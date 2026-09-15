@@ -7,6 +7,8 @@ wip_limits:
   in-progress: 2
   review: 3
 order:                      # ready stories in pull order, highest first
+  - S-007
+  - S-008
   - S-010
   - S-003
 ---

@@ -6,20 +6,20 @@ title: Template prototype under ./template
 status: done
 parent: E-001
 owner: agent
-created: 2026-09-15T16:10:00Z
-updated: 2026-09-15T18:05:00Z
+created: 2026-09-15T16:09:00Z
+updated: 2026-09-15T16:35:10Z
 transitions:
   - to: ready
-    at: 2026-09-15T16:11:00Z
+    at: 2026-09-15T16:10:18Z
     by: agent
   - to: in-progress
-    at: 2026-09-15T16:30:00Z
+    at: 2026-09-15T16:16:51Z
     by: agent
   - to: review
-    at: 2026-09-15T16:45:00Z
+    at: 2026-09-15T16:22:05Z
     by: agent
   - to: done
-    at: 2026-09-15T18:05:00Z
+    at: 2026-09-15T16:35:10Z
     by: alex
 tags: []
 ---

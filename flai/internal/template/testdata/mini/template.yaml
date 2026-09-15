@@ -1,0 +1,22 @@
+version: 9.9.9
+min_flai: 0.1.0
+description: fixture
+variables:
+  - name: project_name
+    prompt: Project name
+    required: true
+  - name: project_key
+    prompt: Key
+    default: "{{ .project_name | initials }}"
+  - name: description
+    prompt: Description
+    default: ""
+layout:
+  design: design
+  docs: docs
+  wip: wip
+render:
+  suffix: .tmpl
+  ignore: ["IGNORED.md", "*.skip"]
+items:
+  story: items/story.md.tmpl

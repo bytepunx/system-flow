@@ -65,3 +65,38 @@ flai version --json
 ```
 
 Prints the version, commit, build date, and Go version.
+
+## Create a project
+
+```bash
+flai new my-project
+```
+
+In a terminal this asks for the project name, key, description, and owner, with defaults pre-filled. In scripts use `--defaults` and `--var`:
+
+```bash
+flai new my-project --defaults --var "description=Billing platform" --var owner=core
+```
+
+| Flag | Effect |
+|------|--------|
+| `--template <url or dir>` | Use this template instead of the configured one. A local directory works. |
+| `--ref <branch, tag, or commit>` | Template version to use. |
+| `--var name=value` | Set a variable. Repeatable. |
+| `--layout key=name` | Rename a documentation folder, for example `--layout design=architecture`. |
+| `--defaults` | Never prompt. Use defaults for anything not given with `--var`. |
+| `--force` | Overwrite files that already exist. Otherwise they are kept and reported. |
+| `--no-git` | Do not run `git init`. |
+
+The result has a `system-flow.yaml` recording the template and version, a `CLAUDE.md` for agents, and the `design`, `docs`, and `wip` folders ready to use.
+
+## Manage the template source
+
+```bash
+flai template show                       # where the template comes from and what it asks for
+flai template update                     # re-fetch a git template into the cache
+flai template use git@github.com:me/system-flow-template.git --ref my-branch
+flai template use ./template             # a local directory, no fetching
+```
+
+Git templates are cloned into `~/.flai/cache/templates`. Private repositories work with whatever git credentials you already have.

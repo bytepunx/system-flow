@@ -1,0 +1,13 @@
+version: 1
+name: {{ .project_name }}
+key: {{ .project_key }}
+template:
+  repo: {{ .template.repo | quote }}
+  ref: {{ .template.ref | quote }}
+  version: {{ .template.version }}
+  applied: {{ .now }}
+layout:
+  design: {{ .layout.design }}
+  docs: {{ .layout.docs }}
+  wip: {{ .layout.wip }}
+projects: []

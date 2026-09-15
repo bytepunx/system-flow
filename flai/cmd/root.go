@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 )
 
 // app carries state shared by all commands.
@@ -19,6 +20,9 @@ type app struct {
 	yes        bool   // --yes
 	out        io.Writer
 	errOut     io.Writer
+	runner     execx.Runner
+
+	stdinIsTerminal *bool // tests override terminal detection
 }
 
 // Execute runs the CLI and returns the process exit code.
@@ -37,7 +41,7 @@ func run(args []string, out, errOut io.Writer) int {
 }
 
 func newRootCmd(out, errOut io.Writer) *cobra.Command {
-	a := &app{out: out, errOut: errOut}
+	a := &app{out: out, errOut: errOut, runner: execx.System{}}
 	root := &cobra.Command{
 		Use:   "flai",
 		Short: "Manage monorepos that follow the system-flow standard",
@@ -57,7 +61,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	pf.BoolVar(&a.jsonOut, "json", false, "print structured JSON output")
 	pf.BoolVarP(&a.yes, "yes", "y", false, "answer yes to confirmations")
 
-	root.AddCommand(newVersionCmd(a), newConfigCmd(a))
+	root.AddCommand(newVersionCmd(a), newConfigCmd(a), newNewCmd(a), newTemplateCmd(a))
 	return root
 }
 

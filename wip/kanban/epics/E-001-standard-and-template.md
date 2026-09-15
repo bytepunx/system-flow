@@ -5,8 +5,8 @@ nature: feature
 title: system-flow standard and template
 status: backlog
 owner: alex
-created: 2026-09-15T16:10:00Z
-updated: 2026-09-15T16:10:00Z
+created: 2026-09-15T16:09:00Z
+updated: 2026-09-15T16:09:00Z
 transitions: []
 tags: []
 ---

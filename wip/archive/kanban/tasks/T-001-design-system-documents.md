@@ -6,17 +6,17 @@ title: Write design/system documents
 status: done
 parent: S-001
 owner: agent
-created: 2026-09-15T16:11:00Z
-updated: 2026-09-15T16:45:00Z
+created: 2026-09-15T16:10:18Z
+updated: 2026-09-15T16:22:05Z
 transitions:
   - to: ready
-    at: 2026-09-15T16:11:00Z
+    at: 2026-09-15T16:10:18Z
     by: agent
   - to: in-progress
-    at: 2026-09-15T16:12:00Z
+    at: 2026-09-15T16:11:37Z
     by: agent
   - to: done
-    at: 2026-09-15T16:25:00Z
+    at: 2026-09-15T16:14:14Z
     by: agent
 stream: S-001
 tags: []

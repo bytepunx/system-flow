@@ -11,9 +11,10 @@ Versions are pinned in `flai/go.mod`; the ones here are the majors we track.
 | Library | Version | Purpose | Why this one |
 |---------|---------|---------|--------------|
 | `github.com/spf13/cobra` | v1.10.2 | Command tree, flags, help, completion | The de facto Go CLI framework, agents know it well |
-| `github.com/goccy/go-yaml` | v1.18 | Parse and write front matter, `system-flow.yaml`, `template.yaml` | Actively maintained, preserves comments better than `gopkg.in/yaml.v3`, which is archived |
-| `github.com/charmbracelet/huh` | v0.7 | Interactive prompts for `new` and `import` | Composable forms, accessible mode, works non-interactively when answers are given by flags |
+| `github.com/goccy/go-yaml` | v1.19 | Parse and write front matter, `system-flow.yaml`, `template.yaml` | Actively maintained, preserves comments better than `gopkg.in/yaml.v3`, which is archived |
+| `github.com/charmbracelet/huh` | v1.0 | Interactive prompts for `new` and `import` | Composable forms, accessible mode, works non-interactively when answers are given by flags |
 | `github.com/charmbracelet/lipgloss` | v1 | Table and board rendering | Same ecosystem as huh |
+| `golang.org/x/term` | v0.46 | Detect whether stdin is a terminal, to decide between prompting and defaults | Standard extended library |
 | `github.com/adrg/xdg` | v0.5 | Not used: config is fixed at `~/.flai` by decision | Listed so nobody adds it |
 
 Deliberately not used:

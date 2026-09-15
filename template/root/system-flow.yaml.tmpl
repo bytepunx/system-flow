@@ -1,13 +1,13 @@
 version: 1
-name: {{ .project_name }}
-key: {{ .project_key }}
-description: {{ .description }}
-owner: {{ .owner }}
-repo: {{ .repo_url }}
+name: {{ .project_name | quote }}
+key: {{ .project_key | quote }}
+description: {{ .description | quote }}
+owner: {{ .owner | quote }}
+repo: {{ .repo_url | quote }}
 template:
-  repo: {{ .template.repo }}
-  ref: {{ .template.ref }}
-  version: {{ .template.version }}
+  repo: {{ .template.repo | quote }}
+  ref: {{ .template.ref | quote }}
+  version: {{ .template.version | quote }}
   applied: {{ .now }}
 layout:
   design: {{ .layout.design }}

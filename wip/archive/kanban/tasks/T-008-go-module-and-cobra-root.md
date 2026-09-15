@@ -6,17 +6,17 @@ title: Go module and cobra root command
 status: done
 parent: S-004
 owner: agent
-created: 2026-09-15T17:05:00Z
-updated: 2026-09-15T17:20:00Z
+created: 2026-09-15T16:24:42Z
+updated: 2026-09-15T16:28:37Z
 transitions:
   - to: ready
-    at: 2026-09-15T17:05:00Z
+    at: 2026-09-15T16:24:42Z
     by: agent
   - to: in-progress
-    at: 2026-09-15T17:08:00Z
+    at: 2026-09-15T16:27:19Z
     by: agent
   - to: done
-    at: 2026-09-15T17:20:00Z
+    at: 2026-09-15T16:28:37Z
     by: agent
 stream: S-004
 tags: [cli]

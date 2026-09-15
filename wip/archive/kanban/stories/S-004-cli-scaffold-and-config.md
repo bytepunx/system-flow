@@ -6,20 +6,20 @@ title: CLI scaffold and config
 status: done
 parent: E-002
 owner: agent
-created: 2026-09-15T16:10:00Z
-updated: 2026-09-15T18:05:00Z
+created: 2026-09-15T16:09:00Z
+updated: 2026-09-15T16:35:10Z
 transitions:
   - to: ready
-    at: 2026-09-15T17:05:00Z
+    at: 2026-09-15T16:24:42Z
     by: agent
   - to: in-progress
-    at: 2026-09-15T17:06:00Z
+    at: 2026-09-15T16:26:00Z
     by: agent
   - to: review
-    at: 2026-09-15T17:55:00Z
+    at: 2026-09-15T16:33:51Z
     by: agent
   - to: done
-    at: 2026-09-15T18:05:00Z
+    at: 2026-09-15T16:35:10Z
     by: alex
 tags: []
 ---

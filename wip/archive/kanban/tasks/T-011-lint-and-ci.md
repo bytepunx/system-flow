@@ -6,17 +6,17 @@ title: Lint config and CI workflow
 status: done
 parent: S-004
 owner: agent
-created: 2026-09-15T17:05:00Z
-updated: 2026-09-15T17:52:00Z
+created: 2026-09-15T16:24:42Z
+updated: 2026-09-15T16:32:33Z
 transitions:
   - to: ready
-    at: 2026-09-15T17:05:00Z
+    at: 2026-09-15T16:24:42Z
     by: agent
   - to: in-progress
-    at: 2026-09-15T17:38:00Z
+    at: 2026-09-15T16:31:14Z
     by: agent
   - to: done
-    at: 2026-09-15T17:52:00Z
+    at: 2026-09-15T16:32:33Z
     by: agent
 stream: S-004
 tags: [cli]
