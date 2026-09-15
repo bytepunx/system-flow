@@ -28,7 +28,7 @@ Tagged releases publish binaries for linux, darwin, and windows.
 
 ## Acceptance criteria
 - [x] GoReleaser config builds all targets
-- [ ] Tag flai/v0.1.0 produces a GitHub release (workflow written and dry-run locally; needs the repo pushed to GitHub and the tag pushed, a human step)
+- [ ] Tag flai/v0.1.0 produces a GitHub release (needs the repo pushed to GitHub and the tag pushed, a human step)
 - [x] README documents install via go install and release download
 
 ## Tasks

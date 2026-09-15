@@ -3,11 +3,11 @@ id: S-023
 type: story
 nature: feature
 title: Write the baseline convention set
-status: review
+status: done
 parent: E-005
 owner: alex
 created: 2026-09-15T18:26:31Z
-updated: 2026-09-15T18:43:49Z
+updated: 2026-09-15T23:00:55Z
 transitions:
   - to: ready
     at: 2026-09-15T18:40:51Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-15T18:43:49Z
     by: agent
+  - to: done
+    at: 2026-09-15T23:00:55Z
+    by: alex
 tags: [conventions]
 ---
 

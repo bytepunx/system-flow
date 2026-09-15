@@ -3,11 +3,11 @@ id: S-026
 type: story
 nature: feature
 title: Adopt the conventions in this repository
-status: review
+status: done
 parent: E-005
 owner: alex
 created: 2026-09-15T18:40:50Z
-updated: 2026-09-15T22:52:23Z
+updated: 2026-09-15T23:00:55Z
 transitions:
   - to: ready
     at: 2026-09-15T22:37:53Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-09-15T22:52:23Z
     by: agent
+  - to: done
+    at: 2026-09-15T23:00:55Z
+    by: alex
 tags: [conventions]
 ---
 
