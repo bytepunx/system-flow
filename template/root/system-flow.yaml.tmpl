@@ -1,0 +1,20 @@
+version: 1
+name: {{ .project_name }}
+key: {{ .project_key }}
+description: {{ .description }}
+owner: {{ .owner }}
+repo: {{ .repo_url }}
+template:
+  repo: {{ .template.repo }}
+  ref: {{ .template.ref }}
+  version: {{ .template.version }}
+  applied: {{ .now }}
+layout:
+  design: {{ .layout.design }}
+  docs: {{ .layout.docs }}
+  wip: {{ .layout.wip }}
+projects: []
+dashboard:
+  image: ghcr.io/bytepunx/flaiover
+  tag: latest
+  port: 4242

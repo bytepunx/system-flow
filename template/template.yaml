@@ -1,0 +1,36 @@
+version: 0.1.0
+min_flai: 0.1.0
+description: system-flow monorepo template
+variables:
+  - name: project_name
+    prompt: Project name
+    required: true
+  - name: project_key
+    prompt: Short project key (used for prefixed IDs if enabled)
+    default: "{{ .project_name | initials }}"
+  - name: description
+    prompt: One line description
+    default: ""
+  - name: owner
+    prompt: Owner or team
+    default: ""
+  - name: repo_url
+    prompt: Repository URL
+    default: ""
+layout:
+  design: design
+  docs: docs
+  wip: wip
+render:
+  suffix: .tmpl
+  ignore: []
+dashboard:
+  image: ghcr.io/bytepunx/flaiover
+  tag: latest
+  port: 4242
+projects: []
+items:                     # rendered by flai when creating work items and narratives, not at project creation
+  epic: items/epic.md.tmpl
+  story: items/story.md.tmpl
+  task: items/task.md.tmpl
+  narrative: items/narrative.md.tmpl

@@ -1,0 +1,22 @@
+name: system-flow check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Lint markdown
+        uses: DavidAnson/markdownlint-cli2-action@v20
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+      - name: Install flai
+        run: go install github.com/bytepunx/system-flow/flai@latest
+      - name: Check standard conformance
+        run: flai check --strict

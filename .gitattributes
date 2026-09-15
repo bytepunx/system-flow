@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.md text diff=markdown
+*.png binary
+*.jpg binary
+*.lock linguist-generated=true
+pnpm-lock.yaml linguist-generated=true
+go.sum linguist-generated=true

@@ -1,0 +1,26 @@
+version: 1
+name: system-flow
+key: sf
+description: Agentic lean project management system
+owner: alex
+repo: https://github.com/bytepunx/system-flow
+template:
+  repo: ./template
+  ref: ""
+  version: 0.1.0
+  applied: 2026-09-15T16:45:00Z
+layout:
+  design: design
+  docs: docs
+  wip: wip
+projects:
+  - name: flai
+    path: flai
+    kind: go
+  - name: flaiover
+    path: flaiover
+    kind: sveltekit
+dashboard:
+  image: ghcr.io/bytepunx/flaiover
+  tag: latest
+  port: 4242

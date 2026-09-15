@@ -1,0 +1,22 @@
+---
+title: System overview
+updated: {{ .today }}
+status: active
+---
+
+# System overview
+
+{{ .description }}
+
+## Parts
+
+```mermaid
+flowchart LR
+    A[Part A] --> B[Part B]
+```
+
+## Principles
+
+- Files are the database.
+- Defer detail until work is next up.
+- Keep `{{ .layout.wip }}/agents` current so any agent can resume.

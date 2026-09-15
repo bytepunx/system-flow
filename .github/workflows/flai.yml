@@ -1,0 +1,46 @@
+name: flai
+
+on:
+  pull_request:
+    paths: ["flai/**", ".github/workflows/flai.yml"]
+  push:
+    branches: [main]
+    paths: ["flai/**", ".github/workflows/flai.yml"]
+
+defaults:
+  run:
+    working-directory: flai
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: flai/go.mod
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.5
+          working-directory: flai
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: flai/go.mod
+      - run: go test -race -count=1 ./...
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: flai/go.mod
+      - run: GOOS=${{ matrix.goos }} GOARCH=amd64 go build ./...
