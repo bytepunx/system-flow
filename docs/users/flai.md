@@ -10,11 +10,17 @@ The system-flow command line tool. Full command reference will be generated from
 
 ## Install
 
+With Go 1.26 or newer:
+
 ```bash
 go install github.com/bytepunx/system-flow/flai@latest
 ```
 
-Release binaries for Linux, macOS, and Windows arrive with story S-010.
+Or download a binary from the [releases page](https://github.com/bytepunx/system-flow/releases): releases named `flai vX.Y.Z` carry `flai_X.Y.Z_<os>_<arch>.tar.gz` (a zip on Windows) for Linux, macOS, and Windows on amd64 and arm64, plus `checksums.txt`. Unpack and put `flai` on your `PATH`.
+
+```bash
+flai version
+```
 
 ## Global flags
 

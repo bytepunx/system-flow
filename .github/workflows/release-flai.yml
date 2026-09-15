@@ -1,0 +1,34 @@
+name: release flai
+
+on:
+  push:
+    tags: ["flai/v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flai
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: flai/go.mod
+      # The monorepo tags flai/vX.Y.Z. GoReleaser OSS cannot strip the
+      # prefix, so .goreleaser.yaml derives the version from the tag with
+      # trimprefix and validation of the tag as semver is skipped here.
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          workdir: flai
+          args: release --clean --skip=validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}

@@ -1,0 +1,67 @@
+# GoReleaser v2 configuration for flai. Run from inside flai/.
+#
+# Releases are cut from tags named flai/vX.Y.Z (see design/tech/ci.md). The
+# open-source GoReleaser does not strip a monorepo prefix, so every template
+# derives the version with `trimprefix .Tag "flai/v"` instead of `.Version`,
+# and the workflow runs with --skip=validate so the non-semver tag is
+# accepted. Snapshot builds (no tag) get 0.0.0-<short commit>.
+version: 2
+project_name: flai
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: flai
+    main: .
+    binary: flai
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Version={{ if .IsSnapshot }}0.0.0-{{ .ShortCommit }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}
+      - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Commit={{ .ShortCommit }}
+      - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Date={{ .Date }}
+
+archives:
+  - id: flai
+    formats: [tar.gz]
+    name_template: '{{ .ProjectName }}_{{ if .IsSnapshot }}snapshot{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}_{{ .Os }}_{{ .Arch }}'
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "0.0.0-{{ .ShortCommit }}"
+
+git:
+  ignore_tags:
+    - "flaiover/*"
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^Archive "
+      - "^docs:"
+
+release:
+  github:
+    owner: bytepunx
+    name: system-flow
+  name_template: 'flai v{{ trimprefix .Tag "flai/v" }}'
+  header: |
+    flai {{ trimprefix .Tag "flai/v" }}, the system-flow CLI. Install with `go install github.com/bytepunx/system-flow/flai@{{ .Tag }}` or download a binary below.

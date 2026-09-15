@@ -104,7 +104,7 @@ func TestRenderRules(t *testing.T) {
 			t.Errorf("%s should not be written", p)
 		}
 	}
-	if st, _ := os.Stat(filepath.Join(dest, "bin", "run.sh")); st == nil || st.Mode().Perm()&0o100 == 0 {
+	if st, _ := os.Stat(filepath.Join(dest, "tools", "run.sh")); st == nil || st.Mode().Perm()&0o100 == 0 {
 		t.Error("exec bit not preserved")
 	}
 	if len(res.Written) != 6 || len(res.Skipped) != 0 {
