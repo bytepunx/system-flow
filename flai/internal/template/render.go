@@ -174,6 +174,11 @@ func ignored(patterns []string, rel string) bool {
 	return false
 }
 
+// RenderText renders one template string with the standard functions.
+func RenderText(name, text string, data map[string]any) (string, error) {
+	return renderString(name, text, data)
+}
+
 func renderString(name, text string, data map[string]any) (string, error) {
 	t, err := template.New(name).Funcs(Funcs).Option("missingkey=error").Parse(text)
 	if err != nil {

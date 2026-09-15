@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -22,7 +24,9 @@ type app struct {
 	errOut     io.Writer
 	runner     execx.Runner
 
-	stdinIsTerminal *bool // tests override terminal detection
+	stdinIsTerminal *bool            // tests override terminal detection
+	cwd             string           // tests override the working directory
+	clock           func() time.Time // tests override the clock
 }
 
 // Execute runs the CLI and returns the process exit code.
@@ -41,7 +45,14 @@ func run(args []string, out, errOut io.Writer) int {
 }
 
 func newRootCmd(out, errOut io.Writer) *cobra.Command {
-	a := &app{out: out, errOut: errOut, runner: execx.System{}}
+	return newRootCmdWith(&app{out: out, errOut: errOut})
+}
+
+func newRootCmdWith(a *app) *cobra.Command {
+	if a.runner == nil {
+		a.runner = execx.System{}
+	}
+	out, errOut := a.out, a.errOut
 	root := &cobra.Command{
 		Use:   "flai",
 		Short: "Manage monorepos that follow the system-flow standard",
@@ -61,7 +72,12 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	pf.BoolVar(&a.jsonOut, "json", false, "print structured JSON output")
 	pf.BoolVarP(&a.yes, "yes", "y", false, "answer yes to confirmations")
 
-	root.AddCommand(newVersionCmd(a), newConfigCmd(a), newNewCmd(a), newTemplateCmd(a))
+	root.AddCommand(
+		newVersionCmd(a), newConfigCmd(a), newNewCmd(a), newTemplateCmd(a),
+		newItemCmd(a, "epic"), newItemCmd(a, "story"), newItemCmd(a, "task"), newShowCmd(a),
+		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newBoardCmd(a),
+		newStreamCmd(a), newArchiveCmd(a),
+	)
 	return root
 }
 
@@ -83,4 +99,12 @@ func (a *app) printJSON(v any) error {
 	enc := json.NewEncoder(a.out)
 	enc.SetIndent("", "  ")
 	return enc.Encode(v)
+}
+
+// relPath shows a path relative to root when possible.
+func relPath(root, p string) string {
+	if rel, err := filepath.Rel(root, p); err == nil {
+		return rel
+	}
+	return p
 }

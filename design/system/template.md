@@ -87,7 +87,7 @@ Available in every rendered file in addition to the manifest variables.
 | `.today` | `YYYY-MM-DD` UTC at render time |
 | `.now` | `YYYY-MM-DDTHH:MM:SSZ` UTC at render time |
 | `.template.repo`, `.template.ref`, `.template.version` | Template source being applied |
-| `.id`, `.title`, `.nature`, `.parent`, `.owner`, `.agent`, `.session` | Item templates only, supplied by `flai epic|story|task new` and `flai stream open` |
+| `.id`, `.title`, `.nature`, `.parent`, `.owner`, `.agent`, `.session` | Item templates only, supplied by `flai epic|story|task new` and `flai stream open`. Use `{{ .title | quote }}` in YAML. |
 
 Template functions: `initials`, `slug`, `upper`, `lower`, `quote` (YAML-safe double-quoted scalar, use it for every free-text value in YAML files). For a local template source, `.template.repo` is the absolute directory so the manifest stays meaningful from any working directory.
 

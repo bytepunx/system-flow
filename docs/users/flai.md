@@ -100,3 +100,66 @@ flai template use ./template             # a local directory, no fetching
 ```
 
 Git templates are cloned into `~/.flai/cache/templates`. Private repositories work with whatever git credentials you already have.
+
+## Work items
+
+All of these run inside a conforming repository (anywhere below `system-flow.yaml`).
+
+```bash
+flai epic new "Billing v2" --nature feature
+flai story new "Invoice PDF export" --epic E-001
+flai task new "Render invoice template" --story S-001 --tag pdf
+flai show S-001
+```
+
+Items are created from the template's item bodies with the next free ID and linked into their parent's Stories or Tasks list. Natures: `feature`, `improvement`, `remediation`, `research`, `experiment`.
+
+### Moving work
+
+```bash
+flai move S-001 ready          # needs at least one task and acceptance criteria
+flai move S-001 in-progress    # warns if the WIP limit is exceeded
+flai move T-001 in-progress
+flai move T-001 done           # tasks may skip review
+flai move S-001 review
+flai move S-001 done --by alex # needs every task closed and every criterion checked
+flai move S-001 in-progress --reason "tests missing"     # from review
+flai move S-002 cancelled --reason "superseded by S-005"
+```
+
+Every move appends to the item's `transitions` with a timestamp and who made it (`--by`, default the config author). Reasons land under the item's Notes.
+
+### Blocking
+
+```bash
+flai block T-001 --reason "waiting on API keys"
+flai unblock T-001
+```
+
+Blocked items keep their column; the interval is recorded so blocked time shows in the charts.
+
+### The board
+
+```bash
+flai board          # stories by column with age, nature, blocked flag, WIP counts
+flai board --all    # epics and tasks too
+flai board --json
+```
+
+### Agent narratives
+
+```bash
+export FLAI_AGENT=claude FLAI_SESSION=abc123
+flai stream open S-001
+flai stream log S-001 "T-001 done, starting T-002"
+```
+
+`wip/agents/index.md` is regenerated after every open, log, move, and archive.
+
+### Archiving
+
+```bash
+flai archive --dry-run
+flai archive               # everything done or cancelled that is safe to move
+flai archive S-001         # one story with its tasks and narrative
+```

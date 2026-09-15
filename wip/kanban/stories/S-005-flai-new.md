@@ -3,11 +3,11 @@ id: S-005
 type: story
 nature: feature
 title: flai new from template
-status: review
+status: done
 parent: E-002
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-15T16:38:47Z
+updated: 2026-09-15T18:00:57Z
 transitions:
   - to: ready
     at: 2026-09-15T16:36:28Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-15T16:38:47Z
     by: agent
+  - to: done
+    at: 2026-09-15T18:00:57Z
+    by: alex
 tags: []
 ---
 
