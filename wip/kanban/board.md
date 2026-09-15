@@ -7,9 +7,9 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-023
   - S-024
   - S-025
+  - S-027
   - S-003
 ---
 

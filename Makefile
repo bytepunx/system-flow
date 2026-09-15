@@ -1,34 +1,37 @@
-.PHONY: check lint-md board stats dashboard dashboard-stop template-test flai flai-test flai-snapshot
+.PHONY: check flai flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop help
 
-check: ## Validate this repo against the standard
-	flai check --strict
+check: ## Validate this repo against the standard (flai check --strict)
+	scripts/check.sh
+
+flai: ## Build bin/flai from source
+	scripts/flai-build.sh
+
+flai-test: ## gofmt, vet, golangci-lint v2, go test -race
+	scripts/flai-test.sh
+
+flai-snapshot: ## GoReleaser snapshot build into flai/dist
+	scripts/flai-snapshot.sh
+
+template-test: ## Render ./template and check the result
+	scripts/template-test.sh
+
+install-tools: ## Install golangci-lint v2 and GoReleaser into bin/
+	scripts/install-tools.sh
 
 lint-md: ## Lint markdown
 	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**"
 
-board:
-	flai board
+board: ## Print the kanban board
+	scripts/flai.sh board
 
-stats:
-	flai stats
+stats: ## Print flow metrics
+	scripts/flai.sh stats
 
-dashboard:
-	flai dashboard
+dashboard: ## Run the flaiover dashboard against this repo
+	scripts/flai.sh dashboard
 
 dashboard-stop:
-	flai dashboard stop
-
-flai: ## Build flai into ./bin
-	cd flai && go build -o ../bin/flai .
-
-flai-test: ## Lint and race-test flai
-	cd flai && golangci-lint run ./... && go test -race ./...
-
-flai-snapshot: ## GoReleaser snapshot build of flai into flai/dist
-	cd flai && goreleaser release --snapshot --clean --skip=publish
-
-template-test: ## Render ./template into a temp dir and check it
-	rm -rf /tmp/system-flow-template-test && flai new /tmp/system-flow-template-test --template ./template --defaults && flai check /tmp/system-flow-template-test --strict
+	scripts/flai.sh dashboard stop
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'

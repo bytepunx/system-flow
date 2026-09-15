@@ -16,6 +16,9 @@ This repository follows the system-flow standard. Read this file fully before ma
 | `{{ .layout.wip }}/agents/` | Your narrative, one file per story | Keep it current. See below. |
 | `{{ .layout.wip }}/archive/` | Finished items and narratives | Do not edit. `flai archive` moves things here. |
 | `system-flow.yaml` | Project manifest | Edit only `name`, `description`, `dashboard`. `flai` owns the rest. |
+| `{{ .layout.design }}/conventions/` | How agents work here, one file per topic | Read all of it at session start. Add project rules below the marker only. |
+| `{{ .layout.design }}/issues/` | Recurring friction, defects, blockers, with counts and cost | Record occurrences; update `summary.md`. |
+| `scripts/` | Purpose-named shell scripts behind the Makefile | Add a script rather than inlining a command sequence. |
 
 All documentation is markdown with YAML front matter. Diagrams are Mermaid. Dates are ISO 8601 UTC.
 
@@ -61,8 +64,8 @@ For every story you touch, `{{ .layout.wip }}/agents/<story-id>.md` must let a f
 
 ## Conventions
 
-- Commit only when asked. Reference the story ID in commit messages.
-- Do not create new top-level folders. Sub-projects are listed in `system-flow.yaml`.
+- Commit when a story lands (review, then acceptance), conventional style with the story ID; see `{{ .layout.design }}/conventions/git.md`.
+- Do not create top-level folders beyond the layout, `scripts/`, and the sub-projects listed in `system-flow.yaml`.
 - Prefer editing the living design over adding a new document.
 
 <!-- system-flow:end-of-baseline -->

@@ -6,7 +6,7 @@ title: Agent conventions
 status: backlog
 owner: alex
 created: 2026-09-15T18:26:31Z
-updated: 2026-09-15T18:26:32Z
+updated: 2026-09-15T22:37:54Z
 transitions: []
 tags: []
 ---
@@ -21,6 +21,11 @@ Every system-flow project ships a `design/conventions` folder: one markdown file
 - S-023 Write the baseline convention set
 - S-024 Prime agent sessions from CLAUDE.md
 - S-025 Tooling support for conventions
+- S-026 Adopt the conventions in this repository
+- S-027 flai issue commands and check rules for design/issues
+- S-026 Adopt the conventions in this repository
+- S-027 flai issue commands and check rules for design/issues
+- S-027 flai issue commands and check rules for design/issues
 
 ## Notes
 Requested 2026-09-15. Supersedes the previous pull order: S-022 to S-025 come first. S-010 stays in review awaiting the human's tag push.

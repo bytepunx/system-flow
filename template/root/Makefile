@@ -1,7 +1,7 @@
 .PHONY: check board stats dashboard dashboard-stop lint-md
 
 check: ## Validate the repo against the system-flow standard
-	flai check --strict
+	scripts/check.sh
 
 lint-md: ## Lint markdown
 	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**"

@@ -19,3 +19,4 @@ Copy `0000-template.md` to start a new one.
 | [0011](0011-project-manifest.md) | system-flow.yaml marks a project and owns folder names | accepted |
 | [0012](0012-flat-kanban-folders-and-archive.md) | Kanban items are flat per type, hierarchy by parent key, archive on completion | accepted |
 | [0013](0013-conventions-folder.md) | design/conventions holds agent norms, one file per topic | accepted |
+| [0014](0014-design-issues.md) | design/issues records recurring friction with counts and cost | accepted |

@@ -18,7 +18,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   ├── adrs/               # point-in-time architecture decisions
 │   ├── system/             # living design, always current
 │   ├── tech/               # active technology choices with versions
-│   └── conventions/        # how agents work here, one file per topic, primed every session
+│   ├── conventions/        # how agents work here, one file per topic, primed every session
+│   └── issues/             # recurring friction with counts and cost, see continuous-improvement.md
 ├── docs/                   # outward-facing documentation, one subfolder per audience
 │   ├── README.md
 │   ├── users/
@@ -33,6 +34,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   │   ├── stories/
 │   │   └── tasks/
 │   └── archive/            # completed items and narratives, same layout as kanban/ and agents/
+├── scripts/                # purpose-named shell scripts; the Makefile and CI call these
+├── Makefile                # entry point for build, lint, check, test; targets call scripts/
 ├── <project-a>/            # code sub-projects, one folder each, at the root
 ├── <project-b>/
 └── .github/                # CI and repo automation shipped by the template
@@ -42,7 +45,7 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 
 ### `design/`
 
-Internal. Written for the people and agents building the system. Four subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
+Internal. Written for the people and agents building the system. Five subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
 
 `design/conventions/` is agent-facing: one short file per topic area stating how work is done in this repository, plus a `README.md` index in read order. The template ships the baseline; a project adds its own rules below the marker line in each file. Every agent session reads this folder first. See [conventions.md](conventions.md) and [ADR-0013](../adrs/0013-conventions-folder.md).
 
@@ -57,6 +60,12 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 - `kanban/` holds active items. An item is active from creation until it is archived.
 - `agents/` holds one narrative file per active story.
 - `archive/` mirrors `kanban/` and `agents/`. `flai archive` moves done and cancelled items here so the board stays small while history stays available for metrics.
+
+`design/issues/` records recurring friction, defects, blockers, and inefficiencies with a count and cost per issue. See [continuous-improvement.md](continuous-improvement.md) and [ADR-0014](../adrs/0014-design-issues.md).
+
+### `scripts/`
+
+Purpose-named shell scripts for common tasks. The `Makefile` is the entry point and its targets call these scripts, so local runs and CI execute the same code. See [conventions/tooling.md](../conventions/tooling.md).
 
 ### Code sub-projects
 

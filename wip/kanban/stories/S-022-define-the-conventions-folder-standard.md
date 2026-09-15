@@ -30,7 +30,7 @@ Decide where conventions live, how they are structured, and how they relate to C
 - [x] An ADR decides the folder (`design/conventions`, the fourth documentation type under `design/`, the subfolder addition ADR-0002 requires) and the one-file-per-topic structure with a README index in read order
 - [x] design/system has a `conventions.md` living document covering purpose, topic list, file format (front matter with title, updated, audience: agent, priority), the project-extension marker, and how CLAUDE.md, conventions, and design/system divide responsibility (CLAUDE.md is the short map, conventions are the norms, design/system is the design)
 - [x] repository-layout.md, project-manifest.md, template.md, documentation-standard.md, and design/README.md updated
-- [ ] The topic list is agreed with the operator before S-023 starts
+- [x] The topic list is agreed with the operator before S-023 starts (confirmed 2026-09-15)
 
 ## Tasks
 - T-033 ADR-0013 conventions folder

@@ -15,7 +15,7 @@ One file per technology. Each records the version in use, where it is used, why 
 | goccy/go-yaml | v1.19 | flai | [go-libraries.md](go-libraries.md) |
 | charmbracelet/huh | v1.0 | flai | [go-libraries.md](go-libraries.md) |
 | golangci-lint | v2.5 | flai | [go.md](go.md) |
-| GoReleaser | v2 | flai | [go.md](go.md) |
+| GoReleaser | v2 (pinned in scripts/install-tools.sh) | flai | [go.md](go.md) |
 | Node.js | 24 LTS | flaiover | [node.md](node.md) |
 | pnpm | 10 | flaiover | [node.md](node.md) |
 | SvelteKit / Svelte | 2 / 5 | flaiover | [sveltekit.md](sveltekit.md) |
