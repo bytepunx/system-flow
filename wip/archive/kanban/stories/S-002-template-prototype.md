@@ -33,7 +33,7 @@ A ./template folder that is a working prototype of the template repository: mani
 - [x] template/template.yaml declares version, variables, layout, and render rules
 - [x] template/root contains CLAUDE.md.tmpl, README.md.tmpl, system-flow.yaml.tmpl, and the three documentation folders with README files
 - [x] Devex files present: .editorconfig, .gitignore, .gitattributes, .markdownlint.yaml, Makefile, CI workflow, PR template
-- [ ] Rendering with flai new --template ./template produces a repo that passes flai check (blocked on S-005)
+- [x] Rendering with flai new --template ./template produces a repo that passes flai check (verified by S-005 and by flai check in S-008)
 
 ## Tasks
 - T-005 Write template.yaml

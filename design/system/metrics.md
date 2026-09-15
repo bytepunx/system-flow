@@ -56,6 +56,19 @@ Computed over a window (default 30 days, by `completed`) and groupable by `type`
 | Aging WIP | Active items by age since started, against the 85th percentile | Flags items likely to be late |
 | Estimate vs actual | Scatter, only items with `estimate` | |
 
+## Precision rules
+
+So that `flai stats` and the dashboard agree to the second:
+
+- Percentiles use nearest rank on the sorted values: the p-th percentile is the value at position `ceil(p/100 × n)`.
+- The backlog interval starts at `created`. An open item's current interval ends at now. Closed items accrue nothing after `completed`.
+- Queue time exists only when both `committed` and `started` exist and `started` is not before `committed`.
+- Cycle time exists only when the item was started. An item cancelled from backlog has a lead time but no cycle time and is excluded from cycle aggregates.
+- Burn-up counts an item in scope from its `created` day and excludes cancelled items. Cumulative flow uses the item's state at the end of each day (23:59:59 UTC).
+- Throughput per week is completed items in the window divided by window days over seven. Weekly buckets are ISO weeks starting Monday.
+- Flow efficiency averages `(cycle - blocked) / cycle` over completed items with a positive cycle time.
+- Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
+
 ## Data access
 
 The dashboard reads items via its server API, which scans `wip/kanban` and `wip/archive` on request and caches by file modification time. `flai stats` prints the same aggregates as a table or JSON so scripts and CI can use them. Both share the same definitions above; the Go implementation is the reference and `flaiover` has a fixture test that checks its numbers against `flai stats --json` output on the sample repo in the template.

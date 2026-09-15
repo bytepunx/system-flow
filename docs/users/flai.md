@@ -163,3 +163,24 @@ flai archive --dry-run
 flai archive               # everything done or cancelled that is safe to move
 flai archive S-001         # one story with its tasks and narrative
 ```
+
+## Check the repository
+
+```bash
+flai check            # errors exit 1
+flai check --strict   # warnings exit 1 too, use this in CI
+flai check ../other-repo --json
+```
+
+Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, and front matter on `design/` and `docs/` files including ADR numbering. `README.md` files are exempt from front matter.
+
+## Flow metrics
+
+```bash
+flai stats                          # stories completed in the last 30 days
+flai stats --since 90d --by nature  # grouped
+flai stats --type task
+flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging
+```
+
+The table shows completed and cancelled counts, throughput per week, current WIP, cycle, lead, and queue time distributions (p50, p85, max, mean), flow efficiency, time-in-state share, aging work against the cycle time p85, and throughput by week. Definitions are in [design/system/metrics.md](../../design/system/metrics.md); the dashboard uses the same numbers.

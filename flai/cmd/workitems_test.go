@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,14 +14,25 @@ import (
 // runIn runs the CLI with the working directory and clock fixed.
 func runIn(t *testing.T, dir string, args ...string) (string, string, int) {
 	t.Helper()
+	return runInAt(t, dir, time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC), args...)
+}
+
+// runInAt runs the CLI with the working directory and clock fixed.
+func runInAt(t *testing.T, dir string, at time.Time, args ...string) (string, string, int) {
+	t.Helper()
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC) }}
+	a := &app{out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return at }}
 	root := newRootCmdWith(a)
 	root.SetArgs(args)
 	code := 0
 	if err := root.Execute(); err != nil {
-		errOut.WriteString("flai: " + err.Error() + "\n")
-		code = 1
+		var ee *exitError
+		if errors.As(err, &ee) {
+			code = ee.code
+		} else {
+			errOut.WriteString("flai: " + err.Error() + "\n")
+			code = 1
+		}
 	}
 	return out.String(), errOut.String(), code
 }

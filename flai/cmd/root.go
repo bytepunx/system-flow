@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,6 +39,10 @@ func run(args []string, out, errOut io.Writer) int {
 	root := newRootCmd(out, errOut)
 	root.SetArgs(args)
 	if err := root.Execute(); err != nil {
+		var ee *exitError
+		if errors.As(err, &ee) {
+			return ee.code
+		}
 		fmt.Fprintf(errOut, "flai: %v\n", err)
 		return 1
 	}
@@ -76,7 +81,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 		newVersionCmd(a), newConfigCmd(a), newNewCmd(a), newTemplateCmd(a),
 		newItemCmd(a, "epic"), newItemCmd(a, "story"), newItemCmd(a, "task"), newShowCmd(a),
 		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newBoardCmd(a),
-		newStreamCmd(a), newArchiveCmd(a),
+		newStreamCmd(a), newArchiveCmd(a), newCheckCmd(a), newStatsCmd(a),
 	)
 	return root
 }

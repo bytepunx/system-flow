@@ -54,7 +54,7 @@ Work is pulled, not pushed. An agent starting a session:
 | review to in-progress | Human | Reason appended to story notes |
 | any to cancelled | Human | Reason appended to story notes |
 
-`flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. Moving a story to `ready` appends it to the board's pull order; leaving `ready` removes it.
+`flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined. Moving a story to `ready` appends it if absent; starting or cancelling it removes it.
 
 ## Blocking
 

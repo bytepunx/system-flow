@@ -1,0 +1,7 @@
+version: 1
+name: good
+key: g
+layout:
+  design: design
+  docs: docs
+  wip: wip

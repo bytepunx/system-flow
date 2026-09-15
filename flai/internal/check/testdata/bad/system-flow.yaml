@@ -1,0 +1,7 @@
+version: 1
+name: bad
+key: b
+layout:
+  design: design
+  docs: docs
+  wip: wip

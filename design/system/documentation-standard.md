@@ -22,7 +22,7 @@ status: active             # active | draft | deprecated
 ---
 ```
 
-ADRs and work items have their own richer schemas. See [work-hierarchy.md](work-hierarchy.md) and the ADR template in `design/adrs/0000-template.md`.
+`README.md` files are folder indexes and are exempt. ADRs and work items have their own richer schemas. See [work-hierarchy.md](work-hierarchy.md) and the ADR template in `design/adrs/0000-template.md`.
 
 ## Naming
 

@@ -1,0 +1,30 @@
+name: system-flow check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Lint markdown
+        uses: DavidAnson/markdownlint-cli2-action@v20
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: flai/go.mod
+      - name: Build flai
+        run: go build -o /usr/local/bin/flai .
+        working-directory: flai
+      - name: Check standard conformance
+        run: flai check --strict
+      - name: Render and check the template prototype
+        run: |
+          flai new /tmp/sample --template ./template --defaults --no-git
+          flai check /tmp/sample --strict

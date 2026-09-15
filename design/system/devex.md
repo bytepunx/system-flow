@@ -29,6 +29,7 @@ What the template ships so a conforming repo is pleasant to work in from the fir
 | Go release | GoReleaser | `flai/.goreleaser.yaml`, tags `flai/v*` produce GitHub release binaries for linux, darwin, windows |
 | Node package manager | pnpm | Lockfile committed, `corepack` pins the version |
 | Dashboard image | GitHub Actions, `docker/build-push-action` | Tags `flaiover/v*` and `main` push to GHCR with `latest` and semver tags |
+| Standard conformance | `.github/workflows/system-flow-check.yml` | Builds `flai` from source, runs `flai check --strict`, renders `./template` and checks the result |
 | Task runner | Root `Makefile` | Delegates into `flai/` and `flaiover/` |
 | Versioning | Independent per sub-project | Git tags prefixed with the project name |
 
