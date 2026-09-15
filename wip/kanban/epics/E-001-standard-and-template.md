@@ -20,6 +20,8 @@ The conventions are written in design/system, decided in design/adrs, exercised 
 - S-001 Define the standard
 - S-002 Template prototype under ./template
 - S-003 Publish the template as its own repository
+- S-020 flai upgrade re-integrates the latest template
+- S-021 flai template push publishes template changes to a remote
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.

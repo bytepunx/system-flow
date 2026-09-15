@@ -47,7 +47,9 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 | `flai stream open <story-id>`, `flai stream log <story-id> "<entry>"` | Create a narrative from the template, append a timestamped log entry, update `index.md`. |
 | `flai archive [id...]` | Move done and cancelled items and their narratives to `wip/archive`. Default: all eligible. |
 | `flai dashboard [--port] [--pull] [--detach]` | Pull the flaiover image if missing, run it with the repo mounted read-write at `/project`, open the browser. `flai dashboard stop`. |
+| `flai upgrade [--dry-run] [--force] [--keep-all\|--replace-all]` | Re-integrate the latest template into an existing repo: add new files, replace files unchanged since they were applied, report project-modified files as conflicts, merge `CLAUDE.md` above its marker. Story S-020. |
 | `flai template show`, `flai template update`, `flai template use <repo> [--ref]` | Inspect, refresh, and switch the template source. |
+| `flai template push [dir] [--remote] [--ref] [--tag] [--dry-run]` | Publish a locally developed template to its git remote: clone, replace contents, commit with the version, push. Git errors surface verbatim; no force push unless `--force`. Story S-021. |
 | `flai config get [key]`, `flai config set <key> <value>`, `flai config path` | Read and edit `~/.flai/config.json` by dotted key; `path` prints the resolved file without creating it. |
 | `flai version` | Version, commit, build date. |
 

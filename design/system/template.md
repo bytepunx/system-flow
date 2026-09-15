@@ -107,6 +107,22 @@ The most important file in the template. It gives an agent, in one read, the rep
 
 Semantic versions in `template.yaml`. `flai` records the applied version in `system-flow.yaml`. Breaking changes to layout or front matter schema bump the major version and ship with a migration note in the template's `CHANGELOG.md`.
 
+## Upgrading a project (S-020)
+
+`flai upgrade` brings a conforming repo to the template version at the configured source. It needs to know which rendered files the project has since changed; the proposed mechanism is a `system-flow.lock.yaml` written by `flai new` and `flai upgrade` with a sha256 per rendered path. Unchanged files are replaced, new files added, changed files reported as conflicts, and `CLAUDE.md` is merged above its marker line. The lock file decision gets an ADR when S-020 starts.
+
+## Publishing a template (S-021)
+
+A template developed inside another repository, as `./template` is here, is published with `flai template push`. The manifest declares its home:
+
+```yaml
+publish:
+  repo: git@github.com:bytepunx/system-flow-template.git
+  ref: main
+```
+
+The command clones the remote branch into the cache, replaces its contents with the local template, commits with the template version in the message, pushes, and with `--tag` also pushes `v<version>`. It assumes push permission exists and reports git failures verbatim. It never changes the calling project's `system-flow.yaml`.
+
 ## Testing the template
 
 The monorepo's CI renders the prototype template into a temporary directory with `flai new --template ./template` and runs `flai check` on the result. This is the sample repo used by dashboard fixture tests.
