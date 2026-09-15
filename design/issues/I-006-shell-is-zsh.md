@@ -5,8 +5,8 @@ class: efficiency
 status: open
 count: 2
 cost: 3m
-first_reported: 2026-09-15T12:00:57Z
-last_reported: 2026-09-15T12:21:56Z
+first_reported: 2026-09-15T18:00:57Z
+last_reported: 2026-09-15T18:21:56Z
 updated: 2026-09-15T22:40:33Z
 ---
 
@@ -16,10 +16,10 @@ updated: 2026-09-15T22:40:33Z
 The environment shell is zsh. `${var^}` is unsupported and unquoted `$VAR` in `for` loops does not word-split, so a loop over task IDs ran once with all IDs as one argument and the rest of the command chain was skipped.
 
 ## Instances
-### 2026-09-15T12:00:57Z
+### 2026-09-15T18:00:57Z
 S-001 bootstrap: `${a^}` broke a heredoc loop; three docs index files were rewritten.
 
-### 2026-09-15T12:21:56Z
+### 2026-09-15T18:21:56Z
 S-010: `for t in $TASKS` passed one argument; the close-out chain silently stopped and was redone.
 
 ## Remediation

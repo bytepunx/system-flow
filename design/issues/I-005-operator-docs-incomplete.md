@@ -19,4 +19,4 @@ The documentation convention requires operator docs to cover every setting with 
 S-026: noticed while adopting the conventions; no measured cost yet because no operator has needed the docs.
 
 ## Remediation
-E-004 stories S-017 and S-019 write the operator docs; extend their criteria to the runbook list. Close when they land.
+S-028 (operator runbooks and settings index) writes them. Close when it lands.

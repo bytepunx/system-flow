@@ -15,8 +15,11 @@ What every code change carries with it, and what it never carries.
 - Single responsibility applies at every level: separate concerns belong in separate functions, modules, or services, in that ascending order.
 - Modules never depend directly on third-party libraries for I/O. They depend on an abstraction that expresses the ideal operation, so the concrete dependency can change without rewriting behavior.
 - Each component presents a public API that implements its behavior and can be tested without concrete external dependencies. That is what behavior testing means here.
-- Integration tests exercise each service in isolation against real adapters.
-- Smoke tests exercise end-to-end paths through the system, are automated, and run in CI so breaking changes are caught before merge.
+- Tests come in three tiers, each more expensive than the last, each with its own command and folder, and each run only after the cheaper tier passes:
+  - Behavior tests: the public API against fakes, no network, no filesystem outside a temp dir, seconds to run. They live beside the code in the language's native test layout and run on every iteration with `make test`.
+  - Integration tests: one service or component against its real adapters (real git, real database, real container). They live in `<project>/tests/integration/` and run with `make integration` once behavior tests pass.
+  - Smoke tests: end-to-end paths through the whole system as a user would exercise it. They live in `tests/smoke/` at the repository root and run with `make smoke` once integration passes, and in CI before merge.
+- A change is not done until the tier it touches passes; a story is not done until all three pass.
 - Tests accompany the change. New behavior gets a test that fails without it; a fixed bug gets a test that reproduces it. Run the whole suite, not just the new test, before reporting.
 - Lint clean. Run the project's linter as configured; fix findings rather than suppressing them. A suppression needs a comment saying why.
 - Report test and lint results as they are. "Tests pass" means you ran them and saw them pass in this environment.
@@ -43,4 +46,4 @@ What every code change carries with it, and what it never carries.
 - Go: standard library `testing` only, no assertion framework; `go test -race ./...`; golangci-lint v2 config in `flai/.golangci.yaml`.
 - The I/O abstraction for git and docker is `flai/internal/execx.Runner`. cobra and goccy/go-yaml are used directly as the CLI and serialization layers; they are the boundary, not behind it.
 - Fixture projects live under `internal/*/testdata/`; the round-trip test in `internal/workitem` and the render test in `cmd` run against this repository and the template and must stay green.
-- Smoke test for the standard is `scripts/template-test.sh`: render the template, run `flai check --strict` on the result. CI runs it in `system-flow-check.yml`.
+- Tiers here: `make test` runs `go test -race -short ./...` in `flai/` (behavior; tests that need real git or the monorepo skip under `-short`); `make integration` runs the full `go test -race ./...` including the git-clone and monorepo round-trip tests; `make smoke` runs `scripts/template-test.sh` (render the template, `flai check --strict` on the result). `flai/tests/integration/` and `tests/smoke/` are created when a test outgrows the Go layout; until then the tiers are selected by `-short` and by script. CI runs all three in `system-flow-check.yml`.

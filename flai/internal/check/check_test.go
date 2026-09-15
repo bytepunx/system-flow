@@ -87,6 +87,9 @@ func TestBadFixtureFindings(t *testing.T) {
 }
 
 func TestMonorepoIsClean(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: reads the monorepo")
+	}
 	repo, err := workitem.Open("../../..")
 	if err != nil {
 		t.Skip("monorepo not present")

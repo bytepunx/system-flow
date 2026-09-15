@@ -26,6 +26,7 @@ What the template ships so a conforming repo is pleasant to work in from the fir
 | Concern | Choice | Detail |
 |---------|--------|--------|
 | Go build and lint | `go build`, `golangci-lint` | Config in `flai/.golangci.yaml` |
+| Test tiers | `make test`, `make integration`, `make smoke` | Behavior tests beside the code (`-short`), integration tests need real git or the monorepo, smoke renders the template and checks the repo. See `design/conventions/code-quality.md`. |
 | Go release | GoReleaser | `flai/.goreleaser.yaml`, tags `flai/v*` produce GitHub release binaries for linux, darwin, windows |
 | Node package manager | pnpm | Lockfile committed, `corepack` pins the version |
 | Dashboard image | GitHub Actions, `docker/build-push-action` | Tags `flaiover/v*` and `main` push to GHCR with `latest` and semver tags |

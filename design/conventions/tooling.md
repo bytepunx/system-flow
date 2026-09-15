@@ -24,7 +24,7 @@ Use the project's tools for the project's data. The tools keep the standard true
 - When a tool is missing or the wrong version, say so and use a scratch install; do not silently fall back to hand edits or skip the step. Add or extend a script under `scripts/` so the operator can install it properly.
 - If a command is missing for something you do repeatedly, propose it as a story instead of scripting around it.
 - Put common tasks in `scripts/` as purpose-named shell scripts, so complex commands and command sequences have one name.
-- The `Makefile` is the entry point for building, linting, quality checks, dependency updates, tests, and environment management. Make targets call the scripts in `scripts/` rather than inlining commands.
+- The `Makefile` is the entry point for building, linting, quality checks, dependency updates, tests, and environment management. Make targets call the scripts in `scripts/` rather than inlining commands. The test targets are `test` (behavior), `integration`, and `smoke`, in that order of cost.
 - Scripts and Make targets work the same locally and in CI.
 - Local testing, previews, and validation run in Docker and Docker Compose; when a cluster is needed, use k3d via `bytepunx/kluster`.
 
@@ -36,6 +36,6 @@ Use the project's tools for the project's data. The tools keep the standard true
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- `make check`, `make flai`, `make flai-test`, `make flai-snapshot`, `make template-test`, and `make install-tools` call the scripts in `scripts/`.
+- `make check`, `make flai`, `make test`, `make integration`, `make smoke`, `make flai-test` (all tiers plus lint), `make flai-snapshot`, and `make install-tools` call the scripts in `scripts/`.
 - No cluster: flaiover runs as a single Docker container via `flai dashboard`; k3d and `bytepunx/kluster` are not used here.
 - The dashboard does not exist yet (E-003); until then `flai board` and `flai stats` are the views.

@@ -5,8 +5,8 @@ class: defect
 status: open
 count: 2
 cost: 15m
-first_reported: 2026-09-15T12:21:56Z
-last_reported: 2026-09-15T12:21:56Z
+first_reported: 2026-09-15T18:21:56Z
+last_reported: 2026-09-15T18:21:56Z
 updated: 2026-09-15T22:40:33Z
 ---
 
@@ -16,10 +16,10 @@ updated: 2026-09-15T22:40:33Z
 The working tree passed but a clone did not: a test fixture under `bin/` was excluded by the root `.gitignore`, and `wip/kanban/tasks` was empty after archiving so git dropped the folder and `flai check` failed on the clone.
 
 ## Instances
-### 2026-09-15T12:21:56Z
+### 2026-09-15T18:21:56Z
 S-010: GoReleaser dry run in a clone ran `go test` and failed on the missing fixture; renamed `bin/` to `tools/`.
 
-### 2026-09-15T12:21:56Z
+### 2026-09-15T18:21:56Z
 S-010: same run, `flai check` reported `kanban/tasks` missing; added `.gitkeep` files.
 
 ## Remediation

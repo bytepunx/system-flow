@@ -31,7 +31,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: flai/go.mod
-      - run: go test -race -count=1 ./...
+      - name: Behavior tests
+        run: go test -race -short -count=1 ./...
+      - name: Integration tests
+        run: go test -race -count=1 ./...
 
   build:
     runs-on: ubuntu-latest

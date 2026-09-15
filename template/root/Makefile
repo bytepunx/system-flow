@@ -1,7 +1,16 @@
-.PHONY: check board stats dashboard dashboard-stop lint-md
+.PHONY: check test integration smoke board stats dashboard dashboard-stop lint-md
 
 check: ## Validate the repo against the system-flow standard
 	scripts/check.sh
+
+test: ## Behavior tests, fast, run on every iteration
+	scripts/test.sh
+
+integration: ## Integration tests, after test passes
+	scripts/integration.sh
+
+smoke: ## Smoke tests, after integration passes
+	scripts/smoke.sh
 
 lint-md: ## Lint markdown
 	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**"

@@ -7,7 +7,10 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `env.sh` | Sourced by the others: puts Go, `~/go/bin`, and `./bin` on PATH, sets `FLAI_CONFIG` to `.flai-cache/config.json` |
 | `flai.sh` | Runs `bin/flai`, building it from `flai/` first if missing or stale |
 | `flai-build.sh` | Builds `bin/flai` from source |
-| `flai-test.sh` | Lints (golangci-lint v2) and race-tests `flai/` |
+| `test.sh` | Behavior tests: `go test -race -short` in `flai/`, seconds, no external dependencies |
+| `integration.sh` | Integration tests: full `go test -race` including real git and the monorepo round-trip |
+| `smoke.sh` | Smoke tests: render the template and check it, then check this repository |
+| `flai-test.sh` | gofmt, vet, golangci-lint v2, then all three tiers in order |
 | `flai-snapshot.sh` | GoReleaser snapshot build into `flai/dist` |
 | `check.sh` | `flai check --strict` on this repository |
 | `template-test.sh` | Renders `template/` into a temp dir and checks the result |

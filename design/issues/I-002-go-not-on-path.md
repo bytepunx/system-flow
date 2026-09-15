@@ -5,8 +5,8 @@ class: blocker
 status: open
 count: 1
 cost: 3m
-first_reported: 2026-09-15T12:00:57Z
-last_reported: 2026-09-15T12:00:57Z
+first_reported: 2026-09-15T18:00:57Z
+last_reported: 2026-09-15T18:00:57Z
 updated: 2026-09-15T22:40:33Z
 ---
 
@@ -16,7 +16,7 @@ updated: 2026-09-15T22:40:33Z
 `go` lives in `/usr/local/go/bin`, which is not on the PATH the agent shell inherits. Every Go command fails with "command not found" until PATH is prefixed by hand.
 
 ## Instances
-### 2026-09-15T12:00:57Z
+### 2026-09-15T18:00:57Z
 S-007: `go test` failed mid-story; found the binary, prefixed PATH on every subsequent call.
 
 ## Remediation

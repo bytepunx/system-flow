@@ -7,7 +7,7 @@ status: review
 parent: E-005
 owner: alex
 created: 2026-09-15T18:40:50Z
-updated: 2026-09-15T22:42:26Z
+updated: 2026-09-15T22:52:23Z
 transitions:
   - to: ready
     at: 2026-09-15T22:37:53Z
@@ -17,6 +17,12 @@ transitions:
     by: agent
   - to: review
     at: 2026-09-15T22:42:26Z
+    by: agent
+  - to: in-progress
+    at: 2026-09-15T22:49:30Z
+    by: alex
+  - to: review
+    at: 2026-09-15T22:52:23Z
     by: agent
 tags: [conventions]
 ---
@@ -39,8 +45,10 @@ Copy the template's design/conventions into this repository after the operator h
 - T-042 Copy conventions into design/conventions with project additions
 - T-043 Seed design/issues and add scripts/ with Makefile delegation
 - T-044 Align CLAUDE.md, layout docs, and current practice
+- T-045 Apply operator answers: test tiers, commit timing, kluster
 
 ## Notes
 - Operator edits to the template added a tenth topic (continuous improvement), design/issues (ADR-0014), and scripts/; all adopted here.
 - Six open questions recorded in the narrative for the operator.
 - Blocked until the operator has finished editing the template conventions; pull only when asked. If S-023 is done and the operator has not asked, skip to S-024.
+- 2026-09-15T22:49:30Z: moved to in-progress: operator answered open questions 1 to 3: no task-boundary commits, kluster is public, three test tiers with separate commands and folders

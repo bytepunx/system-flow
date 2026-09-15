@@ -22,9 +22,5 @@ jobs:
       - name: Build flai
         run: go build -o /usr/local/bin/flai .
         working-directory: flai
-      - name: Check standard conformance
-        run: flai check --strict
-      - name: Render and check the template prototype
-        run: |
-          flai new /tmp/sample --template ./template --defaults --no-git
-          flai check /tmp/sample --strict
+      - name: Smoke tests
+        run: scripts/smoke.sh

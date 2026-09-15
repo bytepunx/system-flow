@@ -17,7 +17,7 @@ How recurring friction, defects, blockers, and inefficiencies are recorded so th
 - Provide a high-level description with more detailed instances of the identified issue or impression
 - Increment the `count` in front matter each time the issue comes up, and keep `first_reported` and `last_reported` timestamps so frequency is visible
 - Where possible, record `cost` in front matter: the average wall-clock time one occurrence costs, as a duration like `20m`
-- Keep `summary.md` in the issues folder: a table of open issues with count, cost, and last occurrence. Update it with every occurrence.
+- Keep `summary.md` in the issues folder: a table of open issues with count, average cost, total cost, and last occurrence, most expensive first. Update it with every occurrence.
 - When a story moves to review, include the summary table in the report if it changed during the story. When an epic completes, present the table and ask the operator whether to spend time on remediation.
 
 ## When in doubt

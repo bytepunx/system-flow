@@ -169,6 +169,9 @@ func TestResolveLocalAndRemote(t *testing.T) {
 }
 
 func TestEnsureClonesWithGit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: needs real git")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}

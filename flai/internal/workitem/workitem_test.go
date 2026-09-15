@@ -53,6 +53,9 @@ func mustMove(t *testing.T, r *Repo, it *Item, to string, reason string) {
 }
 
 func TestRoundTripRepositoryItems(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: reads the monorepo")
+	}
 	// Every hand-written item in the monorepo must survive parse and marshal
 	// byte for byte, so flai edits never churn unrelated lines.
 	root := filepath.Join("..", "..", "..")

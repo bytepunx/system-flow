@@ -1,4 +1,4 @@
-.PHONY: check flai flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop help
+.PHONY: check flai test integration smoke flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -6,7 +6,16 @@ check: ## Validate this repo against the standard (flai check --strict)
 flai: ## Build bin/flai from source
 	scripts/flai-build.sh
 
-flai-test: ## gofmt, vet, golangci-lint v2, go test -race
+test: ## Behavior tests (fast, run on every iteration)
+	scripts/test.sh
+
+integration: ## Integration tests (real git, monorepo round-trip), after test
+	scripts/integration.sh
+
+smoke: ## Smoke tests (template render and check, repo check), after integration
+	scripts/smoke.sh
+
+flai-test: ## Lint plus all three test tiers in order
 	scripts/flai-test.sh
 
 flai-snapshot: ## GoReleaser snapshot build into flai/dist

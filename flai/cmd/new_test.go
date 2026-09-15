@@ -127,6 +127,9 @@ func TestTemplateCommands(t *testing.T) {
 // and checks the result is a valid conforming project. Skipped when the
 // prototype is not present (for example when flai is built standalone).
 func TestRenderPrototypeTemplate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: renders the monorepo template")
+	}
 	proto := filepath.Join("..", "..", "template")
 	if _, err := os.Stat(filepath.Join(proto, "template.yaml")); err != nil {
 		t.Skip("prototype template not present")
