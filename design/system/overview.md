@@ -38,9 +38,10 @@ flowchart LR
 
 | Order | Deliverable | Epic |
 |-------|-------------|------|
+| 0 | Agent conventions: a `conventions` folder of norms every agent primes with, shipped by the template | E-005 |
 | 1 | Standard and template prototype | E-001 |
 | 2 | flai CLI | E-002 |
 | 3 | flaiover dashboard and Docker image | E-003 |
 | 4 | User-facing documentation | E-004 |
 
-Work on 2 and 3 starts once the template decisions in E-001 are settled, which this document set represents.
+Work on 2 and 3 starts once the template decisions in E-001 are settled, which this document set represents. E-005 was added on 2026-09-15 and takes priority over the remaining stories in every other epic; its design lands in `conventions.md` in this folder and an ADR.

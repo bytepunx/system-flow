@@ -6,7 +6,11 @@ wip_limits:
   ready: 5
   in-progress: 2
   review: 3
-order:
+order:                      # pull order: ready stories first, then backlog stories in refinement order
+  - S-022
+  - S-023
+  - S-024
+  - S-025
   - S-003
 ---
 
