@@ -38,7 +38,7 @@ flowchart LR
 
 | Order | Deliverable | Epic |
 |-------|-------------|------|
-| 0 | Agent conventions: a `conventions` folder of norms every agent primes with, shipped by the template | E-005 |
+| 0 | Agent conventions: `design/conventions`, norms every agent primes with, shipped by the template | E-005 |
 | 1 | Standard and template prototype | E-001 |
 | 2 | flai CLI | E-002 |
 | 3 | flaiover dashboard and Docker image | E-003 |

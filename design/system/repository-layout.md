@@ -17,7 +17,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   ├── README.md
 │   ├── adrs/               # point-in-time architecture decisions
 │   ├── system/             # living design, always current
-│   └── tech/               # active technology choices with versions
+│   ├── tech/               # active technology choices with versions
+│   └── conventions/        # how agents work here, one file per topic, primed every session
 ├── docs/                   # outward-facing documentation, one subfolder per audience
 │   ├── README.md
 │   ├── users/
@@ -41,7 +42,9 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 
 ### `design/`
 
-Internal. Written for the people and agents building the system. Three subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
+Internal. Written for the people and agents building the system. Four subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
+
+`design/conventions/` is agent-facing: one short file per topic area stating how work is done in this repository, plus a `README.md` index in read order. The template ships the baseline; a project adds its own rules below the marker line in each file. Every agent session reads this folder first. See [conventions.md](conventions.md) and [ADR-0013](../adrs/0013-conventions-folder.md).
 
 ### `docs/`
 

@@ -12,6 +12,7 @@ Living documents describing system-flow as it currently is. Read them in this or
 |----------|----------------|
 | [overview.md](overview.md) | The four parts of system-flow and how they relate |
 | [documentation-standard.md](documentation-standard.md) | Front matter, naming, and editing rules for all markdown |
+| [conventions.md](conventions.md) | The `design/conventions/` folder: agent norms, topics, file format, precedence, priming |
 | [repository-layout.md](repository-layout.md) | The directory standard a conforming monorepo follows |
 | [work-hierarchy.md](work-hierarchy.md) | Epics, stories, tasks, natures, states, and the front matter schema |
 | [workflow.md](workflow.md) | How work moves through the board, WIP limits, and what an agent must do at each step |

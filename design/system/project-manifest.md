@@ -39,6 +39,6 @@ dashboard:
 Rules:
 
 - `flai` refuses to run project commands in a directory tree with no `system-flow.yaml` above the current directory, except `flai new` and `flai import`.
-- `layout` is the only place folder names live. Everything else resolves through it.
+- `layout` is the only place folder names live. Everything else resolves through it. Subfolders such as `design/conventions` are fixed names under their layout folder.
 - `template.version` lets `flai upgrade` (future) diff the applied template against a newer one.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`) and preserves comments where the YAML library allows it.

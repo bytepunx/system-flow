@@ -18,3 +18,4 @@ Copy `0000-template.md` to start a new one.
 | [0010](0010-shell-out-to-git-and-docker.md) | flai shells out to git and docker | accepted |
 | [0011](0011-project-manifest.md) | system-flow.yaml marks a project and owns folder names | accepted |
 | [0012](0012-flat-kanban-folders-and-archive.md) | Kanban items are flat per type, hierarchy by parent key, archive on completion | accepted |
+| [0013](0013-conventions-folder.md) | design/conventions holds agent norms, one file per topic | accepted |

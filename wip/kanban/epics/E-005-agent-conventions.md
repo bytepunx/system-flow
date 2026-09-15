@@ -14,7 +14,7 @@ tags: []
 # E-005 Agent conventions
 
 ## Outcome
-Every system-flow project ships a `conventions` folder: one markdown file per topic area that tells any agent how to work here, so the operator never starts a project by re-establishing standards, norms, and ways of working. The baseline set comes from the template, projects extend it below a marker, and the template's CLAUDE.md instructs the agent to prime each session with the conventions before touching anything. This repository adopts the same conventions. This epic takes priority over all other open work.
+Every system-flow project ships a `design/conventions` folder: one markdown file per topic area that tells any agent how to work here, so the operator never starts a project by re-establishing standards, norms, and ways of working. The baseline set comes from the template, projects extend it below a marker, and the template's CLAUDE.md instructs the agent to prime each session with the conventions before touching anything. This repository adopts the same conventions. This epic takes priority over all other open work.
 
 ## Stories
 - S-022 Define the conventions folder standard

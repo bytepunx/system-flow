@@ -18,7 +18,7 @@ tags: [conventions, cli]
 flai and the dashboard understand the conventions folder so it is validated, discoverable, and easy to load.
 
 ## Acceptance criteria
-- [ ] system-flow.yaml layout gains `conventions`; manifest.Load requires it; template.yaml layout and the prototype manifest include it
+- [ ] flai resolves the folder as `<layout.design>/conventions`; the template prototype ships it and `flai new` renders it
 - [ ] flai check validates conventions front matter and that README.md lists every convention file exactly once
 - [ ] `flai prime` prints the conventions in read order (paths by default, `--cat` for full content) so an agent or a hook can load them in one call
 - [ ] flai upgrade design (S-020) notes that convention files merge above their marker like CLAUDE.md

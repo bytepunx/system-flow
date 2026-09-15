@@ -22,7 +22,7 @@ status: active             # active | draft | deprecated
 ---
 ```
 
-`README.md` files are folder indexes and are exempt. ADRs and work items have their own richer schemas. See [work-hierarchy.md](work-hierarchy.md) and the ADR template in `design/adrs/0000-template.md`.
+`README.md` files are folder indexes and are exempt. ADRs, work items, and convention files have their own richer schemas; conventions add `audience: agent` and `order`, see [conventions.md](conventions.md). See [work-hierarchy.md](work-hierarchy.md) and the ADR template in `design/adrs/0000-template.md`.
 
 ## Naming
 
@@ -41,6 +41,7 @@ status: active             # active | draft | deprecated
 
 ## Editing rules for living documents
 
+- `design/conventions/` files are edited above the marker only through the template (and `flai upgrade`); a project edits below the marker. An agent that thinks a baseline rule is wrong proposes the change, it does not make it.
 - `design/system` and `design/tech` are edited in place. If a change reverses an earlier decision, write an ADR first, then update the living document and link the ADR.
 - `design/adrs` are never edited after acceptance except to set `superseded_by`.
 - `wip/kanban` items are edited by agents and by `flai`. Human edits are welcome but must keep front matter valid; `flai check` validates it.

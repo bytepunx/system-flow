@@ -26,7 +26,7 @@ Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. 
 │   ├── .markdownlint.yaml
 │   ├── Makefile
 │   ├── .github/workflows/system-flow-check.yml
-│   ├── design/ ...
+│   ├── design/ ...         # includes conventions/, the baseline agent norms, see conventions.md
 │   ├── docs/ ...
 │   └── wip/ ...
 ├── items/                 # rendered by flai at item creation time, not at project creation
@@ -101,7 +101,11 @@ Template functions: `initials`, `slug`, `upper`, `lower`, `quote` (YAML-safe dou
 
 ## The baseline CLAUDE.md
 
-The most important file in the template. It gives an agent, in one read, the repo layout, the work hierarchy, the narrative obligations, and the definition of done. It is deliberately short and links to `design/system` for detail. Projects append their own sections below a marker line; `flai upgrade` (future) replaces only the section above the marker.
+The entry point for an agent. It opens with a priming section that tells the agent to read `conventions/` in order, then the streams index, then the board, before any change (S-024). The rest is a map: the layout table and pointers to `design/system`. Norms themselves live in `design/conventions/`, not here. Projects append their own sections below a marker line; `flai upgrade` replaces only the section above the marker.
+
+## Conventions
+
+`root/design/conventions/` holds the baseline agent norms, one file per topic with a marker line for project additions, exactly as specified in [conventions.md](conventions.md). They are copied verbatim (no `.tmpl`) so they read the same in the template repository and in projects.
 
 ## Versioning
 

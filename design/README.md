@@ -7,6 +7,7 @@ Internal documentation for the system-flow monorepo. Nothing here is written for
 | `adrs/` | Architecture Decision Records. One decision, at one point in time, per file. | Immutable once accepted. Superseded by newer ADRs, never edited in place. |
 | `system/` | The living design of the system as it is right now. | Edited whenever a conversation resolves new details, direction, standards, or decisions. |
 | `tech/` | Every active technology choice: version, where it is used, and why. | Edited whenever a dependency is added, upgraded, or removed. |
+| `conventions/` | How agents work in this repository, one file per topic, read at the start of every session. | Baseline above the marker comes from the template; project rules below it are edited here. |
 
 Rules that apply to everything under `design/`:
 
