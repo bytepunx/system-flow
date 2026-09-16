@@ -29,4 +29,4 @@ How recurring friction, defects, blockers, and inefficiencies are recorded so th
 
 ## Project additions
 - Issues seeded on 2026-09-15 from the first sessions of this project; see `design/issues/summary.md`.
-- Until S-027 lands, maintain the issue files and the summary by hand, following `design/system/continuous-improvement.md`.
+- Record with `flai issue new`, `bump`, and `close`; never edit issue front matter or `summary.md` by hand. Instances and remediation text in the body are edited freely.

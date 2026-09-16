@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 )
 
 func newPrimeCmd(a *app) *cobra.Command {
@@ -46,12 +47,17 @@ content of each file with a header instead of the paths.`,
 			for rel, e := range errs {
 				a.logger().Warn("convention file unreadable", "component", "conventions", "path", rel, "err", e.Error())
 			}
+			list, _ := issues.List(repo)
+			table := issues.SummaryTable(list)
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"dir": relPath(repo.Root, set.Dir), "files": set.Files, "readme": set.README != ""})
+				return a.printJSON(map[string]any{"dir": relPath(repo.Root, set.Dir), "files": set.Files, "readme": set.README != "", "open_issues": len(strings.Split(strings.TrimSpace(table), "\n")) - 2})
 			}
 			if !cat {
 				for _, p := range paths {
 					fmt.Fprintln(a.out, relPath(repo.Root, p))
+				}
+				if table != "" {
+					fmt.Fprintln(a.out, relPath(repo.Root, filepath.Join(issues.Dir(repo), issues.SummaryFile)))
 				}
 				return nil
 			}
@@ -66,6 +72,9 @@ content of each file with a header instead of the paths.`,
 				rel := relPath(repo.Root, p)
 				fmt.Fprintf(a.out, "%s\n%s\n\n", rel, strings.Repeat("=", len(rel)))
 				fmt.Fprint(a.out, string(data))
+			}
+			if table != "" {
+				fmt.Fprintf(a.out, "\nopen issues\n===========\n\n%s", table)
 			}
 			return nil
 		},

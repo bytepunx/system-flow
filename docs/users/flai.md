@@ -216,3 +216,15 @@ flai prime --json
 ```
 
 Agents read these before any change; a shell hook or a wrapper can pipe `flai prime --cat` into the session. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once.
+
+## Record recurring friction
+
+```bash
+flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
+flai issue bump I-001 --cost 8m --note "reinstalled again in S-008"
+flai issue close I-001 --reason "scripts/install-tools.sh pins v2"
+flai issue list [--all]
+flai issue summary
+```
+
+Issues live in `design/issues/`, one file per recurring problem with a class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, and one dated instance per occurrence. `bump` increments the count, updates the average, and appends the instance. Every command regenerates `summary.md`, the table of open issues most expensive first, and `flai prime` lists it after the conventions when anything is open. `flai check` validates the files and warns when the summary is stale.

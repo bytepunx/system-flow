@@ -16,6 +16,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -68,6 +69,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.board()
 	c.documentation()
 	c.conventions()
+	c.issues()
 	sort.SliceStable(c.res.Findings, func(i, j int) bool {
 		a, b := c.res.Findings[i], c.res.Findings[j]
 		if a.Path != b.Path {
@@ -385,8 +387,8 @@ func (c *checker) documentation() {
 				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
 			}
 			if d.IsDir() {
-				if d.Name() == conventions.Folder && filepath.Dir(path) == root {
-					return filepath.SkipDir // validated by the conventions rules
+				if (d.Name() == conventions.Folder || d.Name() == issues.Folder) && filepath.Dir(path) == root {
+					return filepath.SkipDir // validated by their own rules
 				}
 				return nil
 			}
@@ -476,5 +478,48 @@ func (c *checker) conventions() {
 			}
 		}
 		c.add(f.Level, f.Rule, path, line, "%s", f.Message)
+	}
+}
+
+func (c *checker) issues() {
+	dir := issues.Dir(c.repo)
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+		return // optional until the first issue is recorded
+	}
+	list, err := issues.List(c.repo)
+	if err != nil {
+		c.add(Error, "issues.front-matter", dir, 1, "%v", err)
+		return
+	}
+	seen := map[string]string{}
+	for _, is := range list {
+		if err := is.Validate(); err != nil {
+			c.add(Error, "issues.front-matter", is.Path, keyLine(is.Path, "id"), "%v", err)
+		}
+		if prev, dup := seen[is.ID]; dup {
+			c.add(Error, "issues.duplicate-id", is.Path, keyLine(is.Path, "id"), "%s is also defined in %s", is.ID, prev)
+		}
+		seen[is.ID] = is.Path
+		if base := filepath.Base(is.Path); !strings.HasPrefix(base, is.ID+"-") {
+			c.add(Error, "issues.filename", is.Path, 1, "file name should start with %s-", is.ID)
+		}
+	}
+	summaryPath := filepath.Join(dir, issues.SummaryFile)
+	data, err := os.ReadFile(summaryPath)
+	if err != nil {
+		if len(list) > 0 {
+			c.add(Warning, "issues.summary", dir, 1, "summary.md is missing; run flai issue summary")
+		}
+		return
+	}
+	text := string(data)
+	for _, is := range list {
+		linked := strings.Contains(text, "["+is.ID+"]")
+		switch {
+		case is.Status == "open" && !linked:
+			c.add(Warning, "issues.summary", summaryPath, 1, "open issue %s is not in summary.md; run flai issue summary", is.ID)
+		case is.Status != "open" && linked:
+			c.add(Warning, "issues.summary", summaryPath, 1, "closed issue %s is still in summary.md; run flai issue summary", is.ID)
+		}
 	}
 }
