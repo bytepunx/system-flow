@@ -59,7 +59,7 @@ cancelling or sending review back needs --reason. WIP limit breaches warn.`,
 				return err
 			}
 			for _, w := range warnings {
-				fmt.Fprintf(a.errOut, "flai: warning: %s\n", w)
+				a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings})

@@ -87,7 +87,7 @@ func newBoardCmd(a *app) *cobra.Command {
 				fmt.Fprintf(a.out, "\npull order: %v\n", board.Order)
 			}
 			for _, b := range breaches {
-				fmt.Fprintf(a.errOut, "flai: warning: %s\n", b)
+				a.logger().Warn("wip limit exceeded", "component", "workitem", "detail", b)
 			}
 			return nil
 		},

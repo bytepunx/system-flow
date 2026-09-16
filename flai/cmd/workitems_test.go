@@ -30,7 +30,7 @@ func runInAt(t *testing.T, dir string, at time.Time, args ...string) (string, st
 		if errors.As(err, &ee) {
 			code = ee.code
 		} else {
-			errOut.WriteString("flai: " + err.Error() + "\n")
+			a.fail(err)
 			code = 1
 		}
 	}

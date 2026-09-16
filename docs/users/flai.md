@@ -29,6 +29,22 @@ flai version
 | `--config <path>` | Use this config file. Falls back to `$FLAI_CONFIG`, then `~/.flai/config.json`. |
 | `--json` | Structured output for scripts and agents. |
 | `--yes`, `-y` | Answer yes to confirmations. |
+| `--verbose`, `-v` | Debug-level log events on stderr. |
+
+## Logging
+
+Command output goes to stdout. Everything else is a structured log event on stderr, one per line, with `ts`, `level`, `component`, `msg`, and named fields. On a terminal events are key-value text; when stderr is redirected they are JSON. Levels are `DEBUG`, `INFO`, `WARN`, `ERROR`, and `FATAL`; a failed command logs one `FATAL` event with an `err` field and exits non-zero.
+
+| Control | Effect |
+|---------|--------|
+| `--verbose` | Debug level, overrides `LOG_LEVEL` |
+| `LOG_LEVEL` | `debug`, `info` (default), `warn`, `error`, `fatal` |
+| `LOG_FORMAT` | `text` or `json`; default text on a terminal, json otherwise |
+
+```bash
+flai board 2>/dev/null                 # output only
+LOG_FORMAT=json flai check 2>events.jsonl
+```
 
 ## Configuration
 

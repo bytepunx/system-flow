@@ -44,7 +44,7 @@ content of each file with a header instead of the paths.`,
 				paths = append(paths, filepath.Join(repo.Root, f.Path))
 			}
 			for rel, e := range errs {
-				fmt.Fprintf(a.errOut, "flai: warning: %s: %v\n", rel, e)
+				a.logger().Warn("convention file unreadable", "component", "conventions", "path", rel, "err", e.Error())
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"dir": relPath(repo.Root, set.Dir), "files": set.Files, "readme": set.README != ""})

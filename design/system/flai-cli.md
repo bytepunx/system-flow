@@ -55,7 +55,7 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 | `flai config get [key]`, `flai config set <key> <value>`, `flai config path` | Read and edit `~/.flai/config.json` by dotted key; `path` prints the resolved file without creating it. |
 | `flai version` | Version, commit, build date. |
 
-Global flags: `--config <path>`, `--json` where output is structured, and `--yes` to skip confirmations, so agents can drive it. The first command that needs the config creates it with defaults and says so on stderr.
+Global flags: `--config <path>`, `--json` where output is structured, `--yes` to skip confirmations, and `--verbose` for debug log events, so agents can drive it. stdout is command output; stderr carries structured log events per `design/conventions/logging.md` (`log/slog`, text on a terminal, JSON otherwise, `LOG_LEVEL` and `LOG_FORMAT`), and a failing command logs exactly one fatal event at the boundary.
 
 ## Import flow
 
@@ -82,6 +82,7 @@ flai/
 │   ├── template/        # clone, cache, render
 │   ├── workitem/        # parse, validate, transition, ID allocation, board, narratives, archive
 │   ├── execx/           # git and docker behind a Runner interface
+│   ├── logx/            # slog setup per the logging convention: levels incl. fatal, env and flag
 │   ├── narrative/       # wip/agents files
 │   ├── check/           # reference validator, rule names are stable identifiers
 │   ├── conventions/     # loads and validates design/conventions

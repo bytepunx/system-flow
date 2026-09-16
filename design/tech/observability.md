@@ -10,7 +10,7 @@ What the logging and telemetry conventions imply for each sub-project. Decided p
 
 | Sub-project | Logging | Telemetry | Story |
 |-------------|---------|-----------|-------|
-| flai | Go standard library `log/slog` (Go 1.21+): text handler on a terminal, JSON handler otherwise, to stderr. No third-party logger. | None by default; an optional root span via the OpenTelemetry Go SDK only when `OTEL_*` is set, decided in the story. | S-031 |
+| flai | Go standard library `log/slog`: text handler on a terminal, JSON handler otherwise, to stderr; custom fatal level above error; keys renamed to `ts`, `level`, `msg`. Implemented in `flai/internal/logx` (S-031). | None by default; an optional root span via the OpenTelemetry Go SDK only when `OTEL_*` is set, decided in the story. | S-031 |
 | flaiover | `pino` (JSON lines to stdout, child loggers per component, request logging via `pino-http` or an equivalent hook in SvelteKit). | `@opentelemetry/sdk-node` with the OTLP exporter for traces; `prom-client` for `/metrics`; health endpoints are plain routes. Versions pinned when S-032 lands. | S-032 |
 | template | Ships the conventions only; no library. | Compose stack for local testing gains an OpenTelemetry collector and a viewer when the first service needs one. | S-032 |
 

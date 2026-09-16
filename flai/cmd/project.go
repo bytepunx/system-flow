@@ -34,6 +34,7 @@ func (a *app) project() (*workitem.Repo, error) {
 			repo.TemplateDir = src.Dir
 		}
 	}
+	a.logger().Debug("project opened", "component", "workitem", "root", repo.Root, "template_dir", repo.TemplateDir)
 	return repo, nil
 }
 

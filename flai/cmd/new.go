@@ -148,13 +148,7 @@ func (a *app) resolveTemplate(repo, ref string, refresh bool) (template.Source, 
 		return template.Source{}, template.Manifest{}, err
 	}
 	if !src.Cached() || refresh {
-		if !a.jsonOut {
-			fmt.Fprintf(a.errOut, "flai: fetching template %s", src.Repo)
-			if src.Ref != "" {
-				fmt.Fprintf(a.errOut, " @ %s", src.Ref)
-			}
-			fmt.Fprintln(a.errOut)
-		}
+		a.logger().Info("fetching template", "component", "template", "repo", src.Repo, "ref", src.Ref)
 	}
 	if err := src.Ensure(a.runner, refresh); err != nil {
 		return template.Source{}, template.Manifest{}, err
