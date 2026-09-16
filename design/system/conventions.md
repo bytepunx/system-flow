@@ -104,7 +104,7 @@ A conflict between 1 and 2 or 3 is logged in the narrative's Decisions and, if i
 
 ## Priming
 
-The template's `CLAUDE.md` opens with a priming section (S-024): read `design/conventions/README.md` and every file it lists in order, then `wip/agents/index.md`, then the board, before any change. `flai prime` (S-025) prints the same set in read order, with `--cat` for full content, so a hook or a script can load it in one call.
+The template's `CLAUDE.md` opens with a priming section: read `design/conventions/README.md` and every file it lists in order, then `wip/agents/index.md`, then the board, before any change. It also states the precedence order and what to do when a convention conflicts with an instruction or seems wrong. Norms are not repeated in `CLAUDE.md`; it points at the convention files. `flai prime` (S-025) prints the same set in read order, with `--cat` for full content, so a hook or a script can load it in one call.
 
 ## Tooling
 
@@ -119,4 +119,4 @@ The template's `CLAUDE.md` opens with a priming section (S-024): read `design/co
 
 ## Status
 
-Decided in S-022 (this document and ADR-0013). The operator confirmed the topic list, then edited the baseline in the template after S-023 and added a tenth topic, continuous improvement, which brought `design/issues` (ADR-0014) and `scripts/` into the standard. S-026 copied the files into this repository with project additions. The priming section is S-024, the tooling S-025 and S-027.
+Decided in S-022 (this document and ADR-0013). The operator confirmed the topic list, then edited the baseline in the template after S-023 and added a tenth topic, continuous improvement, which brought `design/issues` (ADR-0014) and `scripts/` into the standard. S-026 copied the files into this repository with project additions. S-024 gave `CLAUDE.md` its priming section and shrank it to a map. The tooling is S-025 and S-027.

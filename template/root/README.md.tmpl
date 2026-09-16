@@ -1,7 +1,7 @@
 # {{ .project_name }}
-
+{{ if .description }}
 {{ .description }}
-
+{{ end }}
 This repository follows the [system-flow](https://github.com/bytepunx/system-flow) standard.
 
 | Where | What |
@@ -11,4 +11,4 @@ This repository follows the [system-flow](https://github.com/bytepunx/system-flo
 | [`{{ .layout.wip }}/`]({{ .layout.wip }}/README.md) | Work in process: board, items, agent narratives |
 | `CLAUDE.md` | How agents work in this repo |
 
-Dashboard: `flai dashboard` then open http://localhost:4242.
+Dashboard: `flai dashboard` then open <http://localhost:4242>.
