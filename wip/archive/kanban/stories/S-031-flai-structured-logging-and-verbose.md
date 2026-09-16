@@ -3,11 +3,11 @@ id: S-031
 type: story
 nature: feature
 title: flai structured logging and --verbose
-status: review
+status: done
 parent: E-002
 owner: alex
 created: 2026-09-16T23:24:18Z
-updated: 2026-09-16T23:48:50Z
+updated: 2026-09-16T23:51:18Z
 transitions:
   - to: ready
     at: 2026-09-16T23:45:51Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-16T23:48:50Z
     by: agent
+  - to: done
+    at: 2026-09-16T23:51:18Z
+    by: alex
 tags: [cli, logging]
 ---
 
