@@ -3,11 +3,11 @@ id: S-010
 type: story
 nature: feature
 title: Release pipeline for flai
-status: review
+status: done
 parent: E-002
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-16T04:32:52Z
+updated: 2026-09-16T15:53:39Z
 transitions:
   - to: ready
     at: 2026-09-15T18:11:50Z
@@ -30,6 +30,9 @@ transitions:
   - to: review
     at: 2026-09-16T04:32:52Z
     by: agent
+  - to: done
+    at: 2026-09-16T15:53:39Z
+    by: alex
 tags: []
 ---
 
@@ -40,7 +43,7 @@ Tagged releases publish binaries for linux, darwin, and windows.
 
 ## Acceptance criteria
 - [x] GoReleaser config builds all targets
-- [ ] Tag flai/v0.1.0 produces a GitHub release (needs the repo pushed to GitHub and the tag pushed, a human step)
+- [x] Tag flai/v0.1.0 produces a GitHub release (release run 35118085427 published flai v0.1.0 with six archives and checksums on 2026-09-16)
 - [x] README documents install via go install and release download
 
 ## Tasks
