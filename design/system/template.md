@@ -12,7 +12,7 @@ Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. 
 
 ## Structure
 
-```
+```text
 <template repo>/
 ├── README.md              # about the template itself, not copied
 ├── template.yaml          # manifest: version, variables, prompts, layout, file rules
@@ -87,7 +87,7 @@ Available in every rendered file in addition to the manifest variables.
 | `.today` | `YYYY-MM-DD` UTC at render time |
 | `.now` | `YYYY-MM-DDTHH:MM:SSZ` UTC at render time |
 | `.template.repo`, `.template.ref`, `.template.version` | Template source being applied |
-| `.id`, `.title`, `.nature`, `.parent`, `.owner`, `.agent`, `.session` | Item templates only, supplied by `flai epic|story|task new` and `flai stream open`. Use `{{ .title | quote }}` in YAML. |
+| `.id`, `.title`, `.nature`, `.parent`, `.owner`, `.agent`, `.session` | Item templates only, supplied by `flai epic new`, `flai story new`, `flai task new`, and `flai stream open`. Pipe `.title` through `quote` in YAML. |
 
 Template functions: `initials`, `slug`, `upper`, `lower`, `quote` (YAML-safe double-quoted scalar, use it for every free-text value in YAML files). For a local template source, `.template.repo` is the absolute directory so the manifest stays meaningful from any working directory.
 

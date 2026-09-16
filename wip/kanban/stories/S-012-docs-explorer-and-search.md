@@ -24,5 +24,4 @@ Tree navigation, rendered markdown with Mermaid and code highlighting, front mat
 
 ## Tasks
 
-
 ## Notes

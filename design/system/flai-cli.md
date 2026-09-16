@@ -71,7 +71,7 @@ Global flags: `--config <path>`, `--json` where output is structured, and `--yes
 
 ## Internal structure
 
-```
+```text
 flai/
 ├── main.go
 ├── cmd/                 # one file per cobra command

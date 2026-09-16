@@ -16,6 +16,7 @@ updated: 2026-09-15T22:40:33Z
 The repository lints with golangci-lint v2 (`flai/.golangci.yaml`, `version: "2"`). The host has v1.64 in `~/go/bin`, which cannot read the config. Every session that lints has to install v2 into a scratch location first, and the scratch copy disappears between sessions.
 
 ## Instances
+
 ### 2026-09-15T16:31:32Z
 S-004: discovered when the first lint run failed on the config; installed v2.5.0 into the session scratchpad.
 

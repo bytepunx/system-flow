@@ -24,5 +24,4 @@ Cycle time scatter, burn-up, cumulative flow, time in state, throughput, aging W
 
 ## Tasks
 
-
 ## Notes

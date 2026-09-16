@@ -25,5 +25,4 @@ flai import analyses an existing repo, proposes the layout, prompts for folder n
 
 ## Tasks
 
-
 ## Notes

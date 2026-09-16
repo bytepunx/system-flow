@@ -16,7 +16,7 @@ Where documents live, what every file carries, how it is written, and how it sta
 - Put each document where its audience looks: `design/system` for how the system is, `design/adrs` for why, `design/tech` for what it is built with, `design/conventions` for how we work, `docs/<audience>` for outward-facing guides, `wip/` for work state.
 - Prefer editing the living document over adding a new one. A new file needs a reason a reader would agree with.
 - Front matter minimum for design and docs files: `title`, `updated` (ISO date, bumped on every meaningful edit), `status`. `README.md` files are indexes and are exempt.
-- Titles containing `: ` or starting with a YAML-special character are double-quoted.
+- Titles containing a colon followed by a space, or starting with a YAML-special character, are double-quoted.
 - Dates are ISO 8601 UTC. Timestamps are `YYYY-MM-DDTHH:MM:SSZ` and are real: never write a time you did not observe.
 - Files and folders are lowercase kebab-case. Work items are `<ID>-<slug>.md`. ADRs are `NNNN-slug.md`.
 - Links between documents are relative paths so they work in git hosting and in the dashboard. Do not link to line numbers.

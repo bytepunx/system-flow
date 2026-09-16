@@ -10,7 +10,7 @@ status: active
 
 ## Layout
 
-```
+```text
 design/issues/
 ├── README.md              # what the folder is
 ├── summary.md             # generated table of open issues

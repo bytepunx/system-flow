@@ -22,7 +22,7 @@ A convention states a rule. If the rule needs a rationale longer than a sentence
 
 ## Folder layout
 
-```
+```text
 design/conventions/
 ├── README.md            # index in read order, one line per file
 ├── session-start.md     # order 10

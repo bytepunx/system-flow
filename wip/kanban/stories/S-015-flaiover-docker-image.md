@@ -24,5 +24,4 @@ Multi-stage Dockerfile and a workflow that publishes to ghcr.io/bytepunx/flaiove
 
 ## Tasks
 
-
 ## Notes

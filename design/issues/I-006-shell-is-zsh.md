@@ -16,6 +16,7 @@ updated: 2026-09-15T22:40:33Z
 The environment shell is zsh. `${var^}` is unsupported and unquoted `$VAR` in `for` loops does not word-split, so a loop over task IDs ran once with all IDs as one argument and the rest of the command chain was skipped.
 
 ## Instances
+
 ### 2026-09-15T18:00:57Z
 S-001 bootstrap: `${a^}` broke a heredoc loop; three docs index files were rewritten.
 

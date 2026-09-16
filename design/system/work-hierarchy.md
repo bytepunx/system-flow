@@ -104,7 +104,7 @@ stream: S-004                    # tasks only: the narrative file in wip/agents 
 Rules:
 
 - `created`, `updated`, and every `at` are UTC ISO 8601 timestamps.
-- Titles and other free text that contain `: ` or start with a YAML-special character are double-quoted. `flai` writes them that way; hand edits must too.
+- Titles and other free text that contain a colon followed by a space, or start with a YAML-special character, are double-quoted. `flai` writes them that way; hand edits must too.
 - `transitions` is the source of truth for state. `status` must equal the `to` of the last transition; `flai check` enforces this. Creation implies `backlog` and is not recorded as a transition.
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the `done` or `cancelled` transition. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.

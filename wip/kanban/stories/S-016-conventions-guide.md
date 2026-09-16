@@ -22,5 +22,4 @@ docs/users explains the layout, hierarchy, workflow, and narrative in user terms
 
 ## Tasks
 
-
 ## Notes

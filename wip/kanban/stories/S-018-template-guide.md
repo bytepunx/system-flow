@@ -22,5 +22,4 @@ docs/contributors explains how to fork, edit, and version the template.
 
 ## Tasks
 
-
 ## Notes

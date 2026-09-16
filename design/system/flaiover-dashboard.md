@@ -58,7 +58,7 @@ Server builds a MiniSearch index over title, tags, ID, headings, and body text o
 
 ## Internal structure
 
-```
+```text
 flaiover/
 ├── src/
 │   ├── lib/

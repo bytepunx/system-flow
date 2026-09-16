@@ -22,5 +22,4 @@ docs/users/flai.md documents every command, flag, and the config file.
 
 ## Tasks
 
-
 ## Notes

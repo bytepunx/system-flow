@@ -16,6 +16,7 @@ updated: 2026-09-15T22:42:51Z
 The agent moves stories to review as they finish; the operator accepts them in batches. With a review limit of 3, the fourth finished story breaches the limit and `flai check --strict` fails, which blocks the commit-at-landing rule until someone accepts.
 
 ## Instances
+
 ### 2026-09-15T22:42:51Z
 S-026 reached review while S-010, S-022, and S-023 were still awaiting acceptance. Committed with the warning logged.
 

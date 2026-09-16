@@ -6,6 +6,8 @@ status: active
 
 # Original brief
 
+<!-- markdownlint-disable MD029 -->
+
 The brief that started system-flow, moved verbatim from the root CLAUDE.md on 2026-09-15. It is the source for the epics in `wip/kanban/epics`. Where the living design and this brief disagree, the living design wins and the difference is recorded in an ADR.
 
 I want your assistance designing an agentic lean project management system. I would like for system design to use a hierarchy system that represents how work is specified through to delivery. I would like all written documentation to be expressed in markdown. All internal documentation in a mono-repo belongs under "design" with subfolders based on documentation type and all outward facing (user/operator/etc) belongs in a "docs" folder with subfolders per audience.

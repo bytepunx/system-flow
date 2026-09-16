@@ -1,6 +1,13 @@
+# Aligned with design/system/documentation-standard.md and the work item format.
 default: true
-MD013: false          # line length
+MD013: false                 # line length: prose is wrapped by the editor, not by hand
+MD022:
+  lines_below: 0             # item bodies put text directly under "## Goal" style headings
 MD024:
-  siblings_only: true # duplicate headings allowed in different sections (log entries)
-MD033: false          # inline html, used for the baseline marker and mermaid
-MD041: false          # first line heading, front matter comes first
+  siblings_only: true        # log entries repeat headings in different sections
+MD025:
+  front_matter_title: ""     # front matter title is metadata, not a heading
+MD032: false                 # lists sit directly under headings in item bodies
+MD033: false                 # inline html: baseline marker, mermaid
+MD041: false                 # first line is front matter
+MD060: false                 # table pipe spacing: tables are hand written and generated

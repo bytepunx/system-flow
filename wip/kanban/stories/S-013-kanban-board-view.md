@@ -24,5 +24,4 @@ Board with columns from board.md, cards with age and blocked flag, item detail p
 
 ## Tasks
 
-
 ## Notes

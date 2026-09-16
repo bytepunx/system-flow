@@ -10,7 +10,7 @@ status: active
 
 ## Files
 
-```
+```text
 wip/agents/
 ├── README.md        # this convention in brief, shipped by the template
 ├── index.md         # table of active streams, maintained by flai and agents

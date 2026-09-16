@@ -8,7 +8,7 @@ status: active
 
 A conforming monorepo has this shape. Folder names are defaults; a project may rename the three top-level documentation folders and records the chosen names in [system-flow.yaml](project-manifest.md). Tooling always resolves folders through the manifest, never by hard-coded name.
 
-```
+```text
 <repo>/
 ├── CLAUDE.md               # agent operating instructions, baseline from the template
 ├── README.md               # human entry point

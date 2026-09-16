@@ -25,5 +25,4 @@ SvelteKit 2, Svelte 5, Tailwind 4, adapter-node, ssr off, with /api endpoints th
 
 ## Tasks
 
-
 ## Notes

@@ -21,7 +21,8 @@ How history is made in this repository.
 - Verify the ignore rules do not hide files that must be committed. A fresh clone must build and pass `flai check --strict`.
 - Branch names are `<type>-<story-id>-<slug>` for story work. Work on the default branch only when the operator says so.
 - Pull requests follow `.github/pull_request_template.md`: the story ID and the definition of done, honestly ticked.
-- Tags are the release mechanism and package valuable increments. When an epic completes, tag a minor or major semver release; when a story completes that is valuable on its own, tag a patch. Every release gets a changelog entry, written by the release tooling where it exists and by hand in `CHANGELOG.md` otherwise. Creating a tag is fine; pushing it needs the operator's confirmation.
+- Tags are the release mechanism and follow semver by delivery type: an epic completing is a major release; a `feature` story completing is a minor release; a `remediation` or `improvement` story, or a documentation-only change, is a patch release. `research` and `experiment` stories do not release. Every release gets a changelog entry, written by the release tooling where it exists and by hand in `CHANGELOG.md` otherwise. Creating a tag is fine; pushing it needs the operator's confirmation.
+- Create remote repositories with the `gh` CLI when it is installed and authenticated. Ask the operator for the organization and whether the repository is public or private before creating it; never create a remote unasked. Without `gh`, give the operator the exact commands instead.
 - Before committing, run `git status` and `git diff --stat` and read them. Unrelated changes are split out or explained.
 - Attribution lines the operator or tooling requires go at the end of every commit message and pull request body, unchanged.
 
