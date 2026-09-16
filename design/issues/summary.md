@@ -1,6 +1,6 @@
 ---
 title: Open issues
-updated: 2026-09-15T22:42:51Z
+updated: 2026-09-16T04:30:44Z
 status: active
 ---
 
@@ -17,3 +17,4 @@ Most expensive first. Total is count times average cost.
 | [I-007](I-007-review-queue-exceeds-limit.md) | efficiency | Review column exceeds its WIP limit while acceptance is batched | 1 | 5m | 5m | 2026-09-15T22:42:51Z |
 | [I-002](I-002-go-not-on-path.md) | blocker | Go toolchain is not on PATH in the agent shell | 1 | 3m | 3m | 2026-09-15T18:00:57Z |
 | [I-005](I-005-operator-docs-incomplete.md) | impression | Operator documentation has no runbooks or settings index | 1 | - | - | 2026-09-15T22:40:33Z |
+| [I-008](I-008-flai-workflow-skipped-on-initial-push.md) | impression | Path-filtered flai workflow did not run on the initial push to main | 1 | - | - | 2026-09-16T04:30:44Z |
