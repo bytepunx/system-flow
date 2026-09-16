@@ -19,7 +19,7 @@ Acceptance is the release trigger without an agent remembering: `flai release` r
 
 ## Acceptance criteria
 - [ ] `flai release <id>` computes the bump from the item: epic done major; feature story minor; remediation, improvement, docs-only, or dependency update patch; research and experiment refuse with an explanation
-- [ ] Sub-project scope comes from `system-flow.yaml` projects and the files the story's commits touched; one tag per touched sub-project with its prefix; nothing touched means no tag and a clear message
+- [ ] Scope comes from `system-flow.yaml` projects and the files the story's commits touched: the component the story delivers to (from the epic or the story tags) gets the delivery-type bump, every other touched component gets a patch; nothing touched means no tag and a clear message
 - [ ] The tag is annotated with the item ID and title, created on the acceptance commit, and pushed; `--dry-run` prints what would happen
 - [ ] `flai move <id> done` calls release unless `--no-release`; the template changelog gets an entry when the template is bumped
 - [ ] Pre-release suffixes for research builds are designed as a follow-up note, not implemented

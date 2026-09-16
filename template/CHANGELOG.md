@@ -2,6 +2,8 @@
 
 ## 0.3.0 - 2026-09-16
 
+Note: under the refined release rule (incidental additive touches are a patch) this would have been 0.2.1; the version stands as cut.
+
 - `design/conventions/logging.md` and `telemetry.md` added as drafts, indexed at 110 and 120 (S-025).
 - Markdownlint excludes test fixtures and `bin/`.
 
