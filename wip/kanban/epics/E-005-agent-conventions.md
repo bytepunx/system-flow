@@ -6,7 +6,7 @@ title: Agent conventions
 status: backlog
 owner: alex
 created: 2026-09-15T18:26:31Z
-updated: 2026-09-15T22:37:54Z
+updated: 2026-09-16T23:18:16Z
 transitions: []
 tags: []
 ---
@@ -23,9 +23,13 @@ Every system-flow project ships a `design/conventions` folder: one markdown file
 - S-025 Tooling support for conventions
 - S-026 Adopt the conventions in this repository
 - S-027 flai issue commands and check rules for design/issues
+- S-030 Logging and telemetry conventions
 - S-026 Adopt the conventions in this repository
 - S-027 flai issue commands and check rules for design/issues
+- S-030 Logging and telemetry conventions
 - S-027 flai issue commands and check rules for design/issues
+- S-030 Logging and telemetry conventions
+- S-030 Logging and telemetry conventions
 
 ## Notes
 Requested 2026-09-15. Supersedes the previous pull order: S-022 to S-025 come first. S-010 stays in review awaiting the human's tag push.
