@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-09-16
+
+- `design/conventions/logging.md` and `telemetry.md` added as drafts, indexed at 110 and 120 (S-025).
+- Markdownlint excludes test fixtures and `bin/`.
+
 ## 0.2.0 - 2026-09-16
 
 - `design/conventions/`: ten baseline agent norms with a project-additions marker (S-023, S-026).

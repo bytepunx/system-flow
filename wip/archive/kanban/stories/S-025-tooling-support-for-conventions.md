@@ -3,11 +3,11 @@ id: S-025
 type: story
 nature: feature
 title: Tooling support for conventions
-status: review
+status: done
 parent: E-005
 owner: alex
 created: 2026-09-15T18:26:32Z
-updated: 2026-09-16T23:07:56Z
+updated: 2026-09-16T23:14:35Z
 transitions:
   - to: ready
     at: 2026-09-16T23:03:59Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-16T23:07:56Z
     by: agent
+  - to: done
+    at: 2026-09-16T23:14:35Z
+    by: alex
 tags: [conventions, cli]
 ---
 
