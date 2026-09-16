@@ -21,7 +21,8 @@ jobs:
           go-version-file: flai/go.mod
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.5
+          version: v2.5.0
+          install-mode: goinstall   # build with the workflow's Go; prebuilt binaries lag flai/go.mod
           working-directory: flai
 
   test:
