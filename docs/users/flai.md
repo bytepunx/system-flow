@@ -190,3 +190,13 @@ flai stats --json                   # per-item values, weekly throughput, burn-u
 ```
 
 The table shows completed and cancelled counts, throughput per week, current WIP, cycle, lead, and queue time distributions (p50, p85, max, mean), flow efficiency, time-in-state share, aging work against the cycle time p85, and throughput by week. Definitions are in [design/system/metrics.md](../../design/system/metrics.md); the dashboard uses the same numbers.
+
+## Prime a session
+
+```bash
+flai prime          # paths of design/conventions in read order, README first
+flai prime --cat    # the same files' contents, each under a header
+flai prime --json
+```
+
+Agents read these before any change; a shell hook or a wrapper can pipe `flai prime --cat` into the session. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once.

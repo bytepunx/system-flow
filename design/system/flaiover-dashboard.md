@@ -34,7 +34,8 @@ flowchart LR
 | `/charts/time-in-state` | Stacked bars and aggregate share | `/api/stats/time-in-state` |
 | `/charts/throughput` | Weekly bars by nature | `/api/stats/throughput` |
 | `/charts/aging` | Aging WIP | `/api/stats/aging` |
-| `/docs` | Documentation explorer: tree of `design/`, `docs/`, and `wip/` with rendered markdown, Mermaid, and front matter panel | `/api/docs/tree`, `/api/docs/file` |
+| `/docs` | Documentation explorer: tree of `design/` (including `conventions/` and `issues/`), `docs/`, and `wip/` with rendered markdown, Mermaid, and front matter panel | `/api/docs/tree`, `/api/docs/file` |
+| `/conventions` | The conventions in read order with project additions highlighted; the same set `flai prime` prints | `/api/conventions` |
 | `/adrs` | ADR list with status and supersession chain | `/api/docs/adrs` |
 | `/streams` | Active narratives with current state and next steps | `/api/streams` |
 | `/search` | Full text and front matter search across `design/` and `wip/` | `/api/search` |
@@ -47,7 +48,7 @@ The mount is read-write so the board can be operated from the browser. Writes ar
 
 ## Search
 
-Server builds a MiniSearch index over title, tags, ID, headings, and body text of every markdown file under `design/` and `wip/`, rebuilt on file change. Results link to the docs explorer or the item page.
+Server builds a MiniSearch index over title, tags, ID, headings, and body text of every markdown file under `design/` (conventions and issues included) and `wip/`, rebuilt on file change. Results link to the docs explorer or the item page.
 
 ## Runtime
 

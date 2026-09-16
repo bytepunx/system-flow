@@ -15,6 +15,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -66,6 +67,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.narratives()
 	c.board()
 	c.documentation()
+	c.conventions()
 	sort.SliceStable(c.res.Findings, func(i, j int) bool {
 		a, b := c.res.Findings[i], c.res.Findings[j]
 		if a.Path != b.Path {
@@ -131,7 +133,7 @@ func headingLine(path, heading string) int {
 func (c *checker) layout() {
 	m := c.repo.Manifest
 	for key, subs := range map[string][]string{
-		"design": {"adrs", "system", "tech"},
+		"design": {"adrs", "system", "tech", "conventions"},
 		"docs":   nil,
 		"wip":    {"kanban", "agents", "archive"},
 	} {
@@ -382,7 +384,13 @@ func (c *checker) documentation() {
 			if err != nil {
 				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
 			}
-			if d.IsDir() || !strings.HasSuffix(path, ".md") || d.Name() == "README.md" {
+			if d.IsDir() {
+				if d.Name() == conventions.Folder && filepath.Dir(path) == root {
+					return filepath.SkipDir // validated by the conventions rules
+				}
+				return nil
+			}
+			if !strings.HasSuffix(path, ".md") || d.Name() == "README.md" {
 				return nil
 			}
 			data, err := os.ReadFile(path)
@@ -449,4 +457,24 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func (c *checker) conventions() {
+	set, errs, err := conventions.Load(c.repo)
+	if err != nil {
+		c.add(Error, "conventions.read", conventions.Dir(c.repo), 1, "%v", err)
+		return
+	}
+	for _, f := range set.Validate(errs) {
+		path := filepath.Join(c.repo.Root, f.Path)
+		line := 1
+		switch f.Rule {
+		case "conventions.front-matter", "conventions.order":
+			line = keyLine(path, "order")
+			if strings.Contains(f.Message, "audience") {
+				line = keyLine(path, "audience")
+			}
+		}
+		c.add(f.Level, f.Rule, path, line, "%s", f.Message)
+	}
 }

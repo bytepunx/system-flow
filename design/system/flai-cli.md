@@ -38,7 +38,7 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 |---------|---------|
 | `flai new <dir>` | Create a new conforming monorepo from the template. Prompts for variables when stdin is a terminal; `--var k=v` sets them, `--defaults` never prompts. `--template` and `--ref` override the config source, `--layout key=name` renames a folder, `--force` overwrites, `--no-git` skips `git init`. |
 | `flai import [dir]` | Analyse an existing repo, propose the layout, prompt for folder names, create missing structure, offer to move existing markdown into it, write `system-flow.yaml`. |
-| `flai check [dir] [--strict]` | Validate manifest and layout, every item in kanban and archive (front matter, ID and file name, parents and children, state history and sequence, acceptance criteria, sections), narratives and index, board limits and order, and design/docs front matter including ADRs. One `path:line: level: rule: message` per finding. Errors exit 1; `--strict` makes warnings exit 1. |
+| `flai check [dir] [--strict]` | Validate manifest and layout, every item in kanban and archive (front matter, ID and file name, parents and children, state history and sequence, acceptance criteria, sections), narratives and index, board limits and order, design/docs front matter including ADRs, and the conventions folder (front matter, unique order, marker and project additions, length, README index). One `path:line: level: rule: message` per finding. Errors exit 1; `--strict` makes warnings exit 1. |
 | `flai epic new`, `flai story new --epic E-001`, `flai task new --story S-004` | Create an item from the body template, allocate the next ID, link to parent. |
 | `flai move <id> <state>` | Transition an item with rule validation. `--reason` required for `cancelled` and for review to in-progress; `--by` defaults to the config author. Warns on WIP limit breaches. |
 | `flai show <id>` | One item with history, blocks, and children. |
@@ -49,6 +49,7 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 | `flai archive [id...] [--dry-run]` | Move done and cancelled items and their narratives to `wip/archive`. Default: every closed epic whose stories are archived, every closed story with its tasks, and closed tasks whose story is gone from the board. |
 | `flai dashboard [--port] [--pull] [--detach]` | Pull the flaiover image if missing, run it with the repo mounted read-write at `/project`, open the browser. `flai dashboard stop`. |
 | `flai upgrade [--dry-run] [--force] [--keep-all\|--replace-all]` | Re-integrate the latest template into an existing repo: add new files, replace files unchanged since they were applied, report project-modified files as conflicts, merge `CLAUDE.md` above its marker. Story S-020. |
+| `flai prime [--cat] [--json]` | Print `design/conventions` in read order, README first, as paths or contents, so an agent or hook loads the norms in one call. |
 | `flai template show`, `flai template update`, `flai template use <repo> [--ref]` | Inspect, refresh, and switch the template source. |
 | `flai template push [dir] [--remote] [--ref] [--tag] [--dry-run]` | Publish a locally developed template to its git remote: clone, replace contents, commit with the version, push. Git errors surface verbatim; no force push unless `--force`. Story S-021. |
 | `flai config get [key]`, `flai config set <key> <value>`, `flai config path` | Read and edit `~/.flai/config.json` by dotted key; `path` prints the resolved file without creating it. |
@@ -83,6 +84,7 @@ flai/
 │   ├── execx/           # git and docker behind a Runner interface
 │   ├── narrative/       # wip/agents files
 │   ├── check/           # reference validator, rule names are stable identifiers
+│   ├── conventions/     # loads and validates design/conventions
 │   ├── metrics/         # reference implementation of metrics.md
 │   ├── importer/        # analysis and proposal
 │   ├── dashboard/       # docker run/stop

@@ -19,6 +19,8 @@ How agents work in this repository. Read every file below, in this order, at the
 | 80 | [safety.md](safety.md) | Secrets, destructive actions, untrusted content, sandbox |
 | 90 | [tooling.md](tooling.md) | Using flai and the dashboard instead of hand edits |
 | 100 | [continuous-improvement.md](continuous-improvement.md) | Recording recurring friction, defects, and blockers in `design/issues`, and reviewing them at delivery |
+| 110 | [logging.md](logging.md) | What is logged, at which level, in what shape, and what never appears in a log (draft) |
+| 120 | [telemetry.md](telemetry.md) | Metrics, traces, and health signals every service emits, and how they are named (draft) |
 
 ## How these files work
 
