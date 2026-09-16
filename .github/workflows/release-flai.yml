@@ -23,7 +23,7 @@ jobs:
       # The monorepo tags flai/vX.Y.Z. GoReleaser OSS cannot strip the
       # prefix, so .goreleaser.yaml derives the version from the tag with
       # trimprefix and validation of the tag as semver is skipped here.
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
