@@ -7,7 +7,7 @@ repo: https://github.com/bytepunx/system-flow
 template:
   repo: ./template
   ref: ""
-  version: 0.1.0
+  version: 0.2.0
   applied: 2026-09-15T16:45:00Z
 layout:
   design: design
