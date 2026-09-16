@@ -6,7 +6,7 @@ title: flai CLI
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-15T16:09:00Z
+updated: 2026-09-16T15:50:25Z
 transitions: []
 tags: []
 ---
@@ -24,6 +24,8 @@ A polished Go CLI that creates conforming projects, imports existing ones intera
 - S-008 flai check and flai stats
 - S-009 flai dashboard
 - S-010 Release pipeline for flai
+- S-029 flai release computes the bump, tags, and pushes on acceptance
+- S-029 flai release computes the bump, tags, and pushes on acceptance
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.

@@ -50,7 +50,7 @@ Work is pulled, not pushed. An agent starting a session:
 | backlog to ready | Human or agent during refinement | Definition of ready met |
 | ready to in-progress | Agent pulling work | Narrative opened |
 | in-progress to review | Agent | Acceptance criteria self-checked, narrative summary current |
-| review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met |
+| review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. Acceptance triggers archive, commit, and a semver release by delivery type (see `design/conventions/git.md`) |
 | review to in-progress | Human | Reason appended to story notes |
 | any to cancelled | Human | Reason appended to story notes |
 

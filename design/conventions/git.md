@@ -21,7 +21,10 @@ How history is made in this repository.
 - Verify the ignore rules do not hide files that must be committed. A fresh clone must build and pass `flai check --strict`.
 - Branch names are `<type>-<story-id>-<slug>` for story work. Work on the default branch only when the operator says so.
 - Pull requests follow `.github/pull_request_template.md`: the story ID and the definition of done, honestly ticked.
-- Tags are the release mechanism and follow semver by delivery type: an epic completing is a major release; a `feature` story completing is a minor release; a `remediation` or `improvement` story, or a documentation-only change, is a patch release. `research` and `experiment` stories do not release. Every release gets a changelog entry, written by the release tooling where it exists and by hand in `CHANGELOG.md` otherwise. Creating a tag is fine; pushing it needs the operator's confirmation.
+- Tag on acceptance. When the operator moves an item to `done`, tag and push a semver release in the same step, public or private repository alike. If it is good enough to merge into main, it gets a matching release; no further approval is asked.
+- The bump follows delivery type: an epic done is a major release; a `feature` story done is a minor release; a `remediation` or `improvement` story, a documentation-only change, or a non-breaking dependency update is a patch release.
+- `research` and `experiment` stories stay on a branch and get their additional testing there; they do not release from main. Releasing research builds with semver pre-release suffixes (`1.3.0-rc.1`) is a pattern to adopt when needed and is not yet defined.
+- Every release gets a changelog entry, written by the release tooling where it exists and by hand in `CHANGELOG.md` otherwise. `flai release` computes the bump, tags, and pushes once it exists; until then the agent does it by hand at acceptance.
 - Create remote repositories with the `gh` CLI when it is installed and authenticated. Ask the operator for the organization and whether the repository is public or private before creating it; never create a remote unasked. Without `gh`, give the operator the exact commands instead.
 - Before committing, run `git status` and `git diff --stat` and read them. Unrelated changes are split out or explained.
 - Attribution lines the operator or tooling requires go at the end of every commit message and pull request body, unchanged.
@@ -34,6 +37,6 @@ How history is made in this repository.
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- Releases are per sub-project with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`. The bump follows the delivery-type rule above within the sub-project the story touched; a story touching both bumps both. The template is versioned in `template/template.yaml` and `template/CHANGELOG.md`.
+- Releases are per sub-project with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`. On acceptance, bump the sub-projects the story touched by the delivery-type rule; a story touching both bumps both; a story touching neither (design, docs, wip only) tags nothing. The template is versioned in `template/template.yaml` and `template/CHANGELOG.md`; convention or template changes bump it. Dependabot merges bump the sub-project they touch by a patch.
 - Commit messages end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` when an agent authored the change.
 - Work happens on `main` until the repository is on GitHub with branch protection; the operator will say when branches are required.

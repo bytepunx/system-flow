@@ -12,7 +12,7 @@ What is never done without asking, what is never written down, and what is never
 
 ## Rules
 
-- Confirm before any action that is hard to reverse or reaches outside the repository: deleting or overwriting files you did not create this session, force operations, pushing, publishing, sending messages, calling paid services, changing shared infrastructure or configuration.
+- Confirm before any action that is hard to reverse or reaches outside the repository: deleting or overwriting files you did not create this session, force operations, sending messages, calling paid services, changing shared infrastructure or configuration. Pushing commits and release tags that the workflow produces (see `git.md`) is part of the workflow and needs no separate confirmation; force pushes always do.
 - Confirmation is per action and per context. Approval for one push is not approval for the next.
 - Before deleting or overwriting, look at the target. Before running a command that changes system state, check that the evidence supports that specific action, not just a pattern that resembles a known problem.
 - Secrets never go into the repository, the narratives, the work items, logs, or reports. Redact them if they appear in output you quote. Use environment variables and the project's secret mechanism. Secrets exclude any settings or values necessary to run a local copy of the system for testing purposes.

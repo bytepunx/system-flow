@@ -25,7 +25,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 - Keep the narrative current: rewrite `## Current state` and `## Next steps` after every task transition and before any long operation; append a log entry at every transition, decision, and blocker. `flai stream log` does the log.
 - When blocked, record it with `flai block --reason`, put the question in `## Open questions`, and move to other work. Do not wait idle and do not guess past a blocker that only the operator can clear.
 - Never mark a criterion checked that you did not verify. If verification is impossible in this environment, leave it unchecked and say why in the story notes.
-- Archive with `flai archive` only after the operator has accepted, and only when asked or when the conventions of the project say to.
+- Acceptance triggers the mechanical follow-ups without further asking: archive the item with `flai archive`, commit, and release per `git.md`.
 
 ## When in doubt
 
@@ -36,5 +36,5 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 
 ## Project additions
 - WIP limits are in `wip/kanban/board.md`: ready 5, in-progress 2, review 3.
-- The operator accepts stories (`flai move S-nnn done --by alex`) and asks for archiving; the agent moves stories to review and never to done.
+- The operator accepts stories (`flai move S-nnn done --by alex`); the agent moves stories to review and never to done. After acceptance the agent archives, commits, tags, and pushes without asking.
 - E-005 (agent conventions) takes priority over every other open epic until it closes.
