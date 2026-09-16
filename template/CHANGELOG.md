@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 - 2026-09-16
+
+- `design/conventions/logging.md` and `telemetry.md` are active: five log levels including fatal, structured events, `/_health`, `/_ready`, `/metrics`, OpenTelemetry, golden signals (S-030).
+
 ## 0.3.0 - 2026-09-16
 
 Note: under the refined release rule (incidental additive touches are a patch) this would have been 0.2.1; the version stands as cut.

@@ -3,11 +3,11 @@ id: S-030
 type: story
 nature: feature
 title: Logging and telemetry conventions
-status: review
+status: done
 parent: E-005
 owner: alex
 created: 2026-09-16T23:18:16Z
-updated: 2026-09-16T23:25:10Z
+updated: 2026-09-16T23:45:27Z
 transitions:
   - to: ready
     at: 2026-09-16T23:23:14Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-16T23:25:10Z
     by: agent
+  - to: done
+    at: 2026-09-16T23:45:27Z
+    by: alex
 tags: [conventions]
 ---
 
@@ -27,9 +30,9 @@ tags: [conventions]
 The two draft conventions become real: `logging.md` says what is logged, at which level, in what shape, with what correlation, and what never appears in a log; `telemetry.md` says which metrics, traces, and health signals every service emits, how they are named and labelled, and where they go. Both are written in the template, agreed with the operator, and mirrored here.
 
 ## Acceptance criteria
-- [ ] template/root/design/conventions/logging.md has Rules and When in doubt written, `status: active`, under 120 lines
-- [ ] template/root/design/conventions/telemetry.md the same
-- [ ] README rows drop the "(draft)" suffix in both copies; design/conventions here matches the template above the markers
+- [x] template/root/design/conventions/logging.md has Rules and When in doubt written, `status: active`, under 120 lines
+- [x] template/root/design/conventions/telemetry.md the same
+- [x] README rows drop the "(draft)" suffix in both copies; design/conventions here matches the template above the markers
 - [x] Project additions here say how flai and flaiover apply them (flai: structured stderr logging and a --verbose flag; flaiover: request logs, health endpoint, metrics endpoint) and open follow-up stories where code must change
 - [x] design/tech records any logging or telemetry library the conventions imply, with version and rationale, or states that the standard library suffices
 - [x] flai check --strict passes in this repository and on a rendered template
