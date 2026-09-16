@@ -16,6 +16,8 @@ jobs:
           globs: |
             **/*.md
             !**/node_modules/**
+            !**/testdata/**
+            !bin/**
       - uses: actions/setup-go@v7
         with:
           go-version-file: flai/go.mod

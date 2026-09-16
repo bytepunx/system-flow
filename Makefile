@@ -28,7 +28,7 @@ install-tools: ## Install golangci-lint v2 and GoReleaser into bin/
 	scripts/install-tools.sh
 
 lint-md: ## Lint markdown
-	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**"
+	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**"
 
 board: ## Print the kanban board
 	scripts/flai.sh board
