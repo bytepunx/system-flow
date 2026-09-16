@@ -30,5 +30,6 @@ One file per technology. Each records the version in use, where it is used, why 
 | Git | 2.47 (host) | flai | [go-libraries.md](go-libraries.md) |
 | GitHub Actions, GHCR | n/a | monorepo | [ci.md](ci.md) |
 | markdownlint-cli2 | latest | monorepo, template | [ci.md](ci.md) |
+| log/slog, pino, OpenTelemetry, prom-client | per story | flai, flaiover | [observability.md](observability.md) |
 
 Versions marked "latest" are pinned in lockfiles; this table is updated when the pin moves a major version.
