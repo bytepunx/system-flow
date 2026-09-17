@@ -38,6 +38,7 @@ jobs:
         run: |
           echo "version=$(git describe --tags --match 'flai/v*' --abbrev=0 | sed 's|flai/v||')" >> "$GITHUB_OUTPUT"
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "flaiover=$(git describe --tags --match 'flaiover/v*' --abbrev=0 2>/dev/null | sed 's|flaiover/v||' || echo 0.0.0)" >> "$GITHUB_OUTPUT"
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
@@ -50,5 +51,6 @@ jobs:
             FLAI_VERSION=${{ steps.flai.outputs.version }}
             FLAI_COMMIT=${{ steps.flai.outputs.commit }}
             FLAI_DATE=${{ steps.flai.outputs.date }}
+            FLAIOVER_VERSION=${{ steps.flai.outputs.flaiover }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

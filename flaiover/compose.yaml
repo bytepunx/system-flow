@@ -1,0 +1,31 @@
+# Local run of flaiover with a telemetry stack. From the repository root:
+#   PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build
+# Dashboard: http://localhost:4242   Grafana (traces, metrics, logs): http://localhost:3001
+services:
+  flaiover:
+    build:
+      context: ..
+      dockerfile: flaiover/Dockerfile
+    image: flaiover:local
+    user: '${UID:-1000}:${GID:-1000}'
+    ports:
+      - '127.0.0.1:4242:3000'
+    volumes:
+      - '${PROJECT:-..}:/project'
+    environment:
+      PROJECT_DIR: /project
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_SERVICE_NAME: flaiover
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-always_on}
+    depends_on:
+      - lgtm
+  lgtm:
+    # OpenTelemetry collector, Tempo, Prometheus, Loki, and Grafana in one container for local use.
+    image: grafana/otel-lgtm:latest
+    ports:
+      - '127.0.0.1:3001:3000'
+      - '127.0.0.1:4317:4317'
+      - '127.0.0.1:4318:4318'
+    environment:
+      ENABLE_LOGS_ALL: 'true'

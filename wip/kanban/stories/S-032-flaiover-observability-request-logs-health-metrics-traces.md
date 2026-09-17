@@ -3,11 +3,11 @@ id: S-032
 type: story
 nature: feature
 title: "flaiover observability: request logs, health, metrics, traces"
-status: in-progress
+status: review
 parent: E-003
 owner: alex
 created: 2026-09-16T23:24:18Z
-updated: 2026-09-17T05:52:20Z
+updated: 2026-09-17T06:13:53Z
 transitions:
   - to: ready
     at: 2026-09-17T05:52:20Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-09-17T05:52:20Z
     by: agent
+  - to: review
+    at: 2026-09-17T06:13:53Z
+    by: alex
 tags: [dashboard, telemetry, logging]
 ---
 
@@ -24,12 +27,12 @@ tags: [dashboard, telemetry, logging]
 flaiover follows the logging and telemetry conventions: pino request and lifecycle logs on stdout, `/_health`, `/_ready`, `/metrics` with `flaiover_` golden signals and build info, OpenTelemetry traces to a collector, and a local collector in the compose stack.
 
 ## Acceptance criteria
-- [ ] Request log line per request with trace_id, method, route, status, duration; lifecycle events for start, index built, watcher events
-- [ ] `/_health` always 200 while the process runs; `/_ready` checks the mount and index with timeouts and names the failing dependency
-- [ ] `/metrics` exposes request counter with status label, latency histogram, in-flight gauge, `flaiover_build_info`
-- [ ] Traces exported via OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; W3C context propagated
-- [ ] docker compose for local development includes a collector and a viewer; docs/operators documents the endpoints and variables
-- [ ] design/tech records pino and the OpenTelemetry packages with versions
+- [x] Request log line per request with trace_id, method, route, status, duration; lifecycle events for start, index built, watcher events
+- [x] `/_health` always 200 while the process runs; `/_ready` checks the mount and index with timeouts and names the failing dependency
+- [x] `/metrics` exposes request counter with status label, latency histogram, in-flight gauge, `flaiover_build_info`
+- [x] Traces exported via OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; W3C context propagated
+- [x] docker compose for local development includes a collector and a viewer; docs/operators documents the endpoints and variables
+- [x] design/tech records pino and the OpenTelemetry packages with versions
 
 ## Tasks
 - T-101 pino logging: request line with trace_id, lifecycle events, LOG_LEVEL and LOG_FORMAT

@@ -60,6 +60,7 @@ Every chart has the same filter bar: window, type, and epic where the chart supp
 | `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
 | `POST /api/streams/:id/log` `{ entry }` | flai stream log |
 | `GET /api/stats?since=&type=&by=` | `flai stats --json` verbatim (see metrics.md), cached per query and cleared on change; bad arguments are 400 |
+| `GET /_health`, `GET /_ready`, `GET /metrics` | Liveness, readiness with named dependency checks, Prometheus metrics (S-032, see docs/operators) |
 
 Errors are `{ error }` with the status. The reader caches by path and mtime and is invalidated by the watcher.
 

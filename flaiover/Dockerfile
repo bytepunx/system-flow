@@ -23,6 +23,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
 
 # ---- flaiover build --------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS build
+ARG FLAI_COMMIT=unknown
 WORKDIR /src/flaiover
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
@@ -33,6 +34,8 @@ RUN pnpm build && pnpm prune --prod
 
 # ---- runtime ---------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine
+ARG FLAI_COMMIT=unknown
+ARG FLAIOVER_VERSION=0.0.0
 LABEL org.opencontainers.image.source="https://github.com/bytepunx/system-flow" \
       org.opencontainers.image.description="flaiover: the system-flow dashboard with a bundled flai" \
       org.opencontainers.image.licenses="UNLICENSED"
@@ -48,7 +51,9 @@ ENV NODE_ENV=production \
     PROJECT_DIR=/project \
     FLAI_BIN=/usr/local/bin/flai \
     HOME=/tmp \
-    LOG_FORMAT=json
+    LOG_FORMAT=json \
+    FLAIOVER_COMMIT=${FLAI_COMMIT} \
+    FLAIOVER_VERSION=${FLAIOVER_VERSION}
 VOLUME ["/project"]
 EXPOSE 3000
 # Unprivileged by default; any --user works because nothing here needs a home.

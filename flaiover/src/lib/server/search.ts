@@ -5,6 +5,7 @@ import MiniSearch from 'minisearch';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { splitFrontMatter, type Repo } from './repo';
+import { log } from './log';
 
 export type SearchDoc = {
 	id: string; // path
@@ -55,6 +56,7 @@ export class SearchIndex {
 	async build(): Promise<void> {
 		if (this.building) return this.building;
 		this.building = (async () => {
+			const startedAt = process.hrtime.bigint();
 			const layout = await this.repo.layout();
 			const docs: SearchDoc[] = [];
 			for (const [scope, dir] of [
@@ -72,6 +74,14 @@ export class SearchIndex {
 			index.addAll(docs);
 			this.index = index;
 			this.docs = new Map(docs.map((d) => [d.id, d]));
+			log().info(
+				{
+					component: 'search',
+					documents: docs.length,
+					duration_ms: Math.round(Number(process.hrtime.bigint() - startedAt) / 1e6)
+				},
+				'index built'
+			);
 		})().finally(() => {
 			this.building = null;
 		});

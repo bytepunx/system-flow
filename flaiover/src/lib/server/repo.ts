@@ -7,6 +7,7 @@ import { join, relative, resolve, sep } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { parse as parseYaml } from 'yaml';
 import { watch as chokidarWatch, type FSWatcher } from 'chokidar';
+import { log } from './log';
 
 export type Layout = { design: string; docs: string; wip: string };
 
@@ -253,11 +254,20 @@ export class Repo extends EventEmitter {
 			ignoreInitial: true,
 			awaitWriteFinish: { stabilityThreshold: 150 }
 		});
-		const onChange = (abs: string) => {
+		const onChange = (kind: string) => (abs: string) => {
 			this.fileCache.delete(abs);
-			this.emit('change', relative(this.root, abs).split(sep).join('/'));
+			const path = relative(this.root, abs).split(sep).join('/');
+			log().debug({ component: 'watcher', event: kind, path }, 'file changed');
+			this.emit('change', path);
 		};
-		this.watcher.on('add', onChange).on('change', onChange).on('unlink', onChange);
+		this.watcher
+			.on('add', onChange('add'))
+			.on('change', onChange('change'))
+			.on('unlink', onChange('unlink'))
+			.on('error', (err) =>
+				log().error({ component: 'watcher', err: String(err) }, 'watcher error')
+			);
+		log().info({ component: 'watcher', targets: targets.length }, 'watcher started');
 	}
 
 	async close(): Promise<void> {
