@@ -3,6 +3,7 @@ package workitem
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -84,7 +85,7 @@ func TestRoundTripRepositoryItems(t *testing.T) {
 	}
 	for _, typ := range Types {
 		id, _ := r.NextID(typ)
-		if !strings.HasPrefix(id, strings.ToUpper(typ[:1])+"-0") {
+		if !regexp.MustCompile(`^` + strings.ToUpper(typ[:1]) + `-\d{3,}$`).MatchString(id) {
 			t.Errorf("NextID(%s) = %s", typ, id)
 		}
 	}
