@@ -3,11 +3,11 @@ id: S-009
 type: story
 nature: feature
 title: flai dashboard
-status: review
+status: done
 parent: E-002
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T03:54:28Z
+updated: 2026-09-17T03:58:09Z
 transitions:
   - to: ready
     at: 2026-09-17T03:50:04Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T03:54:28Z
     by: agent
+  - to: done
+    at: 2026-09-17T03:58:09Z
+    by: alex
 tags: []
 ---
 
