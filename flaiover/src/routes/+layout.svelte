@@ -4,8 +4,13 @@
 	import { resolve } from '$app/paths';
 
 	let { children } = $props();
-	// Routes are added to the nav as their stories land (S-012 docs, S-013 board, S-014 charts).
-	const nav = [{ href: resolve('/'), label: 'Overview' }];
+	// Routes are added to the nav as their stories land (S-013 board, S-014 charts).
+	const nav = [
+		{ href: resolve('/'), label: 'Overview' },
+		{ href: resolve('/docs/[...path]', { path: '' }), label: 'Docs' },
+		{ href: resolve('/adrs'), label: 'ADRs' },
+		{ href: resolve('/search'), label: 'Search' }
+	];
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /><title>flaiover</title></svelte:head>
