@@ -134,6 +134,11 @@ func headingLine(path, heading string) int {
 
 func (c *checker) layout() {
 	m := c.repo.Manifest
+	if m.Template.Version != "" {
+		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
+			c.add(Warning, "layout.lock", filepath.Join(c.repo.Root, "system-flow.yaml"), keyLine(filepath.Join(c.repo.Root, "system-flow.yaml"), "template"), "template %s is recorded but there is no system-flow.lock.yaml; run flai upgrade --relock", m.Template.Version)
+		}
+	}
 	for key, subs := range map[string][]string{
 		"design": {"adrs", "system", "tech", "conventions"},
 		"docs":   nil,

@@ -111,9 +111,9 @@ The entry point for an agent. It opens with a priming section that tells the age
 
 Semantic versions in `template.yaml`. `flai` records the applied version in `system-flow.yaml`. Breaking changes to layout or front matter schema bump the major version and ship with a migration note in the template's `CHANGELOG.md`.
 
-## Upgrading a project (S-020)
+## Upgrading a project
 
-`flai upgrade` brings a conforming repo to the template version at the configured source. It needs to know which rendered files the project has since changed; the proposed mechanism is a `system-flow.lock.yaml` written by `flai new` and `flai upgrade` with a sha256 per rendered path. Unchanged files are replaced, new files added, changed files reported as conflicts, and `CLAUDE.md` is merged above its marker line. The lock file decision gets an ADR when S-020 starts.
+`flai upgrade` brings a conforming repo to the template version at the configured source ([ADR-0015](../adrs/0015-template-lock-file.md)). `system-flow.lock.yaml`, written by `flai new` and `flai upgrade`, records a sha256 per rendered path. On upgrade each template path is classified: added when absent, merged when both sides carry the baseline marker (template above, project below), replaced when the project file still matches the lock, skipped when identical, otherwise a conflict. In a terminal each conflict offers keep, replace, or a diff; non-interactive runs need `--keep-all` or `--replace-all` and otherwise change nothing. The manifest's `template.version` and `template.applied` and the lock are updated only when no conflict is unresolved. A dirty git tree is refused unless `--force`, so the upgrade is reviewable as one diff. `--relock` writes the lock at the current version for projects assembled by hand.
 
 ## Publishing a template (S-021)
 

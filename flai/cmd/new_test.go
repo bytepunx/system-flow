@@ -21,7 +21,7 @@ func TestNewWithDefaultsAndVars(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s%s", code, out, errOut)
 	}
-	if !strings.Contains(out, "6 files written") {
+	if !strings.Contains(out, "7 files written") {
 		t.Errorf("summary: %s", out)
 	}
 	readme, _ := os.ReadFile(filepath.Join(dest, "README.md"))
@@ -48,7 +48,7 @@ func TestNewWithDefaultsAndVars(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("json: %v\n%s", err, out)
 	}
-	if len(res.Written) != 0 || len(res.Skipped) != 6 {
+	if len(res.Written) != 0 || len(res.Skipped) != 7 {
 		t.Errorf("rerun written=%v skipped=%v", res.Written, res.Skipped)
 	}
 }

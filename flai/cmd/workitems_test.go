@@ -30,6 +30,9 @@ func runInAt(t *testing.T, dir string, at time.Time, args ...string) (string, st
 		var ee *exitError
 		if errors.As(err, &ee) {
 			code = ee.code
+			if ee.msg != "" {
+				a.fail(err)
+			}
 		} else {
 			a.fail(err)
 			code = 1

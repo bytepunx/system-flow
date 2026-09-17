@@ -2,6 +2,8 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"os"
@@ -21,12 +23,16 @@ type Options struct {
 	Source Source            // recorded in system-flow.yaml via .template.*
 	Force  bool              // overwrite existing files
 	Now    time.Time         // render time; zero means time.Now()
+	// Collect, when set, receives every rendered file instead of writing it.
+	// rel is the destination path relative to dest.
+	Collect func(rel string, content []byte, mode fs.FileMode)
 }
 
 // Result lists what a render did.
 type Result struct {
 	Written []string
-	Skipped []string // existed already and Force was false
+	Skipped []string          // existed already and Force was false
+	Hashes  map[string]string // rel path -> sha256 of the rendered content, for every path (written or not)
 }
 
 // Funcs are the functions available inside template files and defaults.
@@ -85,7 +91,7 @@ func EvalDefault(v Variable, data map[string]any) (string, error) {
 func Render(m Manifest, tplDir, dest string, opt Options) (Result, error) {
 	data := Data(m, opt)
 	root := filepath.Join(tplDir, RootDir)
-	var res Result
+	res := Result{Hashes: map[string]string{}}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -106,6 +112,9 @@ func Render(m Manifest, tplDir, dest string, opt Options) (Result, error) {
 		}
 		target := filepath.Join(dest, filepath.FromSlash(rewriteLayout(m, data, relSlash)))
 		if d.IsDir() {
+			if opt.Collect != nil {
+				return nil
+			}
 			return os.MkdirAll(target, 0o755)
 		}
 		info, err := d.Info()
@@ -125,6 +134,12 @@ func Render(m Manifest, tplDir, dest string, opt Options) (Result, error) {
 			content = []byte(out)
 		}
 		display, _ := filepath.Rel(dest, target)
+		display = filepath.ToSlash(display)
+		res.Hashes[display] = hashBytes(content)
+		if opt.Collect != nil {
+			opt.Collect(display, content, info.Mode().Perm())
+			return nil
+		}
 		if _, err := os.Stat(target); err == nil && !opt.Force {
 			res.Skipped = append(res.Skipped, display)
 			return nil
@@ -214,4 +229,9 @@ func Initials(s string) string {
 		}
 	}
 	return b.String()
+}
+
+func hashBytes(b []byte) string {
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }

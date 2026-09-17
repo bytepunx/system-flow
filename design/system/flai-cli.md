@@ -48,7 +48,7 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 | `flai stream open <story-id>`, `flai stream log <story-id> "<entry>"` | Create a narrative from the template, append a timestamped log entry. `FLAI_AGENT` and `FLAI_SESSION` identify the writer. `index.md` is regenerated from the active narratives after every open, log, move, and archive. |
 | `flai archive [id...] [--dry-run]` | Move done and cancelled items and their narratives to `wip/archive`. Default: every closed epic whose stories are archived, every closed story with its tasks, and closed tasks whose story is gone from the board. |
 | `flai dashboard [--port] [--pull] [--detach]` | Pull the flaiover image if missing, run it with the repo mounted read-write at `/project`, open the browser. `flai dashboard stop`. |
-| `flai upgrade [--dry-run] [--force] [--keep-all\|--replace-all]` | Re-integrate the latest template into an existing repo: add new files, replace files unchanged since they were applied, report project-modified files as conflicts, merge `CLAUDE.md` above its marker. Story S-020. |
+| `flai upgrade [--dry-run] [--force] [--keep-all\|--replace-all] [--relock]` | Bring the project to the template version at the configured source: add new files, merge marker files above the marker, replace files unchanged since applied (per `system-flow.lock.yaml`, ADR-0015), report the rest as conflicts with keep, replace, or diff; refuses a dirty tree; `--relock` records a hand-assembled project. |
 | `flai prime [--cat] [--json]` | Print `design/conventions` in read order, README first, as paths or contents, so an agent or hook loads the norms in one call; the open-issues summary follows when non-empty. |
 | `flai release <id> [--dry-run] [--deliver] [--apply]` | Compute the semver release for an item per the git convention (delivered component gets the delivery-type bump, touched components a patch) and with `--apply` create the tags and version bumps. |
 | `flai accept <id> [--by] [--deliver] [--no-release] [--no-push] [--trailer]` | The operator's acceptance in one step: move to done, archive, template bump, commit, tags on that commit, push. |
@@ -91,6 +91,8 @@ flai/
 │   ├── conventions/     # loads and validates design/conventions
 │   ├── issues/          # design/issues: record, bump, close, summary
 │   ├── release/         # semver plan from item, commits, and manifest components; tags and version files
+│   ├── lock/            # system-flow.lock.yaml
+│   ├── upgrade/         # classify add, merge, replace, conflict; apply with a policy
 │   ├── metrics/         # reference implementation of metrics.md
 │   ├── importer/        # scan, plan, moves with git mv
 │   ├── dashboard/       # docker run/stop

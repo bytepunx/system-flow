@@ -252,3 +252,14 @@ flai accept S-016 --by alex --no-release
 Acceptance is one command. It moves the item to done (the same rules as `flai move`), archives it with its children and narrative, computes the release, bumps the template's version file and changelog if the template is involved, commits, creates the tags on that commit, and pushes the branch and tags. `--no-push` keeps everything local; `--dry-run` prints the plan and stops; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean so the acceptance commit holds only acceptance, unless you pass `--yes`.
 
 The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to, found from the item's tags (a project name or one of its `tags` aliases), its epic's tags, or `--deliver`, gets the delivery-type bump: epic major, feature story minor, remediation or improvement patch. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. Research and experiment stories are refused.
+
+## Upgrade to a newer template
+
+```bash
+flai upgrade --dry-run      # what would change
+flai upgrade                # interactive: keep, replace, or diff each conflict
+flai upgrade --keep-all     # scripts and CI: never overwrite a project edit
+flai upgrade --relock       # a project assembled by hand: record the current files at this version
+```
+
+`flai new` writes `system-flow.lock.yaml`, a hash of every file the template rendered. On upgrade each template path is classified: **add** when the project lacks it, **merge** for files with the baseline marker such as `CLAUDE.md` and the conventions (template text above the marker, yours below), **replace** when your copy still matches the lock, **unchanged** when identical, otherwise a **conflict** that you decide. Without a lock every difference is a conflict, which is what `--relock` fixes. A dirty git tree is refused unless `--force`, so an upgrade is one reviewable diff, and the manifest's template version is updated only when no conflict is left undecided. Kept conflicts stay divergent and come back next time; replace them or add your rule below a marker instead.

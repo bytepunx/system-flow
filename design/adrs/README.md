@@ -20,3 +20,4 @@ Copy `0000-template.md` to start a new one.
 | [0012](0012-flat-kanban-folders-and-archive.md) | Kanban items are flat per type, hierarchy by parent key, archive on completion | accepted |
 | [0013](0013-conventions-folder.md) | design/conventions holds agent norms, one file per topic | accepted |
 | [0014](0014-design-issues.md) | design/issues records recurring friction with counts and cost | accepted |
+| [0015](0015-template-lock-file.md) | system-flow.lock.yaml records what the template rendered so upgrade can tell edits from baseline | accepted |

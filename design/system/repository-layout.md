@@ -13,6 +13,7 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 ├── CLAUDE.md               # agent operating instructions, baseline from the template
 ├── README.md               # human entry point
 ├── system-flow.yaml        # project manifest, marks a conforming repo
+├── system-flow.lock.yaml   # hashes of what the template rendered, owned by flai (ADR-0015)
 ├── design/                 # internal documentation
 │   ├── README.md
 │   ├── adrs/               # point-in-time architecture decisions

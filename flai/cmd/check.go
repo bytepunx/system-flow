@@ -55,7 +55,11 @@ Findings print as path:line: level: rule: message. Errors exit 1; with
 	return c
 }
 
-// exitError signals a non-zero exit without an extra message.
-type exitError struct{ code int }
+// exitError signals a non-zero exit, with an optional message the boundary
+// logs as the fatal event.
+type exitError struct {
+	code int
+	msg  string
+}
 
-func (e *exitError) Error() string { return "" }
+func (e *exitError) Error() string { return e.msg }
