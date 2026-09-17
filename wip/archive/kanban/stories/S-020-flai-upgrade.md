@@ -3,11 +3,11 @@ id: S-020
 type: story
 nature: feature
 title: flai upgrade re-integrates the latest template
-status: review
+status: done
 parent: E-001
 owner: agent
 created: 2026-09-15T17:39:42Z
-updated: 2026-09-17T03:25:23Z
+updated: 2026-09-17T03:30:50Z
 transitions:
   - to: ready
     at: 2026-09-17T03:19:34Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T03:25:23Z
     by: agent
+  - to: done
+    at: 2026-09-17T03:30:50Z
+    by: alex
 tags: [cli, template]
 ---
 
