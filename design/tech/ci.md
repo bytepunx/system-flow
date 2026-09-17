@@ -21,7 +21,7 @@ Workflows in this monorepo:
 
 | Workflow | Trigger | Does |
 |----------|---------|------|
-| `system-flow-check.yml` | pull request, push to main | markdownlint, build flai, `flai check --strict`, render `./template` and check the result |
+| `system-flow-check.yml` | pull request, push to main | markdownlint, build flai, `flai check --strict`, render `./template` and check the result, install the latest release with `install.sh` and `flai self-upgrade` |
 | `flai.yml` | changes under `flai/` | lint, test with race detector, build |
 | `flaiover.yml` | changes under `flaiover/` | lint, unit tests, build, e2e |
 | `release-flai.yml` | tag `flai/v*` | GoReleaser |

@@ -6,7 +6,7 @@ title: system-flow standard and template
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T05:52:19Z
+updated: 2026-09-17T07:21:06Z
 transitions: []
 tags: []
 ---
@@ -24,6 +24,7 @@ The conventions are written in design/system, decided in design/adrs, exercised 
 - S-0021 flai template push publishes template changes to a remote
 - S-0033 Four-digit work item IDs
 - S-0033 Four-digit work item IDs
+- S-0034 flai installer script and self-upgrade command
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.

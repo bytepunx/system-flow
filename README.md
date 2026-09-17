@@ -2,6 +2,14 @@
 
 An agentic lean project management system that lives inside your monorepo. Design, documentation, and work in process are markdown files with front matter. A CLI (`flai`) creates and manages conforming repositories. A dashboard (`flaiover`) turns the files into a kanban board, flow charts, and a searchable documentation explorer.
 
+## Install flai
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
+```
+
+The script detects your platform, downloads the latest release, verifies its checksum, and installs `flai` to `/usr/local/bin` (set `FLAI_INSTALL_DIR` to change that). While this repository is private, log in with `gh auth login` or set `GITHUB_TOKEN` first. Later, `flai self-upgrade` does the same from the installed binary. Details and alternatives: [docs/users/flai.md](docs/users/flai.md#install).
+
 | I want to | Go to |
 |-----------|-------|
 | Understand the conventions | [docs/users/index.md](docs/users/index.md) |
@@ -19,7 +27,7 @@ An agentic lean project management system that lives inside your monorepo. Desig
 | `docs/` | Documentation for users, operators, contributors |
 | `wip/` | Board, work items, agent narratives |
 | `template/` | Prototype of the template repository |
-| `flai/` | The Go CLI (not yet started, see E-0002) |
-| `flaiover/` | The SvelteKit dashboard (not yet started, see E-0003) |
+| `flai/` | The Go CLI |
+| `flaiover/` | The SvelteKit dashboard |
 
 This repository follows its own standard. `CLAUDE.md` is how agents work here.

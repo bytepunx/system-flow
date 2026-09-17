@@ -28,3 +28,5 @@ jobs:
         working-directory: flai
       - name: Smoke tests
         run: scripts/smoke.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

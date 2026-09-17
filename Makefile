@@ -1,4 +1,4 @@
-.PHONY: check flai test integration smoke flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
+.PHONY: check flai test integration smoke install-test flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -12,8 +12,11 @@ test: ## Behavior tests (fast, run on every iteration)
 integration: ## Integration tests (real git, monorepo round-trip), after test
 	scripts/integration.sh
 
-smoke: ## Smoke tests (template render and check, repo check, markdown lint), after integration
+smoke: ## Smoke tests (template render and check, repo check, markdown lint, installer), after integration
 	scripts/smoke.sh
+
+install-test: ## Install the latest flai release with install.sh and flai self-upgrade into .flai-cache
+	scripts/install-test.sh
 
 lint-md: ## Lint all markdown with the CI globs and config
 	scripts/lint-md.sh
@@ -44,9 +47,6 @@ flaiover-test: ## flaiover lint, type check, unit tests
 
 flaiover-image: ## Build the flaiover image as flaiover:local
 	scripts/flaiover-image.sh
-
-lint-md: ## Lint markdown
-	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**" "!flaiover/build/**" "!**/.svelte-kit/**"
 
 board: ## Print the kanban board
 	scripts/flai.sh board

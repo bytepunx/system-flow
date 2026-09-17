@@ -10,13 +10,34 @@ The system-flow command line tool. Full command reference will be generated from
 
 ## Install
 
-With Go 1.26 or newer:
+One line on macOS or Linux:
 
 ```bash
-go install github.com/bytepunx/system-flow/flai@latest
+curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
 ```
 
-Or download a binary from the [releases page](https://github.com/bytepunx/system-flow/releases): releases named `flai vX.Y.Z` carry `flai_X.Y.Z_<os>_<arch>.tar.gz` (a zip on Windows) for Linux, macOS, and Windows on amd64 and arm64, plus `checksums.txt`. Unpack and put `flai` on your `PATH`.
+The script detects the OS and architecture, resolves the newest `flai/v*` release, downloads the archive and `checksums.txt`, verifies the SHA-256, and installs `flai` into `/usr/local/bin`, using `sudo` only when that directory is not writable. It ends by checking that the directory is on your `PATH`.
+
+| Variable | Effect |
+|----------|--------|
+| `FLAI_INSTALL_DIR` | Install somewhere else, for example `$HOME/.local/bin` |
+| `FLAI_VERSION` | Pin a release, for example `1.0.3` |
+| `GITHUB_TOKEN` or `GH_TOKEN` | Authenticate against the GitHub API. While the repository is private one of these, or a `gh auth login` session, is required; the script borrows `gh auth token` when it can |
+
+### Upgrade
+
+```bash
+flai self-upgrade --check      # installed and latest versions
+flai self-upgrade              # replace this binary with the latest release
+flai self-upgrade --version 1.0.3
+flai self-upgrade --dir /usr/local/bin
+```
+
+`self-upgrade` performs the same steps as the script from inside the binary: resolve, download, verify, and replace the running executable atomically. It uses the same token sources. Without `--version` it does nothing when the installed version is already the latest.
+
+### Other ways
+
+With Go 1.26 or newer, `go install github.com/bytepunx/system-flow/flai@latest`. Or download an archive from the [releases page](https://github.com/bytepunx/system-flow/releases): releases named `flai vX.Y.Z` carry `flai_X.Y.Z_<os>_<arch>.tar.gz` (a zip on Windows) for Linux, macOS, and Windows on amd64 and arm64, plus `checksums.txt`. On Windows unpack the zip and put `flai.exe` on your `PATH`.
 
 ```bash
 flai version
