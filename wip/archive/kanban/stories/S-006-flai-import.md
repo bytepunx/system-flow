@@ -3,11 +3,11 @@ id: S-006
 type: story
 nature: feature
 title: flai import for existing monorepos
-status: review
+status: done
 parent: E-002
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T00:19:51Z
+updated: 2026-09-17T02:01:33Z
 transitions:
   - to: ready
     at: 2026-09-17T00:15:09Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T00:19:51Z
     by: agent
+  - to: done
+    at: 2026-09-17T02:01:33Z
+    by: alex
 tags: []
 ---
 
