@@ -3,11 +3,11 @@ id: S-014
 type: story
 nature: feature
 title: Flow metric charts
-status: review
+status: done
 parent: E-003
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T05:02:59Z
+updated: 2026-09-17T05:29:29Z
 transitions:
   - to: ready
     at: 2026-09-17T04:50:14Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T05:02:59Z
     by: agent
+  - to: done
+    at: 2026-09-17T05:29:29Z
+    by: alex
 tags: []
 ---
 
