@@ -3,11 +3,23 @@ id: E-002
 type: epic
 nature: feature
 title: flai CLI
-status: backlog
+status: done
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-16T23:24:18Z
-transitions: []
+updated: 2026-09-17T03:59:08Z
+transitions:
+  - to: ready
+    at: 2026-09-17T03:59:08Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-17T03:59:08Z
+    by: alex
+  - to: review
+    at: 2026-09-17T03:59:08Z
+    by: alex
+  - to: done
+    at: 2026-09-17T03:59:08Z
+    by: alex
 tags: []
 ---
 
