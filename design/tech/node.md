@@ -8,7 +8,7 @@ status: active
 
 | | |
 |-|-|
-| Node version | 24 LTS, pinned in `flaiover/.nvmrc` and the Dockerfile base image `node:24-alpine` |
+| Node version | 24 LTS, pinned in `flaiover/.nvmrc` and `engines`, and the Dockerfile base image `node:24-alpine`; the dev host runs 25 and has no corepack, so pnpm is installed by `scripts/install-tools.sh` into `.flai-cache/pnpm` and all Node caches live under `.flai-cache` |
 | pnpm version | 10, pinned via `packageManager` in `flaiover/package.json` and enabled by corepack |
 | Used in | `flaiover` |
 

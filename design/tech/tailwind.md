@@ -8,7 +8,7 @@ status: active
 
 | | |
 |-|-|
-| Version | 4 |
+| Version | 4.3 |
 | Used in | `flaiover` |
 | Integration | `@tailwindcss/vite` plugin, no PostCSS config |
 | Plugins | `@tailwindcss/typography` for rendered markdown |

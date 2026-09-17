@@ -1,0 +1,35 @@
+name: flaiover
+
+on:
+  pull_request:
+    paths: ["flaiover/**", ".github/workflows/flaiover.yml"]
+  push:
+    branches: [main]
+    paths: ["flaiover/**", ".github/workflows/flaiover.yml"]
+
+defaults:
+  run:
+    working-directory: flaiover
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: flaiover/.nvmrc
+          cache: pnpm
+          cache-dependency-path: flaiover/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Lint and format
+        run: pnpm lint
+      - name: Type check
+        run: pnpm check
+      - name: Unit tests
+        run: pnpm test:unit
+      - name: Build
+        run: pnpm build

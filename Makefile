@@ -1,4 +1,4 @@
-.PHONY: check flai test integration smoke flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop help
+.PHONY: check flai test integration smoke flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -24,11 +24,23 @@ flai-snapshot: ## GoReleaser snapshot build into flai/dist
 template-test: ## Render ./template and check the result
 	scripts/template-test.sh
 
-install-tools: ## Install golangci-lint v2 and GoReleaser into bin/
+install-tools: ## Install golangci-lint v2, GoReleaser, and pnpm into the repo
 	scripts/install-tools.sh
 
+flaiover-install: ## pnpm install for flaiover
+	scripts/flaiover-install.sh
+
+flaiover-dev: ## flaiover dev server against this repo
+	scripts/flaiover-dev.sh
+
+flaiover-build: ## flaiover production build
+	scripts/flaiover-build.sh
+
+flaiover-test: ## flaiover lint, type check, unit tests
+	scripts/flaiover-test.sh
+
 lint-md: ## Lint markdown
-	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**"
+	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**" "!flaiover/build/**" "!**/.svelte-kit/**"
 
 board: ## Print the kanban board
 	scripts/flai.sh board

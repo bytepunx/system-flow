@@ -42,6 +42,19 @@ flowchart LR
 
 Every chart has the same filter bar: window, nature, epic.
 
+## API (S-011)
+
+| Route | Returns |
+|-------|---------|
+| `GET /api/manifest` | `system-flow.yaml` parsed |
+| `GET /api/items?type=&status=&archived=` | Every item from kanban and archive without bodies, sorted by ID; timestamps as `YYYY-MM-DDTHH:MM:SSZ` strings |
+| `GET /api/items/:id` | `{ item, children }` with the body |
+| `GET /api/docs/tree` | Three trees (design, docs, wip) of `{ name, path, kind, title?, frontMatter?, children? }` |
+| `GET /api/docs/file?path=` | `{ path, frontMatter, body, raw }` for one markdown file; paths outside the repo or non-markdown are 400, missing 404 |
+| `GET /api/events` | Server-sent events: `ready` once, then `change` with `{ path }` per changed file under design, docs, wip, or the manifest |
+
+Errors are `{ error }` with the status. The reader caches by path and mtime and is invalidated by the watcher.
+
 ## Writes
 
 The mount is read-write so the board can be operated from the browser. Writes are limited to what `flai` also does: transitions, block and unblock, log entries, and editing an item's body. Every write goes through the same validation rules as `flai check`; the server ports the rules from the Go reference and the fixture test keeps them aligned. Writes are ordinary file edits, so they show up in `git status` for the human to commit.

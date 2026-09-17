@@ -14,4 +14,8 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `flai-snapshot.sh` | GoReleaser snapshot build into `flai/dist` |
 | `check.sh` | `flai check --strict` on this repository |
 | `template-test.sh` | Renders `template/` into a temp dir and checks the result |
-| `install-tools.sh` | Installs golangci-lint v2 and GoReleaser into `bin/` |
+| `install-tools.sh` | Installs golangci-lint v2 and GoReleaser into `bin/`, pnpm into `.flai-cache/pnpm` |
+| `flaiover-install.sh` | `pnpm install --frozen-lockfile` in `flaiover/` |
+| `flaiover-dev.sh` | Dev server against this repository (`PROJECT_DIR` defaults to the root) |
+| `flaiover-build.sh` | Production build (adapter-node) |
+| `flaiover-test.sh` | prettier, eslint, svelte-check, vitest |

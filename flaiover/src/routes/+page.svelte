@@ -1,0 +1,62 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+
+	type Manifest = { name: string; description?: string; template?: { version?: string } };
+	type Item = { id: string; type: string; status: string; title: string; archived: boolean };
+
+	let manifest = $state<Manifest | null>(null);
+	let items = $state<Item[]>([]);
+	let error = $state<string | null>(null);
+
+	const statuses = ['backlog', 'ready', 'in-progress', 'review', 'done'];
+	const active = $derived(items.filter((i) => !i.archived));
+	const count = (type: string, status: string) =>
+		active.filter((i) => i.type === type && i.status === status).length;
+
+	onMount(async () => {
+		try {
+			const [m, i] = await Promise.all([fetch('/api/manifest'), fetch('/api/items')]);
+			if (!m.ok) throw new Error((await m.json()).error ?? m.statusText);
+			manifest = await m.json();
+			items = await i.json();
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		}
+	});
+</script>
+
+{#if error}
+	<p class="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+		Cannot read the project: {error}
+	</p>
+{:else if manifest}
+	<h1 class="text-2xl font-semibold">{manifest.name}</h1>
+	{#if manifest.description}<p class="mt-1 text-zinc-600 dark:text-zinc-400">
+			{manifest.description}
+		</p>{/if}
+	<p class="mt-1 text-xs text-zinc-500">
+		template {manifest.template?.version ?? '?'} · {active.length} active items · {items.length -
+			active.length} archived
+	</p>
+
+	<div class="mt-6 overflow-x-auto">
+		<table class="min-w-full text-sm">
+			<thead>
+				<tr class="text-left text-zinc-500">
+					<th class="py-2 pr-4"></th>
+					{#each statuses as s (s)}<th class="py-2 pr-4 font-medium">{s}</th>{/each}
+				</tr>
+			</thead>
+			<tbody>
+				{#each ['epic', 'story', 'task'] as t (t)}
+					<tr class="border-t border-zinc-200 dark:border-zinc-800">
+						<td class="py-2 pr-4 font-medium">{t}s</td>
+						{#each statuses as s (s)}<td class="py-2 pr-4 tabular-nums">{count(t, s)}</td>{/each}
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+{:else}
+	<p class="text-sm text-zinc-500">Loading…</p>
+{/if}

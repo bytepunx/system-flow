@@ -16,16 +16,17 @@ One file per technology. Each records the version in use, where it is used, why 
 | charmbracelet/huh | v1.0 | flai | [go-libraries.md](go-libraries.md) |
 | golangci-lint | v2.5 | flai | [go.md](go.md) |
 | GoReleaser | v2 (pinned in scripts/install-tools.sh) | flai | [go.md](go.md) |
-| Node.js | 24 LTS | flaiover | [node.md](node.md) |
-| pnpm | 10 | flaiover | [node.md](node.md) |
-| SvelteKit / Svelte | 2 / 5 | flaiover | [sveltekit.md](sveltekit.md) |
-| Vite | 7 | flaiover | [sveltekit.md](sveltekit.md) |
-| Tailwind CSS | 4 | flaiover | [tailwind.md](tailwind.md) |
-| TypeScript | 5 | flaiover | [sveltekit.md](sveltekit.md) |
+| Node.js | 24 LTS (`.nvmrc`; dev host runs 25) | flaiover | [node.md](node.md) |
+| pnpm | 10.34.5 (`packageManager`) | flaiover | [node.md](node.md) |
+| SvelteKit / Svelte | 2.63 / 5.56 | flaiover | [sveltekit.md](sveltekit.md) |
+| Vite | 8 | flaiover | [sveltekit.md](sveltekit.md) |
+| Tailwind CSS | 4.3 with typography | flaiover | [tailwind.md](tailwind.md) |
+| TypeScript | 6 | flaiover | [sveltekit.md](sveltekit.md) |
 | Apache ECharts | 6 | flaiover | [charts.md](charts.md) |
-| markdown-it, shiki, mermaid | latest | flaiover | [markdown.md](markdown.md) |
-| MiniSearch | 7 | flaiover | [search.md](search.md) |
-| Vitest, Playwright | latest | flaiover | [sveltekit.md](sveltekit.md) |
+| yaml, chokidar | 2.9, 5.0 | flaiover | [sveltekit.md](sveltekit.md) |
+| markdown-it, shiki, mermaid | pending S-012 | flaiover | [markdown.md](markdown.md) |
+| MiniSearch | 7.2 | flaiover | [search.md](search.md) |
+| Vitest, Playwright | 4.1, 1.60 | flaiover | [sveltekit.md](sveltekit.md) |
 | Docker | 29 (host), image on node:24-alpine | flaiover, flai | [docker.md](docker.md) |
 | Git | 2.47 (host) | flai | [go-libraries.md](go-libraries.md) |
 | GitHub Actions, GHCR | n/a | monorepo | [ci.md](ci.md) |

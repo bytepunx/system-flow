@@ -8,13 +8,18 @@ status: active
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `@sveltejs/kit` | 2 | App framework, routing, server endpoints |
-| `svelte` | 5 | UI, runes for state |
-| `@sveltejs/adapter-node` | 5 | Node server output for the Docker image |
-| `vite` | 7 | Build and dev server |
-| `typescript` | 5 | Everywhere, `strict` on |
-| `vitest` | latest | Unit tests, including the metrics port fixture test |
-| `@playwright/test` | latest | End-to-end against the template sample repo |
+| `@sveltejs/kit` | 2.63 | App framework, routing, server endpoints; the adapter is configured in `vite.config.ts` |
+| `svelte` | 5.56 | UI, runes for state (runes forced on for project files) |
+| `@sveltejs/adapter-node` | 5.5 | Node server output for the Docker image |
+| `vite` | 8 | Build and dev server |
+| `typescript` | 6 | Everywhere, `strict` on |
+| `vitest` | 4.1 | Unit tests, including the metrics port fixture test |
+| `@playwright/test` | 1.60 | End-to-end against the template sample repo |
+| `yaml` | 2.9 | Front matter and manifest parsing on the server |
+| `chokidar` | 5.0 | File watching behind `/api/events` |
+| `eslint`, `prettier` | 10, 3.8 | Lint and format as scaffolded by `sv create` |
+
+Exact versions are in `flaiover/pnpm-lock.yaml`. Scaffolded with `sv create` on 2026-09-17 (S-011).
 
 Decision: [ADR 0007](../adrs/0007-sveltekit-spa-with-node-adapter-in-docker.md).
 
