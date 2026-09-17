@@ -3,11 +3,11 @@ id: S-021
 type: story
 nature: feature
 title: flai template push publishes template changes to a remote
-status: review
+status: done
 parent: E-001
 owner: agent
 created: 2026-09-15T17:39:42Z
-updated: 2026-09-17T03:37:57Z
+updated: 2026-09-17T03:46:49Z
 transitions:
   - to: ready
     at: 2026-09-17T03:34:09Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T03:37:57Z
     by: agent
+  - to: done
+    at: 2026-09-17T03:46:49Z
+    by: alex
 tags: [cli, template, devops]
 ---
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 - 2026-09-17
+
+- S-021 flai template push publishes template changes to a remote (patch).
+
 ## 1.0.0 - 2026-09-16
 
 Epic E-005 (agent conventions) complete: twelve baseline conventions under
