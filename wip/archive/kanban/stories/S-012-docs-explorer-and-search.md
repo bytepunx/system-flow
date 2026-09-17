@@ -3,11 +3,11 @@ id: S-012
 type: story
 nature: feature
 title: Documentation explorer and search
-status: review
+status: done
 parent: E-003
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T04:29:52Z
+updated: 2026-09-17T04:32:23Z
 transitions:
   - to: ready
     at: 2026-09-17T04:24:14Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T04:29:52Z
     by: agent
+  - to: done
+    at: 2026-09-17T04:32:23Z
+    by: alex
 tags: []
 ---
 
