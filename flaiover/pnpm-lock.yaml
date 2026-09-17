@@ -6,7 +6,7 @@ settings:
 
 importers:
 
-  flaiover:
+  .:
     dependencies:
       chokidar:
         specifier: ^5.0.0
