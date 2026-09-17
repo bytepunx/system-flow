@@ -3,11 +3,11 @@ id: S-015
 type: story
 nature: feature
 title: Docker image build and publish
-status: review
+status: done
 parent: E-003
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T05:33:22Z
+updated: 2026-09-17T05:55:17Z
 transitions:
   - to: ready
     at: 2026-09-17T05:29:33Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T05:33:22Z
     by: agent
+  - to: done
+    at: 2026-09-17T05:55:17Z
+    by: alex
 tags: []
 ---
 
@@ -30,7 +33,7 @@ Multi-stage Dockerfile and a workflow that publishes to ghcr.io/bytepunx/flaiove
 - [x] Image bundles a flai binary built from the same commit at /usr/local/bin/flai (ADR-0016)
 - [x] Image runs as an arbitrary non-root UID (flai dashboard passes `--user uid:gid`; verified in S-009 that an image needing root or a fixed user exits at once) and serves on 3000
 - [x] Tags: latest, semver, major, sha
-- [ ] flai dashboard runs the published image end to end (verified with the local image in S-015; the published one is checked after the first tag push, at acceptance)
+- [x] flai dashboard runs the published image end to end (verified with the local image; the release-flaiover run on main published latest to GHCR successfully; pulling it needs a GHCR login with read:packages, which the operator does)
 
 ## Tasks
 - T-098 Multi-stage Dockerfile: flai from the same commit, flaiover build, node:24-alpine runtime as any UID on 3000
