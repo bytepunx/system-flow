@@ -3,11 +3,11 @@ id: S-029
 type: story
 nature: feature
 title: flai release computes the bump, tags, and pushes on acceptance
-status: review
+status: done
 parent: E-002
 owner: alex
 created: 2026-09-16T15:50:25Z
-updated: 2026-09-17T02:09:10Z
+updated: 2026-09-17T03:15:26Z
 transitions:
   - to: ready
     at: 2026-09-17T02:04:20Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T02:09:10Z
     by: agent
+  - to: done
+    at: 2026-09-17T03:15:26Z
+    by: alex
 tags: [cli, release]
 ---
 
