@@ -3,11 +3,11 @@ id: S-0034
 type: story
 nature: feature
 title: flai installer script and self-upgrade command
-status: review
+status: done
 parent: E-0001
 owner: alex
 created: 2026-09-17T07:21:06Z
-updated: 2026-09-17T07:27:40Z
+updated: 2026-09-17T07:45:39Z
 transitions:
   - to: ready
     at: 2026-09-17T07:22:04Z
@@ -17,6 +17,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-09-17T07:27:40Z
+    by: alex
+  - to: done
+    at: 2026-09-17T07:45:39Z
     by: alex
 tags: [cli, docs]
 ---
