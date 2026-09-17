@@ -3,11 +3,11 @@ id: S-0036
 type: story
 nature: feature
 title: Dashboard authentication with a per-project token
-status: review
+status: done
 parent: E-0006
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-17T20:03:22Z
+updated: 2026-09-17T20:19:05Z
 transitions:
   - to: ready
     at: 2026-09-17T19:52:11Z
@@ -17,6 +17,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-09-17T20:03:22Z
+    by: alex
+  - to: done
+    at: 2026-09-17T20:19:05Z
     by: alex
 blocked:
   - from: 2026-09-17T20:02:21Z
