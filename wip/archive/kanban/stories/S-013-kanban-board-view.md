@@ -3,11 +3,11 @@ id: S-013
 type: story
 nature: feature
 title: Kanban board view with transitions
-status: review
+status: done
 parent: E-003
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T04:38:33Z
+updated: 2026-09-17T04:50:10Z
 transitions:
   - to: ready
     at: 2026-09-17T04:32:27Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T04:38:33Z
     by: agent
+  - to: done
+    at: 2026-09-17T04:50:10Z
+    by: alex
 tags: []
 ---
 
