@@ -23,13 +23,19 @@ layout:                                      # folder names, defaults shown, ren
   design: design
   docs: docs
   wip: wip
-projects:                                    # code sub-projects at the repo root
+projects:                                    # releasable components at the repo root
   - name: flai
     path: flai
     kind: go
+    tags: [cli]                              # story tags that mean "delivers to flai"
   - name: flaiover
     path: flaiover
     kind: sveltekit
+    tags: [dashboard]
+  - name: template
+    path: template
+    kind: template                           # released by bumping template.yaml and CHANGELOG.md, not by tag
+    tags: [template, conventions]
 dashboard:
   image: ghcr.io/bytepunx/flaiover
   tag: latest
@@ -41,4 +47,5 @@ Rules:
 - `flai` refuses to run project commands in a directory tree with no `system-flow.yaml` above the current directory, except `flai new` and `flai import`.
 - `layout` is the only place folder names live. Everything else resolves through it. Subfolders such as `design/conventions` are fixed names under their layout folder.
 - `template.version` lets `flai upgrade` (future) diff the applied template against a newer one.
+- `projects` are the components `flai release` and `flai accept` version: code kinds get `<name>/vX.Y.Z` tags, kind `template` gets its version file bumped. `tags` are aliases a story or epic tag may use to say which component it delivers to.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`) and preserves comments where the YAML library allows it.

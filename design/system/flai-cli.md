@@ -50,6 +50,8 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 | `flai dashboard [--port] [--pull] [--detach]` | Pull the flaiover image if missing, run it with the repo mounted read-write at `/project`, open the browser. `flai dashboard stop`. |
 | `flai upgrade [--dry-run] [--force] [--keep-all\|--replace-all]` | Re-integrate the latest template into an existing repo: add new files, replace files unchanged since they were applied, report project-modified files as conflicts, merge `CLAUDE.md` above its marker. Story S-020. |
 | `flai prime [--cat] [--json]` | Print `design/conventions` in read order, README first, as paths or contents, so an agent or hook loads the norms in one call; the open-issues summary follows when non-empty. |
+| `flai release <id> [--dry-run] [--deliver] [--apply]` | Compute the semver release for an item per the git convention (delivered component gets the delivery-type bump, touched components a patch) and with `--apply` create the tags and version bumps. |
+| `flai accept <id> [--by] [--deliver] [--no-release] [--no-push] [--trailer]` | The operator's acceptance in one step: move to done, archive, template bump, commit, tags on that commit, push. |
 | `flai issue new "<title>" --class <c> [--cost] [--note]`, `flai issue bump <id> [--cost] [--note]`, `flai issue close <id> --reason`, `flai issue list [--all]`, `flai issue summary` | Record, increment, and close recurring friction in `design/issues`; every command regenerates `summary.md` (average and total cost, most expensive first). |
 | `flai template show`, `flai template update`, `flai template use <repo> [--ref]` | Inspect, refresh, and switch the template source. |
 | `flai template push [dir] [--remote] [--ref] [--tag] [--dry-run]` | Publish a locally developed template to its git remote: clone, replace contents, commit with the version, push. Git errors surface verbatim; no force push unless `--force`. Story S-021. |
@@ -88,6 +90,7 @@ flai/
 │   ├── check/           # reference validator, rule names are stable identifiers
 │   ├── conventions/     # loads and validates design/conventions
 │   ├── issues/          # design/issues: record, bump, close, summary
+│   ├── release/         # semver plan from item, commits, and manifest components; tags and version files
 │   ├── metrics/         # reference implementation of metrics.md
 │   ├── importer/        # scan, plan, moves with git mv
 │   ├── dashboard/       # docker run/stop

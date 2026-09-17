@@ -17,9 +17,15 @@ projects:
   - name: flai
     path: flai
     kind: go
+    tags: [cli]
   - name: flaiover
     path: flaiover
     kind: sveltekit
+    tags: [dashboard]
+  - name: template
+    path: template
+    kind: template
+    tags: [template, conventions]
 dashboard:
   image: ghcr.io/bytepunx/flaiover
   tag: latest

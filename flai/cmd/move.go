@@ -65,6 +65,9 @@ cancelling or sending review back needs --reason. WIP limit breaches warn.`,
 				return a.printJSON(map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings})
 			}
 			fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
+			if it.Status == workitem.Done && it.Type != workitem.Task {
+				a.logger().Info("accepted without release; flai accept does move, archive, commit, release, and push in one step", "component", "workitem", "item", it.ID)
+			}
 			return nil
 		},
 	}

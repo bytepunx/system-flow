@@ -239,3 +239,16 @@ flai issue summary
 ```
 
 Issues live in `design/issues/`, one file per recurring problem with a class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, and one dated instance per occurrence. `bump` increments the count, updates the average, and appends the instance. Every command regenerates `summary.md`, the table of open issues most expensive first, and `flai prime` lists it after the conventions when anything is open. `flai check` validates the files and warns when the summary is stale.
+
+## Accept and release
+
+```bash
+flai release S-031 --dry-run          # what acceptance would release
+flai accept S-031 --by alex           # move to done, archive, bump, commit, tag, push
+flai accept E-002 --by alex           # an epic: major release of what it delivered
+flai accept S-016 --by alex --no-release
+```
+
+Acceptance is one command. It moves the item to done (the same rules as `flai move`), archives it with its children and narrative, computes the release, bumps the template's version file and changelog if the template is involved, commits, creates the tags on that commit, and pushes the branch and tags. `--no-push` keeps everything local; `--dry-run` prints the plan and stops; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean so the acceptance commit holds only acceptance, unless you pass `--yes`.
+
+The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to, found from the item's tags (a project name or one of its `tags` aliases), its epic's tags, or `--deliver`, gets the delivery-type bump: epic major, feature story minor, remediation or improvement patch. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. Research and experiment stories are refused.

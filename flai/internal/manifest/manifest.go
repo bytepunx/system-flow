@@ -39,11 +39,14 @@ type Template struct {
 	Applied string `yaml:"applied"`
 }
 
-// Project is a code sub-project at the repo root.
+// Project is a releasable component at the repo root: a code sub-project
+// or the template. Tags are story tags that mean "this story delivers to
+// this component" (for example cli for flai).
 type Project struct {
-	Name string `yaml:"name"`
-	Path string `yaml:"path"`
-	Kind string `yaml:"kind"`
+	Name string   `yaml:"name" json:"name"`
+	Path string   `yaml:"path" json:"path"`
+	Kind string   `yaml:"kind" json:"kind"`
+	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 }
 
 // Dashboard is how the flaiover image runs for this project.

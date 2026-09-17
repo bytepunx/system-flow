@@ -36,5 +36,5 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 
 ## Project additions
 - WIP limits are in `wip/kanban/board.md`: ready 5, in-progress 2, review 3.
-- The operator accepts stories (`flai move S-nnn done --by alex`); the agent moves stories to review and never to done. After acceptance the agent archives, commits, tags, and pushes without asking.
+- The operator accepts stories; the agent runs `flai accept S-nnn --by alex` on their word, which moves to done, archives, commits, releases, and pushes in one step. The agent moves stories to review and never to done by hand.
 - E-005 (agent conventions) takes priority over every other open epic until it closes.

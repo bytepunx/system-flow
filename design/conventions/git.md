@@ -37,6 +37,6 @@ How history is made in this repository.
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- Releases are per sub-project with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`; the template is versioned in `template/template.yaml` and `template/CHANGELOG.md`. On acceptance, the component the story delivers to (its epic's subject, or the story's tags `cli`, `dashboard`, `template`) gets the delivery-type bump; every other component touched incidentally gets a patch; a story touching neither flai, flaiover, nor the template (design, docs, wip only) releases nothing. Dependabot merges are a patch on the sub-project they touch.
+- Releases are per component with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`; the template is versioned in `template/template.yaml` and `template/CHANGELOG.md`. `flai accept <id> --by <operator> --trailer "Co-Authored-By: ..."` performs acceptance and the release: the component the item delivers to (story tags `cli`, `dashboard`, `template`, or the epic's) gets the delivery-type bump, every other touched component a patch, and design, docs, or wip-only items release nothing. Dependabot merges are a patch on the sub-project they touch, tagged by hand until they are items.
 - Commit messages end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` when an agent authored the change.
 - Work happens on `main` until the repository is on GitHub with branch protection; the operator will say when branches are required.
