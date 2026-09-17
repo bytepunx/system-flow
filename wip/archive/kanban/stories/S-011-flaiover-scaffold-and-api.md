@@ -3,11 +3,11 @@ id: S-011
 type: story
 nature: feature
 title: SvelteKit scaffold and repo reader API
-status: review
+status: done
 parent: E-003
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T04:09:27Z
+updated: 2026-09-17T04:24:09Z
 transitions:
   - to: ready
     at: 2026-09-17T04:02:09Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T04:09:27Z
     by: agent
+  - to: done
+    at: 2026-09-17T04:24:09Z
+    by: alex
 tags: []
 ---
 
