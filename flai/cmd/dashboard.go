@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -20,18 +22,32 @@ const containerPort = 3000
 type dashboardSettings struct {
 	Image, Tag string
 	Port       int
+	Bind       string // host address the port is published on
 	Name       string
 	Root       string
 }
 
+// defaultBind publishes on every interface so the dashboard is reachable
+// from other hosts (operator's call, S-0035); --bind 127.0.0.1 restricts it.
+const defaultBind = "0.0.0.0"
+
 // dashboardSettings resolves image, tag, and port: flags, then the
 // manifest's dashboard section, then config.
-func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int) (dashboardSettings, error) {
+func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int, bind string) (dashboardSettings, error) {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
 		return dashboardSettings{}, err
 	}
-	s := dashboardSettings{Image: cfg.Dashboard.Image, Tag: cfg.Dashboard.Tag, Port: cfg.Dashboard.Port, Root: repo.Root}
+	s := dashboardSettings{Image: cfg.Dashboard.Image, Tag: cfg.Dashboard.Tag, Port: cfg.Dashboard.Port, Bind: cfg.Dashboard.Bind, Root: repo.Root}
+	if d := repo.Manifest.Dashboard; d.Bind != "" {
+		s.Bind = d.Bind
+	}
+	if bind != "" {
+		s.Bind = bind
+	}
+	if s.Bind == "" {
+		s.Bind = defaultBind
+	}
 	if d := repo.Manifest.Dashboard; d.Image != "" {
 		s.Image = d.Image
 	}
@@ -71,42 +87,135 @@ func (s dashboardSettings) ref() string { return s.Image + ":" + s.Tag }
 func (s dashboardSettings) url() string { return fmt.Sprintf("http://localhost:%d", s.Port) }
 
 func newDashboardCmd(a *app) *cobra.Command {
-	var image, tag string
+	var image, tag, bind string
 	var port int
-	var pull, attach, open bool
+	var pull, attach, open, build bool
 	c := &cobra.Command{
 		Use:   "dashboard",
 		Short: "Run the flaiover dashboard against this project in Docker",
 		Long: `Pull the flaiover image if it is missing and run it detached with this
-repository mounted read-write at /project, bound to localhost on the
-configured port, as the current user so files it writes keep your ownership.
-Image, tag, and port come from flags, then the dashboard section of
-system-flow.yaml, then ~/.flai/config.json.`,
+repository mounted read-write at /project, published on every interface
+(--bind 127.0.0.1 to restrict) on the configured port, as the current user
+so files it writes keep your ownership. Image, tag, port, and bind come from
+flags, then the dashboard section of system-flow.yaml, then config.`,
 		Example: `  flai dashboard
   flai dashboard --port 8080 --pull
   flai dashboard --attach          # stream logs until Ctrl-C (the container keeps running)
+  flai dashboard --build           # build flaiover:local from this monorepo instead of pulling
   flai dashboard stop`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboard(image, tag, port, pull, attach, open)
+			return a.runDashboard(image, tag, port, bind, pull, attach, open, build)
 		},
 	}
 	f := c.Flags()
 	f.StringVar(&image, "image", "", "image name (default: manifest, then config)")
 	f.StringVar(&tag, "tag", "", "image tag (default: manifest, then config)")
-	f.IntVar(&port, "port", 0, "host port to bind on localhost (default: manifest, then config)")
+	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
+	f.StringVar(&bind, "bind", "", "host address to publish on, 0.0.0.0 for every interface (default: manifest, then config, then 0.0.0.0)")
 	f.BoolVar(&pull, "pull", false, "pull the image even if present")
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
+	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
 	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a))
 	return c
+}
+
+const (
+	localImage = "flaiover"
+	localTag   = "local"
+)
+
+// pullDashboardImage pulls the image; when the registry refuses, it logs
+// Docker in with the GitHub token sources and tries once more. The flaiover
+// package on GHCR is private while the repository is.
+func (a *app) pullDashboardImage(s dashboardSettings) error {
+	a.logger().Info("pulling image", "component", "dashboard", "image", s.ref())
+	_, err := a.runner.Run("", "docker", "pull", "--quiet", s.ref())
+	if err == nil {
+		return nil
+	}
+	registry := registryOf(s.Image)
+	if registry == "" || !unauthorized(err) {
+		return err
+	}
+	token := a.githubToken()
+	if token == "" {
+		return fmt.Errorf("%s refused the pull for %s and no token is available: set GITHUB_TOKEN or run `gh auth login`, then `gh auth refresh -h github.com -s read:packages` (the package is private while the repository is; making the package public also works)", registry, s.ref())
+	}
+	user := a.registryUser()
+	a.logger().Info("logging into registry", "component", "dashboard", "registry", registry, "user", user)
+	if _, lerr := a.runner.RunInput("", "docker", token+"\n", "login", registry, "--username", user, "--password-stdin"); lerr != nil {
+		return fmt.Errorf("docker login %s failed: %w; the token needs the read:packages scope (`gh auth refresh -h github.com -s read:packages`) or the package must be public", registry, lerr)
+	}
+	if _, err := a.runner.Run("", "docker", "pull", "--quiet", s.ref()); err != nil {
+		return fmt.Errorf("%w; logged into %s as %s but the pull was still refused: the token needs read:packages, or the package must be public", err, registry, user)
+	}
+	return nil
+}
+
+// buildDashboardImage builds flaiover:local from flaiover/ in a monorepo
+// checkout, with the same version metadata as scripts/flaiover-image.sh.
+func (a *app) buildDashboardImage(root, ref string) error {
+	dockerfile := filepath.Join(root, "flaiover", "Dockerfile")
+	if _, err := os.Stat(dockerfile); err != nil {
+		return fmt.Errorf("--build needs flaiover/Dockerfile under %s (the system-flow monorepo); elsewhere pull the published image", root)
+	}
+	describe := func(match, prefix, def string) string {
+		out, err := a.runner.Run(root, "git", "describe", "--tags", "--match", match, "--abbrev=0")
+		if err != nil || out == "" {
+			return def
+		}
+		return strings.TrimPrefix(out, prefix)
+	}
+	commit, err := a.runner.Run(root, "git", "rev-parse", "--short", "HEAD")
+	if err != nil || commit == "" {
+		commit = "unknown"
+	}
+	a.logger().Info("building image", "component", "dashboard", "image", ref, "dockerfile", dockerfile)
+	_, err = a.runner.Run(root, "docker", "build", "-f", dockerfile, "-t", ref,
+		"--build-arg", "FLAI_VERSION="+describe("flai/v*", "flai/v", "dev"),
+		"--build-arg", "FLAI_COMMIT="+commit,
+		"--build-arg", "FLAIOVER_VERSION="+describe("flaiover/v*", "flaiover/v", "0.0.0"),
+		"--build-arg", "FLAI_DATE="+a.now().UTC().Format(time.RFC3339),
+		root)
+	return err
+}
+
+// registryOf returns the registry host of an image reference, or "" for
+// Docker Hub.
+func registryOf(image string) string {
+	first, _, ok := strings.Cut(image, "/")
+	if !ok || (!strings.Contains(first, ".") && !strings.Contains(first, ":") && first != "localhost") {
+		return ""
+	}
+	return first
+}
+
+func unauthorized(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unauthorized") || strings.Contains(msg, "denied") || strings.Contains(msg, "authentication required")
+}
+
+// registryUser is the login name for docker login: the gh account, then
+// GITHUB_ACTOR, then a placeholder (GHCR authenticates the token, not the name).
+func (a *app) registryUser() string {
+	if _, err := a.runner.LookPath("gh"); err == nil {
+		if out, err := a.runner.Run("", "gh", "api", "user", "--jq", ".login"); err == nil && out != "" {
+			return out
+		}
+	}
+	if v := os.Getenv("GITHUB_ACTOR"); v != "" {
+		return v
+	}
+	return "token"
 }
 
 func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
 
-func (a *app) runDashboard(image, tag string, port int, pull, attach, open bool) error {
+func (a *app) runDashboard(image, tag string, port int, bind string, pull, attach, open, build bool) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
@@ -114,7 +223,10 @@ func (a *app) runDashboard(image, tag string, port int, pull, attach, open bool)
 	if err := a.requireDocker(); err != nil {
 		return err
 	}
-	s, err := a.dashboardSettings(repo, image, tag, port)
+	if build {
+		image, tag = localImage, localTag
+	}
+	s, err := a.dashboardSettings(repo, image, tag, port, bind)
 	if err != nil {
 		return err
 	}
@@ -123,14 +235,17 @@ func (a *app) runDashboard(image, tag string, port int, pull, attach, open bool)
 		fmt.Fprintf(a.out, "%s is already running at %s (flai dashboard stop to stop it)\n", s.Name, orDefault(url, s.url()))
 		return nil
 	}
-	if _, err := a.runner.Run("", "docker", "image", "inspect", s.ref()); err != nil || pull {
-		a.logger().Info("pulling image", "component", "dashboard", "image", s.ref())
-		if _, err := a.runner.Run("", "docker", "pull", "--quiet", s.ref()); err != nil {
+	if build {
+		if err := a.buildDashboardImage(repo.Root, s.ref()); err != nil {
+			return err
+		}
+	} else if _, err := a.runner.Run("", "docker", "image", "inspect", s.ref()); err != nil || pull {
+		if err := a.pullDashboardImage(s); err != nil {
 			return err
 		}
 	}
 	args := []string{"run", "--detach", "--rm", "--name", s.Name,
-		"--publish", fmt.Sprintf("127.0.0.1:%d:%d", s.Port, containerPort),
+		"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
 		"--volume", s.Root + ":/project",
 		"--env", "PROJECT_DIR=/project",
 	}
@@ -142,11 +257,15 @@ func (a *app) runDashboard(image, tag string, port int, pull, attach, open bool)
 	if err != nil {
 		return err
 	}
-	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url())
+	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "mount": s.Root})
+		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "bind": s.Bind, "port": s.Port, "mount": s.Root})
 	}
-	fmt.Fprintf(a.out, "flaiover running at %s\n  container %s, image %s, %s mounted read-write at /project\n  stop with: flai dashboard stop\n", s.url(), s.Name, s.ref(), s.Root)
+	reach := "reachable from this host only"
+	if s.Bind == defaultBind {
+		reach = "reachable on every interface of this host; no authentication, so keep the host private"
+	}
+	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  container %s, image %s, %s mounted read-write at /project\n  stop with: flai dashboard stop\n", s.url(), reach, s.Name, s.ref(), s.Root)
 	if open {
 		openBrowser(s.url())
 	}
@@ -196,7 +315,7 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 			if err := a.requireDocker(); err != nil {
 				return err
 			}
-			s, err := a.dashboardSettings(repo, "", "", 0)
+			s, err := a.dashboardSettings(repo, "", "", 0, "")
 			if err != nil {
 				return err
 			}
@@ -229,7 +348,7 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 			if err := a.requireDocker(); err != nil {
 				return err
 			}
-			s, err := a.dashboardSettings(repo, "", "", 0)
+			s, err := a.dashboardSettings(repo, "", "", 0, "")
 			if err != nil {
 				return err
 			}
@@ -270,7 +389,7 @@ func newDashboardLogsCmd(a *app) *cobra.Command {
 			if err := a.requireDocker(); err != nil {
 				return err
 			}
-			s, err := a.dashboardSettings(repo, "", "", 0)
+			s, err := a.dashboardSettings(repo, "", "", 0, "")
 			if err != nil {
 				return err
 			}

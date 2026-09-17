@@ -13,6 +13,9 @@ import (
 // Runner executes a program and returns its combined output.
 type Runner interface {
 	Run(dir, name string, args ...string) (string, error)
+	// RunInput is Run with data on standard input, for secrets that must
+	// not appear in arguments (docker login --password-stdin).
+	RunInput(dir, name, input string, args ...string) (string, error)
 	LookPath(name string) (string, error)
 }
 
@@ -20,9 +23,18 @@ type Runner interface {
 type System struct{}
 
 // Run executes name with args in dir and returns combined stdout and stderr.
-func (System) Run(dir, name string, args ...string) (string, error) {
+func (s System) Run(dir, name string, args ...string) (string, error) {
+	return s.RunInput(dir, name, "", args...)
+}
+
+// RunInput executes name with args in dir, feeding input on stdin, and
+// returns combined stdout and stderr.
+func (System) RunInput(dir, name, input string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
+	if input != "" {
+		cmd.Stdin = strings.NewReader(input)
+	}
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf

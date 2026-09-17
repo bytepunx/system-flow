@@ -9,7 +9,7 @@ services:
     image: flaiover:local
     user: '${UID:-1000}:${GID:-1000}'
     ports:
-      - '127.0.0.1:4242:3000'
+      - '4242:3000' # every interface, like flai dashboard; prefix 127.0.0.1: to restrict
     volumes:
       - '${PROJECT:-..}:/project'
     environment:

@@ -13,10 +13,25 @@ import (
 
 // fakeRunner records docker calls and answers from a script.
 type fakeRunner struct {
-	calls   []string
-	missing bool            // docker not on PATH
-	images  map[string]bool // images present
-	running map[string]bool // containers running
+	calls    []string
+	missing  bool            // docker not on PATH
+	images   map[string]bool // images present
+	running  map[string]bool // containers running
+	private  map[string]bool // images that need a login to pull
+	loggedIn bool
+	noToken  bool // gh has no token
+}
+
+func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
+	if name == "docker" && args[0] == "login" {
+		f.calls = append(f.calls, "docker "+strings.Join(args, " ")+" <"+strings.TrimSpace(input)+">")
+		if strings.TrimSpace(input) == "" {
+			return "", fmt.Errorf("docker login: empty password")
+		}
+		f.loggedIn = true
+		return "Login Succeeded", nil
+	}
+	return f.Run(dir, name, args...)
 }
 
 func (f *fakeRunner) LookPath(name string) (string, error) {
@@ -28,6 +43,24 @@ func (f *fakeRunner) LookPath(name string) (string, error) {
 
 func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 	f.calls = append(f.calls, name+" "+strings.Join(args, " "))
+	if name == "gh" {
+		switch strings.Join(args, " ") {
+		case "auth token":
+			if f.noToken {
+				return "", fmt.Errorf("gh auth token: not logged in")
+			}
+			return "ghp_fake", nil
+		case "api user --jq .login":
+			return "tester", nil
+		}
+		return "", nil
+	}
+	if name == "git" {
+		if args[0] == "rev-parse" {
+			return "abc1234", nil
+		}
+		return "", fmt.Errorf("git: no tags")
+	}
 	if name != "docker" {
 		return "", nil
 	}
@@ -38,8 +71,14 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		return "", fmt.Errorf("docker image inspect %s: exit status 1\nError: No such image", args[2])
 	case "pull":
+		if f.private[args[2]] && !f.loggedIn {
+			return "", fmt.Errorf("docker pull --quiet %s: exit status 1\nError response from daemon: error from registry: unauthorized", args[2])
+		}
 		f.images[args[2]] = true
 		return args[2], nil
+	case "build":
+		f.images[args[4]] = true
+		return "sha256:built", nil
 	case "run":
 		f.running[args[4]] = true
 		return "0123456789abcdef", nil
@@ -102,7 +141,7 @@ func TestDashboardLifecycle(t *testing.T) {
 		"docker image inspect ghcr.io/bytepunx/flaiover:0.2.0",
 		"docker pull --quiet ghcr.io/bytepunx/flaiover:0.2.0",
 		"--name flaiover-my-proj",
-		"--publish 127.0.0.1:5555:3000",
+		"--publish 0.0.0.0:5555:3000",
 		"--volume " + root + ":/project",
 		"--env PROJECT_DIR=/project",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
@@ -118,6 +157,12 @@ func TestDashboardLifecycle(t *testing.T) {
 	out, _, _ = runWith(t, root, &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}, "dashboard", "--port", "6000", "--json")
 	if !strings.Contains(out, `"url": "http://localhost:6000"`) {
 		t.Errorf("flag precedence: %s", out)
+	}
+	// --bind restricts the published address; the manifest can set it too
+	bnd := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
+	out, _, _ = runWith(t, root, bnd, "dashboard", "--bind", "127.0.0.1")
+	if !strings.Contains(strings.Join(bnd.calls, "\n"), "--publish 127.0.0.1:5555:3000") || !strings.Contains(out, "reachable from this host only") {
+		t.Errorf("--bind: %s\n%s", out, strings.Join(bnd.calls, "\n"))
 	}
 	// present image is not pulled unless --pull
 	g := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
@@ -150,5 +195,52 @@ func TestDashboardLifecycle(t *testing.T) {
 	out, _, _ = runWith(t, root, f, "dashboard", "stop")
 	if !strings.Contains(out, "not running") {
 		t.Errorf("stop twice: %s", out)
+	}
+}
+
+func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GH_TOKEN", "")
+	root := tempProject(t)
+	img := "ghcr.io/bytepunx/flaiover:latest"
+
+	// Unauthorized pull, token from gh: login and retry.
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, private: map[string]bool{img: true}}
+	out, errOut, code := runWith(t, root, f, "dashboard")
+	joined := strings.Join(f.calls, "\n")
+	if code != 0 || !strings.Contains(joined, "docker login ghcr.io --username tester --password-stdin <ghp_fake>") || strings.Count(joined, "docker pull --quiet "+img) != 2 || !strings.Contains(out, "http://localhost:4242") {
+		t.Fatalf("login retry: %d %s %s\n%s", code, out, errOut, joined)
+	}
+	if strings.Contains(errOut, "ghp_fake") {
+		t.Error("token must not be logged")
+	}
+
+	// No token anywhere: the error names the fix.
+	g := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, private: map[string]bool{img: true}, noToken: true}
+	_, errOut, code = runWith(t, root, g, "dashboard")
+	if code == 0 || !strings.Contains(errOut, "read:packages") || strings.Contains(strings.Join(g.calls, "\n"), "docker login") {
+		t.Errorf("no token: %d %s", code, errOut)
+	}
+
+	// Docker Hub images get no login attempt.
+	h := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, private: map[string]bool{"nginx:latest": true}}
+	_, errOut, code = runWith(t, root, h, "dashboard", "--image", "nginx")
+	if code == 0 || strings.Contains(strings.Join(h.calls, "\n"), "docker login") {
+		t.Errorf("hub image: %d %s", code, errOut)
+	}
+
+	// --build outside the monorepo refuses; inside it builds and runs flaiover:local.
+	b := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	_, errOut, code = runWith(t, root, b, "dashboard", "--build")
+	if code == 0 || !strings.Contains(errOut, "flaiover/Dockerfile") {
+		t.Errorf("build without dockerfile: %d %s", code, errOut)
+	}
+	_ = os.MkdirAll(filepath.Join(root, "flaiover"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "flaiover", "Dockerfile"), []byte("FROM scratch\n"), 0o644)
+	out, errOut, code = runWith(t, root, b, "dashboard", "--build")
+	joined = strings.Join(b.calls, "\n")
+	if code != 0 || !strings.Contains(joined, "docker build -f "+filepath.Join(root, "flaiover", "Dockerfile")+" -t flaiover:local --build-arg FLAI_VERSION=dev --build-arg FLAI_COMMIT=abc1234") || !strings.Contains(joined, "flaiover:local") || strings.Contains(joined, "docker pull") || !strings.Contains(out, "image flaiover:local") {
+		t.Errorf("build: %d %s %s\n%s", code, out, errOut, joined)
 	}
 }

@@ -42,13 +42,14 @@ type Dashboard struct {
 	Image string `json:"image"`
 	Tag   string `json:"tag"`
 	Port  int    `json:"port"`
+	Bind  string `json:"bind"` // host address the port is published on; 0.0.0.0 for every interface
 }
 
 // Default returns the configuration written on first run.
 func Default() Config {
 	return Config{
 		Template:  Template{Repo: "https://github.com/bytepunx/system-flow-template", Ref: "main"},
-		Dashboard: Dashboard{Image: "ghcr.io/bytepunx/flaiover", Tag: "latest", Port: 4242},
+		Dashboard: Dashboard{Image: "ghcr.io/bytepunx/flaiover", Tag: "latest", Port: 4242, Bind: "0.0.0.0"},
 		CacheDir:  orDefault(os.Getenv(CacheEnvVar), "~/.flai/cache"),
 		Author:    currentUser(),
 	}
@@ -147,7 +148,7 @@ func Save(path string, cfg Config) error {
 func Keys() []string {
 	return []string{
 		"template.repo", "template.ref",
-		"dashboard.image", "dashboard.tag", "dashboard.port",
+		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind",
 		"cache_dir", "author",
 	}
 }

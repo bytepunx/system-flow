@@ -80,7 +80,8 @@ LOG_FORMAT=json flai check 2>events.jsonl
   "dashboard": {
     "image": "ghcr.io/bytepunx/flaiover",
     "tag": "latest",
-    "port": 4242
+    "port": 4242,
+    "bind": "0.0.0.0"
   },
   "cache_dir": "~/.flai/cache",
   "author": "<your username>"
@@ -312,9 +313,13 @@ A template developed inside another repository is published by cloning its remot
 flai dashboard                 # pull the image if needed, run it, print the URL
 flai dashboard --port 8080 --pull
 flai dashboard --attach        # follow the logs; Ctrl-C leaves the container running
+flai dashboard --build         # build flaiover:local from this monorepo and run that
+flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
 flai dashboard status
 flai dashboard logs [-f]
 flai dashboard stop
 ```
 
-The container runs detached as `flaiover-<project>`, bound to `127.0.0.1` on the configured port, with the repository mounted read-write at `/project` and running as your user so files it writes keep your ownership. Image, tag, and port come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer.
+The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port, with the repository mounted read-write at `/project` and running as your user so files it writes keep your ownership. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer.
+
+The image lives on GHCR and is private while the repository is. When the pull is refused, `flai dashboard` logs Docker into the registry with `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` and retries once. The token needs the `read:packages` scope; `gh auth refresh -h github.com -s read:packages` adds it. Inside the monorepo, `--build` sidesteps the registry by building the image from `flaiover/` as `flaiover:local`.

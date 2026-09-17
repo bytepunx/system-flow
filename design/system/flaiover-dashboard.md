@@ -74,7 +74,7 @@ Server builds a MiniSearch index over title, tags, ID, headings, and body text o
 
 ## Runtime
 
-- Container listens on `3000`. `flai dashboard` maps it to the configured host port on `127.0.0.1`, default `4242`, and runs the container as the host user (`--user uid:gid`), so the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/project` and `/tmp`, and a writable working directory is not assumed.
+- Container listens on `3000`. `flai dashboard` publishes it on the configured host port, default `4242`, on every interface by default (`dashboard.bind` or `--bind` restricts it, for example to `127.0.0.1`), and runs the container as the host user (`--user uid:gid`), so the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/project` and `/tmp`, and a writable working directory is not assumed.
 - Repo mounted at `/project`. `PROJECT_DIR` overrides for development outside Docker.
 - File watching with `chokidar`, debounced, invalidates the index and pushes updates to open tabs with server-sent events.
 - No authentication. It is a local tool bound to localhost by `flai`. Operators exposing it further are told not to in `docs/operators`.

@@ -54,6 +54,7 @@ type Dashboard struct {
 	Image string `yaml:"image"`
 	Tag   string `yaml:"tag"`
 	Port  int    `yaml:"port"`
+	Bind  string `yaml:"bind"` // host address to publish on; default 0.0.0.0
 }
 
 // Load parses the manifest at path.

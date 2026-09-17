@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-16T23:24:18Z
+updated: 2026-09-17T07:49:28Z
 transitions: []
 tags: []
 ---
@@ -23,6 +23,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0014 Flow metric charts
 - S-0015 Docker image build and publish
 - S-0032 flaiover observability: request logs, health, metrics, traces
+- S-0035 flai dashboard runs from a private registry or a local build
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
