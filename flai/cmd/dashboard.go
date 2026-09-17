@@ -244,19 +244,19 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 			return err
 		}
 	}
-	token, created, err := ensureToken(repo.Root)
+	token, created, err := ensureToken(repo.MainRoot)
 	if err != nil {
 		return fmt.Errorf("dashboard token: %w", err)
 	}
 	if created {
-		a.logger().Info("dashboard token created", "component", "dashboard", "file", relPath(repo.Root, tokenPath(repo.Root)))
+		a.logger().Info("dashboard token created", "component", "dashboard", "file", relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
 	}
 	args := []string{"run", "--detach", "--rm", "--name", s.Name,
 		"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
 		"--volume", s.Root + ":/project",
 		"--env", "PROJECT_DIR=/project",
 	}
-	args = append(args, tokenArgs(repo.Root)...)
+	args = append(args, tokenArgs(repo.MainRoot)...)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
@@ -273,7 +273,7 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	if s.Bind == defaultBind {
 		reach = "reachable on every interface of this host; the token is required, keep the host private"
 	}
-	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at /project\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, relPath(repo.Root, tokenPath(repo.Root)))
+	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at /project\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
 	if open {
 		openBrowser(loginURL(s.url(), token))
 	}

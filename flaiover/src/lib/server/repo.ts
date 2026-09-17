@@ -42,6 +42,7 @@ export type Item = {
 	estimate?: string;
 	stream?: string;
 	tags?: string[];
+	touches?: string[]; // paths or components the work changes (ADR-0019)
 	path: string; // repo-relative
 	archived: boolean;
 	body: string;

@@ -57,8 +57,19 @@ design/conventions/work-management.md and git.md:
 			if it.Type == workitem.Story && it.Status != workitem.Review {
 				return fmt.Errorf("%s is %s; a story is accepted from review", it.ID, it.Status)
 			}
-			if st, _ := a.runner.Run(repo.Root, "git", "status", "--porcelain"); strings.TrimSpace(st) != "" && !a.yes {
-				return fmt.Errorf("working tree has uncommitted changes; commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them")
+			if dirty := a.dirtyOutsideWip(repo); len(dirty) > 0 && !a.yes {
+				return fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
+			}
+			// 0. bring the story branch into the main branch (ADR-0019)
+			merged := false
+			if it.Type == workitem.Story {
+				if dryRun {
+					if a.branchExists(repo.MainRoot, storyBranch(it.ID)) {
+						fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", storyBranch(it.ID))
+					}
+				} else if merged, err = a.mergeStoryBranch(repo, it.ID); err != nil {
+					return err
+				}
 			}
 			var plan *release.Plan
 			if !noRelease {
@@ -182,9 +193,12 @@ design/conventions/work-management.md and git.md:
 				}
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"id": it.ID, "archived": len(ap.Items), "plan": plan, "tags": tags, "pushed": pushed, "published": published})
+				return a.printJSON(map[string]any{"id": it.ID, "archived": len(ap.Items), "merged": merged, "plan": plan, "tags": tags, "pushed": pushed, "published": published})
 			}
 			fmt.Fprintf(a.out, "accepted %s: done, %d items archived, committed", it.ID, len(ap.Items))
+			if merged {
+				fmt.Fprintf(a.out, ", %s merged and removed", storyBranch(it.ID))
+			}
 			if len(tags) > 0 {
 				fmt.Fprintf(a.out, ", tagged %s", strings.Join(tags, ", "))
 			}

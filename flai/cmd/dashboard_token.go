@@ -94,9 +94,9 @@ every session.`,
 			var token string
 			created := false
 			if rotate {
-				token, err = writeToken(repo.Root)
+				token, err = writeToken(repo.MainRoot)
 			} else {
-				token, created, err = ensureToken(repo.Root)
+				token, created, err = ensureToken(repo.MainRoot)
 			}
 			if err != nil {
 				return err
@@ -111,9 +111,9 @@ every session.`,
 				}
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"token": token, "file": relPath(repo.Root, tokenPath(repo.Root)), "login_url": loginURL(s.url(), token), "created": created, "rotated": rotate, "restarted": restarted})
+				return a.printJSON(map[string]any{"token": token, "file": relPath(repo.MainRoot, tokenPath(repo.MainRoot)), "login_url": loginURL(s.url(), token), "created": created, "rotated": rotate, "restarted": restarted})
 			}
-			fmt.Fprintf(a.out, "token: %s\nfile:  %s\nlogin: %s\n", token, relPath(repo.Root, tokenPath(repo.Root)), loginURL(s.url(), token))
+			fmt.Fprintf(a.out, "token: %s\nfile:  %s\nlogin: %s\n", token, relPath(repo.MainRoot, tokenPath(repo.MainRoot)), loginURL(s.url(), token))
 			if restarted {
 				fmt.Fprintf(a.out, "restarted %s; every session must log in again\n", s.Name)
 			}

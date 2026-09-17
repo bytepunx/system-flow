@@ -20,7 +20,7 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
 	var nature, owner, parent string
-	var tags []string
+	var tags, touches []string
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
@@ -33,7 +33,7 @@ func newItemNewCmd(a *app, typ string) *cobra.Command {
 			}
 			it, err := repo.Create(workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
-				Owner: orDefault(owner, a.author()), Tags: tags, Now: a.now(),
+				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Now: a.now(),
 			})
 			if err != nil {
 				return err
@@ -48,6 +48,7 @@ func newItemNewCmd(a *app, typ string) *cobra.Command {
 	c.Flags().StringVar(&nature, "nature", "feature", "one of "+strings.Join(workitem.Natures, ", "))
 	c.Flags().StringVar(&owner, "owner", "", "owner (default: config author)")
 	c.Flags().StringSliceVar(&tags, "tag", nil, "tag (repeatable or comma separated)")
+	c.Flags().StringSliceVar(&touches, "touches", nil, "paths or components this work changes (repeatable or comma separated)")
 	if parentFlag != "" {
 		c.Flags().StringVar(&parent, parentFlag, "", "parent "+parentFlag+" ID")
 		_ = c.MarkFlagRequired(parentFlag)

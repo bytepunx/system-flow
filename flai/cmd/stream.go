@@ -15,15 +15,20 @@ func newStreamCmd(a *app) *cobra.Command {
 		Long: `A stream is the narrative for one story. Set FLAI_AGENT and FLAI_SESSION
 so entries record who wrote them.`,
 	}
-	c.AddCommand(newStreamOpenCmd(a), newStreamLogCmd(a))
+	c.AddCommand(newStreamOpenCmd(a), newStreamLogCmd(a), newStreamSyncCmd(a))
 	return c
 }
 
 func newStreamOpenCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var noBranch bool
+	c := &cobra.Command{
 		Use:   "open <story-id>",
-		Short: "Create the narrative for a story from the template",
-		Args:  cobra.ExactArgs(1),
+		Short: "Create the narrative for a story and check out its branch in a worktree",
+		Long: `Creates wip/agents/<story-id>.md from the template and, in a git repository,
+the branch story/<story-id> from the main branch, checked out in a worktree
+under .flai-cache/worktrees/<story-id> (ADR-0019). Work there; wip/ stays in
+the main checkout. Run flai stream sync at every task transition.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
@@ -41,10 +46,55 @@ func newStreamOpenCmd(a *app) *cobra.Command {
 			if err := a.refreshIndex(repo); err != nil {
 				return err
 			}
+			branch, wt := "", ""
+			if !noBranch {
+				branch, wt, _, err = a.openStoryBranch(repo, story.ID)
+				if err != nil {
+					return fmt.Errorf("narrative opened but the branch was not: %w", err)
+				}
+			}
 			if a.jsonOut {
-				return a.printJSON(map[string]string{"stream": n.Stream, "path": n.Path})
+				return a.printJSON(map[string]string{"stream": n.Stream, "path": n.Path, "branch": branch, "worktree": wt})
 			}
 			fmt.Fprintf(a.out, "opened %s\n", relPath(repo.Root, n.Path))
+			if branch != "" {
+				fmt.Fprintf(a.out, "branch %s checked out at %s; work there and run flai stream sync %s at each task transition\n", branch, relPath(repo.MainRoot, wt), story.ID)
+			}
+			return nil
+		},
+	}
+	c.Flags().BoolVar(&noBranch, "no-branch", false, "narrative only; no branch or worktree")
+	return c
+}
+
+func newStreamSyncCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "sync <story-id>",
+		Short: "Rebase the story branch onto the main branch in its worktree",
+		Long: `Rebases story/<story-id> onto the branch checked out in the main checkout,
+stashing and restoring uncommitted work. Conflicts stop the rebase inside the
+worktree and are listed; resolve them, run git rebase --continue there, and
+sync again.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			it, err := repo.Get(args[0])
+			if err != nil {
+				return err
+			}
+			base, conflicts, err := a.syncStoryBranch(repo, it.ID)
+			if a.jsonOut {
+				_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": err == nil})
+			}
+			if err != nil {
+				return err
+			}
+			if !a.jsonOut {
+				fmt.Fprintf(a.out, "%s is rebased onto %s\n", storyBranch(it.ID), base)
+			}
 			return nil
 		},
 	}

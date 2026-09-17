@@ -66,6 +66,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.layout()
 	c.workItems()
 	c.narratives()
+	c.overlap()
 	c.board()
 	c.documentation()
 	c.conventions()
@@ -311,6 +312,40 @@ func (c *checker) history(it *workitem.Item) {
 }
 
 var narrativeSections = []string{"## Context", "## Current state", "## Next steps", "## Decisions", "## Open questions", "## Log"}
+
+// overlap warns when two in-progress items declare touches that cover the
+// same path (ADR-0019); it is advisory, humans and agents coordinate.
+func (c *checker) overlap() {
+	type owner struct {
+		it   *workitem.Item
+		path string
+	}
+	var owners []owner
+	for _, it := range c.items {
+		if it.Archived || it.Type == workitem.Epic || it.Status != workitem.InProgress {
+			continue
+		}
+		for _, p := range it.Touches {
+			owners = append(owners, owner{it, p})
+		}
+	}
+	for i := 0; i < len(owners); i++ {
+		for j := i + 1; j < len(owners); j++ {
+			a, b := owners[i], owners[j]
+			if a.it.ID == b.it.ID || a.it.Parent == b.it.ID || b.it.Parent == a.it.ID {
+				continue
+			}
+			if pathsOverlap(a.path, b.path) {
+				c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, a.path, b.it.ID, b.path)
+			}
+		}
+	}
+}
+
+func pathsOverlap(a, b string) bool {
+	a, b = strings.TrimSuffix(a, "/"), strings.TrimSuffix(b, "/")
+	return a == b || strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
+}
 
 func (c *checker) narratives() {
 	dir := c.repo.AgentsDir()

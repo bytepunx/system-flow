@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { page } from '$app/state';
 	import { onMount, tick } from 'svelte';
@@ -21,8 +22,34 @@
 	let content: HTMLElement | undefined = $state();
 
 	const current = $derived(page.params.path ?? '');
+	type Worker = { id: string; title: string; touches?: string[] };
+	let workers = $state<Worker[]>([]);
+	// Items in progress or review whose touches cover the open document (ADR-0019);
+	// a story in review still owns its branch until it is accepted.
+	const touching = $derived(
+		current
+			? workers.filter((w) =>
+					(w.touches ?? []).some((t) => {
+						const p = t.replace(/\/$/, '');
+						return current === p || current.startsWith(p + '/');
+					})
+				)
+			: []
+	);
+	async function loadWorkers() {
+		try {
+			const r = await api('/api/items');
+			if (r.ok) {
+				const all = (await r.json()) as (Worker & { status: string })[];
+				workers = all.filter((w) => w.status === 'in-progress' || w.status === 'review');
+			}
+		} catch {
+			workers = [];
+		}
+	}
 
 	onMount(async () => {
+		void loadWorkers();
 		const r = await api('/api/docs/tree');
 		tree = await r.json();
 	});
@@ -71,6 +98,18 @@
 				Pick a document from the tree. Design, docs, and wip are all here.
 			</p>
 		{:else}
+			{#if touching.length}
+				<p
+					class="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+				>
+					Being worked on by
+					{#each touching as w, i (w.id)}{i ? ', ' : ' '}<a
+							class="font-medium underline"
+							href={resolve('/items/[id]', { id: w.id })}>{w.id}</a
+						>
+						{w.title}{/each}. Edits here may collide with that story's branch.
+				</p>
+			{/if}
 			{#if doc?.frontMatter}
 				<details
 					class="mb-4 rounded border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-800 dark:bg-zinc-900"

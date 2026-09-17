@@ -201,6 +201,26 @@ flai board --all    # epics and tasks too
 flai board --json
 ```
 
+### Story branches
+
+```bash
+flai stream open S-0037        # narrative, plus branch story/S-0037 in .flai-cache/worktrees/S-0037
+flai stream sync S-0037        # rebase the branch onto main; run at every task transition
+flai stream open S-0037 --no-branch
+```
+
+Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, stashing uncommitted work around it; conflicts stop inside the worktree and are listed, resolve them, `git rebase --continue`, and sync again. `flai accept` rebases, fast-forwards the branch into main, removes the worktree and branch, then tags and pushes.
+
+### Touches
+
+```bash
+flai story new --epic E-0006 "Title" --touches flaiover/src/lib,docs/users
+flai touches T-0121 flai/internal/workitem
+flai touches T-0121 --clear
+```
+
+`touches` is an advisory list of paths or components a story or task is changing. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path, the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
+
 ### Agent narratives
 
 ```bash

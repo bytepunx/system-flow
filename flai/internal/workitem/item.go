@@ -72,6 +72,7 @@ type Item struct {
 	Estimate    string       `yaml:"estimate" json:"estimate"`
 	Stream      string       `yaml:"stream" json:"stream"`
 	Tags        []string     `yaml:"tags" json:"tags"`
+	Touches     []string     `yaml:"touches" json:"touches,omitempty"` // paths or components the work changes (ADR-0019)
 
 	Path     string `yaml:"-" json:"path"`     // file on disk
 	Archived bool   `yaml:"-" json:"archived"` // lives under wip/archive
@@ -291,6 +292,9 @@ func (it *Item) Marshal() string {
 		fmt.Fprintf(&b, "stream: %s\n", it.Stream)
 	}
 	fmt.Fprintf(&b, "tags: %s\n", FlowList(it.Tags))
+	if len(it.Touches) > 0 {
+		fmt.Fprintf(&b, "touches: %s\n", FlowList(it.Touches))
+	}
 	b.WriteString("---\n")
 	b.WriteString(it.Body)
 	return b.String()

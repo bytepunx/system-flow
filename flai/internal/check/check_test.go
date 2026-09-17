@@ -145,3 +145,57 @@ func TestCacheMustBeIgnored(t *testing.T) {
 		t.Error("ignored cache should pass")
 	}
 }
+
+func TestTouchesOverlap(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	s1 := mustItem(t, repo, workitem.Story, "One", e.ID)
+	s2 := mustItem(t, repo, workitem.Story, "Two", e.ID)
+	for _, s := range []*workitem.Item{s1, s2} {
+		s.Status = workitem.InProgress
+		s.Touches = []string{"flaiover/src/lib"}
+		if err := repo.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s2.Touches = []string{"flaiover/src/lib/server/auth.ts"}
+	_ = repo.Save(s2)
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, f := range res.Findings {
+		if f.Rule == "wip.overlap" && strings.Contains(f.Message, "S-0001 touches flaiover/src/lib") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected wip.overlap: %+v", res.Findings)
+	}
+	s2.Touches = []string{"docs"}
+	_ = repo.Save(s2)
+	res, _ = Run(repo, now)
+	for _, f := range res.Findings {
+		if f.Rule == "wip.overlap" {
+			t.Errorf("disjoint paths must not overlap: %+v", f)
+		}
+	}
+}
+
+func mustItem(t *testing.T, r *workitem.Repo, typ, title, parent string) *workitem.Item {
+	t.Helper()
+	it, err := r.Create(workitem.NewOptions{Type: typ, Title: title, Parent: parent, Owner: "t", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return it
+}

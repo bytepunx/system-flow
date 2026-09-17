@@ -10,7 +10,7 @@ Before any change, read in this order:
 
 1. `design/conventions/README.md` and every file it lists, in its order. These are the rules you work by. `flai prime --cat` prints them in one call.
 2. `wip/agents/index.md`. If a stream is active, read its `## Current state` and `## Next steps`, run `git status`, reconcile, and append a log entry.
-3. `wip/kanban/board.md`. If no stream is active, pull the top `ready` story in `order` within the WIP limit and open its narrative with `flai stream open`.
+3. `wip/kanban/board.md`. If no stream is active, pull the top `ready` story in `order` within the WIP limit and open its narrative with `flai stream open`, then work in the worktree it prints and run `flai stream sync` at every task transition.
 
 Precedence when rules conflict: an explicit instruction from the operator in this conversation, then the project additions below each convention's marker, then the convention baseline, then your own defaults. When the operator's instruction conflicts with a convention, follow the operator, record the conflict in the narrative's `## Decisions`, and raise it in `## Open questions` if it looks like the convention should change. When a convention seems wrong, propose the edit in `## Open questions` and keep following it until the operator or a template release changes it. Never deviate silently and never edit a baseline rule yourself.
 

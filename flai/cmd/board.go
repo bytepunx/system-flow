@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -10,14 +11,15 @@ import (
 )
 
 type boardCard struct {
-	ID      string `json:"id"`
-	Type    string `json:"type"`
-	Title   string `json:"title"`
-	Nature  string `json:"nature"`
-	Parent  string `json:"parent,omitempty"`
-	Blocked bool   `json:"blocked"`
-	Age     string `json:"age_in_column"`
-	AgeSecs int64  `json:"age_in_column_seconds"`
+	ID      string   `json:"id"`
+	Type    string   `json:"type"`
+	Title   string   `json:"title"`
+	Nature  string   `json:"nature"`
+	Parent  string   `json:"parent,omitempty"`
+	Blocked bool     `json:"blocked"`
+	Age     string   `json:"age_in_column"`
+	AgeSecs int64    `json:"age_in_column_seconds"`
+	Touches []string `json:"touches,omitempty"`
 }
 
 func newBoardCmd(a *app) *cobra.Command {
@@ -50,6 +52,7 @@ func newBoardCmd(a *app) *cobra.Command {
 				columns[it.Status] = append(columns[it.Status], boardCard{
 					ID: it.ID, Type: it.Type, Title: it.Title, Nature: it.Nature, Parent: it.Parent,
 					Blocked: it.IsBlocked(), Age: humanDuration(age), AgeSecs: int64(age.Seconds()),
+					Touches: it.Touches,
 				})
 				if it.Type == workitem.Story {
 					counts[it.Status]++
@@ -81,6 +84,9 @@ func newBoardCmd(a *app) *cobra.Command {
 						flag = " BLOCKED"
 					}
 					fmt.Fprintf(a.out, "  %-6s %-46s %-12s %6s%s\n", cd.ID, truncate(cd.Title, 46), cd.Nature, cd.Age, flag)
+					if len(cd.Touches) > 0 {
+						fmt.Fprintf(a.out, "         touches %s\n", strings.Join(cd.Touches, ", "))
+					}
 				}
 			}
 			if len(board.Order) > 0 {

@@ -20,6 +20,10 @@ type Repo struct {
 	// TemplateDir, when set, points at a template checkout whose items/ are
 	// used for new item bodies. Otherwise embedded defaults apply.
 	TemplateDir string
+	// MainRoot is the main checkout when Root is a linked git worktree
+	// (a story branch under .flai-cache/worktrees, ADR-0019), else Root.
+	// wip/ always lives in the main checkout so the board stays live.
+	MainRoot string
 }
 
 // Open finds the manifest above start and returns a Repo.
@@ -32,11 +36,59 @@ func Open(start string) (*Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Repo{Root: filepath.Dir(path), Manifest: m}, nil
+	root := filepath.Dir(path)
+	return &Repo{Root: root, Manifest: m, MainRoot: mainCheckout(root)}, nil
 }
 
-// WipDir is the work-in-process folder.
-func (r *Repo) WipDir() string { return r.Manifest.Dir(r.Root, "wip") }
+// mainCheckout resolves a linked worktree's main checkout from its .git
+// file ("gitdir: <main>/.git/worktrees/<name>"); a normal checkout returns
+// itself.
+func mainCheckout(root string) string {
+	data, err := os.ReadFile(filepath.Join(root, ".git"))
+	if err != nil {
+		return root
+	}
+	line := strings.TrimSpace(string(data))
+	gitdir, ok := strings.CutPrefix(line, "gitdir: ")
+	if !ok {
+		return root
+	}
+	gitdir = filepath.Clean(gitdir)
+	marker := string(filepath.Separator) + ".git" + string(filepath.Separator) + "worktrees" + string(filepath.Separator)
+	i := strings.Index(gitdir, marker)
+	if i < 0 {
+		return root
+	}
+	main := gitdir[:i]
+	if !filepath.IsAbs(main) {
+		main = filepath.Join(root, main)
+	}
+	if _, err := os.Stat(filepath.Join(main, "system-flow.yaml")); err != nil {
+		return root
+	}
+	return main
+}
+
+// IsWorktree reports whether Root is a linked worktree of MainRoot.
+func (r *Repo) IsWorktree() bool { return r.MainRoot != "" && r.MainRoot != r.Root }
+
+// CacheDir is .flai-cache in the main checkout: token, worktrees, tool caches.
+func (r *Repo) CacheDir() string { return filepath.Join(r.mainRoot(), ".flai-cache") }
+
+// WorktreePath is where a story's branch is checked out.
+func (r *Repo) WorktreePath(storyID string) string {
+	return filepath.Join(r.CacheDir(), "worktrees", storyID)
+}
+
+func (r *Repo) mainRoot() string {
+	if r.MainRoot != "" {
+		return r.MainRoot
+	}
+	return r.Root
+}
+
+// WipDir is the work-in-process folder, always in the main checkout.
+func (r *Repo) WipDir() string { return r.Manifest.Dir(r.mainRoot(), "wip") }
 
 // KanbanDir is wip/kanban.
 func (r *Repo) KanbanDir() string { return filepath.Join(r.WipDir(), "kanban") }

@@ -16,13 +16,14 @@ var defaults embed.FS
 
 // NewOptions describe an item to create.
 type NewOptions struct {
-	Type   string
-	Title  string
-	Nature string
-	Parent string
-	Owner  string
-	Tags   []string
-	Now    time.Time
+	Type    string
+	Title   string
+	Nature  string
+	Parent  string
+	Owner   string
+	Tags    []string
+	Touches []string
+	Now     time.Time
 }
 
 // Create allocates an ID, renders the body template, links the parent, and
@@ -83,6 +84,7 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		return nil, fmt.Errorf("item template for %s produced an invalid item: %w", opt.Type, err)
 	}
 	it.Tags = append(it.Tags, opt.Tags...)
+	it.Touches = append(it.Touches, opt.Touches...)
 	if it.Tags == nil {
 		it.Tags = []string{}
 	}

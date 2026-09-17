@@ -116,7 +116,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(
 		newVersionCmd(a), newSelfUpgradeCmd(a), newConfigCmd(a), newNewCmd(a), newImportCmd(a), newUpgradeCmd(a), newTemplateCmd(a),
 		newItemCmd(a, "epic"), newItemCmd(a, "story"), newItemCmd(a, "task"), newShowCmd(a),
-		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newBoardCmd(a),
+		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newTouchesCmd(a), newBoardCmd(a),
 		newStreamCmd(a), newArchiveCmd(a), newMigrateCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a), newReleaseCmd(a), newAcceptCmd(a), newDashboardCmd(a),
 	)
 	return root
