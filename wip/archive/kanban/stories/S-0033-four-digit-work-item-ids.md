@@ -3,11 +3,11 @@ id: S-0033
 type: story
 nature: improvement
 title: Four-digit work item IDs
-status: review
+status: done
 parent: E-0001
 owner: alex
 created: 2026-09-17T05:52:19Z
-updated: 2026-09-17T06:41:33Z
+updated: 2026-09-17T07:14:31Z
 transitions:
   - to: ready
     at: 2026-09-17T06:33:20Z
@@ -17,6 +17,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-09-17T06:41:33Z
+    by: alex
+  - to: done
+    at: 2026-09-17T07:14:31Z
     by: alex
 tags: [cli, template]
 ---

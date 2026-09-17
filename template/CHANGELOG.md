@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2 - 2026-09-17
+
+- S-0033 Four-digit work item IDs (patch).
+
 ## 1.0.1 - 2026-09-17
 
 - S-0021 flai template push publishes template changes to a remote (patch).
