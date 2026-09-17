@@ -12,8 +12,10 @@ services:
       - '4242:3000' # every interface, like flai dashboard; prefix 127.0.0.1: to restrict
     volumes:
       - '${PROJECT:-..}:/project'
+      - '${PROJECT:-..}/.flai-cache/dashboard.token:/run/secrets/flaiover_token:ro' # flai dashboard token creates it
     environment:
       PROJECT_DIR: /project
+      FLAIOVER_TOKEN_FILE: /run/secrets/flaiover_token
       LOG_LEVEL: ${LOG_LEVEL:-info}
       OTEL_SERVICE_NAME: flaiover
       OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318

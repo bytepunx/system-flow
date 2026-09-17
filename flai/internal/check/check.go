@@ -160,6 +160,29 @@ func (c *checker) layout() {
 			c.add(Warning, "layout.subfolder", c.repo.KanbanDir(), 1, "kanban/%s is missing", sub)
 		}
 	}
+	c.cacheIgnored()
+}
+
+// cacheIgnored refuses a repository whose .flai-cache (dashboard token,
+// worktrees, tool caches) could be committed (ADR-0018).
+func (c *checker) cacheIgnored() {
+	cache := filepath.Join(c.repo.Root, ".flai-cache")
+	if st, err := os.Stat(cache); err != nil || !st.IsDir() {
+		return
+	}
+	gi := filepath.Join(c.repo.Root, ".gitignore")
+	data, err := os.ReadFile(gi)
+	if err != nil {
+		c.add(Error, "layout.gitignore", c.repo.Root, 1, ".flai-cache/ exists but there is no .gitignore; it holds the dashboard token and must be ignored")
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		switch strings.TrimSpace(line) {
+		case ".flai-cache", ".flai-cache/", "/.flai-cache", "/.flai-cache/":
+			return
+		}
+	}
+	c.add(Error, "layout.gitignore", gi, 1, ".flai-cache/ is not ignored; it holds the dashboard token and must be")
 }
 
 var requiredHeadings = map[string][]string{

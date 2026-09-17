@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { page } from '$app/state';
 	import { onMount, tick } from 'svelte';
 	import DocTree from '$lib/components/DocTree.svelte';
@@ -22,7 +23,7 @@
 	const current = $derived(page.params.path ?? '');
 
 	onMount(async () => {
-		const r = await fetch('/api/docs/tree');
+		const r = await api('/api/docs/tree');
 		tree = await r.json();
 	});
 
@@ -33,7 +34,7 @@
 			html = '';
 			return;
 		}
-		fetch(`/api/docs/file?path=${encodeURIComponent(path)}`)
+		api(`/api/docs/file?path=${encodeURIComponent(path)}`)
 			.then(async (r) => {
 				if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
 				doc = await r.json();

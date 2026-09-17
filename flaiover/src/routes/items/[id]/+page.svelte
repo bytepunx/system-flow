@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { tick } from 'svelte';
@@ -60,7 +61,7 @@
 	);
 
 	async function load() {
-		const r = await fetch(`/api/items/${id}`);
+		const r = await api(`/api/items/${id}`);
 		if (!r.ok) {
 			error = (await r.json()).error ?? r.statusText;
 			return;
@@ -69,7 +70,7 @@
 		item = data.item;
 		children = data.children;
 		html = render(item!.body, item!.path);
-		writable = (await (await fetch('/api/board')).json()).writable;
+		writable = (await (await api('/api/board')).json()).writable;
 		await tick();
 		if (content) await enhance(content, matchMedia('(prefers-color-scheme: dark)').matches);
 	}
@@ -80,7 +81,7 @@
 
 	async function post(path: string, body: Record<string, unknown>) {
 		notice = null;
-		const r = await fetch(path, {
+		const r = await api(path, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify(body)

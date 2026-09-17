@@ -117,7 +117,7 @@ flags, then the dashboard section of system-flow.yaml, then config.`,
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
 	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
-	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a))
+	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a))
 	return c
 }
 
@@ -244,11 +244,19 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 			return err
 		}
 	}
+	token, created, err := ensureToken(repo.Root)
+	if err != nil {
+		return fmt.Errorf("dashboard token: %w", err)
+	}
+	if created {
+		a.logger().Info("dashboard token created", "component", "dashboard", "file", relPath(repo.Root, tokenPath(repo.Root)))
+	}
 	args := []string{"run", "--detach", "--rm", "--name", s.Name,
 		"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
 		"--volume", s.Root + ":/project",
 		"--env", "PROJECT_DIR=/project",
 	}
+	args = append(args, tokenArgs(repo.Root)...)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
@@ -259,15 +267,15 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	}
 	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "bind": s.Bind, "port": s.Port, "mount": s.Root})
+		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root})
 	}
 	reach := "reachable from this host only"
 	if s.Bind == defaultBind {
-		reach = "reachable on every interface of this host; no authentication, so keep the host private"
+		reach = "reachable on every interface of this host; the token is required, keep the host private"
 	}
-	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  container %s, image %s, %s mounted read-write at /project\n  stop with: flai dashboard stop\n", s.url(), reach, s.Name, s.ref(), s.Root)
+	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at /project\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, relPath(repo.Root, tokenPath(repo.Root)))
 	if open {
-		openBrowser(s.url())
+		openBrowser(loginURL(s.url(), token))
 	}
 	if attach {
 		cmd := exec.Command("docker", "logs", "--follow", s.Name)

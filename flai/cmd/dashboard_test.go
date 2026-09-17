@@ -144,14 +144,37 @@ func TestDashboardLifecycle(t *testing.T) {
 		"--publish 0.0.0.0:5555:3000",
 		"--volume " + root + ":/project",
 		"--env PROJECT_DIR=/project",
+		"--mount type=bind,source=" + filepath.Join(root, ".flai-cache", "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
+		"--env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing %q in calls:\n%s", want, joined)
 		}
 	}
-	if !strings.Contains(out, "http://localhost:5555") || !strings.Contains(out, "flai dashboard stop") {
+	if !strings.Contains(out, "http://localhost:5555") || !strings.Contains(out, "flai dashboard stop") || !strings.Contains(out, "http://localhost:5555/login#token=") {
 		t.Errorf("output: %s", out)
+	}
+	tokenFile := filepath.Join(root, ".flai-cache", "dashboard.token")
+	tokenData, err := os.ReadFile(tokenFile)
+	if err != nil || len(strings.TrimSpace(string(tokenData))) < 40 {
+		t.Fatalf("token file: %v %q", err, tokenData)
+	}
+	if st, _ := os.Stat(tokenFile); st.Mode().Perm() != 0o600 {
+		t.Errorf("token file mode %v", st.Mode().Perm())
+	}
+	if strings.Contains(errOut, strings.TrimSpace(string(tokenData))) {
+		t.Error("token must not be logged")
+	}
+	// token command: stable, then rotated with a restart of the running container
+	out, _, code = runWith(t, root, f, "dashboard", "token")
+	if code != 0 || !strings.Contains(out, "token: "+strings.TrimSpace(string(tokenData))) || !strings.Contains(out, "login: http://localhost:5555/login#token=") {
+		t.Errorf("token: %d %s", code, out)
+	}
+	out, _, code = runWith(t, root, f, "dashboard", "token", "--rotate")
+	rotated, _ := os.ReadFile(tokenFile)
+	if code != 0 || string(rotated) == string(tokenData) || !strings.Contains(out, "token: "+strings.TrimSpace(string(rotated))) || !strings.Contains(strings.Join(f.calls, "\n"), "docker restart flaiover-my-proj") || !strings.Contains(out, "restarted flaiover-my-proj") {
+		t.Errorf("rotate: %d %s", code, out)
 	}
 	// precedence: flag port beats manifest port; manifest port beat config's 4242
 	out, _, _ = runWith(t, root, &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}, "dashboard", "--port", "6000", "--json")

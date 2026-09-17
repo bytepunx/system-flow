@@ -14,8 +14,11 @@ import {
 	commit
 } from '$lib/server/metrics';
 import { startTracing, traceId, withRequestSpan } from '$lib/server/otel';
+import { authenticate, decide, initAuth } from '$lib/server/auth';
+import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
+	const auth = initAuth();
 	const tracing = await startTracing();
 	log().info(
 		{
@@ -23,7 +26,8 @@ export const init: ServerInit = async () => {
 			version,
 			commit,
 			project_dir: process.env.PROJECT_DIR ?? process.cwd(),
-			tracing
+			tracing,
+			auth
 		},
 		'server started'
 	);
@@ -44,6 +48,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event.locals.traceId = tid ?? requestId;
 			let status = 500;
 			try {
+				const auth = authenticate(event.request.headers);
+				event.locals.auth = auth;
+				const decision = decide(path, method, auth, event.request.headers);
+				if (decision.kind === 'unauthorized') {
+					const response = json({ error: 'unauthorized' }, { status: 401 });
+					status = 401;
+					return response;
+				}
+				if (decision.kind === 'forbidden') {
+					const response = json({ error: 'forbidden' }, { status: 403 });
+					status = 403;
+					return response;
+				}
+				if (decision.kind === 'login') {
+					status = 303;
+					redirect(303, `/login?next=${encodeURIComponent(decision.next)}`);
+				}
 				const response = await resolve(event);
 				status = response.status;
 				return response;

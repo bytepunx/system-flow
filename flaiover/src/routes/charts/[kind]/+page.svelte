@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
@@ -25,7 +26,7 @@
 
 	async function load() {
 		error = null;
-		const r = await fetch(`/api/stats?since=${since}&type=${type}`);
+		const r = await api(`/api/stats?since=${since}&type=${type}`);
 		if (!r.ok) {
 			error = (await r.json()).error ?? r.statusText;
 			report = null;
@@ -41,7 +42,7 @@
 		const es = new EventSource('/api/events');
 		es.addEventListener('change', () => load());
 		(async () => {
-			epics = (await (await fetch('/api/items?type=epic')).json()).map(
+			epics = (await (await api('/api/items?type=epic')).json()).map(
 				(e: { id: string; title: string }) => ({ id: e.id, title: e.title })
 			);
 			await load();

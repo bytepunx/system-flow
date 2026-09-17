@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 
 	type Hit = {
@@ -25,7 +26,7 @@
 				hits = [];
 				return;
 			}
-			const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&docs=${docs}`);
+			const r = await api(`/api/search?q=${encodeURIComponent(q)}&docs=${docs}`);
 			const body = await r.json();
 			hits = body.hits;
 			indexed = body.indexed;

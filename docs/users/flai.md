@@ -318,7 +318,11 @@ flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
 flai dashboard status
 flai dashboard logs [-f]
 flai dashboard stop
+flai dashboard token           # print the token and login link
+flai dashboard token --rotate  # new token; a running dashboard restarts
 ```
+
+The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 
 The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port, with the repository mounted read-write at `/project` and running as your user so files it writes keep your ownership. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer.
 

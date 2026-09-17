@@ -5,6 +5,7 @@ declare global {
 		// interface Error {}
 		interface Locals {
 			traceId?: string;
+			auth?: 'bearer' | 'cookie' | 'off' | null;
 		}
 		// interface PageData {}
 		// interface PageState {}

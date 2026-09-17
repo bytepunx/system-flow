@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 
@@ -13,7 +14,7 @@
 	};
 	let adrs = $state<Adr[]>([]);
 	onMount(async () => {
-		adrs = await (await fetch('/api/docs/adrs')).json();
+		adrs = await (await api('/api/docs/adrs')).json();
 	});
 	const byId = $derived(new Map(adrs.map((a) => [a.id, a])));
 	const link = (id: string) => byId.get(id)?.path;

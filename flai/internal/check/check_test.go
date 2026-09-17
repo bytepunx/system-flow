@@ -1,6 +1,8 @@
 package check
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -106,5 +108,40 @@ func TestMonorepoIsClean(t *testing.T) {
 		} else {
 			t.Logf("warning: %s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
 		}
+	}
+}
+
+func TestCacheMustBeIgnored(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", ".flai-cache"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	has := func(rule string) bool {
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range res.Findings {
+			if f.Rule == rule {
+				return true
+			}
+		}
+		return false
+	}
+	if !has("layout.gitignore") {
+		t.Error("expected layout.gitignore without a .gitignore")
+	}
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte("bin/\n"), 0o644)
+	if !has("layout.gitignore") {
+		t.Error("expected layout.gitignore when .flai-cache is not listed")
+	}
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte("bin/\n.flai-cache/\n"), 0o644)
+	if has("layout.gitignore") {
+		t.Error("ignored cache should pass")
 	}
 }

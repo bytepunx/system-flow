@@ -36,3 +36,4 @@ What is logged, at which level, in what shape, and what never appears in a log.
 - flai logs with the standard library `log/slog` to stderr: text handler on a terminal, JSON otherwise; `--verbose` selects debug; `LOG_LEVEL` and `LOG_FORMAT` are honoured. Component is the Go package. `fatal` is a custom slog level above error, emitted once by the command boundary before a non-zero exit; a failed sub-step that the command recovers from is `warn`. Implemented in S-0031.
 - flaiover logs with `pino` to stdout: one line per request with `trace_id`, method, route, status, and duration, plus lifecycle events. Implemented in S-0032.
 - Narratives and work items never receive log output; summaries only (safety.md).
+- Request logs never carry header or cookie values, query strings, or request bodies; the dashboard token (ADR-0018) therefore never reaches a log. Implemented in S-0036.

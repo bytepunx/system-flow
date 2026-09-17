@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { age } from '$lib/age';
@@ -28,7 +29,7 @@
 	let over = $state<string | null>(null);
 
 	async function load() {
-		board = await (await fetch('/api/board')).json();
+		board = await (await api('/api/board')).json();
 	}
 	onMount(() => {
 		load();
@@ -52,7 +53,7 @@
 			reason = prompt(`Reason for moving ${id} to ${to}:`) ?? undefined;
 			if (!reason) return;
 		}
-		const r = await fetch(`/api/items/${id}/move`, {
+		const r = await api(`/api/items/${id}/move`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ to, reason })

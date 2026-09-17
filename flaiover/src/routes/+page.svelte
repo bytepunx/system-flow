@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 
 	type Manifest = { name: string; description?: string; template?: { version?: string } };
@@ -15,7 +16,7 @@
 
 	onMount(async () => {
 		try {
-			const [m, i] = await Promise.all([fetch('/api/manifest'), fetch('/api/items')]);
+			const [m, i] = await Promise.all([api('/api/manifest'), api('/api/items')]);
 			if (!m.ok) throw new Error((await m.json()).error ?? m.statusText);
 			manifest = await m.json();
 			items = await i.json();

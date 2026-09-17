@@ -8,15 +8,42 @@ status: draft
 
 ## Running the dashboard
 
-`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>` with the repository mounted read-write at `/project`, published on every interface at port `4242` by default (`--bind 127.0.0.1`, or `dashboard.bind`, restricts it to this host), as the invoking user. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, port, or bind address in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`. Inside the monorepo `flai dashboard --build` builds the image from `flaiover/` as `flaiover:local` instead of pulling.
+`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>` with the repository mounted read-write at `/project`, published on every interface at port `4242` by default (`--bind 127.0.0.1`, or `dashboard.bind`, restricts it to this host), as the invoking user. It prints a login link; see Authentication below. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, port, or bind address in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`. Inside the monorepo `flai dashboard --build` builds the image from `flaiover/` as `flaiover:local` instead of pulling.
 
 Without `flai`, the equivalent is:
 
 ```bash
 docker run --detach --rm --name flaiover-myproject \
   --publish 0.0.0.0:4242:3000 --volume "$PWD:/project" --env PROJECT_DIR=/project \
+  --mount type=bind,source="$PWD/.flai-cache/dashboard.token",target=/run/secrets/flaiover_token,readonly \
+  --env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token \
   --user "$(id -u):$(id -g)" ghcr.io/bytepunx/flaiover:latest
 ```
+
+## Authentication
+
+Every request except `/_health` and `/_ready` needs the project's token (ADR-0018).
+
+| Step | How |
+|------|-----|
+| Set | `flai dashboard` generates it on first run: 32 random bytes, base64url. `flai dashboard token` prints it; `--rotate` replaces it and restarts a running dashboard, ending every session |
+| Stored | `.flai-cache/dashboard.token`, mode 0600, one per project. `.flai-cache/` must be git-ignored; `flai check` refuses a repository where it is not |
+| Handed to the container | Bind-mounted read-only at `/run/secrets/flaiover_token` with `FLAIOVER_TOKEN_FILE` pointing at it. Never an environment variable, so `docker inspect` does not show it |
+| Browser | Open the login link (`http://host:4242/login#token=...`). The fragment never leaves the browser; the page exchanges it for an HttpOnly, SameSite=Lax cookie (Secure over HTTPS) and rewrites history. Pasting the token on `/login` also works |
+| Agents and tools | `Authorization: Bearer <token>` on every request |
+| Metrics | `/metrics` needs the token unless `FLAIOVER_METRICS_PUBLIC=true` |
+| Development | `scripts/flaiover-dev.sh` points the dev server at the same file; `FLAIOVER_AUTH=off` disables authentication outside production only |
+
+Exposure, plainly:
+
+| Risk | Answer |
+|------|--------|
+| Sniffed on the network | flaiover speaks plain HTTP. Beyond a trusted LAN, terminate TLS in a tunnel or proxy; the cookie is then marked Secure |
+| Token in logs | Request logs carry method, route, status, and duration only; never header or cookie values |
+| Token in the image or repository | Never baked in, never committed; verified by `flai check` |
+| Guessing | 256 bits of randomness |
+| Stolen cookie | HttpOnly blocks script access; rotation invalidates every session |
+| Docker socket access on the host | Can read the mounted file; that is host ownership, not something the token scheme addresses |
 
 ## Access to the image
 
@@ -52,7 +79,7 @@ Local stack: `PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build` r
 
 ## Security posture
 
-The dashboard has no authentication and can write to the mounted repository. By default it is published on every interface of the host so a team can reach it over a private network or VPN; that host must not be exposed to the internet, and the dashboard must not sit behind a public reverse proxy. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. Treat the mount as you would a shared working copy.
+The dashboard authenticates every request with the project token (above) and can write to the mounted repository. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. Treat the mount as you would a shared working copy.
 
 ## Requirements
 
