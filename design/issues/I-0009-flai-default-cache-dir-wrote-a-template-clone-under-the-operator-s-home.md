@@ -1,5 +1,5 @@
 ---
-id: I-009
+id: I-0009
 title: flai default cache_dir wrote a template clone under the operator's home
 class: defect
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-17T00:18:41Z
 updated: 2026-09-17T00:18:41Z
 ---
 
-# I-009 flai default cache_dir wrote a template clone under the operator's home
+# I-0009 flai default cache_dir wrote a template clone under the operator's home
 
 ## Description
 flai default cache_dir wrote a template clone under the operator's home

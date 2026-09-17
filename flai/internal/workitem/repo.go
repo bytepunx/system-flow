@@ -102,11 +102,11 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 // with three digits stay valid; see design/adrs/0017-four-digit-ids.md.
 const IDWidth = 4
 
-var looseID = regexp.MustCompile(`^([ESTest])-?0*(\d+)$`)
+var looseID = regexp.MustCompile(`^([ESTIesti])-?0*(\d+)$`)
 
-// CanonicalID normalises a work item ID as typed (s-32, S-032, S-0032) to the
-// padded form flai allocates (S-0032). Anything that is not an ID is returned
-// unchanged.
+// CanonicalID normalises a work item or issue ID as typed (s-32, S-032,
+// S-0032, I-7) to the padded form flai allocates (S-0032, I-0007). Anything
+// that is not an ID is returned unchanged.
 func CanonicalID(id string) string {
 	m := looseID.FindStringSubmatch(strings.TrimSpace(id))
 	if m == nil {

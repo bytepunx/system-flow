@@ -1,5 +1,5 @@
 ---
-id: I-011
+id: I-0011
 title: flai stream log wrote duplicate same-second headings that markdownlint MD024 rejects in CI
 class: defect
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-17T06:15:37Z
 updated: 2026-09-17T06:15:37Z
 ---
 
-# I-011 flai stream log wrote duplicate same-second headings that markdownlint MD024 rejects in CI
+# I-0011 flai stream log wrote duplicate same-second headings that markdownlint MD024 rejects in CI
 
 ## Description
 flai stream log wrote duplicate same-second headings that markdownlint MD024 rejects in CI

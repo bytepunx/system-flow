@@ -24,12 +24,12 @@ type Rename struct {
 	To   string `json:"to"`
 }
 
-// shortID matches an ID narrower than IDWidth as a whole word, so E-1,
-// S-032 and T-100 are found but T-0100, ADR-0003 and I-011 are not.
-// fileID is the ID prefix of an item file name.
-var fileID = regexp.MustCompile(`^[EST]-\d+`)
+// fileID is the ID prefix of an item or issue file name.
+var fileID = regexp.MustCompile(`^[ESTI]-\d+`)
 
-var shortID = regexp.MustCompile(fmt.Sprintf(`\b([EST])-(\d{1,%d})\b`, IDWidth-1))
+// shortID matches a work item or issue ID narrower than IDWidth as a whole
+// word, so E-1, S-032, T-100 and I-011 are found but T-0100 and ADR-0003 are not.
+var shortID = regexp.MustCompile(fmt.Sprintf(`\b([ESTI])-(\d{1,%d})\b`, IDWidth-1))
 
 // widen rewrites every short ID in text to its canonical form.
 func widen(text string) string {
@@ -37,7 +37,7 @@ func widen(text string) string {
 }
 
 // PlanIDMigration lists the moves and rewrites needed to bring every item in
-// kanban and archive, every narrative, and every reference in the layout
+// kanban and archive, every narrative, every issue, and every reference in the layout
 // folders, the repository's root markdown and yaml files, and each project's
 // root markdown files up to IDWidth digits. Nothing is changed.
 func (r *Repo) PlanIDMigration() (*IDMigration, error) {
@@ -74,6 +74,18 @@ func (r *Repo) PlanIDMigration() (*IDMigration, error) {
 				plan.Renames = append(plan.Renames, Rename{From: r.rel(old), To: r.rel(filepath.Join(dir, newID+".md"))})
 			}
 		}
+	}
+	// Issues live under design/issues; the file name carries the ID.
+	issueFiles, _ := filepath.Glob(filepath.Join(r.Manifest.Dir(r.Root, "design"), "issues", "I-*.md"))
+	for _, p := range issueFiles {
+		base := filepath.Base(p)
+		oldID := fileID.FindString(base)
+		newID := CanonicalID(oldID)
+		if oldID == "" || oldID == newID {
+			continue
+		}
+		plan.Map[oldID] = newID
+		plan.Renames = append(plan.Renames, Rename{From: r.rel(p), To: r.rel(filepath.Join(filepath.Dir(p), newID+strings.TrimPrefix(base, oldID)))})
 	}
 	files, err := r.migrationFiles()
 	if err != nil {

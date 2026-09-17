@@ -82,7 +82,7 @@ func Read(path string) (*Issue, error) {
 func (is *Issue) Validate() error {
 	var errs []string
 	if !idPattern.MatchString(is.ID) {
-		errs = append(errs, fmt.Sprintf("id %q must look like I-001", is.ID))
+		errs = append(errs, fmt.Sprintf("id %q must look like I-0001", is.ID))
 	}
 	if is.Title == "" {
 		errs = append(errs, "title is required")
@@ -159,16 +159,19 @@ func List(r *workitem.Repo) ([]*Issue, error) {
 	return out, nil
 }
 
-// Get finds one issue by ID.
+// Get finds one issue by ID, given in any padding (I-12, I-012, I-0012).
 func Get(r *workitem.Repo, id string) (*Issue, error) {
-	matches, _ := filepath.Glob(filepath.Join(Dir(r), id+"-*.md"))
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("%s not found", id)
+	canon := workitem.CanonicalID(id)
+	for _, cand := range []string{id, canon, fmt.Sprintf("I-%03s", strings.TrimPrefix(canon, "I-"))} {
+		matches, _ := filepath.Glob(filepath.Join(Dir(r), cand+"-*.md"))
+		if len(matches) > 0 {
+			return Read(matches[0])
+		}
 	}
-	return Read(matches[0])
+	return nil, fmt.Errorf("%s not found", id)
 }
 
-// NextID allocates the next I-nnn.
+// NextID allocates the next issue ID, zero-padded to workitem.IDWidth.
 func NextID(r *workitem.Repo) string {
 	max := 0
 	matches, _ := filepath.Glob(filepath.Join(Dir(r), "I-*.md"))
@@ -177,7 +180,7 @@ func NextID(r *workitem.Repo) string {
 			max = n
 		}
 	}
-	return fmt.Sprintf("I-%03d", max+1)
+	return fmt.Sprintf("I-%0*d", workitem.IDWidth, max+1)
 }
 
 // NewOptions describe an issue to record.

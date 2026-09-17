@@ -41,4 +41,4 @@ flai import analyses an existing repo, proposes the layout, prompts for folder n
 - T-0068 Import tests on a synthetic repo, docs
 
 ## Notes
-- FLAI_CACHE_DIR added after a second I-009 occurrence during testing.
+- FLAI_CACHE_DIR added after a second I-0009 occurrence during testing.

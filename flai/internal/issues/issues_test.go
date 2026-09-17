@@ -26,14 +26,14 @@ func repo(t *testing.T) *workitem.Repo {
 
 func TestLifecycle(t *testing.T) {
 	r := repo(t)
-	if id := NextID(r); id != "I-001" {
+	if id := NextID(r); id != "I-0001" {
 		t.Fatalf("first id %s", id)
 	}
 	is, err := New(r, NewOptions{Title: "Lint: version mismatch", Class: "efficiency", Cost: "5m", Note: "found in S-004", Now: t0})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if is.ID != "I-001" || is.Count != 1 || is.Cost != "5m" || !strings.HasSuffix(is.Path, "I-001-lint-version-mismatch.md") {
+	if is.ID != "I-0001" || is.Count != 1 || is.Cost != "5m" || !strings.HasSuffix(is.Path, "I-0001-lint-version-mismatch.md") {
 		t.Fatalf("new: %+v", is)
 	}
 	raw, _ := os.ReadFile(is.Path)
@@ -57,7 +57,7 @@ func TestLifecycle(t *testing.T) {
 		t.Errorf("bump without cost: %v %+v", err, back)
 	}
 	second, _ := New(r, NewOptions{Title: "Two", Class: "defect", Now: t0})
-	if second.ID != "I-002" || second.Cost != "" {
+	if second.ID != "I-0002" || second.Cost != "" {
 		t.Errorf("second: %+v", second)
 	}
 	list, err := WriteSummary(r, t0)
@@ -66,10 +66,10 @@ func TestLifecycle(t *testing.T) {
 	}
 	sum, _ := os.ReadFile(filepath.Join(Dir(r), SummaryFile))
 	s := string(sum)
-	if !strings.Contains(s, "| [I-001](I-001-lint-version-mismatch.md) | efficiency | Lint: version mismatch | 3 | 10m | 30m |") || !strings.Contains(s, "| [I-002](I-002-two.md) | defect | Two | 1 | - | - |") {
+	if !strings.Contains(s, "| [I-0001](I-0001-lint-version-mismatch.md) | efficiency | Lint: version mismatch | 3 | 10m | 30m |") || !strings.Contains(s, "| [I-0002](I-0002-two.md) | defect | Two | 1 | - | - |") {
 		t.Errorf("summary:\n%s", s)
 	}
-	if strings.Index(s, "[I-001]") > strings.Index(s, "[I-002]") {
+	if strings.Index(s, "[I-0001]") > strings.Index(s, "[I-0002]") {
 		t.Error("most expensive first")
 	}
 	if err := Close(back, "fixed by S-010", t0.Add(3*time.Hour)); err != nil || back.Status != "closed" || !strings.Contains(back.Body, "Closed 2026-09-16T13:00:00Z: fixed by S-010") {
@@ -79,7 +79,7 @@ func TestLifecycle(t *testing.T) {
 		t.Error("bump on closed should fail")
 	}
 	list, _ = WriteSummary(r, t0)
-	if table := SummaryTable(list); strings.Contains(table, "I-001") || !strings.Contains(table, "I-002") {
+	if table := SummaryTable(list); strings.Contains(table, "I-0001") || !strings.Contains(table, "I-0002") {
 		t.Errorf("closed issue in table:\n%s", table)
 	}
 	if _, err := New(r, NewOptions{Title: "x", Class: "bug", Now: t0}); err == nil {
@@ -91,7 +91,7 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	good := &Issue{ID: "I-001", Title: "t", Class: "defect", Status: "open", Count: 1, Cost: "5m", FirstReported: "2026-09-16T10:00:00Z", LastReported: "2026-09-16T10:00:00Z", Updated: "2026-09-16T10:00:00Z"}
+	good := &Issue{ID: "I-0001", Title: "t", Class: "defect", Status: "open", Count: 1, Cost: "5m", FirstReported: "2026-09-16T10:00:00Z", LastReported: "2026-09-16T10:00:00Z", Updated: "2026-09-16T10:00:00Z"}
 	if err := good.Validate(); err != nil {
 		t.Fatal(err)
 	}

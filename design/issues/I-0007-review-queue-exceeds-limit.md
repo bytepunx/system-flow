@@ -1,5 +1,5 @@
 ---
-id: I-007
+id: I-0007
 title: Review column exceeds its WIP limit while acceptance is batched
 class: efficiency
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-15T22:42:51Z
 updated: 2026-09-15T22:42:51Z
 ---
 
-# I-007 Review column exceeds its WIP limit while acceptance is batched
+# I-0007 Review column exceeds its WIP limit while acceptance is batched
 
 ## Description
 The agent moves stories to review as they finish; the operator accepts them in batches. With a review limit of 3, the fourth finished story breaches the limit and `flai check --strict` fails, which blocks the commit-at-landing rule until someone accepts.

@@ -1,5 +1,5 @@
 ---
-id: I-006
+id: I-0006
 title: The agent shell is zsh and bash idioms fail silently
 class: efficiency
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-15T18:21:56Z
 updated: 2026-09-15T22:40:33Z
 ---
 
-# I-006 The agent shell is zsh and bash idioms fail silently
+# I-0006 The agent shell is zsh and bash idioms fail silently
 
 ## Description
 The environment shell is zsh. `${var^}` is unsupported and unquoted `$VAR` in `for` loops does not word-split, so a loop over task IDs ran once with all IDs as one argument and the rest of the command chain was skipped.

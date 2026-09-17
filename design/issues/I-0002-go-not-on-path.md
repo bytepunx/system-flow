@@ -1,5 +1,5 @@
 ---
-id: I-002
+id: I-0002
 title: Go toolchain is not on PATH in the agent shell
 class: blocker
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-15T18:00:57Z
 updated: 2026-09-15T22:40:33Z
 ---
 
-# I-002 Go toolchain is not on PATH in the agent shell
+# I-0002 Go toolchain is not on PATH in the agent shell
 
 ## Description
 `go` lives in `/usr/local/go/bin`, which is not on the PATH the agent shell inherits. Every Go command fails with "command not found" until PATH is prefixed by hand.

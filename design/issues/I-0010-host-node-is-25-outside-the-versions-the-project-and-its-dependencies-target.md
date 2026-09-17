@@ -1,5 +1,5 @@
 ---
-id: I-010
+id: I-0010
 title: Host Node is 25, outside the versions the project and its dependencies target
 class: efficiency
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-17T06:01:24Z
 updated: 2026-09-17T06:01:24Z
 ---
 
-# I-010 Host Node is 25, outside the versions the project and its dependencies target
+# I-0010 Host Node is 25, outside the versions the project and its dependencies target
 
 ## Description
 Host Node is 25, outside the versions the project and its dependencies target

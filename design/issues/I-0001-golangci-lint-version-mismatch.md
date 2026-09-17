@@ -1,5 +1,5 @@
 ---
-id: I-001
+id: I-0001
 title: golangci-lint on the host is v1 but the config is v2
 class: efficiency
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-15T18:11:49Z
 updated: 2026-09-15T22:40:33Z
 ---
 
-# I-001 golangci-lint on the host is v1 but the config is v2
+# I-0001 golangci-lint on the host is v1 but the config is v2
 
 ## Description
 The repository lints with golangci-lint v2 (`flai/.golangci.yaml`, `version: "2"`). The host has v1.64 in `~/go/bin`, which cannot read the config. Every session that lints has to install v2 into a scratch location first, and the scratch copy disappears between sessions.

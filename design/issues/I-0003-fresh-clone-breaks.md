@@ -1,5 +1,5 @@
 ---
-id: I-003
+id: I-0003
 title: Files needed by tests or checks were missing in a fresh clone
 class: defect
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-15T18:21:56Z
 updated: 2026-09-15T22:40:33Z
 ---
 
-# I-003 Files needed by tests or checks were missing in a fresh clone
+# I-0003 Files needed by tests or checks were missing in a fresh clone
 
 ## Description
 The working tree passed but a clone did not: a test fixture under `bin/` was excluded by the root `.gitignore`, and `wip/kanban/tasks` was empty after archiving so git dropped the folder and `flai check` failed on the clone.

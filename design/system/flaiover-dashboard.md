@@ -49,7 +49,7 @@ Every chart has the same filter bar: window, type, and epic where the chart supp
 |-------|---------|
 | `GET /api/manifest` | `system-flow.yaml` parsed |
 | `GET /api/items?type=&status=&archived=` | Every item from kanban and archive without bodies, sorted by ID; timestamps as `YYYY-MM-DDTHH:MM:SSZ` strings |
-| `GET /api/items/:id` | `{ item, children }` with the body; the ID may be given in any padding (`S-32`, `S-032`, `S-0032`) |
+| `GET /api/items/:id` | `{ item, children }` with the body; the ID may be given with any zero padding or none, so a two, three, or four digit spelling of the same number resolves to the same item |
 | `GET /api/docs/tree` | Three trees (design, docs, wip) of `{ name, path, kind, title?, frontMatter?, children? }` |
 | `GET /api/docs/file?path=` | `{ path, frontMatter, body, raw }` for one markdown file; paths outside the repo or non-markdown are 400, missing 404 |
 | `GET /api/events` | Server-sent events: `ready` once, then `change` with `{ path }` per changed file under design, docs, wip, or the manifest |

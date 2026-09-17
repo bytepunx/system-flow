@@ -1,5 +1,5 @@
 ---
-id: I-004
+id: I-0004
 title: Hand-edited work items drifted from the schema
 class: defect
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-15T18:11:49Z
 updated: 2026-09-15T22:40:33Z
 ---
 
-# I-004 Hand-edited work items drifted from the schema
+# I-0004 Hand-edited work items drifted from the schema
 
 ## Description
 Before flai owned work items, front matter was written by hand and drifted: an unquoted colon in a title broke parsing, an archived story kept an unchecked criterion, and the board order listed backlog stories against the rule of the time.

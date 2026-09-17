@@ -1,5 +1,5 @@
 ---
-id: I-012
+id: I-0012
 title: Close-out chain was not gated on the narrative rewrite's exit code, so a commit went out with an empty narrative
 class: defect
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-09-17T06:42:13Z
 updated: 2026-09-17T06:42:13Z
 ---
 
-# I-012 Close-out chain was not gated on the narrative rewrite's exit code, so a commit went out with an empty narrative
+# I-0012 Close-out chain was not gated on the narrative rewrite's exit code, so a commit went out with an empty narrative
 
 ## Description
 Close-out chain was not gated on the narrative rewrite's exit code, so a commit went out with an empty narrative

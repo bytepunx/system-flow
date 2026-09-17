@@ -40,4 +40,4 @@ Create github.com/bytepunx/system-flow-template from ./template, tag 0.1.0, and 
 - T-0065 Document the sync procedure and point defaults at the published repo
 
 ## Notes
-- Published private at bytepunx/system-flow-template, v1.0.0. I-009 found and fixed on the way.
+- Published private at bytepunx/system-flow-template, v1.0.0. I-0009 found and fixed on the way.

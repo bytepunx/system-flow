@@ -25,7 +25,7 @@ tags: [dashboard, docs]
 # T-0104 compose stack with a collector and viewer; operator docs; tech pins; tests
 
 ## Work
-flaiover/compose.yaml runs the dashboard next to grafana/otel-lgtm (collector, Tempo, Prometheus, Grafana) with the endpoint wired; docs/operators telemetry reference (endpoints, metric names, variables, compose usage); design/tech/observability.md pins; I-010 for the Node 25 host mismatch.
+flaiover/compose.yaml runs the dashboard next to grafana/otel-lgtm (collector, Tempo, Prometheus, Grafana) with the endpoint wired; docs/operators telemetry reference (endpoints, metric names, variables, compose usage); design/tech/observability.md pins; I-0010 for the Node 25 host mismatch.
 
 ## Done when
 Docs match; compose config validates; tiers green.

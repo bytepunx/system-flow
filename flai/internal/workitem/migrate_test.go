@@ -11,13 +11,13 @@ import (
 func TestCanonicalID(t *testing.T) {
 	for in, want := range map[string]string{
 		"S-32": "S-0032", "s-032": "S-0032", "S-0032": "S-0032", "T-12345": "T-12345",
-		"E-1": "E-0001", "ADR-0003": "ADR-0003", "I-011": "I-011", "": "",
+		"E-1": "E-0001", "ADR-0003": "ADR-0003", "I-011": "I-0011", "i-7": "I-0007", "": "",
 	} {
 		if got := CanonicalID(in); got != want {
 			t.Errorf("CanonicalID(%q) = %q, want %q", in, got, want)
 		}
 	}
-	if got := widen("see S-032, T-100 and T-0100, ADR-0003, I-011, S-1."); got != "see S-0032, T-0100 and T-0100, ADR-0003, I-011, S-0001." {
+	if got := widen("see S-032, T-100 and T-0100, ADR-0003, I-011, S-1."); got != "see S-0032, T-0100 and T-0100, ADR-0003, I-0011, S-0001." {
 		t.Errorf("widen: %q", got)
 	}
 }
@@ -39,7 +39,8 @@ func TestIDMigration(t *testing.T) {
 	write("wip/agents/S-007.md", "---\nstream: S-007\nagent: a\nsession: s\nupdated: 2026-09-17T08:00:00Z\n---\n\n# S-007 Slice\n\n## Log\n")
 	// Half-applied state: front matter already widened, file name not yet.
 	write("wip/kanban/tasks/T-005-half.md", "---\nid: T-0005\ntype: task\nnature: feature\ntitle: Half\nstatus: backlog\nparent: S-0007\nowner: a\ncreated: 2026-09-17T08:00:00Z\nupdated: 2026-09-17T08:00:00Z\ntransitions: []\ntags: []\n---\n\n# T-0005 Half\n")
-	write("design/system/notes.md", "---\ntitle: Notes\n---\n\nS-007 depends on E-001; ADR-0003 and I-011 stay.\n")
+	write("design/system/notes.md", "---\ntitle: Notes\n---\n\nS-007 depends on E-001; ADR-0003 stays, I-011 widens.\n")
+	write("design/issues/I-011-friction.md", "---\nid: I-011\ntitle: Friction\n---\n\n# I-011 Friction\n")
 	write("README.md", "See S-007.\n")
 	write("flai/internal/testdata/fixture.md", "S-007 must stay\n")
 	// A four-digit item created by flai is untouched.
@@ -54,7 +55,7 @@ func TestIDMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(plan.Map) != 4 || plan.Map["S-007"] != "S-0007" || plan.Map["T-099"] != "T-0099" || plan.Map["T-005"] != "T-0005" {
+	if len(plan.Map) != 5 || plan.Map["S-007"] != "S-0007" || plan.Map["T-099"] != "T-0099" || plan.Map["T-005"] != "T-0005" || plan.Map["I-011"] != "I-0011" {
 		t.Errorf("map: %v", plan.Map)
 	}
 	froms := []string{}
@@ -68,6 +69,7 @@ func TestIDMigration(t *testing.T) {
 		"wip/archive/kanban/tasks/T-099-old.md>wip/archive/kanban/tasks/T-0099-old.md",
 		"wip/agents/S-007.md>wip/agents/S-0007.md",
 		"wip/kanban/tasks/T-005-half.md>wip/kanban/tasks/T-0005-half.md",
+		"design/issues/I-011-friction.md>design/issues/I-0011-friction.md",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing rename %s in %s", want, joined)
@@ -90,7 +92,10 @@ func TestIDMigration(t *testing.T) {
 		t.Fatal("story not renamed")
 	}
 	notes, _ := os.ReadFile(filepath.Join(r.Root, "design/system/notes.md"))
-	if string(notes) != "---\ntitle: Notes\n---\n\nS-0007 depends on E-0001; ADR-0003 and I-011 stay.\n" {
+	if _, err := os.Stat(filepath.Join(r.Root, "design/issues/I-0011-friction.md")); err != nil {
+		t.Error("issue not renamed")
+	}
+	if string(notes) != "---\ntitle: Notes\n---\n\nS-0007 depends on E-0001; ADR-0003 stays, I-0011 widens.\n" {
 		t.Errorf("notes: %s", notes)
 	}
 	it, err := r.Get("S-007")

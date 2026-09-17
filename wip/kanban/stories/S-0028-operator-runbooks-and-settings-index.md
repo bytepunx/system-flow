@@ -15,13 +15,13 @@ tags: [docs, operators]
 # S-0028 Operator runbooks and settings index
 
 ## Goal
-Operator documentation meets the documentation convention: every configuration setting indexed, and runbooks for installation, updates, deletion, backups, restores, and migrations for flai and flaiover, with pointers to dashboards and tools. Closes issue I-005.
+Operator documentation meets the documentation convention: every configuration setting indexed, and runbooks for installation, updates, deletion, backups, restores, and migrations for flai and flaiover, with pointers to dashboards and tools. Closes issue I-0005.
 
 ## Acceptance criteria
 - [ ] docs/operators/settings.md indexes every flai config key, flag, environment variable, and flaiover container setting
 - [ ] docs/operators/runbooks/ has one page each for install, update, delete, backup, restore, and migrate, for flai and for flaiover
 - [ ] docs/operators/index.md links the settings index, the runbooks, and where the dashboard and tools are
-- [ ] I-005 closed with a pointer to this story
+- [ ] I-0005 closed with a pointer to this story
 
 ## Tasks
 

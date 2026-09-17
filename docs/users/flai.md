@@ -199,7 +199,7 @@ flai archive S-0001         # one story with its tasks and narrative
 
 ### Item IDs
 
-New items get four-digit IDs (`S-0034`). Commands accept an ID in any padding, so `flai show S-0034`, `S-0034`, and `S-0034` all work. A repository created with three-digit IDs keeps working as it is; to widen it in one step:
+New items and issues get four-digit IDs (`S-0034`, `I-0012`), the same width as ADRs. Commands accept an ID with any zero padding or none, so `flai show` and `flai issue bump` find the item whether you type the number with two, three, or four digits. A repository created with three-digit IDs keeps working as it is; to widen it in one step:
 
 ```bash
 flai migrate ids --dry-run   # list every rename and rewrite
@@ -243,8 +243,8 @@ Agents read these before any change; a shell hook or a wrapper can pipe `flai pr
 
 ```bash
 flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
-flai issue bump I-001 --cost 8m --note "reinstalled again in S-0008"
-flai issue close I-001 --reason "scripts/install-tools.sh pins v2"
+flai issue bump I-0001 --cost 8m --note "reinstalled again in S-0008"
+flai issue close I-0001 --reason "scripts/install-tools.sh pins v2"
 flai issue list [--all]
 flai issue summary
 ```

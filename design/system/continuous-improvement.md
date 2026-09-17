@@ -14,14 +14,14 @@ status: active
 design/issues/
 ├── README.md              # what the folder is
 ├── summary.md             # generated table of open issues
-└── I-001-slug.md          # one file per issue
+└── I-0001-slug.md          # one file per issue
 ```
 
 ## Issue file
 
 ```yaml
 ---
-id: I-001
+id: I-0001
 title: golangci-lint on the host is v1 but the config is v2
 class: efficiency          # defect | blocker | efficiency | impression
 status: open               # open | closed
@@ -32,7 +32,7 @@ last_reported: 2026-09-15T20:10:00Z
 updated: 2026-09-15T20:10:00Z
 ---
 
-# I-001 golangci-lint on the host is v1 but the config is v2
+# I-0001 golangci-lint on the host is v1 but the config is v2
 
 ## Description
 What goes wrong, for whom, and what it costs.
