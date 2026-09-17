@@ -3,11 +3,11 @@ id: S-0035
 type: story
 nature: feature
 title: flai dashboard runs from a private registry or a local build
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-17T07:49:28Z
-updated: 2026-09-17T18:21:19Z
+updated: 2026-09-17T19:02:33Z
 transitions:
   - to: ready
     at: 2026-09-17T07:49:29Z
@@ -17,6 +17,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-09-17T18:21:19Z
+    by: alex
+  - to: done
+    at: 2026-09-17T19:02:33Z
     by: alex
 tags: [dashboard, cli]
 ---

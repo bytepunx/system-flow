@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3 - 2026-09-17
+
+- S-0035 flai dashboard runs from a private registry or a local build (patch).
+
 ## 1.0.2 - 2026-09-17
 
 - S-0033 Four-digit work item IDs (patch).
