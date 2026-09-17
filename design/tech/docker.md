@@ -11,7 +11,7 @@ status: active
 | Host requirement | Docker Engine 24 or newer on `PATH` (dev host has 29) |
 | Image | `ghcr.io/bytepunx/flaiover`, multi-stage build, runtime `node:24-alpine`, non-root user |
 | Tags | `latest`, `<semver>`, `<major>`, `sha-<short>` |
-| Run | `flai dashboard` runs `docker run --rm -p <port>:3000 -v <repo>:/project -e PROJECT_DIR=/project ghcr.io/bytepunx/flaiover:<tag>` |
+| Run | `flai dashboard` runs `docker run --detach --rm --name flaiover-<project> --publish 127.0.0.1:<port>:3000 --volume <repo>:/project --env PROJECT_DIR=/project --user <uid>:<gid> ghcr.io/bytepunx/flaiover:<tag>` |
 
 ## Why
 

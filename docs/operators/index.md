@@ -8,12 +8,14 @@ status: draft
 
 ## Running the dashboard
 
-`flai dashboard` runs `ghcr.io/bytepunx/flaiover` with the repository mounted read-write at `/project`, bound to `127.0.0.1:4242` by default. Change the image, tag, or port in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`.
+`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>` with the repository mounted read-write at `/project`, bound to `127.0.0.1:4242` by default, as the invoking user. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, or port in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`.
 
-Without `flai`:
+Without `flai`, the equivalent is:
 
 ```bash
-docker run --rm -p 127.0.0.1:4242:3000 -v "$PWD:/project" -e PROJECT_DIR=/project --user "$(id -u):$(id -g)" ghcr.io/bytepunx/flaiover:latest
+docker run --detach --rm --name flaiover-myproject \
+  --publish 127.0.0.1:4242:3000 --volume "$PWD:/project" --env PROJECT_DIR=/project \
+  --user "$(id -u):$(id -g)" ghcr.io/bytepunx/flaiover:latest
 ```
 
 ## Security posture

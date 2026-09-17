@@ -273,3 +273,16 @@ flai template push ./template --tag      # also tag v<version>
 ```
 
 A template developed inside another repository is published by cloning its remote branch, replacing the contents with the local template, committing with the template version, and pushing. The branch is created from the default branch if it does not exist; `--tag` refuses a tag that already exists. Git errors are shown as git reports them; nothing is retried, and nothing is force-pushed without `--force`. `flai accept` runs this with `--tag` whenever an accepted item releases a template component, so bumping the template and publishing it are one step.
+
+## Run the dashboard
+
+```bash
+flai dashboard                 # pull the image if needed, run it, print the URL
+flai dashboard --port 8080 --pull
+flai dashboard --attach        # follow the logs; Ctrl-C leaves the container running
+flai dashboard status
+flai dashboard logs [-f]
+flai dashboard stop
+```
+
+The container runs detached as `flaiover-<project>`, bound to `127.0.0.1` on the configured port, with the repository mounted read-write at `/project` and running as your user so files it writes keep your ownership. Image, tag, and port come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer.
