@@ -4,9 +4,10 @@
 	import { resolve } from '$app/paths';
 
 	let { children } = $props();
-	// Routes are added to the nav as their stories land (S-013 board, S-014 charts).
+	// Routes are added to the nav as their stories land (S-014 charts).
 	const nav = [
 		{ href: resolve('/'), label: 'Overview' },
+		{ href: resolve('/board'), label: 'Board' },
 		{ href: resolve('/docs/[...path]', { path: '' }), label: 'Docs' },
 		{ href: resolve('/adrs'), label: 'ADRs' },
 		{ href: resolve('/search'), label: 'Search' }

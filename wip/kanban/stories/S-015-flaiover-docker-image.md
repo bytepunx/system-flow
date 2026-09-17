@@ -18,6 +18,7 @@ tags: []
 Multi-stage Dockerfile and a workflow that publishes to ghcr.io/bytepunx/flaiover.
 
 ## Acceptance criteria
+- [ ] Image bundles a flai binary built from the same commit at /usr/local/bin/flai (ADR-0016)
 - [ ] Image runs as an arbitrary non-root UID (flai dashboard passes `--user uid:gid`; verified in S-009 that an image needing root or a fixed user exits at once) and serves on 3000
 - [ ] Tags: latest, semver, major, sha
 - [ ] flai dashboard runs the published image end to end

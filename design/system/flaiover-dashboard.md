@@ -26,8 +26,8 @@ flowchart LR
 | Route | View | Data |
 |-------|------|------|
 | `/` | Overview: WIP by column, throughput this week, aging items, epics burn-up sparkline | `/api/stats` |
-| `/board` | Kanban board, columns from `board.md`, cards with age, nature, blocked flag, drag to transition | `/api/items`, `/api/items/:id/move` |
-| `/items/:id` | Item detail: rendered body, front matter, children, transitions timeline, narrative link | `/api/items/:id` |
+| `/board` | Kanban board: one column per state with WIP count against the limit, story cards (epics and tasks on request) with age in column, nature, blocked flag; drag to transition, refused moves show the rule; refreshes on SSE (S-013) | `/api/board`, `POST /api/items/:id/move` |
+| `/items/:id` | Item detail: front matter, rendered body, children, transitions timeline, blocked intervals, narrative link, and actions for allowed moves, block, unblock, and a narrative log entry (S-013) | `/api/items/:id`, `POST .../move`, `.../block`, `.../unblock`, `POST /api/streams/:id/log` |
 | `/charts/cycle-time` | Cycle time scatter with percentiles | `/api/stats/cycle-time` |
 | `/charts/burn-up` | Per epic and total | `/api/stats/burn-up` |
 | `/charts/cfd` | Cumulative flow diagram | `/api/stats/cfd` |
@@ -54,12 +54,16 @@ Every chart has the same filter bar: window, nature, epic.
 | `GET /api/events` | Server-sent events: `ready` once, then `change` with `{ path }` per changed file under design, docs, wip, or the manifest |
 | `GET /api/search?q=&docs=` | `{ query, indexed, hits[] }`; each hit has `path`, `kind`, `itemId?`, `title`, `scope`, `status?`, `type?`, `score`, `snippet`, `route` |
 | `GET /api/docs/adrs` | ADR front matter: `id`, `title`, `status`, `date`, `supersedes[]`, `supersededBy[]`, `path` |
+| `GET /api/board` | `{ wip_limits, order, writable, columns: { <state>: card[] } }`; a card has `id`, `type`, `title`, `nature`, `parent`, `status`, `blocked`, `age_seconds`, `entered_at` |
+| `POST /api/items/:id/move` `{ to, reason?, by? }` | flai move; `{ id, status, warnings[] }` or 400 `{ error }` with the rule |
+| `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
+| `POST /api/streams/:id/log` `{ entry }` | flai stream log |
 
 Errors are `{ error }` with the status. The reader caches by path and mtime and is invalidated by the watcher.
 
 ## Writes
 
-The mount is read-write so the board can be operated from the browser. Writes are limited to what `flai` also does: transitions, block and unblock, log entries, and editing an item's body. Every write goes through the same validation rules as `flai check`; the server ports the rules from the Go reference and the fixture test keeps them aligned. Writes are ordinary file edits, so they show up in `git status` for the human to commit.
+The mount is read-write so the board can be operated from the browser. Every write (move, block, unblock, narrative log) is performed by invoking the bundled `flai` binary with `--json` inside the project ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md)); a refused write returns flai's rule text. The server finds the binary through `FLAI_BIN`, then `PATH`, and runs it with `FLAI_CONFIG` and `FLAI_CACHE_DIR` under the project's `.flai-cache` and `FLAI_AGENT=flaiover`. Without a binary the dashboard is read-only and the board says so. Writes are ordinary file edits, so they show up in `git status` for the human to commit. Metrics (S-014) come from `flai stats --json` the same way.
 
 ## Search
 

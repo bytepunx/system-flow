@@ -12,7 +12,7 @@ Copy `0000-template.md` to start a new one.
 | [0004](0004-workflow-states-and-transitions.md) | One state machine, transitions recorded in front matter, blocked is a flag | accepted |
 | [0005](0005-template-as-separate-repository.md) | The template is a separate git repository rendered by flai | accepted |
 | [0006](0006-go-for-the-cli.md) | Go for the flai CLI | accepted |
-| [0007](0007-sveltekit-spa-with-node-adapter-in-docker.md) | SvelteKit SPA with node adapter, shipped as a Docker image | accepted |
+| [0007](0007-sveltekit-spa-with-node-adapter-in-docker.md) | SvelteKit SPA with node adapter, shipped as a Docker image | accepted, superseded in part by 0016 |
 | [0008](0008-cli-config-location.md) | CLI configuration lives in ~/.flai/config.json | accepted |
 | [0009](0009-agent-narrative-per-story.md) | One agent narrative per story in wip/agents | accepted |
 | [0010](0010-shell-out-to-git-and-docker.md) | flai shells out to git and docker | accepted |
@@ -21,3 +21,4 @@ Copy `0000-template.md` to start a new one.
 | [0013](0013-conventions-folder.md) | design/conventions holds agent norms, one file per topic | accepted |
 | [0014](0014-design-issues.md) | design/issues records recurring friction with counts and cost | accepted |
 | [0015](0015-template-lock-file.md) | system-flow.lock.yaml records what the template rendered so upgrade can tell edits from baseline | accepted |
+| [0016](0016-dashboard-delegates-to-flai.md) | flaiover delegates writes and metrics to the flai binary | accepted, supersedes 0007 in part |

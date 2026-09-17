@@ -4,7 +4,7 @@ title: SvelteKit SPA with node adapter, shipped as a Docker image
 status: accepted
 date: 2026-09-15
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0016]
 ---
 
 # ADR-0007 SvelteKit SPA with node adapter, shipped as a Docker image

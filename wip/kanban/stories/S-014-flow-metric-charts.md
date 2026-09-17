@@ -19,7 +19,7 @@ Cycle time scatter, burn-up, cumulative flow, time in state, throughput, aging W
 
 ## Acceptance criteria
 - [ ] Each chart in metrics.md has a route
-- [ ] Numbers match flai stats --json on the fixture repo
+- [ ] Numbers come from `flai stats --json` invoked by the server (ADR-0016), so they match by construction; the client charts them
 - [ ] Charts work in light and dark theme
 
 ## Tasks

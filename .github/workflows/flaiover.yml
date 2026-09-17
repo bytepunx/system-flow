@@ -24,6 +24,12 @@ jobs:
           node-version-file: flaiover/.nvmrc
           cache: pnpm
           cache-dependency-path: flaiover/pnpm-lock.yaml
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: flai/go.mod
+      - name: Build flai for the write and metrics tests
+        run: go build -o "$RUNNER_TEMP/flai" .
+        working-directory: flai
       - run: pnpm install --frozen-lockfile
       - name: Lint and format
         run: pnpm lint
@@ -31,5 +37,7 @@ jobs:
         run: pnpm check
       - name: Unit tests
         run: pnpm test:unit
+        env:
+          FLAI_BIN: ${{ runner.temp }}/flai
       - name: Build
         run: pnpm build
