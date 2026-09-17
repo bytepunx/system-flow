@@ -28,6 +28,13 @@ type Manifest struct {
 	Dashboard   map[string]any    `yaml:"dashboard"`
 	Items       map[string]string `yaml:"items"`
 	Projects    []ProjectKind     `yaml:"projects"`
+	Publish     Publish           `yaml:"publish"`
+}
+
+// Publish names the template's git home for flai template push.
+type Publish struct {
+	Repo string `yaml:"repo"`
+	Ref  string `yaml:"ref"`
 }
 
 // Variable is a value the user supplies when rendering.

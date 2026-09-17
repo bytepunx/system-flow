@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -14,7 +15,7 @@ import (
 func newAcceptCmd(a *app) *cobra.Command {
 	var by, deliver, remote string
 	var trailers []string
-	var noRelease, noPush, dryRun bool
+	var noRelease, noPush, noPublish, dryRun bool
 	c := &cobra.Command{
 		Use:   "accept <id>",
 		Short: "Accept an item: move to done, archive, commit, release, push",
@@ -153,8 +154,25 @@ design/conventions/work-management.md and git.md:
 					pushed = true
 				}
 			}
+			// 7. publish template components at their new version
+			var published []string
+			if plan != nil && plan.Skipped == "" && !noPublish && !noPush {
+				for _, st := range plan.Steps {
+					if st.Component.Kind != "template" {
+						continue
+					}
+					dir := filepath.Join(repo.Root, st.Component.Path)
+					res, err := a.publishTemplate(dir, "", "", true, false, false)
+					if err != nil {
+						return fmt.Errorf("template published locally at %s but pushing to its remote failed: %w", st.To, err)
+					}
+					if !res.Nothing {
+						published = append(published, fmt.Sprintf("%s %s (%s)", res.Remote, res.Tag, res.Commit))
+					}
+				}
+			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"id": it.ID, "archived": len(ap.Items), "plan": plan, "tags": tags, "pushed": pushed})
+				return a.printJSON(map[string]any{"id": it.ID, "archived": len(ap.Items), "plan": plan, "tags": tags, "pushed": pushed, "published": published})
 			}
 			fmt.Fprintf(a.out, "accepted %s: done, %d items archived, committed", it.ID, len(ap.Items))
 			if len(tags) > 0 {
@@ -162,6 +180,9 @@ design/conventions/work-management.md and git.md:
 			}
 			if pushed {
 				fmt.Fprint(a.out, ", pushed")
+			}
+			for _, p := range published {
+				fmt.Fprintf(a.out, ", template published to %s", p)
 			}
 			fmt.Fprintln(a.out)
 			return nil
@@ -172,7 +193,8 @@ design/conventions/work-management.md and git.md:
 	c.Flags().StringVar(&remote, "remote", "origin", "git remote to push to")
 	c.Flags().StringArrayVar(&trailers, "trailer", nil, "line appended to the commit message (repeatable)")
 	c.Flags().BoolVar(&noRelease, "no-release", false, "accept without computing or creating a release")
-	c.Flags().BoolVar(&noPush, "no-push", false, "do not push the commit and tags")
+	c.Flags().BoolVar(&noPush, "no-push", false, "do not push the commit and tags (implies --no-publish)")
+	c.Flags().BoolVar(&noPublish, "no-publish", false, "do not push template components to their publish remote")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "print the release plan and change nothing")
 	return c
 }

@@ -29,6 +29,9 @@ dashboard:
   tag: latest
   port: 4242
 projects: []
+publish:
+  repo: git@github.com:bytepunx/system-flow-template.git
+  ref: main
 items:                     # rendered by flai when creating work items and narratives, not at project creation
   epic: items/epic.md.tmpl
   story: items/story.md.tmpl

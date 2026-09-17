@@ -54,7 +54,7 @@ Template repo cloning goes into `cache_dir/templates/<hash of repo+ref>` and is 
 | `flai accept <id> [--by] [--deliver] [--no-release] [--no-push] [--trailer]` | The operator's acceptance in one step: move to done, archive, template bump, commit, tags on that commit, push. |
 | `flai issue new "<title>" --class <c> [--cost] [--note]`, `flai issue bump <id> [--cost] [--note]`, `flai issue close <id> --reason`, `flai issue list [--all]`, `flai issue summary` | Record, increment, and close recurring friction in `design/issues`; every command regenerates `summary.md` (average and total cost, most expensive first). |
 | `flai template show`, `flai template update`, `flai template use <repo> [--ref]` | Inspect, refresh, and switch the template source. |
-| `flai template push [dir] [--remote] [--ref] [--tag] [--dry-run]` | Publish a locally developed template to its git remote: clone, replace contents, commit with the version, push. Git errors surface verbatim; no force push unless `--force`. Story S-021. |
+| `flai template push [dir] [--remote] [--ref] [--tag] [--dry-run] [--force]` | Publish a locally developed template to its git remote: clone the branch, replace contents, commit with the version, push, and with `--tag` push `v<version>` (refused if it exists). Defaults from `publish` in `template.yaml`. Git errors surface verbatim; no retries; no force push unless `--force`. `flai accept` calls it for template components. |
 | `flai config get [key]`, `flai config set <key> <value>`, `flai config path` | Read and edit `~/.flai/config.json` by dotted key; `path` prints the resolved file without creating it. |
 | `flai version` | Version, commit, build date. |
 
@@ -93,6 +93,7 @@ flai/
 │   ├── release/         # semver plan from item, commits, and manifest components; tags and version files
 │   ├── lock/            # system-flow.lock.yaml
 │   ├── upgrade/         # classify add, merge, replace, conflict; apply with a policy
+│   ├── publish/         # push a local template to its remote: clone, replace, commit, tag, push
 │   ├── metrics/         # reference implementation of metrics.md
 │   ├── importer/        # scan, plan, moves with git mv
 │   ├── dashboard/       # docker run/stop

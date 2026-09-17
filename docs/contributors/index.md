@@ -34,14 +34,11 @@ Write a new ADR in `design/adrs` that supersedes the old one, then update `desig
 
 ## Publishing the template
 
-The template is developed in `./template` and published to [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template), which is flai's default source. Until `flai template push` (S-021) automates it, sync by hand after a story that changes the template lands:
+The template is developed in `./template` and published to [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template), which is flai's default source. Publishing is part of acceptance: when an accepted item releases the template component, `flai accept` bumps `template/template.yaml` and `template/CHANGELOG.md` and runs `flai template push ./template --tag`, which pushes the contents to `publish.repo` at `publish.ref` and tags `v<version>`. To publish outside acceptance:
 
 ```bash
-git subtree split --prefix=template -b template-main
-git push git@github.com:bytepunx/system-flow-template.git template-main:main
-git tag -a template/vX.Y.Z template-main -m "system-flow-template vX.Y.Z"
-git push git@github.com:bytepunx/system-flow-template.git refs/tags/template/vX.Y.Z:refs/tags/vX.Y.Z
-git branch -D template-main
+flai template push ./template --dry-run
+flai template push ./template --tag
 ```
 
-`template/template.yaml` carries the version and `template/CHANGELOG.md` the entry; both are bumped at acceptance per the release rule. The subtree split preserves the template's history without rewriting this repository. This repository keeps `template.repo: ./template` in `system-flow.yaml` so it develops against the working copy; other projects use the published repo and a tag.
+The first publish seeded the remote with the template's history via a subtree split; every push since is a commit on top. This repository keeps `template.repo: ./template` in `system-flow.yaml` so it develops against the working copy; other projects use the published repo and a tag.

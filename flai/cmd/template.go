@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/publish"
+	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
 func newTemplateCmd(a *app) *cobra.Command {
@@ -14,7 +17,99 @@ func newTemplateCmd(a *app) *cobra.Command {
 		Use:   "template",
 		Short: "Inspect, refresh, and switch the template source",
 	}
-	c.AddCommand(newTemplateShowCmd(a), newTemplateUpdateCmd(a), newTemplateUseCmd(a))
+	c.AddCommand(newTemplateShowCmd(a), newTemplateUpdateCmd(a), newTemplateUseCmd(a), newTemplatePushCmd(a))
+	return c
+}
+
+// publishTemplate pushes a local template directory to its remote.
+func (a *app) publishTemplate(dir, remote, ref string, tag, force, dryRun bool) (*publish.Result, error) {
+	m, err := template.LoadManifest(dir)
+	if err != nil {
+		return nil, err
+	}
+	if remote == "" {
+		remote = m.Publish.Repo
+	}
+	if ref == "" {
+		ref = m.Publish.Ref
+	}
+	cacheDir := config.Default().CacheDir
+	if cfg, _, err := a.loadConfig(); err == nil {
+		cacheDir = cfg.CacheDir
+	}
+	abs, _ := filepath.Abs(dir)
+	return publish.Run(a.runner, publish.Options{Dir: dir, Remote: remote, Ref: ref, CacheDir: config.ExpandHome(cacheDir), Tag: tag, Force: force, DryRun: dryRun, Source: abs})
+}
+
+func newTemplatePushCmd(a *app) *cobra.Command {
+	var remote, ref string
+	var tag, force, dryRun bool
+	c := &cobra.Command{
+		Use:   "push [dir]",
+		Short: "Publish a locally developed template to its git remote",
+		Long: `Clone the remote branch (creating it from the default branch if missing),
+replace its contents with the local template, commit with the template
+version, and push. --tag also creates and pushes v<version>, refusing if it
+exists. Git errors are reported verbatim; nothing is retried, and nothing is
+force-pushed without --force. The directory defaults to config template.repo
+when that is a local path; the remote and branch default to publish.repo and
+publish.ref in template.yaml.`,
+		Example: `  flai template push --dry-run
+  flai template push ./template --tag
+  flai template push ./template --remote git@github.com:me/my-template.git --ref main`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dir := ""
+			if len(args) == 1 {
+				dir = args[0]
+			} else {
+				cfg, _, err := a.loadConfig()
+				if err != nil {
+					return err
+				}
+				if !template.IsLocal(cfg.Template.Repo) {
+					return fmt.Errorf("config template.repo (%s) is not a local directory; pass the template directory as an argument", cfg.Template.Repo)
+				}
+				dir = config.ExpandHome(cfg.Template.Repo)
+			}
+			res, err := a.publishTemplate(dir, remote, ref, tag, force, dryRun)
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(res)
+			}
+			switch {
+			case res.Nothing:
+				fmt.Fprintf(a.out, "nothing to push: %s %s matches template %s\n", res.Remote, res.Ref, res.Version)
+			case dryRun:
+				fmt.Fprintf(a.out, "would push %d change(s) to %s %s as \"%s\"", len(res.Files), res.Remote, res.Ref, strings.SplitN(res.Message, "\n", 2)[0])
+				if res.Tag != "" {
+					fmt.Fprintf(a.out, " and tag %s", res.Tag)
+				}
+				fmt.Fprintln(a.out)
+				for _, f := range res.Files {
+					fmt.Fprintf(a.out, "  %s\n", f)
+				}
+				fmt.Fprintln(a.out, "dry run: remote untouched")
+			default:
+				fmt.Fprintf(a.out, "pushed %s to %s %s (%d change(s), commit %s", res.Version, res.Remote, res.Ref, len(res.Files), orDefault(res.Commit, "none"))
+				if res.Tag != "" {
+					fmt.Fprintf(a.out, ", tag %s", res.Tag)
+				}
+				if res.Created {
+					fmt.Fprint(a.out, ", branch created")
+				}
+				fmt.Fprintln(a.out, ")")
+			}
+			return nil
+		},
+	}
+	c.Flags().StringVar(&remote, "remote", "", "git URL (default: publish.repo in template.yaml)")
+	c.Flags().StringVar(&ref, "ref", "", "branch (default: publish.ref in template.yaml)")
+	c.Flags().BoolVar(&tag, "tag", false, "also create and push v<version>")
+	c.Flags().BoolVar(&force, "force", false, "force push and overwrite an existing tag")
+	c.Flags().BoolVar(&dryRun, "dry-run", false, "report the changes and commit message; push nothing")
 	return c
 }
 

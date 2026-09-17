@@ -25,7 +25,6 @@ A polished Go CLI that creates conforming projects, imports existing ones intera
 - S-009 flai dashboard
 - S-010 Release pipeline for flai
 - S-029 flai release computes the bump, tags, and pushes on acceptance
-- S-029 flai release computes the bump, tags, and pushes on acceptance
 - S-031 flai structured logging and --verbose
 
 ## Notes

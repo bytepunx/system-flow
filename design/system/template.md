@@ -75,6 +75,9 @@ projects:
     path: projects/go
   - kind: sveltekit
     path: projects/sveltekit
+publish:                   # the template's git home, used by flai template push
+  repo: git@github.com:bytepunx/system-flow-template.git
+  ref: main
 ```
 
 ## Built-in variables
@@ -115,17 +118,9 @@ Semantic versions in `template.yaml`. `flai` records the applied version in `sys
 
 `flai upgrade` brings a conforming repo to the template version at the configured source ([ADR-0015](../adrs/0015-template-lock-file.md)). `system-flow.lock.yaml`, written by `flai new` and `flai upgrade`, records a sha256 per rendered path. On upgrade each template path is classified: added when absent, merged when both sides carry the baseline marker (template above, project below), replaced when the project file still matches the lock, skipped when identical, otherwise a conflict. In a terminal each conflict offers keep, replace, or a diff; non-interactive runs need `--keep-all` or `--replace-all` and otherwise change nothing. The manifest's `template.version` and `template.applied` and the lock are updated only when no conflict is unresolved. A dirty git tree is refused unless `--force`, so the upgrade is reviewable as one diff. `--relock` writes the lock at the current version for projects assembled by hand.
 
-## Publishing a template (S-021)
+## Publishing a template
 
-A template developed inside another repository, as `./template` is here, is published with `flai template push`. The manifest declares its home:
-
-```yaml
-publish:
-  repo: git@github.com:bytepunx/system-flow-template.git
-  ref: main
-```
-
-The command clones the remote branch into the cache, replaces its contents with the local template, commits with the template version in the message, pushes, and with `--tag` also pushes `v<version>`. It assumes push permission exists and reports git failures verbatim. It never changes the calling project's `system-flow.yaml`.
+A template developed inside another repository, as `./template` is here, is published with `flai template push`. The manifest's `publish` section names its home. The command clones the remote branch into the cache (creating the branch from the default branch if it does not exist), replaces its contents with the local template, commits with the template version in the message, pushes, and with `--tag` also pushes `v<version>`, refusing if that tag exists. It assumes push permission exists, reports git failures verbatim, never retries, and never force-pushes without `--force`. It never changes the calling project's `system-flow.yaml`. `flai accept` runs it with `--tag` for a template component after bumping the version, so a template release is one acceptance. The first publish (S-003) used a subtree split to seed the history; every push since is a commit on top.
 
 ## Testing the template
 
