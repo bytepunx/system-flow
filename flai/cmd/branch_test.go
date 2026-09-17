@@ -35,6 +35,9 @@ func TestStoryBranchLifecycle(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	_ = os.WriteFile(filepath.Join(root, "docs", "guide.md"), []byte("line one\n"), 0o644)
 	gitIn(t, root, "init", "-q", "-b", "main")
+	// flai's own git calls (rebase, merge) need an identity in the repository; CI has no global one.
+	gitIn(t, root, "config", "user.email", "t@t")
+	gitIn(t, root, "config", "user.name", "t")
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-q", "-m", "init")
 
