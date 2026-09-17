@@ -3,12 +3,18 @@ id: S-032
 type: story
 nature: feature
 title: "flaiover observability: request logs, health, metrics, traces"
-status: backlog
+status: in-progress
 parent: E-003
 owner: alex
 created: 2026-09-16T23:24:18Z
-updated: 2026-09-16T23:24:18Z
-transitions: []
+updated: 2026-09-17T05:52:20Z
+transitions:
+  - to: ready
+    at: 2026-09-17T05:52:20Z
+    by: agent
+  - to: in-progress
+    at: 2026-09-17T05:52:20Z
+    by: agent
 tags: [dashboard, telemetry, logging]
 ---
 
@@ -26,6 +32,10 @@ flaiover follows the logging and telemetry conventions: pino request and lifecyc
 - [ ] design/tech records pino and the OpenTelemetry packages with versions
 
 ## Tasks
+- T-101 pino logging: request line with trace_id, lifecycle events, LOG_LEVEL and LOG_FORMAT
+- T-102 /_health, /_ready with dependency checks, /metrics with prom-client golden signals and build_info
+- T-103 OpenTelemetry traces via OTLP when configured, W3C context propagation, one span per request
+- T-104 compose stack with a collector and viewer; operator docs; tech pins; tests
 
 ## Notes
 - Created by S-030. Depends on S-011 (dashboard scaffold). Nature feature; bump flaiover minor on acceptance.
