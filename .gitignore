@@ -23,3 +23,6 @@ coverage.*
 
 # system-flow
 .flai-cache/
+
+# Playwright MCP screenshots and snapshots from visual checks
+.playwright-mcp/

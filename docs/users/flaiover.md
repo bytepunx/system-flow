@@ -18,6 +18,10 @@ Board shows one column per state with the WIP count against the limit from `wip/
 
 Click a card for the item page: front matter, the rendered body, children, the transition history, blocked intervals, a link to the narrative, and buttons for the allowed moves, block, unblock, and adding a narrative log entry.
 
+## Charts
+
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. Pick a window, an item type, and where it applies an epic. Cycle time shows one point per completed item with the p50 and p85 lines; burn-up shows scope against done; cumulative flow shows how many items sit in each state each day; time in state shows where each completed item spent its time and the share across all of them; throughput counts completions per week by nature; aging lists in-progress work against the p85 line; estimates compares estimated with actual hours. Every chart has a table view and follows the light or dark theme.
+
 ## Search
 
 Search covers `design/` and `wip/` by default and `docs/` when you tick the box. Type an item ID, a title, or words from the body; each result shows where it is, its status, and a snippet around the match. Results open in the explorer.

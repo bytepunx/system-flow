@@ -43,6 +43,7 @@
 	},
 	"dependencies": {
 		"chokidar": "^5.0.0",
+		"echarts": "^6.1.0",
 		"markdown-it": "^15.0.2",
 		"markdown-it-anchor": "^10.0.0",
 		"markdown-it-task-lists": "^2.1.1",

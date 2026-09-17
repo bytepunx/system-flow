@@ -28,19 +28,20 @@ flowchart LR
 | `/` | Overview: WIP by column, throughput this week, aging items, epics burn-up sparkline | `/api/stats` |
 | `/board` | Kanban board: one column per state with WIP count against the limit, story cards (epics and tasks on request) with age in column, nature, blocked flag; drag to transition, refused moves show the rule; refreshes on SSE (S-013) | `/api/board`, `POST /api/items/:id/move` |
 | `/items/:id` | Item detail: front matter, rendered body, children, transitions timeline, blocked intervals, narrative link, and actions for allowed moves, block, unblock, and a narrative log entry (S-013) | `/api/items/:id`, `POST .../move`, `.../block`, `.../unblock`, `POST /api/streams/:id/log` |
-| `/charts/cycle-time` | Cycle time scatter with percentiles | `/api/stats/cycle-time` |
-| `/charts/burn-up` | Per epic and total | `/api/stats/burn-up` |
-| `/charts/cfd` | Cumulative flow diagram | `/api/stats/cfd` |
-| `/charts/time-in-state` | Stacked bars and aggregate share | `/api/stats/time-in-state` |
-| `/charts/throughput` | Weekly bars by nature | `/api/stats/throughput` |
-| `/charts/aging` | Aging WIP | `/api/stats/aging` |
+| `/charts/cycle-time` | Cycle time scatter by nature with p50 and p85 lines (S-014) | `/api/stats` |
+| `/charts/burn-up` | Scope and done, per epic or total | `/api/stats` |
+| `/charts/cfd` | Cumulative flow diagram | `/api/stats` |
+| `/charts/time-in-state` | Stacked bars per completed item and the share bar | `/api/stats` |
+| `/charts/throughput` | Weekly bars by nature | `/api/stats` |
+| `/charts/aging` | Aging WIP against p85 | `/api/stats` |
+| `/charts/estimates` | Estimate versus actual with the perfect-estimate diagonal | `/api/stats` |
 | `/docs/<path>` | Documentation explorer: collapsible tree of `design/` (including `conventions/` and `issues/`), `docs/`, and `wip/`; rendered markdown with Mermaid, highlighted code, task lists, heading anchors, rewritten links; front matter panel (S-012) | `/api/docs/tree`, `/api/docs/file` |
 | `/conventions` | The conventions in read order with project additions highlighted; the same set `flai prime` prints | `/api/conventions` |
 | `/adrs` | ADR list with status, date, and supersession chain linking into the explorer (S-012) | `/api/docs/adrs` |
 | `/streams` | Active narratives with current state and next steps | `/api/streams` |
 | `/search` | Search across `design/` and `wip/`, `docs/` on request, with snippets and routes (S-012) | `/api/search?q=&docs=` |
 
-Every chart has the same filter bar: window, nature, epic.
+Every chart has the same filter bar: window, type, and epic where the chart supports it; a summary strip shows completed, cancelled, WIP, throughput, and cycle time percentiles; a table view sits under every chart.
 
 ## API (S-011)
 
@@ -58,6 +59,7 @@ Every chart has the same filter bar: window, nature, epic.
 | `POST /api/items/:id/move` `{ to, reason?, by? }` | flai move; `{ id, status, warnings[] }` or 400 `{ error }` with the rule |
 | `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
 | `POST /api/streams/:id/log` `{ entry }` | flai stream log |
+| `GET /api/stats?since=&type=&by=` | `flai stats --json` verbatim (see metrics.md), cached per query and cleared on change; bad arguments are 400 |
 
 Errors are `{ error }` with the status. The reader caches by path and mtime and is invalidated by the watcher.
 
