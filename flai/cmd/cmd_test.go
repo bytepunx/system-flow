@@ -11,6 +11,7 @@ import (
 
 func runCLI(t *testing.T, args ...string) (stdout, stderr string, code int) {
 	t.Helper()
+	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
 	code = run(args, &out, &errOut)
 	return out.String(), errOut.String(), code

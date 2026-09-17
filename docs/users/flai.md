@@ -77,7 +77,7 @@ flai config set dashboard.port 8080
 flai config path
 ```
 
-Point `template.repo` at any fork and `template.ref` at any branch, tag, or commit to use your own template. A local directory path also works, which is how the system-flow repo develops against its own `./template`.
+Point `template.repo` at any fork and `template.ref` at any branch, tag, or commit to use your own template. A local directory path also works, which is how the system-flow repo develops against its own `./template`. Git templates are cloned under `cache_dir`; set `FLAI_CACHE_DIR` before the first run to choose where that default lands (for example inside a repository or a CI workspace).
 
 ## Version
 
@@ -111,6 +111,17 @@ flai new my-project --defaults --var "description=Billing platform" --var owner=
 | `--no-git` | Do not run `git init`. |
 
 The result has a `system-flow.yaml` recording the template and version, a `CLAUDE.md` for agents, and the `design`, `docs`, and `wip` folders ready to use.
+
+## Convert an existing repository
+
+```bash
+cd existing-repo
+flai import --dry-run     # the proposal, nothing changes
+flai import               # interactive: folder names, moves, where each markdown file goes
+flai import --yes         # accept every default, leave loose markdown in place
+```
+
+`import` scans the tree and proposes: the three documentation folders (reusing `docs/`, `design/`, or `wip/` if they exist, or names you choose with `--layout`), whole-folder moves for `adr/`, `adrs/`, `architecture/`, `doc/`, and `documentation/`, a list of loose markdown files to place, and the code sub-projects it found by their build files (`go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml`). Applying it creates the structure, renders every template file that does not already exist, performs the moves with `git mv` when the file is tracked, writes `system-flow.yaml` with the sub-projects, and runs `flai check`. Existing files are never overwritten; a conflicting move is reported and the source left in place. A repository that already has `system-flow.yaml` is refused unless `--force`.
 
 ## Manage the template source
 

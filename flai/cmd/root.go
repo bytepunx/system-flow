@@ -111,7 +111,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	pf.BoolVarP(&a.verbose, "verbose", "v", false, "debug-level log events on stderr (LOG_LEVEL, LOG_FORMAT also apply)")
 
 	root.AddCommand(
-		newVersionCmd(a), newConfigCmd(a), newNewCmd(a), newTemplateCmd(a),
+		newVersionCmd(a), newConfigCmd(a), newNewCmd(a), newImportCmd(a), newTemplateCmd(a),
 		newItemCmd(a, "epic"), newItemCmd(a, "story"), newItemCmd(a, "task"), newShowCmd(a),
 		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newBoardCmd(a),
 		newStreamCmd(a), newArchiveCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a),

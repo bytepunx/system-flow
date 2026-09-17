@@ -8,6 +8,7 @@ import (
 )
 
 func TestLoadCreatesDefaultsOnFirstRun(t *testing.T) {
+	t.Setenv(CacheEnvVar, "/tmp/flai-test-cache")
 	path := filepath.Join(t.TempDir(), "nested", "config.json")
 	cfg, created, err := Load(path)
 	if err != nil {
@@ -16,7 +17,7 @@ func TestLoadCreatesDefaultsOnFirstRun(t *testing.T) {
 	if !created {
 		t.Fatal("expected created=true on first run")
 	}
-	if cfg.Template.Repo != Default().Template.Repo || cfg.Dashboard.Port != 4242 {
+	if cfg.Template.Repo != Default().Template.Repo || cfg.Dashboard.Port != 4242 || cfg.CacheDir != "/tmp/flai-test-cache" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if _, err := os.Stat(path); err != nil {

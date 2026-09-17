@@ -20,6 +20,7 @@ func runIn(t *testing.T, dir string, args ...string) (string, string, int) {
 // runInAt runs the CLI with the working directory and clock fixed.
 func runInAt(t *testing.T, dir string, at time.Time, args ...string) (string, string, int) {
 	t.Helper()
+	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
 	a := &app{out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return at }}
 	root := newRootCmdWith(a)

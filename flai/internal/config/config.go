@@ -19,6 +19,10 @@ import (
 // EnvVar overrides the config file path when set.
 const EnvVar = "FLAI_CONFIG"
 
+// CacheEnvVar overrides the default cache_dir written on first run, so
+// scripts and tests can keep template clones out of the operator's home.
+const CacheEnvVar = "FLAI_CACHE_DIR"
+
 // Config is the schema of ~/.flai/config.json.
 type Config struct {
 	Template  Template  `json:"template"`
@@ -45,7 +49,7 @@ func Default() Config {
 	return Config{
 		Template:  Template{Repo: "https://github.com/bytepunx/system-flow-template", Ref: "main"},
 		Dashboard: Dashboard{Image: "ghcr.io/bytepunx/flaiover", Tag: "latest", Port: 4242},
-		CacheDir:  "~/.flai/cache",
+		CacheDir:  orDefault(os.Getenv(CacheEnvVar), "~/.flai/cache"),
 		Author:    currentUser(),
 	}
 }
@@ -224,6 +228,13 @@ func (c Config) toMap() map[string]any {
 	var m map[string]any
 	_ = json.Unmarshal(data, &m)
 	return m
+}
+
+func orDefault(s, d string) string {
+	if s == "" {
+		return d
+	}
+	return s
 }
 
 func currentUser() string {

@@ -63,13 +63,13 @@ Global flags: `--config <path>`, `--json` where output is structured, `--yes` to
 `flai import` is the deliberate, interactive path for existing repos.
 
 1. Scan the tree. Detect existing `design`, `docs`, `wip`, `adr`, `adrs`, `architecture`, `documentation` folders and any markdown outside code folders. Detect sub-projects by build files (`go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml`).
-2. Present a proposal: which folders will be created, which existing folders look like they map to `design`, `docs`, or `wip`, and which sub-projects were found.
-3. Ask for folder names, offering the defaults and any detected candidates.
-4. Create the structure and render the template files that do not conflict.
-5. For each existing markdown file outside the new structure, ask: move to `design/system`, `design/adrs`, `docs/<audience>`, leave in place, or skip all remaining. Moves are `git mv` when the repo is git.
-6. Write `system-flow.yaml`, run `flai check`, print a summary and next steps.
+2. Present a proposal: which folders will be created, which existing folders look like they map to `design`, `docs`, or `wip`, which candidate folders (`adr`, `adrs`, `architecture`, `doc`, `documentation`) move whole into the structure, which loose markdown needs a decision, and which sub-projects were found.
+3. Ask for folder names, offering existing folders and the template defaults; `--layout key=name` sets them without asking.
+4. Move candidate folders (confirmed one by one in a terminal), then render the template files that do not already exist. Nothing is overwritten; a conflicting file in a moved folder stays where it was and is reported.
+5. For each loose markdown file, ask: `design/system`, `design/adrs`, `docs/<audience>`, leave in place, or skip all remaining. Non-interactive runs leave files in place. Moves are `git mv` when the file is tracked.
+6. Write `system-flow.yaml` with the detected sub-projects, run `flai check`, print a summary and next steps.
 
-`--dry-run` prints the proposal and stops. `--yes` accepts every default.
+`--dry-run` prints the proposal and stops (`--json` gives the analysis and plan). `--yes` accepts every default. A tree that already has a manifest is refused unless `--force`.
 
 ## Internal structure
 
@@ -89,7 +89,7 @@ flai/
 │   ├── conventions/     # loads and validates design/conventions
 │   ├── issues/          # design/issues: record, bump, close, summary
 │   ├── metrics/         # reference implementation of metrics.md
-│   ├── importer/        # analysis and proposal
+│   ├── importer/        # scan, plan, moves with git mv
 │   ├── dashboard/       # docker run/stop
 │   └── ui/              # prompts and tables
 └── testdata/
