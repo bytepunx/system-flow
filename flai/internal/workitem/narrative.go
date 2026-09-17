@@ -124,7 +124,15 @@ func (r *Repo) LogStream(storyID, entry string, opt StreamOptions) (*Narrative, 
 	if !strings.Contains(n.Body, "\n## Log") && !strings.HasPrefix(n.Body, "## Log") {
 		n.Body = strings.TrimRight(n.Body, "\n") + "\n\n## Log\n"
 	}
-	n.Body = strings.TrimRight(n.Body, "\n") + "\n\n### " + now + "\n" + strings.TrimSpace(entry) + "\n"
+	// Headings are second-resolution timestamps; two entries in the same
+	// second share one heading so the narrative never carries duplicate
+	// headings (markdownlint MD024).
+	body := strings.TrimRight(n.Body, "\n")
+	if lastHeading(body) == "### "+now {
+		n.Body = body + "\n\n" + strings.TrimSpace(entry) + "\n"
+	} else {
+		n.Body = body + "\n\n### " + now + "\n" + strings.TrimSpace(entry) + "\n"
+	}
 	n.Updated = now
 	if opt.Agent != "" {
 		n.Agent = opt.Agent
@@ -173,4 +181,15 @@ func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(r.AgentsDir(), "index.md"), []byte(b.String()), 0o644)
+}
+
+// lastHeading returns the last markdown heading line in body, or "".
+func lastHeading(body string) string {
+	lines := strings.Split(body, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if strings.HasPrefix(lines[i], "#") {
+			return strings.TrimSpace(lines[i])
+		}
+	}
+	return ""
 }

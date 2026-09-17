@@ -12,8 +12,11 @@ test: ## Behavior tests (fast, run on every iteration)
 integration: ## Integration tests (real git, monorepo round-trip), after test
 	scripts/integration.sh
 
-smoke: ## Smoke tests (template render and check, repo check), after integration
+smoke: ## Smoke tests (template render and check, repo check, markdown lint), after integration
 	scripts/smoke.sh
+
+lint-md: ## Lint all markdown with the CI globs and config
+	scripts/lint-md.sh
 
 flai-test: ## Lint plus all three test tiers in order
 	scripts/flai-test.sh

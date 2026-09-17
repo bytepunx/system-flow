@@ -329,6 +329,13 @@ func TestStreamsAndIndex(t *testing.T) {
 	if !strings.HasSuffix(n2.Body, "### 2026-09-15T20:30:00Z\ndid a thing\n") || n2.Updated != "2026-09-15T20:30:00Z" || n2.Agent != "bot2" {
 		t.Errorf("log: %+v\n%s", n2, n2.Body)
 	}
+	n3, err := r.LogStream("S-001", "same second", StreamOptions{Now: later})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(n3.Body, "### 2026-09-15T20:30:00Z\ndid a thing\n\nsame second\n") || strings.Count(n3.Body, "### 2026-09-15T20:30:00Z") != 1 {
+		t.Errorf("same-second log should share the heading:\n%s", n3.Body)
+	}
 	if _, err := r.LogStream("S-009", "x", StreamOptions{Now: t0}); err == nil {
 		t.Error("log to missing stream should fail")
 	}

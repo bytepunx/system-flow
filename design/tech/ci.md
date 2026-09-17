@@ -9,7 +9,7 @@ status: active
 | Component | Use |
 |-----------|-----|
 | GitHub Actions | All CI |
-| `markdownlint-cli2` | Markdown style in monorepo and template output |
+| `markdownlint-cli2` | Markdown style in monorepo and template output; `scripts/lint-md.sh` runs the same globs locally as part of `make smoke` |
 | `flai check --strict` | Standard conformance, run from a built `flai` in CI |
 | GoReleaser action | Release `flai` on tags `flai/v*`. GoReleaser OSS cannot strip a monorepo tag prefix, so `flai/.goreleaser.yaml` derives the version with `trimprefix .Tag "flai/v"` in every template and the workflow passes `--skip=validate`. `git.ignore_tags` excludes `flaiover/*` when finding the previous tag. |
 | `docker/build-push-action` with `docker/metadata-action` | Build and push `flaiover` on tags `flaiover/v*` and on `main` |
