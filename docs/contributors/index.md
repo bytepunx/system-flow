@@ -31,3 +31,17 @@ Write a new ADR in `design/adrs` that supersedes the old one, then update `desig
 - `flai`: tag `flai/vX.Y.Z`, GoReleaser publishes binaries.
 - `flaiover`: tag `flaiover/vX.Y.Z`, the image workflow publishes to GHCR.
 - Template: bump `template.yaml` version, add a `CHANGELOG.md` entry, tag the template repository.
+
+## Publishing the template
+
+The template is developed in `./template` and published to [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template), which is flai's default source. Until `flai template push` (S-021) automates it, sync by hand after a story that changes the template lands:
+
+```bash
+git subtree split --prefix=template -b template-main
+git push git@github.com:bytepunx/system-flow-template.git template-main:main
+git tag -a template/vX.Y.Z template-main -m "system-flow-template vX.Y.Z"
+git push git@github.com:bytepunx/system-flow-template.git refs/tags/template/vX.Y.Z:refs/tags/vX.Y.Z
+git branch -D template-main
+```
+
+`template/template.yaml` carries the version and `template/CHANGELOG.md` the entry; both are bumped at acceptance per the release rule. The subtree split preserves the template's history without rewriting this repository. This repository keeps `template.repo: ./template` in `system-flow.yaml` so it develops against the working copy; other projects use the published repo and a tag.

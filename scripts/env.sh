@@ -5,3 +5,7 @@ export ROOT
 export PATH="$ROOT/bin:/usr/local/go/bin:$HOME/go/bin:$PATH"
 export FLAI_CONFIG="${FLAI_CONFIG:-$ROOT/.flai-cache/config.json}"
 mkdir -p "$ROOT/.flai-cache" "$ROOT/bin"
+# First run: create the config with the cache inside the repo, not under ~/.flai.
+if [ ! -f "$FLAI_CONFIG" ] && [ -x "$ROOT/bin/flai" ]; then
+  "$ROOT/bin/flai" config set cache_dir "$ROOT/.flai-cache/cache" >/dev/null 2>&1 || true
+fi

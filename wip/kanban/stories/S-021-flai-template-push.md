@@ -31,6 +31,6 @@ A repository that develops a template locally, as this monorepo does under `./te
 ## Tasks
 
 ## Notes
-- This is the sync procedure that S-003's acceptance criteria call for; S-003 becomes "run `flai template push --tag` and update config", so refine S-003 once this lands.
+- S-003 published the template once by hand with `git subtree split` and a tag (see docs/contributors); this story replaces that procedure. Keep the subtree approach or a clone-and-replace, but preserve history where practical.
 - Implementation goes through `execx.Runner` and real `git` (ADR-0010). Tests use a local bare repository as the remote, including a non-fast-forward case to prove the error path.
 - `template.yaml` gains `publish: {repo, ref}`; `design/system/template.md` and the prototype manifest are updated in this story.

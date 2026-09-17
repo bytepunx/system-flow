@@ -33,4 +33,4 @@ What is never done without asking, what is never written down, and what is never
 
 ## Project additions
 - Scratch installs go under the session scratchpad or `bin/` (git-ignored); `scripts/install-tools.sh` installs golangci-lint v2 and GoReleaser into `bin/` for the operator.
-- Do not create or modify `~/.flai/config.json`; use `.flai-cache/config.json` via `scripts/flai.sh`.
+- Do not create or modify anything under `~/.flai`; `scripts/flai.sh` uses `.flai-cache/config.json`, and that config sets `cache_dir` to `.flai-cache/cache` so template clones stay in the repository tree (git-ignored).

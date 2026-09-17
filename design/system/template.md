@@ -6,7 +6,7 @@ status: active
 
 # Template repository
 
-The template is the executable form of the standard. It lives in its own git repository so it can be versioned, forked, and pointed at from `flai` config. Until it is published, the prototype lives in [./template](../../template) in this monorepo and `flai` can be pointed at a local path.
+The template is the executable form of the standard. It lives in its own git repository, [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template) (private, published 2026-09-17 at 1.0.0), so it can be versioned, forked, and pointed at from `flai` config. The development copy is [./template](../../template) in this monorepo; this repository points `flai` at that local path and publishes with a subtree push after each template change until S-021 automates it (see `docs/contributors`).
 
 Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. Overridable per user in `~/.flai/config.json` and per project in `system-flow.yaml`.
 
