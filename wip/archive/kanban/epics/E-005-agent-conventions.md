@@ -3,11 +3,23 @@ id: E-005
 type: epic
 nature: feature
 title: Agent conventions
-status: backlog
+status: done
 owner: alex
 created: 2026-09-15T18:26:31Z
-updated: 2026-09-16T23:18:16Z
-transitions: []
+updated: 2026-09-17T00:04:08Z
+transitions:
+  - to: ready
+    at: 2026-09-17T00:04:08Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-17T00:04:08Z
+    by: alex
+  - to: review
+    at: 2026-09-17T00:04:08Z
+    by: alex
+  - to: done
+    at: 2026-09-17T00:04:08Z
+    by: alex
 tags: []
 ---
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0 - 2026-09-16
+
+Epic E-005 (agent conventions) complete: twelve baseline conventions under
+`design/conventions`, `design/issues` with `flai issue`, `scripts/` behind
+the Makefile with three test tiers, and a `CLAUDE.md` that primes every
+session from the conventions. First major release of the template.
+
 ## 0.4.0 - 2026-09-16
 
 - `design/conventions/logging.md` and `telemetry.md` are active: five log levels including fatal, structured events, `/_health`, `/_ready`, `/metrics`, OpenTelemetry, golden signals (S-030).

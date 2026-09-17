@@ -3,11 +3,11 @@ id: S-027
 type: story
 nature: feature
 title: flai issue commands and check rules for design/issues
-status: review
+status: done
 parent: E-005
 owner: alex
 created: 2026-09-15T22:37:54Z
-updated: 2026-09-16T23:59:09Z
+updated: 2026-09-17T00:04:08Z
 transitions:
   - to: ready
     at: 2026-09-16T23:54:25Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-16T23:59:09Z
     by: agent
+  - to: done
+    at: 2026-09-17T00:04:08Z
+    by: alex
 tags: [conventions, cli]
 ---
 
