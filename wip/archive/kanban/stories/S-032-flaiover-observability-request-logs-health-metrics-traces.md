@@ -3,11 +3,11 @@ id: S-032
 type: story
 nature: feature
 title: "flaiover observability: request logs, health, metrics, traces"
-status: review
+status: done
 parent: E-003
 owner: alex
 created: 2026-09-16T23:24:18Z
-updated: 2026-09-17T06:13:53Z
+updated: 2026-09-17T06:31:14Z
 transitions:
   - to: ready
     at: 2026-09-17T05:52:20Z
@@ -17,6 +17,9 @@ transitions:
     by: agent
   - to: review
     at: 2026-09-17T06:13:53Z
+    by: alex
+  - to: done
+    at: 2026-09-17T06:31:14Z
     by: alex
 tags: [dashboard, telemetry, logging]
 ---
