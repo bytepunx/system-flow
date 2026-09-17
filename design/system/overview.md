@@ -43,5 +43,6 @@ flowchart LR
 | 2 | flai CLI | E-0002 |
 | 3 | flaiover dashboard and Docker image | E-0003 |
 | 4 | User-facing documentation | E-0004 |
+| 5 | flaiover as the designer's workbench: authentication, threads, `flai mcp`, editing, review, presence, hub readiness | E-0006 |
 
 Work on 2 and 3 starts once the template decisions in E-0001 are settled, which this document set represents. E-0005 was added on 2026-09-15 and takes priority over the remaining stories in every other epic; its design lands in `conventions.md` in this folder and an ADR.

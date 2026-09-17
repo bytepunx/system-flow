@@ -63,3 +63,7 @@ When an agent cannot proceed it appends an open `blocked` interval with a reason
 ## Cadence
 
 There are no sprints. Flow is continuous. The dashboard's charts replace the status meeting: cycle time scatter shows whether stories are getting slower, burn-up shows scope versus completion per epic, and the state-time breakdown shows where time is spent. Reviewing those charts weekly and adjusting WIP limits or definitions is the process improvement loop.
+
+## Branches and collisions (ADR-0019)
+
+Each story is worked on `story/S-nnnn` in a worktree under `.flai-cache/worktrees/`; `wip/` is written in the main checkout so the board is live. Agents run `flai stream sync` at every task transition and `flai accept` rebases and merges. Stories and tasks may declare `touches`; `flai check` warns when two in-progress items overlap and the dashboard badges the documents. The designer edits on `main` through the dashboard, so their intent reaches the next sync.

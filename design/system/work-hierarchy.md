@@ -41,6 +41,8 @@ IDs are a type letter, a dash, and a sequence zero-padded to four digits: `E-000
 
 File name: `<ID>-<slug>.md` in `wip/kanban/<epics|stories|tasks>/`.
 
+Stories and tasks may carry `touches`, a list of repository paths or component names the work is expected to change (ADR-0019, lands with S-0037). It is advisory: `flai check` warns on overlap between in-progress items, and the dashboard shows it.
+
 ## States
 
 One state machine for all three levels:

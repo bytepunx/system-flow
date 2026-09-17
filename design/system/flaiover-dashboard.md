@@ -96,3 +96,14 @@ flaiover/
 ├── Dockerfile            # multi-stage, node:24-alpine runtime
 └── tests/                # vitest unit, playwright e2e against the template sample repo
 ```
+
+## Workbench (E-0006)
+
+The dashboard becomes the designer's workbench: authenticated (ADR-0018), able to edit documents and commit through flai, host threads anchored to documents and items (ADR-0020), show who is working on what (`touches`, ADR-0019), review and accept stories, and expose `flai mcp` over HTTP for remote agents.
+
+- Authentication: per-project token from `.flai-cache/dashboard.token`, mounted read-only, `Authorization: Bearer` primary, HttpOnly cookie set by `/login` from a URL fragment; `/_health` and `/_ready` open; `/metrics` behind the token unless `FLAIOVER_METRICS_PUBLIC=true`.
+- Editing: body editable, flai-owned front matter read-only, save validated by `flai check`, committed on `main` with the designer as author, content-hash conflict detection.
+- Threads: `wip/threads/*.md` rendered beside their anchor; posting writes through `flai thread`.
+- Review: branch diff against `main`, criteria, narrative, threads, `flai accept` and send-back.
+- Presence and inbox: derived from `wip/agents` and threads; optional notifications.
+- Hub readiness: every `/api/*` response carries `project: { name, key }`; MCP at `/mcp` over Streamable HTTP; the future hub is reached by flaiover dialing out over a websocket with its token, so no inbound ports are needed.
