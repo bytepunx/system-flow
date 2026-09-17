@@ -9,8 +9,8 @@ status: active
 | | |
 |-|-|
 | Host requirement | Docker Engine 24 or newer on `PATH` (dev host has 29) |
-| Image | `ghcr.io/bytepunx/flaiover`, multi-stage build, runtime `node:24-alpine`, non-root user |
-| Tags | `latest`, `<semver>`, `<major>`, `sha-<short>` |
+| Image | `ghcr.io/bytepunx/flaiover`, three-stage build from the repo root (`flaiover/Dockerfile`): `golang:1.26-alpine` builds flai, `node:24-alpine` builds flaiover and prunes to production deps, `node:24-alpine` runtime with `tini`, `git`, the flai binary, `USER 65532` by default and any `--user` supported; about 670 MB (S-015) |
+| Tags | `latest` on main, `<semver>` and `<major>` from `flaiover/v*` tags, `sha-<short>`; built by `release-flaiover.yml` with buildx and GHA cache |
 | Run | `flai dashboard` runs `docker run --detach --rm --name flaiover-<project> --publish 127.0.0.1:<port>:3000 --volume <repo>:/project --env PROJECT_DIR=/project --user <uid>:<gid> ghcr.io/bytepunx/flaiover:<tag>` |
 
 ## Why

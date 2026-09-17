@@ -1,0 +1,13 @@
+# Build context is the repository root; keep it to what the image needs.
+*
+!flai/**
+!flaiover/**
+flai/dist/
+flai/bin/
+flaiover/node_modules/
+flaiover/build/
+flaiover/.svelte-kit/
+flaiover/test-results/
+flaiover/e2e/
+**/*.test.ts
+**/testdata/

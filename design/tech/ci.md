@@ -25,4 +25,4 @@ Workflows in this monorepo:
 | `flai.yml` | changes under `flai/` | lint, test with race detector, build |
 | `flaiover.yml` | changes under `flaiover/` | lint, unit tests, build, e2e |
 | `release-flai.yml` | tag `flai/v*` | GoReleaser |
-| `release-flaiover.yml` | tag `flaiover/v*`, push to main | build and push image |
+| `release-flaiover.yml` | tag `flaiover/v*`, push to main touching flaiover or flai | buildx build of `flaiover/Dockerfile` from the repo root, push to GHCR with latest, semver, major, and sha tags, flai version from the latest `flai/v*` tag |

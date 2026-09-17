@@ -1,4 +1,4 @@
-.PHONY: check flai test integration smoke flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test help
+.PHONY: check flai test integration smoke flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -38,6 +38,9 @@ flaiover-build: ## flaiover production build
 
 flaiover-test: ## flaiover lint, type check, unit tests
 	scripts/flaiover-test.sh
+
+flaiover-image: ## Build the flaiover image as flaiover:local
+	scripts/flaiover-image.sh
 
 lint-md: ## Lint markdown
 	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**" "!flaiover/build/**" "!**/.svelte-kit/**"

@@ -19,3 +19,4 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `flaiover-dev.sh` | Dev server against this repository (`PROJECT_DIR` defaults to the root) |
 | `flaiover-build.sh` | Production build (adapter-node) |
 | `flaiover-test.sh` | prettier, eslint, svelte-check, vitest |
+| `flaiover-image.sh` | Builds the flaiover image locally as `flaiover:local` from the repo root |
