@@ -18,7 +18,7 @@ The agent moves stories to review as they finish; the operator accepts them in b
 ## Instances
 
 ### 2026-09-15T22:42:51Z
-S-026 reached review while S-010, S-022, and S-023 were still awaiting acceptance. Committed with the warning logged.
+S-0026 reached review while S-0010, S-0022, and S-0023 were still awaiting acceptance. Committed with the warning logged.
 
 ## Remediation
-Either raise the review limit in `wip/kanban/board.md` to match the operator's acceptance cadence, or accept stories before pulling the next one. Operator's call; see the S-026 open questions.
+Either raise the review limit in `wip/kanban/board.md` to match the operator's acceptance cadence, or accept stories before pulling the next one. Operator's call; see the S-0026 open questions.

@@ -19,7 +19,7 @@ status: active
 | `chokidar` | 5.0 | File watching behind `/api/events` |
 | `eslint`, `prettier` | 10, 3.8 | Lint and format as scaffolded by `sv create` |
 
-Exact versions are in `flaiover/pnpm-lock.yaml`. Scaffolded with `sv create` on 2026-09-17 (S-011).
+Exact versions are in `flaiover/pnpm-lock.yaml`. Scaffolded with `sv create` on 2026-09-17 (S-0011).
 
 Decision: [ADR 0007](../adrs/0007-sveltekit-spa-with-node-adapter-in-docker.md).
 

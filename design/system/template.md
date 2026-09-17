@@ -6,7 +6,7 @@ status: active
 
 # Template repository
 
-The template is the executable form of the standard. It lives in its own git repository, [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template) (private, published 2026-09-17 at 1.0.0), so it can be versioned, forked, and pointed at from `flai` config. The development copy is [./template](../../template) in this monorepo; this repository points `flai` at that local path and publishes with a subtree push after each template change until S-021 automates it (see `docs/contributors`).
+The template is the executable form of the standard. It lives in its own git repository, [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template) (private, published 2026-09-17 at 1.0.0), so it can be versioned, forked, and pointed at from `flai` config. The development copy is [./template](../../template) in this monorepo; this repository points `flai` at that local path and publishes with a subtree push after each template change until S-0021 automates it (see `docs/contributors`).
 
 Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. Overridable per user in `~/.flai/config.json` and per project in `system-flow.yaml`.
 
@@ -104,7 +104,7 @@ Template functions: `initials`, `slug`, `upper`, `lower`, `quote` (YAML-safe dou
 
 ## The baseline CLAUDE.md
 
-The entry point for an agent. It opens with a priming section that tells the agent to read `conventions/` in order, then the streams index, then the board, before any change (S-024). The rest is a map: the layout table and pointers to `design/system`. Norms themselves live in `design/conventions/`, not here. Projects append their own sections below a marker line; `flai upgrade` replaces only the section above the marker.
+The entry point for an agent. It opens with a priming section that tells the agent to read `conventions/` in order, then the streams index, then the board, before any change (S-0024). The rest is a map: the layout table and pointers to `design/system`. Norms themselves live in `design/conventions/`, not here. Projects append their own sections below a marker line; `flai upgrade` replaces only the section above the marker.
 
 ## Conventions
 
@@ -120,7 +120,7 @@ Semantic versions in `template.yaml`. `flai` records the applied version in `sys
 
 ## Publishing a template
 
-A template developed inside another repository, as `./template` is here, is published with `flai template push`. The manifest's `publish` section names its home. The command clones the remote branch into the cache (creating the branch from the default branch if it does not exist), replaces its contents with the local template, commits with the template version in the message, pushes, and with `--tag` also pushes `v<version>`, refusing if that tag exists. It assumes push permission exists, reports git failures verbatim, never retries, and never force-pushes without `--force`. It never changes the calling project's `system-flow.yaml`. `flai accept` runs it with `--tag` for a template component after bumping the version, so a template release is one acceptance. The first publish (S-003) used a subtree split to seed the history; every push since is a commit on top.
+A template developed inside another repository, as `./template` is here, is published with `flai template push`. The manifest's `publish` section names its home. The command clones the remote branch into the cache (creating the branch from the default branch if it does not exist), replaces its contents with the local template, commits with the template version in the message, pushes, and with `--tag` also pushes `v<version>`, refusing if that tag exists. It assumes push permission exists, reports git failures verbatim, never retries, and never force-pushes without `--force`. It never changes the calling project's `system-flow.yaml`. `flai accept` runs it with `--tag` for a template component after bumping the version, so a template release is one acceptance. The first publish (S-0003) used a subtree split to seed the history; every push since is a commit on top.
 
 ## Testing the template
 

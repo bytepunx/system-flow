@@ -37,7 +37,7 @@ Natures are a closed list. Adding one requires an ADR because the dashboard grou
 
 ## Identifiers
 
-IDs are a type letter, a dash, and a zero-padded sequence: `E-001`, `S-012`, `T-134`. Sequences are per type and per repo and never reused. `flai` allocates the next ID by scanning `kanban/` and `archive/`.
+IDs are a type letter, a dash, and a sequence zero-padded to four digits: `E-0001`, `S-0012`, `T-0134`. Sequences are per type and per repo and never reused. `flai` allocates the next ID by scanning `kanban/` and `archive/`; the next number is one more than the highest existing number whatever its width. Repositories created before ADR-0017 carry three-digit IDs; those stay valid side by side with four-digit ones, sorting is numeric, and commands accept an ID in any padding (`S-0012`, `S-0012`, `S-0012` name the same item). `flai migrate ids` widens an existing repository in one step: it renames every item and narrative with `git mv` and rewrites every reference under `design/`, `docs/`, `wip/`, the root markdown and yaml files, and each project's root markdown files. Run it with `--dry-run` first.
 
 File name: `<ID>-<slug>.md` in `wip/kanban/<epics|stories|tasks>/`.
 
@@ -78,12 +78,12 @@ Blocked is not a state. It is a flag with a timestamped interval so the item kee
 
 ```yaml
 ---
-id: S-004
+id: S-0004
 type: story                      # epic | story | task
 nature: feature                  # feature | improvement | remediation | research | experiment
 title: CLI scaffold and config
 status: ready                    # backlog | ready | in-progress | review | done | cancelled
-parent: E-002                    # required for story and task, absent for epic
+parent: E-0002                    # required for story and task, absent for epic
 owner: agent                     # free text: agent, a person's handle, or team
 created: 2026-09-15T16:10:00Z
 updated: 2026-09-15T16:40:00Z
@@ -97,7 +97,7 @@ blocked:                         # optional, append-only, open interval has no `
     reason: waiting on template repo access
 estimate: 4h                     # optional, Go duration, used for estimate-vs-actual
 tags: [cli, config]              # optional, free text
-stream: S-004                    # tasks only: the narrative file in wip/agents they report to
+stream: S-0004                    # tasks only: the narrative file in wip/agents they report to
 ---
 ```
 
@@ -117,7 +117,7 @@ The body below the front matter has fixed headings so agents and the dashboard c
 Epic:
 
 ```markdown
-# E-002 flai CLI
+# E-0002 flai CLI
 
 ## Outcome
 One paragraph: what is true when this epic is done.
@@ -132,7 +132,7 @@ Anything else.
 Story:
 
 ```markdown
-# S-004 CLI scaffold and config
+# S-0004 CLI scaffold and config
 
 ## Goal
 What this increment delivers and for whom.
@@ -150,7 +150,7 @@ Decisions, links to ADRs, anything discovered on the way.
 Task:
 
 ```markdown
-# T-021 Read and write ~/.flai/config.json
+# T-0021 Read and write ~/.flai/config.json
 
 ## Work
 What to do, concretely.

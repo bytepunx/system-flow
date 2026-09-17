@@ -18,13 +18,13 @@ The repository lints with golangci-lint v2 (`flai/.golangci.yaml`, `version: "2"
 ## Instances
 
 ### 2026-09-15T16:31:32Z
-S-004: discovered when the first lint run failed on the config; installed v2.5.0 into the session scratchpad.
+S-0004: discovered when the first lint run failed on the config; installed v2.5.0 into the session scratchpad.
 
 ### 2026-09-15T18:00:57Z
-S-007: scratch binary gone; reinstalled.
+S-0007: scratch binary gone; reinstalled.
 
 ### 2026-09-15T18:11:49Z
-S-008: reinstalled again.
+S-0008: reinstalled again.
 
 ## Remediation
 `scripts/install-tools.sh` installs v2 into `bin/` (git-ignored) so it persists across sessions; the operator can run it once. Close when the host has v2 or the script is in routine use.

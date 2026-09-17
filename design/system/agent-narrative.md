@@ -14,7 +14,7 @@ status: active
 wip/agents/
 ├── README.md        # this convention in brief, shipped by the template
 ├── index.md         # table of active streams, maintained by flai and agents
-└── S-004.md         # one narrative per active story, named by story ID
+└── S-0004.md         # one narrative per active story, named by story ID
 ```
 
 A work stream is a story. Tasks report into their story's narrative through the `stream` key. Epics have no narrative; their story narratives are enough.
@@ -25,14 +25,14 @@ When a story is archived, its narrative moves with it to `wip/archive/agents/`.
 
 ```markdown
 ---
-stream: S-004
+stream: S-0004
 title: CLI scaffold and config
 updated: 2026-09-15T17:02:00Z
 agent: claude-fable-5-1          # last agent to write, free text
 session: 5da6af50                # opaque, helps correlate with tool logs
 ---
 
-# S-004 CLI scaffold and config
+# S-0004 CLI scaffold and config
 
 ## Context
 Two or three paragraphs a fresh agent needs before touching anything. What the story is, what is already true in the repo, what constraints apply. Rewritten as understanding improves.
@@ -53,10 +53,10 @@ Questions for the human. Each has a date. Answered questions move to Decisions.
 Append-only. One entry per meaningful step, newest last.
 
 ### 2026-09-15T16:12:00Z
-Started. Pulled S-004 to in-progress. Read design/system/flai-cli.md.
+Started. Pulled S-0004 to in-progress. Read design/system/flai-cli.md.
 
 ### 2026-09-15T16:40:00Z
-T-021 done. Config read/write with tests. Decided on plain encoding/json over viper, see Decisions.
+T-0021 done. Config read/write with tests. Decided on plain encoding/json over viper, see Decisions.
 ```
 
 ## Obligations

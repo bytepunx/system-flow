@@ -28,7 +28,7 @@ status: active             # active | draft | deprecated
 
 - Files and folders are lowercase kebab-case: `repository-layout.md`.
 - ADRs are numbered with four digits and a slug: `0003-work-item-hierarchy.md`.
-- Work items are named by ID and slug: `S-004-cli-scaffold-and-config.md`. The ID is the stable handle; the slug may change.
+- Work items are named by ID and slug: `S-0004-cli-scaffold-and-config.md`. The ID is the stable handle; the slug may change.
 - Each folder that a reader might land in has a `README.md` that says what the folder is for.
 
 ## Content rules

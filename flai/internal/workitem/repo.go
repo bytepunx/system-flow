@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -97,27 +98,63 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	return items, nil
 }
 
-// Get finds one item by ID in kanban or archive.
-func (r *Repo) Get(id string) (*Item, error) {
-	typ := TypeOfID(id)
-	if typ == "" {
-		return nil, fmt.Errorf("%q is not a work item ID (E-001, S-001, T-001)", id)
+// IDWidth is the number of digits flai zero-pads new IDs to. Older items
+// with three digits stay valid; see design/adrs/0017-four-digit-ids.md.
+const IDWidth = 4
+
+var looseID = regexp.MustCompile(`^([ESTest])-?0*(\d+)$`)
+
+// CanonicalID normalises a work item ID as typed (s-32, S-032, S-0032) to the
+// padded form flai allocates (S-0032). Anything that is not an ID is returned
+// unchanged.
+func CanonicalID(id string) string {
+	m := looseID.FindStringSubmatch(strings.TrimSpace(id))
+	if m == nil {
+		return id
 	}
-	for _, archived := range []bool{false, true} {
-		dir := r.ItemDir(typ, archived)
-		matches, _ := filepath.Glob(filepath.Join(dir, id+"-*.md"))
-		if len(matches) == 0 {
-			continue
+	return fmt.Sprintf("%s-%0*s", strings.ToUpper(m[1]), IDWidth, m[2])
+}
+
+// idCandidates lists the file-name forms an ID may be stored under: as given,
+// canonical, and the legacy three-digit form.
+func idCandidates(id string) []string {
+	out := []string{id}
+	canon := CanonicalID(id)
+	if m := looseID.FindStringSubmatch(canon); m != nil {
+		legacy := fmt.Sprintf("%s-%03s", m[1], m[2])
+		for _, c := range []string{canon, legacy} {
+			if !contains(out, c) {
+				out = append(out, c)
+			}
 		}
-		it, err := ReadItem(matches[0])
-		if err != nil {
-			return nil, err
+	}
+	return out
+}
+
+// Get finds one item by ID in kanban or archive. IDs may be given in short
+// form (S-32) or with any zero padding; the item's own ID is returned.
+func (r *Repo) Get(id string) (*Item, error) {
+	typ := TypeOfID(CanonicalID(id))
+	if typ == "" {
+		return nil, fmt.Errorf("%q is not a work item ID (E-0001, S-0001, T-0001)", id)
+	}
+	for _, cand := range idCandidates(id) {
+		for _, archived := range []bool{false, true} {
+			dir := r.ItemDir(typ, archived)
+			matches, _ := filepath.Glob(filepath.Join(dir, cand+"-*.md"))
+			if len(matches) == 0 {
+				continue
+			}
+			it, err := ReadItem(matches[0])
+			if err != nil {
+				return nil, err
+			}
+			if it.ID != cand {
+				return nil, fmt.Errorf("%s: front matter id is %s", matches[0], it.ID)
+			}
+			it.Archived = archived
+			return it, nil
 		}
-		if it.ID != id {
-			return nil, fmt.Errorf("%s: front matter id is %s", matches[0], it.ID)
-		}
-		it.Archived = archived
-		return it, nil
 	}
 	return nil, fmt.Errorf("%s not found", id)
 }
@@ -147,7 +184,7 @@ func (r *Repo) NextID(typ string) (string, error) {
 			}
 		}
 	}
-	return fmt.Sprintf("%s%03d", prefix, max+1), nil
+	return fmt.Sprintf("%s%0*d", prefix, IDWidth, max+1), nil
 }
 
 // FileName is <ID>-<slug>.md.

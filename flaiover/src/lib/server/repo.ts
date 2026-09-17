@@ -181,11 +181,17 @@ export class Repo extends EventEmitter {
 		});
 	}
 
+	/** Find an item by ID in any padding (S-32, S-032, S-0032 name the same item). */
 	async itemById(id: string): Promise<{ item: Item; children: Item[] }> {
 		const all = await this.items();
-		const item = all.find((it) => it.id === id);
+		const m = /^([EST])-?0*(\d+)$/i.exec(id.trim());
+		const item = m
+			? all.find(
+					(it) => rank(it.id) === rank(`${m[1].toUpperCase()}-`) && num(it.id) === Number(m[2])
+				)
+			: undefined;
 		if (!item) throw new RepoError(404, `${id} not found`);
-		return { item, children: all.filter((it) => it.parent === id) };
+		return { item, children: all.filter((it) => it.parent === item.id) };
 	}
 
 	/** Documentation trees: design (all types), docs, and wip. */

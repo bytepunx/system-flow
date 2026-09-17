@@ -17,7 +17,7 @@ The documentation convention requires operator docs to cover every setting with 
 ## Instances
 
 ### 2026-09-15T22:40:33Z
-S-026: noticed while adopting the conventions; no measured cost yet because no operator has needed the docs.
+S-0026: noticed while adopting the conventions; no measured cost yet because no operator has needed the docs.
 
 ## Remediation
-S-028 (operator runbooks and settings index) writes them. Close when it lands.
+S-0028 (operator runbooks and settings index) writes them. Close when it lands.

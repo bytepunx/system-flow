@@ -114,7 +114,7 @@ func TestScalar(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	good := &Item{ID: "S-001", Type: Story, Nature: "feature", Title: "x", Status: Ready, Parent: "E-001", Owner: "a",
+	good := &Item{ID: "S-0001", Type: Story, Nature: "feature", Title: "x", Status: Ready, Parent: "E-0001", Owner: "a",
 		Created: "2026-09-15T10:00:00Z", Updated: "2026-09-15T10:00:00Z", Transitions: []Transition{{To: Ready, At: "2026-09-15T10:00:00Z", By: "a"}}}
 	if err := good.Validate(); err != nil {
 		t.Fatalf("valid item rejected: %v", err)
@@ -130,7 +130,7 @@ func TestValidate(t *testing.T) {
 		t.Errorf("bad nature not caught: %v", err)
 	}
 	bad = *good
-	bad.Parent = "T-001"
+	bad.Parent = "T-0001"
 	if err := bad.Validate(); err == nil || !strings.Contains(err.Error(), "parent must be an epic") {
 		t.Errorf("wrong parent type not caught: %v", err)
 	}
@@ -149,38 +149,38 @@ func TestValidate(t *testing.T) {
 func TestCreateAndLinkParents(t *testing.T) {
 	r := newProject(t)
 	e := mustCreate(t, r, Epic, "Ship it: now", "")
-	if e.ID != "E-001" || e.Status != Backlog || !strings.HasSuffix(e.Path, "E-001-ship-it-now.md") {
+	if e.ID != "E-0001" || e.Status != Backlog || !strings.HasSuffix(e.Path, "E-0001-ship-it-now.md") {
 		t.Fatalf("epic: %+v", e)
 	}
-	s := mustCreate(t, r, Story, "First slice", "E-001")
-	tk := mustCreate(t, r, Task, "Do a thing", "S-001")
-	if tk.Stream != "S-001" || tk.Parent != "S-001" {
+	s := mustCreate(t, r, Story, "First slice", "E-0001")
+	tk := mustCreate(t, r, Task, "Do a thing", "S-0001")
+	if tk.Stream != "S-0001" || tk.Parent != "S-0001" {
 		t.Errorf("task: %+v", tk)
 	}
-	e2, _ := r.Get("E-001")
-	if !strings.Contains(e2.Body, "## Stories\n- S-001 First slice\n") {
+	e2, _ := r.Get("E-0001")
+	if !strings.Contains(e2.Body, "## Stories\n- S-0001 First slice\n") {
 		t.Errorf("epic body not linked:\n%s", e2.Body)
 	}
-	s2, _ := r.Get("S-001")
-	if !strings.Contains(s2.Body, "## Tasks\n- T-001 Do a thing\n") {
+	s2, _ := r.Get("S-0001")
+	if !strings.Contains(s2.Body, "## Tasks\n- T-0001 Do a thing\n") {
 		t.Errorf("story body not linked:\n%s", s2.Body)
 	}
-	mustCreate(t, r, Task, "Second thing", "S-001")
-	s3, _ := r.Get("S-001")
-	if !strings.Contains(s3.Body, "- T-001 Do a thing\n- T-002 Second thing\n\n## Notes") {
+	mustCreate(t, r, Task, "Second thing", "S-0001")
+	s3, _ := r.Get("S-0001")
+	if !strings.Contains(s3.Body, "- T-0001 Do a thing\n- T-0002 Second thing\n\n## Notes") {
 		t.Errorf("second task not appended cleanly:\n%s", s3.Body)
 	}
 	orig, _ := os.ReadFile(s3.Path)
 	if s3.Marshal() != string(orig) {
 		t.Error("created story does not round-trip")
 	}
-	if _, err := r.Create(NewOptions{Type: Task, Title: "orphan", Parent: "E-001", Now: t0}); err == nil {
+	if _, err := r.Create(NewOptions{Type: Task, Title: "orphan", Parent: "E-0001", Now: t0}); err == nil {
 		t.Error("task under epic should fail")
 	}
 	if _, err := r.Create(NewOptions{Type: Story, Title: "x", Now: t0}); err == nil {
 		t.Error("story without parent should fail")
 	}
-	if _, err := r.Create(NewOptions{Type: Story, Title: "x", Parent: "E-001", Nature: "bug", Now: t0}); err == nil {
+	if _, err := r.Create(NewOptions{Type: Story, Title: "x", Parent: "E-0001", Nature: "bug", Now: t0}); err == nil {
 		t.Error("bad nature should fail")
 	}
 	_ = s
@@ -189,15 +189,15 @@ func TestCreateAndLinkParents(t *testing.T) {
 func TestMoveRules(t *testing.T) {
 	r := newProject(t)
 	mustCreate(t, r, Epic, "E", "")
-	s := mustCreate(t, r, Story, "S", "E-001")
+	s := mustCreate(t, r, Story, "S", "E-0001")
 	items, _ := r.List(false)
 	board, _ := r.LoadBoard()
 	if _, err := r.Move(s, Ready, MoveOptions{Now: t0, Items: items, Board: board}); err == nil || !strings.Contains(err.Error(), "needs at least one task") {
 		t.Errorf("ready without tasks: %v", err)
 	}
-	mustCreate(t, r, Task, "T", "S-001")
+	mustCreate(t, r, Task, "T", "S-0001")
 	items, _ = r.List(false)
-	s, _ = r.Get("S-001")
+	s, _ = r.Get("S-0001")
 	if _, err := r.Move(s, Ready, MoveOptions{Now: t0, Items: items, Board: board}); err == nil || !strings.Contains(err.Error(), "Acceptance criteria") {
 		t.Errorf("ready without criteria: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestMoveRules(t *testing.T) {
 	_ = r.Save(s)
 	mustMove(t, r, s, Ready, "")
 	board, _ = r.LoadBoard()
-	if len(board.Order) != 1 || board.Order[0] != "S-001" {
+	if len(board.Order) != 1 || board.Order[0] != "S-0001" {
 		t.Errorf("ready story not added to pull order: %v", board.Order)
 	}
 	if _, err := r.Move(s, Done, MoveOptions{Now: t0, Items: items}); err == nil {
@@ -217,15 +217,15 @@ func TestMoveRules(t *testing.T) {
 	mustMove(t, r, s, InProgress, "")
 	mustMove(t, r, s, Review, "")
 	items, _ = r.List(false)
-	if _, err := r.Move(s, Done, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "T-001 is backlog") {
+	if _, err := r.Move(s, Done, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "T-0001 is backlog") {
 		t.Errorf("done with open task: %v", err)
 	}
-	tk, _ := r.Get("T-001")
+	tk, _ := r.Get("T-0001")
 	mustMove(t, r, tk, Ready, "")
 	mustMove(t, r, tk, InProgress, "")
 	mustMove(t, r, tk, Done, "") // tasks may skip review
 	items, _ = r.List(false)
-	s, _ = r.Get("S-001")
+	s, _ = r.Get("S-0001")
 	if _, err := r.Move(s, Done, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "unchecked") {
 		t.Errorf("done with unchecked criteria: %v", err)
 	}
@@ -238,9 +238,9 @@ func TestMoveRules(t *testing.T) {
 		t.Errorf("moved item invalid: %v", err)
 	}
 	// review -> in-progress needs a reason and records it in Notes
-	mustCreate(t, r, Story, "S2", "E-001")
-	mustCreate(t, r, Task, "T2", "S-002")
-	s2, _ := r.Get("S-002")
+	mustCreate(t, r, Story, "S2", "E-0001")
+	mustCreate(t, r, Task, "T2", "S-0002")
+	s2, _ := r.Get("S-0002")
 	s2.Body = strings.Replace(s2.Body, "- [ ]\n", "- [ ] ok\n", 1)
 	_ = r.Save(s2)
 	mustMove(t, r, s2, Ready, "")
@@ -257,7 +257,7 @@ func TestWIPWarningAndBlocks(t *testing.T) {
 	mustCreate(t, r, Epic, "E", "")
 	var stories []*Item
 	for i := 0; i < 3; i++ {
-		s := mustCreate(t, r, Story, "S", "E-001")
+		s := mustCreate(t, r, Story, "S", "E-0001")
 		mustCreate(t, r, Task, "T", s.ID)
 		s, _ = r.Get(s.ID)
 		s.Body = strings.Replace(s.Body, "- [ ]\n", "- [ ] ok\n", 1)
@@ -310,33 +310,33 @@ func TestWIPWarningAndBlocks(t *testing.T) {
 func TestStreamsAndIndex(t *testing.T) {
 	r := newProject(t)
 	mustCreate(t, r, Epic, "E", "")
-	s := mustCreate(t, r, Story, "Stream me", "E-001")
+	s := mustCreate(t, r, Story, "Stream me", "E-0001")
 	n, err := r.OpenStream(s, StreamOptions{Agent: "bot", Session: "abc", Now: t0})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n.Stream != "S-001" || n.Agent != "bot" || !strings.Contains(n.Body, "# S-001 Stream me") || !strings.Contains(n.Body, "## Log\n\n### 2026-09-15T20:00:00Z\nStream opened.") {
+	if n.Stream != "S-0001" || n.Agent != "bot" || !strings.Contains(n.Body, "# S-0001 Stream me") || !strings.Contains(n.Body, "## Log\n\n### 2026-09-15T20:00:00Z\nStream opened.") {
 		t.Errorf("narrative: %+v\n%s", n, n.Body)
 	}
 	if _, err := r.OpenStream(s, StreamOptions{Now: t0}); err == nil {
 		t.Error("second open should fail")
 	}
 	later := t0.Add(30 * time.Minute)
-	n2, err := r.LogStream("S-001", "did a thing", StreamOptions{Agent: "bot2", Now: later})
+	n2, err := r.LogStream("S-0001", "did a thing", StreamOptions{Agent: "bot2", Now: later})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasSuffix(n2.Body, "### 2026-09-15T20:30:00Z\ndid a thing\n") || n2.Updated != "2026-09-15T20:30:00Z" || n2.Agent != "bot2" {
 		t.Errorf("log: %+v\n%s", n2, n2.Body)
 	}
-	n3, err := r.LogStream("S-001", "same second", StreamOptions{Now: later})
+	n3, err := r.LogStream("S-0001", "same second", StreamOptions{Now: later})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasSuffix(n3.Body, "### 2026-09-15T20:30:00Z\ndid a thing\n\nsame second\n") || strings.Count(n3.Body, "### 2026-09-15T20:30:00Z") != 1 {
 		t.Errorf("same-second log should share the heading:\n%s", n3.Body)
 	}
-	if _, err := r.LogStream("S-009", "x", StreamOptions{Now: t0}); err == nil {
+	if _, err := r.LogStream("S-0009", "x", StreamOptions{Now: t0}); err == nil {
 		t.Error("log to missing stream should fail")
 	}
 	items, _ := r.List(false)
@@ -344,7 +344,7 @@ func TestStreamsAndIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	idx, _ := os.ReadFile(filepath.Join(r.AgentsDir(), "index.md"))
-	if !strings.Contains(string(idx), "| [S-001](S-001.md) | Stream me | backlog | bot2 | 2026-09-15T20:30:00Z |") {
+	if !strings.Contains(string(idx), "| [S-0001](S-0001.md) | Stream me | backlog | bot2 | 2026-09-15T20:30:00Z |") {
 		t.Errorf("index:\n%s", idx)
 	}
 }
@@ -352,26 +352,26 @@ func TestStreamsAndIndex(t *testing.T) {
 func TestArchive(t *testing.T) {
 	r := newProject(t)
 	mustCreate(t, r, Epic, "E", "")
-	s := mustCreate(t, r, Story, "S", "E-001")
-	mustCreate(t, r, Task, "T", "S-001")
+	s := mustCreate(t, r, Story, "S", "E-0001")
+	mustCreate(t, r, Task, "T", "S-0001")
 	_, _ = r.OpenStream(s, StreamOptions{Now: t0})
 	items, _ := r.List(false)
-	if _, err := r.PlanArchive(items, []string{"S-001"}); err == nil {
+	if _, err := r.PlanArchive(items, []string{"S-0001"}); err == nil {
 		t.Error("archiving an open story should fail")
 	}
 	plan, _ := r.PlanArchive(items, nil)
 	if len(plan.Items) != 0 {
 		t.Errorf("nothing should be eligible yet: %v", plan.Items)
 	}
-	s, _ = r.Get("S-001")
+	s, _ = r.Get("S-0001")
 	s.Body = strings.Replace(s.Body, "- [ ]\n", "- [x] ok\n", 1)
 	_ = r.Save(s)
 	for _, st := range []string{Ready, InProgress, Done} {
-		tk, _ := r.Get("T-001")
+		tk, _ := r.Get("T-0001")
 		mustMove(t, r, tk, st, "")
 	}
 	for _, st := range []string{Ready, InProgress, Review, Done} {
-		s, _ = r.Get("S-001")
+		s, _ = r.Get("S-0001")
 		mustMove(t, r, s, st, "")
 	}
 	items, _ = r.List(false)
@@ -385,7 +385,7 @@ func TestArchive(t *testing.T) {
 	if err := r.Archive(plan); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(r.ArchiveDir(), "kanban", "stories", "S-001-s.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(r.ArchiveDir(), "kanban", "stories", "S-0001-s.md")); err != nil {
 		entries, _ := os.ReadDir(filepath.Join(r.ArchiveDir(), "kanban", "stories"))
 		names := []string{}
 		for _, e := range entries {
@@ -397,10 +397,10 @@ func TestArchive(t *testing.T) {
 		}
 		t.Errorf("story not archived; archive has %v, plan was %v", names, ids)
 	}
-	if _, err := os.Stat(filepath.Join(r.ArchiveDir(), "agents", "S-001.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(r.ArchiveDir(), "agents", "S-0001.md")); err != nil {
 		t.Error("narrative not archived")
 	}
-	got, _ := r.Get("S-001")
+	got, _ := r.Get("S-0001")
 	if !got.Archived {
 		t.Error("Get should find archived items")
 	}
@@ -409,11 +409,11 @@ func TestArchive(t *testing.T) {
 			t.Errorf("Folder(%s) = %s", typ, got)
 		}
 	}
-	if id, _ := r.NextID(Story); id != "S-002" {
+	if id, _ := r.NextID(Story); id != "S-0002" {
 		t.Errorf("NextID must count archived items: %s", id)
 	}
 	items, _ = r.List(false)
-	if _, err := r.PlanArchive(items, []string{"E-001"}); err == nil {
+	if _, err := r.PlanArchive(items, []string{"E-0001"}); err == nil {
 		t.Error("open epic should not archive")
 	}
 }

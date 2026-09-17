@@ -18,8 +18,8 @@ The working tree passed but a clone did not: a test fixture under `bin/` was exc
 ## Instances
 
 ### 2026-09-15T18:21:56Z
-S-010: GoReleaser dry run in a clone ran `go test` and failed on the missing fixture; renamed `bin/` to `tools/`.
-S-010: same run, `flai check` reported `kanban/tasks` missing; added `.gitkeep` files.
+S-0010: GoReleaser dry run in a clone ran `go test` and failed on the missing fixture; renamed `bin/` to `tools/`.
+S-0010: same run, `flai check` reported `kanban/tasks` missing; added `.gitkeep` files.
 
 ## Remediation
 Convention now requires verifying by clone when unsure (code-quality.md). A CI job on a clean checkout will catch the rest once the repo is on GitHub. Close after the first green CI run.

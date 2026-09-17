@@ -36,5 +36,5 @@ Where documents live, what every file carries, how it is written, and how it sta
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- Operator documentation for flai and flaiover is a draft until E-004; the runbook rules above are the target, not yet met. Tracked as issue I-005.
+- Operator documentation for flai and flaiover is a draft until E-0004; the runbook rules above are the target, not yet met. Tracked as issue I-005.
 - User-facing command documentation in `docs/users/flai.md` is updated in the same story that changes a command.

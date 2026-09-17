@@ -6,7 +6,7 @@ status: draft
 
 # flai
 
-The system-flow command line tool. Full command reference will be generated from the CLI in story S-017; the design is in [design/system/flai-cli.md](../../design/system/flai-cli.md). Implemented so far: `version` and `config`.
+The system-flow command line tool. Full command reference will be generated from the CLI in story S-0017; the design is in [design/system/flai-cli.md](../../design/system/flai-cli.md). Implemented so far: `version` and `config`.
 
 ## Install
 
@@ -140,9 +140,9 @@ All of these run inside a conforming repository (anywhere below `system-flow.yam
 
 ```bash
 flai epic new "Billing v2" --nature feature
-flai story new "Invoice PDF export" --epic E-001
-flai task new "Render invoice template" --story S-001 --tag pdf
-flai show S-001
+flai story new "Invoice PDF export" --epic E-0001
+flai task new "Render invoice template" --story S-0001 --tag pdf
+flai show S-0001
 ```
 
 Items are created from the template's item bodies with the next free ID and linked into their parent's Stories or Tasks list. Natures: `feature`, `improvement`, `remediation`, `research`, `experiment`.
@@ -150,14 +150,14 @@ Items are created from the template's item bodies with the next free ID and link
 ### Moving work
 
 ```bash
-flai move S-001 ready          # needs at least one task and acceptance criteria
-flai move S-001 in-progress    # warns if the WIP limit is exceeded
-flai move T-001 in-progress
-flai move T-001 done           # tasks may skip review
-flai move S-001 review
-flai move S-001 done --by alex # needs every task closed and every criterion checked
-flai move S-001 in-progress --reason "tests missing"     # from review
-flai move S-002 cancelled --reason "superseded by S-005"
+flai move S-0001 ready          # needs at least one task and acceptance criteria
+flai move S-0001 in-progress    # warns if the WIP limit is exceeded
+flai move T-0001 in-progress
+flai move T-0001 done           # tasks may skip review
+flai move S-0001 review
+flai move S-0001 done --by alex # needs every task closed and every criterion checked
+flai move S-0001 in-progress --reason "tests missing"     # from review
+flai move S-0002 cancelled --reason "superseded by S-0005"
 ```
 
 Every move appends to the item's `transitions` with a timestamp and who made it (`--by`, default the config author). Reasons land under the item's Notes.
@@ -165,8 +165,8 @@ Every move appends to the item's `transitions` with a timestamp and who made it 
 ### Blocking
 
 ```bash
-flai block T-001 --reason "waiting on API keys"
-flai unblock T-001
+flai block T-0001 --reason "waiting on API keys"
+flai unblock T-0001
 ```
 
 Blocked items keep their column; the interval is recorded so blocked time shows in the charts.
@@ -183,8 +183,8 @@ flai board --json
 
 ```bash
 export FLAI_AGENT=claude FLAI_SESSION=abc123
-flai stream open S-001
-flai stream log S-001 "T-001 done, starting T-002"
+flai stream open S-0001
+flai stream log S-0001 "T-0001 done, starting T-0002"
 ```
 
 `wip/agents/index.md` is regenerated after every open, log, move, and archive.
@@ -194,8 +194,19 @@ flai stream log S-001 "T-001 done, starting T-002"
 ```bash
 flai archive --dry-run
 flai archive               # everything done or cancelled that is safe to move
-flai archive S-001         # one story with its tasks and narrative
+flai archive S-0001         # one story with its tasks and narrative
 ```
+
+### Item IDs
+
+New items get four-digit IDs (`S-0034`). Commands accept an ID in any padding, so `flai show S-0034`, `S-0034`, and `S-0034` all work. A repository created with three-digit IDs keeps working as it is; to widen it in one step:
+
+```bash
+flai migrate ids --dry-run   # list every rename and rewrite
+flai migrate ids             # git mv the files, rewrite references, refresh the index
+```
+
+The migration touches `design/`, `docs/`, `wip/`, the root markdown and yaml files, and each project's root markdown files. Fixtures under `testdata/`, `node_modules`, and hidden folders are left alone. Commit the result as a `chore:` on its own.
 
 ## Check the repository
 
@@ -232,7 +243,7 @@ Agents read these before any change; a shell hook or a wrapper can pipe `flai pr
 
 ```bash
 flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
-flai issue bump I-001 --cost 8m --note "reinstalled again in S-008"
+flai issue bump I-001 --cost 8m --note "reinstalled again in S-0008"
 flai issue close I-001 --reason "scripts/install-tools.sh pins v2"
 flai issue list [--all]
 flai issue summary
@@ -243,10 +254,10 @@ Issues live in `design/issues/`, one file per recurring problem with a class (`d
 ## Accept and release
 
 ```bash
-flai release S-031 --dry-run          # what acceptance would release
-flai accept S-031 --by alex           # move to done, archive, bump, commit, tag, push
-flai accept E-002 --by alex           # an epic: major release of what it delivered
-flai accept S-016 --by alex --no-release
+flai release S-0031 --dry-run          # what acceptance would release
+flai accept S-0031 --by alex           # move to done, archive, bump, commit, tag, push
+flai accept E-0002 --by alex           # an epic: major release of what it delivered
+flai accept S-0016 --by alex --no-release
 ```
 
 Acceptance is one command. It moves the item to done (the same rules as `flai move`), archives it with its children and narrative, computes the release, bumps the template's version file and changelog if the template is involved, commits, creates the tags on that commit, and pushes the branch and tags. `--no-push` keeps everything local; `--dry-run` prints the plan and stops; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean so the acceptance commit holds only acceptance, unless you pass `--yes`.

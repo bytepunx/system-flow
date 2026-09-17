@@ -6,7 +6,7 @@ status: draft
 
 # Conventions
 
-This page will be the user-facing version of the standard. Until story S-016 lands, the authoritative text is the living design:
+This page will be the user-facing version of the standard. Until story S-0016 lands, the authoritative text is the living design:
 
 - [Repository layout](../../design/system/repository-layout.md)
 - [Work items and front matter](../../design/system/work-hierarchy.md)

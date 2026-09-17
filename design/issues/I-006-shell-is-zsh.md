@@ -18,10 +18,10 @@ The environment shell is zsh. `${var^}` is unsupported and unquoted `$VAR` in `f
 ## Instances
 
 ### 2026-09-15T18:00:57Z
-S-001 bootstrap: `${a^}` broke a heredoc loop; three docs index files were rewritten.
+S-0001 bootstrap: `${a^}` broke a heredoc loop; three docs index files were rewritten.
 
 ### 2026-09-15T18:21:56Z
-S-010: `for t in $TASKS` passed one argument; the close-out chain silently stopped and was redone.
+S-0010: `for t in $TASKS` passed one argument; the close-out chain silently stopped and was redone.
 
 ## Remediation
 Scripts use `#!/usr/bin/env sh` with POSIX constructs only; loops in ad hoc commands use literal lists. Close when scripts cover the routine flows.

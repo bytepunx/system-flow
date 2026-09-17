@@ -37,10 +37,10 @@ Do not create top-level folders beyond these and the sub-projects listed in `sys
 Epics span stories; stories are incremental deliverables; tasks are the pieces of a story. Every item has a nature (`feature`, `improvement`, `remediation`, `research`, `experiment`) and moves through `backlog`, `ready`, `in-progress`, `review`, `done`, or `cancelled`, with every transition timestamped. Use the CLI so front matter stays valid:
 
 ```bash
-flai story new --epic E-001 "Title"
-flai task new --story S-004 "Title"
-flai move T-021 in-progress
-flai block T-021 --reason "waiting on X"
+flai story new --epic E-0001 "Title"
+flai task new --story S-0004 "Title"
+flai move T-0021 in-progress
+flai block T-0021 --reason "waiting on X"
 flai check --strict
 ```
 
@@ -55,6 +55,6 @@ system-flow builds itself. The original brief is in `design/system/brief.md`; th
 
 - `template/` is the development copy of the template repository. `system-flow.yaml` points `flai` at it with a local path. Changes to conventions land in `design/system` first, then in `template/`, in the same story.
 - `flai/` is the Go CLI. Module `github.com/bytepunx/system-flow/flai`. Design in `design/system/flai-cli.md`, libraries in `design/tech/go-libraries.md`. Build and run it with `scripts/flai.sh`; test and lint with `scripts/flai-test.sh` (`make flai-test`).
-- `flaiover/` is the SvelteKit dashboard. Design in `design/system/flaiover-dashboard.md`. Not started; see E-003.
+- `flaiover/` is the SvelteKit dashboard. Design in `design/system/flaiover-dashboard.md`. Not started; see E-0003.
 - Run flai through `scripts/flai.sh`, which builds `bin/flai` from this tree and uses `.flai-cache/config.json`. Set `FLAI_AGENT` and `FLAI_SESSION` first. Hand-edit item bodies, not front matter that a command owns.
 - Metrics definitions in `design/system/metrics.md` are the contract between `flai stats` and the dashboard. Change them only with an ADR.

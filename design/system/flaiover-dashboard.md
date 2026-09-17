@@ -26,30 +26,30 @@ flowchart LR
 | Route | View | Data |
 |-------|------|------|
 | `/` | Overview: WIP by column, throughput this week, aging items, epics burn-up sparkline | `/api/stats` |
-| `/board` | Kanban board: one column per state with WIP count against the limit, story cards (epics and tasks on request) with age in column, nature, blocked flag; drag to transition, refused moves show the rule; refreshes on SSE (S-013) | `/api/board`, `POST /api/items/:id/move` |
-| `/items/:id` | Item detail: front matter, rendered body, children, transitions timeline, blocked intervals, narrative link, and actions for allowed moves, block, unblock, and a narrative log entry (S-013) | `/api/items/:id`, `POST .../move`, `.../block`, `.../unblock`, `POST /api/streams/:id/log` |
-| `/charts/cycle-time` | Cycle time scatter by nature with p50 and p85 lines (S-014) | `/api/stats` |
+| `/board` | Kanban board: one column per state with WIP count against the limit, story cards (epics and tasks on request) with age in column, nature, blocked flag; drag to transition, refused moves show the rule; refreshes on SSE (S-0013) | `/api/board`, `POST /api/items/:id/move` |
+| `/items/:id` | Item detail: front matter, rendered body, children, transitions timeline, blocked intervals, narrative link, and actions for allowed moves, block, unblock, and a narrative log entry (S-0013) | `/api/items/:id`, `POST .../move`, `.../block`, `.../unblock`, `POST /api/streams/:id/log` |
+| `/charts/cycle-time` | Cycle time scatter by nature with p50 and p85 lines (S-0014) | `/api/stats` |
 | `/charts/burn-up` | Scope and done, per epic or total | `/api/stats` |
 | `/charts/cfd` | Cumulative flow diagram | `/api/stats` |
 | `/charts/time-in-state` | Stacked bars per completed item and the share bar | `/api/stats` |
 | `/charts/throughput` | Weekly bars by nature | `/api/stats` |
 | `/charts/aging` | Aging WIP against p85 | `/api/stats` |
 | `/charts/estimates` | Estimate versus actual with the perfect-estimate diagonal | `/api/stats` |
-| `/docs/<path>` | Documentation explorer: collapsible tree of `design/` (including `conventions/` and `issues/`), `docs/`, and `wip/`; rendered markdown with Mermaid, highlighted code, task lists, heading anchors, rewritten links; front matter panel (S-012) | `/api/docs/tree`, `/api/docs/file` |
+| `/docs/<path>` | Documentation explorer: collapsible tree of `design/` (including `conventions/` and `issues/`), `docs/`, and `wip/`; rendered markdown with Mermaid, highlighted code, task lists, heading anchors, rewritten links; front matter panel (S-0012) | `/api/docs/tree`, `/api/docs/file` |
 | `/conventions` | The conventions in read order with project additions highlighted; the same set `flai prime` prints | `/api/conventions` |
-| `/adrs` | ADR list with status, date, and supersession chain linking into the explorer (S-012) | `/api/docs/adrs` |
+| `/adrs` | ADR list with status, date, and supersession chain linking into the explorer (S-0012) | `/api/docs/adrs` |
 | `/streams` | Active narratives with current state and next steps | `/api/streams` |
-| `/search` | Search across `design/` and `wip/`, `docs/` on request, with snippets and routes (S-012) | `/api/search?q=&docs=` |
+| `/search` | Search across `design/` and `wip/`, `docs/` on request, with snippets and routes (S-0012) | `/api/search?q=&docs=` |
 
 Every chart has the same filter bar: window, type, and epic where the chart supports it; a summary strip shows completed, cancelled, WIP, throughput, and cycle time percentiles; a table view sits under every chart.
 
-## API (S-011)
+## API (S-0011)
 
 | Route | Returns |
 |-------|---------|
 | `GET /api/manifest` | `system-flow.yaml` parsed |
 | `GET /api/items?type=&status=&archived=` | Every item from kanban and archive without bodies, sorted by ID; timestamps as `YYYY-MM-DDTHH:MM:SSZ` strings |
-| `GET /api/items/:id` | `{ item, children }` with the body |
+| `GET /api/items/:id` | `{ item, children }` with the body; the ID may be given in any padding (`S-32`, `S-032`, `S-0032`) |
 | `GET /api/docs/tree` | Three trees (design, docs, wip) of `{ name, path, kind, title?, frontMatter?, children? }` |
 | `GET /api/docs/file?path=` | `{ path, frontMatter, body, raw }` for one markdown file; paths outside the repo or non-markdown are 400, missing 404 |
 | `GET /api/events` | Server-sent events: `ready` once, then `change` with `{ path }` per changed file under design, docs, wip, or the manifest |
@@ -60,13 +60,13 @@ Every chart has the same filter bar: window, type, and epic where the chart supp
 | `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
 | `POST /api/streams/:id/log` `{ entry }` | flai stream log |
 | `GET /api/stats?since=&type=&by=` | `flai stats --json` verbatim (see metrics.md), cached per query and cleared on change; bad arguments are 400 |
-| `GET /_health`, `GET /_ready`, `GET /metrics` | Liveness, readiness with named dependency checks, Prometheus metrics (S-032, see docs/operators) |
+| `GET /_health`, `GET /_ready`, `GET /metrics` | Liveness, readiness with named dependency checks, Prometheus metrics (S-0032, see docs/operators) |
 
 Errors are `{ error }` with the status. The reader caches by path and mtime and is invalidated by the watcher.
 
 ## Writes
 
-The mount is read-write so the board can be operated from the browser. Every write (move, block, unblock, narrative log) is performed by invoking the bundled `flai` binary with `--json` inside the project ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md)); a refused write returns flai's rule text. The server finds the binary through `FLAI_BIN`, then `PATH`, and runs it with `FLAI_CONFIG` and `FLAI_CACHE_DIR` under the project's `.flai-cache` and `FLAI_AGENT=flaiover`. Without a binary the dashboard is read-only and the board says so. Writes are ordinary file edits, so they show up in `git status` for the human to commit. Metrics (S-014) come from `flai stats --json` the same way.
+The mount is read-write so the board can be operated from the browser. Every write (move, block, unblock, narrative log) is performed by invoking the bundled `flai` binary with `--json` inside the project ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md)); a refused write returns flai's rule text. The server finds the binary through `FLAI_BIN`, then `PATH`, and runs it with `FLAI_CONFIG` and `FLAI_CACHE_DIR` under the project's `.flai-cache` and `FLAI_AGENT=flaiover`. Without a binary the dashboard is read-only and the board says so. Writes are ordinary file edits, so they show up in `git status` for the human to commit. Metrics (S-0014) come from `flai stats --json` the same way.
 
 ## Search
 

@@ -15,13 +15,13 @@ Friction repeats: a tool at the wrong version, a fixture that git ignores, a fol
 
 ## Decision
 
-`design/` gains `issues/`: one markdown file per issue named `I-nnn-slug.md`, plus `summary.md`, a generated table of open issues, and a `README.md`. Issue front matter carries `id`, `title`, `class` (`defect`, `blocker`, `efficiency`, `impression`), `status` (`open`, `closed`), `count`, `cost` (average wall-clock per occurrence as a duration), `first_reported`, `last_reported`, and `updated`. The body has a description and one dated instance per occurrence. Agents record an occurrence when it happens, increment existing issues rather than duplicating, and include the summary in a story's review report when it changed. At epic completion the summary is presented and the operator decides on remediation. `flai issue` commands (S-027) own the front matter and regenerate the summary.
+`design/` gains `issues/`: one markdown file per issue named `I-nnn-slug.md`, plus `summary.md`, a generated table of open issues, and a `README.md`. Issue front matter carries `id`, `title`, `class` (`defect`, `blocker`, `efficiency`, `impression`), `status` (`open`, `closed`), `count`, `cost` (average wall-clock per occurrence as a duration), `first_reported`, `last_reported`, and `updated`. The body has a description and one dated instance per occurrence. Agents record an occurrence when it happens, increment existing issues rather than duplicating, and include the summary in a story's review report when it changed. At epic completion the summary is presented and the operator decides on remediation. `flai issue` commands (S-0027) own the front matter and regenerate the summary.
 
 ## Consequences
 
 - `design/` now has five documentation types: `adrs`, `system`, `tech`, `conventions`, `issues`.
 - Issue files are the only `design/` documents with a counter that changes often; they are still committed like everything else so history shows when friction started and stopped.
-- `flai check` validates the folder once S-027 lands; until then the schema is followed by hand.
+- `flai check` validates the folder once S-0027 lands; until then the schema is followed by hand.
 - Remediation work is ordinary work: a story under the relevant epic, with nature `remediation` or `improvement`, that closes the issue when done.
 
 ## Alternatives considered

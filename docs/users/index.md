@@ -27,12 +27,12 @@ A story looks like this:
 
 ```markdown
 ---
-id: S-004
+id: S-0004
 type: story
 nature: feature
 title: CLI scaffold and config
 status: in-progress
-parent: E-002
+parent: E-0002
 owner: agent
 created: 2026-09-15T16:10:00Z
 updated: 2026-09-16T09:02:00Z
@@ -46,7 +46,7 @@ transitions:
 tags: [cli]
 ---
 
-# S-004 CLI scaffold and config
+# S-0004 CLI scaffold and config
 
 ## Goal
 ...
@@ -55,7 +55,7 @@ tags: [cli]
 - [ ] ...
 
 ## Tasks
-- T-021 Read and write ~/.flai/config.json
+- T-0021 Read and write ~/.flai/config.json
 
 ## Notes
 ```

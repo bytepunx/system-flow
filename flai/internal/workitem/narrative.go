@@ -113,9 +113,16 @@ func (r *Repo) LogStream(storyID, entry string, opt StreamOptions) (*Narrative, 
 	if strings.TrimSpace(entry) == "" {
 		return nil, fmt.Errorf("an entry is required")
 	}
-	n, err := ReadNarrative(r.NarrativePath(storyID))
+	var n *Narrative
+	var err error
+	for _, cand := range idCandidates(storyID) {
+		n, err = ReadNarrative(r.NarrativePath(cand))
+		if !os.IsNotExist(err) {
+			break
+		}
+	}
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("no stream for %s; open one with `flai stream open %s`", storyID, storyID)
+		return nil, fmt.Errorf("no stream for %s; open one with `flai stream open %s`", storyID, CanonicalID(storyID))
 	}
 	if err != nil {
 		return nil, err

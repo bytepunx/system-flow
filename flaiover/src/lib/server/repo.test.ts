@@ -55,6 +55,9 @@ describe('Repo on the metrics fixture', () => {
 		expect(item.type).toBe('epic');
 		expect(children.map((c) => c.id)).toEqual(['S-001', 'S-002', 'S-003', 'S-004', 'S-005']);
 		await expect(r.itemById('S-999')).rejects.toBeInstanceOf(RepoError);
+		expect((await r.itemById('e-1')).item.id).toBe('E-001');
+		expect((await r.itemById('E-0001')).item.id).toBe('E-001');
+		await expect(r.itemById('X-001')).rejects.toBeInstanceOf(RepoError);
 	});
 	it('builds the documentation trees', async () => {
 		const trees = await r.docsTree();

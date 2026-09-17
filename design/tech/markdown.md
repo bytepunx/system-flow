@@ -14,4 +14,4 @@ status: active
 | `mermaid` | 12.0 | Diagrams from fenced `mermaid` blocks, rendered client side, lazy loaded |
 | `@tailwindcss/typography` | 0.5 | Prose styling |
 
-Rendering happens in the browser from raw markdown served by `/api/docs/file`, so the server stays a file reader and the SPA owns presentation. Relative `.md` links are rewritten to `/docs/<repo path>` explorer routes; anchors and absolute URLs are left alone. `src/lib/markdown.ts` (S-012).
+Rendering happens in the browser from raw markdown served by `/api/docs/file`, so the server stays a file reader and the SPA owns presentation. Relative `.md` links are rewritten to `/docs/<repo path>` explorer routes; anchors and absolute URLs are left alone. `src/lib/markdown.ts` (S-0012).

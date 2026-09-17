@@ -32,6 +32,6 @@ Metrics, traces, and health signals every service emits, and how they are named.
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- flai exposes nothing: it is a short-lived command. It emits no traces unless `OTEL_*` variables are set, and then only one root span per invocation (S-031, optional).
-- flaiover exposes `/_health`, `/_ready` (checks the mounted repository is readable and the index is built), and `/metrics` with `flaiover_` prefixed golden signals and `flaiover_build_info`. Traces via `@opentelemetry/sdk-node` to the collector named by `OTEL_EXPORTER_OTLP_ENDPOINT`. Implemented in S-032.
-- Local telemetry stack (collector plus a viewer) is added to the flaiover compose file in S-032; there is no cluster here.
+- flai exposes nothing: it is a short-lived command. It emits no traces unless `OTEL_*` variables are set, and then only one root span per invocation (S-0031, optional).
+- flaiover exposes `/_health`, `/_ready` (checks the mounted repository is readable and the index is built), and `/metrics` with `flaiover_` prefixed golden signals and `flaiover_build_info`. Traces via `@opentelemetry/sdk-node` to the collector named by `OTEL_EXPORTER_OTLP_ENDPOINT`. Implemented in S-0032.
+- Local telemetry stack (collector plus a viewer) is added to the flaiover compose file in S-0032; there is no cluster here.

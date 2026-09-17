@@ -22,7 +22,7 @@ This supersedes ADR-0007 in part: the "server ports the validation and metrics r
 ## Consequences
 
 - One reference implementation for rules and metrics; the dashboard cannot drift from the CLI.
-- The image carries a second binary and the build is a two-stage, two-language Dockerfile (S-015).
+- The image carries a second binary and the build is a two-stage, two-language Dockerfile (S-0015).
 - Writes cost a process spawn each, acceptable for a local single-user tool.
 - The dashboard's version and flai's move together; an image tag implies the flai it bundles.
 

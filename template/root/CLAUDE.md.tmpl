@@ -37,10 +37,10 @@ Do not create top-level folders beyond these and the sub-projects listed in `sys
 Epics span stories; stories are incremental deliverables; tasks are the pieces of a story. Every item has a nature (`feature`, `improvement`, `remediation`, `research`, `experiment`) and moves through `backlog`, `ready`, `in-progress`, `review`, `done`, or `cancelled`, with every transition timestamped. Use the CLI so front matter stays valid:
 
 ```bash
-flai story new --epic E-001 "Title"
-flai task new --story S-004 "Title"
-flai move T-021 in-progress
-flai block T-021 --reason "waiting on X"
+flai story new --epic E-0001 "Title"
+flai task new --story S-0004 "Title"
+flai move T-0021 in-progress
+flai block T-0021 --reason "waiting on X"
 flai check --strict
 ```
 

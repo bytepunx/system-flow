@@ -38,10 +38,10 @@ flowchart LR
 
 | Order | Deliverable | Epic |
 |-------|-------------|------|
-| 0 | Agent conventions: `design/conventions`, norms every agent primes with, shipped by the template | E-005 |
-| 1 | Standard and template prototype | E-001 |
-| 2 | flai CLI | E-002 |
-| 3 | flaiover dashboard and Docker image | E-003 |
-| 4 | User-facing documentation | E-004 |
+| 0 | Agent conventions: `design/conventions`, norms every agent primes with, shipped by the template | E-0005 |
+| 1 | Standard and template prototype | E-0001 |
+| 2 | flai CLI | E-0002 |
+| 3 | flaiover dashboard and Docker image | E-0003 |
+| 4 | User-facing documentation | E-0004 |
 
-Work on 2 and 3 starts once the template decisions in E-001 are settled, which this document set represents. E-005 was added on 2026-09-15 and takes priority over the remaining stories in every other epic; its design lands in `conventions.md` in this folder and an ADR.
+Work on 2 and 3 starts once the template decisions in E-0001 are settled, which this document set represents. E-0005 was added on 2026-09-15 and takes priority over the remaining stories in every other epic; its design lands in `conventions.md` in this folder and an ADR.

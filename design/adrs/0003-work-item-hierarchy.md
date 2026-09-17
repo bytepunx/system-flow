@@ -27,4 +27,4 @@ Three levels: epics span multiple stories, stories are incremental deliverables,
 
 - Two levels (story, task): epics are needed for burn-up scope and for human-level direction.
 - Free-text natures: not chartable.
-- Project-prefixed IDs (`SF-S-001`): unnecessary while items live in one repo; the manifest reserves a `key` for a future opt-in.
+- Project-prefixed IDs (`SF-S-0001`): unnecessary while items live in one repo; the manifest reserves a `key` for a future opt-in.

@@ -18,7 +18,7 @@ updated: 2026-09-15T22:40:33Z
 ## Instances
 
 ### 2026-09-15T18:00:57Z
-S-007: `go test` failed mid-story; found the binary, prefixed PATH on every subsequent call.
+S-0007: `go test` failed mid-story; found the binary, prefixed PATH on every subsequent call.
 
 ## Remediation
 Scripts under `scripts/` prefix PATH with `/usr/local/go/bin` and `~/go/bin` themselves. Close when the operator adds it to the shell profile or the scripts cover every Go entry point.

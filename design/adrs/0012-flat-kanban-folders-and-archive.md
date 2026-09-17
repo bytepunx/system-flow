@@ -25,5 +25,5 @@ Items could be nested on disk to mirror the hierarchy, or kept flat with the hie
 
 ## Alternatives considered
 
-- Nested `E-001/S-001/T-001.md`: pretty on disk, painful to re-parent and to glob.
+- Nested `E-0001/S-0001/T-0001.md`: pretty on disk, painful to re-parent and to glob.
 - Never archiving: the board folder grows unbounded and every listing gets slower.

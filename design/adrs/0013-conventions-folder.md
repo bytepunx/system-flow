@@ -24,7 +24,7 @@ Every project run with coding agents starts by re-establishing how the agent sho
 - `CLAUDE.md` shrinks to a map and a priming instruction. Norms that were inline there move to `design/conventions/`.
 - `flai check` validates the folder, `flai prime` prints it in read order, and the dashboard indexes it with the rest of `design/`.
 - The conventions are agent-tool agnostic. `CLAUDE.md` is the Claude Code entry point; an `AGENTS.md` or similar pointer can be added for other tools without changing the folder.
-- Existing projects need `flai upgrade` (S-020) or a manual copy to gain the folder; until then `flai check` reports it missing.
+- Existing projects need `flai upgrade` (S-0020) or a manual copy to gain the folder; until then `flai check` reports it missing.
 
 ## Alternatives considered
 

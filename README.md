@@ -19,7 +19,7 @@ An agentic lean project management system that lives inside your monorepo. Desig
 | `docs/` | Documentation for users, operators, contributors |
 | `wip/` | Board, work items, agent narratives |
 | `template/` | Prototype of the template repository |
-| `flai/` | The Go CLI (not yet started, see E-002) |
-| `flaiover/` | The SvelteKit dashboard (not yet started, see E-003) |
+| `flai/` | The Go CLI (not yet started, see E-0002) |
+| `flaiover/` | The SvelteKit dashboard (not yet started, see E-0003) |
 
 This repository follows its own standard. `CLAUDE.md` is how agents work here.

@@ -38,4 +38,4 @@ Use the project's tools for the project's data. The tools keep the standard true
 ## Project additions
 - `make check`, `make flai`, `make test`, `make integration`, `make smoke`, `make flai-test` (all tiers plus lint), `make flai-snapshot`, and `make install-tools` call the scripts in `scripts/`.
 - No cluster: flaiover runs as a single Docker container via `flai dashboard`; k3d and `bytepunx/kluster` are not used here.
-- The dashboard does not exist yet (E-003); until then `flai board` and `flai stats` are the views.
+- The dashboard does not exist yet (E-0003); until then `flai board` and `flai stats` are the views.
