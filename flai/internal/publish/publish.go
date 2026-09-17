@@ -112,7 +112,7 @@ func Run(r execx.Runner, opt Options) (*Result, error) {
 			return nil, fmt.Errorf("tag %s already exists on %s; bump the version in %s or pass --force", res.Tag, opt.Remote, template.ManifestFile)
 		}
 	}
-	if len(res.Files) == 0 && !(opt.Tag && res.Tag != "") {
+	if len(res.Files) == 0 && (!opt.Tag || res.Tag == "") {
 		res.Nothing = true
 		return res, nil
 	}
