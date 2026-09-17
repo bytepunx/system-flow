@@ -51,8 +51,11 @@ design/conventions/work-management.md and git.md:
 			if it.Type == workitem.Task {
 				return fmt.Errorf("%s is a task; accept its story instead", it.ID)
 			}
-			if it.Status != workitem.Review && it.Status != workitem.InProgress {
-				return fmt.Errorf("%s is %s; accept items in review (epics may be accepted from in-progress)", it.ID, it.Status)
+			if it.Closed() {
+				return fmt.Errorf("%s is already %s", it.ID, it.Status)
+			}
+			if it.Type == workitem.Story && it.Status != workitem.Review {
+				return fmt.Errorf("%s is %s; a story is accepted from review", it.ID, it.Status)
 			}
 			if st, _ := a.runner.Run(repo.Root, "git", "status", "--porcelain"); strings.TrimSpace(st) != "" && !a.yes {
 				return fmt.Errorf("working tree has uncommitted changes; commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them")
@@ -79,9 +82,16 @@ design/conventions/work-management.md and git.md:
 			if err != nil {
 				return err
 			}
+			// epics are accepted from wherever they are: walk the state machine to done
+			path := []string{workitem.Ready, workitem.InProgress, workitem.Review, workitem.Done}
 			steps := []string{workitem.Done}
-			if it.Status == workitem.InProgress {
-				steps = []string{workitem.Review, workitem.Done}
+			for i, st := range path {
+				if st == it.Status {
+					steps = path[i+1:]
+				}
+			}
+			if it.Status == workitem.Backlog {
+				steps = path
 			}
 			for _, st := range steps {
 				if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {

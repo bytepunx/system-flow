@@ -75,7 +75,12 @@ func TestAcceptEndToEnd(t *testing.T) {
 		t.Errorf("tag: %q", tag)
 	}
 	_, errOut, code = runIn(t, root, "accept", "S-001", "--by", "alex", "--no-push")
-	if code == 0 || !strings.Contains(errOut, "done") {
+	if code == 0 || !strings.Contains(errOut, "already done") {
 		t.Errorf("second accept must refuse: %s", errOut)
+	}
+	// the epic is accepted straight from backlog: walked to done, major release
+	out, errOut, code = runIn(t, root, "accept", "E-001", "--by", "alex", "--no-push", "--deliver", "cli")
+	if code != 0 || !strings.Contains(out, "tagged cli/v1.0.0") {
+		t.Errorf("epic accept from backlog: %d %s %s", code, out, errOut)
 	}
 }
