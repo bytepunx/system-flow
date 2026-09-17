@@ -3,11 +3,11 @@ id: S-003
 type: story
 nature: feature
 title: Publish the template as its own repository
-status: review
+status: done
 parent: E-001
 owner: agent
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-17T00:11:38Z
+updated: 2026-09-17T00:15:07Z
 transitions:
   - to: ready
     at: 2026-09-17T00:07:13Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-17T00:11:38Z
     by: agent
+  - to: done
+    at: 2026-09-17T00:15:07Z
+    by: alex
 tags: []
 ---
 
