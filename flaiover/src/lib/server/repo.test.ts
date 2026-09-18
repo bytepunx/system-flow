@@ -50,6 +50,18 @@ describe('Repo on the metrics fixture', () => {
 			expect(it.status, it.id).toBe(last);
 		}
 	});
+	it('reads threads and finds them by path or item in any padding', async () => {
+		const all = await r.threads();
+		expect(all.map((t) => t.id)).toEqual(['TH-0001']);
+		expect(all[0].entries).toHaveLength(2);
+		expect(all[0].entries[1]).toMatchObject({ at: '2026-08-30T09:30:00Z', author: 'agent' });
+		expect(all[0].entries[1].text).toContain('Ticked now');
+		expect((await r.threadsFor('S-4')).map((t) => t.id)).toEqual(['TH-0001']);
+		expect((await r.threadsFor('wip/kanban/stories/S-004-four.md')).map((t) => t.id)).toEqual([
+			'TH-0001'
+		]);
+		expect(await r.threadsFor('S-0099')).toEqual([]);
+	});
 	it('returns an item with its children', async () => {
 		const { item, children } = await r.itemById('E-001');
 		expect(item.type).toBe('epic');

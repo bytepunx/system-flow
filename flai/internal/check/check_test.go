@@ -1,6 +1,7 @@
 package check
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -198,4 +199,48 @@ func mustItem(t *testing.T, r *workitem.Repo, typ, title, parent string) *workit
 		t.Fatal(err)
 	}
 	return it
+}
+
+func TestThreadRules(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	_ = os.WriteFile(filepath.Join(root, "docs/guide.md"), []byte("---\ntitle: Guide\n---\n\n# Guide\n\n## Install\nx\n"), 0o644)
+	fm := "---\nid: %s\ntitle: T\nanchor:\n  path: %s\n%sstatus: %s\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\n---\n\n# %s T\n\n## Entries\n\n### 2026-09-01T12:00:00Z alex\nhi\n"
+	w := func(name, body string) {
+		_ = os.WriteFile(filepath.Join(root, "wip/threads", name), []byte(body), 0o644)
+	}
+	w("TH-0001-ok.md", fmt.Sprintf(fm, "TH-0001", "docs/guide.md", "  heading: Install\n", "open", "TH-0001"))
+	w("TH-0002-gone.md", fmt.Sprintf(fm, "TH-0002", "docs/missing.md", "", "open", "TH-0002"))
+	w("TH-0003-heading.md", fmt.Sprintf(fm, "TH-0003", "docs/guide.md", "  heading: Removed\n", "answered", "TH-0003"))
+	w("TH-0004-item.md", fmt.Sprintf(fm, "TH-0004", "wip/kanban/stories/S-0009-x.md", "  item: S-0009\n", "open", "TH-0004"))
+	w("TH-0005-bad.md", fmt.Sprintf(fm, "TH-0005", "docs/guide.md", "", "pending", "TH-0005"))
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, f := range res.Findings {
+		if !strings.Contains(got[f.Rule], filepath.Base(f.Path)) {
+			got[f.Rule] += filepath.Base(f.Path) + " "
+		}
+	}
+	for rule, want := range map[string]string{
+		"threads.anchor":       "TH-0002-gone.md TH-0004-item.md",
+		"threads.heading":      "TH-0003-heading.md",
+		"threads.front-matter": "TH-0005-bad.md",
+	} {
+		if strings.TrimSpace(got[rule]) != want {
+			t.Errorf("%s: got %q want %q", rule, got[rule], want)
+		}
+	}
+	if strings.Contains(got["threads.anchor"], "TH-0001") || strings.Contains(got["threads.front-matter"], "TH-0001") {
+		t.Errorf("the good thread must pass: %v", got)
+	}
 }

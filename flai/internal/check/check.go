@@ -17,6 +17,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -71,6 +72,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.documentation()
 	c.conventions()
 	c.issues()
+	c.threads()
 	sort.SliceStable(c.res.Findings, func(i, j int) bool {
 		a, b := c.res.Findings[i], c.res.Findings[j]
 		if a.Path != b.Path {
@@ -541,6 +543,62 @@ func (c *checker) conventions() {
 			}
 		}
 		c.add(f.Level, f.Rule, path, line, "%s", f.Message)
+	}
+}
+
+// threads validates wip/threads (ADR-0020): schema, file names, anchors
+// that exist, headings that are present, and open threads on archived items.
+func (c *checker) threads() {
+	dir := threads.Dir(c.repo)
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+		return // optional until the first thread
+	}
+	list, err := threads.List(c.repo)
+	if err != nil {
+		c.add(Error, "threads.front-matter", dir, 1, "%v", err)
+		return
+	}
+	byID := map[string]*workitem.Item{}
+	for _, it := range c.items {
+		byID[it.ID] = it
+	}
+	seen := map[string]string{}
+	for _, th := range list {
+		if err := th.Validate(); err != nil {
+			c.add(Error, "threads.front-matter", th.Path, keyLine(th.Path, "id"), "%v", err)
+			continue
+		}
+		if prev, dup := seen[th.ID]; dup {
+			c.add(Error, "threads.duplicate-id", th.Path, keyLine(th.Path, "id"), "%s is also defined in %s", th.ID, prev)
+		}
+		seen[th.ID] = th.Path
+		if base := filepath.Base(th.Path); !strings.HasPrefix(base, th.ID+"-") {
+			c.add(Error, "threads.filename", th.Path, 1, "file name should start with %s-", th.ID)
+		}
+		abs := filepath.Join(c.repo.Root, filepath.FromSlash(th.Anchor.Path))
+		data, err := os.ReadFile(abs)
+		if err != nil {
+			if d2, err2 := os.ReadFile(filepath.Join(c.repo.MainRoot, filepath.FromSlash(th.Anchor.Path))); err2 == nil {
+				data, err = d2, nil
+			}
+		}
+		if err != nil {
+			c.add(Error, "threads.anchor", th.Path, keyLine(th.Path, "anchor"), "anchor %s does not exist", th.Anchor.Path)
+		} else if th.Anchor.Heading != "" && !threads.HasHeading(string(data), th.Anchor.Heading) {
+			c.add(Warning, "threads.heading", th.Path, keyLine(th.Path, "anchor"), "heading %q is no longer in %s", th.Anchor.Heading, th.Anchor.Path)
+		}
+		if th.Anchor.Item != "" {
+			it, ok := byID[th.Anchor.Item]
+			switch {
+			case !ok:
+				c.add(Error, "threads.anchor", th.Path, keyLine(th.Path, "anchor"), "item %s does not exist", th.Anchor.Item)
+			case it.Archived && th.Open():
+				c.add(Warning, "threads.archived", th.Path, keyLine(th.Path, "status"), "%s is %s but %s is archived; resolve it or move it", th.ID, th.Status, th.Anchor.Item)
+			}
+		}
+		if len(th.Entries()) == 0 {
+			c.add(Warning, "threads.entries", th.Path, 1, "%s has no dated entries", th.ID)
+		}
 	}
 }
 

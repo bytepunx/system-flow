@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api';
+	import Threads from '$lib/components/Threads.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { tick } from 'svelte';
@@ -156,6 +157,7 @@
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the mounted repository, rendered client side -->
 				{@html html}
 			</article>
+			<Threads on={item.id} {writable} />
 		</div>
 		<aside class="space-y-4 text-sm">
 			<section

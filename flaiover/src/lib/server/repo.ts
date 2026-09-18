@@ -27,6 +27,33 @@ export type Manifest = {
 export type Transition = { to: string; at: string; by: string };
 export type Block = { from: string; until?: string; reason: string };
 
+export type ThreadEntry = { at: string; author: string; text: string };
+export type Thread = {
+	id: string;
+	title: string;
+	anchor: { path: string; heading?: string; item?: string };
+	status: 'open' | 'answered' | 'resolved';
+	participants: string[];
+	created: string;
+	updated: string;
+	path: string; // repo-relative
+	entries: ThreadEntry[];
+};
+
+const ENTRY = /^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+)$/gm;
+
+/** Dated entries of a thread body, in order. */
+export function threadEntries(body: string): ThreadEntry[] {
+	const out: ThreadEntry[] = [];
+	const heads = [...body.matchAll(ENTRY)];
+	heads.forEach((m, i) => {
+		const start = (m.index ?? 0) + m[0].length;
+		const end = i + 1 < heads.length ? (heads[i + 1].index ?? body.length) : body.length;
+		out.push({ at: m[1], author: m[2], text: body.slice(start, end).trim() });
+	});
+	return out;
+}
+
 export type Item = {
 	id: string;
 	type: 'epic' | 'story' | 'task';
@@ -132,6 +159,47 @@ export class Repo extends EventEmitter {
 
 	async layout(): Promise<Layout> {
 		return (await this.manifest()).layout;
+	}
+
+	/** Threads under wip/threads, sorted by ID (ADR-0020). */
+	async threads(): Promise<Thread[]> {
+		const layout = await this.layout();
+		const dir = join(layout.wip, 'threads');
+		const abs = this.resolveInside(dir);
+		const entries = await readdir(abs).catch(() => [] as string[]);
+		const out: Thread[] = [];
+		for (const name of entries) {
+			if (!name.startsWith('TH-') || !name.endsWith('.md')) continue;
+			const rel = join(dir, name).split(sep).join('/');
+			const { frontMatter, body } = splitFrontMatter(await readFile(join(abs, name), 'utf8'));
+			if (!frontMatter) continue;
+			const fm = frontMatter as Partial<Thread> & { anchor?: Thread['anchor'] };
+			out.push({
+				id: String(fm.id),
+				title: String(fm.title ?? ''),
+				anchor: fm.anchor ?? { path: '' },
+				status: (fm.status as Thread['status']) ?? 'open',
+				participants: fm.participants ?? [],
+				created: stamp(fm.created),
+				updated: stamp(fm.updated),
+				path: rel,
+				entries: threadEntries(body)
+			});
+		}
+		return out.sort((a, b) => num(a.id) - num(b.id));
+	}
+
+	/** Threads anchored to a repository path or an item ID. */
+	async threadsFor(on: string): Promise<Thread[]> {
+		const want = on.replace(/\/$/, '');
+		const m = /^([EST])-?0*(\d+)$/i.exec(want);
+		// Items are matched by type and number so any padding (S-4, S-004, S-0004) works.
+		const sameItem = (id: string | undefined) =>
+			m !== null &&
+			id !== undefined &&
+			rank(id) === rank(`${m[1].toUpperCase()}-`) &&
+			num(id) === Number(m[2]);
+		return (await this.threads()).filter((t) => t.anchor.path === want || sameItem(t.anchor.item));
 	}
 
 	/** All work items from kanban and archive, sorted by ID. */

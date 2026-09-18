@@ -47,7 +47,7 @@ Ordered list. The first item is what to do next. Rewritten on every meaningful s
 Bullet list of decisions made during this stream with a one-line rationale each. Anything architectural also gets an ADR; link it.
 
 ## Open questions
-Questions for the human. Each has a date. Answered questions move to Decisions.
+Questions for the human. Each has a date. Answered questions move to Decisions. Between `<!-- threads:start -->` and `<!-- threads:end -->` flai keeps a generated list of unresolved threads anchored to the story or its tasks (ADR-0020, S-0038); do not edit that block by hand.
 
 ## Log
 Append-only. One entry per meaningful step, newest last.

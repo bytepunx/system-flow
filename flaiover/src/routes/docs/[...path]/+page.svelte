@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Threads from '$lib/components/Threads.svelte';
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { page } from '$app/state';
@@ -22,6 +23,9 @@
 	let content: HTMLElement | undefined = $state();
 
 	const current = $derived(page.params.path ?? '');
+	function headingsOf(body: string): string[] {
+		return [...body.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => m[1]);
+	}
 	type Worker = { id: string; title: string; touches?: string[] };
 	let workers = $state<Worker[]>([]);
 	// Items in progress or review whose touches cover the open document (ADR-0019);
@@ -129,6 +133,7 @@
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the mounted repository, rendered client side -->
 				{@html html}
 			</article>
+			<Threads on={current} headings={doc ? headingsOf(doc.body) : []} />
 		{/if}
 	</section>
 </div>

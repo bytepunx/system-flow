@@ -49,6 +49,7 @@ Every chart has the same filter bar: window, type, and epic where the chart supp
 |-------|---------|
 | `GET /api/manifest` | `system-flow.yaml` parsed |
 | `GET /api/items?type=&status=&archived=` | Every item from kanban and archive without bodies, sorted by ID; timestamps as `YYYY-MM-DDTHH:MM:SSZ` strings |
+| `GET /api/threads?on=<path\|id>&all=1`, `POST /api/threads` `{ on, heading?, title, text }`, `POST /api/threads/:id/reply` `{ text }`, `POST /api/threads/:id/resolve` `{ reason? }` | Threads read from `wip/threads`, written through `flai thread` with the manifest owner as author (S-0038) |
 | `POST /api/login` | `{ token }` from the login page; sets the session cookie (S-0036) |
 | `POST /api/logout` | Clears the session cookie |
 | `GET /api/items/:id` | `{ item, children }` with the body; the ID may be given with any zero padding or none, so a two, three, or four digit spelling of the same number resolves to the same item |

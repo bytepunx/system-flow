@@ -221,6 +221,20 @@ flai touches T-0121 --clear
 
 `touches` is an advisory list of paths or components a story or task is changing. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path, the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
 
+### Threads
+
+```bash
+flai thread new --on design/system/flaiover-dashboard.md --heading "Workbench (E-0006)" "Title" "Question"
+flai thread new --on S-0038 "Title" "Question"        # anchored to an item
+flai thread list                                       # unresolved threads
+flai thread list --on S-0038 --all
+flai thread show TH-0001
+flai thread reply TH-0001 "Answer"
+flai thread resolve TH-0001 --reason "settled in ADR-0021"
+```
+
+A thread is one file under `wip/threads/`, anchored to a document, a heading in it, or a work item, with dated entries by author. The author is `--by`, else `FLAI_AGENT`, else the config author. A reply from anyone but the opener marks the thread `answered`; the opener's follow-up makes it `open` again; `resolve` closes it. Unresolved threads on a story or its tasks are mirrored into the story narrative under `## Open questions`, so an agent sees them without the dashboard. `flai check` validates threads: the anchor must exist, a named heading must still be in the document, and open threads on archived items are flagged.
+
 ### Agent narratives
 
 ```bash
