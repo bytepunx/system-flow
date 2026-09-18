@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-09-15
+updated: 2026-09-18
 status: draft
 ---
 
@@ -8,17 +8,28 @@ status: draft
 
 ## Running the dashboard
 
-`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>` with the repository mounted read-write at `/project`, published on every interface at port `4242` by default (`--bind 127.0.0.1`, or `dashboard.bind`, restricts it to this host), as the invoking user. It prints a login link; see Authentication below. It also passes your git `user.name` and `user.email` into the container, so an acceptance made from the dashboard commits as you; the container has no credentials, so such an acceptance is committed and tagged locally and you push it from a shell. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, port, or bind address in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`. Inside the monorepo `flai dashboard --build` builds the image from `flaiover/` as `flaiover:local` instead of pulling.
+`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>` with the repository mounted read-write at the same absolute path it has on the host and `PROJECT_DIR` set to that path, published on every interface at port `4242` by default (`--bind 127.0.0.1`, or `dashboard.bind`, restricts it to this host), as the invoking user. It prints a login link; see Authentication below. It also passes your git `user.name` and `user.email` into the container, so an acceptance made from the dashboard commits as you; the container has no credentials, so such an acceptance is committed and tagged locally and you push it from a shell. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, port, or bind address in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`. Inside the monorepo `flai dashboard --build` builds the image from `flaiover/` as `flaiover:local` instead of pulling.
 
 Without `flai`, the equivalent is:
 
 ```bash
 docker run --detach --rm --name flaiover-myproject \
-  --publish 0.0.0.0:4242:3000 --volume "$PWD:/project" --env PROJECT_DIR=/project \
+  --publish 0.0.0.0:4242:3000 --volume "$PWD:$PWD" --env PROJECT_DIR="$PWD" \
   --mount type=bind,source="$PWD/.flai-cache/dashboard.token",target=/run/secrets/flaiover_token,readonly \
   --env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token \
   --user "$(id -u):$(id -g)" ghcr.io/bytepunx/flaiover:latest
 ```
+
+### Why the mount path matters
+
+Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository with absolute paths in both directions. The container runs git for acceptance, so those paths must exist inside it, which they do when the repository is mounted at its host path ([ADR-0022](../../design/adrs/0022-repository-mounted-at-its-host-path.md)). A container that sees the repository anywhere else, including one started by an older flai at `/project`, cannot accept a story that has a branch; the confirmation says so and points at `flai accept`. The image's default is still `PROJECT_DIR=/project` for mounts made by hand, which is fine for reading and for projects without story branches.
+
+| Setting | Where | Default | Effect |
+|---------|-------|---------|--------|
+| `PROJECT_DIR` | container environment, set by `flai dashboard` | the repository's host path (`/project` in the image) | The repository flaiover serves and the folder flai's config and cache are read from (`.flai-cache`) |
+| `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths so they work at any mount path. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
+
+When the host path cannot be used in a Linux container (a Windows drive path, or a path containing a colon), `flai dashboard` mounts at `/project`, logs a warning, and stories with a branch are accepted from a shell unless worktrees are relative.
 
 ## Authentication
 

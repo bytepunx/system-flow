@@ -1,5 +1,8 @@
 # Local run of flaiover with a telemetry stack. From the repository root:
 #   PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build
+# PROJECT is required and absolute: the repository is mounted at its host path,
+# like flai dashboard does, so the links git keeps for story worktrees resolve
+# in the container (ADR-0022).
 # Dashboard: http://localhost:4242   Grafana (traces, metrics, logs): http://localhost:3001
 services:
   flaiover:
@@ -11,10 +14,10 @@ services:
     ports:
       - '4242:3000' # every interface, like flai dashboard; prefix 127.0.0.1: to restrict
     volumes:
-      - '${PROJECT:-..}:/project'
-      - '${PROJECT:-..}/.flai-cache/dashboard.token:/run/secrets/flaiover_token:ro' # flai dashboard token creates it
+      - '${PROJECT:?set PROJECT to the absolute path of the repository}:${PROJECT}'
+      - '${PROJECT}/.flai-cache/dashboard.token:/run/secrets/flaiover_token:ro' # flai dashboard token creates it
     environment:
-      PROJECT_DIR: /project
+      PROJECT_DIR: ${PROJECT}
       FLAIOVER_TOKEN_FILE: /run/secrets/flaiover_token
       LOG_LEVEL: ${LOG_LEVEL:-info}
       OTEL_SERVICE_NAME: flaiover

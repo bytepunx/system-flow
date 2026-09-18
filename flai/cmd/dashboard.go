@@ -39,6 +39,11 @@ func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int
 		return dashboardSettings{}, err
 	}
 	s := dashboardSettings{Image: cfg.Dashboard.Image, Tag: cfg.Dashboard.Tag, Port: cfg.Dashboard.Port, Bind: cfg.Dashboard.Bind, Root: repo.Root}
+	// The dashboard serves the main checkout: wip lives there, and a linked
+	// worktree on its own has no repository to point at (ADR-0019).
+	if repo.MainRoot != "" {
+		s.Root = repo.MainRoot
+	}
 	if d := repo.Manifest.Dashboard; d.Bind != "" {
 		s.Bind = d.Bind
 	}
@@ -94,7 +99,8 @@ func newDashboardCmd(a *app) *cobra.Command {
 		Use:   "dashboard",
 		Short: "Run the flaiover dashboard against this project in Docker",
 		Long: `Pull the flaiover image if it is missing and run it detached with this
-repository mounted read-write at /project, published on every interface
+repository mounted read-write at its own host path, so the links git keeps
+for story worktrees resolve in the container, published on every interface
 (--bind 127.0.0.1 to restrict) on the configured port, as the current user
 so files it writes keep your ownership. Image, tag, port, and bind come from
 flags, then the dashboard section of system-flow.yaml, then config.`,
@@ -228,6 +234,22 @@ func (a *app) gitIdentityArgs(root string) []string {
 	}
 }
 
+// fallbackMount is where the repository goes when its host path cannot be
+// a path in the container, and the image's own default.
+const fallbackMount = "/project"
+
+// containerMount returns the path the repository is mounted at in the
+// container. Git links a story worktree to its repository with absolute
+// paths, so they resolve in the container only when it sees the repository
+// at its host path (ADR-0022). A Windows path cannot be one in a Linux
+// container; mirrored is false then and the fixed mount is used.
+func containerMount(goos, root string) (target string, mirrored bool) {
+	if goos == "windows" || !strings.HasPrefix(root, "/") || strings.Contains(root, ":") {
+		return fallbackMount, false
+	}
+	return root, true
+}
+
 func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
@@ -268,10 +290,16 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	if created {
 		a.logger().Info("dashboard token created", "component", "dashboard", "file", relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
 	}
+	mount, mirrored := containerMount(runtime.GOOS, s.Root)
+	if !mirrored {
+		a.logger().Warn("repository cannot be mounted at its host path", "component", "dashboard", "root", s.Root, "mount", mount,
+			"effect", "stories with a branch cannot be accepted from the board",
+			"fix", "accept from a shell with flai accept, or set worktrees.relative_paths (git 2.48 or newer) before opening stories")
+	}
 	args := []string{"run", "--detach", "--rm", "--name", s.Name,
 		"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
-		"--volume", s.Root + ":/project",
-		"--env", "PROJECT_DIR=/project",
+		"--volume", s.Root + ":" + mount,
+		"--env", "PROJECT_DIR=" + mount,
 	}
 	args = append(args, tokenArgs(repo.MainRoot)...)
 	// Acceptance from the dashboard commits as the person who started it
@@ -287,13 +315,13 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	}
 	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root})
+		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root, "mount_target": mount})
 	}
 	reach := "reachable from this host only"
 	if s.Bind == defaultBind {
 		reach = "reachable on every interface of this host; the token is required, keep the host private"
 	}
-	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at /project\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
+	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at %s\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, mount, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
 	if open {
 		openBrowser(loginURL(s.url(), token))
 	}

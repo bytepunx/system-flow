@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-09-15
+updated: 2026-09-18
 status: active
 ---
 
@@ -17,7 +17,7 @@ SvelteKit with `adapter-node`. The browser side is a single-page app (`ssr = fal
 ```mermaid
 flowchart LR
     B[Browser SPA<br/>Svelte 5 + Tailwind] -->|/api/*| S[SvelteKit server<br/>adapter-node]
-    S -->|read, watch, write| M[/project mount]
+    S -->|read, watch, write| M[repository mount]
     S -->|index| I[(in-memory index<br/>front matter, search)]
 ```
 
@@ -79,7 +79,7 @@ Server builds a MiniSearch index over title, tags, ID, headings, and body text o
 ## Runtime
 
 - Container listens on `3000`. `flai dashboard` publishes it on the configured host port, default `4242`, on every interface by default (`dashboard.bind` or `--bind` restricts it, for example to `127.0.0.1`), and runs the container as the host user (`--user uid:gid`), so the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/project` and `/tmp`, and a writable working directory is not assumed.
-- Repo mounted at `/project`. `PROJECT_DIR` overrides for development outside Docker.
+- `flai dashboard` mounts the repository at the same absolute path it has on the host and sets `PROJECT_DIR` to it ([ADR-0022](../adrs/0022-repository-mounted-at-its-host-path.md)). Git links a story worktree to its repository with absolute paths, so they resolve in the container only when the two paths match; with the old fixed `/project` mount, accepting a story with a branch failed (I-0017). The image's own default is still `PROJECT_DIR=/project` for running it by hand, and `PROJECT_DIR` is also how development outside Docker points at a repository. When the host path cannot be a container path (a Windows drive path), `flai dashboard` falls back to `/project` and says that stories with a branch must be accepted from a shell, or worktrees made relative with `worktrees.relative_paths`.
 - File watching with `chokidar`, debounced, invalidates the index and pushes updates to open tabs with server-sent events.
 - No authentication. It is a local tool bound to localhost by `flai`. Operators exposing it further are told not to in `docs/operators`.
 

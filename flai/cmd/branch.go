@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -62,16 +63,43 @@ func (a *app) openStoryBranch(repo *workitem.Repo, id string) (branch, path stri
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", "", false, err
 	}
-	if a.branchExists(repo.MainRoot, branch) {
-		_, err = a.runner.Run(repo.MainRoot, "git", "worktree", "add", "--quiet", path, branch)
-	} else {
-		_, err = a.runner.Run(repo.MainRoot, "git", "worktree", "add", "--quiet", "-b", branch, path, base)
+	args := []string{"worktree", "add", "--quiet"}
+	if a.relativeWorktrees() {
+		args = append(args, "--relative-paths")
 	}
+	if a.branchExists(repo.MainRoot, branch) {
+		args = append(args, path, branch)
+	} else {
+		args = append(args, "-b", branch, path, base)
+	}
+	_, err = a.runner.Run(repo.MainRoot, "git", args...)
 	if err != nil {
 		return "", "", false, err
 	}
 	a.logger().Info("story branch opened", "component", "git", "branch", branch, "worktree", relPath(repo.MainRoot, path), "base", base)
 	return branch, path, true, nil
+}
+
+// relativeWorktrees reports whether to link a new worktree with relative
+// paths: only when the operator set worktrees.relative_paths, and only with
+// a git that understands them. The git version never turns it on by itself
+// (ADR-0022); with the key on and an older git an ordinary worktree is made,
+// which the dashboard's host-path mount covers.
+func (a *app) relativeWorktrees() bool {
+	cfg, _, err := a.loadConfig()
+	if err != nil || !cfg.Worktrees.RelativePaths {
+		return false
+	}
+	v, err := gitver.Installed(a.runner)
+	if err != nil {
+		a.logger().Warn("git version unreadable, creating an ordinary worktree", "component", "git", "setting", "worktrees.relative_paths", "err", err)
+		return false
+	}
+	if !v.AtLeast(gitver.RelativeWorktrees) {
+		a.logger().Warn("git is too old for relative worktree paths, creating an ordinary worktree", "component", "git", "setting", "worktrees.relative_paths", "git", v.String(), "needs", gitver.RelativeWorktrees.String())
+		return false
+	}
+	return true
 }
 
 // syncStoryBranch rebases the story branch onto the main branch inside its

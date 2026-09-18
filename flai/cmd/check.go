@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -34,6 +35,11 @@ Findings print as path:line: level: rule: message. Errors exit 1; with
 			res, err := check.Run(repo, a.now())
 			if err != nil {
 				return err
+			}
+			// The clone may need a newer git than the one installed (ADR-0022).
+			// No git on PATH means nothing here depends on its version.
+			if v, err := gitver.Installed(a.runner); err == nil {
+				check.GitCompat(res, repo, v)
 			}
 			if a.jsonOut {
 				if err := a.printJSON(res); err != nil {

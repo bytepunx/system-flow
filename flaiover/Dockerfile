@@ -1,9 +1,12 @@
 # flaiover: the system-flow dashboard, with a flai binary from the same
 # commit (ADR-0016). Build from the repository root:
 #   docker build -f flaiover/Dockerfile -t flaiover:local .
-# Runs as any UID (flai dashboard passes --user); listens on 3000; the
-# project is mounted at /project and flai's config and cache live under
-# /project/.flai-cache, so no writable home is needed.
+# Runs as any UID (flai dashboard passes --user); listens on 3000. The
+# project is whatever PROJECT_DIR names: flai dashboard mounts the repository
+# at its host path and sets PROJECT_DIR to it, so the links git keeps for
+# story worktrees resolve here (ADR-0022); /project is the default for running
+# the image by hand. flai's config and cache live under PROJECT_DIR/.flai-cache,
+# so no writable home is needed.
 
 ARG GO_VERSION=1.26
 ARG NODE_VERSION=24
@@ -54,7 +57,6 @@ ENV NODE_ENV=production \
     LOG_FORMAT=json \
     FLAIOVER_COMMIT=${FLAI_COMMIT} \
     FLAIOVER_VERSION=${FLAIOVER_VERSION}
-VOLUME ["/project"]
 EXPOSE 3000
 # Unprivileged by default; any --user works because nothing here needs a home.
 USER 65532:65532

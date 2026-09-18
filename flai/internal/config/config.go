@@ -29,6 +29,15 @@ type Config struct {
 	Dashboard Dashboard `json:"dashboard"`
 	CacheDir  string    `json:"cache_dir"`
 	Author    string    `json:"author"`
+	Worktrees Worktrees `json:"worktrees"`
+}
+
+// Worktrees is how flai stream open creates a story's worktree.
+type Worktrees struct {
+	// RelativePaths links worktrees with relative paths (git 2.48 or newer).
+	// Off by default and never turned on by flai: creating one sets a
+	// repository extension that older git refuses for the whole clone (ADR-0022).
+	RelativePaths bool `json:"relative_paths"`
 }
 
 // Template is where flai fetches the project template from.
@@ -150,6 +159,7 @@ func Keys() []string {
 		"template.repo", "template.ref",
 		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind",
 		"cache_dir", "author",
+		"worktrees.relative_paths",
 	}
 }
 

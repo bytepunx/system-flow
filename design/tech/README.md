@@ -28,7 +28,7 @@ One file per technology. Each records the version in use, where it is used, why 
 | MiniSearch | 7.2 | flaiover | [search.md](search.md) |
 | Vitest, jsdom, Playwright | 4.1, 30.1, 1.60 | flaiover | [sveltekit.md](sveltekit.md) |
 | Docker | 29 (host), image on node:24-alpine | flaiover, flai | [docker.md](docker.md) |
-| Git | 2.47 (host) | flai | [go-libraries.md](go-libraries.md) |
+| Git | 2.47 (host), 2.54 (image); 2.48 or newer only for the opt-in relative worktree links | flai, flaiover image | [git.md](git.md) |
 | GitHub Actions, GHCR | n/a | monorepo | [ci.md](ci.md) |
 | markdownlint-cli2 | 0.20.0 locally via npx (`scripts/lint-md.sh`), action v24 in CI | monorepo, template | [ci.md](ci.md) |
 | log/slog, pino, OpenTelemetry, @prometheus-io/client | slog; pino 10.3, otel sdk-node 0.222, client 0.16 | flai, flaiover | [observability.md](observability.md) |

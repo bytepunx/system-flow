@@ -129,6 +129,19 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	} else if _, err := os.Stat(filepath.Join(repo.MainRoot, ".git")); err == nil {
 		res.Blockers = append(res.Blockers, "this is a git repository but git cannot be run here; accept from a shell with flai accept "+it.ID)
 	}
+	// A story worktree git cannot open from here (I-0017): its links are
+	// absolute host paths, and this process sees the repository somewhere
+	// else. Say what to do instead of failing later with git's own error.
+	worktreeReadable := true
+	if wt := repo.WorktreePath(it.ID); useGit && it.Type == workitem.Story {
+		if _, err := os.Stat(wt); err == nil {
+			if _, err := a.runner.Run(wt, "git", "rev-parse", "--git-dir"); err != nil {
+				worktreeReadable = false
+				a.logger().Warn("story worktree cannot be opened by git", "component", "git", "worktree", relPath(repo.MainRoot, wt), "err", err)
+				res.Blockers = append(res.Blockers, fmt.Sprintf("git cannot open the story worktree %s from here: the paths git keeps for it do not exist in this environment, which happens when the dashboard sees the repository at a different path than the host does. Accept from a shell on the host with flai accept %s, or stop the dashboard and start it with flai dashboard, which mounts the repository at its host path", relPath(repo.MainRoot, wt), it.ID))
+			}
+		}
+	}
 	if len(res.Blockers) > 0 && !o.dryRun {
 		return nil, fmt.Errorf("%s cannot be accepted yet: %s", it.ID, strings.Join(res.Blockers, "; "))
 	}
@@ -154,7 +167,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 		res.Merged = merged
 	}
-	if !o.noRelease && useGit {
+	// An unreadable worktree blocks acceptance; its release cannot be planned either.
+	if !o.noRelease && useGit && worktreeReadable {
 		plan, err := a.planReleaseAt(repo, it, o.deliver, planRoot)
 		if err != nil {
 			return nil, err

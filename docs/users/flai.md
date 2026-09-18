@@ -96,6 +96,7 @@ flai config get template.repo
 flai config set template.repo git@github.com:me/system-flow-template.git
 flai config set template.ref my-branch
 flai config set dashboard.port 8080
+flai config set worktrees.relative_paths true   # opt in to relative worktree links, git 2.48 or newer
 flai config path
 ```
 
@@ -212,6 +213,22 @@ flai stream open S-0037 --no-branch
 ```
 
 Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, stashing uncommitted work around it; conflicts stop inside the worktree and are listed, resolve them, `git rebase --continue`, and sync again. `flai accept` rebases, fast-forwards the branch into main, removes the worktree and branch, then tags and pushes.
+
+#### Relative worktree links (opt-in)
+
+`worktrees.relative_paths` is off by default, and flai never turns it on for you, whatever git you have. Set it when the repository cannot be mounted in the dashboard at its own path, or when you move the clone around. With it on and git 2.48 or newer, `flai stream open` creates the worktree with `git worktree add --relative-paths`, so the links work wherever the repository is mounted. With it on and an older git, flai warns, naming your git version and the setting, and creates an ordinary worktree.
+
+Turning it on changes the clone, not just the worktree: the first relative worktree sets `extensions.relativeWorktrees` in `.git/config`, and any git older than 2.48 then refuses the whole repository with `unknown repository extension found: relativeworktrees`. That includes other tools on your machine that bundle their own git. `flai check` warns with `git.relative-worktrees` when it finds the extension and an older git on your `PATH`.
+
+To go back, with git 2.48 or newer:
+
+```bash
+git worktree repair --no-relative-paths .flai-cache/worktrees/S-0001   # once per worktree; the path is required
+git config --unset extensions.relativeWorktrees
+flai config set worktrees.relative_paths false
+```
+
+With only an older git: delete the `relativeWorktrees = true` line from `.git/config`, then run `git worktree repair .flai-cache/worktrees/S-0001` for each worktree before anything prunes them, and set the key to false.
 
 ### Touches
 
@@ -385,6 +402,6 @@ flai dashboard token --rotate  # new token; a running dashboard restarts
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 
-The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port, with the repository mounted read-write at `/project` and running as your user so files it writes keep your ownership. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer.
+The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port, with the repository mounted read-write at the same absolute path it has on your machine, and running as your user so files it writes keep your ownership. The path matters: git links a story's worktree to the repository with absolute paths, and the dashboard can only accept a story with a branch when those paths exist in the container too. When your path cannot be one in a Linux container (a Windows drive path), the repository is mounted at `/project`, `flai dashboard` warns that stories with a branch must be accepted from a shell with `flai accept`, and the way to make the board work is the relative worktree setting below. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer.
 
 The image lives on GHCR and is private while the repository is. When the pull is refused, `flai dashboard` logs Docker into the registry with `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` and retries once. The token needs the `read:packages` scope; `gh auth refresh -h github.com -s read:packages` adds it. Inside the monorepo, `--build` sidesteps the registry by building the image from `flaiover/` as `flaiover:local`.

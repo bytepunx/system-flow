@@ -148,8 +148,8 @@ func TestDashboardLifecycle(t *testing.T) {
 		"docker pull --quiet ghcr.io/bytepunx/flaiover:0.2.0",
 		"--name flaiover-my-proj",
 		"--publish 0.0.0.0:5555:3000",
-		"--volume " + root + ":/project",
-		"--env PROJECT_DIR=/project",
+		"--volume " + root + ":" + root, // at its host path, so worktree links resolve (ADR-0022)
+		"--env PROJECT_DIR=" + root,
 		"--mount type=bind,source=" + filepath.Join(root, ".flai-cache", "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
 		"--env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
@@ -277,5 +277,54 @@ func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 	joined = strings.Join(b.calls, "\n")
 	if code != 0 || !strings.Contains(joined, "docker build -f "+filepath.Join(root, "flaiover", "Dockerfile")+" -t flaiover:local --build-arg FLAI_VERSION=dev --build-arg FLAI_COMMIT=abc1234") || !strings.Contains(joined, "flaiover:local") || strings.Contains(joined, "docker pull") || !strings.Contains(out, "image flaiover:local") {
 		t.Errorf("build: %d %s %s\n%s", code, out, errOut, joined)
+	}
+}
+
+func TestContainerMount(t *testing.T) {
+	for _, c := range []struct {
+		goos, root, target string
+		mirrored           bool
+	}{
+		{"linux", "/home/a/repo", "/home/a/repo", true},
+		{"darwin", "/Users/a/my repo", "/Users/a/my repo", true},
+		{"windows", `C:\Users\a\repo`, "/project", false},
+		{"linux", "C:/Users/a/repo", "/project", false},
+		{"linux", "/home/a/re:po", "/project", false}, // a colon splits docker's --volume
+	} {
+		target, mirrored := containerMount(c.goos, c.root)
+		if target != c.target || mirrored != c.mirrored {
+			t.Errorf("containerMount(%s, %s) = %s, %v; want %s, %v", c.goos, c.root, target, mirrored, c.target, c.mirrored)
+		}
+	}
+}
+
+// A host path that cannot be a container path falls back to /project and
+// says what that costs and what to do about it (ADR-0022).
+func TestDashboardFallsBackWhenTheHostPathCannotBeMirrored(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("LOG_FORMAT", "json")
+	root := filepath.Join(t.TempDir(), "re:po") // a colon would split docker's --volume target
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: colon\nkey: c\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard")
+	if code != 0 {
+		t.Fatalf("run: %s", errOut)
+	}
+	joined := strings.Join(f.calls, "\n")
+	for _, want := range []string{"--volume " + root + ":/project", "--env PROJECT_DIR=/project"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("missing %q in calls:\n%s", want, joined)
+		}
+	}
+	for _, want := range []string{`"level":"WARN"`, `"mount":"/project"`, `"effect":`, "flai accept", "worktrees.relative_paths"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("warning should carry %s:\n%s", want, errOut)
+		}
+	}
+	if !strings.Contains(out, "mounted read-write at /project") {
+		t.Errorf("output should name the mount: %s", out)
 	}
 }
