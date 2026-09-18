@@ -19,6 +19,7 @@
 		branch?: string;
 		resumed?: boolean;
 		blockers?: string[];
+		uncommitted?: string[];
 		plan?: { level: string; commits: string[]; steps: Step[]; skipped?: string } | null;
 	};
 
@@ -26,11 +27,19 @@
 		id,
 		onconfirm,
 		oncancel
-	}: { id: string; onconfirm: () => void | Promise<void>; oncancel: () => void } = $props();
+	}: {
+		id: string;
+		/** include is true when the designer chose to put the uncommitted files in the acceptance commit. */
+		onconfirm: (include: boolean) => void | Promise<void>;
+		oncancel: () => void;
+	} = $props();
 
 	let preview = $state<Preview | null>(null);
 	let error = $state<string | null>(null);
 	let busy = $state(false);
+	// Uncommitted files outside wip: off by default, and accept waits for the choice (S-0051).
+	let include = $state(false);
+	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 
 	const v = (x: Version) => (typeof x === 'string' ? x : `${x.Major}.${x.Minor}.${x.Patch}`);
 
@@ -38,6 +47,7 @@
 		const target = id;
 		preview = null;
 		error = null;
+		include = false;
 		api(`/api/items/${target}/acceptance`)
 			.then(async (r) => {
 				const data = await r.json();
@@ -50,7 +60,7 @@
 	async function confirm() {
 		busy = true;
 		try {
-			await onconfirm();
+			await onconfirm(include);
 		} finally {
 			busy = false;
 		}
@@ -87,6 +97,22 @@
 					<ul class="mt-1 ml-4 list-disc">
 						{#each preview.blockers as b (b)}<li>{b}</li>{/each}
 					</ul>
+				</div>
+			{/if}
+			{#if preview.uncommitted?.length}
+				<div class="mt-3 rounded border border-warn bg-warn-soft p-2 text-warn" role="group">
+					<p class="font-medium">Uncommitted changes outside wip:</p>
+					<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+						{#each preview.uncommitted as p (p)}<li>{p}</li>{/each}
+					</ul>
+					<p class="mt-2">
+						Acceptance refuses these by default, so its commit holds only acceptance. Cancel to
+						commit or stash them first, or include them.
+					</p>
+					<label class="mt-2 flex items-center gap-2">
+						<input type="checkbox" bind:checked={include} disabled={busy} />
+						Include these files in the acceptance commit
+					</label>
 				</div>
 			{/if}
 			<ul class="mt-3 space-y-1">
@@ -133,7 +159,7 @@
 			<button
 				type="button"
 				class="rounded bg-primary px-3 py-1 text-on-primary disabled:opacity-50"
-				disabled={busy || !!error || !preview || !!preview.blockers?.length}
+				disabled={busy || !!error || !preview || !!preview.blockers?.length || needsChoice}
 				onclick={confirm}>{busy ? 'Accepting…' : 'Accept'}</button
 			>
 		</div>

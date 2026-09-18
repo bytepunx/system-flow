@@ -234,6 +234,45 @@ func (a *app) gitIdentityArgs(root string) []string {
 	}
 }
 
+// excludesMountPath is where the host's global git excludes file appears in
+// the container.
+const excludesMountPath = "/run/flaiover/gitignore"
+
+// gitExcludesArgs gives the container the host's global git excludes, so a
+// file ignored only there is not reported as uncommitted by git in the
+// container, which refused an acceptance from the board (I-0019). The file
+// is the one git uses on the host: core.excludesFile when set, else git's
+// default location. It is mounted read-only and named to git through
+// GIT_CONFIG_* variables, like the identity, because the container has no
+// home to hold a git config. Nothing is passed when there is no such file.
+func (a *app) gitExcludesArgs(root string) []string {
+	if _, err := a.runner.LookPath("git"); err != nil {
+		return nil
+	}
+	file, _ := a.runner.Run(root, "git", "config", "--type=path", "--get", "core.excludesFile")
+	file = strings.TrimSpace(file)
+	if file == "" {
+		base := os.Getenv("XDG_CONFIG_HOME")
+		if base == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return nil
+			}
+			base = filepath.Join(home, ".config")
+		}
+		file = filepath.Join(base, "git", "ignore")
+	}
+	if st, err := os.Stat(file); err != nil || !st.Mode().IsRegular() || strings.Contains(file, ",") {
+		return nil
+	}
+	return []string{
+		"--mount", "type=bind,source=" + file + ",target=" + excludesMountPath + ",readonly",
+		"--env", "GIT_CONFIG_COUNT=1",
+		"--env", "GIT_CONFIG_KEY_0=core.excludesFile",
+		"--env", "GIT_CONFIG_VALUE_0=" + excludesMountPath,
+	}
+}
+
 // fallbackMount is where the repository goes when its host path cannot be
 // a path in the container, and the image's own default.
 const fallbackMount = "/project"
@@ -305,6 +344,7 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	// Acceptance from the dashboard commits as the person who started it
 	// (S-0046): the container has no ~/.gitconfig of its own.
 	args = append(args, a.gitIdentityArgs(repo.MainRoot)...)
+	args = append(args, a.gitExcludesArgs(repo.MainRoot)...)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}

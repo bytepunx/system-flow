@@ -19,8 +19,9 @@ type fakeRunner struct {
 	running  map[string]bool // containers running
 	private  map[string]bool // images that need a login to pull
 	loggedIn bool
-	noToken  bool // gh has no token
-	identity bool // git config has a user
+	noToken  bool   // gh has no token
+	identity bool   // git config has a user
+	excludes string // git config core.excludesFile, already expanded
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -64,6 +65,8 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 			return "Test User", nil
 		case args[0] == "config" && f.identity && args[1] == "user.email":
 			return "test@example.com", nil
+		case args[0] == "config" && f.excludes != "" && args[len(args)-1] == "core.excludesFile":
+			return f.excludes, nil
 		}
 		return "", fmt.Errorf("git: no tags")
 	}
@@ -327,4 +330,48 @@ func TestDashboardFallsBackWhenTheHostPathCannotBeMirrored(t *testing.T) {
 	if !strings.Contains(out, "mounted read-write at /project") {
 		t.Errorf("output should name the mount: %s", out)
 	}
+}
+
+// The container gets the host's global git excludes, so what git ignores on
+// the host is not uncommitted in the dashboard (I-0019, S-0051).
+func TestDashboardPassesTheGlobalGitExcludes(t *testing.T) {
+	run := func(t *testing.T, f *fakeRunner) string {
+		t.Helper()
+		t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+		if _, errOut, code := runWith(t, tempProject(t), f, "dashboard"); code != 0 {
+			t.Fatalf("run: %s", errOut)
+		}
+		return strings.Join(f.calls, "\n")
+	}
+	env := "--env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=core.excludesFile --env GIT_CONFIG_VALUE_0=/run/flaiover/gitignore"
+
+	t.Run("the configured file", func(t *testing.T) {
+		t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "unused"))
+		file := filepath.Join(t.TempDir(), "my-ignore")
+		_ = os.WriteFile(file, []byte(".claude/settings.local.json\n"), 0o644)
+		calls := run(t, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, excludes: file})
+		for _, want := range []string{"--mount type=bind,source=" + file + ",target=/run/flaiover/gitignore,readonly", env} {
+			if !strings.Contains(calls, want) {
+				t.Errorf("missing %q in calls:\n%s", want, calls)
+			}
+		}
+	})
+	t.Run("git's default location when none is configured", func(t *testing.T) {
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		file := filepath.Join(xdg, "git", "ignore")
+		_ = os.MkdirAll(filepath.Dir(file), 0o755)
+		_ = os.WriteFile(file, []byte("x\n"), 0o644)
+		calls := run(t, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}})
+		if !strings.Contains(calls, "source="+file+",target=/run/flaiover/gitignore,readonly") || !strings.Contains(calls, env) {
+			t.Errorf("default excludes file not passed:\n%s", calls)
+		}
+	})
+	t.Run("nothing when there is no such file", func(t *testing.T) {
+		t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+		calls := run(t, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, excludes: filepath.Join(t.TempDir(), "gone")})
+		if strings.Contains(calls, "GIT_CONFIG_COUNT") || strings.Contains(calls, "/run/flaiover/gitignore") {
+			t.Errorf("no excludes file, nothing to pass:\n%s", calls)
+		}
+	})
 }

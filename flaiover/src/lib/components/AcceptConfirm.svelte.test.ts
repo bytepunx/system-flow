@@ -107,4 +107,64 @@ describe('AcceptConfirm', () => {
 		expect(onconfirm).not.toHaveBeenCalled();
 		unmount(c);
 	});
+
+	it('passes false to onconfirm when there is nothing uncommitted', async () => {
+		api.mockResolvedValue(json({ id: 'S-0051', plan: null }));
+		const onconfirm = vi.fn();
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0051', onconfirm, oncancel: vi.fn() }
+		});
+		await settle();
+		expect(document.querySelector('input[type=checkbox]')).toBeNull();
+		([...document.querySelectorAll('button')][1] as HTMLButtonElement).click();
+		await settle();
+		expect(onconfirm).toHaveBeenCalledWith(false);
+		unmount(c);
+	});
+
+	it('lists uncommitted paths and waits for the choice before accepting', async () => {
+		api.mockResolvedValue(
+			json({ id: 'S-0051', plan: null, uncommitted: ['.claude/', 'docs/stray.md'] })
+		);
+		const onconfirm = vi.fn();
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0051', onconfirm, oncancel: vi.fn() }
+		});
+		await settle();
+		const text = document.body.textContent ?? '';
+		expect(text).toContain('.claude/');
+		expect(text).toContain('docs/stray.md');
+		expect(text).toContain('holds only acceptance');
+		const box = document.querySelector('input[type=checkbox]') as HTMLInputElement;
+		const accept = [...document.querySelectorAll('button')][1] as HTMLButtonElement;
+		expect(box.checked).toBe(false); // off by default
+		expect(accept.disabled).toBe(true);
+		accept.click();
+		expect(onconfirm).not.toHaveBeenCalled();
+
+		box.click();
+		await settle();
+		expect(accept.disabled).toBe(false);
+		accept.click();
+		await settle();
+		expect(onconfirm).toHaveBeenCalledWith(true);
+		unmount(c);
+	});
+
+	it('keeps accept disabled for a blocker even when the choice is made', async () => {
+		api.mockResolvedValue(
+			json({ id: 'S-0051', plan: null, blockers: ['no identity'], uncommitted: ['x.md'] })
+		);
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0051', onconfirm: vi.fn(), oncancel: vi.fn() }
+		});
+		await settle();
+		(document.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+		await settle();
+		expect(([...document.querySelectorAll('button')][1] as HTMLButtonElement).disabled).toBe(true);
+		unmount(c);
+	});
 });

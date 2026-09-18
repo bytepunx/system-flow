@@ -58,7 +58,7 @@
 		else void move(id, to);
 	}
 
-	async function move(id: string, to: string) {
+	async function move(id: string, to: string, includeUncommitted = false) {
 		notice = null;
 		let reason: string | undefined;
 		const from = board?.columns[
@@ -71,7 +71,7 @@
 		const r = await api(`/api/items/${id}/move`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ to, reason })
+			body: JSON.stringify({ to, reason, include_uncommitted: includeUncommitted || undefined })
 		});
 		const body = await r.json();
 		if (!r.ok) notice = { kind: 'error', text: body.error ?? r.statusText };
@@ -95,9 +95,9 @@
 	<AcceptConfirm
 		id={accepting}
 		oncancel={() => (accepting = null)}
-		onconfirm={async () => {
+		onconfirm={async (include) => {
 			const id = accepting!;
-			await move(id, 'done');
+			await move(id, 'done', include);
 			accepting = null;
 		}}
 	/>

@@ -23,3 +23,8 @@ coverage.*
 
 # system-flow
 .flai-cache/
+
+# Per-user agent configuration (Claude Code local settings, for example FLAI_AGENT).
+# Ignored here and not only in a user's global excludes, which the dashboard
+# container may not have.
+.claude/settings.local.json

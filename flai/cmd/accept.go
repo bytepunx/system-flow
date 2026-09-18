@@ -36,6 +36,10 @@ type acceptResult struct {
 	PushError string        `json:"push_error,omitempty"` // accepted locally; the push did not happen
 	Published []string      `json:"published"`
 	Blockers  []string      `json:"blockers,omitempty"` // what would stop acceptance before it changes anything
+	// Uncommitted paths outside wip. The real run refuses them unless --yes
+	// includes them in the acceptance commit; a dry run reports them so the
+	// choice can be made before confirming (S-0051).
+	Uncommitted []string `json:"uncommitted,omitempty"`
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -117,7 +121,10 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	case it.Type == workitem.Story && it.Status != workitem.Review:
 		return nil, fmt.Errorf("%s is %s; a story is accepted from review", it.ID, it.Status)
 	}
-	if dirty := a.dirtyOutsideWip(repo); useGit && len(dirty) > 0 && !a.yes {
+	if useGit {
+		res.Uncommitted = a.dirtyOutsideWip(repo)
+	}
+	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun {
 		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
 	}
 	// Preflight: everything that would fail midway is checked before the
@@ -306,6 +313,13 @@ func (a *app) printAccept(res *acceptResult) error {
 	if res.DryRun {
 		for _, b := range res.Blockers {
 			fmt.Fprintf(a.out, "blocked: %s\n", b)
+		}
+		if len(res.Uncommitted) > 0 {
+			effect := "the real run refuses until they are committed or stashed, or --yes includes them"
+			if a.yes {
+				effect = "--yes includes them in the acceptance commit"
+			}
+			fmt.Fprintf(a.out, "uncommitted outside wip: %s; %s\n", strings.Join(res.Uncommitted, ", "), effect)
 		}
 		if res.Branch != "" {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)
