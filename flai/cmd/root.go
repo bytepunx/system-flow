@@ -117,7 +117,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 		newVersionCmd(a), newSelfUpgradeCmd(a), newConfigCmd(a), newNewCmd(a), newImportCmd(a), newUpgradeCmd(a), newTemplateCmd(a),
 		newItemCmd(a, "epic"), newItemCmd(a, "story"), newItemCmd(a, "task"), newShowCmd(a),
 		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newTouchesCmd(a), newBoardCmd(a),
-		newStreamCmd(a), newArchiveCmd(a), newMigrateCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a), newThreadCmd(a), newReleaseCmd(a), newAcceptCmd(a), newDashboardCmd(a),
+		newStreamCmd(a), newArchiveCmd(a), newMigrateCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a), newThreadCmd(a), newMCPCmd(a), newReleaseCmd(a), newAcceptCmd(a), newDashboardCmd(a),
 	)
 	return root
 }

@@ -46,29 +46,8 @@ same flags. There is no other way for a story to become done.`,
 				}
 				return a.printAccept(res)
 			}
-			items, err := repo.List(false)
+			warnings, err := repo.Transition(it, args[1], orDefault(by, a.author()), reason, a.now())
 			if err != nil {
-				return err
-			}
-			board, err := repo.LoadBoard()
-			if err != nil {
-				return err
-			}
-			warnings, err := repo.Move(it, args[1], workitem.MoveOptions{
-				By: orDefault(by, a.author()), Reason: reason, Now: a.now(), Items: items, Board: board,
-			})
-			if err != nil {
-				return err
-			}
-			if err := repo.Save(it); err != nil {
-				return err
-			}
-			if it.Type == workitem.Story {
-				if err := board.Save(a.now().Format("2006-01-02")); err != nil {
-					return err
-				}
-			}
-			if err := a.refreshIndex(repo); err != nil {
 				return err
 			}
 			for _, w := range warnings {

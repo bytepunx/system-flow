@@ -14,6 +14,7 @@ Versions are pinned in `flai/go.mod`; the ones here are the majors we track.
 | `github.com/goccy/go-yaml` | v1.19 | Parse and write front matter, `system-flow.yaml`, `template.yaml` | Actively maintained, preserves comments better than `gopkg.in/yaml.v3`, which is archived |
 | `github.com/charmbracelet/huh` | v1.0 | Interactive prompts for `new` and `import` | Composable forms, accessible mode, works non-interactively when answers are given by flags |
 | `github.com/charmbracelet/lipgloss` | v1 | Table and board rendering | Same ecosystem as huh |
+| `github.com/modelcontextprotocol/go-sdk` | v1.8.0 | `flai mcp`: MCP server, stdio transport, typed tools with inferred JSON schemas, in-memory transports for tests | The official SDK, maintained with the specification; hand-rolling JSON-RPC and schema inference would be the alternative |
 | `golang.org/x/term` | v0.46 | Detect whether stdin is a terminal, to decide between prompting and defaults | Standard extended library |
 | `github.com/adrg/xdg` | v0.5 | Not used: config is fixed at `~/.flai` by decision | Listed so nobody adds it |
 

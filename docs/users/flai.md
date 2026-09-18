@@ -235,6 +235,29 @@ flai thread resolve TH-0001 --reason "settled in ADR-0021"
 
 A thread is one file under `wip/threads/`, anchored to a document, a heading in it, or a work item, with dated entries by author. The author is `--by`, else `FLAI_AGENT`, else the config author. A reply from anyone but the opener marks the thread `answered`; the opener's follow-up makes it `open` again; `resolve` closes it. Unresolved threads on a story or its tasks are mirrored into the story narrative under `## Open questions`, so an agent sees them without the dashboard. `flai check` validates threads: the anchor must exist, a named heading must still be in the document, and open threads on archived items are flagged.
 
+### Serving agents over MCP
+
+```bash
+flai mcp          # an MCP server on stdio; agents start it, you do not
+```
+
+`flai mcp` gives an agent session a typed, low-latency view of the repository. Register it once per project in `.mcp.json` (new projects get this from the template):
+
+```json
+{ "mcpServers": { "flai": { "command": "flai", "args": ["mcp"] } } }
+```
+
+| Tool | What it does |
+|------|--------------|
+| `inbox` | Unresolved threads; `awaiting: you` when the last entry is not the agent's. `story` filters, `all` includes threads awaiting someone else |
+| `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
+| `item_get`, `item_move` | Read an item with its children; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
+| `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served |
+| `who_touches` | In-progress and in-review items whose `touches` cover a path |
+| `wait_for_events` | Blocks until a thread, item, or narrative changes, or the timeout passes, so an idle agent hears your reply within a second |
+
+Design and docs files are also exposed as resources (`flai://design/...`, `flai://docs/...`). Everything the server writes goes through the same code as the CLI, so files stay the record and the dashboard shows agent replies as they land.
+
 ### Agent narratives
 
 ```bash
