@@ -6,7 +6,7 @@ title: flaiover as the designer's workbench
 status: ready
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-18T16:25:54Z
+updated: 2026-09-18T16:33:03Z
 transitions:
   - to: ready
     at: 2026-09-18T16:25:54Z
@@ -28,6 +28,7 @@ flaiover is where the system's designer reads, edits, discusses, and accepts the
 - S-0041 Review and acceptance from the dashboard
 - S-0042 Agent presence, activity, and the designer's inbox
 - S-0043 MCP over HTTP and project identity in the API, hub-ready
+- S-0046 Moving a story to done is acceptance
 
 ## Notes
 Carved out 2026-09-17 from the operator's direction. Decisions: ADR-0018 (dashboard token), ADR-0019 (story branches, wip on main, touches), ADR-0020 (files plus MCP). Pull order is the story order above: authentication first, hub transport last. E-0003 stays open for dashboard remediation only.
