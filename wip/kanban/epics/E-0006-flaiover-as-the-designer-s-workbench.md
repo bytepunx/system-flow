@@ -3,11 +3,14 @@ id: E-0006
 type: epic
 nature: feature
 title: flaiover as the designer's workbench
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-17T19:46:29Z
-transitions: []
+updated: 2026-09-18T16:25:54Z
+transitions:
+  - to: ready
+    at: 2026-09-18T16:25:54Z
+    by: alex
 tags: []
 ---
 
