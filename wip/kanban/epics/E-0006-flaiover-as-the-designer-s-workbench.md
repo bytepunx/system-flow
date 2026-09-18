@@ -6,7 +6,7 @@ title: flaiover as the designer's workbench
 status: ready
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-18T18:36:10Z
+updated: 2026-09-18T20:54:44Z
 transitions:
   - to: ready
     at: 2026-09-18T16:25:54Z
@@ -31,6 +31,7 @@ flaiover is where the system's designer reads, edits, discusses, and accepts the
 - S-0046 Moving a story to done is acceptance
 - S-0048 Parent epic indicator on story cards on the board
 - S-0050 Accepting a story from the dashboard works when the story has a worktree
+- S-0051 Accepting from the dashboard shows uncommitted changes outside wip and lets the designer include them
 
 ## Notes
 Carved out 2026-09-17 from the operator's direction. Decisions: ADR-0018 (dashboard token), ADR-0019 (story branches, wip on main, touches), ADR-0020 (files plus MCP). Pull order is the story order above: authentication first, hub transport last. E-0003 stays open for dashboard remediation only.
