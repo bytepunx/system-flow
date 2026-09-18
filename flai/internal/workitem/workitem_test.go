@@ -192,18 +192,12 @@ func TestMoveRules(t *testing.T) {
 	s := mustCreate(t, r, Story, "S", "E-0001")
 	items, _ := r.List(false)
 	board, _ := r.LoadBoard()
-	if _, err := r.Move(s, Ready, MoveOptions{Now: t0, Items: items, Board: board}); err == nil || !strings.Contains(err.Error(), "needs at least one task") {
-		t.Errorf("ready without tasks: %v", err)
-	}
-	mustCreate(t, r, Task, "T", "S-0001")
-	items, _ = r.List(false)
-	s, _ = r.Get("S-0001")
 	if _, err := r.Move(s, Ready, MoveOptions{Now: t0, Items: items, Board: board}); err == nil || !strings.Contains(err.Error(), "Acceptance criteria") {
 		t.Errorf("ready without criteria: %v", err)
 	}
 	s.Body = strings.Replace(s.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] works\n", 1)
 	_ = r.Save(s)
-	mustMove(t, r, s, Ready, "")
+	mustMove(t, r, s, Ready, "") // no tasks: the pulling agent writes them (ADR-0021)
 	board, _ = r.LoadBoard()
 	if len(board.Order) != 1 || board.Order[0] != "S-0001" {
 		t.Errorf("ready story not added to pull order: %v", board.Order)
@@ -214,7 +208,13 @@ func TestMoveRules(t *testing.T) {
 	if _, err := r.Move(s, Cancelled, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "--reason") {
 		t.Errorf("cancel without reason: %v", err)
 	}
-	mustMove(t, r, s, InProgress, "")
+	mustMove(t, r, s, InProgress, "") // still no tasks
+	items, _ = r.List(false)
+	if _, err := r.Move(s, Review, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "needs at least one task before it goes to review") {
+		t.Errorf("review without tasks: %v", err)
+	}
+	mustCreate(t, r, Task, "T", "S-0001")
+	s, _ = r.Get("S-0001")
 	mustMove(t, r, s, Review, "")
 	items, _ = r.List(false)
 	if _, err := r.Move(s, Done, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "T-0001 is backlog") {

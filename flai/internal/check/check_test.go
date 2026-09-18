@@ -40,7 +40,7 @@ func TestBadFixtureFindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]string{ // rule -> substring of path
-		"story.tasks":         "S-001",
+		"story.tasks":         "S-004", // review with no tasks
 		"story.criteria":      "S-001",
 		"narrative.missing":   "S-001",
 		"item.parent-missing": "T-001",
@@ -76,6 +76,13 @@ func TestBadFixtureFindings(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("expected %s on %s, got %v", rule, path, got[rule])
+		}
+	}
+	// S-001 is in-progress and S-002 is ready: tasks are not required until
+	// review (ADR-0021), so neither may raise story.tasks.
+	for _, p := range got["story.tasks"] {
+		if !strings.Contains(p, "S-004") {
+			t.Errorf("story.tasks raised before review on %s", p)
 		}
 	}
 	if res.OK(false) {

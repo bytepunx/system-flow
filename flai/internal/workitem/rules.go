@@ -52,13 +52,14 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	children := Children(opt.Items, it.ID)
 	switch to {
 	case Ready:
-		if it.Type == Story {
-			if len(children) == 0 {
-				return nil, fmt.Errorf("rule: a story needs at least one task before it is ready (flai task new --story %s \"...\")", it.ID)
-			}
-			if !hasCriteria(it.Body) {
-				return nil, fmt.Errorf("rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
-			}
+		// Tasks are not part of ready: the agent that pulls the story
+		// writes them once it is in progress (ADR-0021).
+		if it.Type == Story && !hasCriteria(it.Body) {
+			return nil, fmt.Errorf("rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
+		}
+	case Review:
+		if it.Type == Story && len(children) == 0 {
+			return nil, fmt.Errorf("rule: a story needs at least one task before it goes to review (flai task new --story %s \"...\")", it.ID)
 		}
 	case Done:
 		for _, c := range children {

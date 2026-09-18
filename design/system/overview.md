@@ -1,6 +1,6 @@
 ---
 title: System overview
-updated: 2026-09-15
+updated: 2026-09-18
 status: active
 ---
 
@@ -30,7 +30,7 @@ flowchart LR
 
 - **Files are the database.** Every fact the tooling needs is in markdown front matter or in the directory structure. Tooling may cache but never owns state.
 - **Measure the process, not the people.** Timestamps on state transitions exist so the *process* can be tuned. Metrics are aggregated by state and nature, not by owner.
-- **Defer detail.** Epics get stories when they are next up. Stories get tasks when they become ready. Backlog items are one paragraph.
+- **Defer detail.** Epics get stories when they are next up. Stories get tasks when an agent starts them ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)). Backlog items are one paragraph.
 - **Recoverable by default.** If the environment dies, `wip/agents` plus the kanban item is enough for a fresh agent to resume without the human reconstructing context.
 - **The repo builds itself.** system-flow is developed inside a system-flow monorepo. Every convention is exercised here before it is shipped in the template.
 

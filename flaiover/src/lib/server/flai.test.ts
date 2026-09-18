@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -59,6 +59,28 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		await expect(flai(dir, ['move', 'S-004', 'cancelled'])).rejects.toMatchObject({
 			status: 400,
 			message: expect.stringContaining('needs --reason')
+		});
+	});
+	it('moves a story with no tasks to ready and in-progress, and is refused at review (ADR-0021)', async () => {
+		const { data: made } = await flai<{ id: string }>(dir, [
+			'story',
+			'new',
+			'No tasks yet',
+			'--epic',
+			'E-001'
+		]);
+		const stories = join(dir, 'wip/kanban/stories');
+		const name = (await readdir(stories)).find((f) => f.startsWith(made.id + '-'))!;
+		const path = join(stories, name);
+		const body = await readFile(path, 'utf8');
+		await writeFile(path, body.replace('- [ ]\n', '- [ ] works\n'));
+		for (const to of ['ready', 'in-progress']) {
+			const { data } = await flai<{ status: string }>(dir, ['move', made.id, to, '--by', 'test']);
+			expect(data.status).toBe(to);
+		}
+		await expect(flai(dir, ['move', made.id, 'review', '--by', 'test'])).rejects.toMatchObject({
+			status: 400,
+			message: expect.stringContaining('needs at least one task before it goes to review')
 		});
 	});
 	it('blocks, unblocks, and logs to a stream', async () => {

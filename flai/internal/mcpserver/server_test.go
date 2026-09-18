@@ -265,3 +265,23 @@ func TestDesignerReplyReachesAWaitingAgent(t *testing.T) {
 		t.Errorf("quiet wait: %v", quiet)
 	}
 }
+
+// A story with no tasks moves to ready and in-progress through item_move and
+// is refused at review: the pulling agent writes the tasks (ADR-0021).
+func TestStoryWithoutTasksMovesUntilReview(t *testing.T) {
+	f := setup(t)
+	s, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "No tasks", Parent: f.story.Parent, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(s.Path)
+	_ = os.WriteFile(s.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644)
+	for _, to := range []string{"ready", "in-progress"} {
+		if out, failed := f.call(t, "item_move", map[string]any{"id": s.ID, "to": to}); failed != "" || out["status"] != to {
+			t.Fatalf("move story without tasks to %s: %v %s", to, out, failed)
+		}
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"id": s.ID, "to": "review"}); !strings.Contains(failed, "needs at least one task before it goes to review") {
+		t.Errorf("review without tasks should be refused with the rule: %q", failed)
+	}
+}

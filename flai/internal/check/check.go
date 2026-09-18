@@ -254,13 +254,13 @@ func (c *checker) oneItem(it *workitem.Item) {
 	}
 	c.history(it)
 	children := workitem.Children(c.items, it.ID)
-	if it.Type == workitem.Story && it.Status != workitem.Backlog && it.Status != workitem.Cancelled {
-		if len(children) == 0 {
-			c.add(Error, "story.tasks", p, keyLine(p, "status"), "a %s story needs at least one task", it.Status)
-		}
-		if !hasCriteria(it.Body) {
-			c.add(Error, "story.criteria", p, headingLine(p, "## Acceptance criteria"), "a %s story needs acceptance criteria with at least one checkbox", it.Status)
-		}
+	// Tasks are written by the agent that pulls the story, once it is in
+	// progress, and are required from review onwards (ADR-0021).
+	if it.Type == workitem.Story && (it.Status == workitem.Review || it.Status == workitem.Done) && len(children) == 0 {
+		c.add(Error, "story.tasks", p, keyLine(p, "status"), "a %s story needs at least one task", it.Status)
+	}
+	if it.Type == workitem.Story && it.Status != workitem.Backlog && it.Status != workitem.Cancelled && !hasCriteria(it.Body) {
+		c.add(Error, "story.criteria", p, headingLine(p, "## Acceptance criteria"), "a %s story needs acceptance criteria with at least one checkbox", it.Status)
 	}
 	if it.Status == workitem.Done {
 		for _, ch := range children {

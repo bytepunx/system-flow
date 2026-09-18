@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-09-15
+updated: 2026-09-18
 status: active
 ---
 
@@ -66,7 +66,7 @@ stateDiagram-v2
 | State | Meaning | Clock |
 |-------|---------|-------|
 | `backlog` | Captured, not committed, may be one paragraph | Lead time starts at `created` |
-| `ready` | Refined enough to start: acceptance criteria present, tasks written for a story | Queue time |
+| `ready` | Refined enough to start: goal and acceptance criteria present. Tasks are written by the agent that starts the story | Queue time |
 | `in-progress` | Being worked | Cycle time starts on first entry |
 | `review` | Work complete, awaiting verification or human acceptance | Review time |
 | `done` | Accepted | Cycle and lead time end |
@@ -110,7 +110,7 @@ Rules:
 - `transitions` is the source of truth for state. `status` must equal the `to` of the last transition; `flai check` enforces this. Creation implies `backlog` and is not recorded as a transition.
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the `done` or `cancelled` transition. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.
-- A story cannot be `ready` without at least one task and an acceptance criteria section.
+- A story cannot be `ready` without an acceptance criteria section with at least one checkbox. It can be `ready` and `in-progress` with no tasks, and cannot be `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)).
 
 ## Body structure
 

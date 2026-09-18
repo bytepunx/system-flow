@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-15
+updated: 2026-09-18
 status: draft
 ---
 
@@ -172,17 +172,19 @@ Items are created from the template's item bodies with the next free ID and link
 ### Moving work
 
 ```bash
-flai move S-0001 ready          # needs at least one task and acceptance criteria
+flai move S-0001 ready          # needs acceptance criteria; tasks are not required
 flai move S-0001 in-progress    # warns if the WIP limit is exceeded
 flai move T-0001 in-progress
 flai move T-0001 done           # tasks may skip review
-flai move S-0001 review
+flai move S-0001 review         # needs at least one task
 flai move S-0001 done --by alex # needs every task closed and every criterion checked
 flai move S-0001 in-progress --reason "tests missing"     # from review
 flai move S-0002 cancelled --reason "superseded by S-0005"
 ```
 
 Every move appends to the item's `transitions` with a timestamp and who made it (`--by`, default the config author). Reasons land under the item's Notes.
+
+A story is ready once its goal and acceptance criteria are written. The agent that pulls it moves it to `in-progress` and then writes its tasks; a story with no tasks is refused at `review`, and `flai check` reports `story.tasks` for a `review` or `done` story that has none.
 
 ### Blocking
 

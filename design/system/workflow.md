@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-09-15
+updated: 2026-09-18
 status: active
 ---
 
@@ -27,13 +27,15 @@ Work is pulled, not pushed. An agent starting a session:
 1. Reads `wip/agents/index.md` to find streams with open narratives it was working on.
 2. If none, reads `wip/kanban/board.md` and pulls the highest ordered `ready` story into `in-progress`, respecting the WIP limit.
 3. Opens or resumes the narrative for that story in `wip/agents/<story-id>.md`.
-4. Works tasks in order, transitioning each task as it goes.
+4. If the story has no tasks, reads its goal, acceptance criteria, and notes and writes them, each with `## Work` and `## Done when`. If the story does not say enough to do that, blocks it with the reason, opens a thread on it saying what is missing, and pulls the next story.
+5. Works tasks in order, transitioning each task as it goes.
 
 ## Definition of ready (story)
 
 - `## Goal` and `## Acceptance criteria` are filled.
-- Tasks exist, each with `## Work` and `## Done when`.
 - Parent epic is not `cancelled`.
+
+Tasks are not part of ready. The agent that pulls the story writes them once it is `in-progress`, and a story cannot enter `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)). `flai move` and `flai check` enforce both halves: nothing about tasks is checked on the way into `ready` or `in-progress`, and `story.tasks` is raised for `review` and `done` stories.
 
 ## Definition of done (story)
 
@@ -48,8 +50,8 @@ Work is pulled, not pushed. An agent starting a session:
 | Transition | Made by | Required action |
 |------------|---------|-----------------|
 | backlog to ready | Human or agent during refinement | Definition of ready met |
-| ready to in-progress | Agent pulling work | Narrative opened |
-| in-progress to review | Agent | Acceptance criteria self-checked, narrative summary current |
+| ready to in-progress | Agent pulling work | Narrative opened; tasks written next if the story has none |
+| in-progress to review | Agent | At least one task exists, acceptance criteria self-checked, narrative summary current |
 | review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. For a story this transition is acceptance, however it is made: `flai accept`, `flai move <story> done`, a card dropped on done, or the item page button all run the same flow (S-0046). `flai accept` does the acceptance: rebase and merge the story branch, move to done, archive, commit, semver release (delivery-type bump for the component delivered to, patch for components touched incidentally, see `design/conventions/git.md`), push |
 | review to in-progress | Human | Reason appended to story notes |
 | any to cancelled | Human | Reason appended to story notes |
