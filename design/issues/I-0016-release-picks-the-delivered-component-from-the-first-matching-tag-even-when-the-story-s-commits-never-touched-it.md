@@ -20,10 +20,8 @@ Release picks the delivered component from the first matching tag even when the 
 ### 2026-09-18T17:08:11Z
 S-0039 was pure flai work but carried tags [dashboard, cli]; the release gave flaiover a minor bump with zero files and flai only a patch. The same shape hit S-0035 and S-0037. Two causes: I tagged every E-0006 story dashboard,cli when creating the epic, and deliverTarget takes the first tag that names a component without looking at the touched files. Versions stand as cut.
 
-### 2026-09-18T17:08:11Z
 Counted retroactively: S-0035 (flai work, flaiover took the minor).
 
-### 2026-09-18T17:08:11Z
 Counted retroactively: S-0037 (mostly flai work, flaiover took the minor).
 
 ## Remediation
