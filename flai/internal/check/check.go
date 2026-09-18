@@ -575,10 +575,27 @@ func (c *checker) threads() {
 		if base := filepath.Base(th.Path); !strings.HasPrefix(base, th.ID+"-") {
 			c.add(Error, "threads.filename", th.Path, 1, "file name should start with %s-", th.ID)
 		}
-		abs := filepath.Join(c.repo.Root, filepath.FromSlash(th.Anchor.Path))
+		// An item anchor follows the item: archiving moves the file, the
+		// thread stays attached. A plain path anchor must exist as written.
+		anchorPath := th.Anchor.Path
+		if th.Anchor.Item != "" {
+			it, ok := byID[th.Anchor.Item]
+			switch {
+			case !ok:
+				c.add(Error, "threads.anchor", th.Path, keyLine(th.Path, "anchor"), "item %s does not exist", th.Anchor.Item)
+				continue
+			case it.Archived && th.Open():
+				c.add(Warning, "threads.archived", th.Path, keyLine(th.Path, "status"), "%s is %s but %s is archived; resolve it or move it", th.ID, th.Status, th.Anchor.Item)
+			}
+			anchorPath = it.Path
+		}
+		abs := anchorPath
+		if !filepath.IsAbs(abs) {
+			abs = filepath.Join(c.repo.Root, filepath.FromSlash(anchorPath))
+		}
 		data, err := os.ReadFile(abs)
-		if err != nil {
-			if d2, err2 := os.ReadFile(filepath.Join(c.repo.MainRoot, filepath.FromSlash(th.Anchor.Path))); err2 == nil {
+		if err != nil && !filepath.IsAbs(anchorPath) {
+			if d2, err2 := os.ReadFile(filepath.Join(c.repo.MainRoot, filepath.FromSlash(anchorPath))); err2 == nil {
 				data, err = d2, nil
 			}
 		}
@@ -586,15 +603,6 @@ func (c *checker) threads() {
 			c.add(Error, "threads.anchor", th.Path, keyLine(th.Path, "anchor"), "anchor %s does not exist", th.Anchor.Path)
 		} else if th.Anchor.Heading != "" && !threads.HasHeading(string(data), th.Anchor.Heading) {
 			c.add(Warning, "threads.heading", th.Path, keyLine(th.Path, "anchor"), "heading %q is no longer in %s", th.Anchor.Heading, th.Anchor.Path)
-		}
-		if th.Anchor.Item != "" {
-			it, ok := byID[th.Anchor.Item]
-			switch {
-			case !ok:
-				c.add(Error, "threads.anchor", th.Path, keyLine(th.Path, "anchor"), "item %s does not exist", th.Anchor.Item)
-			case it.Archived && th.Open():
-				c.add(Warning, "threads.archived", th.Path, keyLine(th.Path, "status"), "%s is %s but %s is archived; resolve it or move it", th.ID, th.Status, th.Anchor.Item)
-			}
 		}
 		if len(th.Entries()) == 0 {
 			c.add(Warning, "threads.entries", th.Path, 1, "%s has no dated entries", th.ID)

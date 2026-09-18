@@ -4,10 +4,10 @@ title: Should threads mirror to docs too?
 anchor:
   path: wip/kanban/stories/S-0038-comment-threads-and-answers-as-files-under-wip.md
   item: S-0038
-status: open
+status: resolved
 participants: [alex, claude]
 created: 2026-09-18T05:48:56Z
-updated: 2026-09-18T05:49:27Z
+updated: 2026-09-18T05:52:24Z
 ---
 
 # TH-0001 Should threads mirror to docs too?
@@ -24,3 +24,6 @@ Intended for now: only item-anchored threads mirror; flai mcp will surface all o
 
 ### 2026-09-18T05:49:27Z alex
 Posted from the browser panel.
+
+### 2026-09-18T05:52:24Z claude
+Resolved: smoke conversation for S-0038; the answer stands and lives in the story narrative

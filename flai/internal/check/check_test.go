@@ -217,6 +217,10 @@ func TestThreadRules(t *testing.T) {
 	w("TH-0003-heading.md", fmt.Sprintf(fm, "TH-0003", "docs/guide.md", "  heading: Removed\n", "answered", "TH-0003"))
 	w("TH-0004-item.md", fmt.Sprintf(fm, "TH-0004", "wip/kanban/stories/S-0009-x.md", "  item: S-0009\n", "open", "TH-0004"))
 	w("TH-0005-bad.md", fmt.Sprintf(fm, "TH-0005", "docs/guide.md", "", "pending", "TH-0005"))
+	// an item anchor follows the item into the archive; the stale path is not an error
+	_ = os.MkdirAll(filepath.Join(root, "wip/archive/kanban/epics"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "wip/archive/kanban/epics/E-0001-old.md"), []byte("---\nid: E-0001\ntype: epic\nnature: feature\ntitle: Old\nstatus: done\nowner: a\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\ntransitions:\n  - to: done\n    at: 2026-09-01T12:00:00Z\n    by: a\ntags: []\n---\n\n# E-0001 Old\n\n## Outcome\nx\n\n## Stories\n\n## Notes\n"), 0o644)
+	w("TH-0006-archived.md", fmt.Sprintf(fm, "TH-0006", "wip/kanban/epics/E-0001-old.md", "  item: E-0001\n", "resolved", "TH-0006"))
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
@@ -240,7 +244,7 @@ func TestThreadRules(t *testing.T) {
 			t.Errorf("%s: got %q want %q", rule, got[rule], want)
 		}
 	}
-	if strings.Contains(got["threads.anchor"], "TH-0001") || strings.Contains(got["threads.front-matter"], "TH-0001") {
-		t.Errorf("the good thread must pass: %v", got)
+	if strings.Contains(got["threads.anchor"], "TH-0001") || strings.Contains(got["threads.front-matter"], "TH-0001") || strings.Contains(got["threads.anchor"], "TH-0006") || strings.Contains(got["threads.archived"], "TH-0006") {
+		t.Errorf("the good and archived threads must pass: %v", got)
 	}
 }
