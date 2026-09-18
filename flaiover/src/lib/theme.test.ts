@@ -90,13 +90,19 @@ describe.each([
 
 describe('brand colours keep their roles', () => {
 	it('uses the five brand values where contrast allows', () => {
-		expect(light.ink).toBe('#0f1108');
-		expect(dark.ground).toBe('#0f1108');
-		expect(dark.surface).toBe('#241909');
+		expect(light.ground).toBe('#f7f3e3');
+		expect(dark.ink).toBe('#f7f3e3');
 		expect(light.muted).toBe('#645853');
 		expect(light.primary).toBe('#054a91');
 		expect(dark.accent).toBe('#23b5d3');
 		expect(light['accent-strong']).toBe('#23b5d3');
+		expect(light['good-strong']).toBe('#119822');
+		expect(dark['good-strong']).toBe('#119822');
+	});
+	it('documents why the brand green is a fill, not text', () => {
+		// #119822 reads at 3.4:1 on the cream ground; text uses #0c6e19, the brand green fills badges with ink text.
+		expect(contrast('#119822', light.ground)).toBeLessThan(4.5);
+		expect(contrast(light.ink, '#119822')).toBeGreaterThanOrEqual(4.5);
 	});
 	it('documents why the light accent text is a darker step of the cyan', () => {
 		// #23b5d3 on the light ground is about 2.2:1, so text and focus use #17788c.

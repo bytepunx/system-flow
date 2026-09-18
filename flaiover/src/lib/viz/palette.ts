@@ -1,12 +1,12 @@
 // Categorical palette led by the brand hues (S-0044): slot 0 is the brand
-// blue (#054a91 family), slot 2 the brand cyan (#23b5d3 family), slot 7 the
-// brand brown (#241909 family); the rest are supplementary hues stepped to
+// blue (#054a91 family), slot 2 the brand cyan (#23b5d3 family), slot 5 the
+// brand green (#119822 family); the rest are supplementary hues stepped to
 // the same bands. Both modes pass the dataviz validator (2026-09-18) against
 // the chart surfaces below. Slots are assigned in fixed order and never
 // cycled; scatter colours by at most three groups.
 export const CATEGORICAL = {
-	light: ['#2f6ec4', '#d0483f', '#0e8fa9', '#b5820a', '#c0559a', '#2f8f4e', '#6f5bc8', '#b0632a'],
-	dark: ['#3f86d9', '#e05a52', '#1e9fbb', '#b88b1f', '#d55f9d', '#2f9e5a', '#8b7ce6', '#c27a3c']
+	light: ['#2f6ec4', '#d0483f', '#0e8fa9', '#b5820a', '#c0559a', '#1d9a2e', '#6f5bc8', '#b0632a'],
+	dark: ['#3f86d9', '#e05a52', '#1e9fbb', '#b88b1f', '#d55f9d', '#33a646', '#8b7ce6', '#c27a3c']
 } as const;
 
 // The workflow states get fixed slots so a state keeps its colour across charts.
@@ -40,18 +40,18 @@ export function theme(dark: boolean): Theme {
 	return dark
 		? {
 				dark,
-				surface: '#241909',
-				text: '#f5f2ee',
-				textSecondary: '#a09088',
-				grid: '#3a2f27',
+				surface: '#272220',
+				text: '#f7f3e3',
+				textSecondary: '#a79a95',
+				grid: '#433b38',
 				series: CATEGORICAL.dark
 			}
 		: {
 				dark,
-				surface: '#fbfaf8',
-				text: '#0f1108',
+				surface: '#fdfbf3',
+				text: '#1c1917',
 				textSecondary: '#645853',
-				grid: '#e6dfd8',
+				grid: '#e3ddcc',
 				series: CATEGORICAL.light
 			};
 }

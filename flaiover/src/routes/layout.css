@@ -6,50 +6,53 @@
    for contrast in src/lib/theme.test.ts. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
-/* Brand: #0f1108 ink, #23b5d3 accent, #241909 surface, #645853 muted, #054a91 primary. */
+/* Brand: #f7f3e3 ground, #23b5d3 accent, #119822 good, #645853 muted, #054a91 primary.
+   The dark ground and surface are deep steps of the warm grey hue. */
 :root {
 	color-scheme: light;
-	--t-ground: #f5f2ee;
-	--t-surface: #fbfaf8;
-	--t-raised: #ece7e1;
-	--t-ink: #0f1108;
-	--t-ink-soft: #3a332e;
+	--t-ground: #f7f3e3;
+	--t-surface: #fdfbf3;
+	--t-raised: #ece6d3;
+	--t-ink: #1c1917;
+	--t-ink-soft: #3d3633;
 	--t-muted: #645853;
-	--t-line: #d9d2cb;
-	--t-line-strong: #8a7d73;
+	--t-line: #d5cfcd;
+	--t-line-strong: #8b7b74;
 	--t-primary: #054a91;
 	--t-on-primary: #ffffff;
-	--t-primary-soft: #dde8f3;
+	--t-primary-soft: #dbe6f1;
 	--t-accent: #17788c;
 	--t-accent-strong: #23b5d3;
-	--t-accent-soft: #d7eef3;
-	--t-good: #1d6b3a;
-	--t-good-soft: #dcefe1;
+	--t-accent-soft: #d6eef2;
+	--t-good: #0c6e19;
+	--t-good-strong: #119822;
+	--t-good-soft: #d1fad6;
 	--t-warn: #7a4a00;
-	--t-warn-soft: #f8ead0;
+	--t-warn-soft: #f6e6c6;
 	--t-danger: #9b1c1c;
-	--t-danger-soft: #fbe4e1;
+	--t-danger-soft: #f9e1dc;
 	--t-info: #0f5d70;
-	--t-info-soft: #d7eef3;
+	--t-info-soft: #d6eef2;
 }
 [data-theme='dark'] {
 	color-scheme: dark;
-	--t-ground: #0f1108;
-	--t-surface: #241909;
-	--t-raised: #332619;
-	--t-ink: #f5f2ee;
-	--t-ink-soft: #d8cfc6;
-	--t-muted: #a09088;
-	--t-line: #3a2f27;
-	--t-line-strong: #7a685c;
-	--t-primary: #0660bb;
+	--t-ground: #191615;
+	--t-surface: #272220;
+	--t-raised: #38312e;
+	--t-ink: #f7f3e3;
+	--t-ink-soft: #e6dfd0;
+	--t-muted: #a79a95;
+	--t-line: #433b38;
+	--t-line-strong: #7b6c66;
+	--t-primary: #0866c8;
 	--t-on-primary: #ffffff;
 	--t-primary-soft: #123a66;
 	--t-accent: #23b5d3;
 	--t-accent-strong: #23b5d3;
 	--t-accent-soft: #0f3f4c;
-	--t-good: #7fd39a;
-	--t-good-soft: #16351f;
+	--t-good: #62c96f;
+	--t-good-strong: #119822;
+	--t-good-soft: #084910;
 	--t-warn: #f0c36b;
 	--t-warn-soft: #4a3410;
 	--t-danger: #f28b82;
@@ -74,6 +77,7 @@
 	--color-accent-strong: var(--t-accent-strong);
 	--color-accent-soft: var(--t-accent-soft);
 	--color-good: var(--t-good);
+	--color-good-strong: var(--t-good-strong);
 	--color-good-soft: var(--t-good-soft);
 	--color-warn: var(--t-warn);
 	--color-warn-soft: var(--t-warn-soft);
@@ -101,6 +105,11 @@
 	--tw-prose-pre-bg: var(--t-raised);
 	--tw-prose-th-borders: var(--t-line-strong);
 	--tw-prose-td-borders: var(--t-line);
+}
+/* Heading anchors are navigation aids, not links to elsewhere. */
+.prose :where(h1, h2, h3, h4, h5, h6) a {
+	color: inherit;
+	text-decoration: none;
 }
 :focus-visible {
 	outline: 2px solid var(--t-accent);
