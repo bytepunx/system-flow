@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { themeState } from '$lib/theme.svelte';
 	import Threads from '$lib/components/Threads.svelte';
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
@@ -72,7 +73,7 @@
 				error = null;
 				html = render(doc!.body, path);
 				await tick();
-				if (content) await enhance(content, matchMedia('(prefers-color-scheme: dark)').matches);
+				if (content) await enhance(content, themeState.dark);
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : String(e);
@@ -85,27 +86,23 @@
 <svelte:head><title>{current ? current.split('/').pop() : 'Docs'} · flaiover</title></svelte:head>
 
 <div class="grid grid-cols-1 gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
-	<aside
-		class="max-h-[80vh] overflow-auto rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
-	>
+	<aside class="max-h-[80vh] overflow-auto rounded border border-line bg-surface p-3">
 		{#if tree.length}
 			<DocTree nodes={tree} {current} />
 		{:else}
-			<p class="text-sm text-zinc-500">Loading tree…</p>
+			<p class="text-sm text-muted">Loading tree…</p>
 		{/if}
 	</aside>
 	<section class="min-w-0">
 		{#if error}
-			<p class="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</p>
+			<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
 		{:else if !current}
-			<p class="text-sm text-zinc-500">
+			<p class="text-sm text-muted">
 				Pick a document from the tree. Design, docs, and wip are all here.
 			</p>
 		{:else}
 			{#if touching.length}
-				<p
-					class="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
-				>
+				<p class="mb-3 rounded border border-warn bg-warn-soft px-3 py-2 text-xs text-warn">
 					Being worked on by
 					{#each touching as w, i (w.id)}{i ? ', ' : ' '}<a
 							class="font-medium underline"
@@ -115,13 +112,11 @@
 				</p>
 			{/if}
 			{#if doc?.frontMatter}
-				<details
-					class="mb-4 rounded border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-800 dark:bg-zinc-900"
-				>
+				<details class="mb-4 rounded border border-line bg-surface p-3 text-xs">
 					<summary class="cursor-pointer font-medium">Front matter · {current}</summary>
 					<dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
 						{#each Object.entries(doc.frontMatter) as [k, v] (k)}
-							<dt class="text-zinc-500">{k}</dt>
+							<dt class="text-muted">{k}</dt>
 							<dd class="font-mono break-all">
 								{typeof v === 'object' ? JSON.stringify(v) : String(v)}
 							</dd>
@@ -129,7 +124,7 @@
 					</dl>
 				</details>
 			{/if}
-			<article bind:this={content} class="prose max-w-none prose-zinc dark:prose-invert">
+			<article bind:this={content} class="prose max-w-none">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the mounted repository, rendered client side -->
 				{@html html}
 			</article>

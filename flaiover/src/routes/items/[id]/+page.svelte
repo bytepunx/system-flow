@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
 	import { page } from '$app/state';
@@ -73,7 +74,7 @@
 		html = render(item!.body, item!.path);
 		writable = (await (await api('/api/board')).json()).writable;
 		await tick();
-		if (content) await enhance(content, matchMedia('(prefers-color-scheme: dark)').matches);
+		if (content) await enhance(content, themeState.dark);
 	}
 	$effect(() => {
 		void id;
@@ -110,23 +111,21 @@
 <svelte:head><title>{id} · flaiover</title></svelte:head>
 
 {#if error}
-	<p class="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</p>
+	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
 {:else if item}
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
 		<div class="min-w-0">
 			<h1 class="text-2xl font-semibold"><span class="font-mono">{item.id}</span> {item.title}</h1>
-			<p class="mt-1 text-sm text-zinc-500">
+			<p class="mt-1 text-sm text-muted">
 				{item.type} · {item.nature} · <span class="font-medium">{item.status}</span>
-				{#if blocked}<span class="ml-1 font-semibold text-red-600">BLOCKED</span>{/if}
+				{#if blocked}<span class="ml-1 font-semibold text-danger">BLOCKED</span>{/if}
 				{#if item.archived}· archived{/if}
 				{#if item.parent}· parent <a
 						class="underline"
 						href={resolve('/items/[id]', { id: item.parent })}>{item.parent}</a
 					>{/if}
 			</p>
-			{#if notice}<p
-					class="mt-2 rounded border border-zinc-300 bg-zinc-100 p-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-				>
+			{#if notice}<p class="mt-2 rounded border border-line-strong bg-raised p-2 text-sm">
 					{notice}
 				</p>{/if}
 			{#if writable && !item.archived}
@@ -134,42 +133,40 @@
 					{#each moves as to (to)}
 						<button
 							type="button"
-							class="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+							class="rounded border border-line-strong px-2 py-1 text-xs hover:bg-raised"
 							onclick={() => move(to)}>→ {to}</button
 						>
 					{/each}
 					{#if blocked}
 						<button
 							type="button"
-							class="rounded border border-zinc-300 px-2 py-1 text-xs"
+							class="rounded border border-line-strong px-2 py-1 text-xs"
 							onclick={() => post(`/api/items/${id}/unblock`, {})}>unblock</button
 						>
 					{:else if item.status !== 'done' && item.status !== 'cancelled'}
 						<button
 							type="button"
-							class="rounded border border-zinc-300 px-2 py-1 text-xs"
+							class="rounded border border-line-strong px-2 py-1 text-xs"
 							onclick={block}>block…</button
 						>
 					{/if}
 				</div>
 			{/if}
-			<article bind:this={content} class="prose mt-4 max-w-none prose-zinc dark:prose-invert">
+			<article bind:this={content} class="prose mt-4 max-w-none">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the mounted repository, rendered client side -->
 				{@html html}
 			</article>
 			<Threads on={item.id} {writable} />
 		</div>
 		<aside class="space-y-4 text-sm">
-			<section
-				class="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
-			>
+			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>
 				<ol class="space-y-1 text-xs">
-					<li><span class="font-mono text-zinc-500">{item.created}</span> created</li>
+					<li><span class="font-mono text-muted">{item.created}</span> created</li>
 					{#each item.transitions as t (t.at + t.to)}
 						<li>
-							<span class="font-mono text-zinc-500">{t.at}</span>
-							{t.to} <span class="text-zinc-500">by {t.by}</span>
+							<span class="font-mono text-muted">{t.at}</span>
+							{t.to} <span class="text-muted">by {t.by}</span>
 						</li>
 					{/each}
 				</ol>
@@ -178,31 +175,27 @@
 					<ul class="space-y-1 text-xs">
 						{#each item.blocked as b (b.from)}
 							<li>
-								<span class="font-mono text-zinc-500">{b.from}</span> → {b.until ?? 'open'}: {b.reason}
+								<span class="font-mono text-muted">{b.from}</span> → {b.until ?? 'open'}: {b.reason}
 							</li>
 						{/each}
 					</ul>
 				{/if}
 			</section>
 			{#if children.length}
-				<section
-					class="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
-				>
+				<section class="rounded border border-line bg-surface p-3">
 					<h2 class="mb-2 font-medium">Children</h2>
 					<ul class="space-y-1 text-xs">
 						{#each children as c (c.id)}
 							<li>
 								<a class="font-mono underline" href={resolve('/items/[id]', { id: c.id })}>{c.id}</a
-								> <span class="text-zinc-500">{c.status}</span>
+								> <span class="text-muted">{c.status}</span>
 								{c.title}
 							</li>
 						{/each}
 					</ul>
 				</section>
 			{/if}
-			<section
-				class="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
-			>
+			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">Files</h2>
 				<p class="text-xs">
 					<a class="underline" href={resolve('/docs/[...path]', { path: item.path })}>{item.path}</a
@@ -226,11 +219,11 @@
 							}}
 						>
 							<input
-								class="min-w-0 flex-1 rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+								class="min-w-0 flex-1 rounded border border-line-strong px-2 py-1 text-xs"
 								placeholder="log entry"
 								bind:value={entry}
 							/>
-							<button type="submit" class="rounded border border-zinc-300 px-2 py-1 text-xs"
+							<button type="submit" class="rounded border border-line-strong px-2 py-1 text-xs"
 								>log</button
 							>
 						</form>
@@ -238,9 +231,7 @@
 				{/if}
 			</section>
 			{#if item.tags?.length || item.owner || item.estimate}
-				<section
-					class="rounded border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-800 dark:bg-zinc-900"
-				>
+				<section class="rounded border border-line bg-surface p-3 text-xs">
 					{#if item.owner}<div>owner: {item.owner}</div>{/if}
 					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
 					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
@@ -249,5 +240,5 @@
 		</aside>
 	</div>
 {:else}
-	<p class="text-sm text-zinc-500">Loading…</p>
+	<p class="text-sm text-muted">Loading…</p>
 {/if}

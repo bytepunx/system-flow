@@ -27,15 +27,15 @@
 </script>
 
 {#if error}
-	<p class="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">
 		Cannot read the project: {error}
 	</p>
 {:else if manifest}
 	<h1 class="text-2xl font-semibold">{manifest.name}</h1>
-	{#if manifest.description}<p class="mt-1 text-zinc-600 dark:text-zinc-400">
+	{#if manifest.description}<p class="mt-1 text-ink-soft">
 			{manifest.description}
 		</p>{/if}
-	<p class="mt-1 text-xs text-zinc-500">
+	<p class="mt-1 text-xs text-muted">
 		template {manifest.template?.version ?? '?'} · {active.length} active items · {items.length -
 			active.length} archived
 	</p>
@@ -43,14 +43,14 @@
 	<div class="mt-6 overflow-x-auto">
 		<table class="min-w-full text-sm">
 			<thead>
-				<tr class="text-left text-zinc-500">
+				<tr class="text-left text-muted">
 					<th class="py-2 pr-4"></th>
 					{#each statuses as s (s)}<th class="py-2 pr-4 font-medium">{s}</th>{/each}
 				</tr>
 			</thead>
 			<tbody>
 				{#each ['epic', 'story', 'task'] as t (t)}
-					<tr class="border-t border-zinc-200 dark:border-zinc-800">
+					<tr class="border-t border-line">
 						<td class="py-2 pr-4 font-medium">{t}s</td>
 						{#each statuses as s (s)}<td class="py-2 pr-4 tabular-nums">{count(t, s)}</td>{/each}
 					</tr>
@@ -59,5 +59,5 @@
 		</table>
 	</div>
 {:else}
-	<p class="text-sm text-zinc-500">Loading…</p>
+	<p class="text-sm text-muted">Loading…</p>
 {/if}

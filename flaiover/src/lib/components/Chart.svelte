@@ -57,5 +57,5 @@
 <div
 	bind:this={el}
 	style="height: {height}px; background: {theme.surface}"
-	class="w-full rounded border border-zinc-200 dark:border-zinc-800"
+	class="w-full rounded border border-line"
 ></div>

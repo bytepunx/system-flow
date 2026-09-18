@@ -75,22 +75,21 @@
 		><input type="checkbox" bind:checked={all} /> epics and tasks too</label
 	>
 	{#if board && !board.writable}
-		<span
-			class="rounded bg-amber-100 px-2 py-1 text-xs text-amber-900 dark:bg-amber-900 dark:text-amber-100"
+		<span class="rounded bg-warn-soft px-2 py-1 text-xs text-warn"
 			>read-only: flai is not available to the dashboard</span
 		>
 	{/if}
 	{#if board?.order.length}
-		<span class="text-xs text-zinc-500">pull order: {board.order.join(', ')}</span>
+		<span class="text-xs text-muted">pull order: {board.order.join(', ')}</span>
 	{/if}
 </div>
 {#if notice}
 	<p
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'
-			? 'border-red-300 bg-red-50 text-red-800'
+			? 'border-danger bg-danger-soft text-danger'
 			: notice.kind === 'warn'
-				? 'border-amber-300 bg-amber-50 text-amber-900'
-				: 'border-emerald-300 bg-emerald-50 text-emerald-900'}"
+				? 'border-warn bg-warn-soft text-warn'
+				: 'border-good bg-good-soft text-good'}"
 	>
 		{notice.text}
 	</p>
@@ -99,9 +98,9 @@
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
 		{#each states as state (state)}
 			<section
-				class="min-h-40 rounded border bg-white p-2 dark:bg-zinc-900 {over === state
-					? 'border-blue-400'
-					: 'border-zinc-200 dark:border-zinc-800'}"
+				class="min-h-40 rounded border bg-surface p-2 {over === state
+					? 'border-accent'
+					: 'border-line '}"
 				role="group"
 				aria-label={state}
 				ondragover={(e) => {
@@ -124,8 +123,8 @@
 					{#if board.wip_limits[state]}
 						<span
 							class="text-xs {count(state) > board.wip_limits[state]
-								? 'text-red-600'
-								: 'text-zinc-500'}">{count(state)}/{board.wip_limits[state]}</span
+								? 'text-danger'
+								: 'text-muted'}">{count(state)}/{board.wip_limits[state]}</span
 						>
 					{/if}
 				</h2>
@@ -135,20 +134,20 @@
 						draggable={board.writable}
 						ondragstart={() => (dragging = c.id)}
 						ondragend={() => (dragging = null)}
-						class="mb-2 block rounded border border-zinc-200 bg-zinc-50 p-2 text-xs hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 {dragging ===
+						class="mb-2 block rounded border border-line bg-ground p-2 text-xs hover:border-line-strong {dragging ===
 						c.id
 							? 'opacity-50'
 							: ''}"
 					>
 						<div class="flex items-center justify-between">
 							<span class="font-mono font-medium">{c.id}</span>
-							<span class="text-zinc-500">{age(c.age_seconds)}</span>
+							<span class="text-muted">{age(c.age_seconds)}</span>
 						</div>
 						<div class="mt-1 leading-snug">{c.title}</div>
-						<div class="mt-1 flex gap-2 text-[10px] text-zinc-500">
+						<div class="mt-1 flex gap-2 text-[10px] text-muted">
 							<span>{c.nature}</span>
 							{#if c.type !== 'story'}<span>{c.type}</span>{/if}
-							{#if c.blocked}<span class="font-semibold text-red-600">BLOCKED</span>{/if}
+							{#if c.blocked}<span class="font-semibold text-danger">BLOCKED</span>{/if}
 						</div>
 					</a>
 				{/each}
@@ -156,5 +155,5 @@
 		{/each}
 	</div>
 {:else}
-	<p class="text-sm text-zinc-500">Loading…</p>
+	<p class="text-sm text-muted">Loading…</p>
 {/if}

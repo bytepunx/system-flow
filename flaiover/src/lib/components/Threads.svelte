@@ -66,43 +66,43 @@
 		if (await post(`/api/threads/${id}/reply`, { text: t })) replies[id] = '';
 	}
 	const badge: Record<Thread['status'], string> = {
-		open: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
-		answered: 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100',
-		resolved: 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200'
+		open: 'bg-warn-soft text-warn  ',
+		answered: 'bg-info-soft text-info  ',
+		resolved: 'bg-raised text-ink-soft  '
 	};
 </script>
 
 <section class="mt-6 text-sm" data-threads={on}>
 	<div class="flex items-center gap-3">
 		<h2 class="font-medium">Threads</h2>
-		<label class="text-xs text-zinc-500"
+		<label class="text-xs text-muted"
 			><input type="checkbox" bind:checked={showResolved} /> show resolved</label
 		>
 		{#if writable}
 			<button
 				type="button"
-				class="ml-auto rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700"
+				class="ml-auto rounded border border-line-strong px-2 py-1 text-xs"
 				onclick={() => (composing = !composing)}>{composing ? 'cancel' : 'new thread'}</button
 			>
 		{/if}
 	</div>
-	{#if notice}<p class="mt-2 text-xs text-red-700">{notice}</p>{/if}
+	{#if notice}<p class="mt-2 text-xs text-danger">{notice}</p>{/if}
 	{#if composing}
 		<form
-			class="mt-3 space-y-2 rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+			class="mt-3 space-y-2 rounded border border-line bg-surface p-3"
 			onsubmit={(e) => {
 				e.preventDefault();
 				void open();
 			}}
 		>
 			<input
-				class="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+				class="w-full rounded border border-line-strong px-2 py-1 text-sm"
 				placeholder="title"
 				bind:value={title}
 			/>
 			{#if headings.length}
 				<select
-					class="w-full rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+					class="w-full rounded border border-line-strong px-2 py-1 text-xs"
 					bind:value={heading}
 				>
 					<option value="">whole document</option>
@@ -110,26 +110,26 @@
 				</select>
 			{/if}
 			<textarea
-				class="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+				class="w-full rounded border border-line-strong px-2 py-1 text-sm"
 				rows="3"
 				placeholder="what do you want to ask or say?"
 				bind:value={text}></textarea>
-			<button type="submit" class="rounded bg-zinc-800 px-3 py-1 text-xs text-white">post</button>
+			<button type="submit" class="rounded bg-primary px-3 py-1 text-xs text-on-primary"
+				>post</button
+			>
 		</form>
 	{/if}
 	{#if threads.length === 0}
-		<p class="mt-2 text-xs text-zinc-500">No threads here.</p>
+		<p class="mt-2 text-xs text-muted">No threads here.</p>
 	{/if}
 	{#each threads as t (t.id)}
-		<article
-			class="mt-3 rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
-		>
+		<article class="mt-3 rounded border border-line bg-surface p-3">
 			<header class="flex flex-wrap items-center gap-2">
-				<span class="font-mono text-xs text-zinc-500">{t.id}</span>
+				<span class="font-mono text-xs text-muted">{t.id}</span>
 				<span class="font-medium">{t.title}</span>
 				<span class="rounded px-1.5 py-0.5 text-[10px] uppercase {badge[t.status]}">{t.status}</span
 				>
-				{#if t.anchor.heading}<span class="text-xs text-zinc-500">§ {t.anchor.heading}</span>{/if}
+				{#if t.anchor.heading}<span class="text-xs text-muted">§ {t.anchor.heading}</span>{/if}
 				{#if t.anchor.item && t.anchor.item !== on}
 					<a class="text-xs underline" href={resolve('/items/[id]', { id: t.anchor.item })}
 						>{t.anchor.item}</a
@@ -139,7 +139,7 @@
 			<ol class="mt-2 space-y-2">
 				{#each t.entries as e (e.at + e.author)}
 					<li class="text-sm">
-						<div class="text-xs text-zinc-500">
+						<div class="text-xs text-muted">
 							<span class="font-mono">{e.at}</span>
 							{e.author}
 						</div>
@@ -156,17 +156,17 @@
 					}}
 				>
 					<input
-						class="min-w-0 flex-1 rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+						class="min-w-0 flex-1 rounded border border-line-strong px-2 py-1 text-xs"
 						placeholder="reply"
 						bind:value={replies[t.id]}
 					/>
-					<button type="submit" class="rounded border border-zinc-300 px-2 py-1 text-xs"
+					<button type="submit" class="rounded border border-line-strong px-2 py-1 text-xs"
 						>reply</button
 					>
 					{#if t.status !== 'resolved'}
 						<button
 							type="button"
-							class="rounded border border-zinc-300 px-2 py-1 text-xs"
+							class="rounded border border-line-strong px-2 py-1 text-xs"
 							onclick={() => post(`/api/threads/${t.id}/resolve`, {})}>resolve</button
 						>
 					{/if}

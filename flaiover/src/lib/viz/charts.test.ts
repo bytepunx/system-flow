@@ -154,7 +154,7 @@ describe('chart builders', () => {
 		};
 		expect(o.series.map((s) => s.name)).toEqual(['feature', 'improvement']);
 		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[0]);
-		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[2]);
+		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[5]);
 		expect(o.series[0].markLine?.data.map((d) => [d.name, d.yAxis])).toEqual([
 			['p50', 1],
 			['p85', 1.08]

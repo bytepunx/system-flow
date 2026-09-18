@@ -12,7 +12,8 @@
 	let epic = $state('');
 	let report = $state<Report | null>(null);
 	let error = $state<string | null>(null);
-	let dark = $state(false);
+	import { themeState } from '$lib/theme.svelte';
+	const dark = $derived(themeState.dark);
 	let epics = $state<{ id: string; title: string }[]>([]);
 
 	const kind = $derived(
@@ -35,10 +36,6 @@
 		report = await r.json();
 	}
 	onMount(() => {
-		const mq = matchMedia('(prefers-color-scheme: dark)');
-		dark = mq.matches;
-		const onScheme = (e: MediaQueryListEvent) => (dark = e.matches);
-		mq.addEventListener('change', onScheme);
 		const es = new EventSource('/api/events');
 		es.addEventListener('change', () => load());
 		(async () => {
@@ -49,7 +46,6 @@
 		})();
 		return () => {
 			es.close();
-			mq.removeEventListener('change', onScheme);
 		};
 	});
 </script>
@@ -61,16 +57,15 @@
 		<a
 			href={resolve('/charts/[kind]', { kind: k })}
 			class="rounded px-2 py-1 text-sm {k === kind
-				? 'bg-zinc-200 font-medium dark:bg-zinc-800'
-				: 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'}"
-			>{TITLES[k]}</a
+				? 'bg-raised font-medium '
+				: 'text-ink-soft hover:text-ink '}">{TITLES[k]}</a
 		>
 	{/each}
 </div>
 <div class="mb-4 flex flex-wrap items-center gap-3 text-sm">
 	<label
 		>window <select
-			class="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+			class="rounded border border-line-strong bg-surface px-2 py-1"
 			bind:value={since}
 			onchange={load}
 			>{#each ['7d', '30d', '90d', '365d'] as w (w)}<option value={w}>{w}</option>{/each}</select
@@ -78,7 +73,7 @@
 	>
 	<label
 		>type <select
-			class="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+			class="rounded border border-line-strong bg-surface px-2 py-1"
 			bind:value={type}
 			onchange={load}
 			>{#each ['story', 'task', 'epic'] as ty (ty)}<option value={ty}>{ty}</option>{/each}</select
@@ -86,9 +81,7 @@
 	>
 	{#if kind !== 'cfd' && kind !== 'throughput' && kind !== 'estimates'}
 		<label
-			>epic <select
-				class="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
-				bind:value={epic}
+			>epic <select class="rounded border border-line-strong bg-surface px-2 py-1" bind:value={epic}
 				><option value="">all</option>{#each epics as e (e.id)}<option value={e.id}
 						>{e.id} {e.title}</option
 					>{/each}</select
@@ -96,7 +89,7 @@
 		>
 	{/if}
 	{#if s}
-		<span class="text-xs text-zinc-500"
+		<span class="text-xs text-muted"
 			>completed {s.completed} · cancelled {s.cancelled} · WIP {s.wip} · throughput {s.throughput_per_week.toFixed(
 				1
 			)}/week · cycle p50 {human(s.cycle_time.p50_seconds)} p85 {human(
@@ -106,7 +99,7 @@
 	{/if}
 </div>
 {#if error}
-	<p class="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</p>
+	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
 {:else if option}
 	<h1 class="mb-2 text-xl font-semibold">{TITLES[kind]}</h1>
 	<Chart
@@ -121,12 +114,12 @@
 		{/await}
 	{/if}
 	<details class="mt-4 text-xs">
-		<summary class="cursor-pointer text-zinc-500">table view</summary>
+		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
 			{#if kind === 'aging' && report}
 				<table class="min-w-full">
 					<thead
-						><tr class="text-left text-zinc-500"
+						><tr class="text-left text-muted"
 							><th class="pr-4">item</th><th class="pr-4">status</th><th class="pr-4">age</th><th
 								>title</th
 							></tr
@@ -142,7 +135,7 @@
 			{:else if kind === 'throughput' && report}
 				<table class="min-w-full">
 					<thead
-						><tr class="text-left text-zinc-500"><th class="pr-4">week</th><th>done</th></tr></thead
+						><tr class="text-left text-muted"><th class="pr-4">week</th><th>done</th></tr></thead
 					><tbody
 						>{#each report.throughput as w (w.week)}<tr
 								><td class="pr-4 font-mono">{w.week}</td><td>{w.done}</td></tr
@@ -152,7 +145,7 @@
 			{:else if report}
 				<table class="min-w-full">
 					<thead
-						><tr class="text-left text-zinc-500"
+						><tr class="text-left text-muted"
 							><th class="pr-4">item</th><th class="pr-4">nature</th><th class="pr-4">completed</th
 							><th class="pr-4">cycle</th><th class="pr-4">lead</th><th>blocked</th></tr
 						></thead
@@ -172,5 +165,5 @@
 		</div>
 	</details>
 {:else}
-	<p class="text-sm text-zinc-500">Loading…</p>
+	<p class="text-sm text-muted">Loading…</p>
 {/if}

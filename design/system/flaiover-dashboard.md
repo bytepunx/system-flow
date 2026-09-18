@@ -100,6 +100,27 @@ flaiover/
 └── tests/                # vitest unit, playwright e2e against the template sample repo
 ```
 
+## Theme (S-0044)
+
+The dashboard wears the brand palette through a token layer in `src/routes/layout.css`: CSS custom properties per theme, mapped to Tailwind utilities with `@theme inline` (`bg-ground`, `text-ink`, `border-line`, `text-accent`, ...). Dark is a selected theme: `data-theme` on `<html>`, stamped before first paint from `localStorage` (`flaiover-theme`) or the system preference, cycled by the button in the navigation (`src/lib/theme.svelte.ts`). Pages and components use tokens only; `src/lib/theme.test.ts` parses the stylesheet and checks every text pair at 4.5:1 and every control pair at 3:1.
+
+| Token | Role | Light | Dark |
+|-------|------|-------|------|
+| ground | page background | `#f5f2ee` (warm off-white from the brown hue) | `#0f1108` (brand) |
+| surface | cards, header | `#fbfaf8` | `#241909` (brand) |
+| raised | hover and code backgrounds | `#ece7e1` | `#332619` |
+| ink | body text | `#0f1108` (brand) | `#f5f2ee` |
+| ink-soft | secondary text | `#3a332e` | `#d8cfc6` |
+| muted | captions, metadata | `#645853` (brand) | `#a09088` |
+| line / line-strong | card borders / input borders | `#d9d2cb` / `#8a7d73` | `#3a2f27` / `#7a685c` |
+| primary / on-primary | buttons, active states | `#054a91` (brand) / `#ffffff` | `#0660bb` / `#ffffff` |
+| accent / accent-strong | links, focus ring / indicators and badges | `#17788c` / `#23b5d3` (brand) | `#23b5d3` (brand) |
+| good, warn, danger, info (+ -soft) | status text on status backgrounds, always with a label | `#1d6b3a`, `#7a4a00`, `#9b1c1c`, `#0f5d70` | `#7fd39a`, `#f0c36b`, `#f28b82`, `#6fd0e6` |
+
+Contrast (WCAG): ink on ground 17.0 light and 17.0 dark; muted on ground 6.1 and 8.0; accent on ground 4.6 and 7.8; white on primary 8.8 and 6.2; line-strong on ground 3.6 and 3.6; primary against ground 7.9 and 3.1. `#23b5d3` reads at 2.2:1 on the light ground, so light-theme text and focus use the darker cyan step `#17788c` and the brand cyan is kept for indicators and badge fills with ink text (7.8:1).
+
+Charts (`src/lib/viz/palette.ts`) follow the same brand: slot 0 is the blue family, slot 2 the cyan family, slot 7 the brown family, with supplementary hues stepped to the light band (L 0.43–0.77) and the dark band; both palettes pass the dataviz validator against the chart surfaces (`#fbfaf8`, `#241909`) on 2026-09-18. Workflow states and natures keep fixed slots so an entity's colour never changes with the filter.
+
 ## Workbench (E-0006)
 
 The dashboard becomes the designer's workbench: authenticated (ADR-0018), able to edit documents and commit through flai, host threads anchored to documents and items (ADR-0020), show who is working on what (`touches`, ADR-0019), review and accept stories, and expose `flai mcp` over HTTP for remote agents.

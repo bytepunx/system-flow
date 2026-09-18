@@ -2,6 +2,8 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
+	import { themeState } from '$lib/theme.svelte';
 
 	let { children } = $props();
 	const nav = [
@@ -12,20 +14,32 @@
 		{ href: resolve('/adrs'), label: 'ADRs' },
 		{ href: resolve('/search'), label: 'Search' }
 	];
+	const modeLabel = {
+		system: 'theme: system',
+		light: 'theme: light',
+		dark: 'theme: dark'
+	} as const;
+	onMount(() => themeState.start());
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /><title>flaiover</title></svelte:head>
 
-<div class="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-	<header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+<div class="min-h-screen bg-ground text-ink">
+	<header class="border-b border-line bg-surface">
 		<nav class="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-			<span class="font-semibold tracking-tight">flaiover</span>
+			<span class="font-semibold tracking-tight text-accent">flaiover</span>
 			{#each nav as { href, label } (href)}
-				<a
-					class="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-					{href}>{label}</a
-				>
+				<a class="text-sm text-ink-soft hover:text-accent" {href}>{label}</a>
 			{/each}
+			<button
+				type="button"
+				class="ml-auto rounded border border-line px-2 py-1 text-xs text-muted hover:text-ink"
+				title="Cycle system, light, dark"
+				aria-label={modeLabel[themeState.mode]}
+				onclick={() => themeState.cycle()}
+			>
+				{modeLabel[themeState.mode]}
+			</button>
 		</nav>
 	</header>
 	<main class="mx-auto max-w-6xl px-4 py-6">

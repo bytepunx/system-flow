@@ -48,7 +48,7 @@
 	}}
 >
 	<input
-		class="w-full max-w-lg rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+		class="w-full max-w-lg rounded border border-line-strong bg-surface px-3 py-2 text-sm"
 		placeholder="item ID, title, or words in the body"
 		bind:value={q}
 		oninput={run}
@@ -56,19 +56,19 @@
 	<label class="flex items-center gap-2 text-sm"
 		><input type="checkbox" bind:checked={docs} onchange={run} /> include docs/</label
 	>
-	{#if indexed}<span class="text-xs text-zinc-500">{indexed} files indexed</span>{/if}
+	{#if indexed}<span class="text-xs text-muted">{indexed} files indexed</span>{/if}
 </form>
 <ul class="mt-4 space-y-3">
 	{#each hits as h (h.path)}
-		<li class="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+		<li class="rounded border border-line bg-surface p-3">
 			<a class="font-medium underline" href={href(h)}>{h.itemId ? `${h.itemId} ` : ''}{h.title}</a>
-			<span class="ml-2 text-xs text-zinc-500"
+			<span class="ml-2 text-xs text-muted"
 				>{h.scope}{h.type ? ` · ${h.type}` : ''}{h.status ? ` · ${h.status}` : ''}</span
 			>
-			<p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{h.snippet}</p>
-			<p class="mt-1 font-mono text-xs text-zinc-400">{h.path}</p>
+			<p class="mt-1 text-sm text-ink-soft">{h.snippet}</p>
+			<p class="mt-1 font-mono text-xs text-muted">{h.path}</p>
 		</li>
 	{:else}
-		{#if q.trim()}<li class="text-sm text-zinc-500">No results.</li>{/if}
+		{#if q.trim()}<li class="text-sm text-muted">No results.</li>{/if}
 	{/each}
 </ul>

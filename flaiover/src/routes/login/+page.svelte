@@ -41,9 +41,9 @@
 	});
 </script>
 
-<div class="mx-auto mt-24 max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+<div class="mx-auto mt-24 max-w-md rounded-lg border border-line bg-surface p-6 shadow-sm">
 	<h1 class="text-lg font-semibold">Log in to flaiover</h1>
-	<p class="mt-2 text-sm text-slate-600">
+	<p class="mt-2 text-sm text-ink-soft">
 		Paste the project token, or open the login link that <code>flai dashboard token</code> prints.
 	</p>
 	<form
@@ -54,18 +54,18 @@
 		}}
 	>
 		<input
-			class="flex-1 rounded border border-slate-300 px-3 py-2 font-mono text-sm"
+			class="flex-1 rounded border border-line-strong px-3 py-2 font-mono text-sm"
 			type="password"
 			placeholder="token"
 			bind:value={token}
 			autocomplete="off"
 		/>
 		<button
-			class="rounded bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
+			class="rounded bg-primary px-4 py-2 text-sm text-on-primary disabled:opacity-50"
 			disabled={busy || !token}
 		>
 			Log in
 		</button>
 	</form>
-	{#if error}<p class="mt-3 text-sm text-red-700">{error}</p>{/if}
+	{#if error}<p class="mt-3 text-sm text-danger">{error}</p>{/if}
 </div>
