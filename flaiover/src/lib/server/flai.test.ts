@@ -21,6 +21,15 @@ describe('board reader', () => {
 		expect(s4.blocked).toBe(false);
 		expect(b.columns.done).toEqual([]); // done items in the fixture are archived
 	});
+	it('names the parent of every card that has one', async () => {
+		const b = await board(new Repo(fixture), new Date('2026-09-01T12:00:00Z'));
+		const [story, task] = b.columns['in-progress'];
+		expect(story).toMatchObject({ id: 'S-004', parent: 'E-001', parent_title: 'Epic' });
+		expect(task).toMatchObject({ id: 'T-003', parent: 'S-004', parent_title: 'Four' });
+		const epic = b.columns.backlog.find((c) => c.id === 'E-001')!;
+		expect(epic.parent).toBeUndefined();
+		expect(epic.parent_title).toBeUndefined();
+	});
 });
 
 describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {

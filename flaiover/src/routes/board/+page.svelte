@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
-	import { resolve } from '$app/paths';
+	import BoardCard from '$lib/components/BoardCard.svelte';
 	import { onMount } from 'svelte';
-	import { age } from '$lib/age';
 
 	type Card = {
 		id: string;
@@ -11,6 +10,7 @@
 		title: string;
 		nature: string;
 		parent?: string;
+		parent_title?: string;
 		status: string;
 		blocked: boolean;
 		age_seconds: number;
@@ -163,27 +163,13 @@
 					{/if}
 				</h2>
 				{#each cards(state) as c (c.id)}
-					<a
-						href={resolve('/items/[id]', { id: c.id })}
+					<BoardCard
+						card={c}
 						draggable={board.writable}
+						dragging={dragging === c.id}
 						ondragstart={() => (dragging = c.id)}
 						ondragend={() => (dragging = null)}
-						class="mb-2 block rounded border border-line bg-ground p-2 text-xs hover:border-line-strong {dragging ===
-						c.id
-							? 'opacity-50'
-							: ''}"
-					>
-						<div class="flex items-center justify-between">
-							<span class="font-mono font-medium">{c.id}</span>
-							<span class="text-muted">{age(c.age_seconds)}</span>
-						</div>
-						<div class="mt-1 leading-snug">{c.title}</div>
-						<div class="mt-1 flex gap-2 text-[10px] text-muted">
-							<span>{c.nature}</span>
-							{#if c.type !== 'story'}<span>{c.type}</span>{/if}
-							{#if c.blocked}<span class="font-semibold text-danger">BLOCKED</span>{/if}
-						</div>
-					</a>
+					/>
 				{/each}
 			</section>
 		{/each}

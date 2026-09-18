@@ -11,6 +11,8 @@ export type Card = {
 	title: string;
 	nature: string;
 	parent?: string;
+	/** Title of the parent item, so a card can name its epic or story without a second request. */
+	parent_title?: string;
 	status: string;
 	blocked: boolean;
 	entered_at: string;
@@ -42,7 +44,10 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 		// no board.md: defaults
 	}
 	const columns: Record<string, Card[]> = Object.fromEntries(STATES.map((s) => [s, []]));
-	for (const it of await repo.items()) {
+	const items = await repo.items();
+	// Parents are looked up among every item, archived ones included.
+	const titles = new Map(items.map((it) => [it.id, it.title]));
+	for (const it of items) {
 		if (it.archived) continue;
 		const entered = enteredAt(it);
 		(columns[it.status] ??= []).push({
@@ -51,6 +56,7 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 			title: it.title,
 			nature: it.nature,
 			parent: it.parent,
+			parent_title: it.parent ? titles.get(it.parent) : undefined,
 			status: it.status,
 			blocked: (it.blocked ?? []).some((b) => !b.until),
 			entered_at: entered,

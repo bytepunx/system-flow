@@ -26,7 +26,7 @@ flowchart LR
 | Route | View | Data |
 |-------|------|------|
 | `/` | Overview: WIP by column, throughput this week, aging items, epics burn-up sparkline | `/api/stats` |
-| `/board` | Kanban board: one column per state with WIP count against the limit, story cards (epics and tasks on request) with age in column, nature, blocked flag; drag to transition, refused moves show the rule; refreshes on SSE (S-0013) | `/api/board`, `POST /api/items/:id/move` |
+| `/board` | Kanban board: one column per state with WIP count against the limit, story cards (epics and tasks on request) with age in column, nature, blocked flag, and the parent's ID bottom right with its title as tooltip and accessible name (`BoardCard.svelte`, S-0048); drag to transition, refused moves show the rule; refreshes on SSE (S-0013) | `/api/board`, `POST /api/items/:id/move` |
 | `/items/:id` | Item detail: front matter, rendered body, children, transitions timeline, blocked intervals, narrative link, and actions for allowed moves, block, unblock, and a narrative log entry (S-0013) | `/api/items/:id`, `POST .../move`, `.../block`, `.../unblock`, `POST /api/streams/:id/log` |
 | `/charts/cycle-time` | Cycle time scatter by nature with p50 and p85 lines (S-0014) | `/api/stats` |
 | `/charts/burn-up` | Scope and done, per epic or total | `/api/stats` |
@@ -58,7 +58,7 @@ Every chart has the same filter bar: window, type, and epic where the chart supp
 | `GET /api/events` | Server-sent events: `ready` once, then `change` with `{ path }` per changed file under design, docs, wip, or the manifest |
 | `GET /api/search?q=&docs=` | `{ query, indexed, hits[] }`; each hit has `path`, `kind`, `itemId?`, `title`, `scope`, `status?`, `type?`, `score`, `snippet`, `route` |
 | `GET /api/docs/adrs` | ADR front matter: `id`, `title`, `status`, `date`, `supersedes[]`, `supersededBy[]`, `path` |
-| `GET /api/board` | `{ wip_limits, order, writable, columns: { <state>: card[] } }`; a card has `id`, `type`, `title`, `nature`, `parent`, `status`, `blocked`, `age_seconds`, `entered_at` |
+| `GET /api/board` | `{ wip_limits, order, writable, columns: { <state>: card[] } }`; a card has `id`, `type`, `title`, `nature`, `parent`, `parent_title` (the parent item's title, absent without a parent; S-0048), `status`, `blocked`, `age_seconds`, `entered_at` |
 | `POST /api/items/:id/move` `{ to, reason?, by? }` | flai move; `{ id, status, warnings[] }` or 400 `{ error }` with the rule. A story moved to done is accepted: the response also carries `merged`, `tags`, `pushed`, `push_error` (S-0046) |
 | `GET /api/items/:id/acceptance` | `flai accept --dry-run`: `{ plan, branch, blockers[] }`, shown in the confirmation dialog before a story is dropped on done |
 | `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
