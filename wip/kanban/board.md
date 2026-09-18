@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0038
   - S-0039
   - S-0040
   - S-0041

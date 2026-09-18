@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5 - 2026-09-18
+
+- S-0038 Comment threads and answers as files under wip (patch).
+
 ## 1.0.4 - 2026-09-18
 
 - S-0037 Story branches with wip on main, stream sync, and the touches flag (patch).
