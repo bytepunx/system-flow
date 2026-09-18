@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.8 - 2026-09-18
+
+- S-0051 Accepting from the dashboard shows uncommitted changes outside wip and lets the designer include them (patch).
+
 ## 1.0.7 - 2026-09-18
 
 - S-0049 A story is ready without tasks; the agent that pulls it writes them (patch).
