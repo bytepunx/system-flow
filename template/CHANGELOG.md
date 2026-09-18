@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.6 - 2026-09-18
+
+- S-0039 flai mcp: inbox, reply, read, and move tools with the template .mcp.json (patch).
+
 ## 1.0.5 - 2026-09-18
 
 - S-0038 Comment threads and answers as files under wip (patch).
