@@ -3,11 +3,11 @@ id: S-0037
 type: story
 nature: feature
 title: Story branches with wip on main, stream sync, and the touches flag
-status: review
+status: done
 parent: E-0006
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-17T20:27:32Z
+updated: 2026-09-18T04:55:23Z
 transitions:
   - to: ready
     at: 2026-09-17T20:20:10Z
@@ -17,6 +17,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-09-17T20:27:32Z
+    by: alex
+  - to: done
+    at: 2026-09-18T04:55:23Z
     by: alex
 tags: [dashboard, cli]
 touches: [flai/internal/workitem, flai/cmd, flai/internal/check, flaiover/src/routes/docs, docs/users/flai.md]

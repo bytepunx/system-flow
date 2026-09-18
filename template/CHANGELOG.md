@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4 - 2026-09-18
+
+- S-0037 Story branches with wip on main, stream sync, and the touches flag (patch).
+
 ## 1.0.3 - 2026-09-17
 
 - S-0035 flai dashboard runs from a private registry or a local build (patch).
