@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "flai": {
-      "command": "scripts/flai.sh",
+      "command": "flai",
       "args": ["mcp"]
     }
   }
