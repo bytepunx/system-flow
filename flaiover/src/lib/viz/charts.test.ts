@@ -8,6 +8,7 @@ import {
 	estimates,
 	human,
 	KINDS,
+	normalise,
 	stateShare,
 	throughput,
 	timeInState,
@@ -194,6 +195,18 @@ describe('chart builders', () => {
 		expect(ag.series[0].data[0].value).toBe(1.08);
 		const es = estimates(report, light) as { series: { data: { value: number[] }[] }[] };
 		expect(es.series[0].data[0].value).toEqual([20, 26]);
+	});
+	it('draws every chart from a report whose lists are null (older flai, empty selection)', () => {
+		const empty = {
+			...report,
+			items: null,
+			throughput: null,
+			cfd: null,
+			aging: null,
+			burnup: null
+		} as unknown as Report;
+		for (const kind of KINDS) expect(() => build(kind, empty, light)).not.toThrow();
+		expect(normalise(empty).aging).toEqual([]);
 	});
 	it('dark theme swaps the palette and surface', () => {
 		expect(dark.series[0]).toBe(CATEGORICAL.dark[0]);

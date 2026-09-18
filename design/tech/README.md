@@ -26,7 +26,7 @@ One file per technology. Each records the version in use, where it is used, why 
 | yaml, chokidar | 2.9, 5.0 | flaiover | [sveltekit.md](sveltekit.md) |
 | markdown-it, shiki, mermaid | 15.0, 4.4, 12.0 | flaiover | [markdown.md](markdown.md) |
 | MiniSearch | 7.2 | flaiover | [search.md](search.md) |
-| Vitest, Playwright | 4.1, 1.60 | flaiover | [sveltekit.md](sveltekit.md) |
+| Vitest, jsdom, Playwright | 4.1, 30.1, 1.60 | flaiover | [sveltekit.md](sveltekit.md) |
 | Docker | 29 (host), image on node:24-alpine | flaiover, flai | [docker.md](docker.md) |
 | Git | 2.47 (host) | flai | [go-libraries.md](go-libraries.md) |
 | GitHub Actions, GHCR | n/a | monorepo | [ci.md](ci.md) |

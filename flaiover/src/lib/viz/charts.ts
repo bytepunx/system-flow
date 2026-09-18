@@ -42,6 +42,22 @@ export type ItemMetrics = {
 	estimate_error?: number;
 	age_seconds?: number;
 };
+/**
+ * Older flai builds emit null for empty lists; give every list the charts
+ * iterate a value so a selection with no items draws an empty chart instead
+ * of throwing (S-0045).
+ */
+export function normalise(r: Report): Report {
+	return {
+		...r,
+		items: r.items ?? [],
+		throughput: r.throughput ?? [],
+		cfd: r.cfd ?? [],
+		aging: r.aging ?? [],
+		burnup: r.burnup ?? {}
+	};
+}
+
 export type Report = {
 	generated_at: string;
 	type: string;
@@ -420,7 +436,8 @@ export function estimates(r: Report, t: Theme): Opt {
 	});
 }
 
-export function build(kind: Kind, r: Report, t: Theme, epic?: string): Opt {
+export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt {
+	const r = normalise(report);
 	switch (kind) {
 		case 'cycle-time':
 			return cycleTime(r, t, epic);

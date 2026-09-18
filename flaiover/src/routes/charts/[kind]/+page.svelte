@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import Chart from '$lib/components/Chart.svelte';
-	import { build, human, KINDS, TITLES, type Kind, type Report } from '$lib/viz/charts';
+	import { build, human, KINDS, normalise, TITLES, type Kind, type Report } from '$lib/viz/charts';
 	import { theme } from '$lib/viz/palette';
 
 	let since = $state('30d');
@@ -33,7 +33,7 @@
 			report = null;
 			return;
 		}
-		report = await r.json();
+		report = normalise(await r.json());
 	}
 	onMount(() => {
 		const es = new EventSource('/api/events');

@@ -1,7 +1,9 @@
 package metrics
 
 import (
+	"encoding/json"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,5 +120,21 @@ func TestHuman(t *testing.T) {
 		if got := Human(in); got != want {
 			t.Errorf("Human(%v) = %s want %s", in, got, want)
 		}
+	}
+}
+
+func TestEmptyReportSerialisesListsNotNull(t *testing.T) {
+	rep := Compute(nil, Options{Type: "task", Now: time.Date(2026, 9, 18, 0, 0, 0, 0, time.UTC)})
+	data, err := json.Marshal(rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"items":[]`, `"throughput":[]`, `"cfd":[]`, `"aging":[]`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("missing %s in %s", want, data)
+		}
+	}
+	if strings.Contains(string(data), `"burnup":null`) {
+		t.Errorf("burnup must be an object: %s", data)
 	}
 }

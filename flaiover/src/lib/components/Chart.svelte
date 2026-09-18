@@ -10,7 +10,9 @@
 		height = 360
 	}: { option: Record<string, unknown>; theme: Theme; height?: number } = $props();
 	let el: HTMLDivElement;
-	let chart: import('echarts/core').ECharts | null = null;
+	// Reactive (raw: the instance itself is not proxied) so the redraw effect
+	// runs again once the asynchronously created instance exists.
+	let chart = $state.raw<import('echarts/core').ECharts | null>(null);
 
 	onMount(() => {
 		let disposed = false;
@@ -37,7 +39,6 @@
 			]);
 			if (disposed) return;
 			chart = echarts.init(el, undefined, { renderer: 'canvas' });
-			chart.setOption(option);
 		})();
 		const ro = new ResizeObserver(() => chart?.resize());
 		ro.observe(el);
@@ -49,8 +50,16 @@
 		};
 	});
 
+	// Read the props before touching the instance: an optional chain on a
+	// null instance would skip them, and the effect would never track them
+	// (S-0045). notMerge replaces the previous chart type entirely.
 	$effect(() => {
-		chart?.setOption(option, true);
+		const next = option;
+		chart?.setOption(next, true);
+	});
+	$effect(() => {
+		void height;
+		chart?.resize();
 	});
 </script>
 

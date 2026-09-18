@@ -13,7 +13,8 @@ status: active
 | `@sveltejs/adapter-node` | 5.5 | Node server output for the Docker image |
 | `vite` | 8 | Build and dev server |
 | `typescript` | 6 | Everywhere, `strict` on |
-| `vitest` | 4.1 | Unit tests, including the metrics port fixture test |
+| `vitest` | 4.1 | Unit tests, including the metrics port fixture test; a `client` project runs `*.svelte.test.ts` component tests in jsdom |
+| `jsdom` | 30.1 | DOM for Svelte component tests (S-0045) |
 | `@playwright/test` | 1.60 | End-to-end against the template sample repo |
 | `yaml` | 2.9 | Front matter and manifest parsing on the server |
 | `chokidar` | 5.0 | File watching behind `/api/events` |

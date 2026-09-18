@@ -179,6 +179,23 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	}
 	rep.CFD = cfd(items, opt.Now)
 	rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85)
+	// Empty lists serialise as [] rather than null, so consumers can iterate
+	// without guarding every field (S-0045).
+	if rep.Items == nil {
+		rep.Items = []ItemMetrics{}
+	}
+	if rep.Throughput == nil {
+		rep.Throughput = []WeekBucket{}
+	}
+	if rep.CFD == nil {
+		rep.CFD = []DayPoint{}
+	}
+	if rep.Aging == nil {
+		rep.Aging = []AgingItem{}
+	}
+	if rep.Burnup == nil {
+		rep.Burnup = map[string][]DayPoint{}
+	}
 	return rep
 }
 
