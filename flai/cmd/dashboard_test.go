@@ -20,6 +20,7 @@ type fakeRunner struct {
 	private  map[string]bool // images that need a login to pull
 	loggedIn bool
 	noToken  bool // gh has no token
+	identity bool // git config has a user
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -56,8 +57,13 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		return "", nil
 	}
 	if name == "git" {
-		if args[0] == "rev-parse" {
+		switch {
+		case args[0] == "rev-parse":
 			return "abc1234", nil
+		case args[0] == "config" && f.identity && args[1] == "user.name":
+			return "Test User", nil
+		case args[0] == "config" && f.identity && args[1] == "user.email":
+			return "test@example.com", nil
 		}
 		return "", fmt.Errorf("git: no tags")
 	}
@@ -180,6 +186,12 @@ func TestDashboardLifecycle(t *testing.T) {
 	out, _, _ = runWith(t, root, &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}, "dashboard", "--port", "6000", "--json")
 	if !strings.Contains(out, `"url": "http://localhost:6000"`) {
 		t.Errorf("flag precedence: %s", out)
+	}
+	// the host's git identity travels into the container so acceptance can commit
+	idr := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}, identity: true}
+	_, _, _ = runWith(t, root, idr, "dashboard")
+	if j := strings.Join(idr.calls, "\n"); !strings.Contains(j, "--env GIT_COMMITTER_NAME=Test User") || !strings.Contains(j, "--env GIT_AUTHOR_EMAIL=test@example.com") {
+		t.Errorf("identity env missing:\n%s", j)
 	}
 	// --bind restricts the published address; the manifest can set it too
 	bnd := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}

@@ -68,6 +68,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.workItems()
 	c.narratives()
 	c.overlap()
+	c.unaccepted()
 	c.board()
 	c.documentation()
 	c.conventions()
@@ -314,6 +315,35 @@ func (c *checker) history(it *workitem.Item) {
 }
 
 var narrativeSections = []string{"## Context", "## Current state", "## Next steps", "## Decisions", "## Open questions", "## Log"}
+
+// unaccepted flags stories that are done without having been accepted: still
+// in kanban, or with their story branch still present (S-0046). Done means
+// accepted; flai accept <id> completes them.
+func (c *checker) unaccepted() {
+	for _, it := range c.items {
+		if it.Type != workitem.Story || it.Status != workitem.Done {
+			continue
+		}
+		switch {
+		case !it.Archived:
+			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is done but was never accepted (not archived, not released); run flai accept %s", it.ID, it.ID)
+		case storyBranchExists(c.repo.MainRoot, it.ID):
+			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is done but its branch story/%s was never merged; merge or delete it", it.ID, it.ID)
+		}
+	}
+}
+
+// storyBranchExists looks for refs/heads/story/<id> without shelling out.
+func storyBranchExists(mainRoot, id string) bool {
+	if mainRoot == "" {
+		return false
+	}
+	if _, err := os.Stat(filepath.Join(mainRoot, ".git", "refs", "heads", "story", id)); err == nil {
+		return true
+	}
+	data, err := os.ReadFile(filepath.Join(mainRoot, ".git", "packed-refs"))
+	return err == nil && strings.Contains(string(data), " refs/heads/story/"+id+"\n")
+}
 
 // overlap warns when two in-progress items declare touches that cover the
 // same path (ADR-0019); it is advisory, humans and agents coordinate.

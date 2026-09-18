@@ -137,7 +137,10 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string) (bool, error) {
 // dirtyOutsideWip lists uncommitted paths that are not under the wip
 // folder, which accumulates transitions between story landings by design.
 func (a *app) dirtyOutsideWip(repo *workitem.Repo) []string {
-	st, _ := a.runner.Run(repo.MainRoot, "git", "status", "--porcelain")
+	st, err := a.runner.Run(repo.MainRoot, "git", "status", "--porcelain")
+	if err != nil {
+		return nil // not a repository: nothing to be dirty
+	}
 	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
 	var out []string
 	for _, line := range strings.Split(st, "\n") {

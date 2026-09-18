@@ -11,6 +11,7 @@ import (
 
 func newMoveCmd(a *app) *cobra.Command {
 	var reason, by string
+	var accept acceptOptions
 	c := &cobra.Command{
 		Use:   "move <id> <state>",
 		Short: "Transition a work item, enforcing the workflow rules",
@@ -18,7 +19,11 @@ func newMoveCmd(a *app) *cobra.Command {
 
 Rules from design/system/workflow.md are enforced: a story needs tasks and
 acceptance criteria before ready, children must be closed before done, and
-cancelling or sending review back needs --reason. WIP limit breaches warn.`,
+cancelling or sending review back needs --reason. WIP limit breaches warn.
+
+Moving a story from review to done is acceptance: it runs the same flow as
+flai accept (merge the story branch, archive, commit, tag, push), with the
+same flags. There is no other way for a story to become done.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-004 in-progress --reason "tests missing"   # from review
@@ -32,6 +37,14 @@ cancelling or sending review back needs --reason. WIP limit breaches warn.`,
 			it, err := repo.Get(args[0])
 			if err != nil {
 				return err
+			}
+			if it.Type == workitem.Story && args[1] == workitem.Done && it.Status == workitem.Review {
+				accept.by = by
+				res, err := a.acceptItem(repo, it, accept)
+				if err != nil {
+					return err
+				}
+				return a.printAccept(res)
 			}
 			items, err := repo.List(false)
 			if err != nil {
@@ -65,14 +78,15 @@ cancelling or sending review back needs --reason. WIP limit breaches warn.`,
 				return a.printJSON(map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings})
 			}
 			fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
-			if it.Status == workitem.Done && it.Type != workitem.Task {
-				a.logger().Info("accepted without release; flai accept does move, archive, commit, release, and push in one step", "component", "workitem", "item", it.ID)
+			if it.Status == workitem.Done && it.Type == workitem.Epic {
+				a.logger().Info("epic closed without a release; flai accept does move, archive, commit, release, and push in one step", "component", "workitem", "item", it.ID)
 			}
 			return nil
 		},
 	}
 	c.Flags().StringVar(&reason, "reason", "", "why (required for cancelled and review → in-progress)")
 	c.Flags().StringVar(&by, "by", "", "who made the change (default: config author)")
+	addAcceptFlags(c, &accept)
 	return c
 }
 

@@ -96,38 +96,31 @@ func TestWorkItemLifecycle(t *testing.T) {
 	}
 	b, _ = os.ReadFile(storyPath)
 	_ = os.WriteFile(storyPath, bytes.Replace(b, []byte("- [ ] it works"), []byte("- [x] it works"), 1), 0o644)
-	if _, errOut, code = runIn(t, nested, "move", "S-0001", "done", "--by", "alex"); code != 0 {
-		t.Fatalf("done: %s", errOut)
+	// Moving a story to done is acceptance (S-0046): outside git that is the
+	// transition plus the archive, so the story leaves the board at once.
+	out, errOut, code = runIn(t, nested, "move", "S-0001", "done", "--by", "alex")
+	if code != 0 || !strings.Contains(out, "accepted S-0001: done, 2 items archived") {
+		t.Fatalf("done: %s %s", out, errOut)
 	}
-
 	out, _, _ = runIn(t, nested, "show", "S-0001")
 	if !strings.Contains(out, "story · feature · done") || !strings.Contains(out, "T-0001  done") || !strings.Contains(out, "by alex") {
 		t.Errorf("show:\n%s", out)
 	}
+	if _, err := os.Stat(storyPath); err == nil {
+		t.Error("the accepted story should have left the kanban folder")
+	}
 	out, _, _ = runIn(t, nested, "board", "--all")
-	if !strings.Contains(out, "done") || !strings.Contains(out, "S-0001") || !strings.Contains(out, "E-0001") {
-		t.Errorf("board:\n%s", out)
+	if strings.Contains(out, "S-0001") || !strings.Contains(out, "E-0001") {
+		t.Errorf("board should no longer list the accepted story:\n%s", out)
 	}
-	idx, _ := os.ReadFile(filepath.Join(root, "wip", "agents", "index.md"))
-	if !strings.Contains(string(idx), "| [S-0001](S-0001.md) | Slice | done | tester |") {
-		t.Errorf("index:\n%s", idx)
-	}
-
 	out, _, code = runIn(t, nested, "archive", "--dry-run")
-	if code != 0 || !strings.Contains(out, "would archive S-0001") || !strings.Contains(out, "would archive T-0001") || !strings.Contains(out, "narrative") {
-		t.Fatalf("archive dry run: %s", out)
-	}
-	if _, err := os.Stat(storyPath); err != nil {
-		t.Fatal("dry run moved files")
-	}
-	out, _, code = runIn(t, nested, "archive")
-	if code != 0 || !strings.Contains(out, "archived S-0001") {
-		t.Fatalf("archive: %s", out)
+	if code != 0 || !strings.Contains(out, "nothing to archive") {
+		t.Fatalf("archive dry run after acceptance: %s", out)
 	}
 	if _, err := os.Stat(filepath.Join(root, "wip", "archive", "agents", "S-0001.md")); err != nil {
 		t.Error("narrative not archived")
 	}
-	idx, _ = os.ReadFile(filepath.Join(root, "wip", "agents", "index.md"))
+	idx, _ := os.ReadFile(filepath.Join(root, "wip", "agents", "index.md"))
 	if strings.Contains(string(idx), "S-0001") {
 		t.Error("index still lists archived stream")
 	}

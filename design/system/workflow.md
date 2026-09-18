@@ -16,7 +16,7 @@ This is the Lean part. The board is `wip/kanban`, the columns are the states in 
 | ready | 5 | stories |
 | in-progress | 2 | stories |
 | review | 3 | stories |
-| done | none, archived by `flai archive` | all |
+| done | none; a story reaches done only by acceptance, which archives it | all |
 
 Limits apply to stories. Tasks inherit their story's column budget. Epics are not limited; there should rarely be more than a handful open. `flai check` warns when a limit is exceeded. It does not block, because an agent finishing a story is more valuable than a hard stop, but the warning is recorded in the narrative.
 
@@ -50,11 +50,11 @@ Work is pulled, not pushed. An agent starting a session:
 | backlog to ready | Human or agent during refinement | Definition of ready met |
 | ready to in-progress | Agent pulling work | Narrative opened |
 | in-progress to review | Agent | Acceptance criteria self-checked, narrative summary current |
-| review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. `flai accept` does the acceptance: move to done, archive, commit, semver release (delivery-type bump for the component delivered to, patch for components touched incidentally, see `design/conventions/git.md`), push |
+| review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. For a story this transition is acceptance, however it is made: `flai accept`, `flai move <story> done`, a card dropped on done, or the item page button all run the same flow (S-0046). `flai accept` does the acceptance: rebase and merge the story branch, move to done, archive, commit, semver release (delivery-type bump for the component delivered to, patch for components touched incidentally, see `design/conventions/git.md`), push |
 | review to in-progress | Human | Reason appended to story notes |
 | any to cancelled | Human | Reason appended to story notes |
 
-`flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined. Moving a story to `ready` appends it if absent; starting or cancelling it removes it.
+`flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. A story moved from `review` to `done` is accepted rather than merely transitioned; a story found `done` but unarchived was never accepted, `flai check` flags it as `story.unaccepted`, and `flai accept` completes it. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined. Moving a story to `ready` appends it if absent; starting or cancelling it removes it.
 
 ## Blocking
 

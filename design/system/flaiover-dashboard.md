@@ -59,7 +59,8 @@ Every chart has the same filter bar: window, type, and epic where the chart supp
 | `GET /api/search?q=&docs=` | `{ query, indexed, hits[] }`; each hit has `path`, `kind`, `itemId?`, `title`, `scope`, `status?`, `type?`, `score`, `snippet`, `route` |
 | `GET /api/docs/adrs` | ADR front matter: `id`, `title`, `status`, `date`, `supersedes[]`, `supersededBy[]`, `path` |
 | `GET /api/board` | `{ wip_limits, order, writable, columns: { <state>: card[] } }`; a card has `id`, `type`, `title`, `nature`, `parent`, `status`, `blocked`, `age_seconds`, `entered_at` |
-| `POST /api/items/:id/move` `{ to, reason?, by? }` | flai move; `{ id, status, warnings[] }` or 400 `{ error }` with the rule |
+| `POST /api/items/:id/move` `{ to, reason?, by? }` | flai move; `{ id, status, warnings[] }` or 400 `{ error }` with the rule. A story moved to done is accepted: the response also carries `merged`, `tags`, `pushed`, `push_error` (S-0046) |
+| `GET /api/items/:id/acceptance` | `flai accept --dry-run`: `{ plan, branch, blockers[] }`, shown in the confirmation dialog before a story is dropped on done |
 | `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
 | `POST /api/streams/:id/log` `{ entry }` | flai stream log |
 | `GET /api/stats?since=&type=&by=` | `flai stats --json` verbatim (see metrics.md), cached per query and cleared on change; bad arguments are 400 |

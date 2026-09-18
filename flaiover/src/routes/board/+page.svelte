@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api';
+	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { age } from '$lib/age';
@@ -43,6 +44,20 @@
 	const count = (state: string) =>
 		(board?.columns[state] ?? []).filter((c) => c.type === 'story').length;
 
+	// A story dropped on done is an acceptance: confirm with the plan first (S-0046).
+	let accepting = $state<string | null>(null);
+	function cardOf(id: string): Card | undefined {
+		for (const cards of Object.values(board?.columns ?? {})) {
+			const c = cards.find((x) => x.id === id);
+			if (c) return c;
+		}
+	}
+	function request(id: string, to: string) {
+		const card = cardOf(id);
+		if (to === 'done' && card?.type === 'story' && card.status === 'review') accepting = id;
+		else void move(id, to);
+	}
+
 	async function move(id: string, to: string) {
 		notice = null;
 		let reason: string | undefined;
@@ -62,12 +77,31 @@
 		if (!r.ok) notice = { kind: 'error', text: body.error ?? r.statusText };
 		else if (body.warnings?.length)
 			notice = { kind: 'warn', text: `${id} → ${to}. ${body.warnings.join(' ')}` };
+		else if (body.push_error)
+			notice = {
+				kind: 'warn',
+				text: `${id} accepted locally${body.tags?.length ? ` (${body.tags.join(', ')})` : ''} but not pushed: ${body.push_error}. Push the commit and tags from a shell.`
+			};
+		else if (body.tags?.length)
+			notice = { kind: 'ok', text: `${id} accepted: released ${body.tags.join(', ')}` };
 		else notice = { kind: 'ok', text: `${id} → ${to}` };
 		await load();
 	}
 </script>
 
 <svelte:head><title>Board · flaiover</title></svelte:head>
+
+{#if accepting}
+	<AcceptConfirm
+		id={accepting}
+		oncancel={() => (accepting = null)}
+		onconfirm={async () => {
+			const id = accepting!;
+			await move(id, 'done');
+			accepting = null;
+		}}
+	/>
+{/if}
 
 <div class="mb-3 flex flex-wrap items-center gap-4">
 	<h1 class="text-2xl font-semibold">Board</h1>
@@ -115,7 +149,7 @@
 					const id = dragging;
 					dragging = null;
 					over = null;
-					if (id) move(id, state);
+					if (id) request(id, state);
 				}}
 			>
 				<h2 class="mb-2 flex items-baseline justify-between text-sm font-medium">

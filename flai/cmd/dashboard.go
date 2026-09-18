@@ -211,6 +211,23 @@ func (a *app) registryUser() string {
 	return "token"
 }
 
+// gitIdentityArgs passes the host's git user into the container as the
+// standard GIT_AUTHOR_* and GIT_COMMITTER_* variables, when it has one.
+func (a *app) gitIdentityArgs(root string) []string {
+	if _, err := a.runner.LookPath("git"); err != nil {
+		return nil
+	}
+	name, err1 := a.runner.Run(root, "git", "config", "user.name")
+	email, err2 := a.runner.Run(root, "git", "config", "user.email")
+	if err1 != nil || err2 != nil || name == "" || email == "" {
+		return nil
+	}
+	return []string{
+		"--env", "GIT_AUTHOR_NAME=" + name, "--env", "GIT_AUTHOR_EMAIL=" + email,
+		"--env", "GIT_COMMITTER_NAME=" + name, "--env", "GIT_COMMITTER_EMAIL=" + email,
+	}
+}
+
 func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
@@ -257,6 +274,9 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 		"--env", "PROJECT_DIR=/project",
 	}
 	args = append(args, tokenArgs(repo.MainRoot)...)
+	// Acceptance from the dashboard commits as the person who started it
+	// (S-0046): the container has no ~/.gitconfig of its own.
+	args = append(args, a.gitIdentityArgs(repo.MainRoot)...)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}

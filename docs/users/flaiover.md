@@ -18,7 +18,7 @@ Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collaps
 
 ## Board
 
-Board shows one column per state with the WIP count against the limit from `wip/kanban/board.md`. Cards are stories by default; a toggle adds epics and tasks. Each card shows the ID, title, nature, how long it has sat in its column, and a flag when it is blocked. Drag a card to another column to move it: the same rules `flai move` enforces apply, and a refused move shows the rule. Every write is made by the bundled `flai`, so the files change exactly as they would from the terminal and appear in `git status` for you to commit.
+Board shows one column per state with the WIP count against the limit from `wip/kanban/board.md`. Cards are stories by default; a toggle adds epics and tasks. Each card shows the ID, title, nature, how long it has sat in its column, and a flag when it is blocked. Drag a card to another column to move it: the same rules `flai move` enforces apply, and a refused move shows the rule. Dropping a story on done accepts it, so the dashboard first shows what acceptance will do, the branch to be merged and the release it will cut, and only proceeds when you confirm; cancelling leaves the card in review. If the dashboard cannot push, it says the story was accepted locally and asks you to push from a shell. Every write is made by the bundled `flai`, so the files change exactly as they would from the terminal and appear in `git status` for you to commit.
 
 Click a card for the item page: front matter, the rendered body, children, the transition history, blocked intervals, a link to the narrative, and buttons for the allowed moves, block, unblock, and adding a narrative log entry.
 

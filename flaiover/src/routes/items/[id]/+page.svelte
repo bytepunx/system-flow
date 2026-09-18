@@ -2,6 +2,7 @@
 	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
+	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { tick } from 'svelte';
@@ -89,12 +90,20 @@
 			body: JSON.stringify(body)
 		});
 		const data = await r.json();
-		notice = r.ok
-			? `done${data.warnings?.length ? ': ' + data.warnings.join(' ') : ''}`
-			: `refused: ${data.error}`;
+		if (!r.ok) notice = `refused: ${data.error}`;
+		else if (data.push_error)
+			notice = `accepted locally but not pushed (${data.push_error}); push the commit and tags from a shell`;
+		else if (data.tags?.length) notice = `accepted: released ${data.tags.join(', ')}`;
+		else notice = `done${data.warnings?.length ? ': ' + data.warnings.join(' ') : ''}`;
 		await load();
 	}
+	let accepting = $state(false);
 	function move(to: string) {
+		// A story going to done is an acceptance: confirm with the plan first (S-0046).
+		if (to === 'done' && item?.type === 'story' && item.status === 'review' && !accepting) {
+			accepting = true;
+			return;
+		}
 		let reason: string | undefined;
 		if (to === 'cancelled' || (item?.status === 'review' && to === 'in-progress')) {
 			reason = prompt(`Reason for ${to}:`) ?? undefined;
@@ -109,6 +118,17 @@
 </script>
 
 <svelte:head><title>{id} · flaiover</title></svelte:head>
+
+{#if accepting && item}
+	<AcceptConfirm
+		id={item.id}
+		oncancel={() => (accepting = false)}
+		onconfirm={async () => {
+			await post(`/api/items/${item!.id}/move`, { to: 'done' });
+			accepting = false;
+		}}
+	/>
+{/if}
 
 {#if error}
 	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>

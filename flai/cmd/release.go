@@ -13,6 +13,13 @@ import (
 
 // planRelease computes the release for an item in the repo.
 func (a *app) planRelease(repo *workitem.Repo, it *workitem.Item, deliver string) (*release.Plan, error) {
+	return a.planReleaseAt(repo, it, deliver, "")
+}
+
+// planReleaseAt computes the plan from the history at root (default: the
+// repository root). A dry run of acceptance plans from the story worktree,
+// whose branch already holds the commits that the merge will bring to main.
+func (a *app) planReleaseAt(repo *workitem.Repo, it *workitem.Item, deliver, root string) (*release.Plan, error) {
 	if err := execx.Require(a.runner, "git", "Releases are git tags; install git."); err != nil {
 		return nil, err
 	}
@@ -20,7 +27,10 @@ func (a *app) planRelease(repo *workitem.Repo, it *workitem.Item, deliver string
 	if it.Parent != "" {
 		parent, _ = repo.Get(it.Parent)
 	}
-	return release.Compute(a.runner, repo.Root, repo.Manifest, it, parent, deliver)
+	if root == "" {
+		root = repo.Root
+	}
+	return release.Compute(a.runner, root, repo.Manifest, it, parent, deliver)
 }
 
 func (a *app) printPlan(plan *release.Plan) {
