@@ -58,6 +58,10 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 
 `flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. A story moved from `review` to `done` is accepted rather than merely transitioned; a story found `done` but unarchived was never accepted, `flai check` flags it as `story.unaccepted`, and `flai accept` completes it. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined.
 
+### Natures that do not release ([ADR-0025](../adrs/0025-research-is-accepted-without-a-release.md))
+
+Acceptance of a `research` story is the same act as any other (merge, done, archive, commit, push) and cuts no release: no tag, no version, no changelog, whatever its commits touched. Its plan says so, and names any component whose files land on main without a release. An `experiment` story is refused by acceptance, before anything is merged, and stays on its branch; `flai accept --no-release` is the deliberate way to land one. The push follows every acceptance, released or not.
+
 ### The pull order (S-0057)
 
 Only the `ready` and `backlog` columns have an order, and only stories are in it; the other columns are read by what happened to the items in them, and tasks follow their story. A column reads as the stories `order` names, in its order, then the stories it does not name, by ID. So a backlog nobody has prioritised still has one reading, and placing a story says something only about the stories placed above it.
