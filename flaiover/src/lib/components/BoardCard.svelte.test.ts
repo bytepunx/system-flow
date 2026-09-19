@@ -172,6 +172,17 @@ describe('BoardCard', () => {
 		expect(classes).toContain('bg-nature-feature');
 	});
 
+	it('hands key presses to the board and carries its ID for the board to find it again', () => {
+		const onkeydown = vi.fn();
+		component = render(base, { onkeydown });
+		const card = document.querySelector('a')!;
+		expect(card.dataset.id).toBe('S-0048');
+		card.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true })
+		);
+		expect(onkeydown).toHaveBeenCalledOnce();
+	});
+
 	it('stays one draggable link to the item, with no link inside it', () => {
 		const ondragstart = vi.fn();
 		component = render({ ...base, parent: 'E-0006' }, { draggable: true, ondragstart });

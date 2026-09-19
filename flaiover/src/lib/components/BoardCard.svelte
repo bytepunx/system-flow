@@ -24,13 +24,16 @@
 		draggable = false,
 		dragging = false,
 		ondragstart,
-		ondragend
+		ondragend,
+		onkeydown
 	}: {
 		card: Card;
 		draggable?: boolean;
 		dragging?: boolean;
 		ondragstart?: () => void;
 		ondragend?: () => void;
+		/** Alt+arrow reorders a focused card on the board (S-0057); the card itself decides nothing. */
+		onkeydown?: (e: KeyboardEvent) => void;
 	} = $props();
 
 	// Epics have no parent. The indicator is not a link: the card is one.
@@ -46,6 +49,8 @@
 	{draggable}
 	{ondragstart}
 	{ondragend}
+	{onkeydown}
+	data-id={card.id}
 	data-nature={card.nature}
 	data-type={card.type}
 	class="mb-2 block rounded border border-line p-2 text-xs hover:border-t-line-strong hover:border-r-line-strong hover:border-b-line-strong {tintFor(
