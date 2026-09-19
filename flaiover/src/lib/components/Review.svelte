@@ -2,6 +2,7 @@
 	// Review of one story (S-0041): what was asked, what the agent says, what
 	// is being discussed, what changed, and what accepting will do; then accept
 	// as the designer with each step shown, or send back with a reason.
+	import UnreleasedList from './UnreleasedList.svelte';
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { criteriaOf, readNdjson, sectionOf } from '$lib/review';
@@ -29,7 +30,13 @@
 		branch?: string;
 		blockers?: string[];
 		uncommitted?: string[];
-		plan?: { level: string; commits: string[]; steps: Step[] | null; skipped?: string } | null;
+		plan?: {
+			level: string;
+			commits: string[];
+			steps: Step[] | null;
+			skipped?: string;
+			unreleased?: { component: string; files: string[] }[];
+		} | null;
 	};
 	type Progress = { step: string; msg: string };
 
@@ -293,7 +300,10 @@
 					{/if}
 					<li>Move the story to done, archive it with its tasks and narrative, and commit.</li>
 					{#if preview.plan?.skipped}
-						<li>No release: {preview.plan.skipped}.</li>
+						<li>
+							No release: {preview.plan.skipped}.
+							<UnreleasedList unreleased={preview.plan.unreleased} />
+						</li>
 					{:else if preview.plan?.steps?.length}
 						<li>
 							Tag a {preview.plan.level} release:

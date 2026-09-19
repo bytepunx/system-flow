@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Moving a story to done is acceptance (S-0046): show what it will do
 	// before it happens. Cancelling changes nothing; the card stays in review.
+	import UnreleasedList from './UnreleasedList.svelte';
 	import { api } from '$lib/api';
 
 	type Version = string | { Major: number; Minor: number; Patch: number };
@@ -20,7 +21,14 @@
 		resumed?: boolean;
 		blockers?: string[];
 		uncommitted?: string[];
-		plan?: { level: string; commits: string[]; steps: Step[]; skipped?: string } | null;
+		plan?: {
+			level: string;
+			commits: string[];
+			steps: Step[];
+			skipped?: string;
+			/** Components a no-release story touched: code landing on main without a version (ADR-0025). */
+			unreleased?: { component: string; files: string[] }[];
+		} | null;
 	};
 
 	let {
@@ -127,7 +135,10 @@
 				{/if}
 				<li>Archive the story, its tasks, and its narrative, and commit.</li>
 				{#if preview.plan?.skipped}
-					<li>No release: {preview.plan.skipped}.</li>
+					<li>
+						No release: {preview.plan.skipped}.
+						<UnreleasedList unreleased={preview.plan.unreleased} />
+					</li>
 				{:else if preview.plan}
 					<li>
 						Tag and push a {preview.plan.level} release from {preview.plan.commits.length}

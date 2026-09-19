@@ -197,6 +197,28 @@ describe('Review', () => {
 		expect(JSON.parse(calls('/accept')[0][1].body)).toEqual({ include_uncommitted: true });
 	});
 
+	it('offers a research story for acceptance, with no release and what lands unreleased (ADR-0025)', async () => {
+		backend({
+			preview: {
+				branch: 'story/S-0041',
+				blockers: [],
+				plan: {
+					level: 'none',
+					commits: ['a'],
+					steps: [],
+					skipped: 'S-0041 is research: its findings land on main and are pushed',
+					unreleased: [{ component: 'flai', files: ['flai/x.go'] }]
+				}
+			}
+		});
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		const text = (document.body.textContent ?? '').replace(/\s+/g, ' ');
+		expect(text).toContain('No release: S-0041 is research');
+		expect(text).toContain('flai lands on main without a release (1 file)');
+		expect(button('Accept').disabled).toBe(false);
+	});
+
 	it('sends a story back with a reason typed in the page', async () => {
 		backend({});
 		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });

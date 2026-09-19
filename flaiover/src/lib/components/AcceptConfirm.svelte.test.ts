@@ -73,6 +73,58 @@ describe('AcceptConfirm', () => {
 		unmount(c);
 	});
 
+	it('accepts a research story, saying it releases nothing and what lands unreleased (ADR-0025)', async () => {
+		api.mockResolvedValue(
+			json({
+				id: 'S-0052',
+				branch: 'story/S-0052',
+				blockers: [],
+				plan: {
+					level: 'none',
+					commits: ['a'],
+					steps: [],
+					skipped:
+						'S-0052 is research: its findings land on main and are pushed, and research cuts no release whatever it touched (ADR-0025)',
+					unreleased: [{ component: 'flai', files: ['flai/cmd/x.go', 'flai/cmd/x_test.go'] }]
+				}
+			})
+		);
+		const onconfirm = vi.fn();
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0052', onconfirm, oncancel: vi.fn() }
+		});
+		await settle();
+		const text = (document.body.textContent ?? '').replace(/\s+/g, ' ');
+		expect(text).toContain('No release: S-0052 is research');
+		expect(text).toContain('flai lands on main without a release (2 files)');
+		expect(text).not.toContain('Tag and push');
+		const accept = [...document.querySelectorAll('button')].at(-1)!;
+		expect(accept.disabled).toBe(false);
+		accept.click();
+		await settle();
+		expect(onconfirm).toHaveBeenCalledOnce();
+		unmount(c);
+	});
+
+	it('lists nothing as unreleased for research that touched no component', async () => {
+		api.mockResolvedValue(
+			json({
+				id: 'S-0052',
+				blockers: [],
+				plan: { level: 'none', commits: ['a'], steps: [], skipped: 'S-0052 is research' }
+			})
+		);
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0052', onconfirm: vi.fn(), oncancel: vi.fn() }
+		});
+		await settle();
+		expect(document.querySelector('[data-testid="unreleased"]')).toBeNull();
+		expect(document.body.textContent).toContain('No release: S-0052 is research');
+		unmount(c);
+	});
+
 	it('lists blockers from the preview and keeps accept disabled', async () => {
 		api.mockResolvedValue(
 			json({ id: 'S-0046', blockers: ['git has no committer identity here'], plan: null })

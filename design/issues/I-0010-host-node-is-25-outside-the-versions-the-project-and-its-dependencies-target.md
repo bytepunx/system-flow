@@ -3,11 +3,11 @@ id: I-0010
 title: Host Node is 25, outside the versions the project and its dependencies target
 class: efficiency
 status: open
-count: 12
+count: 13
 cost: 3m
 first_reported: 2026-09-17T06:01:24Z
-last_reported: 2026-09-19T07:02:44Z
-updated: 2026-09-19T07:02:44Z
+last_reported: 2026-09-19T07:23:18Z
+updated: 2026-09-19T07:23:18Z
 ---
 
 # I-0010 Host Node is 25, outside the versions the project and its dependencies target
@@ -52,5 +52,8 @@ S-0055: make flaiover-install refused under Node 25 in the new worktree; npm_con
 
 ### 2026-09-19T07:02:44Z
 S-0057: make flaiover-install refused under Node 25 in the new worktree; npm_config_engine_strict=false again
+
+### 2026-09-19T07:23:18Z
+S-0053: make flaiover-install refused under Node 25 in the new worktree; npm_config_engine_strict=false again
 
 ## Remediation
