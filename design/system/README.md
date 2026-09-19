@@ -23,5 +23,6 @@ Living documents describing system-flow as it currently is. Read them in this or
 | [template.md](template.md) | The template repository: structure, manifest, variables, rendering |
 | [flai-cli.md](flai-cli.md) | The `flai` command line tool |
 | [flaiover-dashboard.md](flaiover-dashboard.md) | The `flaiover` web dashboard |
+| [pushing-from-the-board.md](pushing-from-the-board.md) | The finding of S-0052: the ways an acceptance made from the board could be pushed, what was tried, the recommendation, and the operator's decision (ADR-0026) |
 | [devex.md](devex.md) | Developer experience and operations components shipped by the template |
 | [brief.md](brief.md) | The original brief, kept verbatim for reference |
