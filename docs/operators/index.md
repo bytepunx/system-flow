@@ -24,6 +24,43 @@ docker run --detach --rm --name flaiover-myproject \
 
 The dashboard has one project token and so one holder. What it does for them is recorded as the manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. Git commits made in the container are authored by the git identity `flai dashboard` passes in from the host. An acceptance from the dashboard needs that identity, the repository mounted at its host path, and the host's global git excludes, all of which `flai dashboard` sets up; it is committed and tagged locally and never pushed, because the container holds no credentials.
 
+### Pushing what the board accepts
+
+By default the container holds no git credential. A story accepted from the board is merged, committed, and tagged in your clone, the dashboard says it was accepted locally, and someone pushes from a shell. That is deliberate: whoever can push a release tag can publish a release.
+
+If you want an acceptance from the board to reach the remote at once, release tags included, name an SSH private key on the host and `flai dashboard` mounts it into the container read-only ([ADR-0026](../../design/adrs/0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md)). It is a setting of this machine, never of the repository:
+
+```bash
+flai config set dashboard.push_key ~/.ssh/flaiover-push   # or: flai dashboard --push-key <path>
+flai dashboard stop && flai dashboard
+flai dashboard status                                     # says which key the running container holds
+flai config set dashboard.push_key ""                     # back to holding nothing, after a restart
+```
+
+Understand what this changes before turning it on. The dashboard token becomes the power to publish: whoever holds it can release any story that is in review by accepting it. And if the container were ever compromised, the key is a file it can read.
+
+**Which key.** In order of how little a stolen copy opens:
+
+1. **A key made for this repository alone** (recommended). Make one without a passphrase and add its public half to the repository as a deploy key with write access (on GitHub: Settings, Deploy keys, Add deploy key, Allow write access). A stolen copy opens this one repository and nothing else.
+
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "flaiover push $(hostname)" -f ~/.ssh/flaiover-push
+   cat ~/.ssh/flaiover-push.pub      # add this as the deploy key
+   ```
+
+   If the same host already uses another key for that provider, the remote URL stays as it is: the container is told to use only the key you named.
+2. **Your own key.** It works the same way and is the quickest to set up, but it opens every repository of your account and every server that trusts it, and the container can read the file. If it has a passphrase, as your own key should, `flai dashboard` refuses it: nobody is there to type the passphrase when an acceptance is pushed.
+
+Your SSH agent is never forwarded into the container. It would lend the container every key in the agent for as long as it runs, and it stops working when you log out.
+
+**What `flai dashboard` checks before it starts anything**, each with the reason when it refuses: the file exists, is no looser than mode 0600, is a private key, and has no passphrase; the `origin` remote is an SSH URL; and this machine already has a `known_hosts` entry for the remote's host. The container never accepts a host key on first use: connect once from a shell (`ssh -T git@github.com`), check the fingerprint against the ones your provider publishes, and accept it there. `--push-known-hosts <file>` (or `dashboard.push_known_hosts`) takes the host keys from a file you curate instead of your `known_hosts` and the system's. The pinned host keys and a passwd entry for your user ID, which OpenSSH needs, are written under `.flai-cache/` and mounted read-only. At start `flai dashboard` prints the key's fingerprint and comment, never the key.
+
+**Limit what a stolen key can do** with rules on the repository: block force pushes to the default branch, and restrict deletion of the default branch and of release tags (`flai/v*`, `flaiover/v*`). No rule stops a key that may push from publishing a release; that is what the key is for.
+
+**To revoke**: delete the deploy key from the repository (or remove your own key from your account), unset `dashboard.push_key`, and restart the dashboard. A dedicated key never expires on its own.
+
+A push that fails (no network, a revoked key) leaves the acceptance standing, as without a key: the dashboard says it was accepted locally and shows the command. Not supported on a Windows host yet; `flai dashboard` says so and refuses the key.
+
 ### Why the mount path matters
 
 Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository with absolute paths in both directions. The container runs git for acceptance, so those paths must exist inside it, which they do when the repository is mounted at its host path ([ADR-0022](../../design/adrs/0022-repository-mounted-at-its-host-path.md)). A container that sees the repository anywhere else, including one started by an older flai at `/project`, cannot accept a story that has a branch; the confirmation says so and points at `flai accept`. The image's default is still `PROJECT_DIR=/project` for mounts made by hand, which is fine for reading and for projects without story branches.
@@ -117,7 +154,7 @@ Local stack: `PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build` r
 
 ## Security posture
 
-The dashboard authenticates every request with the project token (above) and can write to the mounted repository. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. Treat the mount as you would a shared working copy.
+The dashboard authenticates every request with the project token (above) and can write to the mounted repository. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. Treat the mount as you would a shared working copy. The container holds no git credential unless you give it a push key (above); with one, the token is also the power to publish a release, so keep the dashboard off public addresses or behind a tunnel you trust, and rotate the token (`flai dashboard token --rotate`) when in doubt.
 
 ## Requirements
 

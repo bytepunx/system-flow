@@ -109,8 +109,8 @@ The operator decided on 2026-09-19, recorded in [ADR-0026](../adrs/0026-the-dash
 - The key is **the operator's own SSH key, mounted read-only**, not the dedicated key that was recommended. The operator was told what that exposes before choosing. It is their key and their repository, and the decision is theirs. The mechanism is the same for any key file, so a dedicated key remains a matter of which path the operator names, and the documentation will say which is safer.
 - The board shows a standing "accepted, not pushed" state; no retry button.
 
-Nothing is built here. What follows:
+Nothing was built in S-0052. What followed:
 
-1. **S-0062** The container pushes an acceptance when the operator has given it a key: the opt-in, the SSH client in the image, the passwd entry, pinned host keys, refusing a passphrase-protected key with the reason, a warning at start that names what the container holds, and the operators' documentation with the safer choice first.
+1. **S-0062** (built; see [operators](../../docs/operators/index.md#pushing-what-the-board-accepts)) The container pushes an acceptance when the operator has given it a key: the opt-in, the SSH client in the image, the passwd entry, pinned host keys, refusing a passphrase-protected key with the reason, a warning at start that names what the container holds, and the operators' documentation with the safer choice first.
 2. **S-0063** A standing "accepted, not pushed" state on the board and the item page, the same fact in `inbox` for agents, and `flai push --pending` on the host for projects that give the container nothing and for pushes that failed.
 3. **S-0064** A container cannot leave git hooks or configuration that run on the host: the finding under "What is at stake", which matters most for the default set-up, where the container holds nothing and the hook is the only way to the operator's credentials.
