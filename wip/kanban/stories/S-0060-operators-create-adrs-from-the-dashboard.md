@@ -3,12 +3,15 @@ id: S-0060
 type: story
 nature: feature
 title: Operators create ADRs from the dashboard
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-19T05:34:10Z
-updated: 2026-09-19T05:34:10Z
-transitions: []
+updated: 2026-09-19T06:37:41Z
+transitions:
+  - to: ready
+    at: 2026-09-19T06:37:41Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover, flai/cmd, design/adrs]
 ---

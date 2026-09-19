@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.10 - 2026-09-19
+
+- S-0057 Cards can be dragged within a column to change the pull order (patch).
+
 ## 1.0.9 - 2026-09-19
 
 - S-0058 An agent learns through MCP that the designer moved work to ready (patch).

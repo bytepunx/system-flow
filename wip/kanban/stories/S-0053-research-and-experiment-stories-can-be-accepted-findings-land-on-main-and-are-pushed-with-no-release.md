@@ -3,12 +3,15 @@ id: S-0053
 type: story
 nature: improvement
 title: "Research and experiment stories can be accepted: findings land on main and are pushed, with no release"
-status: backlog
+status: ready
 parent: E-0001
 owner: alex
 created: 2026-09-19T02:05:28Z
-updated: 2026-09-19T02:05:28Z
-transitions: []
+updated: 2026-09-19T07:09:52Z
+transitions:
+  - to: ready
+    at: 2026-09-19T07:09:52Z
+    by: alex
 tags: [cli, conventions]
 touches: [flai/internal/release, flai/cmd, design/conventions, template]
 ---

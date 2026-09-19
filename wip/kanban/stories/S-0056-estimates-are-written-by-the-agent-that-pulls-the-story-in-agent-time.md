@@ -3,12 +3,15 @@ id: S-0056
 type: story
 nature: improvement
 title: Estimates are written by the agent that pulls the story, in agent time
-status: backlog
+status: ready
 parent: E-0001
 owner: alex
 created: 2026-09-19T02:05:29Z
-updated: 2026-09-19T02:05:29Z
-transitions: []
+updated: 2026-09-19T06:37:43Z
+transitions:
+  - to: ready
+    at: 2026-09-19T06:37:43Z
+    by: alex
 tags: [cli, conventions]
 touches: [flai/cmd, design/conventions, design/system, template]
 ---

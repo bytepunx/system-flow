@@ -3,12 +3,15 @@ id: S-0061
 type: story
 nature: remediation
 title: An agent's first inbox is bounded, not the last 24 hours in full
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-19T05:44:37Z
-updated: 2026-09-19T05:44:37Z
-transitions: []
+updated: 2026-09-19T06:37:36Z
+transitions:
+  - to: ready
+    at: 2026-09-19T06:37:36Z
+    by: alex
 tags: [cli]
 touches: [flai/internal/mcpserver]
 ---

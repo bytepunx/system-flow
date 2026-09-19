@@ -7,7 +7,11 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0057
+  - S-0061
+  - S-0059
+  - S-0060
+  - S-0056
+  - S-0053
 ---
 
 # Board

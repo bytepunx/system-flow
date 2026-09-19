@@ -3,12 +3,15 @@ id: S-0059
 type: story
 nature: feature
 title: Operators create epics and stories from the board
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-19T05:34:09Z
-updated: 2026-09-19T05:34:09Z
-transitions: []
+updated: 2026-09-19T06:37:39Z
+transitions:
+  - to: ready
+    at: 2026-09-19T06:37:39Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover, flai/cmd]
 ---
