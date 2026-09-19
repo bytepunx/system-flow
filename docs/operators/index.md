@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-09-18
+updated: 2026-09-19
 status: draft
 ---
 
@@ -27,6 +27,7 @@ Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository wi
 | Setting | Where | Default | Effect |
 |---------|-------|---------|--------|
 | `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_0`, `GIT_CONFIG_VALUE_0` | container environment, set by `flai dashboard` | `core.excludesFile` pointing at `/run/flaiover/gitignore` when the host has a global excludes file, unset otherwise | The host's global git excludes (`core.excludesFile`, else `$XDG_CONFIG_HOME/git/ignore`, else `~/.config/git/ignore`) is bind-mounted read-only there, so a file ignored only on the host is not reported as uncommitted in the dashboard and does not stop an acceptance (S-0051) |
+| `dashboard.autocommit` | `system-flow.yaml`, per project | `true` | Documents saved from the dashboard's editor are committed on the main checkout, one path per commit, authored by the git identity `flai dashboard` passes in, with a `Co-Authored-By: flaiover` trailer. `false` leaves them uncommitted: agents on story branches then do not see the edit until someone commits it, and an acceptance from the board lists it as an uncommitted change. Commits are never pushed from the container ([ADR-0023](../../design/adrs/0023-documents-are-saved-through-flai.md)) |
 | `PROJECT_DIR` | container environment, set by `flai dashboard` | the repository's host path (`/project` in the image) | The repository flaiover serves and the folder flai's config and cache are read from (`.flai-cache`) |
 | `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths so they work at any mount path. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
 

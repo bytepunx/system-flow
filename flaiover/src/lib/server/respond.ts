@@ -6,7 +6,8 @@ export async function respond<T>(fn: () => Promise<T>): Promise<Response> {
 	try {
 		return json(await fn());
 	} catch (e) {
-		if (e instanceof RepoError) return json({ error: e.message }, { status: e.status });
+		if (e instanceof RepoError)
+			return json({ ...(e.data ?? {}), error: e.message }, { status: e.status });
 		throw e;
 	}
 }

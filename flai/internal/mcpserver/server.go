@@ -15,6 +15,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -376,30 +377,8 @@ type DocOut struct {
 // the tree flai runs in (a story worktree) and falling back to the main
 // checkout, where wip always lives.
 func (s *server) docPath(rel string) (string, error) {
-	clean := filepath.ToSlash(filepath.Clean(strings.TrimPrefix(rel, "./")))
-	if clean == "." || strings.HasPrefix(clean, "../") || filepath.IsAbs(clean) || !strings.HasSuffix(clean, ".md") {
-		return "", fmt.Errorf("%q is not a markdown path inside the repository", rel)
-	}
-	allowed := false
-	for _, key := range []string{"design", "docs", "wip"} {
-		dir := strings.TrimSuffix(s.repo.Manifest.Layout[key], "/")
-		if dir != "" && strings.HasPrefix(clean, dir+"/") {
-			allowed = true
-		}
-	}
-	if !allowed {
-		return "", fmt.Errorf("%q is outside the design, docs, and wip folders", rel)
-	}
-	for _, root := range []string{s.repo.Root, s.repo.MainRoot} {
-		if root == "" {
-			continue
-		}
-		p := filepath.Join(root, filepath.FromSlash(clean))
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
-		}
-	}
-	return "", fmt.Errorf("%s does not exist", clean)
+	abs, _, err := docedit.Resolve(s.repo, rel)
+	return abs, err
 }
 
 func (s *server) docGet(_ context.Context, _ *mcp.CallToolRequest, in DocIn) (*mcp.CallToolResult, DocOut, error) {

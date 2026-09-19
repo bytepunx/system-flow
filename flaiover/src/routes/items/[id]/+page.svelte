@@ -220,6 +220,11 @@
 				<p class="text-xs">
 					<a class="underline" href={resolve('/docs/[...path]', { path: item.path })}>{item.path}</a
 					>
+					{#if writable && !item.archived}
+						· <a class="underline" href={resolve('/edit/[...path]', { path: item.path })}
+							>edit the body</a
+						>
+					{/if}
 				</p>
 				{#if narrative}
 					<p class="mt-1 text-xs">

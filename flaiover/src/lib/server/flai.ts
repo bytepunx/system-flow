@@ -37,6 +37,13 @@ export function resetFlaiBinary() {
 
 export type FlaiResult<T> = { data: T; warnings: string[] };
 
+export type FlaiOptions = {
+	/** Written to flai's standard input. */
+	input?: string;
+	/** flai exit codes that are an HTTP status of their own, with the JSON on stdout as the response data. */
+	exitStatus?: Record<number, number>;
+};
+
 /**
  * Run flai with --json in the project directory and return its JSON.
  * A failure becomes a RepoError carrying flai's rule text (from the fatal
@@ -44,7 +51,8 @@ export type FlaiResult<T> = { data: T; warnings: string[] };
  */
 export async function flai<T = unknown>(
 	projectDir: string,
-	args: string[]
+	args: string[],
+	opt: FlaiOptions = {}
 ): Promise<FlaiResult<T>> {
 	const bin = await flaiBinary();
 	if (!bin)
@@ -60,7 +68,7 @@ export async function flai<T = unknown>(
 		LOG_FORMAT: 'json'
 	};
 	return new Promise((resolvePromise, reject) => {
-		execFile(
+		const child = execFile(
 			bin,
 			[...args, '--json'],
 			{ cwd: projectDir, env, maxBuffer: 16 * 1024 * 1024 },
@@ -72,6 +80,19 @@ export async function flai<T = unknown>(
 				if (err) {
 					const fatal = events.find((e) => e.level === 'FATAL');
 					const message = String(fatal?.err ?? stderr.trim() ?? err.message);
+					// An exit code the caller knows (flai doc save: conflict, refused) carries its
+					// payload as JSON on stdout.
+					const status = typeof err.code === 'number' ? opt.exitStatus?.[err.code] : undefined;
+					if (status) {
+						let data: Record<string, unknown> | undefined;
+						try {
+							data = JSON.parse(stdout);
+						} catch {
+							data = undefined;
+						}
+						reject(new RepoError(status, message.replace(/^(conflict|refused):\s*/, ''), data));
+						return;
+					}
 					reject(
 						new RepoError(message.startsWith('rule:') ? 400 : 500, message.replace(/^rule:\s*/, ''))
 					);
@@ -87,6 +108,8 @@ export async function flai<T = unknown>(
 				}
 			}
 		);
+		// Content goes on standard input, never in arguments or through a shell.
+		if (opt.input !== undefined) child.stdin?.end(opt.input);
 	});
 }
 

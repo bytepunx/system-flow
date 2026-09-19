@@ -7,6 +7,8 @@
 	import { onMount, tick } from 'svelte';
 	import DocTree from '$lib/components/DocTree.svelte';
 	import { render, enhance } from '$lib/markdown';
+	import { headingsOf } from '$lib/edit';
+	import { touching, type Worker } from '$lib/touches';
 
 	type Node = {
 		name: string;
@@ -24,29 +26,16 @@
 	let content: HTMLElement | undefined = $state();
 
 	const current = $derived(page.params.path ?? '');
-	function headingsOf(body: string): string[] {
-		return [...body.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => m[1]);
-	}
-	type Worker = { id: string; title: string; touches?: string[] };
 	let workers = $state<Worker[]>([]);
+	let writable = $state(false);
 	// Items in progress or review whose touches cover the open document (ADR-0019);
 	// a story in review still owns its branch until it is accepted.
-	const touching = $derived(
-		current
-			? workers.filter((w) =>
-					(w.touches ?? []).some((t) => {
-						const p = t.replace(/\/$/, '');
-						return current === p || current.startsWith(p + '/');
-					})
-				)
-			: []
-	);
+	const touchingNow = $derived(touching(current, workers));
 	async function loadWorkers() {
 		try {
 			const r = await api('/api/items');
 			if (r.ok) {
-				const all = (await r.json()) as (Worker & { status: string })[];
-				workers = all.filter((w) => w.status === 'in-progress' || w.status === 'review');
+				workers = (await r.json()) as Worker[];
 			}
 		} catch {
 			workers = [];
@@ -55,6 +44,9 @@
 
 	onMount(async () => {
 		void loadWorkers();
+		api('/api/board')
+			.then(async (r) => (writable = r.ok ? (await r.json()).writable : false))
+			.catch(() => (writable = false));
 		const r = await api('/api/docs/tree');
 		tree = await r.json();
 	});
@@ -101,14 +93,22 @@
 				Pick a document from the tree. Design, docs, and wip are all here.
 			</p>
 		{:else}
-			{#if touching.length}
+			{#if touchingNow.length}
 				<p class="mb-3 rounded border border-warn bg-warn-soft px-3 py-2 text-xs text-warn">
 					Being worked on by
-					{#each touching as w, i (w.id)}{i ? ', ' : ' '}<a
+					{#each touchingNow as w, i (w.id)}{i ? ', ' : ' '}<a
 							class="font-medium underline"
 							href={resolve('/items/[id]', { id: w.id })}>{w.id}</a
 						>
 						{w.title}{/each}. Edits here may collide with that story's branch.
+				</p>
+			{/if}
+			{#if writable && doc}
+				<p class="mb-3 text-right text-xs">
+					<a
+						class="rounded border border-line px-2 py-1 hover:border-line-strong"
+						href={resolve('/edit/[...path]', { path: current })}>Edit</a
+					>
 				</p>
 			{/if}
 			{#if doc?.frontMatter}

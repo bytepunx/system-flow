@@ -354,7 +354,9 @@ export class Repo extends EventEmitter {
 export class RepoError extends Error {
 	constructor(
 		public status: number,
-		message: string
+		message: string,
+		/** Extra fields for the response body, beside `error` (a conflict's current version, a refusal's findings). */
+		public data?: Record<string, unknown>
 	) {
 		super(message);
 	}

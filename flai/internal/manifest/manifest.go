@@ -55,6 +55,13 @@ type Dashboard struct {
 	Tag   string `yaml:"tag"`
 	Port  int    `yaml:"port"`
 	Bind  string `yaml:"bind"` // host address to publish on; default 0.0.0.0
+	// Autocommit commits documents saved from the dashboard; nil means true (ADR-0023).
+	Autocommit *bool `yaml:"autocommit,omitempty"`
+}
+
+// Autocommit reports whether documents saved from the dashboard are committed.
+func (m Manifest) Autocommit() bool {
+	return m.Dashboard.Autocommit == nil || *m.Dashboard.Autocommit
 }
 
 // Load parses the manifest at path.

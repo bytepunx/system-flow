@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-18
+updated: 2026-09-19
 status: draft
 ---
 
@@ -305,6 +305,16 @@ flai migrate ids             # git mv the files, rewrite references, refresh the
 ```
 
 The migration touches `design/`, `docs/`, `wip/`, the root markdown and yaml files, and each project's root markdown files. Fixtures under `testdata/`, `node_modules`, and hidden folders are left alone. Commit the result as a `chore:` on its own.
+
+## Edit a document through flai
+
+```bash
+flai doc show design/system/overview.md --json      # content, its sha256, and the edit mode
+flai doc save design/system/overview.md --hash "$h" --message "clarify the overview" < new.md
+flai doc save wip/kanban/stories/S-0001-x.md --hash "$h" --no-commit < new.md
+```
+
+This is the save path of the dashboard's editor, usable from a script too. `show` reports the mode: `full` for design and docs files, `body` for work items, narratives, and `board.md`, whose front matter flai owns, and `none`, with the reason, for generated files, threads, issues, and the archive. `save` reads the new content on standard input and needs the hash `show` gave for the content you started from. If the file has changed since, it stops as a conflict (exit code 3) and prints a diff of the current file against yours; with `--json` the current content and its hash come too, and saving over it means saving again with that hash. If the content changes front matter flai owns, or the check finds anything your change introduced, the save is refused (exit code 4), the findings are printed, and the file is left as it was. A saved file is committed on its own, `docs:` for design and docs and `chore:` for wip with the item's ID in brackets, authored by your git identity; `--message` sets the subject, `--trailer` adds lines, `--no-commit` or `dashboard.autocommit: false` in `system-flow.yaml` skips the commit. Nothing is pushed. For design and docs files the `updated` date is set to today unless you changed it.
 
 ## Check the repository
 

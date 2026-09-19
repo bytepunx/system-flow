@@ -18,8 +18,15 @@
 	let {
 		on,
 		headings = [],
-		writable = true
-	}: { on: string; headings?: string[]; writable?: boolean } = $props();
+		writable = true,
+		compose
+	}: {
+		on: string;
+		headings?: string[];
+		writable?: boolean;
+		/** A heading to start a new thread on: opens the composer with it selected (the editor's "open a thread on this heading", S-0040). */
+		compose?: string;
+	} = $props();
 
 	let threads = $state<Thread[]>([]);
 	let showResolved = $state(false);
@@ -29,6 +36,13 @@
 	let text = $state('');
 	let heading = $state('');
 	let replies = $state<Record<string, string>>({});
+
+	$effect(() => {
+		if (compose && writable) {
+			heading = compose;
+			composing = true;
+		}
+	});
 
 	async function load() {
 		const r = await api(`/api/threads?on=${encodeURIComponent(on)}${showResolved ? '&all=1' : ''}`);
