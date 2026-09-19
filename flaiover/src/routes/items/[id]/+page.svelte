@@ -1,5 +1,6 @@
 <script lang="ts">
 	import KindChips from '$lib/components/KindChips.svelte';
+	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
@@ -147,6 +148,7 @@
 						href={resolve('/items/[id]', { id: item.parent })}>{item.parent}</a
 					>{/if}
 			</p>
+			{#if item.status === 'done'}<div class="mt-2"><UnpushedNotice item={item.id} /></div>{/if}
 			{#if notice}<p class="mt-2 rounded border border-line-strong bg-raised p-2 text-sm">
 					{notice}
 				</p>{/if}

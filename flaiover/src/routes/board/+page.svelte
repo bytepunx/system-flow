@@ -4,6 +4,7 @@
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
+	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
 		canReorderOnto,
@@ -41,8 +42,11 @@
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
 
+	// bumped on every load so the unpushed notice asks again when anything changes
+	let loads = $state(0);
 	async function load() {
 		board = await (await api('/api/board')).json();
+		loads += 1;
 	}
 	onMount(() => {
 		load();
@@ -175,6 +179,7 @@
 	{/if}
 </div>
 <div class="mb-3"><BoardLegend /></div>
+<UnpushedNotice refresh={loads} />
 {#if notice}
 	<p
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'

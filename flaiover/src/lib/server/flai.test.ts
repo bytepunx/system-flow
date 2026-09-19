@@ -141,6 +141,54 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 			message: expect.stringContaining('only stories are in the pull order')
 		});
 	});
+	it('asks flai, offline, whether an acceptance is unpushed (S-0063)', async () => {
+		const { execFileSync } = await import('node:child_process');
+		const base = await mkdtemp(join(tmpdir(), 'flaiover-unpushed-'));
+		const git = (cwd: string, ...args: string[]) =>
+			execFileSync('git', args, {
+				cwd,
+				env: {
+					...process.env,
+					GIT_AUTHOR_NAME: 't',
+					GIT_AUTHOR_EMAIL: 't@t',
+					GIT_COMMITTER_NAME: 't',
+					GIT_COMMITTER_EMAIL: 't@t'
+				}
+			}).toString();
+		try {
+			const clone = join(base, 'clone');
+			await cp(fixture, clone, { recursive: true });
+			git(base, 'init', '-q', '--bare', '-b', 'main', 'origin.git');
+			git(clone, 'init', '-q', '-b', 'main');
+			git(clone, 'add', '-A');
+			git(clone, 'commit', '-q', '-m', 'init');
+			git(clone, 'remote', 'add', 'origin', join(base, 'origin.git'));
+			git(clone, 'push', '-q', '-u', 'origin', 'main');
+			const ask = () =>
+				flai<{
+					pushed: boolean;
+					reason?: string;
+					unpushed?: { acceptances: string[]; tags: string[] };
+				}>(clone, ['push', '--pending', '--dry-run']);
+			expect((await ask()).data).toMatchObject({ pushed: false, reason: 'nothing pending' });
+			git(
+				clone,
+				'commit',
+				'-q',
+				'--allow-empty',
+				'-m',
+				'chore: [S-004] accept and archive; release cli 1.1.0'
+			);
+			git(clone, 'tag', '-a', 'cli/v1.1.0', '-m', 'cli 1.1.0');
+			const { data } = await ask();
+			expect(data.pushed).toBe(false);
+			expect(data.unpushed).toMatchObject({ acceptances: ['S-004'], tags: ['cli/v1.1.0'] });
+			// a dry run pushes nothing
+			expect(git(join(base, 'origin.git'), 'tag', '--list').trim()).toBe('');
+		} finally {
+			await rm(base, { recursive: true, force: true });
+		}
+	});
 	it('blocks, unblocks, and logs to a stream', async () => {
 		await flai(dir, ['block', 'S-004', '--reason', 'waiting']);
 		let file = await readFile(join(dir, 'wip/kanban/stories/S-004-four.md'), 'utf8');
