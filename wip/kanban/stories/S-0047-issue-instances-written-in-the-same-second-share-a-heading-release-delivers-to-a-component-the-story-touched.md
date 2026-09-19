@@ -3,12 +3,18 @@ id: S-0047
 type: story
 nature: remediation
 title: "Issue instances written in the same second share a heading; release delivers to a component the story touched"
-status: backlog
+status: in-progress
 parent: E-0001
 owner: alex
 created: 2026-09-18T17:11:45Z
-updated: 2026-09-18T17:11:45Z
-transitions: []
+updated: 2026-09-19T10:29:07Z
+transitions:
+  - to: ready
+    at: 2026-09-19T10:17:33Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-19T10:29:07Z
+    by: system-flow
 tags: [cli]
 touches: [flai/internal/issues, flai/internal/release]
 ---
