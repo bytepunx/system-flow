@@ -23,6 +23,9 @@ function render(card: Props['card'], props: Partial<Props> = {}) {
 	return component;
 }
 const parent = () => document.querySelector<HTMLElement>('[data-testid="parent"]');
+const details = () => document.querySelector<HTMLElement>('[data-testid="details"]');
+// a font size utility, not a colour: text-[11px], text-xs, text-sm
+const sizeClass = /(^|\s)text-(\[\d+px\]|xs|sm|base)(\s|$)/;
 
 describe('BoardCard', () => {
 	let component: ReturnType<typeof render> | undefined;
@@ -91,6 +94,24 @@ describe('BoardCard', () => {
 			'BLOCKED',
 			'E-0006'
 		]);
+	});
+
+	it('puts the details under a divider, in one size for the whole row', () => {
+		component = render({ ...base, id: 'T-0160', type: 'task', blocked: true, parent: 'S-0048' });
+		const row = details()!;
+		expect(row).toBe(document.querySelector('a')!.lastElementChild);
+		expect(row.className).toContain('border-t');
+		// 12 px, the title's size, chosen by the operator
+		expect(row.className).toMatch(/(^|\s)text-xs(\s|$)/);
+		// nothing in the row sets a size of its own, the parent ID included
+		expect(row.children).toHaveLength(4);
+		for (const child of row.children) expect(child.className).not.toMatch(sizeClass);
+	});
+
+	it('lets a crowded row wrap instead of overflowing the card', () => {
+		component = render({ ...base, blocked: true, parent: 'E-0006' });
+		expect(details()!.className).toContain('flex-wrap');
+		expect(parent()!.className).toContain('shrink-0');
 	});
 
 	it('stays one draggable link to the item, with no link inside it', () => {
