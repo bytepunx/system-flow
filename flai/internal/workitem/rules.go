@@ -97,7 +97,7 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	}
 	if opt.Board != nil && it.Type == Story {
 		if to == Ready {
-			opt.Board.AppendToOrder(it.ID)
+			opt.Board.PlaceReadyLast(it.ID, opt.Items)
 		} else {
 			opt.Board.RemoveFromOrder(it.ID)
 		}

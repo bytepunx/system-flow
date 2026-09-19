@@ -48,6 +48,27 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool) BoardVie
 			v.Counts[it.Status]++
 		}
 	}
+	// Backlog and ready read in pull order: the stories take the sequence, in
+	// the places stories already hold, and epics and tasks stay where they are.
+	for _, st := range []string{Backlog, Ready} {
+		rank := map[string]int{}
+		for i, id := range PullSequence(board.Order, items, st) {
+			rank[id] = i
+		}
+		cards := v.Columns[st]
+		var slots []int
+		var stories []BoardCard
+		for i, c := range cards {
+			if c.Type == Story {
+				slots = append(slots, i)
+				stories = append(stories, c)
+			}
+		}
+		sort.SliceStable(stories, func(i, j int) bool { return rank[stories[i].ID] < rank[stories[j].ID] })
+		for i, slot := range slots {
+			cards[slot] = stories[i]
+		}
+	}
 	for _, st := range States {
 		if limit, ok := board.WIPLimits[st]; ok && limit > 0 && v.Counts[st] > limit {
 			v.Breaches = append(v.Breaches, fmt.Sprintf("%s has %d stories, limit %d", st, v.Counts[st], limit))
@@ -57,28 +78,15 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool) BoardVie
 }
 
 // ReadyInPullOrder returns the ready stories, those named in the pull order
-// first and in that order, the rest after them by ID.
+// first and in that order, the rest after them by ID. The view's columns are
+// already in that sequence.
 func (v BoardView) ReadyInPullOrder() []BoardCard {
-	rank := map[string]int{}
-	for i, id := range v.Order {
-		rank[id] = i + 1
-	}
 	var out []BoardCard
 	for _, c := range v.Columns[Ready] {
 		if c.Type == Story {
 			out = append(out, c)
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		ri, rj := rank[out[i].ID], rank[out[j].ID]
-		switch {
-		case ri != 0 && rj != 0:
-			return ri < rj
-		case ri != 0 || rj != 0:
-			return ri != 0
-		}
-		return lessID(out[i].ID, out[j].ID)
-	})
 	return out
 }
 
