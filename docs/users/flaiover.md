@@ -16,6 +16,20 @@ flaiover uses the brand palette in a light and a dark theme. It follows your sys
 
 Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text. ADRs lists the architecture decisions with status, date, and which decisions supersede which.
 
+## Reviewing a story
+
+A story in review has a review page: open it from the card in the review column, or from "Review this story" on the item page. It puts what you need to decide in one place.
+
+- The acceptance criteria, with which are ticked and how many.
+- The narrative's current state and next steps, as the agent left them, with a link to the whole narrative.
+- What the story's branch changes against main: the files, with lines added and removed, and the hunks when you open a file. Large patches are cut and marked; the rest is a `git diff` away. A story that was not worked on a branch says so instead.
+- What accepting will do: the branch that is merged, the release that is cut, anything that blocks acceptance from here, and any uncommitted files outside `wip/`, which you choose to include or deal with first.
+- The threads on the story, where you can ask before deciding.
+
+Accept runs the acceptance as you, the project's owner, and shows each step as it completes: the branch merged, the story moved to done, the archive, the commit, the tags. Nothing is pushed from the dashboard; the page says so, and you push from a shell. If flai refuses or fails, for example a rebase that stops on a conflict or an unticked criterion, the page shows flai's message word for word, and the story is still in review.
+
+Send back asks why, in the page, and moves the story to in-progress with your reason recorded in its notes, where the agent reads it.
+
 ## Editing documents
 
 Every document page and every work item page has an Edit link when the dashboard can write. The editor shows the markdown on the left and, on the right, a preview drawn by the same renderer as the explorer, diagrams and code highlighting included.

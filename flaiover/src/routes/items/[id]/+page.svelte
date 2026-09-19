@@ -148,6 +148,17 @@
 			{#if notice}<p class="mt-2 rounded border border-line-strong bg-raised p-2 text-sm">
 					{notice}
 				</p>{/if}
+			{#if item.type === 'story' && item.status === 'review'}
+				<p class="mt-3 text-sm">
+					<a
+						class="rounded border border-line-strong px-2 py-1 hover:bg-raised"
+						href={resolve('/review/[id]', { id: item.id })}>Review this story</a
+					>
+					<span class="ml-2 text-xs text-muted"
+						>criteria, narrative, threads, the branch's diff, and what accepting does</span
+					>
+				</p>
+			{/if}
 			{#if writable && !item.archived}
 				<div class="mt-3 flex flex-wrap gap-2">
 					{#each moves as to (to)}

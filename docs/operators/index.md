@@ -20,6 +20,10 @@ docker run --detach --rm --name flaiover-myproject \
   --user "$(id -u):$(id -g)" ghcr.io/bytepunx/flaiover:latest
 ```
 
+### Who acts when the dashboard writes
+
+The dashboard has one project token and so one holder. What it does for them is recorded as the manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. Git commits made in the container are authored by the git identity `flai dashboard` passes in from the host. An acceptance from the dashboard needs that identity, the repository mounted at its host path, and the host's global git excludes, all of which `flai dashboard` sets up; it is committed and tagged locally and never pushed, because the container holds no credentials.
+
 ### Why the mount path matters
 
 Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository with absolute paths in both directions. The container runs git for acceptance, so those paths must exist inside it, which they do when the repository is mounted at its host path ([ADR-0022](../../design/adrs/0022-repository-mounted-at-its-host-path.md)). A container that sees the repository anywhere else, including one started by an older flai at `/project`, cannot accept a story that has a branch; the confirmation says so and points at `flai accept`. The image's default is still `PROJECT_DIR=/project` for mounts made by hand, which is fine for reading and for projects without story branches.

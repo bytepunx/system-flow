@@ -1,7 +1,7 @@
 // Every mutation and every metric goes through the flai binary (ADR-0016).
 // The server only spawns it; rules, front matter writing, and numbers stay
 // in one implementation.
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, delimiter } from 'node:path';
@@ -110,6 +110,73 @@ export async function flai<T = unknown>(
 		);
 		// Content goes on standard input, never in arguments or through a shell.
 		if (opt.input !== undefined) child.stdin?.end(opt.input);
+	});
+}
+
+/** One structured log event flai wrote to stderr while it ran. */
+export type FlaiEvent = Record<string, unknown> & { level?: string; msg?: string };
+
+/**
+ * Run flai like `flai()`, but hand each log event to `onEvent` as it is written, for commands
+ * that take long enough to be worth watching (flai accept, S-0041). execFile buffers until exit,
+ * so this spawns. The result and the failure are the same as `flai()`'s.
+ */
+export async function flaiStream<T = unknown>(
+	projectDir: string,
+	args: string[],
+	onEvent: (e: FlaiEvent) => void
+): Promise<FlaiResult<T>> {
+	const bin = await flaiBinary();
+	if (!bin)
+		throw new RepoError(
+			503,
+			'flai is not available to this dashboard; writes and metrics are disabled (set FLAI_BIN or put flai on PATH)'
+		);
+	const env = {
+		...process.env,
+		FLAI_CONFIG: process.env.FLAI_CONFIG ?? join(projectDir, '.flai-cache', 'config.json'),
+		FLAI_CACHE_DIR: process.env.FLAI_CACHE_DIR ?? join(projectDir, '.flai-cache', 'cache'),
+		FLAI_AGENT: process.env.FLAI_AGENT ?? 'flaiover',
+		LOG_FORMAT: 'json'
+	};
+	return new Promise((resolvePromise, reject) => {
+		const child = spawn(bin, [...args, '--json'], { cwd: projectDir, env });
+		const events: FlaiEvent[] = [];
+		let stdout = '';
+		let pending = '';
+		child.stdout.setEncoding('utf8').on('data', (d: string) => (stdout += d));
+		child.stderr.setEncoding('utf8').on('data', (d: string) => {
+			pending += d;
+			const lines = pending.split('\n');
+			pending = lines.pop() ?? '';
+			for (const e of parseEvents(lines.join('\n'))) {
+				events.push(e);
+				onEvent(e);
+			}
+		});
+		child.on('error', (err) => reject(new RepoError(500, err.message)));
+		child.on('close', (code) => {
+			for (const e of parseEvents(pending)) {
+				events.push(e);
+				onEvent(e);
+			}
+			const warnings = events
+				.filter((e) => e.level === 'WARN')
+				.map((e) => String(e.detail ?? e.msg));
+			if (code !== 0) {
+				const fatal = events.find((e) => e.level === 'FATAL');
+				const message = String(fatal?.err ?? `flai exited with code ${code}`);
+				reject(
+					new RepoError(message.startsWith('rule:') ? 400 : 500, message.replace(/^rule:\s*/, ''))
+				);
+				return;
+			}
+			try {
+				resolvePromise({ data: stdout.trim() ? (JSON.parse(stdout) as T) : (null as T), warnings });
+			} catch {
+				reject(new RepoError(500, `flai returned non-JSON output: ${stdout.slice(0, 200)}`));
+			}
+		});
 	});
 }
 

@@ -136,6 +136,22 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	} else if _, err := os.Stat(filepath.Join(repo.MainRoot, ".git")); err == nil {
 		res.Blockers = append(res.Blockers, "this is a git repository but git cannot be run here; accept from a shell with flai accept "+it.ID)
 	}
+	// The workflow's own rules for done (open tasks, unticked criteria) are
+	// checked on a copy before the branch is merged: a story that cannot be
+	// done must not have its branch merged and its worktree removed first,
+	// which is what happened until S-0041 found it from the review page.
+	if !res.Resumed {
+		if items, err := repo.List(false); err == nil {
+			probe := *it
+			probe.Transitions = append([]workitem.Transition(nil), it.Transitions...)
+			for _, st := range stepsToDone(it.Status) {
+				if _, err := repo.Move(&probe, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items}); err != nil {
+					res.Blockers = append(res.Blockers, strings.TrimPrefix(err.Error(), "rule: "))
+					break
+				}
+			}
+		}
+	}
 	// A story worktree git cannot open from here (I-0017): its links are
 	// absolute host paths, and this process sees the repository somewhere
 	// else. Say what to do instead of failing later with git's own error.
@@ -173,6 +189,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			return nil, err
 		}
 		res.Merged = merged
+		if merged {
+			a.acceptStep(it, "merged", res.Branch+" rebased and fast-forwarded into the main branch")
+		}
 	}
 	// An unreadable worktree blocks acceptance; its release cannot be planned either.
 	if !o.noRelease && useGit && worktreeReadable {
@@ -199,17 +218,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	if !res.Resumed {
-		path := []string{workitem.Ready, workitem.InProgress, workitem.Review, workitem.Done}
-		steps := []string{workitem.Done}
-		for i, st := range path {
-			if st == it.Status {
-				steps = path[i+1:]
-			}
-		}
-		if it.Status == workitem.Backlog {
-			steps = path
-		}
-		for _, st := range steps {
+		for _, st := range stepsToDone(it.Status) {
 			if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {
 				return nil, err
 			}
@@ -224,6 +233,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	res.Status = it.Status
+	a.acceptStep(it, "done", it.ID+" moved to done")
 	// 2. archive
 	items, _ = repo.List(false)
 	ap, err := repo.PlanArchive(items, []string{it.ID})
@@ -234,6 +244,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	res.Archived = len(ap.Items)
+	a.acceptStep(it, "archived", fmt.Sprintf("%d item(s) and the narrative archived", res.Archived))
 	if err := a.refreshIndex(repo); err != nil {
 		return nil, err
 	}
@@ -265,11 +276,13 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if _, err := a.runner.Run(repo.Root, "git", "commit", "-q", "-m", msg); err != nil {
 		return nil, err
 	}
+	a.acceptStep(it, "committed", firstLine(msg))
 	// 5. tags
 	if plan != nil && plan.Skipped == "" {
 		if res.Tags, err = release.Tag(a.runner, repo.Root, plan); err != nil {
 			return nil, err
 		}
+		a.acceptStep(it, "tagged", strings.Join(res.Tags, ", "))
 	}
 	// 6. push
 	// The acceptance is complete and committed by now; a push that cannot
@@ -282,8 +295,10 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			if _, err := a.runner.Run(repo.Root, "git", append([]string{"push", "-q", remote}, refs...)...); err != nil {
 				res.PushError = firstLine(err.Error())
 				a.logger().Warn("accepted locally but not pushed", "component", "git", "item", it.ID, "detail", "run: git push "+remote+" "+strings.Join(refs, " "))
+				a.acceptStep(it, "not-pushed", "accepted locally; run: git push "+remote+" "+strings.Join(refs, " "))
 			} else {
 				res.Pushed = true
+				a.acceptStep(it, "pushed", "pushed to "+remote)
 			}
 		}
 	}
@@ -304,6 +319,27 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	return res, nil
+}
+
+// stepsToDone is the walk from a state to done, one transition at a time.
+func stepsToDone(status string) []string {
+	path := []string{workitem.Ready, workitem.InProgress, workitem.Review, workitem.Done}
+	if status == workitem.Backlog {
+		return path
+	}
+	for i, st := range path {
+		if st == status {
+			return path[i+1:]
+		}
+	}
+	return []string{workitem.Done}
+}
+
+// acceptStep logs one completed step of an acceptance as an info event with
+// stable fields, so a client such as the dashboard can show progress while
+// the command runs (S-0041). The message is fixed; what varies is in fields.
+func (a *app) acceptStep(it *workitem.Item, step, detail string) {
+	a.logger().Info("acceptance step", "component", "accept", "item", it.ID, "step", step, "detail", detail)
 }
 
 func (a *app) printAccept(res *acceptResult) error {

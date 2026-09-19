@@ -12,6 +12,7 @@
 		nature: string;
 		parent?: string;
 		parent_title?: string;
+		status?: string;
 		blocked: boolean;
 		age_seconds: number;
 	};
@@ -37,7 +38,9 @@
 </script>
 
 <a
-	href={resolve('/items/[id]', { id: card.id })}
+	href={card.type === 'story' && card.status === 'review'
+		? resolve('/review/[id]', { id: card.id })
+		: resolve('/items/[id]', { id: card.id })}
 	{draggable}
 	{ondragstart}
 	{ondragend}
