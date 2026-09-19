@@ -38,6 +38,8 @@ describe('adrs on the monorepo', () => {
 		expect(list.length).toBeGreaterThanOrEqual(15);
 		expect(list[0].id).toBe('ADR-0001');
 		expect(list.find((a) => a.id === 'ADR-0002')?.supersededBy).toEqual([]);
+		expect(list.find((a) => a.id === 'ADR-0018')?.refines).toEqual(['ADR-0016']);
+		expect(list.find((a) => a.id === 'ADR-0002')?.refines).toEqual([]);
 		expect(list.every((a) => a.status === 'accepted')).toBe(true);
 		expect(list.every((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.date))).toBe(true);
 	});

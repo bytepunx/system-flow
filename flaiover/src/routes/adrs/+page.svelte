@@ -11,6 +11,7 @@
 		date: string;
 		supersedes: string[];
 		supersededBy: string[];
+		refines?: string[];
 	};
 	let adrs = $state<Adr[]>([]);
 	// Recording and accepting are writes through flai (S-0060): offered only when flai answers.
@@ -109,6 +110,11 @@
 				<td class="py-2 pr-4 whitespace-nowrap">{a.date}</td>
 				<td class="py-2 text-xs text-muted">
 					{#each a.supersedes as s (s)}supersedes {#if link(s)}<a
+								class="underline"
+								href={resolve('/docs/[...path]', { path: link(s)! })}>{s}</a
+							>{:else}{s}{/if}
+					{/each}
+					{#each a.refines ?? [] as s (s)}refines {#if link(s)}<a
 								class="underline"
 								href={resolve('/docs/[...path]', { path: link(s)! })}>{s}</a
 							>{:else}{s}{/if}

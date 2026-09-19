@@ -14,7 +14,13 @@ flaiover uses the brand palette in a light and a dark theme. It follows your sys
 
 ## Documentation explorer
 
-Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text. ADRs lists the architecture decisions with status, date, and which decisions supersede which.
+Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text. ADRs lists the architecture decisions with status, date, and which decisions supersede which. When the dashboard can write, "+ new ADR" records a decision from there (see Recording a decision).
+
+## Recording a decision
+
+On the ADRs page, "+ new ADR" opens a form: a title (the decision, as a sentence), whether it is proposed or accepted, the existing decisions it supersedes or refines, chosen from the list, and the markdown, which starts from the sections of your project's `design/adrs/0000-template.md` with the preview beside it. You write no front matter. The number (one more than the highest ADR file present), the file name, the front matter, the date, the row in `design/adrs/README.md`, `superseded_by` on a decision it replaces, and the commit (your git identity, with a flaiover trailer) are made by `flai adr new`. If `flai check` would report anything with the new record in place, nothing is created and your text stays in the form. Afterwards you land on the new ADR in the explorer, and the list shows it without a reload, with what it supersedes and refines.
+
+A proposed ADR is a draft: it can still be edited, and its row on the ADRs page has an "accept" button, which sets it to accepted with today's date. An accepted ADR is immutable, here as everywhere: the editor will not open its body, and the way to change a decision is to record a new one that supersedes it. Nothing is pushed.
 
 ## Agents on other machines
 

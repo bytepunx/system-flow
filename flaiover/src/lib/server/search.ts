@@ -189,6 +189,8 @@ export type Adr = {
 	date: string;
 	supersedes: string[];
 	supersededBy: string[];
+	/** ADRs this one narrows or extends without replacing them (S-0060). */
+	refines: string[];
 };
 
 export async function adrs(repo: Repo): Promise<Adr[]> {
@@ -209,7 +211,8 @@ export async function adrs(repo: Repo): Promise<Adr[]> {
 			status: String(fm.status ?? ''),
 			date: fm.date instanceof Date ? fm.date.toISOString().slice(0, 10) : String(fm.date ?? ''),
 			supersedes: list(fm.supersedes),
-			supersededBy: list(fm.superseded_by)
+			supersededBy: list(fm.superseded_by),
+			refines: list(fm.refines)
 		});
 	}
 	return out;

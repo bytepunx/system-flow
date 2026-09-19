@@ -346,6 +346,19 @@ flai migrate ids             # git mv the files, rewrite references, refresh the
 
 The migration touches `design/`, `docs/`, `wip/`, the root markdown and yaml files, and each project's root markdown files. Fixtures under `testdata/`, `node_modules`, and hidden folders are left alone. Commit the result as a `chore:` on its own.
 
+## Record a decision
+
+```bash
+flai adr new "The dashboard authenticates every request with a project token" --refines 16
+flai adr new --print-body > decision.md         # the sections of your design/adrs/0000-template.md
+flai adr new "Replace the SPA with server rendering" --status accepted --supersedes 7 --body-stdin --autocommit < decision.md
+flai adr accept 27                               # a proposed ADR becomes accepted, dated today
+```
+
+`flai adr new` takes the next number from the files in `design/adrs` (one more than the highest; gaps are not filled), names the file `NNNN-slug.md`, writes `id`, `title`, `status` (`proposed` unless you say `--status accepted`), `date`, `supersedes`, `superseded_by`, and `refines`, adds the row to `design/adrs/README.md`, and sets `superseded_by` on each ADR it supersedes, which is the one edit allowed to an accepted ADR. The body is your template's sections, or standard input with `--body-stdin`. `flai check` runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. `--autocommit` makes one `docs: ADR-NNNN <title>` commit of what was written, unless the project sets `dashboard.autocommit: false`; nothing is pushed.
+
+`flai check` warns with `adr.index` when an ADR file has no row in the index or a row has no file. An accepted ADR is immutable: `flai doc` refuses its body, and so does the dashboard's editor.
+
 ## Edit a document through flai
 
 ```bash
