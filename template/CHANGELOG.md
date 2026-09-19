@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.9 - 2026-09-19
+
+- S-0058 An agent learns through MCP that the designer moved work to ready (patch).
+
 ## 1.0.8 - 2026-09-18
 
 - S-0051 Accepting from the dashboard shows uncommitted changes outside wip and lets the designer include them (patch).
