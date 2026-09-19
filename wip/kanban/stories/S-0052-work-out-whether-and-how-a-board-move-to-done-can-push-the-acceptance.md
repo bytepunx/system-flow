@@ -7,10 +7,11 @@ status: backlog
 parent: E-0006
 owner: alex
 created: 2026-09-19T01:55:25Z
-updated: 2026-09-19T01:57:55Z
+updated: 2026-09-19T07:23:18Z
 transitions: []
 blocked:
   - from: 2026-09-19T01:57:55Z
+    until: 2026-09-19T07:23:18Z
     reason: research stories cannot presently be moved to done
 tags: [dashboard, cli]
 touches: [design/adrs, design/system]

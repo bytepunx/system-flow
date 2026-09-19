@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.11 - 2026-09-19
+
+- S-0053 Research and experiment stories can be accepted: findings land on main and are pushed, with no release (patch).
+
 ## 1.0.10 - 2026-09-19
 
 - S-0057 Cards can be dragged within a column to change the pull order (patch).
