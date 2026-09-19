@@ -55,7 +55,7 @@ func (p Placement) validate() error {
 		}
 	}
 	if n != 1 {
-		return fmt.Errorf("say where it goes with exactly one of --before, --after, --top, --bottom")
+		return fmt.Errorf("rule: say where it goes with exactly one of --before, --after, --top, --bottom")
 	}
 	return nil
 }
@@ -65,6 +65,8 @@ func (p Placement) validate() error {
 // nothing else. Backlog stories that were never placed and still come last by
 // ID stay unnamed, so one placement does not make the list name the whole
 // backlog. Ready stories are always named, as Move names them.
+// Refusals are rule errors, like Move's, so the dashboard shows them as the
+// reason and not as a failure.
 func (b *Board) Place(items []*Item, id string, p Placement) error {
 	if err := p.validate(); err != nil {
 		return err
@@ -77,26 +79,26 @@ func (b *Board) Place(items []*Item, id string, p Placement) error {
 	}
 	it, ok := byID[id]
 	if !ok {
-		return fmt.Errorf("%s is not an active item", id)
+		return fmt.Errorf("rule: %s is not an active item", id)
 	}
 	if it.Type != Story {
-		return fmt.Errorf("%s is a %s; only stories are in the pull order", id, it.Type)
+		return fmt.Errorf("rule: %s is a %s; only stories are in the pull order", id, it.Type)
 	}
 	if !Ordered(it.Status) {
-		return fmt.Errorf("%s is %s; only backlog and ready stories have a pull order", id, it.Status)
+		return fmt.Errorf("rule: %s is %s; only backlog and ready stories have a pull order", id, it.Status)
 	}
 	ref := p.Before + p.After
 	if ref != "" {
 		other, ok := byID[ref]
 		switch {
 		case ref == id:
-			return fmt.Errorf("%s cannot be placed relative to itself", id)
+			return fmt.Errorf("rule: %s cannot be placed relative to itself", id)
 		case !ok:
-			return fmt.Errorf("%s is not an active item", ref)
+			return fmt.Errorf("rule: %s is not an active item", ref)
 		case other.Type != Story:
-			return fmt.Errorf("%s is a %s; only stories are in the pull order", ref, other.Type)
+			return fmt.Errorf("rule: %s is a %s; only stories are in the pull order", ref, other.Type)
 		case other.Status != it.Status:
-			return fmt.Errorf("%s is %s and %s is %s; the pull order is within one column, and flai move changes the column", id, it.Status, ref, other.Status)
+			return fmt.Errorf("rule: %s is %s and %s is %s; the pull order is within one column, and flai move changes the column", id, it.Status, ref, other.Status)
 		}
 	}
 

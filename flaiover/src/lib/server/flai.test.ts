@@ -92,6 +92,41 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 			message: expect.stringContaining('needs at least one task before it goes to review')
 		});
 	});
+	it('places a story with flai order, and the board reads the column in that order (S-0057)', async () => {
+		const ids: string[] = [];
+		for (const title of ['Order one', 'Order two', 'Order three']) {
+			const { data } = await flai<{ id: string }>(dir, ['story', 'new', title, '--epic', 'E-001']);
+			ids.push(data.id);
+		}
+		const [one, two, three] = ids;
+		const backlog = async () =>
+			(await board(new Repo(dir))).columns.backlog
+				.filter((c) => ids.includes(c.id))
+				.map((c) => c.id);
+		expect(await backlog()).toEqual([one, two, three]);
+		const { data } = await flai<{ status: string; sequence: string[]; order: string[] }>(dir, [
+			'order',
+			three,
+			'--before',
+			one
+		]);
+		expect(data.status).toBe('backlog');
+		expect(data.sequence.filter((id) => ids.includes(id))).toEqual([three, one, two]);
+		expect(await backlog()).toEqual([three, one, two]);
+		// an epic sharing the column keeps its place
+		const column = (await board(new Repo(dir))).columns.backlog;
+		expect(column.findIndex((c) => c.id === 'E-001')).toBe(
+			column.findIndex((c) => c.type !== 'story')
+		);
+		await expect(flai(dir, ['order', three, '--before', 'S-004'])).rejects.toMatchObject({
+			status: 400,
+			message: expect.stringContaining('within one column')
+		});
+		await expect(flai(dir, ['order', 'E-001', '--top'])).rejects.toMatchObject({
+			status: 400,
+			message: expect.stringContaining('only stories are in the pull order')
+		});
+	});
 	it('blocks, unblocks, and logs to a stream', async () => {
 		await flai(dir, ['block', 'S-004', '--reason', 'waiting']);
 		let file = await readFile(join(dir, 'wip/kanban/stories/S-004-four.md'), 'utf8');

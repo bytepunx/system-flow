@@ -5,6 +5,35 @@ import { flaiBinary } from './flai';
 
 export const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
 
+/** The columns that have a pull order (S-0057); the rule is flai's, in design/system/workflow.md. */
+export const ORDERED = ['backlog', 'ready'] as const;
+
+const idNumber = (id: string) => Number(id.replace(/^\D+/, '')) || 0;
+
+/**
+ * A column's cards with its stories in pull order: those `order` names first, in its order,
+ * then the rest by ID. Stories take the sequence in the places stories already hold, so epics
+ * and tasks stay where they are. The same reading as flai board's.
+ */
+export function inPullOrder<T extends { id: string; type: string }>(
+	cards: T[],
+	order: string[]
+): T[] {
+	const rank = new Map<string, number>();
+	for (const id of order) if (!rank.has(id)) rank.set(id, rank.size);
+	const stories = cards
+		.filter((c) => c.type === 'story')
+		.sort((a, b) => {
+			const ra = rank.get(a.id);
+			const rb = rank.get(b.id);
+			if (ra !== undefined && rb !== undefined) return ra - rb;
+			if (ra !== undefined || rb !== undefined) return ra !== undefined ? -1 : 1;
+			return idNumber(a.id) - idNumber(b.id) || a.id.localeCompare(b.id);
+		});
+	let next = 0;
+	return cards.map((c) => (c.type === 'story' ? stories[next++] : c));
+}
+
 export type Card = {
 	id: string;
 	type: Item['type'];
@@ -63,5 +92,6 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 			age_seconds: Math.max(0, Math.round((now.getTime() - Date.parse(entered)) / 1000))
 		});
 	}
+	for (const state of ORDERED) columns[state] = inPullOrder(columns[state], order);
 	return { wip_limits: limits, order, writable: (await flaiBinary()) !== null, columns };
 }
