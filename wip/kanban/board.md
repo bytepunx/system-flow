@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0061
   - S-0059
   - S-0060
   - S-0056

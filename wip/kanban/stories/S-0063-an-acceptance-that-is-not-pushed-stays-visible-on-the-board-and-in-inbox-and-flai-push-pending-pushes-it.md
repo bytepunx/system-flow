@@ -3,12 +3,18 @@ id: S-0063
 type: story
 nature: feature
 title: An acceptance that is not pushed stays visible on the board and in inbox, and flai push --pending pushes it
-status: backlog
+status: in-progress
 parent: E-0006
 owner: alex
 created: 2026-09-19T07:54:42Z
-updated: 2026-09-19T07:55:41Z
-transitions: []
+updated: 2026-09-19T08:34:59Z
+transitions:
+  - to: ready
+    at: 2026-09-19T08:13:32Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-19T08:34:07Z
+    by: system-flow
 tags: []
 touches: [flai/cmd, flai/internal/workitem, flai/internal/mcpserver, flaiover]
 ---
@@ -27,6 +33,10 @@ When an acceptance has been made and not pushed, that stays visible until it is 
 - [ ] Tests for the detection (nothing, ahead without an acceptance, ahead with one, tags, no remote, diverged), the command against a scratch bare remote, the MCP field, and the notice; `docs/users/flai.md`, `docs/users/flaiover.md`, `docs/operators/index.md`, `flai-cli.md`, and `flaiover-dashboard.md` updated
 
 ## Tasks
+- T-0225 Detect an unpushed acceptance offline, and carry it in flai board --json
+- T-0226 flai push --pending on the host
+- T-0227 The standing notice on the board and the item page
+- T-0228 inbox and the MCP board tool report it, with what an agent does about it; documentation and criteria
 
 ## Notes
 From S-0052's finding, `design/system/pushing-from-the-board.md`, and ADR-0026. The operator chose the standing state on 2026-09-19. It is worth building whether or not a project gives its container a key (S-0062): it is the default for every project that does not, and the fallback when a push fails.
