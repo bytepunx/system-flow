@@ -114,6 +114,64 @@ describe('BoardCard', () => {
 		expect(parent()!.className).toContain('shrink-0');
 	});
 
+	it.each([
+		['feature', 'bg-nature-feature'],
+		['improvement', 'bg-nature-improvement'],
+		['remediation', 'bg-nature-remediation'],
+		['research', 'bg-nature-research'],
+		['experiment', 'bg-nature-experiment']
+	])('tints a %s card with its nature token, and still says the nature', (nature, tint) => {
+		component = render({ ...base, nature });
+		const card = document.querySelector('a')!;
+		expect(card.className.split(/\s+/)).toContain(tint);
+		expect(card.className).not.toContain('bg-ground');
+		expect(card.dataset.nature).toBe(nature);
+		expect(details()!.firstElementChild!.textContent).toBe(nature);
+	});
+
+	it.each([
+		['epic', 'E-0006', 'border-l-type-epic'],
+		['story', 'S-0048', 'border-l-type-story'],
+		['task', 'T-0160', 'border-l-type-task']
+	])('stripes the left edge of a %s with its type token', (type, id, stripe) => {
+		component = render({ ...base, id, type });
+		const classes = document.querySelector('a')!.className.split(/\s+/);
+		expect(classes).toContain('border-l-4');
+		expect(classes).toContain(stripe);
+		// hovering strengthens the other three edges and leaves the stripe alone
+		expect(classes).not.toContain('hover:border-line-strong');
+		expect(classes).not.toContain('hover:border-l-line-strong');
+	});
+
+	it('keeps the plain card for a nature or a type it does not know', () => {
+		component = render({ ...base, nature: 'chore', type: 'theme' });
+		const classes = document.querySelector('a')!.className.split(/\s+/);
+		expect(classes).toContain('bg-ground');
+		expect(classes).not.toContain('border-l-4');
+		expect(classes).toContain('hover:border-l-line-strong');
+		expect(classes.filter((c) => /nature-|type-/.test(c))).toEqual([]);
+	});
+
+	it('rings a blocked card on its tint, and keeps the written flag', () => {
+		component = render({ ...base, nature: 'research', blocked: true });
+		const card = document.querySelector('a')!;
+		expect(card.className).toContain('ring-danger');
+		expect(card.className).toContain('bg-nature-research');
+		expect(card.textContent).toContain('BLOCKED');
+	});
+
+	it('does not ring a card that is not blocked', () => {
+		component = render(base);
+		expect(document.querySelector('a')!.className).not.toContain('ring-danger');
+	});
+
+	it('fades and dashes the card being dragged, on its tint', () => {
+		component = render({ ...base, nature: 'feature' }, { dragging: true });
+		const classes = document.querySelector('a')!.className.split(/\s+/);
+		expect(classes).toEqual(expect.arrayContaining(['opacity-50', 'border-dashed']));
+		expect(classes).toContain('bg-nature-feature');
+	});
+
 	it('stays one draggable link to the item, with no link inside it', () => {
 		const ondragstart = vi.fn();
 		component = render({ ...base, parent: 'E-0006' }, { draggable: true, ondragstart });

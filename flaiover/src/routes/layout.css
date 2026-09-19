@@ -33,6 +33,17 @@
 	--t-danger-soft: #f9e1dc;
 	--t-info: #0f5d70;
 	--t-info-soft: #d6eef2;
+	/* Board cards: a pastel tint per nature and a colour per type (S-0055). Telling them
+	   apart by colour alone is waived, the card says both in text; reading the text on
+	   them is not, and theme.test.ts checks it. */
+	--t-nature-feature: #e9f1fa;
+	--t-nature-improvement: #eaf5e8;
+	--t-nature-remediation: #fdeedd;
+	--t-nature-research: #f0ecfa;
+	--t-nature-experiment: #fae9f1;
+	--t-type-epic: #8f7fd6;
+	--t-type-story: #4fb0c8;
+	--t-type-task: #b3a392;
 }
 [data-theme='dark'] {
 	color-scheme: dark;
@@ -59,6 +70,14 @@
 	--t-danger-soft: #4a1a17;
 	--t-info: #6fd0e6;
 	--t-info-soft: #0f3f4c;
+	--t-nature-feature: #1b2634;
+	--t-nature-improvement: #1c291e;
+	--t-nature-remediation: #322517;
+	--t-nature-research: #262035;
+	--t-nature-experiment: #321d2d;
+	--t-type-epic: #a99be0;
+	--t-type-story: #7cc4d6;
+	--t-type-task: #c9bcae;
 }
 
 @theme inline {
@@ -85,6 +104,14 @@
 	--color-danger-soft: var(--t-danger-soft);
 	--color-info: var(--t-info);
 	--color-info-soft: var(--t-info-soft);
+	--color-nature-feature: var(--t-nature-feature);
+	--color-nature-improvement: var(--t-nature-improvement);
+	--color-nature-remediation: var(--t-nature-remediation);
+	--color-nature-research: var(--t-nature-research);
+	--color-nature-experiment: var(--t-nature-experiment);
+	--color-type-epic: var(--t-type-epic);
+	--color-type-story: var(--t-type-story);
+	--color-type-task: var(--t-type-task);
 }
 
 /* Rendered markdown wears the same tokens. */

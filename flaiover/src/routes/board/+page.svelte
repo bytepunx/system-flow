@@ -2,6 +2,7 @@
 	import { api } from '$lib/api';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
+	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import { onMount } from 'svelte';
 
 	type Card = {
@@ -117,6 +118,7 @@
 		<span class="text-xs text-muted">pull order: {board.order.join(', ')}</span>
 	{/if}
 </div>
+<div class="mb-3"><BoardLegend /></div>
 {#if notice}
 	<p
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'

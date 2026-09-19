@@ -54,6 +54,17 @@ const controlPairs: [string, string][] = [
 	['line-strong', 'surface']
 ];
 
+// Board cards (S-0055): the title, the details, and the BLOCKED flag sit on the nature tint.
+// Telling the pastels apart is waived, the card says both in text; reading on them is not.
+// The type colours are an edge stripe and a legend swatch, and carry no text.
+const natures = ['feature', 'improvement', 'remediation', 'research', 'experiment'];
+const types = ['epic', 'story', 'task'];
+const cardPairs: [string, string][] = natures.flatMap((n): [string, string][] => [
+	['ink', `nature-${n}`],
+	['muted', `nature-${n}`],
+	['danger', `nature-${n}`]
+]);
+
 describe.each([
 	['light', light],
 	['dark', dark]
@@ -75,13 +86,22 @@ describe.each([
 			'good',
 			'warn',
 			'danger',
-			'info'
+			'info',
+			...natures.map((n) => `nature-${n}`),
+			...types.map((t) => `type-${t}`)
 		]) {
 			expect(t[k], k).toMatch(/^#[0-9a-f]{6}$/);
 		}
 	});
 	it.each(textPairs)('%s on %s reads at AA (4.5:1)', (fg, bg) => {
 		expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(4.5);
+	});
+	it.each(cardPairs)('%s on %s reads at AA (4.5:1) on a board card', (fg, bg) => {
+		expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(4.5);
+	});
+	it('gives every nature and every type a colour of its own', () => {
+		expect(new Set(natures.map((n) => t[`nature-${n}`])).size).toBe(natures.length);
+		expect(new Set(types.map((k) => t[`type-${k}`])).size).toBe(types.length);
 	});
 	it.each(controlPairs)('%s against %s clears 3:1 for controls', (fg, bg) => {
 		expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(3);

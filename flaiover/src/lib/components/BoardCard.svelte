@@ -1,9 +1,11 @@
 <script lang="ts">
 	// One card on the kanban board: a single link to the item, draggable when
 	// the board is writable. The bottom row carries nature, type, and the
-	// blocked flag on the left and the parent's ID on the right (S-0048).
+	// blocked flag on the left and the parent's ID on the right (S-0048). The background
+	// is tinted by nature and the left edge striped by type (S-0055); the text stays.
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
+	import { stripeFor, tintFor } from '$lib/cardcolour';
 
 	type Card = {
 		id: string;
@@ -44,8 +46,12 @@
 	{draggable}
 	{ondragstart}
 	{ondragend}
-	class="mb-2 block rounded border border-line bg-ground p-2 text-xs hover:border-line-strong {dragging
-		? 'opacity-50'
+	data-nature={card.nature}
+	data-type={card.type}
+	class="mb-2 block rounded border border-line p-2 text-xs hover:border-t-line-strong hover:border-r-line-strong hover:border-b-line-strong {tintFor(
+		card.nature
+	)} {stripeFor(card.type)} {card.blocked ? 'ring-1 ring-danger' : ''} {dragging
+		? 'border-dashed opacity-50'
 		: ''}"
 >
 	<div class="flex items-center justify-between">
