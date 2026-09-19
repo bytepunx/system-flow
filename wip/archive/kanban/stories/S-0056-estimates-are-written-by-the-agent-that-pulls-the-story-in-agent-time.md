@@ -3,17 +3,20 @@ id: S-0056
 type: story
 nature: improvement
 title: Estimates are written by the agent that pulls the story, in agent time
-status: in-progress
+status: cancelled
 parent: E-0001
 owner: alex
 created: 2026-09-19T02:05:29Z
-updated: 2026-09-19T09:57:19Z
+updated: 2026-09-19T10:01:24Z
 transitions:
   - to: ready
     at: 2026-09-19T06:37:43Z
     by: alex
   - to: in-progress
     at: 2026-09-19T09:57:19Z
+    by: system-flow
+  - to: cancelled
+    at: 2026-09-19T10:01:24Z
     by: system-flow
 tags: [cli, conventions]
 touches: [flai/cmd, design/conventions, design/system, template]
@@ -42,3 +45,4 @@ What was found when queuing this, which does not match the premise and should be
 For calibration: the stories accepted on 2026-09-18 (S-0048 to S-0051) each spent roughly ten to forty-five minutes in progress, with an agent doing the work, which is the scale an agent-time estimate lives on.
 
 `design/system/metrics.md` is the contract between `flai stats` and the dashboard and changes only with an ADR.
+- 2026-09-19T10:01:24Z: moved to cancelled: Cancelled by the operator on 2026-09-19: no work item here carries an estimate, so there was nothing to correct, and estimates are not worth having for agent work at this scale (stories take ten to forty-five minutes in progress).

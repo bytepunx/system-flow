@@ -3,11 +3,11 @@ id: S-0060
 type: story
 nature: feature
 title: Operators create ADRs from the dashboard
-status: review
+status: done
 parent: E-0006
 owner: alex
 created: 2026-09-19T05:34:10Z
-updated: 2026-09-19T09:56:56Z
+updated: 2026-09-19T10:13:29Z
 transitions:
   - to: ready
     at: 2026-09-19T06:37:41Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-19T09:56:56Z
     by: system-flow
+  - to: done
+    at: 2026-09-19T10:13:29Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover, flai/cmd, design/adrs]
 ---

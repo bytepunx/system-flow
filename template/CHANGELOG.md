@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.13 - 2026-09-19
+
+- S-0060 Operators create ADRs from the dashboard (patch).
+
 ## 1.0.12 - 2026-09-19
 
 - S-0063 An acceptance that is not pushed stays visible on the board and in inbox, and flai push --pending pushes it (patch).
