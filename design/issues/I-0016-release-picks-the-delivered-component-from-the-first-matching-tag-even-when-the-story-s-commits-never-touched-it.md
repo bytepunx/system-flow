@@ -2,12 +2,12 @@
 id: I-0016
 title: Release picks the delivered component from the first matching tag even when the story's commits never touched it
 class: defect
-status: open
+status: closed
 count: 3
 cost: 7m
 first_reported: 2026-09-18T17:08:11Z
 last_reported: 2026-09-18T17:08:11Z
-updated: 2026-09-18T17:08:11Z
+updated: 2026-09-19T10:34:13Z
 ---
 
 # I-0016 Release picks the delivered component from the first matching tag even when the story's commits never touched it
@@ -25,3 +25,4 @@ Counted retroactively: S-0035 (flai work, flaiover took the minor).
 Counted retroactively: S-0037 (mostly flai work, flaiover took the minor).
 
 ## Remediation
+Closed 2026-09-19T10:34:13Z: S-0047: the release delivers only to a component the story's commits touched; a tag naming an untouched component never delivers. Versions already cut stand.
