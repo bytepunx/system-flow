@@ -14,7 +14,7 @@ What counts as a decision, where each kind is recorded, and what never happens t
 
 - A decision is any choice that a later reader could reasonably have made differently: a technology, a structure, a rule, a naming, a scope cut, a deferral.
 - Record every decision the moment it is made, in the narrative's `## Decisions` with a one-line reason. Do not wait for the end of the story.
-- Architectural decisions get an ADR in `design/adrs`: anything that changes structure, technology, contracts between parts, or a rule the tooling enforces. Copy `0000-template.md`, take the next number, one decision per file.
+- Architectural decisions get an ADR in `design/adrs`: anything that changes structure, technology, contracts between parts, or a rule the tooling enforces. Record it with `flai adr new "<the decision, as a sentence>"`, which takes the next number from the files present, names the file, writes the front matter, adds the row to the index, and sets `superseded_by` on an ADR it supersedes (`--supersedes`, `--refines`, `--status accepted`, the body on standard input with `--body-stdin`); do not copy the template by hand or look the number up. One decision per file.
 - A decision that changes how the system currently is also changes the living design in `design/system` or `design/tech`, in the same change, with a link to the ADR.
 - A decision that only affects one story is recorded in that story's `## Notes` and the narrative. It does not need an ADR but if it changes the system behavior, must also be captured in the `design/system` or `design/tech` folders.
 - Never edit an accepted ADR except to set `superseded_by`. To change a decision, write a new ADR that supersedes the old one in whole or in part, then update the living design.
@@ -31,6 +31,5 @@ What counts as a decision, where each kind is recorded, and what never happens t
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- ADR numbering continues from the index in `design/adrs/README.md`; next is 0015.
 - Changes to conventions land in `template/root/design/conventions/` first and are copied here above the marker; project rules go below the marker in `design/conventions/` only.
 - Metrics definitions in `design/system/metrics.md` are the contract between flai and flaiover; change them only with an ADR.

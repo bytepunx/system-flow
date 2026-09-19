@@ -27,7 +27,7 @@ status: active             # active | draft | deprecated
 ## Naming
 
 - Files and folders are lowercase kebab-case: `repository-layout.md`.
-- ADRs are numbered with four digits and a slug: `0003-work-item-hierarchy.md`.
+- ADRs are numbered with four digits and a slug: `0003-work-item-hierarchy.md`. `flai adr new` gives the number (one more than the highest file present; gaps are not filled), the slug, the front matter (`id`, `title`, `status`, `date`, `supersedes`, `superseded_by`, and `refines` when given), and the row in `design/adrs/README.md`; the status is `proposed` until `flai adr accept` or `--status accepted`. `flai check` warns with `adr.index` when the files and the index disagree.
 - Work items are named by ID and slug: `S-0004-cli-scaffold-and-config.md`. The ID is the stable handle; the slug may change.
 - Each folder that a reader might land in has a `README.md` that says what the folder is for.
 
@@ -43,7 +43,7 @@ status: active             # active | draft | deprecated
 
 - `design/conventions/` files are edited above the marker only through the template (and `flai upgrade`); a project edits below the marker. An agent that thinks a baseline rule is wrong proposes the change, it does not make it.
 - `design/system` and `design/tech` are edited in place. If a change reverses an earlier decision, write an ADR first, then update the living document and link the ADR.
-- `design/adrs` are never edited after acceptance except to set `superseded_by`.
+- `design/adrs` are never edited after acceptance except to set `superseded_by`. The tooling holds this: `flai doc` refuses the body of an accepted, superseded, or deprecated ADR, in the dashboard's editor too, and only `flai adr new --supersedes` sets `superseded_by` (S-0060). A proposed ADR is a draft and is edited like any document.
 - `wip/kanban` items are edited by agents and by `flai`. Human edits are welcome but must keep front matter valid; `flai check` validates it.
 - `wip/agents` narratives are append-only in the log section. The summary sections at the top are rewritten as understanding improves.
 

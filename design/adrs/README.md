@@ -2,7 +2,7 @@
 
 One decision per file, numbered in order of acceptance. An ADR is never edited after acceptance except to record `superseded_by`. To change a decision, write a new ADR that supersedes the old one in whole or in part, then update the living documents in `design/system` and `design/tech`.
 
-Copy `0000-template.md` to start a new one.
+Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs page: the number, the file, its front matter, and the row below are made for you, from the sections in `0000-template.md`. `flai check` warns when a file has no row here or a row has no file.
 
 | ADR | Title | Status |
 |-----|-------|--------|
