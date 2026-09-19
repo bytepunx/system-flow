@@ -60,6 +60,7 @@ Your SSH agent is never forwarded into the container. It would lend the containe
 **To revoke**: delete the deploy key from the repository (or remove your own key from your account), unset `dashboard.push_key`, and restart the dashboard. A dedicated key never expires on its own.
 
 A push that fails (no network, a revoked key) leaves the acceptance standing, as without a key: the dashboard says it was accepted locally and shows the command. Not supported on a Windows host yet; `flai dashboard` says so and refuses the key.
+
 ### When an acceptance has not been pushed
 
 The dashboard's container holds no git credential unless you give it a push key (above), so an acceptance from the board is committed and tagged in your clone and waits there. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying so until it is pushed. On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; it never forces, and refuses when the remote has moved until you fetch and merge. An agent session that is running does this itself when `inbox` reports it. To make it unattended without giving the container anything, run it from a timer of your own (a systemd user timer or cron entry calling `flai push --pending` in the repository); that is a push nobody approved, with your full credentials, and is your decision to make on your host.
