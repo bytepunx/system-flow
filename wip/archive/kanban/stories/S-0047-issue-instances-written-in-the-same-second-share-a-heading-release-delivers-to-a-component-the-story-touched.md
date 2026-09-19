@@ -3,11 +3,11 @@ id: S-0047
 type: story
 nature: remediation
 title: "Issue instances written in the same second share a heading; release delivers to a component the story touched"
-status: in-progress
+status: done
 parent: E-0001
 owner: alex
 created: 2026-09-18T17:11:45Z
-updated: 2026-09-19T10:29:07Z
+updated: 2026-09-19T21:46:25Z
 transitions:
   - to: ready
     at: 2026-09-19T10:17:33Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-09-19T10:29:07Z
     by: system-flow
+  - to: review
+    at: 2026-09-19T10:35:22Z
+    by: system-flow
+  - to: done
+    at: 2026-09-19T21:46:25Z
+    by: alex
 tags: [cli]
 touches: [flai/internal/issues, flai/internal/release]
 ---
@@ -25,12 +31,15 @@ touches: [flai/internal/issues, flai/internal/release]
 Two small flai defects that each broke something on main are fixed at the root: `flai issue bump` and `flai issue new` never write duplicate same-second headings, and the release never awards the delivery bump to a component the story's commits did not touch.
 
 ## Acceptance criteria
-- [ ] Issue instances recorded within the same second share one heading, the way narrative log entries do since I-0011; a test bumps twice at one instant and the file passes the duplicate-heading rule
-- [ ] The release picks the delivered component from the story's tags only among components its commits touched; when the tags name several, the one with the most touched files wins; a tag naming an untouched component never delivers; `--deliver` still overrides; tests cover a [dashboard, cli] story that only touched the CLI
-- [ ] The remaining E-0006 stories carry tags that say where they deliver
-- [ ] I-0011 and I-0016 are closed against this story
+- [x] Issue instances recorded within the same second share one heading, the way narrative log entries do since I-0011; a test bumps twice at one instant and the file passes the duplicate-heading rule
+- [x] The release picks the delivered component from the story's tags only among components its commits touched; when the tags name several, the one with the most touched files wins; a tag naming an untouched component never delivers; `--deliver` still overrides; tests cover a [dashboard, cli] story that only touched the CLI
+- [x] The remaining E-0006 stories carry tags that say where they deliver
+- [x] I-0011 and I-0016 are closed against this story
 
 ## Tasks
+- T-0242 Issue instances recorded in the same second share one heading
+- T-0243 The release delivers only to a component the story's commits touched, the most touched among the tagged ones
+- T-0244 Tags on the remaining E-0006 stories, the release documentation, and closing I-0011 and I-0016
 
 ## Notes
 - I-0016: S-0039 was pure flai work tagged [dashboard, cli]; flaiover took a minor with zero files and flai a patch. S-0035 and S-0037 had the same shape. Versions stand as cut.
