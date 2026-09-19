@@ -23,6 +23,9 @@ const (
 	Major = "major"
 	Minor = "minor"
 	Patch = "patch"
+	// None is the level of an item that is accepted but cuts no release:
+	// a research story (ADR-0025).
+	None = "none"
 )
 
 // Version is a parsed semver.
@@ -77,10 +80,20 @@ type Plan struct {
 	Untouched []string `json:"untouched_files"` // touched files mapping to no component
 	Steps     []Step   `json:"steps"`
 	Skipped   string   `json:"skipped,omitempty"` // reason nothing releases
+	// Unreleased names the components whose files the item's commits touched
+	// although it cuts no release: code landing on main without a version.
+	Unreleased []Unreleased `json:"unreleased,omitempty"`
 }
 
-// LevelFor maps an item's type and nature to a bump level. Research and
-// experiment do not release.
+// Unreleased is a component a no-release item touched.
+type Unreleased struct {
+	Component string   `json:"component"`
+	Files     []string `json:"files"`
+}
+
+// LevelFor maps an item's type and nature to a bump level. A research story
+// is accepted without a release (None); an experiment stays on its branch and
+// is refused (ADR-0025).
 func LevelFor(it *workitem.Item) (string, error) {
 	if it.Type == workitem.Epic {
 		return Major, nil
@@ -90,8 +103,10 @@ func LevelFor(it *workitem.Item) (string, error) {
 		return Minor, nil
 	case "remediation", "improvement":
 		return Patch, nil
-	case "research", "experiment":
-		return "", fmt.Errorf("%s is a %s story; research and experiment stay on a branch and do not release from main", it.ID, it.Nature)
+	case "research":
+		return None, nil
+	case "experiment":
+		return "", fmt.Errorf("%s is an experiment; an experiment stays on its branch and is not accepted onto main (ADR-0025); flai accept --no-release lands one deliberately", it.ID)
 	}
 	return "", fmt.Errorf("%s has nature %q, no release rule", it.ID, it.Nature)
 }
@@ -200,6 +215,15 @@ func Compute(r execx.Runner, root string, m manifest.Manifest, it *workitem.Item
 		if !matched {
 			plan.Untouched = append(plan.Untouched, f)
 		}
+	}
+	if level == None {
+		plan.Skipped = fmt.Sprintf("%s is research: its findings land on main and are pushed, and research cuts no release whatever it touched (ADR-0025)", it.ID)
+		for _, p := range m.Projects {
+			if files, was := touched[p.Name]; was {
+				plan.Unreleased = append(plan.Unreleased, Unreleased{Component: p.Name, Files: files})
+			}
+		}
+		return plan, nil
 	}
 	delivered := deliverTarget(m, it, parent, deliver, touched)
 	if len(touched) == 0 && delivered == "" {

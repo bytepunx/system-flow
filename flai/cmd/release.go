@@ -36,6 +36,9 @@ func (a *app) planReleaseAt(repo *workitem.Repo, it *workitem.Item, deliver, roo
 func (a *app) printPlan(plan *release.Plan) {
 	if plan.Skipped != "" {
 		fmt.Fprintf(a.out, "%s %s: no release (%s)\n", plan.Item, plan.Title, plan.Skipped)
+		for _, u := range plan.Unreleased {
+			fmt.Fprintf(a.out, "  %-10s lands on main without a release  [%d files]\n", u.Component, len(u.Files))
+		}
 		return
 	}
 	fmt.Fprintf(a.out, "%s %s: %s release from %d commit(s)\n", plan.Item, plan.Title, plan.Level, len(plan.Commits))

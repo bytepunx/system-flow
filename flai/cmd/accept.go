@@ -152,6 +152,15 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			}
 		}
 	}
+	// A nature that is not accepted onto main (an experiment, ADR-0025) is
+	// refused here, before the merge, not by the release plan after it.
+	releasable := true
+	if !o.noRelease {
+		if _, err := release.LevelFor(it); err != nil {
+			releasable = false
+			res.Blockers = append(res.Blockers, err.Error())
+		}
+	}
 	// A story worktree git cannot open from here (I-0017): its links are
 	// absolute host paths, and this process sees the repository somewhere
 	// else. Say what to do instead of failing later with git's own error.
@@ -194,7 +203,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	// An unreadable worktree blocks acceptance; its release cannot be planned either.
-	if !o.noRelease && useGit && worktreeReadable {
+	// Nor can the release of a nature that is refused: the preview carries the blocker instead.
+	if !o.noRelease && useGit && worktreeReadable && releasable {
 		plan, err := a.planReleaseAt(repo, it, o.deliver, planRoot)
 		if err != nil {
 			return nil, err

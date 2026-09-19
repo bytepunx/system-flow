@@ -32,8 +32,66 @@ func TestVersionsAndLevels(t *testing.T) {
 			t.Errorf("%s/%s: %s %v", it.Type, it.Nature, got, err)
 		}
 	}
-	if _, err := LevelFor(&workitem.Item{ID: "S-9", Type: workitem.Story, Nature: "research"}); err == nil {
-		t.Error("research must not release")
+	// ADR-0025: research is accepted without a release; experiment is refused.
+	if got, err := LevelFor(&workitem.Item{ID: "S-9", Type: workitem.Story, Nature: "research"}); err != nil || got != None {
+		t.Errorf("research is accepted with no release: %q %v", got, err)
+	}
+	_, err := LevelFor(&workitem.Item{ID: "S-9", Type: workitem.Story, Nature: "experiment"})
+	if err == nil || !strings.Contains(err.Error(), "S-9 is an experiment") || strings.Contains(err.Error(), "research") {
+		t.Errorf("experiment stays on its branch, and the message names only experiment: %v", err)
+	}
+}
+
+// ADR-0025: a research story plans no release whatever it touched, and the
+// plan names the components whose files land on main unreleased.
+func TestComputeResearch(t *testing.T) {
+	root, r := gitRepo(t)
+	// S-003 touched only docs
+	findings := &workitem.Item{ID: "S-003", Type: workitem.Story, Nature: "research", Title: "Findings"}
+	plan, err := Compute(r, root, m, findings, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Level != None || len(plan.Steps) != 0 || len(plan.Unreleased) != 0 || !strings.Contains(plan.Skipped, "S-003 is research") || !strings.Contains(plan.Skipped, "ADR-0025") {
+		t.Errorf("docs-only research: %+v", plan)
+	}
+	if len(plan.Commits) != 1 || len(plan.Untouched) != 1 {
+		t.Errorf("the plan still says what the story changed: %+v", plan)
+	}
+	// S-002 touched two components and carries no tag: for a feature that is
+	// an error asking for --deliver; for research there is nothing to deliver.
+	code := &workitem.Item{ID: "S-002", Type: workitem.Story, Nature: "research", Title: "Spike with code"}
+	plan, err = Compute(r, root, m, code, nil, "")
+	if err != nil {
+		t.Fatalf("research that touched components is not refused: %v", err)
+	}
+	if len(plan.Steps) != 0 || plan.Skipped == "" {
+		t.Errorf("no step, so no tag and no version bump: %+v", plan)
+	}
+	if len(plan.Unreleased) != 2 || plan.Unreleased[0].Component != "cli" || plan.Unreleased[1].Component != "web" || len(plan.Unreleased[0].Files) != 1 || plan.Unreleased[0].Files[0] != "cli/feature.go" {
+		t.Errorf("components landing unreleased, in manifest order: %+v", plan.Unreleased)
+	}
+	// a tag or --deliver changes nothing: research never delivers to a component
+	code.Tags = []string{"command"}
+	plan, _ = Compute(r, root, m, code, nil, "web")
+	if len(plan.Steps) != 0 || len(plan.Unreleased) != 2 {
+		t.Errorf("tags and --deliver do not make research release: %+v", plan)
+	}
+	// applying and tagging a research plan changes nothing
+	if err := Apply(r, root, plan, time.Date(2026, 9, 19, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	tags, err := Tag(r, root, plan)
+	if err != nil || len(tags) != 0 {
+		t.Errorf("no tags for research: %v %v", tags, err)
+	}
+	out, _ := r.Run(root, "git", "status", "--porcelain")
+	if strings.TrimSpace(out) != "" {
+		t.Errorf("no version file or changelog changed: %q", out)
+	}
+	// experiment is refused by Compute too
+	if _, err := Compute(r, root, m, &workitem.Item{ID: "S-003", Type: workitem.Story, Nature: "experiment"}, nil, ""); err == nil {
+		t.Error("experiment must be refused")
 	}
 }
 
