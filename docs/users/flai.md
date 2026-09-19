@@ -170,6 +170,16 @@ flai show S-0001
 
 Items are created from the template's item bodies with the next free ID and linked into their parent's Stories or Tasks list. Natures: `feature`, `improvement`, `remediation`, `research`, `experiment`.
 
+To create an item with its body already written, give the body on standard input. This is what the dashboard's "new" form does, and it is one step that happens or does not:
+
+```bash
+flai story new --print-body > story.md          # the sections your project's template gives a story
+$EDITOR story.md                                # write the goal, criteria as - [ ] lines, notes
+flai story new "Invoice PDF export" --epic E-0001 --body-stdin --autocommit < story.md
+```
+
+The heading (`# S-0007 Invoice PDF export`) and the front matter are flai's; the body is everything below the heading. `flai check` runs with the new item in place: if it reports anything the item introduces, nothing is created, the parent is left as it was, the findings are printed, and the exit code is 4. `--autocommit` commits the new item and its parent on their own (`chore: [S-0007] create story: ...`) unless the project sets `dashboard.autocommit: false`; `--trailer` adds trailer lines. Nothing is pushed.
+
 ### Moving work
 
 ```bash
