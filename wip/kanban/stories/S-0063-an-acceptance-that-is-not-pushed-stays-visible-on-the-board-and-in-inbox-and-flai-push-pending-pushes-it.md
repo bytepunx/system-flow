@@ -3,17 +3,20 @@ id: S-0063
 type: story
 nature: feature
 title: An acceptance that is not pushed stays visible on the board and in inbox, and flai push --pending pushes it
-status: in-progress
+status: review
 parent: E-0006
 owner: alex
 created: 2026-09-19T07:54:42Z
-updated: 2026-09-19T08:34:59Z
+updated: 2026-09-19T09:18:43Z
 transitions:
   - to: ready
     at: 2026-09-19T08:13:32Z
     by: alex
   - to: in-progress
     at: 2026-09-19T08:34:07Z
+    by: system-flow
+  - to: review
+    at: 2026-09-19T09:18:43Z
     by: system-flow
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal/workitem, flai/internal/mcpserver, flaiover]
@@ -25,12 +28,12 @@ touches: [flai/cmd, flai/internal/workitem, flai/internal/mcpserver, flaiover]
 When an acceptance has been made and not pushed, that stays visible until it is no longer true: on the board and the item page for the operator, in `inbox` for agents, with one command on the host that pushes what is pending. Today the dashboard says it once, after the acceptance, and the fact is gone on the next page load.
 
 ## Acceptance criteria
-- [ ] flai can tell, offline and with no credential, whether `main` is ahead of its remote-tracking branch by commits that include an acceptance, and which tags point at commits not yet on the remote-tracking branch; `flai board --json` and the MCP `board` tool carry it as `unpushed: { commits, acceptances, tags }`, absent when there is nothing or no remote
-- [ ] The board and the item page of an accepted story show a standing "accepted, not pushed" notice with the counts, the tags, and the command to run, on every load until it stops being true; it clears by itself after a push from this clone, and the notice says that a push made from another clone is not seen until someone fetches here
-- [ ] `inbox` reports unpushed acceptances to agents on every call while they exist, like ready work and unlike one-time changes, and the server instructions and the work-management convention say what an agent does about it: fetch, push `main` and those tags, never force
-- [ ] `flai push --pending` on the host pushes `main` and the tags on unpushed commits with the host's own credentials, only when the commits ahead include an acceptance, says "nothing pending" otherwise, refuses when `main` has diverged from the remote and says to fetch and merge, and never forces; `--dry-run` prints what it would push
-- [ ] No retry button on the board: the operator chose the standing state without one
-- [ ] Tests for the detection (nothing, ahead without an acceptance, ahead with one, tags, no remote, diverged), the command against a scratch bare remote, the MCP field, and the notice; `docs/users/flai.md`, `docs/users/flaiover.md`, `docs/operators/index.md`, `flai-cli.md`, and `flaiover-dashboard.md` updated
+- [x] flai can tell, offline and with no credential, whether `main` is ahead of its remote-tracking branch by commits that include an acceptance, and which tags point at commits not yet on the remote-tracking branch; `flai board --json` and the MCP `board` tool carry it as `unpushed: { commits, acceptances, tags }`, absent when there is nothing or no remote
+- [x] The board and the item page of an accepted story show a standing "accepted, not pushed" notice with the counts, the tags, and the command to run, on every load until it stops being true; it clears by itself after a push from this clone, and the notice says that a push made from another clone is not seen until someone fetches here
+- [x] `inbox` reports unpushed acceptances to agents on every call while they exist, like ready work and unlike one-time changes, and the server instructions and the work-management convention say what an agent does about it: fetch, push `main` and those tags, never force
+- [x] `flai push --pending` on the host pushes `main` and the tags on unpushed commits with the host's own credentials, only when the commits ahead include an acceptance, says "nothing pending" otherwise, refuses when `main` has diverged from the remote and says to fetch and merge, and never forces; `--dry-run` prints what it would push
+- [x] No retry button on the board: the operator chose the standing state without one
+- [x] Tests for the detection (nothing, ahead without an acceptance, ahead with one, tags, no remote, diverged), the command against a scratch bare remote, the MCP field, and the notice; `docs/users/flai.md`, `docs/users/flaiover.md`, `docs/operators/index.md`, `flai-cli.md`, and `flaiover-dashboard.md` updated
 
 ## Tasks
 - T-0225 Detect an unpushed acceptance offline, and carry it in flai board --json

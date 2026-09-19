@@ -3,15 +3,18 @@ id: S-0060
 type: story
 nature: feature
 title: Operators create ADRs from the dashboard
-status: ready
+status: in-progress
 parent: E-0006
 owner: alex
 created: 2026-09-19T05:34:10Z
-updated: 2026-09-19T06:37:41Z
+updated: 2026-09-19T09:39:14Z
 transitions:
   - to: ready
     at: 2026-09-19T06:37:41Z
     by: alex
+  - to: in-progress
+    at: 2026-09-19T09:38:09Z
+    by: system-flow
 tags: [dashboard, cli]
 touches: [flaiover, flai/cmd, design/adrs]
 ---
@@ -33,6 +36,11 @@ An operator records a new architecture decision from the ADRs page by writing th
 - [ ] Tests: `flai adr new` with real git (numbering with gaps, slug, index row, supersedes, check refusal leaving nothing behind, commit), the endpoint, the form as a component; `design/system/flaiover-dashboard.md`, `flai-cli.md`, `documentation-standard.md` or wherever ADR format is described, the decisions convention (template baseline first), and `docs/users` updated
 
 ## Tasks
+- T-0233 flai adr new and flai adr accept: number from the files, slug, front matter, index row, supersedes and refines, body on standard input, checked before kept, committed on its own
+- T-0234 flai check keeps the ADR index honest, and an accepted ADR's body cannot be edited
+- T-0235 The decisions convention, the ADR index text, and the designs say ADRs are made with flai adr new
+- T-0236 Dashboard: endpoints, the new ADR form on the ADRs page, and accepting a proposed ADR
+- T-0237 Try it in a browser against a scratch project, user documentation, criteria
 
 ## Notes
 Raised by the operator on 2026-09-19 with S-0059: "In the ADRs, operators should be able to create new ADRs", with the same aim: boilerplate behind the scenes, the operator writes the guidance in markdown, and eventually all project activity is driven from the dashboard.
