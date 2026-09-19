@@ -16,6 +16,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -28,6 +30,9 @@ type Options struct {
 	Now     func() time.Time // default time.Now
 	Poll    time.Duration    // wait_for_events polling interval, default 250ms
 	MaxWait time.Duration    // upper bound for one wait_for_events call, default 5m
+	// Runner runs git to ask whether an acceptance is unpushed (S-0063).
+	// Without one the server says nothing about it.
+	Runner execx.Runner
 }
 
 type server struct {
@@ -36,11 +41,12 @@ type server struct {
 	now     func() time.Time
 	poll    time.Duration
 	maxWait time.Duration
+	runner  execx.Runner
 }
 
 // New builds the MCP server with its tools and resources.
 func New(opt Options) *mcp.Server {
-	s := &server{repo: opt.Repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait}
+	s := &server{repo: opt.Repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner}
 	if s.agent == "" {
 		s.agent = "agent"
 	}
@@ -54,7 +60,7 @@ func New(opt Options) *mcp.Server {
 		s.maxWait = 5 * time.Minute
 	}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). When nothing is in progress and can_pull is true, pull the first ready story without waiting to be told. An agent that stays running holds wait_for_events when idle; one that ends its turn calls inbox when it starts again, and nothing in between is lost. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). When nothing is in progress and can_pull is true, pull the first ready story without waiting to be told. An agent that stays running holds wait_for_events when idle; one that ends its turn calls inbox when it starts again, and nothing in between is lost. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
 	})
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit, and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."}, s.inbox)
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_get", Description: "One thread with all of its dated entries."}, s.threadGet)
@@ -126,6 +132,7 @@ type InboxIn struct {
 // InboxOut is the agent's inbox.
 type InboxOut struct {
 	Agent       string               `json:"agent"`
+	Unpushed    *pending.Unpushed    `json:"unpushed,omitempty" jsonschema:"an acceptance made in this clone and not pushed, listed on every call while it is true: push it from the host with git fetch and then flai push --pending, which never forces"`
 	AwaitingYou int                  `json:"awaiting_you"`
 	Threads     []ThreadSummary      `json:"threads"`
 	Ready       []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
@@ -160,7 +167,7 @@ func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
-	out.Ready, out.CanPull = view.ReadyInPullOrder(), view.CanPull()
+	out.Ready, out.CanPull, out.Unpushed = view.ReadyInPullOrder(), view.CanPull(), view.Unpushed
 	if out.Ready == nil {
 		out.Ready = []workitem.BoardCard{}
 	}
@@ -179,7 +186,15 @@ func (s *server) boardView(all bool) (workitem.BoardView, error) {
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
-	return workitem.NewBoardView(items, board, s.now(), all), nil
+	view := workitem.NewBoardView(items, board, s.now(), all)
+	root := s.repo.MainRoot
+	if root == "" {
+		root = s.repo.Root
+	}
+	if u := pending.Detect(s.runner, root); u.Pending() {
+		view.Unpushed = u
+	}
+	return view, nil
 }
 
 // BoardIn selects what the board shows.

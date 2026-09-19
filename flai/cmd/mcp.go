@@ -29,7 +29,7 @@ Standard output is the protocol channel; log events go to standard error.`,
 				return err
 			}
 			agent, _ := agentIdentity()
-			srv := mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now})
+			srv := mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner})
 			a.logger().Info("mcp server started", "component", "mcp", "agent", agent, "root", repo.Root)
 			return srv.Run(cmd.Context(), &mcp.StdioTransport{})
 		},
