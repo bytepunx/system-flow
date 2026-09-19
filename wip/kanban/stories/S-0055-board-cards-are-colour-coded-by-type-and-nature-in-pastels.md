@@ -3,12 +3,15 @@ id: S-0055
 type: story
 nature: feature
 title: Board cards are colour coded by type and nature in pastels
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-19T02:05:29Z
-updated: 2026-09-19T02:05:29Z
-transitions: []
+updated: 2026-09-19T05:35:11Z
+transitions:
+  - to: ready
+    at: 2026-09-19T05:35:11Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/lib/components, flaiover/src/routes]
 ---

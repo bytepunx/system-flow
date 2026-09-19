@@ -3,12 +3,15 @@ id: S-0057
 type: story
 nature: feature
 title: Cards can be dragged within a column to change the pull order
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-19T02:05:29Z
-updated: 2026-09-19T02:05:29Z
-transitions: []
+updated: 2026-09-19T05:35:38Z
+transitions:
+  - to: ready
+    at: 2026-09-19T05:35:38Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover, flai/cmd]
 ---
