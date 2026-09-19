@@ -204,6 +204,17 @@ flai board --all    # epics and tasks too
 flai board --json
 ```
 
+The `backlog` and `ready` columns are listed in pull order: the stories named in `order` in `wip/kanban/board.md`, in that order, then the rest by ID. Agents pull the first ready story, so this is how you say what comes next.
+
+```bash
+flai order S-0061 --top                # first in its column
+flai order S-0059 --before S-0061      # just above another story of the same column
+flai order S-0047 --after S-0053
+flai order S-0056 --bottom
+```
+
+Only ready and backlog stories can be placed, and only relative to a story in the same column; `flai move` changes the column. A story you move to `ready` joins the end of the ready stories. Backlog stories you have never placed stay out of the list and come last, by ID. The dashboard's board does the same thing when you drag a card up or down within a column.
+
 ### Story branches
 
 ```bash

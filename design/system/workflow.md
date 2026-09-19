@@ -56,7 +56,15 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 | review to in-progress | Human | Reason appended to story notes |
 | any to cancelled | Human | Reason appended to story notes |
 
-`flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. A story moved from `review` to `done` is accepted rather than merely transitioned; a story found `done` but unarchived was never accepted, `flai check` flags it as `story.unaccepted`, and `flai accept` completes it. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined. Moving a story to `ready` appends it if absent; starting or cancelling it removes it.
+`flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. A story moved from `review` to `done` is accepted rather than merely transitioned; a story found `done` but unarchived was never accepted, `flai check` flags it as `story.unaccepted`, and `flai accept` completes it. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined.
+
+### The pull order (S-0057)
+
+Only the `ready` and `backlog` columns have an order, and only stories are in it; the other columns are read by what happened to the items in them, and tasks follow their story. A column reads as the stories `order` names, in its order, then the stories it does not name, by ID. So a backlog nobody has prioritised still has one reading, and placing a story says something only about the stories placed above it.
+
+`flai order <story> --before <other> | --after <other> | --top | --bottom` places a story within its column. It refuses an epic or a task, a story in any other state, a reference in another column (changing the column is `flai move`), and a story relative to itself, each with the reason. On every write the list is normalised: ready stories, then backlog stories, and names that are no longer ready or backlog stories are dropped. Backlog stories that were never placed and still come last by ID stay unnamed, so one placement does not make `board.md` name the whole backlog. Ready stories are always named.
+
+`flai move` keeps the list true as stories change column: a story moved to `ready` is named after the ready stories already named and before any backlog story, wherever the list had it; a story moved anywhere else is removed, so one sent back to `backlog` returns to the unplaced ones. `flai board`, the MCP `board` and `inbox` tools, and the dashboard's board all lay out `backlog` and `ready` in this sequence, and the dashboard's drag within a column calls `flai order` (ADR-0016). An agent's MCP `inbox` reports a reordering of the stories it had already seen as a change.
 
 ## Blocking
 
