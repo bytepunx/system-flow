@@ -121,6 +121,24 @@ flaiover/
 └── tests/                # vitest unit, playwright e2e against the template sample repo
 ```
 
+## What the container can write (S-0064, [ADR-0027](../adrs/0027-git-hooks-config-and-info-are-read-only-in-the-dashboard-container.md))
+
+`flai dashboard` mounts the clone read-write and then, over it and read-only, `.git/hooks`, `.git/info`, `.git/config`, `.flai-cache/dashboard.token`, and the host's flai config when it lies inside the clone (`flai/cmd/dashboard_guard.go`). flaiover knows nothing of this; it is how the container is started. The routes by which a process in the container could leave something git later runs on the host, and what became of each:
+
+| Route | Invisible to `git status` | Now |
+|-------|---------------------------|-----|
+| A hook in `.git/hooks` | yes | closed: read-only; tried, the write fails |
+| `core.hooksPath`, `core.fsmonitor`, `core.sshCommand`, editor, pager, askpass, credential helpers, shell aliases, includes, `gpg.program`, filter, diff, and merge drivers, `url.*.insteadOf`, `pushurl` in `.git/config` | yes | closed: `git config` and a rename of the file fail with the config read-only; `git branch -d`, the one legitimate rewrite, tolerates it |
+| Per-worktree config (`config.worktree`) | yes | closed: it is read only when `extensions.worktreeConfig` is set in the read-only config |
+| `.git/info/exclude` hiding a planted file, `.git/info/attributes` naming a filter | yes | closed: read-only |
+| A hook in `.git/worktrees/<name>/hooks` | yes | not a route: it can be written and git does not run it (hooks come from the common directory) |
+| The dashboard token's file, and a flai config inside the clone (image, push key) | yes (ignored) | closed: read-only |
+| Refs, `HEAD`, the index | shows in `git log` and `git status` | open by necessity: acceptance moves branches and commits |
+| A tracked file, including a script the operator runs | no, it shows | open by necessity: a merge writes the work tree; acceptance refuses uncommitted changes outside `wip/` unless asked (S-0051), and review is where a change is seen |
+| A file git ignores that the host executes (a built binary, `node_modules/.bin`, tool caches) | yes | open: project specific, flai does not know which a project has |
+
+What the container's own work writes under `.git`, measured for the ADR: `ORIG_HEAD`, `COMMIT_EDITMSG`, `index`, logs, refs, `worktrees/`, objects, and a rewrite of `config` with identical content. A file bind mount pins the file as it was at start, so the container reads the git config of that moment until the dashboard is restarted.
+
 ## Theme (S-0044)
 
 The dashboard wears the brand palette (`#f7f3e3`, `#23b5d3`, `#119822`, `#645853`, `#054a91`) through a token layer in `src/routes/layout.css`: CSS custom properties per theme, mapped to Tailwind utilities with `@theme inline` (`bg-ground`, `text-ink`, `border-line`, `text-accent`, ...). Dark is a selected theme: `data-theme` on `<html>`, stamped before first paint from `localStorage` (`flaiover-theme`) or the system preference, cycled by the button in the navigation (`src/lib/theme.svelte.ts`). The palette has no dark colour, so the dark ground and surface are deep steps of the warm grey hue. Pages and components use tokens only; `src/lib/theme.test.ts` parses the stylesheet and checks every text pair at 4.5:1 and every control pair at 3:1.

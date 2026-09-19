@@ -249,7 +249,12 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		slug = "decision"
 	}
 	if len(slug) > 80 {
-		slug = strings.TrimRight(slug[:80], "-")
+		// cut at a word, not in the middle of one
+		cut := slug[:80]
+		if i := strings.LastIndex(cut, "-"); i > 40 {
+			cut = cut[:i]
+		}
+		slug = strings.TrimRight(cut, "-")
 	}
 	name := num4(n) + "-" + slug + ".md"
 	path := filepath.Join(dir, name)

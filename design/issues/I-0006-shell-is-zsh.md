@@ -3,11 +3,11 @@ id: I-0006
 title: The agent shell is zsh and bash idioms fail silently
 class: efficiency
 status: open
-count: 5
+count: 6
 cost: 2m
 first_reported: 2026-09-15T18:00:57Z
-last_reported: 2026-09-19T07:56:04Z
-updated: 2026-09-19T07:56:04Z
+last_reported: 2026-09-19T10:27:33Z
+updated: 2026-09-19T10:27:33Z
 ---
 
 # I-0006 The agent shell is zsh and bash idioms fail silently
@@ -31,6 +31,9 @@ S-0058: a git push with tags held in a shell variable was passed as one refspec 
 
 ### 2026-09-19T07:56:04Z
 S-0052: a docker run command line held in a shell variable was passed as one word by zsh in the research lab; wrapped it in a script instead
+
+### 2026-09-19T10:27:33Z
+S-0064: rm -f keys/* with no matches made zsh abort the whole && chain (no matches found), so the lab's keys were never generated; removed the directory instead
 
 ## Remediation
 Scripts use `#!/usr/bin/env sh` with POSIX constructs only; loops in ad hoc commands use literal lists. Close when scripts cover the routine flows.

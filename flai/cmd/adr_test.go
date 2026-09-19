@@ -230,3 +230,14 @@ func TestAcceptedAdrCannotBeEdited(t *testing.T) {
 		t.Errorf("the template is not an accepted ADR: %+v", doc)
 	}
 }
+
+func TestAdrSlugIsCutAtAWord(t *testing.T) {
+	root := adrProject(t)
+	out, errOut, code := runIn(t, root, "adr", "new", "The dashboard container cannot write git hooks, git config, or git info: they are mounted read-only over the clone")
+	if code != 0 {
+		t.Fatal(errOut)
+	}
+	if !strings.Contains(out, "design/adrs/0008-the-dashboard-container-cannot-write-git-hooks-git-config-or-git-info-they-are.md") {
+		t.Errorf("a long title gives a file name that ends on a whole word:\n%s", out)
+	}
+}
