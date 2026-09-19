@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/pending"
 )
 
 // BoardCard is one item on the board as flai board --json and the MCP board
@@ -27,6 +29,9 @@ type BoardView struct {
 	WIPLimits map[string]int         `json:"wip_limits"`
 	Order     []string               `json:"order"`
 	Breaches  []string               `json:"breaches"`
+	// Unpushed is set by callers that can ask git: an acceptance in the main
+	// checkout that its remote-tracking branch does not have yet (S-0063).
+	Unpushed *pending.Unpushed `json:"unpushed,omitempty"`
 	// Counts are stories per column, which is what the limits apply to.
 	Counts map[string]int `json:"-"`
 }

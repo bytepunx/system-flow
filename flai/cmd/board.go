@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -29,6 +30,9 @@ func newBoardCmd(a *app) *cobra.Command {
 				return err
 			}
 			view := workitem.NewBoardView(items, board, a.now(), all)
+			if u := pending.Detect(a.runner, mainRootOf(repo)); u.Pending() {
+				view.Unpushed = u
+			}
 			columns, counts, breaches := view.Columns, view.Counts, view.Breaches
 			if a.jsonOut {
 				return a.printJSON(view)
@@ -58,6 +62,9 @@ func newBoardCmd(a *app) *cobra.Command {
 			if len(board.Order) > 0 {
 				fmt.Fprintf(a.out, "\npull order: %v\n", board.Order)
 			}
+			if u := view.Unpushed; u != nil {
+				fmt.Fprintf(a.out, "\naccepted, not pushed: %s (%d commit(s) ahead of %s%s); run: %s\n", strings.Join(u.Acceptances, ", "), u.Commits, u.Upstream, tagsNote(u.Tags), u.Command)
+			}
 			for _, b := range breaches {
 				a.logger().Warn("wip limit exceeded", "component", "workitem", "detail", b)
 			}
@@ -74,4 +81,19 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return string(r[:n-1]) + "…"
+}
+
+// mainRootOf is the main checkout, where acceptances are committed.
+func mainRootOf(repo *workitem.Repo) string {
+	if repo.MainRoot != "" {
+		return repo.MainRoot
+	}
+	return repo.Root
+}
+
+func tagsNote(tags []string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+	return ", tags " + strings.Join(tags, ", ")
 }
