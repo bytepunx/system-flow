@@ -24,6 +24,11 @@ type NewOptions struct {
 	Tags    []string
 	Touches []string
 	Now     time.Time
+	// Body replaces what the template puts below the item's heading: the
+	// author's goal, criteria, and notes, written before the item exists
+	// (S-0059). The heading stays the one flai renders, so the ID and the
+	// title in it cannot disagree with the front matter.
+	Body string
 }
 
 // Create allocates an ID, renders the body template, links the parent, and
@@ -83,6 +88,9 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("item template for %s produced an invalid item: %w", opt.Type, err)
 	}
+	if body := strings.TrimSpace(opt.Body); body != "" {
+		it.Body = itemHeading(it.Body) + "\n\n" + body + "\n"
+	}
 	it.Tags = append(it.Tags, opt.Tags...)
 	it.Touches = append(it.Touches, opt.Touches...)
 	if it.Tags == nil {
@@ -105,6 +113,42 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		}
 	}
 	return it, nil
+}
+
+// itemHeading is the first heading of a rendered item body, "# ID Title".
+func itemHeading(body string) string {
+	for _, l := range strings.Split(body, "\n") {
+		if strings.HasPrefix(l, "# ") {
+			return strings.TrimRight(l, " ")
+		}
+	}
+	return ""
+}
+
+// TemplateBody is what the project's template puts below the heading of a
+// new item of this type: the sections an author fills in. A form starts
+// from it, so a project that changed its item template gets its own
+// sections and not flai's defaults.
+func (r *Repo) TemplateBody(typ string) (string, error) {
+	if !contains(Types, typ) {
+		return "", fmt.Errorf("unknown type %q", typ)
+	}
+	doc, err := r.renderItemTemplate(typ, map[string]any{
+		"id": "X-0000", "title": "title", "nature": "feature", "parent": "",
+		"owner": "owner", "now": "2000-01-01T00:00:00Z", "today": "2000-01-01",
+	})
+	if err != nil {
+		return "", err
+	}
+	it, err := ParseItem(doc)
+	if err != nil {
+		return "", err
+	}
+	body := it.Body
+	if h := itemHeading(body); h != "" {
+		body = body[strings.Index(body, h)+len(h):]
+	}
+	return strings.TrimLeft(body, "\n"), nil
 }
 
 // renderItemTemplate uses the project's template items/ when available,

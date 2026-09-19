@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/itemnew"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -20,16 +23,85 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
 	var nature, owner, parent string
-	var tags, touches []string
+	var tags, touches, trailers []string
+	var bodyStdin, autocommit, printBody bool
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
 		Short: fmt.Sprintf("Create a %s from the item template", typ),
-		Args:  cobra.ExactArgs(1),
+		Long: fmt.Sprintf(`Create a %s from the project's item template with the next free ID,
+linked into its parent.
+
+With --body-stdin the body below the item's heading is read from standard
+input instead of the template's empty sections, and the creation is one step
+that happens or does not: flai check runs with the new item in place, and if
+it reports anything the item introduces, the item is removed, its parent is
+restored, and the findings are printed (exit 4). --autocommit commits the new
+item and its parent on their own, unless the project sets
+dashboard.autocommit: false. Nothing is pushed. --print-body prints the body
+the template gives, for a form or a script to start from, and creates nothing.`, typ),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if printBody {
+				return cobra.NoArgs(cmd, args)
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
+			}
+			if printBody {
+				body, err := repo.TemplateBody(typ)
+				if err != nil {
+					return err
+				}
+				if a.jsonOut {
+					return a.printJSON(map[string]string{"type": typ, "body": body})
+				}
+				fmt.Fprint(a.out, body)
+				return nil
+			}
+			opt := workitem.NewOptions{
+				Type: typ, Title: args[0], Nature: nature, Parent: parent,
+				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Now: a.now(),
+			}
+			if bodyStdin || autocommit {
+				if bodyStdin {
+					data, err := io.ReadAll(cmd.InOrStdin())
+					if err != nil {
+						return err
+					}
+					if strings.TrimSpace(string(data)) == "" {
+						return fmt.Errorf("--body-stdin was given and standard input is empty; write the body, or leave the flag out for the template's empty sections")
+					}
+					opt.Body = string(data)
+				}
+				res, err := itemnew.Create(repo, a.runner, itemnew.Options{New: opt, Autocommit: autocommit, Trailers: trailers})
+				if r, ok := docedit.IsRefused(err); ok {
+					if a.jsonOut {
+						_ = a.printJSON(map[string]any{"refused": r})
+					} else {
+						for _, f := range r.Findings {
+							fmt.Fprintf(a.out, "%s:%d: %s: %s: %s\n", f.Path, f.Line, f.Level, f.Rule, f.Message)
+						}
+					}
+					return &exitError{code: exitDocRefused, msg: r.Error()}
+				}
+				if err != nil {
+					return err
+				}
+				if a.jsonOut {
+					return a.printJSON(res)
+				}
+				fmt.Fprintf(a.out, "%s %s\n  %s\n", res.Item.ID, res.Item.Title, res.Path)
+				switch {
+				case res.Committed:
+					fmt.Fprintf(a.out, "  committed %s\n", res.Commit)
+				case res.CommitError != "":
+					fmt.Fprintf(a.out, "  NOT committed (%s)\n", firstLine(res.CommitError))
+				}
+				return nil
 			}
 			it, err := repo.Create(workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
@@ -49,9 +121,18 @@ func newItemNewCmd(a *app, typ string) *cobra.Command {
 	c.Flags().StringVar(&owner, "owner", "", "owner (default: config author)")
 	c.Flags().StringSliceVar(&tags, "tag", nil, "tag (repeatable or comma separated)")
 	c.Flags().StringSliceVar(&touches, "touches", nil, "paths or components this work changes (repeatable or comma separated)")
+	c.Flags().BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input; checked before it is kept")
+	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the new item and its parent on their own, unless dashboard.autocommit is false")
+	c.Flags().StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
+	c.Flags().BoolVar(&printBody, "print-body", false, "print the body the template gives this type and create nothing")
 	if parentFlag != "" {
 		c.Flags().StringVar(&parent, parentFlag, "", "parent "+parentFlag+" ID")
-		_ = c.MarkFlagRequired(parentFlag)
+		c.PreRunE = func(cmd *cobra.Command, args []string) error {
+			if !printBody && parent == "" {
+				return fmt.Errorf("required flag \"%s\" not set", parentFlag)
+			}
+			return nil
+		}
 	}
 	return c
 }
