@@ -119,6 +119,9 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newTouchesCmd(a), newBoardCmd(a), newOrderCmd(a), newPushCmd(a),
 		newStreamCmd(a), newArchiveCmd(a), newMigrateCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a), newThreadCmd(a), newMCPCmd(a), newReleaseCmd(a), newAcceptCmd(a), newDashboardCmd(a), newDocCmd(a),
 	)
+	// Registered apart from the list above so that stories adding commands at
+	// the same time do not meet on one line.
+	root.AddCommand(newAdrCmd(a))
 	return root
 }
 

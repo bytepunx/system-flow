@@ -140,8 +140,35 @@ func ModeOf(repo *workitem.Repo, abs string) (mode, reason string) {
 		return Body, "flai owns a work item's front matter; move, block, and retitle it with flai"
 	case under(repo.AgentsDir()):
 		return Body, "flai owns a narrative's front matter"
+	case acceptedADR(repo, abs):
+		return None, "an accepted ADR is immutable: to change the decision, record a new ADR that supersedes it (flai adr new --supersedes)"
 	}
 	return Full, ""
+}
+
+var (
+	adrFile        = regexp.MustCompile(`^\d{4}-.+\.md$`)
+	acceptedStatus = regexp.MustCompile(`(?m)^status: *(accepted|superseded|deprecated)\b`)
+)
+
+// acceptedADR reports whether the file is an ADR that has been accepted. A
+// proposed ADR is still a draft and is edited like any document; once
+// accepted, only flai adr new sets superseded_by on it (S-0060, settling
+// what S-0040 left open).
+func acceptedADR(repo *workitem.Repo, abs string) bool {
+	if filepath.Base(filepath.Dir(abs)) != "adrs" || !adrFile.MatchString(filepath.Base(abs)) {
+		return false
+	}
+	design := filepath.Join(repo.Root, strings.TrimSuffix(repo.Manifest.Layout["design"], "/"))
+	if rel, err := filepath.Rel(design, abs); err != nil || strings.HasPrefix(rel, "..") {
+		return false
+	}
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		return false
+	}
+	fm, _, err := workitem.SplitFrontMatter(string(data))
+	return err == nil && acceptedStatus.MatchString(fm)
 }
 
 // Show loads a document for editing.
