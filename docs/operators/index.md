@@ -38,6 +38,26 @@ Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository wi
 
 When the host path cannot be used in a Linux container (a Windows drive path, or a path containing a colon), `flai dashboard` mounts at `/project`, logs a warning, and stories with a branch are accepted from a shell unless worktrees are relative.
 
+## MCP over HTTP
+
+The dashboard serves the project's MCP server at `/mcp` ([ADR-0024](../../design/adrs/0024-mcp-over-http-and-project-identity.md)), so an agent on another machine, and later a hub, reach the same tools an agent on the host has through `flai mcp`.
+
+| | |
+|-|-|
+| Transport | MCP Streamable HTTP: `POST /mcp` for messages, `DELETE /mcp` to end a session, `GET /mcp` answers 405 (no server-initiated stream is offered) |
+| Authentication | `Authorization: Bearer <project token>` only. The browser session cookie does not open `/mcp`, and a request whose `Origin` is another site is refused |
+| Sessions | Each session is its own `flai mcp` process on the host, running as the agent named by the `X-Flai-Agent` header on `initialize`, else the client's name. A session ends on `DELETE`, or after `FLAIOVER_MCP_IDLE_MINUTES` without a request (default 30); at most `FLAIOVER_MCP_MAX_SESSIONS` exist at once (default 16), after which `initialize` answers 503 |
+| Long requests | `wait_for_events` holds its request open until something changes, for up to five minutes. A proxy or tunnel in front of the dashboard must allow an idle response that long, or agents see their wait cut short |
+| Log | `mcp session started` and `mcp session ended` events, with the session, the agent, and how many sessions are open |
+
+### The tunnel expectation
+
+The dashboard speaks plain HTTP and the token travels in every request. On the machine itself or a network you trust that is acceptable. Anywhere else, put a tunnel or a reverse proxy that terminates TLS in front of it and give agents the `https` address; never publish the dashboard's port to the internet as it is. To keep it to the host and let only the tunnel reach it, bind it to loopback: `dashboard.bind: 127.0.0.1` in `system-flow.yaml`, or `flai dashboard --bind 127.0.0.1`. A hub, when there is one, is reached the other way round: the dashboard dials out to it, so no inbound port is opened at all.
+
+### Project identity
+
+Every `/api/*` and `/mcp` response names the project it came from: the headers `X-Flai-Project-Key` and `X-Flai-Project-Name` (URI-encoded), and `project: { name, key }` in JSON object bodies. Both come from `name` and `key` in `system-flow.yaml`; `flai check` warns when `key` is missing. Responses that refuse a request for lack of a token carry neither.
+
 ## Authentication
 
 Every request except `/_health` and `/_ready` needs the project's token (ADR-0018).

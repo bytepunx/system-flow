@@ -3,11 +3,11 @@ id: I-0010
 title: Host Node is 25, outside the versions the project and its dependencies target
 class: efficiency
 status: open
-count: 9
+count: 10
 cost: 3m
 first_reported: 2026-09-17T06:01:24Z
-last_reported: 2026-09-19T04:59:20Z
-updated: 2026-09-19T04:59:20Z
+last_reported: 2026-09-19T05:26:51Z
+updated: 2026-09-19T05:26:51Z
 ---
 
 # I-0010 Host Node is 25, outside the versions the project and its dependencies target
@@ -43,5 +43,8 @@ S-0041: same refusal installing flaiover dependencies in the story worktree
 
 ### 2026-09-19T04:59:20Z
 S-0042: same refusal installing flaiover dependencies in the story worktree
+
+### 2026-09-19T05:26:51Z
+S-0043: same refusal installing flaiover dependencies in the story worktree
 
 ## Remediation

@@ -138,6 +138,12 @@ func headingLine(path, heading string) int {
 
 func (c *checker) layout() {
 	m := c.repo.Manifest
+	// API responses name the project by this key (ADR-0024). A warning now;
+	// an error after the template minor that ships the requirement.
+	if strings.TrimSpace(m.Key) == "" {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Warning, "manifest.key", mf, keyLine(mf, "name"), "system-flow.yaml has no key; add a short one (for example the project's initials), which the dashboard's API and a hub use to name this project")
+	}
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
 			c.add(Warning, "layout.lock", filepath.Join(c.repo.Root, "system-flow.yaml"), keyLine(filepath.Join(c.repo.Root, "system-flow.yaml"), "template"), "template %s is recorded but there is no system-flow.lock.yaml; run flai upgrade --relock", m.Template.Version)

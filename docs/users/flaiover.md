@@ -16,6 +16,10 @@ flaiover uses the brand palette in a light and a dark theme. It follows your sys
 
 Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text. ADRs lists the architecture decisions with status, date, and which decisions supersede which.
 
+## Agents on other machines
+
+The dashboard also serves the project's MCP tools over HTTP at `/mcp`, so an agent that is not on this machine can read the inbox, move items, and reply to threads with the project token. What it does shows up here like any other agent's work. Setting it up is in [the flai guide](flai.md) and, for what to put in front of it, the operator guide.
+
 ## Inbox and activity
 
 Inbox is the list of things that need you, and the number beside its link in the navigation is how many there are. It holds five kinds of entry, each a link to where you deal with it: stories in review, which open their review page; threads where someone other than you wrote last; open questions agents left in their narratives; blocked items, with the reason; and overlapping touches, where two stories in progress say they change the same files. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. The list and the count refresh by themselves when files change.

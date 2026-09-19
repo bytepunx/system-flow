@@ -17,6 +17,7 @@ import { startTracing, traceId, withRequestSpan } from '$lib/server/otel';
 import { authenticate, decide, initAuth } from '$lib/server/auth';
 import { repo } from '$lib/server/repo';
 import { startNotifier } from '$lib/server/notify';
+import { projectIdentity, setIdentityHeaders } from '$lib/server/project';
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
@@ -77,6 +78,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 				}
 				const response = await resolve(event);
 				status = response.status;
+				// Every API and MCP answer names its project (ADR-0024); refusals above do not,
+				// so an unauthenticated caller learns nothing about what is served here.
+				if (path.startsWith('/api/') || path === '/mcp')
+					return setIdentityHeaders(response, await projectIdentity(repo()));
 				return response;
 			} finally {
 				const seconds = Number(process.hrtime.bigint() - startedAt) / 1e9;

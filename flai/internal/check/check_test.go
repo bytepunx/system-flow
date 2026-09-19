@@ -40,7 +40,8 @@ func TestBadFixtureFindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]string{ // rule -> substring of path
-		"story.tasks":         "S-004", // review with no tasks
+		"story.tasks":         "S-004",            // review with no tasks
+		"manifest.key":        "system-flow.yaml", // API responses name the project by it (ADR-0024)
 		"story.criteria":      "S-001",
 		"narrative.missing":   "S-001",
 		"item.parent-missing": "T-001",

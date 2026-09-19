@@ -276,6 +276,22 @@ flai mcp          # an MCP server on stdio; agents start it, you do not
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
 | `wait_for_events` | Returns at once when something changed since this agent last looked, otherwise blocks until a thread, item, or narrative changes, or the timeout passes. Returns `events` in the same shape as `changes`, and the changed paths |
 
+An agent on another machine reaches the same server through the dashboard, over HTTP, with the project token. Its `.mcp.json` names the dashboard's `/mcp` and sends the token as a bearer; `X-Flai-Agent` is the name it works under, as `FLAI_AGENT` is locally:
+
+```json
+{
+  "mcpServers": {
+    "flai": {
+      "type": "http",
+      "url": "https://dashboard.example/mcp",
+      "headers": { "Authorization": "Bearer ${FLAIOVER_TOKEN}", "X-Flai-Agent": "claude@laptop" }
+    }
+  }
+}
+```
+
+The tools and their behaviour are the same, because the dashboard starts a `flai mcp` of its own for each connected agent and passes messages through. Keep the token out of the file: Claude Code expands `${VAR}` in `.mcp.json`, as above; for another client, check how it takes a secret. Use `https` through a tunnel or proxy whenever the dashboard is not on a network you trust; see the operator guide.
+
 "Since this agent last looked" is a marker per agent name (`FLAI_AGENT`) under `.flai-cache/mcp/`, outside git. It only decides which changes are news; ready work and open threads are listed on every call, so nothing depends on it. An agent that ends its turn between your messages calls `inbox` when it starts again and hears what you did in between; one that stays running holds `wait_for_events` and hears within a second. `flai move` records `FLAI_AGENT` as who moved an item when it is set, so an agent is not told about its own moves; a move on the dashboard's board is recorded as the project's `owner`.
 
 Design and docs files are also exposed as resources (`flai://design/...`, `flai://docs/...`). Everything the server writes goes through the same code as the CLI, so files stay the record and the dashboard shows agent replies as they land.
