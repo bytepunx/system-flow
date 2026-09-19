@@ -22,6 +22,11 @@ type fakeRunner struct {
 	noToken  bool   // gh has no token
 	identity bool   // git config has a user
 	excludes string // git config core.excludesFile, already expanded
+	// the push key (S-0062)
+	remote     string // git remote get-url --push origin
+	keyKind    string // what ssh-keygen -y -P "" says: "", "passphrase", "notkey"
+	knownHosts string // what ssh-keygen -F prints for the remote's host
+	pushMount  string // source of the push key mount of a running container
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -57,8 +62,30 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		return "", nil
 	}
+	if name == "ssh-keygen" {
+		switch args[0] {
+		case "-y":
+			switch f.keyKind {
+			case "passphrase":
+				return "Load key \"k\": incorrect passphrase supplied to decrypt private key", fmt.Errorf("ssh-keygen: exit status 255")
+			case "notkey":
+				return "Load key \"k\": error in libcrypto", fmt.Errorf("ssh-keygen: exit status 255")
+			}
+			return "ssh-ed25519 AAAAC3Nza test", nil
+		case "-l":
+			return "256 SHA256:fakefingerprint alex at laptop (ED25519)", nil
+		case "-F":
+			if f.knownHosts == "" {
+				return "", fmt.Errorf("ssh-keygen: exit status 1")
+			}
+			return "# Host " + args[1] + " found: line 3\n" + f.knownHosts + "\n", nil
+		}
+		return "", nil
+	}
 	if name == "git" {
 		switch {
+		case args[0] == "remote" && f.remote != "":
+			return f.remote, nil
 		case args[0] == "rev-parse":
 			return "abc1234", nil
 		case args[0] == "config" && f.identity && args[1] == "user.name":
@@ -98,6 +125,9 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		return "", nil
 	case "inspect":
+		if strings.Contains(strings.Join(args, " "), pushKeyMountPath) {
+			return f.pushMount, nil
+		}
 		return "ghcr.io/bytepunx/flaiover:0.2.0 5555", nil
 	case "stop":
 		delete(f.running, args[1])

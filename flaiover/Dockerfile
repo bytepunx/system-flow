@@ -42,7 +42,9 @@ ARG FLAIOVER_VERSION=0.0.0
 LABEL org.opencontainers.image.source="https://github.com/bytepunx/system-flow" \
       org.opencontainers.image.description="flaiover: the system-flow dashboard with a bundled flai" \
       org.opencontainers.image.licenses="UNLICENSED"
-RUN apk add --no-cache git tini
+# openssh-client: git pushes an acceptance over SSH when the operator has
+# given the container a key (ADR-0026). Unused, and harmless, otherwise.
+RUN apk add --no-cache git openssh-client-default tini
 WORKDIR /app
 COPY --from=build /src/flaiover/build ./build
 COPY --from=build /src/flaiover/node_modules ./node_modules

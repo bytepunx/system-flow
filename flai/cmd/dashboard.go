@@ -92,7 +92,7 @@ func (s dashboardSettings) ref() string { return s.Image + ":" + s.Tag }
 func (s dashboardSettings) url() string { return fmt.Sprintf("http://localhost:%d", s.Port) }
 
 func newDashboardCmd(a *app) *cobra.Command {
-	var image, tag, bind string
+	var image, tag, bind, pushKeyFlag, pushHostsFlag string
 	var port int
 	var pull, attach, open, build bool
 	c := &cobra.Command{
@@ -111,7 +111,7 @@ flags, then the dashboard section of system-flow.yaml, then config.`,
   flai dashboard stop`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboard(image, tag, port, bind, pull, attach, open, build)
+			return a.runDashboard(image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build)
 		},
 	}
 	f := c.Flags()
@@ -119,6 +119,8 @@ flags, then the dashboard section of system-flow.yaml, then config.`,
 	f.StringVar(&tag, "tag", "", "image tag (default: manifest, then config)")
 	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
 	f.StringVar(&bind, "bind", "", "host address to publish on, 0.0.0.0 for every interface (default: manifest, then config, then 0.0.0.0)")
+	f.StringVar(&pushKeyFlag, "push-key", "", "SSH private key the container may push acceptances with (default: config dashboard.push_key; none gives it no credential)")
+	f.StringVar(&pushHostsFlag, "push-known-hosts", "", "file to take the remote's host keys from, with --push-key (default: config dashboard.push_known_hosts, then your known_hosts and the system's)")
 	f.BoolVar(&pull, "pull", false, "pull the image even if present")
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
@@ -293,7 +295,7 @@ func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
 
-func (a *app) runDashboard(image, tag string, port int, bind string, pull, attach, open, build bool) error {
+func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build bool) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
@@ -322,6 +324,14 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 			return err
 		}
 	}
+	// The push key is checked before anything is started: a key that cannot
+	// work is refused now, not at the first acceptance (ADR-0026).
+	var pk *pushKey
+	if keyPath := a.pushKeyPath(pushKeyFlag); keyPath != "" {
+		if pk, err = a.preparePushKey(repo, keyPath, a.pushKnownHosts(pushHostsFlag), "origin"); err != nil {
+			return err
+		}
+	}
 	token, created, err := ensureToken(repo.MainRoot)
 	if err != nil {
 		return fmt.Errorf("dashboard token: %w", err)
@@ -345,6 +355,7 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	// (S-0046): the container has no ~/.gitconfig of its own.
 	args = append(args, a.gitIdentityArgs(repo.MainRoot)...)
 	args = append(args, a.gitExcludesArgs(repo.MainRoot)...)
+	args = append(args, pk.args()...)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
@@ -355,13 +366,20 @@ func (a *app) runDashboard(image, tag string, port int, bind string, pull, attac
 	}
 	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root, "mount_target": mount})
+		out := map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root, "mount_target": mount}
+		if pk != nil {
+			out["push_key"] = pk
+		}
+		return a.printJSON(out)
 	}
 	reach := "reachable from this host only"
 	if s.Bind == defaultBind {
 		reach = "reachable on every interface of this host; the token is required, keep the host private"
 	}
 	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at %s\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, mount, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
+	if pk != nil {
+		fmt.Fprint(a.out, pk.describe())
+	}
 	if open {
 		openBrowser(loginURL(s.url(), token))
 	}
@@ -458,11 +476,24 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 					image, url = i, orDefault(u, url)
 				}
 			}
+			keyPath, keyPrint := "", ""
+			if running {
+				keyPath, keyPrint = a.runningPushKey(s.Name)
+			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"container": s.Name, "running": running, "url": url, "image": image})
+				out := map[string]any{"container": s.Name, "running": running, "url": url, "image": image}
+				if keyPath != "" {
+					out["push_key"] = map[string]string{"path": keyPath, "fingerprint": keyPrint}
+				}
+				return a.printJSON(out)
 			}
 			if running {
 				fmt.Fprintf(a.out, "%s running at %s (%s)\n", s.Name, url, image)
+				if keyPath != "" {
+					fmt.Fprintf(a.out, "  holds a push key: %s from %s; acceptances from the board are pushed, and the dashboard token can publish a release\n", keyPrint, keyPath)
+				} else {
+					fmt.Fprintln(a.out, "  holds no credential: acceptances from the board are pushed from a shell")
+				}
 			} else {
 				fmt.Fprintf(a.out, "%s not running; start with flai dashboard\n", s.Name)
 			}

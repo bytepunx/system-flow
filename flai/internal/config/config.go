@@ -52,6 +52,13 @@ type Dashboard struct {
 	Tag   string `json:"tag"`
 	Port  int    `json:"port"`
 	Bind  string `json:"bind"` // host address the port is published on; 0.0.0.0 for every interface
+	// PushKey is an SSH private key on this host that the container may push
+	// acceptances with (ADR-0026). Empty, the default, gives it nothing. It is
+	// a fact about one machine, so it lives here and never in the manifest.
+	PushKey string `json:"push_key"`
+	// PushKnownHosts names the file the remote's host keys are taken from
+	// instead of this user's and the system's known_hosts.
+	PushKnownHosts string `json:"push_known_hosts"`
 }
 
 // Default returns the configuration written on first run.
@@ -157,7 +164,7 @@ func Save(path string, cfg Config) error {
 func Keys() []string {
 	return []string{
 		"template.repo", "template.ref",
-		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind",
+		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.push_key", "dashboard.push_known_hosts",
 		"cache_dir", "author",
 		"worktrees.relative_paths",
 	}
