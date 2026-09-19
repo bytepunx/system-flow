@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.12 - 2026-09-19
+
+- S-0063 An acceptance that is not pushed stays visible on the board and in inbox, and flai push --pending pushes it (patch).
+
 ## 1.0.11 - 2026-09-19
 
 - S-0053 Research and experiment stories can be accepted: findings land on main and are pushed, with no release (patch).

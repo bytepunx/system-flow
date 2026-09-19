@@ -3,12 +3,21 @@ id: T-0237
 type: task
 nature: feature
 title: Try it in a browser against a scratch project, user documentation, criteria
-status: backlog
+status: done
 parent: S-0060
 owner: alex
 created: 2026-09-19T09:39:14Z
-updated: 2026-09-19T09:39:14Z
-transitions: []
+updated: 2026-09-19T09:56:50Z
+transitions:
+  - to: ready
+    at: 2026-09-19T09:50:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-19T09:50:24Z
+    by: system-flow
+  - to: done
+    at: 2026-09-19T09:56:50Z
+    by: system-flow
 stream: S-0060
 tags: []
 ---

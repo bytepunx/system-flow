@@ -3,11 +3,11 @@ id: S-0063
 type: story
 nature: feature
 title: An acceptance that is not pushed stays visible on the board and in inbox, and flai push --pending pushes it
-status: review
+status: done
 parent: E-0006
 owner: alex
 created: 2026-09-19T07:54:42Z
-updated: 2026-09-19T09:18:43Z
+updated: 2026-09-19T10:00:05Z
 transitions:
   - to: ready
     at: 2026-09-19T08:13:32Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-19T09:18:43Z
     by: system-flow
+  - to: done
+    at: 2026-09-19T10:00:05Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal/workitem, flai/internal/mcpserver, flaiover]
 ---

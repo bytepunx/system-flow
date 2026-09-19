@@ -3,17 +3,20 @@ id: T-0236
 type: task
 nature: feature
 title: "Dashboard: endpoints, the new ADR form on the ADRs page, and accepting a proposed ADR"
-status: in-progress
+status: done
 parent: S-0060
 owner: alex
 created: 2026-09-19T09:39:14Z
-updated: 2026-09-19T09:47:15Z
+updated: 2026-09-19T09:50:24Z
 transitions:
   - to: ready
     at: 2026-09-19T09:47:15Z
     by: system-flow
   - to: in-progress
     at: 2026-09-19T09:47:15Z
+    by: system-flow
+  - to: done
+    at: 2026-09-19T09:50:24Z
     by: system-flow
 stream: S-0060
 tags: []
