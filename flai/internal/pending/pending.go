@@ -74,7 +74,8 @@ func Detect(r execx.Runner, root string) *Unpushed {
 	if err != nil || ahead == 0 {
 		return nil
 	}
-	u := &Unpushed{Branch: branch, Upstream: upstream, Remote: upstream[:strings.Index(upstream, "/")], Commits: ahead, Acceptances: []string{}, Tags: []string{}}
+	remote, _, _ := strings.Cut(upstream, "/")
+	u := &Unpushed{Branch: branch, Upstream: upstream, Remote: remote, Commits: ahead, Acceptances: []string{}, Tags: []string{}}
 	if subjects, err := r.Run(root, "git", "log", "--format=%s", upstream+".."+branch); err == nil {
 		for _, s := range lines(subjects) {
 			if m := acceptance.FindStringSubmatch(s); m != nil {
