@@ -356,6 +356,9 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	args = append(args, a.gitIdentityArgs(repo.MainRoot)...)
 	args = append(args, a.gitExcludesArgs(repo.MainRoot)...)
 	args = append(args, pk.args()...)
+	guardArgs, guarded, guardNote := a.gitGuardArgs(s.Root, mount)
+	args = append(args, guardArgs...)
+	planted := a.auditClone(s.Root)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
@@ -370,6 +373,10 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		if pk != nil {
 			out["push_key"] = pk
 		}
+		out["read_only"] = guarded
+		if len(planted) > 0 {
+			out["already_in_clone"] = planted
+		}
 		return a.printJSON(out)
 	}
 	reach := "reachable from this host only"
@@ -380,6 +387,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	if pk != nil {
 		fmt.Fprint(a.out, pk.describe())
 	}
+	fmt.Fprint(a.out, guardMessage(guarded, guardNote, planted))
 	if open {
 		openBrowser(loginURL(s.url(), token))
 	}
@@ -485,6 +493,12 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 				if keyPath != "" {
 					out["push_key"] = map[string]string{"path": keyPath, "fingerprint": keyPrint}
 				}
+				if running {
+					out["git_read_only"] = a.runningGuard(s.Name)
+				}
+				if planted := a.auditClone(s.Root); len(planted) > 0 {
+					out["already_in_clone"] = planted
+				}
 				return a.printJSON(out)
 			}
 			if running {
@@ -494,6 +508,12 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 				} else {
 					fmt.Fprintln(a.out, "  holds no credential: acceptances from the board are pushed from a shell")
 				}
+				if a.runningGuard(s.Name) {
+					fmt.Fprintln(a.out, "  git hooks, config, and info are read-only in the container")
+				} else {
+					fmt.Fprintln(a.out, "  this container can write git hooks and config that would run on this host: it was started by an older flai; restart it (flai dashboard stop, then flai dashboard)")
+				}
+				fmt.Fprint(a.out, guardMessage(nil, "", a.auditClone(s.Root)))
 			} else {
 				fmt.Fprintf(a.out, "%s not running; start with flai dashboard\n", s.Name)
 			}

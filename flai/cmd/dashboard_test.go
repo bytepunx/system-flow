@@ -27,6 +27,9 @@ type fakeRunner struct {
 	keyKind    string // what ssh-keygen -y -P "" says: "", "passphrase", "notkey"
 	knownHosts string // what ssh-keygen -F prints for the remote's host
 	pushMount  string // source of the push key mount of a running container
+	// the read-only git paths (S-0064)
+	roMounts  string // read-only mount destinations of a running container, one per line
+	gitConfig string // git config --local --list
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -86,6 +89,8 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		switch {
 		case args[0] == "remote" && f.remote != "":
 			return f.remote, nil
+		case args[0] == "config" && len(args) > 2 && args[1] == "--local" && args[2] == "--list":
+			return f.gitConfig, nil
 		case args[0] == "rev-parse":
 			return "abc1234", nil
 		case args[0] == "config" && f.identity && args[1] == "user.name":
@@ -127,6 +132,9 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 	case "inspect":
 		if strings.Contains(strings.Join(args, " "), pushKeyMountPath) {
 			return f.pushMount, nil
+		}
+		if strings.Contains(strings.Join(args, " "), "if not .RW") {
+			return f.roMounts, nil
 		}
 		return "ghcr.io/bytepunx/flaiover:0.2.0 5555", nil
 	case "stop":
