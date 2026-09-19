@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -455,5 +456,92 @@ func TestPullOrderChangeIsReportedOnlyWhenPrioritiesChange(t *testing.T) {
 	}
 	if ready := out["ready"].([]any); ready[0].(map[string]any)["id"] != b.ID {
 		t.Errorf("ready follows the new order: %v", ready)
+	}
+}
+
+// S-0061: the first look of a new agent on a busy repository was 209 changes
+// and 68 KB. A look is capped, the newest kept and the rest counted, a first
+// look leaves task transitions out, and the cursor passes all of it.
+func TestAFirstLookIsBoundedAndLeavesTasksOut(t *testing.T) {
+	// what the fixture alone holds for a first look: its own story and epic
+	quiet, _ := setup(t).call(t, "inbox", map[string]any{})
+	already := len(quiet["changes"].([]any))
+
+	f := setup(t)
+	// a busy day before the agent's first call: more story changes than the
+	// cap, and task transitions among them
+	for i := 0; i < maxEvents+7; i++ {
+		f.readyStory(t, fmt.Sprintf("Busy %02d", i), t0.Add(time.Duration(i+1)*time.Minute))
+	}
+	task, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task moved today", Parent: f.story.ID, Owner: "alex", Now: t0.Add(2 * time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.repo.Transition(task, workitem.Ready, "alex", "", t0.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	*f.clock = t0.Add(3 * time.Hour)
+
+	first, _ := f.call(t, "inbox", map[string]any{})
+	changes := first["changes"].([]any)
+	if len(changes) != maxEvents {
+		t.Fatalf("a look reports at most %d changes, got %d", maxEvents, len(changes))
+	}
+	if got := first["changes_omitted"]; got != float64(7+already) {
+		t.Errorf("the older ones are counted: changes_omitted = %v, want %d", got, 7+already)
+	}
+	for _, c := range changes {
+		if c.(map[string]any)["type"] == "task" {
+			t.Errorf("a first look leaves task transitions out: %v", c)
+		}
+	}
+	summaries := changeSummaries(first, "changes")
+	if !strings.Contains(summaries[0], "Busy 07") || !strings.Contains(summaries[len(summaries)-1], fmt.Sprintf("Busy %02d", maxEvents+6)) {
+		t.Errorf("the newest are kept, oldest first: %q … %q", summaries[0], summaries[len(summaries)-1])
+	}
+	if ready := first["ready"].([]any); len(ready) != maxEvents+7 {
+		t.Errorf("ready work is state and is not capped: %d", len(ready))
+	}
+
+	again, _ := f.call(t, "inbox", map[string]any{})
+	if len(again["changes"].([]any)) != 0 || again["changes_omitted"] != float64(0) {
+		t.Errorf("nothing left out or filtered comes back: %v omitted %v", again["changes"], again["changes_omitted"])
+	}
+}
+
+// With a cursor, task transitions are news again, and the cap still holds,
+// for wait_for_events as for inbox.
+func TestALaterLookReportsTasksAndIsStillCapped(t *testing.T) {
+	f := setup(t)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	task, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Moved while away", Parent: f.story.ID, Owner: "alex", Now: t0.Add(5 * time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.repo.Transition(task, workitem.Ready, "alex", "", t0.Add(5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := f.call(t, "inbox", map[string]any{})
+	if got := changeSummaries(out, "changes"); len(got) != 1 || !strings.Contains(got[0], "Moved while away moved to ready") {
+		t.Errorf("a task transition is reported once the agent has a cursor: %v", got)
+	}
+
+	for i := 0; i < maxEvents+3; i++ {
+		f.readyStory(t, fmt.Sprintf("Later %02d", i), t0.Add(time.Duration(20+i)*time.Minute))
+	}
+	*f.clock = t0.Add(5 * time.Hour)
+	held, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 1})
+	if n := len(held["events"].([]any)); n != maxEvents {
+		t.Fatalf("wait_for_events is capped too: %d", n)
+	}
+	if held["events_omitted"] != float64(3) {
+		t.Errorf("events_omitted = %v, want 3", held["events_omitted"])
+	}
+	after, _ := f.call(t, "inbox", map[string]any{})
+	if len(after["changes"].([]any)) != 0 {
+		t.Errorf("the omitted ones do not come back: %v", after["changes"])
 	}
 }

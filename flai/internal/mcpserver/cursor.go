@@ -25,6 +25,14 @@ type cursor struct {
 // firstLook is how far back a new agent is told about.
 const firstLook = 24 * time.Hour
 
+// maxEvents is the most changes one look reports; the newest are kept and the
+// rest are counted, not listed. It is a constant, not a setting: the bound
+// exists so that a look always fits a tool result. The first look of a new
+// agent on 2026-09-19 was 209 changes and 68 KB, about 330 characters each,
+// and did not fit (S-0061); fifty is about 16 KB, which leaves room for
+// threads and ready work, and is more than an agent acts on in one look.
+const maxEvents = 50
+
 var unsafeName = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 
 func (s *server) cursorPath() string {
@@ -73,25 +81,38 @@ type Event struct {
 	Summary string `json:"summary" jsonschema:"the change in words"`
 }
 
-// catchUp returns what others changed since the cursor and advances it.
-func (s *server) catchUp() ([]Event, error) {
+// catchUp returns what others changed since the cursor, the newest maxEvents
+// of them, and how many older ones it left out, and advances the cursor past
+// all of them: what a look leaves out never comes back in a later one. A
+// first look, with no cursor, is told of stories and epics only; a day of
+// task transitions is history to an agent that has just arrived, not news.
+func (s *server) catchUp() ([]Event, int, error) {
 	items, err := s.repo.List(true)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	board, err := s.repo.LoadBoard()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	now := s.now().UTC().Truncate(time.Second)
 	cur := s.loadCursor()
 	events := []Event{}
 	next := cursor{Seen: now.Format(workitem.TimeFormat), Keys: map[string]bool{}, Order: board.Order}
 	for _, c := range workitem.Changes(items, cur.since(now), s.agent, cur.Keys) {
-		events = append(events, Event{Change: c, Summary: describe(c)})
+		// the cursor passes every change, reported or not
 		if c.At == next.Seen {
 			next.Keys[c.Key()] = true
 		}
+		if !cur.known && c.Type == workitem.Task {
+			continue
+		}
+		events = append(events, Event{Change: c, Summary: describe(c)})
+	}
+	omitted := 0
+	if len(events) > maxEvents {
+		omitted = len(events) - maxEvents
+		events = events[omitted:] // oldest first, so the newest are at the end
 	}
 	// keys already reported for a second that is still the current one
 	if cur.Seen == next.Seen {
@@ -106,7 +127,7 @@ func (s *server) catchUp() ([]Event, error) {
 		})
 	}
 	s.saveCursor(next)
-	return events, nil
+	return events, omitted, nil
 }
 
 // reordered reports whether the stories two pull orders share come in a
