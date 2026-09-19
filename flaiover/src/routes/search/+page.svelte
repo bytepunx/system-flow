@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
+	import KindChips from '$lib/components/KindChips.svelte';
+	import { stripeClass, tintFor } from '$lib/cardcolour';
 
 	type Hit = {
 		path: string;
@@ -10,6 +12,7 @@
 		scope: string;
 		status?: string;
 		type?: string;
+		nature?: string;
 		snippet: string;
 		route: string;
 	};
@@ -60,10 +63,19 @@
 </form>
 <ul class="mt-4 space-y-3">
 	{#each hits as h (h.path)}
-		<li class="rounded border border-line bg-surface p-3">
+		<!-- An item hit wears the board card's coding (S-0055); a document stays plain. -->
+		<li
+			class="rounded border border-line p-3 {h.kind === 'item' && h.nature
+				? `${tintFor(h.nature)} ${stripeClass(h.type ?? '')}`
+				: 'bg-surface'}"
+			data-kind={h.kind}
+		>
 			<a class="font-medium underline" href={href(h)}>{h.itemId ? `${h.itemId} ` : ''}{h.title}</a>
 			<span class="ml-2 text-xs text-muted"
-				>{h.scope}{h.type ? ` · ${h.type}` : ''}{h.status ? ` · ${h.status}` : ''}</span
+				>{h.scope}{#if h.type || h.nature}<span class="mx-1">·</span><KindChips
+						type={h.type}
+						nature={h.kind === 'item' ? h.nature : undefined}
+					/>{/if}{h.status ? ` · ${h.status}` : ''}</span
 			>
 			<p class="mt-1 text-sm text-ink-soft">{h.snippet}</p>
 			<p class="mt-1 font-mono text-xs text-muted">{h.path}</p>

@@ -30,6 +30,7 @@ export type Hit = {
 	scope: string;
 	status?: string;
 	type?: string;
+	nature?: string;
 	score: number;
 	snippet: string;
 	route: string;
@@ -140,6 +141,7 @@ export class SearchIndex {
 					scope: doc.scope,
 					status: doc.status,
 					type: doc.type,
+					nature: doc.nature,
 					score: Math.round(r.score * 100) / 100,
 					snippet: snippet(doc.body, r.terms),
 					route: doc.kind === 'item' && doc.itemId ? `/items/${doc.itemId}` : `/docs/${doc.path}`

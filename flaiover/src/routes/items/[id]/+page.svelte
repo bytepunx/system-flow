@@ -1,4 +1,5 @@
 <script lang="ts">
+	import KindChips from '$lib/components/KindChips.svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
@@ -137,7 +138,8 @@
 		<div class="min-w-0">
 			<h1 class="text-2xl font-semibold"><span class="font-mono">{item.id}</span> {item.title}</h1>
 			<p class="mt-1 text-sm text-muted">
-				{item.type} · {item.nature} · <span class="font-medium">{item.status}</span>
+				<KindChips type={item.type} nature={item.nature} /> ·
+				<span class="font-medium">{item.status}</span>
 				{#if blocked}<span class="ml-1 font-semibold text-danger">BLOCKED</span>{/if}
 				{#if item.archived}· archived{/if}
 				{#if item.parent}· parent <a

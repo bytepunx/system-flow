@@ -15,9 +15,13 @@ describe('SearchIndex on the fixture', () => {
 		expect(byId[0].itemId).toBe('S-001');
 		expect(byId[0].route).toBe('/items/S-001');
 		expect(byId[0].kind).toBe('item');
+		// the hit carries what the results page colours it by (S-0055)
+		expect(byId[0].type).toBe('story');
+		expect(byId[0].nature).toBe('feature');
 		const byTitle = await idx.search('Session start');
 		expect(byTitle[0].path).toBe('design/conventions/session-start.md');
 		expect(byTitle[0].route).toBe('/docs/design/conventions/session-start.md');
+		expect(byTitle[0].nature).toBeUndefined();
 		const noDocs = await idx.search('docs');
 		expect(noDocs.every((h) => h.scope !== 'docs')).toBe(true);
 	});

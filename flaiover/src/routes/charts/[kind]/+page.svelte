@@ -6,6 +6,7 @@
 	import Chart from '$lib/components/Chart.svelte';
 	import { build, human, KINDS, normalise, TITLES, type Kind, type Report } from '$lib/viz/charts';
 	import { theme } from '$lib/viz/palette';
+	import KindChips from '$lib/components/KindChips.svelte';
 
 	let since = $state('30d');
 	let type = $state('story');
@@ -151,9 +152,9 @@
 						></thead
 					><tbody
 						>{#each report.items.filter((i) => i.completed) as i (i.id)}<tr
-								><td class="pr-4 font-mono">{i.id}</td><td class="pr-4">{i.nature}</td><td
-									class="pr-4">{i.completed?.slice(0, 10)}</td
-								><td class="pr-4"
+								><td class="pr-4 font-mono">{i.id}</td><td class="py-0.5 pr-4"
+									><KindChips nature={i.nature} /></td
+								><td class="pr-4">{i.completed?.slice(0, 10)}</td><td class="pr-4"
 									>{i.cycle_time_seconds !== undefined ? human(i.cycle_time_seconds) : '-'}</td
 								><td class="pr-4"
 									>{i.lead_time_seconds !== undefined ? human(i.lead_time_seconds) : '-'}</td

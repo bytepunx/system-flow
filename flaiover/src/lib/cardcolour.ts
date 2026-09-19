@@ -29,8 +29,13 @@ export function tintFor(nature: string): string {
 	return natureTint[nature] ?? 'bg-ground';
 }
 
-/** A known type gets a 4 px stripe that hovering leaves alone; an unknown one keeps the plain edge. */
-export function stripeFor(type: string): string {
+/** A known type's 4 px stripe on the left edge; nothing for an unknown one. */
+export function stripeClass(type: string): string {
 	const stripe = typeStripe[type];
-	return stripe ? `border-l-4 ${stripe}` : 'hover:border-l-line-strong';
+	return stripe ? `border-l-4 ${stripe}` : '';
+}
+
+/** On a board card hovering leaves the stripe alone; an unknown type keeps the plain, hoverable edge. */
+export function stripeFor(type: string): string {
+	return stripeClass(type) || 'hover:border-l-line-strong';
 }
