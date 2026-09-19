@@ -281,7 +281,11 @@
 							card={c}
 							draggable={board.writable}
 							dragging={dragging === c.id}
-							ondragstart={() => (dragging = c.id)}
+							ondragstart={() => {
+								dragging = c.id;
+								// the last action's notice must not read as this drag's result
+								notice = null;
+							}}
 							ondragend={() => {
 								dragging = null;
 								marker = null;
