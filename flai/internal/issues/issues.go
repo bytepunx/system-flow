@@ -261,14 +261,23 @@ func Close(is *Issue, reason string, now time.Time) error {
 	return is.Save()
 }
 
+// insertInstance adds an occurrence at the end of the Instances section.
+// Instances are headed by their timestamp, to the second. Two recorded in the
+// same second share the heading, as narrative log entries do (I-0011): a
+// second identical heading fails the duplicate-heading rule.
 func insertInstance(body, ts, note string) string {
-	entry := fmt.Sprintf("### %s\n%s\n\n", ts, note)
-	idx := strings.Index(body, "\n## Remediation")
-	if idx < 0 {
-		return strings.TrimRight(body, "\n") + "\n\n" + entry
+	head, tail := strings.TrimRight(body, "\n"), ""
+	if idx := strings.Index(body, "\n## Remediation"); idx >= 0 {
+		head, tail = strings.TrimRight(body[:idx], "\n"), body[idx+1:]
 	}
-	head := strings.TrimRight(body[:idx], "\n") + "\n\n"
-	return head + entry + body[idx+1:]
+	entry := fmt.Sprintf("### %s\n%s\n\n", ts, note)
+	if last := strings.LastIndex(head, "\n### "); last >= 0 {
+		heading, _, _ := strings.Cut(head[last+1:], "\n")
+		if strings.TrimSpace(heading) == "### "+ts {
+			entry = note + "\n\n"
+		}
+	}
+	return head + "\n\n" + entry + tail
 }
 
 // Summary renders summary.md: open issues, most expensive first.
