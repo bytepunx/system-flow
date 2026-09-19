@@ -206,3 +206,98 @@ func TestComputeAndApply(t *testing.T) {
 		t.Errorf("tags: %s", out)
 	}
 }
+
+// I-0016, S-0047: a tag delivers only to a component the commits touched.
+func TestDeliveryGoesToATouchedComponent(t *testing.T) {
+	root, r := gitRepo(t)
+	run := func(args ...string) {
+		if out, err := r.Run(root, "git", args...); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	w := func(rel string) {
+		p := filepath.Join(root, rel)
+		_ = os.MkdirAll(filepath.Dir(p), 0o755)
+		_ = os.WriteFile(p, []byte("x\n"), 0o644)
+	}
+	// S-010: pure CLI work
+	w("cli/only.go")
+	run("add", "-A")
+	run("commit", "-q", "-m", "feat: [S-010] cli only")
+	// S-011: mostly web, a little cli
+	w("web/a.js")
+	w("web/b.js")
+	w("web/c.js")
+	w("cli/little.go")
+	run("add", "-A")
+	run("commit", "-q", "-m", "feat: [S-011] mostly web")
+	// S-012: one file in each
+	w("cli/tie.go")
+	w("web/tie.js")
+	run("add", "-A")
+	run("commit", "-q", "-m", "feat: [S-012] a tie")
+
+	steps := func(plan *Plan) (out []string) {
+		for _, st := range plan.Steps {
+			kind := "incidental"
+			if st.Delivered {
+				kind = "delivered"
+			}
+			out = append(out, st.Component.Name+" "+st.Level+" "+kind)
+		}
+		return
+	}
+	story := func(id string, tags ...string) *workitem.Item {
+		return &workitem.Item{ID: id, Type: workitem.Story, Nature: "feature", Title: id, Tags: tags}
+	}
+
+	// the case that went wrong: [web, command] on CLI-only work
+	plan, err := Compute(r, root, m, story("S-010", "web", "command"), nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := steps(plan); len(got) != 1 || got[0] != "cli minor delivered" {
+		t.Errorf("an untouched component gets no release at all, the touched one delivers: %v", got)
+	}
+	// several tagged and touched: the most touched files wins, whatever the tag order
+	for _, tags := range [][]string{{"command", "web"}, {"web", "command"}} {
+		plan, _ = Compute(r, root, m, story("S-011", tags...), nil, "")
+		if got := steps(plan); len(got) != 2 || got[0] != "web minor delivered" || got[1] != "cli patch incidental" {
+			t.Errorf("tags %v: %v", tags, got)
+		}
+	}
+	// a tie goes to the earlier tag
+	plan, _ = Compute(r, root, m, story("S-012", "web", "cli"), nil, "")
+	if got := steps(plan); got[0] != "web minor delivered" {
+		t.Errorf("tie, web first: %v", got)
+	}
+	plan, _ = Compute(r, root, m, story("S-012", "cli", "web"), nil, "")
+	if got := steps(plan); got[0] != "cli minor delivered" {
+		t.Errorf("tie, cli first: %v", got)
+	}
+	// the story's tags name only an untouched component: the epic's tags are asked next
+	epic := &workitem.Item{ID: "E-001", Type: workitem.Epic, Tags: []string{"command"}}
+	plan, err = Compute(r, root, m, story("S-010", "tpl"), epic, "")
+	if err != nil || steps(plan)[0] != "cli minor delivered" || len(plan.Steps) != 1 {
+		t.Errorf("epic tags: %v %v", steps(plan), err)
+	}
+	// no tag names a touched component, one component touched: it delivers
+	plan, err = Compute(r, root, m, story("S-010", "tpl"), nil, "")
+	if err != nil || len(plan.Steps) != 1 || steps(plan)[0] != "cli minor delivered" {
+		t.Errorf("the only touched component: %v %v", steps(plan), err)
+	}
+	// no tag names a touched component, two touched: still the operator's call
+	if _, err := Compute(r, root, m, story("S-011", "tpl"), nil, ""); err == nil || !strings.Contains(err.Error(), "--deliver") {
+		t.Errorf("ambiguous still asks: %v", err)
+	}
+	// --deliver overrides everything, even towards an untouched component
+	plan, _ = Compute(r, root, m, story("S-010", "command"), nil, "web")
+	if got := steps(plan); got[0] != "web minor delivered" {
+		t.Errorf("--deliver: %v", got)
+	}
+	// tagged, and touching no component at all: nothing to release
+	plan, err = Compute(r, root, m, story("S-003", "command"), nil, "")
+	if err != nil || plan.Skipped == "" || len(plan.Steps) != 0 {
+		t.Errorf("a tagged docs-only story releases nothing: %+v %v", plan, err)
+	}
+}

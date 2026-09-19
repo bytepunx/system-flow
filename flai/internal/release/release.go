@@ -264,26 +264,33 @@ func Compute(r execx.Runner, root string, m manifest.Manifest, it *workitem.Item
 	return plan, nil
 }
 
-// deliverTarget picks the delivered component: --deliver, then a story or
-// epic tag matching a project name or alias, then the only touched one.
+// deliverTarget picks the component the item delivers to. --deliver is the
+// operator's explicit word and wins. Otherwise a tag decides, the item's own
+// before its parent's, and only among components the item's commits touched:
+// a tag naming a component no commit touched never delivers, so that
+// component gets no release at all (I-0016: a story of pure CLI work tagged
+// [dashboard, cli] gave the dashboard a minor release with no files in it).
+// When the tags name several touched components, the one with the most
+// touched files wins, the earlier tag breaking a tie. With no tag deciding,
+// the only touched component delivers.
 func deliverTarget(m manifest.Manifest, it, parent *workitem.Item, deliver string, touched map[string][]string) string {
 	if deliver != "" {
 		return deliver
 	}
 	match := func(tags []string) string {
+		best, files := "", 0
 		for _, t := range tags {
 			for _, p := range m.Projects {
-				if t == p.Name {
-					return p.Name
-				}
+				named := t == p.Name
 				for _, alias := range p.Tags {
-					if t == alias {
-						return p.Name
-					}
+					named = named || t == alias
+				}
+				if n := len(touched[p.Name]); named && n > files {
+					best, files = p.Name, n
 				}
 			}
 		}
-		return ""
+		return best
 	}
 	if n := match(it.Tags); n != "" {
 		return n
