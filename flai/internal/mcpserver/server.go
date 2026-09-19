@@ -54,9 +54,9 @@ func New(opt Options) *mcp.Server {
 		s.maxWait = 5 * time.Minute
 	}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at session start, at every task transition, and before moving a story to review; hold wait_for_events when idle. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked. When nothing is in progress and can_pull is true, pull the first ready story without waiting to be told. An agent that stays running holds wait_for_events when idle; one that ends its turn calls inbox when it starts again, and nothing in between is lost. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done.",
 	})
-	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "Unresolved threads between the designer and agents. awaiting is 'you' when the last entry is not yours. Filter by story to see only threads on a story and its tasks."}, s.inbox)
+	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit, and the changes others made to work items since this agent last looked, reported once. Filter by story to see only threads on a story and its tasks."}, s.inbox)
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_get", Description: "One thread with all of its dated entries."}, s.threadGet)
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_open", Description: "Open a thread on a repository path (optionally a heading in it) or a work item ID, to ask the designer a question or record a discussion."}, s.threadOpen)
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_reply", Description: "Add an entry to a thread as this agent. A reply from anyone but the opener marks the thread answered."}, s.threadReply)
@@ -65,7 +65,8 @@ func New(opt Options) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{Name: "item_move", Description: "Transition a work item with the workflow rules enforced. Refuses to move a story or epic to done: acceptance is the operator's."}, s.itemMove)
 	mcp.AddTool(srv, &mcp.Tool{Name: "doc_get", Description: "A markdown document under the design, docs, or wip folders, by repository path."}, s.docGet)
 	mcp.AddTool(srv, &mcp.Tool{Name: "who_touches", Description: "In-progress and in-review items whose touches cover a path; ask before editing a path someone else is working on."}, s.whoTouches)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Block until a thread, work item, or narrative changes, or the timeout passes. Hold this when idle to react to the designer within a second."}, s.waitForEvents)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes. Hold this when idle to react to the designer within a second."}, s.waitForEvents)
+	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches. Stories only unless all is set."}, s.board)
 	for _, key := range []string{"design", "docs"} {
 		srv.AddResourceTemplate(&mcp.ResourceTemplate{
 			Name:        key,
@@ -124,9 +125,12 @@ type InboxIn struct {
 
 // InboxOut is the agent's inbox.
 type InboxOut struct {
-	Agent       string          `json:"agent"`
-	AwaitingYou int             `json:"awaiting_you"`
-	Threads     []ThreadSummary `json:"threads"`
+	Agent       string               `json:"agent"`
+	AwaitingYou int                  `json:"awaiting_you"`
+	Threads     []ThreadSummary      `json:"threads"`
+	Ready       []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
+	CanPull     bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room to pull one"`
+	Changes     []Event              `json:"changes" jsonschema:"what others changed since this agent last looked; reported once"`
 }
 
 func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
@@ -151,7 +155,46 @@ func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*
 		}
 		out.Threads = append(out.Threads, sum)
 	}
+	view, err := s.boardView(false)
+	if err != nil {
+		return nil, InboxOut{}, err
+	}
+	out.Ready, out.CanPull = view.ReadyInPullOrder(), view.CanPull()
+	if out.Ready == nil {
+		out.Ready = []workitem.BoardCard{}
+	}
+	if out.Changes, err = s.catchUp(); err != nil {
+		return nil, InboxOut{}, err
+	}
 	return nil, out, nil
+}
+
+func (s *server) boardView(all bool) (workitem.BoardView, error) {
+	items, err := s.repo.List(false)
+	if err != nil {
+		return workitem.BoardView{}, err
+	}
+	board, err := s.repo.LoadBoard()
+	if err != nil {
+		return workitem.BoardView{}, err
+	}
+	return workitem.NewBoardView(items, board, s.now(), all), nil
+}
+
+// BoardIn selects what the board shows.
+type BoardIn struct {
+	All bool `json:"all,omitempty" jsonschema:"include epics and tasks"`
+}
+
+func (s *server) board(_ context.Context, _ *mcp.CallToolRequest, in BoardIn) (*mcp.CallToolResult, workitem.BoardView, error) {
+	view, err := s.boardView(in.All)
+	if view.Breaches == nil {
+		view.Breaches = []string{}
+	}
+	if view.Order == nil {
+		view.Order = []string{}
+	}
+	return nil, view, err
 }
 
 // ThreadIDIn names a thread.
@@ -428,7 +471,8 @@ type WaitIn struct {
 
 // WaitOut reports what changed.
 type WaitOut struct {
-	Changed  []string `json:"changed" jsonschema:"repository paths that were added, modified, or removed"`
+	Events   []Event  `json:"events" jsonschema:"what others changed to work items since this agent last looked"`
+	Changed  []string `json:"changed" jsonschema:"repository paths that were added, modified, or removed while waiting"`
 	TimedOut bool     `json:"timed_out"`
 }
 
@@ -486,7 +530,14 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 	if timeout > s.maxWait {
 		timeout = s.maxWait
 	}
+	// Anything that happened between two calls is behind the cursor already:
+	// report it now rather than wait for the next change.
 	before := s.snapshot()
+	if events, err := s.catchUp(); err != nil {
+		return nil, WaitOut{}, err
+	} else if len(events) > 0 {
+		return nil, WaitOut{Events: events, Changed: []string{}}, nil
+	}
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
 	tick := time.NewTicker(s.poll)
@@ -494,15 +545,21 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, WaitOut{Changed: []string{}}, ctx.Err()
+			return nil, WaitOut{Events: []Event{}, Changed: []string{}}, ctx.Err()
 		case <-deadline.C:
-			return nil, WaitOut{Changed: []string{}, TimedOut: true}, nil
+			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil
 		case <-tick.C:
 			if changed := diff(before, s.snapshot()); len(changed) > 0 {
 				for i, p := range changed {
 					changed[i] = s.rel(p)
 				}
-				return nil, WaitOut{Changed: changed}, nil
+				// Paths say something changed (a thread, a narrative, this
+				// agent's own write); events say what others did to work items.
+				events, err := s.catchUp()
+				if err != nil {
+					return nil, WaitOut{}, err
+				}
+				return nil, WaitOut{Events: events, Changed: changed}, nil
 			}
 		}
 	}

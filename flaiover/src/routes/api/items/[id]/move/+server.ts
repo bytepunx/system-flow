@@ -1,6 +1,7 @@
 import { repo, RepoError } from '$lib/server/repo';
 import { flai } from '$lib/server/flai';
 import { respond } from '$lib/server/respond';
+import { designer } from '$lib/server/threads';
 import type { RequestHandler } from './$types';
 
 /**
@@ -28,7 +29,9 @@ export const POST: RequestHandler = ({ params, request }) =>
 			include_uncommitted?: boolean;
 		};
 		if (!body.to) throw new RepoError(400, 'to is required');
-		const args = _moveArgs(params.id, body as MoveBody);
+		// A move made on the board is the designer's, not the dashboard's: name them, as threads do.
+		// flai would otherwise record FLAI_AGENT, which here is "flaiover" (S-0058).
+		const args = _moveArgs(params.id, { ...(body as MoveBody), by: body.by || (await designer()) });
 		const { data, warnings } = await flai<{ id: string; status: string; warnings: string[] }>(
 			repo().root,
 			args

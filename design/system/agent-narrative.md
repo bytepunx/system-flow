@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-09-15
+updated: 2026-09-19
 status: active
 ---
 
@@ -58,6 +58,18 @@ Started. Pulled S-0004 to in-progress. Read design/system/flai-cli.md.
 ### 2026-09-15T16:40:00Z
 T-0021 done. Config read/write with tests. Decided on plain encoding/json over viper, see Decisions.
 ```
+
+## What an agent is told through MCP
+
+`flai mcp` is the agent's view of the repository ([ADR-0020](../adrs/0020-files-plus-mcp.md)); the files stay the record. Since S-0058 the view covers work as well as threads, and it serves an agent that ends its turn between the designer's messages as well as one that stays running.
+
+- `inbox` reports three things. Threads awaiting this agent. The stories that are ready to pull, in pull order, with whether the in-progress limit allows a pull: this is state, listed on every call, so an agent that has forgotten everything still sees the work. And the changes others made since this agent last looked: an item created, moved, blocked, or unblocked, with what happened, to what, by whom, and when, and a note when the pull order changed.
+- Changes are derived from the files, not recorded anew: `transitions` carry `to`, `at`, and `by`; `blocked` intervals carry `from`, `until`, and `reason`; `board.md` carries `order`. A change whose `by` is this agent is not reported back to it, which is why `flai move`, `block`, and `unblock` record `FLAI_AGENT` when it is set.
+- "Since this agent last looked" is a cursor per agent name under `.flai-cache/mcp/`, outside git. It is a read marker, a cache in the sense of the overview's principle that tooling never owns state: losing it repeats or skips the report of a change and loses nothing else, because ready work and open threads are state and are always listed. With no cursor, the last 24 hours are reported.
+- `wait_for_events` returns at once when the cursor is already behind, so a change made between two calls is not lost; otherwise it blocks until something changes. It returns events in the same shape as `inbox` does, with the changed paths, and advances the cursor.
+- `board` returns what `flai board --json` prints: columns, limits, pull order, breaches.
+
+An agent that ends its turn calls `inbox` at the start of every turn. An agent that stays running holds `wait_for_events`. Either way a ready story found there is pulled when nothing is in progress, without waiting to be told.
 
 ## Obligations
 

@@ -1,6 +1,6 @@
 ---
 title: Work management
-updated: 2026-09-18
+updated: 2026-09-19
 audience: agent
 order: 30
 status: active
@@ -13,6 +13,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 ## Rules
 
 - Work is pulled, never pushed. Take the top `ready` story from the board's `order`; do not pick by preference.
+- With the `flai` MCP server connected, `inbox` is how you learn what changed: it lists threads awaiting you, the stories ready to pull in pull order, and what others did to work items since you last looked. Call it at the start of every turn or session, at every task transition, and before moving a story to review. If you stay running while idle, hold `wait_for_events`; if you end your turn, `inbox` at your next start reports everything in between. When nothing is in progress and `can_pull` is true, pull the first ready story it lists without waiting to be told.
 - Respect WIP limits. If pulling would exceed the limit, finish or hand off something first. A limit breach that cannot be avoided is logged in the narrative.
 - One story in progress per agent at a time. Tasks within it are worked in order.
 - Every change belongs to a story. If there is no story for what you are about to do, create one under the right epic and refine it before starting; if it is a five-minute fix, make it a task on the current story.

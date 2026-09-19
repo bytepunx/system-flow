@@ -3,24 +3,11 @@ package cmd
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
-
-type boardCard struct {
-	ID      string   `json:"id"`
-	Type    string   `json:"type"`
-	Title   string   `json:"title"`
-	Nature  string   `json:"nature"`
-	Parent  string   `json:"parent,omitempty"`
-	Blocked bool     `json:"blocked"`
-	Age     string   `json:"age_in_column"`
-	AgeSecs int64    `json:"age_in_column_seconds"`
-	Touches []string `json:"touches,omitempty"`
-}
 
 func newBoardCmd(a *app) *cobra.Command {
 	var all bool
@@ -41,31 +28,10 @@ func newBoardCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			now := a.now()
-			columns := map[string][]boardCard{}
-			counts := map[string]int{}
-			for _, it := range items {
-				if !all && it.Type != workitem.Story {
-					continue
-				}
-				age := now.Sub(it.EnteredAt())
-				columns[it.Status] = append(columns[it.Status], boardCard{
-					ID: it.ID, Type: it.Type, Title: it.Title, Nature: it.Nature, Parent: it.Parent,
-					Blocked: it.IsBlocked(), Age: humanDuration(age), AgeSecs: int64(age.Seconds()),
-					Touches: it.Touches,
-				})
-				if it.Type == workitem.Story {
-					counts[it.Status]++
-				}
-			}
-			var breaches []string
-			for _, st := range workitem.States {
-				if limit, ok := board.WIPLimits[st]; ok && limit > 0 && counts[st] > limit {
-					breaches = append(breaches, fmt.Sprintf("%s has %d stories, limit %d", st, counts[st], limit))
-				}
-			}
+			view := workitem.NewBoardView(items, board, a.now(), all)
+			columns, counts, breaches := view.Columns, view.Counts, view.Breaches
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"columns": columns, "wip_limits": board.WIPLimits, "order": board.Order, "breaches": breaches})
+				return a.printJSON(view)
 			}
 			for _, st := range workitem.States {
 				cards := columns[st]
@@ -100,19 +66,6 @@ func newBoardCmd(a *app) *cobra.Command {
 	}
 	c.Flags().BoolVar(&all, "all", false, "include epics and tasks")
 	return c
-}
-
-func humanDuration(d time.Duration) string {
-	switch {
-	case d < time.Minute:
-		return "now"
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 48*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
 }
 
 func truncate(s string, n int) string {

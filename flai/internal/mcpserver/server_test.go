@@ -23,6 +23,7 @@ type fixture struct {
 	cs    *mcp.ClientSession
 	story *workitem.Item
 	task  *workitem.Item
+	clock *time.Time // what the server reads as now; tests move it
 }
 
 func setup(t *testing.T) *fixture {
@@ -54,7 +55,8 @@ func setup(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 
-	srv := New(Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return t0.Add(time.Minute) }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second})
+	clock := t0.Add(time.Minute)
+	srv := New(Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second})
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	ct, st := mcp.NewInMemoryTransports()
@@ -66,7 +68,7 @@ func setup(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = cs.Close() })
-	return &fixture{repo: repo, cs: cs, story: story, task: task}
+	return &fixture{repo: repo, cs: cs, story: story, task: task, clock: &clock}
 }
 
 // call invokes a tool and decodes its structured result; failed is the
@@ -104,7 +106,7 @@ func TestToolsAreAdvertised(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "doc_get inbox item_get item_move thread_get thread_open thread_reply thread_resolve wait_for_events who_touches"
+	want := "board doc_get inbox item_get item_move thread_get thread_open thread_reply thread_resolve wait_for_events who_touches"
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
 	}
@@ -283,5 +285,175 @@ func TestStoryWithoutTasksMovesUntilReview(t *testing.T) {
 	}
 	if _, failed := f.call(t, "item_move", map[string]any{"id": s.ID, "to": "review"}); !strings.Contains(failed, "needs at least one task before it goes to review") {
 		t.Errorf("review without tasks should be refused with the rule: %q", failed)
+	}
+}
+
+// readyStory creates a story with criteria and moves it to ready as the
+// designer at the given time.
+func (f *fixture) readyStory(t *testing.T, title string, at time.Time) *workitem.Item {
+	t.Helper()
+	s, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: f.story.Parent, Owner: "alex", Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(s.Path)
+	_ = os.WriteFile(s.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644)
+	s, _ = f.repo.Get(s.ID)
+	if _, err := f.repo.Transition(s, workitem.Ready, "alex", "", at); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func changeSummaries(out map[string]any, key string) (got []string) {
+	for _, e := range out[key].([]any) {
+		got = append(got, e.(map[string]any)["summary"].(string))
+	}
+	return got
+}
+
+// S-0058: the designer moves a story to ready between two calls; the agent
+// was not waiting, and still hears of it, once, and sees it as ready work
+// until it is pulled.
+func TestInboxReportsReadyWorkAndWhatOthersChanged(t *testing.T) {
+	f := setup(t)
+	first, _ := f.call(t, "inbox", map[string]any{})
+	if len(first["ready"].([]any)) != 0 || first["can_pull"] != true {
+		t.Fatalf("nothing is ready yet: %v", first)
+	}
+
+	*f.clock = t0.Add(10 * time.Minute)
+	s := f.readyStory(t, "Made ready meanwhile", t0.Add(5*time.Minute))
+	out, _ := f.call(t, "inbox", map[string]any{})
+	ready := out["ready"].([]any)
+	if len(ready) != 1 || ready[0].(map[string]any)["id"] != s.ID {
+		t.Fatalf("ready: %v", out["ready"])
+	}
+	if got := changeSummaries(out, "changes"); len(got) != 1 || got[0] != s.ID+" Made ready meanwhile moved to ready by alex" {
+		t.Errorf("changes: %v", got)
+	}
+
+	again, _ := f.call(t, "inbox", map[string]any{})
+	if len(again["changes"].([]any)) != 0 {
+		t.Errorf("a change is reported once: %v", again["changes"])
+	}
+	if len(again["ready"].([]any)) != 1 {
+		t.Errorf("ready work is state and stays listed: %v", again["ready"])
+	}
+
+	// the agent pulls it: its own move is not news to it, and the story is no longer ready
+	*f.clock = t0.Add(11 * time.Minute)
+	if _, failed := f.call(t, "item_move", map[string]any{"id": s.ID, "to": "in-progress"}); failed != "" {
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(12 * time.Minute)
+	after, _ := f.call(t, "inbox", map[string]any{})
+	if len(after["changes"].([]any)) != 0 || len(after["ready"].([]any)) != 0 {
+		t.Errorf("own move echoed, or story still ready: %v", after)
+	}
+	// two stories in progress against the default limit of two
+	if after["can_pull"] != false {
+		t.Errorf("can_pull should follow the in-progress limit: %v", after["can_pull"])
+	}
+	if _, err := os.Stat(filepath.Join(f.repo.CacheDir(), "mcp", "claude.json")); err != nil {
+		t.Errorf("the cursor lives under .flai-cache/mcp: %v", err)
+	}
+}
+
+func TestWaitForEventsReturnsWhatIsAlreadyBehindTheCursor(t *testing.T) {
+	f := setup(t)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" { // the agent looks, then goes away
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	s := f.readyStory(t, "While nobody waited", t0.Add(5*time.Minute))
+	start := time.Now()
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+	if failed != "" || out["timed_out"] == true || time.Since(start) > 2*time.Second {
+		t.Fatalf("a change behind the cursor returns at once: %v %s after %s", out, failed, time.Since(start))
+	}
+	if got := changeSummaries(out, "events"); len(got) != 1 || !strings.Contains(got[0], s.ID) || !strings.Contains(got[0], "moved to ready by alex") {
+		t.Errorf("events: %v", got)
+	}
+}
+
+func TestWaitForEventsReportsAnEventWhileHeld(t *testing.T) {
+	f := setup(t)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		it, _ := f.repo.Get(f.story.ID)
+		// stamped with the very second the cursor stands at: the boundary case
+		if err := workitem.BlockItem(it, "waiting on the designer", t0.Add(10*time.Minute)); err == nil {
+			_ = f.repo.Save(it)
+		}
+	}()
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+	if failed != "" || out["timed_out"] == true {
+		t.Fatalf("held wait: %v %s", out, failed)
+	}
+	if got := changeSummaries(out, "events"); len(got) != 1 || !strings.Contains(got[0], "was blocked: waiting on the designer") {
+		t.Errorf("events: %v", got)
+	}
+	if len(out["changed"].([]any)) == 0 {
+		t.Errorf("the changed paths are still reported: %v", out)
+	}
+}
+
+func TestBoardToolMatchesTheSharedView(t *testing.T) {
+	f := setup(t)
+	s := f.readyStory(t, "On the board", t0)
+	out, failed := f.call(t, "board", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	cols := out["columns"].(map[string]any)
+	if len(cols["ready"].([]any)) != 1 || cols["ready"].([]any)[0].(map[string]any)["id"] != s.ID || len(cols["in-progress"].([]any)) != 1 {
+		t.Errorf("columns: %v", cols)
+	}
+	if out["wip_limits"] == nil || out["order"] == nil || out["breaches"] == nil {
+		t.Errorf("limits, order, and breaches belong to the view: %v", out)
+	}
+	all, _ := f.call(t, "board", map[string]any{"all": true})
+	if n := len(all["columns"].(map[string]any)["backlog"].([]any)); n < 2 {
+		t.Errorf("all adds the epic and the task: %d", n)
+	}
+}
+
+func TestPullOrderChangeIsReportedOnlyWhenPrioritiesChange(t *testing.T) {
+	for _, c := range []struct {
+		before, after []string
+		want          bool
+	}{
+		{[]string{"S-1", "S-2"}, []string{"S-1", "S-2", "S-3"}, false}, // a story became ready
+		{[]string{"S-1", "S-2"}, []string{"S-2"}, false},               // one was started
+		{[]string{"S-1", "S-2", "S-3"}, []string{"S-3", "S-1"}, true},  // S-3 now comes first
+		{nil, []string{"S-1"}, false},
+	} {
+		if got := reordered(c.before, c.after); got != c.want {
+			t.Errorf("reordered(%v, %v) = %v, want %v", c.before, c.after, got, c.want)
+		}
+	}
+	f := setup(t)
+	a := f.readyStory(t, "A", t0)
+	b := f.readyStory(t, "B", t0)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	board, _ := f.repo.LoadBoard()
+	board.Order = []string{b.ID, a.ID}
+	if err := board.Save("2026-09-18"); err != nil {
+		t.Fatal(err)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	out, _ := f.call(t, "inbox", map[string]any{})
+	if got := changeSummaries(out, "changes"); len(got) != 1 || got[0] != "the pull order is now "+b.ID+", "+a.ID {
+		t.Errorf("changes: %v", got)
+	}
+	if ready := out["ready"].([]any); ready[0].(map[string]any)["id"] != b.ID {
+		t.Errorf("ready follows the new order: %v", ready)
 	}
 }

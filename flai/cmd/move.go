@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -46,7 +47,7 @@ same flags. There is no other way for a story to become done.`,
 				}
 				return a.printAccept(res)
 			}
-			warnings, err := repo.Transition(it, args[1], orDefault(by, a.author()), reason, a.now())
+			warnings, err := repo.Transition(it, args[1], a.movedBy(by), reason, a.now())
 			if err != nil {
 				return err
 			}
@@ -64,9 +65,24 @@ same flags. There is no other way for a story to become done.`,
 		},
 	}
 	c.Flags().StringVar(&reason, "reason", "", "why (required for cancelled and review → in-progress)")
-	c.Flags().StringVar(&by, "by", "", "who made the change (default: config author)")
+	c.Flags().StringVar(&by, "by", "", "who made the change (default: FLAI_AGENT when set, else the config author)")
 	addAcceptFlags(c, &accept)
 	return c
+}
+
+// movedBy is who a transition is recorded as made by: --by, else FLAI_AGENT
+// when an agent's session sets it, else the config author. An agent's moves
+// must carry its name so that they are not reported back to it as the
+// designer's (S-0058). Acceptance keeps the config author: it is the
+// operator's act whoever types the command.
+func (a *app) movedBy(by string) string {
+	if by != "" {
+		return by
+	}
+	if agent := os.Getenv("FLAI_AGENT"); agent != "" {
+		return agent
+	}
+	return a.author()
 }
 
 func newBlockCmd(a *app) *cobra.Command {

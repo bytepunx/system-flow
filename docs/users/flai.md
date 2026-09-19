@@ -268,12 +268,15 @@ flai mcp          # an MCP server on stdio; agents start it, you do not
 
 | Tool | What it does |
 |------|--------------|
-| `inbox` | Unresolved threads; `awaiting: you` when the last entry is not the agent's. `story` filters, `all` includes threads awaiting someone else |
+| `inbox` | Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once |
+| `board` | The board as `flai board --json` prints it; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served |
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
-| `wait_for_events` | Blocks until a thread, item, or narrative changes, or the timeout passes, so an idle agent hears your reply within a second |
+| `wait_for_events` | Returns at once when something changed since this agent last looked, otherwise blocks until a thread, item, or narrative changes, or the timeout passes. Returns `events` in the same shape as `changes`, and the changed paths |
+
+"Since this agent last looked" is a marker per agent name (`FLAI_AGENT`) under `.flai-cache/mcp/`, outside git. It only decides which changes are news; ready work and open threads are listed on every call, so nothing depends on it. An agent that ends its turn between your messages calls `inbox` when it starts again and hears what you did in between; one that stays running holds `wait_for_events` and hears within a second. `flai move` records `FLAI_AGENT` as who moved an item when it is set, so an agent is not told about its own moves; a move on the dashboard's board is recorded as the project's `owner`.
 
 Design and docs files are also exposed as resources (`flai://design/...`, `flai://docs/...`). Everything the server writes goes through the same code as the CLI, so files stay the record and the dashboard shows agent replies as they land.
 

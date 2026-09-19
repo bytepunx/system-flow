@@ -1,6 +1,6 @@
 ---
 title: Session start
-updated: 2026-09-18
+updated: 2026-09-19
 audience: agent
 order: 10
 status: active
@@ -16,7 +16,7 @@ What to load before touching anything, how to resume after a crash, and how to l
 - If `wip/agents/index.md` lists an active stream, read that narrative's `## Current state` and `## Next steps` before anything else. Assume it is true until `git status` says otherwise.
 - Run `git status` and compare with the narrative. Uncommitted changes the narrative does not mention are the first thing to reconcile, and the reconciliation goes in the log.
 - Append a log entry to the narrative stating that a session started or recovered, and what state you found.
-- If no stream is active, pull the top story from the board's `order` that is `ready`, respecting the WIP limit, and open its narrative with `flai stream open`. Do not start a `backlog` story; refine it to `ready` first and say so. A ready story may have no tasks: writing them is the first thing you do once it is `in-progress`, as `work-management.md` describes.
+- If no stream is active, pull the top story from the board's `order` that is `ready`, respecting the WIP limit, and open its narrative with `flai stream open`. Do not start a `backlog` story; refine it to `ready` first and say so. With the `flai` MCP server connected, `inbox` lists the ready stories in pull order and what changed while you were away; use it instead of inferring the board from files. A ready story may have no tasks: writing them is the first thing you do once it is `in-progress`, as `work-management.md` describes.
 - Do not re-derive facts already recorded in the narrative, the story, or `design/system`. Read them.
 - Do not read the whole repository to orient yourself. The four documents above plus the active story and its design links are enough; go wider only when a task needs it.
 - Before any long-running or risky operation, rewrite `## Current state` and `## Next steps` so a crash mid-operation loses nothing.
