@@ -15,11 +15,21 @@ import {
 } from '$lib/server/metrics';
 import { startTracing, traceId, withRequestSpan } from '$lib/server/otel';
 import { authenticate, decide, initAuth } from '$lib/server/auth';
+import { repo } from '$lib/server/repo';
+import { startNotifier } from '$lib/server/notify';
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
 	const auth = initAuth();
 	const tracing = await startTracing();
+	// Webhook for new inbox entries, only when system-flow.yaml asks for it (S-0042).
+	// A project that cannot be read yet must not stop the server from starting.
+	try {
+		const r = repo();
+		if (await startNotifier(r)) await r.watch();
+	} catch (err) {
+		log().warn({ component: 'notify', err: String(err) }, 'inbox webhook not started');
+	}
 	log().info(
 		{
 			component: 'server',

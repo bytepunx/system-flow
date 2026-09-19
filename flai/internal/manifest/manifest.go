@@ -57,6 +57,9 @@ type Dashboard struct {
 	Bind  string `yaml:"bind"` // host address to publish on; default 0.0.0.0
 	// Autocommit commits documents saved from the dashboard; nil means true (ADR-0023).
 	Autocommit *bool `yaml:"autocommit,omitempty"`
+	// NotifyURL, when set, is where the dashboard's server posts new inbox
+	// entries (S-0042). flai itself never calls it.
+	NotifyURL string `yaml:"notify_url,omitempty"`
 }
 
 // Autocommit reports whether documents saved from the dashboard are committed.

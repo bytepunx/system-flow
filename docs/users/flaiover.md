@@ -16,6 +16,14 @@ flaiover uses the brand palette in a light and a dark theme. It follows your sys
 
 Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text. ADRs lists the architecture decisions with status, date, and which decisions supersede which.
 
+## Inbox and activity
+
+Inbox is the list of things that need you, and the number beside its link in the navigation is how many there are. It holds five kinds of entry, each a link to where you deal with it: stories in review, which open their review page; threads where someone other than you wrote last; open questions agents left in their narratives; blocked items, with the reason; and overlapping touches, where two stories in progress say they change the same files. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. The list and the count refresh by themselves when files change.
+
+You can ask the browser to tell you when something new arrives: tick "Desktop notification" on the inbox page and allow it when the browser asks. It is off until you turn it on, it is remembered per browser, and it only fires for entries that appear while a dashboard tab is open, never for what was already there.
+
+Activity shows who is working on what: one card per story with an open narrative, with the agent and session that last wrote it, how long ago, the story's state, the task in progress, whether anything in it is blocked, and the last line of its log. Nothing is recorded to produce this. An agent that stops writing does not disappear; its card simply grows older.
+
 ## Reviewing a story
 
 A story in review has a review page: open it from the card in the review column, or from "Review this story" on the item page. It puts what you need to decide in one place.
