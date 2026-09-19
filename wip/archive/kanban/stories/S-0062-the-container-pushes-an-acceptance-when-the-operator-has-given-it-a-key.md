@@ -3,11 +3,11 @@ id: S-0062
 type: story
 nature: feature
 title: The container pushes an acceptance when the operator has given it a key
-status: review
+status: done
 parent: E-0006
 owner: alex
 created: 2026-09-19T07:54:42Z
-updated: 2026-09-19T08:33:52Z
+updated: 2026-09-19T09:10:53Z
 transitions:
   - to: ready
     at: 2026-09-19T08:13:14Z
@@ -18,7 +18,10 @@ transitions:
   - to: review
     at: 2026-09-19T08:33:52Z
     by: system-flow
-tags: []
+  - to: done
+    at: 2026-09-19T09:10:53Z
+    by: alex
+tags: [cli, dashboard]
 touches: [flai/cmd, flaiover, design/adrs, docs/operators]
 ---
 

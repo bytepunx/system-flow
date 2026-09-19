@@ -9,7 +9,7 @@ owner: alex
 created: 2026-09-19T07:54:42Z
 updated: 2026-09-19T07:55:41Z
 transitions: []
-tags: []
+tags: [cli]
 touches: [flai/cmd, docs/operators]
 ---
 

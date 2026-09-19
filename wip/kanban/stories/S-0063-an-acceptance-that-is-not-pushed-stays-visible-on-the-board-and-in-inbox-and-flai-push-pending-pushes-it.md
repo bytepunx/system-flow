@@ -15,7 +15,7 @@ transitions:
   - to: in-progress
     at: 2026-09-19T08:34:07Z
     by: system-flow
-tags: []
+tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal/workitem, flai/internal/mcpserver, flaiover]
 ---
 
