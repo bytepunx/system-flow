@@ -5,11 +5,25 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo, RepoError } from './repo';
 import { board } from './board';
-import { flai, flaiBinary, resetFlaiBinary } from './flai';
+import { flai, flaiBinary, resetFlaiBinary, withJson } from './flai';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const bin = process.env.FLAI_BIN ?? resolve('../bin/flai');
 const haveFlai = existsSync(bin);
+
+describe('withJson', () => {
+	it('asks for JSON before a -- that ends the flags, else at the end', () => {
+		expect(withJson(['move', 'S-1', 'ready'])).toEqual(['move', 'S-1', 'ready', '--json']);
+		expect(withJson(['story', 'new', '--epic=E-1', '--', '--json is my title'])).toEqual([
+			'story',
+			'new',
+			'--epic=E-1',
+			'--json',
+			'--',
+			'--json is my title'
+		]);
+	});
+});
 
 describe('board reader', () => {
 	it('groups active items by state with ages and limits', async () => {
@@ -137,6 +151,43 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		await flai(dir, ['stream', 'log', 'S-004', 'from the dashboard']);
 		const narrative = await readFile(join(dir, 'wip/agents/S-004.md'), 'utf8');
 		expect(narrative).toContain('from the dashboard');
+	});
+	it('creates a story with a body in one step, and is refused by the check with nothing left (S-0059)', async () => {
+		const { data: body } = await flai<{ body: string }>(dir, ['story', 'new', '--print-body']);
+		expect(body.body).toContain('## Goal');
+		expect(body.body).not.toContain('---');
+		const args = (title: string) => [
+			'story',
+			'new',
+			'--nature=improvement',
+			'--owner=olive',
+			'--epic=E-001',
+			'--body-stdin',
+			'--autocommit',
+			'--',
+			title
+		];
+		const { data } = await flai<{ item: { id: string; owner: string }; path: string }>(
+			dir,
+			args('--json is a title here'),
+			{
+				input:
+					'## Goal\nFrom the board.\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n',
+				exitStatus: { 4: 422 }
+			}
+		);
+		expect(data.item.owner).toBe('olive');
+		const file = await readFile(join(dir, data.path), 'utf8');
+		expect(file).toContain(`# ${data.item.id} --json is a title here\n\n## Goal\nFrom the board.`);
+		const before = await readdir(join(dir, 'wip/kanban/stories'));
+		await expect(
+			flai(dir, args('Refused'), {
+				input:
+					'## Goal\nNo notes section, which flai check reports.\n\n## Acceptance criteria\n- [ ] x\n\n## Tasks\n',
+				exitStatus: { 4: 422 }
+			})
+		).rejects.toMatchObject({ status: 422, data: { refused: { findings: expect.any(Array) } } });
+		expect(await readdir(join(dir, 'wip/kanban/stories'))).toEqual(before);
 	});
 	it('reports a missing binary as 503', async () => {
 		process.env.FLAI_BIN = '/nonexistent/flai';

@@ -10,6 +10,16 @@ import { RepoError } from './repo';
 let resolved: string | null | undefined;
 
 /** Locate flai: FLAI_BIN, then PATH. Cached per process; null when absent. */
+/**
+ * flai's structured output is asked for with --json, which must come before a `--` that ends the
+ * flags: what follows `--` is the designer's text (a title), and --json after it would be read as
+ * more of it.
+ */
+export function withJson(args: string[]): string[] {
+	const end = args.indexOf('--');
+	return end < 0 ? [...args, '--json'] : [...args.slice(0, end), '--json', ...args.slice(end)];
+}
+
 export async function flaiBinary(): Promise<string | null> {
 	if (resolved !== undefined) return resolved;
 	const candidates: string[] = [];
@@ -70,7 +80,7 @@ export async function flai<T = unknown>(
 	return new Promise((resolvePromise, reject) => {
 		const child = execFile(
 			bin,
-			[...args, '--json'],
+			withJson(args),
 			{ cwd: projectDir, env, maxBuffer: 16 * 1024 * 1024 },
 			(err, stdout, stderr) => {
 				const events = parseEvents(stderr);
@@ -140,7 +150,7 @@ export async function flaiStream<T = unknown>(
 		LOG_FORMAT: 'json'
 	};
 	return new Promise((resolvePromise, reject) => {
-		const child = spawn(bin, [...args, '--json'], { cwd: projectDir, env });
+		const child = spawn(bin, withJson(args), { cwd: projectDir, env });
 		const events: FlaiEvent[] = [];
 		let stdout = '';
 		let pending = '';

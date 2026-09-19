@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api';
+	import { resolve } from '$app/paths';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
@@ -156,6 +157,14 @@
 	<label class="flex items-center gap-2 text-sm"
 		><input type="checkbox" bind:checked={all} /> epics and tasks too</label
 	>
+	{#if board?.writable}
+		<!-- Creating is a write through flai (S-0059): no flai, no action. -->
+		<a
+			class="rounded border border-line-strong bg-surface px-2 py-1 text-sm hover:bg-raised"
+			href={resolve('/new')}
+			data-testid="new-item-link">+ new</a
+		>
+	{/if}
 	{#if board && !board.writable}
 		<span class="rounded bg-warn-soft px-2 py-1 text-xs text-warn"
 			>read-only: flai is not available to the dashboard</span
