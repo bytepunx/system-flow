@@ -6,7 +6,7 @@ title: flaiover as the designer's workbench
 status: ready
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-19T05:44:37Z
+updated: 2026-09-19T07:54:42Z
 transitions:
   - to: ready
     at: 2026-09-18T16:25:54Z
@@ -40,6 +40,9 @@ flaiover is where the system's designer reads, edits, discusses, and accepts the
 - S-0059 Operators create epics and stories from the board
 - S-0060 Operators create ADRs from the dashboard
 - S-0061 An agent's first inbox is bounded, not the last 24 hours in full
+- S-0062 The container pushes an acceptance when the operator has given it a key
+- S-0063 An acceptance that is not pushed stays visible on the board and in inbox, and flai push --pending pushes it
+- S-0064 A dashboard container cannot leave git hooks or configuration that run on the host
 
 ## Notes
 Carved out 2026-09-17 from the operator's direction. Decisions: ADR-0018 (dashboard token), ADR-0019 (story branches, wip on main, touches), ADR-0020 (files plus MCP). Pull order is the story order above: authentication first, hub transport last. E-0003 stays open for dashboard remediation only.

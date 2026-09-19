@@ -3,12 +3,21 @@ id: T-0171
 type: task
 nature: research
 title: Write the finding with a recommendation, get the decision, record it, and queue what follows
-status: backlog
+status: done
 parent: S-0052
 owner: alex
 created: 2026-09-19T01:55:25Z
-updated: 2026-09-19T01:55:25Z
-transitions: []
+updated: 2026-09-19T07:56:35Z
+transitions:
+  - to: ready
+    at: 2026-09-19T07:56:34Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-19T07:56:34Z
+    by: system-flow
+  - to: done
+    at: 2026-09-19T07:56:35Z
+    by: system-flow
 stream: S-0052
 tags: []
 ---
