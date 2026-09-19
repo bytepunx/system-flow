@@ -3,12 +3,15 @@ id: S-0043
 type: story
 nature: feature
 title: MCP over HTTP and project identity in the API, hub-ready
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-17T19:46:29Z
-updated: 2026-09-17T19:46:29Z
-transitions: []
+updated: 2026-09-19T01:56:20Z
+transitions:
+  - to: ready
+    at: 2026-09-19T01:56:20Z
+    by: alex
 tags: [dashboard, cli]
 ---
 

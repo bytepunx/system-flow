@@ -3,12 +3,15 @@ id: S-0042
 type: story
 nature: feature
 title: Agent presence, activity, and the designer's inbox
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-17T19:46:29Z
-updated: 2026-09-17T19:46:29Z
-transitions: []
+updated: 2026-09-19T01:56:17Z
+transitions:
+  - to: ready
+    at: 2026-09-19T01:56:17Z
+    by: alex
 tags: [dashboard, cli]
 ---
 

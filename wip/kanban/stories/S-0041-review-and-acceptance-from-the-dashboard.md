@@ -3,12 +3,15 @@ id: S-0041
 type: story
 nature: feature
 title: Review and acceptance from the dashboard
-status: backlog
+status: ready
 parent: E-0006
 owner: alex
 created: 2026-09-17T19:46:29Z
-updated: 2026-09-17T19:46:29Z
-transitions: []
+updated: 2026-09-19T01:56:14Z
+transitions:
+  - to: ready
+    at: 2026-09-19T01:56:14Z
+    by: alex
 tags: [dashboard, cli]
 ---
 

@@ -6,7 +6,7 @@ title: system-flow standard and template
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-18T18:01:55Z
+updated: 2026-09-19T02:05:29Z
 transitions: []
 tags: []
 ---
@@ -27,6 +27,8 @@ The conventions are written in design/system, decided in design/adrs, exercised 
 - S-0034 flai installer script and self-upgrade command
 - S-0047 Issue instances written in the same second share a heading; release delivers to a component the story touched
 - S-0049 A story is ready without tasks; the agent that pulls it writes them
+- S-0053 Research and experiment stories can be accepted: findings land on main and are pushed, with no release
+- S-0056 Estimates are written by the agent that pulls the story, in agent time
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
