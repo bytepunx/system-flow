@@ -3,12 +3,21 @@ id: T-0258
 type: task
 nature: feature
 title: "flai: a JSON-RPC peer over a WebSocket that flai opens, with the handshake, pings, reconnection, and project.info"
-status: backlog
+status: done
 parent: S-0072
 owner: alex
 created: 2026-09-20T07:28:27Z
-updated: 2026-09-20T07:28:27Z
-transitions: []
+updated: 2026-09-20T07:34:50Z
+transitions:
+  - to: ready
+    at: 2026-09-20T07:29:03Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-20T07:29:03Z
+    by: system-flow
+  - to: done
+    at: 2026-09-20T07:34:50Z
+    by: system-flow
 stream: S-0072
 tags: []
 ---

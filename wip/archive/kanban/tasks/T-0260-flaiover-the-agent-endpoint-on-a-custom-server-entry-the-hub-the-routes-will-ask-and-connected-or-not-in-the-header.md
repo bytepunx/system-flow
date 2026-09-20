@@ -3,12 +3,21 @@ id: T-0260
 type: task
 nature: feature
 title: "flaiover: the agent endpoint on a custom server entry, the hub the routes will ask, and connected or not in the header"
-status: backlog
+status: done
 parent: S-0072
 owner: alex
 created: 2026-09-20T07:28:28Z
-updated: 2026-09-20T07:28:28Z
-transitions: []
+updated: 2026-09-20T07:39:50Z
+transitions:
+  - to: ready
+    at: 2026-09-20T07:34:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-20T07:34:50Z
+    by: system-flow
+  - to: done
+    at: 2026-09-20T07:39:50Z
+    by: system-flow
 stream: S-0072
 tags: []
 ---

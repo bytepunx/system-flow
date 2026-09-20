@@ -3,12 +3,21 @@ id: T-0261
 type: task
 nature: feature
 title: flai dashboard hands the container the agent credential, starts flai serve, registers the project, and reports it in status
-status: backlog
+status: done
 parent: S-0072
 owner: alex
 created: 2026-09-20T07:28:28Z
-updated: 2026-09-20T07:28:28Z
-transitions: []
+updated: 2026-09-20T07:42:43Z
+transitions:
+  - to: ready
+    at: 2026-09-20T07:39:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-20T07:39:50Z
+    by: system-flow
+  - to: done
+    at: 2026-09-20T07:42:43Z
+    by: system-flow
 stream: S-0072
 tags: []
 ---

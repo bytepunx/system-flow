@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0073
   - S-0074
   - S-0075
   - S-0076

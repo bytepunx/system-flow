@@ -3,15 +3,18 @@ id: S-0073
 type: story
 nature: feature
 title: "The dashboard reads work items through the channel: project, board, items, threads, and file changes"
-status: ready
+status: in-progress
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:50Z
-updated: 2026-09-20T07:27:44Z
+updated: 2026-09-20T07:52:15Z
 transitions:
   - to: ready
     at: 2026-09-20T07:27:44Z
     by: alex
+  - to: in-progress
+    at: 2026-09-20T07:50:50Z
+    by: system-flow
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system]
 ---
@@ -29,6 +32,10 @@ The first reads leave the mount. flai answers the project's identity and layout,
 - [ ] The design documents and the users' documentation say where the dashboard's data comes from
 
 ## Tasks
+- T-0263 flai: methods for the project, the board, items, one item, and threads, from the code the CLI prints with
+- T-0264 flai: a watcher that tells the dashboard which files changed
+- T-0265 flaiover: the manifest, board, items, item, threads, readiness, and events come from the channel; the file parsing for them is deleted
+- T-0266 Measure the board's load against today's, try it end to end, and document where the data comes from
 
 ## Notes
 From S-0071's finding, `design/system/dashboard-host-channel.md`, and ADR-0029. Depends on the channel story. The operator chose structured methods over restricted file reads (ADR-0029), so nothing here exposes a file.
