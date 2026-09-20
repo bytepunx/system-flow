@@ -22,7 +22,10 @@ RUN pnpm build && pnpm prune --prod
 FROM node:${NODE_VERSION}-alpine
 ARG FLAI_COMMIT=unknown
 ARG FLAIOVER_VERSION=0.0.0
-LABEL org.opencontainers.image.source="https://github.com/bytepunx/system-flow" \
+# The flai of the commit this image was built from: the one it was tested against, not one it holds.
+ARG FLAI_VERSION=dev
+LABEL dev.system-flow.flai="${FLAI_VERSION}" \
+      org.opencontainers.image.source="https://github.com/bytepunx/system-flow" \
       org.opencontainers.image.description="flaiover: the system-flow dashboard; it reaches a project through flai serve on the host" \
       org.opencontainers.image.licenses="UNLICENSED"
 RUN apk add --no-cache tini
