@@ -54,7 +54,7 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 			c := base
 			c.Kind, c.To, c.By, c.At = Moved, tr.To, tr.By, tr.At
 			if tr.To == Cancelled {
-				c.Cause = cancelledWith(byID, it, tr.At)
+				c.Cause = CancelledWith(byID, it, tr.At)
 			}
 			if tr.By != self && after(tr.At, c) {
 				out = append(out, c)
@@ -84,10 +84,10 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 	return out
 }
 
-// cancelledWith names the item whose cancellation at the same moment took it
+// CancelledWith names the item whose cancellation at the same moment took it
 // along: the highest ancestor cancelled at that time. Nothing records it; a
 // cascade stamps every item with one time (ADR-0028).
-func cancelledWith(byID map[string]*Item, it *Item, at string) string {
+func CancelledWith(byID map[string]*Item, it *Item, at string) string {
 	cause := ""
 	for p := byID[it.Parent]; p != nil; p = byID[p.Parent] {
 		for _, tr := range p.Transitions {

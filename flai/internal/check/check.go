@@ -245,6 +245,11 @@ func (c *checker) oneItem(it *workitem.Item) {
 		case parent.Type != map[string]string{workitem.Story: workitem.Epic, workitem.Task: workitem.Story}[it.Type]:
 			c.add(Error, "item.parent-type", p, keyLine(p, "parent"), "parent %s is a %s", it.Parent, parent.Type)
 		default:
+			// Cancelling a parent cancels what is open under it (ADR-0028); a tree
+			// cancelled by an older flai, or edited by hand, is caught here.
+			if parent.Status == workitem.Cancelled && !it.Closed() {
+				c.add(Error, "item.parent-cancelled", p, keyLine(p, "status"), "%s is %s under %s, which is cancelled; cancel it (flai move %s cancelled --reason \"%s cancelled\") or give it another parent", it.ID, it.Status, parent.ID, it.ID, parent.ID)
+			}
 			if !strings.Contains(parent.Body, "- "+it.ID+" ") && !strings.Contains(parent.Body, it.ID+"\n") {
 				c.add(Warning, "item.parent-list", parent.Path, headingLine(parent.Path, map[string]string{workitem.Story: "## Stories", workitem.Task: "## Tasks"}[it.Type]), "%s does not list child %s", parent.ID, it.ID)
 			}
@@ -304,7 +309,9 @@ func (c *checker) history(it *workitem.Item) {
 			c.add(Error, "item.chronology", p, keyLine(p, "transitions"), "transitions[%d] at %s is before %s", i, tr.At, prevAt.Format(workitem.TimeFormat))
 		}
 		prevAt = at
-		if !contains(allowedNext[prevState], tr.To) {
+		// A parent's cancellation takes an item out of review; nothing else does (ADR-0028).
+		cascaded := tr.To == workitem.Cancelled && prevState == workitem.Review && workitem.CancelledWith(c.byID, it, tr.At) != ""
+		if !contains(allowedNext[prevState], tr.To) && !cascaded {
 			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: %s cannot follow %s", i, tr.To, prevState)
 		} else if tr.To == workitem.Done && prevState == workitem.InProgress && it.Type != workitem.Task {
 			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: a %s must go through review before done", i, it.Type)
