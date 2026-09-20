@@ -15,9 +15,9 @@ touches: [flairport/src]
 
 ## Outcome
 
-* Gather all running flai-managed project instances and their web dashboard containers running on a single host and present them via a "single pane of glass" so the operator can have one page to go to and click through all the projects they're managing
+- Gather all running flai-managed project instances and their web dashboard containers running on a single host and present them via a "single pane of glass" so the operator can have one page to go to and click through all the projects they're managing
 
-* Expose this surface via something like cloudflared or a similar tunnel so that it can be accessed from outside the network over HTTPS (https terminated at the tunnel provider's network edge) with a simple passkey/identity check at the edge
+- Expose this surface via something like cloudflared or a similar tunnel so that it can be accessed from outside the network over HTTPS (https terminated at the tunnel provider's network edge) with a simple passkey/identity check at the edge
 
 ## Stories
 
