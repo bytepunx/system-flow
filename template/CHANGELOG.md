@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.14 - 2026-09-20
+
+- S-0070 Cancelling an epic cancels its open stories and their tasks, and cancelling a story cancels its open tasks (patch).
+
 ## 1.0.13 - 2026-09-19
 
 - S-0060 Operators create ADRs from the dashboard (patch).

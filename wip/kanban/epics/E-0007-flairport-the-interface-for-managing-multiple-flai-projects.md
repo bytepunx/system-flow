@@ -6,7 +6,7 @@ title: flairport - the interface for managing multiple flai projects
 status: backlog
 owner: alex
 created: 2026-09-20T01:14:04Z
-updated: 2026-09-20T01:14:04Z
+updated: 2026-09-20T03:35:30Z
 transitions: []
 tags: [flairport]
 touches: [flairport/src]
@@ -21,13 +21,14 @@ touches: [flairport/src]
 
 ## Stories
 
-* Extend flai and flaiover to write and manage a metadata file about each running instance into ~/.flai (home directory belongs to the current operator) in YAML format - this includes the port for each flaiover instance as well as the necessary token to access it
+- S-0065 Extend flai and flaiover to write and manage a metadata file about each running instance into ~/.flai (home directory belongs to the current operator) in YAML format - this includes the port for each flaiover instance as well as the necessary token to access it
 
-* flai/flaiover will need to negotiate a port depending on what's available. this can be part of the metadata read/write pattern to a ~/.flai folder such that flai reserves a port range block of ~50-100 ports that are unlikely to collide with common OSS/system ports
+- S-0066 flai/flaiover will need to negotiate a port depending on what's available. this can be part of the metadata read/write pattern to a ~/.flai folder such that flai reserves a port range block of ~50-100 ports that are unlikely to collide with common OSS/system ports
 
-* Read the currently open flai/flaiover sessions from the metadata files and present a sidebar interface (which should include a filter bar to support finding projects quickly) so that the operator using flairport can start, stop, restart, and manage all projects using this system-flow approach
+- S-0067 Read the currently open flai/flaiover sessions from the metadata files and present a sidebar interface (which should include a filter bar to support finding projects quickly) so that the operator using flairport can start, stop, restart, and manage all projects using this system-flow approach
 
-* On selection of a project, present it, embedded, in the browser screen as a "integration at the glass" approach
+- S-0068 On selection of a project, present it, embedded, in the browser screen as a "integration at the glass" approach
+- S-0069 Research tunnel options for reaching flairport from outside the network, ending in a story for flai CLI integration if one suits
 
 ## Notes
 
