@@ -71,6 +71,10 @@ func failed(err error) *channel.Error {
 	return &channel.Error{Code: channel.CodeInternal, Message: err.Error()}
 }
 
+// Commands runs the flai commands behind the write methods; nil is this
+// executable. Tests replace it before building the table.
+var Commands Runner
+
 // NotFound is the code for an item or thread that does not exist.
 const NotFound = -32004
 
@@ -244,7 +248,7 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 			return out, nil
 		},
 	}
-	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods()} {
+	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), writeMethods(Commands, now)} {
 		for name, m := range more {
 			table[name] = m
 		}

@@ -43,10 +43,12 @@ const (
 	CodeUnknownProject = -32001
 )
 
-// Error is a JSON-RPC error object.
+// Error is a JSON-RPC error object. Data carries what a caller can act on:
+// the current version of a document that changed, the findings of a refusal.
 type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 func (e *Error) Error() string { return e.Message }
@@ -56,6 +58,23 @@ type Project struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
 	Root string `json:"-"`
+}
+
+type progressKey struct{}
+
+// Progress sends the dashboard a step of the request being answered, as a
+// $/progress notification carrying the request's ID. Outside a request (the
+// CLI's flai hostapi, a test) it does nothing.
+func Progress(ctx context.Context, value any) {
+	if emit, ok := ctx.Value(progressKey{}).(func(any)); ok {
+		emit(value)
+	}
+}
+
+// WithProgress gives a context an emitter; flai hostapi uses it to print
+// steps, and tests to collect them.
+func WithProgress(ctx context.Context, emit func(any)) context.Context {
+	return context.WithValue(ctx, progressKey{}, emit)
 }
 
 // Method answers one named request for a project. Params are data to be
@@ -376,6 +395,12 @@ func (c *Client) serveOnce(ctx context.Context) error {
 			}
 		case m.Method != "" && m.ID != nil:
 			rctx, stop := context.WithCancel(ctx)
+			id := m.ID
+			rctx = WithProgress(rctx, func(value any) {
+				if b, err := json.Marshal(map[string]any{"id": id, "value": value}); err == nil {
+					_ = send(message{Method: "$/progress", Params: b})
+				}
+			})
 			inflight.Store(string(m.ID), stop)
 			go func(m message) {
 				defer func() { stop(); inflight.Delete(string(m.ID)) }()
