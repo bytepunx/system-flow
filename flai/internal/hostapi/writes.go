@@ -161,9 +161,16 @@ var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 // template with the operator's own credentials (S-0078).
 const ActionPush = "push"
 
+// ActionAgent is the host action that starts the operator's agent command
+// when a story becomes ready and nobody is attending the project (S-0079).
+// No method of the channel asks for it: flai serve performs it itself, from
+// what it sees in the project's files.
+const ActionAgent = "agent"
+
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
-	ActionPush: "push accepted work and its release tags, and publish the template, with your git credentials; a holder of the dashboard token can then publish any story that is in review",
+	ActionPush:  "push accepted work and its release tags, and publish the template, with your git credentials; a holder of the dashboard token can then publish any story that is in review",
+	ActionAgent: "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
 }
 
 // Host is what the host decides and records about host actions (ADR-0029).

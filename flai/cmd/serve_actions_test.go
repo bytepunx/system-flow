@@ -70,7 +70,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there is: push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -134,5 +134,48 @@ func TestHostActionPush(t *testing.T) {
 	}
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "push: off everywhere") {
 		t.Errorf("actions, after: %s", out)
+	}
+}
+
+// S-0079: the agent's command is the operator's, an argument list with no
+// default, managed on the host and nowhere else.
+func TestServeAgentCommand(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, _, _ := runIn(t, root, "serve", "agent")
+	if !strings.Contains(out, "no command is set, so nothing is started") || !strings.Contains(out, "off for this project") {
+		t.Errorf("by default: %s", out)
+	}
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "agent: off everywhere") || !strings.Contains(out, "whoever can move a story to ready") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	out, errOut, code := runIn(t, root, "serve", "agent", "set", "--name", "builder", "--", "claude", "-p", "work on {story}; echo $HOME")
+	if code != 0 || !strings.Contains(out, `command: "claude" "-p" "work on {story}; echo $HOME"`) || !strings.Contains(out, "never through a shell") {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	if !strings.Contains(string(cfg), `"work on {story}; echo $HOME"`) || !strings.Contains(string(cfg), `"name": "builder"`) {
+		t.Errorf("kept as an argument list, as written: %s", cfg)
+	}
+	if _, errOut, code := runIn(t, root, "config", "set", "agent.command", "rm -rf /"); code == 0 {
+		t.Errorf("flai config set does not reach it: %s", errOut)
+	}
+	if _, _, code := runIn(t, root, "serve", "agent", "set"); code == 0 {
+		t.Error("set needs a program")
+	}
+	runIn(t, root, "serve", "enable", "agent")
+	js, _, _ := runIn(t, root, "serve", "agent", "show", "--json")
+	if !strings.Contains(js, `"enabled_here": true`) || !strings.Contains(js, `"claude"`) {
+		t.Errorf("show --json: %s", js)
+	}
+	got := (&app{}).agentConfig(root)
+	if !got.Enabled || len(got.Command) != 3 || got.Name != "builder" {
+		t.Errorf("what flai serve is given: %+v", got)
+	}
+	if out, _, _ := runIn(t, root, "serve", "agent", "clear"); !strings.Contains(out, "no command is set") {
+		t.Errorf("clear: %s", out)
+	}
+	if got := (&app{}).agentConfig(root); len(got.Command) != 0 {
+		t.Errorf("cleared: %+v", got)
 	}
 }

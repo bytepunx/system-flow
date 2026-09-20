@@ -154,6 +154,9 @@ type Options struct {
 	// Host is the operator's say over host actions and the journal of them
 	// (S-0078); the zero value enables nothing.
 	Host hostapi.Host
+	// Agent is the operator's say about starting an agent when a story
+	// becomes ready (S-0079); nil starts none.
+	Agent func(root string) AgentConfig
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
 }
@@ -231,10 +234,26 @@ func Run(ctx context.Context, o Options) error {
 			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, done: make(chan struct{})}
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
+			starter := newLauncher(o, e)
+			starter.look(cctx, false) // learns what is ready now; starts nothing
+			go func() {
+				for {
+					select {
+					case <-cctx.Done():
+						return
+					case <-starter.again:
+						starter.look(cctx, true)
+					}
+				}
+			}()
 			go func() {
 				// The dashboard hears of each changed file; what it shows comes from asking again.
 				go watcher.Run(cctx, func(rel string) {
 					r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
+					// a story's state is in its file under kanban, and the pull order in the board
+					if strings.Contains(filepath.ToSlash(rel), "/kanban/") {
+						starter.look(cctx, false)
+					}
 				})
 				r.client.Run(cctx)
 				close(r.done)

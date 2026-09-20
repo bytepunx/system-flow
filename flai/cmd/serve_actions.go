@@ -7,11 +7,13 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // Host actions (S-0078, ADR-0029): what flai serve may do on this host, with
@@ -240,4 +242,126 @@ append-only and yours: nothing a dashboard can ask for reads or changes it.`,
 	}
 	c.Flags().IntVarP(&last, "last", "n", 0, "only the last n entries")
 	return c
+}
+
+// flai serve agent: the command flai serve starts an agent with (S-0079).
+func newServeAgentCmd(a *app) *cobra.Command {
+	c := &cobra.Command{
+		Use:   "agent",
+		Short: "The command flai serve starts when a story becomes ready and nobody is attending",
+		Long: `flai serve can start an agent session for you when a story becomes ready and
+no agent is attending the project. It is a host action, off until you enable
+it (flai serve enable agent), and it has no default command: you write one.
+
+The command is an argument list, run as it stands in the project's directory,
+as you, never through a shell. In an argument {story} is replaced by the
+story's ID and {root} by the project's directory; nothing else is interpreted.
+The session's environment carries FLAI_AGENT, FLAI_STORY, and FLAI_SESSION.
+One agent is started per project at a time; its output goes to a log beside
+flai serve's state, and every start and failure is in flai serve journal.`,
+		Example: `  flai serve agent set -- claude -p "Work on story {story} as the conventions say"
+  flai serve agent set --name builder -- /home/me/bin/start-agent {story}
+  flai serve agent show
+  flai serve enable agent
+  flai serve agent clear`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() },
+	}
+	var name string
+	var attended int
+	set := &cobra.Command{
+		Use:   "set -- <program> [args...]",
+		Short: "Set the command, as an argument list after --",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			if strings.TrimSpace(args[0]) == "" {
+				return fmt.Errorf("the program is empty")
+			}
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			cfg.Agent.Command = args
+			if name != "" {
+				cfg.Agent.Name = name
+			}
+			if attended > 0 {
+				cfg.Agent.AttendedMinutes = attended
+			}
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showAgentCommand()
+		},
+	}
+	set.Flags().StringVar(&name, "name", "", "the FLAI_AGENT the session works under (default agent)")
+	set.Flags().IntVar(&attended, "attended-minutes", 0, "how recent a sign of an agent counts as attending (default 6)")
+	c.AddCommand(set,
+		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
+		&cobra.Command{Use: "clear", Short: "Remove the command; nothing is started without one", Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error {
+				cfg, path, err := a.loadConfig()
+				if err != nil {
+					return err
+				}
+				cfg.Agent = config.AgentStart{}
+				if err := config.Save(path, cfg); err != nil {
+					return err
+				}
+				return a.showAgentCommand()
+			}},
+	)
+	return c
+}
+
+func (a *app) showAgentCommand() error {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
+	here, enabled := "", false
+	if repo, err := a.project(); err == nil {
+		here = mainRootOf(repo)
+		enabled = cfg.ActionEnabled(hostapi.ActionAgent, here)
+	}
+	if a.jsonOut {
+		cmd := cfg.Agent.Command
+		if cmd == nil {
+			cmd = []string{}
+		}
+		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "enabled_here": enabled})
+	}
+	if len(cfg.Agent.Command) == 0 {
+		fmt.Fprintln(a.out, "no command is set, so nothing is started; flai serve agent set -- <program> [args...]")
+	} else {
+		quoted := make([]string, len(cfg.Agent.Command))
+		for i, arg := range cfg.Agent.Command {
+			quoted[i] = fmt.Sprintf("%q", arg)
+		}
+		fmt.Fprintf(a.out, "command: %s\n  run as it stands, in the project's directory, never through a shell\n", strings.Join(quoted, " "))
+	}
+	if here != "" {
+		if enabled {
+			fmt.Fprintln(a.out, "the agent action is on for this project; flai serve disable agent turns it off")
+		} else {
+			fmt.Fprintln(a.out, "the agent action is off for this project; flai serve enable agent turns it on")
+		}
+	}
+	return nil
+}
+
+// agentConfig is the operator's say about starting agents for a project,
+// read from the configuration at every look (S-0079).
+func (a *app) agentConfig(root string) serve.AgentConfig {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return serve.AgentConfig{}
+	}
+	return serve.AgentConfig{
+		Enabled:  cfg.ActionEnabled(hostapi.ActionAgent, root),
+		Command:  cfg.Agent.Command,
+		Name:     cfg.Agent.Name,
+		Attended: time.Duration(cfg.Agent.AttendedMinutes) * time.Minute,
+	}
 }

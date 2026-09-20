@@ -37,6 +37,26 @@ type Config struct {
 	// serve enable and disable manage it, on the host, and nothing a
 	// dashboard can ask for reads or writes this file.
 	HostActions map[string][]string `json:"host_actions,omitempty"`
+	// Agent is what flai serve starts when a story becomes ready and nobody
+	// is attending the project, once the agent action is enabled (S-0079).
+	// There is no default command: an operator writes one, as an argument
+	// list that is run as it stands, never through a shell. Like HostActions
+	// it is not among Keys; flai serve agent manages it.
+	Agent AgentStart `json:"agent,omitzero"`
+}
+
+// AgentStart is the command flai serve starts an agent with.
+type AgentStart struct {
+	// Command is the program and its arguments. In an argument, {story} is
+	// replaced by the story's ID and {root} by the project's directory;
+	// nothing else is interpreted.
+	Command []string `json:"command,omitempty"`
+	// Name is the FLAI_AGENT the session works under; "agent" when empty.
+	Name string `json:"name,omitempty"`
+	// AttendedMinutes is how recent a sign of an agent must be for the
+	// project to count as attended; 6 when zero, one more than the longest
+	// an agent holds wait_for_events.
+	AttendedMinutes int `json:"attended_minutes,omitempty"`
 }
 
 // AllProjects stands for every project in HostActions.
