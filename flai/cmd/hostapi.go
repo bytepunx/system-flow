@@ -30,7 +30,7 @@ JSON. An error is printed as {"error": {"code", "message"}} with exit 2.`,
   flai hostapi item.get '{"id":"S-0042"}'`,
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			methods := hostapi.Methods(buildinfo.Version, a.now)
+			methods := hostapi.MethodsFor(buildinfo.Version, a.now, a.host())
 			if len(args) == 0 {
 				names := make([]string, 0, len(methods))
 				for name := range methods {

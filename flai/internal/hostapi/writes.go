@@ -32,6 +32,7 @@ const (
 	Conflict = -32009 // the thing changed since it was read; Data has the current version
 	Refused  = -32010 // flai check refused the content; Data has the findings
 	Rule     = -32011 // a workflow rule said no; the message says which
+	Disabled = -32012 // a host action the operator has not enabled; Data says what enables it
 )
 
 // Trailer marks a commit made for the dashboard, as it always has.
@@ -144,8 +145,52 @@ func (j *journal) put(key string, res any, err *channel.Error) {
 
 var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 
+// ActionPush is the host action that pushes an acceptance and publishes the
+// template with the operator's own credentials (S-0078).
+const ActionPush = "push"
+
+// Actions are the host actions there are, with what each lets a dashboard do.
+var Actions = map[string]string{
+	ActionPush: "push accepted work and its release tags, and publish the template, with your git credentials; a holder of the dashboard token can then publish any story that is in review",
+}
+
+// Host is what the host decides and records about host actions (ADR-0029).
+// The zero value enables nothing and records nothing.
+type Host struct {
+	// Enabled reports whether the operator enabled an action for a project.
+	Enabled func(action, root string) bool
+	// Record writes one entry of the host's journal.
+	Record func(Entry)
+}
+
+// Entry is one host action asked for, whatever became of it.
+type Entry struct {
+	At        string `json:"at"`
+	Action    string `json:"action"`
+	Method    string `json:"method"`
+	Project   string `json:"project"`
+	Root      string `json:"root"`
+	By        string `json:"by"` // who the dashboard acts for: the manifest's owner
+	RequestID string `json:"request_id,omitempty"`
+	Outcome   string `json:"outcome"` // done, failed, or disabled
+	Detail    string `json:"detail,omitempty"`
+}
+
+func (h Host) enabled(action, root string) bool {
+	return h.Enabled != nil && h.Enabled(action, root)
+}
+
+// EnableCommand is what the operator runs, on the host, in the project.
+func EnableCommand(action string) string { return "flai serve enable " + action }
+
 // spec is one write: how its params become a command line.
 type spec struct {
+	// action names the host action this method is: asked for while the
+	// operator has not enabled it, it is refused and says what enables it.
+	action string
+	// uses names a host action this method performs as part of its work when
+	// it is enabled, and does without when it is not; it is journalled then.
+	uses string
 	// build validates and returns the arguments (without --json) and what goes on standard input.
 	build func(p channel.Project, raw json.RawMessage) (args []string, stdin string, err *channel.Error)
 	// exits maps exit codes that carry a payload on standard output to error codes.
@@ -223,7 +268,7 @@ func decode[T any](raw json.RawMessage) (T, *channel.Error) {
 	return v, params(raw, &v)
 }
 
-func specs() map[string]spec {
+func specs(host Host) map[string]spec {
 	type build = func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)
 	one := func(b build) spec { return spec{build: b} }
 	read := func(b build) spec { return spec{build: b, reads: true} }
@@ -434,7 +479,7 @@ func specs() map[string]spec {
 			return []string{"accept", in.ID, "--dry-run"}, "", nil
 		}),
 
-		"accept.run": {progress: true, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"accept.run": {progress: true, uses: ActionPush, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
 				IncludeUncommitted bool   `json:"include_uncommitted"`
@@ -446,6 +491,12 @@ func specs() map[string]spec {
 				return nil, "", e
 			}
 			args := []string{"accept", in.ID, "--by=" + owner(p)}
+			// flai runs here as the operator, with their credentials. Whether
+			// an acceptance asked for by a dashboard may push is theirs to say
+			// (I-0028: from S-0075 until S-0078 it pushed unasked).
+			if !host.enabled(ActionPush, p.Root) {
+				args = append(args, "--no-push")
+			}
 			if in.IncludeUncommitted {
 				args = append(args, "--yes")
 			}
@@ -685,6 +736,17 @@ func specs() map[string]spec {
 			}
 			return []string{"push", "--pending", "--dry-run"}, "", nil
 		}),
+
+		// push.run: the host action. flai push --pending --publish as the
+		// operator: the branch and the release tags of accepted work, then the
+		// template where its publish remote is behind. Never forced; when the
+		// remote has moved it refuses (exit 3) and says to fetch and merge.
+		"push.run": {action: ActionPush, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"push", "--pending", "--publish"}, "", nil
+		}},
 	}
 }
 
@@ -701,13 +763,13 @@ func withJSON(args []string) []string {
 
 // writeMethods turns the specs into methods: validate, consult the journal,
 // run, and read the outcome the way the dashboard used to.
-func writeMethods(run Runner, now func() time.Time) map[string]channel.Method {
+func writeMethods(run Runner, now func() time.Time, host Host) map[string]channel.Method {
 	if run == nil {
 		run = ExecRunner
 	}
 	j := &journal{done: map[string]journalled{}, now: now}
 	out := map[string]channel.Method{}
-	for name, sp := range specs() {
+	for name, sp := range specs(host) {
 		out[name] = func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			args, stdin, e := sp.build(p, raw)
 			if e != nil {
@@ -727,6 +789,18 @@ func writeMethods(run Runner, now func() time.Time) map[string]channel.Method {
 					return was.res, was.err
 				}
 			}
+			var id struct {
+				RequestID string `json:"request_id"`
+			}
+			_ = json.Unmarshal(raw, &id)
+			entry := Entry{At: now().UTC().Format(time.RFC3339), Method: name, Project: p.Key, Root: p.Root, By: owner(p), RequestID: id.RequestID}
+			if sp.action != "" && !host.enabled(sp.action, p.Root) {
+				entry.Action, entry.Outcome = sp.action, "disabled"
+				host.record(entry)
+				return nil, &channel.Error{Code: Disabled,
+					Message: fmt.Sprintf("the host action %q is not enabled for this project. On the host, in the project, run: %s", sp.action, EnableCommand(sp.action)),
+					Data:    map[string]any{"action": sp.action, "enable": EnableCommand(sp.action)}}
+			}
 			r := Run{Dir: p.Root, Args: withJSON(args), Stdin: stdin}
 			if sp.progress {
 				r.OnEvent = func(ev map[string]any) { channel.Progress(ctx, ev) }
@@ -736,10 +810,68 @@ func writeMethods(run Runner, now func() time.Time) map[string]channel.Method {
 			if key != "" && ctx.Err() == nil {
 				j.put(key, res, rerr)
 			}
+			if entry.Action = sp.action; entry.Action == "" && sp.uses != "" && host.enabled(sp.uses, p.Root) {
+				entry.Action = sp.uses
+			}
+			if entry.Action != "" {
+				entry.Outcome, entry.Detail = describe(res, rerr)
+				host.record(entry)
+			}
 			return res, rerr
 		}
 	}
 	return out
+}
+
+func (h Host) record(e Entry) {
+	if h.Record != nil {
+		h.Record(e)
+	}
+}
+
+// describe says in a line what became of a host action, for the journal:
+// what was pushed and published, or why not.
+func describe(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Pushed    bool     `json:"pushed"`
+		PushError string   `json:"push_error"`
+		Reason    string   `json:"reason"`
+		Tags      []string `json:"tags"`
+		Published []string `json:"published"`
+		Unpushed  *struct {
+			Acceptances []string `json:"acceptances"`
+			Tags        []string `json:"tags"`
+		} `json:"unpushed"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	if said.Unpushed != nil && len(said.Tags) == 0 {
+		said.Tags = said.Unpushed.Tags
+	}
+	switch {
+	case said.PushError != "":
+		return "failed", "not pushed: " + said.PushError
+	case !said.Pushed:
+		return "done", "nothing pushed: " + orElse(said.Reason, "nothing was pending")
+	}
+	detail = "pushed"
+	if len(said.Tags) > 0 {
+		detail += " with tags " + strings.Join(said.Tags, ", ")
+	}
+	if len(said.Published) > 0 {
+		detail += "; published " + strings.Join(said.Published, ", ")
+	}
+	return "done", detail
+}
+
+func orElse(s, d string) string {
+	if s == "" {
+		return d
+	}
+	return s
 }
 
 // outcome reads what flai said: JSON on standard output, warnings and the

@@ -30,6 +30,55 @@ type Config struct {
 	CacheDir  string    `json:"cache_dir"`
 	Author    string    `json:"author"`
 	Worktrees Worktrees `json:"worktrees"`
+	// HostActions are the actions flai serve may perform on this host when a
+	// dashboard asks (ADR-0029): the action's name, and for which projects,
+	// each the absolute path of a main checkout, or "*" for every project. It
+	// is empty by default, which means none, and it is not among Keys: flai
+	// serve enable and disable manage it, on the host, and nothing a
+	// dashboard can ask for reads or writes this file.
+	HostActions map[string][]string `json:"host_actions,omitempty"`
+}
+
+// AllProjects stands for every project in HostActions.
+const AllProjects = "*"
+
+// ActionEnabled reports whether a host action is enabled for a project.
+func (c Config) ActionEnabled(action, root string) bool {
+	for _, r := range c.HostActions[action] {
+		if r == AllProjects || r == root {
+			return true
+		}
+	}
+	return false
+}
+
+// WithAction returns the configuration with an action enabled or disabled
+// for a project (or AllProjects). Disabling for AllProjects disables it
+// everywhere: no project keeps it.
+func (c Config) WithAction(action, root string, on bool) Config {
+	next := map[string][]string{}
+	for a, roots := range c.HostActions {
+		next[a] = append([]string{}, roots...)
+	}
+	var kept []string
+	for _, r := range next[action] {
+		if r != root && (on || root != AllProjects) {
+			kept = append(kept, r)
+		}
+	}
+	if on {
+		kept = append(kept, root)
+	}
+	if len(kept) == 0 {
+		delete(next, action)
+	} else {
+		next[action] = kept
+	}
+	if len(next) == 0 {
+		next = nil
+	}
+	c.HostActions = next
+	return c
 }
 
 // Worktrees is how flai stream open creates a story's worktree.

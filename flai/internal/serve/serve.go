@@ -56,6 +56,9 @@ func (d Dir) status() string   { return filepath.Join(string(d), "state.json") }
 // Log is where a detached flai serve writes.
 func (d Dir) Log() string { return filepath.Join(string(d), "serve.log") }
 
+// Journal is where every host action asked for is written, one JSON object a line.
+func (d Dir) Journal() string { return filepath.Join(string(d), "journal.jsonl") }
+
 // Projects reads the registry; none is an empty list.
 func (d Dir) Projects() ([]Entry, error) {
 	data, err := os.ReadFile(d.registry())
@@ -148,6 +151,9 @@ type Options struct {
 	Every      time.Duration // how often the registry is read and the status written
 	Now        func() time.Time
 	WatchEvery time.Duration // how often a project's files are looked at; the watcher's default when zero
+	// Host is the operator's say over host actions and the journal of them
+	// (S-0078); the zero value enables nothing.
+	Host hostapi.Host
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
 }
@@ -175,7 +181,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.NewClient == nil {
 		o.NewClient = func(e Entry, key []byte) *channel.Client {
 			return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-				Methods: hostapi.Methods(o.Version, o.Now), Version: o.Version, Logger: o.Logger}
+				Methods: hostapi.MethodsFor(o.Version, o.Now, o.Host), Version: o.Version, Logger: o.Logger}
 		}
 	}
 	if st, alive := o.Dir.ReadStatus(o.Now()); alive && st.PID != os.Getpid() {

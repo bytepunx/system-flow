@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -90,8 +91,8 @@ func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 	gitIn(t, other, "push", "-q", "origin", "main")
 	gitIn(t, root, "fetch", "-q", "origin")
 	_, errOut, code := runIn(t, root, "push", "--pending")
-	if code == 0 || !strings.Contains(errOut, "have diverged") || !strings.Contains(errOut, "never forces") {
-		t.Errorf("diverged: refuse, say to fetch and merge, never force: %d %s", code, errOut)
+	if code != exitPushDiverged || !strings.Contains(errOut, "have diverged") || !strings.Contains(errOut, "never forces") {
+		t.Errorf("diverged: refuse with its own exit code, say to fetch and merge, never force: %d %s", code, errOut)
 	}
 }
 
@@ -117,5 +118,63 @@ func TestPushPendingManyTags(t *testing.T) {
 	}
 	if again, _, _ := runIn(t, root, "push", "--pending"); !strings.Contains(again, "nothing pending") {
 		t.Errorf("after the push: %s", again)
+	}
+}
+
+// S-0078: --publish also publishes a template component whose version the
+// pushed commits moved, after the push, as flai template push --tag does.
+func TestPushPendingPublishesAMovedTemplate(t *testing.T) {
+	root, remote := researchProject(t, "feature", true)
+	bare := filepath.Join(t.TempDir(), "tpl.git")
+	gitIn(t, filepath.Dir(bare), "init", "-q", "--bare", "-b", "main", bare)
+	tpl := filepath.Join(root, "tpl")
+	_ = filepath.WalkDir(miniTemplate, func(path string, d os.DirEntry, _ error) error {
+		rel, _ := filepath.Rel(miniTemplate, path)
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(tpl, rel), 0o755)
+		}
+		b, _ := os.ReadFile(path)
+		return os.WriteFile(filepath.Join(tpl, rel), b, 0o644)
+	})
+	manifest := filepath.Join(tpl, "template.yaml")
+	y, _ := os.ReadFile(manifest)
+	_ = os.WriteFile(manifest, []byte(string(y)+"publish:\n  repo: "+bare+"\n  ref: main\n"), 0o644)
+	m, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(string(m)+"  - name: tpl\n    path: tpl\n    kind: template\n"), 0o644)
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "chore: a template component")
+	gitIn(t, root, "push", "-q", "origin", "main")
+
+	// nothing of the template moved: an acceptance alone publishes nothing
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--no-push", "--yes"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	dry, _, _ := runIn(t, root, "push", "--pending", "--publish", "--dry-run")
+	if strings.Contains(dry, "publish") {
+		t.Errorf("no template version moved: %s", dry)
+	}
+	// its version moves in a commit that is ahead too
+	y, _ = os.ReadFile(manifest)
+	_ = os.WriteFile(manifest, []byte(strings.Replace(string(y), "version: 9.9.9", "version: 9.9.10", 1)), 0o644)
+	gitIn(t, root, "commit", "-q", "-am", "chore: template 9.9.10")
+	dry, _, _ = runIn(t, root, "push", "--pending", "--publish", "--dry-run")
+	if !strings.Contains(dry, "then publish tpl") || strings.Contains(gitIn(t, bare, "tag", "--list"), "v9.9.10") {
+		t.Errorf("the dry run says what would be published and publishes nothing: %s", dry)
+	}
+	if plain, _, _ := runIn(t, root, "push", "--pending", "--dry-run"); strings.Contains(plain, "publish") {
+		t.Errorf("without --publish nothing is said of templates: %s", plain)
+	}
+	out, errOut, code := runIn(t, root, "push", "--pending", "--publish", "--json")
+	if code != 0 || !strings.Contains(out, `"pushed": true`) || !strings.Contains(out, "v9.9.10") {
+		t.Fatalf("push --publish: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(gitIn(t, bare, "tag", "--list"), "v9.9.10") {
+		t.Error("the template's remote has the new version's tag")
+	}
+	if strings.TrimSpace(gitIn(t, remote, "rev-parse", "main")) != strings.TrimSpace(gitIn(t, root, "rev-parse", "main")) {
+		t.Error("and the project's remote has main")
+	}
+	if again, _, _ := runIn(t, root, "push", "--pending", "--publish"); !strings.Contains(again, "nothing pending") {
+		t.Errorf("twice is once: %s", again)
 	}
 }

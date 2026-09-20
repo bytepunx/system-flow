@@ -67,7 +67,8 @@ export const REQUIRED_METHODS = [
 	'adr.template',
 	'adr.accept',
 	'stats.get',
-	'push.pending'
+	'push.pending',
+	'push.run'
 ];
 
 export type AgentStatus = {

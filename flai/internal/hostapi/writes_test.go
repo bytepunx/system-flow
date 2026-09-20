@@ -29,7 +29,7 @@ var good = map[string]struct {
 	"item.new":          {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
 	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
 	"accept.preview":    {`{"id":"S-0001"}`, "accept S-0001 --dry-run --json", ""},
-	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
+	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --no-push --yes --json", ""},
 	"stream.diff":       {`{"id":"S-0001"}`, "stream diff S-0001 --json", ""},
 	"stream.log":        {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
 	"thread.new":        {`{"on":"S-0001","heading":"Goal","title":"How deep?","text":"Eight metres?",` + rid + `}`, "thread new --on=S-0001 --by=olive --heading=Goal --json -- How deep? Eight metres?", ""},
@@ -42,6 +42,7 @@ var good = map[string]struct {
 	"adr.accept":        {`{"id":"ADR-0028",` + rid + `}`, "adr accept 28 --autocommit --trailer=" + Trailer + " --json", ""},
 	"stats.get":         {`{"since":"30d","type":"story","by":"nature"}`, "stats --since=30d --type=story --by=nature --json", ""},
 	"push.pending":      {`{}`, "push --pending --dry-run --json", ""},
+	"push.run":          {`{` + rid + `}`, "push --pending --publish --json", ""},
 }
 
 // refused is, per method, params that must never reach a command line.
@@ -67,6 +68,7 @@ var refused = map[string][]string{
 	"adr.accept":        {`{"id":"--trailer=x",` + rid + `}`},
 	"stats.get":         {`{"since":"30d; ls"}`, `{"type":"folder"}`, `{"by":"owner"}`},
 	"push.pending":      {`"--force"`},
+	"push.run":          {`"--force"`, `{}`},
 }
 
 type recorder struct {
@@ -84,8 +86,18 @@ func (r *recorder) run(_ context.Context, run Run) (Ran, error) {
 	return r.ran, nil
 }
 
+// hostFor is a host nobody has touched, except for a method that is itself a
+// host action, which can only show what it runs with that action enabled.
+func hostFor(name string) Host {
+	action := specs(Host{})[name].action
+	if action == "" {
+		return Host{}
+	}
+	return Host{Enabled: func(a, _ string) bool { return a == action }}
+}
+
 func TestEveryWriteIsCovered(t *testing.T) {
-	for name := range specs() {
+	for name := range specs(Host{}) {
 		if _, ok := good[name]; !ok {
 			t.Errorf("%s has no valid call in good: add one with the command line it must become", name)
 		}
@@ -93,8 +105,8 @@ func TestEveryWriteIsCovered(t *testing.T) {
 			t.Errorf("%s has no refusals in refused: say what must never reach its command line", name)
 		}
 	}
-	if len(good) != len(specs()) {
-		t.Errorf("good names %d methods, there are %d", len(good), len(specs()))
+	if len(good) != len(specs(Host{})) {
+		t.Errorf("good names %d methods, there are %d", len(good), len(specs(Host{})))
 	}
 }
 
@@ -102,7 +114,7 @@ func TestWritesBecomeTheCommandLinesTheDashboardUsedToRun(t *testing.T) {
 	p := withDocs(t) // owner: olive
 	for name, c := range good {
 		rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
-		res, rerr := writeMethods(rec.run, time.Now)[name](context.Background(), p, json.RawMessage(c.params))
+		res, rerr := writeMethods(rec.run, time.Now, hostFor(name))[name](context.Background(), p, json.RawMessage(c.params))
 		if rerr != nil {
 			t.Errorf("%s: %+v", name, rerr)
 			continue
@@ -121,7 +133,7 @@ func TestWhatIsNotDataNeverReachesACommandLine(t *testing.T) {
 	for name, list := range refused {
 		for _, params := range list {
 			rec := &recorder{}
-			_, rerr := writeMethods(rec.run, time.Now)[name](context.Background(), p, json.RawMessage(params))
+			_, rerr := writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(params))
 			if rerr == nil || rerr.Code != channel.CodeInvalidParams || len(rec.runs) != 0 {
 				t.Errorf("%s %s: error %+v, ran %d command(s)", name, params, rerr, len(rec.runs))
 			}
@@ -133,11 +145,11 @@ func TestARepeatedWriteIsAnsweredFromTheJournal(t *testing.T) {
 	p := withDocs(t)
 	now := time.Date(2026, 9, 20, 9, 0, 0, 0, time.UTC)
 	for name, c := range good {
-		if specs()[name].reads {
+		if specs(Host{})[name].reads {
 			continue
 		}
 		rec := &recorder{ran: Ran{Stdout: []byte(`{"n":1}`)}}
-		m := writeMethods(rec.run, func() time.Time { return now })[name]
+		m := writeMethods(rec.run, func() time.Time { return now }, hostFor(name))[name]
 		first, e1 := m(context.Background(), p, json.RawMessage(c.params))
 		rec.ran = Ran{Stdout: []byte(`{"n":2}`)}
 		second, e2 := m(context.Background(), p, json.RawMessage(c.params))
@@ -160,7 +172,7 @@ func TestOutcomes(t *testing.T) {
 	p := withDocs(t)
 	call := func(name string, ran Ran) (any, *channel.Error) {
 		rec := &recorder{ran: ran}
-		return writeMethods(rec.run, time.Now)[name](context.Background(), p, json.RawMessage(good[name].params))
+		return writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(good[name].params))
 	}
 	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
 
@@ -214,7 +226,7 @@ func TestAcceptanceSendsEachStepAsProgress(t *testing.T) {
 	rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"S-0001"}`), Events: []map[string]any{{"level": "INFO", "msg": "story branch merged"}, {"level": "INFO", "msg": "archived"}}}}
 	var steps []string
 	ctx := channel.WithProgress(context.Background(), func(v any) { steps = append(steps, v.(map[string]any)["msg"].(string)) })
-	if _, e := writeMethods(rec.run, time.Now)["accept.run"](ctx, p, json.RawMessage(good["accept.run"].params)); e != nil {
+	if _, e := writeMethods(rec.run, time.Now, Host{})["accept.run"](ctx, p, json.RawMessage(good["accept.run"].params)); e != nil {
 		t.Fatal(e)
 	}
 	if strings.Join(steps, "|") != "story branch merged|archived" {
@@ -222,8 +234,102 @@ func TestAcceptanceSendsEachStepAsProgress(t *testing.T) {
 	}
 	// a move is not streamed
 	steps = nil
-	_, _ = writeMethods(rec.run, time.Now)["item.move"](ctx, p, json.RawMessage(good["item.move"].params))
+	_, _ = writeMethods(rec.run, time.Now, Host{})["item.move"](ctx, p, json.RawMessage(good["item.move"].params))
 	if len(steps) != 0 {
 		t.Errorf("a move sent progress: %v", steps)
+	}
+}
+
+// S-0078, I-0028: flai runs on the host as the operator. What a dashboard may
+// make it do with their credentials is off until they enable it by name, and
+// every such request is written down, whatever became of it.
+func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	var journal []Entry
+	on := false
+	host := Host{
+		Enabled: func(action, root string) bool { return on && action == ActionPush && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	at := time.Date(2026, 9, 20, 13, 0, 0, 0, time.UTC)
+	call := func(name string, ran Ran) ([]string, *channel.Error) {
+		rec := &recorder{ran: ran}
+		_, e := writeMethods(rec.run, func() time.Time { return at }, host)[name](context.Background(), p, json.RawMessage(good[name].params))
+		var lines []string
+		for _, r := range rec.runs {
+			lines = append(lines, strings.Join(r.Args, " "))
+		}
+		return lines, e
+	}
+
+	// off: an acceptance pushes nothing, the push is refused and says what enables it
+	ran, e := call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001","pushed":false}`)})
+	if e != nil || len(ran) != 1 || !strings.Contains(ran[0], "--no-push") {
+		t.Fatalf("an acceptance with the action off: %v %+v", ran, e)
+	}
+	if len(journal) != 0 {
+		t.Errorf("an acceptance that may not push is no host action: %+v", journal)
+	}
+	ran, e = call("push.run", Ran{})
+	if e == nil || e.Code != Disabled || len(ran) != 0 || !strings.Contains(e.Message, "flai serve enable push") || e.Data.(map[string]any)["enable"] != "flai serve enable push" {
+		t.Fatalf("a disabled action runs nothing and says what to run: %v %+v", ran, e)
+	}
+	if len(journal) != 1 || journal[0].Outcome != "disabled" || journal[0].Action != ActionPush || journal[0].By != "olive" || journal[0].Project != p.Key || journal[0].Root != p.Root || journal[0].At != "2026-09-20T13:00:00Z" || journal[0].RequestID == "" {
+		t.Errorf("the refusal is journalled: %+v", journal)
+	}
+
+	// on
+	on, journal = true, nil
+	ran, e = call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001","pushed":true,"tags":["cli/v1.1.0"],"published":["origin v1.0.1 (abc)"]}`)})
+	if e != nil || len(ran) != 1 || strings.Contains(ran[0], "--no-push") {
+		t.Fatalf("an acceptance with the action on: %v %+v", ran, e)
+	}
+	ran, e = call("push.run", Ran{Stdout: []byte(`{"pushed":true,"unpushed":{"acceptances":["S-0001"],"tags":["cli/v1.1.0"]}}`)})
+	if e != nil || len(ran) != 1 || ran[0] != "push --pending --publish --json" {
+		t.Fatalf("push.run: %v %+v", ran, e)
+	}
+	_, _ = call("push.run", Ran{Stdout: []byte(`{"pushed":false,"reason":"nothing pending"}`)})
+	_, e = call("push.run", Ran{Exit: 3, Events: []map[string]any{{"level": "FATAL", "err": "conflict: main and origin/main have diverged"}}})
+	if e == nil || e.Code != Conflict || e.Message != "main and origin/main have diverged" {
+		t.Errorf("a remote that moved is a conflict with its reason: %+v", e)
+	}
+	_, _ = call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001","pushed":false,"push_error":"could not read from remote"}`)})
+	want := []struct{ method, outcome, detail string }{
+		{"accept.run", "done", "pushed with tags cli/v1.1.0; published origin v1.0.1 (abc)"},
+		{"push.run", "done", "pushed with tags cli/v1.1.0"},
+		{"push.run", "done", "nothing pushed: nothing pending"},
+		{"push.run", "failed", "main and origin/main have diverged"},
+		{"accept.run", "failed", "not pushed: could not read from remote"},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Method != w.method || got.Outcome != w.outcome || got.Detail != w.detail || got.Action != ActionPush {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
+
+// Nothing a dashboard can ask for reads or changes what is enabled.
+func TestNoMethodTouchesTheHostConfiguration(t *testing.T) {
+	for name := range Methods("test", nil) {
+		for _, word := range []string{"config", "enable", "disable", "action", "journal"} {
+			if strings.Contains(name, word) {
+				t.Errorf("%s: the host's configuration and journal are the operator's, on the host", name)
+			}
+		}
+	}
+	for name, sp := range specs(Host{Enabled: func(string, string) bool { return true }}) {
+		args, _, e := sp.build(channel.Project{Root: t.TempDir()}, json.RawMessage(good[name].params))
+		if e != nil {
+			continue
+		}
+		if len(args) > 0 && (args[0] == "config" || args[0] == "serve") {
+			t.Errorf("%s runs flai %s", name, args[0])
+		}
+	}
+	if info := enabledActions(Host{}, "/x"); len(info) != len(Actions) || info[ActionPush] {
+		t.Errorf("project.info names every action and says none is on: %+v", info)
 	}
 }

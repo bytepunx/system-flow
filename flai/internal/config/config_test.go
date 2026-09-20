@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -27,7 +29,7 @@ func TestLoadCreatesDefaultsOnFirstRun(t *testing.T) {
 	if err != nil || created {
 		t.Fatalf("second Load: created=%v err=%v", created, err)
 	}
-	if cfg2 != cfg {
+	if !reflect.DeepEqual(cfg2, cfg) {
 		t.Fatalf("round trip mismatch:\n%+v\n%+v", cfg, cfg2)
 	}
 }
@@ -71,7 +73,7 @@ func TestSetAndGetRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if back != cfg {
+	if !reflect.DeepEqual(back, cfg) {
 		t.Fatalf("save/load mismatch:\n%+v\n%+v", cfg, back)
 	}
 }
@@ -141,5 +143,39 @@ func TestKeysMatchSchema(t *testing.T) {
 		if _, err := cfg.Get(k); err != nil {
 			t.Errorf("Keys() lists %s but Get fails: %v", k, err)
 		}
+	}
+}
+
+// S-0078: host actions are off by default and enabled by name, per project.
+func TestHostActions(t *testing.T) {
+	c := Default()
+	if c.ActionEnabled("push", "/a") || c.HostActions != nil {
+		t.Fatal("nothing is enabled by default")
+	}
+	c = c.WithAction("push", "/a", true)
+	if !c.ActionEnabled("push", "/a") || c.ActionEnabled("push", "/b") || c.ActionEnabled("agent", "/a") {
+		t.Errorf("enabled for one project and one action: %+v", c.HostActions)
+	}
+	c = c.WithAction("push", "/a", true) // twice is once
+	if len(c.HostActions["push"]) != 1 {
+		t.Errorf("not listed twice: %+v", c.HostActions)
+	}
+	all := c.WithAction("push", AllProjects, true)
+	if !all.ActionEnabled("push", "/b") {
+		t.Error("every project")
+	}
+	if off := all.WithAction("push", AllProjects, false); off.ActionEnabled("push", "/a") || off.HostActions != nil {
+		t.Errorf("disabling for all leaves none: %+v", off.HostActions)
+	}
+	if off := all.WithAction("push", "/a", false); !off.ActionEnabled("push", "/a") {
+		t.Error("with all projects enabled, one project's entry going changes nothing, and status must say so")
+	}
+	for _, k := range Keys() {
+		if strings.HasPrefix(k, "host_actions") {
+			t.Error("flai config set cannot enable an action: only flai serve enable does")
+		}
+	}
+	if _, err := c.Set("host_actions.push", "*"); err == nil {
+		t.Error("flai config set refuses the key")
 	}
 }

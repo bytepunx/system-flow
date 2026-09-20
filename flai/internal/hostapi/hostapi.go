@@ -34,6 +34,9 @@ type ProjectInfo struct {
 	Projects    []manifest.Project `json:"projects"`
 	Dashboard   ProjectDashboard   `json:"dashboard"`
 	Flai        string             `json:"flai"`
+	// HostActions are the host actions there are, and whether the operator
+	// enabled each for this project (S-0078). Read-only to the dashboard.
+	HostActions map[string]bool `json:"host_actions"`
 }
 
 // ProjectTemplate is which template the project was made from, which the
@@ -105,8 +108,24 @@ func relative(root string, items []*workitem.Item, bodies bool) []*workitem.Item
 	return out
 }
 
-// Methods is the table flai serve offers.
+// enabledActions says which host actions the operator enabled for a project.
+// It is told to the dashboard so that it can say what will happen; nothing
+// the dashboard can ask for changes it.
+func enabledActions(host Host, root string) map[string]bool {
+	out := map[string]bool{}
+	for name := range Actions {
+		out[name] = host.enabled(name, root)
+	}
+	return out
+}
+
+// Methods is the table flai serve offers, with no host action enabled.
 func Methods(version string, now func() time.Time) map[string]channel.Method {
+	return MethodsFor(version, now, Host{})
+}
+
+// MethodsFor is the table with the host's say over host actions.
+func MethodsFor(version string, now func() time.Time, host Host) map[string]channel.Method {
 	if now == nil {
 		now = time.Now
 	}
@@ -129,7 +148,8 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 			}
 			return ProjectInfo{Version: m.Version, Name: m.Name, Key: m.Key, Description: m.Description, Owner: m.Owner, Repo: m.Repo,
 				Template: ProjectTemplate{Ref: m.Template.Ref, Version: m.Template.Version, Applied: m.Template.Applied},
-				Layout:   m.Layout, Projects: projects, Dashboard: ProjectDashboard{NotifyURL: m.Dashboard.NotifyURL, Autocommit: m.Autocommit()}, Flai: version}, nil
+				Layout:   m.Layout, Projects: projects, Dashboard: ProjectDashboard{NotifyURL: m.Dashboard.NotifyURL, Autocommit: m.Autocommit()}, Flai: version,
+				HostActions: enabledActions(host, p.Root)}, nil
 		},
 
 		// board.get: the board as flai board --json gives it. all adds epics and tasks.
@@ -248,7 +268,7 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 			return out, nil
 		},
 	}
-	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), writeMethods(Commands, now)} {
+	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), writeMethods(Commands, now, host)} {
 		for name, m := range more {
 			table[name] = m
 		}

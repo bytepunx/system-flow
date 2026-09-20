@@ -2,15 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func newPushCmd(a *app) *cobra.Command {
-	var onlyPending, dryRun bool
+	var onlyPending, dryRun, publishToo bool
 	c := &cobra.Command{
 		Use:   "push --pending",
 		Short: "Push an acceptance that was made and not pushed",
@@ -21,6 +23,10 @@ checkout's branch is ahead of its remote-tracking branch and the commits
 ahead include an acceptance, it pushes the branch and the tags on those
 commits. It never forces. When the remote has commits this clone lacks it
 refuses and says to fetch and merge first.
+
+--publish also publishes each template component whose version those
+commits moved, as flai template push --tag does, after the push and never
+forced. It is what the dashboard's push action runs (flai serve enable push).
 
 flai board and the dashboard say when there is something pending; agents are
 told by the MCP inbox.`,
@@ -44,7 +50,9 @@ told by the MCP inbox.`,
 			case !u.Pending():
 				result["reason"] = fmt.Sprintf("%s is ahead of %s by %d commit(s), none of them an acceptance; that is yours to push with git", u.Branch, u.Upstream, u.Commits)
 			case u.Behind > 0:
-				return fmt.Errorf("%s and %s have diverged: %d commit(s) here and %d there. Fetch and merge first (git fetch %s && git merge %s), then run this again; flai never forces a push", u.Branch, u.Upstream, u.Commits, u.Behind, u.Remote, u.Upstream)
+				// exit 3: a caller that is not a person (the dashboard's push
+				// action) tells a remote that moved from a failure of flai's
+				return &exitError{code: exitPushDiverged, msg: fmt.Sprintf("conflict: %s and %s have diverged: %d commit(s) here and %d there. Fetch and merge first (git fetch %s && git merge %s), then run this again; flai never forces a push", u.Branch, u.Upstream, u.Commits, u.Behind, u.Remote, u.Upstream)}
 			}
 			if reason, ok := result["reason"]; ok {
 				if a.jsonOut {
@@ -54,7 +62,16 @@ told by the MCP inbox.`,
 				return nil
 			}
 			result["unpushed"] = u
+			// which templates those commits moved is asked before the push:
+			// afterwards nothing is ahead and nothing says so
+			var moved []string
+			if publishToo {
+				moved = a.templatesMoved(repo, root, u.Upstream)
+			}
 			what := fmt.Sprintf("%s to %s: %s%s", strings.Join(u.Acceptances, ", "), u.Remote, u.Branch, tagsNote(u.Tags))
+			if len(moved) > 0 {
+				what += ", then publish " + strings.Join(moved, ", ")
+			}
 			if dryRun {
 				result["dry_run"] = true
 				if a.jsonOut {
@@ -69,6 +86,20 @@ told by the MCP inbox.`,
 				}
 			}
 			result["pushed"] = true
+			published := []string{}
+			for _, path := range moved {
+				pub, err := a.publishTemplate(filepath.Join(root, path), "", "", true, false, false)
+				if err != nil {
+					return fmt.Errorf("pushed %s, but publishing %s failed and nothing was forced: %s. Run flai template push %s --tag when it is put right", what, path, firstLine(err.Error()), path)
+				}
+				if !pub.Nothing {
+					published = append(published, fmt.Sprintf("%s %s (%s)", pub.Remote, pub.Tag, pub.Commit))
+				}
+			}
+			result["published"] = published
+			if len(published) > 0 {
+				what += "; published " + strings.Join(published, ", ")
+			}
 			if a.jsonOut {
 				return a.printJSON(result)
 			}
@@ -78,5 +109,27 @@ told by the MCP inbox.`,
 	}
 	c.Flags().BoolVar(&onlyPending, "pending", false, "push the branch and tags of acceptances that were made and not pushed")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "say what would be pushed")
+	c.Flags().BoolVar(&publishToo, "publish", false, "also publish template components whose version the pushed commits moved")
 	return c
+}
+
+// exitPushDiverged is flai push's exit code when the remote has commits this
+// clone lacks: nothing was pushed, and fetching and merging is the way on.
+const exitPushDiverged = 3
+
+// templatesMoved lists the template components whose template.yaml differs
+// between the remote-tracking branch and the checkout: the ones an unpushed
+// acceptance released.
+func (a *app) templatesMoved(repo *workitem.Repo, root, upstream string) []string {
+	var moved []string
+	for _, p := range repo.Manifest.Projects {
+		if p.Kind != "template" {
+			continue
+		}
+		file := filepath.ToSlash(filepath.Join(p.Path, "template.yaml"))
+		if _, err := a.runner.Run(root, "git", "diff", "--quiet", upstream, "HEAD", "--", file); err != nil {
+			moved = append(moved, p.Path)
+		}
+	}
+	return moved
 }

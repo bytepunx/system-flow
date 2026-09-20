@@ -51,7 +51,7 @@ in a folder named serve beside flai's config file.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now})
+			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host()})
 		},
 	}
 	c.AddCommand(
@@ -92,6 +92,7 @@ in a folder named serve beside flai's config file.`,
 				return nil
 			},
 		},
+		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeJournalCmd(a),
 		&cobra.Command{
 			Use:   "status",
 			Short: "Whether flai serve runs, which projects it serves, and which dashboards have it connected",
