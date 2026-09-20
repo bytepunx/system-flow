@@ -244,8 +244,10 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 			return out, nil
 		},
 	}
-	for name, m := range docMethods() {
-		table[name] = m
+	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now)} {
+		for name, m := range more {
+			table[name] = m
+		}
 	}
 	return table
 }

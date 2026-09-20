@@ -114,8 +114,6 @@ func plain(v any) any {
 	return v
 }
 
-var firstHeading = regexp.MustCompile(`(?m)^#\s+(.+)$`)
-
 // docPath checks a path the dashboard sent: a Markdown file under one of the
 // manifest's folders, by its real location, and nothing else.
 func docPath(root, rel string) (string, *channel.Error) {
