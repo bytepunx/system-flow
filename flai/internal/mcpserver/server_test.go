@@ -13,6 +13,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -543,5 +544,53 @@ func TestALaterLookReportsTasksAndIsStillCapped(t *testing.T) {
 	after, _ := f.call(t, "inbox", map[string]any{})
 	if len(after["changes"].([]any)) != 0 {
 		t.Errorf("the omitted ones do not come back: %v", after["changes"])
+	}
+}
+
+// S-0085: an agent is told when someone else edits an item, and what of it
+// changed; its own edits are not news to it; a waiting agent wakes for it.
+func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
+	f := setup(t)
+	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
+		t.Fatal("first look")
+	}
+	at := f.clock.Add(30 * time.Second)
+	*f.clock = f.clock.Add(time.Minute)
+	itemedit.Record(f.repo, itemedit.Notice{At: at.Format(workitem.TimeFormat), By: "alex", ID: f.story.ID, Type: workitem.Story, Title: "Story, renamed", Changed: []string{"title", "criteria"}})
+	itemedit.Record(f.repo, itemedit.Notice{At: at.Format(workitem.TimeFormat), By: "claude", ID: f.story.ID, Type: workitem.Story, Title: "Story, renamed", Changed: []string{"notes"}})
+	out, _ := f.call(t, "inbox", map[string]any{})
+	changes := out["changes"].([]any)
+	if len(changes) != 1 {
+		t.Fatalf("the designer's edit and not my own: %v", changes)
+	}
+	c := changes[0].(map[string]any)
+	if c["kind"] != "edited" || c["id"] != f.story.ID || c["by"] != "alex" || c["to"] != "title,criteria" || !strings.Contains(c["summary"].(string), "was edited by alex: title, criteria") {
+		t.Errorf("the change: %v", c)
+	}
+	if again, _ := f.call(t, "inbox", map[string]any{}); len(again["changes"].([]any)) != 0 {
+		t.Errorf("told once: %v", again["changes"])
+	}
+
+	// a waiting agent wakes for the notice itself
+	// the clock moves before the wait starts, not under it: the server reads it
+	*f.clock = f.clock.Add(time.Minute)
+	// a notice is stamped when it is written, which is after the waiting agent's look, here
+	// within the same second: the cursor's keys, not its time, tell it is news
+	stamp := f.clock.Format(workitem.TimeFormat)
+	done := make(chan map[string]any, 1)
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+		done <- out
+	}()
+	time.Sleep(150 * time.Millisecond)
+	itemedit.Record(f.repo, itemedit.Notice{At: stamp, By: "alex", ID: f.story.ID, Type: workitem.Story, Title: "Story, renamed", Changed: []string{"touches"}})
+	select {
+	case w := <-done:
+		events := w["events"].([]any)
+		if w["timed_out"] == true || len(events) != 1 || events[0].(map[string]any)["to"] != "touches" {
+			t.Errorf("wait: %v", w)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_events never returned")
 	}
 }

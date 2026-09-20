@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -75,6 +77,10 @@ func (s *server) saveCursor(c cursor) {
 	}
 }
 
+// Edited is the kind of a change someone made to an item's own fields or
+// body with flai edit; To names what of it changed.
+const Edited = "edited"
+
 // Event is one thing that changed since the agent last looked.
 type Event struct {
 	workitem.Change
@@ -109,6 +115,26 @@ func (s *server) catchUp() ([]Event, int, error) {
 		}
 		events = append(events, Event{Change: c, Summary: describe(c)})
 	}
+	// Edits someone else made with flai edit or from the dashboard (S-0085).
+	// They are not in the items' front matter, which is strict and shared
+	// with older flai; flai edit notes them beside the cursors.
+	since := cur.since(now).UTC().Truncate(time.Second)
+	for _, n := range itemedit.Notices(s.repo) {
+		at, err := time.Parse(workitem.TimeFormat, n.At)
+		c := workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At}
+		news := at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])
+		if err != nil || n.By == s.agent || !news {
+			continue
+		}
+		if c.At == next.Seen {
+			next.Keys[c.Key()] = true
+		}
+		if !cur.known && c.Type == workitem.Task {
+			continue
+		}
+		events = append(events, Event{Change: c, Summary: describe(c)})
+	}
+	sort.SliceStable(events, func(i, j int) bool { return events[i].At < events[j].At })
 	omitted := 0
 	if len(events) > maxEvents {
 		omitted = len(events) - maxEvents
@@ -172,6 +198,8 @@ func describe(c workitem.Change) string {
 		return c.ID + " " + c.Title + " was blocked: " + c.Reason
 	case workitem.Unblocked:
 		return c.ID + " " + c.Title + " was unblocked"
+	case Edited:
+		return c.ID + " " + c.Title + " was edited" + who + ": " + strings.ReplaceAll(c.To, ",", ", ") + ". Read it again before you go on"
 	}
 	return c.ID + " " + c.Kind
 }
