@@ -72,6 +72,35 @@ describe('the root page (S-0080)', () => {
 		expect(text).toContain('not connected');
 	});
 
+	it('filters the project list by name or key', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () =>
+				answer({
+					projects: [
+						{ key: 'harbour', name: 'Harbour', connected: true },
+						{ key: 'quay', name: 'Quay', connected: true }
+					]
+				})
+			)
+		);
+		const { default: Overview } = await import('./+page.svelte');
+		c = mount(Overview, { target: document.body });
+		await settle();
+		const filterInput = document.querySelector<HTMLInputElement>('[data-testid="project-filter"]')!;
+		expect(filterInput).not.toBeNull();
+		filterInput.value = 'har';
+		filterInput.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		const list = document.querySelector('[data-testid="project-list"]')!;
+		expect(list.textContent).toContain('Harbour');
+		expect(list.textContent).not.toContain('Quay');
+		filterInput.value = 'nothing matches this';
+		filterInput.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		expect(list.textContent).toContain('No project matches');
+	});
+
 	it('picking a project from the list chooses it', async () => {
 		vi.stubGlobal(
 			'fetch',

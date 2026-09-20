@@ -15,6 +15,14 @@
 	let items = $state<Item[]>([]);
 	let error = $state<string | null>(null);
 	let glances = $state<ProjectGlance[]>([]);
+	let filter = $state('');
+	const filteredGlances = $derived(
+		filter.trim()
+			? glances.filter((p) =>
+					`${p.name} ${p.key}`.toLowerCase().includes(filter.trim().toLowerCase())
+				)
+			: glances
+	);
 
 	const statuses = ['backlog', 'ready', 'in-progress', 'review', 'done'];
 	const active = $derived(items.filter((i) => !i.archived));
@@ -57,8 +65,17 @@
 {#if showList}
 	<h1 class="text-2xl font-semibold">Projects</h1>
 	<p class="mt-1 text-ink-soft">flai on the host serves more than one project; choose one.</p>
+	{#if glances.length > 1}
+		<input
+			type="search"
+			placeholder="Filter projects…"
+			class="mt-4 w-full max-w-sm rounded border border-line-strong bg-surface px-2 py-1 text-sm"
+			data-testid="project-filter"
+			bind:value={filter}
+		/>
+	{/if}
 	<ul class="mt-4 space-y-2" data-testid="project-list">
-		{#each glances as p (p.key)}
+		{#each filteredGlances as p (p.key)}
 			<li class="rounded border border-line bg-surface p-3">
 				<button
 					type="button"
@@ -82,6 +99,8 @@
 		{/each}
 		{#if glances.length === 0}
 			<li class="text-sm text-muted">No project has connected here yet.</li>
+		{:else if filteredGlances.length === 0}
+			<li class="text-sm text-muted">No project matches "{filter}".</li>
 		{/if}
 	</ul>
 {:else if error}
