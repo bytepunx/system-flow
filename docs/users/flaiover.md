@@ -28,9 +28,7 @@ A proposed ADR is a draft: it can still be edited, and its row on the ADRs page 
 
 ## Agents on other machines
 
-In this release the dashboard's `/mcp` endpoint answers 503: it needed a flai inside the image, which is gone. Agents on the host use `flai mcp` over stdio and are not affected; MCP over HTTP comes back served by flai on the host.
-
-The dashboard also serves the project's MCP tools over HTTP at `/mcp`, so an agent that is not on this machine can read the inbox, move items, and reply to threads with the project token. What it does shows up here like any other agent's work. Setting it up is in [the flai guide](flai.md) and, for what to put in front of it, the operator guide.
+Agents do not work through the dashboard. They use flai's MCP server on the host: over stdio as `.mcp.json` sets up, or over HTTP after `flai mcp start` for an agent that cannot start a process there; setting that up is in [the flai guide](flai.md). What an agent does shows up here like anyone's work. The dashboard's own `/mcp` address, which served MCP until flaiover 0.22, now answers 410 and says so.
 
 ## Inbox and activity
 

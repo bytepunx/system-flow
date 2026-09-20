@@ -4,7 +4,7 @@ title: flaiover serves MCP over HTTP, and every response names its project
 status: accepted
 date: 2026-09-19
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0030]
 ---
 
 # ADR-0024 flaiover serves MCP over HTTP, and every response names its project

@@ -63,7 +63,7 @@ A push that fails (no network, a revoked key) leaves the acceptance standing, as
 
 ### When an acceptance has not been pushed
 
-The dashboard's container holds no git credential unless you give it a push key (above), so an acceptance from the board is committed and tagged in your clone and waits there. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying so until it is pushed. On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; it never forces, and refuses when the remote has moved until you fetch and merge. An agent session that is running does this itself when `inbox` reports it. To make it unattended without giving the container anything, run it from a timer of your own (a systemd user timer or cron entry calling `flai push --pending` in the repository); that is a push nobody approved, with your full credentials, and is your decision to make on your host.
+The dashboard's container holds no git credential unless you give it a push key (above), so an acceptance from the board is committed and tagged in your clone and waits there. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying so until it is pushed. On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; it never forces, and refuses when the remote has moved until you fetch and merge. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. An agent session that is running does this itself when `inbox` reports it. To make it unattended without giving the container anything, run it from a timer of your own (a systemd user timer or cron entry calling `flai push --pending` in the repository); that is a push nobody approved, with your full credentials, and is your decision to make on your host.
 
 ### What the container can and cannot write
 
@@ -107,25 +107,36 @@ When the host path cannot be used in a Linux container (a Windows drive path, or
 
 ## MCP over HTTP
 
-**In this release `/mcp` answers 503.** It worked by starting `flai mcp` inside the container, and the image no longer holds a flai (S-0075). Agents on the host are not affected: they use `flai mcp` over stdio, as `.mcp.json` sets up. MCP over HTTP returns with flai serving it on the host itself (S-0076); what follows describes the route as it was and will be removed then.
+MCP is served by flai on the host, not by the dashboard ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)). An agent on the host needs nothing from you: `.mcp.json` starts `flai mcp` on stdio. For an agent that cannot start a process there, run the same server over HTTP, one per project:
 
-The dashboard serves the project's MCP server at `/mcp` ([ADR-0024](../../design/adrs/0024-mcp-over-http-and-project-identity.md)), so an agent on another machine, and later a hub, reach the same tools an agent on the host has through `flai mcp`.
+```bash
+flai mcp start      # in the background; flai mcp http runs it in the foreground
+flai mcp status     # where it listens, and what an agent's configuration looks like
+flai mcp token      # its bearer token; --rotate replaces it and restarts the server
+flai mcp stop
+```
 
 | | |
 |-|-|
-| Transport | MCP Streamable HTTP: `POST /mcp` for messages, `DELETE /mcp` to end a session, `GET /mcp` answers 405 (no server-initiated stream is offered) |
-| Authentication | `Authorization: Bearer <project token>` only. The browser session cookie does not open `/mcp`, and a request whose `Origin` is another site is refused |
-| Sessions | Each session is its own `flai mcp` process on the host, running as the agent named by the `X-Flai-Agent` header on `initialize`, else the client's name. A session ends on `DELETE`, or after `FLAIOVER_MCP_IDLE_MINUTES` without a request (default 30); at most `FLAIOVER_MCP_MAX_SESSIONS` exist at once (default 16), after which `initialize` answers 503 |
-| Long requests | `wait_for_events` holds its request open until something changes, for up to five minutes. A proxy or tunnel in front of the dashboard must allow an idle response that long, or agents see their wait cut short |
-| Log | `mcp session started` and `mcp session ended` events, with the session, the agent, and how many sessions are open |
+| Address | `http://127.0.0.1:4243/mcp` unless `--addr` says otherwise. The address is remembered per project (`.flai-cache/mcp-http.addr`), so an agent's configuration survives a restart; a second project on the same machine needs another port |
+| Transport | MCP Streamable HTTP, answers as `application/json`. Clients on revisions up to 2025-11-25 get a session (`Mcp-Session-Id`), ended by `DELETE` or after `--idle` without a request (default 30 minutes), at most `--max-sessions` at once (default 16), after which `initialize` answers 503. Clients on 2026-07-28, which has no sessions, are served request by request at the same address |
+| Authentication | `Authorization: Bearer <token>` only, from `.flai-cache/mcp.token` (mode 0600, git-ignored, created when first needed). It is not the dashboard's token, and the dashboard's token does not open it. A request with an `Origin` header, which is what a browser sends, is refused with 403 |
+| The agent's name | The `X-Flai-Agent` header, else the client's own name, made safe for a file name. It is who thread entries and transitions are attributed to, and whose cursor `inbox` keeps |
+| Long requests | `wait_for_events` holds its request open until something changes, for up to five minutes. A proxy or tunnel in front must allow an idle response that long, or agents see their wait cut short. At most 64 requests are in flight at once; more answer 503 |
+| State and log | `.flai-cache/mcp-http.json` while it runs, `.flai-cache/mcp-http.log` for its events (`mcp server started`, `mcp session opening` with the agent and how many sessions are open, `mcp server stopped`) |
+| What it serves | The main checkout, read when it starts: restart it after changing `system-flow.yaml` |
+
+It listens on this machine only by default. `--addr 0.0.0.0:4243` or another interface is allowed and logged as a warning: the token travels in every request and flai does not encrypt it, so beyond the machine put an SSH forward, a tunnel, or a proxy that terminates TLS in front and give agents that address.
+
+**The dashboard's `/mcp` is gone.** Until flaiover 0.22 the dashboard served MCP itself (ADR-0024, superseded). Any request to `/mcp` now answers 410 with a message naming `flai mcp start`, so an agent configured for the old address is told what to do. `FLAIOVER_MCP_MAX_SESSIONS` and `FLAIOVER_MCP_IDLE_MINUTES` no longer mean anything.
 
 ### The tunnel expectation
 
-The dashboard speaks plain HTTP and the token travels in every request. On the machine itself or a network you trust that is acceptable. Anywhere else, put a tunnel or a reverse proxy that terminates TLS in front of it and give agents the `https` address; never publish the dashboard's port to the internet as it is. To keep it to the host and let only the tunnel reach it, bind it to loopback: `dashboard.bind: 127.0.0.1` in `system-flow.yaml`, or `flai dashboard --bind 127.0.0.1`. A hub, when there is one, is reached the other way round: the dashboard dials out to it, so no inbound port is opened at all.
+The dashboard speaks plain HTTP and the token travels in every request. On the machine itself or a network you trust that is acceptable. Anywhere else, put a tunnel or a reverse proxy that terminates TLS in front of it and use the `https` address; never publish the dashboard's port to the internet as it is. To keep it to the host and let only the tunnel reach it, bind it to loopback: `dashboard.bind: 127.0.0.1` in `system-flow.yaml`, or `flai dashboard --bind 127.0.0.1`. The same holds for `flai mcp` over HTTP, which has its own port and token.
 
 ### Project identity
 
-Every `/api/*` and `/mcp` response names the project it came from: the headers `X-Flai-Project-Key` and `X-Flai-Project-Name` (URI-encoded), and `project: { name, key }` in JSON object bodies. Both come from `name` and `key` in `system-flow.yaml`; `flai check` warns when `key` is missing. Responses that refuse a request for lack of a token carry neither.
+Every `/api/*` response of the dashboard, and every answer of `flai mcp` over HTTP, names the project it came from: the headers `X-Flai-Project-Key` and `X-Flai-Project-Name` (URI-encoded), and `project: { name, key }` in JSON object bodies. Both come from `name` and `key` in `system-flow.yaml`; `flai check` warns when `key` is missing. The dashboard's refusals for lack of a token carry neither; flai's MCP server sends the headers on refusals too, since its caller chose the project by choosing the address.
 
 ## Authentication
 

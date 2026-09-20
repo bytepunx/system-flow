@@ -29,9 +29,10 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0021](0021-story-ready-without-tasks.md) | A story is ready without tasks; the pulling agent writes them and review requires them | accepted |
 | [0022](0022-repository-mounted-at-its-host-path.md) | The dashboard mounts the repository at its host path; relative-path worktrees are an opt-in | accepted, refines 0019 |
 | [0023](0023-documents-are-saved-through-flai.md) | Documents edited in the dashboard are saved through flai | accepted, refines 0016 |
-| [0024](0024-mcp-over-http-and-project-identity.md) | flaiover serves MCP over HTTP, and every response names its project | accepted, refines 0018 and 0020 |
+| [0024](0024-mcp-over-http-and-project-identity.md) | flaiover serves MCP over HTTP, and every response names its project | accepted, refines 0018 and 0020, superseded by 0030 |
 | [0025](0025-research-is-accepted-without-a-release.md) | A research story is accepted and pushed without a release; an experiment stays on its branch | accepted |
 | [0026](0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md) | The dashboard container may push acceptances with a key the operator gives it | accepted, refines 0018 |
 | [0027](0027-git-hooks-config-and-info-are-read-only-in-the-dashboard-container.md) | Git hooks, config, and info are read-only in the dashboard container | accepted, refines 0018, 0022 and 0026 |
 | [0028](0028-cancelling-an-item-cancels-everything-open-under-it.md) | Cancelling an item cancels everything open under it | accepted, refines 0004 |
 | [0029](0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md) | The dashboard reaches a project only through flai on the host | accepted, refines 0007, 0016, 0018 and 0024 |
+| [0030](0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md) | MCP is served by flai on the host, over stdio and HTTP, and the dashboard's API still names its project | accepted, supersedes 0024, refines 0020 and 0029 |

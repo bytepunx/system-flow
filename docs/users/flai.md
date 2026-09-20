@@ -293,6 +293,7 @@ A thread is one file under `wip/threads/`, anchored to a document, a heading in 
 
 ```bash
 flai mcp          # an MCP server on stdio; agents start it, you do not
+flai mcp start    # the same server over HTTP, for an agent that cannot start a process here
 ```
 
 `flai mcp` gives an agent session a typed, low-latency view of the repository. Register it once per project in `.mcp.json` (new projects get this from the template):
@@ -311,21 +312,31 @@ flai mcp          # an MCP server on stdio; agents start it, you do not
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
 | `wait_for_events` | Returns at once when something changed since this agent last looked, otherwise blocks until a thread, item, or narrative changes, or the timeout passes. Returns `events` in the same shape as `changes`, and the changed paths |
 
-An agent on another machine reaches the same server through the dashboard, over HTTP, with the project token. Its `.mcp.json` names the dashboard's `/mcp` and sends the token as a bearer; `X-Flai-Agent` is the name it works under, as `FLAI_AGENT` is locally:
+An agent that cannot start a process on the host reaches the same server over HTTP. flai serves it itself, one server per project, on the host ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)); the dashboard is not involved and need not run:
+
+```bash
+flai mcp start      # in the background, at http://127.0.0.1:4243/mcp unless --addr says otherwise
+flai mcp status     # where it listens, and an agent's configuration to copy
+flai mcp token      # its bearer token (.flai-cache/mcp.token); --rotate replaces it
+flai mcp stop
+flai mcp http       # the same server in the foreground; Ctrl-C stops it
+```
+
+The agent's configuration names that address and sends the token as a bearer; `X-Flai-Agent` is the name it works under, as `FLAI_AGENT` is locally (without it, the client's own name is used):
 
 ```json
 {
   "mcpServers": {
     "flai": {
       "type": "http",
-      "url": "https://dashboard.example/mcp",
-      "headers": { "Authorization": "Bearer ${FLAIOVER_TOKEN}", "X-Flai-Agent": "claude@laptop" }
+      "url": "http://127.0.0.1:4243/mcp",
+      "headers": { "Authorization": "Bearer ${FLAI_MCP_TOKEN}", "X-Flai-Agent": "claude@laptop" }
     }
   }
 }
 ```
 
-The tools and their behaviour are the same, because the dashboard starts a `flai mcp` of its own for each connected agent and passes messages through. Keep the token out of the file: Claude Code expands `${VAR}` in `.mcp.json`, as above; for another client, check how it takes a secret. Use `https` through a tunnel or proxy whenever the dashboard is not on a network you trust; see the operator guide.
+The tools and their behaviour are the same, because it is the same server. Keep the token out of the file: Claude Code expands `${VAR}` in `.mcp.json`, as above; for another client, check how it takes a secret. This token is the MCP server's own, not the dashboard's. The server listens on the host only; from another machine, reach it through an SSH forward or a tunnel that terminates TLS, as the operator guide describes. It serves the main checkout, and a second project on the same host needs another port (`--addr`, remembered per project). Until flaiover 0.22 the dashboard served MCP at its `/mcp`; that address now answers 410 and says to use this instead.
 
 "Since this agent last looked" is a marker per agent name (`FLAI_AGENT`) under `.flai-cache/mcp/`, outside git. It only decides which changes are news; ready work and open threads are listed on every call, so nothing depends on it. One look reports at most 50 changes, the newest, and says in `changes_omitted` (`events_omitted` for `wait_for_events`) how many older ones it left out; those are not reported later. The first look under a new name covers the last 24 hours and tells of stories and epics only, not task transitions: to an agent that has just arrived, a day of task moves is history, and `board` and `item_get` show how things stand. An agent that ends its turn between your messages calls `inbox` when it starts again and hears what you did in between; one that stays running holds `wait_for_events` and hears within a second. `flai move` records `FLAI_AGENT` as who moved an item when it is set, so an agent is not told about its own moves; a move on the dashboard's board is recorded as the project's `owner`.
 
