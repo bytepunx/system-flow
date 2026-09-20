@@ -27,7 +27,7 @@ function remember(key: string | null): void {
 class ProjectState {
 	/** Every project flai has ever named here, from /api/projects. */
 	list = $state<Project[]>([]);
-	private loaded = false;
+	loaded = $state(false);
 	/** What api() sends as ?project=, and what the switcher shows as current. null means "let the
 	 * server's own single-project fallback decide", which is right until there is more than one. */
 	current = $state<string | null>(null);
@@ -93,3 +93,12 @@ class ProjectState {
 }
 
 export const projectState = new ProjectState();
+
+/** Test-only: undoes refresh(), back to how a fresh page load starts. Resetting `list` and
+ * `current` alone would leave `loaded` stuck true from a previous test, and the next mount's
+ * effect would then skip straight to the single-project path on whatever list is left over. */
+export function resetForTests(): void {
+	projectState.list = [];
+	projectState.loaded = false;
+	projectState.pick(null, false);
+}

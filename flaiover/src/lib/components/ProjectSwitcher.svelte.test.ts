@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import ProjectSwitcher from './ProjectSwitcher.svelte';
-import { projectState } from '$lib/project.svelte';
+import { projectState, resetForTests } from '$lib/project.svelte';
 
 describe('ProjectSwitcher (S-0080)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	beforeEach(() => {
-		projectState.list = [];
-		projectState.pick(null, false);
+		resetForTests();
 		vi.stubGlobal('location', { ...window.location, reload: vi.fn() });
 	});
 	afterEach(() => {
