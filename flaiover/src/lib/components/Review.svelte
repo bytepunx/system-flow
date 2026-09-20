@@ -55,7 +55,14 @@
 	let running = $state(false);
 	let progress = $state<Progress[]>([]);
 	let warnings = $state<string[]>([]);
-	let result = $state<{ tags?: string[]; pushed?: boolean; push_error?: string } | null>(null);
+	let result = $state<{
+		tags?: string[];
+		pushed?: boolean;
+		push_error?: string;
+		published?: string[];
+	} | null>(null);
+	// whether the operator enabled pushing from the board, on the host (S-0078)
+	let pushEnabled = $state(false);
 	let failure = $state<string | null>(null);
 
 	let sendingBack = $state(false);
@@ -98,6 +105,9 @@
 		api('/api/board')
 			.then(async (r) => (writable = r.ok ? (await r.json()).writable : false))
 			.catch(() => (writable = false));
+		api('/api/unpushed')
+			.then(async (r) => (pushEnabled = r.ok ? (await r.json()).push_enabled === true : false))
+			.catch(() => (pushEnabled = false));
 		get<{ body: string }>(`/api/docs/file?path=${encodeURIComponent(`wip/agents/${target}.md`)}`)
 			.then((d) => (narrative = d.body))
 			.catch(() => (narrative = ''));
@@ -186,12 +196,19 @@
 			{#if result.tags?.length}<p>Released: {result.tags.join(', ')}</p>{:else}<p>
 					Nothing was released.
 				</p>{/if}
-			{#if !result.pushed}
-				<p>
-					Not pushed{result.push_error ? ` (${result.push_error})` : ''}: push the commit{result
-						.tags?.length
-						? ' and the tags'
-						: ''} from a shell.
+			{#if result.pushed}
+				<p data-testid="accept-pushed">
+					Pushed from the host{result.tags?.length ? ', tags included' : ''}{result.published
+						?.length
+						? `; published ${result.published.join(', ')}`
+						: ''}.
+				</p>
+			{:else}
+				<p data-testid="accept-not-pushed">
+					Not pushed{result.push_error ? ` (${result.push_error})` : ''}: on the host, run
+					<code class="rounded bg-surface px-1 text-ink">flai push --pending</code>{pushEnabled
+						? ', or push from the notice on the board'
+						: ''}.
 				</p>
 			{/if}
 		</div>
@@ -313,7 +330,18 @@
 								{v(s.from)} → {v(s.to)}{/each}
 						</li>
 					{/if}
-					<li>Nothing is pushed from the dashboard; push from a shell afterwards.</li>
+					{#if pushEnabled}
+						<li>
+							Push the commit and the release tags from the host, with the operator's credentials,
+							and publish the template if its version moves: the operator enabled pushing from the
+							board.
+						</li>
+					{:else}
+						<li>
+							Nothing is pushed: pushing from the board is off. Push from a shell on the host
+							afterwards (<code>flai push --pending</code>).
+						</li>
+					{/if}
 				</ul>
 			{/if}
 

@@ -172,6 +172,31 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 			await rm(base, { recursive: true, force: true });
 		}
 	});
+	it('is refused a push while the operator has not enabled it, and told what enables it (S-0078)', async () => {
+		// a configuration of its own: the refusal is journalled beside it, and that is not the operator's
+		const was = process.env.FLAI_CONFIG;
+		const host = await mkdtemp(join(tmpdir(), 'flaiover-host-'));
+		process.env.FLAI_CONFIG = join(host, 'config.json');
+		try {
+			const info = await r.ask<{ host_actions: Record<string, boolean> }>('project.info');
+			expect(info.host_actions).toEqual({ push: false });
+			await expect(r.write('push.run')).rejects.toMatchObject({
+				status: 403,
+				message: expect.stringContaining('flai serve enable push'),
+				data: { action: 'push', enable: 'flai serve enable push' }
+			});
+			const journal = await readFile(join(host, 'serve', 'journal.jsonl'), 'utf8');
+			expect(JSON.parse(journal.trim())).toMatchObject({
+				action: 'push',
+				method: 'push.run',
+				outcome: 'disabled'
+			});
+		} finally {
+			if (was === undefined) delete process.env.FLAI_CONFIG;
+			else process.env.FLAI_CONFIG = was;
+			await rm(host, { recursive: true, force: true });
+		}
+	});
 	it('blocks, unblocks, and logs to a stream', async () => {
 		await r.write('item.block', { id: 'S-004', reason: 'waiting' });
 		let file = await readFile(join(dir, 'wip/kanban/stories/S-004-four.md'), 'utf8');

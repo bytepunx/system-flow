@@ -303,6 +303,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if !o.noPush {
 		if _, err := a.runner.Run(repo.Root, "git", "remote", "get-url", remote); err == nil {
 			refs := append([]string{"HEAD"}, res.Tags...)
+			// said before it starts: a push can take a while, and a dashboard
+			// showing the steps should say what it is waiting for (S-0078)
+			a.acceptStep(it, "pushing", "pushing to "+remote)
 			var err error
 			for _, batch := range pending.Batches("HEAD", res.Tags) {
 				if _, err = a.runner.Run(repo.Root, "git", append([]string{"push", "-q", remote}, batch...)...); err != nil {
@@ -312,7 +315,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			if err != nil {
 				res.PushError = firstLine(err.Error())
 				a.logger().Warn("accepted locally but not pushed", "component", "git", "item", it.ID, "detail", "run: git push "+remote+" "+strings.Join(refs, " "))
-				a.acceptStep(it, "not-pushed", "accepted locally; run: git push "+remote+" "+strings.Join(refs, " "))
+				a.acceptStep(it, "not-pushed", "accepted locally, not pushed ("+res.PushError+"); run: flai push --pending")
 			} else {
 				res.Pushed = true
 				a.acceptStep(it, "pushed", "pushed to "+remote)

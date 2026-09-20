@@ -38,7 +38,67 @@ describe('UnpushedNotice', () => {
 		expect(text).toContain('3 commits ahead of origin/main, tags flai/v1.2.11, flaiover/v0.17.1');
 		expect(text).toContain('flai push --pending');
 		expect(text).toContain('A push made from another clone is not seen here until someone fetches');
+		// pushing from the board is the operator's to enable, on the host; nothing here can
 		expect(document.querySelectorAll('button')).toHaveLength(0);
+		expect(text).toContain('Pushing from the board is off');
+		expect(text).toContain('flai serve enable push');
+	});
+
+	it('offers the push when the operator enabled it, shows it pushing, then what was pushed (S-0078)', async () => {
+		let release: (v: unknown) => void = () => {};
+		api.mockImplementation((url: string, init?: { method?: string }) => {
+			if (init?.method === 'POST') return new Promise((r) => (release = r));
+			return Promise.resolve(answer({ unpushed: pending, push_enabled: true }));
+		});
+		c = mount(UnpushedNotice, { target: document.body, props: {} });
+		await settle();
+		const button = document.querySelector<HTMLButtonElement>('[data-testid="push-now"]')!;
+		expect(button.textContent).toContain('Push now');
+		expect(notice()!.textContent).not.toContain('Pushing from the board is off');
+		button.click();
+		await settle();
+		expect(api).toHaveBeenCalledWith('/api/unpushed', { method: 'POST' });
+		expect(notice()!.textContent).toContain('Pushing:');
+		expect(button.disabled).toBe(true);
+		// flai answers; the next look finds nothing pending
+		api.mockImplementation(() => Promise.resolve(answer({ unpushed: null, push_enabled: true })));
+		release(
+			answer({
+				pushed: true,
+				unpushed: pending,
+				published: ['git@example.invalid:t.git v1.0.16 (abc1234)']
+			})
+		);
+		await settle();
+		expect(notice()).toBeNull();
+		const done = document.querySelector('[data-testid="pushed"]')!.textContent!;
+		expect(done).toContain('Pushed with tags flai/v1.2.11, flaiover/v0.17.1');
+		expect(done).toContain('published git@example.invalid:t.git v1.0.16');
+	});
+
+	it('shows why a push was refused, keeps the notice, and gives the command to run by hand', async () => {
+		api.mockImplementation((url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'POST'
+					? {
+							ok: false,
+							statusText: 'Conflict',
+							json: async () => ({
+								error: 'main and origin/main have diverged: fetch and merge first'
+							})
+						}
+					: answer({ unpushed: pending, push_enabled: true })
+			)
+		);
+		c = mount(UnpushedNotice, { target: document.body, props: {} });
+		await settle();
+		document.querySelector<HTMLButtonElement>('[data-testid="push-now"]')!.click();
+		await settle();
+		const refused = document.querySelector('[data-testid="push-refused"]')!.textContent!;
+		expect(refused).toContain('Not pushed:');
+		expect(refused).toContain('have diverged');
+		expect(refused).toContain('flai push --pending');
+		expect(notice()!.textContent).toContain('Accepted, not pushed');
 	});
 
 	it('shows nothing when nothing is pending', async () => {

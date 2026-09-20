@@ -21,6 +21,8 @@ export type Manifest = {
 	layout: Layout;
 	projects?: { name: string; path: string; kind: string; tags?: string[] }[];
 	dashboard?: { image?: string; tag?: string; port?: number };
+	/** Host actions and whether the operator enabled each for this project, on the host (S-0078). */
+	host_actions?: Record<string, boolean>;
 };
 
 export type Transition = { to: string; at: string; by: string };
@@ -96,12 +98,14 @@ const INVALID_PARAMS = -32602;
 const CONFLICT = -32009;
 const REFUSED = -32010;
 const RULE = -32011;
+const DISABLED = -32012; // a host action the operator has not enabled (S-0078)
 const STATUS: Record<number, number> = {
 	[NOT_FOUND]: 404,
 	[INVALID_PARAMS]: 400,
 	[RULE]: 400,
 	[CONFLICT]: 409,
-	[REFUSED]: 422
+	[REFUSED]: 422,
+	[DISABLED]: 403
 };
 
 const viaChannel: Ask = (method, params, opt) =>
