@@ -6,7 +6,6 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo } from './repo';
 import { flaiAsk } from './testing';
-import { resetFlaiBinary } from './flai';
 import { notifyUrl, startNotifier, type Notifier, type NotifyBody } from './notify';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
@@ -42,10 +41,6 @@ describe('inbox webhook', () => {
 		dir = await mkdtemp(join(tmpdir(), 'flaiover-notify-'));
 		await cp(fixture, dir, { recursive: true });
 		process.env.PROJECT_DIR = dir;
-		// no flai here: overlaps are left out, which is not what this tests
-		process.env.FLAI_BIN = join(dir, 'no-such-flai');
-		process.env.PATH = '';
-		resetFlaiBinary();
 		received = [];
 		status = 200;
 		server = createServer((req, res) => {

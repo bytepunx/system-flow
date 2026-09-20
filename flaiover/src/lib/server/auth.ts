@@ -83,15 +83,6 @@ export function authenticate(headers: Headers): AuthKind | null {
 	return null;
 }
 
-/** Whether an Origin header names this host; anything unparsable, "null" included, does not. */
-function sameHost(origin: string, host: string | null): boolean {
-	try {
-		return new URL(origin).host === host;
-	} catch {
-		return false;
-	}
-}
-
 export type Decision =
 	| { kind: 'allow' }
 	| { kind: 'unauthorized' }
@@ -123,14 +114,8 @@ export function decide(
 		return { kind: 'allow' };
 	}
 	if (path === '/metrics' && env.FLAIOVER_METRICS_PUBLIC === 'true') return { kind: 'allow' };
-	// MCP over HTTP (ADR-0024): the bearer token only. The session cookie does not
-	// open it, so a page in the designer's browser cannot drive tools, and a
-	// request sent from another site's page is refused outright.
-	if (path === '/mcp') {
-		const origin = headers.get('origin');
-		if (origin && !sameHost(origin, headers.get('host'))) return { kind: 'forbidden' };
-		return auth === 'bearer' || auth === 'off' ? { kind: 'allow' } : { kind: 'unauthorized' };
-	}
+	// MCP moved to flai on the host (ADR-0030). What is left here only says so, to anyone.
+	if (path === '/mcp') return { kind: 'allow' };
 	if (!auth) {
 		if (method === 'GET' && !path.startsWith('/api/') && path !== '/metrics') {
 			return { kind: 'login', next: path };

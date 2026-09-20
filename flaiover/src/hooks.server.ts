@@ -91,9 +91,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 				}
 				const response = await resolve(event);
 				status = response.status;
-				// Every API and MCP answer names its project (ADR-0024); refusals above do not,
+				// Every API answer names its project (ADR-0024, kept by ADR-0030); refusals above do not,
 				// so an unauthenticated caller learns nothing about what is served here.
-				if (path.startsWith('/api/') || path === '/mcp')
+				if (path.startsWith('/api/'))
 					return setIdentityHeaders(response, await projectIdentity(repo()));
 				return response;
 			} finally {

@@ -8,7 +8,6 @@ import { join, relative } from 'node:path';
 const ALLOWED: Record<string, string> = {
 	'src/lib/server/auth.ts': 'the login token, a secret handed to the container',
 	'src/lib/server/agent.ts': 'the agent credential, a secret handed to the container',
-	'src/lib/server/flai.ts': 'looks for a flai binary for the MCP bridge, which S-0076 removes',
 	'src/lib/server/testing.ts': 'test support, never imported by the application'
 };
 
@@ -33,6 +32,19 @@ describe('the server reads no project file', () => {
 			.map((p) => relative('.', p).split('\\').join('/'))
 			.filter((p) => /from ['"](node:)?fs(\/promises)?['"]/.test(readFileSync(p, 'utf8')))
 			.filter((p) => !(p in ALLOWED));
+		expect(offenders).toEqual([]);
+	});
+
+	// S-0076: the MCP bridge was the last thing that started a process in the container.
+	it('starts no process', () => {
+		const offenders = [
+			...sources('src/lib/server'),
+			...sources('src/routes'),
+			'src/hooks.server.ts'
+		]
+			.map((p) => relative('.', p).split('\\').join('/'))
+			.filter((p) => p !== 'src/lib/server/testing.ts')
+			.filter((p) => /from ['"](node:)?child_process['"]/.test(readFileSync(p, 'utf8')));
 		expect(offenders).toEqual([]);
 	});
 
