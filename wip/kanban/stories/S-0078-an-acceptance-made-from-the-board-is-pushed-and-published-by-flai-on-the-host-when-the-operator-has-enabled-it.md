@@ -3,12 +3,15 @@ id: S-0078
 type: story
 nature: feature
 title: An acceptance made from the board is pushed and published by flai on the host, when the operator has enabled it
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:51Z
-updated: 2026-09-20T07:26:51Z
-transitions: []
+updated: 2026-09-20T07:52:55Z
+transitions:
+  - to: ready
+    at: 2026-09-20T07:52:55Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system, docs/operators]
 ---

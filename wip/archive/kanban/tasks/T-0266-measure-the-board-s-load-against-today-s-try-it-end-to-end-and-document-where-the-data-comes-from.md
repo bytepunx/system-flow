@@ -3,12 +3,21 @@ id: T-0266
 type: task
 nature: feature
 title: Measure the board's load against today's, try it end to end, and document where the data comes from
-status: backlog
+status: done
 parent: S-0073
 owner: alex
 created: 2026-09-20T07:52:15Z
-updated: 2026-09-20T07:52:15Z
-transitions: []
+updated: 2026-09-20T08:23:40Z
+transitions:
+  - to: ready
+    at: 2026-09-20T08:05:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-20T08:05:46Z
+    by: system-flow
+  - to: done
+    at: 2026-09-20T08:23:40Z
+    by: system-flow
 stream: S-0073
 tags: []
 ---

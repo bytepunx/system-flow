@@ -3,17 +3,20 @@ id: T-0263
 type: task
 nature: feature
 title: "flai: methods for the project, the board, items, one item, and threads, from the code the CLI prints with"
-status: in-progress
+status: done
 parent: S-0073
 owner: alex
 created: 2026-09-20T07:52:14Z
-updated: 2026-09-20T07:52:16Z
+updated: 2026-09-20T07:55:54Z
 transitions:
   - to: ready
     at: 2026-09-20T07:52:16Z
     by: system-flow
   - to: in-progress
     at: 2026-09-20T07:52:16Z
+    by: system-flow
+  - to: done
+    at: 2026-09-20T07:55:54Z
     by: system-flow
 stream: S-0073
 tags: []

@@ -1,10 +1,11 @@
 ---
 title: Active streams
-updated: 2026-09-20T07:52:32Z
+updated: 2026-09-20T12:05:11Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0073](S-0073.md) | The dashboard reads work items through the channel: project, board, items, threads, and file changes | in-progress | system-flow | 2026-09-20T07:50:49Z |
+| [S-0074](S-0074.md) | The dashboard reads documents, ADRs, narratives, the inbox, and search through the channel, and parses no project file | review | system-flow | 2026-09-20T08:47:33Z |
+| [S-0075](S-0075.md) | Every write the dashboard makes goes through the channel, and the image no longer carries flai, git, or ssh | review | system-flow | 2026-09-20T09:10:29Z |
