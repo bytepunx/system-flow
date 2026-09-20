@@ -41,9 +41,6 @@ importers:
       mermaid:
         specifier: ^12.0.0
         version: 12.0.0
-      minisearch:
-        specifier: ^7.2.0
-        version: 7.2.0
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -53,9 +50,6 @@ importers:
       ws:
         specifier: ^8.21.3
         version: 8.21.3
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -2172,9 +2166,6 @@ packages:
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
-
-  minisearch@7.2.0:
-    resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
@@ -4868,8 +4859,6 @@ snapshots:
       brace-expansion: 5.0.12
 
   minimist@1.2.8: {}
-
-  minisearch@7.2.0: {}
 
   module-details-from-path@1.0.4: {}
 

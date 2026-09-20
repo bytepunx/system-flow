@@ -7,7 +7,6 @@ import { join, resolve } from 'node:path';
 import { Repo } from './repo';
 import { flaiAsk } from './testing';
 import { resetFlaiBinary } from './flai';
-import { resetInboxCache } from './inbox';
 import { notifyUrl, startNotifier, type Notifier, type NotifyBody } from './notify';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
@@ -47,7 +46,6 @@ describe('inbox webhook', () => {
 		process.env.FLAI_BIN = join(dir, 'no-such-flai');
 		process.env.PATH = '';
 		resetFlaiBinary();
-		resetInboxCache();
 		received = [];
 		status = 200;
 		server = createServer((req, res) => {

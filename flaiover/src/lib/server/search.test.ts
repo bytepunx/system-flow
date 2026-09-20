@@ -2,34 +2,34 @@ import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { Repo } from './repo';
 import { flaiAsk } from './testing';
-import { SearchIndex, adrs, snippet } from './search';
+import { adrs, search } from './search';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const monorepo = resolve('..');
 
-describe('SearchIndex on the fixture', () => {
-	const idx = new SearchIndex(new Repo(fixture, flaiAsk(fixture)));
+// The index and the ranking are flai's (internal/search); here the dashboard's view of the answers.
+describe('search on the fixture, through flai', () => {
+	const r = new Repo(fixture, flaiAsk(fixture));
+	const find = async (q: string, docs = false) => (await search(r, q, docs)).hits;
 	it('indexes items and design files, docs only on request', async () => {
-		await idx.build();
-		expect(idx.size()).toBeGreaterThanOrEqual(12);
-		const byId = await idx.search('S-001');
+		expect((await search(r, '')).indexed).toBeGreaterThanOrEqual(12);
+		const byId = await find('S-001');
 		expect(byId[0].itemId).toBe('S-001');
 		expect(byId[0].route).toBe('/items/S-001');
 		expect(byId[0].kind).toBe('item');
 		// the hit carries what the results page colours it by (S-0055)
 		expect(byId[0].type).toBe('story');
 		expect(byId[0].nature).toBe('feature');
-		const byTitle = await idx.search('Session start');
+		const byTitle = await find('Session start');
 		expect(byTitle[0].path).toBe('design/conventions/session-start.md');
 		expect(byTitle[0].route).toBe('/docs/design/conventions/session-start.md');
 		expect(byTitle[0].nature).toBeUndefined();
-		const noDocs = await idx.search('docs');
+		const noDocs = await find('docs');
 		expect(noDocs.every((h) => h.scope !== 'docs')).toBe(true);
 	});
-	it('snippets show the match', () => {
-		const s = snippet('one two three commit at landing four five six', ['landing']);
-		expect(s).toContain('landing');
-		expect(snippet('short', ['nope'])).toBe('short');
+	it('snippets show the match', async () => {
+		const hits = await find('session');
+		expect(hits[0].snippet.toLowerCase()).toContain('session');
 	});
 });
 
@@ -45,8 +45,7 @@ describe('adrs on the monorepo', () => {
 		expect(list.every((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.date))).toBe(true);
 	});
 	it('finds a body phrase across wip and design', async () => {
-		const idx = new SearchIndex(new Repo(monorepo, flaiAsk(monorepo)));
-		const hits = await idx.search('front matter');
+		const { hits } = await search(new Repo(monorepo, flaiAsk(monorepo)), 'front matter');
 		expect(hits.length).toBeGreaterThan(0);
 		expect(hits.some((h) => h.path.startsWith('design/'))).toBe(true);
 	});

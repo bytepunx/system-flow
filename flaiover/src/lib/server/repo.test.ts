@@ -1,24 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
-import { Repo, RepoError, splitFrontMatter } from './repo';
+import { Repo, RepoError } from './repo';
 import { flaiAsk } from './testing';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const monorepo = resolve('..');
-
-describe('splitFrontMatter', () => {
-	it('parses a block and keeps the body', () => {
-		const { frontMatter, body } = splitFrontMatter(
-			'---\ntitle: T\nupdated: 2026-09-15\n---\n\n# T\n'
-		);
-		expect(frontMatter).toEqual({ title: 'T', updated: '2026-09-15' });
-		expect(body).toBe('\n# T\n');
-	});
-	it('returns null without a block', () => {
-		expect(splitFrontMatter('# plain\n').frontMatter).toBeNull();
-	});
-});
 
 describe('Repo on the metrics fixture', () => {
 	const r = new Repo(fixture, flaiAsk(fixture));

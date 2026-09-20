@@ -6,43 +6,28 @@ import { join, resolve } from 'node:path';
 import { Repo } from './repo';
 import { flaiAsk } from './testing';
 import { flai, resetFlaiBinary } from './flai';
-import { activity, lastLogEntry } from './activity';
-import { inbox, openQuestions, resetInboxCache } from './inbox';
+import { activity } from './activity';
+import { hrefFor, inbox } from './inbox';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const bin = process.env.FLAI_BIN ?? resolve('../bin/flai');
 
-describe('narrative parsing', () => {
-	it('finds the last log entry', () => {
-		const body =
-			'## Current state\ns\n\n## Log\n\n### 2026-08-31T10:00:00Z\nStream opened.\n\n### 2026-08-31T11:30:00Z\nT-003 done,\nstarting T-004.\n';
-		expect(lastLogEntry(body)).toEqual({
-			at: '2026-08-31T11:30:00Z',
-			text: 'T-003 done,\nstarting T-004.'
-		});
-		expect(lastLogEntry('## Log\n')).toBeUndefined();
-	});
-	it('reads open questions and skips the generated threads block', () => {
-		const body = [
-			'## Decisions',
-			'- not a question',
-			'',
-			'## Open questions',
-			'- Should the editor refuse accepted ADRs?',
-			'  Proposed: yes.',
-			'<!-- threads:start -->',
-			'- TH-0001 generated, not a question',
-			'<!-- threads:end -->',
-			'* A second one',
-			'',
-			'## Log',
-			'- not this either'
-		].join('\n');
-		expect(openQuestions(body)).toEqual([
-			'Should the editor refuse accepted ADRs? Proposed: yes.',
-			'A second one'
-		]);
-		expect(openQuestions('## Log\n')).toEqual([]);
+// How narratives are parsed is flai's now, and tested there (internal/hostapi); the dashboard adds
+// the link each entry leads to.
+describe('where an inbox entry leads', () => {
+	it('sends a story in review to its review page, an item to its page, a document to the docs', () => {
+		expect(hrefFor({ kind: 'review', item: 'S-0004' })).toBe('/review/S-0004');
+		expect(hrefFor({ kind: 'blocked', item: 'T-0001' })).toBe('/items/T-0001');
+		expect(
+			hrefFor({ kind: 'thread', item: 'S-0001', path: 'wip/kanban/stories/S-0001-a.md' })
+		).toBe('/items/S-0001');
+		expect(hrefFor({ kind: 'thread', path: 'design/system/overview.md' })).toBe(
+			'/docs/design/system/overview.md'
+		);
+		expect(hrefFor({ kind: 'question', path: 'wip/agents/S-0001.md' })).toBe(
+			'/docs/wip/agents/S-0001.md'
+		);
+		expect(hrefFor({ kind: 'overlap' })).toBe('/board');
 	});
 });
 
@@ -70,7 +55,6 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		process.env.PROJECT_DIR = dir;
 		process.env.FLAI_BIN = bin;
 		resetFlaiBinary();
-		resetInboxCache();
 		// a second story in progress that touches what S-004 touches, and a block
 		await flai(dir, ['touches', 'S-004', 'flai/cmd']);
 		const { data } = await flai<{ id: string }>(dir, [
@@ -133,7 +117,7 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		expect(box.counts.question + box.counts.blocked + box.counts.overlap).toBeGreaterThanOrEqual(3);
 		expect(box.notes).toEqual([]);
 		// the same repository gives the same keys, so "new" means something
-		resetInboxCache();
+		repo.forget();
 		expect((await inbox(repo)).entries.map((e) => e.key)).toEqual(box.entries.map((e) => e.key));
 	});
 
@@ -151,7 +135,6 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		await flai(dir, ['unblock', 'T-003']).catch(() => undefined);
 		await flai(dir, ['move', 'S-004', 'review', '--by', 'bot']);
 		const fresh = new Repo(dir, flaiAsk(dir));
-		resetInboxCache();
 		const review = (await inbox(fresh)).entries.filter((e) => e.kind === 'review');
 		await fresh.close();
 		expect(review).toMatchObject([{ key: 'review:S-004', href: '/review/S-004' }]);

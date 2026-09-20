@@ -2,10 +2,8 @@
 // system-flow repository (PROJECT_DIR) and nothing else. Mirrors the rules in
 // design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
-import { readFile, readdir, stat } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
-import { parse as parseYaml } from 'yaml';
 import { agent, AgentError } from './agent';
 import { log } from './log';
 
@@ -76,21 +74,6 @@ export function projectDir(): string {
 	return resolve(process.env.PROJECT_DIR ?? process.cwd());
 }
 
-/** Split a markdown document into front matter (parsed) and body. */
-export function splitFrontMatter(doc: string): {
-	frontMatter: Record<string, unknown> | null;
-	body: string;
-} {
-	if (!doc.startsWith('---\n')) return { frontMatter: null, body: doc };
-	const rest = doc.slice(4);
-	const end = rest.indexOf('\n---\n');
-	if (end < 0) return { frontMatter: null, body: doc };
-	const fm = parseYaml(rest.slice(0, end + 1)) as Record<string, unknown> | null;
-	return { frontMatter: fm ?? {}, body: rest.slice(end + 5) };
-}
-
-type CacheEntry<T> = { mtimeMs: number; value: T };
-
 /** Asks flai on the host for a named method (ADR-0029). Tests supply one that reads a fixture through flai. */
 export type Ask = <T>(method: string, params?: Record<string, unknown>) => Promise<T>;
 
@@ -103,12 +86,11 @@ const viaChannel: Ask = (method, params) => agent().ask(method, params);
 /**
  * Repo is the dashboard's view of one system-flow repository. The project, its work items, and its
  * threads are asked of flai on the host over the channel and kept until flai says a file changed
- * (S-0073); documents, narratives, and search still read the mount through a per-path mtime cache
- * until S-0074 moves them. Either way a change is announced as 'change' with the repo-relative path.
+ * (S-0073), and so are documents, narratives, the inbox, and search (S-0074): nothing here reads a
+ * file of the project. A change is announced as 'change' with the repo-relative path.
  */
 export class Repo extends EventEmitter {
 	readonly root: string;
-	private fileCache = new Map<string, CacheEntry<unknown>>();
 	private answers = new Map<string, Promise<unknown>>();
 	private listening = false;
 
@@ -134,7 +116,7 @@ export class Repo extends EventEmitter {
 	}
 
 	/** One answer per question until something changes; a failure is not kept. */
-	private remembered<T>(key: string, method: string, params: Record<string, unknown> = {}) {
+	remember<T>(key: string, method: string, params: Record<string, unknown> = {}): Promise<T> {
 		let hit = this.answers.get(key) as Promise<T> | undefined;
 		if (!hit) {
 			hit = this.ask<T>(method, params);
@@ -152,37 +134,12 @@ export class Repo extends EventEmitter {
 	/** A file of the project changed, by flai's word: forget what was asked and tell the listeners. */
 	changed(path: string): void {
 		this.answers.clear();
-		try {
-			this.fileCache.delete(this.resolveInside(path));
-		} catch {
-			// not a path inside the project: nothing cached under it
-		}
 		log().debug({ component: 'watcher', path }, 'file changed');
 		this.emit('change', path);
 	}
 
-	/** Resolve a repo-relative path and refuse anything outside the root. */
-	resolveInside(rel: string): string {
-		const abs = resolve(this.root, rel);
-		if (abs !== this.root && !abs.startsWith(this.root + sep)) {
-			throw new RepoError(400, `path escapes the repository: ${rel}`);
-		}
-		return abs;
-	}
-
-	private async cached<T>(rel: string, load: (abs: string) => Promise<T>): Promise<T> {
-		const abs = this.resolveInside(rel);
-		const st = await stat(abs).catch(() => null);
-		if (!st) throw new RepoError(404, `not found: ${rel}`);
-		const hit = this.fileCache.get(abs) as CacheEntry<T> | undefined;
-		if (hit && hit.mtimeMs === st.mtimeMs) return hit.value;
-		const value = await load(abs);
-		this.fileCache.set(abs, { mtimeMs: st.mtimeMs, value });
-		return value;
-	}
-
 	async manifest(): Promise<Manifest> {
-		const m = await this.remembered<Manifest>('project', 'project.info');
+		const m = await this.remember<Manifest>('project', 'project.info');
 		if (!m || !m.layout?.design || !m.layout?.docs || !m.layout?.wip) {
 			throw new RepoError(
 				500,
@@ -198,23 +155,23 @@ export class Repo extends EventEmitter {
 
 	/** Every thread, resolved ones included, sorted by ID (ADR-0020), as flai reads them. */
 	async threads(): Promise<Thread[]> {
-		return this.remembered<Thread[]>('threads', 'threads.list', { all: true });
+		return this.remember<Thread[]>('threads', 'threads.list', { all: true });
 	}
 
 	/** Threads anchored to a repository path or an item ID. */
 	async threadsFor(on: string): Promise<Thread[]> {
 		const want = on.replace(/\/$/, '');
-		return this.remembered<Thread[]>(`threads:${want}`, 'threads.list', { on: want, all: true });
+		return this.remember<Thread[]>(`threads:${want}`, 'threads.list', { on: want, all: true });
 	}
 
 	/** The board as flai lays it out, epics and tasks included (board.ts gives it its shape). */
 	async boardView<T>(): Promise<T> {
-		return this.remembered<T>('board', 'board.get', { all: true });
+		return this.remember<T>('board', 'board.get', { all: true });
 	}
 
 	/** All work items from kanban and archive, sorted by ID, as flai reads them. */
 	async items(): Promise<Item[]> {
-		const raw = await this.remembered<FlaiItem[]>('items', 'items.list', {
+		const raw = await this.remember<FlaiItem[]>('items', 'items.list', {
 			archived: true,
 			bodies: true
 		});
@@ -223,7 +180,7 @@ export class Repo extends EventEmitter {
 
 	/** Find an item by ID in any padding (S-32, S-032, S-0032 name the same item). */
 	async itemById(id: string): Promise<{ item: Item; children: Item[] }> {
-		const got = await this.remembered<{ item: FlaiItem; children: FlaiItem[] | null }>(
+		const got = await this.remember<{ item: FlaiItem; children: FlaiItem[] | null }>(
 			`item:${id.trim()}`,
 			'item.get',
 			{ id: id.trim() }
@@ -231,59 +188,19 @@ export class Repo extends EventEmitter {
 		return { item: fromFlai(got.item), children: (got.children ?? []).map(fromFlai) };
 	}
 
-	/** Documentation trees: design (all types), docs, and wip. */
+	/** Documentation trees: design (all types), docs, and wip, each Markdown file with its front matter. */
 	async docsTree(): Promise<DocNode[]> {
-		const layout = await this.layout();
-		const roots: DocNode[] = [];
-		for (const dir of [layout.design, layout.docs, layout.wip]) {
-			roots.push(await this.tree(dir));
-		}
-		return roots;
+		return this.remember<DocNode[]>('docs', 'docs.tree');
 	}
 
-	private async tree(rel: string): Promise<DocNode> {
-		const abs = this.resolveInside(rel);
-		const node: DocNode = {
-			name: rel.split('/').pop() ?? rel,
-			path: rel,
-			kind: 'dir',
-			children: []
-		};
-		const entries = (await readdir(abs, { withFileTypes: true }).catch(() => [])).sort((a, b) =>
-			a.name.localeCompare(b.name)
-		);
-		for (const e of entries) {
-			if (e.name.startsWith('.')) continue;
-			const childRel = `${rel}/${e.name}`;
-			if (e.isDirectory()) {
-				node.children!.push(await this.tree(childRel));
-			} else if (e.name.endsWith('.md')) {
-				const { frontMatter } = splitFrontMatter(await readFile(join(abs, e.name), 'utf8'));
-				node.children!.push({
-					name: e.name,
-					path: childRel,
-					kind: 'file',
-					title: typeof frontMatter?.title === 'string' ? frontMatter.title : undefined,
-					frontMatter: frontMatter ?? undefined
-				});
-			}
-		}
-		return node;
-	}
-
-	/** One markdown file, raw, with parsed front matter. */
+	/** One markdown file, raw, with parsed front matter. flai refuses anything that is not a document of the project. */
 	async docFile(rel: string): Promise<{
 		path: string;
 		frontMatter: Record<string, unknown> | null;
 		body: string;
 		raw: string;
 	}> {
-		if (!rel.endsWith('.md')) throw new RepoError(400, 'only markdown files are served');
-		return this.cached(rel, async (abs) => {
-			const raw = await readFile(abs, 'utf8');
-			const { frontMatter, body } = splitFrontMatter(raw);
-			return { path: rel, frontMatter, body, raw };
-		});
+		return this.remember(`doc:${rel}`, 'doc.get', { path: rel });
 	}
 
 	/**
