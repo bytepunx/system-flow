@@ -123,8 +123,9 @@ flai mcp stop
 | Authentication | `Authorization: Bearer <token>` only, from `.flai-cache/mcp.token` (mode 0600, git-ignored, created when first needed). It is not the dashboard's token, and the dashboard's token does not open it. A request with an `Origin` header, which is what a browser sends, is refused with 403 |
 | The agent's name | The `X-Flai-Agent` header, else the client's own name, made safe for a file name. It is who thread entries and transitions are attributed to, and whose cursor `inbox` keeps |
 | Long requests | `wait_for_events` holds its request open until something changes, for up to five minutes. A proxy or tunnel in front must allow an idle response that long, or agents see their wait cut short. At most 64 requests are in flight at once; more answer 503 |
-| State and log | `.flai-cache/mcp-http.json` while it runs, `.flai-cache/mcp-http.log` for its events (`mcp server started`, `mcp session opening` with the agent and how many sessions are open, `mcp server stopped`) |
+| State and log | `.flai-cache/mcp-http.json` while it runs, `.flai-cache/mcp-http.log` for its events (`mcp server started`, `mcp session requested` with the agent and how many sessions are open, `mcp server stopped`) |
 | What it serves | The main checkout, read when it starts: restart it after changing `system-flow.yaml` |
+| Stopping | `flai mcp stop` ends held `wait_for_events` calls as waits that ran out, so a waiting agent gets an answer, not a broken connection, and simply starts a session again when the server is back |
 
 It listens on this machine only by default. `--addr 0.0.0.0:4243` or another interface is allowed and logged as a warning: the token travels in every request and flai does not encrypt it, so beyond the machine put an SSH forward, a tunnel, or a proxy that terminates TLS in front and give agents that address.
 

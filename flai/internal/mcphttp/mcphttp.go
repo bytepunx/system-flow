@@ -192,7 +192,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, agent))
 		if opening {
-			h.opt.Logger.Info("mcp session opening", "agent", agent, "sessions", h.stateful.live())
+			h.opt.Logger.Info("mcp session requested", "agent", agent, "sessions", h.stateful.live())
 		}
 	}
 	if alone {

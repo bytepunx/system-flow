@@ -145,11 +145,12 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 	if !loopback(addr) {
 		log.Warn("listening beyond this machine: the token travels in every request and flai does not encrypt it, so put a proxy or tunnel that terminates TLS in front", "addr", addr)
 	}
+	closing := make(chan struct{})
 	handler := mcphttp.Handler(mcphttp.Options{
 		Token: token, ProjectKey: repo.Manifest.Key, ProjectName: repo.Manifest.Name,
 		MaxSessions: maxSessions, Idle: idle, Logger: log,
 		NewServer: func(agent string) *mcp.Server {
-			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner})
+			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing})
 		},
 	})
 	mux := http.NewServeMux()
@@ -183,7 +184,9 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 				log.Warn("could not write state", "error", err.Error())
 			}
 		case <-ctx.Done():
-			// Held calls would keep a graceful shutdown waiting for minutes.
+			// An idle agent holds wait_for_events for minutes: those calls are
+			// ended as if their time had passed, and anything else gets a moment.
+			close(closing)
 			wait, cancel := context.WithTimeout(context.Background(), mcpShutdownWait)
 			defer cancel()
 			if err := srv.Shutdown(wait); err != nil {

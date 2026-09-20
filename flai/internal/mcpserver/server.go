@@ -33,6 +33,10 @@ type Options struct {
 	// Runner runs git to ask whether an acceptance is unpushed (S-0063).
 	// Without one the server says nothing about it.
 	Runner execx.Runner
+	// Closing, when closed, ends every held wait_for_events as if its time had
+	// passed, so a server over HTTP can stop without cutting agents off
+	// (S-0076). The SDK does not tie a session's call to its HTTP request.
+	Closing <-chan struct{}
 }
 
 type server struct {
@@ -42,11 +46,12 @@ type server struct {
 	poll    time.Duration
 	maxWait time.Duration
 	runner  execx.Runner
+	closing <-chan struct{}
 }
 
 // New builds the MCP server with its tools and resources.
 func New(opt Options) *mcp.Server {
-	s := &server{repo: opt.Repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner}
+	s := &server{repo: opt.Repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing}
 	if s.agent == "" {
 		s.agent = "agent"
 	}
@@ -567,6 +572,8 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 		case <-ctx.Done():
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}}, ctx.Err()
 		case <-deadline.C:
+			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil
+		case <-s.closing: // nil, and so never ready, unless the server was given one
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil
 		case <-tick.C:
 			if changed := diff(before, s.snapshot()); len(changed) > 0 {

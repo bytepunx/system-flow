@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -111,6 +112,27 @@ func TestMCPOverHTTP(t *testing.T) {
 	}
 	_ = cs.Close()
 
+	// An idle agent holds wait_for_events. A stop ends that call as if its
+	// time had passed, instead of cutting the agent off after a wait.
+	holder, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: state.State.URL, HTTPClient: &http.Client{Transport: mcpBearer{token, "holder"}}, DisableStandaloneSSE: true}, &mcp.ClientSessionOptions{ProtocolVersion: "2025-11-25"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holder.CallTool(ctx, &mcp.CallToolParams{Name: "inbox"}); err != nil {
+		t.Fatal(err)
+	}
+	held := make(chan string, 1)
+	go func() {
+		res, err := holder.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_for_events", Arguments: map[string]any{"timeout_seconds": 120}})
+		if err != nil || len(res.Content) == 0 {
+			held <- "failed: " + fmt.Sprint(err)
+			return
+		}
+		text, _ := res.Content[0].(*mcp.TextContent)
+		held <- text.Text
+	}()
+	time.Sleep(300 * time.Millisecond) // let the call arrive and start waiting
+
 	res2, err := http.Get(state.State.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -121,6 +143,14 @@ func TestMCPOverHTTP(t *testing.T) {
 	}
 
 	cancel()
+	select {
+	case got := <-held:
+		if !strings.Contains(got, `"timed_out":true`) {
+			t.Errorf("the held wait ends as a wait that ran out: %s", got)
+		}
+	case <-time.After(3 * time.Second):
+		t.Error("the held wait was not ended by the stop")
+	}
 	select {
 	case err := <-served:
 		if err != nil {
