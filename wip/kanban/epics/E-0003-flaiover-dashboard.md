@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-20T07:26:52Z
+updated: 2026-09-20T13:58:34Z
 transitions: []
 tags: []
 ---
@@ -38,6 +38,9 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0080 One dashboard serves every project the host flai serves
 - S-0081 The dashboard can restart, upgrade, and stop itself through flai on the host
 - S-0082 Checks for a story in review are run on the host and shown on the review page
+- S-0083 Logging in to the dashboard works from any address, not only localhost: the session cookie is not marked Secure over plain HTTP
+- S-0084 One flai serve per repository: a second one steps back instead of taking the dashboard's connection
+- S-0085 Stories and epics are editable from the dashboard: title, nature, tags, touches, parent, and body, each change made by flai on the host
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
