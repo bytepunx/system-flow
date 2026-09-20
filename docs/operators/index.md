@@ -31,7 +31,7 @@ It shows nothing until a `flai serve` that knows the project and holds the same 
 Earlier releases mounted the repository read-write into the container, with `.git/hooks`, `.git/config`, and `.git/info` read-only over it, your git identity and global excludes passed in, and optionally an SSH key to push with. All of that is gone.
 
 - **Restart the dashboard** with the new flai: `flai dashboard stop`, then `flai dashboard`. A container started by an older flai keeps its mounts until then, and `flai dashboard status` says so.
-- **If you configured a push key** (`dashboard.push_key`, `--push-key`, `dashboard.push_known_hosts`): it is ignored, and `flai dashboard` says so at every start until you clear it with `flai config set dashboard.push_key ""` (and `dashboard.push_known_hosts` likewise). The container has no git or ssh to push with and no repository to push from. An acceptance from the board is committed and tagged on the host and pushed from the host with your own credentials: `flai push --pending`, below. If the key was a deploy key made for this purpose, delete it from the repository's settings and from `~/.ssh`; nothing uses it any more. `.flai-cache/dashboard.known_hosts` and `.flai-cache/dashboard.passwd` can be deleted.
+- **If you configured a push key** (`dashboard.push_key`, `--push-key`, `dashboard.push_known_hosts`): it is ignored, and `flai dashboard` says so at every start until you clear it with `flai config set dashboard.push_key ""` (and `dashboard.push_known_hosts` likewise). The container has no git or ssh to push with and no repository to push from. An acceptance from the board is committed and tagged on the host and pushed from the host with your own credentials: `flai push --pending`, or from the board once you enable the push action, both below. If the key was a deploy key made for this purpose, delete it from the repository's settings and from `~/.ssh`; nothing uses it any more. `.flai-cache/dashboard.known_hosts` and `.flai-cache/dashboard.passwd` can be deleted.
 - **Nothing to do for git settings.** Commits from the board are made on the host with your git configuration of the moment; the advice to restart the dashboard after changing git settings no longer applies.
 - **A Windows or otherwise unusual host path** no longer matters: git runs where `flai serve` runs, so a story with a branch can be accepted from the board anywhere.
 
@@ -39,15 +39,36 @@ Earlier releases mounted the repository read-write into the container, with `.gi
 
 The dashboard has one project token and so one holder. What it does for them is recorded as the manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. All of it is done by `flai serve` on the host, as you: commits carry your git identity and the dashboard's `Co-Authored-By` trailer.
 
-### When an acceptance has not been pushed
+### Pushing what the board accepts
 
-A story accepted from the board is merged, committed, and tagged in your clone by `flai serve`, and waits there: nothing pushes it unasked, because whoever can push a release tag can publish a release. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying so until it is pushed. On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; it never forces, and refuses when the remote has moved until you fetch and merge. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. An agent session that is running does this itself when `inbox` reports it. To make it unattended, run it from a timer of your own (a systemd user timer or cron entry calling `flai push --pending` in the repository); that is a push nobody approved, with your full credentials, and is your decision to make on your host.
+A story accepted from the board is merged, committed, and tagged in your clone by `flai serve`, and by default it waits there: whoever can push a release tag can publish a release, so nothing pushes it until you say so. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying "accepted, not pushed" until it is pushed.
+
+**By hand.** On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; `--publish` also publishes the template when its version moved. It never forces, and refuses when the remote has moved until you fetch and merge. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. An agent session that is running does this itself when `inbox` reports it.
+
+**From the board, once you enable it.** Pushing is a *host action*: something `flai serve` does on your machine, as you and with your credentials, because the dashboard asked. Every host action is off until you enable it by name, in a shell on the host:
+
+```bash
+flai serve actions          # what there is, what each means, where each is on
+flai serve enable push      # for the project in the working directory; --all-projects for every project
+flai serve journal          # every host action asked for, refused ones included
+flai serve disable push     # --all-projects turns it off everywhere
+```
+
+Enabling and disabling take effect at once, with no restart. The setting is `host_actions` in your flai configuration (`~/.flai/config.json`); `flai config set` does not reach it, and nothing the dashboard can ask for reads or changes it or the journal.
+
+**Understand what enabling it means.** The dashboard token becomes the power to publish: whoever holds it can accept any story an agent has put in review, and the acceptance is then pushed, release tags included, and the template published, with your git credentials and with nobody at the keyboard. A compromised dashboard container could ask for the same. If that is more than you want a token to be worth, leave it off and push by hand, or from a timer of your own.
+
+With it on, an acceptance from the board pushes as its last step, and the confirmation says so before you accept; the standing notice gains a **Push now** button for acceptances made while it was off. The push is `flai push --pending --publish`: never forced, and when the remote has moved it is refused and the board shows the reason and the command to run by hand. With it off, the notice says what would enable it, and asking anyway is refused (HTTP 403) and journalled.
+
+The journal is `journal.jsonl` beside `flai serve`'s state (the `serve` folder next to your flai configuration), mode 0600, one line per request: when, the action, the method, the project, for whom (the manifest's `owner`), the request, and the outcome (`done`, `failed`, or `disabled`) with what was pushed and published or why not.
+
+> **Correction, 2026-09-20.** From flai 1.5.3 to 1.6.1, an acceptance made from the board was pushed and published with your credentials although nothing had enabled it (I-0028). Acceptance had moved from the container, which held no credential, to `flai serve` on the host, which has yours, and the push was not turned off on the way. This page said during that time that nothing was pushed unasked and that the token was not the power to publish; both were wrong. If you accepted from the board with one of those releases, check what was pushed against what you meant to release. The release after 1.6.1 restores the default described above.
 
 ### What the container can and cannot reach
 
 It can reach its port, the network, and the two secrets. It cannot read or write any file of the project or of the host: no work tree, no `.git`, no `.flai-cache` beyond those two files, no flai configuration. So it cannot leave a git hook or setting that would run on your machine, change a tracked file or a branch, or plant an ignored file your tools execute, which were the routes open or guarded while the repository was mounted (I-0022, ADR-0027, superseded).
 
-What a compromised container could still do is what the dashboard itself does: ask `flai serve` for the named methods it offers (reads of the three folders, moves, saves of Markdown under them, an acceptance of a story in review), each of which flai checks and performs itself, and present the login token. Treat a dashboard you expose beyond your own network accordingly, and see the next section for how to turn the connection off.
+What a compromised container could still do is what the dashboard itself does: ask `flai serve` for the named methods it offers (reads of the three folders, moves, saves of Markdown under them, an acceptance of a story in review, and a push if you enabled that host action), each of which flai checks and performs itself, and present the login token. Treat a dashboard you expose beyond your own network accordingly, and see the next section for how to turn the connection off.
 
 | Setting | Where | Default | Effect |
 |---------|-------|---------|--------|
@@ -161,7 +182,7 @@ Local stack: `PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build` r
 
 ## Security posture
 
-The dashboard authenticates every request with the project token (above), and through `flai serve` it can change the project: moves, saves, acceptances. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. The container holds no file of the project and no git credential, so the token is not the power to publish: an acceptance waits on the host until you push it. Keep the dashboard off public addresses or behind a tunnel you trust all the same, and rotate the token (`flai dashboard token --rotate`) when in doubt.
+The dashboard authenticates every request with the project token (above), and through `flai serve` it can change the project: moves, saves, acceptances. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. The container holds no file of the project and no git credential. Whether the token is the power to publish is yours to decide: it is not unless you enable the push action on the host (above), and it is once you do. Keep the dashboard off public addresses or behind a tunnel you trust all the same, and rotate the token (`flai dashboard token --rotate`) when in doubt.
 
 ## Requirements
 

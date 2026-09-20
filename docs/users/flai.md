@@ -448,11 +448,12 @@ flai accept S-0016 --by alex --no-release
 
 Acceptance is one step, and for a story it is the only way to reach done: `flai move S-0031 done` from review, a card dropped on done in the dashboard, and `flai accept S-0031` all run the same flow with the same flags. It rebases the story branch and fast-forwards it into the main branch, moves the item to done (the same rules as `flai move`), archives it with its children and narrative, computes the release, bumps the template's version file and changelog if the template is involved, commits, creates the tags on that commit, and pushes the branch and tags. `--no-push` keeps everything local; `--dry-run` prints the plan, anything that would block it, and any uncommitted files outside `wip/`, and stops without refusing; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean outside `wip/` so the acceptance commit holds only acceptance, unless you pass `--yes`, which includes those files in it. From the dashboard the same choice is a checkbox in the confirmation.
 
-Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review. A push that cannot happen (no network, no credential at hand) does not undo the acceptance, and an acceptance made from the board is never pushed unasked ([operators](../operators/index.md)): the result says it was accepted locally and not pushed, and `git push origin HEAD --follow-tags` from a shell finishes the job. `flai board` says so for as long as it is true (`accepted, not pushed: S-0031 (3 commit(s) ahead of origin/main, tags flai/v1.3.0)`), `flai board --json` carries it as `unpushed`, and one command on the host finishes the job:
+Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review. A push that cannot happen (no network, no credential at hand) does not undo the acceptance, and an acceptance made from the board is pushed only when the operator has enabled that on the host ([operators](../operators/index.md)): the result says it was accepted locally and not pushed, and `git push origin HEAD --follow-tags` from a shell finishes the job. `flai board` says so for as long as it is true (`accepted, not pushed: S-0031 (3 commit(s) ahead of origin/main, tags flai/v1.3.0)`), `flai board --json` carries it as `unpushed`, and one command on the host finishes the job:
 
 ```bash
 flai push --pending             # push the branch and the release tags of acceptances that were not pushed
 flai push --pending --dry-run   # say what would be pushed
+flai push --pending --publish   # also publish the template when those commits moved its version
 ```
 
 It only acts when the commits ahead of the remote include an acceptance; ordinary commits are yours to push with git. It never forces: when the remote has commits this clone lacks it refuses and tells you to fetch and merge first. It answers from what this clone knows, so a push made from another clone is not seen until you fetch.
@@ -512,6 +513,17 @@ flai serve stop
 `flai hostapi` shows what the dashboard can ask, and answers one question on the terminal: `flai hostapi` lists the methods, `flai hostapi board.get '{"all":true}'` prints what the board page is given.
 
 It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` ends it. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
+
+`flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; there is one today, `push`, which lets an acceptance made from the board be pushed and published:
+
+```bash
+flai serve actions          # what there is, what each means, and where each is on
+flai serve enable push      # for this project; --all-projects for every project
+flai serve disable push
+flai serve journal          # every host action asked for, and what became of it
+```
+
+What enabling `push` means for who can publish a release is in the operator guide; read it first.
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 
