@@ -289,6 +289,23 @@ flai thread resolve TH-0001 --reason "settled in ADR-0021"
 
 A thread is one file under `wip/threads/`, anchored to a document, a heading in it, or a work item, with dated entries by author. The author is `--by`, else `FLAI_AGENT`, else the config author. A reply from anyone but the opener marks the thread `answered`; the opener's follow-up makes it `open` again; `resolve` closes it. Unresolved threads on a story or its tasks are mirrored into the story narrative under `## Open questions`, so an agent sees them without the dashboard. `flai check` validates threads: the anchor must exist, a named heading must still be in the document, and open threads on archived items are flagged.
 
+### Changing an item after it was made
+
+```bash
+flai edit S-0085 --show                         # the fields, the body below the heading, and the hash
+flai edit S-0085 --title "A better name" --autocommit
+flai edit S-0085 --nature improvement --tag dashboard --tag cli --touches flaiover/src
+flai edit S-0085 --parent E-0004                # an open epic for a story, an open story for a task
+flai edit S-0085 --body-stdin --hash <hash> < body.md
+flai edit S-0085 --clear-tags --clear-touches
+```
+
+`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
+
+A title lives in several places, and a retitle keeps them in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name under design, docs, and wip (from a story's worktree only under wip, because design and docs there are another branch's). With `--hash`, the one `--show` printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. `flai check` runs with the change in place: what the change introduces refuses it, every file is put back, and the findings are printed (exit 4). What is simply not allowed, a nature there is not, an epic as a task's parent, is said as a `rule:`. `--autocommit` commits every file the edit touched in one commit; nothing is pushed.
+
+Agents connected over MCP are told of an edit someone else made, as a change of kind `edited` that names what changed. That comes from a small log under `.flai-cache`, outside git, like an agent's read marker: hand edits of a file are not reported, as before.
+
 ### Serving agents over MCP
 
 ```bash
@@ -304,7 +321,7 @@ flai mcp start    # the same server over HTTP, for an agent that cannot start a 
 
 | Tool | What it does |
 |------|--------------|
-| `inbox` | Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
+| `inbox` | (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
 | `board` | The board as `flai board --json` prints it; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |

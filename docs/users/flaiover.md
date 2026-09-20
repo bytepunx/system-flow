@@ -56,9 +56,21 @@ Send back asks why, in the page, and moves the story to in-progress with your re
 
 Every document page and every work item page has an Edit link when the dashboard can write. The editor shows the markdown on the left and, on the right, a preview drawn by the same renderer as the explorer, diagrams and code highlighting included.
 
-What you can change depends on the file, and flai decides it, not the dashboard. Design and docs files are yours entirely: body and front matter, with the front matter checked when you save. For work items, narratives, and the board, flai owns the front matter, because it is the item's state; it is shown read-only and you edit the body. Move, block, and retitle items from the board or with `flai`. Generated files (`wip/agents/index.md`, `design/issues/summary.md`), threads, issues, and anything in the archive are not editable here, and the page says why.
+What you can change depends on the file, and flai decides it, not the dashboard. Design and docs files are yours entirely: body and front matter, with the front matter checked when you save. For work items, narratives, and the board, flai owns the front matter, because it is the item's state; it is shown read-only and you edit the body. Move and block items from the board or with `flai`; change what a story or an epic says about itself from its own page, as described next. Generated files (`wip/agents/index.md`, `design/issues/summary.md`), threads, issues, and anything in the archive are not editable here, and the page says why.
 
 Saving does three things. flai checks the repository with your change in place, and if the change introduces any finding, the save is refused, the findings are listed, the file is left as it was, and your text stays in the editor. If someone else changed the document after you opened it, an agent or a colleague, you get a conflict instead: the page shows what is there now against what you are saving, and you choose to load the current version, which discards your edits, or to save yours over it. Otherwise the file is saved and committed on its own, with you as the author, the line you typed under "What changed" as the subject, and a trailer naming the dashboard. For design and docs files the `updated` date is set to today unless you set it yourself. A project can turn the commit off with `dashboard.autocommit: false` in `system-flow.yaml`; the edit is then saved and left for you to commit.
+
+### Editing a story or an epic
+
+A story's or an epic's page has an **edit…** button while the item is open (not done, cancelled, or archived). It turns the page into a form: the title, the nature, the tags, and for a story what it touches and its parent epic, with the body below as Markdown and a preview. The line at the top names what is not yours to change there, because it is the item's state and flai's: the ID, the type, the status (move the card instead), the owner, and the dates.
+
+Save sends only what you changed, and flai on the host does the rest in one step. A new title is kept in step everywhere it appears: the file's name, the heading, the line in the parent's list, the story's narrative, and links to the old file name in other documents. A new parent must be an open epic; the story leaves the old epic's list and joins the new one. The repository is checked with your change in place, exactly as for a document: if the check finds anything the change introduces, say a story in progress left without acceptance criteria, nothing is changed, the findings are listed, and your text stays in the form. If an agent or someone else changed the item after you opened it, you get the same choice as for a document: load the current version, or save yours over it, and only the fields you changed are written over. Everything is committed in one commit, as you, with the dashboard's trailer.
+
+Acceptance criteria can be ticked where you read them: on a story's page the checkboxes under "Acceptance criteria" are live, and each tick is a small edit of the body made the same way.
+
+An agent working on the story is told. Its `inbox` reports the edit with what changed (title, nature, tags, touches, parent, goal, criteria, notes, or body), and one that is waiting hears within a second, so it reads the story again before it goes on.
+
+Tasks are not edited here: they are the agent's to write. A task's page says so, and its body can still be opened as a document.
 
 Commits made here are not pushed; push from a shell, as with a story accepted from the board.
 
