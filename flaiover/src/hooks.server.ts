@@ -18,7 +18,7 @@ import { authenticate, decide, initAuth } from '$lib/server/auth';
 import { repo } from '$lib/server/repo';
 import { startNotifier } from '$lib/server/notify';
 import { projectIdentity, setIdentityHeaders } from '$lib/server/project';
-import { agent, exposeAgentUpgrade } from '$lib/server/agent';
+import { agent, exposeAgentUpgrade, withProject } from '$lib/server/agent';
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
@@ -64,60 +64,67 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const route = routeLabel(event.route.id, path);
 	const startedAt = process.hrtime.bigint();
 	inFlight.inc();
+	// Which project repo()/agent() resolve to for the length of this request (S-0080): the ?project=
+	// query parameter a page or the client's api() helper sends; with none, the one project a
+	// dashboard not yet told to serve several keeps working for, unchanged.
+	const projectKey = event.url.searchParams.get('project');
+	const run = <T>(fn: () => T): T => (projectKey ? withProject(projectKey, fn) : fn());
 	try {
-		return await withRequestSpan(method, path, event.request.headers, async (span) => {
-			const tid = traceId(span);
-			const requestId = tid ? undefined : crypto.randomUUID();
-			event.locals.traceId = tid ?? requestId;
-			let status = 500;
-			try {
-				const auth = authenticate(event.request.headers);
-				event.locals.auth = auth;
-				const decision = decide(path, method, auth, event.request.headers);
-				if (decision.kind === 'unauthorized') {
-					const response = json({ error: 'unauthorized' }, { status: 401 });
-					status = 401;
+		return await run(() =>
+			withRequestSpan(method, path, event.request.headers, async (span) => {
+				const tid = traceId(span);
+				const requestId = tid ? undefined : crypto.randomUUID();
+				event.locals.traceId = tid ?? requestId;
+				let status = 500;
+				try {
+					const auth = authenticate(event.request.headers);
+					event.locals.auth = auth;
+					const decision = decide(path, method, auth, event.request.headers);
+					if (decision.kind === 'unauthorized') {
+						const response = json({ error: 'unauthorized' }, { status: 401 });
+						status = 401;
+						return response;
+					}
+					if (decision.kind === 'forbidden') {
+						const response = json({ error: 'forbidden' }, { status: 403 });
+						status = 403;
+						return response;
+					}
+					if (decision.kind === 'login') {
+						status = 303;
+						redirect(303, `/login?next=${encodeURIComponent(decision.next)}`);
+					}
+					const response = await resolve(event);
+					status = response.status;
+					// Every API answer names its project (ADR-0024, kept by ADR-0030); refusals above do not,
+					// so an unauthenticated caller learns nothing about what is served here.
+					if (path.startsWith('/api/'))
+						return setIdentityHeaders(response, await projectIdentity(repo()));
 					return response;
+				} finally {
+					const seconds = Number(process.hrtime.bigint() - startedAt) / 1e9;
+					span.setAttributes({ 'http.route': route, 'http.response.status_code': status });
+					if (status >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
+					requestsTotal.labels(method, route, statusClass(status)).inc();
+					requestDuration.labels(method, route).observe(seconds);
+					if (!QUIET.has(path) && !path.startsWith('/_app/')) {
+						log()[status >= 500 ? 'error' : 'info'](
+							{
+								component: 'http',
+								trace_id: tid,
+								request_id: requestId,
+								method,
+								route,
+								path,
+								status,
+								duration_ms: Math.round(seconds * 1000)
+							},
+							'request handled'
+						);
+					}
 				}
-				if (decision.kind === 'forbidden') {
-					const response = json({ error: 'forbidden' }, { status: 403 });
-					status = 403;
-					return response;
-				}
-				if (decision.kind === 'login') {
-					status = 303;
-					redirect(303, `/login?next=${encodeURIComponent(decision.next)}`);
-				}
-				const response = await resolve(event);
-				status = response.status;
-				// Every API answer names its project (ADR-0024, kept by ADR-0030); refusals above do not,
-				// so an unauthenticated caller learns nothing about what is served here.
-				if (path.startsWith('/api/'))
-					return setIdentityHeaders(response, await projectIdentity(repo()));
-				return response;
-			} finally {
-				const seconds = Number(process.hrtime.bigint() - startedAt) / 1e9;
-				span.setAttributes({ 'http.route': route, 'http.response.status_code': status });
-				if (status >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
-				requestsTotal.labels(method, route, statusClass(status)).inc();
-				requestDuration.labels(method, route).observe(seconds);
-				if (!QUIET.has(path) && !path.startsWith('/_app/')) {
-					log()[status >= 500 ? 'error' : 'info'](
-						{
-							component: 'http',
-							trace_id: tid,
-							request_id: requestId,
-							method,
-							route,
-							path,
-							status,
-							duration_ms: Math.round(seconds * 1000)
-						},
-						'request handled'
-					);
-				}
-			}
-		});
+			})
+		);
 	} finally {
 		inFlight.dec();
 	}

@@ -2,22 +2,22 @@ import { afterEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
-import { AgentError, AgentHub, proof, REQUIRED_METHODS } from './agent';
+import { AgentError, AgentRegistry, proof, REQUIRED_METHODS } from './agent';
 
 const KEY = 'agent-credential-for-tests';
 
 type Flai = { ws: WebSocket; requests: Record<string, unknown>[]; closed: Promise<number> };
 
-/** A hub on a real HTTP server, the way server.js wires it. */
-async function serve(hub: AgentHub) {
+/** A registry on a real HTTP server, the way server.js wires it. */
+async function serve(registry: AgentRegistry) {
 	const server = http.createServer((_req, res) => res.end('ok'));
-	server.on('upgrade', (req, socket, head) => hub.handleUpgrade(req, socket, head));
+	server.on('upgrade', (req, socket, head) => registry.handleUpgrade(req, socket, head));
 	await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
 	const port = (server.address() as AddressInfo).port;
 	return { server, url: `ws://127.0.0.1:${port}/agent`, port };
 }
 
-/** The flai end of the handshake, with the key it believes in. */
+/** The flai end of the handshake, with the key it believes in, for the named project. */
 function connect(
 	url: string,
 	key: string,
@@ -25,7 +25,8 @@ function connect(
 		name: 'Harbour'
 	}),
 	headers: Record<string, string> = {},
-	methods: string[] = REQUIRED_METHODS
+	methods: string[] = REQUIRED_METHODS,
+	project: { key: string; name: string } = { key: 'harbour', name: 'Harbour' }
 ): Promise<Flai> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(url, { headers });
@@ -46,7 +47,7 @@ function connect(
 						protocol: 1,
 						nonce: mine,
 						flai: '9.9.9',
-						project: { key: 'harbour', name: 'Harbour' },
+						project,
 						methods
 					}
 				})
@@ -77,19 +78,19 @@ function connect(
 	});
 }
 
-describe('AgentHub', () => {
+describe('AgentRegistry and AgentHub', () => {
 	const cleanup: (() => void)[] = [];
 	afterEach(() => {
 		for (const f of cleanup.splice(0)) f();
 	});
 	async function setup(opt = {}) {
-		const hub = new AgentHub(KEY, opt);
-		const s = await serve(hub);
+		const registry = new AgentRegistry(KEY, opt);
+		const s = await serve(registry);
 		cleanup.push(() => {
-			hub.close();
+			registry.close();
 			s.server.close();
 		});
-		return { hub, ...s };
+		return { registry, hub: registry.hub('harbour'), ...s };
 	}
 
 	it('says 503 until a flai has proven itself, then asks it named methods for its project', async () => {
@@ -126,14 +127,21 @@ describe('AgentHub', () => {
 		await expect(connect(`ws://127.0.0.1:${port}/elsewhere`, KEY)).rejects.toThrow('status 404');
 	});
 
-	it('is 503 for everyone when the container was given no credential', async () => {
-		const hub = new AgentHub(null);
-		const s = await serve(hub);
+	it('closes a proven connection that names no project', async () => {
+		const { url } = await setup();
+		const flai = await connect(url, KEY, undefined, {}, REQUIRED_METHODS, { key: '', name: '' });
+		expect(await flai.closed).toBe(4400);
+	});
+
+	it('is 503 for everyone when the dashboard was given no credential', async () => {
+		const registry = new AgentRegistry(null);
+		const s = await serve(registry);
 		cleanup.push(() => {
-			hub.close();
+			registry.close();
 			s.server.close();
 		});
-		expect(hub.status()).toEqual({ configured: false, connected: false });
+		expect(registry.hub('harbour').status()).toEqual({ configured: false, connected: false });
+		expect(registry.configured()).toBe(false);
 		await expect(connect(s.url, KEY)).rejects.toThrow('status 503');
 	});
 
@@ -179,7 +187,7 @@ describe('AgentHub', () => {
 		});
 	});
 
-	it('lets a newer proven connection replace the older one', async () => {
+	it('lets a newer proven connection replace the older one, for the same project', async () => {
 		const { hub, url } = await setup();
 		const first = await connect(url, KEY, () => ({ from: 'first' }));
 		const second = await connect(url, KEY, () => ({ from: 'second' }));
@@ -286,5 +294,50 @@ describe('AgentHub', () => {
 				);
 		});
 		await expect(hub.ask('doc.save')).rejects.toMatchObject({ code: -32009, data: { hash: 'h2' } });
+	});
+
+	// S-0080: one dashboard, several projects, one shared credential.
+	it('serves two projects over two connections at once, without either replacing the other', async () => {
+		const { registry, url } = await setup();
+		const first = await connect(url, KEY, () => ({ from: 'harbour' }), {}, REQUIRED_METHODS, {
+			key: 'harbour',
+			name: 'Harbour'
+		});
+		const second = await connect(url, KEY, () => ({ from: 'quay' }), {}, REQUIRED_METHODS, {
+			key: 'quay',
+			name: 'Quay'
+		});
+		cleanup.push(() => {
+			first.ws.terminate();
+			second.ws.terminate();
+		});
+		await new Promise((r) => setTimeout(r, 30));
+		expect(
+			await Promise.race([first.closed, new Promise((r) => setTimeout(() => r('open'), 50))])
+		).toBe('open');
+		expect(registry.hub('harbour').status()).toMatchObject({
+			connected: true,
+			serves: { key: 'harbour' }
+		});
+		expect(registry.hub('quay').status()).toMatchObject({
+			connected: true,
+			serves: { key: 'quay' }
+		});
+		await expect(registry.hub('harbour').ask('project.info')).resolves.toEqual({ from: 'harbour' });
+		await expect(registry.hub('quay').ask('project.info')).resolves.toEqual({ from: 'quay' });
+
+		// losing one project's connection does not touch the other's
+		first.ws.terminate();
+		await new Promise((r) => setTimeout(r, 30));
+		expect(registry.hub('harbour').status().connected).toBe(false);
+		expect(registry.hub('quay').status().connected).toBe(true);
+
+		expect(registry.list().map((p) => p.key)).toEqual(['harbour', 'quay']);
+	});
+
+	it('tells a project nothing has ever connected for apart from one that merely is not connected now', async () => {
+		const { registry } = await setup();
+		expect(registry.peek('harbour')).toBeDefined(); // set() in the test's own setup()
+		expect(registry.peek('never-seen')).toBeUndefined();
 	});
 });

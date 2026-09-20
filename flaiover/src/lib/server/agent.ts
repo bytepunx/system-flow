@@ -4,6 +4,15 @@
 // proves it holds it over two nonces. Until the second proof arrives nothing
 // is served, and afterwards everything the dashboard can ask for is a method
 // flai chose to offer.
+//
+// One dashboard serves every project the host flai serves (S-0080): every
+// project's flai proves itself with the same shared credential, so the proof
+// is done once, at the registry, before either side knows which project a
+// connection is for. Only once hello names a project does a connection join
+// (or replace) that project's own AgentHub: "one connection per credential"
+// becomes "one connection per project", which is what a dashboard with more
+// than one project connected needs.
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
@@ -77,7 +86,7 @@ export const REQUIRED_METHODS = [
 ];
 
 export type AgentStatus = {
-	/** false when the container was given no agent credential (an older flai started it). */
+	/** false when the dashboard was given no agent credential (an older flai started it). */
 	configured: boolean;
 	connected: boolean;
 	since?: string;
@@ -87,6 +96,9 @@ export type AgentStatus = {
 	/** Methods this dashboard needs and the connected flai does not offer: it is older than the dashboard. */
 	missing?: string[];
 };
+
+/** One project as the registry knows it, for a project list or switcher. */
+export type ConnectedProject = { key: string; name: string; connected: boolean; since?: string };
 
 type Pending = {
 	resolve: (v: unknown) => void;
@@ -102,6 +114,12 @@ type Message = {
 	result?: unknown;
 	error?: { code: number; message: string; data?: Record<string, unknown> };
 };
+type ConnInfo = {
+	since: string;
+	flai: string;
+	project: { key: string; name: string };
+	missing: string[];
+};
 
 export type AgentOptions = { pingMs?: number; handshakeMs?: number; maxUnproven?: number };
 
@@ -116,141 +134,38 @@ function same(a: string, b: string): boolean {
 }
 
 /**
+ * One project's connection: at most one proven flai at a time, and the requests waiting on it.
  * Emits 'connected' when a flai has proven itself, 'gone' when it is lost, and 'change' with a
- * repo-relative path when flai says a file of the project changed (S-0073).
+ * repo-relative path when flai says a file of the project changed (S-0073). An AgentHub never does
+ * its own handshake: a registry proves the shared credential and hands it a socket already proven,
+ * so "no host flai has ever named this project" (unknown) can be told apart from "flai is not
+ * connected right now" (this hub exists, `status().connected` is false).
  */
 export class AgentHub extends EventEmitter {
-	private wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE });
 	private conn: WebSocket | null = null;
-	private info: {
-		since: string;
-		flai: string;
-		project: { key: string; name: string };
-		missing: string[];
-	} | null = null;
+	private info: ConnInfo | null = null;
 	private pending = new Map<number, Pending>();
 	private nextId = 1;
-	private unproven = 0;
 	private pingMs: number;
-	private handshakeMs: number;
-	private maxUnproven: number;
+	/** Whether the registry that made this hub was given a shared credential at all: false only when
+	 * the dashboard was started with none, which is true for every project alike, not a per-project fact. */
+	private configuredFlag: boolean;
 
-	constructor(
-		private key: string | null,
-		opt: AgentOptions = {}
-	) {
+	constructor(opt: AgentOptions & { configured?: boolean } = {}) {
 		super();
 		this.pingMs = opt.pingMs ?? 4000;
-		this.handshakeMs = opt.handshakeMs ?? 5000;
-		this.maxUnproven = opt.maxUnproven ?? 4;
+		this.configuredFlag = opt.configured ?? true;
 	}
 
 	status(): AgentStatus {
-		if (!this.key) return { configured: false, connected: false };
+		if (!this.configuredFlag) return { configured: false, connected: false };
 		if (!this.conn || !this.info) return { configured: true, connected: false };
 		const { project, ...rest } = this.info;
 		return { configured: true, connected: true, ...rest, serves: project };
 	}
 
-	/**
-	 * The HTTP server's 'upgrade' event for /agent. A browser always sends Origin on a WebSocket
-	 * and flai never does, so a page in the designer's browser cannot reach this at all.
-	 */
-	handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
-		const refuse = (status: string) => {
-			socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
-			socket.destroy();
-		};
-		const path = (req.url ?? '').split('?')[0];
-		if (path !== AGENT_PATH) return refuse('404 Not Found');
-		if (!this.key) return refuse('503 Service Unavailable');
-		if (req.headers.origin) return refuse('403 Forbidden');
-		if (this.unproven >= this.maxUnproven) return refuse('429 Too Many Requests');
-		this.wss.handleUpgrade(req, socket, head, (ws) => this.handshake(ws));
-	}
-
-	private handshake(ws: WebSocket): void {
-		const key = this.key!;
-		this.unproven++;
-		let mine = '';
-		let theirs = '';
-		let hello: { flai?: string; project?: { key?: string; name?: string }; methods?: unknown } = {};
-		let done = false;
-		const finish = () => {
-			if (!done) {
-				done = true;
-				this.unproven--;
-				clearTimeout(timer);
-			}
-		};
-		const timer = setTimeout(() => ws.close(4408, 'handshake timed out'), this.handshakeMs);
-		ws.on('close', finish);
-		ws.on('error', () => ws.terminate());
-		const onMessage = (data: Buffer) => {
-			let m: Message;
-			try {
-				m = JSON.parse(data.toString());
-			} catch {
-				return ws.close(4400, 'not JSON');
-			}
-			if (!mine) {
-				const p = (m.params ?? {}) as { protocol?: number; nonce?: string } & typeof hello;
-				if (m.method !== 'hello' || typeof p.nonce !== 'string' || !p.nonce)
-					return ws.close(4400, 'hello first');
-				if (p.protocol !== PROTOCOL) {
-					ws.send(
-						JSON.stringify({
-							jsonrpc: '2.0',
-							id: m.id,
-							error: {
-								code: -32000,
-								message: `this dashboard speaks protocol ${PROTOCOL}, flai sent ${p.protocol}`
-							}
-						})
-					);
-					return ws.close(4400, 'protocol');
-				}
-				theirs = p.nonce;
-				hello = p;
-				mine = randomBytes(16).toString('hex');
-				ws.send(
-					JSON.stringify({
-						jsonrpc: '2.0',
-						id: m.id,
-						result: {
-							nonce: mine,
-							proof: proof(key, 'dashboard', theirs, mine),
-							dashboard: version
-						}
-					})
-				);
-				return;
-			}
-			const given = (m.params as { proof?: string } | undefined)?.proof;
-			if (
-				m.method !== 'hello.prove' ||
-				typeof given !== 'string' ||
-				!same(given, proof(key, 'flai', mine, theirs))
-			) {
-				log().warn({ component: 'agent' }, 'a connection to /agent did not prove the credential');
-				return ws.close(4401, 'not proven');
-			}
-			finish();
-			ws.off('message', onMessage);
-			this.adopt(ws, {
-				since: new Date().toISOString(),
-				flai: String(hello.flai ?? ''),
-				project: { key: String(hello.project?.key ?? ''), name: String(hello.project?.name ?? '') },
-				missing: REQUIRED_METHODS.filter(
-					(m) => !(Array.isArray(hello.methods) ? hello.methods : []).includes(m)
-				)
-			});
-		};
-		ws.on('message', onMessage);
-	}
-
-	/** One connection per credential: a newer proven connection replaces the older one. */
-	private adopt(ws: WebSocket, info: NonNullable<AgentHub['info']>): void {
+	/** One connection per project: a newer proven connection replaces the older one. */
+	adopt(ws: WebSocket, info: ConnInfo): void {
 		if (this.conn) {
 			this.conn.close(4000, 'replaced by a newer connection');
 			this.drop(this.conn, 'replaced');
@@ -358,15 +273,191 @@ export class AgentHub extends EventEmitter {
 
 	close(): void {
 		this.conn?.terminate();
+	}
+}
+
+/** Rejects everything at once: a project no host flai has ever named here (S-0080). Not kept in the
+ * registry's map, so it never counts as a known project and is made fresh for every such request. */
+class UnknownProjectHub extends AgentHub {
+	constructor(private key: string) {
+		super();
+	}
+	override status(): AgentStatus {
+		return { configured: false, connected: false };
+	}
+	override ask<T>(): Promise<T> {
+		return Promise.reject(new AgentError(404, `no project "${this.key}" is being served here`));
+	}
+}
+
+/**
+ * Proves the one shared credential every project's flai holds, then routes the proven connection to
+ * that project's own AgentHub by the key hello names (S-0080). A dashboard with nothing configured,
+ * or asked for a project it has never heard from, answers as AgentHub always has: 503 unconfigured,
+ * or (new) 404 unknown.
+ */
+export class AgentRegistry {
+	private wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE });
+	private hubs = new Map<string, AgentHub>();
+	private unproven = 0;
+	private handshakeMs: number;
+	private maxUnproven: number;
+	private opt: AgentOptions;
+
+	constructor(
+		private key: string | null,
+		opt: AgentOptions = {}
+	) {
+		this.opt = opt;
+		this.handshakeMs = opt.handshakeMs ?? 5000;
+		this.maxUnproven = opt.maxUnproven ?? 4;
+	}
+
+	/** The project's hub, made the first time it is asked for. Every project shares the credential,
+	 * so any key is accepted here; a request naming one nothing has ever connected for uses `peek`
+	 * instead, to tell that apart from one that is merely not connected right now. */
+	hub(key: string): AgentHub {
+		let h = this.hubs.get(key);
+		if (!h) {
+			h = new AgentHub({ ...this.opt, configured: this.key !== null });
+			this.hubs.set(key, h);
+		}
+		return h;
+	}
+
+	/** The project's hub if a flai has ever named it here, else undefined: never creates one. */
+	peek(key: string): AgentHub | undefined {
+		return this.hubs.get(key);
+	}
+
+	/** Every project a flai has named here, connected or not, for a list or a switcher. */
+	list(): ConnectedProject[] {
+		const out: ConnectedProject[] = [];
+		for (const [key, h] of this.hubs) {
+			const st = h.status();
+			out.push({ key, name: st.serves?.name ?? key, connected: st.connected, since: st.since });
+		}
+		return out.sort((a, b) => a.key.localeCompare(b.key));
+	}
+
+	configured(): boolean {
+		return this.key !== null;
+	}
+
+	/**
+	 * The HTTP server's 'upgrade' event for /agent. A browser always sends Origin on a WebSocket
+	 * and flai never does, so a page in the designer's browser cannot reach this at all.
+	 */
+	handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
+		const refuse = (status: string) => {
+			socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
+			socket.destroy();
+		};
+		const path = (req.url ?? '').split('?')[0];
+		if (path !== AGENT_PATH) return refuse('404 Not Found');
+		if (!this.key) return refuse('503 Service Unavailable');
+		if (req.headers.origin) return refuse('403 Forbidden');
+		if (this.unproven >= this.maxUnproven) return refuse('429 Too Many Requests');
+		this.wss.handleUpgrade(req, socket, head, (ws) => this.handshake(ws));
+	}
+
+	private handshake(ws: WebSocket): void {
+		const key = this.key!;
+		this.unproven++;
+		let mine = '';
+		let theirs = '';
+		let hello: { flai?: string; project?: { key?: string; name?: string }; methods?: unknown } = {};
+		let done = false;
+		const finish = () => {
+			if (!done) {
+				done = true;
+				this.unproven--;
+				clearTimeout(timer);
+			}
+		};
+		const timer = setTimeout(() => ws.close(4408, 'handshake timed out'), this.handshakeMs);
+		ws.on('close', finish);
+		ws.on('error', () => ws.terminate());
+		const onMessage = (data: Buffer) => {
+			let m: Message;
+			try {
+				m = JSON.parse(data.toString());
+			} catch {
+				return ws.close(4400, 'not JSON');
+			}
+			if (!mine) {
+				const p = (m.params ?? {}) as { protocol?: number; nonce?: string } & typeof hello;
+				if (m.method !== 'hello' || typeof p.nonce !== 'string' || !p.nonce)
+					return ws.close(4400, 'hello first');
+				if (p.protocol !== PROTOCOL) {
+					ws.send(
+						JSON.stringify({
+							jsonrpc: '2.0',
+							id: m.id,
+							error: {
+								code: -32000,
+								message: `this dashboard speaks protocol ${PROTOCOL}, flai sent ${p.protocol}`
+							}
+						})
+					);
+					return ws.close(4400, 'protocol');
+				}
+				theirs = p.nonce;
+				hello = p;
+				mine = randomBytes(16).toString('hex');
+				ws.send(
+					JSON.stringify({
+						jsonrpc: '2.0',
+						id: m.id,
+						result: {
+							nonce: mine,
+							proof: proof(key, 'dashboard', theirs, mine),
+							dashboard: version
+						}
+					})
+				);
+				return;
+			}
+			const given = (m.params as { proof?: string } | undefined)?.proof;
+			if (
+				m.method !== 'hello.prove' ||
+				typeof given !== 'string' ||
+				!same(given, proof(key, 'flai', mine, theirs))
+			) {
+				log().warn({ component: 'agent' }, 'a connection to /agent did not prove the credential');
+				return ws.close(4401, 'not proven');
+			}
+			const projectKey = String(hello.project?.key ?? '');
+			if (!projectKey) {
+				log().warn({ component: 'agent' }, 'a proven connection named no project');
+				finish();
+				return ws.close(4400, 'project key required');
+			}
+			finish();
+			ws.off('message', onMessage);
+			this.hub(projectKey).adopt(ws, {
+				since: new Date().toISOString(),
+				flai: String(hello.flai ?? ''),
+				project: { key: projectKey, name: String(hello.project?.name ?? '') },
+				missing: REQUIRED_METHODS.filter(
+					(m) => !(Array.isArray(hello.methods) ? hello.methods : []).includes(m)
+				)
+			});
+		};
+		ws.on('message', onMessage);
+	}
+
+	close(): void {
+		for (const h of this.hubs.values()) h.close();
 		this.wss.close();
 	}
 }
 
-let hub: AgentHub | null = null;
+let reg: AgentRegistry | null = null;
 
-/** The process-wide hub. The credential comes from FLAIOVER_AGENT_KEY_FILE, read once. */
-export function agent(env: Record<string, string | undefined> = process.env): AgentHub {
-	if (hub) return hub;
+/** The process-wide registry. The shared credential comes from FLAIOVER_AGENT_KEY_FILE, read once. */
+export function registry(env: Record<string, string | undefined> = process.env): AgentRegistry {
+	if (reg) return reg;
 	let key: string | null = null;
 	const file = env.FLAIOVER_AGENT_KEY_FILE;
 	if (file) {
@@ -376,13 +467,49 @@ export function agent(env: Record<string, string | undefined> = process.env): Ag
 			log().warn({ component: 'agent', err: String(err) }, 'agent credential unreadable');
 		}
 	}
-	hub = new AgentHub(key);
-	return hub;
+	reg = new AgentRegistry(key);
+	return reg;
+}
+
+/**
+ * Which project the current call is for: set for the length of a request by hooks.server.ts, from
+ * the URL or a project query parameter (S-0080). Code with no request of its own to draw a project
+ * key from (server startup, a test that never sets it) falls back to `defaultProjectKey`, which
+ * keeps one dashboard for one project working exactly as it always has.
+ */
+export const projectContext = new AsyncLocalStorage<{ key: string }>();
+export const defaultProjectKey = '__default__';
+
+export function currentProjectKey(): string {
+	return projectContext.getStore()?.key ?? defaultProjectKey;
+}
+
+/** Run fn with key as the current project for repo()/agent() calls inside it. */
+export function withProject<T>(key: string, fn: () => T): T {
+	return projectContext.run({ key }, fn);
+}
+
+/**
+ * The current project's hub. Called with no arguments everywhere in the app, as before S-0080: it
+ * resolves the project from the request in progress (or the default, outside one). A project no
+ * flai has ever connected for is refused (404) rather than silently starting to track it, unless it
+ * is the default, which a single-project dashboard vivifies the way it always has.
+ */
+export function agent(): AgentHub {
+	const key = currentProjectKey();
+	if (key === defaultProjectKey) return registry().hub(key);
+	const h = registry().peek(key);
+	return h ?? new UnknownProjectHub(key);
+}
+
+/** Every project a flai has named on this dashboard, for a switcher. */
+export function connectedProjects(): ConnectedProject[] {
+	return registry().list();
 }
 
 export function resetAgent(): void {
-	hub?.close();
-	hub = null;
+	reg?.close();
+	reg = null;
 }
 
 declare global {
@@ -390,10 +517,10 @@ declare global {
 		((req: IncomingMessage, socket: Duplex, head: Buffer) => void) | undefined;
 }
 
-/** Called from the server's init hook: the custom server entry and the dev server find the hub here. */
+/** Called from the server's init hook: the custom server entry and the dev server find the registry here. */
 export function exposeAgentUpgrade(): void {
 	globalThis.__flaioverAgentUpgrade = (req, socket, head) =>
-		agent().handleUpgrade(req, socket, head);
+		registry().handleUpgrade(req, socket, head);
 }
 
 /** Resolves when a flai is connected, or after ms with whether one is. */

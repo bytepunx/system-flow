@@ -5,7 +5,7 @@
 import { resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { agent, AgentError, connectedWithin } from './agent';
+import { agent, AgentError, connectedWithin, currentProjectKey, defaultProjectKey } from './agent';
 import { log } from './log';
 
 export type Layout = { design: string; docs: string; wip: string };
@@ -324,14 +324,34 @@ function fromFlai(it: FlaiItem): Item {
 	};
 }
 
-let shared: Repo | null = null;
-/** The process-wide Repo for the mounted project. */
+const repos = new Map<string, Repo>();
+
+/**
+ * The current project's Repo (S-0080): one per project key, so that one project's cached answers,
+ * watcher, and cursor never leak into another's. Which project is current is set for the length of
+ * a request by hooks.server.ts (agent.ts's projectContext); code with none of its own, a test that
+ * never sets it included, gets the same one Repo it always has, keyed under defaultProjectKey.
+ */
 export function repo(): Repo {
-	if (!shared) shared = new Repo();
-	return shared;
+	const key = currentProjectKey();
+	let r = repos.get(key);
+	if (!r) {
+		r = new Repo();
+		repos.set(key, r);
+	}
+	return r;
 }
 
-/** Replace the process-wide Repo, or forget it with null. For tests, which ask a flai of their own. */
-export function useRepo(r: Repo | null): void {
-	shared = r;
+/**
+ * Replace a project's Repo, or forget it with null. For tests, which ask a flai of their own. With
+ * no key, replaces the default project's, as it always has for a single-project dashboard's tests.
+ */
+export function useRepo(r: Repo | null, key: string = defaultProjectKey): void {
+	if (r) repos.set(key, r);
+	else repos.delete(key);
+}
+
+/** Every Repo made so far, for tests that need to reach into more than the current project's. */
+export function knownRepos(): Map<string, Repo> {
+	return repos;
 }
