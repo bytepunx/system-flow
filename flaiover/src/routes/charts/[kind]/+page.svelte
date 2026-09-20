@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api';
+	import { projectState } from '$lib/project.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
@@ -37,7 +38,7 @@
 		report = normalise(await r.json());
 	}
 	onMount(() => {
-		const es = new EventSource('/api/events');
+		const es = new EventSource(projectState.tag('/api/events'));
 		es.addEventListener('change', () => load());
 		(async () => {
 			epics = (await (await api('/api/items?type=epic')).json()).map(

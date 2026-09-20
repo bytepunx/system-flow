@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api';
+	import { projectState } from '$lib/project.svelte';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 
@@ -28,7 +29,7 @@
 			.then((r) => (writable = r.ok))
 			.catch(() => (writable = false));
 		// the list follows the files: an ADR recorded here or from a shell appears without a reload
-		const es = new EventSource('/api/events');
+		const es = new EventSource(projectState.tag('/api/events'));
 		es.addEventListener('change', () => void load());
 		return () => es.close();
 	});

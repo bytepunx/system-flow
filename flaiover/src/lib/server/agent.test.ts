@@ -340,4 +340,27 @@ describe('AgentRegistry and AgentHub', () => {
 		expect(registry.peek('harbour')).toBeDefined(); // set() in the test's own setup()
 		expect(registry.peek('never-seen')).toBeUndefined();
 	});
+
+	it('solo() is the one connected project when there is exactly one, so a caller naming none keeps working', async () => {
+		const { registry, hub, url } = await setup();
+		expect(registry.solo()).toBe(hub); // vivified by the test's own setup(), before any connection
+		expect(registry.solo().status()).toEqual({ configured: true, connected: false });
+
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		expect(registry.solo()).toBe(hub);
+		expect(registry.solo().status().connected).toBe(true);
+
+		// a second project appears: naming none is now ambiguous, not silently the first project
+		const second = await connect(url, KEY, undefined, {}, REQUIRED_METHODS, {
+			key: 'quay',
+			name: 'Quay'
+		});
+		cleanup.push(() => second.ws.terminate());
+		expect(registry.solo()).not.toBe(hub);
+		expect(registry.solo().status()).toEqual({ configured: true, connected: false });
+		// each project on its own is still reachable by name
+		expect(registry.hub('harbour').status().connected).toBe(true);
+		expect(registry.hub('quay').status().connected).toBe(true);
+	});
 });

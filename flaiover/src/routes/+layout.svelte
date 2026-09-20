@@ -9,6 +9,8 @@
 	import HostFlai from '$lib/components/HostFlai.svelte';
 	import HostFlaiBanner from '$lib/components/HostFlaiBanner.svelte';
 	import { hostFlai } from '$lib/hostflai.svelte';
+	import { projectState } from '$lib/project.svelte';
+	import ProjectSwitcher from '$lib/components/ProjectSwitcher.svelte';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -29,14 +31,25 @@
 	} as const;
 	onMount(() => {
 		themeState.start();
-		// The inbox needs a session; the login page has none yet.
+	});
+
+	// The inbox, the host flai badge, and the project switcher all need a session; the login page has
+	// none yet. Reactive, not onMount-once (I-0032): the login page's own redirect is a client-side
+	// navigation, so onMount alone would never see signedIn become true once the app has booted on
+	// /login itself, which following a login link always does.
+	let started = false;
+	$effect(() => {
 		const signedIn = page.url.pathname !== '/login';
-		if (signedIn) inboxState.start();
-		if (signedIn) hostFlai.start();
-		return () => {
+		if (signedIn && !started) {
+			started = true;
+			inboxState.start();
+			hostFlai.start();
+			void projectState.refresh();
+		} else if (!signedIn && started) {
+			started = false;
 			inboxState.stop();
-			if (signedIn) hostFlai.stop();
-		};
+			hostFlai.stop();
+		}
 	});
 </script>
 
@@ -51,6 +64,7 @@
 					>{label}{#if label === 'Inbox'}<InboxBadge />{/if}</a
 				>
 			{/each}
+			{#if page.url.pathname !== '/login'}<ProjectSwitcher />{/if}
 			<span class="ml-auto"
 				>{#if page.url.pathname !== '/login'}<HostFlai />{/if}</span
 			>

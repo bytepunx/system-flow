@@ -2,6 +2,7 @@
 // navigation badge and the inbox page, refreshed on repository change events,
 // with optional desktop notifications for entries that appear while open.
 import { api } from '$lib/api';
+import { projectState } from './project.svelte';
 
 export type InboxEntry = {
 	key: string;
@@ -41,7 +42,7 @@ class InboxState {
 		this.permission = 'Notification' in window ? Notification.permission : 'unsupported';
 		this.notify = localStorage.getItem(NOTIFY_KEY) === 'on' && this.permission === 'granted';
 		void this.refresh();
-		this.#source = new EventSource('/api/events');
+		this.#source = new EventSource(projectState.tag('/api/events'));
 		this.#source.addEventListener('change', () => {
 			// a save touches several files; one refresh after they settle
 			if (this.#timer) clearTimeout(this.#timer);

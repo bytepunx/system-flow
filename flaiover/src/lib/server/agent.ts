@@ -344,6 +344,23 @@ export class AgentRegistry {
 		return this.key !== null;
 	}
 
+	private pending: AgentHub | null = null;
+
+	/**
+	 * The one project this dashboard serves, when there is exactly one, for code with no project of
+	 * its own to name (S-0080): a call with no `?project=` at all keeps working the way it always did
+	 * for the overwhelmingly common single-project dashboard, with nothing to configure for it. With
+	 * none known yet, or more than one, a placeholder that is never connected stands in: `configured`
+	 * still reflects whether the dashboard holds a credential at all, and once a second project is
+	 * seen every caller must start naming one, which the client does once it learns there are several.
+	 */
+	solo(): AgentHub {
+		const known = [...this.hubs.keys()];
+		if (known.length === 1) return this.hubs.get(known[0])!;
+		if (!this.pending) this.pending = new AgentHub({ configured: this.key !== null });
+		return this.pending;
+	}
+
 	/**
 	 * The HTTP server's 'upgrade' event for /agent. A browser always sends Origin on a WebSocket
 	 * and flai never does, so a page in the designer's browser cannot reach this at all.
@@ -497,7 +514,7 @@ export function withProject<T>(key: string, fn: () => T): T {
  */
 export function agent(): AgentHub {
 	const key = currentProjectKey();
-	if (key === defaultProjectKey) return registry().hub(key);
+	if (key === defaultProjectKey) return registry().solo();
 	const h = registry().peek(key);
 	return h ?? new UnknownProjectHub(key);
 }

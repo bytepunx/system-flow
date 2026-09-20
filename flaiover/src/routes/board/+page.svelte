@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api';
+	import { projectState } from '$lib/project.svelte';
 	import { resolve } from '$app/paths';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
@@ -89,7 +90,7 @@
 	onMount(() => {
 		load();
 		void loadPublish();
-		const es = new EventSource('/api/events');
+		const es = new EventSource(projectState.tag('/api/events'));
 		es.addEventListener('change', () => {
 			load();
 			void loadPublish();

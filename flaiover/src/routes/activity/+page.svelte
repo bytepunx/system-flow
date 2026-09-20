@@ -1,6 +1,7 @@
 <script lang="ts">
 	// /activity: who is working on what (S-0042).
 	import { api } from '$lib/api';
+	import { projectState } from '$lib/project.svelte';
 	import { onMount } from 'svelte';
 	import ActivityView from '$lib/components/ActivityView.svelte';
 
@@ -19,7 +20,7 @@
 	}
 	onMount(() => {
 		void load();
-		const es = new EventSource('/api/events');
+		const es = new EventSource(projectState.tag('/api/events'));
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		es.addEventListener('change', () => {
 			clearTimeout(timer);
