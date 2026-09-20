@@ -64,11 +64,34 @@ The journal is `journal.jsonl` beside `flai serve`'s state (the `serve` folder n
 
 > **Correction, 2026-09-20.** From flai 1.5.3 to 1.6.1, an acceptance made from the board was pushed and published with your credentials although nothing had enabled it (I-0028). Acceptance had moved from the container, which held no credential, to `flai serve` on the host, which has yours, and the push was not turned off on the way. This page said during that time that nothing was pushed unasked and that the token was not the power to publish; both were wrong. If you accepted from the board with one of those releases, check what was pushed against what you meant to release. The release after 1.6.1 restores the default described above.
 
+### Starting an agent when a story becomes ready
+
+`flai serve` can start an agent session for you when a story becomes ready and nobody is attending the project, so that a move to ready on the board starts work with no one at a keyboard. It is a host action, off until you enable it, and it has **no default command**: you write the command, and flai runs exactly that.
+
+```bash
+flai serve agent set -- claude -p "Work on story {story} as the conventions say"
+flai serve agent set --name builder --attended-minutes 10 -- /home/me/bin/start-agent {story}
+flai serve agent show
+flai serve enable agent        # for this project; --all-projects for every project
+flai serve journal             # every start and every failure
+flai serve disable agent
+flai serve agent clear         # with no command, nothing is started
+```
+
+**Understand what enabling it means.** Whoever can move a story to ready then starts your command on your machine, as you: you at the board, an agent with `flai move`, and anyone who holds the dashboard token. What the command may do once started is whatever you wrote it to do; flai passes it a story's ID and nothing more. A compromised dashboard container could move a story to ready too.
+
+- **The command** is an argument list after `--`, stored in your flai configuration (`agent` in `~/.flai/config.json`; `flai config set` does not reach it). It is run as it stands, in the project's directory, never through a shell: `$HOME`, `;`, and backticks in an argument are passed along literally. In an argument, `{story}` becomes the story's ID and `{root}` the project's directory. The environment carries `FLAI_AGENT` (`--name`, default `agent`), `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`. The ID is flai's own reading of the project's files, checked to be a story's ID; nothing the dashboard sends is part of the command.
+- **When it starts.** A story has entered ready (from the board, the CLI, or an agent), the in-progress limit leaves room for a pull, no agent flai started for the project is still running, and nobody is attending. The session is given the first ready story in your pull order, which is what the conventions tell an agent to pull.
+- **Attending** is judged from files, because flai asks nobody: an agent connected over MCP rewrites its read marker under `.flai-cache/mcp/` at every look, at least every five minutes while it waits, and an agent at work writes its story's narrative under `wip/agents/`. If the newest of those is younger than `--attended-minutes` (6 by default), someone is attending and will see the story in their inbox. A log entry you add to a narrative from the dashboard counts too, for those minutes.
+- **One at a time.** One agent per project. A second ready story waits until the first session ends, and then the next is started if the conditions still hold. The conventions tell a session flai started to end when nothing is left to pull, for this reason.
+- **What does not start one.** Stories that were already ready when `flai serve` began: a restart of `flai serve` never starts a session. A story that stayed ready while someone was attending is not picked up later by itself; the next story to enter ready, or the end of a started agent, looks again. Only projects `flai serve` serves, that is, ones whose dashboard was started with `flai dashboard`.
+- **Where to look.** The board shows that an agent was started, for which story, by which command's name, and when; that a command could not be started; and why a ready story waits. `flai serve journal` has every start and failure, and each session's output is in a log under `serve/agents/` beside `flai serve`'s state. Stopping a started agent is yours to do on the host (its PID is in the journal); the dashboard cannot stop, start, or configure one.
+
 ### What the container can and cannot reach
 
 It can reach its port, the network, and the two secrets. It cannot read or write any file of the project or of the host: no work tree, no `.git`, no `.flai-cache` beyond those two files, no flai configuration. So it cannot leave a git hook or setting that would run on your machine, change a tracked file or a branch, or plant an ignored file your tools execute, which were the routes open or guarded while the repository was mounted (I-0022, ADR-0027, superseded).
 
-What a compromised container could still do is what the dashboard itself does: ask `flai serve` for the named methods it offers (reads of the three folders, moves, saves of Markdown under them, an acceptance of a story in review, and a push if you enabled that host action), each of which flai checks and performs itself, and present the login token. Treat a dashboard you expose beyond your own network accordingly, and see the next section for how to turn the connection off.
+What a compromised container could still do is what the dashboard itself does: ask `flai serve` for the named methods it offers (reads of the three folders, moves, saves of Markdown under them, an acceptance of a story in review, a push if you enabled that host action, and, by moving a story to ready, a start of your agent command if you enabled that one), each of which flai checks and performs itself, and present the login token. Treat a dashboard you expose beyond your own network accordingly, and see the next section for how to turn the connection off.
 
 | Setting | Where | Default | Effect |
 |---------|-------|---------|--------|

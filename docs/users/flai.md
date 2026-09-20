@@ -531,7 +531,7 @@ flai serve stop
 
 It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` ends it. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
-`flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; there is one today, `push`, which lets an acceptance made from the board be pushed and published:
+`flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets an acceptance made from the board be pushed and published:
 
 ```bash
 flai serve actions          # what there is, what each means, and where each is on
@@ -540,7 +540,7 @@ flai serve disable push
 flai serve journal          # every host action asked for, and what became of it
 ```
 
-What enabling `push` means for who can publish a release is in the operator guide; read it first.
+A second one, `agent`, starts a command you wrote when a story becomes ready and nobody is attending the project (`flai serve agent set -- <program> [args...]`, then `flai serve enable agent`). What enabling either means, for who can publish a release and who can start a process on your machine, is in the operator guide; read it first.
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 
