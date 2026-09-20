@@ -99,3 +99,21 @@ func (u *Unpushed) Pending() bool { return u != nil && len(u.Acceptances) > 0 }
 
 // Refs are what a push sends: the branch and the tags on unpushed commits.
 func (u *Unpushed) Refs() []string { return append([]string{u.Branch}, u.Tags...) }
+
+// TagsPerPush is the most tags one push may carry: GitHub creates no events
+// for tags when more than three arrive at once, so a workflow that releases on
+// a tag never runs (I-0026).
+const TagsPerPush = 3
+
+// Batches splits a push into the pushes it is made of: the tags TagsPerPush
+// at a time and the branch with the last of them. The branch goes last
+// because Detect finds unpushed tags through it; were it pushed first, a push
+// interrupted halfway would leave tags nothing reports.
+func Batches(branch string, tags []string) [][]string {
+	var out [][]string
+	for len(tags) > TagsPerPush {
+		out = append(out, append([]string{}, tags[:TagsPerPush]...))
+		tags = tags[TagsPerPush:]
+	}
+	return append(out, append([]string{branch}, tags...))
+}

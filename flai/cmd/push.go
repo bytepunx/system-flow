@@ -63,8 +63,10 @@ told by the MCP inbox.`,
 				fmt.Fprintf(a.out, "would push %s\ndry run: nothing pushed\n", what)
 				return nil
 			}
-			if _, err := a.runner.Run(root, "git", append([]string{"push", u.Remote}, u.Refs()...)...); err != nil {
-				return fmt.Errorf("the push failed and nothing was forced: %s. If the remote moved, fetch and merge, then run this again", firstLine(err.Error()))
+			for _, refs := range pending.Batches(u.Branch, u.Tags) {
+				if _, err := a.runner.Run(root, "git", append([]string{"push", u.Remote}, refs...)...); err != nil {
+					return fmt.Errorf("the push failed and nothing was forced: %s. If the remote moved, fetch and merge, then run this again", firstLine(err.Error()))
+				}
 			}
 			result["pushed"] = true
 			if a.jsonOut {

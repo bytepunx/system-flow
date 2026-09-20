@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -302,7 +303,13 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if !o.noPush {
 		if _, err := a.runner.Run(repo.Root, "git", "remote", "get-url", remote); err == nil {
 			refs := append([]string{"HEAD"}, res.Tags...)
-			if _, err := a.runner.Run(repo.Root, "git", append([]string{"push", "-q", remote}, refs...)...); err != nil {
+			var err error
+			for _, batch := range pending.Batches("HEAD", res.Tags) {
+				if _, err = a.runner.Run(repo.Root, "git", append([]string{"push", "-q", remote}, batch...)...); err != nil {
+					break
+				}
+			}
+			if err != nil {
 				res.PushError = firstLine(err.Error())
 				a.logger().Warn("accepted locally but not pushed", "component", "git", "item", it.ID, "detail", "run: git push "+remote+" "+strings.Join(refs, " "))
 				a.acceptStep(it, "not-pushed", "accepted locally; run: git push "+remote+" "+strings.Join(refs, " "))

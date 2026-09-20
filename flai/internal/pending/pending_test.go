@@ -122,3 +122,21 @@ func TestDetect(t *testing.T) {
 		}
 	})
 }
+
+// I-0026: GitHub creates no tag events for a push of more than three tags.
+func TestBatches(t *testing.T) {
+	tags := []string{"a/v1", "a/v2", "a/v3", "b/v1", "b/v2", "b/v3", "c/v1"}
+	want := [][]string{{"a/v1", "a/v2", "a/v3"}, {"b/v1", "b/v2", "b/v3"}, {"main", "c/v1"}}
+	if got := Batches("main", tags); !reflect.DeepEqual(got, want) {
+		t.Errorf("seven tags: %v", got)
+	}
+	if got := Batches("main", tags[:3]); !reflect.DeepEqual(got, [][]string{{"main", "a/v1", "a/v2", "a/v3"}}) {
+		t.Errorf("three tags are one push, as before: %v", got)
+	}
+	if got := Batches("main", nil); !reflect.DeepEqual(got, [][]string{{"main"}}) {
+		t.Errorf("no tags: %v", got)
+	}
+	if len(tags) != 7 {
+		t.Error("the tags given are not changed")
+	}
+}

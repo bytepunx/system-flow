@@ -94,3 +94,28 @@ func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 		t.Errorf("diverged: refuse, say to fetch and merge, never force: %d %s", code, errOut)
 	}
 }
+
+// I-0026: more than three tags in one push create no tag events on GitHub, so
+// the push is made in parts, and every tag still arrives.
+func TestPushPendingManyTags(t *testing.T) {
+	root, remote := researchProject(t, "feature", true)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--no-push"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	for _, tag := range []string{"x/v1", "x/v2", "x/v3", "x/v4", "x/v5", "x/v6"} {
+		gitIn(t, root, "tag", "-a", tag, "-m", tag)
+	}
+	out, errOut, code := runIn(t, root, "push", "--pending")
+	if code != 0 || !strings.Contains(out, "pushed S-0001 to origin") {
+		t.Fatalf("push: %d %s %s", code, out, errOut)
+	}
+	there := gitIn(t, remote, "tag", "--list")
+	for _, tag := range []string{"cli/v1.1.0", "x/v1", "x/v6"} {
+		if !strings.Contains(there, tag) {
+			t.Errorf("%s did not arrive: %s", tag, there)
+		}
+	}
+	if again, _, _ := runIn(t, root, "push", "--pending"); !strings.Contains(again, "nothing pending") {
+		t.Errorf("after the push: %s", again)
+	}
+}
