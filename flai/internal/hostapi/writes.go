@@ -730,12 +730,13 @@ func specs(host Host) map[string]spec {
 			return args, "", nil
 		}),
 
-		"push.pending": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// exit 3 is a remote that has moved: said as a conflict, with its reason (S-0078)
+		"push.pending": {reads: true, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
 			}
 			return []string{"push", "--pending", "--dry-run"}, "", nil
-		}),
+		}},
 
 		// push.run: the host action. flai push --pending --publish as the
 		// operator: the branch and the release tags of accepted work, then the
