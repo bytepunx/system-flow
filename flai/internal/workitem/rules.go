@@ -27,6 +27,10 @@ type MoveOptions struct {
 	// counts. Load it once with Repo.List(false).
 	Items []*Item
 	Board *Board
+	// Cascade marks a cancellation that follows a parent's. It alone may
+	// cancel an item in review (ADR-0028): cancelling the parent must close
+	// everything under it, and the item's branch is left as it is.
+	Cascade bool
 }
 
 // Move validates and applies a state transition. Warnings are non-fatal
@@ -42,7 +46,8 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	if from == to {
 		return nil, fmt.Errorf("%s is already %s", it.ID, to)
 	}
-	ok := contains(allowed[from], to) || (it.Type == Task && from == InProgress && to == Done)
+	ok := contains(allowed[from], to) || (it.Type == Task && from == InProgress && to == Done) ||
+		(opt.Cascade && to == Cancelled && from == Review)
 	if !ok {
 		return nil, fmt.Errorf("rule: %s cannot go from %s to %s (allowed: %s)", it.ID, from, to, strings.Join(allowedFor(it, from), ", "))
 	}
