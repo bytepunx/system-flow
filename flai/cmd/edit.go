@@ -13,7 +13,7 @@ import (
 
 // flai edit changes a work item after it was made (S-0085).
 func newEditCmd(a *app) *cobra.Command {
-	var title, nature, parent, hash, message string
+	var title, nature, parent, hash, message, byFlag string
 	var tags, touches, trailers []string
 	var clearTags, clearTouches, bodyStdin, autocommit, show bool
 	c := &cobra.Command{
@@ -111,6 +111,9 @@ the item changed.`,
 			if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
 				by = cfg.Author
 			}
+			if byFlag != "" {
+				by = byFlag
+			}
 			res, err := itemedit.Apply(repo, a.runner, args[0], ch, itemedit.Options{Hash: hash, By: by, Message: message, Trailers: trailers, NoCommit: !autocommit, Now: a.now()})
 			if c, ok := docedit.IsConflict(err); ok {
 				if a.jsonOut {
@@ -162,6 +165,7 @@ the item changed.`,
 	f.StringVar(&parent, "parent", "", "the new parent: an epic for a story, a story for a task")
 	f.BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input")
 	f.StringVar(&hash, "hash", "", "the hash flai edit --show printed; a change made meanwhile is then a conflict")
+	f.StringVar(&byFlag, "by", "", "who edits, as agents are told (default: FLAI_AGENT, then the config author)")
 	f.StringVar(&message, "message", "", "commit subject after the prefix (default names what changed)")
 	f.BoolVar(&autocommit, "autocommit", false, "commit every file the edit touched, unless dashboard.autocommit is false")
 	f.StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")

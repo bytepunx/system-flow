@@ -54,6 +54,8 @@ export const REQUIRED_METHODS = [
 	'item.unblock',
 	'item.new',
 	'item.template',
+	'item.show',
+	'item.edit',
 	'accept.preview',
 	'accept.run',
 	'stream.diff',

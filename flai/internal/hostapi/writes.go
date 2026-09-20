@@ -143,6 +143,18 @@ func (j *journal) put(key string, res any, err *channel.Error) {
 	j.done[key] = journalled{at: j.now(), res: res, err: err}
 }
 
+// contentHash is what docedit.Hash gives: a SHA-256 in hex.
+var contentHash = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+func isNature(v string) bool {
+	for _, n := range workitem.Natures {
+		if n == v {
+			return true
+		}
+	}
+	return false
+}
+
 var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 
 // ActionPush is the host action that pushes an acceptance and publishes the
@@ -451,6 +463,94 @@ func specs(host Host) map[string]spec {
 				args = append(args, "--touches="+strings.TrimSpace(v))
 			}
 			return append(args, "--body-stdin", "--autocommit", "--trailer="+Trailer, "--", title), in.Body, nil
+		}},
+
+		// item.show and item.edit: an item's own words, changed after it was made
+		// (S-0085). flai edit does the work: the retitle kept in step everywhere,
+		// the parents' lists, the check with the change in place, one commit.
+		"item.show": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"edit", in.ID, "--show"}, "", nil
+		}),
+
+		"item.edit": {exits: map[int]int{3: Conflict, 4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID      string    `json:"id"`
+				Hash    string    `json:"hash"`
+				Title   *string   `json:"title"`
+				Nature  *string   `json:"nature"`
+				Tags    *[]string `json:"tags"`
+				Touches *[]string `json:"touches"`
+				Parent  *string   `json:"parent"`
+				Body    *string   `json:"body"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			// the dashboard always edits what it read: without the hash a change an
+			// agent made meanwhile would be overwritten unseen
+			if !contentHash.MatchString(in.Hash) {
+				return nil, "", bad("hash is required: the one item.show gave for what was edited")
+			}
+			args := []string{"edit", in.ID, "--hash=" + in.Hash, "--by=" + owner(p), "--autocommit", "--trailer=" + Trailer}
+			if in.Title != nil {
+				if text(*in.Title) == "" {
+					return nil, "", bad("a title is required")
+				}
+				args = append(args, "--title="+text(*in.Title))
+			}
+			if in.Nature != nil {
+				if !isNature(*in.Nature) {
+					return nil, "", bad("%q is not a nature", *in.Nature)
+				}
+				args = append(args, "--nature="+*in.Nature)
+			}
+			if in.Parent != nil {
+				if e := needID(*in.Parent); e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--parent="+*in.Parent)
+			}
+			for _, l := range []struct {
+				flag, clear string
+				values      *[]string
+			}{{"tag", "--clear-tags", in.Tags}, {"touches", "--clear-touches", in.Touches}} {
+				if l.values == nil {
+					continue
+				}
+				if len(*l.values) == 0 {
+					args = append(args, l.clear)
+					continue
+				}
+				for _, v := range *l.values {
+					if !listValue.MatchString(strings.TrimSpace(v)) {
+						return nil, "", bad("%s values are single words or paths without commas", l.flag)
+					}
+					args = append(args, "--"+l.flag+"="+strings.TrimSpace(v))
+				}
+			}
+			stdin := ""
+			if in.Body != nil {
+				if strings.TrimSpace(*in.Body) == "" {
+					return nil, "", bad("write what the item is for: the body is empty")
+				}
+				args, stdin = append(args, "--body-stdin"), *in.Body
+			}
+			if len(args) == 6 {
+				return nil, "", bad("nothing to change")
+			}
+			return args, stdin, nil
 		}},
 
 		"item.template": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {

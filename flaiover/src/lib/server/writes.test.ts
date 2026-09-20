@@ -244,3 +244,59 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 		expect(Array.isArray(data.cancelled)).toBe(true);
 	});
 });
+
+// S-0085: an item's own words are changed by flai on the host, in one checked step.
+describe.skipIf(!haveFlai)('editing an item through flai', () => {
+	let dir: string;
+	let r: Repo;
+	type View = { title: string; body: string; hash: string; editable: boolean; parents: unknown[] };
+	beforeAll(async () => {
+		dir = await mkdtemp(join(tmpdir(), 'flaiover-edit-'));
+		await cp(fixture, dir, { recursive: true });
+		r = new Repo(dir, flaiAsk(dir));
+	});
+	afterAll(async () => {
+		await rm(dir, { recursive: true, force: true });
+	});
+
+	it('shows what an editor needs, retitles everywhere, and refuses a stale hash', async () => {
+		const { data: v } = await r.run<View>('item.show', { id: 'S-004' });
+		expect(v).toMatchObject({ title: 'Four', editable: true });
+		expect(v.body).not.toMatch(/^# /);
+		expect(v.hash).toMatch(/^[0-9a-f]{64}$/);
+		expect(v.parents.length).toBeGreaterThan(0);
+
+		const { data } = await r.write<{ changed: string[]; renamed_from?: string; path: string }>(
+			'item.edit',
+			{ id: 'S-004', hash: v.hash, title: 'Four, renamed', tags: ['dashboard'] }
+		);
+		expect(data.changed).toEqual(['title', 'tags']);
+		expect(data.renamed_from).toBe('wip/kanban/stories/S-004-four.md');
+		const file = await readFile(join(dir, data.path), 'utf8');
+		expect(file).toContain('title: Four, renamed');
+		expect(file).toContain('# S-004 Four, renamed');
+		expect(file).toContain('tags: [dashboard]');
+
+		// the hash is of the file as it was read: it no longer is
+		await expect(
+			r.write('item.edit', { id: 'S-004', hash: v.hash, title: 'Too late' })
+		).rejects.toMatchObject({
+			status: 409,
+			data: { hash: expect.stringMatching(/^[0-9a-f]{64}$/) }
+		});
+	});
+
+	it('is refused by the check with nothing changed, and by flai for what is not a value', async () => {
+		const { data: v } = await r.run<View>('item.show', { id: 'S-004' });
+		await expect(
+			r.write('item.edit', { id: 'S-004', hash: v.hash, body: '## Goal\nNo criteria left.\n' })
+		).rejects.toMatchObject({ status: 422, data: { findings: expect.any(Array) } });
+		expect((await r.run<View>('item.show', { id: 'S-004' })).data.hash).toBe(v.hash);
+		await expect(
+			r.write('item.edit', { id: 'S-004', hash: v.hash, tags: ['--by=eve'] })
+		).rejects.toMatchObject({ status: 400 });
+		await expect(r.write('item.edit', { id: 'S-004', hash: v.hash })).rejects.toMatchObject({
+			status: 400
+		});
+	});
+});

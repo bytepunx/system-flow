@@ -76,3 +76,24 @@ export async function readNdjson(
 	}
 	emit(pending + decoder.decode());
 }
+
+/**
+ * The body with its nth acceptance criterion ticked or unticked (S-0085). Only lines of the
+ * "Acceptance criteria" section count, in order, as criteriaOf lists them; null when there is no
+ * such criterion. Everything else in the body is left exactly as it was.
+ */
+export function toggleCriterion(body: string, index: number): string | null {
+	const lines = body.split('\n');
+	const start = lines.findIndex((l) => l.trim().toLowerCase() === '## acceptance criteria');
+	if (start < 0 || index < 0) return null;
+	let n = -1;
+	for (let i = start + 1; i < lines.length && !/^##\s/.test(lines[i]); i++) {
+		const m = /^(\s*[-*]\s+\[)( |x|X)(\]\s+.*\S\s*)$/.exec(lines[i]);
+		if (!m) continue;
+		if (++n === index) {
+			lines[i] = m[1] + (m[2] === ' ' ? 'x' : ' ') + m[3];
+			return lines.join('\n');
+		}
+	}
+	return null;
+}

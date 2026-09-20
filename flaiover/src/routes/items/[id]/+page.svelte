@@ -6,6 +6,8 @@
 	import Threads from '$lib/components/Threads.svelte';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
+	import ItemEditor from '$lib/components/ItemEditor.svelte';
+	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { tick } from 'svelte';
@@ -28,6 +30,7 @@
 		estimate?: string;
 		stream?: string;
 		tags?: string[];
+		touches?: string[];
 		path: string;
 		archived: boolean;
 		body: string;
@@ -79,6 +82,57 @@
 		writable = (await (await api('/api/board')).json()).writable;
 		await tick();
 		if (content) await enhance(content, themeState.dark);
+		if (canEdit) wireCriteria();
+	}
+
+	// Stories and epics are edited here (S-0085); tasks are the agent's to write, and their body
+	// can still be opened as a document. A closed or archived item is not edited.
+	let editing = $state(false);
+	const canEdit = $derived(
+		writable &&
+			!!item &&
+			!item.archived &&
+			(item.type === 'story' || item.type === 'epic') &&
+			item.status !== 'done' &&
+			item.status !== 'cancelled'
+	);
+
+	/** The rendered criteria become tickable in place: each tick is an edit of the body by flai. */
+	function wireCriteria() {
+		if (!content) return;
+		const heading = [...content.querySelectorAll('h2')].find(
+			(h) => h.textContent?.trim().toLowerCase() === 'acceptance criteria'
+		);
+		const boxes: HTMLInputElement[] = [];
+		for (
+			let el = heading?.nextElementSibling;
+			el && el.tagName !== 'H2';
+			el = el.nextElementSibling
+		)
+			boxes.push(...el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+		boxes.forEach((box, i) => {
+			box.disabled = false;
+			box.setAttribute('aria-label', `criterion ${i + 1}`);
+			box.addEventListener('change', () => void tickCriterion(i));
+		});
+	}
+
+	async function tickCriterion(index: number) {
+		notice = null;
+		const shown = await api(`/api/items/${id}/edit`);
+		const view = await shown.json().catch(() => ({}));
+		const body = shown.ok ? toggleCriterion(view.body ?? '', index) : null;
+		if (body === null) {
+			notice = `refused: ${view.error ?? 'that criterion is no longer there; the page was reloaded'}`;
+			return load();
+		}
+		const r = await api(`/api/items/${id}/edit`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ hash: view.hash, body })
+		});
+		if (!r.ok) notice = `refused: ${(await r.json().catch(() => ({}))).error ?? r.statusText}`;
+		await load();
 	}
 	$effect(() => {
 		void id;
@@ -190,6 +244,14 @@
 							onclick={() => move(to)}>→ {to}</button
 						>
 					{/each}
+					{#if canEdit && !editing}
+						<button
+							type="button"
+							class="rounded border border-line-strong px-2 py-1 text-xs hover:bg-raised"
+							onclick={() => (editing = true)}
+							data-testid="edit-item">edit…</button
+						>
+					{/if}
 					{#if blocked}
 						<button
 							type="button"
@@ -205,10 +267,24 @@
 					{/if}
 				</div>
 			{/if}
-			<article bind:this={content} class="prose mt-4 max-w-none">
-				<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the mounted repository, rendered client side -->
-				{@html html}
-			</article>
+			{#if editing}
+				<div class="mt-4">
+					<ItemEditor
+						id={item.id}
+						oncancel={() => (editing = false)}
+						onsaved={async (changed) => {
+							editing = false;
+							notice = changed.length ? `saved: ${changed.join(', ')}` : 'nothing changed';
+							await load();
+						}}
+					/>
+				</div>
+			{:else}
+				<article bind:this={content} class="prose mt-4 max-w-none">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown of the project, asked of flai on the host, rendered client side -->
+					{@html html}
+				</article>
+			{/if}
 			<Threads on={item.id} {writable} />
 		</div>
 		<aside class="space-y-4 text-sm">
@@ -253,7 +329,7 @@
 				<p class="text-xs">
 					<a class="underline" href={resolve('/docs/[...path]', { path: item.path })}>{item.path}</a
 					>
-					{#if writable && !item.archived}
+					{#if writable && !item.archived && item.type === 'task'}
 						· <a class="underline" href={resolve('/edit/[...path]', { path: item.path })}
 							>edit the body</a
 						>
@@ -288,11 +364,18 @@
 					{/if}
 				{/if}
 			</section>
-			{#if item.tags?.length || item.owner || item.estimate}
+			{#if item.type === 'task' && writable && !item.archived}
+				<p class="text-xs text-muted">
+					Tasks are the agent's to write. Their title and fields are not edited here; the body can
+					be opened as a document.
+				</p>
+			{/if}
+			{#if item.tags?.length || item.touches?.length || item.owner || item.estimate}
 				<section class="rounded border border-line bg-surface p-3 text-xs">
 					{#if item.owner}<div>owner: {item.owner}</div>{/if}
 					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
 					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
+					{#if item.touches?.length}<div>touches: {item.touches.join(', ')}</div>{/if}
 				</section>
 			{/if}
 		</aside>

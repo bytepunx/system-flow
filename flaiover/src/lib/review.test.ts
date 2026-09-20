@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { criteriaOf, patchLines, readNdjson, sectionOf } from './review';
+import { criteriaOf, patchLines, readNdjson, sectionOf, toggleCriterion } from './review';
 
 const STORY = `# S-0041 Review
 
@@ -59,5 +59,29 @@ describe('review helpers', () => {
 			{ event: 'progress', step: 'done' },
 			{ event: 'done' }
 		]);
+	});
+});
+
+describe('toggleCriterion (S-0085)', () => {
+	const body = [
+		'## Goal',
+		'- [ ] not a criterion',
+		'',
+		'## Acceptance criteria',
+		'- [ ] first',
+		'text between',
+		'* [x] second',
+		'',
+		'## Notes',
+		'- [ ] nor this'
+	].join('\n');
+	it('ticks and unticks the nth criterion and nothing else', () => {
+		expect(toggleCriterion(body, 0)).toBe(body.replace('- [ ] first', '- [x] first'));
+		expect(toggleCriterion(body, 1)).toBe(body.replace('* [x] second', '* [ ] second'));
+	});
+	it('knows when there is no such criterion', () => {
+		expect(toggleCriterion(body, 2)).toBeNull();
+		expect(toggleCriterion(body, -1)).toBeNull();
+		expect(toggleCriterion('## Goal\n- [ ] x\n', 0)).toBeNull();
 	});
 });
