@@ -23,15 +23,7 @@ type fakeRunner struct {
 	loggedIn bool
 	noToken  bool   // gh has no token
 	identity bool   // git config has a user
-	excludes string // git config core.excludesFile, already expanded
-	// the push key (S-0062)
-	remote     string // git remote get-url --push origin
-	keyKind    string // what ssh-keygen -y -P "" says: "", "passphrase", "notkey"
-	knownHosts string // what ssh-keygen -F prints for the remote's host
-	pushMount  string // source of the push key mount of a running container
-	// the read-only git paths (S-0064)
-	roMounts  string // read-only mount destinations of a running container, one per line
-	gitConfig string // git config --local --list
+	mounts   string // mount destinations of a running container, one per line
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -67,40 +59,14 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		return "", nil
 	}
-	if name == "ssh-keygen" {
-		switch args[0] {
-		case "-y":
-			switch f.keyKind {
-			case "passphrase":
-				return "Load key \"k\": incorrect passphrase supplied to decrypt private key", fmt.Errorf("ssh-keygen: exit status 255")
-			case "notkey":
-				return "Load key \"k\": error in libcrypto", fmt.Errorf("ssh-keygen: exit status 255")
-			}
-			return "ssh-ed25519 AAAAC3Nza test", nil
-		case "-l":
-			return "256 SHA256:fakefingerprint alex at laptop (ED25519)", nil
-		case "-F":
-			if f.knownHosts == "" {
-				return "", fmt.Errorf("ssh-keygen: exit status 1")
-			}
-			return "# Host " + args[1] + " found: line 3\n" + f.knownHosts + "\n", nil
-		}
-		return "", nil
-	}
 	if name == "git" {
 		switch {
-		case args[0] == "remote" && f.remote != "":
-			return f.remote, nil
-		case args[0] == "config" && len(args) > 2 && args[1] == "--local" && args[2] == "--list":
-			return f.gitConfig, nil
 		case args[0] == "rev-parse":
 			return "abc1234", nil
 		case args[0] == "config" && f.identity && args[1] == "user.name":
 			return "Test User", nil
 		case args[0] == "config" && f.identity && args[1] == "user.email":
 			return "test@example.com", nil
-		case args[0] == "config" && f.excludes != "" && args[len(args)-1] == "core.excludesFile":
-			return f.excludes, nil
 		}
 		return "", fmt.Errorf("git: no tags")
 	}
@@ -132,11 +98,8 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		return "", nil
 	case "inspect":
-		if strings.Contains(strings.Join(args, " "), pushKeyMountPath) {
-			return f.pushMount, nil
-		}
-		if strings.Contains(strings.Join(args, " "), "if not .RW") {
-			return f.roMounts, nil
+		if strings.Contains(strings.Join(args, " "), ".Mounts") {
+			return f.mounts, nil
 		}
 		return "ghcr.io/bytepunx/flaiover:0.2.0 5555", nil
 	case "stop":
@@ -193,8 +156,6 @@ func TestDashboardLifecycle(t *testing.T) {
 		"docker pull --quiet ghcr.io/bytepunx/flaiover:0.2.0",
 		"--name flaiover-my-proj",
 		"--publish 0.0.0.0:5555:3000",
-		"--volume " + root + ":" + root, // at its host path, so worktree links resolve (ADR-0022)
-		"--env PROJECT_DIR=" + root,
 		"--mount type=bind,source=" + filepath.Join(root, ".flai-cache", "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
 		"--env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
@@ -203,8 +164,24 @@ func TestDashboardLifecycle(t *testing.T) {
 			t.Errorf("missing %q in calls:\n%s", want, joined)
 		}
 	}
-	if !strings.Contains(out, "http://localhost:5555") || !strings.Contains(out, "flai dashboard stop") || !strings.Contains(out, "http://localhost:5555/login#token=") {
+	if !strings.Contains(out, "http://localhost:5555") || !strings.Contains(out, "flai dashboard stop") || !strings.Contains(out, "http://localhost:5555/login#token=") || !strings.Contains(out, "no file of the project") {
 		t.Errorf("output: %s", out)
+	}
+	// ADR-0031: a port and two secrets, and nothing of the project or of the
+	// person who started it.
+	var run string
+	for _, c := range f.calls {
+		if strings.HasPrefix(c, "docker run ") {
+			run = c
+		}
+	}
+	for _, gone := range []string{"--volume", root + ":", "PROJECT_DIR", "GIT_", ".git/", "push_key", "known_hosts", "/etc/passwd", "gitignore"} {
+		if strings.Contains(run, gone) {
+			t.Errorf("%q has no place in the container's arguments:\n%s", gone, run)
+		}
+	}
+	if n := strings.Count(run, "--mount "); n != 2 || strings.Count(run, "target=/run/secrets/") != 2 || strings.Count(run, ",readonly") != 2 {
+		t.Errorf("the only mounts are the two secrets, read-only:\n%s", run)
 	}
 	tokenFile := filepath.Join(root, ".flai-cache", "dashboard.token")
 	tokenData, err := os.ReadFile(tokenFile)
@@ -232,11 +209,11 @@ func TestDashboardLifecycle(t *testing.T) {
 	if !strings.Contains(out, `"url": "http://localhost:6000"`) {
 		t.Errorf("flag precedence: %s", out)
 	}
-	// the host's git identity travels into the container so acceptance can commit
+	// the host's git identity stays on the host: flai serve commits there (S-0075)
 	idr := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}, identity: true}
 	_, _, _ = runWith(t, root, idr, "dashboard")
-	if j := strings.Join(idr.calls, "\n"); !strings.Contains(j, "--env GIT_COMMITTER_NAME=Test User") || !strings.Contains(j, "--env GIT_AUTHOR_EMAIL=test@example.com") {
-		t.Errorf("identity env missing:\n%s", j)
+	if j := strings.Join(idr.calls, "\n"); strings.Contains(j, "Test User") || strings.Contains(j, "git config") {
+		t.Errorf("the identity is not read, let alone passed:\n%s", j)
 	}
 	// --bind restricts the published address; the manifest can set it too
 	bnd := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
@@ -264,6 +241,20 @@ func TestDashboardLifecycle(t *testing.T) {
 	if !strings.Contains(out, "running at http://localhost:5555 (ghcr.io/bytepunx/flaiover:0.2.0)") {
 		t.Errorf("status must report the running container: %s", out)
 	}
+	if strings.Contains(out, "older flai") || strings.Contains(out, "push") || strings.Contains(out, "read-only") {
+		t.Errorf("status says nothing of keys or git paths any more: %s", out)
+	}
+	// a container an older flai started still has the project mounted: say so
+	f.mounts = "/run/secrets/flaiover_token\n" + root + "\n" + root + "/.git/hooks\n"
+	out, _, _ = runWith(t, root, f, "dashboard", "status")
+	if !strings.Contains(out, "started by an older flai") || !strings.Contains(out, root) || !strings.Contains(out, "flai dashboard stop") {
+		t.Errorf("a stale container: %s", out)
+	}
+	js, _, _ := runWith(t, root, f, "dashboard", "status", "--json")
+	if !strings.Contains(js, `"stale_mounts"`) || strings.Contains(js, "git_read_only") || strings.Contains(js, "push_key") {
+		t.Errorf("status --json: %s", js)
+	}
+	f.mounts = ""
 	out, _, _ = runWith(t, root, f, "dashboard", "logs")
 	if !strings.Contains(out, "hello from container") {
 		t.Errorf("logs: %s", out)
@@ -325,95 +316,32 @@ func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 	}
 }
 
-func TestContainerMount(t *testing.T) {
-	for _, c := range []struct {
-		goos, root, target string
-		mirrored           bool
-	}{
-		{"linux", "/home/a/repo", "/home/a/repo", true},
-		{"darwin", "/Users/a/my repo", "/Users/a/my repo", true},
-		{"windows", `C:\Users\a\repo`, "/project", false},
-		{"linux", "C:/Users/a/repo", "/project", false},
-		{"linux", "/home/a/re:po", "/project", false}, // a colon splits docker's --volume
-	} {
-		target, mirrored := containerMount(c.goos, c.root)
-		if target != c.target || mirrored != c.mirrored {
-			t.Errorf("containerMount(%s, %s) = %s, %v; want %s, %v", c.goos, c.root, target, mirrored, c.target, c.mirrored)
-		}
-	}
-}
-
-// A host path that cannot be a container path falls back to /project and
-// says what that costs and what to do about it (ADR-0022).
-func TestDashboardFallsBackWhenTheHostPathCannotBeMirrored(t *testing.T) {
+// S-0077: the push key is retired. Asked for, it is named, explained, and
+// ignored, and the dashboard starts.
+func TestDashboardPushKeyIsRetired(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("LOG_FORMAT", "json")
-	root := filepath.Join(t.TempDir(), "re:po") // a colon would split docker's --volume target
-	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
-		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	root := tempProject(t)
+	img := map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}
+	f := &fakeRunner{images: img, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "--push-key", "/home/me/.ssh/deploy")
+	if code != 0 || !strings.Contains(out, "--push-key: retired and ignored") || !strings.Contains(out, "flai push --pending") || !strings.Contains(out, "ADR-0031") {
+		t.Fatalf("flag: %d %s %s", code, out, errOut)
 	}
-	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: colon\nkey: c\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
-	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
-	out, errOut, code := runWith(t, root, f, "dashboard")
-	if code != 0 {
-		t.Fatalf("run: %s", errOut)
+	if j := strings.Join(f.calls, "\n"); strings.Contains(j, "deploy") || strings.Contains(j, "ssh-keygen") {
+		t.Errorf("the key is not looked at or passed:\n%s", j)
 	}
-	joined := strings.Join(f.calls, "\n")
-	for _, want := range []string{"--volume " + root + ":/project", "--env PROJECT_DIR=/project"} {
-		if !strings.Contains(joined, want) {
-			t.Errorf("missing %q in calls:\n%s", want, joined)
-		}
+	if _, _, code := runWith(t, root, f, "config", "set", "dashboard.push_key", "/home/me/.ssh/deploy"); code != 0 {
+		t.Fatal("an old config still loads, and the key can still be set, so it can be cleared")
 	}
-	for _, want := range []string{`"level":"WARN"`, `"mount":"/project"`, `"effect":`, "flai accept", "worktrees.relative_paths"} {
-		if !strings.Contains(errOut, want) {
-			t.Errorf("warning should carry %s:\n%s", want, errOut)
-		}
+	out, _, _ = runWith(t, root, &fakeRunner{images: img, running: map[string]bool{}}, "dashboard")
+	if !strings.Contains(out, "dashboard.push_key: retired and ignored") {
+		t.Errorf("config: %s", out)
 	}
-	if !strings.Contains(out, "mounted read-write at /project") {
-		t.Errorf("output should name the mount: %s", out)
+	js, _, _ := runWith(t, root, &fakeRunner{images: img, running: map[string]bool{}}, "dashboard", "--json")
+	if !strings.Contains(js, `"retired"`) || strings.Contains(js, `"push_key"`) || strings.Contains(js, `"mount"`) {
+		t.Errorf("--json: %s", js)
 	}
-}
-
-// The container gets the host's global git excludes, so what git ignores on
-// the host is not uncommitted in the dashboard (I-0019, S-0051).
-func TestDashboardPassesTheGlobalGitExcludes(t *testing.T) {
-	run := func(t *testing.T, f *fakeRunner) string {
-		t.Helper()
-		t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-		if _, errOut, code := runWith(t, tempProject(t), f, "dashboard"); code != 0 {
-			t.Fatalf("run: %s", errOut)
-		}
-		return strings.Join(f.calls, "\n")
+	if help, _, _ := runWith(t, root, f, "dashboard", "--help"); strings.Contains(help, "push-key") {
+		t.Error("the retired flags are hidden")
 	}
-	env := "--env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=core.excludesFile --env GIT_CONFIG_VALUE_0=/run/flaiover/gitignore"
-
-	t.Run("the configured file", func(t *testing.T) {
-		t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "unused"))
-		file := filepath.Join(t.TempDir(), "my-ignore")
-		_ = os.WriteFile(file, []byte(".claude/settings.local.json\n"), 0o644)
-		calls := run(t, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, excludes: file})
-		for _, want := range []string{"--mount type=bind,source=" + file + ",target=/run/flaiover/gitignore,readonly", env} {
-			if !strings.Contains(calls, want) {
-				t.Errorf("missing %q in calls:\n%s", want, calls)
-			}
-		}
-	})
-	t.Run("git's default location when none is configured", func(t *testing.T) {
-		xdg := t.TempDir()
-		t.Setenv("XDG_CONFIG_HOME", xdg)
-		file := filepath.Join(xdg, "git", "ignore")
-		_ = os.MkdirAll(filepath.Dir(file), 0o755)
-		_ = os.WriteFile(file, []byte("x\n"), 0o644)
-		calls := run(t, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}})
-		if !strings.Contains(calls, "source="+file+",target=/run/flaiover/gitignore,readonly") || !strings.Contains(calls, env) {
-			t.Errorf("default excludes file not passed:\n%s", calls)
-		}
-	})
-	t.Run("nothing when there is no such file", func(t *testing.T) {
-		t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-		calls := run(t, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, excludes: filepath.Join(t.TempDir(), "gone")})
-		if strings.Contains(calls, "GIT_CONFIG_COUNT") || strings.Contains(calls, "/run/flaiover/gitignore") {
-			t.Errorf("no excludes file, nothing to pass:\n%s", calls)
-		}
-	})
 }

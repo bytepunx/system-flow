@@ -98,12 +98,14 @@ func newDashboardCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "dashboard",
 		Short: "Run the flaiover dashboard against this project in Docker",
-		Long: `Pull the flaiover image if it is missing and run it detached with this
-repository mounted read-write at its own host path, so the links git keeps
-for story worktrees resolve in the container, published on every interface
-(--bind 127.0.0.1 to restrict) on the configured port, as the current user
-so files it writes keep your ownership. Image, tag, port, and bind come from
-flags, then the dashboard section of system-flow.yaml, then config.`,
+		Long: `Pull the flaiover image if it is missing and run it detached, published on
+every interface (--bind 127.0.0.1 to restrict) on the configured port. The
+container is given that port, the login token, and the credential flai serve
+proves itself with, and nothing else: no file of the project is mounted into
+it (ADR-0031). Everything it shows and changes it asks of flai serve on this
+host, which this command registers the project with and starts. Image, tag,
+port, and bind come from flags, then the dashboard section of
+system-flow.yaml, then config.`,
 		Example: `  flai dashboard
   flai dashboard --port 8080 --pull
   flai dashboard --attach          # stream logs until Ctrl-C (the container keeps running)
@@ -119,8 +121,10 @@ flags, then the dashboard section of system-flow.yaml, then config.`,
 	f.StringVar(&tag, "tag", "", "image tag (default: manifest, then config)")
 	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
 	f.StringVar(&bind, "bind", "", "host address to publish on, 0.0.0.0 for every interface (default: manifest, then config, then 0.0.0.0)")
-	f.StringVar(&pushKeyFlag, "push-key", "", "SSH private key the container may push acceptances with (default: config dashboard.push_key; none gives it no credential)")
-	f.StringVar(&pushHostsFlag, "push-known-hosts", "", "file to take the remote's host keys from, with --push-key (default: config dashboard.push_known_hosts, then your known_hosts and the system's)")
+	f.StringVar(&pushKeyFlag, "push-key", "", "retired (ADR-0031): the container pushes nothing")
+	f.StringVar(&pushHostsFlag, "push-known-hosts", "", "retired (ADR-0031)")
+	_ = f.MarkHidden("push-key")
+	_ = f.MarkHidden("push-known-hosts")
 	f.BoolVar(&pull, "pull", false, "pull the image even if present")
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
@@ -220,76 +224,49 @@ func (a *app) registryUser() string {
 	return "token"
 }
 
-// gitIdentityArgs passes the host's git user into the container as the
-// standard GIT_AUTHOR_* and GIT_COMMITTER_* variables, when it has one.
-func (a *app) gitIdentityArgs(root string) []string {
-	if _, err := a.runner.LookPath("git"); err != nil {
-		return nil
+// retiredPushKey says what replaced the push key when one is still asked
+// for, by flag or in the host's config. It is a note, not an error: the
+// dashboard starts, and what the setting was for is done another way.
+func (a *app) retiredPushKey(keyFlag, hostsFlag string) string {
+	set := []string{}
+	if keyFlag != "" {
+		set = append(set, "--push-key")
 	}
-	name, err1 := a.runner.Run(root, "git", "config", "user.name")
-	email, err2 := a.runner.Run(root, "git", "config", "user.email")
-	if err1 != nil || err2 != nil || name == "" || email == "" {
-		return nil
+	if hostsFlag != "" {
+		set = append(set, "--push-known-hosts")
 	}
-	return []string{
-		"--env", "GIT_AUTHOR_NAME=" + name, "--env", "GIT_AUTHOR_EMAIL=" + email,
-		"--env", "GIT_COMMITTER_NAME=" + name, "--env", "GIT_COMMITTER_EMAIL=" + email,
-	}
-}
-
-// excludesMountPath is where the host's global git excludes file appears in
-// the container.
-const excludesMountPath = "/run/flaiover/gitignore"
-
-// gitExcludesArgs gives the container the host's global git excludes, so a
-// file ignored only there is not reported as uncommitted by git in the
-// container, which refused an acceptance from the board (I-0019). The file
-// is the one git uses on the host: core.excludesFile when set, else git's
-// default location. It is mounted read-only and named to git through
-// GIT_CONFIG_* variables, like the identity, because the container has no
-// home to hold a git config. Nothing is passed when there is no such file.
-func (a *app) gitExcludesArgs(root string) []string {
-	if _, err := a.runner.LookPath("git"); err != nil {
-		return nil
-	}
-	file, _ := a.runner.Run(root, "git", "config", "--type=path", "--get", "core.excludesFile")
-	file = strings.TrimSpace(file)
-	if file == "" {
-		base := os.Getenv("XDG_CONFIG_HOME")
-		if base == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return nil
-			}
-			base = filepath.Join(home, ".config")
+	if cfg, _, err := a.loadConfig(); err == nil {
+		if cfg.Dashboard.PushKey != "" {
+			set = append(set, "dashboard.push_key")
 		}
-		file = filepath.Join(base, "git", "ignore")
+		if cfg.Dashboard.PushKnownHosts != "" {
+			set = append(set, "dashboard.push_known_hosts")
+		}
 	}
-	if st, err := os.Stat(file); err != nil || !st.Mode().IsRegular() || strings.Contains(file, ",") {
-		return nil
+	if len(set) == 0 {
+		return ""
 	}
-	return []string{
-		"--mount", "type=bind,source=" + file + ",target=" + excludesMountPath + ",readonly",
-		"--env", "GIT_CONFIG_COUNT=1",
-		"--env", "GIT_CONFIG_KEY_0=core.excludesFile",
-		"--env", "GIT_CONFIG_VALUE_0=" + excludesMountPath,
-	}
+	return "  " + strings.Join(set, ", ") + ": retired and ignored. The container holds no git, no ssh, and no file of the project, so it has nothing to push with (ADR-0031). An acceptance from the board is pushed from this host with your own credentials: flai push --pending. Clear the setting with: flai config set dashboard.push_key \"\"\n"
 }
 
-// fallbackMount is where the repository goes when its host path cannot be
-// a path in the container, and the image's own default.
-const fallbackMount = "/project"
+// secretMountPrefix is where the container's two secrets are mounted; a
+// running container with a mount anywhere else was started by an older flai.
+const secretMountPrefix = "/run/secrets/"
 
-// containerMount returns the path the repository is mounted at in the
-// container. Git links a story worktree to its repository with absolute
-// paths, so they resolve in the container only when it sees the repository
-// at its host path (ADR-0022). A Windows path cannot be one in a Linux
-// container; mirrored is false then and the fixed mount is used.
-func containerMount(goos, root string) (target string, mirrored bool) {
-	if goos == "windows" || !strings.HasPrefix(root, "/") || strings.Contains(root, ":") {
-		return fallbackMount, false
+// staleMounts lists what a running container has mounted besides its two
+// secrets: the project, from a flai older than ADR-0031.
+func (a *app) staleMounts(container string) []string {
+	out, err := a.runner.Run("", "docker", "inspect", "--format", "{{range .Mounts}}{{.Destination}}{{\"\\n\"}}{{end}}", container)
+	if err != nil {
+		return nil
 	}
-	return root, true
+	var stale []string
+	for _, l := range strings.Split(out, "\n") {
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, secretMountPrefix) {
+			stale = append(stale, l)
+		}
+	}
+	return stale
 }
 
 func (a *app) requireDocker() error {
@@ -325,14 +302,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 			return err
 		}
 	}
-	// The push key is checked before anything is started: a key that cannot
-	// work is refused now, not at the first acceptance (ADR-0026).
-	var pk *pushKey
-	if keyPath := a.pushKeyPath(pushKeyFlag); keyPath != "" {
-		if pk, err = a.preparePushKey(repo, keyPath, a.pushKnownHosts(pushHostsFlag), "origin"); err != nil {
-			return err
-		}
-	}
+	retired := a.retiredPushKey(pushKeyFlag, pushHostsFlag)
 	token, created, err := ensureToken(repo.MainRoot)
 	if err != nil {
 		return fmt.Errorf("dashboard token: %w", err)
@@ -340,16 +310,9 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	if created {
 		a.logger().Info("dashboard token created", "component", "dashboard", "file", relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
 	}
-	mount, mirrored := containerMount(runtime.GOOS, s.Root)
-	if !mirrored {
-		a.logger().Warn("repository cannot be mounted at its host path", "component", "dashboard", "root", s.Root, "mount", mount,
-			"effect", "stories with a branch cannot be accepted from the board",
-			"fix", "accept from a shell with flai accept, or set worktrees.relative_paths (git 2.48 or newer) before opening stories")
-	}
+	// A port and two secrets, and nothing of the project (ADR-0031).
 	args := []string{"run", "--detach", "--rm", "--name", s.Name,
 		"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
-		"--volume", s.Root + ":" + mount,
-		"--env", "PROJECT_DIR=" + mount,
 	}
 	args = append(args, tokenArgs(repo.MainRoot)...)
 	// The credential flai serve and the dashboard prove to each other (ADR-0029).
@@ -357,14 +320,9 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		return fmt.Errorf("agent credential: %w", err)
 	}
 	args = append(args, agentKeyArgs(repo.MainRoot)...)
-	// Acceptance from the dashboard commits as the person who started it
-	// (S-0046): the container has no ~/.gitconfig of its own.
-	args = append(args, a.gitIdentityArgs(repo.MainRoot)...)
-	args = append(args, a.gitExcludesArgs(repo.MainRoot)...)
-	args = append(args, pk.args()...)
-	guardArgs, guarded, guardNote := a.gitGuardArgs(s.Root, mount)
-	args = append(args, guardArgs...)
-	planted := a.auditClone(s.Root)
+	// The two secrets are files only this user can read, so the container
+	// runs as this user to read them. It owns nothing else there: no file of
+	// the host is within its reach to write as you (ADR-0031).
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
@@ -379,14 +337,10 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		serveNote = a.connectServe(repo, s)
 	}
 	if a.jsonOut {
-		out := map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root, "mount_target": mount}
-		if pk != nil {
-			out["push_key"] = pk
-		}
-		out["read_only"] = guarded
+		out := map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "project": s.Root}
 		out["host_flai"] = a.hostFlai(s.Root)
-		if len(planted) > 0 {
-			out["already_in_clone"] = planted
+		if retired != "" {
+			out["retired"] = strings.TrimSpace(retired)
 		}
 		return a.printJSON(out)
 	}
@@ -394,11 +348,8 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	if s.Bind == defaultBind {
 		reach = "reachable on every interface of this host; the token is required, keep the host private"
 	}
-	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, %s mounted read-write at %s\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, mount, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
-	if pk != nil {
-		fmt.Fprint(a.out, pk.describe())
-	}
-	fmt.Fprint(a.out, guardMessage(guarded, guardNote, planted))
+	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of the project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
+	fmt.Fprint(a.out, retired)
 	fmt.Fprint(a.out, serveNote)
 	if open {
 		openBrowser(loginURL(s.url(), token))
@@ -500,37 +451,23 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 					image, url = i, orDefault(u, url)
 				}
 			}
-			keyPath, keyPrint := "", ""
+			var stale []string
 			if running {
-				keyPath, keyPrint = a.runningPushKey(s.Name)
+				stale = a.staleMounts(s.Name)
 			}
 			if a.jsonOut {
 				out := map[string]any{"container": s.Name, "running": running, "url": url, "image": image}
-				if keyPath != "" {
-					out["push_key"] = map[string]string{"path": keyPath, "fingerprint": keyPrint}
-				}
-				if running {
-					out["git_read_only"] = a.runningGuard(s.Name)
+				if len(stale) > 0 {
+					out["stale_mounts"] = stale
 				}
 				out["host_flai"] = a.hostFlai(s.Root)
-				if planted := a.auditClone(s.Root); len(planted) > 0 {
-					out["already_in_clone"] = planted
-				}
 				return a.printJSON(out)
 			}
 			if running {
 				fmt.Fprintf(a.out, "%s running at %s (%s)\n", s.Name, url, image)
-				if keyPath != "" {
-					fmt.Fprintf(a.out, "  holds a push key: %s from %s; acceptances from the board are pushed, and the dashboard token can publish a release\n", keyPrint, keyPath)
-				} else {
-					fmt.Fprintln(a.out, "  holds no credential: acceptances from the board are pushed from a shell")
+				if len(stale) > 0 {
+					fmt.Fprintf(a.out, "  this container was started by an older flai and still has the project mounted (%s); restart it: flai dashboard stop, then flai dashboard\n", strings.Join(stale, ", "))
 				}
-				if a.runningGuard(s.Name) {
-					fmt.Fprintln(a.out, "  git hooks, config, and info are read-only in the container")
-				} else {
-					fmt.Fprintln(a.out, "  this container can write git hooks and config that would run on this host: it was started by an older flai; restart it (flai dashboard stop, then flai dashboard)")
-				}
-				fmt.Fprint(a.out, guardMessage(nil, "", a.auditClone(s.Root)))
 				fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
 			} else {
 				fmt.Fprintf(a.out, "%s not running; start with flai dashboard\n", s.Name)

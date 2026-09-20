@@ -1,9 +1,10 @@
 # flaiover: the system-flow dashboard. Build from the repository root:
 #   docker build -f flaiover/Dockerfile -t flaiover:local .
-# Runs as any UID (flai dashboard passes --user); listens on 3000. The image
+# Runs as any UID (flai dashboard passes --user, so the two secrets it mounts can be read); listens on 3000. The image
 # holds no flai, no git, and no ssh (S-0075, ADR-0029): everything it shows
 # and everything it changes is asked of flai serve on the host, which dials
-# the /agent endpoint. It needs no writable home and nothing of the project.
+# the /agent endpoint. It needs no writable home, and nothing of the project is
+# mounted into it (S-0077, ADR-0031).
 
 ARG NODE_VERSION=24
 
@@ -37,7 +38,6 @@ COPY --from=build /src/flaiover/server.js ./server.js
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
-    PROJECT_DIR=/project \
     HOME=/tmp \
     LOG_FORMAT=json \
     FLAIOVER_COMMIT=${FLAI_COMMIT} \

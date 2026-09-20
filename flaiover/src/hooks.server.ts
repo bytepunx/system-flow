@@ -48,7 +48,6 @@ export const init: ServerInit = async () => {
 			component: 'server',
 			version,
 			commit,
-			project_dir: process.env.PROJECT_DIR ?? process.cwd(),
 			tracing,
 			auth,
 			channel

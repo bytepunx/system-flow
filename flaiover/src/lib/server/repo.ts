@@ -1,6 +1,6 @@
-// Repository reader: the server side of flaiover. Reads the mounted
-// system-flow repository (PROJECT_DIR) and nothing else. Mirrors the rules in
-// design/system/work-hierarchy.md and repository-layout.md; flai's Go
+// The project as the server sees it: nothing on disk. Every answer is asked of flai on the host
+// over the channel (ADR-0029), and the container holds no file of the project (ADR-0031). The
+// shapes mirror design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
 import { resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -71,6 +71,10 @@ export type DocNode = {
 
 export const ITEM_TYPES = ['epic', 'story', 'task'] as const;
 
+/**
+ * Names the project for tests and development, where flai is asked about a directory on this
+ * machine (testing.ts). In the container it names nothing that exists there.
+ */
 export function projectDir(): string {
 	return resolve(process.env.PROJECT_DIR ?? process.cwd());
 }
