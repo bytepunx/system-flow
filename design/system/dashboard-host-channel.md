@@ -74,7 +74,7 @@ Both work, and on one machine neither is measurably faster. The differences are 
 | **SSE down, POST up** | flai opens a GET stream and posts answers | Two channels paired by id; chunks posted separately need sequence numbers to stay in order under load | The same | No custom server; stock routes | Works (**tried**). The fallback if the custom server proves troublesome. A long-lived event stream is also the thing proxies buffer (S-0069's quick-tunnel trial), which matters if the dashboard ever runs elsewhere |
 | **Long-poll job lease** | flai polls `POST /agent/lease`, held open | Each request is a leased job with acknowledge, renew, complete | Jobs wait in a durable queue | Most: a job table, leases, expiry | Right when work must wait for an absent agent. Here nothing can even be shown without flai, so nothing should queue; a lease per board read is ceremony |
 | **MCP, the dashboard asking flai** | flai as MCP client of `/mcp` | Server-initiated requests | | | No: the protocol is removing them, and they never meant "perform this" |
-| **MCP spoken over the reversed socket** | flai dials; the dashboard is the MCP client of flai's existing server | Tool calls | 503 | Small (**tried**) | Works, and keeps `/mcp` alive for agents elsewhere without a process in the container. Not the dashboard's own API: tool results are text for agents, and the protocol is churning |
+| **MCP spoken over the reversed socket** | flai dials; the dashboard is the MCP client of flai's existing server | Tool calls | 503 | Small (**tried**) | Works, and would keep `/mcp` alive without a process in the container. Not the dashboard's own API: tool results are text for agents, and the protocol is churning. The operator decided MCP belongs to flai on the host, not behind the dashboard (see Decision) |
 | **Unix socket or named pipe mounted into the container** | The container dials the host | | | Small on Linux | No: it is a mount, the direction is the one ruled out, and sockets do not cross Docker Desktop's file sharing on macOS and Windows |
 | **Request files under `.flai-cache`** | | | | | No: it needs the mount |
 | **A reverse TCP tunnel (remotedialer)** | flai dials; the dashboard may then dial into the host | | | | No: it hands the container a way into the host's network |
@@ -113,7 +113,7 @@ One process per user, `flai serve` for the sake of a name, serving every project
 
 **A WebSocket that flai opens to the dashboard, carrying JSON-RPC 2.0, with named, typed methods implemented in flai; one `flai serve` per user; reads through restricted file methods first and structured methods after; host actions off until enabled; then the mount removed.** It is the one candidate that is a single ordered pipe in both directions with cancellation and progress for free, it was as fast as anything tried, it fails visibly, and it is the transport proxies treat best if the dashboard ever leaves the host. Its one real cost is a custom server entry for flaiover, because SvelteKit has no WebSocket support of its own; if that proves fragile, SSE down with POST up carries the same methods and was tried.
 
-Build order, each a story, the dashboard working after every one:
+Build order as recommended, each a story, the dashboard working after every one. The decision below changed two things, how reads move and where MCP lives, and lists the stories as they were created:
 
 1. The channel and nothing else: `flai serve`, the agent endpoint, the credential, the handshake, pings, reconnection, status on both sides. The mount stays.
 2. Reads through the channel: `files.list`, `file.read`, and change notifications from a watcher in flai; `repo.ts` reads from the channel.
@@ -126,4 +126,22 @@ Build order, each a story, the dashboard working after every one:
 
 ## Decision
 
-Pending the operator's answer; recorded here and as an ADR when given.
+The operator decided on 2026-09-20, in the session, with this finding in front of them ([ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md)):
+
+- **The channel:** a WebSocket that flai opens to the dashboard, carrying JSON-RPC 2.0, as recommended.
+- **Dashboards:** one dashboard for every project is the end state, built after the mount is gone, as recommended.
+- **Reads:** structured methods only. The recommendation was restricted file methods first, to remove the mount sooner; the operator chose the cleaner end state from the start: flai answers the board, items, threads, documents, the ADR list, narratives and activity, the designer's inbox, and search as data, and the dashboard stops parsing project files. There is no `file.read`. The read stories below are larger for it, and the mount goes later than it would have.
+- **MCP:** it moves down to flai. In the operator's words: "lets move the MCP integration down to flai as a process again (flai MCP can start a server process) since we want flai and agents working together on the host and not having agents interacting with a project through the dashboard." The dashboard's `/mcp` endpoint goes; flai serves MCP itself on the host, over stdio as now and over HTTP as a process of its own for agents that need it. The MCP-over-HTTP part of ADR-0024 is superseded when that story lands; its project identity stays.
+
+The stories, in build order, under E-0003:
+
+1. S-0072: the channel and nothing else; the mount stays.
+2. S-0073: work items read through the channel (project, board, items, threads) and change notifications from a watcher in flai.
+3. S-0074: documents, ADRs, narratives and activity, the inbox, and search read through the channel; the dashboard parses no project file.
+4. S-0075: every write through the channel; the image drops `flai`, `git`, and `ssh`.
+5. S-0076: MCP served by flai on the host, over HTTP as well as stdio; the dashboard's `/mcp` removed.
+6. S-0077: the mount removed, with everything that existed to make it safe.
+7. S-0078: push and publish after an acceptance, as a host action.
+8. S-0079: an agent started when a story becomes ready.
+9. S-0080: one dashboard for every project.
+10. S-0081 and S-0082, later: the dashboard managed from its own page; checks run for a story in review.

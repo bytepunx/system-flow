@@ -34,3 +34,4 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0026](0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md) | The dashboard container may push acceptances with a key the operator gives it | accepted, refines 0018 |
 | [0027](0027-git-hooks-config-and-info-are-read-only-in-the-dashboard-container.md) | Git hooks, config, and info are read-only in the dashboard container | accepted, refines 0018, 0022 and 0026 |
 | [0028](0028-cancelling-an-item-cancels-everything-open-under-it.md) | Cancelling an item cancels everything open under it | accepted, refines 0004 |
+| [0029](0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md) | The dashboard reaches a project only through flai on the host | accepted, refines 0007, 0016, 0018 and 0024 |
