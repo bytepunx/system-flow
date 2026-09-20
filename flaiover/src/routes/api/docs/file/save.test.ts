@@ -3,7 +3,8 @@ import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { resetFlaiBinary } from '$lib/server/flai';
+import { Repo, useRepo } from '$lib/server/repo';
+import { flaiAsk } from '$lib/server/testing';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const bin = process.env.FLAI_BIN ?? resolve('../bin/flai');
@@ -28,13 +29,12 @@ describe.skipIf(!existsSync(bin))('document editing endpoints', () => {
 		await cp(fixture, dir, { recursive: true });
 		await mkdir(join(dir, 'design/system'), { recursive: true });
 		await writeFile(join(dir, 'design/system/plan.md'), DOC);
-		process.env.PROJECT_DIR = dir;
-		process.env.FLAI_BIN = bin;
-		resetFlaiBinary();
+		useRepo(new Repo(dir, flaiAsk(dir)));
 		GET = (await import('../edit/+server')).GET as unknown as Handler;
 		PUT = (await import('./+server')).PUT as unknown as Handler;
 	});
 	afterAll(async () => {
+		useRepo(null);
 		await rm(dir, { recursive: true, force: true });
 	});
 

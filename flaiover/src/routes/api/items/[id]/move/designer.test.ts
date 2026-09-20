@@ -5,7 +5,6 @@ import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { resetFlaiBinary } from '$lib/server/flai';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const bin = process.env.FLAI_BIN ?? resolve('../bin/flai');
@@ -24,8 +23,6 @@ describe.skipIf(!existsSync(bin))('move endpoint attribution', () => {
 		await writeFile(manifest, yaml + 'owner: dana\n');
 		process.env.PROJECT_DIR = dir;
 		useRepo(new Repo(dir, flaiAsk(dir)));
-		process.env.FLAI_BIN = bin;
-		resetFlaiBinary();
 		POST = (await import('./+server')).POST as unknown as Handler;
 	});
 	afterAll(async () => {
@@ -44,5 +41,12 @@ describe.skipIf(!existsSync(bin))('move endpoint attribution', () => {
 		const file = await readFile(join(dir, 'wip/kanban/tasks/T-003-t3.md'), 'utf8');
 		expect(file).toMatch(/- to: done\n\s+at: [^\n]+\n\s+by: dana/);
 		expect(file).not.toContain('by: flaiover');
+	});
+	it('does not let the request name someone else: flai decides who the designer is (S-0075)', async () => {
+		const r = await move('S-004', { to: 'review', by: 'mallory' });
+		expect(r.status).toBe(200);
+		const file = await readFile(join(dir, 'wip/kanban/stories/S-004-four.md'), 'utf8');
+		expect(file).not.toContain('mallory');
+		expect(file).toMatch(/- to: review\n\s+at: [^\n]+\n\s+by: dana/);
 	});
 });

@@ -25,11 +25,28 @@ export function flaiAsk(root: string): Ask {
 					} catch {
 						return fail(err ?? new Error(`flai hostapi ${method}: no JSON`));
 					}
-					const e = (out as { error?: { code: number; message: string } } | null)?.error;
-					if (err && e) return fail(new AgentError(502, e.message, e.code));
+					const e = (
+						out as {
+							error?: { code: number; message: string; data?: Record<string, unknown> };
+						} | null
+					)?.error;
+					if (err && e) return fail(new AgentError(502, e.message, e.code, e.data));
 					if (err) return fail(err);
 					done(out as T);
 				}
 			);
 		});
+}
+
+/** Run the tree's flai directly, for a test's setup: what an agent or a person would do in a shell. */
+export function shell<T = unknown>(root: string, args: string[]): Promise<T> {
+	return new Promise<T>((done, fail) => {
+		execFile(
+			flaiBin,
+			[...args, '--json'],
+			{ cwd: root, env: { ...process.env, FLAI_AGENT: '' } },
+			(err, stdout, stderr) =>
+				err ? fail(new Error(stderr || String(err))) : done(JSON.parse(stdout))
+		);
+	});
 }

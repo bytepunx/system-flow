@@ -10,6 +10,11 @@ export const GET: RequestHandler = () =>
 	respond(async () => {
 		const status = agent().status();
 		if (!status.connected) return status;
+		if (status.missing?.length)
+			return {
+				...status,
+				error: `flai ${status.flai} on the host is older than this dashboard and lacks ${status.missing.length} of the things it asks for (${status.missing.slice(0, 3).join(', ')}${status.missing.length > 3 ? ', …' : ''}); upgrade flai on the host, then run flai serve stop and flai dashboard`
+			};
 		try {
 			return { ...status, info: await agent().ask('project.info', {}, 2000) };
 		} catch (err) {

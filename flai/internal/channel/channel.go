@@ -18,6 +18,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -255,6 +256,9 @@ type helloParams struct {
 	Nonce    string  `json:"nonce"`
 	Flai     string  `json:"flai"`
 	Project  Project `json:"project"`
+	// Methods are what this flai offers, so that a dashboard newer than the
+	// flai that serves it can say what is missing instead of failing page by page.
+	Methods []string `json:"methods"`
 }
 
 type helloResult struct {
@@ -304,7 +308,12 @@ func (c *Client) serveOnce(ctx context.Context) error {
 
 	// hello: flai's nonce out, the dashboard's nonce and proof back.
 	mine := nonce()
-	params, _ := json.Marshal(helloParams{Protocol: Protocol, Nonce: mine, Flai: c.Version, Project: c.Project})
+	names := make([]string, 0, len(c.Methods))
+	for name := range c.Methods {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	params, _ := json.Marshal(helloParams{Protocol: Protocol, Nonce: mine, Flai: c.Version, Project: c.Project, Methods: names})
 	if err := send(message{ID: json.RawMessage(`"hello"`), Method: "hello", Params: params}); err != nil {
 		return err
 	}

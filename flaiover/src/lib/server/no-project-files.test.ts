@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 const ALLOWED: Record<string, string> = {
 	'src/lib/server/auth.ts': 'the login token, a secret handed to the container',
 	'src/lib/server/agent.ts': 'the agent credential, a secret handed to the container',
-	'src/lib/server/flai.ts': 'looks for the flai binary that still performs writes (until S-0075)',
+	'src/lib/server/flai.ts': 'looks for a flai binary for the MCP bridge, which S-0076 removes',
 	'src/lib/server/testing.ts': 'test support, never imported by the application'
 };
 

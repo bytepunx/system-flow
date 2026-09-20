@@ -1,6 +1,5 @@
 import { json } from '@sveltejs/kit';
 import { repo } from '$lib/server/repo';
-import { flaiBinary } from '$lib/server/flai';
 import { agent } from '$lib/server/agent';
 
 const TIMEOUT_MS = 2000;
@@ -35,7 +34,6 @@ export const GET = async () => {
 	} catch (e) {
 		checks.items = { ok: false, detail: e instanceof Error ? e.message : String(e) };
 	}
-	checks.flai = { ok: true, detail: (await flaiBinary()) ? 'writable' : 'read-only' };
 	const ok = Object.values(checks).every((c) => c.ok);
 	return json({ status: ok ? 'ready' : 'not ready', checks }, { status: ok ? 200 : 503 });
 };

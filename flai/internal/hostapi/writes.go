@@ -612,13 +612,16 @@ func specs() map[string]spec {
 				return nil, "", bad("write the decision: the body is empty")
 			}
 			args := []string{"adr", "new", "--status=" + status}
-			for flag, list := range map[string][]string{"supersedes": in.Supersedes, "refines": in.Refines} {
-				for _, v := range list {
+			for _, rel := range []struct {
+				flag string
+				list []string
+			}{{"supersedes", in.Supersedes}, {"refines", in.Refines}} {
+				for _, v := range rel.list {
 					n, e := adrNo(v)
 					if e != nil {
 						return nil, "", e
 					}
-					args = append(args, "--"+flag+"="+n)
+					args = append(args, "--"+rel.flag+"="+n)
 				}
 			}
 			return append(args, "--body-stdin", "--autocommit", "--trailer="+Trailer, "--", title), in.Body, nil
@@ -631,7 +634,7 @@ func specs() map[string]spec {
 			return []string{"adr", "new", "--print-body"}, "", nil
 		}),
 
-		"adr.accept": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"adr.accept": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID string `json:"id"`
 			}](raw)
@@ -643,7 +646,7 @@ func specs() map[string]spec {
 				return nil, "", e
 			}
 			return []string{"adr", "accept", n, "--autocommit", "--trailer=" + Trailer}, "", nil
-		}),
+		}},
 
 		"stats.get": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {

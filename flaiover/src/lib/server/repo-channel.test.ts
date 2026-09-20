@@ -164,4 +164,61 @@ describe('Repo over the channel', () => {
 		expect(b.columns.review).toEqual([]);
 		expect(b.order).toEqual(['S-0002', 'S-0001']);
 	});
+
+	it('repeats a write once, with the same request ID, when flai was lost and came back', async () => {
+		const sent: Record<string, unknown>[] = [];
+		let lose = true;
+		const ask = (async (_m: string, params: Record<string, unknown> = {}) => {
+			sent.push(params);
+			if (lose) {
+				lose = false;
+				throw new AgentError(502, 'the host flai went away before it answered');
+			}
+			return { data: { id: 'S-0001', status: 'ready' }, warnings: [] };
+		}) as unknown as Ask;
+		const r = new Repo('/nowhere', ask, async () => true);
+		await expect(r.write('item.move', { id: 'S-0001', to: 'ready' })).resolves.toMatchObject({
+			data: { status: 'ready' }
+		});
+		expect(sent).toHaveLength(2);
+		expect(sent[0].request_id).toMatch(/^[0-9a-f-]{36}$/);
+		expect(sent[1].request_id).toBe(sent[0].request_id);
+
+		// flai did not come back: the loss is the answer, and nothing is sent again
+		lose = true;
+		sent.length = 0;
+		const gone = new Repo('/nowhere', ask, async () => false);
+		await expect(gone.write('item.move', { id: 'S-0001', to: 'ready' })).rejects.toMatchObject({
+			status: 502
+		});
+		expect(sent).toHaveLength(1);
+
+		// what flai refused is not retried: a rule is an answer
+		sent.length = 0;
+		const refusing = (async (_m: string, params: Record<string, unknown> = {}) => {
+			sent.push(params);
+			throw new AgentError(502, 'S-0001 cannot go from review to cancelled', -32011);
+		}) as unknown as Ask;
+		await expect(
+			new Repo('/nowhere', refusing, async () => true).write('item.move', { id: 'S-0001', to: 'x' })
+		).rejects.toMatchObject({ status: 400 });
+		expect(sent).toHaveLength(1);
+	});
+
+	it('gives a conflict and a refusal their status and what flai sent with them', async () => {
+		const conflict = (async () => {
+			throw new AgentError(502, 'the file changed', -32009, { hash: 'h2', current: '# theirs' });
+		}) as unknown as Ask;
+		await expect(new Repo('/nowhere', conflict).write('doc.save', {})).rejects.toMatchObject({
+			status: 409,
+			data: { hash: 'h2' }
+		});
+		const refused = (async () => {
+			throw new AgentError(502, 'flai check has 1 finding(s)', -32010, { findings: [{}] });
+		}) as unknown as Ask;
+		await expect(new Repo('/nowhere', refused).write('item.new', {})).rejects.toMatchObject({
+			status: 422,
+			data: { findings: [{}] }
+		});
+	});
 });

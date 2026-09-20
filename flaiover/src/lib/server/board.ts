@@ -1,6 +1,5 @@
 // The board, as flai on the host lays it out (S-0073).
 import type { Item, Repo } from './repo';
-import { flaiBinary } from './flai';
 
 export const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
 
@@ -60,7 +59,8 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 	return {
 		wip_limits: b.wip_limits,
 		order: b.order ?? [],
-		writable: (await flaiBinary()) !== null,
+		// flai on the host does the writing (S-0075): a board that could be read can be written.
+		writable: true,
 		columns
 	};
 }

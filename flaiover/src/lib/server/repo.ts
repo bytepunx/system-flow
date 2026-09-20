@@ -4,7 +4,8 @@
 // implementation is the reference.
 import { resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
-import { agent, AgentError } from './agent';
+import { randomUUID } from 'node:crypto';
+import { agent, AgentError, connectedWithin } from './agent';
 import { log } from './log';
 
 export type Layout = { design: string; docs: string; wip: string };
@@ -75,13 +76,32 @@ export function projectDir(): string {
 }
 
 /** Asks flai on the host for a named method (ADR-0029). Tests supply one that reads a fixture through flai. */
-export type Ask = <T>(method: string, params?: Record<string, unknown>) => Promise<T>;
+export type AskOptions = { timeoutMs?: number; onProgress?: (value: unknown) => void };
+export type Ask = <T>(
+	method: string,
+	params?: Record<string, unknown>,
+	opt?: AskOptions
+) => Promise<T>;
+
+/** What a command of flai answered: its JSON, and the warnings it logged. */
+export type Written<T> = { data: T; warnings: string[] };
 
 /** flai's code for an item or thread that does not exist (internal/hostapi). */
 const NOT_FOUND = -32004;
 const INVALID_PARAMS = -32602;
+const CONFLICT = -32009;
+const REFUSED = -32010;
+const RULE = -32011;
+const STATUS: Record<number, number> = {
+	[NOT_FOUND]: 404,
+	[INVALID_PARAMS]: 400,
+	[RULE]: 400,
+	[CONFLICT]: 409,
+	[REFUSED]: 422
+};
 
-const viaChannel: Ask = (method, params) => agent().ask(method, params);
+const viaChannel: Ask = (method, params, opt) =>
+	agent().ask(method, params, opt?.timeoutMs, opt?.onProgress);
 
 /**
  * Repo is the dashboard's view of one system-flow repository. The project, its work items, and its
@@ -96,22 +116,59 @@ export class Repo extends EventEmitter {
 
 	constructor(
 		root = projectDir(),
-		private source: Ask = viaChannel
+		private source: Ask = viaChannel,
+		/** Whether flai is back within ms, for the one retry of a write; tests give their own. */
+		private returned: (ms: number) => Promise<boolean> = source === viaChannel
+			? (ms) => connectedWithin(agent(), ms)
+			: async () => false
 	) {
 		super();
 		this.root = resolve(root);
 	}
 
 	/** Ask flai, with its refusals as the HTTP statuses the routes answer with. */
-	async ask<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+	async ask<T>(method: string, params: Record<string, unknown> = {}, opt?: AskOptions): Promise<T> {
 		try {
-			return await this.source<T>(method, params);
+			return await this.source<T>(method, params, opt);
+		} catch (e) {
+			if (e instanceof AgentError)
+				throw new RepoError(
+					(e.code !== undefined && STATUS[e.code]) || (e.code === undefined ? e.status : 500),
+					e.message,
+					e.data
+				);
+			throw e;
+		}
+	}
+
+	/** A command of flai that changes nothing: a preview, a template, a diff, the statistics. */
+	async run<T>(method: string, params: Record<string, unknown> = {}, opt?: AskOptions) {
+		return this.ask<Written<T>>(method, params, opt);
+	}
+
+	/**
+	 * A write (S-0075). It carries a request ID, so that when the connection is lost before the answer
+	 * and flai returns within a few seconds, the same request is sent once more and flai answers from
+	 * its journal if it had already done it: a retry can never move, accept, or save twice.
+	 */
+	async write<T>(method: string, params: Record<string, unknown> = {}, opt?: AskOptions) {
+		const body = { ...params, request_id: randomUUID() };
+		const timed = { timeoutMs: 60000, ...opt };
+		try {
+			return await this.source<Written<T>>(method, body, timed).catch(async (e) => {
+				const lost = e instanceof AgentError && e.status === 502 && e.code === undefined;
+				if (!lost || !(await this.returned(5000))) throw e;
+				return this.source<Written<T>>(method, body, timed);
+			});
 		} catch (e) {
 			if (e instanceof AgentError) {
-				const status = e.code === NOT_FOUND ? 404 : e.code === INVALID_PARAMS ? 400 : e.status;
-				throw new RepoError(status, e.message);
+				const status =
+					(e.code !== undefined && STATUS[e.code]) || (e.code === undefined ? e.status : 500);
+				throw new RepoError(status, e.message, e.data);
 			}
 			throw e;
+		} finally {
+			this.answers.clear();
 		}
 	}
 

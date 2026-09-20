@@ -1,7 +1,5 @@
 import { repo, RepoError } from '$lib/server/repo';
-import { flai } from '$lib/server/flai';
 import { respond } from '$lib/server/respond';
-import { designer } from '$lib/server/threads';
 import type { RequestHandler } from './$types';
 
 /** GET ?on=<path|item>&all=1 : threads, unresolved unless all=1. */
@@ -14,7 +12,7 @@ export const GET: RequestHandler = ({ url }) =>
 		return all ? list : list.filter((t) => t.status !== 'resolved');
 	});
 
-/** POST { on, heading?, title, text } : open a thread through flai. */
+/** POST { on, heading?, title, text }: open a thread as the designer (flai's thread.new on the host). */
 export const POST: RequestHandler = ({ request }) =>
 	respond(async () => {
 		const body = (await request.json().catch(() => ({}))) as {
@@ -25,9 +23,11 @@ export const POST: RequestHandler = ({ request }) =>
 		};
 		if (!body.on || !body.title?.trim() || !body.text?.trim())
 			throw new RepoError(400, 'on, title, and text are required');
-		const args = ['thread', 'new', '--on', body.on, '--by', await designer()];
-		if (body.heading) args.push('--heading', body.heading);
-		args.push(body.title.trim(), body.text.trim());
-		const { data, warnings } = await flai<Record<string, unknown>>(repo().root, args);
+		const { data, warnings } = await repo().write<Record<string, unknown>>('thread.new', {
+			on: body.on,
+			heading: body.heading,
+			title: body.title,
+			text: body.text
+		});
 		return { ...data, warnings };
 	});

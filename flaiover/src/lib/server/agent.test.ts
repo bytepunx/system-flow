@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
-import { AgentError, AgentHub, proof } from './agent';
+import { AgentError, AgentHub, proof, REQUIRED_METHODS } from './agent';
 
 const KEY = 'agent-credential-for-tests';
 
@@ -24,7 +24,8 @@ function connect(
 	answer: (m: { id: number; method: string; params: Record<string, unknown> }) => unknown = () => ({
 		name: 'Harbour'
 	}),
-	headers: Record<string, string> = {}
+	headers: Record<string, string> = {},
+	methods: string[] = REQUIRED_METHODS
 ): Promise<Flai> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(url, { headers });
@@ -45,7 +46,8 @@ function connect(
 						protocol: 1,
 						nonce: mine,
 						flai: '9.9.9',
-						project: { key: 'harbour', name: 'Harbour' }
+						project: { key: 'harbour', name: 'Harbour' },
+						methods
 					}
 				})
 			)
@@ -224,5 +226,65 @@ describe('AgentHub', () => {
 		flai.ws.terminate();
 		await new Promise((r) => setTimeout(r, 50));
 		expect(events.at(-1)).toBe('gone');
+	});
+
+	it('says what a flai older than the dashboard does not offer', async () => {
+		const { hub, url } = await setup();
+		const old = await connect(url, KEY, undefined, {}, ['project.info', 'board.get']);
+		cleanup.push(() => old.ws.terminate());
+		const missing = hub.status().missing ?? [];
+		expect(missing).toContain('accept.run');
+		expect(missing).not.toContain('board.get');
+		old.ws.terminate();
+		await new Promise((r) => setTimeout(r, 30));
+		const current = await connect(url, KEY);
+		cleanup.push(() => current.ws.terminate());
+		expect(hub.status().missing).toEqual([]);
+	});
+
+	it('hands a request its progress, by the request ID', async () => {
+		const { hub, url } = await setup();
+		const flai = await connect(url, KEY, () => undefined);
+		cleanup.push(() => flai.ws.terminate());
+		flai.ws.on('message', (data) => {
+			const m = JSON.parse(data.toString());
+			if (m.method !== 'accept.run') return;
+			for (const step of ['merged', 'committed'])
+				flai.ws.send(
+					JSON.stringify({
+						jsonrpc: '2.0',
+						method: '$/progress',
+						params: { id: m.id, value: step }
+					})
+				);
+			// progress for a request that is not waiting is dropped
+			flai.ws.send(
+				JSON.stringify({ jsonrpc: '2.0', method: '$/progress', params: { id: 9999, value: 'x' } })
+			);
+			flai.ws.send(JSON.stringify({ jsonrpc: '2.0', id: m.id, result: { data: 'done' } }));
+		});
+		const steps: unknown[] = [];
+		await expect(hub.ask('accept.run', {}, 2000, (v) => steps.push(v))).resolves.toEqual({
+			data: 'done'
+		});
+		expect(steps).toEqual(['merged', 'committed']);
+	});
+
+	it('keeps what flai sent with an error', async () => {
+		const { hub, url } = await setup();
+		const flai = await connect(url, KEY, () => undefined);
+		cleanup.push(() => flai.ws.terminate());
+		flai.ws.on('message', (data) => {
+			const m = JSON.parse(data.toString());
+			if (m.id)
+				flai.ws.send(
+					JSON.stringify({
+						jsonrpc: '2.0',
+						id: m.id,
+						error: { code: -32009, message: 'the file changed', data: { hash: 'h2' } }
+					})
+				);
+		});
+		await expect(hub.ask('doc.save')).rejects.toMatchObject({ code: -32009, data: { hash: 'h2' } });
 	});
 });

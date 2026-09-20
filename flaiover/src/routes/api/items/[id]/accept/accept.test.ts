@@ -1,30 +1,27 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Repo, useRepo } from '$lib/server/repo';
-import { flaiAsk } from '$lib/server/testing';
-import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { resetFlaiBinary } from '$lib/server/flai';
+import { Repo, useRepo, type Ask } from '$lib/server/repo';
+import { AgentError } from '$lib/server/agent';
 
 type Handler = (event: never) => Promise<Response>;
 
-// A fake flai (S-0041): a script standing in for the binary through FLAI_BIN. It records its
-// arguments, writes what $FAKE_STDERR holds to stderr a line at a time with a pause between, then
-// $FAKE_STDOUT to stdout, and exits with $FAKE_EXIT.
-const FAKE = `#!/bin/sh
-printf '%s\\n' "$@" > "$FAKE_DIR/args"
-if [ -n "$FAKE_STDERR" ]; then
-  printf '%s\\n' "$FAKE_STDERR" | while IFS= read -r line; do printf '%s\\n' "$line" >&2; sleep 0.05; done
-fi
-[ -n "$FAKE_STDOUT" ] && printf '%s\\n' "$FAKE_STDOUT"
-exit "\${FAKE_EXIT:-0}"
-`;
+// The channel, scripted (S-0041, S-0075): what flai on the host would send while it accepts, as
+// progress for the request, then its answer or its error. How the command line is built is flai's
+// business and tested there; here it is what the route asks for and what it streams to the browser.
+let asked: { method: string; params: Record<string, unknown> }[] = [];
+let script: { progress?: unknown[]; answer?: unknown; error?: AgentError } = {};
+const channel = (async (method: string, params: Record<string, unknown> = {}, opt) => {
+	asked.push({ method, params });
+	for (const step of script.progress ?? []) {
+		opt?.onProgress?.(step);
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	if (script.error) throw script.error;
+	return script.answer;
+}) as Ask;
 
-describe('acceptance and diff endpoints with a fake flai', () => {
-	let dir: string;
+describe('acceptance and diff endpoints over the channel', () => {
 	let accept: Handler;
 	let diff: Handler;
-	const args = async () => (await readFile(join(dir, 'args'), 'utf8')).trim().split('\n');
 	const lines = async (r: Response) =>
 		(await r.text())
 			.trim()
@@ -37,42 +34,49 @@ describe('acceptance and diff endpoints with a fake flai', () => {
 		} as never);
 
 	beforeAll(async () => {
-		dir = await mkdtemp(join(tmpdir(), 'flaiover-fake-'));
-		await writeFile(
-			join(dir, 'system-flow.yaml'),
-			'version: 1\nname: t\nowner: dana\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n'
-		);
-		const bin = join(dir, 'flai');
-		await writeFile(bin, FAKE);
-		await chmod(bin, 0o755);
-		process.env.PROJECT_DIR = dir;
-		useRepo(new Repo(dir, flaiAsk(dir)));
-		process.env.FLAI_BIN = bin;
-		process.env.FAKE_DIR = dir;
-		resetFlaiBinary();
+		useRepo(new Repo('/nowhere', channel));
 		accept = (await import('./+server')).POST as unknown as Handler;
 		diff = (await import('../diff/+server')).GET as unknown as Handler;
 	});
 	beforeEach(() => {
-		delete process.env.FAKE_STDERR;
-		delete process.env.FAKE_STDOUT;
-		delete process.env.FAKE_EXIT;
+		asked = [];
+		script = {};
 	});
-	afterAll(async () => {
-		useRepo(null);
-		await rm(dir, { recursive: true, force: true });
-	});
+	afterAll(() => useRepo(null));
 
-	it('accepts as the designer and streams each step before the result', async () => {
-		process.env.FAKE_STDERR = [
-			'{"level":"INFO","msg":"story branch merged","branch":"story/S-0041"}',
-			'{"level":"INFO","msg":"acceptance step","item":"S-0041","step":"merged","detail":"story/S-0041 rebased and fast-forwarded into the main branch"}',
-			'{"level":"INFO","msg":"acceptance step","item":"S-0041","step":"committed","detail":"chore: [S-0041] accept and archive"}',
-			'{"level":"WARN","msg":"accepted locally but not pushed","detail":"run: git push origin HEAD"}',
-			'{"level":"INFO","msg":"acceptance step","item":"S-0041","step":"not-pushed","detail":"accepted locally; run: git push origin HEAD"}'
-		].join('\n');
-		process.env.FAKE_STDOUT =
-			'{"id":"S-0041","status":"done","merged":true,"tags":["flaiover/v0.13.0"]}';
+	it('asks flai to accept and streams each step before the result', async () => {
+		script = {
+			progress: [
+				{ level: 'INFO', msg: 'story branch merged', branch: 'story/S-0041' },
+				{
+					level: 'INFO',
+					msg: 'acceptance step',
+					step: 'merged',
+					detail: 'story/S-0041 rebased and fast-forwarded into the main branch'
+				},
+				{
+					level: 'INFO',
+					msg: 'acceptance step',
+					step: 'committed',
+					detail: 'chore: [S-0041] accept and archive'
+				},
+				{
+					level: 'WARN',
+					msg: 'accepted locally but not pushed',
+					detail: 'run: git push origin HEAD'
+				},
+				{
+					level: 'INFO',
+					msg: 'acceptance step',
+					step: 'not-pushed',
+					detail: 'accepted locally; run: git push origin HEAD'
+				}
+			],
+			answer: {
+				data: { id: 'S-0041', status: 'done', merged: true, tags: ['flaiover/v0.13.0'] },
+				warnings: []
+			}
+		};
 		const r = await post('S-0041', {});
 		expect(r.status).toBe(200);
 		expect(r.headers.get('content-type')).toBe('application/x-ndjson');
@@ -89,47 +93,68 @@ describe('acceptance and diff endpoints with a fake flai', () => {
 			msg: expect.stringContaining('fast-forwarded')
 		});
 		expect(out.at(-1).result).toMatchObject({ status: 'done', tags: ['flaiover/v0.13.0'] });
-		expect(await args()).toEqual(['accept', 'S-0041', '--by', 'dana', '--json']);
+		expect(asked).toHaveLength(1);
+		expect(asked[0].method).toBe('accept.run');
+		expect(asked[0].params).toMatchObject({ id: 'S-0041', include_uncommitted: false });
+		// a write: it carries a request ID, and names nobody: flai decides who the designer is
+		expect(String(asked[0].params.request_id)).toMatch(/^[0-9a-f-]{36}$/);
+		expect(asked[0].params).not.toHaveProperty('by');
 	});
 
-	it('passes --yes only when the designer chose to include uncommitted files', async () => {
-		process.env.FAKE_STDOUT = '{"id":"S-0041","status":"done"}';
+	it('passes the choice to include uncommitted files only when it is true', async () => {
+		script = { answer: { data: { id: 'S-0041', status: 'done' }, warnings: [] } };
 		await (await post('S-0041', { include_uncommitted: true })).text();
-		expect(await args()).toEqual(['accept', 'S-0041', '--by', 'dana', '--yes', '--json']);
+		expect(asked[0].params.include_uncommitted).toBe(true);
 		await (await post('S-0041', { include_uncommitted: 'yes' })).text();
-		expect(await args()).not.toContain('--yes');
+		expect(asked[1].params.include_uncommitted).toBe(false);
 	});
 
 	it('ends with flai’s message verbatim when the acceptance fails', async () => {
 		const message =
-			'rebase of story/S-0041 onto main stopped with conflicts in docs/users/flai.md; resolve them in .flai-cache/worktrees/S-0041 and run flai stream sync S-0041';
-		process.env.FAKE_STDERR = JSON.stringify({
-			level: 'FATAL',
-			msg: 'command failed',
-			err: message
-		});
-		process.env.FAKE_EXIT = '1';
+			'rebase of story/S-0041 onto main stopped with conflicts in docs/users/flai.md; resolve them in .flai-cache/worktrees/S-0041 and run flai stream sync';
+		script = { error: new AgentError(502, message, -32603) };
 		const out = await lines(await post('S-0041', {}));
 		expect(out).toHaveLength(1);
 		expect(out[0]).toEqual({ event: 'error', status: 500, error: message });
 	});
 
+	it('says the acceptance may have completed when the connection is lost on the way', async () => {
+		script = {
+			progress: [{ level: 'INFO', msg: 'acceptance step', step: 'merged', detail: 'merged' }],
+			error: new AgentError(502, 'the host flai went away before it answered')
+		};
+		const out = await lines(await post('S-0041', {}));
+		expect(out.map((l) => l.event)).toEqual(['progress', 'error']);
+		expect(out[1].status).toBe(502);
+		expect(out[1].error).toContain('may have completed on the host');
+		expect(out[1].error).toContain('flai board');
+	});
+
 	it('passes the branch diff through', async () => {
-		process.env.FAKE_STDOUT =
-			'{"story":"S-0041","branch":"story/S-0041","files":[{"path":"a.md","status":"added","additions":1,"deletions":0,"patch":"@@ -0,0 +1 @@\\n+a"}]}';
+		script = {
+			answer: {
+				data: {
+					story: 'S-0041',
+					branch: 'story/S-0041',
+					files: [{ path: 'a.md', status: 'added', additions: 1, deletions: 0, patch: '+a' }]
+				},
+				warnings: []
+			}
+		};
 		const r = await diff({ params: { id: 'S-0041' } } as never);
 		expect(r.status).toBe(200);
 		expect((await r.json()).files[0]).toMatchObject({ path: 'a.md', status: 'added' });
-		expect(await args()).toEqual(['stream', 'diff', 'S-0041', '--json']);
+		expect(asked[0]).toEqual({ method: 'stream.diff', params: { id: 'S-0041' } });
 	});
 
 	it('answers a story without a branch with flai’s reason', async () => {
-		process.env.FAKE_STDERR = JSON.stringify({
-			level: 'FATAL',
-			msg: 'command failed',
-			err: 'S-0002 has no branch story/S-0002: it was never opened with flai stream open, or it has been merged and removed'
-		});
-		process.env.FAKE_EXIT = '1';
+		script = {
+			error: new AgentError(
+				502,
+				'S-0002 has no branch story/S-0002: it was never opened with flai stream open, or it has been merged and removed',
+				-32603
+			)
+		};
 		const r = await diff({ params: { id: 'S-0002' } } as never);
 		expect(r.status).toBe(500);
 		expect((await r.json()).error).toContain('has no branch story/S-0002');

@@ -1,30 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cp, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { Repo, RepoError } from './repo';
-import { flaiAsk } from './testing';
+import { Repo } from './repo';
+import { flaiAsk, haveFlai, shell } from './testing';
 import { board } from './board';
-import { flai, flaiBinary, resetFlaiBinary, withJson } from './flai';
 
+// The dashboard's writes are flai's methods on the host (S-0075). Here they run through `flai
+// hostapi` from this tree: the same method table flai serve offers, the same validation, the same
+// commands, against a copy of the fixture.
 const fixture = resolve('../flai/internal/metrics/testdata/good');
-const bin = process.env.FLAI_BIN ?? resolve('../bin/flai');
-const haveFlai = existsSync(bin);
-
-describe('withJson', () => {
-	it('asks for JSON before a -- that ends the flags, else at the end', () => {
-		expect(withJson(['move', 'S-1', 'ready'])).toEqual(['move', 'S-1', 'ready', '--json']);
-		expect(withJson(['story', 'new', '--epic=E-1', '--', '--json is my title'])).toEqual([
-			'story',
-			'new',
-			'--epic=E-1',
-			'--json',
-			'--',
-			'--json is my title'
-		]);
-	});
-});
 
 describe('board reader', () => {
 	it('groups active items by state with ages and limits', async () => {
@@ -47,46 +32,47 @@ describe('board reader', () => {
 	});
 });
 
-describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
+describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 	let dir: string;
+	let r: Repo;
 	beforeAll(async () => {
-		process.env.FLAI_BIN = bin;
-		resetFlaiBinary();
 		dir = await mkdtemp(join(tmpdir(), 'flaiover-'));
 		await cp(fixture, dir, { recursive: true });
+		r = new Repo(dir, flaiAsk(dir));
 	});
 	afterAll(async () => {
 		await rm(dir, { recursive: true, force: true });
 	});
 
-	it('finds the binary', async () => {
-		expect(await flaiBinary()).toBe(bin);
-	});
-	it('performs a valid move and reports the new status', async () => {
-		const { data } = await flai<{ id: string; status: string }>(dir, [
-			'move',
-			'T-003',
-			'done',
-			'--by',
-			'test'
-		]);
+	it('performs a valid move as the designer and reports the new status', async () => {
+		const { data } = await r.write<{ id: string; status: string }>('item.move', {
+			id: 'T-003',
+			to: 'done'
+		});
 		expect(data).toMatchObject({ id: 'T-003', status: 'done' });
 		const file = await readFile(join(dir, 'wip/kanban/tasks/T-003-t3.md'), 'utf8');
 		expect(file).toContain('status: done');
-		expect(file).toMatch(/- to: done\n\s+at: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\n\s+by: test/);
+		// the fixture names no owner, so flai records the designer; the dashboard names nobody
+		expect(file).toMatch(
+			/- to: done\n\s+at: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\n\s+by: designer/
+		);
 	});
-	it('refuses an invalid move with the rule text as a 400', async () => {
-		await expect(flai(dir, ['move', 'S-004', 'done'])).rejects.toMatchObject({
+	it('refuses an invalid move with the rule text as a 400, and an argument that is not one', async () => {
+		await expect(r.write('item.move', { id: 'S-004', to: 'done' })).rejects.toMatchObject({
 			status: 400,
 			message: expect.stringContaining('cannot go from in-progress to done')
 		});
-		await expect(flai(dir, ['move', 'S-004', 'cancelled'])).rejects.toMatchObject({
+		await expect(r.write('item.move', { id: 'S-004', to: 'cancelled' })).rejects.toMatchObject({
 			status: 400,
 			message: expect.stringContaining('needs --reason')
 		});
+		await expect(r.write('item.move', { id: '--help', to: 'ready' })).rejects.toMatchObject({
+			status: 400,
+			message: expect.stringContaining('not an item ID')
+		});
 	});
 	it('moves a story with no tasks to ready and in-progress, and is refused at review (ADR-0021)', async () => {
-		const { data: made } = await flai<{ id: string }>(dir, [
+		const made = await shell<{ id: string }>(dir, [
 			'story',
 			'new',
 			'No tasks yet',
@@ -99,32 +85,28 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		const body = await readFile(path, 'utf8');
 		await writeFile(path, body.replace('- [ ]\n', '- [ ] works\n'));
 		for (const to of ['ready', 'in-progress']) {
-			const { data } = await flai<{ status: string }>(dir, ['move', made.id, to, '--by', 'test']);
+			const { data } = await r.write<{ status: string }>('item.move', { id: made.id, to });
 			expect(data.status).toBe(to);
 		}
-		await expect(flai(dir, ['move', made.id, 'review', '--by', 'test'])).rejects.toMatchObject({
+		await expect(r.write('item.move', { id: made.id, to: 'review' })).rejects.toMatchObject({
 			status: 400,
 			message: expect.stringContaining('needs at least one task before it goes to review')
 		});
 	});
-	it('places a story with flai order, and the board reads the column in that order (S-0057)', async () => {
+	it('places a story in the pull order, and the board reads the column in that order (S-0057)', async () => {
 		const ids: string[] = [];
-		for (const title of ['Order one', 'Order two', 'Order three']) {
-			const { data } = await flai<{ id: string }>(dir, ['story', 'new', title, '--epic', 'E-001']);
-			ids.push(data.id);
-		}
+		for (const title of ['Order one', 'Order two', 'Order three'])
+			ids.push((await shell<{ id: string }>(dir, ['story', 'new', title, '--epic', 'E-001'])).id);
 		const [one, two, three] = ids;
 		const backlog = async () =>
 			(await board(new Repo(dir, flaiAsk(dir)))).columns.backlog
 				.filter((c) => ids.includes(c.id))
 				.map((c) => c.id);
 		expect(await backlog()).toEqual([one, two, three]);
-		const { data } = await flai<{ status: string; sequence: string[]; order: string[] }>(dir, [
-			'order',
-			three,
-			'--before',
-			one
-		]);
+		const { data } = await r.write<{ status: string; sequence: string[] }>('item.order', {
+			id: three,
+			before: one
+		});
 		expect(data.status).toBe('backlog');
 		expect(data.sequence.filter((id) => ids.includes(id))).toEqual([three, one, two]);
 		expect(await backlog()).toEqual([three, one, two]);
@@ -133,11 +115,11 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		expect(column.findIndex((c) => c.id === 'E-001')).toBe(
 			column.findIndex((c) => c.type !== 'story')
 		);
-		await expect(flai(dir, ['order', three, '--before', 'S-004'])).rejects.toMatchObject({
+		await expect(r.write('item.order', { id: three, before: 'S-004' })).rejects.toMatchObject({
 			status: 400,
 			message: expect.stringContaining('within one column')
 		});
-		await expect(flai(dir, ['order', 'E-001', '--top'])).rejects.toMatchObject({
+		await expect(r.write('item.order', { id: 'E-001', top: true })).rejects.toMatchObject({
 			status: 400,
 			message: expect.stringContaining('only stories are in the pull order')
 		});
@@ -166,11 +148,11 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 			git(clone, 'remote', 'add', 'origin', join(base, 'origin.git'));
 			git(clone, 'push', '-q', '-u', 'origin', 'main');
 			const ask = () =>
-				flai<{
+				new Repo(clone, flaiAsk(clone)).run<{
 					pushed: boolean;
 					reason?: string;
 					unpushed?: { acceptances: string[]; tags: string[] };
-				}>(clone, ['push', '--pending', '--dry-run']);
+				}>('push.pending');
 			expect((await ask()).data).toMatchObject({ pushed: false, reason: 'nothing pending' });
 			git(
 				clone,
@@ -191,62 +173,49 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		}
 	});
 	it('blocks, unblocks, and logs to a stream', async () => {
-		await flai(dir, ['block', 'S-004', '--reason', 'waiting']);
+		await r.write('item.block', { id: 'S-004', reason: 'waiting' });
 		let file = await readFile(join(dir, 'wip/kanban/stories/S-004-four.md'), 'utf8');
 		expect(file).toContain('reason: waiting');
-		await flai(dir, ['unblock', 'S-004']);
+		await r.write('item.unblock', { id: 'S-004' });
 		file = await readFile(join(dir, 'wip/kanban/stories/S-004-four.md'), 'utf8');
 		expect(file).toMatch(/until: \d{4}/);
-		await flai(dir, ['stream', 'log', 'S-004', 'from the dashboard']);
+		await r.write('stream.log', { id: 'S-004', entry: '--from the dashboard' });
 		const narrative = await readFile(join(dir, 'wip/agents/S-004.md'), 'utf8');
-		expect(narrative).toContain('from the dashboard');
+		expect(narrative).toContain('--from the dashboard');
 	});
 	it('creates a story with a body in one step, and is refused by the check with nothing left (S-0059)', async () => {
-		const { data: body } = await flai<{ body: string }>(dir, ['story', 'new', '--print-body']);
-		expect(body.body).toContain('## Goal');
-		expect(body.body).not.toContain('---');
-		const args = (title: string) => [
-			'story',
-			'new',
-			'--nature=improvement',
-			'--owner=olive',
-			'--epic=E-001',
-			'--body-stdin',
-			'--autocommit',
-			'--',
-			title
-		];
-		const { data } = await flai<{ item: { id: string; owner: string }; path: string }>(
-			dir,
-			args('--json is a title here'),
-			{
-				input:
-					'## Goal\nFrom the board.\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n',
-				exitStatus: { 4: 422 }
-			}
+		const { data: template } = await r.run<{ body: string }>('item.template', { type: 'story' });
+		expect(template.body).toContain('## Goal');
+		expect(template.body).not.toContain('---');
+		const make = (title: string, body: string) =>
+			r.write<{ item: { id: string; owner: string }; path: string }>('item.new', {
+				type: 'story',
+				title,
+				nature: 'improvement',
+				parent: 'E-001',
+				body
+			});
+		const { data } = await make(
+			'--json is a title here',
+			'## Goal\nFrom the board.\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n'
 		);
-		expect(data.item.owner).toBe('olive');
+		expect(data.item.owner).toBe('designer');
 		const file = await readFile(join(dir, data.path), 'utf8');
 		expect(file).toContain(`# ${data.item.id} --json is a title here\n\n## Goal\nFrom the board.`);
 		const before = await readdir(join(dir, 'wip/kanban/stories'));
 		await expect(
-			flai(dir, args('Refused'), {
-				input:
-					'## Goal\nNo notes section, which flai check reports.\n\n## Acceptance criteria\n- [ ] x\n\n## Tasks\n',
-				exitStatus: { 4: 422 }
-			})
-		).rejects.toMatchObject({ status: 422, data: { refused: { findings: expect.any(Array) } } });
+			make(
+				'Refused',
+				'## Goal\nNo notes section, which flai check reports.\n\n## Acceptance criteria\n- [ ] x\n\n## Tasks\n'
+			)
+		).rejects.toMatchObject({ status: 422, data: { findings: expect.any(Array) } });
 		expect(await readdir(join(dir, 'wip/kanban/stories'))).toEqual(before);
 	});
-	it('reports a missing binary as 503', async () => {
-		process.env.FLAI_BIN = '/nonexistent/flai';
-		const savedPath = process.env.PATH;
-		process.env.PATH = '';
-		resetFlaiBinary();
-		await expect(flai(dir, ['board'])).rejects.toBeInstanceOf(RepoError);
-		await expect(flai(dir, ['board'])).rejects.toMatchObject({ status: 503 });
-		process.env.PATH = savedPath;
-		process.env.FLAI_BIN = bin;
-		resetFlaiBinary();
+	it('reads what changes nothing without a request ID: a cancellation preview, a diff of nothing, stats', async () => {
+		const { data } = await r.run<{ dry_run: boolean; cancelled: unknown[] }>('item.move.preview', {
+			id: 'E-001'
+		});
+		expect(data.dry_run).toBe(true);
+		expect(Array.isArray(data.cancelled)).toBe(true);
 	});
 });

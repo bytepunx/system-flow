@@ -4,8 +4,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo } from './repo';
-import { flaiAsk } from './testing';
-import { flai, resetFlaiBinary } from './flai';
+import { flaiAsk, shell } from './testing';
 import { activity } from './activity';
 import { hrefFor, inbox } from './inbox';
 
@@ -53,11 +52,9 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 				)
 		);
 		process.env.PROJECT_DIR = dir;
-		process.env.FLAI_BIN = bin;
-		resetFlaiBinary();
 		// a second story in progress that touches what S-004 touches, and a block
-		await flai(dir, ['touches', 'S-004', 'flai/cmd']);
-		const { data } = await flai<{ id: string }>(dir, [
+		await shell(dir, ['touches', 'S-004', 'flai/cmd']);
+		const data = await shell<{ id: string }>(dir, [
 			'story',
 			'new',
 			'Overlapping',
@@ -71,9 +68,9 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		const name = (await readdir(file)).find((f) => f.startsWith(data.id + '-'))!;
 		const body = await readFile(join(file, name), 'utf8');
 		await writeFile(join(file, name), body.replace('- [ ]\n', '- [x] ok\n'));
-		await flai(dir, ['move', data.id, 'ready', '--by', 'alex']);
-		await flai(dir, ['move', data.id, 'in-progress', '--by', 'alex']);
-		await flai(dir, ['block', 'T-003', '--reason', 'waiting on the designer']);
+		await shell(dir, ['move', data.id, 'ready', '--by', 'alex']);
+		await shell(dir, ['move', data.id, 'in-progress', '--by', 'alex']);
+		await shell(dir, ['block', 'T-003', '--reason', 'waiting on the designer']);
 		repo = new Repo(dir, flaiAsk(dir));
 	});
 	afterAll(async () => {
@@ -131,9 +128,9 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 	});
 
 	it('lists a story in review with a link to its review page', async () => {
-		await flai(dir, ['move', 'T-003', 'done', '--by', 'bot']).catch(() => undefined);
-		await flai(dir, ['unblock', 'T-003']).catch(() => undefined);
-		await flai(dir, ['move', 'S-004', 'review', '--by', 'bot']);
+		await shell(dir, ['move', 'T-003', 'done', '--by', 'bot']).catch(() => undefined);
+		await shell(dir, ['unblock', 'T-003']).catch(() => undefined);
+		await shell(dir, ['move', 'S-004', 'review', '--by', 'bot']);
 		const fresh = new Repo(dir, flaiAsk(dir));
 		const review = (await inbox(fresh)).entries.filter((e) => e.kind === 'review');
 		await fresh.close();
