@@ -3,11 +3,14 @@ id: E-0007
 type: epic
 nature: feature
 title: flairport - the interface for managing multiple flai projects
-status: backlog
+status: cancelled
 owner: alex
 created: 2026-09-20T01:14:04Z
-updated: 2026-09-20T03:35:30Z
-transitions: []
+updated: 2026-09-20T06:46:19Z
+transitions:
+  - to: cancelled
+    at: 2026-09-20T06:46:19Z
+    by: alex
 tags: [flairport]
 touches: [flairport/src]
 ---
@@ -33,3 +36,4 @@ touches: [flairport/src]
 ## Notes
 
 It is not flairports job to provide an authentication/authorization mechanism; that is additional infrastructure that could be supplied either by the tunnel vendor or by authstar.
+- 2026-09-20T06:46:19Z: moved to cancelled: going a different direction

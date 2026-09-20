@@ -3,13 +3,16 @@ id: E-0006
 type: epic
 nature: feature
 title: flaiover as the designer's workbench
-status: ready
+status: cancelled
 owner: alex
 created: 2026-09-17T19:46:28Z
-updated: 2026-09-20T06:14:18Z
+updated: 2026-09-20T06:54:41Z
 transitions:
   - to: ready
     at: 2026-09-18T16:25:54Z
+    by: alex
+  - to: cancelled
+    at: 2026-09-20T06:54:41Z
     by: alex
 tags: []
 ---
@@ -47,3 +50,4 @@ flaiover is where the system's designer reads, edits, discusses, and accepts the
 
 ## Notes
 Carved out 2026-09-17 from the operator's direction. Decisions: ADR-0018 (dashboard token), ADR-0019 (story branches, wip on main, touches), ADR-0020 (files plus MCP). Pull order is the story order above: authentication first, hub transport last. E-0003 stays open for dashboard remediation only.
+- 2026-09-20T06:54:41Z: moved to cancelled: going a different direction

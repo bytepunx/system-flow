@@ -3,14 +3,17 @@ id: S-0065
 type: story
 nature: feature
 title: "flai records every running dashboard in the operator's flai home: where it listens and the token that opens it"
-status: ready
+status: cancelled
 parent: E-0007
 owner: alex
 created: 2026-09-20T01:18:58Z
-updated: 2026-09-20T03:31:55Z
+updated: 2026-09-20T06:46:19Z
 transitions:
   - to: ready
     at: 2026-09-20T03:31:55Z
+    by: alex
+  - to: cancelled
+    at: 2026-09-20T06:46:19Z
     by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src]
@@ -44,3 +47,4 @@ A project's key comes from `system-flow.yaml` (`key`, a warning when missing sin
 In this repository flai's config is `.flai-cache/config.json` through `scripts/flai.sh`, not `~/.flai`, and agents here must not write under the operator's `~/.flai` while testing. The override in the sixth criterion exists for that.
 
 S-0066 (port negotiation) builds on this record, and S-0067 (flairport) reads it.
+- 2026-09-20T06:46:19Z: moved to cancelled: E-0007 cancelled: going a different direction

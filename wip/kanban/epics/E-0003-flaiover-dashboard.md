@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-18T16:15:39Z
+updated: 2026-09-20T07:26:52Z
 transitions: []
 tags: []
 ---
@@ -26,6 +26,18 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0035 flai dashboard runs from a private registry or a local build
 - S-0044 Dashboard theme from the brand palette
 - S-0045 Charts do not update when switching chart type
+- S-0071 Research how the dashboard and a flai process on the host can talk, so that actions in the dashboard trigger actions on the host
+- S-0072 flai on the host dials the dashboard and the two speak JSON-RPC: the channel and nothing else
+- S-0073 The dashboard reads work items through the channel: project, board, items, threads, and file changes
+- S-0074 The dashboard reads documents, ADRs, narratives, the inbox, and search through the channel, and parses no project file
+- S-0075 Every write the dashboard makes goes through the channel, and the image no longer carries flai, git, or ssh
+- S-0076 flai serves MCP itself on the host, over HTTP as well as stdio, and the dashboard's /mcp endpoint goes
+- S-0077 flai dashboard no longer mounts the clone, and everything that existed to make the mount safe goes with it
+- S-0078 An acceptance made from the board is pushed and published by flai on the host, when the operator has enabled it
+- S-0079 A story moved to ready starts an agent on the host, with the command the operator configured
+- S-0080 One dashboard serves every project the host flai serves
+- S-0081 The dashboard can restart, upgrade, and stop itself through flai on the host
+- S-0082 Checks for a story in review are run on the host and shown on the review page
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.

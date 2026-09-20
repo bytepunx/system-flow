@@ -3,14 +3,17 @@ id: S-0067
 type: story
 nature: feature
 title: flairport lists every recorded project in a filterable sidebar and starts, stops, and restarts them
-status: ready
+status: cancelled
 parent: E-0007
 owner: alex
 created: 2026-09-20T01:18:59Z
-updated: 2026-09-20T03:31:59Z
+updated: 2026-09-20T06:46:19Z
 transitions:
   - to: ready
     at: 2026-09-20T03:31:59Z
+    by: alex
+  - to: cancelled
+    at: 2026-09-20T06:46:19Z
     by: alex
 tags: [flairport]
 touches: [flairport/src, flai/cmd, system-flow.yaml]
@@ -44,3 +47,4 @@ Relation to ADR-0024. That ADR sketched a hub that projects dial out to over a w
 `CLAUDE.md` says not to create top-level folders beyond those listed and the sub-projects in `system-flow.yaml`, and that flai owns the manifest's `projects`: adding `flairport` there is part of this story and is done the way the manifest allows, with the operator's word recorded, since it adds a release component.
 
 Stack. flaiover is SvelteKit with the node adapter, Tailwind, and a token layer in `layout.css`; reusing that stack and sharing the theme is the obvious choice, and the ADR should say so or say why not. Whether flairport's server is Node (like flaiover) or a `flai` subcommand that serves a static front end is the main thing to settle: the second needs no Node on the host.
+- 2026-09-20T06:46:19Z: moved to cancelled: E-0007 cancelled: going a different direction

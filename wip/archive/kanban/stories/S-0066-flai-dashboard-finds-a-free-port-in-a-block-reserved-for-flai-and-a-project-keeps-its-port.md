@@ -3,14 +3,17 @@ id: S-0066
 type: story
 nature: feature
 title: flai dashboard finds a free port in a block reserved for flai, and a project keeps its port
-status: ready
+status: cancelled
 parent: E-0007
 owner: alex
 created: 2026-09-20T01:18:58Z
-updated: 2026-09-20T03:31:57Z
+updated: 2026-09-20T06:46:19Z
 transitions:
   - to: ready
     at: 2026-09-20T03:31:57Z
+    by: alex
+  - to: cancelled
+    at: 2026-09-20T06:46:19Z
     by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd]
@@ -42,3 +45,4 @@ Depends on S-0065: the record is where a project's port is remembered and where 
 Ranges to stay out of: 0 to 1023 (system), the Linux default ephemeral range 32768 to 60999 and IANA's 49152 to 65535 (a free port there can be taken by any outgoing connection a moment later), and well-known development ports (3000, 5173, 8000, 8080, 8888, 9000 and their neighbours). Whether the block should start at 4242, so the first project stays where operators already look, is part of the choice.
 
 The probe has to bind on the address the dashboard will be published on (0.0.0.0 by default since S-0035), because a port free on loopback can be taken on another interface.
+- 2026-09-20T06:46:19Z: moved to cancelled: E-0007 cancelled: going a different direction

@@ -3,14 +3,17 @@ id: S-0068
 type: story
 nature: feature
 title: A project selected in flairport is shown embedded and fully working, through flairport's own address
-status: ready
+status: cancelled
 parent: E-0007
 owner: alex
 created: 2026-09-20T01:18:59Z
-updated: 2026-09-20T03:32:02Z
+updated: 2026-09-20T06:46:19Z
 transitions:
   - to: ready
     at: 2026-09-20T03:32:02Z
+    by: alex
+  - to: cancelled
+    at: 2026-09-20T06:46:19Z
     by: alex
 tags: [flairport, dashboard]
 touches: [flairport/src, flaiover/src]
@@ -40,3 +43,4 @@ Why a proxy is likely. A tunnel publishes one local address. If flairport framed
 What is known about flaiover that bears on it. It authenticates by bearer token or by an HttpOnly, SameSite cookie set at `/login`; writes need an `x-requested-with` header (seen in S-0059: a plain fetch without it is 403); pages build links with `resolve()` from `$app/paths`, but the client's API calls are absolute (`/api/...`), and `EventSource('/api/events')` likewise; the login redirect is to `/login`. A path prefix therefore touches the `api()` helper, every `EventSource`, and the base path setting; a subdomain per project touches none of that and needs wildcard DNS and certificates at the tunnel. The ADR should weigh exactly this.
 
 Depends on S-0065 and S-0067. Setting up the tunnel itself (cloudflared or another, and the identity check at its edge) is the epic's second outcome and is not a bullet yet: this story makes flairport correct behind one and documents what the tunnel must provide; a story for the tunnel's set-up and documentation is worth adding to the epic.
+- 2026-09-20T06:46:19Z: moved to cancelled: E-0007 cancelled: going a different direction
