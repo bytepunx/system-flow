@@ -33,7 +33,7 @@ func run(t *testing.T, dir Dir) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond,
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
 					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
@@ -156,5 +156,27 @@ func TestASecondServeRefusesWhileTheFirstRuns(t *testing.T) {
 	}
 	if _, err := os.Stat(dir.status()); err == nil {
 		t.Error("a serve that ended left its status behind")
+	}
+}
+
+func TestAChangedFileReachesTheDashboardAsANotification(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	root, key := scratchProject(t, "harbour")
+	_ = os.MkdirAll(filepath.Join(root, "wip/kanban/stories"), 0o755)
+	_ = os.MkdirAll(filepath.Join(root, "src"), 0o755)
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: key}); err != nil {
+		t.Fatal(err)
+	}
+	run(t, dir)
+	conn := dash.Wait(t)
+	time.Sleep(80 * time.Millisecond)                                                     // the watcher has its first look
+	_ = os.WriteFile(filepath.Join(root, "src/main.go"), []byte("package main\n"), 0o644) // not the dashboard's business
+	_ = os.WriteFile(filepath.Join(root, "wip/kanban/stories/S-0001-a.md"), []byte("a\n"), 0o644)
+	method, params := conn.Next(t)
+	var p struct{ Project, Path string }
+	_ = json.Unmarshal(params, &p)
+	if method != "change" || p.Project != "harbour" || p.Path != "wip/kanban/stories/S-0001-a.md" {
+		t.Errorf("notification: %s %s", method, params)
 	}
 }

@@ -121,5 +121,19 @@ func (c *Conn) Ask(t *testing.T, method, params string) (json.RawMessage, *chann
 	return m.Result, m.Error
 }
 
+// Next reads the next message flai sends by itself: a notification.
+func (c *Conn) Next(t *testing.T) (method string, params json.RawMessage) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, data, err := c.ws.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m msg
+	_ = json.Unmarshal(data, &m)
+	return m.Method, m.Params
+}
+
 // Close drops the connection from the dashboard's side.
 func (c *Conn) Close() { _ = c.ws.Close(websocket.StatusGoingAway, "gone") }

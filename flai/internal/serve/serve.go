@@ -20,6 +20,8 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/watch"
 )
 
 // Entry is one registered project: where it is, and the dashboard to dial.
@@ -140,11 +142,12 @@ func (d Dir) ReadStatus(now time.Time) (Status, bool) {
 
 // Options configure Run.
 type Options struct {
-	Dir     Dir
-	Version string
-	Logger  *slog.Logger
-	Every   time.Duration // how often the registry is read and the status written
-	Now     func() time.Time
+	Dir        Dir
+	Version    string
+	Logger     *slog.Logger
+	Every      time.Duration // how often the registry is read and the status written
+	Now        func() time.Time
+	WatchEvery time.Duration // how often a project's files are looked at; the watcher's default when zero
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
 }
@@ -221,7 +224,15 @@ func Run(ctx context.Context, o Options) error {
 			cctx, stop := context.WithCancel(ctx)
 			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, done: make(chan struct{})}
 			clients[root] = r
-			go func() { r.client.Run(cctx); close(r.done) }()
+			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
+			go func() {
+				// The dashboard hears of each changed file; what it shows comes from asking again.
+				go watcher.Run(cctx, func(rel string) {
+					r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
+				})
+				r.client.Run(cctx)
+				close(r.done)
+			}()
 			o.Logger.Info("project served", "component", "serve", "root", root, "key", e.Key, "dashboard", e.URL)
 		}
 	}
@@ -248,4 +259,20 @@ func Run(ctx context.Context, o Options) error {
 		case <-tick.C:
 		}
 	}
+}
+
+// watchedPaths are the manifest's three folders and the manifest itself:
+// what the dashboard shows, and nothing else of the clone.
+func watchedPaths(root string) []string {
+	out := []string{manifest.File}
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil {
+		return append(out, "design", "docs", "wip")
+	}
+	for _, k := range []string{"design", "docs", "wip"} {
+		if dir := m.Layout[k]; dir != "" && !filepath.IsAbs(dir) && !strings.HasPrefix(filepath.Clean(dir), "..") {
+			out = append(out, dir)
+		}
+	}
+	return out
 }

@@ -25,3 +25,5 @@ Deliberately not used:
 - `go-git`: cloning with branches, submodules, and credentials is more reliable by shelling out to the user's `git`. See [ADR 0010](../adrs/0010-shell-out-to-git-and-docker.md).
 - Docker SDK: same reasoning, `docker` on `PATH` is required and invoked as a subprocess.
 - Markdown parsers: `flai` only needs front matter and headings, a small hand-written splitter is enough.
+
+No library watches files. `flai serve` tells a dashboard which files changed (S-0073) by polling: `internal/watch` stats the manifest's three folders and the manifest every 300 ms and reports a file once it has looked the same for one tick. `fsnotify` was the alternative; inotify, kqueue, and Windows each have limits of their own (watches per user, a descriptor per file, no recursion), and a walk of a few hundred Markdown files costs less than the difference is worth. `wait_for_events` in `flai mcp` polls for the same reason.

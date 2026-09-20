@@ -96,8 +96,22 @@ type Client struct {
 	MaxBackoff time.Duration
 	Now        func() time.Time
 
-	mu    sync.Mutex
-	state State
+	mu     sync.Mutex
+	state  State
+	notify func(method string, params any) error // set while a proven connection is open
+}
+
+// Notify sends a notification to the dashboard when one is connected, and
+// reports whether it was sent. Nothing is queued for a dashboard that is
+// not there: it asks again for what it shows when flai returns.
+func (c *Client) Notify(method string, params any) bool {
+	c.mu.Lock()
+	send := c.notify
+	c.mu.Unlock()
+	if send == nil {
+		return false
+	}
+	return send(method, params) == nil
 }
 
 func (c *Client) defaults() {
@@ -303,6 +317,20 @@ func (c *Client) serveOnce(ctx context.Context) error {
 	c.setState(func(s *State) {
 		s.Connected, s.Since, s.LastError = true, c.Now().UTC().Format(time.RFC3339), ""
 	})
+	c.mu.Lock()
+	c.notify = func(method string, params any) error {
+		b, err := json.Marshal(params)
+		if err != nil {
+			return err
+		}
+		return send(message{Method: method, Params: b})
+	}
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		c.notify = nil
+		c.mu.Unlock()
+	}()
 	c.Logger.Info("connected to the dashboard", "component", "channel", "url", c.URL, "project", c.Project.Key, "dashboard", hr.Dashboard)
 	c.setState(func(s *State) { s.Attempts = 0 })
 
