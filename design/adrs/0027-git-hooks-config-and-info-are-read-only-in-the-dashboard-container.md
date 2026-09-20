@@ -4,7 +4,7 @@ title: "Git hooks, config, and info are read-only in the dashboard container"
 status: accepted
 date: 2026-09-19
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0031]
 refines: [ADR-0018, ADR-0022, ADR-0026]
 ---
 

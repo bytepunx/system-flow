@@ -4,7 +4,7 @@ title: The dashboard container may push acceptances with a key the operator give
 status: accepted
 date: 2026-09-19
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0031]
 refines: [ADR-0018]
 ---
 

@@ -4,7 +4,7 @@ title: The dashboard mounts the repository at its host path; relative-path workt
 status: accepted
 date: 2026-09-18
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0031]
 ---
 
 # ADR-0022 The dashboard mounts the repository at its host path; relative-path worktrees are an opt-in
