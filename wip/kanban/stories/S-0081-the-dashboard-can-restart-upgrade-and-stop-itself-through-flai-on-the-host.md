@@ -3,12 +3,15 @@ id: S-0081
 type: story
 nature: feature
 title: The dashboard can restart, upgrade, and stop itself through flai on the host
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:52Z
-updated: 2026-09-20T07:26:52Z
-transitions: []
+updated: 2026-09-20T13:01:46Z
+transitions:
+  - to: ready
+    at: 2026-09-20T13:01:46Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flaiover/src, design/system]
 ---

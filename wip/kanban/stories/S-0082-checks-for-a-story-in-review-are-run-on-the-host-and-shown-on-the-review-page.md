@@ -3,12 +3,15 @@ id: S-0082
 type: story
 nature: feature
 title: Checks for a story in review are run on the host and shown on the review page
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:52Z
-updated: 2026-09-20T07:26:52Z
-transitions: []
+updated: 2026-09-20T13:01:56Z
+transitions:
+  - to: ready
+    at: 2026-09-20T13:01:56Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system]
 ---
