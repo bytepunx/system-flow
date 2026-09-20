@@ -3,11 +3,11 @@ id: S-0077
 type: story
 nature: improvement
 title: flai dashboard no longer mounts the clone, and everything that existed to make the mount safe goes with it
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:51Z
-updated: 2026-09-20T12:55:10Z
+updated: 2026-09-20T12:57:22Z
 transitions:
   - to: ready
     at: 2026-09-20T07:28:22Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-20T12:55:10Z
     by: system-flow
+  - to: done
+    at: 2026-09-20T12:57:22Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flaiover/src, flaiover/Dockerfile, design/system, design/adrs, docs/operators]
 ---
