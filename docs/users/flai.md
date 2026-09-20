@@ -489,7 +489,7 @@ flai dashboard --no-serve      # do not register with, or start, flai serve
 
 ### flai serve: flai on the host, for the dashboards
 
-`flai dashboard` also starts `flai serve`, a small process of yours on the host, and registers the project with it. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is how the dashboard reads the board, the work items, and the threads, and how it hears that a file changed; documents, search, and writes still use the mounted repository and follow in later releases. Without `flai serve` the dashboard says on every page that it has no flai to ask. One `flai serve` serves every project you start a dashboard for.
+`flai dashboard` also starts `flai serve`, a small process of yours on the host, and registers the project with it. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is how the dashboard reads everything it shows (the board, work items, threads, documents, decisions, the inbox, activity, and search) and how it hears that a file changed; writes still use the mounted repository and follow in a later release. Without `flai serve` the dashboard says on every page that it has no flai to ask. One `flai serve` serves every project you start a dashboard for.
 
 ```bash
 flai serve status     # does it run, which projects, which dashboards have it connected
