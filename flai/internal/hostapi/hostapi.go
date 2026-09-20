@@ -113,7 +113,7 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 		}
 		return repo, nil
 	}
-	return map[string]channel.Method{
+	table := map[string]channel.Method{
 		"project.info": func(_ context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
 			m, err := manifest.Load(filepath.Join(p.Root, manifest.File))
 			if err != nil {
@@ -244,6 +244,10 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 			return out, nil
 		},
 	}
+	for name, m := range docMethods() {
+		table[name] = m
+	}
+	return table
 }
 
 func isState(s string) bool {
