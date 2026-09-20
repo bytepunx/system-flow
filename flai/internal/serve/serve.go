@@ -137,7 +137,7 @@ func (d Dir) ReadStatus(now time.Time) (Status, bool) {
 	if err != nil || now.Sub(updated) > StaleAfter {
 		return st, false
 	}
-	return st, processAlive(st.PID)
+	return st, Alive(st.PID)
 }
 
 // Options configure Run.

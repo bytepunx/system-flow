@@ -8,8 +8,8 @@ import (
 	"syscall"
 )
 
-// processAlive reports whether pid names a process this user can signal.
-func processAlive(pid int) bool {
+// Alive reports whether pid names a process this user can signal.
+func Alive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}

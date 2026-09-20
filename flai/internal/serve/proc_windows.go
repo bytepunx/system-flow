@@ -8,9 +8,9 @@ import (
 	"syscall"
 )
 
-// processAlive cannot probe with a signal on Windows; the fresh status
+// Alive cannot probe with a signal on Windows; the fresh status
 // file is the evidence there.
-func processAlive(pid int) bool { return pid > 0 }
+func Alive(pid int) bool { return pid > 0 }
 
 // Detach starts cmd in its own process group, without a console.
 func Detach(cmd *exec.Cmd) {
