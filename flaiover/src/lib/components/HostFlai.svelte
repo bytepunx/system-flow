@@ -1,37 +1,13 @@
 <script lang="ts">
-	// Whether a flai on the host has this dashboard connected (ADR-0029). Nothing is shown when the
-	// container was given no agent credential: an older flai started it, and there is nothing to say.
-	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
+	// The header's word on the host flai (ADR-0029). Nothing is shown when the container was given no
+	// agent credential: an older flai started it, and the banner below the header explains.
+	import { hostFlai } from '$lib/hostflai.svelte';
 
-	type Status = {
-		configured: boolean;
-		connected: boolean;
-		since?: string;
-		flai?: string;
-		error?: string;
-	};
-
-	let { everyMs = 10000 }: { everyMs?: number } = $props();
-	let status = $state<Status | null>(null);
-
-	async function load() {
-		try {
-			const r = await api('/api/agent');
-			if (r.ok) status = await r.json();
-		} catch {
-			// The page says nothing new when the dashboard itself cannot be reached.
-		}
-	}
-	onMount(() => {
-		void load();
-		const t = setInterval(load, everyMs);
-		return () => clearInterval(t);
-	});
+	const status = $derived(hostFlai.status);
 </script>
 
 {#if status?.configured}
-	{#if status.connected && !status.error}
+	{#if hostFlai.usable}
 		<span
 			class="rounded border border-line px-2 py-1 text-xs text-muted"
 			data-host-flai="connected"

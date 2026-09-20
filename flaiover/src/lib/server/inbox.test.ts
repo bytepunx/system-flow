@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo } from './repo';
+import { flaiAsk } from './testing';
 import { flai, resetFlaiBinary } from './flai';
 import { activity, lastLogEntry } from './activity';
 import { inbox, openQuestions, resetInboxCache } from './inbox';
@@ -89,7 +90,7 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		await flai(dir, ['move', data.id, 'ready', '--by', 'alex']);
 		await flai(dir, ['move', data.id, 'in-progress', '--by', 'alex']);
 		await flai(dir, ['block', 'T-003', '--reason', 'waiting on the designer']);
-		repo = new Repo(dir);
+		repo = new Repo(dir, flaiAsk(dir));
 	});
 	afterAll(async () => {
 		await repo?.close();
@@ -149,7 +150,7 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		await flai(dir, ['move', 'T-003', 'done', '--by', 'bot']).catch(() => undefined);
 		await flai(dir, ['unblock', 'T-003']).catch(() => undefined);
 		await flai(dir, ['move', 'S-004', 'review', '--by', 'bot']);
-		const fresh = new Repo(dir);
+		const fresh = new Repo(dir, flaiAsk(dir));
 		resetInboxCache();
 		const review = (await inbox(fresh)).entries.filter((e) => e.kind === 'review');
 		await fresh.close();

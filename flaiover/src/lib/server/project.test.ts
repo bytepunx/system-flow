@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { Repo, useRepo } from '$lib/server/repo';
+import { flaiAsk } from '$lib/server/testing';
 import { cp, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -15,8 +17,10 @@ describe('project identity in responses (ADR-0024)', () => {
 		dir = await mkdtemp(join(tmpdir(), 'flaiover-project-'));
 		await cp(fixture, dir, { recursive: true });
 		process.env.PROJECT_DIR = dir;
+		useRepo(new Repo(dir, flaiAsk(dir)));
 	});
 	afterAll(async () => {
+		useRepo(null);
 		await rm(dir, { recursive: true, force: true });
 	});
 

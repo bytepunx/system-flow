@@ -229,10 +229,12 @@ func For(r *workitem.Repo, pathOrItem string) ([]*Thread, error) {
 		return nil, err
 	}
 	want := strings.TrimSuffix(filepath.ToSlash(pathOrItem), "/")
+	// An item is matched in any padding, the anchor's included: S-4, S-004,
+	// and S-0004 name one story, and older projects anchored with three digits.
 	canon := workitem.CanonicalID(want)
 	var out []*Thread
 	for _, th := range all {
-		if th.Anchor.Path == want || (th.Anchor.Item != "" && th.Anchor.Item == canon) {
+		if th.Anchor.Path == want || (th.Anchor.Item != "" && workitem.CanonicalID(th.Anchor.Item) == canon) {
 			out = append(out, th)
 		}
 	}

@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo } from './repo';
+import { flaiAsk } from './testing';
 import { resetFlaiBinary } from './flai';
 import { resetInboxCache } from './inbox';
 import { notifyUrl, startNotifier, type Notifier, type NotifyBody } from './notify';
@@ -30,6 +31,8 @@ describe('inbox webhook', () => {
 			p,
 			(await readFile(p, 'utf8')).replace('## Open questions\n', `## Open questions\n- ${q}\n`)
 		);
+		// flai on the host is what watches files now (S-0073); here the test is its voice.
+		repo.changed('wip/agents/S-004.md');
 	};
 	const waitFor = async (ok: () => boolean, ms = 4000) => {
 		const end = Date.now() + ms;
@@ -57,7 +60,7 @@ describe('inbox webhook', () => {
 			});
 		});
 		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-		repo = new Repo(dir);
+		repo = new Repo(dir, flaiAsk(dir));
 		notifier = null;
 	});
 	afterEach(async () => {
@@ -72,7 +75,7 @@ describe('inbox webhook', () => {
 		expect(await notifyUrl(repo)).toBeNull();
 		expect(await startNotifier(repo, 20)).toBeNull();
 		await setManifest('dashboard:\n  notify_url: "ftp://example.com/x"\n');
-		expect(await notifyUrl(new Repo(dir))).toBeNull();
+		expect(await notifyUrl(new Repo(dir, flaiAsk(dir)))).toBeNull();
 	});
 
 	it('posts an entry that appears after it started, once, and never what was already there', async () => {
@@ -81,7 +84,6 @@ describe('inbox webhook', () => {
 		notifier = await startNotifier(repo, 20);
 		expect(notifier).not.toBeNull();
 		await repo.watch();
-		await new Promise((r) => setTimeout(r, 400)); // let the watcher settle before writing
 
 		await addQuestion('Which port should it use?');
 		await waitFor(() => received.length >= 1);
@@ -100,6 +102,7 @@ describe('inbox webhook', () => {
 
 		// an unrelated change posts nothing more
 		await writeFile(join(dir, 'design/system/extra.md'), '---\ntitle: x\n---\n');
+		repo.changed('design/system/extra.md');
 		await new Promise((r) => setTimeout(r, 600));
 		await notifier!.idle();
 		expect(received).toHaveLength(1);
@@ -109,7 +112,6 @@ describe('inbox webhook', () => {
 		await setManifest(`dashboard:\n  notify_url: "${url()}"\n`);
 		notifier = await startNotifier(repo, 20);
 		await repo.watch();
-		await new Promise((r) => setTimeout(r, 400)); // let the watcher settle before writing
 		status = 500;
 		await addQuestion('First?');
 		await waitFor(() => received.length >= 1);

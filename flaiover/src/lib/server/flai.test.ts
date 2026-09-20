@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo, RepoError } from './repo';
+import { flaiAsk } from './testing';
 import { board } from './board';
 import { flai, flaiBinary, resetFlaiBinary, withJson } from './flai';
 
@@ -27,7 +28,7 @@ describe('withJson', () => {
 
 describe('board reader', () => {
 	it('groups active items by state with ages and limits', async () => {
-		const b = await board(new Repo(fixture), new Date('2026-09-01T12:00:00Z'));
+		const b = await board(new Repo(fixture, flaiAsk(fixture)), new Date('2026-09-01T12:00:00Z'));
 		expect(b.wip_limits).toEqual({ ready: 5, 'in-progress': 2, review: 3 });
 		expect(b.columns['in-progress'].map((c) => c.id)).toEqual(['S-004', 'T-003']);
 		const s4 = b.columns['in-progress'][0];
@@ -36,7 +37,7 @@ describe('board reader', () => {
 		expect(b.columns.done).toEqual([]); // done items in the fixture are archived
 	});
 	it('names the parent of every card that has one', async () => {
-		const b = await board(new Repo(fixture), new Date('2026-09-01T12:00:00Z'));
+		const b = await board(new Repo(fixture, flaiAsk(fixture)), new Date('2026-09-01T12:00:00Z'));
 		const [story, task] = b.columns['in-progress'];
 		expect(story).toMatchObject({ id: 'S-004', parent: 'E-001', parent_title: 'Epic' });
 		expect(task).toMatchObject({ id: 'T-003', parent: 'S-004', parent_title: 'Four' });
@@ -114,7 +115,7 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		}
 		const [one, two, three] = ids;
 		const backlog = async () =>
-			(await board(new Repo(dir))).columns.backlog
+			(await board(new Repo(dir, flaiAsk(dir)))).columns.backlog
 				.filter((c) => ids.includes(c.id))
 				.map((c) => c.id);
 		expect(await backlog()).toEqual([one, two, three]);
@@ -128,7 +129,7 @@ describe.skipIf(!haveFlai)('flai wrapper on a temp project', () => {
 		expect(data.sequence.filter((id) => ids.includes(id))).toEqual([three, one, two]);
 		expect(await backlog()).toEqual([three, one, two]);
 		// an epic sharing the column keeps its place
-		const column = (await board(new Repo(dir))).columns.backlog;
+		const column = (await board(new Repo(dir, flaiAsk(dir)))).columns.backlog;
 		expect(column.findIndex((c) => c.id === 'E-001')).toBe(
 			column.findIndex((c) => c.type !== 'story')
 		);

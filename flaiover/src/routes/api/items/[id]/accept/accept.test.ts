@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { Repo, useRepo } from '$lib/server/repo';
+import { flaiAsk } from '$lib/server/testing';
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -44,6 +46,7 @@ describe('acceptance and diff endpoints with a fake flai', () => {
 		await writeFile(bin, FAKE);
 		await chmod(bin, 0o755);
 		process.env.PROJECT_DIR = dir;
+		useRepo(new Repo(dir, flaiAsk(dir)));
 		process.env.FLAI_BIN = bin;
 		process.env.FAKE_DIR = dir;
 		resetFlaiBinary();
@@ -56,6 +59,7 @@ describe('acceptance and diff endpoints with a fake flai', () => {
 		delete process.env.FAKE_EXIT;
 	});
 	afterAll(async () => {
+		useRepo(null);
 		await rm(dir, { recursive: true, force: true });
 	});
 

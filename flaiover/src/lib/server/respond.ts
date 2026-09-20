@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { repo, RepoError } from './repo';
+import { AgentError } from './agent';
 import { projectIdentity } from './project';
 
 /** A JSON object gains `project: { name, key }` (ADR-0024); arrays and scalars keep their shape. */
@@ -15,6 +16,7 @@ export async function respond<T>(fn: () => Promise<T>): Promise<Response> {
 	} catch (e) {
 		if (e instanceof RepoError)
 			return json(await identified({ ...(e.data ?? {}), error: e.message }), { status: e.status });
+		if (e instanceof AgentError) return json({ error: e.message }, { status: e.status });
 		throw e;
 	}
 }

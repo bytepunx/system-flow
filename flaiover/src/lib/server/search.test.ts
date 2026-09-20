@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { Repo } from './repo';
+import { flaiAsk } from './testing';
 import { SearchIndex, adrs, snippet } from './search';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const monorepo = resolve('..');
 
 describe('SearchIndex on the fixture', () => {
-	const idx = new SearchIndex(new Repo(fixture));
+	const idx = new SearchIndex(new Repo(fixture, flaiAsk(fixture)));
 	it('indexes items and design files, docs only on request', async () => {
 		await idx.build();
 		expect(idx.size()).toBeGreaterThanOrEqual(12);
@@ -34,7 +35,7 @@ describe('SearchIndex on the fixture', () => {
 
 describe('adrs on the monorepo', () => {
 	it('lists ADRs with the supersession chain', async () => {
-		const list = await adrs(new Repo(monorepo));
+		const list = await adrs(new Repo(monorepo, flaiAsk(monorepo)));
 		expect(list.length).toBeGreaterThanOrEqual(15);
 		expect(list[0].id).toBe('ADR-0001');
 		expect(list.find((a) => a.id === 'ADR-0002')?.supersededBy).toEqual([]);
@@ -44,7 +45,7 @@ describe('adrs on the monorepo', () => {
 		expect(list.every((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.date))).toBe(true);
 	});
 	it('finds a body phrase across wip and design', async () => {
-		const idx = new SearchIndex(new Repo(monorepo));
+		const idx = new SearchIndex(new Repo(monorepo, flaiAsk(monorepo)));
 		const hits = await idx.search('front matter');
 		expect(hits.length).toBeGreaterThan(0);
 		expect(hits.some((h) => h.path.startsWith('design/'))).toBe(true);

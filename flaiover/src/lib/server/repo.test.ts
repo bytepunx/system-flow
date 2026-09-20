@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { Repo, RepoError, splitFrontMatter } from './repo';
+import { flaiAsk } from './testing';
 
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const monorepo = resolve('..');
@@ -20,7 +21,7 @@ describe('splitFrontMatter', () => {
 });
 
 describe('Repo on the metrics fixture', () => {
-	const r = new Repo(fixture);
+	const r = new Repo(fixture, flaiAsk(fixture));
 	it('reads the manifest', async () => {
 		const m = await r.manifest();
 		expect(m.name).toBe('good');
@@ -92,7 +93,7 @@ describe('Repo on the metrics fixture', () => {
 
 describe.skipIf(!existsSync(resolve(monorepo, 'system-flow.yaml')))('Repo on the monorepo', () => {
 	it('reads every item with a consistent status', async () => {
-		const r = new Repo(monorepo);
+		const r = new Repo(monorepo, flaiAsk(monorepo));
 		const items = await r.items();
 		expect(items.length).toBeGreaterThan(50);
 		for (const it of items) {

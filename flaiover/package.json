@@ -54,7 +54,6 @@
 		"@opentelemetry/sdk-node": "^0.222.0",
 		"@opentelemetry/semantic-conventions": "^1.43.0",
 		"@prometheus-io/client": "^0.16.1",
-		"chokidar": "^5.0.0",
 		"echarts": "^6.1.0",
 		"markdown-it": "^15.0.2",
 		"markdown-it-anchor": "^10.0.0",

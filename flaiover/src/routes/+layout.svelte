@@ -7,6 +7,8 @@
 	import { inboxState } from '$lib/inbox.svelte';
 	import InboxBadge from '$lib/components/InboxBadge.svelte';
 	import HostFlai from '$lib/components/HostFlai.svelte';
+	import HostFlaiBanner from '$lib/components/HostFlaiBanner.svelte';
+	import { hostFlai } from '$lib/hostflai.svelte';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -28,8 +30,13 @@
 	onMount(() => {
 		themeState.start();
 		// The inbox needs a session; the login page has none yet.
-		if (page.url.pathname !== '/login') inboxState.start();
-		return () => inboxState.stop();
+		const signedIn = page.url.pathname !== '/login';
+		if (signedIn) inboxState.start();
+		if (signedIn) hostFlai.start();
+		return () => {
+			inboxState.stop();
+			if (signedIn) hostFlai.stop();
+		};
 	});
 </script>
 
@@ -58,6 +65,7 @@
 			</button>
 		</nav>
 	</header>
+	{#if page.url.pathname !== '/login'}<HostFlaiBanner />{/if}
 	<main class="mx-auto max-w-6xl px-4 py-6">
 		{@render children()}
 	</main>

@@ -5,6 +5,7 @@
 // is served, and afterwards everything the dashboard can ask for is a method
 // flai chose to offer.
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
@@ -63,7 +64,11 @@ function same(a: string, b: string): boolean {
 	return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export class AgentHub {
+/**
+ * Emits 'connected' when a flai has proven itself and 'change' with a repo-relative path when flai
+ * says a file of the project changed (S-0073).
+ */
+export class AgentHub extends EventEmitter {
 	private wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE });
 	private conn: WebSocket | null = null;
 	private info: { since: string; flai: string; project: { key: string; name: string } } | null =
@@ -79,6 +84,7 @@ export class AgentHub {
 		private key: string | null,
 		opt: AgentOptions = {}
 	) {
+		super();
 		this.pingMs = opt.pingMs ?? 4000;
 		this.handshakeMs = opt.handshakeMs ?? 5000;
 		this.maxUnproven = opt.maxUnproven ?? 4;
@@ -209,6 +215,7 @@ export class AgentHub {
 			clearInterval(ping);
 			this.drop(ws, 'closed');
 		});
+		this.emit('connected');
 	}
 
 	private drop(ws: WebSocket, why: string): void {
@@ -228,6 +235,11 @@ export class AgentHub {
 		try {
 			m = JSON.parse(data.toString());
 		} catch {
+			return;
+		}
+		if (m.method === 'change' && m.id === undefined) {
+			const path = (m.params as { path?: unknown } | undefined)?.path;
+			if (typeof path === 'string' && path) this.emit('change', path);
 			return;
 		}
 		if (typeof m.id !== 'number') return;

@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { Repo, useRepo } from '$lib/server/repo';
+import { flaiAsk } from '$lib/server/testing';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,11 +23,13 @@ describe.skipIf(!existsSync(bin))('move endpoint attribution', () => {
 		const yaml = (await readFile(manifest, 'utf8')).replace(/^owner:.*\n/m, '');
 		await writeFile(manifest, yaml + 'owner: dana\n');
 		process.env.PROJECT_DIR = dir;
+		useRepo(new Repo(dir, flaiAsk(dir)));
 		process.env.FLAI_BIN = bin;
 		resetFlaiBinary();
 		POST = (await import('./+server')).POST as unknown as Handler;
 	});
 	afterAll(async () => {
+		useRepo(null);
 		await rm(dir, { recursive: true, force: true });
 	});
 	const move = (id: string, body: unknown) =>

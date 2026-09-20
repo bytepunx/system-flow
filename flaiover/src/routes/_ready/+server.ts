@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { repo } from '$lib/server/repo';
 import { flaiBinary } from '$lib/server/flai';
+import { agent } from '$lib/server/agent';
 
 const TIMEOUT_MS = 2000;
 
@@ -14,6 +15,14 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
 /** Readiness: each dependency checked with a short timeout; names the one that failed. */
 export const GET = async () => {
 	const checks: Record<string, { ok: boolean; detail?: string }> = {};
+	// The project and its items are asked of flai on the host (ADR-0029): without it nothing is ready.
+	const host = agent().status();
+	checks.host_flai = {
+		ok: host.connected,
+		detail: host.connected
+			? `flai ${host.flai}`
+			: 'not connected; run flai dashboard, or flai serve start'
+	};
 	try {
 		const m = await withTimeout(repo().manifest());
 		checks.project = { ok: true, detail: m.name };

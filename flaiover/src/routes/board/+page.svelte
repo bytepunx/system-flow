@@ -46,7 +46,15 @@
 	// bumped on every load so the unpushed notice asks again when anything changes
 	let loads = $state(0);
 	async function load() {
-		board = await (await api('/api/board')).json();
+		const r = await api('/api/board');
+		const body = await r.json();
+		// Without a flai on the host there is no board to show; the banner says why (S-0073).
+		if (!r.ok) {
+			if (!board) notice = { kind: 'error', text: body.error ?? r.statusText };
+			return;
+		}
+		if (notice?.kind === 'error' && !board) notice = null;
+		board = body;
 		loads += 1;
 	}
 	onMount(() => {

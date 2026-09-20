@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Repo } from './repo';
+import { flaiAsk } from './testing';
 import { resetFlaiBinary } from './flai';
 import { clearStatsCache, stats, validate } from './stats';
 import type { Report } from '$lib/viz/charts';
@@ -42,7 +43,7 @@ describe.skipIf(!existsSync(bin))('stats through flai on the fixture', () => {
 		await rm(dir, { recursive: true, force: true });
 	});
 	it('returns the report shape the charts consume', async () => {
-		const r = await stats<Report>(new Repo(dir), { since: '365d' });
+		const r = await stats<Report>(new Repo(dir, flaiAsk(dir)), { since: '365d' });
 		expect(r.type).toBe('story');
 		expect(r.summary.completed).toBeGreaterThanOrEqual(2);
 		expect(r.summary.cycle_time.p85_seconds).toBeGreaterThan(0);

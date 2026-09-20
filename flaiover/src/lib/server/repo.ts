@@ -3,10 +3,10 @@
 // design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
 import { readFile, readdir, stat } from 'node:fs/promises';
-import { join, relative, resolve, sep } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { parse as parseYaml } from 'yaml';
-import { watch as chokidarWatch, type FSWatcher } from 'chokidar';
+import { agent, AgentError } from './agent';
 import { log } from './log';
 
 export type Layout = { design: string; docs: string; wip: string };
@@ -40,20 +40,6 @@ export type Thread = {
 	entries: ThreadEntry[];
 };
 
-const ENTRY = /^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+)$/gm;
-
-/** Dated entries of a thread body, in order. */
-export function threadEntries(body: string): ThreadEntry[] {
-	const out: ThreadEntry[] = [];
-	const heads = [...body.matchAll(ENTRY)];
-	heads.forEach((m, i) => {
-		const start = (m.index ?? 0) + m[0].length;
-		const end = i + 1 < heads.length ? (heads[i + 1].index ?? body.length) : body.length;
-		out.push({ at: m[1], author: m[2], text: body.slice(start, end).trim() });
-	});
-	return out;
-}
-
 export type Item = {
 	id: string;
 	type: 'epic' | 'story' | 'task';
@@ -85,11 +71,6 @@ export type DocNode = {
 };
 
 export const ITEM_TYPES = ['epic', 'story', 'task'] as const;
-const FOLDERS: Record<(typeof ITEM_TYPES)[number], string> = {
-	epic: 'epics',
-	story: 'stories',
-	task: 'tasks'
-};
 
 export function projectDir(): string {
 	return resolve(process.env.PROJECT_DIR ?? process.cwd());
@@ -110,18 +91,69 @@ export function splitFrontMatter(doc: string): {
 
 type CacheEntry<T> = { mtimeMs: number; value: T };
 
+/** Asks flai on the host for a named method (ADR-0029). Tests supply one that reads a fixture through flai. */
+export type Ask = <T>(method: string, params?: Record<string, unknown>) => Promise<T>;
+
+/** flai's code for an item or thread that does not exist (internal/hostapi). */
+const NOT_FOUND = -32004;
+const INVALID_PARAMS = -32602;
+
+const viaChannel: Ask = (method, params) => agent().ask(method, params);
+
 /**
- * Repo reads one system-flow repository. Every read goes through a
- * per-path mtime cache; the watcher invalidates and emits 'change'.
+ * Repo is the dashboard's view of one system-flow repository. The project, its work items, and its
+ * threads are asked of flai on the host over the channel and kept until flai says a file changed
+ * (S-0073); documents, narratives, and search still read the mount through a per-path mtime cache
+ * until S-0074 moves them. Either way a change is announced as 'change' with the repo-relative path.
  */
 export class Repo extends EventEmitter {
 	readonly root: string;
 	private fileCache = new Map<string, CacheEntry<unknown>>();
-	private watcher: FSWatcher | null = null;
+	private answers = new Map<string, Promise<unknown>>();
+	private listening = false;
 
-	constructor(root = projectDir()) {
+	constructor(
+		root = projectDir(),
+		private source: Ask = viaChannel
+	) {
 		super();
 		this.root = resolve(root);
+	}
+
+	/** Ask flai, with its refusals as the HTTP statuses the routes answer with. */
+	async ask<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+		try {
+			return await this.source<T>(method, params);
+		} catch (e) {
+			if (e instanceof AgentError) {
+				const status = e.code === NOT_FOUND ? 404 : e.code === INVALID_PARAMS ? 400 : e.status;
+				throw new RepoError(status, e.message);
+			}
+			throw e;
+		}
+	}
+
+	/** One answer per question until something changes; a failure is not kept. */
+	private remembered<T>(key: string, method: string, params: Record<string, unknown> = {}) {
+		let hit = this.answers.get(key) as Promise<T> | undefined;
+		if (!hit) {
+			hit = this.ask<T>(method, params);
+			this.answers.set(key, hit);
+			hit.catch(() => this.answers.delete(key));
+		}
+		return hit;
+	}
+
+	/** A file of the project changed, by flai's word: forget what was asked and tell the listeners. */
+	changed(path: string): void {
+		this.answers.clear();
+		try {
+			this.fileCache.delete(this.resolveInside(path));
+		} catch {
+			// not a path inside the project: nothing cached under it
+		}
+		log().debug({ component: 'watcher', path }, 'file changed');
+		this.emit('change', path);
 	}
 
 	/** Resolve a repo-relative path and refuse anything outside the root. */
@@ -145,122 +177,48 @@ export class Repo extends EventEmitter {
 	}
 
 	async manifest(): Promise<Manifest> {
-		return this.cached('system-flow.yaml', async (abs) => {
-			const m = parseYaml(await readFile(abs, 'utf8')) as Manifest;
-			if (!m || !m.layout?.design || !m.layout?.docs || !m.layout?.wip) {
-				throw new RepoError(
-					500,
-					'system-flow.yaml is missing layout.design, layout.docs, or layout.wip'
-				);
-			}
-			return m;
-		});
+		const m = await this.remembered<Manifest>('project', 'project.info');
+		if (!m || !m.layout?.design || !m.layout?.docs || !m.layout?.wip) {
+			throw new RepoError(
+				500,
+				'system-flow.yaml is missing layout.design, layout.docs, or layout.wip'
+			);
+		}
+		return m;
 	}
 
 	async layout(): Promise<Layout> {
 		return (await this.manifest()).layout;
 	}
 
-	/** Threads under wip/threads, sorted by ID (ADR-0020). */
+	/** Every thread, resolved ones included, sorted by ID (ADR-0020), as flai reads them. */
 	async threads(): Promise<Thread[]> {
-		const layout = await this.layout();
-		const dir = join(layout.wip, 'threads');
-		const abs = this.resolveInside(dir);
-		const entries = await readdir(abs).catch(() => [] as string[]);
-		const out: Thread[] = [];
-		for (const name of entries) {
-			if (!name.startsWith('TH-') || !name.endsWith('.md')) continue;
-			const rel = join(dir, name).split(sep).join('/');
-			const { frontMatter, body } = splitFrontMatter(await readFile(join(abs, name), 'utf8'));
-			if (!frontMatter) continue;
-			const fm = frontMatter as Partial<Thread> & { anchor?: Thread['anchor'] };
-			out.push({
-				id: String(fm.id),
-				title: String(fm.title ?? ''),
-				anchor: fm.anchor ?? { path: '' },
-				status: (fm.status as Thread['status']) ?? 'open',
-				participants: fm.participants ?? [],
-				created: stamp(fm.created),
-				updated: stamp(fm.updated),
-				path: rel,
-				entries: threadEntries(body)
-			});
-		}
-		return out.sort((a, b) => num(a.id) - num(b.id));
+		return this.remembered<Thread[]>('threads', 'threads.list', { all: true });
 	}
 
 	/** Threads anchored to a repository path or an item ID. */
 	async threadsFor(on: string): Promise<Thread[]> {
 		const want = on.replace(/\/$/, '');
-		const m = /^([EST])-?0*(\d+)$/i.exec(want);
-		// Items are matched by type and number so any padding (S-4, S-004, S-0004) works.
-		const sameItem = (id: string | undefined) =>
-			m !== null &&
-			id !== undefined &&
-			rank(id) === rank(`${m[1].toUpperCase()}-`) &&
-			num(id) === Number(m[2]);
-		return (await this.threads()).filter((t) => t.anchor.path === want || sameItem(t.anchor.item));
+		return this.remembered<Thread[]>(`threads:${want}`, 'threads.list', { on: want, all: true });
 	}
 
-	/** All work items from kanban and archive, sorted by ID. */
+	/** All work items from kanban and archive, sorted by ID, as flai reads them. */
 	async items(): Promise<Item[]> {
-		const layout = await this.layout();
-		const out: Item[] = [];
-		for (const archived of [false, true]) {
-			for (const type of ITEM_TYPES) {
-				const dir = archived
-					? join(layout.wip, 'archive', 'kanban', FOLDERS[type])
-					: join(layout.wip, 'kanban', FOLDERS[type]);
-				const abs = this.resolveInside(dir);
-				const entries = await readdir(abs).catch(() => [] as string[]);
-				for (const name of entries) {
-					if (!name.endsWith('.md') || name.startsWith('_')) continue;
-					const rel = join(dir, name).split(sep).join('/');
-					out.push(await this.item(rel, archived));
-				}
-			}
-		}
-		return out.sort((a, b) => rank(a.id) - rank(b.id) || num(a.id) - num(b.id));
-	}
-
-	private async item(rel: string, archived: boolean): Promise<Item> {
-		return this.cached(rel, async (abs) => {
-			const { frontMatter, body } = splitFrontMatter(await readFile(abs, 'utf8'));
-			if (!frontMatter) throw new RepoError(500, `${rel}: no front matter`);
-			const fm = frontMatter as Partial<Item>;
-			return {
-				...fm,
-				id: String(fm.id),
-				type: fm.type as Item['type'],
-				nature: String(fm.nature),
-				title: String(fm.title),
-				status: String(fm.status),
-				created: stamp(fm.created),
-				updated: stamp(fm.updated),
-				transitions: (fm.transitions ?? []).map((t) => ({ ...t, at: stamp(t.at) })),
-				blocked: fm.blocked?.map((b) => ({
-					...b,
-					from: stamp(b.from),
-					until: b.until ? stamp(b.until) : undefined
-				})),
-				path: rel,
-				archived,
-				body
-			};
+		const raw = await this.remembered<FlaiItem[]>('items', 'items.list', {
+			archived: true,
+			bodies: true
 		});
+		return raw.map(fromFlai);
 	}
 
 	/** Find an item by ID in any padding (S-32, S-032, S-0032 name the same item). */
 	async itemById(id: string): Promise<{ item: Item; children: Item[] }> {
-		const all = await this.items();
-		const m = /^([EST])-?0*(\d+)$/i.exec(id.trim());
-		const item = m
-			? all.find(
-					(it) => rank(it.id) === rank(`${m[1].toUpperCase()}-`) && num(it.id) === Number(m[2])
-				)
-			: undefined;
-		if (!item) throw new RepoError(404, `${id} not found`);
-		return { item, children: all.filter((it) => it.parent === item.id) };
+		const got = await this.remembered<{ item: FlaiItem; children: FlaiItem[] | null }>(
+			`item:${id.trim()}`,
+			'item.get',
+			{ id: id.trim() }
+		);
+		return { item: fromFlai(got.item), children: (got.children ?? []).map(fromFlai) };
 	}
 
 	/** Documentation trees: design (all types), docs, and wip. */
@@ -318,36 +276,21 @@ export class Repo extends EventEmitter {
 		});
 	}
 
-	/** Start watching the documentation and wip folders; emits 'change' with the repo-relative path. */
+	/**
+	 * Listen for flai's word that a file changed, and for its return: a flai that comes back may have
+	 * missed changes, so everything asked is forgotten and open pages are told to look again.
+	 */
 	async watch(): Promise<void> {
-		if (this.watcher) return;
-		const layout = await this.layout();
-		const targets = [layout.design, layout.docs, layout.wip, 'system-flow.yaml'].map((p) =>
-			this.resolveInside(p)
-		);
-		this.watcher = chokidarWatch(targets, {
-			ignoreInitial: true,
-			awaitWriteFinish: { stabilityThreshold: 150 }
-		});
-		const onChange = (kind: string) => (abs: string) => {
-			this.fileCache.delete(abs);
-			const path = relative(this.root, abs).split(sep).join('/');
-			log().debug({ component: 'watcher', event: kind, path }, 'file changed');
-			this.emit('change', path);
-		};
-		this.watcher
-			.on('add', onChange('add'))
-			.on('change', onChange('change'))
-			.on('unlink', onChange('unlink'))
-			.on('error', (err) =>
-				log().error({ component: 'watcher', err: String(err) }, 'watcher error')
-			);
-		log().info({ component: 'watcher', targets: targets.length }, 'watcher started');
+		if (this.listening || this.source !== viaChannel) return;
+		this.listening = true;
+		const hub = agent();
+		hub.on('change', (path: string) => this.changed(path));
+		hub.on('connected', () => this.changed('system-flow.yaml'));
+		log().info({ component: 'watcher' }, 'listening for changes from the host flai');
 	}
 
 	async close(): Promise<void> {
-		await this.watcher?.close();
-		this.watcher = null;
+		this.answers.clear();
 	}
 }
 
@@ -362,16 +305,28 @@ export class RepoError extends Error {
 	}
 }
 
-function stamp(v: unknown): string {
-	if (v instanceof Date) return v.toISOString().replace(/\.\d{3}Z$/, 'Z');
-	return String(v ?? '');
-}
+/** An item as flai marshals it: empty strings and nulls where the front matter had nothing. */
+type FlaiItem = Omit<Item, 'blocked' | 'tags' | 'touches' | 'transitions'> & {
+	transitions: Transition[] | null;
+	blocked: (Omit<Block, 'until'> & { until?: string })[] | null;
+	tags: string[] | null;
+	touches?: string[] | null;
+};
 
-function rank(id: string): number {
-	return id.startsWith('E-') ? 0 : id.startsWith('S-') ? 1 : 2;
-}
-function num(id: string): number {
-	return Number(id.slice(2)) || 0;
+function fromFlai(it: FlaiItem): Item {
+	return {
+		...it,
+		parent: it.parent || undefined,
+		owner: it.owner || undefined,
+		estimate: it.estimate || undefined,
+		stream: it.stream || undefined,
+		transitions: it.transitions ?? [],
+		blocked: it.blocked?.length
+			? it.blocked.map((b) => ({ ...b, until: b.until || undefined }))
+			: undefined,
+		tags: it.tags ?? undefined,
+		touches: it.touches ?? undefined
+	};
 }
 
 let shared: Repo | null = null;
@@ -379,4 +334,9 @@ let shared: Repo | null = null;
 export function repo(): Repo {
 	if (!shared) shared = new Repo();
 	return shared;
+}
+
+/** Replace the process-wide Repo, or forget it with null. For tests, which ask a flai of their own. */
+export function useRepo(r: Repo | null): void {
+	shared = r;
 }

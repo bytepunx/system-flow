@@ -198,4 +198,27 @@ describe('AgentHub', () => {
 		await new Promise((r) => setTimeout(r, 200));
 		expect(hub.status().connected).toBe(false);
 	});
+
+	it("passes on flai's word that a file changed, and says when a flai has connected", async () => {
+		const { hub, url } = await setup();
+		const events: string[] = [];
+		hub.on('connected', () => events.push('connected'));
+		hub.on('change', (path: string) => events.push(path));
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		flai.ws.send(
+			JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'change',
+				params: { project: 'harbour', path: 'wip/kanban/stories/S-0001-a.md' }
+			})
+		);
+		// not a path, and not a notification: neither is announced
+		flai.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'change', params: { path: 7 } }));
+		flai.ws.send(
+			JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'change', params: { path: 'x' } })
+		);
+		await new Promise((r) => setTimeout(r, 50));
+		expect(events).toEqual(['connected', 'wip/kanban/stories/S-0001-a.md']);
+	});
 });

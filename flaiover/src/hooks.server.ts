@@ -27,14 +27,22 @@ export const init: ServerInit = async () => {
 	// The channel flai on the host dials (ADR-0029): the server entry hands /agent upgrades to the hub.
 	exposeAgentUpgrade();
 	const channel = agent().status().configured;
-	// Webhook for new inbox entries, only when system-flow.yaml asks for it (S-0042).
-	// A project that cannot be read yet must not stop the server from starting.
-	try {
-		const r = repo();
-		if (await startNotifier(r)) await r.watch();
-	} catch (err) {
-		log().warn({ component: 'notify', err: String(err) }, 'inbox webhook not started');
-	}
+	// flai on the host says which files changed; the caches, /api/events, and the notifier listen (S-0073).
+	const r = repo();
+	await r.watch();
+	// Webhook for new inbox entries, only when system-flow.yaml asks for it (S-0042). The manifest is
+	// asked of flai, which may not have connected yet: try now, and again whenever one connects.
+	let notifying = false;
+	const startNotifying = async () => {
+		if (notifying) return;
+		try {
+			notifying = (await startNotifier(r)) !== null;
+		} catch (err) {
+			log().debug({ component: 'notify', err: String(err) }, 'inbox webhook not started yet');
+		}
+	};
+	agent().on('connected', () => void startNotifying());
+	void startNotifying();
 	log().info(
 		{
 			component: 'server',
