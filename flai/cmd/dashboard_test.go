@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // fakeRunner records docker calls and answers from a script.
@@ -150,7 +152,9 @@ func runWith(t *testing.T, dir string, r *fakeRunner, args ...string) (string, s
 	t.Helper()
 	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: dir, runner: r, clock: func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) }}
+	a := &app{out: &out, errOut: &errOut, cwd: dir, runner: r, clock: func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) },
+		// No test starts a real flai serve: the test binary is not flai.
+		serveStarter: func() (serve.Status, bool, error) { return serve.Status{PID: 4242}, true, nil }}
 	root := newRootCmdWith(a)
 	root.SetArgs(args)
 	code := 0

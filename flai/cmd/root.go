@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/logx"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // app carries state shared by all commands.
@@ -29,10 +30,11 @@ type app struct {
 	runner     execx.Runner
 	log        *slog.Logger // structured events on errOut, see design/conventions/logging.md
 
-	stdinIsTerminal *bool                            // tests override terminal detection
-	confirm         func(title string) (bool, error) // tests answer confirmations
-	cwd             string                           // tests override the working directory
-	clock           func() time.Time                 // tests override the clock
+	stdinIsTerminal *bool                              // tests override terminal detection
+	confirm         func(title string) (bool, error)   // tests answer confirmations
+	serveStarter    func() (serve.Status, bool, error) // tests do not start a process
+	cwd             string                             // tests override the working directory
+	clock           func() time.Time                   // tests override the clock
 }
 
 // Execute runs the CLI and returns the process exit code.

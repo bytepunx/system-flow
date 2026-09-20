@@ -94,7 +94,7 @@ func (s dashboardSettings) url() string { return fmt.Sprintf("http://localhost:%
 func newDashboardCmd(a *app) *cobra.Command {
 	var image, tag, bind, pushKeyFlag, pushHostsFlag string
 	var port int
-	var pull, attach, open, build bool
+	var pull, attach, open, build, noServe bool
 	c := &cobra.Command{
 		Use:   "dashboard",
 		Short: "Run the flaiover dashboard against this project in Docker",
@@ -111,7 +111,7 @@ flags, then the dashboard section of system-flow.yaml, then config.`,
   flai dashboard stop`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboard(image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build)
+			return a.runDashboard(image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build, noServe)
 		},
 	}
 	f := c.Flags()
@@ -124,6 +124,7 @@ flags, then the dashboard section of system-flow.yaml, then config.`,
 	f.BoolVar(&pull, "pull", false, "pull the image even if present")
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
+	f.BoolVar(&noServe, "no-serve", false, "do not register the project with flai serve or start it; the dashboard then has no flai on the host to ask (ADR-0029)")
 	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
 	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a))
 	return c
@@ -295,7 +296,7 @@ func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
 
-func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build bool) error {
+func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build, noServe bool) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
@@ -351,6 +352,11 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		"--env", "PROJECT_DIR=" + mount,
 	}
 	args = append(args, tokenArgs(repo.MainRoot)...)
+	// The credential flai serve and the dashboard prove to each other (ADR-0029).
+	if err := ensureAgentKey(repo.MainRoot); err != nil {
+		return fmt.Errorf("agent credential: %w", err)
+	}
+	args = append(args, agentKeyArgs(repo.MainRoot)...)
 	// Acceptance from the dashboard commits as the person who started it
 	// (S-0046): the container has no ~/.gitconfig of its own.
 	args = append(args, a.gitIdentityArgs(repo.MainRoot)...)
@@ -368,12 +374,17 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		return err
 	}
 	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
+	serveNote := "  host flai: not started (--no-serve); flai serve start connects it\n"
+	if !noServe {
+		serveNote = a.connectServe(repo, s)
+	}
 	if a.jsonOut {
 		out := map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "mount": s.Root, "mount_target": mount}
 		if pk != nil {
 			out["push_key"] = pk
 		}
 		out["read_only"] = guarded
+		out["host_flai"] = a.hostFlai(s.Root)
 		if len(planted) > 0 {
 			out["already_in_clone"] = planted
 		}
@@ -388,6 +399,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		fmt.Fprint(a.out, pk.describe())
 	}
 	fmt.Fprint(a.out, guardMessage(guarded, guardNote, planted))
+	fmt.Fprint(a.out, serveNote)
 	if open {
 		openBrowser(loginURL(s.url(), token))
 	}
@@ -440,6 +452,10 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 			s, err := a.dashboardSettings(repo, "", "", 0, "")
 			if err != nil {
 				return err
+			}
+			// flai serve stays for the other projects; it stops dialling this one.
+			if err := a.serveDir().Unregister(s.Root); err != nil {
+				a.logger().Warn("project not unregistered from flai serve", "component", "dashboard", "err", err.Error())
 			}
 			if running, _ := a.containerRunning(s.Name); !running {
 				fmt.Fprintf(a.out, "%s is not running\n", s.Name)
@@ -496,6 +512,7 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 				if running {
 					out["git_read_only"] = a.runningGuard(s.Name)
 				}
+				out["host_flai"] = a.hostFlai(s.Root)
 				if planted := a.auditClone(s.Root); len(planted) > 0 {
 					out["already_in_clone"] = planted
 				}
@@ -514,6 +531,7 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 					fmt.Fprintln(a.out, "  this container can write git hooks and config that would run on this host: it was started by an older flai; restart it (flai dashboard stop, then flai dashboard)")
 				}
 				fmt.Fprint(a.out, guardMessage(nil, "", a.auditClone(s.Root)))
+				fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
 			} else {
 				fmt.Fprintf(a.out, "%s not running; start with flai dashboard\n", s.Name)
 			}

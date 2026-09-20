@@ -25,7 +25,7 @@ import (
 // host when missing, so that there is something to mount and nothing for the
 // container to create in their place.
 var guardedDirs = []string{".git/hooks", ".git/info"}
-var guardedFiles = []string{".git/config", ".flai-cache/dashboard.token"}
+var guardedFiles = []string{".git/config", ".flai-cache/dashboard.token", ".flai-cache/" + agentKeyFileName}
 
 // gitGuardArgs returns the read-only mounts and what to tell the operator.
 // hostRoot is the clone on the host, mount where the container sees it.
@@ -42,8 +42,16 @@ func (a *app) gitGuardArgs(hostRoot, mount string) (args []string, guarded []str
 		args = append(args, "--volume", src+":"+mount+"/"+filepath.ToSlash(rel)+":ro")
 		guarded = append(guarded, filepath.ToSlash(rel))
 	}
-	for _, rel := range guardedDirs {
-		if err := os.MkdirAll(filepath.Join(hostRoot, rel), 0o755); err != nil {
+	dirs := append([]string{}, guardedDirs...)
+	// flai serve's registry, when flai's config (and so the registry) is kept
+	// inside the clone: it names the projects flai serves, the dashboards it
+	// dials, and the credential files it reads, none of which the container
+	// may choose (ADR-0029).
+	if rel, err := filepath.Rel(hostRoot, string(a.serveDir())); err == nil && !strings.HasPrefix(rel, "..") {
+		dirs = append(dirs, rel)
+	}
+	for _, rel := range dirs {
+		if err := os.MkdirAll(filepath.Join(hostRoot, rel), 0o700); err != nil {
 			continue
 		}
 		add(rel)
