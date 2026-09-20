@@ -119,6 +119,16 @@ It listens on this machine only by default. `--addr 0.0.0.0:4243` or another int
 
 The dashboard speaks plain HTTP and the token travels in every request. On the machine itself or a network you trust that is acceptable. Anywhere else, put a tunnel or a reverse proxy that terminates TLS in front of it and use the `https` address; never publish the dashboard's port to the internet as it is. To keep it to the host and let only the tunnel reach it, bind it to loopback: `dashboard.bind: 127.0.0.1` in `system-flow.yaml`, or `flai dashboard --bind 127.0.0.1`. The same holds for `flai mcp` over HTTP, which has its own port and token.
 
+### How the dashboard knows whether it is served over HTTPS
+
+It matters for one thing: the browser's session cookie is marked `Secure` exactly when the page is served over HTTPS, and a browser drops a `Secure` cookie it receives over plain HTTP from anywhere but `localhost`.
+
+- **Directly, over plain HTTP** (by `localhost`, a LAN address, a VPN address): nothing to configure. The dashboard sees that the connection is plain and sets an ordinary cookie.
+- **Behind a proxy or tunnel that terminates TLS**: it must tell the dashboard the original scheme in `X-Forwarded-Proto`. cloudflared, Caddy, and Traefik send it unasked; nginx needs `proxy_set_header X-Forwarded-Proto $scheme;`. The dashboard takes the first value of the header, accepts only `http` or `https`, and otherwise goes by the connection. Without the header the cookie is not `Secure` although the page is HTTPS, which works and is weaker than it should be.
+- A client that sends `X-Forwarded-Proto: https` by itself over plain HTTP affects only its own session: its cookie is marked `Secure` and its browser drops it.
+
+Until flaiover 0.22.3 the dashboard took every request for HTTPS, so logging in from any address but `localhost` over plain HTTP came straight back to the login page with no reason given (S-0083). The login page now checks that the session was kept and says so when it was not. Bearer tokens were never affected.
+
 ### Project identity
 
 Every `/api/*` response of the dashboard, and every answer of `flai mcp` over HTTP, names the project it came from: the headers `X-Flai-Project-Key` and `X-Flai-Project-Name` (URI-encoded), and `project: { name, key }` in JSON object bodies. Both come from `name` and `key` in `system-flow.yaml`; `flai check` warns when `key` is missing. The dashboard's refusals for lack of a token carry neither; flai's MCP server sends the headers on refusals too, since its caller chose the project by choosing the address.
@@ -132,7 +142,7 @@ Every request except `/_health` and `/_ready` needs the project's token (ADR-001
 | Set | `flai dashboard` generates it on first run: 32 random bytes, base64url. `flai dashboard token` prints it; `--rotate` replaces it and restarts a running dashboard, ending every session |
 | Stored | `.flai-cache/dashboard.token`, mode 0600, one per project. `.flai-cache/` must be git-ignored; `flai check` refuses a repository where it is not |
 | Handed to the container | Bind-mounted read-only at `/run/secrets/flaiover_token` with `FLAIOVER_TOKEN_FILE` pointing at it. Never an environment variable, so `docker inspect` does not show it |
-| Browser | Open the login link (`http://host:4242/login#token=...`). The fragment never leaves the browser; the page exchanges it for an HttpOnly, SameSite=Lax cookie (Secure over HTTPS) and rewrites history. Pasting the token on `/login` also works |
+| Browser | Open the login link (`http://host:4242/login#token=...`). The fragment never leaves the browser; the page exchanges it for an HttpOnly, SameSite=Lax cookie (Secure over HTTPS, which the dashboard knows as described under the tunnel expectation) and rewrites history. Pasting the token on `/login` also works |
 | Agents and tools | `Authorization: Bearer <token>` on every request |
 | Metrics | `/metrics` needs the token unless `FLAIOVER_METRICS_PUBLIC=true` |
 | Development | `scripts/flaiover-dev.sh` points the dev server at the same file; `FLAIOVER_AUTH=off` disables authentication outside production only |
