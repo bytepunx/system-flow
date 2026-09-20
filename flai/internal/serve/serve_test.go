@@ -135,6 +135,42 @@ func TestServesRegisteredProjectsAndFollowsTheRegistry(t *testing.T) {
 	}
 }
 
+func TestASharedCredentialDoesNotLetOneProjectAnswerForAnother(t *testing.T) {
+	// One flai serve, one shared credential, two projects (S-0080): the credential proves who flai
+	// is, not which project a given connection speaks for. Each connection still only answers for
+	// the one project it named in hello.
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	rootA, keyA := scratchProject(t, "harbour")
+	rootB, keyB := scratchProject(t, "lighthouse")
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: rootA, URL: dash.URL, KeyFile: keyA}); err != nil {
+		t.Fatal(err)
+	}
+	if err := dir.Register(Entry{Key: "lighthouse", Name: "lighthouse", Root: rootB, URL: dash.URL, KeyFile: keyB}); err != nil {
+		t.Fatal(err)
+	}
+	run(t, dir)
+	first, second := dash.Wait(t), dash.Wait(t)
+	byProject := map[string]*channeltest.Conn{first.Project: first, second.Project: second}
+	harbour, lighthouse := byProject["harbour"], byProject["lighthouse"]
+	if harbour == nil || lighthouse == nil {
+		t.Fatalf("expected harbour and lighthouse, got %q and %q", first.Project, second.Project)
+	}
+
+	if _, rerr := harbour.Ask(t, "project.info", `{"project":"harbour"}`); rerr != nil {
+		t.Errorf("harbour's connection answering for harbour: %v", rerr)
+	}
+	if _, rerr := harbour.Ask(t, "project.info", `{"project":"lighthouse"}`); rerr == nil || rerr.Code != channel.CodeUnknownProject {
+		t.Errorf("harbour's connection asked for lighthouse: %+v", rerr)
+	}
+	if _, rerr := lighthouse.Ask(t, "project.info", `{"project":"lighthouse"}`); rerr != nil {
+		t.Errorf("lighthouse's connection answering for lighthouse: %v", rerr)
+	}
+	if _, rerr := lighthouse.Ask(t, "project.info", `{"project":"harbour"}`); rerr == nil || rerr.Code != channel.CodeUnknownProject {
+		t.Errorf("lighthouse's connection asked for harbour: %+v", rerr)
+	}
+}
+
 func TestASecondServeRefusesWhileTheFirstRuns(t *testing.T) {
 	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
 	// A status as another live process would have written it: this test's parent is alive and is not us.
