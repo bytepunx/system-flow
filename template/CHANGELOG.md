@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.16 - 2026-09-20
+
+- S-0079 A story moved to ready starts an agent on the host, with the command the operator configured (patch).
+
 ## 1.0.15 - 2026-09-20
 
 - S-0076 flai serves MCP itself on the host, over HTTP as well as stdio, and the dashboard's /mcp endpoint goes (patch).
