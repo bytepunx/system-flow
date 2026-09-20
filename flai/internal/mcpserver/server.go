@@ -60,7 +60,7 @@ func New(opt Options) *mcp.Server {
 		s.maxWait = 5 * time.Minute
 	}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). When nothing is in progress and can_pull is true, pull the first ready story without waiting to be told. An agent that stays running holds wait_for_events when idle; one that ends its turn calls inbox when it starts again, and nothing in between is lost. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). When nothing is in progress and can_pull is true, pull the first ready story without waiting to be told. An agent that stays running holds wait_for_events when idle; one that ends its turn calls inbox when it starts again, and nothing in between is lost. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
 	})
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit, and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."}, s.inbox)
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_get", Description: "One thread with all of its dated entries."}, s.threadGet)
@@ -68,7 +68,7 @@ func New(opt Options) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_reply", Description: "Add an entry to a thread as this agent. A reply from anyone but the opener marks the thread answered."}, s.threadReply)
 	mcp.AddTool(srv, &mcp.Tool{Name: "thread_resolve", Description: "Close a thread, optionally saying what settled it."}, s.threadResolve)
 	mcp.AddTool(srv, &mcp.Tool{Name: "item_get", Description: "A work item by ID (any zero padding): front matter, body, and children."}, s.itemGet)
-	mcp.AddTool(srv, &mcp.Tool{Name: "item_move", Description: "Transition a work item with the workflow rules enforced. Refuses to move a story or epic to done: acceptance is the operator's."}, s.itemMove)
+	mcp.AddTool(srv, &mcp.Tool{Name: "item_move", Description: "Transition a work item with the workflow rules enforced. Moving an item to cancelled also cancels everything open under it, and the result lists what went with it. Refuses to move a story or epic to done: acceptance is the operator's."}, s.itemMove)
 	mcp.AddTool(srv, &mcp.Tool{Name: "doc_get", Description: "A markdown document under the design, docs, or wip folders, by repository path."}, s.docGet)
 	mcp.AddTool(srv, &mcp.Tool{Name: "who_touches", Description: "In-progress and in-review items whose touches cover a path; ask before editing a path someone else is working on."}, s.whoTouches)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes. Hold this when idle to react to the designer within a second. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
@@ -358,6 +358,8 @@ type ItemMoveOut struct {
 	ID       string   `json:"id"`
 	Status   string   `json:"status"`
 	Warnings []string `json:"warnings"`
+	// Cancelled is what a move to cancelled took with it: everything that was open under the item.
+	Cancelled []workitem.Cascaded `json:"cancelled,omitempty" jsonschema:"items cancelled with this one, each with the state it was in"`
 }
 
 func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMoveIn) (*mcp.CallToolResult, ItemMoveOut, error) {
@@ -368,14 +370,15 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	if in.To == workitem.Done && it.Type != workitem.Task {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is %s: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready", it.ID, articled(it.Type))
 	}
-	warnings, err := s.repo.Transition(it, in.To, s.agent, in.Reason, s.now())
+	res, err := s.repo.TransitionAll(it, in.To, s.agent, in.Reason, s.now())
 	if err != nil {
 		return nil, ItemMoveOut{}, err
 	}
+	warnings := res.Warnings
 	if warnings == nil {
 		warnings = []string{}
 	}
-	return nil, ItemMoveOut{ID: it.ID, Status: it.Status, Warnings: warnings}, nil
+	return nil, ItemMoveOut{ID: it.ID, Status: it.Status, Warnings: warnings, Cancelled: res.Cancelled}, nil
 }
 
 func articled(typ string) string {

@@ -29,9 +29,10 @@ type app struct {
 	runner     execx.Runner
 	log        *slog.Logger // structured events on errOut, see design/conventions/logging.md
 
-	stdinIsTerminal *bool            // tests override terminal detection
-	cwd             string           // tests override the working directory
-	clock           func() time.Time // tests override the clock
+	stdinIsTerminal *bool                            // tests override terminal detection
+	confirm         func(title string) (bool, error) // tests answer confirmations
+	cwd             string                           // tests override the working directory
+	clock           func() time.Time                 // tests override the clock
 }
 
 // Execute runs the CLI and returns the process exit code.

@@ -23,6 +23,7 @@ type Change struct {
 	To     string `json:"to,omitempty"`     // the state moved to
 	By     string `json:"by,omitempty"`     // who, when the file says; blocked intervals do not
 	Reason string `json:"reason,omitempty"` // why it was blocked
+	Cause  string `json:"cause,omitempty"`  // the item whose cancellation took this one with it (ADR-0028)
 	At     string `json:"at"`
 }
 
@@ -42,12 +43,19 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 		}
 		return t.After(since) || (t.Equal(since) && !seen[c.Key()])
 	}
+	byID := map[string]*Item{}
+	for _, it := range items {
+		byID[it.ID] = it
+	}
 	var out []Change
 	for _, it := range items {
 		base := Change{ID: it.ID, Type: it.Type, Title: it.Title}
 		for _, tr := range it.Transitions {
 			c := base
 			c.Kind, c.To, c.By, c.At = Moved, tr.To, tr.By, tr.At
+			if tr.To == Cancelled {
+				c.Cause = cancelledWith(byID, it, tr.At)
+			}
 			if tr.By != self && after(tr.At, c) {
 				out = append(out, c)
 			}
@@ -74,4 +82,22 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 		return lessID(out[i].ID, out[j].ID)
 	})
 	return out
+}
+
+// cancelledWith names the item whose cancellation at the same moment took it
+// along: the highest ancestor cancelled at that time. Nothing records it; a
+// cascade stamps every item with one time (ADR-0028).
+func cancelledWith(byID map[string]*Item, it *Item, at string) string {
+	cause := ""
+	for p := byID[it.Parent]; p != nil; p = byID[p.Parent] {
+		for _, tr := range p.Transitions {
+			if tr.To == Cancelled && tr.At == at {
+				cause = p.ID
+			}
+		}
+		if p.Parent == p.ID {
+			break
+		}
+	}
+	return cause
 }

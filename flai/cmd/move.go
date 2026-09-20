@@ -12,6 +12,7 @@ import (
 
 func newMoveCmd(a *app) *cobra.Command {
 	var reason, by string
+	var dryRun bool
 	var accept acceptOptions
 	c := &cobra.Command{
 		Use:   "move <id> <state>",
@@ -22,13 +23,19 @@ Rules from design/system/workflow.md are enforced: a story needs tasks and
 acceptance criteria before ready, children must be closed before done, and
 cancelling or sending review back needs --reason. WIP limit breaches warn.
 
+Cancelling an epic cancels every open story under it and their open tasks;
+cancelling a story cancels its open tasks (ADR-0028). The items are listed
+first, a terminal is asked unless --yes is given, and --dry-run changes
+nothing. Branches, worktrees, and narratives are left as they are.
+
 Moving a story from review to done is acceptance: it runs the same flow as
 flai accept (merge the story branch, archive, commit, tag, push), with the
 same flags. There is no other way for a story to become done.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-004 in-progress --reason "tests missing"   # from review
-  flai move S-009 cancelled --reason "superseded by S-012"`,
+  flai move S-009 cancelled --reason "superseded by S-012"
+  flai move E-003 cancelled --reason "a different route" --dry-run`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -41,11 +48,18 @@ same flags. There is no other way for a story to become done.`,
 			}
 			if it.Type == workitem.Story && args[1] == workitem.Done && it.Status == workitem.Review {
 				accept.by = by
+				accept.dryRun = accept.dryRun || dryRun
 				res, err := a.acceptItem(repo, it, accept)
 				if err != nil {
 					return err
 				}
 				return a.printAccept(res)
+			}
+			if args[1] == workitem.Cancelled {
+				return a.cancelItem(repo, it, a.movedBy(by), reason, dryRun)
+			}
+			if dryRun {
+				return fmt.Errorf("--dry-run previews a cancellation or an acceptance; other moves have nothing to preview")
 			}
 			warnings, err := repo.Transition(it, args[1], a.movedBy(by), reason, a.now())
 			if err != nil {
@@ -65,6 +79,7 @@ same flags. There is no other way for a story to become done.`,
 		},
 	}
 	c.Flags().StringVar(&reason, "reason", "", "why (required for cancelled and review → in-progress)")
+	c.Flags().BoolVar(&dryRun, "dry-run", false, "for a move to cancelled: list what would be cancelled with it and change nothing")
 	c.Flags().StringVar(&by, "by", "", "who made the change (default: FLAI_AGENT when set, else the config author)")
 	addAcceptFlags(c, &accept)
 	return c

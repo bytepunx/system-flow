@@ -164,6 +164,9 @@ func describe(c workitem.Change) string {
 	}
 	switch c.Kind {
 	case workitem.Moved:
+		if c.Cause != "" {
+			return c.ID + " " + c.Title + " was cancelled with " + c.Cause + who
+		}
 		return c.ID + " " + c.Title + " moved to " + c.To + who
 	case workitem.WasBlocked:
 		return c.ID + " " + c.Title + " was blocked: " + c.Reason
