@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 )
 
 // Entry is one registered project: where it is, and the dashboard to dial.
@@ -171,7 +172,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.NewClient == nil {
 		o.NewClient = func(e Entry, key []byte) *channel.Client {
 			return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-				Methods: channel.Methods(o.Version), Version: o.Version, Logger: o.Logger}
+				Methods: hostapi.Methods(o.Version, o.Now), Version: o.Version, Logger: o.Logger}
 		}
 	}
 	if st, alive := o.Dir.ReadStatus(o.Now()); alive && st.PID != os.Getpid() {

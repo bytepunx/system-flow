@@ -503,3 +503,18 @@ func contains(list []string, s string) bool {
 	}
 	return false
 }
+
+// View is a thread as flai prints it and the dashboard reads it: the front
+// matter, the path relative to the repository, the entries, and the story
+// the thread belongs to.
+func View(r *workitem.Repo, th *Thread) map[string]any {
+	path := th.Path
+	if rel, err := filepath.Rel(r.MainRoot, th.Path); err == nil {
+		path = filepath.ToSlash(rel)
+	}
+	return map[string]any{
+		"id": th.ID, "title": th.Title, "anchor": th.Anchor, "status": th.Status,
+		"participants": th.Participants, "created": th.Created, "updated": th.Updated,
+		"path": path, "entries": th.Entries(), "story": StoryOf(r, th),
+	}
+}

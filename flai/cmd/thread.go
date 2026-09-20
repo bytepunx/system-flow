@@ -217,9 +217,5 @@ func describeAnchor(an threads.Anchor) string {
 }
 
 func threadJSON(repo *workitem.Repo, th *threads.Thread) map[string]any {
-	return map[string]any{
-		"id": th.ID, "title": th.Title, "anchor": th.Anchor, "status": th.Status,
-		"participants": th.Participants, "created": th.Created, "updated": th.Updated,
-		"path": relPath(repo.MainRoot, th.Path), "entries": th.Entries(), "story": threads.StoryOf(repo, th),
-	}
+	return threads.View(repo, th)
 }

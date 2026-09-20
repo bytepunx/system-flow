@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/channel/channeltest"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 )
 
 func scratchProject(t *testing.T, key string) (root, keyFile string) {
@@ -35,7 +36,7 @@ func run(t *testing.T, dir Dir) {
 		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: channel.Methods("test"), Version: "test", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -91,7 +92,7 @@ func TestServesRegisteredProjectsAndFollowsTheRegistry(t *testing.T) {
 		t.Errorf("hello named %q", conn.Project)
 	}
 	res, rerr := conn.Ask(t, "project.info", `{"project":"harbour"}`)
-	var info channel.ProjectInfo
+	var info hostapi.ProjectInfo
 	if rerr != nil || json.Unmarshal(res, &info) != nil || info.Key != "harbour" {
 		t.Errorf("project.info: %v %s", rerr, res)
 	}

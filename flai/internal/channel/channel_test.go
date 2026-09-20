@@ -104,9 +104,24 @@ func project(t *testing.T) Project {
 	return Project{Key: "harbour", Name: "Harbour", Root: root}
 }
 
+// ProjectInfo and testMethods stand in for the table flai serve offers
+// (internal/hostapi), which this package must not import.
+type ProjectInfo struct {
+	Name   string            `json:"name"`
+	Owner  string            `json:"owner"`
+	Layout map[string]string `json:"layout"`
+	Flai   string            `json:"flai"`
+}
+
+func testMethods() map[string]Method {
+	return map[string]Method{"project.info": func(_ context.Context, p Project, _ json.RawMessage) (any, *Error) {
+		return ProjectInfo{Name: p.Name, Owner: "olive", Layout: map[string]string{"wip": "wip"}, Flai: "test"}, nil
+	}}
+}
+
 func startClient(t *testing.T, url, key string, p Project) *Client {
 	t.Helper()
-	c := &Client{URL: url, Key: []byte(key), Project: p, Methods: Methods("test"), Version: "test",
+	c := &Client{URL: url, Key: []byte(key), Project: p, Methods: testMethods(), Version: "test",
 		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

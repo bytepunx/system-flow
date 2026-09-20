@@ -11,15 +11,21 @@ import (
 // BoardCard is one item on the board as flai board --json and the MCP board
 // tool print it.
 type BoardCard struct {
-	ID      string   `json:"id"`
-	Type    string   `json:"type"`
-	Title   string   `json:"title"`
-	Nature  string   `json:"nature"`
-	Parent  string   `json:"parent,omitempty"`
-	Blocked bool     `json:"blocked"`
-	Age     string   `json:"age_in_column"`
-	AgeSecs int64    `json:"age_in_column_seconds"`
-	Touches []string `json:"touches,omitempty"`
+	ID     string `json:"id"`
+	Type   string `json:"type"`
+	Title  string `json:"title"`
+	Nature string `json:"nature"`
+	Parent string `json:"parent,omitempty"`
+	// ParentTitle, Status, and EnteredAt are what the dashboard's board shows
+	// beyond the CLI's (S-0073): a card names its parent without a second
+	// request, and its age is counted from EnteredAt in the browser.
+	ParentTitle string   `json:"parent_title,omitempty"`
+	Status      string   `json:"status"`
+	EnteredAt   string   `json:"entered_at"`
+	Blocked     bool     `json:"blocked"`
+	Age         string   `json:"age_in_column"`
+	AgeSecs     int64    `json:"age_in_column_seconds"`
+	Touches     []string `json:"touches,omitempty"`
 }
 
 // BoardView is the board with its cards: one reading of the repository for
@@ -39,6 +45,11 @@ type BoardView struct {
 // NewBoardView lays the active items out by column. Stories only unless all.
 func NewBoardView(items []*Item, board *Board, now time.Time, all bool) BoardView {
 	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}}
+	// A parent is looked up among every item given, archived ones included.
+	titles := map[string]string{}
+	for _, it := range items {
+		titles[it.ID] = it.Title
+	}
 	for _, it := range items {
 		if it.Archived || (!all && it.Type != Story) {
 			continue
@@ -46,6 +57,7 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool) BoardVie
 		age := now.Sub(it.EnteredAt())
 		v.Columns[it.Status] = append(v.Columns[it.Status], BoardCard{
 			ID: it.ID, Type: it.Type, Title: it.Title, Nature: it.Nature, Parent: it.Parent,
+			ParentTitle: titles[it.Parent], Status: it.Status, EnteredAt: it.EnteredAt().UTC().Format(TimeFormat),
 			Blocked: it.IsBlocked(), Age: HumanDuration(age), AgeSecs: int64(age.Seconds()),
 			Touches: it.Touches,
 		})
