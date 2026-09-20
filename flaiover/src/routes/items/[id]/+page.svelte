@@ -5,6 +5,7 @@
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
+	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { tick } from 'svelte';
@@ -106,13 +107,19 @@
 			accepting = true;
 			return;
 		}
+		// A cancellation takes everything open under the item with it: show that first (S-0070).
+		if (to === 'cancelled') {
+			cancelling = true;
+			return;
+		}
 		let reason: string | undefined;
-		if (to === 'cancelled' || (item?.status === 'review' && to === 'in-progress')) {
+		if (item?.status === 'review' && to === 'in-progress') {
 			reason = prompt(`Reason for ${to}:`) ?? undefined;
 			if (!reason) return;
 		}
 		post(`/api/items/${id}/move`, { to, reason });
 	}
+	let cancelling = $state(false);
 	function block() {
 		const reason = prompt('Why is it blocked?');
 		if (reason) post(`/api/items/${id}/block`, { reason });
@@ -128,6 +135,17 @@
 		onconfirm={async (include) => {
 			await post(`/api/items/${item!.id}/move`, { to: 'done', include_uncommitted: include });
 			accepting = false;
+		}}
+	/>
+{/if}
+
+{#if cancelling && item}
+	<CancelConfirm
+		id={item.id}
+		oncancel={() => (cancelling = false)}
+		onconfirm={async (reason) => {
+			await post(`/api/items/${item!.id}/move`, { to: 'cancelled', reason });
+			cancelling = false;
 		}}
 	/>
 {/if}

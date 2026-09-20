@@ -2,6 +2,7 @@
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
+	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
@@ -71,8 +72,11 @@
 	function request(id: string, to: string) {
 		const card = cardOf(id);
 		if (to === 'done' && card?.type === 'story' && card.status === 'review') accepting = id;
+		else if (to === 'cancelled') cancelling = id;
 		else void move(id, to);
 	}
+	// A cancellation takes everything open under the item with it: show that first (S-0070).
+	let cancelling = $state<string | null>(null);
 
 	// Reordering within backlog and ready (S-0057). `marker` is where a drop would put the
 	// dragged story: above or below a card, or at the end of its column.
@@ -111,13 +115,13 @@
 		if (p) void place(c.id, p, refocus);
 	}
 
-	async function move(id: string, to: string, includeUncommitted = false) {
+	async function move(id: string, to: string, includeUncommitted = false, why?: string) {
 		notice = null;
-		let reason: string | undefined;
+		let reason = why;
 		const from = board?.columns[
 			Object.keys(board.columns).find((s) => board!.columns[s].some((c) => c.id === id)) ?? ''
 		]?.find((c) => c.id === id)?.status;
-		if (to === 'cancelled' || (from === 'review' && to === 'in-progress')) {
+		if (!reason && (to === 'cancelled' || (from === 'review' && to === 'in-progress'))) {
 			reason = prompt(`Reason for moving ${id} to ${to}:`) ?? undefined;
 			if (!reason) return;
 		}
@@ -137,6 +141,11 @@
 			};
 		else if (body.tags?.length)
 			notice = { kind: 'ok', text: `${id} accepted: released ${body.tags.join(', ')}` };
+		else if (body.cancelled?.length)
+			notice = {
+				kind: 'ok',
+				text: `${id} → ${to}, and ${body.cancelled.length} under it: ${body.cancelled.map((c: { id: string }) => c.id).join(', ')}`
+			};
 		else notice = { kind: 'ok', text: `${id} → ${to}` };
 		await load();
 	}
@@ -152,6 +161,18 @@
 			const id = accepting!;
 			await move(id, 'done', include);
 			accepting = null;
+		}}
+	/>
+{/if}
+
+{#if cancelling}
+	<CancelConfirm
+		id={cancelling}
+		oncancel={() => (cancelling = null)}
+		onconfirm={async (reason) => {
+			const id = cancelling!;
+			await move(id, 'cancelled', false, reason);
+			cancelling = null;
 		}}
 	/>
 {/if}
