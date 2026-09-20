@@ -3,11 +3,11 @@ id: S-0074
 type: story
 nature: feature
 title: The dashboard reads documents, ADRs, narratives, the inbox, and search through the channel, and parses no project file
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:50Z
-updated: 2026-09-20T08:47:42Z
+updated: 2026-09-20T12:05:23Z
 transitions:
   - to: ready
     at: 2026-09-20T07:27:45Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-20T08:47:42Z
     by: system-flow
+  - to: done
+    at: 2026-09-20T12:05:23Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system]
 ---
