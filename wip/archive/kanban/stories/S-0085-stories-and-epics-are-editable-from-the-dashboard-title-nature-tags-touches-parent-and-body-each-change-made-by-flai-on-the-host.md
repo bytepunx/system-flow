@@ -3,11 +3,11 @@ id: S-0085
 type: story
 nature: feature
 title: "Stories and epics are editable from the dashboard: title, nature, tags, touches, parent, and body, each change made by flai on the host"
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-20T13:58:34Z
-updated: 2026-09-20T15:46:38Z
+updated: 2026-09-20T19:07:14Z
 transitions:
   - to: ready
     at: 2026-09-20T13:58:53Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-20T15:46:38Z
     by: system-flow
+  - to: done
+    at: 2026-09-20T19:07:14Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system, docs/users]
 ---
