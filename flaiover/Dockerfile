@@ -35,6 +35,7 @@ COPY --from=build /src/flaiover/build ./build
 COPY --from=build /src/flaiover/node_modules ./node_modules
 COPY --from=build /src/flaiover/package.json ./package.json
 COPY --from=build /src/flaiover/server.js ./server.js
+COPY --from=build /src/flaiover/scheme.js ./scheme.js
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
@@ -46,5 +47,6 @@ EXPOSE 3000
 # Unprivileged by default; any --user works because nothing here needs a home.
 USER 65532:65532
 ENTRYPOINT ["/sbin/tini", "--"]
-# server.js is adapter-node's handler plus the WebSocket upgrade for /agent (ADR-0029).
+# server.js is adapter-node's handler plus the WebSocket upgrade for /agent (ADR-0029), and tells
+# the handler which scheme each request came over (scheme.js, S-0083).
 CMD ["node", "server.js"]

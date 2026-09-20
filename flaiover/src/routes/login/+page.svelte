@@ -21,9 +21,23 @@
 			headers: { 'content-type': 'application/json', 'x-requested-with': 'flaiover' },
 			body: JSON.stringify({ token: value })
 		});
-		busy = false;
 		if (!r.ok) {
+			busy = false;
 			error = 'That token was not accepted.';
+			return;
+		}
+		// The token was right. Whether the browser kept the session cookie is another matter: ask
+		// for something that needs it before going on, or a dropped cookie shows up as this page
+		// asking for the token again, with no reason given (S-0083).
+		const kept = await fetch('/api/agent').catch(() => null);
+		busy = false;
+		if (kept && kept.status === 401) {
+			error =
+				'The token is right, but this browser did not keep the session cookie, so you are not logged in. ' +
+				(location.protocol === 'http:'
+					? 'This page is served over plain HTTP: a proxy or tunnel in front of the dashboard that reports HTTPS (X-Forwarded-Proto) makes the cookie HTTPS-only. '
+					: '') +
+				'Check that cookies are allowed for this address, or use the address the dashboard is really served at.';
 			return;
 		}
 		// The token came in the fragment; leave no trace of it in history.
@@ -67,5 +81,7 @@
 			Log in
 		</button>
 	</form>
-	{#if error}<p class="mt-3 text-sm text-danger">{error}</p>{/if}
+	{#if error}<p class="mt-3 text-sm text-danger" role="alert" data-testid="login-error">
+			{error}
+		</p>{/if}
 </div>

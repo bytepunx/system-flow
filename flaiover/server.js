@@ -4,18 +4,25 @@
 // in the application (src/lib/server/agent.ts) and is found through a global
 // it sets when the server initialises.
 import http from 'node:http';
-import { handler } from './build/handler.js';
+import { noteScheme, schemeHeader } from './scheme.js';
+
+// adapter-node reads this when its handler is loaded, so it is set first and
+// the handler is imported after it. Without it every request is taken for
+// https (S-0083). ORIGIN, when an operator sets it, still overrides both.
+process.env.PROTOCOL_HEADER = schemeHeader();
+const { handler } = await import('./build/handler.js');
 
 const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
 const shutdownMs = Number(process.env.SHUTDOWN_TIMEOUT ?? 5) * 1000;
 
-const server = http.createServer((req, res) =>
+const server = http.createServer((req, res) => {
+	noteScheme(req);
 	handler(req, res, () => {
 		res.statusCode = 404;
 		res.end('Not found');
-	})
-);
+	});
+});
 
 server.on('upgrade', (req, socket, head) => {
 	const upgrade = globalThis.__flaioverAgentUpgrade;
