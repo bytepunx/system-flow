@@ -77,7 +77,7 @@ type State struct {
 	Connected bool   `json:"connected"`
 	Since     string `json:"since,omitempty"`      // when the current connection was proven
 	LastError string `json:"last_error,omitempty"` // why the last attempt ended
-	Attempts  int    `json:"attempts"`
+	Attempts  int    `json:"attempts"`             // connections that ended since the last proven one
 }
 
 // Client keeps one connection to one dashboard alive.
@@ -105,7 +105,7 @@ func (c *Client) defaults() {
 		c.MaxBytes = MaxMessage
 	}
 	if c.PingEvery <= 0 {
-		c.PingEvery = 5 * time.Second
+		c.PingEvery = 4 * time.Second
 	}
 	if c.MinBackoff <= 0 {
 		c.MinBackoff = 250 * time.Millisecond
@@ -140,6 +140,7 @@ func (c *Client) Run(ctx context.Context) {
 	c.defaults()
 	c.setState(func(s *State) { s.URL = c.URL })
 	backoff := c.MinBackoff
+	lastLogged := "\x00"
 	for ctx.Err() == nil {
 		started := c.Now()
 		err := c.serveOnce(ctx)
@@ -155,7 +156,12 @@ func (c *Client) Run(ctx context.Context) {
 		if c.Now().Sub(started) > 2*c.MaxBackoff {
 			backoff = c.MinBackoff
 		}
-		c.Logger.Info("dashboard connection ended", "component", "channel", "url", c.URL, "project", c.Project.Key, "err", errText(err), "retry_in", backoff.String())
+		// A dashboard that is down, or an image from before the channel, fails
+		// the same way every few seconds: say it once, not every time.
+		if msg := errText(err); msg != lastLogged {
+			lastLogged = msg
+			c.Logger.Info("dashboard connection ended; retrying until it answers", "component", "channel", "url", c.URL, "project", c.Project.Key, "err", msg)
+		}
 		select {
 		case <-ctx.Done():
 			return
@@ -298,6 +304,7 @@ func (c *Client) serveOnce(ctx context.Context) error {
 		s.Connected, s.Since, s.LastError = true, c.Now().UTC().Format(time.RFC3339), ""
 	})
 	c.Logger.Info("connected to the dashboard", "component", "channel", "url", c.URL, "project", c.Project.Key, "dashboard", hr.Dashboard)
+	c.setState(func(s *State) { s.Attempts = 0 })
 
 	// A dashboard that stops answering pings is gone, however open the socket looks.
 	go func() {

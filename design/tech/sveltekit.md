@@ -1,6 +1,6 @@
 ---
 title: SvelteKit, Svelte, Vite, TypeScript, tests
-updated: 2026-09-15
+updated: 2026-09-20
 status: active
 ---
 
@@ -18,6 +18,7 @@ status: active
 | `@playwright/test` | 1.60 | End-to-end against the template sample repo |
 | `yaml` | 2.9 | Front matter and manifest parsing on the server |
 | `chokidar` | 5.0 | File watching behind `/api/events` |
+| `ws` | 8.21 | The agent endpoint `/agent` that flai on the host dials (ADR-0029, S-0072). SvelteKit has no WebSocket support, so `flaiover/server.js` wraps adapter-node's handler and hands the upgrade to the hub in `$lib/server/agent.ts`; a Vite plugin in `vite.config.ts` does the same for the development server. `@types/ws` for development |
 | `eslint`, `prettier` | 10, 3.8 | Lint and format as scaffolded by `sv create` |
 
 Exact versions are in `flaiover/pnpm-lock.yaml`. Scaffolded with `sv create` on 2026-09-17 (S-0011).

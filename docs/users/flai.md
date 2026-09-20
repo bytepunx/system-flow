@@ -484,7 +484,21 @@ flai dashboard logs [-f]
 flai dashboard stop
 flai dashboard token           # print the token and login link
 flai dashboard token --rotate  # new token; a running dashboard restarts
+flai dashboard --no-serve      # do not register with, or start, flai serve
 ```
+
+### flai serve: flai on the host, for the dashboards
+
+`flai dashboard` also starts `flai serve`, a small process of yours on the host, and registers the project with it. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is the first step of moving the dashboard off the mounted repository: today the one thing asked over it is the project's identity, and everything else works as before, with or without it. One `flai serve` serves every project you start a dashboard for.
+
+```bash
+flai serve status     # does it run, which projects, which dashboards have it connected
+flai serve            # run it in the foreground to watch it; Ctrl-C stops it
+flai serve start      # run it in the background (flai dashboard does this for you)
+flai serve stop
+```
+
+It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` ends it. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 

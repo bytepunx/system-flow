@@ -183,7 +183,8 @@ func TestReconnectsAfterTheDashboardGoesAway(t *testing.T) {
 	if got := d.ask(second, "1", "project.info", `{"project":"harbour"}`); got.Error != nil {
 		t.Errorf("after the reconnect: %+v", got.Error)
 	}
-	if st := c.State(); !st.Connected || st.Attempts < 1 {
+	// Attempts counts failures since the last proven connection.
+	if st := c.State(); !st.Connected || st.Attempts != 0 {
 		t.Errorf("state: %+v", st)
 	}
 }

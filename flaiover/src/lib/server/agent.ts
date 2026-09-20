@@ -79,7 +79,7 @@ export class AgentHub {
 		private key: string | null,
 		opt: AgentOptions = {}
 	) {
-		this.pingMs = opt.pingMs ?? 5000;
+		this.pingMs = opt.pingMs ?? 4000;
 		this.handshakeMs = opt.handshakeMs ?? 5000;
 		this.maxUnproven = opt.maxUnproven ?? 4;
 	}

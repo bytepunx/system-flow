@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-09-19
+updated: 2026-09-20
 status: draft
 ---
 
@@ -72,7 +72,7 @@ The repository is mounted read-write, `.git` included, because accepting a story
 - `.git/hooks`: no hook can be added or changed from the container.
 - `.git/config`: no git setting that runs a command or redirects a remote (`core.sshCommand`, `core.hooksPath`, a shell alias, a filter, `url.*.insteadOf`, a `pushurl`, and the like).
 - `.git/info`: `exclude` cannot be used to hide a planted file from `git status`, and `attributes` cannot name a filter.
-- `.flai-cache/dashboard.token`, and your flai config when it lives inside the repository (it names the image and the push key the next `flai dashboard` uses).
+- `.flai-cache/dashboard.token` and `.flai-cache/dashboard.agent-key`, and your flai config when it lives inside the repository (it names the image and the push key the next `flai dashboard` uses), together with the `serve` folder beside it (it names the projects `flai serve` serves, the dashboards it dials, and the credential files it reads).
 
 `flai dashboard` says so when it starts, and also lists what the clone already holds of those kinds (an enabled hook, such a setting) so you can check that they are yours; `flai dashboard status` repeats it, and tells you when the running container was started by an older flai without these mounts: restart it.
 
@@ -91,6 +91,18 @@ Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository wi
 | `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths so they work at any mount path. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
 
 When the host path cannot be used in a Linux container (a Windows drive path, or a path containing a colon), `flai dashboard` mounts at `/project`, logs a warning, and stories with a branch are accepted from a shell unless worktrees are relative.
+
+## The connection from flai on the host
+
+`flai dashboard` starts a second thing beside the container: `flai serve`, one process per user on the host, which opens a WebSocket to the dashboard's `/agent` endpoint and keeps it open. Over it the dashboard asks flai for named things and flai answers. The direction is deliberate: the container is given no socket, pipe, or address of the host's, and cannot start a conversation with it. This is the first step of taking the mounted repository away from the container; in this release the mount is unchanged and the one thing asked is the project's identity.
+
+- **The credential.** `flai dashboard` creates `.flai-cache/dashboard.agent-key` (mode 0600) and mounts it read-only at `/run/secrets/flaiover_agent_key`. It is not the login token and opens nothing but `/agent`. It never travels: `flai serve` sends a nonce, the dashboard answers with its own nonce and an HMAC of both under the credential, and `flai serve` answers with the mirror HMAC. A flai that dials a port something else is listening on gives nothing away and says so in `flai serve status`; a client that cannot prove the credential is dropped before it is served anything.
+- **Who can reach `/agent`.** Anyone who can reach the dashboard's port can open the socket, and gets nothing without the credential. A request with an `Origin` header is refused outright, so no page in a browser can try. One connection per credential: a newer proven connection replaces the older.
+- **What can be asked.** Only the methods `flai serve` offers, each checked against the project's key. There is no method that takes a command line or a file path of the caller's choosing, and the dashboard cannot add one.
+- **When it is not there.** Pings every 4 seconds in both directions; a `flai serve` that is frozen or gone is marked so within ten seconds, a restarted container is reconnected within a second, and requests in flight fail with a clear error. Tried on Linux under WSL2 with Docker Engine. On macOS and Windows with Docker Desktop nothing differs in principle, since flai dials the published port on the host as a browser does, but it has **not been tried** there; on Windows `flai serve` runs in its own process group and `flai serve stop` ends it without a graceful signal.
+- **Where its files are.** A folder named `serve` beside flai's config file: `projects.json` (what it serves), `state.json` (rewritten every second while it runs), `serve.log`. Nothing in it is secret; the credential stays in the project's `.flai-cache`.
+- **Turning it off.** `flai dashboard --no-serve` starts the container without registering the project. The dashboard then shows "host flai: not connected" and works as before.
+- **Stopping the container.** The image's server now closes every connection five seconds after SIGTERM (`SHUTDOWN_TIMEOUT`, in seconds), so a container asked to stop does stop, even with event streams open; before, a server that had stopped listening could linger while its container showed as up.
 
 ## MCP over HTTP
 

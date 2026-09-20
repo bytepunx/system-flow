@@ -8,6 +8,10 @@ status: draft
 
 Run it with `flai dashboard` and open <http://localhost:4242>. The design is in [design/system/flaiover-dashboard.md](../../design/system/flaiover-dashboard.md); the full guide arrives with story S-0019.
 
+## Host flai
+
+At the right of the header the dashboard says whether a flai on the host has it connected: "host flai: connected" (hover for the version and since when), or "host flai: not connected" on a yellow ground. `flai dashboard` starts that process, `flai serve`, for you; `flai serve status` on the host says why it is not connected. For now nothing else depends on it: every page works without it. Later releases move the dashboard's reading and writing of the project onto that connection, and then a dashboard without it will say so on every page. A dashboard started by a flai from before this feature shows nothing there.
+
 ## Theme
 
 flaiover uses the brand palette in a light and a dark theme. It follows your system preference by default; the button at the right of the navigation cycles system, light, and dark, and the choice is remembered per browser. Both themes are checked for readable contrast, and the charts use palettes validated for colour-vision deficiency in each theme.
