@@ -27,6 +27,21 @@ export default defineConfig({
 	define: { __FLAIOVER_VERSION__: JSON.stringify(version) },
 	plugins: [
 		tailwindcss(),
+		{
+			// The development server's hook for /agent, as server.js is the image's (ADR-0029).
+			// Vite's own WebSocket upgrades are left alone.
+			name: 'flaiover-agent-upgrade',
+			configureServer(server) {
+				server.httpServer?.on('upgrade', (req, socket, head) => {
+					if ((req.url ?? '').split('?')[0] === '/agent')
+						(
+							globalThis as {
+								__flaioverAgentUpgrade?: (r: unknown, s: unknown, h: unknown) => void;
+							}
+						).__flaioverAgentUpgrade?.(req, socket, head);
+				});
+			}
+		},
 		sveltekit({
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.

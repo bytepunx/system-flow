@@ -6,6 +6,7 @@
 	import { themeState } from '$lib/theme.svelte';
 	import { inboxState } from '$lib/inbox.svelte';
 	import InboxBadge from '$lib/components/InboxBadge.svelte';
+	import HostFlai from '$lib/components/HostFlai.svelte';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -43,9 +44,12 @@
 					>{label}{#if label === 'Inbox'}<InboxBadge />{/if}</a
 				>
 			{/each}
+			<span class="ml-auto"
+				>{#if page.url.pathname !== '/login'}<HostFlai />{/if}</span
+			>
 			<button
 				type="button"
-				class="ml-auto rounded border border-line px-2 py-1 text-xs text-muted hover:text-ink"
+				class="rounded border border-line px-2 py-1 text-xs text-muted hover:text-ink"
 				title="Cycle system, light, dark"
 				aria-label={modeLabel[themeState.mode]}
 				onclick={() => themeState.cycle()}

@@ -49,6 +49,7 @@ WORKDIR /app
 COPY --from=build /src/flaiover/build ./build
 COPY --from=build /src/flaiover/node_modules ./node_modules
 COPY --from=build /src/flaiover/package.json ./package.json
+COPY --from=build /src/flaiover/server.js ./server.js
 COPY --from=flai /out/flai /usr/local/bin/flai
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -63,4 +64,5 @@ EXPOSE 3000
 # Unprivileged by default; any --user works because nothing here needs a home.
 USER 65532:65532
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "build"]
+# server.js is adapter-node's handler plus the WebSocket upgrade for /agent (ADR-0029).
+CMD ["node", "server.js"]

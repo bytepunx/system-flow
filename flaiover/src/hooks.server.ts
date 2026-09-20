@@ -18,11 +18,15 @@ import { authenticate, decide, initAuth } from '$lib/server/auth';
 import { repo } from '$lib/server/repo';
 import { startNotifier } from '$lib/server/notify';
 import { projectIdentity, setIdentityHeaders } from '$lib/server/project';
+import { agent, exposeAgentUpgrade } from '$lib/server/agent';
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
 	const auth = initAuth();
 	const tracing = await startTracing();
+	// The channel flai on the host dials (ADR-0029): the server entry hands /agent upgrades to the hub.
+	exposeAgentUpgrade();
+	const channel = agent().status().configured;
 	// Webhook for new inbox entries, only when system-flow.yaml asks for it (S-0042).
 	// A project that cannot be read yet must not stop the server from starting.
 	try {
@@ -38,7 +42,8 @@ export const init: ServerInit = async () => {
 			commit,
 			project_dir: process.env.PROJECT_DIR ?? process.cwd(),
 			tracing,
-			auth
+			auth,
+			channel
 		},
 		'server started'
 	);
