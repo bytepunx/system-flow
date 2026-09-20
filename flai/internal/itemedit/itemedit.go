@@ -85,6 +85,17 @@ type Result struct {
 	Warnings    []check.Finding `json:"warnings"`
 }
 
+// InvalidError is a change that is not allowed, whatever the repository
+// holds: the caller's mistake, not a failure. A command says it as a rule, so
+// that a dashboard answers 400 and not 500.
+type InvalidError struct{ msg string }
+
+func (e *InvalidError) Error() string { return e.msg }
+
+func invalid(format string, args ...any) error {
+	return &InvalidError{msg: fmt.Sprintf(format, args...)}
+}
+
 var heading = regexp.MustCompile(`(?m)\A\s*# [^\n]*\n?`)
 
 // below returns the body without its first heading.
@@ -174,7 +185,7 @@ func cleanList(what string, in []string) ([]string, error) {
 			continue
 		}
 		if !listValue.MatchString(v) {
-			return nil, fmt.Errorf("%s %q: letters, digits, and _ . / @ + - only, not starting with a dash", what, v)
+			return nil, invalid("%s %q: letters, digits, and _ . / @ + - only, not starting with a dash", what, v)
 		}
 		seen[v] = true
 		out = append(out, v)
@@ -292,10 +303,10 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if ch.Title != nil {
 		t := strings.Join(strings.Fields(*ch.Title), " ")
 		if t == "" {
-			return nil, fmt.Errorf("a title is required")
+			return nil, invalid("a title is required")
 		}
 		if len(t) > 200 {
-			return nil, fmt.Errorf("a title is one line of at most 200 characters; this one has %d", len(t))
+			return nil, invalid("a title is one line of at most 200 characters; this one has %d", len(t))
 		}
 		if t != it.Title {
 			it.Title = t
@@ -308,7 +319,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			ok = ok || n == *ch.Nature
 		}
 		if !ok {
-			return nil, fmt.Errorf("nature %q must be one of %s", *ch.Nature, strings.Join(workitem.Natures, ", "))
+			return nil, invalid("nature %q must be one of %s", *ch.Nature, strings.Join(workitem.Natures, ", "))
 		}
 		it.Nature = *ch.Nature
 		changed = append(changed, "nature")
@@ -325,7 +336,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	}
 	if ch.Touches != nil {
 		if it.Type == workitem.Epic {
-			return nil, fmt.Errorf("%s is an epic; touches belong to stories and tasks", it.ID)
+			return nil, invalid("%s is an epic; touches belong to stories and tasks", it.ID)
 		}
 		touches, err := cleanList("touches", *ch.Touches)
 		if err != nil {
@@ -343,17 +354,17 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if ch.Parent != nil && workitem.CanonicalID(*ch.Parent) != workitem.CanonicalID(it.Parent) {
 		want := parentType(it.Type)
 		if want == "" {
-			return nil, fmt.Errorf("%s is an epic; epics have no parent", it.ID)
+			return nil, invalid("%s is an epic; epics have no parent", it.ID)
 		}
 		p, err := repo.Get(*ch.Parent)
 		if err != nil {
 			return nil, err
 		}
 		if p.Type != want {
-			return nil, fmt.Errorf("%s is a %s; a %s's parent must be a %s", p.ID, p.Type, it.Type, want)
+			return nil, invalid("%s is a %s; a %s's parent must be a %s", p.ID, p.Type, it.Type, want)
 		}
 		if p.Archived || p.Closed() {
-			return nil, fmt.Errorf("%s is %s; pick an open parent", p.ID, p.Status)
+			return nil, invalid("%s is %s; pick an open parent", p.ID, p.Status)
 		}
 		newParent = p
 		if it.Parent != "" {
@@ -368,10 +379,10 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if ch.Body != nil {
 		nb := strings.TrimSpace(strings.ReplaceAll(*ch.Body, "\r\n", "\n"))
 		if nb == "" {
-			return nil, fmt.Errorf("write what the item is for: the body is empty")
+			return nil, invalid("write what the item is for: the body is empty")
 		}
 		if heading.MatchString(nb) && strings.HasPrefix(strings.TrimSpace(nb), "# ") {
-			return nil, fmt.Errorf("the body starts with a heading of its own; the item's heading is its ID and title, and flai writes it")
+			return nil, invalid("the body starts with a heading of its own; the item's heading is its ID and title, and flai writes it")
 		}
 		if nb != strings.TrimSpace(body) {
 			changed = append(changed, bodyChanges(body, nb)...)
@@ -405,7 +416,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		it.Path = filepath.Join(filepath.Dir(oldPath), workitem.FileName(it.ID, it.Title))
 		if it.Path != oldPath {
 			if _, err := os.Stat(it.Path); err == nil {
-				return nil, fmt.Errorf("%s already exists", rel(repo, it.Path))
+				return nil, invalid("%s already exists", rel(repo, it.Path))
 			}
 			res.Renamed = rel(repo, oldPath)
 		}

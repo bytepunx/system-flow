@@ -187,8 +187,14 @@ func TestEditRefusals(t *testing.T) {
 		"nothing":               {[]string{"edit", "S-0001"}, "nothing to change"},
 		"no such item":          {[]string{"edit", "S-0042", "--title", "x"}, "not found"},
 	} {
-		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.says) {
+		_, errOut, code := runIn(t, root, c.args...)
+		if code == 0 || !strings.Contains(errOut, c.says) {
 			t.Errorf("%s: %d %s", name, code, errOut)
+		}
+		// what the caller got wrong is said as a rule, so that a dashboard answers 400 and
+		// not 500; an item that is not there is said as that, which it answers with 404
+		if wantRule := !strings.Contains(c.says, "not found") && name != "nothing"; wantRule != strings.Contains(errOut, "rule: ") {
+			t.Errorf("%s: a rule or not: %s", name, errOut)
 		}
 	}
 	if _, errOut, code := runStdin(t, root, "# My own heading\n\n## Goal\nx\n", "edit", "S-0001", "--body-stdin"); code == 0 || !strings.Contains(errOut, "heading of its own") {

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -130,6 +131,12 @@ the item changed.`,
 					}
 				}
 				return &exitError{code: exitDocRefused, msg: r.Error()}
+			}
+			var inv *itemedit.InvalidError
+			if errors.As(err, &inv) {
+				// a rule, as flai move says its refusals: the caller's mistake, which a
+				// dashboard answers with 400 and not with 500
+				return fmt.Errorf("rule: %s", inv.Error())
 			}
 			if err != nil {
 				return err

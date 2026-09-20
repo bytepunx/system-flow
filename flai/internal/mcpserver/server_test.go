@@ -590,6 +590,11 @@ func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 		if w["timed_out"] == true || len(events) != 1 || events[0].(map[string]any)["to"] != "touches" {
 			t.Errorf("wait: %v", w)
 		}
+		for _, p := range w["changed"].([]any) {
+			if strings.Contains(p.(string), ".flai-cache") {
+				t.Errorf("the notices wake the agent and are not shown to it as a path: %v", w["changed"])
+			}
+		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("wait_for_events never returned")
 	}

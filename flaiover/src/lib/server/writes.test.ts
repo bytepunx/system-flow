@@ -298,5 +298,19 @@ describe.skipIf(!haveFlai)('editing an item through flai', () => {
 		await expect(r.write('item.edit', { id: 'S-004', hash: v.hash })).rejects.toMatchObject({
 			status: 400
 		});
+		// what flai itself refuses as not allowed is the caller's mistake too: 400, never 500
+		const { data: epic } = await r.run<View>('item.show', { id: 'E-001' });
+		await expect(
+			r.write('item.edit', { id: 'E-001', hash: epic.hash, touches: ['flai'] })
+		).rejects.toMatchObject({
+			status: 400,
+			message: expect.stringContaining('touches belong to stories and tasks')
+		});
+		await expect(
+			r.write('item.edit', { id: 'S-004', hash: v.hash, parent: 'S-004' })
+		).rejects.toMatchObject({ status: 400 });
+		await expect(
+			r.write('item.edit', { id: 'S-004', hash: v.hash, parent: 'E-999' })
+		).rejects.toMatchObject({ status: 404 });
 	});
 });

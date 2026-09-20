@@ -582,9 +582,15 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil
 		case <-tick.C:
 			if changed := diff(before, s.snapshot()); len(changed) > 0 {
-				for i, p := range changed {
-					changed[i] = s.rel(p)
+				// the notices wake a waiting agent and are not a path of the
+				// repository to show it: what they say arrives as events
+				shown := changed[:0]
+				for _, p := range changed {
+					if p != itemedit.NoticesPath(s.repo) {
+						shown = append(shown, s.rel(p))
+					}
 				}
+				changed = shown
 				// Paths say something changed (a thread, a narrative, this
 				// agent's own write); events say what others did to work items.
 				events, omitted, err := s.catchUp()
