@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +30,15 @@ func (a *app) host() hostapi.Host {
 		Enabled: func(action, root string) bool {
 			cfg, _, err := a.loadConfig()
 			return err == nil && cfg.ActionEnabled(action, root)
+		},
+		Agent: func(root string) any {
+			cfg, _, _ := a.loadConfig()
+			st := a.serveDir().AgentStates()[root]
+			command := ""
+			if len(cfg.Agent.Command) > 0 {
+				command = filepath.Base(cfg.Agent.Command[0]) // its name, never its arguments
+			}
+			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting}
 		},
 		Record: func(e hostapi.Entry) {
 			if err := a.journal(e); err != nil {

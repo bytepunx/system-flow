@@ -6,6 +6,7 @@
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
+	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
 		canReorderOnto,
@@ -209,6 +210,7 @@
 </div>
 <div class="mb-3"><BoardLegend /></div>
 <UnpushedNotice refresh={loads} />
+<HostAgentNotice refresh={loads} />
 {#if notice}
 	<p
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'

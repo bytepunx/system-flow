@@ -180,6 +180,10 @@ type Host struct {
 	Enabled func(action, root string) bool
 	// Record writes one entry of the host's journal.
 	Record func(Entry)
+	// Agent reports what flai serve knows of agents it starts for a project
+	// (S-0079): what runs, the last start or failure, and why a ready story
+	// waits. Nil when nothing starts agents here.
+	Agent func(root string) any
 }
 
 // Entry is one host action asked for, whatever became of it.

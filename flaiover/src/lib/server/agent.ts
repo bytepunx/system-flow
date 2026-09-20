@@ -70,6 +70,7 @@ export const REQUIRED_METHODS = [
 	'adr.accept',
 	'stats.get',
 	'push.pending',
+	'agent.status',
 	'push.run'
 ];
 

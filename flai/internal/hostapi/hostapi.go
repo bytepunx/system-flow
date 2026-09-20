@@ -152,6 +152,21 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				HostActions: enabledActions(host, p.Root)}, nil
 		},
 
+		// agent.status: whether flai serve starts an agent when a story becomes
+		// ready here (S-0079), what it started, and why a ready story waits. It
+		// is read-only, like everything about host actions: the dashboard shows
+		// it, and cannot start, stop, or configure anything.
+		"agent.status": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			if e := params(raw, &struct{}{}); e != nil {
+				return nil, e
+			}
+			out := map[string]any{"enabled": host.enabled(ActionAgent, p.Root)}
+			if host.Agent != nil {
+				out["state"] = host.Agent(p.Root)
+			}
+			return out, nil
+		},
+
 		// board.get: the board as flai board --json gives it. all adds epics and tasks.
 		"board.get": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {

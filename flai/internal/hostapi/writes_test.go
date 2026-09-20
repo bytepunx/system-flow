@@ -349,3 +349,31 @@ func TestNoMethodTouchesTheHostConfiguration(t *testing.T) {
 		t.Errorf("project.info names every action and says none is on: %+v", info)
 	}
 }
+
+// S-0079: the dashboard is told what flai serve did about starting an agent,
+// and can do nothing about it.
+func TestAgentStatusIsReadOnly(t *testing.T) {
+	p := withDocs(t)
+	state := map[string]any{"command": "claude", "waiting": "an agent is attending"}
+	host := Host{
+		Enabled: func(action, root string) bool { return action == ActionAgent && root == p.Root },
+		Agent:   func(string) any { return state },
+	}
+	res, e := MethodsFor("test", nil, host)["agent.status"](context.Background(), p, json.RawMessage(`{}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	got, _ := json.Marshal(res)
+	if string(got) != `{"enabled":true,"state":{"command":"claude","waiting":"an agent is attending"}}` {
+		t.Errorf("status: %s", got)
+	}
+	res, _ = Methods("test", nil)["agent.status"](context.Background(), p, json.RawMessage(`{}`))
+	if got, _ := json.Marshal(res); string(got) != `{"enabled":false}` {
+		t.Errorf("on a host nobody touched: %s", got)
+	}
+	for name := range Methods("test", nil) {
+		if strings.HasPrefix(name, "agent.") && name != "agent.status" {
+			t.Errorf("%s: nothing the dashboard can ask for starts, stops, or configures an agent", name)
+		}
+	}
+}
