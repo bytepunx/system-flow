@@ -23,15 +23,26 @@ import (
 // names it, the settings the dashboard's server acts on, and the flai that
 // serves it.
 type ProjectInfo struct {
-	Version     int               `json:"version"`
-	Name        string            `json:"name"`
-	Key         string            `json:"key"`
-	Description string            `json:"description,omitempty"`
-	Owner       string            `json:"owner,omitempty"`
-	Repo        string            `json:"repo,omitempty"`
-	Layout      map[string]string `json:"layout"`
-	Dashboard   ProjectDashboard  `json:"dashboard"`
-	Flai        string            `json:"flai"`
+	Version     int                `json:"version"`
+	Name        string             `json:"name"`
+	Key         string             `json:"key"`
+	Description string             `json:"description,omitempty"`
+	Owner       string             `json:"owner,omitempty"`
+	Repo        string             `json:"repo,omitempty"`
+	Template    ProjectTemplate    `json:"template"`
+	Layout      map[string]string  `json:"layout"`
+	Projects    []manifest.Project `json:"projects"`
+	Dashboard   ProjectDashboard   `json:"dashboard"`
+	Flai        string             `json:"flai"`
+}
+
+// ProjectTemplate is which template the project was made from, which the
+// overview page shows. The repository address is left out: a local template
+// path would name a folder on the host.
+type ProjectTemplate struct {
+	Ref     string `json:"ref,omitempty"`
+	Version string `json:"version,omitempty"`
+	Applied string `json:"applied,omitempty"`
 }
 
 // ProjectDashboard is the part of the manifest's dashboard section that the
@@ -108,8 +119,13 @@ func Methods(version string, now func() time.Time) map[string]channel.Method {
 			if err != nil {
 				return nil, failed(err)
 			}
+			projects := m.Projects
+			if projects == nil {
+				projects = []manifest.Project{}
+			}
 			return ProjectInfo{Version: m.Version, Name: m.Name, Key: m.Key, Description: m.Description, Owner: m.Owner, Repo: m.Repo,
-				Layout: m.Layout, Dashboard: ProjectDashboard{NotifyURL: m.Dashboard.NotifyURL, Autocommit: m.Autocommit()}, Flai: version}, nil
+				Template: ProjectTemplate{Ref: m.Template.Ref, Version: m.Template.Version, Applied: m.Template.Applied},
+				Layout:   m.Layout, Projects: projects, Dashboard: ProjectDashboard{NotifyURL: m.Dashboard.NotifyURL, Autocommit: m.Autocommit()}, Flai: version}, nil
 		},
 
 		// board.get: the board as flai board --json gives it. all adds epics and tasks.

@@ -489,7 +489,7 @@ flai dashboard --no-serve      # do not register with, or start, flai serve
 
 ### flai serve: flai on the host, for the dashboards
 
-`flai dashboard` also starts `flai serve`, a small process of yours on the host, and registers the project with it. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is the first step of moving the dashboard off the mounted repository: today the one thing asked over it is the project's identity, and everything else works as before, with or without it. One `flai serve` serves every project you start a dashboard for.
+`flai dashboard` also starts `flai serve`, a small process of yours on the host, and registers the project with it. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is how the dashboard reads the board, the work items, and the threads, and how it hears that a file changed; documents, search, and writes still use the mounted repository and follow in later releases. Without `flai serve` the dashboard says on every page that it has no flai to ask. One `flai serve` serves every project you start a dashboard for.
 
 ```bash
 flai serve status     # does it run, which projects, which dashboards have it connected
@@ -497,6 +497,8 @@ flai serve            # run it in the foreground to watch it; Ctrl-C stops it
 flai serve start      # run it in the background (flai dashboard does this for you)
 flai serve stop
 ```
+
+`flai hostapi` shows what the dashboard can ask, and answers one question on the terminal: `flai hostapi` lists the methods, `flai hostapi board.get '{"all":true}'` prints what the board page is given.
 
 It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` ends it. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 

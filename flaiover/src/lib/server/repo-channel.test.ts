@@ -30,6 +30,12 @@ describe('Repo over the channel', () => {
 		expect(calls.map((c) => c.method)).toEqual(['project.info', 'items.list']);
 		expect(calls[1].params).toEqual({ archived: true, bodies: true });
 
+		// a flai that went away: nothing it said is shown as current
+		r.forget();
+		await r.manifest();
+		expect(calls.at(-1)?.method).toBe('project.info');
+		calls.pop();
+
 		r.changed('wip/kanban/stories/S-0001-a.md');
 		expect(seen).toEqual(['wip/kanban/stories/S-0001-a.md']);
 		await r.items();
@@ -142,6 +148,7 @@ describe('Repo over the channel', () => {
 		});
 		const b = await board(new Repo('/nowhere', ask), new Date('2026-09-20T09:00:00Z'));
 		expect(calls[0]).toEqual({ method: 'board.get', params: { all: true } });
+		expect(calls).toHaveLength(1);
 		expect(b.columns.ready.map((c) => [c.id, c.age_seconds, c.parent_title, c.blocked])).toEqual([
 			['S-0002', 3600, 'Quay', false],
 			['S-0001', 7200, undefined, true]

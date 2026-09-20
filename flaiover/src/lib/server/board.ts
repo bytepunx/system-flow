@@ -39,7 +39,9 @@ type FlaiBoard = {
  * here so that `now` means the same thing it always did to callers and tests.
  */
 export async function board(repo: Repo, now = new Date()): Promise<Board> {
-	const b = await repo.ask<FlaiBoard>('board.get', { all: true });
+	// Kept until flai says a file changed, like everything else asked: the board's one moving part,
+	// a card's age, is counted here from entered_at.
+	const b = await repo.boardView<FlaiBoard>();
 	const columns: Record<string, Card[]> = Object.fromEntries(STATES.map((s) => [s, []]));
 	for (const [state, cards] of Object.entries(b.columns ?? {})) {
 		columns[state] = (cards ?? []).map((c) => ({

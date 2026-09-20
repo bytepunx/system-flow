@@ -101,8 +101,9 @@ Server builds a MiniSearch index over title, tags, ID, headings, and body text o
 
 - Container listens on `3000`. `flai dashboard` publishes it on the configured host port, default `4242`, on every interface by default (`dashboard.bind` or `--bind` restricts it, for example to `127.0.0.1`), and runs the container as the host user (`--user uid:gid`), so the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/project` and `/tmp`, and a writable working directory is not assumed.
 - `flai dashboard` mounts the repository at the same absolute path it has on the host and sets `PROJECT_DIR` to it ([ADR-0022](../adrs/0022-repository-mounted-at-its-host-path.md)). Git links a story worktree to its repository with absolute paths, so they resolve in the container only when the two paths match; with the old fixed `/project` mount, accepting a story with a branch failed (I-0017). The image's own default is still `PROJECT_DIR=/project` for running it by hand, and `PROJECT_DIR` is also how development outside Docker points at a repository. When the host path cannot be a container path (a Windows drive path), `flai dashboard` falls back to `/project` and says that stories with a branch must be accepted from a shell, or worktrees made relative with `worktrees.relative_paths`.
+- The project, work items, threads, and board come from flai on the host, not from the mount (S-0073, below); `/_ready` is not ready without a connected flai.
 - The image's entry is `node server.js`, not `node build`: see the channel to flai on the host, below. `FLAIOVER_AGENT_KEY_FILE` names the agent credential `flai dashboard` mounts.
-- File watching with `chokidar`, debounced, invalidates the index and pushes updates to open tabs with server-sent events.
+- File watching is flai's on the host (S-0073): its `change` notifications invalidate what was asked and the search index, and push updates to open tabs with server-sent events.
 - No authentication. It is a local tool bound to localhost by `flai`. Operators exposing it further are told not to in `docs/operators`.
 
 ## Internal structure
@@ -191,6 +192,27 @@ The first step of reaching a project only through flai on the host: the channel 
 - **Asking.** `agent().ask(method, params, timeoutMs)` sends a JSON-RPC request with the connected project's key added to the params and resolves with the result. It rejects with `AgentError`: 503 when no flai is connected (the message names the commands that start one), 504 when the answer does not come in time (and sends `$/cancel`), 502 when flai answers with an error (its message and code kept) or goes away first. Messages are capped at 16 MiB.
 - **Status.** `GET /api/agent` answers `{ configured, connected, since, flai, serves, info }`, where `info` is `project.info` asked over the channel with a two second limit, so connected means it answers; `error` replaces `info` when it does not. `HostFlai.svelte` in the header polls it every ten seconds: "host flai: connected", or "not connected" with the command in its tooltip; nothing when `configured` is false, which is a container started by an older flai.
 - **Tests.** `agent.test.ts` runs the hub on a real HTTP server with a `ws` client as flai: the handshake, a wrong credential, an `Origin`, another path, no credential, a request in flight when flai goes, a timeout and its cancel, flai's error passed on, replacement, and a flai that stops answering pings.
+
+## Where the data comes from (S-0073)
+
+The project, its work items, its threads, and the board are asked of flai on the host over the channel; nothing in flaiover parses an item, a thread, or `board.md` any more. Documents, the ADR list, narratives, the inbox's open questions, and search still read the mount, and move in S-0074.
+
+- **`Repo`** (`$lib/server/repo.ts`) takes an `Ask`, by default the hub's. `manifest()` is `project.info`, `items()` is `items.list` with the archive and bodies, `itemById()` is `item.get`, `threads()` and `threadsFor()` are `threads.list`, and `boardView()` is `board.get` with epics and tasks. Each answer is kept until flai says a file changed, and none is kept from a flai that has gone: the hub's `gone` forgets them, so a missing flai is a 503 and never yesterday's board. flai's refusals become the statuses the routes answer with: not found 404, a bad argument 400, no flai 503, no answer in time 504.
+- **`board.ts`** maps flai's board view to the shape the page uses and counts a card's age from `entered_at`. The pull order and the columns are flai's; the TypeScript copy of the ordering rule is deleted.
+- **Changes.** `flai serve` watches each project's design, docs, and wip folders and its manifest and sends `change` with the repository-relative path. The hub emits it, `Repo.changed()` forgets what was asked and re-emits it, and `/api/events`, the search index, the stats and inbox caches, and the notifier listen as they did to chokidar, which is gone. A flai that connects is announced as a change to `system-flow.yaml`, so open pages look again by themselves. The inbox webhook starts when a flai first connects, because its address is in the manifest.
+- **Without a flai.** `/api/manifest`, `/api/board`, `/api/items`, `/api/items/:id`, `/api/threads`, and whatever composes them answer 503 with "no host flai is connected; run flai dashboard in the project, or flai serve start"; `/_ready` has a `host_flai` check and is not ready. `HostFlaiBanner.svelte` under the header says on every page what is missing and the commands that bring it back, and tells a container started by an older flai apart; it and the header badge share `$lib/hostflai.svelte.ts`, which looks every three seconds while flai is away and every ten while it is there.
+- **Tests.** `flaiAsk(root)` in `$lib/server/testing.ts` answers a `Repo` by running `flai hostapi` from this tree on a fixture folder, so the tests read what the dashboard will be served, by the same code; `useRepo()` swaps the process-wide `Repo` for route tests. `repo-channel.test.ts` covers the keeping and forgetting, the item shape, the statuses, and the board mapping with a fake `Ask`.
+- **Measured** on a copy of this repository (350 items, 428 Markdown files under wip), the published 0.19.1 image reading the mount against this story's image asking flai, thirty requests each after the first:
+
+| Request | 0.19.1, mount: first, then median | S-0073, channel: first, then median |
+|---------|-----------------------------------|-------------------------------------|
+| `/api/board` | 56 ms, 41 ms | 81 ms, 2 ms |
+| `/api/items/S-0070` | 40 ms, 39 ms | 59 ms, 2 ms |
+| `/api/items` (217 KiB) | 41 ms, 41 ms | 69 ms, 5 ms |
+| `/api/threads?all=1` | 7 ms, 5 ms | 14 ms, 2 ms |
+| `/api/manifest` | 3 ms, 2 ms | 5 ms, 2 ms |
+
+The first request after a change costs more, because flai reads every item file again and the answer crosses the channel; every request after it costs a twentieth of what it did, because the mount was stat-ed file by file on every request. A move made on the host reached an open event stream in about half a second (the watcher's 300 ms look plus one tick of debounce).
 
 ## Hub shape
 

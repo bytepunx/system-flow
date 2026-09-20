@@ -203,6 +203,7 @@ describe('AgentHub', () => {
 		const { hub, url } = await setup();
 		const events: string[] = [];
 		hub.on('connected', () => events.push('connected'));
+		hub.on('gone', () => events.push('gone'));
 		hub.on('change', (path: string) => events.push(path));
 		const flai = await connect(url, KEY);
 		cleanup.push(() => flai.ws.terminate());
@@ -220,5 +221,8 @@ describe('AgentHub', () => {
 		);
 		await new Promise((r) => setTimeout(r, 50));
 		expect(events).toEqual(['connected', 'wip/kanban/stories/S-0001-a.md']);
+		flai.ws.terminate();
+		await new Promise((r) => setTimeout(r, 50));
+		expect(events.at(-1)).toBe('gone');
 	});
 });

@@ -65,8 +65,8 @@ function same(a: string, b: string): boolean {
 }
 
 /**
- * Emits 'connected' when a flai has proven itself and 'change' with a repo-relative path when flai
- * says a file of the project changed (S-0073).
+ * Emits 'connected' when a flai has proven itself, 'gone' when it is lost, and 'change' with a
+ * repo-relative path when flai says a file of the project changed (S-0073).
  */
 export class AgentHub extends EventEmitter {
 	private wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE });
@@ -228,6 +228,7 @@ export class AgentHub extends EventEmitter {
 			p.reject(new AgentError(502, 'the host flai went away before it answered'));
 		}
 		log().info({ component: 'agent', why }, 'host flai gone');
+		this.emit('gone');
 	}
 
 	private settle(data: Buffer): void {

@@ -144,6 +144,11 @@ export class Repo extends EventEmitter {
 		return hit;
 	}
 
+	/** Forget every answer; the next question is asked of flai again. */
+	forget(): void {
+		this.answers.clear();
+	}
+
 	/** A file of the project changed, by flai's word: forget what was asked and tell the listeners. */
 	changed(path: string): void {
 		this.answers.clear();
@@ -200,6 +205,11 @@ export class Repo extends EventEmitter {
 	async threadsFor(on: string): Promise<Thread[]> {
 		const want = on.replace(/\/$/, '');
 		return this.remembered<Thread[]>(`threads:${want}`, 'threads.list', { on: want, all: true });
+	}
+
+	/** The board as flai lays it out, epics and tasks included (board.ts gives it its shape). */
+	async boardView<T>(): Promise<T> {
+		return this.remembered<T>('board', 'board.get', { all: true });
 	}
 
 	/** All work items from kanban and archive, sorted by ID, as flai reads them. */
@@ -286,6 +296,9 @@ export class Repo extends EventEmitter {
 		const hub = agent();
 		hub.on('change', (path: string) => this.changed(path));
 		hub.on('connected', () => this.changed('system-flow.yaml'));
+		// What was asked of a flai that has gone is not shown as if it were current: without flai the
+		// routes answer 503, and the pages say why.
+		hub.on('gone', () => this.forget());
 		log().info({ component: 'watcher' }, 'listening for changes from the host flai');
 	}
 

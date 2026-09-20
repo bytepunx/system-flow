@@ -10,7 +10,7 @@ Run it with `flai dashboard` and open <http://localhost:4242>. The design is in 
 
 ## Host flai
 
-At the right of the header the dashboard says whether a flai on the host has it connected: "host flai: connected" (hover for the version and since when), or "host flai: not connected" on a yellow ground. `flai dashboard` starts that process, `flai serve`, for you; `flai serve status` on the host says why it is not connected. For now nothing else depends on it: every page works without it. Later releases move the dashboard's reading and writing of the project onto that connection, and then a dashboard without it will say so on every page. A dashboard started by a flai from before this feature shows nothing there.
+At the right of the header the dashboard says whether a flai on the host has it connected: "host flai: connected" (hover for the version and since when), or "host flai: not connected" on a yellow ground. `flai dashboard` starts that process, `flai serve`, for you; `flai serve status` on the host says why it is not connected. The board, the work items, and the threads are read through it: the dashboard asks flai for them and flai tells it when a file changes, so a move made in a terminal shows on an open board in about half a second. Without it those pages have nothing to show, and a yellow banner under the header says so on every page, with the commands that bring it back; the page recovers by itself when flai returns. Documents, search, and saving still use the mounted repository for now, and move onto the connection in later releases. A dashboard started by a flai from before this feature shows nothing there.
 
 ## Theme
 
