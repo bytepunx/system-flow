@@ -1,6 +1,6 @@
 ---
 title: Work management
-updated: 2026-09-19
+updated: 2026-09-20
 audience: agent
 order: 30
 status: active
@@ -25,6 +25,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 - When you pull a story, in this order: move it to `in-progress`, open the narrative, read the goal, criteria, and notes, then write its tasks with `flai task new` if it has none, each with `## Work` and `## Done when`. Then work them in order. A story cannot go to `review` without at least one task.
 - If the story does not say enough to write the tasks, do not invent scope. Record it with `flai block --reason`, open a thread on the story saying what is missing (`thread_open`, or `flai thread new`), and pull the next story.
 - Definition of done, story: every criterion checked, at least one task and every task done or cancelled, decisions recorded, docs updated, `flai check --strict` clean, narrative closed. Move the story to `review`; only the operator moves it to `done`.
+- Cancelling an epic cancels every open story under it and their open tasks, and cancelling a story cancels its open tasks; `flai move <id> cancelled --dry-run` lists what would go. When `inbox` or `wait_for_events` says your story, or a task of it, was cancelled, alone or with a parent, stop work on it at once: write what state the work is in to the narrative's `## Current state` and log, do not commit further to the story branch, and leave the branch and worktree alone; they are the operator's to keep or remove. Then call `inbox` and pull the next ready story.
 - Transition items as you go with `flai move`, at the moment the state changes, so timestamps are true. Never backfill a history.
 - Keep the narrative current: rewrite `## Current state` and `## Next steps` after every task transition and before any long operation; append a log entry at every transition, decision, and blocker. `flai stream log` does the log.
 - When blocked, record it with `flai block --reason`, put the question in `## Open questions`, and move to other work. Do not wait idle and do not guess past a blocker that only the operator can clear.

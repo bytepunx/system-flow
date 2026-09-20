@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-19
+updated: 2026-09-20
 status: draft
 ---
 
@@ -191,7 +191,21 @@ flai move S-0001 review         # needs at least one task
 flai move S-0001 done --by alex # needs every task closed and every criterion checked
 flai move S-0001 in-progress --reason "tests missing"     # from review
 flai move S-0002 cancelled --reason "superseded by S-0005"
+flai move E-0003 cancelled --reason "a different route" --dry-run   # what would go with it
 ```
+
+### Cancelling
+
+Cancelling an epic cancels every story under it that is still open and their open tasks; cancelling a story cancels its open tasks. Items that are done or already cancelled are left alone. `flai move` lists what will be cancelled first and, on a terminal, asks before doing it (`--yes` skips the question, `--dry-run` only lists). Each cancelled item records its own transition and a note that names the cause, such as `E-0003 cancelled: a different route`, so an archived task still says why it ended.
+
+```text
+Cancelling E-0003 also cancels 3 items:
+  story S-0009  in-progress Berths
+    task  T-0031  backlog     Dredge
+  story S-0010  review      Cranes  (in review: its work stays on its branch, unmerged)
+```
+
+A story in review cannot be cancelled directly: accept it or send it back. It is cancelled only with its epic, and the list says so; accept it first if you want the work. Cancelled is final. Nothing of git is touched: the command names each cancelled story's narrative, branch, and worktree and leaves them for you to keep or remove (`flai archive` moves the narratives). If a tree was cancelled by an older flai or edited by hand, `flai check` reports each open item under a cancelled parent as `item.parent-cancelled`.
 
 Every move appends to the item's `transitions` with a timestamp and who made it (`--by`, default the config author). Reasons land under the item's Notes.
 

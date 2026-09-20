@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-09-18
+updated: 2026-09-20
 status: active
 ---
 
@@ -59,6 +59,7 @@ stateDiagram-v2
     backlog --> cancelled
     ready --> cancelled
     in_progress --> cancelled
+    review --> cancelled: only with its parent
     done --> [*]
     cancelled --> [*]
 ```
@@ -110,6 +111,7 @@ Rules:
 - `transitions` is the source of truth for state. `status` must equal the `to` of the last transition; `flai check` enforces this. Creation implies `backlog` and is not recorded as a transition.
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the `done` or `cancelled` transition. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.
+- A cancelled epic has no open story and a cancelled story has no open task: cancelling a parent cancels what is open under it, including an item in `review`, which can be cancelled in no other way ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)). `flai check` reports a tree where this does not hold.
 - A story cannot be `ready` without an acceptance criteria section with at least one checkbox. It can be `ready` and `in-progress` with no tasks, and cannot be `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)).
 
 ## Body structure
