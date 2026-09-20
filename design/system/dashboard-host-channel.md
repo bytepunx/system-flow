@@ -140,7 +140,7 @@ The stories, in build order, under E-0003:
 3. S-0074: documents, ADRs, narratives and activity, the inbox, and search read through the channel; the dashboard parses no project file.
 4. S-0075: every write through the channel; the image drops `flai`, `git`, and `ssh`.
 5. S-0076: MCP served by flai on the host, over HTTP as well as stdio; the dashboard's `/mcp` removed. Landed as [ADR-0030](../adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md): a process of its own per project (`flai mcp start`), not part of `flai serve`, serving revisions with and without sessions at one address.
-6. S-0077: the mount removed, with everything that existed to make it safe.
+6. S-0077: the mount removed, with everything that existed to make it safe. Landed as [ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md): a port and two secrets, the push key retired, the container still run as the host user so it can read them.
 7. S-0078: push and publish after an acceptance, as a host action.
 8. S-0079: an agent started when a story becomes ready.
 9. S-0080: one dashboard for every project.

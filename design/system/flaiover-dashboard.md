@@ -12,13 +12,13 @@ Source: `./flaiover` in this monorepo. Image: `ghcr.io/bytepunx/flaiover`.
 
 ## Shape
 
-SvelteKit with `adapter-node`. The browser side is a single-page app (`ssr = false` at the root layout) so navigation is instant and state lives in the client. The server side is a thin set of `+server.ts` endpoints under `/api` that read and write the mounted repo. This is the only way a browser app can reach the filesystem, so "SPA" here means the UI, not the deployment. See ADR 0007.
+SvelteKit with `adapter-node`. The browser side is a single-page app (`ssr = false` at the root layout) so navigation is instant and state lives in the client. The server side is a thin set of `+server.ts` endpoints under `/api` that ask flai on the host for everything they show and change (ADR-0029); the container holds no file of the project ([ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). "SPA" here means the UI, not the deployment. See ADR 0007.
 
 ```mermaid
 flowchart LR
     B[Browser SPA<br/>Svelte 5 + Tailwind] -->|/api/*| S[SvelteKit server<br/>adapter-node]
-    S -->|read, watch, write| M[repository mount]
-    S -->|index| I[(in-memory index<br/>front matter, search)]
+    F[flai serve<br/>on the host] -->|dials /agent, answers named methods| S
+    F -->|read, watch, write, git| R[repository]
 ```
 
 ## Views
@@ -109,8 +109,8 @@ Server builds a MiniSearch index over title, tags, ID, headings, and body text o
 
 ## Runtime
 
-- Container listens on `3000`. `flai dashboard` publishes it on the configured host port, default `4242`, on every interface by default (`dashboard.bind` or `--bind` restricts it, for example to `127.0.0.1`), and runs the container as the host user (`--user uid:gid`), so the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/project` and `/tmp`, and a writable working directory is not assumed.
-- `flai dashboard` mounts the repository at the same absolute path it has on the host and sets `PROJECT_DIR` to it ([ADR-0022](../adrs/0022-repository-mounted-at-its-host-path.md)). Git links a story worktree to its repository with absolute paths, so they resolve in the container only when the two paths match; with the old fixed `/project` mount, accepting a story with a branch failed (I-0017). The image's own default is still `PROJECT_DIR=/project` for running it by hand, and `PROJECT_DIR` is also how development outside Docker points at a repository. When the host path cannot be a container path (a Windows drive path), `flai dashboard` falls back to `/project` and says that stories with a branch must be accepted from a shell, or worktrees made relative with `worktrees.relative_paths`.
+- Container listens on `3000`. `flai dashboard` publishes it on the configured host port, default `4242`, on every interface by default (`dashboard.bind` or `--bind` restricts it, for example to `127.0.0.1`), and runs the container as the host user (`--user uid:gid`), so that it can read the two secret files, which are the host user's alone; the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/tmp`, and a writable working directory is not assumed.
+- `flai dashboard` gives the container a published port and two secrets mounted read-only under `/run/secrets` (the login token and the agent credential), and nothing else: no project volume, no `PROJECT_DIR`, no git identity, excludes, or push key (S-0077, [ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md), which supersedes ADR-0022, ADR-0026, and ADR-0027). `PROJECT_DIR` remains only as how tests and development outside Docker name the directory that `testing.ts` asks flai about. `flai dashboard status` reads a running container's mounts and says when one was started by an older flai and still has the project.
 - Everything the dashboard shows and everything it changes is asked of flai on the host (S-0073 to S-0075, below); the image holds no `flai`, `git`, or `ssh`, and `/_ready` is not ready without a connected flai.
 - The image's entry is `node server.js`, not `node build`: see the channel to flai on the host, below. `FLAIOVER_AGENT_KEY_FILE` names the agent credential `flai dashboard` mounts.
 - File watching is flai's on the host (S-0073): its `change` notifications invalidate what was asked and the search index, and push updates to open tabs with server-sent events.
@@ -134,23 +134,17 @@ flaiover/
 └── tests/                # vitest unit, playwright e2e against the template sample repo
 ```
 
-## What the container can write (S-0064, [ADR-0027](../adrs/0027-git-hooks-config-and-info-are-read-only-in-the-dashboard-container.md))
+## What the container can reach (S-0077, [ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md))
 
-`flai dashboard` mounts the clone read-write and then, over it and read-only, `.git/hooks`, `.git/info`, `.git/config`, `.flai-cache/dashboard.token`, and the host's flai config when it lies inside the clone (`flai/cmd/dashboard_guard.go`). flaiover knows nothing of this; it is how the container is started. The routes by which a process in the container could leave something git later runs on the host, and what became of each:
+Nothing of the project. While the clone was mounted (ADR-0022) a process in the container could leave something git would later run on the host as the operator (I-0022); S-0064 closed the routes git itself offers with read-only mounts (ADR-0027) and left three open by necessity: refs and the index, tracked files, and ignored files the host executes. S-0077 removed the mount, and with it every one of those routes, closed and open alike. Tried from inside a container started the new way: see the story's narrative.
 
-| Route | Invisible to `git status` | Now |
-|-------|---------------------------|-----|
-| A hook in `.git/hooks` | yes | closed: read-only; tried, the write fails |
-| `core.hooksPath`, `core.fsmonitor`, `core.sshCommand`, editor, pager, askpass, credential helpers, shell aliases, includes, `gpg.program`, filter, diff, and merge drivers, `url.*.insteadOf`, `pushurl` in `.git/config` | yes | closed: `git config` and a rename of the file fail with the config read-only; `git branch -d`, the one legitimate rewrite, tolerates it |
-| Per-worktree config (`config.worktree`) | yes | closed: it is read only when `extensions.worktreeConfig` is set in the read-only config |
-| `.git/info/exclude` hiding a planted file, `.git/info/attributes` naming a filter | yes | closed: read-only |
-| A hook in `.git/worktrees/<name>/hooks` | yes | not a route: it can be written and git does not run it (hooks come from the common directory) |
-| The dashboard token's file, and a flai config inside the clone (image, push key) | yes (ignored) | closed: read-only |
-| Refs, `HEAD`, the index | shows in `git log` and `git status` | open by necessity: acceptance moves branches and commits |
-| A tracked file, including a script the operator runs | no, it shows | open by necessity: a merge writes the work tree; acceptance refuses uncommitted changes outside `wip/` unless asked (S-0051), and review is where a change is seen |
-| A file git ignores that the host executes (a built binary, `node_modules/.bin`, tool caches) | yes | open: project specific, flai does not know which a project has |
-
-What the container's own work writes under `.git`, measured for the ADR: `ORIG_HEAD`, `COMMIT_EDITMSG`, `index`, logs, refs, `worktrees/`, objects, and a rewrite of `config` with identical content. A file bind mount pins the file as it was at start, so the container reads the git config of that moment until the dashboard is restarted.
+| Within the container's reach | What it allows |
+|------------------------------|----------------|
+| Its published port and the network | Serving the dashboard |
+| `/run/secrets/flaiover_token`, read-only | Checking a login; a compromised container could present it, which gains it nothing it lacks |
+| `/run/secrets/flaiover_agent_key`, read-only | Proving itself to `flai serve`, and so asking for the channel's named methods |
+| The channel's methods (`internal/hostapi`) | Reads of Markdown under the manifest's three folders and the manifest; moves, blocks, saves, thread entries, new items, and the acceptance of a story in review, each validated and performed by flai on the host. No command line, no path outside those folders, no git |
+| `/tmp` | Its only writable place; gone with the container |
 
 ## Theme (S-0044)
 

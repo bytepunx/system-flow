@@ -8,93 +8,56 @@ status: draft
 
 ## Running the dashboard
 
-`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>` with the repository mounted read-write at the same absolute path it has on the host and `PROJECT_DIR` set to that path, published on every interface at port `4242` by default (`--bind 127.0.0.1`, or `dashboard.bind`, restricts it to this host), as the invoking user. It prints a login link; see Authentication below. It also passes your git `user.name` and `user.email` into the container, so an acceptance made from the dashboard commits as you, and your global git excludes file, so git there ignores what it ignores for you; the container has no credentials, so such an acceptance is committed and tagged locally and you push it from a shell. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, port, or bind address in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`. Inside the monorepo `flai dashboard --build` builds the image from `flaiover/` as `flaiover:local` instead of pulling.
+`flai dashboard` runs `ghcr.io/bytepunx/flaiover` detached as `flaiover-<project>`, published on every interface at port `4242` by default (`--bind 127.0.0.1`, or `dashboard.bind`, restricts it to this host), and prints a login link; see Authentication below. The container is given that port and two secrets, each one file mounted read-only: the login token and the credential the host's flai proves itself with. **No file of the project is mounted into it** ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). Everything the dashboard shows and everything it changes it asks of `flai serve` on this host, which `flai dashboard` registers the project with and starts; see the next section. `flai dashboard status`, `logs`, and `stop` manage it. Change the image, tag, port, or bind address in `~/.flai/config.json` or per project in `system-flow.yaml` under `dashboard`. Inside the monorepo `flai dashboard --build` builds the image from `flaiover/` as `flaiover:local` instead of pulling.
 
-Without `flai`, the equivalent is:
+The container runs as you (`--user`), for one reason: the two secrets are files only you can read. There is nothing of yours within its reach to write.
+
+Without `flai`, the container alone is:
 
 ```bash
 docker run --detach --rm --name flaiover-myproject \
-  --publish 0.0.0.0:4242:3000 --volume "$PWD:$PWD" --env PROJECT_DIR="$PWD" \
+  --publish 0.0.0.0:4242:3000 \
   --mount type=bind,source="$PWD/.flai-cache/dashboard.token",target=/run/secrets/flaiover_token,readonly \
   --env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token \
+  --mount type=bind,source="$PWD/.flai-cache/dashboard.agent-key",target=/run/secrets/flaiover_agent_key,readonly \
+  --env FLAIOVER_AGENT_KEY_FILE=/run/secrets/flaiover_agent_key \
   --user "$(id -u):$(id -g)" ghcr.io/bytepunx/flaiover:latest
 ```
 
+It shows nothing until a `flai serve` that knows the project and holds the same credential connects to it, which is what `flai dashboard` arranges; started by hand, every page says that no flai is connected.
+
+### Upgrading from a release that mounted the repository
+
+Earlier releases mounted the repository read-write into the container, with `.git/hooks`, `.git/config`, and `.git/info` read-only over it, your git identity and global excludes passed in, and optionally an SSH key to push with. All of that is gone.
+
+- **Restart the dashboard** with the new flai: `flai dashboard stop`, then `flai dashboard`. A container started by an older flai keeps its mounts until then, and `flai dashboard status` says so.
+- **If you configured a push key** (`dashboard.push_key`, `--push-key`, `dashboard.push_known_hosts`): it is ignored, and `flai dashboard` says so at every start until you clear it with `flai config set dashboard.push_key ""` (and `dashboard.push_known_hosts` likewise). The container has no git or ssh to push with and no repository to push from. An acceptance from the board is committed and tagged on the host and pushed from the host with your own credentials: `flai push --pending`, below. If the key was a deploy key made for this purpose, delete it from the repository's settings and from `~/.ssh`; nothing uses it any more. `.flai-cache/dashboard.known_hosts` and `.flai-cache/dashboard.passwd` can be deleted.
+- **Nothing to do for git settings.** Commits from the board are made on the host with your git configuration of the moment; the advice to restart the dashboard after changing git settings no longer applies.
+- **A Windows or otherwise unusual host path** no longer matters: git runs where `flai serve` runs, so a story with a branch can be accepted from the board anywhere.
+
 ### Who acts when the dashboard writes
 
-The dashboard has one project token and so one holder. What it does for them is recorded as the manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. Git commits made in the container are authored by the git identity `flai dashboard` passes in from the host. An acceptance from the dashboard needs that identity, the repository mounted at its host path, and the host's global git excludes, all of which `flai dashboard` sets up; it is committed and tagged locally and never pushed, because the container holds no credentials.
-
-### Pushing what the board accepts
-
-By default the container holds no git credential. A story accepted from the board is merged, committed, and tagged in your clone, the dashboard says it was accepted locally, and someone pushes from a shell. That is deliberate: whoever can push a release tag can publish a release.
-
-If you want an acceptance from the board to reach the remote at once, release tags included, name an SSH private key on the host and `flai dashboard` mounts it into the container read-only ([ADR-0026](../../design/adrs/0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md)). It is a setting of this machine, never of the repository:
-
-```bash
-flai config set dashboard.push_key ~/.ssh/flaiover-push   # or: flai dashboard --push-key <path>
-flai dashboard stop && flai dashboard
-flai dashboard status                                     # says which key the running container holds
-flai config set dashboard.push_key ""                     # back to holding nothing, after a restart
-```
-
-Understand what this changes before turning it on. The dashboard token becomes the power to publish: whoever holds it can release any story that is in review by accepting it. And if the container were ever compromised, the key is a file it can read.
-
-**Which key.** In order of how little a stolen copy opens:
-
-1. **A key made for this repository alone** (recommended). Make one without a passphrase and add its public half to the repository as a deploy key with write access (on GitHub: Settings, Deploy keys, Add deploy key, Allow write access). A stolen copy opens this one repository and nothing else.
-
-   ```bash
-   ssh-keygen -t ed25519 -N "" -C "flaiover push $(hostname)" -f ~/.ssh/flaiover-push
-   cat ~/.ssh/flaiover-push.pub      # add this as the deploy key
-   ```
-
-   If the same host already uses another key for that provider, the remote URL stays as it is: the container is told to use only the key you named.
-2. **Your own key.** It works the same way and is the quickest to set up, but it opens every repository of your account and every server that trusts it, and the container can read the file. If it has a passphrase, as your own key should, `flai dashboard` refuses it: nobody is there to type the passphrase when an acceptance is pushed.
-
-Your SSH agent is never forwarded into the container. It would lend the container every key in the agent for as long as it runs, and it stops working when you log out.
-
-**What `flai dashboard` checks before it starts anything**, each with the reason when it refuses: the file exists, is no looser than mode 0600, is a private key, and has no passphrase; the `origin` remote is an SSH URL; and this machine already has a `known_hosts` entry for the remote's host. The container never accepts a host key on first use: connect once from a shell (`ssh -T git@github.com`), check the fingerprint against the ones your provider publishes, and accept it there. `--push-known-hosts <file>` (or `dashboard.push_known_hosts`) takes the host keys from a file you curate instead of your `known_hosts` and the system's. The pinned host keys and a passwd entry for your user ID, which OpenSSH needs, are written under `.flai-cache/` and mounted read-only. At start `flai dashboard` prints the key's fingerprint and comment, never the key.
-
-**Limit what a stolen key can do** with rules on the repository: block force pushes to the default branch, and restrict deletion of the default branch and of release tags (`flai/v*`, `flaiover/v*`). No rule stops a key that may push from publishing a release; that is what the key is for.
-
-**To revoke**: delete the deploy key from the repository (or remove your own key from your account), unset `dashboard.push_key`, and restart the dashboard. A dedicated key never expires on its own.
-
-A push that fails (no network, a revoked key) leaves the acceptance standing, as without a key: the dashboard says it was accepted locally and shows the command. Not supported on a Windows host yet; `flai dashboard` says so and refuses the key.
+The dashboard has one project token and so one holder. What it does for them is recorded as the manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. All of it is done by `flai serve` on the host, as you: commits carry your git identity and the dashboard's `Co-Authored-By` trailer.
 
 ### When an acceptance has not been pushed
 
-The dashboard's container holds no git credential unless you give it a push key (above), so an acceptance from the board is committed and tagged in your clone and waits there. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying so until it is pushed. On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; it never forces, and refuses when the remote has moved until you fetch and merge. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. An agent session that is running does this itself when `inbox` reports it. To make it unattended without giving the container anything, run it from a timer of your own (a systemd user timer or cron entry calling `flai push --pending` in the repository); that is a push nobody approved, with your full credentials, and is your decision to make on your host.
+A story accepted from the board is merged, committed, and tagged in your clone by `flai serve`, and waits there: nothing pushes it unasked, because whoever can push a release tag can publish a release. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying so until it is pushed. On the host, `flai push --pending` pushes the branch and the release tags of those acceptances with your own credentials; it never forces, and refuses when the remote has moved until you fetch and merge. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. An agent session that is running does this itself when `inbox` reports it. To make it unattended, run it from a timer of your own (a systemd user timer or cron entry calling `flai push --pending` in the repository); that is a push nobody approved, with your full credentials, and is your decision to make on your host.
 
-### What the container can and cannot write
+### What the container can and cannot reach
 
-The repository is mounted read-write, `.git` included, because accepting a story from the board merges, commits, tags, and removes a worktree. A few paths inside it are mounted a second time, read-only, so that a compromised container cannot leave something that git would later run on your machine as you ([ADR-0027](../../design/adrs/0027-git-hooks-config-and-info-are-read-only-in-the-dashboard-container.md)):
+It can reach its port, the network, and the two secrets. It cannot read or write any file of the project or of the host: no work tree, no `.git`, no `.flai-cache` beyond those two files, no flai configuration. So it cannot leave a git hook or setting that would run on your machine, change a tracked file or a branch, or plant an ignored file your tools execute, which were the routes open or guarded while the repository was mounted (I-0022, ADR-0027, superseded).
 
-- `.git/hooks`: no hook can be added or changed from the container.
-- `.git/config`: no git setting that runs a command or redirects a remote (`core.sshCommand`, `core.hooksPath`, a shell alias, a filter, `url.*.insteadOf`, a `pushurl`, and the like).
-- `.git/info`: `exclude` cannot be used to hide a planted file from `git status`, and `attributes` cannot name a filter.
-- `.flai-cache/dashboard.token` and `.flai-cache/dashboard.agent-key`, and your flai config when it lives inside the repository (it names the image and the push key the next `flai dashboard` uses), together with the `serve` folder beside it (it names the projects `flai serve` serves, the dashboards it dials, and the credential files it reads).
-
-`flai dashboard` says so when it starts, and also lists what the clone already holds of those kinds (an enabled hook, such a setting) so you can check that they are yours; `flai dashboard status` repeats it, and tells you when the running container was started by an older flai without these mounts: restart it.
-
-Two things follow. The container reads the git config as it was when the dashboard started, so after changing git settings on the host (a new remote, say), restart the dashboard. And this closes the routes git itself offers, not every route a writable working copy offers: the container can still change a tracked file, which you would see in `git status` and `git diff` and which acceptance refuses to include unasked, and it can write files that git ignores. If your project runs ignored files on the host (a built binary, tool caches), treat a dashboard you expose beyond your own network accordingly.
-
-### Why the mount path matters
-
-Git links a story worktree (`.flai-cache/worktrees/S-nnnn`) to the repository with absolute paths in both directions. The container runs git for acceptance, so those paths must exist inside it, which they do when the repository is mounted at its host path ([ADR-0022](../../design/adrs/0022-repository-mounted-at-its-host-path.md)). A container that sees the repository anywhere else, including one started by an older flai at `/project`, cannot accept a story that has a branch; the confirmation says so and points at `flai accept`. The image's default is still `PROJECT_DIR=/project` for mounts made by hand, which is fine for reading and for projects without story branches.
+What a compromised container could still do is what the dashboard itself does: ask `flai serve` for the named methods it offers (reads of the three folders, moves, saves of Markdown under them, an acceptance of a story in review), each of which flai checks and performs itself, and present the login token. Treat a dashboard you expose beyond your own network accordingly, and see the next section for how to turn the connection off.
 
 | Setting | Where | Default | Effect |
 |---------|-------|---------|--------|
-| `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_0`, `GIT_CONFIG_VALUE_0` | container environment, set by `flai dashboard` | `core.excludesFile` pointing at `/run/flaiover/gitignore` when the host has a global excludes file, unset otherwise | The host's global git excludes (`core.excludesFile`, else `$XDG_CONFIG_HOME/git/ignore`, else `~/.config/git/ignore`) is bind-mounted read-only there, so a file ignored only on the host is not reported as uncommitted in the dashboard and does not stop an acceptance (S-0051) |
 | `dashboard.notify_url` | `system-flow.yaml`, per project | unset | A webhook for the designer's inbox. When it is an `http` or `https` URL, the dashboard's server POSTs `{ "project": "<name>", "entry": { "key", "kind", "title", "href", "at" } }` as JSON for each inbox entry that appears after the server started: `kind` is `thread`, `question`, `review`, `blocked`, or `overlap`, and `href` is a path in the dashboard. One attempt per entry, a five second timeout, no retry; a failure is a warning in the log naming the host only, since the URL may carry a secret. The project token, file contents, and anything else are never sent. Entries that existed at start are not posted, so a restart does not replay the inbox. Read once at start: restart the dashboard after changing it |
-| `dashboard.autocommit` | `system-flow.yaml`, per project | `true` | Documents saved from the dashboard's editor are committed on the main checkout, one path per commit, authored by the git identity `flai dashboard` passes in, with a `Co-Authored-By: flaiover` trailer. `false` leaves them uncommitted: agents on story branches then do not see the edit until someone commits it, and an acceptance from the board lists it as an uncommitted change. Commits are never pushed from the container ([ADR-0023](../../design/adrs/0023-documents-are-saved-through-flai.md)) |
-| `PROJECT_DIR` | container environment, set by `flai dashboard` | the repository's host path (`/project` in the image) | The repository flaiover serves and the folder flai's config and cache are read from (`.flai-cache`) |
-| `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths so they work at any mount path. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
-
-When the host path cannot be used in a Linux container (a Windows drive path, or a path containing a colon), `flai dashboard` mounts at `/project`, logs a warning, and stories with a branch are accepted from a shell unless worktrees are relative.
+| `dashboard.autocommit` | `system-flow.yaml`, per project | `true` | Documents saved from the dashboard's editor are committed on the main checkout by `flai serve`, one path per commit, authored by your git identity, with a `Co-Authored-By: flaiover` trailer. `false` leaves them uncommitted: agents on story branches then do not see the edit until someone commits it, and an acceptance from the board lists it as an uncommitted change. Nothing is pushed ([ADR-0023](../../design/adrs/0023-documents-are-saved-through-flai.md)) |
+| `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths, for clones that are moved or shared. The dashboard no longer has any use for it. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
 
 ## The connection from flai on the host
 
-`flai dashboard` starts a second thing beside the container: `flai serve`, one process per user on the host, which opens a WebSocket to the dashboard's `/agent` endpoint and keeps it open. Over it the dashboard asks flai for named things and flai answers. The direction is deliberate: the container is given no socket, pipe, or address of the host's, and cannot start a conversation with it. It is how the container's dependence on the mounted repository is being taken away, a release at a time: everything the dashboard reads and everything it changes goes over it now. The repository is still mounted in this release and is no longer used: with it taken away by hand, every page and every write worked, an acceptance of a story on its own branch included. The image holds no `flai`, no `git`, and no `ssh`; commits made from the board are made by `flai serve` on the host as you, with your git configuration, and carry the dashboard's trailer. A push key given to the container (`dashboard.push_key`) no longer has anything to push with; pushing from the host on your word arrives with a later release, and until then an acceptance from the board is pushed from a shell as before (`flai push --pending`).
+`flai dashboard` starts a second thing beside the container: `flai serve`, one process per user on the host, which opens a WebSocket to the dashboard's `/agent` endpoint and keeps it open. Over it the dashboard asks flai for named things and flai answers. The direction is deliberate: the container is given no socket, pipe, or address of the host's, and cannot start a conversation with it. It is the only way the dashboard reaches the project: everything it reads and everything it changes goes over it, and the container holds no file of the project ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). The image holds no `flai`, no `git`, and no `ssh`; commits made from the board are made by `flai serve` on the host as you, with your git configuration, and carry the dashboard's trailer.
 
 - **The credential.** `flai dashboard` creates `.flai-cache/dashboard.agent-key` (mode 0600) and mounts it read-only at `/run/secrets/flaiover_agent_key`. It is not the login token and opens nothing but `/agent`. It never travels: `flai serve` sends a nonce, the dashboard answers with its own nonce and an HMAC of both under the credential, and `flai serve` answers with the mirror HMAC. A flai that dials a port something else is listening on gives nothing away and says so in `flai serve status`; a client that cannot prove the credential is dropped before it is served anything.
 - **Who can reach `/agent`.** Anyone who can reach the dashboard's port can open the socket, and gets nothing without the credential. A request with an `Origin` header is refused outright, so no page in a browser can try. One connection per credential: a newer proven connection replaces the older.
@@ -178,7 +141,7 @@ Making the package public on GHCR removes the need for a token entirely; that is
 
 ## The image
 
-`ghcr.io/bytepunx/flaiover` is built from `flaiover/Dockerfile` at the repository root: a `flai` binary from the same commit at `/usr/local/bin/flai`, the SvelteKit build on `node:24-alpine`, listening on `3000`, running as an unprivileged user by default and working under any `--user`. Tags: `latest` (main), `X.Y.Z` and `X` from `flaiover/vX.Y.Z` release tags, and `sha-<commit>`. While the repository is private the package is too: `docker login ghcr.io` with a token that has `read:packages` before `flai dashboard` can pull it. The container writes flai's config and cache under the mounted project's `.flai-cache/`, which is git-ignored.
+`ghcr.io/bytepunx/flaiover` is built from `flaiover/Dockerfile` at the repository root: the SvelteKit build on `node:24-alpine` and nothing else (no `flai`, no `git`, no `ssh`; the label `dev.system-flow.flai` names the flai of the commit it was built and tested with), listening on `3000`, running as an unprivileged user by default and working under any `--user`. Tags: `latest` (main), `X.Y.Z` and `X` from `flaiover/vX.Y.Z` release tags, and `sha-<commit>`. While the repository is private the package is too: `docker login ghcr.io` with a token that has `read:packages` before `flai dashboard` can pull it. The container writes nothing that outlives it: it has no volume, and its only home is `/tmp`.
 
 Build locally with `make flaiover-image` (tag `flaiover:local`) and run it with `flai dashboard --image flaiover --tag local`.
 
@@ -190,7 +153,7 @@ flaiover follows the logging and telemetry conventions.
 |--------|-------|-------|
 | Logs | stdout, one JSON event per line | `ts`, `level`, `service`, `component`, `msg`, and fields; one line per request with `trace_id` (or `request_id` when tracing is off), `method`, `route`, `path`, `status`, `duration_ms`; `LOG_LEVEL` (`debug`, `info`, `warn`, `error`), `LOG_FORMAT=text` for key-value text outside production |
 | Liveness | `GET /_health` | Always 200 while the process runs; touches nothing |
-| Readiness | `GET /_ready` | Checks the mounted project's manifest and item listing with a two second timeout each and reports whether the bundled flai is available; 503 names the failing check |
+| Readiness | `GET /_ready` | Checks that flai on the host is connected (`host_flai`) and, through it, the project's manifest and item listing, with a two second timeout each; 503 names the failing check |
 | Metrics | `GET /metrics` | Prometheus format: `flaiover_http_requests_total{method,route,status}`, `flaiover_http_request_duration_seconds` (histogram), `flaiover_http_requests_in_flight`, `flaiover_build_info{version,commit}` (the flaiover release tag and commit baked into the image), plus Node process metrics prefixed `flaiover_`. Route labels are SvelteKit route ids, never paths with IDs |
 | Traces | OTLP/HTTP | Exported only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; one server span per request named `<method> <path>` with W3C context taken from the incoming headers; standard `OTEL_*` variables apply (`OTEL_SERVICE_NAME`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`) |
 
@@ -198,7 +161,7 @@ Local stack: `PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build` r
 
 ## Security posture
 
-The dashboard authenticates every request with the project token (above) and can write to the mounted repository. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. Treat the mount as you would a shared working copy; the git hooks, config, and info inside it are read-only to the container (above). The container holds no git credential unless you give it a push key (above); with one, the token is also the power to publish a release, so keep the dashboard off public addresses or behind a tunnel you trust, and rotate the token (`flai dashboard token --rotate`) when in doubt.
+The dashboard authenticates every request with the project token (above), and through `flai serve` it can change the project: moves, saves, acceptances. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. The container holds no file of the project and no git credential, so the token is not the power to publish: an acceptance waits on the host until you push it. Keep the dashboard off public addresses or behind a tunnel you trust all the same, and rotate the token (`flai dashboard token --rotate`) when in doubt.
 
 ## Requirements
 

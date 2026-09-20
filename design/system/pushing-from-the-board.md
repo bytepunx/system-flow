@@ -8,6 +8,8 @@ status: active
 
 The finding of S-0052. An acceptance made from the flaiover board is merged, archived, committed, and tagged in the clone, and not pushed: `flai dashboard` gives the container the host's git identity and global excludes and no credential ([ADR-0018](../adrs/0018-dashboard-token.md), [operators](../../docs/operators/index.md)). The board says "accepted locally" and prints the `git push` command. The operator was surprised by this twice, and between 2026-09-18 and 2026-09-19 an agent session pushed `main` and the release tags from the host after every one of ten board acceptances. This document weighs the ways the push could happen, says what was tried, and ends with one recommendation. Nothing here is built; the decision and the stories that follow are at the end.
 
+> Superseded in practice, 2026-09-20: the push key this finding led to (ADR-0026, S-0062) was retired by S-0077 ([ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). The container now holds no git, no ssh, and no file of the project, so nothing can be pushed from it; an acceptance is pushed from the host (`flai push --pending`, and by `flai serve` on the operator's word with S-0078). What follows is the finding as it was made.
+
 ## What is at stake
 
 A push of `main` with a tag `flai/vX.Y.Z` or `flaiover/vX.Y.Z` starts the release workflows, which publish binaries and the dashboard image that `flai dashboard --pull` and `install.sh` hand to every user. Whatever can push tags can publish a release.
