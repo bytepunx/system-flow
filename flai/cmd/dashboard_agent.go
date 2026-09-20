@@ -24,11 +24,14 @@ const (
 	agentKeyFileEnv   = "FLAIOVER_AGENT_KEY_FILE"
 )
 
-func agentKeyPath(root string) string { return filepath.Join(root, cacheDirName, agentKeyFileName) }
+// agentKeyPath is the shared credential's file, beside flai serve's state,
+// next to flai's config file (S-0080): every project the dashboard serves
+// proves itself with the one file, as the login token is now the one file.
+func agentKeyPath(dir string) string { return filepath.Join(dir, agentKeyFileName) }
 
 // ensureAgentKey creates the credential when missing, mode 0600.
-func ensureAgentKey(root string) error {
-	p := agentKeyPath(root)
+func ensureAgentKey(dir string) error {
+	p := agentKeyPath(dir)
 	if data, err := os.ReadFile(p); err == nil && strings.TrimSpace(string(data)) != "" {
 		return nil
 	}
@@ -43,9 +46,9 @@ func ensureAgentKey(root string) error {
 }
 
 // agentKeyArgs hand the credential to the container the way the token is.
-func agentKeyArgs(root string) []string {
+func agentKeyArgs(dir string) []string {
 	return []string{
-		"--mount", "type=bind,source=" + agentKeyPath(root) + ",target=" + agentKeyMountPath + ",readonly",
+		"--mount", "type=bind,source=" + agentKeyPath(dir) + ",target=" + agentKeyMountPath + ",readonly",
 		"--env", agentKeyFileEnv + "=" + agentKeyMountPath,
 	}
 }
@@ -66,7 +69,7 @@ func (s dashboardSettings) dialURL() string {
 // running. It reports what it did; a failure here leaves a dashboard that
 // works as before, so it is told and not fatal.
 func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note string) {
-	entry := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(repo.MainRoot)}
+	entry := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
 	if entry.Key == "" {
 		return "  host flai: not connected, the manifest has no key (flai check says how to add one)\n"
 	}

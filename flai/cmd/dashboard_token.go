@@ -24,32 +24,34 @@ const (
 	tokenFragmentName = "token"
 )
 
-func tokenPath(root string) string {
-	return filepath.Join(root, cacheDirName, tokenFileName)
-}
+// tokenPath and agentKeyPath (dashboard_agent.go) are files in dir, which is
+// always the shared serve directory beside flai's config (S-0080): one
+// dashboard, one login token, one agent credential per user. A project's own
+// .flai-cache no longer holds either.
+func tokenPath(dir string) string { return filepath.Join(dir, tokenFileName) }
 
-// ensureToken returns the project's dashboard token, creating it when missing.
-func ensureToken(root string) (token string, created bool, err error) {
-	p := tokenPath(root)
+// ensureToken returns the shared dashboard token, creating it when missing.
+func ensureToken(dir string) (token string, created bool, err error) {
+	p := tokenPath(dir)
 	if data, err := os.ReadFile(p); err == nil && strings.TrimSpace(string(data)) != "" {
 		return strings.TrimSpace(string(data)), false, nil
 	}
-	token, err = writeToken(root)
+	token, err = writeToken(dir)
 	return token, true, err
 }
 
 // writeToken generates a fresh token and writes it in place, so a container
 // that bind-mounts the file sees the new content after a restart.
-func writeToken(root string) (string, error) {
+func writeToken(dir string) (string, error) {
 	buf := make([]byte, tokenBytes)
 	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
 	token := base64.RawURLEncoding.EncodeToString(buf)
-	if err := os.MkdirAll(filepath.Join(root, cacheDirName), 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
-	p := tokenPath(root)
+	p := tokenPath(dir)
 	if err := os.WriteFile(p, []byte(token+"\n"), tokenFileMode); err != nil {
 		return "", err
 	}
@@ -64,9 +66,9 @@ func loginURL(base, token string) string {
 }
 
 // tokenArgs are the docker run arguments that hand the token to the container.
-func tokenArgs(root string) []string {
+func tokenArgs(dir string) []string {
 	return []string{
-		"--mount", "type=bind,source=" + tokenPath(root) + ",target=" + tokenMountPath + ",readonly",
+		"--mount", "type=bind,source=" + tokenPath(dir) + ",target=" + tokenMountPath + ",readonly",
 		"--env", tokenFileEnv + "=" + tokenMountPath,
 	}
 }
@@ -76,11 +78,12 @@ func newDashboardTokenCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "token",
 		Short: "Print the dashboard token and login link; --rotate replaces it",
-		Long: `The token lives at .flai-cache/dashboard.token (mode 0600, git-ignored) and
-is created by flai dashboard on first run. Browsers use the login link, whose
-fragment never leaves the browser; agents send it as a bearer header. --rotate
-writes a new token in place and restarts a running dashboard, which ends
-every session.`,
+		Long: `One token for every project the dashboard serves (S-0080), created by flai
+dashboard on first run and kept beside flai serve's state, next to flai's
+config file. Browsers use the login link, whose fragment never leaves the
+browser; agents send it as a bearer header. --rotate writes a new token in
+place and restarts the dashboard, which ends every session, for every
+project it serves, not only this one.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -91,12 +94,13 @@ every session.`,
 			if err != nil {
 				return err
 			}
+			dir := string(a.serveDir())
 			var token string
 			created := false
 			if rotate {
-				token, err = writeToken(repo.MainRoot)
+				token, err = writeToken(dir)
 			} else {
-				token, created, err = ensureToken(repo.MainRoot)
+				token, created, err = ensureToken(dir)
 			}
 			if err != nil {
 				return err
@@ -111,15 +115,15 @@ every session.`,
 				}
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"token": token, "file": relPath(repo.MainRoot, tokenPath(repo.MainRoot)), "login_url": loginURL(s.url(), token), "created": created, "rotated": rotate, "restarted": restarted})
+				return a.printJSON(map[string]any{"token": token, "file": tokenPath(dir), "login_url": loginURL(s.url(), token), "created": created, "rotated": rotate, "restarted": restarted})
 			}
-			fmt.Fprintf(a.out, "token: %s\nfile:  %s\nlogin: %s\n", token, relPath(repo.MainRoot, tokenPath(repo.MainRoot)), loginURL(s.url(), token))
+			fmt.Fprintf(a.out, "token: %s\nfile:  %s\nlogin: %s\n", token, tokenPath(dir), loginURL(s.url(), token))
 			if restarted {
-				fmt.Fprintf(a.out, "restarted %s; every session must log in again\n", s.Name)
+				fmt.Fprintf(a.out, "restarted %s; every session must log in again, for every project it serves\n", s.Name)
 			}
 			return nil
 		},
 	}
-	c.Flags().BoolVar(&rotate, "rotate", false, "replace the token and restart a running dashboard")
+	c.Flags().BoolVar(&rotate, "rotate", false, "replace the token and restart the dashboard, for every project it serves")
 	return c
 }

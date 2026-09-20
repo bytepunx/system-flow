@@ -24,13 +24,13 @@ func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T
 	if code != 0 {
 		t.Fatalf("%s %s", out, errOut)
 	}
-	keyFile := filepath.Join(root, ".flai-cache", "dashboard.agent-key")
+	keyFile := filepath.Join(string(serve.DirFor(cfg)), "dashboard.agent-key")
 	info, err := os.Stat(keyFile)
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("agent credential: %v %v", info, err)
 	}
 	key, _ := os.ReadFile(keyFile)
-	token, _ := os.ReadFile(filepath.Join(root, ".flai-cache", "dashboard.token"))
+	token, _ := os.ReadFile(filepath.Join(string(serve.DirFor(cfg)), "dashboard.token"))
 	if len(strings.TrimSpace(string(key))) < 32 || string(key) == string(token) {
 		t.Error("the agent credential must be its own secret, not the login token")
 	}
@@ -60,7 +60,7 @@ func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T
 	}
 
 	// status, as a running flai serve with this project connected would have it
-	f.running["flaiover-harbour"] = true
+	f.running["flaiover"] = true
 	st := serve.Status{PID: os.Getpid(), Version: "test", Started: "2026-09-20T07:00:00Z", Updated: time.Now().UTC().Format(time.RFC3339),
 		Connections: map[string]channel.State{root: {URL: "http://127.0.0.1:5555", Connected: true, Since: "2026-09-20T07:00:01Z"}}}
 	data, _ := json.Marshal(st)
@@ -117,5 +117,89 @@ func TestDialURLFollowsTheBindAddress(t *testing.T) {
 		if got := (dashboardSettings{Bind: bind, Port: 4242}).dialURL(); got != want {
 			t.Errorf("bind %q: %s, want %s", bind, got, want)
 		}
+	}
+}
+
+// S-0080: one dashboard container serves every project the host flai serves,
+// with one shared login token and one shared agent credential.
+func TestDashboardSharesOneContainerAcrossProjects(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	serveDir := string(serve.DirFor(cfg))
+
+	first := tempProject(t)
+	_ = os.WriteFile(filepath.Join(first, "system-flow.yaml"), []byte("version: 1\nname: First\nkey: first\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n"), 0o644)
+	second := tempProject(t)
+	_ = os.WriteFile(filepath.Join(second, "system-flow.yaml"), []byte("version: 1\nname: Second\nkey: second\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n"), 0o644)
+
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, first, f, "dashboard")
+	if code != 0 {
+		t.Fatalf("first: %s %s", out, errOut)
+	}
+	if n := strings.Count(strings.Join(f.calls, "\n"), "docker run "); n != 1 {
+		t.Fatalf("one container started: %d runs", n)
+	}
+	out, errOut, code = runWith(t, second, f, "dashboard")
+	if code != 0 {
+		t.Fatalf("second: %s %s", out, errOut)
+	}
+	if n := strings.Count(strings.Join(f.calls, "\n"), "docker run "); n != 1 {
+		t.Errorf("a second flai dashboard started a second container: %s", strings.Join(f.calls, "\n"))
+	}
+	if !strings.Contains(out, "already runs") || !strings.Contains(out, second) {
+		t.Errorf("says it now also serves the second project: %s", out)
+	}
+	entries, _ := serve.DirFor(cfg).Projects()
+	if len(entries) != 2 {
+		t.Fatalf("both registered: %+v", entries)
+	}
+	// one shared token and one shared agent credential, not one per project
+	if _, err := os.Stat(filepath.Join(first, ".flai-cache", "dashboard.token")); !os.IsNotExist(err) {
+		t.Error("no per-project token file")
+	}
+	if _, err := os.Stat(filepath.Join(serveDir, "dashboard.token")); err != nil {
+		t.Errorf("the shared token: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(serveDir, "dashboard.agent-key")); err != nil {
+		t.Errorf("the shared agent credential: %v", err)
+	}
+	for _, e := range entries {
+		if e.KeyFile != filepath.Join(serveDir, "dashboard.agent-key") {
+			t.Errorf("%s does not share the credential file: %s", e.Key, e.KeyFile)
+		}
+	}
+
+	// stopping the first leaves the container running for the second
+	out, _, code = runWith(t, first, f, "dashboard", "stop")
+	if code != 0 {
+		t.Fatal(out)
+	}
+	if !strings.Contains(out, "unregistered") || !strings.Contains(out, "second") {
+		t.Errorf("stop of the first: %s", out)
+	}
+	if entries, _ := serve.DirFor(cfg).Projects(); len(entries) != 1 || entries[0].Key != "second" {
+		t.Errorf("only the second remains: %+v", entries)
+	}
+	if strings.Contains(strings.Join(f.calls, "\n"), "docker stop") {
+		t.Error("the container was stopped although the second project still needs it")
+	}
+
+	// flai dashboard status names every project the container serves
+	statusOut, _, _ := runWith(t, second, f, "dashboard", "status")
+	if !strings.Contains(statusOut, "serves: second") {
+		t.Errorf("status names the project served: %s", statusOut)
+	}
+
+	// stopping the last registered project stops the container
+	out, _, code = runWith(t, second, f, "dashboard", "stop")
+	if code != 0 || !strings.Contains(out, "stopped flaiover") {
+		t.Errorf("stop of the last: %d %s", code, out)
+	}
+	if !strings.Contains(strings.Join(f.calls, "\n"), "docker stop flaiover") {
+		t.Error("the container should have been stopped")
+	}
+	if entries, _ := serve.DirFor(cfg).Projects(); len(entries) != 0 {
+		t.Errorf("nothing left registered: %+v", entries)
 	}
 }

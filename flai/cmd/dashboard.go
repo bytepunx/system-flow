@@ -77,16 +77,15 @@ func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int
 	if s.Tag == "" {
 		s.Tag = "latest"
 	}
-	name := strings.ToLower(repo.Manifest.Name)
-	name = strings.Map(func(r rune) rune {
-		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-' || r == '_' {
-			return r
-		}
-		return '-'
-	}, name)
-	s.Name = "flaiover-" + strings.Trim(name, "-")
+	// One container serves every project the host flai serves (S-0080): its
+	// name is fixed, not derived from a project's own name any more.
+	s.Name = sharedContainerName
 	return s, nil
 }
+
+// sharedContainerName is the one dashboard container's name, for every
+// project on this host.
+const sharedContainerName = "flaiover"
 
 func (s dashboardSettings) ref() string { return s.Image + ":" + s.Tag }
 func (s dashboardSettings) url() string { return fmt.Sprintf("http://localhost:%d", s.Port) }
@@ -97,15 +96,19 @@ func newDashboardCmd(a *app) *cobra.Command {
 	var pull, attach, open, build, noServe bool
 	c := &cobra.Command{
 		Use:   "dashboard",
-		Short: "Run the flaiover dashboard against this project in Docker",
-		Long: `Pull the flaiover image if it is missing and run it detached, published on
-every interface (--bind 127.0.0.1 to restrict) on the configured port. The
-container is given that port, the login token, and the credential flai serve
-proves itself with, and nothing else: no file of the project is mounted into
-it (ADR-0031). Everything it shows and changes it asks of flai serve on this
-host, which this command registers the project with and starts. Image, tag,
-port, and bind come from flags, then the dashboard section of
-system-flow.yaml, then config.`,
+		Short: "Make sure the one flaiover dashboard runs and serves this project",
+		Long: `One dashboard container serves every project on this host (S-0080): if it is
+not running, this pulls the image (unless missing) and starts it, published on
+every interface (--bind 127.0.0.1 to restrict) on the configured port; if it
+already runs, for this project or another, this registers the project with it
+and starts no second container. The container is given that port, the one
+login token, and the one credential flai serve proves itself with, kept
+beside flai serve's state, and nothing else: no file of any project is
+mounted into it (ADR-0031). Everything it shows and changes it asks of flai
+serve on this host, which this command registers the project with and
+starts. Image, tag, port, and bind come from flags, then the dashboard
+section of system-flow.yaml, then config; they matter only the first time,
+when they decide what the shared container is started with.`,
 		Example: `  flai dashboard
   flai dashboard --port 8080 --pull
   flai dashboard --attach          # stream logs until Ctrl-C (the container keeps running)
@@ -288,56 +291,67 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	if err != nil {
 		return err
 	}
-	if running, _ := a.containerRunning(s.Name); running {
-		_, url := a.containerInfo(s.Name)
-		fmt.Fprintf(a.out, "%s is already running at %s (flai dashboard stop to stop it)\n", s.Name, orDefault(url, s.url()))
-		return nil
-	}
-	if build {
-		if err := a.buildDashboardImage(repo.Root, s.ref()); err != nil {
-			return err
-		}
-	} else if _, err := a.runner.Run("", "docker", "image", "inspect", s.ref()); err != nil || pull {
-		if err := a.pullDashboardImage(s); err != nil {
-			return err
-		}
-	}
+	dir := string(a.serveDir())
 	retired := a.retiredPushKey(pushKeyFlag, pushHostsFlag)
-	token, created, err := ensureToken(repo.MainRoot)
+	// A container started for another project may already serve this one
+	// (S-0080): register this project with it too, and say so, instead of
+	// starting a second container or refusing.
+	already, _ := a.containerRunning(s.Name)
+	if !already {
+		if build {
+			if err := a.buildDashboardImage(repo.Root, s.ref()); err != nil {
+				return err
+			}
+		} else if _, err := a.runner.Run("", "docker", "image", "inspect", s.ref()); err != nil || pull {
+			if err := a.pullDashboardImage(s); err != nil {
+				return err
+			}
+		}
+	}
+	token, created, err := ensureToken(dir)
 	if err != nil {
 		return fmt.Errorf("dashboard token: %w", err)
 	}
 	if created {
-		a.logger().Info("dashboard token created", "component", "dashboard", "file", relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
+		a.logger().Info("dashboard token created", "component", "dashboard", "file", tokenPath(dir))
 	}
-	// A port and two secrets, and nothing of the project (ADR-0031).
-	args := []string{"run", "--detach", "--rm", "--name", s.Name,
-		"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
-	}
-	args = append(args, tokenArgs(repo.MainRoot)...)
 	// The credential flai serve and the dashboard prove to each other (ADR-0029).
-	if err := ensureAgentKey(repo.MainRoot); err != nil {
+	if err := ensureAgentKey(dir); err != nil {
 		return fmt.Errorf("agent credential: %w", err)
 	}
-	args = append(args, agentKeyArgs(repo.MainRoot)...)
-	// The two secrets are files only this user can read, so the container
-	// runs as this user to read them. It owns nothing else there: no file of
-	// the host is within its reach to write as you (ADR-0031).
-	if runtime.GOOS != "windows" {
-		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
+	var id string
+	if !already {
+		// A port and two secrets, and nothing of any project (ADR-0031).
+		args := []string{"run", "--detach", "--rm", "--name", s.Name,
+			"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
+		}
+		args = append(args, tokenArgs(dir)...)
+		args = append(args, agentKeyArgs(dir)...)
+		// The two secrets are files only this user can read, so the container
+		// runs as this user to read them. It owns nothing else there: no file
+		// of the host is within its reach to write as you (ADR-0031).
+		if runtime.GOOS != "windows" {
+			args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
+		}
+		args = append(args, s.ref())
+		id, err = a.runner.Run("", "docker", args...)
+		if err != nil {
+			return err
+		}
+		a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	}
-	args = append(args, s.ref())
-	id, err := a.runner.Run("", "docker", args...)
-	if err != nil {
-		return err
-	}
-	a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	serveNote := "  host flai: not started (--no-serve); flai serve start connects it\n"
 	if !noServe {
 		serveNote = a.connectServe(repo, s)
 	}
+	url := s.url()
+	if already {
+		if _, u := a.containerInfo(s.Name); u != "" {
+			url = u
+		}
+	}
 	if a.jsonOut {
-		out := map[string]any{"container": s.Name, "id": short(id), "image": s.ref(), "url": s.url(), "login_url": loginURL(s.url(), token), "bind": s.Bind, "port": s.Port, "project": s.Root}
+		out := map[string]any{"container": s.Name, "already_running": already, "id": short(id), "url": url, "login_url": loginURL(url, token), "bind": s.Bind, "project": s.Root}
 		out["host_flai"] = a.hostFlai(s.Root)
 		if retired != "" {
 			out["retired"] = strings.TrimSpace(retired)
@@ -348,11 +362,15 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	if s.Bind == defaultBind {
 		reach = "reachable on every interface of this host; the token is required, keep the host private"
 	}
-	fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of the project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.url(), reach, loginURL(s.url(), token), s.Name, s.ref(), s.Root, relPath(repo.MainRoot, tokenPath(repo.MainRoot)))
+	if already {
+		fmt.Fprintf(a.out, "%s already runs at %s, and now also serves %s\n  log in with: %s\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.Name, url, s.Root, loginURL(url, token), tokenPath(dir))
+	} else {
+		fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of any project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", url, reach, loginURL(url, token), s.Name, s.ref(), s.Root, tokenPath(dir))
+	}
 	fmt.Fprint(a.out, retired)
 	fmt.Fprint(a.out, serveNote)
 	if open {
-		openBrowser(loginURL(s.url(), token))
+		openBrowser(loginURL(url, token))
 	}
 	if attach {
 		cmd := exec.Command("docker", "logs", "--follow", s.Name)
@@ -390,7 +408,7 @@ func (a *app) containerInfo(name string) (image, url string) {
 func newDashboardStopCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop",
-		Short: "Stop the dashboard container for this project",
+		Short: "Stop this project's dashboard; the shared container stops only when it was the last project served",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -405,11 +423,28 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 				return err
 			}
 			// flai serve stays for the other projects; it stops dialling this one.
+			// One dashboard container serves every project on this host (S-0080),
+			// so it stops only when this was the last one registered.
 			if err := a.serveDir().Unregister(s.Root); err != nil {
 				a.logger().Warn("project not unregistered from flai serve", "component", "dashboard", "err", err.Error())
 			}
+			remaining, err := a.serveDir().Projects()
+			if err != nil {
+				return err
+			}
 			if running, _ := a.containerRunning(s.Name); !running {
 				fmt.Fprintf(a.out, "%s is not running\n", s.Name)
+				return nil
+			}
+			if len(remaining) > 0 {
+				names := make([]string, len(remaining))
+				for i, p := range remaining {
+					names[i] = p.Key
+				}
+				if a.jsonOut {
+					return a.printJSON(map[string]any{"container": s.Name, "state": "still-running", "serves": names})
+				}
+				fmt.Fprintf(a.out, "%s unregistered; %s keeps running for %s\n", s.Root, s.Name, strings.Join(names, ", "))
 				return nil
 			}
 			if _, err := a.runner.Run("", "docker", "stop", s.Name); err != nil {
@@ -418,7 +453,7 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 			if a.jsonOut {
 				return a.printJSON(map[string]string{"container": s.Name, "state": "stopped"})
 			}
-			fmt.Fprintf(a.out, "stopped %s\n", s.Name)
+			fmt.Fprintf(a.out, "stopped %s (no project left registered)\n", s.Name)
 			return nil
 		},
 	}
@@ -455,8 +490,16 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 			if running {
 				stale = a.staleMounts(s.Name)
 			}
+			served, err := a.serveDir().Projects()
+			if err != nil {
+				return err
+			}
+			names := make([]string, len(served))
+			for i, p := range served {
+				names[i] = p.Key
+			}
 			if a.jsonOut {
-				out := map[string]any{"container": s.Name, "running": running, "url": url, "image": image}
+				out := map[string]any{"container": s.Name, "running": running, "url": url, "image": image, "serves": names}
 				if len(stale) > 0 {
 					out["stale_mounts"] = stale
 				}
@@ -465,6 +508,9 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 			}
 			if running {
 				fmt.Fprintf(a.out, "%s running at %s (%s)\n", s.Name, url, image)
+				if len(names) > 0 {
+					fmt.Fprintf(a.out, "  serves: %s\n", strings.Join(names, ", "))
+				}
 				if len(stale) > 0 {
 					// the shortest is the project itself; the rest lie inside it
 					first := stale[0]
@@ -477,7 +523,7 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 					if len(stale) > 1 {
 						more = fmt.Sprintf(" and %d more", len(stale)-1)
 					}
-					fmt.Fprintf(a.out, "  this container was started by an older flai and still has the project mounted (%s%s); restart it: flai dashboard stop, then flai dashboard\n", first, more)
+					fmt.Fprintf(a.out, "  this container was started by an older flai and still has a project mounted (%s%s); restart it: flai dashboard stop, then flai dashboard\n", first, more)
 				}
 				fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
 			} else {

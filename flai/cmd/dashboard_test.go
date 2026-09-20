@@ -134,7 +134,9 @@ func runWith(t *testing.T, dir string, r *fakeRunner, args ...string) (string, s
 }
 
 func TestDashboardLifecycle(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	serveDir := string(serve.DirFor(cfg))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n"), 0o644)
 
@@ -154,9 +156,9 @@ func TestDashboardLifecycle(t *testing.T) {
 	for _, want := range []string{
 		"docker image inspect ghcr.io/bytepunx/flaiover:0.2.0",
 		"docker pull --quiet ghcr.io/bytepunx/flaiover:0.2.0",
-		"--name flaiover-my-proj",
+		"--name flaiover",
 		"--publish 0.0.0.0:5555:3000",
-		"--mount type=bind,source=" + filepath.Join(root, ".flai-cache", "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
+		"--mount type=bind,source=" + filepath.Join(serveDir, "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
 		"--env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 	} {
@@ -164,7 +166,7 @@ func TestDashboardLifecycle(t *testing.T) {
 			t.Errorf("missing %q in calls:\n%s", want, joined)
 		}
 	}
-	if !strings.Contains(out, "http://localhost:5555") || !strings.Contains(out, "flai dashboard stop") || !strings.Contains(out, "http://localhost:5555/login#token=") || !strings.Contains(out, "no file of the project") {
+	if !strings.Contains(out, "http://localhost:5555") || !strings.Contains(out, "flai dashboard stop") || !strings.Contains(out, "http://localhost:5555/login#token=") || !strings.Contains(out, "no file of any project") {
 		t.Errorf("output: %s", out)
 	}
 	// ADR-0031: a port and two secrets, and nothing of the project or of the
@@ -183,7 +185,7 @@ func TestDashboardLifecycle(t *testing.T) {
 	if n := strings.Count(run, "--mount "); n != 2 || strings.Count(run, "target=/run/secrets/") != 2 || strings.Count(run, ",readonly") != 2 {
 		t.Errorf("the only mounts are the two secrets, read-only:\n%s", run)
 	}
-	tokenFile := filepath.Join(root, ".flai-cache", "dashboard.token")
+	tokenFile := filepath.Join(serveDir, "dashboard.token")
 	tokenData, err := os.ReadFile(tokenFile)
 	if err != nil || len(strings.TrimSpace(string(tokenData))) < 40 {
 		t.Fatalf("token file: %v %q", err, tokenData)
@@ -201,7 +203,7 @@ func TestDashboardLifecycle(t *testing.T) {
 	}
 	out, _, code = runWith(t, root, f, "dashboard", "token", "--rotate")
 	rotated, _ := os.ReadFile(tokenFile)
-	if code != 0 || string(rotated) == string(tokenData) || !strings.Contains(out, "token: "+strings.TrimSpace(string(rotated))) || !strings.Contains(strings.Join(f.calls, "\n"), "docker restart flaiover-my-proj") || !strings.Contains(out, "restarted flaiover-my-proj") {
+	if code != 0 || string(rotated) == string(tokenData) || !strings.Contains(out, "token: "+strings.TrimSpace(string(rotated))) || !strings.Contains(strings.Join(f.calls, "\n"), "docker restart flaiover") || !strings.Contains(out, "restarted flaiover") {
 		t.Errorf("rotate: %d %s", code, out)
 	}
 	// precedence: flag port beats manifest port; manifest port beat config's 4242
@@ -232,10 +234,10 @@ func TestDashboardLifecycle(t *testing.T) {
 	if !strings.Contains(strings.Join(h.calls, "\n"), "docker pull --quiet ghcr.io/bytepunx/flaiover:latest") {
 		t.Error("--pull should pull")
 	}
-	// already running, status, logs, stop
+	// already running for this same project: still registers, says so, starts no second container
 	out, _, _ = runWith(t, root, f, "dashboard")
-	if !strings.Contains(out, "already running") {
-		t.Errorf("second start: %s", out)
+	if !strings.Contains(out, "already runs") || !strings.Contains(out, "now also serves") || strings.Count(strings.Join(f.calls, "\n"), "docker run ") != 1 {
+		t.Errorf("second start: %s\n%s", out, strings.Join(f.calls, "\n"))
 	}
 	out, _, _ = runWith(t, root, f, "dashboard", "status")
 	if !strings.Contains(out, "running at http://localhost:5555 (ghcr.io/bytepunx/flaiover:0.2.0)") {
@@ -260,7 +262,7 @@ func TestDashboardLifecycle(t *testing.T) {
 		t.Errorf("logs: %s", out)
 	}
 	out, _, code = runWith(t, root, f, "dashboard", "stop")
-	if code != 0 || !strings.Contains(out, "stopped flaiover-my-proj") || f.running["flaiover-my-proj"] {
+	if code != 0 || !strings.Contains(out, "stopped flaiover") || f.running["flaiover"] {
 		t.Errorf("stop: %d %s", code, out)
 	}
 	out, _, _ = runWith(t, root, f, "dashboard", "stop")
