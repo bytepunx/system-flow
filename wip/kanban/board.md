@@ -7,9 +7,9 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0076
-  - S-0077
   - S-0078
+  - S-0079
+  - S-0080
 ---
 
 # Board

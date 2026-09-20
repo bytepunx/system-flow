@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.15 - 2026-09-20
+
+- S-0076 flai serves MCP itself on the host, over HTTP as well as stdio, and the dashboard's /mcp endpoint goes (patch).
+
 ## 1.0.14 - 2026-09-20
 
 - S-0070 Cancelling an epic cancels its open stories and their tasks, and cancelling a story cancels its open tasks (patch).

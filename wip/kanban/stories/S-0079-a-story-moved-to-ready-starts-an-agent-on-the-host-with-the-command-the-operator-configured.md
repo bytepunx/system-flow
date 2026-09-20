@@ -3,12 +3,15 @@ id: S-0079
 type: story
 nature: feature
 title: A story moved to ready starts an agent on the host, with the command the operator configured
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:51Z
-updated: 2026-09-20T07:26:51Z
-transitions: []
+updated: 2026-09-20T12:10:05Z
+transitions:
+  - to: ready
+    at: 2026-09-20T12:10:05Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system, design/conventions, template]
 ---

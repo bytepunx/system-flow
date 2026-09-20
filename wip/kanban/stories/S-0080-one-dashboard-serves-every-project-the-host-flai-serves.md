@@ -3,12 +3,15 @@ id: S-0080
 type: story
 nature: feature
 title: One dashboard serves every project the host flai serves
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:52Z
-updated: 2026-09-20T07:26:52Z
-transitions: []
+updated: 2026-09-20T12:10:11Z
+transitions:
+  - to: ready
+    at: 2026-09-20T12:10:11Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system, design/adrs, docs/operators]
 ---
