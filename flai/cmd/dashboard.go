@@ -466,7 +466,18 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 			if running {
 				fmt.Fprintf(a.out, "%s running at %s (%s)\n", s.Name, url, image)
 				if len(stale) > 0 {
-					fmt.Fprintf(a.out, "  this container was started by an older flai and still has the project mounted (%s); restart it: flai dashboard stop, then flai dashboard\n", strings.Join(stale, ", "))
+					// the shortest is the project itself; the rest lie inside it
+					first := stale[0]
+					for _, m := range stale {
+						if len(m) < len(first) {
+							first = m
+						}
+					}
+					more := ""
+					if len(stale) > 1 {
+						more = fmt.Sprintf(" and %d more", len(stale)-1)
+					}
+					fmt.Fprintf(a.out, "  this container was started by an older flai and still has the project mounted (%s%s); restart it: flai dashboard stop, then flai dashboard\n", first, more)
 				}
 				fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
 			} else {

@@ -744,6 +744,10 @@ func writeMethods(run Runner, now func() time.Time) map[string]channel.Method {
 
 // outcome reads what flai said: JSON on standard output, warnings and the
 // fatal message among the log events, and exit codes that carry a payload.
+// missingItem is what flai says when an ID names nothing: workitem's
+// "<ID> not found", possibly wrapped by the command that looked it up.
+var missingItem = regexp.MustCompile(`(^|[ :])[EST]-\d+ not found$`)
+
 func outcome(ran Ran, err error, exits map[int]int) (any, *channel.Error) {
 	if err != nil {
 		return nil, failed(err)
@@ -779,6 +783,13 @@ func outcome(ran Ran, err error, exits map[int]int) (any, *channel.Error) {
 		}
 		if strings.HasPrefix(fatal, "rule:") {
 			return nil, &channel.Error{Code: Rule, Message: strings.TrimSpace(strings.TrimPrefix(fatal, "rule:"))}
+		}
+		// A write aimed at an item that is not there is the caller's mistake,
+		// as it is for a read: 404, not a failure of flai's (S-0077; until
+		// then it answered 500). The command runs as a process, so its words
+		// are all there is to go by; a test holds them to workitem's.
+		if missingItem.MatchString(fatal) {
+			return nil, &channel.Error{Code: NotFound, Message: fatal}
 		}
 		return nil, &channel.Error{Code: channel.CodeInternal, Message: fatal}
 	}

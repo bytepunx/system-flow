@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 const rid = `"request_id":"req-00000001"`
@@ -172,6 +173,25 @@ func TestOutcomes(t *testing.T) {
 	}
 	if _, e := call("item.move", Ran{Exit: 1, Events: fatal("disk full")}); e == nil || e.Code != channel.CodeInternal || e.Message != "disk full" {
 		t.Errorf("a failure: %+v", e)
+	}
+	// S-0077: a write aimed at an item that is not there is 404, as a read is,
+	// not a failure of flai's. The words are workitem's own, taken from the
+	// lookup itself, so a change of wording fails here and not in a dashboard.
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, missing := repo.Get("S-9999")
+	if missing == nil {
+		t.Fatal("S-9999 should not exist in the fixture")
+	}
+	for _, said := range []string{missing.Error(), "move: " + missing.Error()} {
+		if _, e := call("item.move", Ran{Exit: 1, Events: fatal(said)}); e == nil || e.Code != NotFound || e.Message != said {
+			t.Errorf("a missing item, said as %q: %+v", said, e)
+		}
+	}
+	if _, e := call("item.move", Ran{Exit: 1, Events: fatal("the remote was not found")}); e == nil || e.Code != channel.CodeInternal {
+		t.Errorf("only an item's absence is a 404: %+v", e)
 	}
 	_, e := call("doc.save", Ran{Exit: 3, Stdout: []byte(`{"conflict":{"hash":"h2","current":"# theirs\n"}}`), Events: fatal("conflict: the file changed")})
 	if e == nil || e.Code != Conflict || e.Message != "the file changed" || e.Data.(map[string]any)["hash"] != "h2" {
