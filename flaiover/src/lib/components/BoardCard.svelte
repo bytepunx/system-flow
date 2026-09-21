@@ -23,6 +23,7 @@
 		card,
 		draggable = false,
 		dragging = false,
+		waiting = false,
 		ondragstart,
 		ondragend,
 		onkeydown
@@ -30,6 +31,9 @@
 		card: Card;
 		draggable?: boolean;
 		dragging?: boolean;
+		/** Merged to main but not yet published (S-0087); the done column's own state, meaningless
+		 * elsewhere. */
+		waiting?: boolean;
 		ondragstart?: () => void;
 		ondragend?: () => void;
 		/** Alt+arrow reorders a focused card on the board (S-0057); the card itself decides nothing. */
@@ -74,6 +78,9 @@
 		<span>{card.nature}</span>
 		{#if card.type !== 'story'}<span>{card.type}</span>{/if}
 		{#if card.blocked}<span class="font-semibold text-danger">BLOCKED</span>{/if}
+		{#if waiting}<span class="font-semibold text-warn" data-testid="waiting-to-publish"
+				>waiting to publish</span
+			>{/if}
 		{#if card.parent}
 			<span
 				class="ml-auto shrink-0 font-mono"

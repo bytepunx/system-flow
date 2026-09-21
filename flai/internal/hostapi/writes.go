@@ -169,7 +169,7 @@ const ActionAgent = "agent"
 
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
-	ActionPush:  "push accepted work and its release tags, and publish the template, with your git credentials; a holder of the dashboard token can then publish any story that is in review",
+	ActionPush:  "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
 	ActionAgent: "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
 }
 
@@ -854,6 +854,27 @@ func specs(host Host) map[string]spec {
 				return nil, "", e
 			}
 			return []string{"push", "--pending", "--publish"}, "", nil
+		}},
+
+		// publish.preview: everything release.Pending would release, without
+		// changing anything, so the board can show it before the operator asks
+		// for it (S-0087).
+		"publish.preview": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"release", "--pending", "--dry-run"}, "", nil
+		}),
+
+		// publish.run: the host action, the same one push.run uses (ADR-0031,
+		// S-0078): flai release --pending as the operator, applying, tagging,
+		// and pushing everything accepted and unreleased. Never forced; when
+		// the remote has moved it refuses (exit 3) and says to fetch and merge.
+		"publish.run": {action: ActionPush, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"release", "--pending"}, "", nil
 		}},
 	}
 }

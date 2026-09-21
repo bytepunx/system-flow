@@ -7,6 +7,7 @@
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
+	import PublishBanner from '$lib/components/PublishBanner.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
 		canReorderOnto,
@@ -58,10 +59,41 @@
 		board = body;
 		loads += 1;
 	}
+
+	// Everything accepted and unreleased since each component's last tag (S-0087), for the done
+	// column's Publish banner and to mark its own cards as waiting rather than published. Fetched
+	// here, not inside the banner, so the two share one answer instead of asking twice (I-0033).
+	type PendingItem = { id: string; title: string; level: string };
+	type PendingPlan = {
+		component: { name: string };
+		level: string;
+		from: string;
+		to: string;
+		items: PendingItem[];
+	};
+	let publishPlans = $state<PendingPlan[]>([]);
+	let publishEnabled = $state(false);
+	async function loadPublish() {
+		try {
+			const r = await api('/api/publish');
+			if (!r.ok) return;
+			const body = await r.json();
+			publishPlans = body.plans ?? [];
+			publishEnabled = body.push_enabled === true;
+		} catch {
+			// keep what we had: a failed question is not news
+		}
+	}
+	const waitingIds = $derived(new Set(publishPlans.flatMap((p) => p.items.map((it) => it.id))));
+
 	onMount(() => {
 		load();
+		void loadPublish();
 		const es = new EventSource('/api/events');
-		es.addEventListener('change', () => load());
+		es.addEventListener('change', () => {
+			load();
+			void loadPublish();
+		});
 		return () => es.close();
 	});
 
@@ -278,6 +310,16 @@
 						>
 					{/if}
 				</h2>
+				{#if state === 'done'}
+					<PublishBanner
+						plans={publishPlans}
+						enabled={publishEnabled}
+						onpublished={() => {
+							void loadPublish();
+							load();
+						}}
+					/>
+				{/if}
 				{#each cards(state) as c (c.id)}
 					<!-- The wrapper is the drop target for reordering and holds the controls beside the
 					     card's link. A drop on a card of another column falls through to the column. -->
@@ -326,6 +368,7 @@
 							card={c}
 							draggable={board.writable}
 							dragging={dragging === c.id}
+							waiting={state === 'done' && waitingIds.has(c.id)}
 							ondragstart={() => {
 								dragging = c.id;
 								// the last action's notice must not read as this drag's result

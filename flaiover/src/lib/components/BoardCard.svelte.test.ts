@@ -165,6 +165,18 @@ describe('BoardCard', () => {
 		expect(document.querySelector('a')!.className).not.toContain('ring-danger');
 	});
 
+	it('shows a "waiting to publish" flag when told the card is merged but unreleased', () => {
+		component = render(base, { waiting: true });
+		expect(document.querySelector('[data-testid="waiting-to-publish"]')?.textContent).toBe(
+			'waiting to publish'
+		);
+	});
+
+	it('shows nothing of the sort by default', () => {
+		component = render(base);
+		expect(document.querySelector('[data-testid="waiting-to-publish"]')).toBeNull();
+	});
+
 	it('fades and dashes the card being dragged, on its tint', () => {
 		component = render({ ...base, nature: 'feature' }, { dragging: true });
 		const classes = document.querySelector('a')!.className.split(/\s+/);

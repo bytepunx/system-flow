@@ -71,7 +71,9 @@ export const REQUIRED_METHODS = [
 	'stats.get',
 	'push.pending',
 	'agent.status',
-	'push.run'
+	'push.run',
+	'publish.preview',
+	'publish.run'
 ];
 
 export type AgentStatus = {
