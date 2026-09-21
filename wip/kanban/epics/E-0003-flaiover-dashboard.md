@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-20T13:58:34Z
+updated: 2026-09-21T03:52:27Z
 transitions: []
 tags: []
 ---
@@ -41,6 +41,9 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0083 Logging in to the dashboard works from any address, not only localhost: the session cookie is not marked Secure over plain HTTP
 - S-0084 One flai serve per repository: a second one steps back instead of taking the dashboard's connection
 - S-0085 Stories and epics are editable from the dashboard: title, nature, tags, touches, parent, and body, each change made by flai on the host
+- S-0086 The host flai connection banner says 'not connected' even when a flai is connected but too old
+- S-0087 Moving a story to done merges it; a publish button on the board tags and pushes everything accumulated since the last one
+- S-0088 The Review page doesn't render markdown in the narrative pane
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
