@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-21T04:03:18Z
+updated: 2026-09-21T04:09:25Z
 transitions: []
 tags: []
 ---
@@ -46,6 +46,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0088 The Review page doesn't render markdown in the narrative pane
 - S-0089 Inbox should not continue showing open items for stories that moved to review
 - S-0090 Operators should be able to answer open questions in via the dashboard
+- S-0091 The flai CLI should install itself to a user's home directory or a configurable path
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
