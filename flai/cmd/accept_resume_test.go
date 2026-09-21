@@ -67,12 +67,7 @@ func TestAcceptCompletesAnUnacceptedStory(t *testing.T) {
 	if !strings.Contains(out, "story.unaccepted") || !strings.Contains(out, "flai accept S-0001") {
 		t.Errorf("check should flag the stranded story:\n%s", out)
 	}
-	// A remote that cannot be pushed to must not fail the acceptance.
-	gitIn(t, root, "remote", "add", "origin", filepath.Join(t.TempDir(), "missing.git"))
-	out, errOut, code := runIn(t, root, "accept", "S-0001", "--no-release")
-	if code != 0 || !strings.Contains(out, "NOT pushed") {
-		t.Fatalf("an unpushable remote should be reported, not fatal: %d %s %s", code, out, errOut)
-	}
+	out, errOut, code := runIn(t, root, "accept", "S-0001")
 	if code != 0 || !strings.Contains(out, "completed the acceptance of S-0001") || !strings.Contains(out, "story/S-0001 merged and removed") {
 		t.Fatalf("resume: %d %s %s", code, out, errOut)
 	}
@@ -85,7 +80,7 @@ func TestAcceptCompletesAnUnacceptedStory(t *testing.T) {
 	if out, _, _ := runIn(t, root, "check"); strings.Contains(out, "story.unaccepted") {
 		t.Errorf("nothing should be flagged after completion:\n%s", out)
 	}
-	if _, _, code := runIn(t, root, "accept", "S-0001", "--no-release", "--no-push"); code == 0 {
+	if _, _, code := runIn(t, root, "accept", "S-0001"); code == 0 {
 		t.Error("an archived story cannot be accepted again")
 	}
 }
@@ -130,11 +125,11 @@ func TestAcceptRefusesBeforeChangingAnythingWithoutIdentity(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
 		t.Fatal(errOut)
 	}
-	out, _, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--no-release", "--json")
+	out, _, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
 	if code != 0 || !strings.Contains(out, "committer identity") {
 		t.Errorf("the dry run should list the blocker: %d %s", code, out)
 	}
-	_, errOut, code := runIn(t, root, "move", "S-0001", "done", "--no-release", "--no-push")
+	_, errOut, code := runIn(t, root, "move", "S-0001", "done")
 	if code == 0 || !strings.Contains(errOut, "cannot be accepted yet") {
 		t.Fatalf("should refuse: %d %s", code, errOut)
 	}

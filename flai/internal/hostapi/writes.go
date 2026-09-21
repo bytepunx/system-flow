@@ -590,7 +590,7 @@ func specs(host Host) map[string]spec {
 			return []string{"accept", in.ID, "--dry-run"}, "", nil
 		}),
 
-		"accept.run": {progress: true, uses: ActionPush, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"accept.run": {progress: true, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
 				IncludeUncommitted bool   `json:"include_uncommitted"`
@@ -601,13 +601,9 @@ func specs(host Host) map[string]spec {
 			if e := needID(in.ID); e != nil {
 				return nil, "", e
 			}
+			// Acceptance merges and archives only; it releases nothing (S-0087).
+			// Publishing what has accumulated is a step of its own (publish.run).
 			args := []string{"accept", in.ID, "--by=" + owner(p)}
-			// flai runs here as the operator, with their credentials. Whether
-			// an acceptance asked for by a dashboard may push is theirs to say
-			// (I-0028: from S-0075 until S-0078 it pushed unasked).
-			if !host.enabled(ActionPush, p.Root) {
-				args = append(args, "--no-push")
-			}
 			if in.IncludeUncommitted {
 				args = append(args, "--yes")
 			}

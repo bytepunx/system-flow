@@ -106,7 +106,7 @@ func LevelFor(it *workitem.Item) (string, error) {
 	case "research":
 		return None, nil
 	case "experiment":
-		return "", fmt.Errorf("%s is an experiment; an experiment stays on its branch and is not accepted onto main (ADR-0025); flai accept --no-release lands one deliberately", it.ID)
+		return "", fmt.Errorf("%s is an experiment; an experiment stays on its branch and is not accepted onto main (ADR-0025)", it.ID)
 	}
 	return "", fmt.Errorf("%s has nature %q, no release rule", it.ID, it.Nature)
 }

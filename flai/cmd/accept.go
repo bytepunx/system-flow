@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -16,27 +15,24 @@ import (
 // acceptOptions are shared by `flai accept` and `flai move <story> done`:
 // there is one way for a story to become done, and it is acceptance (S-0046).
 type acceptOptions struct {
-	by, deliver, remote string
-	trailers            []string
-	noRelease, noPush   bool
-	noPublish, dryRun   bool
+	by       string
+	trailers []string
+	dryRun   bool
 }
 
 // acceptResult is what acceptance did, or under dryRun what it would do.
+// Acceptance merges, moves to done, and archives; it computes no release, no
+// tag, and no push (S-0087) — see flai release --pending for that, run when
+// the operator chooses to publish what has accumulated on main.
 type acceptResult struct {
-	ID        string        `json:"id"`
-	Status    string        `json:"status"`
-	DryRun    bool          `json:"dry_run,omitempty"`
-	Resumed   bool          `json:"resumed,omitempty"` // the item was already done but never archived
-	Branch    string        `json:"branch,omitempty"`
-	Merged    bool          `json:"merged"`
-	Archived  int           `json:"archived"`
-	Plan      *release.Plan `json:"plan"`
-	Tags      []string      `json:"tags"`
-	Pushed    bool          `json:"pushed"`
-	PushError string        `json:"push_error,omitempty"` // accepted locally; the push did not happen
-	Published []string      `json:"published"`
-	Blockers  []string      `json:"blockers,omitempty"` // what would stop acceptance before it changes anything
+	ID       string   `json:"id"`
+	Status   string   `json:"status"`
+	DryRun   bool     `json:"dry_run,omitempty"`
+	Resumed  bool     `json:"resumed,omitempty"` // the item was already done but never archived
+	Branch   string   `json:"branch,omitempty"`
+	Merged   bool     `json:"merged"`
+	Archived int      `json:"archived"`
+	Blockers []string `json:"blockers,omitempty"` // what would stop acceptance before it changes anything
 	// Uncommitted paths outside wip. The real run refuses them unless --yes
 	// includes them in the acceptance commit; a dry run reports them so the
 	// choice can be made before confirming (S-0051).
@@ -47,27 +43,25 @@ func newAcceptCmd(a *app) *cobra.Command {
 	var o acceptOptions
 	c := &cobra.Command{
 		Use:   "accept <id>",
-		Short: "Accept an item: merge its branch, move to done, archive, commit, release, push",
+		Short: "Accept an item: merge its branch, move to done, archive, commit",
 		Long: `The operator's acceptance step as one command, per
 design/conventions/work-management.md and git.md:
 
   0. rebase the story branch and fast-forward it into the main branch
   1. move the item to done (its rules apply: children closed, criteria checked)
   2. flai archive for the item and its children and narrative
-  3. compute the release; bump the template version file and changelog if the
-     template is a component in the plan
-  4. git commit the work item, archive, and version changes
-  5. create the release tags on that commit
-  6. push the branch and the tags
+  3. git commit the work item and archive
+
+Acceptance computes no release, creates no tag, and pushes nothing (S-0087):
+that is a deliberate step of its own, run when the operator chooses to
+publish what has accumulated on main, not tied to any one item. See flai
+release --pending.
 
 flai move <story> done from review runs exactly this. An item that is already
 done but was never archived (an older flai, a hand edit) is completed from
-step 0 without a second transition. --dry-run shows the plan and changes
-nothing.`,
+step 0 without a second transition. --dry-run changes nothing.`,
 		Example: `  flai accept S-031 --by alex
-  flai accept E-002 --by alex --deliver flai
-  flai accept S-016 --by alex --no-release      # docs-only story
-  flai accept S-031 --by alex --no-push`,
+  flai accept S-031 --by alex --dry-run`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -86,7 +80,7 @@ nothing.`,
 		},
 	}
 	addAcceptFlags(c, &o)
-	c.Flags().BoolVar(&o.dryRun, "dry-run", false, "print the release plan and change nothing")
+	c.Flags().BoolVar(&o.dryRun, "dry-run", false, "show what would block acceptance and change nothing")
 	return c
 }
 
@@ -95,24 +89,18 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 	if c.Flags().Lookup("by") == nil {
 		c.Flags().StringVar(&o.by, "by", "", "who accepted (default: config author)")
 	}
-	c.Flags().StringVar(&o.deliver, "deliver", "", "component the item delivers to, when its tags do not say")
-	c.Flags().StringVar(&o.remote, "remote", "origin", "git remote to push to")
 	c.Flags().StringArrayVar(&o.trailers, "trailer", nil, "line appended to the commit message (repeatable)")
-	c.Flags().BoolVar(&o.noRelease, "no-release", false, "accept without computing or creating a release")
-	c.Flags().BoolVar(&o.noPush, "no-push", false, "do not push the commit and tags (implies --no-publish)")
-	c.Flags().BoolVar(&o.noPublish, "no-publish", false, "do not push template components to their publish remote")
 }
 
 // acceptItem runs the acceptance flow for a story or an epic.
 func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*acceptResult, error) {
 	// Without git (a project that is not a repository) acceptance is the
-	// transition and the archive; with git it also merges, commits, tags,
-	// and pushes.
+	// transition and the archive; with git it also merges and commits.
 	useGit := a.inGitWorkTree(repo.MainRoot)
 	if it.Type == workitem.Task {
 		return nil, fmt.Errorf("%s is a task; accept its story instead", it.ID)
 	}
-	res := &acceptResult{ID: it.ID, Status: it.Status, DryRun: o.dryRun, Tags: []string{}, Published: []string{}}
+	res := &acceptResult{ID: it.ID, Status: it.Status, DryRun: o.dryRun}
 	switch {
 	case it.Status == workitem.Done && !it.Archived:
 		// Done without acceptance: finish the job rather than refuse it.
@@ -154,22 +142,16 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	// A nature that is not accepted onto main (an experiment, ADR-0025) is
-	// refused here, before the merge, not by the release plan after it.
-	releasable := true
-	if !o.noRelease {
-		if _, err := release.LevelFor(it); err != nil {
-			releasable = false
-			res.Blockers = append(res.Blockers, err.Error())
-		}
+	// refused here, before the merge.
+	if _, err := release.LevelFor(it); err != nil {
+		res.Blockers = append(res.Blockers, err.Error())
 	}
 	// A story worktree git cannot open from here (I-0017): its links are
 	// absolute host paths, and this process sees the repository somewhere
 	// else. Say what to do instead of failing later with git's own error.
-	worktreeReadable := true
 	if wt := repo.WorktreePath(it.ID); useGit && it.Type == workitem.Story {
 		if _, err := os.Stat(wt); err == nil {
 			if _, err := a.runner.Run(wt, "git", "rev-parse", "--git-dir"); err != nil {
-				worktreeReadable = false
 				a.logger().Warn("story worktree cannot be opened by git", "component", "git", "worktree", relPath(repo.MainRoot, wt), "err", err)
 				res.Blockers = append(res.Blockers, fmt.Sprintf("git cannot open the story worktree %s from here: the paths git keeps for it do not exist in this environment, which happens when the dashboard sees the repository at a different path than the host does. Accept from a shell on the host with flai accept %s, or stop the dashboard and start it with flai dashboard, which mounts the repository at its host path", relPath(repo.MainRoot, wt), it.ID))
 			}
@@ -182,18 +164,12 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if hasBranch {
 		res.Branch = storyBranch(it.ID)
 	}
+	if o.dryRun {
+		return res, nil
+	}
 
 	// 0. bring the story branch into the main branch (ADR-0019)
-	planRoot := ""
-	if o.dryRun {
-		// The branch is not merged in a dry run, so plan from the worktree,
-		// whose history already holds the story's commits.
-		if wt := repo.WorktreePath(it.ID); hasBranch {
-			if _, err := os.Stat(wt); err == nil {
-				planRoot = wt
-			}
-		}
-	} else if it.Type == workitem.Story {
+	if it.Type == workitem.Story {
 		merged, err := a.mergeStoryBranch(repo, it.ID)
 		if err != nil {
 			return nil, err
@@ -202,21 +178,6 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		if merged {
 			a.acceptStep(it, "merged", res.Branch+" rebased and fast-forwarded into the main branch")
 		}
-	}
-	// An unreadable worktree blocks acceptance; its release cannot be planned either.
-	// Nor can the release of a nature that is refused: the preview carries the blocker instead.
-	if !o.noRelease && useGit && worktreeReadable && releasable {
-		plan, err := a.planReleaseAt(repo, it, o.deliver, planRoot)
-		if err != nil {
-			return nil, err
-		}
-		res.Plan = plan
-		if !a.jsonOut {
-			a.printPlan(plan)
-		}
-	}
-	if o.dryRun {
-		return res, nil
 	}
 
 	// 1. done (epics: walk through review if needed)
@@ -262,25 +223,14 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if !useGit {
 		return res, nil
 	}
-	plan := res.Plan
-	// 3. version files
-	if plan != nil && plan.Skipped == "" {
-		if err := release.Apply(a.runner, repo.Root, plan, a.now()); err != nil {
-			return nil, err
-		}
-	}
-	// 4. commit
+	// 3. commit: the item, the archive, and nothing else. No release is
+	// computed, no tag created, no push made (S-0087) — that is a publish, a
+	// deliberate step of its own over everything accumulated on main, not
+	// tied to any one item's acceptance. See flai release --pending.
 	if _, err := a.runner.Run(repo.Root, "git", "add", "-A"); err != nil {
 		return nil, err
 	}
 	msg := fmt.Sprintf("chore: [%s] accept and archive", it.ID)
-	if plan != nil && plan.Skipped == "" {
-		var parts []string
-		for _, st := range plan.Steps {
-			parts = append(parts, fmt.Sprintf("%s %s", st.Component.Name, st.To))
-		}
-		msg += "; release " + strings.Join(parts, ", ")
-	}
 	for _, t := range o.trailers {
 		msg += "\n\n" + t
 	}
@@ -288,56 +238,6 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	a.acceptStep(it, "committed", firstLine(msg))
-	// 5. tags
-	if plan != nil && plan.Skipped == "" {
-		if res.Tags, err = release.Tag(a.runner, repo.Root, plan); err != nil {
-			return nil, err
-		}
-		a.acceptStep(it, "tagged", strings.Join(res.Tags, ", "))
-	}
-	// 6. push
-	// The acceptance is complete and committed by now; a push that cannot
-	// happen (no credentials in the dashboard container, no network) is
-	// reported, not treated as a failed acceptance. Pushing later is idempotent.
-	remote := orDefault(o.remote, "origin")
-	if !o.noPush {
-		if _, err := a.runner.Run(repo.Root, "git", "remote", "get-url", remote); err == nil {
-			refs := append([]string{"HEAD"}, res.Tags...)
-			// said before it starts: a push can take a while, and a dashboard
-			// showing the steps should say what it is waiting for (S-0078)
-			a.acceptStep(it, "pushing", "pushing to "+remote)
-			var err error
-			for _, batch := range pending.Batches("HEAD", res.Tags) {
-				if _, err = a.runner.Run(repo.Root, "git", append([]string{"push", "-q", remote}, batch...)...); err != nil {
-					break
-				}
-			}
-			if err != nil {
-				res.PushError = firstLine(err.Error())
-				a.logger().Warn("accepted locally but not pushed", "component", "git", "item", it.ID, "detail", "run: git push "+remote+" "+strings.Join(refs, " "))
-				a.acceptStep(it, "not-pushed", "accepted locally, not pushed ("+res.PushError+"); run: flai push --pending")
-			} else {
-				res.Pushed = true
-				a.acceptStep(it, "pushed", "pushed to "+remote)
-			}
-		}
-	}
-	// 7. publish template components at their new version
-	if plan != nil && plan.Skipped == "" && !o.noPublish && !o.noPush && res.PushError == "" {
-		for _, st := range plan.Steps {
-			if st.Component.Kind != "template" {
-				continue
-			}
-			dir := filepath.Join(repo.Root, st.Component.Path)
-			pub, err := a.publishTemplate(dir, "", "", true, false, false)
-			if err != nil {
-				return nil, fmt.Errorf("template published locally at %s but pushing to its remote failed: %w", st.To, err)
-			}
-			if !pub.Nothing {
-				res.Published = append(res.Published, fmt.Sprintf("%s %s (%s)", pub.Remote, pub.Tag, pub.Commit))
-			}
-		}
-	}
 	return res, nil
 }
 
@@ -391,19 +291,7 @@ func (a *app) printAccept(res *acceptResult) error {
 	if res.Merged {
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}
-	if len(res.Tags) > 0 {
-		fmt.Fprintf(a.out, ", tagged %s", strings.Join(res.Tags, ", "))
-	}
-	if res.Pushed {
-		fmt.Fprint(a.out, ", pushed")
-	}
-	if res.PushError != "" {
-		fmt.Fprintf(a.out, ", NOT pushed (%s); push the commit and tags from a shell", res.PushError)
-	}
-	for _, p := range res.Published {
-		fmt.Fprintf(a.out, ", template published to %s", p)
-	}
-	fmt.Fprintln(a.out)
+	fmt.Fprintln(a.out, "; nothing released yet, run flai release --pending to publish")
 	return nil
 }
 

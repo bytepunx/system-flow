@@ -29,8 +29,9 @@ first, a terminal is asked unless --yes is given, and --dry-run changes
 nothing. Branches, worktrees, and narratives are left as they are.
 
 Moving a story from review to done is acceptance: it runs the same flow as
-flai accept (merge the story branch, archive, commit, tag, push), with the
-same flags. There is no other way for a story to become done.`,
+flai accept (merge the story branch, archive, commit), with the same flags.
+There is no other way for a story to become done. Acceptance computes no
+release; see flai release --pending.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-004 in-progress --reason "tests missing"   # from review
@@ -73,7 +74,7 @@ same flags. There is no other way for a story to become done.`,
 			}
 			fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
 			if it.Status == workitem.Done && it.Type == workitem.Epic {
-				a.logger().Info("epic closed without a release; flai accept does move, archive, commit, release, and push in one step", "component", "workitem", "item", it.ID)
+				a.logger().Info("epic closed without an archive or a commit; flai accept does move, archive, and commit in one step", "component", "workitem", "item", it.ID)
 			}
 			return nil
 		},

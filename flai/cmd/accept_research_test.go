@@ -70,9 +70,11 @@ func researchProject(t *testing.T, nature string, withCode bool) (root, remote s
 	return root, remote
 }
 
-// assertResearchAccepted checks what ADR-0025 promises of an accepted
-// research story: merged, archived, committed, pushed, and nothing released.
-func assertResearchAccepted(t *testing.T, root, remote string) {
+// assertAccepted checks what acceptance alone promises, whatever the item's
+// nature: merged, archived, committed, no tag, nothing pushed (S-0087:
+// releasing what has landed on main is a deliberate publish, not tied to any
+// one item's acceptance).
+func assertAccepted(t *testing.T, root, remote string) {
 	t.Helper()
 	if _, err := os.Stat(filepath.Join(root, "design", "finding.md")); err != nil {
 		t.Errorf("the finding is on main: %v", err)
@@ -84,7 +86,7 @@ func assertResearchAccepted(t *testing.T, root, remote string) {
 		t.Error("the story worktree is removed")
 	}
 	if got := strings.TrimSpace(gitIn(t, root, "tag", "--list")); got != "cli/v1.0.0" {
-		t.Errorf("no tag is created for research, got %q", got)
+		t.Errorf("acceptance creates no tag, got %q", got)
 	}
 	subject := strings.TrimSpace(gitIn(t, root, "log", "-1", "--format=%s"))
 	if subject != "chore: [S-0001] accept and archive" {
@@ -95,15 +97,15 @@ func assertResearchAccepted(t *testing.T, root, remote string) {
 	}
 	local := strings.TrimSpace(gitIn(t, root, "rev-parse", "HEAD"))
 	pushed := strings.TrimSpace(gitIn(t, remote, "rev-parse", "main"))
-	if local != pushed {
-		t.Errorf("the acceptance commit is pushed although nothing was released: local %s, remote %s", local, pushed)
-	}
-	if got := strings.TrimSpace(gitIn(t, remote, "tag", "--list")); got != "cli/v1.0.0" {
-		t.Errorf("no tag reaches the remote, got %q", got)
+	if local == pushed {
+		t.Errorf("acceptance alone must not reach the remote: local %s is already on it", local)
 	}
 }
 
-// S-0053, ADR-0025: a research story is accepted and pushed with no release.
+// ADR-0025: a research story is accepted like any other, merged and
+// archived, with nothing released — true of every story since S-0087, since
+// acceptance itself never releases; the point of this test is that a
+// research story is not blocked or treated specially on the way.
 func TestAcceptResearchEndToEnd(t *testing.T) {
 	root, remote := researchProject(t, "research", false)
 
@@ -113,45 +115,31 @@ func TestAcceptResearchEndToEnd(t *testing.T) {
 	}
 	var pre struct {
 		Blockers []string `json:"blockers"`
-		Plan     struct {
-			Level      string `json:"level"`
-			Skipped    string `json:"skipped"`
-			Steps      []any  `json:"steps"`
-			Unreleased []any  `json:"unreleased"`
-		} `json:"plan"`
 	}
 	if err := json.Unmarshal([]byte(out), &pre); err != nil {
 		t.Fatalf("preview json: %v\n%s", err, out)
 	}
-	if len(pre.Blockers) != 0 || pre.Plan.Level != "none" || !strings.Contains(pre.Plan.Skipped, "is research") || len(pre.Plan.Steps) != 0 || len(pre.Plan.Unreleased) != 0 {
-		t.Errorf("preview: %+v", pre)
+	if len(pre.Blockers) != 0 {
+		t.Errorf("preview blockers: %+v", pre.Blockers)
 	}
 
-	out, errOut, code = runIn(t, root, "accept", "S-0001")
-	if code != 0 {
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %d %s", code, errOut)
 	}
-	if !strings.Contains(out, "no release (S-0001 is research") {
-		t.Errorf("the plan says research releases nothing and why:\n%s", out)
-	}
-	assertResearchAccepted(t, root, remote)
+	assertAccepted(t, root, remote)
 }
 
 // The board's way in: flai move <story> done is the same acceptance. This
-// story also changed a component, which lands unreleased and is said so.
+// story also changed a component; acceptance alone still releases nothing.
 func TestMoveResearchToDoneNamesCodeLandingUnreleased(t *testing.T) {
 	root, remote := researchProject(t, "research", true)
-	out, errOut, code := runIn(t, root, "move", "S-0001", "done")
-	if code != 0 {
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "done"); code != 0 {
 		t.Fatalf("move to done: %d %s", code, errOut)
-	}
-	if !strings.Contains(out, "cli") || !strings.Contains(out, "lands on main without a release") {
-		t.Errorf("the plan names the component landing unreleased:\n%s", out)
 	}
 	if _, err := os.Stat(filepath.Join(root, "cli", "probe.go")); err != nil {
 		t.Errorf("the component change is on main: %v", err)
 	}
-	assertResearchAccepted(t, root, remote)
+	assertAccepted(t, root, remote)
 }
 
 // An experiment stays on its branch: refused before anything is merged, in
@@ -190,16 +178,12 @@ func TestAcceptRefusesAnExperimentBeforeMerging(t *testing.T) {
 	}
 }
 
-// Nothing pinned that the push follows an acceptance that cuts no release:
-// a feature story that touched no component.
+// A feature story that touched no component: acceptance still merges,
+// archives, and commits it; nothing is released or pushed by accept alone.
 func TestAcceptPushesWhenThePlanIsSkipped(t *testing.T) {
 	root, remote := researchProject(t, "feature", false)
-	out, errOut, code := runIn(t, root, "accept", "S-0001")
-	if code != 0 {
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %d %s", code, errOut)
 	}
-	if !strings.Contains(out, "no release (no component touched") {
-		t.Errorf("plan:\n%s", out)
-	}
-	assertResearchAccepted(t, root, remote)
+	assertAccepted(t, root, remote)
 }

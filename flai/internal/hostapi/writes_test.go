@@ -31,7 +31,7 @@ var good = map[string]struct {
 	"item.show":         {`{"id":"S-0001"}`, "edit S-0001 --show --json", ""},
 	"item.edit":         {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --body-stdin --json", "## Goal\nx\n"},
 	"accept.preview":    {`{"id":"S-0001"}`, "accept S-0001 --dry-run --json", ""},
-	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --no-push --yes --json", ""},
+	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
 	"stream.diff":       {`{"id":"S-0001"}`, "stream diff S-0001 --json", ""},
 	"stream.log":        {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
 	"thread.new":        {`{"on":"S-0001","heading":"Goal","title":"How deep?","text":"Eight metres?",` + rid + `}`, "thread new --on=S-0001 --by=olive --heading=Goal --json -- How deep? Eight metres?", ""},
@@ -278,13 +278,14 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 		return lines, e
 	}
 
-	// off: an acceptance pushes nothing, the push is refused and says what enables it
-	ran, e := call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001","pushed":false}`)})
-	if e != nil || len(ran) != 1 || !strings.Contains(ran[0], "--no-push") {
+	// off: an acceptance never pushes or tags either way (S-0087); the push
+	// action governs push.run, not accept.run
+	ran, e := call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001"}`)})
+	if e != nil || len(ran) != 1 {
 		t.Fatalf("an acceptance with the action off: %v %+v", ran, e)
 	}
 	if len(journal) != 0 {
-		t.Errorf("an acceptance that may not push is no host action: %+v", journal)
+		t.Errorf("acceptance is no host action: %+v", journal)
 	}
 	ran, e = call("push.run", Ran{})
 	if e == nil || e.Code != Disabled || len(ran) != 0 || !strings.Contains(e.Message, "flai serve enable push") || e.Data.(map[string]any)["enable"] != "flai serve enable push" {
@@ -294,10 +295,10 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 		t.Errorf("the refusal is journalled: %+v", journal)
 	}
 
-	// on
+	// on: the same command line either way
 	on, journal = true, nil
-	ran, e = call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001","pushed":true,"tags":["cli/v1.1.0"],"published":["origin v1.0.1 (abc)"]}`)})
-	if e != nil || len(ran) != 1 || strings.Contains(ran[0], "--no-push") {
+	ran, e = call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001"}`)})
+	if e != nil || len(ran) != 1 {
 		t.Fatalf("an acceptance with the action on: %v %+v", ran, e)
 	}
 	ran, e = call("push.run", Ran{Stdout: []byte(`{"pushed":true,"unpushed":{"acceptances":["S-0001"],"tags":["cli/v1.1.0"]}}`)})
@@ -309,13 +310,12 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 	if e == nil || e.Code != Conflict || e.Message != "main and origin/main have diverged" {
 		t.Errorf("a remote that moved is a conflict with its reason: %+v", e)
 	}
-	_, _ = call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001","pushed":false,"push_error":"could not read from remote"}`)})
+	// accept.run is never journalled as a host action (S-0087): it never
+	// pushes, so it never uses the push action.
 	want := []struct{ method, outcome, detail string }{
-		{"accept.run", "done", "pushed with tags cli/v1.1.0; published origin v1.0.1 (abc)"},
 		{"push.run", "done", "pushed with tags cli/v1.1.0"},
 		{"push.run", "done", "nothing pushed: nothing pending"},
 		{"push.run", "failed", "main and origin/main have diverged"},
-		{"accept.run", "failed", "not pushed: could not read from remote"},
 	}
 	if len(journal) != len(want) {
 		t.Fatalf("journal: %+v", journal)

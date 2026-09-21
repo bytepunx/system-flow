@@ -77,7 +77,7 @@ func TestAcceptSaysWhatToDoWhenTheWorktreeCannotBeOpened(t *testing.T) {
 		t.Errorf("git's raw error must not be the message:\n%s", out)
 	}
 
-	_, errOut, code = runIn(t, root, "accept", "S-0001", "--no-release")
+	_, errOut, code = runIn(t, root, "accept", "S-0001")
 	if code == 0 || !strings.Contains(errOut, "cannot be accepted yet") || !strings.Contains(errOut, "flai accept S-0001") {
 		t.Errorf("the real run must refuse with the same advice: %d %s", code, errOut)
 	}

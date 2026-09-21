@@ -136,7 +136,7 @@ func TestStoryBranchLifecycle(t *testing.T) {
 		t.Fatal(errOut)
 	}
 	// a dry run previews the merge and changes nothing
-	out, errOut, code = runIn(t, root, "accept", "S-0001", "--dry-run", "--no-release", "--json")
+	out, errOut, code = runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
 	if code != 0 || !strings.Contains(out, `"branch": "story/S-0001"`) || !strings.Contains(out, `"dry_run": true`) {
 		t.Fatalf("dry run: %d %s %s", code, out, errOut)
 	}
@@ -144,7 +144,7 @@ func TestStoryBranchLifecycle(t *testing.T) {
 		t.Fatal("dry run must not remove the worktree")
 	}
 	// moving the story to done IS acceptance (S-0046): same flow, same flags
-	out, errOut, code = runIn(t, root, "move", "S-0001", "done", "--by", "tester", "--no-release", "--no-push")
+	out, errOut, code = runIn(t, root, "move", "S-0001", "done", "--by", "tester")
 	if code != 0 || !strings.Contains(out, "accepted S-0001") || !strings.Contains(out, "story/S-0001 merged and removed") {
 		t.Fatalf("move to done: %d %s %s", code, out, errOut)
 	}

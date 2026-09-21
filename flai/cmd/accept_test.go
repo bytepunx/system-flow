@@ -52,18 +52,18 @@ func TestAcceptEndToEnd(t *testing.T) {
 	if code != 0 || !strings.Contains(out, "cli        0.0.0 -> 0.1.0  minor  delivered") {
 		t.Fatalf("release dry run: %d %s %s", code, out, errOut)
 	}
-	out, errOut, code = runIn(t, root, "accept", "S-0001", "--by", "alex", "--no-push", "--trailer", "Co-Authored-By: t <t@t>")
+	out, errOut, code = runIn(t, root, "accept", "S-0001", "--by", "alex", "--trailer", "Co-Authored-By: t <t@t>")
 	if code != 0 {
 		t.Fatalf("accept: %s\n%s", errOut, out)
 	}
-	if !strings.Contains(out, "accepted S-0001: done, 2 items archived, committed, tagged cli/v0.1.0") {
+	if !strings.Contains(out, "accepted S-0001: done, 2 items archived, committed") {
 		t.Errorf("summary: %s", out)
 	}
 	if _, err := os.Stat(filepath.Join(root, "wip", "archive", "kanban", "stories", "S-0001-ship-it.md")); err != nil {
 		t.Error("story not archived")
 	}
 	log, _ := r.Run(root, "git", "log", "-1", "--format=%B")
-	if !strings.HasPrefix(log, "chore: [S-0001] accept and archive; release cli 0.1.0") || !strings.Contains(log, "Co-Authored-By: t <t@t>") {
+	if !strings.HasPrefix(log, "chore: [S-0001] accept and archive") || !strings.Contains(log, "Co-Authored-By: t <t@t>") {
 		t.Errorf("commit message:\n%s", log)
 	}
 	st, _ := r.Run(root, "git", "status", "--porcelain")
@@ -71,16 +71,16 @@ func TestAcceptEndToEnd(t *testing.T) {
 		t.Errorf("working tree dirty after accept:\n%s", st)
 	}
 	tag, _ := r.Run(root, "git", "tag", "-l", "cli/*")
-	if strings.TrimSpace(tag) != "cli/v0.1.0" {
-		t.Errorf("tag: %q", tag)
+	if strings.TrimSpace(tag) != "" {
+		t.Errorf("acceptance alone creates no tag: %q", tag)
 	}
-	_, errOut, code = runIn(t, root, "accept", "S-0001", "--by", "alex", "--no-push")
+	_, errOut, code = runIn(t, root, "accept", "S-0001", "--by", "alex")
 	if code == 0 || !strings.Contains(errOut, "already done") {
 		t.Errorf("second accept must refuse: %s", errOut)
 	}
-	// the epic is accepted straight from backlog: walked to done, major release
-	out, errOut, code = runIn(t, root, "accept", "E-0001", "--by", "alex", "--no-push", "--deliver", "cli")
-	if code != 0 || !strings.Contains(out, "tagged cli/v1.0.0") {
+	// the epic is accepted straight from backlog: walked to done, no release
+	out, errOut, code = runIn(t, root, "accept", "E-0001", "--by", "alex")
+	if code != 0 || !strings.Contains(out, "accepted E-0001: done") {
 		t.Errorf("epic accept from backlog: %d %s %s", code, out, errOut)
 	}
 }

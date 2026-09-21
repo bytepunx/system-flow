@@ -48,7 +48,7 @@ func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 	}
 	preview := func(args ...string) []string {
 		t.Helper()
-		out, errOut, code := runIn(t, root, append([]string{"accept", "S-0001", "--dry-run", "--no-release", "--json"}, args...)...)
+		out, errOut, code := runIn(t, root, append([]string{"accept", "S-0001", "--dry-run", "--json"}, args...)...)
 		if code != 0 {
 			t.Fatalf("a dry run must not refuse (%v): %d %s", args, code, errOut)
 		}
@@ -70,12 +70,12 @@ func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 			t.Errorf("dry run %v should report the stray file, got %v", args, got)
 		}
 	}
-	out, _, _ := runIn(t, root, "accept", "S-0001", "--dry-run", "--no-release")
+	out, _, _ := runIn(t, root, "accept", "S-0001", "--dry-run")
 	if !strings.Contains(out, "uncommitted outside wip: docs/stray.md") || !strings.Contains(out, "--yes") {
 		t.Errorf("text preview should name the file and the way to include it:\n%s", out)
 	}
 
-	_, errOut, code := runIn(t, root, "accept", "S-0001", "--no-release")
+	_, errOut, code := runIn(t, root, "accept", "S-0001")
 	if code == 0 || !strings.Contains(errOut, "uncommitted changes outside wip (docs/stray.md)") {
 		t.Errorf("the real run must still refuse without --yes: %d %s", code, errOut)
 	}
@@ -83,7 +83,7 @@ func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 		t.Error("a refused acceptance must leave the story in review")
 	}
 
-	if _, errOut, code := runIn(t, root, "move", "S-0001", "done", "--yes", "--no-release"); code != 0 {
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "done", "--yes"); code != 0 {
 		t.Fatalf("move to done with --yes should accept and include the file: %s", errOut)
 	}
 	if files := gitIn(t, root, "show", "--name-only", "--format=", "HEAD"); !strings.Contains(files, "docs/stray.md") {

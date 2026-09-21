@@ -128,7 +128,7 @@ func TestAcceptLogsEachStep(t *testing.T) {
 			t.Fatalf("flai %v: %s", args, errOut)
 		}
 	}
-	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "dana", "--no-release", "--json")
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "dana", "--json")
 	if code != 0 {
 		t.Fatal(errOut)
 	}
@@ -165,11 +165,11 @@ func TestAcceptChecksTheRulesBeforeItMergesAnything(t *testing.T) {
 	}
 	head := gitIn(t, root, "rev-parse", "main")
 
-	out, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--no-release", "--json")
+	out, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
 	if code != 0 || !strings.Contains(out, "S-0001 has unchecked acceptance criteria") {
 		t.Errorf("the preview should carry the rule as a blocker: %d %s %s", code, out, errOut)
 	}
-	_, errOut, code = runIn(t, root, "accept", "S-0001", "--no-release")
+	_, errOut, code = runIn(t, root, "accept", "S-0001")
 	if code == 0 || !strings.Contains(errOut, "unchecked acceptance criteria") {
 		t.Fatalf("acceptance must be refused: %d %s", code, errOut)
 	}

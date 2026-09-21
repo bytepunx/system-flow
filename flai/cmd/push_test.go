@@ -12,19 +12,18 @@ import (
 // the host, by flai push --pending; flai board says when there is one.
 func TestPushPending(t *testing.T) {
 	root, remote := researchProject(t, "feature", true)
-	// accept as the dashboard container does when it holds nothing
-	out, errOut, code := runIn(t, root, "accept", "S-0001", "--no-push")
+	// accept as the dashboard container does when it holds nothing; S-0087:
+	// acceptance alone tags nothing, so there is a pending acceptance commit
+	// but no tag until the operator publishes.
+	out, errOut, code := runIn(t, root, "accept", "S-0001")
 	if code != 0 {
 		t.Fatalf("accept: %s", errOut)
-	}
-	if !strings.Contains(out, "cli/v1.1.0") {
-		t.Fatalf("the acceptance tags a release: %s", out)
 	}
 	remoteHead := func() string { return strings.TrimSpace(gitIn(t, remote, "rev-parse", "main")) }
 	before := remoteHead()
 
 	board, _, _ := runIn(t, root, "board")
-	if !strings.Contains(board, "accepted, not pushed: S-0001") || !strings.Contains(board, "tags cli/v1.1.0") || !strings.Contains(board, "flai push --pending") {
+	if !strings.Contains(board, "accepted, not pushed: S-0001") || !strings.Contains(board, "flai push --pending") {
 		t.Errorf("flai board says what is pending and what to run:\n%s", board)
 	}
 	var view struct {
@@ -36,7 +35,7 @@ func TestPushPending(t *testing.T) {
 		} `json:"unpushed"`
 	}
 	js, _, _ := runIn(t, root, "board", "--json")
-	if err := json.Unmarshal([]byte(js), &view); err != nil || view.Unpushed == nil || view.Unpushed.Upstream != "origin/main" || len(view.Unpushed.Acceptances) != 1 || view.Unpushed.Acceptances[0] != "S-0001" || len(view.Unpushed.Tags) != 1 {
+	if err := json.Unmarshal([]byte(js), &view); err != nil || view.Unpushed == nil || view.Unpushed.Upstream != "origin/main" || len(view.Unpushed.Acceptances) != 1 || view.Unpushed.Acceptances[0] != "S-0001" || len(view.Unpushed.Tags) != 0 {
 		t.Errorf("board --json: %v %+v", err, view.Unpushed)
 	}
 
@@ -44,18 +43,15 @@ func TestPushPending(t *testing.T) {
 		t.Errorf("flai push alone does nothing and says why: %d %s", code, errOut)
 	}
 	dry, _, _ := runIn(t, root, "push", "--pending", "--dry-run")
-	if !strings.Contains(dry, "would push S-0001 to origin: main, tags cli/v1.1.0") || remoteHead() != before {
+	if !strings.Contains(dry, "would push S-0001 to origin: main") || remoteHead() != before {
 		t.Errorf("dry run: %s (remote moved: %v)", dry, remoteHead() != before)
 	}
 	out, errOut, code = runIn(t, root, "push", "--pending")
-	if code != 0 || !strings.Contains(out, "pushed S-0001 to origin: main, tags cli/v1.1.0") {
+	if code != 0 || !strings.Contains(out, "pushed S-0001 to origin: main") {
 		t.Fatalf("push: %d %s %s", code, out, errOut)
 	}
 	if got := strings.TrimSpace(gitIn(t, root, "rev-parse", "HEAD")); remoteHead() != got {
 		t.Errorf("the remote has the acceptance: %s vs %s", remoteHead(), got)
-	}
-	if tags := gitIn(t, remote, "tag", "--list"); !strings.Contains(tags, "cli/v1.1.0") {
-		t.Errorf("the release tag is on the remote: %s", tags)
 	}
 	again, _, _ := runIn(t, root, "push", "--pending")
 	if !strings.Contains(again, "nothing pending") {
@@ -79,7 +75,7 @@ func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 		t.Error("nothing should have been pushed")
 	}
 
-	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--no-push", "--yes"); code != 0 {
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--yes"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}
 	// someone pushes to the remote from another clone, and this one fetches
@@ -100,7 +96,7 @@ func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 // the push is made in parts, and every tag still arrives.
 func TestPushPendingManyTags(t *testing.T) {
 	root, remote := researchProject(t, "feature", true)
-	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--no-push"); code != 0 {
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}
 	for _, tag := range []string{"x/v1", "x/v2", "x/v3", "x/v4", "x/v5", "x/v6"} {
@@ -111,7 +107,7 @@ func TestPushPendingManyTags(t *testing.T) {
 		t.Fatalf("push: %d %s %s", code, out, errOut)
 	}
 	there := gitIn(t, remote, "tag", "--list")
-	for _, tag := range []string{"cli/v1.1.0", "x/v1", "x/v6"} {
+	for _, tag := range []string{"x/v1", "x/v6"} {
 		if !strings.Contains(there, tag) {
 			t.Errorf("%s did not arrive: %s", tag, there)
 		}
@@ -146,7 +142,7 @@ func TestPushPendingPublishesAMovedTemplate(t *testing.T) {
 	gitIn(t, root, "push", "-q", "origin", "main")
 
 	// nothing of the template moved: an acceptance alone publishes nothing
-	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--no-push", "--yes"); code != 0 {
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--yes"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}
 	dry, _, _ := runIn(t, root, "push", "--pending", "--publish", "--dry-run")

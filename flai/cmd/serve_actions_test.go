@@ -41,15 +41,11 @@ func TestHostActionPush(t *testing.T) {
 	inProcess(t)
 	head := func(dir string) string { return strings.TrimSpace(gitIn(t, dir, "rev-parse", "main")) }
 	before := head(remote)
-	// I-0028: an acceptance a dashboard asks for runs here as the operator,
-	// with a remote it can push to, and pushes nothing, because nobody said
-	// it may. From S-0075 until this story it pushed.
+	// S-0087: acceptance itself never pushes or tags, whatever the push
+	// action is set to; it only merges, archives, and commits locally.
 	out, _, code := runIn(t, root, "hostapi", "accept.run", `{"id":"S-0001","include_uncommitted":true,"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a09"}`)
-	if code != 0 || !strings.Contains(out, `"pushed":false`) || head(remote) != before || head(root) == before {
+	if code != 0 || head(remote) != before || head(root) == before {
 		t.Fatalf("an acceptance with the action off: accepted here, nothing pushed: %d %s", code, out)
-	}
-	if strings.Contains(gitIn(t, remote, "tag", "--list"), "cli/v1.1.0") {
-		t.Fatal("nor its release tag")
 	}
 
 	out, _, _ = runIn(t, root, "serve", "actions")
@@ -87,9 +83,9 @@ func TestHostActionPush(t *testing.T) {
 		t.Errorf("per project: %s", info)
 	}
 
-	// on: pushed, with the tag
+	// on: pushed, the acceptance commit only (S-0087: nothing tagged it)
 	out, _, code = runIn(t, root, "hostapi", "push.run", pushRequest)
-	if code != 0 || !strings.Contains(out, `"pushed":true`) || head(remote) != head(root) || !strings.Contains(gitIn(t, remote, "tag", "--list"), "cli/v1.1.0") {
+	if code != 0 || !strings.Contains(out, `"pushed":true`) || head(remote) != head(root) {
 		t.Fatalf("enabled: %d %s", code, out)
 	}
 	out, _, _ = runIn(t, root, "hostapi", "push.run", `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a11"}`)
@@ -103,7 +99,7 @@ func TestHostActionPush(t *testing.T) {
 	if err := json.Unmarshal([]byte(js), &entries); err != nil || len(entries) != 3 {
 		t.Fatalf("journal: %v %s", err, js)
 	}
-	for i, want := range []struct{ outcome, detail string }{{"disabled", ""}, {"done", "pushed with tags cli/v1.1.0"}, {"done", "nothing pushed: nothing pending"}} {
+	for i, want := range []struct{ outcome, detail string }{{"disabled", ""}, {"done", "pushed"}, {"done", "nothing pushed: nothing pending"}} {
 		e := entries[i]
 		if e.Outcome != want.outcome || e.Detail != want.detail || e.Action != "push" || e.Method != "push.run" || e.Root != root || e.By == "" || e.At == "" {
 			t.Errorf("entry %d: %+v", i, e)
