@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.17 - 2026-09-21
+
+- S-0087 Moving a story to done merges it; a publish button on the board tags and pushes everything accumulated since the last one (patch).
+
 ## 1.0.16 - 2026-09-20
 
 - S-0079 A story moved to ready starts an agent on the host, with the command the operator configured (patch).

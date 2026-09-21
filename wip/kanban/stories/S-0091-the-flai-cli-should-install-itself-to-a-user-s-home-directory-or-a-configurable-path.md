@@ -3,12 +3,15 @@ id: S-0091
 type: story
 nature: improvement
 title: The flai CLI should install itself to a user's home directory or a configurable path
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-21T04:09:25Z
-updated: 2026-09-21T04:09:25Z
-transitions: []
+updated: 2026-09-21T04:13:50Z
+transitions:
+  - to: ready
+    at: 2026-09-21T04:13:50Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 ---
