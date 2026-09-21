@@ -47,13 +47,28 @@ func (c *collector) reset() {
 	c.mu.Unlock()
 }
 
+// write puts a file in place in one step: the content goes to a scratch file
+// beside the watched root (not under it, so the watcher cannot see it) and is
+// renamed over the target. os.WriteFile truncates first, so a tick landing
+// between the truncate and the write would see an empty file, and a test
+// goroutine that stalls there makes that a report of its own.
 func write(t *testing.T, root, rel, content string) {
 	t.Helper()
 	full := filepath.Join(root, rel)
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+	tmp, err := os.CreateTemp(filepath.Dir(root), "write-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tmp.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmp.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(tmp.Name(), full); err != nil {
 		t.Fatal(err)
 	}
 }
