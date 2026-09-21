@@ -137,11 +137,160 @@ func gitRepo(t *testing.T) (string, execx.Runner) {
 	return root, r
 }
 
-var m = manifest.Manifest{Projects: []manifest.Project{
-	{Name: "cli", Path: "cli", Kind: "go", Tags: []string{"command"}},
-	{Name: "web", Path: "web", Kind: "sveltekit"},
-	{Name: "tpl", Path: "tpl", Kind: "template"},
-}}
+var m = manifest.Manifest{
+	Layout: map[string]string{"design": "design", "docs": "docs", "wip": "wip"},
+	Projects: []manifest.Project{
+		{Name: "cli", Path: "cli", Kind: "go", Tags: []string{"command"}},
+		{Name: "web", Path: "web", Kind: "sveltekit"},
+		{Name: "tpl", Path: "tpl", Kind: "template"},
+	},
+}
+
+// writeAcceptedItem writes an archived item file (S-0087's Pending finds
+// items by their "chore: [ID] accept and archive" commit, and every such
+// item is archived by then) and commits it with that exact message, having
+// first written the given files, so the commit also touches whatever
+// component the caller wants this item counted against.
+func writeAcceptedItem(t *testing.T, root string, r execx.Runner, id, typ, nature, title, parent string, files map[string]string) {
+	t.Helper()
+	dir := "stories"
+	if typ == workitem.Epic {
+		dir = "epics"
+	}
+	fm := "---\nid: " + id + "\ntype: " + typ + "\nnature: " + nature + "\ntitle: " + title + "\nstatus: done\n"
+	if parent != "" {
+		fm += "parent: " + parent + "\n"
+	}
+	fm += "---\n# " + id + " " + title + "\n"
+	p := filepath.Join(root, "wip/archive/kanban", dir, id+"-item.md")
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	if err := os.WriteFile(p, []byte(fm), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for rel, body := range files {
+		fp := filepath.Join(root, rel)
+		_ = os.MkdirAll(filepath.Dir(fp), 0o755)
+		if err := os.WriteFile(fp, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := r.Run(root, "git", "add", "-A"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Run(root, "git", "commit", "-q", "-m", "chore: ["+id+"] accept and archive"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestPendingBatchesTheHighestLevel is S-0087's core rule: several items
+// against one component since its last tag release together, at the
+// highest delivery level among them, not one release each.
+func TestPendingBatchesTheHighestLevel(t *testing.T) {
+	root, r := gitRepo(t) // cli tagged at 0.10.0
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", "", map[string]string{"cli/b.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-103", workitem.Story, "improvement", "Tidy", "", map[string]string{"cli/c.go": "package main\n"})
+
+	plans, err := Pending(r, root, m, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 1 || plans[0].Component.Name != "cli" {
+		t.Fatalf("one component pending: %+v", plans)
+	}
+	p := plans[0]
+	if p.Level != Minor || p.From.String() != "0.10.0" || p.To.String() != "0.11.0" || p.Tag != "cli/v0.11.0" {
+		t.Errorf("the highest level among the batch wins, one bump not three: %+v", p)
+	}
+	if len(p.Items) != 3 {
+		t.Errorf("every item that touched cli is counted: %+v", p.Items)
+	}
+	if len(p.Files) != 3 {
+		t.Errorf("files from every item, deduplicated: %v", p.Files)
+	}
+}
+
+// Once a component is published (a tag on HEAD, as flai release --pending
+// will create), what it already covered is not counted again; only what
+// comes after the tag is pending next time (S-0087).
+func TestPendingLeavesOutWhatALaterTagAlreadyCovered(t *testing.T) {
+	root, r := gitRepo(t) // cli tagged at 0.10.0
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/a.go": "package main\n"})
+
+	plans, err := Pending(r, root, m, repo)
+	if err != nil || len(plans) != 1 || plans[0].Level != Patch {
+		t.Fatalf("before publishing: %+v %v", plans, err)
+	}
+	// simulate a publish: tag cli at the level Pending found
+	if _, err := r.Run(root, "git", "tag", "-a", plans[0].Tag, "-m", "published"); err != nil {
+		t.Fatal(err)
+	}
+
+	if plans, err := Pending(r, root, m, repo); err != nil || len(plans) != 0 {
+		t.Fatalf("right after publishing, nothing new is pending: %+v %v", plans, err)
+	}
+
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", "", map[string]string{"cli/b.go": "package main\n"})
+	plans, err = Pending(r, root, m, repo)
+	if err != nil || len(plans) != 1 || plans[0].Level != Minor || len(plans[0].Items) != 1 || plans[0].Items[0].ID != "S-102" {
+		t.Fatalf("only what came after the tag counts, S-101 is not double counted: %+v %v", plans, err)
+	}
+}
+
+// An epic done outranks a feature story, which outranks a remediation: a
+// batch spanning an epic's completion is a major release.
+func TestPendingAnEpicInTheBatchIsMajor(t *testing.T) {
+	root, r := gitRepo(t)
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", "", map[string]string{"cli/b.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "E-010", workitem.Epic, "feature", "Ship the epic", "", map[string]string{"cli/c.go": "package main\n"})
+
+	plans, err := Pending(r, root, m, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 1 || plans[0].Level != Major || plans[0].To.String() != "1.0.0" {
+		t.Fatalf("an epic in the batch makes it major: %+v", plans)
+	}
+}
+
+// Nothing accepted at all: an empty batch, not an error.
+func TestPendingEmptyBatch(t *testing.T) {
+	root, r := gitRepo(t)
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	plans, err := Pending(r, root, m, repo)
+	if err != nil || len(plans) != 0 {
+		t.Errorf("nothing accepted, nothing pending: %+v %v", plans, err)
+	}
+}
+
+// A research story in the batch contributes nothing to the bump, even
+// alongside items that do (ADR-0025 holds under batching too).
+func TestPendingResearchContributesNothing(t *testing.T) {
+	root, r := gitRepo(t)
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "research", "A finding", "", map[string]string{"cli/a.go": "package main\n"})
+
+	plans, err := Pending(r, root, m, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 0 {
+		t.Errorf("research alone releases nothing, even having touched cli: %+v", plans)
+	}
+
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/b.go": "package main\n"})
+	plans, err = Pending(r, root, m, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 1 || plans[0].Level != Patch || len(plans[0].Items) != 1 {
+		t.Errorf("research alongside a patch: only the patch counts: %+v", plans)
+	}
+}
 
 func TestComputeAndApply(t *testing.T) {
 	root, r := gitRepo(t)

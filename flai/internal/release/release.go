@@ -366,3 +366,157 @@ func bumpTemplate(root string, st Step, plan *Plan, now time.Time) error {
 	}
 	return os.WriteFile(cl, []byte(s), 0o644)
 }
+
+// PendingItem is one accepted item counted toward a PendingPlan.
+type PendingItem struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Level string `json:"level"`
+}
+
+// PendingPlan is one component's batch: everything accepted and unreleased
+// for it since its last tag, at the highest delivery level among it
+// (S-0087). Publishing merges several stories' releases into one, rather
+// than each cutting its own: a feature and two remediations against the
+// same component since its last tag produce one minor release, not three.
+type PendingPlan struct {
+	Component manifest.Project `json:"component"`
+	Level     string           `json:"level"`
+	From      Version          `json:"from"`
+	To        Version          `json:"to"`
+	Tag       string           `json:"tag,omitempty"`
+	Version   string           `json:"version,omitempty"`
+	Items     []PendingItem    `json:"items"`
+	Files     []string         `json:"files"`
+}
+
+var rank = map[string]int{None: 0, Patch: 1, Minor: 2, Major: 3}
+
+// higher is the more urgent of two bump levels; "" counts as None.
+func higher(a, b string) string {
+	if rank[b] > rank[a] {
+		return b
+	}
+	return a
+}
+
+var acceptedSubject = regexp.MustCompile(`^chore: \[([EST]-\d+)\] accept and archive`)
+
+// acceptedIDsIn lists the items accepted by a commit in revRange (a git
+// revision range, or a single ref meaning everything reachable from it),
+// each once, oldest first.
+func acceptedIDsIn(r execx.Runner, root, revRange string) ([]string, error) {
+	out, err := r.Run(root, "git", "log", "--reverse", "--format=%s", revRange)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	seen := map[string]bool{}
+	for _, l := range strings.Split(out, "\n") {
+		if m := acceptedSubject.FindStringSubmatch(l); m != nil && !seen[m[1]] {
+			seen[m[1]] = true
+			ids = append(ids, m[1])
+		}
+	}
+	return ids, nil
+}
+
+// componentBoundary is the ref marking the last publish for a component, or
+// "" when it has never been released: everything accepted since is pending.
+// A code component's tag is that ref directly. A template has no local tag
+// (Tag creates none for it; its version lives in template.yaml, published to
+// its own remote); the commit that set its current version stands in.
+func componentBoundary(r execx.Runner, root string, p manifest.Project, cur Version) (string, error) {
+	if cur == (Version{}) {
+		return "", nil
+	}
+	if p.Kind != "template" {
+		return p.Name + "/v" + cur.String(), nil
+	}
+	out, err := r.Run(root, "git", "log", "-n1", "--format=%H", "-S", "version: "+cur.String(), "--", filepath.Join(p.Path, "template.yaml"))
+	if err != nil || strings.TrimSpace(out) == "" {
+		return "", nil
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// Pending computes the batch: one PendingPlan per component with something
+// accepted and unreleased for it, from every item a "chore: [ID] accept and
+// archive" commit names since that component's last publish (S-0087). An
+// item is looked up once and its Compute()-equivalent reused for every
+// component it touches or delivers to.
+func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) ([]*PendingPlan, error) {
+	plans := map[string]*Plan{} // item ID -> its own plan, computed once
+	itemPlan := func(id string) (*Plan, error) {
+		if p, ok := plans[id]; ok {
+			return p, nil
+		}
+		it, err := repo.Get(id)
+		if err != nil {
+			return nil, err
+		}
+		var parent *workitem.Item
+		if it.Parent != "" {
+			parent, _ = repo.Get(it.Parent)
+		}
+		p, err := Compute(r, root, m, it, parent, "")
+		if err != nil {
+			return nil, err
+		}
+		plans[id] = p
+		return p, nil
+	}
+
+	var out []*PendingPlan
+	for _, proj := range m.Projects {
+		cur, err := CurrentVersion(r, root, proj)
+		if err != nil {
+			return nil, err
+		}
+		boundary, err := componentBoundary(r, root, proj, cur)
+		if err != nil {
+			return nil, err
+		}
+		revRange := "HEAD"
+		if boundary != "" {
+			revRange = boundary + "..HEAD"
+		}
+		ids, err := acceptedIDsIn(r, root, revRange)
+		if err != nil {
+			return nil, err
+		}
+		pp := &PendingPlan{Component: proj, From: cur}
+		seenFile := map[string]bool{}
+		for _, id := range ids {
+			ip, err := itemPlan(id)
+			if err != nil {
+				continue // an item that cannot be recomputed (removed, malformed) is skipped, not fatal to the batch
+			}
+			for _, st := range ip.Steps {
+				if st.Component.Name != proj.Name {
+					continue
+				}
+				pp.Level = higher(pp.Level, st.Level)
+				pp.Items = append(pp.Items, PendingItem{ID: id, Title: ip.Title, Level: st.Level})
+				for _, f := range st.Files {
+					if !seenFile[f] {
+						seenFile[f] = true
+						pp.Files = append(pp.Files, f)
+					}
+				}
+			}
+		}
+		if len(pp.Items) == 0 || pp.Level == "" || pp.Level == None {
+			continue
+		}
+		sort.Strings(pp.Files)
+		pp.To = cur.Bumped(pp.Level)
+		if proj.Kind == "template" {
+			pp.Version = filepath.ToSlash(filepath.Join(proj.Path, "template.yaml"))
+		} else {
+			pp.Tag = proj.Name + "/v" + pp.To.String()
+		}
+		out = append(out, pp)
+	}
+	return out, nil
+}
