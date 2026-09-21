@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-21T03:52:27Z
+updated: 2026-09-21T03:59:59Z
 transitions: []
 tags: []
 ---
@@ -44,6 +44,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0086 The host flai connection banner says 'not connected' even when a flai is connected but too old
 - S-0087 Moving a story to done merges it; a publish button on the board tags and pushes everything accumulated since the last one
 - S-0088 The Review page doesn't render markdown in the narrative pane
+- S-0089 Inbox should not continue showing open items for stories that moved to review
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
