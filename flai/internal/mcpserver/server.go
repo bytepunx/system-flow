@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -184,7 +185,9 @@ func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*
 }
 
 func (s *server) boardView(all bool) (workitem.BoardView, error) {
-	items, err := s.repo.List(false)
+	// true: a done story stays visible until it is published (S-0087), which
+	// NewBoardView decides from PendingIDs, not from this flag.
+	items, err := s.repo.List(true)
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
@@ -192,7 +195,7 @@ func (s *server) boardView(all bool) (workitem.BoardView, error) {
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
-	view := workitem.NewBoardView(items, board, s.now(), all)
+	view := workitem.NewBoardView(items, board, s.now(), all, release.PendingIDs(s.runner, s.repo.Root, s.repo.Manifest, s.repo))
 	root := s.repo.MainRoot
 	if root == "" {
 		root = s.repo.Root

@@ -136,7 +136,9 @@ func readyStories(root string) (ids []string, room bool, err error) {
 	if err != nil {
 		return nil, false, err
 	}
-	view := workitem.NewBoardView(items, board, time.Now(), false)
+	// Pull order and CanPull never look at done or archived items, so which
+	// ones stay visible there (S-0087) makes no difference here.
+	view := workitem.NewBoardView(items, board, time.Now(), false, nil)
 	for _, c := range view.ReadyInPullOrder() {
 		if c.Type == workitem.Story && !c.Blocked {
 			ids = append(ids, c.ID)

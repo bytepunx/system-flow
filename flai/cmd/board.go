@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -21,7 +22,7 @@ func newBoardCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			items, err := repo.List(false)
+			items, err := repo.List(true)
 			if err != nil {
 				return err
 			}
@@ -29,7 +30,7 @@ func newBoardCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			view := workitem.NewBoardView(items, board, a.now(), all)
+			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo))
 			if u := pending.Detect(a.runner, mainRootOf(repo)); u.Pending() {
 				view.Unpushed = u
 			}

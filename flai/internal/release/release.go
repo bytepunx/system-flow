@@ -4,6 +4,7 @@
 package release
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,6 +33,25 @@ const (
 type Version struct{ Major, Minor, Patch int }
 
 func (v Version) String() string { return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch) }
+
+// MarshalJSON writes a Version as its plain "X.Y.Z" string, not the struct
+// fields: flaiover reads From/To as strings (found in S-0087's T-0318 review,
+// where the done column's Publish banner showed "[object Object]" for them).
+func (v Version) MarshalJSON() ([]byte, error) { return json.Marshal(v.String()) }
+
+// UnmarshalJSON reads a Version from its plain "X.Y.Z" string, the mirror of MarshalJSON.
+func (v *Version) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	parsed, ok := ParseVersion(s)
+	if !ok {
+		return fmt.Errorf("%q is not a version", s)
+	}
+	*v = parsed
+	return nil
+}
 
 // Bumped returns the next version for a level.
 func (v Version) Bumped(level string) Version {
@@ -567,4 +587,25 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 		out = append(out, pp)
 	}
 	return out, nil
+}
+
+// PendingIDs is every story and epic ID Pending finds still unpublished, for
+// a caller that only needs to know which items those are — the board,
+// keeping a done, archived item visible until it is published (S-0087) —
+// not the full per-component plan. A history that cannot be read (no git,
+// for instance) is nothing pending rather than an error the caller must
+// handle: whether to show it is a lesser concern than whether to show the
+// board at all.
+func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) map[string]bool {
+	plans, err := Pending(r, root, m, repo)
+	if err != nil {
+		return nil
+	}
+	ids := map[string]bool{}
+	for _, p := range plans {
+		for _, it := range p.Items {
+			ids[it.ID] = true
+		}
+	}
+	return ids
 }

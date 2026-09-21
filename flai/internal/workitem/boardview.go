@@ -43,7 +43,11 @@ type BoardView struct {
 }
 
 // NewBoardView lays the active items out by column. Stories only unless all.
-func NewBoardView(items []*Item, board *Board, now time.Time, all bool) BoardView {
+// Acceptance archives a story the moment it merges (S-0087); pendingPublish
+// names the stories a release has not yet covered, so a done, archived story
+// still on the done column until it is published, instead of vanishing the
+// instant it is accepted, before anyone has had the chance to see it there.
+func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool) BoardView {
 	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}}
 	// A parent is looked up among every item given, archived ones included.
 	titles := map[string]string{}
@@ -51,7 +55,8 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool) BoardVie
 		titles[it.ID] = it.Title
 	}
 	for _, it := range items {
-		if it.Archived || (!all && it.Type != Story) {
+		archivedButPending := it.Archived && it.Status == Done && pendingPublish[it.ID]
+		if (it.Archived && !archivedButPending) || (!all && it.Type != Story) {
 			continue
 		}
 		age := now.Sub(it.EnteredAt())

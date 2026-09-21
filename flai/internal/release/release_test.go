@@ -1,6 +1,7 @@
 package release
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,24 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
+
+// Found in T-0318's end-to-end review: flaiover reads From/To as plain
+// strings, and without this Version marshalled as its struct fields, which
+// the board's Publish banner showed as "[object Object]".
+func TestVersionMarshalsAsAPlainString(t *testing.T) {
+	v := Version{Major: 1, Minor: 2, Patch: 3}
+	data, err := json.Marshal(v)
+	if err != nil || string(data) != `"1.2.3"` {
+		t.Fatalf("marshal: %s %v", data, err)
+	}
+	var back Version
+	if err := json.Unmarshal(data, &back); err != nil || back != v {
+		t.Fatalf("round trip: %+v %v", back, err)
+	}
+	if err := json.Unmarshal([]byte(`"not a version"`), &back); err == nil {
+		t.Error("a non-version string must be refused")
+	}
+}
 
 func TestVersionsAndLevels(t *testing.T) {
 	v, ok := ParseVersion("v1.2.3")
