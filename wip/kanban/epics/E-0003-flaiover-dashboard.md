@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-21T04:12:16Z
+updated: 2026-09-21T22:48:55Z
 transitions: []
 tags: []
 ---
@@ -48,6 +48,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0090 Operators should be able to answer open questions in via the dashboard
 - S-0091 The flai CLI should install itself to a user's home directory or a configurable path
 - S-0092 New stories should not require an epic
+- S-0093 The watcher's debounce is tested by driving its ticks, not by racing a wall clock
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
