@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -61,10 +63,10 @@ func (a *app) printPlan(plan *release.Plan) {
 
 func newReleaseCmd(a *app) *cobra.Command {
 	var deliver string
-	var dryRun bool
+	var dryRun, onlyPending bool
 	c := &cobra.Command{
-		Use:   "release <id>",
-		Short: "Compute (and with --apply create) the semver release for an accepted item",
+		Use:   "release <id> | --pending",
+		Short: "Compute a release for one item, or publish everything accumulated since it was last done",
 		Long: `Per design/conventions/git.md: the component the item delivers to gets the
 delivery-type bump (epic major, feature story minor, remediation or
 improvement patch); every other component its commits touched gets a patch.
@@ -73,11 +75,31 @@ item's tags (a project name or one of its tags), the parent's tags, or
 --deliver. Code components get an annotated tag <name>/vX.Y.Z on HEAD; the
 template component gets its version file and changelog bumped (commit them).
 
-flai accept does all of this after moving the item to done.`,
+flai accept never does this (S-0087): it only merges, archives, and commits.
+Publishing is a deliberate step of its own, over everything accumulated:
+
+  flai release --pending
+
+computes one release per component, the highest delivery level among
+everything accepted and unreleased for it since its last tag, bumps and
+commits, tags, and pushes the branch and every tag together, three tags to a
+push (I-0026). Run again after a partial failure: what already tagged or
+pushed is not redone.`,
 		Example: `  flai release S-031 --dry-run
-  flai release S-031 --deliver flai --apply`,
-		Args: cobra.ExactArgs(1),
+  flai release S-031 --deliver flai --apply
+  flai release --pending --dry-run
+  flai release --pending`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if onlyPending {
+				if len(args) > 0 {
+					return fmt.Errorf("--pending publishes everything accumulated, not one item; drop the id")
+				}
+				return a.publishPending(dryRun)
+			}
+			if len(args) != 1 {
+				return fmt.Errorf("an item ID is required, or --pending to publish everything accumulated")
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
@@ -97,7 +119,7 @@ flai accept does all of this after moving the item to done.`,
 			a.printPlan(plan)
 			if dryRun || !apply || plan.Skipped != "" {
 				if !apply && !dryRun && plan.Skipped == "" {
-					fmt.Fprintln(a.out, "(plan only; add --apply to create tags and bump version files, or use flai accept)")
+					fmt.Fprintln(a.out, "(plan only; add --apply to create tags and bump version files, or flai release --pending to publish it with everything else accumulated)")
 				}
 				return nil
 			}
@@ -118,7 +140,130 @@ flai accept does all of this after moving the item to done.`,
 		},
 	}
 	c.Flags().StringVar(&deliver, "deliver", "", "component the item delivers to, when its tags do not say")
-	c.Flags().BoolVar(&dryRun, "dry-run", false, "print the plan only")
+	c.Flags().BoolVar(&dryRun, "dry-run", false, "print the plan only, or with --pending what would publish")
 	c.Flags().Bool("apply", false, "create tags and bump version files")
+	c.Flags().BoolVar(&onlyPending, "pending", false, "publish everything merged and unreleased since each component's last tag")
 	return c
+}
+
+// publishPending is flai release --pending (S-0087): everything release.Pending
+// finds, applied, tagged, and pushed together, resumable on partial failure.
+func (a *app) publishPending(dryRun bool) error {
+	if err := execx.Require(a.runner, "git", "Releases are git tags; install git."); err != nil {
+		return err
+	}
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	plans, err := release.Pending(a.runner, repo.Root, repo.Manifest, repo)
+	if err != nil {
+		return err
+	}
+	if dryRun {
+		if a.jsonOut {
+			return a.printJSON(map[string]any{"plans": plans, "dry_run": true})
+		}
+		if len(plans) == 0 {
+			fmt.Fprintln(a.out, "nothing pending")
+			return nil
+		}
+		for _, p := range plans {
+			a.printPendingPlan(p)
+		}
+		fmt.Fprintln(a.out, "dry run: nothing changed")
+		return nil
+	}
+	for _, p := range plans {
+		if err := release.ApplyPending(p, repo.Root, a.now()); err != nil {
+			return err
+		}
+	}
+	if len(plans) > 0 {
+		if status, _ := a.runner.Run(repo.Root, "git", "status", "--porcelain"); strings.TrimSpace(status) != "" {
+			if _, err := a.runner.Run(repo.Root, "git", "add", "-A"); err != nil {
+				return err
+			}
+			if _, err := a.runner.Run(repo.Root, "git", "commit", "-q", "-m", "chore: publish "+summarizePlans(plans)); err != nil {
+				return err
+			}
+		}
+	}
+	var tags []string
+	for _, p := range plans {
+		tag, err := release.TagPending(a.runner, repo.Root, p)
+		if err != nil {
+			return err
+		}
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	u := pending.Detect(a.runner, repo.Root)
+	result := map[string]any{"plans": plans, "tags": tags, "pushed": false}
+	if u == nil {
+		if len(plans) == 0 {
+			result["reason"] = "nothing pending"
+			if a.jsonOut {
+				return a.printJSON(result)
+			}
+			fmt.Fprintln(a.out, "nothing pending")
+			return nil
+		}
+		// tagged and committed locally, but nothing ahead of a remote to push
+		// to (no upstream configured): report what was done, not an error.
+		if a.jsonOut {
+			return a.printJSON(result)
+		}
+		fmt.Fprintf(a.out, "published locally: %s (no upstream to push to)\n", summarizePlans(plans))
+		return nil
+	}
+	for _, batch := range pending.Batches(u.Branch, u.Tags) {
+		if _, err := a.runner.Run(repo.Root, "git", append([]string{"push", "-q", u.Remote}, batch...)...); err != nil {
+			result["push_error"] = firstLine(err.Error())
+			if a.jsonOut {
+				return a.printJSON(result)
+			}
+			return fmt.Errorf("published and committed locally, but the push failed and nothing was forced: %s. Fetch and merge if the remote moved, then run flai release --pending again; what already tagged is not redone", firstLine(err.Error()))
+		}
+	}
+	result["pushed"] = true
+	var published []string
+	for _, p := range plans {
+		if p.Component.Kind != "template" {
+			continue
+		}
+		pub, err := a.publishTemplate(filepath.Join(repo.Root, p.Component.Path), "", "", true, false, false)
+		if err != nil {
+			return fmt.Errorf("published and pushed %s, but publishing %s to its own remote failed: %w. Run flai template push %s --tag when it is put right", summarizePlans(plans), p.Component.Path, err, p.Component.Path)
+		}
+		if !pub.Nothing {
+			published = append(published, fmt.Sprintf("%s %s (%s)", pub.Remote, pub.Tag, pub.Commit))
+		}
+	}
+	result["published"] = published
+	if a.jsonOut {
+		return a.printJSON(result)
+	}
+	fmt.Fprintf(a.out, "published %s, pushed to %s", summarizePlans(plans), u.Remote)
+	if len(published) > 0 {
+		fmt.Fprintf(a.out, "; published %s", strings.Join(published, ", "))
+	}
+	fmt.Fprintln(a.out)
+	return nil
+}
+
+func summarizePlans(plans []*release.PendingPlan) string {
+	parts := make([]string, len(plans))
+	for i, p := range plans {
+		parts[i] = fmt.Sprintf("%s %s", p.Component.Name, p.To)
+	}
+	return strings.Join(parts, ", ")
+}
+
+func (a *app) printPendingPlan(p *release.PendingPlan) {
+	fmt.Fprintf(a.out, "%-10s %s -> %s  %-6s [%d item(s), %d file(s)]\n", p.Component.Name, p.From, p.To, p.Level, len(p.Items), len(p.Files))
+	for _, it := range p.Items {
+		fmt.Fprintf(a.out, "  %-10s %-6s %s\n", it.ID, it.Level, it.Title)
+	}
 }

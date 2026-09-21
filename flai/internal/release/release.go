@@ -338,7 +338,14 @@ func Tag(r execx.Runner, root string, plan *Plan) ([]string, error) {
 }
 
 func bumpTemplate(root string, st Step, plan *Plan, now time.Time) error {
-	path := filepath.Join(root, st.Version)
+	bullet := fmt.Sprintf("- %s %s (%s).\n", plan.Item, plan.Title, st.Level)
+	return bumpVersionAndChangelog(root, st.Version, st.Component.Path, st.To, now, bullet)
+}
+
+// bumpVersionAndChangelog writes the version file's version: line and adds
+// one changelog entry above the previous one, its body the given bullets.
+func bumpVersionAndChangelog(root, versionFile, componentPath string, to Version, now time.Time, bullets string) error {
+	path := filepath.Join(root, versionFile)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -346,14 +353,14 @@ func bumpTemplate(root string, st Step, plan *Plan, now time.Time) error {
 	lines := strings.Split(string(data), "\n")
 	for i, l := range lines {
 		if strings.HasPrefix(l, "version:") {
-			lines[i] = "version: " + st.To.String()
+			lines[i] = "version: " + to.String()
 		}
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
 		return err
 	}
-	cl := filepath.Join(root, st.Component.Path, "CHANGELOG.md")
-	entry := fmt.Sprintf("## %s - %s\n\n- %s %s (%s).\n", st.To, now.UTC().Format("2006-01-02"), plan.Item, plan.Title, st.Level)
+	cl := filepath.Join(root, componentPath, "CHANGELOG.md")
+	entry := fmt.Sprintf("## %s - %s\n\n%s", to, now.UTC().Format("2006-01-02"), bullets)
 	existing, err := os.ReadFile(cl)
 	if err != nil {
 		return os.WriteFile(cl, []byte("# Changelog\n\n"+entry), 0o644)
@@ -365,6 +372,42 @@ func bumpTemplate(root string, st Step, plan *Plan, now time.Time) error {
 		s = strings.TrimRight(s, "\n") + "\n\n" + entry
 	}
 	return os.WriteFile(cl, []byte(s), 0o644)
+}
+
+// ApplyPending performs a batch plan: the version file and one changelog
+// entry naming every item it bundles (files only; the caller commits).
+func ApplyPending(plan *PendingPlan, root string, now time.Time) error {
+	if plan.Version == "" {
+		return nil
+	}
+	var bullets strings.Builder
+	for _, it := range plan.Items {
+		fmt.Fprintf(&bullets, "- %s %s (%s).\n", it.ID, it.Title, it.Level)
+	}
+	return bumpVersionAndChangelog(root, plan.Version, plan.Component.Path, plan.To, now, bullets.String())
+}
+
+// TagPending creates the plan's tag on HEAD, unless it already exists: a
+// prior run of flai release --pending may have created it and failed before
+// pushing, and running it again must not fail on an existing tag (S-0087).
+// "" is returned for a template plan (Tag() never tags one) or one already
+// tagged.
+func TagPending(r execx.Runner, root string, plan *PendingPlan) (string, error) {
+	if plan.Tag == "" {
+		return "", nil
+	}
+	if out, err := r.Run(root, "git", "tag", "--list", plan.Tag); err == nil && strings.TrimSpace(out) != "" {
+		return "", nil
+	}
+	items := make([]string, len(plan.Items))
+	for i, it := range plan.Items {
+		items[i] = it.ID
+	}
+	msg := fmt.Sprintf("%s v%s: %s (%s)", plan.Component.Name, plan.To, strings.Join(items, ", "), plan.Level)
+	if _, err := r.Run(root, "git", "tag", "-a", plan.Tag, "-m", msg); err != nil {
+		return "", err
+	}
+	return plan.Tag, nil
 }
 
 // PendingItem is one accepted item counted toward a PendingPlan.
