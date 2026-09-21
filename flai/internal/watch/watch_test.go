@@ -98,23 +98,78 @@ func TestReportsChangedAddedAndRemovedFilesUnderTheWatchedPathsOnly(t *testing.T
 	c.wait(t)
 }
 
-func TestAFileStillBeingWrittenIsReportedOnce(t *testing.T) {
-	root := t.TempDir()
-	write(t, root, "wip/a.md", "0\n")
-	w := &Watcher{Root: root, Paths: []string{"wip"}, Every: 40 * time.Millisecond}
-	c := &collector{}
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { w.Run(ctx, c.emit); close(done) }()
-	t.Cleanup(func() { cancel(); <-done })
-	time.Sleep(60 * time.Millisecond)
-	content := "0\n"
-	for i := 0; i < 8; i++ { // a write every 15 ms: faster than the tick
-		content += "more\n"
-		write(t, root, "wip/a.md", content)
-		time.Sleep(15 * time.Millisecond)
+// snap is a snapshot of files by name; a file's size stands in for its whole
+// signature, since the debounce only compares signatures for equality.
+func snap(sizes map[string]int64) map[string]sig {
+	out := map[string]sig{}
+	for rel, size := range sizes {
+		out[rel] = sig{mod: size, size: size}
 	}
-	c.wait(t, "wip/a.md")
-	time.Sleep(150 * time.Millisecond)
-	c.wait(t, "wip/a.md")
+	return out
+}
+
+func expect(t *testing.T, step string, got []string, want ...string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("%s: reported %v, want %v", step, got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("%s: reported %v, want %v", step, got, want)
+		}
+	}
+}
+
+// The debounce is fed snapshots, one per tick, so these tests pass or fail the
+// same on a machine that stalls for seconds as on one that never does.
+
+func TestAFileStillBeingWrittenIsReportedOnce(t *testing.T) {
+	d := newDebounce(snap(map[string]int64{"wip/a.md": 1}))
+	for size := int64(2); size <= 9; size++ { // a different size at every tick: still being written
+		expect(t, "while written", d.tick(snap(map[string]int64{"wip/a.md": size})))
+	}
+	expect(t, "first tick it holds still", d.tick(snap(map[string]int64{"wip/a.md": 9})), "wip/a.md")
+	expect(t, "afterwards", d.tick(snap(map[string]int64{"wip/a.md": 9})))
+	expect(t, "and again", d.tick(snap(map[string]int64{"wip/a.md": 9})))
+}
+
+func TestAFileThatSettlesAndIsWrittenAgainIsReportedForEachSettle(t *testing.T) {
+	d := newDebounce(snap(map[string]int64{"a": 1}))
+	expect(t, "changed", d.tick(snap(map[string]int64{"a": 2})))
+	expect(t, "settled", d.tick(snap(map[string]int64{"a": 2})), "a")
+	expect(t, "changed again", d.tick(snap(map[string]int64{"a": 3})))
+	expect(t, "settled again", d.tick(snap(map[string]int64{"a": 3})), "a")
+}
+
+func TestAFileThatChangesBackWhilePendingIsStillReported(t *testing.T) {
+	d := newDebounce(snap(map[string]int64{"a": 1}))
+	expect(t, "changed", d.tick(snap(map[string]int64{"a": 2})))
+	expect(t, "changed back", d.tick(snap(map[string]int64{"a": 1})))
+	expect(t, "settled at the old value", d.tick(snap(map[string]int64{"a": 1})), "a")
+}
+
+func TestAnAddedFileIsReportedOnceItHoldsStill(t *testing.T) {
+	d := newDebounce(snap(nil))
+	expect(t, "appeared", d.tick(snap(map[string]int64{"new.md": 4})))
+	expect(t, "settled", d.tick(snap(map[string]int64{"new.md": 4})), "new.md")
+}
+
+func TestARemovedFileIsReportedAtOnce(t *testing.T) {
+	d := newDebounce(snap(map[string]int64{"a": 1, "b": 1}))
+	expect(t, "b removed", d.tick(snap(map[string]int64{"a": 1})), "b")
+	expect(t, "afterwards", d.tick(snap(map[string]int64{"a": 1})))
+}
+
+func TestAFileRemovedWhileItsChangeIsPendingIsReportedOnce(t *testing.T) {
+	d := newDebounce(snap(map[string]int64{"a": 1}))
+	expect(t, "changed", d.tick(snap(map[string]int64{"a": 2})))
+	expect(t, "removed", d.tick(snap(nil)), "a")
+	expect(t, "afterwards", d.tick(snap(nil)))
+}
+
+func TestSeveralFilesAreReportedSortedAndIndependently(t *testing.T) {
+	d := newDebounce(snap(map[string]int64{"b": 1, "a": 1, "c": 1}))
+	expect(t, "all three change", d.tick(snap(map[string]int64{"b": 2, "a": 2, "c": 1})))
+	expect(t, "b keeps changing, a settles, c untouched", d.tick(snap(map[string]int64{"b": 3, "a": 2, "c": 1})), "a")
+	expect(t, "b settles", d.tick(snap(map[string]int64{"b": 3, "a": 2, "c": 1})), "b")
 }

@@ -68,6 +68,54 @@ func (w *Watcher) snapshot() map[string]sig {
 	return out
 }
 
+// debounce holds what one tick needs from the ticks before it: the last
+// snapshot, and the files that changed but have not yet looked the same for a
+// whole tick. It has no clock and touches no files, so a test can feed it
+// snapshots in any order and at any pace.
+type debounce struct {
+	prev    map[string]sig
+	pending map[string]sig
+}
+
+func newDebounce(first map[string]sig) *debounce {
+	return &debounce{prev: first, pending: map[string]sig{}}
+}
+
+// tick takes the next snapshot and returns, sorted and without repeats, the
+// files that are ready to report: those that have looked the same since the
+// last tick after a change, and those that were removed.
+func (d *debounce) tick(cur map[string]sig) []string {
+	var ready []string
+	for rel, was := range d.pending {
+		now, exists := cur[rel]
+		if !exists || now == was {
+			ready = append(ready, rel)
+			delete(d.pending, rel)
+		}
+	}
+	for rel, s := range cur {
+		if old, ok := d.prev[rel]; !ok || old != s {
+			d.pending[rel] = s
+		}
+	}
+	for rel := range d.prev {
+		if _, ok := cur[rel]; !ok {
+			if _, waiting := d.pending[rel]; !waiting {
+				ready = append(ready, rel)
+			}
+		}
+	}
+	d.prev = cur
+	sort.Strings(ready)
+	var out []string
+	for _, rel := range ready {
+		if len(out) == 0 || out[len(out)-1] != rel {
+			out = append(out, rel)
+		}
+	}
+	return out
+}
+
 // Run calls emit with the repository-relative path of each file that was
 // added, changed, or removed, until ctx ends. A file still being written is
 // reported once it has looked the same for one tick, which is the debounce.
@@ -76,8 +124,7 @@ func (w *Watcher) Run(ctx context.Context, emit func(rel string)) {
 	if every <= 0 {
 		every = 300 * time.Millisecond
 	}
-	prev := w.snapshot()
-	pending := map[string]sig{}
+	d := newDebounce(w.snapshot())
 	tick := time.NewTicker(every)
 	defer tick.Stop()
 	for {
@@ -86,33 +133,8 @@ func (w *Watcher) Run(ctx context.Context, emit func(rel string)) {
 			return
 		case <-tick.C:
 		}
-		cur := w.snapshot()
-		var ready []string
-		for rel, was := range pending {
-			now, exists := cur[rel]
-			if !exists || now == was {
-				ready = append(ready, rel)
-				delete(pending, rel)
-			}
-		}
-		for rel, s := range cur {
-			if old, ok := prev[rel]; !ok || old != s {
-				pending[rel] = s
-			}
-		}
-		for rel := range prev {
-			if _, ok := cur[rel]; !ok {
-				if _, waiting := pending[rel]; !waiting {
-					ready = append(ready, rel)
-				}
-			}
-		}
-		prev = cur
-		sort.Strings(ready)
-		for i, rel := range ready {
-			if i == 0 || ready[i-1] != rel {
-				emit(rel)
-			}
+		for _, rel := range d.tick(w.snapshot()) {
+			emit(rel)
 		}
 	}
 }
