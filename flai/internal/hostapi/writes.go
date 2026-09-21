@@ -291,7 +291,7 @@ func decode[T any](raw json.RawMessage) (T, *channel.Error) {
 	return v, params(raw, &v)
 }
 
-func specs(host Host) map[string]spec {
+func specs() map[string]spec {
 	type build = func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)
 	one := func(b build) spec { return spec{build: b} }
 	read := func(b build) spec { return spec{build: b, reads: true} }
@@ -898,7 +898,7 @@ func writeMethods(run Runner, now func() time.Time, host Host) map[string]channe
 	}
 	j := &journal{done: map[string]journalled{}, now: now}
 	out := map[string]channel.Method{}
-	for name, sp := range specs(host) {
+	for name, sp := range specs() {
 		out[name] = func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			args, stdin, e := sp.build(p, raw)
 			if e != nil {

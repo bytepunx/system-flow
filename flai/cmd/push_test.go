@@ -15,7 +15,7 @@ func TestPushPending(t *testing.T) {
 	// accept as the dashboard container does when it holds nothing; S-0087:
 	// acceptance alone tags nothing, so there is a pending acceptance commit
 	// but no tag until the operator publishes.
-	out, errOut, code := runIn(t, root, "accept", "S-0001")
+	_, errOut, code := runIn(t, root, "accept", "S-0001")
 	if code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}
@@ -46,7 +46,7 @@ func TestPushPending(t *testing.T) {
 	if !strings.Contains(dry, "would push S-0001 to origin: main") || remoteHead() != before {
 		t.Errorf("dry run: %s (remote moved: %v)", dry, remoteHead() != before)
 	}
-	out, errOut, code = runIn(t, root, "push", "--pending")
+	out, errOut, code := runIn(t, root, "push", "--pending")
 	if code != 0 || !strings.Contains(out, "pushed S-0001 to origin: main") {
 		t.Fatalf("push: %d %s %s", code, out, errOut)
 	}

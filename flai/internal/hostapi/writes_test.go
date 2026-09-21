@@ -109,7 +109,7 @@ func (r *recorder) run(_ context.Context, run Run) (Ran, error) {
 // hostFor is a host nobody has touched, except for a method that is itself a
 // host action, which can only show what it runs with that action enabled.
 func hostFor(name string) Host {
-	action := specs(Host{})[name].action
+	action := specs()[name].action
 	if action == "" {
 		return Host{}
 	}
@@ -117,7 +117,7 @@ func hostFor(name string) Host {
 }
 
 func TestEveryWriteIsCovered(t *testing.T) {
-	for name := range specs(Host{}) {
+	for name := range specs() {
 		if _, ok := good[name]; !ok {
 			t.Errorf("%s has no valid call in good: add one with the command line it must become", name)
 		}
@@ -125,8 +125,8 @@ func TestEveryWriteIsCovered(t *testing.T) {
 			t.Errorf("%s has no refusals in refused: say what must never reach its command line", name)
 		}
 	}
-	if len(good) != len(specs(Host{})) {
-		t.Errorf("good names %d methods, there are %d", len(good), len(specs(Host{})))
+	if len(good) != len(specs()) {
+		t.Errorf("good names %d methods, there are %d", len(good), len(specs()))
 	}
 }
 
@@ -165,7 +165,7 @@ func TestARepeatedWriteIsAnsweredFromTheJournal(t *testing.T) {
 	p := withDocs(t)
 	now := time.Date(2026, 9, 20, 9, 0, 0, 0, time.UTC)
 	for name, c := range good {
-		if specs(Host{})[name].reads {
+		if specs()[name].reads {
 			continue
 		}
 		rec := &recorder{ran: Ran{Stdout: []byte(`{"n":1}`)}}
@@ -340,7 +340,7 @@ func TestNoMethodTouchesTheHostConfiguration(t *testing.T) {
 			}
 		}
 	}
-	for name, sp := range specs(Host{Enabled: func(string, string) bool { return true }}) {
+	for name, sp := range specs() {
 		args, _, e := sp.build(channel.Project{Root: t.TempDir()}, json.RawMessage(good[name].params))
 		if e != nil {
 			continue

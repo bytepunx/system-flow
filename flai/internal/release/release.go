@@ -477,7 +477,12 @@ func componentBoundary(r execx.Runner, root string, p manifest.Project, cur Vers
 		return p.Name + "/v" + cur.String(), nil
 	}
 	out, err := r.Run(root, "git", "log", "-n1", "--format=%H", "-S", "version: "+cur.String(), "--", filepath.Join(p.Path, "template.yaml"))
-	if err != nil || strings.TrimSpace(out) == "" {
+	if err != nil {
+		return "", err
+	}
+	// No commit found (unlikely, since CurrentVersion just read this version from
+	// the file): walk the full history rather than fail the whole batch over it.
+	if strings.TrimSpace(out) == "" {
 		return "", nil
 	}
 	return strings.TrimSpace(out), nil

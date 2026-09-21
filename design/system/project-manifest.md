@@ -49,7 +49,7 @@ Rules:
 - `flai` refuses to run project commands in a directory tree with no `system-flow.yaml` above the current directory, except `flai new` and `flai import`.
 - `layout` is the only place folder names live. Everything else resolves through it. Subfolders such as `design/conventions` are fixed names under their layout folder.
 - `template.version` is the version `flai upgrade` compares against; `system-flow.lock.yaml` beside the manifest records the hash of every rendered file so upgrade can tell project edits from baseline (ADR-0015).
-- `projects` are the components `flai release` and `flai accept` version: code kinds get `<name>/vX.Y.Z` tags, kind `template` gets its version file bumped. `tags` are aliases a story or epic tag may use to say which component it delivers to.
+- `projects` are the components `flai release` versions, one item at a time or, since S-0087, batched by `flai release --pending`: code kinds get `<name>/vX.Y.Z` tags, kind `template` gets its version file bumped. `flai accept` versions nothing. `tags` are aliases a story or epic tag may use to say which component it delivers to.
 - `dashboard.notify_url`, when set, makes the dashboard's server POST `{ project, entry: { key, kind, title, href, at } }` to that URL for each inbox entry that appears after it started: one attempt, a short timeout, a warning in the log on failure. The token and file contents are never sent. Unset by default.
 - `dashboard.autocommit: false` leaves documents saved from the dashboard uncommitted; the default commits each save on the main checkout, one path per commit (ADR-0023).
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`) and preserves comments where the YAML library allows it.

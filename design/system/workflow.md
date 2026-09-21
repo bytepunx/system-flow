@@ -52,7 +52,7 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 | backlog to ready | Human or agent during refinement | Definition of ready met |
 | ready to in-progress | Agent pulling work | Narrative opened; tasks written next if the story has none |
 | in-progress to review | Agent | At least one task exists, acceptance criteria self-checked, narrative summary current |
-| review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. For a story this transition is acceptance, however it is made: `flai accept`, `flai move <story> done`, a card dropped on done, or the item page button all run the same flow (S-0046). `flai accept` does the acceptance: rebase and merge the story branch, move to done, archive, commit, semver release (delivery-type bump for the component delivered to, patch for components touched incidentally, see `design/conventions/git.md`), push |
+| review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. For a story this transition is acceptance, however it is made: `flai accept`, `flai move <story> done`, a card dropped on done, or the item page button all run the same flow (S-0046). `flai accept` does the acceptance: rebase and merge the story branch, move to done, archive, commit. Nothing is tagged or pushed at acceptance (S-0087, ADR-0032): publishing what has accumulated is `flai release --pending`, a deliberate step of its own, run by hand or from the board's Publish action, see `design/conventions/git.md` |
 | review to in-progress | Human | Reason appended to story notes |
 | backlog, ready, or in-progress to cancelled | Human | Reason appended to the item's notes. Everything open under the item is cancelled with it ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)) |
 | review to cancelled | Only a parent's cancellation | An item in review is accepted or sent back; it is cancelled only with its epic or story |
@@ -61,7 +61,7 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 
 ### Natures that do not release ([ADR-0025](../adrs/0025-research-is-accepted-without-a-release.md))
 
-Acceptance of a `research` story is the same act as any other (merge, done, archive, commit, push) and cuts no release: no tag, no version, no changelog, whatever its commits touched. Its plan says so, and names any component whose files land on main without a release. An `experiment` story is refused by acceptance, before anything is merged, and stays on its branch; `flai accept --no-release` is the deliberate way to land one. The push follows every acceptance, released or not.
+Acceptance of a `research` story is the same act as any other (merge, done, archive, commit) since S-0087: no acceptance tags or pushes any more, so there is nothing left to say a research story does differently at that point. What is still true: publishing (`flai release --pending`, [ADR-0032](../adrs/0032-accepting-a-story-merges-it-publishing-is-a-deliberate-batched-step-over.md)) never gives a component a bump on a research story's account, whatever it touched. An `experiment` story is refused by acceptance, before anything is merged, and stays on its branch.
 
 ### The pull order (S-0057)
 

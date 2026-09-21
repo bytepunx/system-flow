@@ -151,17 +151,13 @@ var m = manifest.Manifest{
 // item is archived by then) and commits it with that exact message, having
 // first written the given files, so the commit also touches whatever
 // component the caller wants this item counted against.
-func writeAcceptedItem(t *testing.T, root string, r execx.Runner, id, typ, nature, title, parent string, files map[string]string) {
+func writeAcceptedItem(t *testing.T, root string, r execx.Runner, id, typ, nature, title string, files map[string]string) {
 	t.Helper()
 	dir := "stories"
 	if typ == workitem.Epic {
 		dir = "epics"
 	}
-	fm := "---\nid: " + id + "\ntype: " + typ + "\nnature: " + nature + "\ntitle: " + title + "\nstatus: done\n"
-	if parent != "" {
-		fm += "parent: " + parent + "\n"
-	}
-	fm += "---\n# " + id + " " + title + "\n"
+	fm := "---\nid: " + id + "\ntype: " + typ + "\nnature: " + nature + "\ntitle: " + title + "\nstatus: done\n---\n# " + id + " " + title + "\n"
 	p := filepath.Join(root, "wip/archive/kanban", dir, id+"-item.md")
 	_ = os.MkdirAll(filepath.Dir(p), 0o755)
 	if err := os.WriteFile(p, []byte(fm), 0o644); err != nil {
@@ -188,9 +184,9 @@ func writeAcceptedItem(t *testing.T, root string, r execx.Runner, id, typ, natur
 func TestPendingBatchesTheHighestLevel(t *testing.T) {
 	root, r := gitRepo(t) // cli tagged at 0.10.0
 	repo := &workitem.Repo{Root: root, Manifest: m}
-	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/a.go": "package main\n"})
-	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", "", map[string]string{"cli/b.go": "package main\n"})
-	writeAcceptedItem(t, root, r, "S-103", workitem.Story, "improvement", "Tidy", "", map[string]string{"cli/c.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", map[string]string{"cli/b.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-103", workitem.Story, "improvement", "Tidy", map[string]string{"cli/c.go": "package main\n"})
 
 	plans, err := Pending(r, root, m, repo)
 	if err != nil {
@@ -217,7 +213,7 @@ func TestPendingBatchesTheHighestLevel(t *testing.T) {
 func TestPendingLeavesOutWhatALaterTagAlreadyCovered(t *testing.T) {
 	root, r := gitRepo(t) // cli tagged at 0.10.0
 	repo := &workitem.Repo{Root: root, Manifest: m}
-	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", map[string]string{"cli/a.go": "package main\n"})
 
 	plans, err := Pending(r, root, m, repo)
 	if err != nil || len(plans) != 1 || plans[0].Level != Patch {
@@ -232,7 +228,7 @@ func TestPendingLeavesOutWhatALaterTagAlreadyCovered(t *testing.T) {
 		t.Fatalf("right after publishing, nothing new is pending: %+v %v", plans, err)
 	}
 
-	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", "", map[string]string{"cli/b.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", map[string]string{"cli/b.go": "package main\n"})
 	plans, err = Pending(r, root, m, repo)
 	if err != nil || len(plans) != 1 || plans[0].Level != Minor || len(plans[0].Items) != 1 || plans[0].Items[0].ID != "S-102" {
 		t.Fatalf("only what came after the tag counts, S-101 is not double counted: %+v %v", plans, err)
@@ -244,9 +240,9 @@ func TestPendingLeavesOutWhatALaterTagAlreadyCovered(t *testing.T) {
 func TestPendingAnEpicInTheBatchIsMajor(t *testing.T) {
 	root, r := gitRepo(t)
 	repo := &workitem.Repo{Root: root, Manifest: m}
-	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/a.go": "package main\n"})
-	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", "", map[string]string{"cli/b.go": "package main\n"})
-	writeAcceptedItem(t, root, r, "E-010", workitem.Epic, "feature", "Ship the epic", "", map[string]string{"cli/c.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Add a thing", map[string]string{"cli/b.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "E-010", workitem.Epic, "feature", "Ship the epic", map[string]string{"cli/c.go": "package main\n"})
 
 	plans, err := Pending(r, root, m, repo)
 	if err != nil {
@@ -272,7 +268,7 @@ func TestPendingEmptyBatch(t *testing.T) {
 func TestPendingResearchContributesNothing(t *testing.T) {
 	root, r := gitRepo(t)
 	repo := &workitem.Repo{Root: root, Manifest: m}
-	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "research", "A finding", "", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "research", "A finding", map[string]string{"cli/a.go": "package main\n"})
 
 	plans, err := Pending(r, root, m, repo)
 	if err != nil {
@@ -282,7 +278,7 @@ func TestPendingResearchContributesNothing(t *testing.T) {
 		t.Errorf("research alone releases nothing, even having touched cli: %+v", plans)
 	}
 
-	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "remediation", "Fix one", "", map[string]string{"cli/b.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "remediation", "Fix one", map[string]string{"cli/b.go": "package main\n"})
 	plans, err = Pending(r, root, m, repo)
 	if err != nil {
 		t.Fatal(err)
