@@ -82,7 +82,12 @@ export const REQUIRED_METHODS = [
 	'agent.status',
 	'push.run',
 	'publish.preview',
-	'publish.run'
+	'publish.run',
+	'dashboard.status',
+	'dashboard.check',
+	'dashboard.restart',
+	'dashboard.upgrade',
+	'dashboard.stop'
 ];
 
 export type AgentStatus = {

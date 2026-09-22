@@ -419,6 +419,9 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 				return err
 			}
 			if running, _ := a.containerRunning(s.Name); !running {
+				if a.jsonOut {
+					return a.printJSON(map[string]any{"container": s.Name, "state": "not-running"})
+				}
 				fmt.Fprintf(a.out, "%s is not running\n", s.Name)
 				return nil
 			}

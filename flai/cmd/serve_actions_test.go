@@ -66,7 +66,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, dashboard, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")

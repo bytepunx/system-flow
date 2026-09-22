@@ -272,9 +272,10 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 		if healthErr != nil {
 			detail = healthErr.Error()
 		}
-		if a.jsonOut {
-			return a.printJSON(map[string]any{"container": s.Name, "outcome": "failed", "ref": s.ref(), "detail": detail})
-		}
+		// An exit, not a --json success payload with a "failed" field inside
+		// it: this must fail the same way whether or not --json was given, so
+		// a host action calling it with --json always sees a real error, not
+		// a 200-shaped answer that happens to say "failed".
 		return fmt.Errorf("upgrade to %s failed: %s; %s keeps running unchanged", s.ref(), detail, s.Name)
 	}
 

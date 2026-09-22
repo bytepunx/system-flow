@@ -167,10 +167,15 @@ const ActionPush = "push"
 // what it sees in the project's files.
 const ActionAgent = "agent"
 
+// ActionDashboard is the host action that restarts, upgrades, or stops the
+// dashboard container with Docker on this host (S-0081).
+const ActionDashboard = "dashboard"
+
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
-	ActionPush:  "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
-	ActionAgent: "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
+	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
+	ActionAgent:     "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
+	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 }
 
 // Host is what the host decides and records about host actions (ADR-0029).
@@ -222,6 +227,12 @@ type spec struct {
 	progress bool
 	// reads marks a command that changes nothing: no request ID is asked for.
 	reads bool
+	// describe says in a line what a successful call did, for the journal.
+	// Nil means the push/publish shape (describe, below); a host action with
+	// a different answer shape (dashboard.restart, dashboard.upgrade,
+	// dashboard.stop) sets its own. A failed call is always "failed",
+	// err.Message, whichever this is.
+	describe func(res any, err *channel.Error) (outcome, detail string)
 }
 
 func text(v string) string { return strings.Join(strings.Fields(v), " ") }
@@ -876,6 +887,123 @@ func specs() map[string]spec {
 			}
 			return []string{"release", "--pending"}, "", nil
 		}},
+
+		// dashboard.status: a read of what flai dashboard status already
+		// reports, so the board can show the version running and who else it
+		// serves without a host action (S-0081).
+		"dashboard.status": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"dashboard", "status"}, "", nil
+		}),
+
+		// dashboard.check: a read that pulls the configured image and
+		// compares it to what is running, changing nothing (S-0081).
+		"dashboard.check": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"dashboard", "check"}, "", nil
+		}),
+
+		// dashboard.restart and dashboard.upgrade: the host action (S-0081),
+		// running the same commands the operator's own shell does. Both
+		// stream progress: they take real Docker time, unlike a move or an
+		// edit. Neither takes an image or tag from the dashboard; flai
+		// upgrades only to what this host's own configuration names.
+		"dashboard.restart": {action: ActionDashboard, progress: true, describe: describeDashboardRestart, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"dashboard", "restart"}, "", nil
+		}},
+		"dashboard.upgrade": {action: ActionDashboard, progress: true, describe: describeDashboardUpgrade, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"dashboard", "upgrade"}, "", nil
+		}},
+
+		// dashboard.stop: the host action, the same command the operator's
+		// own flai dashboard stop runs: unregisters this project, and stops
+		// the container only when it was the last one registered.
+		"dashboard.stop": {action: ActionDashboard, describe: describeDashboardStop, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"dashboard", "stop"}, "", nil
+		}},
+	}
+}
+
+// describeDashboardRestart, describeDashboardUpgrade, and describeDashboardStop
+// read cmd/dashboard.go and cmd/dashboard_upgrade.go's own --json shapes for
+// the journal, rather than describe's push/publish shape above. A failed
+// call is described the same way regardless: "failed", err.Message.
+
+func describeDashboardRestart(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Container  string `json:"container"`
+		WasRunning bool   `json:"was_running"`
+		Ref        string `json:"ref"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	verb := "started"
+	if said.WasRunning {
+		verb = "restarted"
+	}
+	return "done", fmt.Sprintf("%s %s (%s)", verb, said.Container, said.Ref)
+}
+
+func describeDashboardUpgrade(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Container string `json:"container"`
+		Outcome   string `json:"outcome"`
+		From      string `json:"from"`
+		To        string `json:"to"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	switch said.Outcome {
+	case "up-to-date":
+		return "done", fmt.Sprintf("%s already running %s", said.Container, said.To)
+	case "started":
+		return "done", fmt.Sprintf("started %s (%s)", said.Container, said.To)
+	case "upgraded":
+		return "done", fmt.Sprintf("upgraded %s from %s to %s", said.Container, said.From, said.To)
+	default:
+		return "done", said.Container
+	}
+}
+
+func describeDashboardStop(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Container string   `json:"container"`
+		State     string   `json:"state"`
+		Serves    []string `json:"serves"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	switch said.State {
+	case "stopped":
+		return "done", said.Container + " stopped"
+	case "still-running":
+		return "done", said.Container + " unregistered; still serving " + strings.Join(said.Serves, ", ")
+	case "not-running":
+		return "done", said.Container + " was not running"
+	default:
+		return "done", said.Container
 	}
 }
 
@@ -943,7 +1071,11 @@ func writeMethods(run Runner, now func() time.Time, host Host) map[string]channe
 				entry.Action = sp.uses
 			}
 			if entry.Action != "" {
-				entry.Outcome, entry.Detail = describe(res, rerr)
+				d := describe
+				if sp.describe != nil {
+					d = sp.describe
+				}
+				entry.Outcome, entry.Detail = d(res, rerr)
 				host.record(entry)
 			}
 			return res, rerr

@@ -179,7 +179,7 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 		process.env.FLAI_CONFIG = join(host, 'config.json');
 		try {
 			const info = await r.ask<{ host_actions: Record<string, boolean> }>('project.info');
-			expect(info.host_actions).toEqual({ agent: false, push: false });
+			expect(info.host_actions).toEqual({ agent: false, push: false, dashboard: false });
 			await expect(r.write('push.run')).rejects.toMatchObject({
 				status: 403,
 				message: expect.stringContaining('flai serve enable push'),
