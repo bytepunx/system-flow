@@ -87,7 +87,11 @@ export const REQUIRED_METHODS = [
 	'dashboard.check',
 	'dashboard.restart',
 	'dashboard.upgrade',
-	'dashboard.stop'
+	'dashboard.stop',
+	'checks.status',
+	'checks.tail',
+	'checks.run',
+	'checks.cancel'
 ];
 
 export type AgentStatus = {

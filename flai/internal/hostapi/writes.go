@@ -952,7 +952,91 @@ func specs() map[string]spec {
 			}
 			return []string{"dashboard", "stop"}, "", nil
 		}},
+
+		// checks.status: a read of what flai checks status already reports:
+		// the current or last run for a story (S-0082).
+		"checks.status": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"checks", "status", in.ID}, "", nil
+		}),
+
+		// checks.tail: a read, progress-streaming, of new lines in a run's
+		// log since a byte offset, waiting a little for more while the run
+		// is active (S-0082). Each line arrives as a log event, the same
+		// machinery push and dashboard already stream progress with.
+		"checks.tail": {reads: true, progress: true, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID   string `json:"id"`
+				From int    `json:"from"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			if in.From < 0 {
+				return nil, "", bad("from must not be negative")
+			}
+			return []string{"checks", "tail", in.ID, "--from=" + strconv.Itoa(in.From), "--wait=20"}, "", nil
+		}},
+
+		// checks.run and checks.cancel: the host action (S-0082), running the
+		// same commands the operator's own shell does. run streams progress
+		// and is detached generously: the real time limit is the operator's
+		// own (flai serve checks timeout), enforced by flai checks run
+		// itself, not by this request surviving that long.
+		"checks.run": {action: ActionChecks, progress: true, describe: describeChecksRun, detachTimeout: 2 * time.Hour, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"checks", "run", in.ID}, "", nil
+		}},
+		"checks.cancel": {action: ActionChecks, describe: describeChecksRun, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"checks", "cancel", in.ID}, "", nil
+		}},
 	}
+}
+
+// describeChecksRun reads flai checks run/cancel's own --json shape
+// (ChecksRun) for the journal, rather than describe's push/publish shape.
+func describeChecksRun(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Story   string `json:"story"`
+		Outcome string `json:"outcome"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	if said.Outcome == "" {
+		return "done", said.Story
+	}
+	return "done", said.Story + ": " + said.Outcome
 }
 
 // describeDashboardRestart, describeDashboardUpgrade, and describeDashboardStop

@@ -117,7 +117,23 @@ flai serve disable dashboard
 
 **An upgrade never touches the running container until the new one has proven itself.** `flai dashboard upgrade` pulls the configured image and, if it differs from what is running, starts it as a second, temporary container of its own and waits for it to answer healthy; only then does it stop the running container and start the new image in its place. If the new image never answers healthy, the temporary container is removed and the one you already had keeps running, unchanged — the same command run by hand (`flai dashboard upgrade`, `flai dashboard check` to look without changing anything, `flai dashboard restart` to cycle the process without a pull) behaves identically, on or off the board.
 
-### What the container can and cannot reach
+### The checks host action (S-0082)
+
+`flai serve` can run checks for a story in review, in the story's worktree, on your machine, because the review page asked. It is a host action, off until you enable it:
+
+```bash
+flai serve checks set --name flai -- scripts/flai-test.sh
+flai serve checks set --name flaiover -- bash -c "cd flaiover && pnpm run check && pnpm run test:unit -- run && pnpm run lint"
+flai serve checks show
+flai serve checks timeout 20      # minutes for one run of every command together; 15 by default
+flai serve enable checks          # for the project in the working directory; --all-projects for every project
+flai serve journal                # every run and cancel, refused ones included
+flai serve checks clear flaiover  # one name, or every name with no argument
+```
+
+Naming nothing here leaves the manifest's own `checks:` in effect instead — the project's own default, committed and visible to everyone. Naming any command here, on this host, uses this list instead, for this host only: your own real choice of where to name them, never a merge of both.
+
+**Understand what enabling it means.** Whoever holds the dashboard token can run every named check, in order, in a story's worktree, on your machine, as you, and cancel a run early. Each command is an argument list, run as it stands, never through a shell; `{story}` and `{root}` are replaced in an argument, nothing else is interpreted. The first command to fail stops the rest; a run is bounded by the timeout above, and cancelling it (terminate, then, after a short grace period, kill) reaches the whole process tree the command started, not only its direct child. One run per story at a time: a second while one is active is refused, not queued. The outcome and duration stay with the story (`flai checks status <id>`) until you accept it.
 
 It can reach its port, the network, and the two secrets. It cannot read or write any file of the project or of the host: no work tree, no `.git`, no `.flai-cache` beyond those two files, no flai configuration. So it cannot leave a git hook or setting that would run on your machine, change a tracked file or a branch, or plant an ignored file your tools execute, which were the routes open or guarded while the repository was mounted (I-0022, ADR-0027, superseded).
 

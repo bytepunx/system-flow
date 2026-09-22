@@ -52,6 +52,10 @@ var good = map[string]struct {
 	"dashboard.restart": {`{` + rid + `}`, "dashboard restart --json", ""},
 	"dashboard.upgrade": {`{` + rid + `}`, "dashboard upgrade --json", ""},
 	"dashboard.stop":    {`{` + rid + `}`, "dashboard stop --json", ""},
+	"checks.status":     {`{"id":"S-0001"}`, "checks status S-0001 --json", ""},
+	"checks.tail":       {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
+	"checks.run":        {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
+	"checks.cancel":     {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
 }
 
 // refused is, per method, params that must never reach a command line.
@@ -99,6 +103,10 @@ var refused = map[string][]string{
 	"dashboard.restart": {`"--force"`, `{}`},
 	"dashboard.upgrade": {`"--force"`, `{}`},
 	"dashboard.stop":    {`"--force"`, `{}`},
+	"checks.status":     {`{"id":"--help"}`, `{"id":"../S-0001"}`},
+	"checks.tail":       {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
+	"checks.run":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"checks.cancel":     {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 }
 
 type recorder struct {
@@ -392,6 +400,46 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	}
 }
 
+// S-0082: checks.run and checks.cancel are off until enabled, refused and
+// journalled the same generic way every other host action is (already
+// proven for push above); this checks describeChecksRun's own journal line.
+func TestChecksHostActionJournalEntry(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	var journal []Entry
+	on := false
+	host := Host{
+		Enabled: func(action, root string) bool { return on && action == ActionChecks && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	call := func(name string, ran Ran) *channel.Error {
+		rec := &recorder{ran: ran}
+		_, e := writeMethods(rec.run, time.Now, host)[name](context.Background(), p, json.RawMessage(good[name].params))
+		return e
+	}
+	if e := call("checks.run", Ran{}); e == nil || e.Code != Disabled {
+		t.Fatalf("off: %+v", e)
+	}
+	on = true
+	if e := call("checks.run", Ran{Stdout: []byte(`{"story":"S-0001","outcome":"passed"}`)}); e != nil {
+		t.Fatalf("on: %+v", e)
+	}
+	if e := call("checks.cancel", Ran{Stdout: []byte(`{"story":"S-0001","outcome":"cancelled"}`)}); e != nil {
+		t.Fatalf("cancel: %+v", e)
+	}
+	if len(journal) != 3 {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if journal[0].Outcome != "disabled" || journal[0].Action != ActionChecks {
+		t.Errorf("entry 0: %+v", journal[0])
+	}
+	if journal[1].Outcome != "done" || journal[1].Detail != "S-0001: passed" || journal[1].Action != ActionChecks {
+		t.Errorf("entry 1: %+v", journal[1])
+	}
+	if journal[2].Outcome != "done" || journal[2].Detail != "S-0001: cancelled" {
+		t.Errorf("entry 2: %+v", journal[2])
+	}
+}
+
 // S-0081: dashboard.restart, dashboard.upgrade, and dashboard.stop can each
 // end the very WebSocket connection their own request arrived on (a restart
 // or a successful upgrade stops the container answering it; a stop does
@@ -399,11 +447,12 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 // the request's context, which exec.CommandContext turned into a SIGINT to
 // the flai subprocess mid-restart, killing it between "stop the old
 // container" and "start the new one" and leaving nothing running at all.
-// These three specs now run with their own background context instead.
-func TestADashboardWriteSurvivesItsOwnConnectionDying(t *testing.T) {
+// These specs, and checks.run since S-0082 (a browser closing the review
+// page mid-run must not kill it either), run with their own background
+// context instead.
+func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 	p := withDocs(t)
-	host := Host{Enabled: func(a, _ string) bool { return a == ActionDashboard }}
-	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop"} {
+	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run"} {
 		t.Run(name, func(t *testing.T) {
 			parentCtx, cancelParent := context.WithCancel(context.Background())
 			t.Cleanup(cancelParent)
@@ -416,7 +465,7 @@ func TestADashboardWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 				}
 				return Ran{Stdout: []byte(`{"container":"flaiover"}`)}, nil
 			}
-			if _, e := writeMethods(run, time.Now, host)[name](parentCtx, p, json.RawMessage(good[name].params)); e != nil {
+			if _, e := writeMethods(run, time.Now, hostFor(name))[name](parentCtx, p, json.RawMessage(good[name].params)); e != nil {
 				t.Fatalf("%s: %+v", name, e)
 			}
 			// The real assertion already happened inside run, live, the moment
