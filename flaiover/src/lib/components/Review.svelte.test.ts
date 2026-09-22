@@ -66,8 +66,31 @@ function backend(over: {
 	accept?: () => unknown;
 	move?: () => unknown;
 	diff?: () => unknown;
+	checksStatuses?: unknown[];
+	checksRun?: () => unknown;
+	checksCancel?: () => unknown;
+	checksTail?: () => unknown;
 }) {
-	api.mockImplementation(async (url: string, init?: { method?: string }) => {
+	let statusIdx = 0;
+	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+		if (url.includes('/checks/tail'))
+			return over.checksTail
+				? over.checksTail()
+				: ndjson([{ event: 'done', offset: 0, running: false }]);
+		if (url.endsWith('/checks') && init?.method === 'POST') {
+			const body = JSON.parse(init.body ?? '{}') as { action?: string };
+			if (body.action === 'run')
+				return over.checksRun ? over.checksRun() : json({ story: 'S-0041', running: false });
+			return over.checksCancel ? over.checksCancel() : json({ story: 'S-0041', running: false });
+		}
+		if (url.endsWith('/checks')) {
+			const list = over.checksStatuses ?? [
+				{ story: 'S-0041', running: false, checks_enabled: false }
+			];
+			const v = list[Math.min(statusIdx, list.length - 1)];
+			statusIdx++;
+			return json(v);
+		}
 		if (url.endsWith('/accept'))
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
@@ -251,5 +274,146 @@ describe('Review', () => {
 		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
 		await settle();
 		expect(document.body.textContent).toContain('has no branch story/S-0041');
+	});
+
+	describe('checks (S-0082)', () => {
+		it('says checks are off and what enables them, and offers no button', async () => {
+			backend({ checksStatuses: [{ story: 'S-0041', running: false, checks_enabled: false }] });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const section = document.querySelector('[data-testid="checks-section"]')!;
+			expect(section.textContent).toContain('flai serve enable checks');
+			expect(section.querySelector('[data-testid="checks-run"]')).toBeNull();
+		});
+
+		it('shows a run that finished before this page was opened, not nothing', async () => {
+			backend({
+				checksStatuses: [
+					{
+						story: 'S-0041',
+						running: false,
+						checks_enabled: true,
+						outcome: 'passed',
+						started: '2026-09-22T00:00:00Z',
+						ended: '2026-09-22T00:05:00Z',
+						steps: [{ name: 'flai', command: 'scripts/flai-test.sh', exit: 0 }]
+					}
+				]
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const text = document.querySelector('[data-testid="checks-section"]')!.textContent!;
+			expect(text).toContain('passed');
+			expect(text).toContain('flai: ok');
+		});
+
+		// A live checksRun state, held here rather than in a fixed backend() array: watchChecks
+		// polls checks.status in a loop of its own once a run is found active, at a pace this test
+		// does not control, so the mock must answer from real state (flipped by the actions under
+		// test) rather than a sequence indexed by call count. Everything else still goes through
+		// the ordinary backend().
+		function liveChecksBackend(initial: Record<string, unknown> = {}) {
+			backend({});
+			const base = api.getMockImplementation()!;
+			let run: Record<string, unknown> = {
+				story: 'S-0041',
+				running: false,
+				checks_enabled: true,
+				...initial
+			};
+			let tailSent = false;
+			api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+				if (url.includes('/checks/tail')) {
+					// A real flai checks.tail blocks server-side, for real time; a mock that answers
+					// on the spot lets watchChecks's loop spin on nothing but resolved microtasks,
+					// which starves the event loop before it ever runs settle()'s own timers. One
+					// real tick keeps this test from hanging (found live, running this very test).
+					await new Promise((r) => setTimeout(r, 0));
+					if (!tailSent && run.running) {
+						tailSent = true;
+						return ndjson([
+							{ event: 'line', text: '=== flai: scripts/flai-test.sh ===' },
+							{ event: 'done', offset: 40, running: run.running }
+						]);
+					}
+					return ndjson([{ event: 'done', offset: 40, running: run.running }]);
+				}
+				if (url.endsWith('/checks') && init?.method === 'POST') {
+					const body = JSON.parse(init.body ?? '{}') as { action?: string };
+					if (body.action === 'run') {
+						run = {
+							story: 'S-0041',
+							running: true,
+							checks_enabled: true,
+							current: 'flai',
+							started: '2026-09-22T00:00:00Z'
+						};
+						tailSent = false;
+					} else {
+						run = { ...run, running: false, outcome: 'cancelled' };
+					}
+					return json(run);
+				}
+				if (url.endsWith('/checks')) return json(run);
+				return base(url, init);
+			});
+			return {
+				end: (outcome: string, steps: unknown[]) => {
+					run = { ...run, running: false, outcome, ended: '2026-09-22T00:01:00Z' };
+					if (steps.length) run.steps = steps;
+				}
+			};
+		}
+
+		it('runs checks: live output while running, the outcome once the run ends', async () => {
+			const live = liveChecksBackend();
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			document.querySelector<HTMLButtonElement>('[data-testid="checks-run"]')!.click();
+			await settle();
+			expect(document.querySelector('[data-testid="checks-section"]')!.textContent).toContain(
+				'scripts/flai-test.sh'
+			);
+			live.end('passed', [{ name: 'flai', command: 'scripts/flai-test.sh', exit: 0 }]);
+			await settle();
+			await settle();
+			expect(calls('/checks')[0][1]).toMatchObject({
+				method: 'POST',
+				body: JSON.stringify({ action: 'run' })
+			});
+			const text = document.querySelector('[data-testid="checks-section"]')!.textContent!;
+			expect(text).toContain('scripts/flai-test.sh');
+			expect(text).toContain('passed');
+		});
+
+		it('cancels a running run', async () => {
+			liveChecksBackend({ running: true, current: 'flai', started: '2026-09-22T00:00:00Z' });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(document.querySelector('[data-testid="checks-run"]')).toBeNull();
+			document.querySelector<HTMLButtonElement>('[data-testid="checks-cancel"]')!.click();
+			await settle();
+			expect(calls('/checks')[0][1]).toMatchObject({
+				method: 'POST',
+				body: JSON.stringify({ action: 'cancel' })
+			});
+			expect(document.querySelector('[data-testid="checks-section"]')!.textContent).toContain(
+				'cancelled'
+			);
+		});
+
+		it('shows what flai said when a run could not be started', async () => {
+			backend({
+				checksStatuses: [{ story: 'S-0041', running: false, checks_enabled: true }],
+				checksRun: () => json({ error: 'a checks run for S-0041 is already active (pid 123)' }, 409)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			document.querySelector<HTMLButtonElement>('[data-testid="checks-run"]')!.click();
+			await settle();
+			expect(document.querySelector('[data-testid="checks-error"]')!.textContent).toContain(
+				'already active'
+			);
+		});
 	});
 });

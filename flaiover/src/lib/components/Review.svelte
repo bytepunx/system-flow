@@ -39,6 +39,22 @@
 		} | null;
 	};
 	type Progress = { step: string; msg: string };
+	type CheckStep = {
+		name: string;
+		command?: string;
+		started?: string;
+		ended?: string;
+		exit?: number | null;
+	};
+	type ChecksRun = {
+		story?: string;
+		running?: boolean;
+		current?: string;
+		steps?: CheckStep[];
+		outcome?: string;
+		started?: string;
+		ended?: string;
+	};
 
 	let { id }: { id: string } = $props();
 
@@ -67,6 +83,24 @@
 
 	let sendingBack = $state(false);
 	let reason = $state('');
+
+	// Checks (S-0082): the operator's named commands, run in the story's
+	// worktree, gated on the checks host action. checksEnabled comes from
+	// project.info's host_actions, asked afresh each load like pushEnabled;
+	// checksRun is the last known state, kept live by watchChecks while a
+	// run is active. watchToken guards against a stale loop from a previous
+	// story still running after id changes.
+	let checksEnabled = $state(false);
+	let checksRun = $state<ChecksRun | null>(null);
+	let checksLines = $state<string[]>([]);
+	let checksBusy = $state<'run' | 'cancel' | null>(null);
+	let checksError = $state<string | null>(null);
+	let tailOffset = 0;
+	let watchToken = 0;
+
+	function sleep(ms: number): Promise<void> {
+		return new Promise((r) => setTimeout(r, ms));
+	}
 
 	const v = (x: Version) => (typeof x === 'string' ? x : `${x.Major}.${x.Minor}.${x.Patch}`);
 	const criteria = $derived(item ? criteriaOf(item.body) : []);
@@ -118,10 +152,138 @@
 			get<Preview>(`/api/items/${target}/acceptance`)
 				.then((p) => (preview = p))
 				.catch((e) => (previewError = e instanceof Error ? e.message : String(e)));
+		void loadChecks(target);
 	}
 	$effect(() => {
 		void load(id);
 	});
+
+	async function refreshChecksStatus(target: string, token: number) {
+		try {
+			const r = await api(`/api/items/${target}/checks`);
+			const data = await r.json();
+			if (token !== watchToken) return;
+			if (r.ok) {
+				checksEnabled = data.checks_enabled === true;
+				checksRun = data as ChecksRun;
+			}
+		} catch {
+			// leave the last known state showing rather than clear it
+		}
+	}
+
+	function resetChecks() {
+		// A separate function, not an inline assignment in loadChecks: assigning
+		// checksRun = null there and reading it after the await below tripped a
+		// TypeScript 6.0 control-flow bug (narrows the read to `never`).
+		checksRun = null;
+		checksLines = [];
+		checksError = null;
+		checksBusy = null;
+		tailOffset = 0;
+	}
+
+	async function loadChecks(target: string) {
+		const token = ++watchToken;
+		resetChecks();
+		await refreshChecksStatus(target, token);
+		if (token === watchToken && checksRun?.running) void watchChecks(target, token);
+	}
+
+	// Drives the live output while a run is active: checks.status for the
+	// summary (which check, pass/fail so far), checks.tail in a loop for
+	// the output — each call returns once it has new content or its own
+	// wait elapses, then the client calls again with the returned offset
+	// (review.ts's readNdjson reads the same NDJSON shape accept already
+	// uses). Stops itself once running is false.
+	async function watchChecks(target: string, token: number) {
+		while (token === watchToken) {
+			await refreshChecksStatus(target, token);
+			if (token !== watchToken || !checksRun?.running) return;
+			let ok = true;
+			try {
+				const r = await api(`/api/items/${target}/checks/tail?from=${tailOffset}`);
+				if (!r.ok) {
+					const data = await r.json().catch(() => ({}));
+					if (token === watchToken) checksError = data.error ?? r.statusText;
+					return;
+				}
+				await readNdjson(r, (l) => {
+					if (token !== watchToken) return;
+					if (l.event === 'line') checksLines = [...checksLines, String(l.text)];
+					else if (l.event === 'done') tailOffset = Number(l.offset) || tailOffset;
+					else if (l.event === 'error') {
+						checksError = String(l.error);
+						ok = false;
+					}
+				});
+			} catch (e) {
+				if (token === watchToken) checksError = e instanceof Error ? e.message : String(e);
+				return;
+			}
+			if (!ok) return;
+		}
+	}
+
+	async function runChecks() {
+		if (checksBusy || !item) return;
+		checksBusy = 'run';
+		checksError = null;
+		checksLines = [];
+		tailOffset = 0;
+		const target = id;
+		// flai checks run blocks until the whole sequence ends, real minutes:
+		// race the request against a short wait and fall back to polling and
+		// tailing rather than waiting on this response, the same shape
+		// HostPanel's own restart/upgrade already uses for a slow action.
+		const attempt = api(`/api/items/${target}/checks`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ action: 'run' })
+		})
+			.then(async (r) => ({ ok: r.ok, body: await r.json().catch(() => ({})) }))
+			.catch((e) => ({ ok: false, body: { error: e instanceof Error ? e.message : String(e) } }));
+		const outcome = await Promise.race([attempt, sleep(1500).then(() => 'started' as const)]);
+		checksBusy = null;
+		if (outcome !== 'started' && !outcome.ok) {
+			checksError = (outcome.body as { error?: string })?.error ?? 'could not start the checks run';
+			return;
+		}
+		const token = watchToken;
+		await refreshChecksStatus(target, token);
+		void watchChecks(target, token);
+		if (outcome === 'started') {
+			// The write had not answered within the short wait: it is still
+			// running for real, so once it eventually does, take one more look
+			// in case watchChecks's own loop had already stopped on a transient
+			// tail error before the run was actually done.
+			void attempt.then(() => {
+				if (token === watchToken) void refreshChecksStatus(target, token);
+			});
+		}
+	}
+
+	async function cancelChecks() {
+		if (checksBusy || !item) return;
+		checksBusy = 'cancel';
+		checksError = null;
+		const target = id;
+		try {
+			const r = await api(`/api/items/${target}/checks`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'cancel' })
+			});
+			const data = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				checksError = data.error ?? r.statusText;
+				return;
+			}
+			await refreshChecksStatus(target, watchToken);
+		} finally {
+			checksBusy = null;
+		}
+	}
 
 	async function accept() {
 		if (!canAccept) return;
@@ -397,6 +559,81 @@
 				{/if}
 			{:else if !writable && inReview}
 				<p class="mt-3 text-xs text-muted">Read-only: flai is not available to this dashboard.</p>
+			{/if}
+		</section>
+	{/if}
+
+	{#if inReview || checksRun?.started}
+		<section
+			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="checks-section"
+		>
+			<h2 class="mb-2 font-medium">Checks</h2>
+			{#if checksError}
+				<p
+					class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"
+					role="alert"
+					data-testid="checks-error"
+				>
+					{checksError}
+				</p>
+			{/if}
+			{#if checksRun?.started}
+				<p data-testid="checks-summary">
+					{#if checksRun.running}
+						Running {checksRun.current}, started {checksRun.started}.
+					{:else}
+						{checksRun.outcome}, started {checksRun.started}, ended {checksRun.ended}.
+					{/if}
+				</p>
+				{#if checksRun.steps?.length}
+					<ul class="mt-1 ml-4 list-disc">
+						{#each checksRun.steps as s (s.name)}
+							<li>
+								{s.name}: {s.exit == null
+									? 'did not start'
+									: s.exit === 0
+										? 'ok'
+										: `exit ${s.exit}`}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				{#if checksLines.length}
+					<pre
+						class="mt-2 max-h-64 overflow-y-auto rounded bg-ground p-2 font-mono text-xs whitespace-pre-wrap"
+						data-testid="checks-output">{checksLines.join('\n')}</pre>
+				{/if}
+			{:else if checksEnabled}
+				<p class="text-muted">No checks have run yet.</p>
+			{/if}
+
+			{#if !checksEnabled}
+				<p class="mt-2 text-muted">
+					Off: the operator turns this on in a shell on the host with
+					<code class="rounded bg-ground px-1 text-ink">flai serve enable checks</code>.
+				</p>
+			{:else if writable && inReview}
+				<p class="mt-3 flex flex-wrap gap-2">
+					{#if checksRun?.running}
+						<button
+							type="button"
+							class="rounded border border-warn px-2 py-1 text-warn disabled:opacity-60"
+							onclick={cancelChecks}
+							disabled={checksBusy !== null}
+							data-testid="checks-cancel"
+							>{checksBusy === 'cancel' ? 'Cancelling…' : 'Cancel'}</button
+						>
+					{:else}
+						<button
+							type="button"
+							class="rounded border border-line px-2 py-1 disabled:opacity-60"
+							onclick={runChecks}
+							disabled={checksBusy !== null}
+							data-testid="checks-run">{checksBusy === 'run' ? 'Starting…' : 'Run checks'}</button
+						>
+					{/if}
+				</p>
 			{/if}
 		</section>
 	{/if}
