@@ -96,7 +96,8 @@ func (d Dir) updateAgent(root string, change func(*AgentState)) {
 	_ = d.write(d.agents(), all)
 }
 
-var storyID = regexp.MustCompile(`^S-\d{3,}$`)
+// StoryID matches a story ID: S-, then three or more digits.
+var StoryID = regexp.MustCompile(`^S-\d{3,}$`)
 
 // launcher starts agents for one project.
 type launcher struct {
@@ -247,7 +248,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story string) {
 		}
 		l.log("agent could not be started", "story", story, "command", run.Command, "err", run.Error)
 	}
-	if !storyID.MatchString(story) {
+	if !StoryID.MatchString(story) {
 		fail(fmt.Errorf("%q is not a story's ID", story))
 		return
 	}

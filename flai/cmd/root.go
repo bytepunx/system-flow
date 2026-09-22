@@ -36,7 +36,7 @@ type app struct {
 	cwd             string                             // tests override the working directory
 	clock           func() time.Time                   // tests override the clock
 	healthProbe     func(url string) bool              // tests fake the dashboard upgrade's health check
-	sleep           func(d time.Duration)              // tests skip the dashboard upgrade's poll delay
+	sleep           func(d time.Duration)              // tests skip a real poll delay (dashboard upgrade, checks cancel)
 }
 
 // Execute runs the CLI and returns the process exit code.
@@ -128,7 +128,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 		newVersionCmd(a), newSelfUpgradeCmd(a), newConfigCmd(a), newNewCmd(a), newImportCmd(a), newUpgradeCmd(a), newTemplateCmd(a),
 		newItemCmd(a, "epic"), newItemCmd(a, "story"), newItemCmd(a, "task"), newShowCmd(a),
 		newMoveCmd(a), newBlockCmd(a), newUnblockCmd(a), newTouchesCmd(a), newEditCmd(a), newBoardCmd(a), newOrderCmd(a), newPushCmd(a),
-		newStreamCmd(a), newArchiveCmd(a), newMigrateCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a), newThreadCmd(a), newMCPCmd(a), newReleaseCmd(a), newAcceptCmd(a), newDashboardCmd(a), newDocCmd(a),
+		newStreamCmd(a), newArchiveCmd(a), newMigrateCmd(a), newCheckCmd(a), newStatsCmd(a), newPrimeCmd(a), newIssueCmd(a), newThreadCmd(a), newMCPCmd(a), newReleaseCmd(a), newAcceptCmd(a), newDashboardCmd(a), newDocCmd(a), newChecksCmd(a),
 	)
 	// Registered apart from the list above so that stories adding commands at
 	// the same time do not meet on one line.

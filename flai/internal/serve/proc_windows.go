@@ -5,6 +5,7 @@ package serve
 import (
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -24,4 +25,13 @@ func Terminate(pid int) error {
 		return err
 	}
 	return p.Kill()
+}
+
+// TerminateGroup stops the process and its tree (S-0082): Windows has no
+// gentler signal, so this is the same as KillGroup.
+func TerminateGroup(pid int) error { return KillGroup(pid) }
+
+// KillGroup forces the process and everything it spawned to stop.
+func KillGroup(pid int) error {
+	return exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid)).Run()
 }

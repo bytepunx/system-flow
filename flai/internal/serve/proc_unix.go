@@ -28,3 +28,22 @@ func Terminate(pid int) error {
 	}
 	return p.Signal(syscall.SIGTERM)
 }
+
+// TerminateGroup asks the process group led by pid to stop (S-0082): Detach
+// makes a detached process its own session and group leader, so a signal to
+// the negative of its PID reaches it and everything it spawned, not just
+// the one process.
+func TerminateGroup(pid int) error {
+	if pid <= 0 {
+		return os.ErrInvalid
+	}
+	return syscall.Kill(-pid, syscall.SIGTERM)
+}
+
+// KillGroup forces the process group led by pid to stop.
+func KillGroup(pid int) error {
+	if pid <= 0 {
+		return os.ErrInvalid
+	}
+	return syscall.Kill(-pid, syscall.SIGKILL)
+}
