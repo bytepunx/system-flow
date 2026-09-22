@@ -24,6 +24,19 @@ type fakeRunner struct {
 	noToken  bool   // gh has no token
 	identity bool   // git config has a user
 	mounts   string // mount destinations of a running container, one per line
+
+	imageIDs       map[string]string // ref -> the image ID a pull or inspect of it reports now; default sha256:<ref>
+	containerRef   map[string]string // container name -> the ref it was last started with
+	containerImage map[string]string // container name -> the image ID it was started from (a snapshot, not re-derived, so a later change to imageIDs is a real difference a check can find)
+	probeAddr      string            // host:port `docker port` reports for the upgrade probe container; default 127.0.0.1:19999
+}
+
+// idFor is the image ID a pull or inspect of ref reports right now.
+func (f *fakeRunner) idFor(ref string) string {
+	if id, ok := f.imageIDs[ref]; ok {
+		return id
+	}
+	return "sha256:" + ref
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -75,10 +88,14 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 	}
 	switch args[0] {
 	case "image":
-		if f.images[args[2]] {
-			return "[]", nil
+		ref := args[2]
+		if !f.images[ref] {
+			return "", fmt.Errorf("docker image inspect %s: exit status 1\nError: No such image", ref)
 		}
-		return "", fmt.Errorf("docker image inspect %s: exit status 1\nError: No such image", args[2])
+		if len(args) >= 5 && args[3] == "--format" && args[4] == "{{.Id}}" {
+			return f.idFor(ref), nil
+		}
+		return "[]", nil
 	case "pull":
 		if f.private[args[2]] && !f.loggedIn {
 			return "", fmt.Errorf("docker pull --quiet %s: exit status 1\nError response from daemon: error from registry: unauthorized", args[2])
@@ -89,7 +106,16 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		f.images[args[4]] = true
 		return "sha256:built", nil
 	case "run":
-		f.running[args[4]] = true
+		name, ref := args[4], args[len(args)-1]
+		f.running[name] = true
+		if f.containerRef == nil {
+			f.containerRef = map[string]string{}
+		}
+		if f.containerImage == nil {
+			f.containerImage = map[string]string{}
+		}
+		f.containerRef[name] = ref
+		f.containerImage[name] = f.idFor(ref)
 		return "0123456789abcdef", nil
 	case "ps":
 		name := strings.TrimSuffix(strings.TrimPrefix(args[len(args)-1], "name=^/"), "$")
@@ -98,13 +124,27 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		return "", nil
 	case "inspect":
+		if len(args) >= 3 && args[1] == "--format" && args[2] == "{{.Image}}" {
+			return f.containerImage[args[len(args)-1]], nil
+		}
 		if strings.Contains(strings.Join(args, " "), ".Mounts") {
 			return f.mounts, nil
+		}
+		if ref, ok := f.containerRef[args[len(args)-1]]; ok {
+			return ref + " 5555", nil
 		}
 		return "ghcr.io/bytepunx/flaiover:0.2.0 5555", nil
 	case "stop":
 		delete(f.running, args[1])
 		return args[1], nil
+	case "rm":
+		delete(f.running, args[len(args)-1])
+		return "", nil
+	case "port":
+		if f.probeAddr != "" {
+			return f.probeAddr, nil
+		}
+		return "127.0.0.1:19999", nil
 	case "logs":
 		return "hello from container", nil
 	}
@@ -113,11 +153,27 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 
 func runWith(t *testing.T, dir string, r *fakeRunner, args ...string) (string, string, int) {
 	t.Helper()
+	return runWithApp(t, &app{cwd: dir, runner: r}, args...)
+}
+
+// runWithApp is runWith for a test that needs to set more of app than the
+// runner: an upgrade test fakes healthProbe and sleep so a health check
+// that never succeeds does not make the test wait for real.
+func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
+	t.Helper()
 	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: dir, runner: r, clock: func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) },
+	a.out, a.errOut = &out, &errOut
+	if a.clock == nil {
+		a.clock = func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) }
+	}
+	if a.serveStarter == nil {
 		// No test starts a real flai serve: the test binary is not flai.
-		serveStarter: func() (serve.Status, bool, error) { return serve.Status{PID: 4242}, true, nil }}
+		a.serveStarter = func() (serve.Status, bool, error) { return serve.Status{PID: 4242}, true, nil }
+	}
+	if a.sleep == nil {
+		a.sleep = func(time.Duration) {} // tests never wait for a real interval
+	}
 	root := newRootCmdWith(a)
 	root.SetArgs(args)
 	code := 0
@@ -345,5 +401,189 @@ func TestDashboardPushKeyIsRetired(t *testing.T) {
 	}
 	if help, _, _ := runWith(t, root, f, "dashboard", "--help"); strings.Contains(help, "push-key") {
 		t.Error("the retired flags are hidden")
+	}
+}
+
+// T-0322: flai dashboard restart, check, upgrade.
+
+func dashboardProject(t *testing.T) string {
+	t.Helper()
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n  tag: latest\n"), 0o644)
+	return root
+}
+
+func TestDashboardRestartStartsWhenNotRunning(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
+	if code != 0 {
+		t.Fatalf("restart: %d %s", code, errOut)
+	}
+	if !f.running["flaiover"] {
+		t.Error("not started")
+	}
+	if !strings.Contains(out, "started flaiover") {
+		t.Errorf("output: %s", out)
+	}
+}
+
+func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	ranRef := f.containerRef["flaiover"]
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"} // a newer build under the same tag
+	f.calls = nil                                                                      // only the restart's own calls matter below
+	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
+	if code != 0 {
+		t.Fatalf("restart: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "restarted flaiover") {
+		t.Errorf("output: %s", out)
+	}
+	if f.containerRef["flaiover"] != ranRef {
+		t.Errorf("restart used %s, want the ref it was already running, %s (a plain restart must never silently upgrade)", f.containerRef["flaiover"], ranRef)
+	}
+	joined := strings.Join(f.calls, "\n")
+	if strings.Count(joined, "docker pull") != 0 {
+		t.Errorf("restart pulled; it should reuse the local image:\n%s", joined)
+	}
+}
+
+func TestDashboardCheckReportsNotRunningPlainly(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "check")
+	if code != 0 {
+		t.Fatalf("check: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "not running") {
+		t.Errorf("output: %s", out)
+	}
+}
+
+func TestDashboardCheckFindsNothingWhenAlreadyCurrent(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	out, errOut, code := runWith(t, root, f, "dashboard", "check", "--json")
+	if code != 0 {
+		t.Fatalf("check: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, `"upgrade_available": false`) {
+		t.Errorf("output: %s", out)
+	}
+}
+
+func TestDashboardCheckFindsAnUpdate(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	out, errOut, code := runWith(t, root, f, "dashboard", "check", "--json")
+	if code != 0 {
+		t.Fatalf("check: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, `"upgrade_available": true`) {
+		t.Errorf("output: %s", out)
+	}
+}
+
+func TestDashboardUpgradeStartsWhenNotRunning(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade")
+	if code != 0 {
+		t.Fatalf("upgrade: %d %s", code, errOut)
+	}
+	if !f.running["flaiover"] || !strings.Contains(out, "started flaiover") {
+		t.Errorf("not started: %s %s", out, errOut)
+	}
+}
+
+func TestDashboardUpgradeReportsAlreadyUpToDate(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { t.Fatal("no probe needed when already current"); return false }}
+	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
+	if code != 0 {
+		t.Fatalf("upgrade: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "already running") {
+		t.Errorf("output: %s", out)
+	}
+	if f.running[dashboardUpgradeProbeName] {
+		t.Error("no temporary container should have been started")
+	}
+}
+
+// dashboardUpgradeProbeName is the temporary container's name for the
+// fixture project's fixed container name.
+const dashboardUpgradeProbeName = "flaiover" + upgradeProbeSuffix
+
+func TestDashboardUpgradeSwapsToAHealthyNewImage(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	var probed []string
+	a := &app{cwd: root, runner: f, healthProbe: func(url string) bool { probed = append(probed, url); return true }}
+	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
+	if code != 0 {
+		t.Fatalf("upgrade: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "upgraded flaiover") {
+		t.Errorf("output: %s", out)
+	}
+	if len(probed) != 1 || !strings.HasSuffix(probed[0], "/_health") || !strings.HasPrefix(probed[0], "http://127.0.0.1:") {
+		t.Errorf("health probe: %v", probed)
+	}
+	if f.running[dashboardUpgradeProbeName] {
+		t.Error("the temporary container should have been stopped")
+	}
+	if !f.running["flaiover"] {
+		t.Error("the real container should be running again")
+	}
+	if f.containerImage["flaiover"] != "sha256:newer" {
+		t.Errorf("running image = %s, want the new one", f.containerImage["flaiover"])
+	}
+}
+
+func TestDashboardUpgradeLeavesThePreviousContainerRunningWhenTheNewOneNeverAnswersHealthy(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:broken"}
+	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { return false }}
+	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
+	if code == 0 {
+		t.Fatalf("upgrade should have failed: %s", out)
+	}
+	if !strings.Contains(errOut, "keeps running unchanged") {
+		t.Errorf("errOut: %s", errOut)
+	}
+	if !f.running["flaiover"] {
+		t.Fatal("the previous container must still be running")
+	}
+	if f.containerImage["flaiover"] == "sha256:broken" {
+		t.Error("the real container must not have been touched")
+	}
+	if f.running[dashboardUpgradeProbeName] {
+		t.Error("the temporary container should have been cleaned up")
 	}
 }

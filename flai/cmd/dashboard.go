@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -133,7 +131,8 @@ when they decide what the shared container is started with.`,
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
 	f.BoolVar(&noServe, "no-serve", false, "do not register the project with flai serve or start it; the dashboard then has no flai on the host to ask (ADR-0029)")
 	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
-	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a))
+	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a),
+		newDashboardRestartCmd(a), newDashboardCheckCmd(a), newDashboardUpgradeCmd(a))
 	return c
 }
 
@@ -321,20 +320,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	}
 	var id string
 	if !already {
-		// A port and two secrets, and nothing of any project (ADR-0031).
-		args := []string{"run", "--detach", "--rm", "--name", s.Name,
-			"--publish", fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort),
-		}
-		args = append(args, tokenArgs(dir)...)
-		args = append(args, agentKeyArgs(dir)...)
-		// The two secrets are files only this user can read, so the container
-		// runs as this user to read them. It owns nothing else there: no file
-		// of the host is within its reach to write as you (ADR-0031).
-		if runtime.GOOS != "windows" {
-			args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
-		}
-		args = append(args, s.ref())
-		id, err = a.runner.Run("", "docker", args...)
+		id, err = a.startContainer(dir, s.Name, fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort), s.ref())
 		if err != nil {
 			return err
 		}

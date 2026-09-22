@@ -35,6 +35,8 @@ type app struct {
 	serveStarter    func() (serve.Status, bool, error) // tests do not start a process
 	cwd             string                             // tests override the working directory
 	clock           func() time.Time                   // tests override the clock
+	healthProbe     func(url string) bool              // tests fake the dashboard upgrade's health check
+	sleep           func(d time.Duration)              // tests skip the dashboard upgrade's poll delay
 }
 
 // Execute runs the CLI and returns the process exit code.
@@ -90,6 +92,12 @@ func newRootCmd(out, errOut io.Writer) *cobra.Command {
 func newRootCmdWith(a *app) *cobra.Command {
 	if a.runner == nil {
 		a.runner = execx.System{}
+	}
+	if a.healthProbe == nil {
+		a.healthProbe = httpHealthProbe
+	}
+	if a.sleep == nil {
+		a.sleep = time.Sleep
 	}
 	out, errOut := a.out, a.errOut
 	root := &cobra.Command{
