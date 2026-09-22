@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // inProcess runs the flai commands behind the host's write methods in this
@@ -66,7 +68,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, dashboard, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, checks, dashboard, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -173,5 +175,111 @@ func TestServeAgentCommand(t *testing.T) {
 	}
 	if got := (&app{}).agentConfig(root); len(got.Command) != 0 {
 		t.Errorf("cleared: %+v", got)
+	}
+}
+
+// S-0082: the checks commands are the operator's, named argument lists with
+// no default, several at once, managed on the host and nowhere else.
+func TestServeChecksCommands(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, _, _ := runIn(t, root, "serve", "checks")
+	if !strings.Contains(out, "no command is named here; the manifest's own checks: is used instead") ||
+		!strings.Contains(out, "timeout: 15 minutes") || !strings.Contains(out, "off for this project") {
+		t.Errorf("by default: %s", out)
+	}
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "checks: off everywhere") || !strings.Contains(out, "in a story's worktree") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if _, _, code := runIn(t, root, "serve", "checks", "set", "--", "go", "test", "./..."); code == 0 {
+		t.Error("set needs --name")
+	}
+	if _, _, code := runIn(t, root, "serve", "checks", "set", "--name", "flai"); code == 0 {
+		t.Error("set needs a program")
+	}
+	out, errOut, code := runIn(t, root, "serve", "checks", "set", "--name", "flai", "--", "scripts/flai-test.sh")
+	if code != 0 || !strings.Contains(out, `flai: "scripts/flai-test.sh"`) {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	out, _, code = runIn(t, root, "serve", "checks", "set", "--name", "flaiover", "--", "bash", "-c", "cd flaiover; pnpm test")
+	if code != 0 || !strings.Contains(out, `flai: "scripts/flai-test.sh"`) || !strings.Contains(out, `flaiover: "bash" "-c" "cd flaiover; pnpm test"`) {
+		t.Fatalf("a second name adds, does not replace: %d %s", code, out)
+	}
+	out, _, code = runIn(t, root, "serve", "checks", "set", "--name", "flai", "--", "scripts/flai-test.sh", "--fast")
+	if code != 0 || !strings.Contains(out, `flai: "scripts/flai-test.sh" "--fast"`) || strings.Count(out, "flai:") != 1 {
+		t.Fatalf("the same name replaces: %d %s", code, out)
+	}
+	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	if !strings.Contains(string(cfg), `"cd flaiover; pnpm test"`) || !strings.Contains(string(cfg), `"name": "flaiover"`) {
+		t.Errorf("kept as an argument list, as written: %s", cfg)
+	}
+	if _, errOut, code := runIn(t, root, "config", "set", "checks.commands", "rm -rf /"); code == 0 {
+		t.Errorf("flai config set does not reach it: %s", errOut)
+	}
+	out, _, code = runIn(t, root, "serve", "checks", "timeout", "20")
+	if code != 0 || !strings.Contains(out, "timeout: 20 minutes") {
+		t.Fatalf("timeout: %d %s", code, out)
+	}
+	if _, _, code := runIn(t, root, "serve", "checks", "timeout", "0"); code == 0 {
+		t.Error("timeout must be positive")
+	}
+	runIn(t, root, "serve", "enable", "checks")
+	js, _, _ := runIn(t, root, "serve", "checks", "show", "--json")
+	if !strings.Contains(js, `"enabled_here": true`) || !strings.Contains(js, `"timeout_minutes": 20`) || !strings.Contains(js, `"flai"`) || !strings.Contains(js, `"flaiover"`) {
+		t.Errorf("show --json: %s", js)
+	}
+	if out, _, _ := runIn(t, root, "serve", "checks", "clear", "flai"); strings.Contains(out, `flai:`) || !strings.Contains(out, `flaiover:`) {
+		t.Errorf("clear one name: %s", out)
+	}
+	if out, _, _ := runIn(t, root, "serve", "checks", "clear"); !strings.Contains(out, "no command is named here") {
+		t.Errorf("clear with no name clears all: %s", out)
+	}
+}
+
+// S-0082: the host's own named commands are used when there are any; the
+// manifest's checks: only when the host names none. Never a merge.
+func TestChecksConfigResolvesHostOverManifest(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	runIn(t, root, "serve", "checks", "show") // creates the config file, as flai itself would
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &app{}
+
+	// nothing named anywhere
+	cc, err := a.checksConfig(repo)
+	if err != nil || len(cc.Commands) != 0 || cc.Enabled || cc.Timeout != serve.DefaultChecksTimeout {
+		t.Fatalf("nothing named: %+v %v", cc, err)
+	}
+
+	// the manifest names checks:, host config names none: the manifest's are used
+	manifestYAML := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" +
+		"checks:\n  - name: flai\n    command: [scripts/flai-test.sh]\n"
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(manifestYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo, err = workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cc, err = a.checksConfig(repo)
+	if err != nil || len(cc.Commands) != 1 || cc.Commands[0].Name != "flai" {
+		t.Fatalf("falls back to the manifest: %+v %v", cc, err)
+	}
+
+	// the host names a different one: the host's is used, not a merge
+	runIn(t, root, "serve", "checks", "set", "--name", "flaiover", "--", "true")
+	cc, err = a.checksConfig(repo)
+	if err != nil || len(cc.Commands) != 1 || cc.Commands[0].Name != "flaiover" {
+		t.Fatalf("the host's own commands, not merged with the manifest's: %+v %v", cc, err)
+	}
+	if cc.Enabled {
+		t.Error("still off until enabled")
+	}
+	runIn(t, root, "serve", "enable", "checks")
+	if cc, err := a.checksConfig(repo); err != nil || !cc.Enabled {
+		t.Errorf("enabled: %+v %v", cc, err)
 	}
 }

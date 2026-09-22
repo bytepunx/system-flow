@@ -171,11 +171,17 @@ const ActionAgent = "agent"
 // dashboard container with Docker on this host (S-0081).
 const ActionDashboard = "dashboard"
 
+// ActionChecks is the host action that runs the commands named in the
+// manifest or the host's configuration, in a story's worktree, and reports
+// the outcome (S-0082).
+const ActionChecks = "checks"
+
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
 	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
 	ActionAgent:     "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
+	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
 }
 
 // Host is what the host decides and records about host actions (ADR-0029).

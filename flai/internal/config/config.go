@@ -43,6 +43,11 @@ type Config struct {
 	// list that is run as it stands, never through a shell. Like HostActions
 	// it is not among Keys; flai serve agent manages it.
 	Agent AgentStart `json:"agent,omitzero"`
+	// Checks are the commands a story in review is checked with, once the
+	// checks action is enabled (S-0082). When Commands is empty the
+	// manifest's own checks: are used instead; this is not among Keys, and
+	// flai serve checks manages it.
+	Checks ChecksConfig `json:"checks,omitzero"`
 }
 
 // AgentStart is the command flai serve starts an agent with.
@@ -57,6 +62,24 @@ type AgentStart struct {
 	// project to count as attended; 6 when zero, one more than the longest
 	// an agent holds wait_for_events.
 	AttendedMinutes int `json:"attended_minutes,omitempty"`
+}
+
+// ChecksConfig is the operator's say about running checks for a story in
+// review, on this host.
+type ChecksConfig struct {
+	// Commands are the named checks, run in order, in the story's worktree.
+	// Empty means: use the manifest's checks: instead.
+	Commands []NamedCommand `json:"commands,omitempty"`
+	// TimeoutMinutes bounds one run of every command together; 15 when zero.
+	TimeoutMinutes int `json:"timeout_minutes,omitempty"`
+}
+
+// NamedCommand is one command by name: an argument list, run as it stands,
+// never through a shell. In an argument, {story} is replaced by the story's
+// ID and {root} by the directory it runs in; nothing else is interpreted.
+type NamedCommand struct {
+	Name    string   `json:"name"`
+	Command []string `json:"command"`
 }
 
 // AllProjects stands for every project in HostActions.

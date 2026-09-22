@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -177,5 +178,35 @@ func TestHostActions(t *testing.T) {
 	}
 	if _, err := c.Set("host_actions.push", "*"); err == nil {
 		t.Error("flai config set refuses the key")
+	}
+}
+
+// S-0082: checks round-trips as a list of named argument lists, and, like
+// agent, stays out of Keys() and unreachable by flai config set.
+func TestChecksRoundTrip(t *testing.T) {
+	c := Default()
+	if len(c.Checks.Commands) != 0 || c.Checks.TimeoutMinutes != 0 {
+		t.Fatalf("nothing named by default: %+v", c.Checks)
+	}
+	c.Checks.Commands = []NamedCommand{{Name: "flai", Command: []string{"scripts/flai-test.sh"}}}
+	c.Checks.TimeoutMinutes = 20
+	data, err := json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Checks.Commands) != 1 || got.Checks.Commands[0].Name != "flai" || got.Checks.TimeoutMinutes != 20 {
+		t.Errorf("round trip: %+v", got.Checks)
+	}
+	for _, k := range Keys() {
+		if strings.HasPrefix(k, "checks") {
+			t.Error("flai config set cannot reach checks: only flai serve checks does")
+		}
+	}
+	if _, err := Default().Set("checks.timeout_minutes", "5"); err == nil {
+		t.Error("flai config set refuses the key, at least while nothing is named yet")
 	}
 }

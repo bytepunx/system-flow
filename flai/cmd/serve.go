@@ -92,7 +92,7 @@ in a folder named serve beside flai's config file.`,
 				return nil
 			},
 		},
-		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeJournalCmd(a), newServeAgentCmd(a),
+		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeChecksCmd(a),
 		&cobra.Command{
 			Use:   "status",
 			Short: "Whether flai serve runs, which projects it serves, and which dashboards have it connected",

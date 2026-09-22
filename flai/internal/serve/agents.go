@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -252,10 +251,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story string) {
 		fail(fmt.Errorf("%q is not a story's ID", story))
 		return
 	}
-	argv := make([]string, len(cfg.Command))
-	for i, a := range cfg.Command {
-		argv[i] = strings.NewReplacer("{story}", story, "{root}", l.entry.Root).Replace(a)
-	}
+	argv := Substitute(cfg.Command, story, l.entry.Root)
 	logDir := filepath.Join(string(l.dir), "agents")
 	if err := os.MkdirAll(logDir, 0o700); err != nil {
 		fail(err)

@@ -29,6 +29,19 @@ type Manifest struct {
 	Layout      map[string]string `yaml:"layout"`
 	Projects    []Project         `yaml:"projects"`
 	Dashboard   Dashboard         `yaml:"dashboard"`
+	// Checks are the commands a story in review is checked with, in the
+	// story's worktree, in order (S-0082). Used only when the host's own
+	// configuration names none: that is the operator's choice of where to
+	// name them, not a merge of both.
+	Checks []NamedCommand `yaml:"checks,omitempty" json:"checks,omitempty"`
+}
+
+// NamedCommand is one command by name: an argument list, run as it stands,
+// never through a shell. In an argument, {story} is replaced by the story's
+// ID and {root} by the directory it runs in; nothing else is interpreted.
+type NamedCommand struct {
+	Name    string   `yaml:"name" json:"name"`
+	Command []string `yaml:"command" json:"command"`
 }
 
 // Template records which template produced the project.
