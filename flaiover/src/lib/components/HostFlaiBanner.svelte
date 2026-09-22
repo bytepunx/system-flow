@@ -20,13 +20,15 @@
 					it. On the host, upgrade flai, then run <code>flai dashboard stop</code> and
 					<code>flai dashboard</code> in the project.
 				</p>
+			{:else if status.connected}
+				<p class="font-medium">flai on the host is connected, but the project cannot be shown.</p>
+				<p class="mt-1">{status.error}</p>
 			{:else}
 				<p class="font-medium">No flai on the host is connected, so the project cannot be shown.</p>
 				<p class="mt-1">
 					On the host, run <code>flai dashboard</code> in the project, or
-					<code>flai serve start</code>; <code>flai serve status</code> says why it is not
-					connected. This page recovers by itself when it is.
-					{#if status.error}<span class="text-muted">({status.error})</span>{/if}
+					<code>flai serve start</code>; <code>flai serve status</code> says why it is not connected.
+					This page recovers by itself when it is.
 				</p>
 			{/if}
 		</div>

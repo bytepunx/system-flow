@@ -17,6 +17,13 @@
 			title={`flai ${status.flai ?? ''} on the host, connected since ${status.since ?? ''}`}
 			>host flai: connected</a
 		>
+	{:else if status.connected}
+		<a
+			href={resolve('/host')}
+			class="rounded border border-warn bg-warn-soft px-2 py-1 text-xs no-underline"
+			data-host-flai="outdated"
+			title={status.error ?? ''}>host flai: outdated</a
+		>
 	{:else}
 		<a
 			href={resolve('/host')}

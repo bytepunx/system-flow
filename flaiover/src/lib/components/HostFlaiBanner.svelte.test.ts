@@ -29,11 +29,41 @@ describe('HostFlaiBanner', () => {
 		expect(text).toContain('flai dashboard');
 		expect(text).toContain('flai serve start');
 		expect(text).toContain('flai serve status');
+		unmount(c);
+	});
 
-		// connected but not answering is not usable either, and the reason is shown
+	// Found live (S-0086): a flai still running an old in-memory version after the binary on disk
+	// was upgraded reported as "not connected" to the operator, when /api/agent already carried the
+	// true story (connected: true, and why it cannot be used). A connected flai never gets the
+	// not-connected wording, whatever the reason it cannot be used.
+	it('tells a connected flai that lacks what the dashboard needs apart from one never connected', () => {
+		const c = mount(HostFlaiBanner, { target: document.body });
+		hostFlai.status = {
+			configured: true,
+			connected: true,
+			flai: '1.7.0',
+			error:
+				'flai 1.7.0 on the host is older than this dashboard and lacks 2 of the things it asks for (checks.run, checks.cancel); upgrade flai on the host, then run flai serve stop and flai dashboard'
+		};
+		flushSync();
+		const text = banner()?.textContent ?? '';
+		expect(text).toContain('flai on the host is connected');
+		expect(text).not.toContain('No flai on the host is connected');
+		expect(text).toContain('1.7.0');
+		expect(text).toContain('checks.run');
+		expect(text).toContain('flai serve stop');
+		unmount(c);
+	});
+
+	// Connected but not answering (a timeout, say) is the same "connected but unusable" shape,
+	// whatever the reason in status.error.
+	it('shows a connected flai that failed to answer the same way, not as not-connected', () => {
+		const c = mount(HostFlaiBanner, { target: document.body });
 		hostFlai.status = { configured: true, connected: true, error: 'did not answer in time' };
 		flushSync();
-		expect(banner()?.textContent).toContain('did not answer in time');
+		const text = banner()?.textContent ?? '';
+		expect(text).not.toContain('No flai on the host is connected');
+		expect(text).toContain('did not answer in time');
 		unmount(c);
 	});
 
