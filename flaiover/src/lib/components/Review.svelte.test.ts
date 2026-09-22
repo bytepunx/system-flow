@@ -70,6 +70,7 @@ function backend(over: {
 	checksRun?: () => unknown;
 	checksCancel?: () => unknown;
 	checksTail?: () => unknown;
+	narrative?: string;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
@@ -116,7 +117,7 @@ function backend(over: {
 				}
 			);
 		if (url.startsWith('/api/board')) return json({ writable: true });
-		if (url.startsWith('/api/docs/file')) return json({ body: NARRATIVE });
+		if (url.startsWith('/api/docs/file')) return json({ body: over.narrative ?? NARRATIVE });
 		if (url.startsWith('/api/threads')) return json([]);
 		if (url.startsWith('/api/items/')) return json({ item: over.item ?? STORY, children: [] });
 		return json({});
@@ -148,7 +149,7 @@ describe('Review', () => {
 		expect(text).toContain('1 of 2 checked');
 		expect(text).toContain('not checked: Accept as the designer');
 		expect(text).toContain('All tasks done.');
-		expect(text).toContain('1. Accept.');
+		expect(text).toContain('Accept.');
 		expect(text).toContain('story/S-0041');
 		expect(text).toContain('docs/a.md');
 		expect(text).toContain('0.12.1 → 0.13.0');
@@ -415,5 +416,21 @@ describe('Review', () => {
 				'already active'
 			);
 		});
+	});
+
+	// Found live (S-0088): the narrative pane showed markdown as literal text ("1. Accept.", "**x**")
+	// instead of rendering it, unlike every other place in the dashboard that shows a document body.
+	it('renders markdown in the narrative pane rather than showing it as literal text', async () => {
+		backend({
+			narrative:
+				'# S-0041\n\n## Current state\n**All** tasks done.\n\n## Next steps\n1. Accept.\n2. Then archive.\n\n## Decisions\n'
+		});
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		const strong = document.querySelector('strong');
+		expect(strong?.textContent).toBe('All');
+		const items = [...document.querySelectorAll('ol li')].map((li) => li.textContent);
+		expect(items).toEqual(['Accept.', 'Then archive.']);
+		expect(document.body.textContent).not.toContain('**All**');
 	});
 });

@@ -8,6 +8,9 @@
 	import { criteriaOf, readNdjson, sectionOf } from '$lib/review';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import Threads from '$lib/components/Threads.svelte';
+	import { render, enhance } from '$lib/markdown';
+	import { themeState } from '$lib/theme.svelte';
+	import { tick } from 'svelte';
 
 	type Item = {
 		id: string;
@@ -60,6 +63,9 @@
 
 	let item = $state<Item | null>(null);
 	let narrative = $state<string | null>(null);
+	let currentStateHtml = $state('');
+	let nextStepsHtml = $state('');
+	let narrativeContent: HTMLElement | undefined = $state();
 	let diff = $state<Record<string, unknown> | null>(null);
 	let diffError = $state<string | null>(null);
 	let preview = $state<Preview | null>(null);
@@ -124,10 +130,20 @@
 		return data as T;
 	}
 
+	async function renderNarrative(target: string): Promise<void> {
+		const docPath = `wip/agents/${target}.md`;
+		const body = narrative ?? '';
+		currentStateHtml = render(sectionOf(body, 'Current state') || '—', docPath);
+		nextStepsHtml = render(sectionOf(body, 'Next steps') || '—', docPath);
+		await tick();
+		if (narrativeContent) await enhance(narrativeContent, themeState.dark);
+	}
+
 	async function load(target: string) {
 		error = diffError = previewError = failure = null;
 		item = null;
 		narrative = diff = preview = result = null;
+		currentStateHtml = nextStepsHtml = '';
 		progress = [];
 		warnings = [];
 		try {
@@ -143,7 +159,10 @@
 			.then(async (r) => (pushEnabled = r.ok ? (await r.json()).push_enabled === true : false))
 			.catch(() => (pushEnabled = false));
 		get<{ body: string }>(`/api/docs/file?path=${encodeURIComponent(`wip/agents/${target}.md`)}`)
-			.then((d) => (narrative = d.body))
+			.then(async (d) => {
+				narrative = d.body;
+				await renderNarrative(target);
+			})
 			.catch(() => (narrative = ''));
 		get<Record<string, unknown>>(`/api/items/${target}/diff`)
 			.then((d) => (diff = d))
@@ -419,10 +438,18 @@
 			{:else if !narrative}
 				<p class="text-muted">No narrative for this story.</p>
 			{:else}
-				<h3 class="text-xs font-medium text-muted">Current state</h3>
-				<p class="mb-2 whitespace-pre-wrap">{sectionOf(narrative, 'Current state') || '—'}</p>
-				<h3 class="text-xs font-medium text-muted">Next steps</h3>
-				<p class="whitespace-pre-wrap">{sectionOf(narrative, 'Next steps') || '—'}</p>
+				<div bind:this={narrativeContent}>
+					<h3 class="text-xs font-medium text-muted">Current state</h3>
+					<div class="prose mb-2 max-w-none">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
+						{@html currentStateHtml}
+					</div>
+					<h3 class="text-xs font-medium text-muted">Next steps</h3>
+					<div class="prose max-w-none">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
+						{@html nextStepsHtml}
+					</div>
+				</div>
 			{/if}
 		</section>
 	</div>
