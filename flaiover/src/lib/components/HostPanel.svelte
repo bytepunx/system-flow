@@ -57,11 +57,16 @@
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
-	// A restart or an upgrade that swaps to a new image stops the container answering this very
-	// request, so the fetch is raced against a short client-side timeout: whichever comes first,
-	// a network error or the timeout, is treated the same as "proceeding", not as a failure.
+	// Restart always stops the container answering this very request; a swapping upgrade does on
+	// success; stop does when this was the last project registered. All three fetches are raced
+	// against a short client-side timeout: whichever comes first, a network error or the timeout,
+	// is treated the same as "proceeding", not as a failure — found live (S-0081, T-0325): the
+	// first version of this page called plain fetch for stop and always waited to reconnect after
+	// upgrade, so an upgrade that changed nothing showed "Reconnected" for a container that was
+	// never touched, and a stop that was genuinely the last project threw an unhandled rejection
+	// instead of reporting anything.
 	async function fireAndExpectMaybeNoAnswer(
-		action: 'restart' | 'upgrade'
+		action: 'restart' | 'upgrade' | 'stop'
 	): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; body?: unknown } | 'gone'> {
 		const attempt = api('/api/dashboard', {
 			method: 'POST',
@@ -112,22 +117,25 @@
 				return;
 			}
 			if (action === 'stop') {
-				const r = await api('/api/dashboard', {
-					method: 'POST',
-					body: JSON.stringify({ action })
-				});
-				const body = await r.json().catch(() => ({}));
-				if (!r.ok) {
-					failed = body.error ?? r.statusText;
+				const outcome = await fireAndExpectMaybeNoAnswer('stop');
+				if (outcome === 'gone') {
+					// This was the last project: the container is genuinely gone, and with it
+					// this page's own way of reaching it again. Nothing to reconnect to.
+					message = 'Stopping: this was the last project, so the container is gone.';
 					return;
 				}
+				if (!outcome.ok) {
+					failed = (outcome.body as { error?: string })?.error ?? 'the action failed';
+					return;
+				}
+				const body = outcome.body as { container?: string; state?: string; serves?: string[] };
 				message =
 					body.state === 'stopped'
 						? `${body.container} stopped.`
 						: body.state === 'still-running'
 							? `Unregistered; still serving ${(body.serves ?? []).join(', ')}.`
 							: `${body.container} was not running.`;
-				await load();
+				if (body.state !== 'stopped') await load();
 				return;
 			}
 			const outcome = await fireAndExpectMaybeNoAnswer(action);
@@ -139,9 +147,17 @@
 				failed = (outcome.body as { error?: string })?.error ?? 'the action failed';
 				return;
 			}
-			// A clean response beat the container's own teardown: still confirm by reconnecting,
-			// since "upgraded" can still be mid-swap when the answer arrives.
-			await waitForReconnect(previousImage);
+			// A clean response beat the container's own teardown. Restart always cycles the
+			// container, so it always reconnects; upgrade only touched anything if it actually
+			// swapped — "up-to-date" or "started" never stopped what was already answering.
+			if (action === 'restart' || (outcome.body as { outcome?: string }).outcome === 'upgraded') {
+				await waitForReconnect(previousImage);
+				return;
+			}
+			message =
+				(outcome.body as { outcome?: string }).outcome === 'up-to-date'
+					? `${status?.container ?? 'flaiover'} is already running the latest.`
+					: 'Started.';
 		} finally {
 			busy = null;
 		}

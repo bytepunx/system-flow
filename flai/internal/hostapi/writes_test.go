@@ -391,3 +391,67 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 		}
 	}
 }
+
+// S-0081: dashboard.restart, dashboard.upgrade, and dashboard.stop can each
+// end the very WebSocket connection their own request arrived on (a restart
+// or a successful upgrade stops the container answering it; a stop does
+// when it is the last project). Found live: the connection dying cancelled
+// the request's context, which exec.CommandContext turned into a SIGINT to
+// the flai subprocess mid-restart, killing it between "stop the old
+// container" and "start the new one" and leaving nothing running at all.
+// These three specs now run with their own background context instead.
+func TestADashboardWriteSurvivesItsOwnConnectionDying(t *testing.T) {
+	p := withDocs(t)
+	host := Host{Enabled: func(a, _ string) bool { return a == ActionDashboard }}
+	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop"} {
+		t.Run(name, func(t *testing.T) {
+			parentCtx, cancelParent := context.WithCancel(context.Background())
+			t.Cleanup(cancelParent)
+			var sawCtx context.Context
+			run := func(ctx context.Context, r Run) (Ran, error) {
+				sawCtx = ctx
+				cancelParent() // the request's own connection dies, as a real restart's does
+				if ctx.Err() != nil {
+					t.Fatal("the command's context was already cancelled by the connection dying mid-run")
+				}
+				return Ran{Stdout: []byte(`{"container":"flaiover"}`)}, nil
+			}
+			if _, e := writeMethods(run, time.Now, host)[name](parentCtx, p, json.RawMessage(good[name].params)); e != nil {
+				t.Fatalf("%s: %+v", name, e)
+			}
+			// The real assertion already happened inside run, live, the moment
+			// the connection died: ctx.Err() was nil there, or the test failed
+			// with t.Fatal above. sawCtx is checked here only for identity —
+			// checking Err() this late would just see the method's own,
+			// entirely normal, deferred cancel of its own context on return,
+			// which happens whether or not the connection ever died.
+			if sawCtx == nil {
+				t.Fatal("run was never called")
+			}
+			if sawCtx == parentCtx {
+				t.Errorf("%s: ran with the request's own context, not a detached one", name)
+			}
+		})
+	}
+}
+
+// A method with no detachTimeout keeps the old behavior: its exec context is
+// the request's own, so a connection dying mid-run does cancel it. This
+// guards against detaching everything by accident.
+func TestAnOrdinaryWriteIsStillCancelledWithItsConnection(t *testing.T) {
+	p := withDocs(t)
+	parentCtx, cancelParent := context.WithCancel(context.Background())
+	defer cancelParent()
+	var sawCtx context.Context
+	run := func(ctx context.Context, r Run) (Ran, error) {
+		sawCtx = ctx
+		cancelParent()
+		return Ran{Stdout: []byte(`{"id":"S-0001"}`)}, nil
+	}
+	if _, e := writeMethods(run, time.Now, Host{})["item.move"](parentCtx, p, json.RawMessage(good["item.move"].params)); e != nil {
+		t.Fatalf("item.move: %+v", e)
+	}
+	if sawCtx.Err() == nil {
+		t.Error("an ordinary write's exec context should be the request's own and so get cancelled with it")
+	}
+}

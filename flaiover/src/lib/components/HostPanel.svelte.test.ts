@@ -177,4 +177,42 @@ describe('HostPanel', () => {
 			'Unregistered; still serving quay.'
 		);
 	});
+
+	// Found live (S-0081, T-0325): stopping the last project stops the very container answering
+	// the request, the same self-termination a restart causes; the first version of this
+	// component only raced that fetch for restart and upgrade, so a real "last project" stop
+	// threw an unhandled rejection instead of reporting anything.
+	it('treats a stop that drops the connection as the container genuinely gone, not a failure', async () => {
+		api.mockResolvedValueOnce(status());
+		c = mount(HostPanel, { target: document.body, props: fast });
+		flushSync();
+		await settle();
+		api.mockImplementationOnce(() => new Promise(() => {}));
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-stop"]')!.click();
+		await settleThrough(20);
+		expect(document.querySelector('[data-testid="host-panel-message"]')!.textContent).toContain(
+			'last project'
+		);
+		expect(document.querySelector('[data-testid="host-panel-reconnecting"]')).toBeNull();
+		expect(document.querySelector('[data-testid="host-panel-failed"]')).toBeNull();
+	});
+
+	// Found live: an upgrade that changed nothing (already current) still made the page say
+	// "Reconnected", implying a disruption that never happened, because it always waited to
+	// reconnect after any clean response.
+	it('does not claim a reconnect for an upgrade that touched nothing', async () => {
+		api.mockResolvedValueOnce(status());
+		c = mount(HostPanel, { target: document.body });
+		flushSync();
+		await settle();
+		api.mockResolvedValueOnce(
+			answer({ container: 'flaiover-s0325-scratch', outcome: 'up-to-date', to: 'a' })
+		);
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-upgrade"]')!.click();
+		await settle();
+		expect(document.querySelector('[data-testid="host-panel-message"]')!.textContent).toContain(
+			'already running the latest'
+		);
+		expect(document.querySelector('[data-testid="host-panel-reconnecting"]')).toBeNull();
+	});
 });

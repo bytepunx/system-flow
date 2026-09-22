@@ -233,6 +233,18 @@ type spec struct {
 	// dashboard.stop) sets its own. A failed call is always "failed",
 	// err.Message, whichever this is.
 	describe func(res any, err *channel.Error) (outcome, detail string)
+	// detachTimeout, when nonzero, runs the command with its own background
+	// context instead of the request's: a write whose own success can close
+	// the WebSocket connection the request arrived on (dashboard.restart
+	// stops the container answering it; dashboard.upgrade does on a
+	// successful swap; dashboard.stop does when it is the last project)
+	// must not be killed by that connection's own context cancelling out
+	// from under it (S-0081, found live: exec.CommandContext SIGKILLed the
+	// subprocess mid-restart when the container's own disconnect cancelled
+	// the request context that spawned it, leaving no container running at
+	// all). Progress still tries the original context; sending on a closed
+	// connection just fails silently (channel.Progress → send → conn.Write).
+	detachTimeout time.Duration
 }
 
 func text(v string) string { return strings.Join(strings.Fields(v), " ") }
@@ -912,13 +924,13 @@ func specs() map[string]spec {
 		// stream progress: they take real Docker time, unlike a move or an
 		// edit. Neither takes an image or tag from the dashboard; flai
 		// upgrades only to what this host's own configuration names.
-		"dashboard.restart": {action: ActionDashboard, progress: true, describe: describeDashboardRestart, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"dashboard.restart": {action: ActionDashboard, progress: true, describe: describeDashboardRestart, detachTimeout: 90 * time.Second, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
 			}
 			return []string{"dashboard", "restart"}, "", nil
 		}},
-		"dashboard.upgrade": {action: ActionDashboard, progress: true, describe: describeDashboardUpgrade, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"dashboard.upgrade": {action: ActionDashboard, progress: true, describe: describeDashboardUpgrade, detachTimeout: 6 * time.Minute, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
 			}
@@ -928,7 +940,7 @@ func specs() map[string]spec {
 		// dashboard.stop: the host action, the same command the operator's
 		// own flai dashboard stop runs: unregisters this project, and stops
 		// the container only when it was the last one registered.
-		"dashboard.stop": {action: ActionDashboard, describe: describeDashboardStop, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"dashboard.stop": {action: ActionDashboard, describe: describeDashboardStop, detachTimeout: 60 * time.Second, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
 			}
@@ -1062,9 +1074,19 @@ func writeMethods(run Runner, now func() time.Time, host Host) map[string]channe
 			if sp.progress {
 				r.OnEvent = func(ev map[string]any) { channel.Progress(ctx, ev) }
 			}
-			ran, err := run(ctx, r)
+			execCtx := ctx
+			if sp.detachTimeout > 0 {
+				var execCancel context.CancelFunc
+				execCtx, execCancel = context.WithTimeout(context.Background(), sp.detachTimeout)
+				defer execCancel()
+			}
+			ran, err := run(execCtx, r)
 			res, rerr := outcome(ran, err, sp.exits)
-			if key != "" && ctx.Err() == nil {
+			// A detached write's own ctx being cancelled is not news — it is
+			// the very connection this write's success can sever — so only
+			// the ordinary case still checks it: a cancelled, non-detached
+			// request is not cached, in case its result is a half-answer.
+			if key != "" && (sp.detachTimeout > 0 || ctx.Err() == nil) {
 				j.put(key, res, rerr)
 			}
 			if entry.Action = sp.action; entry.Action == "" && sp.uses != "" && host.enabled(sp.uses, p.Root) {
