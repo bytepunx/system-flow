@@ -22,7 +22,8 @@
 		{ href: resolve('/charts/[kind]', { kind: 'cycle-time' }), label: 'Charts' },
 		{ href: resolve('/docs/[...path]', { path: '' }), label: 'Docs' },
 		{ href: resolve('/adrs'), label: 'ADRs' },
-		{ href: resolve('/search'), label: 'Search' }
+		{ href: resolve('/search'), label: 'Search' },
+		{ href: resolve('/host'), label: 'Host' }
 	];
 	const modeLabel = {
 		system: 'theme: system',
