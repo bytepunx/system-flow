@@ -7,8 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0091
-  - S-0081
   - S-0082
   - S-0086
 ---
