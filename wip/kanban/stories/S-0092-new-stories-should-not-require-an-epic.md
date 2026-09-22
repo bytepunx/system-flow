@@ -3,12 +3,15 @@ id: S-0092
 type: story
 nature: improvement
 title: New stories should not require an epic
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-21T04:12:16Z
-updated: 2026-09-21T04:12:16Z
-transitions: []
+updated: 2026-09-22T22:39:04Z
+transitions:
+  - to: ready
+    at: 2026-09-22T22:39:04Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---

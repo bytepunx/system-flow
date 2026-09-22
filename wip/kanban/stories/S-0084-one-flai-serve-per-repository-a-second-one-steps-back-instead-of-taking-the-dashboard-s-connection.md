@@ -3,12 +3,15 @@ id: S-0084
 type: story
 nature: remediation
 title: "One flai serve per repository: a second one steps back instead of taking the dashboard's connection"
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-20T13:56:29Z
-updated: 2026-09-20T13:56:29Z
-transitions: []
+updated: 2026-09-22T23:46:11Z
+transitions:
+  - to: ready
+    at: 2026-09-22T23:46:11Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system, docs/operators]
 ---
