@@ -8,7 +8,7 @@ An agentic lean project management system that lives inside your monorepo. Desig
 curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
 ```
 
-The script detects your platform, downloads the latest release, verifies its checksum, and installs `flai` to `/usr/local/bin` (set `FLAI_INSTALL_DIR` to change that). While this repository is private, log in with `gh auth login` or set `GITHUB_TOKEN` first. Later, `flai self-upgrade` does the same from the installed binary. Details and alternatives: [docs/users/flai.md](docs/users/flai.md#install).
+The script detects your platform, downloads the latest release, verifies its checksum, and installs `flai` to `$HOME/.flai/bin` (set `FLAI_INSTALL_DIR` to change that), a directory you already own, so it never needs `sudo`. While this repository is private, log in with `gh auth login` or set `GITHUB_TOKEN` first. Later, `flai self-upgrade` does the same from the installed binary. Details and alternatives: [docs/users/flai.md](docs/users/flai.md#install).
 
 | I want to | Go to |
 |-----------|-------|

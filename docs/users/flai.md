@@ -16,11 +16,11 @@ One line on macOS or Linux:
 curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
 ```
 
-The script detects the OS and architecture, resolves the newest `flai/v*` release, downloads the archive and `checksums.txt`, verifies the SHA-256, and installs `flai` into `/usr/local/bin`, using `sudo` only when that directory is not writable. It ends by checking that the directory is on your `PATH`.
+The script detects the OS and architecture, resolves the newest `flai/v*` release, downloads the archive and `checksums.txt`, verifies the SHA-256, and installs `flai` into `$HOME/.flai/bin`, a directory you already own, alongside flai's own config and cache under `~/.flai`. No `sudo` is ever used. It ends by printing where it installed and, if `$HOME/.flai/bin` is not already on your `PATH`, a line to add to your shell profile.
 
 | Variable | Effect |
 |----------|--------|
-| `FLAI_INSTALL_DIR` | Install somewhere else, for example `$HOME/.local/bin` |
+| `FLAI_INSTALL_DIR` | Install somewhere else, for example `/usr/local/bin` (needs write access there already; the script does not use `sudo`) |
 | `FLAI_VERSION` | Pin a release, for example `1.0.3` |
 | `GITHUB_TOKEN` or `GH_TOKEN` | Authenticate against the GitHub API. While the repository is private one of these, or a `gh auth login` session, is required; the script borrows `gh auth token` when it can |
 
@@ -30,10 +30,10 @@ The script detects the OS and architecture, resolves the newest `flai/v*` releas
 flai self-upgrade --check      # installed and latest versions
 flai self-upgrade              # replace this binary with the latest release
 flai self-upgrade --version 1.0.3
-flai self-upgrade --dir /usr/local/bin
+flai self-upgrade --dir /some/other/directory
 ```
 
-`self-upgrade` performs the same steps as the script from inside the binary: resolve, download, verify, and replace the running executable atomically. It uses the same token sources. Without `--version` it does nothing when the installed version is already the latest.
+`self-upgrade` performs the same steps as the script from inside the binary: resolve, download, verify, and replace the running executable atomically. It uses the same token sources. Without `--version` it does nothing when the installed version is already the latest. With no `--dir` it replaces whichever binary is running, so once installed under `~/.flai/bin` an agent or a scheduled job can run `flai self-upgrade` itself, with no `sudo` and no extra configuration.
 
 ### Other ways
 

@@ -5,15 +5,16 @@
 #
 # Detects OS and architecture, resolves the newest flai/v* release, downloads
 # the archive and checksums.txt, verifies the SHA-256, and installs flai into
-# FLAI_INSTALL_DIR (default /usr/local/bin, with sudo when that is not
-# writable). While the repository is private the GitHub API needs a token:
-# GITHUB_TOKEN or GH_TOKEN, or a `gh auth login` session. `flai self-upgrade`
-# does the same from an installed binary.
+# FLAI_INSTALL_DIR (default $HOME/.flai/bin, alongside flai's own config and
+# cache under ~/.flai; ADR-0008). This is always a directory the user owns,
+# so no sudo is ever used or needed. While the repository is private the
+# GitHub API needs a token: GITHUB_TOKEN or GH_TOKEN, or a `gh auth login`
+# session. `flai self-upgrade` does the same from an installed binary.
 set -eu
 
 REPO="${FLAI_REPO:-bytepunx/system-flow}"
 BINARY="flai"
-INSTALL_DIR="${FLAI_INSTALL_DIR:-/usr/local/bin}"
+INSTALL_DIR="${FLAI_INSTALL_DIR:-$HOME/.flai/bin}"
 API="${FLAI_API:-https://api.github.com}"
 
 if [ -t 1 ]; then GREEN="\033[32m"; YELLOW="\033[33m"; RED="\033[31m"; RESET="\033[0m"; else GREEN=""; YELLOW=""; RED=""; RESET=""; fi
@@ -104,22 +105,19 @@ info "Checksum verified"
 tar -xzf "$TMP/$ARCHIVE" -C "$TMP" "$BINARY" || fatal "archive does not contain $BINARY"
 
 DEST="$INSTALL_DIR/$BINARY"
-if [ -d "$INSTALL_DIR" ] && [ -w "$INSTALL_DIR" ]; then
-  install -m 0755 "$TMP/$BINARY" "$DEST"
-elif [ ! -d "$INSTALL_DIR" ] && mkdir -p "$INSTALL_DIR" 2>/dev/null; then
-  install -m 0755 "$TMP/$BINARY" "$DEST"
-else
-  step "Installing to $DEST (sudo required)..."
-  sudo install -m 0755 "$TMP/$BINARY" "$DEST"
-fi
+mkdir -p "$INSTALL_DIR" 2>/dev/null || fatal "could not create $INSTALL_DIR (point FLAI_INSTALL_DIR at a directory you can write to)"
+install -m 0755 "$TMP/$BINARY" "$DEST" \
+  || fatal "could not install to $DEST (point FLAI_INSTALL_DIR at a directory you can write to)"
 info "Installed $DEST ($("$DEST" version 2>/dev/null | head -1))"
 
+PATH_LINE="export PATH=\"$INSTALL_DIR:\$PATH\""
 FOUND=$(command -v "$BINARY" 2>/dev/null || true)
 if [ "$FOUND" = "$DEST" ]; then
   info "flai $VERSION is ready; upgrade later with: flai self-upgrade"
 elif [ -n "$FOUND" ]; then
   warn "'command -v flai' resolves to $FOUND, not $DEST; an earlier PATH entry takes precedence"
 else
-  warn "$INSTALL_DIR is not on your PATH; add it to your shell profile:"
-  warn "  export PATH=\"$INSTALL_DIR:\$PATH\""
+  warn "$INSTALL_DIR is not on your PATH yet"
 fi
+step "add $INSTALL_DIR to your PATH by adding this line to your shell profile:"
+step "  $PATH_LINE"
