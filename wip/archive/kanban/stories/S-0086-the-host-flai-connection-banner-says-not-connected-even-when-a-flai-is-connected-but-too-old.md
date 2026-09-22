@@ -3,11 +3,11 @@ id: S-0086
 type: story
 nature: remediation
 title: The host flai connection banner says 'not connected' even when a flai is connected but too old
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-20T23:52:48Z
-updated: 2026-09-22T23:51:22Z
+updated: 2026-09-22T23:52:42Z
 transitions:
   - to: ready
     at: 2026-09-20T23:53:22Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-22T23:51:22Z
     by: system-flow
+  - to: done
+    at: 2026-09-22T23:52:42Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 ---
