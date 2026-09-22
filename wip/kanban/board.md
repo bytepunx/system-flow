@@ -9,6 +9,8 @@ wip_limits:
 order:
   - S-0082
   - S-0086
+  - S-0088
+  - S-0089
 ---
 
 # Board

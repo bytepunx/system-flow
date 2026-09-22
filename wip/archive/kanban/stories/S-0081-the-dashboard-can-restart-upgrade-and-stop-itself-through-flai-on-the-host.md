@@ -3,11 +3,11 @@ id: S-0081
 type: story
 nature: feature
 title: The dashboard can restart, upgrade, and stop itself through flai on the host
-status: in-progress
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-20T07:26:52Z
-updated: 2026-09-22T21:13:07Z
+updated: 2026-09-22T22:27:22Z
 transitions:
   - to: ready
     at: 2026-09-20T13:01:46Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-09-22T21:12:17Z
     by: system-flow
+  - to: review
+    at: 2026-09-22T22:26:32Z
+    by: system-flow
+  - to: done
+    at: 2026-09-22T22:27:22Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flaiover/src, design/system]
 ---
@@ -24,9 +30,9 @@ touches: [flai/cmd, flaiover/src, design/system]
 A host action for managing the dashboard from its own page: restart, pull and start a newer image, stop. Off until the operator enables it.
 
 ## Acceptance criteria
-- [ ] Restart, upgrade to the image tag the configuration names, and stop are host actions, enabled by name, journalled, and run by flai with the same code as `flai dashboard`
-- [ ] The page says what version runs, whether a newer one exists, and what the action will do; after a restart or upgrade the browser reconnects by itself and says what changed
-- [ ] An upgrade that fails leaves the previous container running, and the page says why
+- [x] Restart, upgrade to the image tag the configuration names, and stop are host actions, enabled by name, journalled, and run by flai with the same code as `flai dashboard`
+- [x] The page says what version runs, whether a newer one exists, and what the action will do; after a restart or upgrade the browser reconnects by itself and says what changed
+- [x] An upgrade that fails leaves the previous container running, and the page says why
 
 ## Tasks
 - T-0322 flai dashboard gets restart, check, and upgrade subcommands, upgrade a safe blue-green swap

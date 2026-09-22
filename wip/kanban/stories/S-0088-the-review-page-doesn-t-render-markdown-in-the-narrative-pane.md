@@ -3,12 +3,15 @@ id: S-0088
 type: story
 nature: remediation
 title: The Review page doesn't render markdown in the narrative pane
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-21T03:52:27Z
-updated: 2026-09-21T03:52:27Z
-transitions: []
+updated: 2026-09-22T21:46:27Z
+transitions:
+  - to: ready
+    at: 2026-09-22T21:46:27Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 ---

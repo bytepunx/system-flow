@@ -3,12 +3,24 @@ id: T-0324
 type: task
 nature: feature
 title: A host page shows the dashboard's own version and update state, with restart/upgrade/stop actions
-status: backlog
+status: done
 parent: S-0081
 owner: alex
 created: 2026-09-22T21:12:56Z
-updated: 2026-09-22T21:12:56Z
-transitions: []
+updated: 2026-09-22T21:47:41Z
+transitions:
+  - to: ready
+    at: 2026-09-22T21:37:09Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-22T21:37:09Z
+    by: system-flow
+  - to: review
+    at: 2026-09-22T21:47:41Z
+    by: system-flow
+  - to: done
+    at: 2026-09-22T21:47:41Z
+    by: system-flow
 stream: S-0081
 tags: []
 ---

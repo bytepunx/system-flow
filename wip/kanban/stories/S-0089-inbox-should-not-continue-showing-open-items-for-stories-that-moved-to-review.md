@@ -3,12 +3,15 @@ id: S-0089
 type: story
 nature: remediation
 title: Inbox should not continue showing open items for stories that moved to review
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-21T03:59:59Z
-updated: 2026-09-21T03:59:59Z
-transitions: []
+updated: 2026-09-22T21:46:29Z
+transitions:
+  - to: ready
+    at: 2026-09-22T21:46:29Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 ---

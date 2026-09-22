@@ -3,17 +3,23 @@ id: T-0323
 type: task
 nature: feature
 title: A dashboard host action gates restart, check, and upgrade over the channel, journalled like push and agent
-status: in-progress
+status: done
 parent: S-0081
 owner: alex
 created: 2026-09-22T21:12:43Z
-updated: 2026-09-22T21:22:50Z
+updated: 2026-09-22T21:36:53Z
 transitions:
   - to: ready
     at: 2026-09-22T21:22:49Z
     by: system-flow
   - to: in-progress
     at: 2026-09-22T21:22:50Z
+    by: system-flow
+  - to: review
+    at: 2026-09-22T21:36:53Z
+    by: system-flow
+  - to: done
+    at: 2026-09-22T21:36:53Z
     by: system-flow
 stream: S-0081
 tags: []

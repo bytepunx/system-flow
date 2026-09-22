@@ -3,12 +3,24 @@ id: T-0325
 type: task
 nature: feature
 title: "Tried end to end: restart, a real upgrade swap, a failed upgrade, and stop, against real Docker"
-status: backlog
+status: done
 parent: S-0081
 owner: alex
 created: 2026-09-22T21:13:07Z
-updated: 2026-09-22T21:22:45Z
-transitions: []
+updated: 2026-09-22T22:25:38Z
+transitions:
+  - to: ready
+    at: 2026-09-22T21:47:48Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-22T21:47:48Z
+    by: system-flow
+  - to: review
+    at: 2026-09-22T22:25:38Z
+    by: system-flow
+  - to: done
+    at: 2026-09-22T22:25:38Z
+    by: system-flow
 stream: S-0081
 tags: []
 ---
