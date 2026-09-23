@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -17,12 +18,17 @@ func newPushCmd(a *app) *cobra.Command {
 		Use:   "push --pending",
 		Short: "Push an acceptance that was made and not pushed",
 		Long: `An acceptance made where there is no git credential, such as the dashboard
-container without a push key, is committed and tagged in the clone and not
-pushed. Run this on the host, with your own credentials: when the main
-checkout's branch is ahead of its remote-tracking branch and the commits
-ahead include an acceptance, it pushes the branch and the tags on those
-commits. It never forces. When the remote has commits this clone lacks it
-refuses and says to fetch and merge first.
+container without a push key, is committed in the clone and not pushed.
+flai accept computes no release and creates no tag (S-0087): before
+deciding what to push, this tags everything release.Pending finds
+accumulated and unreleased since each component's last tag (the same
+computation flai release --pending uses), applies the version bump, and
+commits it, so a release is never a separate step someone has to remember
+(S-0094). Run this on the host, with your own credentials: when the main
+checkout's branch is then ahead of its remote-tracking branch and the
+commits ahead include an acceptance or a release just tagged here, it
+pushes the branch and the tags together. It never forces. When the remote
+has commits this clone lacks it refuses and says to fetch and merge first.
 
 --publish also publishes each template component whose version those
 commits moved, as flai template push --tag does, after the push and never
@@ -42,12 +48,41 @@ told by the MCP inbox.`,
 				return err
 			}
 			root := mainRootOf(repo)
+
+			// Tag whatever release has accumulated before deciding what to
+			// push (S-0094): flai accept computes none of this (S-0087), so
+			// this is the one place it happens, and it happens before the
+			// push below, not as a separate step someone has to remember.
+			// A dry run only previews the plan; nothing is applied or tagged.
+			var plans []*release.PendingPlan
+			var newTags []string
+			if dryRun {
+				plans, err = release.Pending(a.runner, root, repo.Manifest, repo)
+			} else {
+				plans, newTags, err = a.computeApplyAndTagPending(root, repo)
+			}
+			if err != nil {
+				return err
+			}
+
 			u := pending.Detect(a.runner, root)
 			result := map[string]any{"pushed": false}
+			if len(plans) > 0 {
+				result["release"] = plans
+			}
 			switch {
+			case u == nil && len(newTags) > 0:
+				// tagged and committed locally, but nothing ahead of a remote
+				// to push to (no upstream configured): say what was done.
+				if a.jsonOut {
+					result["tags"] = newTags
+					return a.printJSON(result)
+				}
+				fmt.Fprintf(a.out, "tagged locally: %s (no upstream to push to)\n", strings.Join(newTags, ", "))
+				return nil
 			case u == nil:
 				result["reason"] = "nothing pending"
-			case !u.Pending():
+			case !u.Pending() && len(newTags) == 0:
 				result["reason"] = fmt.Sprintf("%s is ahead of %s by %d commit(s), none of them an acceptance; that is yours to push with git", u.Branch, u.Upstream, u.Commits)
 			case u.Behind > 0:
 				// exit 3: a caller that is not a person (the dashboard's push
@@ -77,6 +112,12 @@ told by the MCP inbox.`,
 				if a.jsonOut {
 					return a.printJSON(result)
 				}
+				if len(plans) > 0 {
+					fmt.Fprintln(a.out, "would also tag, first:")
+					for _, p := range plans {
+						a.printPendingPlan(p)
+					}
+				}
 				fmt.Fprintf(a.out, "would push %s\ndry run: nothing pushed\n", what)
 				return nil
 			}
@@ -86,6 +127,7 @@ told by the MCP inbox.`,
 				}
 			}
 			result["pushed"] = true
+			result["tags"] = newTags
 			published := []string{}
 			for _, path := range moved {
 				pub, err := a.publishTemplate(filepath.Join(root, path), "", "", true, false, false)

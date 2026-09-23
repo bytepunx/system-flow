@@ -63,6 +63,51 @@ func TestPushPending(t *testing.T) {
 	}
 }
 
+// S-0094: flai accept computes no release (S-0087), so nothing tags it until
+// something does; this is the one place it happens, before the push itself,
+// not a separate step left for someone to remember.
+func TestPushPendingTagsWhatAcceptLeftUnreleased(t *testing.T) {
+	root, remote := researchProject(t, "feature", true)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	if tags := gitIn(t, root, "tag", "--list"); strings.Contains(tags, "v1.1.0") {
+		t.Fatalf("accept alone must tag nothing: %s", tags)
+	}
+
+	dry, _, _ := runIn(t, root, "push", "--pending", "--dry-run")
+	if !strings.Contains(dry, "cli") || !strings.Contains(dry, "1.1.0") || !strings.Contains(dry, "would also tag") {
+		t.Errorf("dry run previews the release it would tag first: %s", dry)
+	}
+	if tags := gitIn(t, root, "tag", "--list"); strings.Contains(tags, "v1.1.0") {
+		t.Errorf("a dry run must tag nothing: %s", tags)
+	}
+
+	out, errOut, code := runIn(t, root, "push", "--pending", "--json")
+	if code != 0 {
+		t.Fatalf("push: %s", errOut)
+	}
+	var got struct {
+		Pushed bool     `json:"pushed"`
+		Tags   []string `json:"tags"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil || !got.Pushed || len(got.Tags) != 1 || got.Tags[0] != "cli/v1.1.0" {
+		t.Fatalf("push --json: %v %s", err, out)
+	}
+	if tags := gitIn(t, root, "tag", "--list"); !strings.Contains(tags, "cli/v1.1.0") {
+		t.Errorf("the tag exists locally: %s", tags)
+	}
+	if remoteTags := gitIn(t, remote, "tag", "--list"); !strings.Contains(remoteTags, "cli/v1.1.0") {
+		t.Errorf("and it reached the remote, with the push, not after it: %s", remoteTags)
+	}
+	if remoteHead := strings.TrimSpace(gitIn(t, remote, "rev-parse", "main")); remoteHead != strings.TrimSpace(gitIn(t, root, "rev-parse", "main")) {
+		t.Error("the version-bump commit reached the remote too")
+	}
+	if again, _, _ := runIn(t, root, "push", "--pending"); !strings.Contains(again, "nothing pending") {
+		t.Errorf("a second run retags nothing: %s", again)
+	}
+}
+
 func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 	root, remote := researchProject(t, "feature", false)
 	gitIn(t, root, "add", "-A")

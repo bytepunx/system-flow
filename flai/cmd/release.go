@@ -76,7 +76,6 @@ item's tags (a project name or one of its tags), the parent's tags, or
 template component gets its version file and changelog bumped (commit them).
 
 flai accept never does this (S-0087): it only merges, archives, and commits.
-Publishing is a deliberate step of its own, over everything accumulated:
 
   flai release --pending
 
@@ -84,7 +83,9 @@ computes one release per component, the highest delivery level among
 everything accepted and unreleased for it since its last tag, bumps and
 commits, tags, and pushes the branch and every tag together, three tags to a
 push (I-0026). Run again after a partial failure: what already tagged or
-pushed is not redone.`,
+pushed is not redone. flai push --pending does the same computing, applying,
+and tagging before it decides what to push (S-0094), so this command is for
+seeing or forcing it ahead of a push, not the only place it happens.`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run
@@ -146,8 +147,50 @@ pushed is not redone.`,
 	return c
 }
 
-// publishPending is flai release --pending (S-0087): everything release.Pending
-// finds, applied, tagged, and pushed together, resumable on partial failure.
+// computeApplyAndTagPending is the first half of flai release --pending
+// (S-0087) and, since S-0094, of flai push --pending too: everything
+// release.Pending finds since each component's last tag, applied (version
+// files and one changelog entry, committed) and tagged on HEAD, before
+// anything is pushed. flai accept computes none of this (it only merges,
+// archives, and commits): a push must, so that tagging a release is never a
+// separate step someone has to remember. TagPending is idempotent, so a
+// partial failure here and a rerun does not retag what already tagged.
+func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*release.PendingPlan, []string, error) {
+	plans, err := release.Pending(a.runner, root, repo.Manifest, repo)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, p := range plans {
+		if err := release.ApplyPending(p, root, a.now()); err != nil {
+			return nil, nil, err
+		}
+	}
+	if len(plans) > 0 {
+		if status, _ := a.runner.Run(root, "git", "status", "--porcelain"); strings.TrimSpace(status) != "" {
+			if _, err := a.runner.Run(root, "git", "add", "-A"); err != nil {
+				return nil, nil, err
+			}
+			if _, err := a.runner.Run(root, "git", "commit", "-q", "-m", "chore: publish "+summarizePlans(plans)); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	var tags []string
+	for _, p := range plans {
+		tag, err := release.TagPending(a.runner, root, p)
+		if err != nil {
+			return nil, nil, err
+		}
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	return plans, tags, nil
+}
+
+// publishPending is flai release --pending (S-0087): everything
+// computeApplyAndTagPending finds, applied and tagged, pushed together,
+// resumable on partial failure.
 func (a *app) publishPending(dryRun bool) error {
 	if err := execx.Require(a.runner, "git", "Releases are git tags; install git."); err != nil {
 		return err
@@ -156,11 +199,11 @@ func (a *app) publishPending(dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	plans, err := release.Pending(a.runner, repo.Root, repo.Manifest, repo)
-	if err != nil {
-		return err
-	}
 	if dryRun {
+		plans, err := release.Pending(a.runner, repo.Root, repo.Manifest, repo)
+		if err != nil {
+			return err
+		}
 		if a.jsonOut {
 			return a.printJSON(map[string]any{"plans": plans, "dry_run": true})
 		}
@@ -174,30 +217,9 @@ func (a *app) publishPending(dryRun bool) error {
 		fmt.Fprintln(a.out, "dry run: nothing changed")
 		return nil
 	}
-	for _, p := range plans {
-		if err := release.ApplyPending(p, repo.Root, a.now()); err != nil {
-			return err
-		}
-	}
-	if len(plans) > 0 {
-		if status, _ := a.runner.Run(repo.Root, "git", "status", "--porcelain"); strings.TrimSpace(status) != "" {
-			if _, err := a.runner.Run(repo.Root, "git", "add", "-A"); err != nil {
-				return err
-			}
-			if _, err := a.runner.Run(repo.Root, "git", "commit", "-q", "-m", "chore: publish "+summarizePlans(plans)); err != nil {
-				return err
-			}
-		}
-	}
-	var tags []string
-	for _, p := range plans {
-		tag, err := release.TagPending(a.runner, repo.Root, p)
-		if err != nil {
-			return err
-		}
-		if tag != "" {
-			tags = append(tags, tag)
-		}
+	plans, tags, err := a.computeApplyAndTagPending(repo.Root, repo)
+	if err != nil {
+		return err
 	}
 	u := pending.Detect(a.runner, repo.Root)
 	result := map[string]any{"plans": plans, "tags": tags, "pushed": false}
