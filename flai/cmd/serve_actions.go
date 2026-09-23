@@ -364,7 +364,7 @@ func (a *app) showAgentCommand() error {
 		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "harnesses": hosts, "enabled_here": enabled})
 	}
 	if len(cfg.Agent.Command) == 0 {
-		fmt.Fprintln(a.out, "no command is set, so nothing is started; flai serve agent set -- <program> [args...]")
+		fmt.Fprintln(a.out, "no command is set, so a story that names no harness is not started; flai serve agent set -- <program> [args...]")
 	} else {
 		fmt.Fprintf(a.out, "command: %s\n  run as it stands, in the project's directory, never through a shell\n", quoteArgs(cfg.Agent.Command))
 	}

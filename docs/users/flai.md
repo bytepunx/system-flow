@@ -564,7 +564,7 @@ flai serve disable push
 flai serve journal          # every host action asked for, and what became of it
 ```
 
-A second one, `agent`, starts a command you wrote when a story becomes ready and nobody is attending the project (`flai serve agent set -- <program> [args...]`, then `flai serve enable agent`). What enabling either means, for who can publish a release and who can start a process on your machine, is in the operator guide; read it first.
+A second one, `agent`, starts an agent for each story that becomes ready: the harness and model the story names (see [Who works a story](#who-works-a-story-its-agent)), with the program and permissions you set for that harness on the host (`flai serve agent harness`), or a command you wrote for stories that name none (`flai serve agent set -- <program> [args...]`). Turn it on with `flai serve enable agent`. What enabling either means, for who can publish a release and who can start a process on your machine, is in the operator guide; read it first.
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 

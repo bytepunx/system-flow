@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-09-20
+updated: 2026-09-23
 status: draft
 ---
 
@@ -82,26 +82,30 @@ The journal is `journal.jsonl` beside `flai serve`'s state (the `serve` folder n
 
 ### Starting an agent when a story becomes ready
 
-`flai serve` can start an agent session for you when a story becomes ready and nobody is attending the project, so that a move to ready on the board starts work with no one at a keyboard. It is a host action, off until you enable it, and it has **no default command**: you write the command, and flai runs exactly that.
+`flai serve` can start an agent for each story that becomes ready, so that a move to ready on the board starts work with no one at a keyboard. Each story names its agent: a harness, a model, and options (`flai agent set` gives new stories a default; `flai edit` or the dashboard changes one story's). flai starts a harness it knows through its adapter, with the program and the arguments you set for it on this host. For a story that names no harness, it runs a command you wrote, if you set one. It is a host action, off until you enable it ([ADR-0038](../../design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md)).
 
 ```bash
-flai serve agent set -- claude -p "Work on story {story} as the conventions say"
-flai serve agent set --name builder --attended-minutes 10 -- /home/me/bin/start-agent {story}
-flai serve agent show
 flai serve enable agent        # for this project; --all-projects for every project
+flai serve agent harness       # each harness: the program and what its agent may do here
+flai serve agent harness claude-code --program /opt/claude/bin/claude
+flai serve agent harness claude-code -- --permission-mode acceptEdits --allowedTools Bash,mcp__flai
+flai serve agent harness claude-code --reset
+flai serve agent set --name builder -- /home/me/bin/start-agent {story} --model {model}
+flai serve agent show
 flai serve journal             # every start and every failure
 flai serve disable agent
-flai serve agent clear         # with no command, nothing is started
 ```
 
-**Understand what enabling it means.** Whoever can move a story to ready then starts your command on your machine, as you: you at the board, an agent with `flai move`, and anyone who holds the dashboard token. What the command may do once started is whatever you wrote it to do; flai passes it a story's ID and nothing more. A compromised dashboard container could move a story to ready too.
+**Understand what enabling it means.** Whoever can move a story to ready starts an agent on your machine, as you: you at the board, an agent with `flai move`, and anyone who holds the dashboard token. So can whoever can edit a story, because a story chooses its harness and its model. A compromised dashboard container could do both. What a story cannot choose is what runs or what the agent may do.
 
-- **The command** is an argument list after `--`, stored in your flai configuration (`agent` in `~/.flai/config.json`; `flai config set` does not reach it). It is run as it stands, in the project's directory, never through a shell: `$HOME`, `;`, and backticks in an argument are passed along literally. In an argument, `{story}` becomes the story's ID and `{root}` the project's directory. The environment carries `FLAI_AGENT` (`--name`, default `agent`), `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`. The ID is flai's own reading of the project's files, checked to be a story's ID; nothing the dashboard sends is part of the command.
-- **When it starts.** A story has entered ready (from the board, the CLI, or an agent), the in-progress limit leaves room for a pull, no agent flai started for the project is still running, and nobody is attending. The session is given the first ready story in your pull order, which is what the conventions tell an agent to pull.
-- **Attending** is judged from files, because flai asks nobody: an agent connected over MCP rewrites its read marker under `.flai-cache/mcp/` at every look, at least every five minutes while it waits, and an agent at work writes its story's narrative under `wip/agents/`. If the newest of those is younger than `--attended-minutes` (6 by default), someone is attending and will see the story in their inbox. A log entry you add to a narrative from the dashboard counts too, for those minutes.
-- **One at a time.** One agent per project. A second ready story waits until the first session ends, and then the next is started if the conditions still hold. The conventions tell a session flai started to end when nothing is left to pull, for this reason.
-- **What does not start one.** Stories that were already ready when `flai serve` began: a restart of `flai serve` never starts a session. A story that stayed ready while someone was attending is not picked up later by itself; the next story to enter ready, or the end of a started agent, looks again. Only projects `flai serve` serves, that is, ones whose dashboard was started with `flai dashboard`.
-- **Where to look.** The board shows that an agent was started, for which story, by which command's name, and when; that a command could not be started; and why a ready story waits. `flai serve journal` has every start and failure, and each session's output is in a log under `serve/agents/` beside `flai serve`'s state. Stopping a started agent is yours to do on the host (its PID is in the journal); the dashboard cannot stop, start, or configure one.
+- **Harnesses.** `claude-code` runs `claude -p` headless, in the project's directory, with a prompt that tells it to work that story, and only that story, to review the way the project's conventions say. It gets the story's `--model` and flai's MCP server (this flai's `flai mcp`), and no other MCP server unless you add one with `--mcp-config` in its arguments. The only options a story may give it are `effort` (low, medium, high, xhigh, max), `max_budget_usd`, and `fallback_model`, and each is checked. Anything else refuses the start, and the story's card says why. By default an agent may edit files in the project, run any shell command (git, flai, your tests), and use flai's tools: `--permission-mode acceptEdits --allowedTools Bash,mcp__flai`. `flai serve agent harness claude-code -- ...` replaces those arguments, and `--program` names the binary. Both are stored in your flai configuration (`agent.harnesses` in `~/.flai/config.json`), which `flai config set` does not reach.
+- **Your command.** A story that names no harness, or names `command`, is started with the argument list you set with `flai serve agent set -- ...`. It is run as it stands, never through a shell. `{story}`, `{root}`, `{model}`, and `{harness}` in an argument are replaced, and the story's options are in `FLAI_AGENT_CONFIG` as a JSON object. With no command set, such a story is not started, and the board says so.
+- **The environment** carries `FLAI_AGENT` (your `--name`, default `agent`, and the story: `agent-S-0104`), `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`, with `FLAI_MODEL` and `FLAI_HARNESS` for your command. Each agent has a name of its own, so its inbox and its place in `wait_for_work` are its own. The story's ID is flai's own reading of the project's files, checked to be a story's ID. Nothing the dashboard sends becomes part of a command.
+- **When one starts.** One agent per ready story, in your pull order, while the in-progress limit leaves room. An agent started for a story that is still in ready counts as a story in progress. A story is started once each time it enters ready, from the board, the CLI, or an agent: one whose agent failed waits until it is moved to ready again. Nothing starts while someone else is attending the project.
+- **Attending** is judged from files, because flai asks nobody. An agent connected over MCP rewrites its read marker under `.flai-cache/mcp/` at every look, at least every five minutes while it waits. An agent at work writes its story's narrative under `wip/agents/`. If the newest of those is younger than `--attended-minutes` (6 by default), someone is attending and will see the story in their inbox. The marker and narrative of an agent flai started do not count, and a log entry you add to a narrative from the dashboard does, for those minutes.
+- **What does not start one.** Stories that were already ready when `flai serve` began: a restart of `flai serve` never starts a session. An agent that outlived a restart is still watched, and is settled at the next look after it ends. Only projects `flai serve` serves start agents, that is, ones whose dashboard was started with `flai dashboard`.
+- **How it ends.** An agent that ends with its story in review or done has worked. One that ends with its story anywhere else has failed: the story's card and page say where it left the story and whether it was blocked, and how it exited. An agent that asks you something opens a thread on its story and waits for the answer, which you give on the story's page or in the inbox.
+- **Where to look.** Each story's card on the board has a dot while its agent runs: green at work, yellow waiting for you (it asked on the story, or the story is blocked), red when it failed. The story's page says which harness and model, since when, the question it waits on, or why it failed and where its log is. `flai serve journal` has every start and failure, and each agent's output is in a log under `serve/agents/` beside `flai serve`'s state. Stopping an agent is yours to do on the host (its PID is in the journal); the dashboard cannot stop, start, or configure one.
 
 ### The dashboard host action (S-0081)
 

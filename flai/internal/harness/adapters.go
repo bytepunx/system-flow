@@ -46,13 +46,23 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	}
 	// The agent reaches flai through this flai's own MCP server on stdio,
 	// whatever the project's .mcp.json says, which a headless session would
-	// not have approved.
+	// not have approved, and no other: not the operator's own connectors and
+	// plugins, which S-0104's trial found loaded otherwise. The operator adds
+	// others with --mcp-config in the harness's arguments.
 	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "stdio", "command": r.Flai, "args": []string{"mcp"}}}})
 	if err != nil {
 		return Start{}, err
 	}
 	argv := []string{host.Program, "-p", Prompt(r), "--output-format", "stream-json", "--verbose",
-		"--mcp-config", string(mcp), "--name", strings.TrimSpace(r.Project + " " + r.Story)}
+		"--mcp-config", string(mcp), "--strict-mcp-config", "--name", strings.TrimSpace(r.Project + " " + r.Story)}
+	// A session of its own, so that an agent that ended waiting for an
+	// answer goes on with what it knew.
+	switch {
+	case r.Session != "" && r.Answered != "":
+		argv = append(argv, "--resume", r.Session)
+	case r.Session != "":
+		argv = append(argv, "--session-id", r.Session)
+	}
 	if model != "" {
 		argv = append(argv, "--model", model)
 	}
@@ -64,7 +74,8 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 // command is the operator's own command (S-0079): run as it stands, with
 // {story}, {root}, {model}, and {harness} replaced in its arguments. The
 // story's config is not interpreted: it is handed over as FLAI_AGENT_CONFIG,
-// a JSON object, for the command to read if it wants.
+// a JSON object, for the command to read if it wants. Started again after
+// its question was answered, it has FLAI_ANSWERED, the thread's ID.
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -95,5 +106,9 @@ func (command) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
-	return Start{Harness: Command, Argv: argv, Env: []string{"FLAI_MODEL=" + model, "FLAI_HARNESS=" + harness, "FLAI_AGENT_CONFIG=" + string(cfg)}}, nil
+	env := []string{"FLAI_MODEL=" + model, "FLAI_HARNESS=" + harness, "FLAI_AGENT_CONFIG=" + string(cfg)}
+	if r.Answered != "" {
+		env = append(env, "FLAI_ANSWERED="+r.Answered)
+	}
+	return Start{Harness: Command, Argv: argv, Env: env}, nil
 }

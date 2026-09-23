@@ -12,9 +12,9 @@ const run = {
 
 describe('agent activity (S-0104)', () => {
 	it('is green while working, yellow while waiting, red when failed, and no dot once finished', () => {
-		expect(dotClass('working')).toBe('bg-good');
-		expect(dotClass('waiting')).toBe('bg-warn');
-		expect(dotClass('failed')).toBe('bg-danger');
+		expect(dotClass('working')).toBe('bg-dot-working');
+		expect(dotClass('waiting')).toBe('bg-dot-waiting');
+		expect(dotClass('failed')).toBe('bg-dot-failed');
 		expect(dotClass('worked')).toBeNull();
 	});
 	it('says what the agent is doing, with which harness and model, and why', () => {

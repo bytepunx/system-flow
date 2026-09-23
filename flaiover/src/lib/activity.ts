@@ -41,11 +41,11 @@ export type HostAgent = {
 export function dotClass(state: ActivityState): string | null {
 	switch (state) {
 		case 'working':
-			return 'bg-good';
+			return 'bg-dot-working';
 		case 'waiting':
-			return 'bg-warn';
+			return 'bg-dot-waiting';
 		case 'failed':
-			return 'bg-danger';
+			return 'bg-dot-failed';
 		default:
 			return null;
 	}

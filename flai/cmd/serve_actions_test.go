@@ -143,7 +143,7 @@ func TestServeAgentCommand(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "agent")
-	if !strings.Contains(out, "no command is set, so nothing is started") || !strings.Contains(out, "off for this project") {
+	if !strings.Contains(out, "no command is set, so a story that names no harness is not started") || !strings.Contains(out, "off for this project") {
 		t.Errorf("by default: %s", out)
 	}
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "agent: off everywhere") || !strings.Contains(out, "whoever can move a story to ready") {

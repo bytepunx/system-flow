@@ -33,6 +33,11 @@
 	--t-danger-soft: #f9e1dc;
 	--t-info: #0f5d70;
 	--t-info-soft: #d6eef2;
+	/* A story's agent (S-0104): green at work, yellow waiting, red failed. A dot, so the colour
+	   is what it says; its label says it in words. */
+	--t-dot-working: #1f9d3a;
+	--t-dot-waiting: #e0b000;
+	--t-dot-failed: #d32f2f;
 	/* Board cards: a pastel tint per nature and a colour per type (S-0055). Telling them
 	   apart by colour alone is waived, the card says both in text; reading the text on
 	   them is not, and theme.test.ts checks it. */
@@ -70,6 +75,9 @@
 	--t-danger-soft: #4a1a17;
 	--t-info: #6fd0e6;
 	--t-info-soft: #0f3f4c;
+	--t-dot-working: #62c96f;
+	--t-dot-waiting: #f5c542;
+	--t-dot-failed: #f26b60;
 	--t-nature-feature: #1b2634;
 	--t-nature-improvement: #1c291e;
 	--t-nature-remediation: #322517;
@@ -104,6 +112,9 @@
 	--color-danger-soft: var(--t-danger-soft);
 	--color-info: var(--t-info);
 	--color-info-soft: var(--t-info-soft);
+	--color-dot-working: var(--t-dot-working);
+	--color-dot-waiting: var(--t-dot-waiting);
+	--color-dot-failed: var(--t-dot-failed);
 	--color-nature-feature: var(--t-nature-feature);
 	--color-nature-improvement: var(--t-nature-improvement);
 	--color-nature-remediation: var(--t-nature-remediation);

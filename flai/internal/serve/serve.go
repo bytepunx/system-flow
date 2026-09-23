@@ -295,8 +295,9 @@ func Run(ctx context.Context, o Options) error {
 				// The dashboard hears of each changed file; what it shows comes from asking again.
 				go watcher.Run(cctx, func(rel string) {
 					r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
-					// a story's state is in its file under kanban, and the pull order in the board
-					if strings.Contains(filepath.ToSlash(rel), "/kanban/") {
+					// a story's state is in its file under kanban, and the pull order in the
+					// board; an answer to an agent's question is in its thread
+					if slashed := filepath.ToSlash(rel); strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") {
 						starter.look(cctx, false)
 					}
 				})

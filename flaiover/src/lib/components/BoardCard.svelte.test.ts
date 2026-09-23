@@ -220,9 +220,9 @@ describe('BoardCard', () => {
 		component = render(base);
 		expect(dot()).toBeNull();
 		for (const [state, colour] of [
-			['working', 'bg-good'],
-			['waiting', 'bg-warn'],
-			['failed', 'bg-danger']
+			['working', 'bg-dot-working'],
+			['waiting', 'bg-dot-waiting'],
+			['failed', 'bg-dot-failed']
 		] as const) {
 			unmount(component);
 			component = render(base, { activity: { state, why: 'why so', run } });

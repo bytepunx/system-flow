@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,8 +42,9 @@ import (
 // agent at work writes its story's narrative under wip/agents. If the newest
 // of those files is younger than the operator's attended_minutes (six by
 // default), someone is attending, and they will see the ready story in their
-// inbox. The generated index there does not count, nor do the cursor and the
-// narrative of an agent flai serve started itself.
+// inbox. Only a story's narrative counts there, not the generated index or a
+// README, nor do the cursor and the narrative of an agent flai serve started
+// itself.
 //
 // Each command is run as it stands in the project's directory, never through
 // a shell. The story's ID is flai's own reading of the files, checked against
@@ -78,6 +80,7 @@ func (c AgentConfig) host(name string) harness.Host {
 // Outcomes of an agent that has ended.
 const (
 	OutcomeWorked = "worked" // it left its story in review or done
+	OutcomeAsked  = "asked"  // it ended waiting for an answer, and is started again when there is one
 	OutcomeFailed = "failed" // it could not be started, or left its story anywhere else
 )
 
@@ -94,9 +97,15 @@ type AgentRun struct {
 	Exit    *int   `json:"exit,omitempty"`
 	Error   string `json:"error,omitempty"` // why it could not be started
 	Log     string `json:"log,omitempty"`
-	// Outcome is set once it has ended; Why says what went wrong.
+	// Session is the harness's session, which a start after an answer resumes.
+	Session string `json:"session,omitempty"`
+	// Answered is the question this run was started again for.
+	Answered string `json:"answered,omitempty"`
+	// Outcome is set once it has ended; Why says what went wrong, and Thread
+	// is the question it ended waiting on.
 	Outcome string `json:"outcome,omitempty"`
 	Why     string `json:"why,omitempty"`
+	Thread  string `json:"thread,omitempty"`
 }
 
 // live is a run that has not ended.
@@ -235,10 +244,10 @@ func attended(root string, within time.Duration, now time.Time, own map[string]b
 		return false, ""
 	}
 	newest, which := time.Time{}, ""
-	look := func(pattern string, skip string) {
+	look := func(pattern string, counts func(name string) bool) {
 		files, _ := filepath.Glob(pattern)
 		for _, f := range files {
-			if filepath.Base(f) == skip || own[f] {
+			if !counts(filepath.Base(f)) || own[f] {
 				continue
 			}
 			if info, err := os.Stat(f); err == nil && info.ModTime().After(newest) {
@@ -246,8 +255,9 @@ func attended(root string, within time.Duration, now time.Time, own map[string]b
 			}
 		}
 	}
-	look(filepath.Join(repo.CacheDir(), "mcp", "*.json"), "")
-	look(filepath.Join(repo.AgentsDir(), "*.md"), "index.md")
+	look(filepath.Join(repo.CacheDir(), "mcp", "*.json"), func(string) bool { return true })
+	// a story's narrative, not the index flai writes or the template's README
+	look(filepath.Join(repo.AgentsDir(), "*.md"), func(name string) bool { return StoryID.MatchString(strings.TrimSuffix(name, ".md")) })
 	if which == "" || now.Sub(newest) > within {
 		return false, ""
 	}
@@ -277,23 +287,27 @@ func ownSigns(root string, st AgentState, within time.Duration, now time.Time) m
 	return out
 }
 
-// judge is how an agent that has ended left its story.
-func judge(root, story string, exit *int) (outcome, why string) {
+// judge is how an agent that has ended left its story: worked, asked (a
+// question of its own on the story is open and unanswered), or failed.
+func judge(root, story, agent string, exit *int) (outcome, why, thread string) {
 	code := "an exit code nobody saw"
 	if exit != nil {
 		code = fmt.Sprintf("exit %d", *exit)
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
-		return OutcomeFailed, fmt.Sprintf("ended (%s); the project could not be read: %v", code, err)
+		return OutcomeFailed, fmt.Sprintf("ended (%s); the project could not be read: %v", code, err), ""
 	}
 	it, err := repo.Get(story)
 	if err != nil {
-		return OutcomeFailed, fmt.Sprintf("ended (%s); %s could not be read: %v", code, story, err)
+		return OutcomeFailed, fmt.Sprintf("ended (%s); %s could not be read: %v", code, story, err), ""
 	}
 	switch it.Status {
 	case workitem.Review, workitem.Done:
-		return OutcomeWorked, ""
+		return OutcomeWorked, "", ""
+	}
+	if th := asking(repo, story, agent); th != nil {
+		return OutcomeAsked, "waiting for an answer to " + th.ID + ": " + th.Title, th.ID
 	}
 	why = fmt.Sprintf("ended (%s) with %s in %s", code, story, it.Status)
 	for _, b := range it.Blocked {
@@ -301,7 +315,7 @@ func judge(root, story string, exit *int) (outcome, why string) {
 			why += ", blocked: " + b.Reason
 		}
 	}
-	return OutcomeFailed, why
+	return OutcomeFailed, why, ""
 }
 
 // look is called when the project's work items may have changed, when an
@@ -333,11 +347,14 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		}
 	}
 	l.settleOrphans()
+	cfg := l.config(l.entry.Root)
+	if cfg.Enabled {
+		l.resume(ctx, cfg)
+	}
 	if len(stories) == 0 {
 		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = "" })
 		return
 	}
-	cfg := l.config(l.entry.Root)
 	if !cfg.Enabled {
 		return
 	}
@@ -415,20 +432,48 @@ func (l *launcher) settleOrphans() {
 		}
 		ended := *run
 		ended.Ended = l.now().UTC().Format(time.RFC3339)
-		ended.Outcome, ended.Why = judge(l.entry.Root, run.Story, nil)
+		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, run.Story, run.Agent, nil)
 		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(&ended) })
 		l.log("agent ended while flai serve was away", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 	}
 }
 
-// start starts an agent for story, and says whether it did.
-func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory) bool {
+// resume starts again each agent that ended waiting for an answer, once the
+// answer is there, in the session it had. Its story is its own and already
+// in progress, so neither the limit nor anyone attending holds it back.
+func (l *launcher) resume(ctx context.Context, cfg AgentConfig) {
+	st := l.dir.AgentStates()[l.entry.Root]
+	repo, err := workitem.Open(l.entry.Root)
+	if err != nil {
+		return
+	}
+	for id, run := range st.Stories {
+		if run.Outcome != OutcomeAsked || run.Thread == "" || !answered(repo, run) {
+			continue
+		}
+		it, err := repo.Get(id)
+		if err != nil || it.Closed() {
+			continue
+		}
+		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent}, run)
+	}
+}
+
+// start starts an agent for story, or starts again the one that ended asking
+// in after, and says whether it did.
+func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory, after ...*AgentRun) bool {
 	now := l.now().UTC()
 	name := cfg.Name
 	if name == "" {
 		name = "agent"
 	}
-	run := &AgentRun{Story: story.ID, Agent: name + "-" + story.ID, Started: now.Format(time.RFC3339)}
+	run := &AgentRun{Story: story.ID, Agent: name + "-" + story.ID, Started: now.Format(time.RFC3339), Session: newSession()}
+	if len(after) > 0 && after[0] != nil {
+		run.Agent, run.Answered = after[0].Agent, after[0].Thread
+		if after[0].Session != "" {
+			run.Session = after[0].Session
+		}
+	}
 	if story.Agent != nil {
 		run.Model = story.Agent.Model
 	}
@@ -455,7 +500,8 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
-	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai}, cfg.host(name))
+	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
+		Session: run.Session, Answered: run.Answered}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}
@@ -490,6 +536,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	l.waiting[run.PID] = true
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
+	if run.Answered != "" {
+		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s answered (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.Answered, run.PID, run.Log)
+	}
 	if l.record != nil {
 		l.record(entry)
 	}
@@ -506,7 +555,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		}
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
-		ended.Outcome, ended.Why = judge(l.entry.Root, story.ID, &code)
+		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, story.ID, run.Agent, &code)
 		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(&ended) })
 		l.mu.Lock()
 		delete(l.waiting, run.PID)
@@ -585,6 +634,8 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 			}
 		case run.Outcome == OutcomeWorked:
 			a.State = ActivityWorked
+		case run.Outcome == OutcomeAsked:
+			a.State, a.Thread, a.Why = ActivityWaiting, run.Thread, run.Why
 		default:
 			a.State, a.Why = ActivityFailed, run.Why
 			if a.Why == "" {
@@ -594,4 +645,45 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 		out[id] = a
 	}
 	return out
+}
+
+// asking is the open thread on story whose last entry is agent's: a question
+// it asked that nobody has answered yet.
+func asking(repo *workitem.Repo, story, agent string) *threads.Thread {
+	all, err := threads.List(repo)
+	if err != nil {
+		return nil
+	}
+	for _, th := range all {
+		if !th.Open() || threads.StoryOf(repo, th) != story {
+			continue
+		}
+		if e := th.Entries(); len(e) > 0 && e[len(e)-1].Author == agent {
+			return th
+		}
+	}
+	return nil
+}
+
+// answered says whether the question a run ended waiting on has an answer:
+// an entry by someone else after the agent's, or the thread resolved.
+func answered(repo *workitem.Repo, run *AgentRun) bool {
+	th, err := threads.Get(repo, run.Thread)
+	if err != nil {
+		return false
+	}
+	if !th.Open() {
+		return true
+	}
+	e := th.Entries()
+	return len(e) > 0 && e[len(e)-1].Author != run.Agent
+}
+
+// newSession is a random UUID, the form Claude Code's sessions take.
+func newSession() string {
+	var b [16]byte
+	_, _ = rand.Read(b[:])
+	b[6] = b[6]&0x0f | 0x40
+	b[8] = b[8]&0x3f | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }

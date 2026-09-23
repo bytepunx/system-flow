@@ -43,3 +43,4 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0035](0035-repositories-under-folders-the-operator-names-can-be-imported-from-the-board.md) | Repositories under folders the operator names can be imported from the board | accepted, refines 0029 |
 | [0036](0036-a-folder-that-is-not-a-project-is-served-whole-by-flai-mcp-and-flai-dashboard.md) | A folder that is not a project is served whole by flai mcp and flai dashboard | accepted, refines 0030 |
 | [0037](0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md) | A story carries its agent, copied from the project's default when it is made | accepted |
+| [0038](0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md) | flai serve starts a story's own agent through an adapter, with what the operator allows | accepted, refines 0029 and 0037 |

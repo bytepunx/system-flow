@@ -59,7 +59,7 @@ func newAgentLab(t *testing.T) *agentLab {
 	lab.stub = filepath.Join(lab.outDir, "stub-agent")
 	script := "#!/bin/sh\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; } > \"$out\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; } > \"$out\"\n" +
 		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n"
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
@@ -332,8 +332,14 @@ func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 		old := time.Now().Add(-time.Hour)
 		_ = os.Chtimes(filepath.Join(lab.root, ".flai-cache", "mcp", "claude.json"), old, old)
 		_ = os.WriteFile(filepath.Join(lab.root, "wip", "agents", "index.md"), []byte("# index\n"), 0o644)
-		if yes, _ := attended(lab.root, 6*time.Minute, time.Now(), nil); yes {
-			t.Error("an hour-old cursor and a fresh index are nobody attending")
+		// a new project's README there is no narrative either (found in S-0104's trial)
+		_ = os.WriteFile(filepath.Join(lab.root, "wip", "agents", "README.md"), []byte("# agents\n"), 0o644)
+		if yes, sign := attended(lab.root, 6*time.Minute, time.Now(), nil); yes {
+			t.Errorf("an hour-old cursor, a fresh index, and a README are nobody attending: %s", sign)
+		}
+		_ = os.WriteFile(filepath.Join(lab.root, "wip", "agents", "S-0009.md"), []byte("# S-0009\n"), 0o644)
+		if yes, _ := attended(lab.root, 6*time.Minute, time.Now(), nil); !yes {
+			t.Error("a narrative written now is someone at work")
 		}
 	})
 	t.Run("the limit leaves no room", func(t *testing.T) {
@@ -421,4 +427,58 @@ func TestWhatEachStorysAgentIsDoing(t *testing.T) {
 	}
 	lab.release(blocked)
 	waitFor(t, "the last ends", func() bool { return !lab.run(blocked).live() })
+}
+
+// S-0104: an agent that ends with a question of its own open on its story is
+// waiting, not failed, and is started again, as itself, once it is answered.
+func TestAnAgentThatEndedAskingIsStartedAgainWhenAnswered(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	id := lab.ready("Asks and ends")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: first.Agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	r := lab.run(id)
+	if r.Outcome != OutcomeAsked || r.Thread != th.ID || !strings.Contains(r.Why, "waiting for an answer to "+th.ID) {
+		t.Fatalf("asked: %+v", r)
+	}
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != th.ID {
+		t.Fatalf("activity: %+v", a)
+	}
+	// nothing is started again while the question is open
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	lab.l.look(ctx, false)
+	if lab.run(id).live() {
+		t.Fatal("started again before the answer")
+	}
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { return lab.run(id).live() })
+	again := lab.run(id)
+	if again.Agent != first.Agent || again.Session != first.Session || again.Answered != th.ID {
+		t.Errorf("the same agent, in its session, for the answer: %+v, first %+v", again, first)
+	}
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+	if !strings.Contains(string(got), "answered: "+th.ID) {
+		t.Errorf("the command was told what was answered:\n%s", got)
+	}
+	// this time it ended with no question open and its story in progress: failed
+	if r := lab.run(id); r.Outcome != OutcomeFailed {
+		t.Errorf("after the answer: %+v", r)
+	}
+	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "again for "+id) {
+		t.Errorf("journal: %+v", j)
+	}
 }

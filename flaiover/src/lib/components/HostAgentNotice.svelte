@@ -64,10 +64,9 @@
 			</p>
 		{/if}
 		<p class="mt-1 text-xs text-muted">
-			flai on the host starts each ready story's agent, or <code
-				>{st.command || 'the operator’s command'}</code
-			>, while the in-progress limit leaves room and no other agent is attending. Stopping an agent
-			is done on the host; the dashboard cannot.
+			flai on the host starts each ready story's agent{#if st.command}, or <code>{st.command}</code> for
+				a story that names no harness{/if}, while the in-progress limit leaves room and no other
+			agent is attending. Stopping an agent is done on the host; the dashboard cannot.
 		</p>
 	</div>
 {/if}

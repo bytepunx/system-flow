@@ -31,6 +31,12 @@ type Request struct {
 	Agent   *manifest.Agent // the story's agent; nil when it has none
 	Name    string          // FLAI_AGENT the session works under
 	Flai    string          // this flai's executable, the agent's MCP server
+	// Session names the harness's session, so that it can be resumed; a
+	// harness that has no sessions ignores it.
+	Session string
+	// Answered is the thread the agent asked on that has been answered: the
+	// agent ended while it waited, and is started again to go on (S-0104).
+	Answered string
 }
 
 // Host is the operator's say about one harness, from the host's configuration.
@@ -135,11 +141,20 @@ func options(harness string, config map[string]string, takes map[string]option) 
 
 // Prompt is what the agent is asked to do: work its story, and nothing
 // else, the way the project's conventions say, asking the designer through
-// flai when it needs them.
+// flai when it needs them. A resumed agent is told its question was answered.
 func Prompt(r Request) string {
+	if r.Answered != "" {
+		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.
+
+%[4]s`, r.Name, r.Story, r.Answered, rules(r))
+	}
 	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, because it entered ready.
 
 Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md: prime your session with flai prime --cat, open the story with flai stream open %[2]s, write its tasks if it has none, and work them in the worktree that prints. Commit each task, keep the narrative's Current state and Next steps true, run flai stream sync %[2]s at every task transition, and call the flai MCP tool inbox there too.
 
-When you need the designer to decide something, ask with the flai MCP tool thread_open on %[2]s, then hold wait_for_events until the thread is answered, and go on. Do not end while a question you asked is open. When every acceptance criterion is met, move %[2]s to review with flai move %[2]s review and end. If you cannot go on, block the story with flai block %[2]s --reason and say why in its narrative, then end.`, r.Name, r.Story, r.Root)
+%[4]s`, r.Name, r.Story, r.Root, rules(r))
+}
+
+func rules(r Request) string {
+	return fmt.Sprintf(`When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on. If you end while the question is open, flai starts you again when it is answered. When every acceptance criterion is met, move %[1]s to review with flai move %[1]s review and end. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
 }

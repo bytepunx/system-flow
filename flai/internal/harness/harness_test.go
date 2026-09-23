@@ -49,6 +49,9 @@ func TestClaudeCodeRunsHeadlessWithTheStorysModelAndFlaisMCP(t *testing.T) {
 			Args    []string `json:"args"`
 		} `json:"mcpServers"`
 	}
+	if !slices.Contains(argv, "--strict-mcp-config") {
+		t.Errorf("the agent's MCP servers are flai's alone: %q", argv)
+	}
 	if err := json.Unmarshal([]byte(raw), &mcp); err != nil || mcp.MCPServers["flai"].Command != "/usr/local/bin/flai" || !slices.Equal(mcp.MCPServers["flai"].Args, []string{"mcp"}) {
 		t.Fatalf("mcp config %s: %v", raw, err)
 	}
@@ -129,5 +132,29 @@ func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt lacks %q", want)
 		}
+	}
+}
+
+// S-0104: an agent that ended waiting for an answer is started again in the
+// session it had, told what was answered.
+func TestAnAnsweredAgentGoesOnInItsSession(t *testing.T) {
+	a := &manifest.Agent{Harness: ClaudeCode, Model: "claude-haiku-4-5"}
+	r := req(a)
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	st, _ := (claudeCode{}).Start(r, Host{})
+	if after(st.Argv, "--session-id") != r.Session || slices.Contains(st.Argv, "--resume") {
+		t.Fatalf("first start: %q", st.Argv)
+	}
+	r.Answered = "TH-0001"
+	st, _ = (claudeCode{}).Start(r, Host{})
+	if after(st.Argv, "--resume") != r.Session || slices.Contains(st.Argv, "--session-id") {
+		t.Fatalf("resumed: %q", st.Argv)
+	}
+	if p := st.Argv[2]; !strings.Contains(p, "answered your question TH-0001 on S-0104") || !strings.Contains(p, "wait_for_events") {
+		t.Errorf("resume prompt: %s", p)
+	}
+	cmd, _ := (command{}).Start(r, Host{Program: "run-agent"})
+	if !slices.Contains(cmd.Env, "FLAI_ANSWERED=TH-0001") {
+		t.Errorf("command env: %q", cmd.Env)
 	}
 }
