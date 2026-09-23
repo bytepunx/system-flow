@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import HostFlaiBanner from './HostFlaiBanner.svelte';
 import { hostFlai } from '$lib/hostflai.svelte';
+import { projectState, resetForTests } from '$lib/project.svelte';
 
 describe('HostFlaiBanner', () => {
 	afterEach(() => {
@@ -30,6 +31,25 @@ describe('HostFlaiBanner', () => {
 		expect(text).toContain('flai serve start');
 		expect(text).toContain('flai serve status');
 		unmount(c);
+	});
+
+	// Found live (S-0095): with two projects connected and none chosen yet, the status is asked for
+	// no project in particular and says "not connected", which was false. Until a choice is made the
+	// banner says nothing; once one is, it says what is true of that project.
+	it('says nothing while several projects are known and none is chosen', () => {
+		projectState.list = [
+			{ key: 'alpha', name: 'Alpha', connected: true },
+			{ key: 'beta', name: 'Beta', connected: true }
+		];
+		const c = mount(HostFlaiBanner, { target: document.body });
+		hostFlai.status = { configured: true, connected: false };
+		flushSync();
+		expect(banner()).toBeNull();
+		projectState.pick('beta', false);
+		flushSync();
+		expect(banner()?.textContent).toContain('No flai on the host is connected');
+		unmount(c);
+		resetForTests();
 	});
 
 	// Found live (S-0086): a flai still running an old in-memory version after the binary on disk

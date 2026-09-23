@@ -2,11 +2,15 @@
 	// The project is read through flai on the host (S-0073). When none is connected the pages have
 	// nothing to show, so every page says what is missing and the command that brings it back.
 	import { hostFlai } from '$lib/hostflai.svelte';
+	import { projectState } from '$lib/project.svelte';
 
 	const status = $derived(hostFlai.status);
+	// Several projects and none chosen yet (S-0095): the status was asked for no project in
+	// particular, so "not connected" would be false; the switcher and the project list ask for a choice.
+	const choosing = $derived(projectState.needsChoice && !projectState.current);
 </script>
 
-{#if status && !hostFlai.usable}
+{#if status && !hostFlai.usable && !choosing}
 	<div
 		class="border-b border-warn bg-warn-soft px-4 py-3 text-sm"
 		role="alert"

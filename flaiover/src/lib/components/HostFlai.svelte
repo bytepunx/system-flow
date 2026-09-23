@@ -4,11 +4,14 @@
 	// /host, where restart, upgrade, and stop live (S-0081).
 	import { resolve } from '$app/paths';
 	import { hostFlai } from '$lib/hostflai.svelte';
+	import { projectState } from '$lib/project.svelte';
 
 	const status = $derived(hostFlai.status);
+	// Nothing to say about "the" host flai until a project is chosen among several (S-0095).
+	const choosing = $derived(projectState.needsChoice && !projectState.current);
 </script>
 
-{#if status?.configured}
+{#if status?.configured && !choosing}
 	{#if hostFlai.usable}
 		<a
 			href={resolve('/host')}
