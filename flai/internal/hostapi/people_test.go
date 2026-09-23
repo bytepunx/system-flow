@@ -133,7 +133,7 @@ func TestInboxDesigner(t *testing.T) {
 	if e := byKind["thread"]; e.Key != "thread:TH-0001" || e.Item != "S-0001" || e.Detail != "claude wrote last, on S-0001" || e.At != "2026-09-20T08:40:00Z" {
 		t.Errorf("thread: %+v", e)
 	}
-	if e := byKind["question"]; e.Key != "question:S-0001:150ucnp" || e.Title != "Which port should it use?" || e.Path != "wip/agents/S-0001.md" || e.Detail != "asked in the narrative of S-0001" {
+	if e := byKind["question"]; e.Key != "question:S-0001:150ucnp" || e.Title != "Which port should it use?" || e.Path != "wip/agents/S-0001.md" || e.Detail != "asked in the narrative of S-0001" || e.Item != "S-0001" {
 		t.Errorf("question: %+v", e)
 	}
 	if e := byKind["review"]; e.Key != "review:S-0004" || e.Item != "S-0004" || e.Title != "S-0004 Customs" {

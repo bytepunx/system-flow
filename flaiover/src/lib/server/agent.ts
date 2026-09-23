@@ -69,6 +69,7 @@ export const REQUIRED_METHODS = [
 	'accept.run',
 	'stream.diff',
 	'stream.log',
+	'stream.answer',
 	'thread.new',
 	'thread.reply',
 	'thread.resolve',

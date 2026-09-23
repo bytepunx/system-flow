@@ -671,6 +671,30 @@ func specs() map[string]spec {
 			return []string{"stream", "log", in.ID, "--", strings.TrimSpace(in.Entry)}, "", nil
 		}),
 
+		// stream.answer answers a hand-written open question (S-0090): one
+		// with no thread of its own, so thread.reply does not already reach
+		// it. It moves to Decisions (design/system/agent-narrative.md).
+		"stream.answer": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID       string `json:"id"`
+				Question string `json:"question"`
+				Answer   string `json:"answer"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			if strings.TrimSpace(in.Question) == "" {
+				return nil, "", bad("question is required")
+			}
+			if strings.TrimSpace(in.Answer) == "" {
+				return nil, "", bad("answer is required")
+			}
+			return []string{"stream", "answer", in.ID, "--by=" + owner(p), "--", strings.TrimSpace(in.Question), strings.TrimSpace(in.Answer)}, "", nil
+		}),
+
 		"thread.new": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				On      string `json:"on"`

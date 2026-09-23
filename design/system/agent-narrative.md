@@ -47,7 +47,7 @@ Ordered list. The first item is what to do next. Rewritten on every meaningful s
 Bullet list of decisions made during this stream with a one-line rationale each. Anything architectural also gets an ADR; link it.
 
 ## Open questions
-Questions for the human. Each has a date. Answered questions move to Decisions. Between `<!-- threads:start -->` and `<!-- threads:end -->` flai keeps a generated list of unresolved threads anchored to the story or its tasks (ADR-0020, S-0038); do not edit that block by hand. Agents connected to `flai mcp` see the same threads through `inbox` and are woken by `wait_for_events` (S-0039).
+Questions for the human. Each has a date. Answered questions move to Decisions: by hand, or with `flai stream answer` (also reachable from the dashboard's inbox, S-0090), which removes the matching bullet and records the answer under Decisions itself. A story whose narrative still has a hand-written question here is refused into review (S-0089): the agent cannot finish without the answer, so `flai move` (and the MCP and dashboard paths behind it) names the question and how to answer it; answering it, or removing it, lets the move through. Mirrored threads do not count toward this rule, since they are tracked, and close, as threads. Between `<!-- threads:start -->` and `<!-- threads:end -->` flai keeps a generated list of unresolved threads anchored to the story or its tasks (ADR-0020, S-0038); do not edit that block by hand. Agents connected to `flai mcp` see the same threads through `inbox` and are woken by `wait_for_events` (S-0039).
 
 ## Log
 Append-only. One entry per meaningful step, newest last.

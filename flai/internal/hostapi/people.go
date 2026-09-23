@@ -274,7 +274,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 				}
 				for _, q := range workitem.OpenQuestions(n.body) {
 					add(InboxEntry{Key: "question:" + stream + ":" + keyHash(q), Kind: "question", Title: q,
-						Detail: "asked in the narrative of " + stream, Path: dir + "/" + n.name, At: str(n.fm["updated"], "")})
+						Detail: "asked in the narrative of " + stream, Item: stream, Path: dir + "/" + n.name, At: str(n.fm["updated"], "")})
 				}
 			}
 

@@ -2,6 +2,15 @@
 	// /inbox: what needs a human (S-0042). The data is shared with the navigation badge.
 	import { inboxState } from '$lib/inbox.svelte';
 	import InboxView from '$lib/components/InboxView.svelte';
+	import { api } from '$lib/api';
+	import { onMount } from 'svelte';
+
+	let writable = $state(false);
+	onMount(() => {
+		api('/api/board')
+			.then(async (r) => (writable = r.ok ? (await r.json()).writable : false))
+			.catch(() => (writable = false));
+	});
 </script>
 
 <svelte:head><title>Inbox · flaiover</title></svelte:head>
@@ -28,5 +37,5 @@
 {:else if !inboxState.data}
 	<p class="text-sm text-muted">Loading…</p>
 {:else}
-	<InboxView inbox={inboxState.data} />
+	<InboxView inbox={inboxState.data} {writable} />
 {/if}

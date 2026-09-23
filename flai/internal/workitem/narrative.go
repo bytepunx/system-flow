@@ -154,6 +154,155 @@ func (r *Repo) LogStream(storyID, entry string, opt StreamOptions) (*Narrative, 
 	return n, nil
 }
 
+var narrativeSectionHeading = regexp.MustCompile(`^##\s`)
+var narrativeBullet = regexp.MustCompile(`^\s*[-*]\s+(.*\S)\s*$`)
+var narrativeContinuation = regexp.MustCompile(`^\s{2,}\S`)
+
+// OpenQuestions are the bullets under a narrative's ## Open questions,
+// outside the block flai generates to mirror threads (a mirrored thread is
+// tracked, and closes, as a thread; a hand-written bullet stays until it is
+// answered with AnswerOpenQuestion or removed by hand).
+func OpenQuestions(body string) []string {
+	lines := strings.Split(body, "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.TrimSpace(l) == "## Open questions" {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return nil
+	}
+	var out []string
+	generated := false
+	for _, line := range lines[start+1:] {
+		if narrativeSectionHeading.MatchString(line) {
+			break
+		}
+		switch {
+		case strings.Contains(line, "<!-- threads:start -->"):
+			generated = true
+		case strings.Contains(line, "<!-- threads:end -->"):
+			generated = false
+		case !generated:
+			if m := narrativeBullet.FindStringSubmatch(line); m != nil {
+				out = append(out, m[1])
+			} else if len(out) > 0 && narrativeContinuation.MatchString(line) {
+				out[len(out)-1] += " " + strings.TrimSpace(line)
+			}
+		}
+	}
+	return out
+}
+
+// AnswerOpenQuestion removes the bullet under a story's narrative's ## Open
+// questions matching question (exactly as OpenQuestions returns it, so the
+// caller passes back a title an inbox entry already showed) and records the
+// answer under ## Decisions (design/system/agent-narrative.md: "Answered
+// questions move to Decisions"). It refuses if none matches, so an answer
+// can never silently land nowhere.
+func (r *Repo) AnswerOpenQuestion(storyID, question, answer, by string, now time.Time) (*Narrative, error) {
+	var n *Narrative
+	var err error
+	for _, cand := range idCandidates(storyID) {
+		n, err = ReadNarrative(r.NarrativePath(cand))
+		if !os.IsNotExist(err) {
+			break
+		}
+	}
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("no stream for %s; open one with `flai stream open %s`", storyID, CanonicalID(storyID))
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(n.Body, "\n")
+	secStart := -1
+	for i, l := range lines {
+		if strings.TrimSpace(l) == "## Open questions" {
+			secStart = i
+			break
+		}
+	}
+	if secStart < 0 {
+		return nil, fmt.Errorf("%s's narrative has no ## Open questions section", n.Stream)
+	}
+	secEnd := len(lines)
+	for i := secStart + 1; i < len(lines); i++ {
+		if narrativeSectionHeading.MatchString(lines[i]) {
+			secEnd = i
+			break
+		}
+	}
+
+	bStart, bEnd, generated := -1, -1, false
+	for i := secStart + 1; i < secEnd; {
+		switch {
+		case strings.Contains(lines[i], "<!-- threads:start -->"):
+			generated, i = true, i+1
+		case strings.Contains(lines[i], "<!-- threads:end -->"):
+			generated, i = false, i+1
+		case generated:
+			i++
+		default:
+			m := narrativeBullet.FindStringSubmatch(lines[i])
+			if m == nil {
+				i++
+				continue
+			}
+			text, j := m[1], i+1
+			for j < secEnd && narrativeContinuation.MatchString(lines[j]) {
+				text += " " + strings.TrimSpace(lines[j])
+				j++
+			}
+			if text == question {
+				bStart, bEnd = i, j
+				i = secEnd // found it; stop
+			} else {
+				i = j
+			}
+		}
+	}
+	if bStart < 0 {
+		return nil, fmt.Errorf("%s's narrative has no open question matching %q", n.Stream, question)
+	}
+	lines = append(lines[:bStart], lines[bEnd:]...)
+
+	entry := fmt.Sprintf("- %s: %s — %s (answered by %s)", now.UTC().Format("2006-01-02"), question, strings.TrimSpace(answer), orDefault(by, "designer"))
+	dStart := -1
+	for i, l := range lines {
+		if strings.TrimSpace(l) == "## Decisions" {
+			dStart = i
+			break
+		}
+	}
+	if dStart < 0 {
+		n.Body = strings.TrimRight(strings.Join(lines, "\n"), "\n") + "\n\n## Decisions\n" + entry + "\n"
+	} else {
+		dEnd := len(lines)
+		for i := dStart + 1; i < len(lines); i++ {
+			if narrativeSectionHeading.MatchString(lines[i]) {
+				dEnd = i
+				break
+			}
+		}
+		for dEnd > dStart+1 && strings.TrimSpace(lines[dEnd-1]) == "" {
+			dEnd--
+		}
+		out := append([]string{}, lines[:dEnd]...)
+		out = append(out, entry)
+		out = append(out, lines[dEnd:]...)
+		n.Body = strings.Join(out, "\n")
+	}
+	n.Updated = now.UTC().Format(TimeFormat)
+	if err := n.Save(); err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
 // ActiveNarratives lists narratives under wip/agents.
 func (r *Repo) ActiveNarratives() ([]*Narrative, error) {
 	matches, _ := filepath.Glob(filepath.Join(r.AgentsDir(), "S-*.md"))
@@ -189,48 +338,6 @@ func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(r.AgentsDir(), "index.md"), []byte(b.String()), 0o644)
-}
-
-var narrativeSectionHeading = regexp.MustCompile(`^##\s`)
-var narrativeBullet = regexp.MustCompile(`^\s*[-*]\s+(.*\S)\s*$`)
-var narrativeContinuation = regexp.MustCompile(`^\s{2,}\S`)
-
-// OpenQuestions are the bullets under a narrative's ## Open questions,
-// outside the block flai generates to mirror threads (a mirrored thread is
-// tracked, and closes, as a thread; a hand-written bullet has no such
-// tracking, so it stays until whoever wrote it removes it by hand).
-func OpenQuestions(body string) []string {
-	lines := strings.Split(body, "\n")
-	start := -1
-	for i, l := range lines {
-		if strings.TrimSpace(l) == "## Open questions" {
-			start = i
-			break
-		}
-	}
-	if start < 0 {
-		return nil
-	}
-	var out []string
-	generated := false
-	for _, line := range lines[start+1:] {
-		if narrativeSectionHeading.MatchString(line) {
-			break
-		}
-		switch {
-		case strings.Contains(line, "<!-- threads:start -->"):
-			generated = true
-		case strings.Contains(line, "<!-- threads:end -->"):
-			generated = false
-		case !generated:
-			if m := narrativeBullet.FindStringSubmatch(line); m != nil {
-				out = append(out, m[1])
-			} else if len(out) > 0 && narrativeContinuation.MatchString(line) {
-				out[len(out)-1] += " " + strings.TrimSpace(line)
-			}
-		}
-	}
-	return out
 }
 
 // lastHeading returns the last markdown heading line in body, or "".

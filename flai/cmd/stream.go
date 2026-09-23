@@ -15,7 +15,7 @@ func newStreamCmd(a *app) *cobra.Command {
 		Long: `A stream is the narrative for one story. Set FLAI_AGENT and FLAI_SESSION
 so entries record who wrote them.`,
 	}
-	c.AddCommand(newStreamDiffCmd(a), newStreamOpenCmd(a), newStreamLogCmd(a), newStreamSyncCmd(a))
+	c.AddCommand(newStreamDiffCmd(a), newStreamOpenCmd(a), newStreamLogCmd(a), newStreamSyncCmd(a), newStreamAnswerCmd(a))
 	return c
 }
 
@@ -125,4 +125,36 @@ func newStreamLogCmd(a *app) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newStreamAnswerCmd(a *app) *cobra.Command {
+	var by string
+	c := &cobra.Command{
+		Use:   "answer <story-id> \"<question>\" \"<answer>\"",
+		Short: "Answer an open question in a story's narrative: it moves to Decisions",
+		Long: `Removes the bullet matching <question> (exactly as it reads under ##
+Open questions) and records it, with the answer, under ## Decisions
+(design/system/agent-narrative.md: "Answered questions move to Decisions").
+Refuses if no open question matches. This is for a hand-written question, a
+freeform note an agent left with no answer/resolve of its own; a question
+mirrored from a thread is answered with flai thread reply instead.`,
+		Args: cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			n, err := repo.AnswerOpenQuestion(args[0], args[1], args[2], a.threadAuthor(by), a.now())
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(map[string]string{"stream": n.Stream, "updated": n.Updated})
+			}
+			fmt.Fprintf(a.out, "%s answered; moved to Decisions in %s\n", args[1], relPath(repo.MainRoot, n.Path))
+			return nil
+		},
+	}
+	c.Flags().StringVar(&by, "by", "", "who answered it (default: FLAI_AGENT, then config author)")
+	return c
 }

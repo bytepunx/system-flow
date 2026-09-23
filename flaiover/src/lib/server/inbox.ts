@@ -11,6 +11,9 @@ export type InboxEntry = {
 	detail?: string;
 	href: string; // a dashboard path
 	at?: string;
+	// The story or item this entry is about, when it has one: a question
+	// entry needs it to answer in place (S-0090), not just to link out.
+	item?: string;
 };
 export type Inbox = {
 	total: number;
@@ -19,11 +22,12 @@ export type Inbox = {
 	notes: string[];
 };
 
-type FlaiEntry = Omit<InboxEntry, 'href'> & { item?: string; path?: string };
+type FlaiEntry = Omit<InboxEntry, 'href'> & { path?: string };
 
-/** Where an entry leads: the review page for a story in review, else its item, else its document. */
+/** Where an entry leads: the review page for a story in review, a question's own narrative document (even once it also carries an item id, to answer it in place), else its item, else its document. */
 export function hrefFor(e: { kind: InboxKind; item?: string; path?: string }): string {
 	if (e.kind === 'review' && e.item) return `/review/${e.item}`;
+	if (e.kind === 'question' && e.path) return `/docs/${e.path}`;
 	if (e.item) return `/items/${e.item}`;
 	if (e.path) return `/docs/${e.path}`;
 	return '/board';
@@ -38,11 +42,12 @@ export async function inbox(repo: Repo): Promise<Inbox> {
 		total: got.total,
 		counts: got.counts,
 		notes: got.notes ?? [],
-		entries: (got.entries ?? []).map(({ item, path, ...e }) => ({
+		entries: (got.entries ?? []).map(({ path, ...e }) => ({
 			...e,
 			detail: e.detail || undefined,
 			at: e.at || undefined,
-			href: hrefFor({ kind: e.kind, item, path })
+			item: e.item || undefined,
+			href: hrefFor({ kind: e.kind, item: e.item, path })
 		}))
 	};
 }

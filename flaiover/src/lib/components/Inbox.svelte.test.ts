@@ -5,11 +5,18 @@ import InboxView from './InboxView.svelte';
 import InboxBadge from './InboxBadge.svelte';
 import { inboxState, newEntries, type Inbox } from '$lib/inbox.svelte';
 
-vi.mock('$lib/api', () => ({ api: vi.fn() }));
+const api = vi.fn();
+vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) =>
 		route.replace('[...path]', params.path ?? '').replace('[id]', params.id ?? '')
 }));
+const json = (body: unknown, status = 200) => ({
+	ok: status < 400,
+	status,
+	statusText: String(status),
+	json: async () => body
+});
 
 const BOX: Inbox = {
 	total: 3,
@@ -47,6 +54,7 @@ describe('inbox and activity views', () => {
 		if (c) unmount(c);
 		c = undefined;
 		inboxState.data = null;
+		api.mockReset();
 		document.body.innerHTML = '';
 	});
 
@@ -61,6 +69,70 @@ describe('inbox and activity views', () => {
 		expect(links).toEqual(['/review/S-0041', '/items/S-0042', '/items/T-0003']);
 		expect(document.body.textContent).toContain('blocked: waiting on keys');
 		expect(document.body.textContent).toContain('flai is not available');
+	});
+
+	const QUESTION_BOX: Inbox = {
+		total: 1,
+		counts: { thread: 0, question: 1, review: 0, blocked: 0, overlap: 0 },
+		notes: [],
+		entries: [
+			{
+				key: 'question:S-0001:abc',
+				kind: 'question',
+				title: 'Which port should it use?',
+				detail: 'asked in the narrative of S-0001',
+				href: '/docs/wip/agents/S-0001.md',
+				item: 'S-0001'
+			}
+		]
+	};
+
+	it('offers no way to answer a question when the dashboard is not writable', () => {
+		c = mount(InboxView, {
+			target: document.body,
+			props: { inbox: QUESTION_BOX, writable: false }
+		});
+		flushSync();
+		expect(document.querySelector('[data-testid="question-answer-input"]')).toBeNull();
+	});
+
+	it('answers an open question in place, posting to its story and refreshing the inbox', async () => {
+		api.mockResolvedValueOnce(json({}));
+		api.mockResolvedValueOnce(json({ total: 0, counts: BOX.counts, entries: [], notes: [] }));
+		c = mount(InboxView, { target: document.body, props: { inbox: QUESTION_BOX, writable: true } });
+		flushSync();
+		const input = document.querySelector<HTMLInputElement>(
+			'[data-testid="question-answer-input"]'
+		)!;
+		input.value = 'Nine.';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		document.querySelector<HTMLButtonElement>('[data-testid="question-answer-submit"]')!.click();
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+		expect(api).toHaveBeenCalledWith(
+			'/api/streams/S-0001/answer',
+			expect.objectContaining({
+				method: 'POST',
+				body: JSON.stringify({ question: 'Which port should it use?', answer: 'Nine.' })
+			})
+		);
+		expect(api).toHaveBeenLastCalledWith('/api/inbox');
+	});
+
+	it('shows what flai said when answering is refused', async () => {
+		api.mockResolvedValueOnce(json({ error: 'no open question matching that' }, 400));
+		c = mount(InboxView, { target: document.body, props: { inbox: QUESTION_BOX, writable: true } });
+		flushSync();
+		const input = document.querySelector<HTMLInputElement>(
+			'[data-testid="question-answer-input"]'
+		)!;
+		input.value = 'Nine.';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		document.querySelector<HTMLButtonElement>('[data-testid="question-answer-submit"]')!.click();
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+		flushSync();
+		expect(document.body.textContent).toContain('no open question matching that');
 	});
 
 	it('says so when nothing needs the designer', () => {

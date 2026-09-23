@@ -213,6 +213,27 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 		const narrative = await readFile(join(dir, 'wip/agents/S-004.md'), 'utf8');
 		expect(narrative).toContain('--from the dashboard');
 	});
+	it('answers an open question in a narrative, moving it to Decisions (S-0090)', async () => {
+		const path = join(dir, 'wip/agents/S-004.md');
+		const before = await readFile(path, 'utf8');
+		await writeFile(
+			path,
+			before.replace('## Open questions\n', '## Open questions\n- Which port should it use?\n')
+		);
+		await r.write('stream.answer', {
+			id: 'S-004',
+			question: 'Which port should it use?',
+			answer: 'Nine.'
+		});
+		const after = await readFile(path, 'utf8');
+		expect(after).not.toContain('- Which port should it use?\n');
+		const decisions = after.slice(
+			after.indexOf('## Decisions'),
+			after.indexOf('## Open questions')
+		);
+		expect(decisions).toContain('Which port should it use?');
+		expect(decisions).toContain('Nine.');
+	});
 	it('creates a story with a body in one step, and is refused by the check with nothing left (S-0059)', async () => {
 		const { data: template } = await r.run<{ body: string }>('item.template', { type: 'story' });
 		expect(template.body).toContain('## Goal');

@@ -11,6 +11,7 @@ export type InboxEntry = {
 	detail?: string;
 	href: string;
 	at?: string;
+	item?: string;
 };
 export type Inbox = {
 	total: number;

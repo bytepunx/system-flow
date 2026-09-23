@@ -69,7 +69,7 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 		if it.Type == Story {
 			if n, err := ReadNarrative(r.NarrativePath(it.ID)); err == nil {
 				if qs := OpenQuestions(n.Body); len(qs) > 0 {
-					return nil, fmt.Errorf("rule: %s has an open question in its narrative (%s): %q; resolve it, or remove it from ## Open questions, before review", it.ID, n.Path, qs[0])
+					return nil, fmt.Errorf("rule: %s has an open question in its narrative (%s): %q; it needs an answer before review (the operator answers it from the dashboard's inbox, or: flai stream answer %s %q \"<answer>\")", it.ID, n.Path, qs[0], it.ID, qs[0])
 				}
 			}
 		}
