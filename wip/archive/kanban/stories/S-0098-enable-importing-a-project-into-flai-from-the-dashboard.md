@@ -3,10 +3,10 @@ id: S-0098
 type: story
 nature: feature
 title: Enable importing a project into flai from the dashboard
-status: review
+status: done
 owner: alex
 created: 2026-09-23T03:58:10Z
-updated: 2026-09-23T04:27:25Z
+updated: 2026-09-23T05:04:00Z
 transitions:
   - to: ready
     at: 2026-09-23T03:58:13Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-23T04:27:25Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T05:04:00Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---
