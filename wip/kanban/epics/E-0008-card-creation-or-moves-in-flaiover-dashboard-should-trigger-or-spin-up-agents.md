@@ -6,7 +6,7 @@ title: Card creation or moves in flaiover dashboard should trigger or spin up ag
 status: backlog
 owner: alex
 created: 2026-09-23T16:43:01Z
-updated: 2026-09-23T16:43:01Z
+updated: 2026-09-23T16:46:55Z
 transitions: []
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
@@ -20,5 +20,6 @@ Instead of tell an agent like Claude to use the MCP endpoint to poll for ready i
 These agents need to "prime" context via ADRs and conventions for the story and make use of the activity log, inbox, flai via MCP to submit questions for the user, create and work tasks, and monitor the inbox for responses so that they can successfully move the story to the review stage.
 
 ## Stories
+- S-0103 Extend existing data structures, APIs, and UI to track agent configuration
 
 ## Notes
