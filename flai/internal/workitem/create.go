@@ -47,11 +47,15 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		return nil, fmt.Errorf("nature %q must be one of %s", opt.Nature, strings.Join(Natures, ", "))
 	}
 	var parent *Item
-	if opt.Type == Epic {
+	switch {
+	case opt.Type == Epic:
 		if opt.Parent != "" {
 			return nil, fmt.Errorf("epics have no parent")
 		}
-	} else {
+	case opt.Type == Story && opt.Parent == "":
+		// a story need not belong to an epic (S-0092): not every story fits
+		// an active one, and an epic created only to hold one is not wanted.
+	default:
 		wantParent := Epic
 		if opt.Type == Task {
 			wantParent = Story

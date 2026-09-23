@@ -168,7 +168,11 @@ func TestItemNewPrintBodyAndItsRefusals(t *testing.T) {
 	if _, errOut, code := runStdin(t, root, "  \n", "story", "new", "Empty", "--epic", "E-0001", "--body-stdin"); code == 0 || !strings.Contains(errOut, "standard input is empty") {
 		t.Errorf("an empty body is refused: %d %s", code, errOut)
 	}
-	if _, errOut, code := runIn(t, root, "story", "new", "No parent"); code == 0 || !strings.Contains(errOut, "epic") {
-		t.Errorf("a story still needs its epic: %d %s", code, errOut)
+	// a story need not belong to an epic (S-0092)
+	if out, errOut, code := runIn(t, root, "story", "new", "No parent"); code != 0 || !strings.HasPrefix(out, "S-") {
+		t.Errorf("a story without an epic: %d %s %s", code, out, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "task", "new", "No parent"); code == 0 || !strings.Contains(errOut, "story") {
+		t.Errorf("a task still needs its story: %d %s", code, errOut)
 	}
 }

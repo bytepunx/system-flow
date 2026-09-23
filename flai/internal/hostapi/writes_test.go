@@ -166,6 +166,28 @@ func TestWritesBecomeTheCommandLinesTheDashboardUsedToRun(t *testing.T) {
 	}
 }
 
+// A story need not belong to an epic (S-0092): item.new leaves out --epic
+// entirely rather than refusing for a missing parent.
+func TestItemNewStoryWithNoEpic(t *testing.T) {
+	p := withDocs(t)
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+	params := `{"type":"story","title":"Standalone","body":"## Goal\nx\n",` + rid + `}`
+	_, rerr := writeMethods(rec.run, time.Now, hostFor("item.new"))["item.new"](context.Background(), p, json.RawMessage(params))
+	if rerr != nil {
+		t.Fatalf("story with no epic: %+v", rerr)
+	}
+	if len(rec.runs) != 1 {
+		t.Fatalf("ran %d commands", len(rec.runs))
+	}
+	args := strings.Join(rec.runs[0].Args, " ")
+	if strings.Contains(args, "--epic") {
+		t.Errorf("a story with no parent should not carry --epic: %s", args)
+	}
+	if !strings.HasPrefix(args, "story new --nature=feature --owner=olive --body-stdin") {
+		t.Errorf("ran %s", args)
+	}
+}
+
 func TestWhatIsNotDataNeverReachesACommandLine(t *testing.T) {
 	p := withDocs(t)
 	for name, list := range refused {

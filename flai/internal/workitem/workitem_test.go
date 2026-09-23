@@ -177,8 +177,19 @@ func TestCreateAndLinkParents(t *testing.T) {
 	if _, err := r.Create(NewOptions{Type: Task, Title: "orphan", Parent: "E-0001", Now: t0}); err == nil {
 		t.Error("task under epic should fail")
 	}
-	if _, err := r.Create(NewOptions{Type: Story, Title: "x", Now: t0}); err == nil {
-		t.Error("story without parent should fail")
+	// a story need not belong to an epic (S-0092)
+	orphan, err := r.Create(NewOptions{Type: Story, Title: "x", Now: t0})
+	if err != nil {
+		t.Fatalf("story without an epic: %v", err)
+	}
+	if orphan.Parent != "" {
+		t.Errorf("orphan story got a parent: %q", orphan.Parent)
+	}
+	if err := orphan.Validate(); err != nil {
+		t.Errorf("orphan story is invalid: %v", err)
+	}
+	if _, err := r.Create(NewOptions{Type: Task, Title: "x", Now: t0}); err == nil {
+		t.Error("task without a parent story should still fail")
 	}
 	if _, err := r.Create(NewOptions{Type: Story, Title: "x", Parent: "E-0001", Nature: "bug", Now: t0}); err == nil {
 		t.Error("bad nature should fail")

@@ -168,7 +168,7 @@ flai task new "Render invoice template" --story S-0001 --tag pdf
 flai show S-0001
 ```
 
-Items are created from the template's item bodies with the next free ID and linked into their parent's Stories or Tasks list. Natures: `feature`, `improvement`, `remediation`, `research`, `experiment`.
+Items are created from the template's item bodies with the next free ID and linked into their parent's Stories or Tasks list. Natures: `feature`, `improvement`, `remediation`, `research`, `experiment`. `--epic` is optional for a story: not every story fits an active epic, and an epic made only to hold one is not wanted (S-0092); `--story` is still required for a task.
 
 To create an item with its body already written, give the body on standard input. This is what the dashboard's "new" form does, and it is one step that happens or does not:
 

@@ -86,7 +86,7 @@ type: story                      # epic | story | task
 nature: feature                  # feature | improvement | remediation | research | experiment
 title: CLI scaffold and config
 status: ready                    # backlog | ready | in-progress | review | done | cancelled
-parent: E-0002                    # required for story and task, absent for epic
+parent: E-0002                    # required for task; optional for story (S-0092), absent for epic
 owner: agent                     # free text: agent, a person's handle, or team
 created: 2026-09-15T16:10:00Z
 updated: 2026-09-15T16:40:00Z

@@ -61,13 +61,23 @@ func TestWorkItemLifecycle(t *testing.T) {
 	if code != 0 || !strings.HasPrefix(out, "E-0001 Big thing") {
 		t.Fatalf("epic new: %d %s %s", code, out, errOut)
 	}
-	_, errOut, code = runIn(t, nested, "story", "new", "Slice")
-	if code == 0 || !strings.Contains(errOut, "epic") {
-		t.Fatalf("story without --epic should fail: %s", errOut)
+	_, errOut, code = runIn(t, nested, "task", "new", "Piece")
+	if code == 0 || !strings.Contains(errOut, "story") {
+		t.Fatalf("task without --story should fail: %s", errOut)
 	}
 	out, _, code = runIn(t, nested, "story", "new", "Slice", "--epic", "E-0001", "--tag", "a,b")
 	if code != 0 || !strings.HasPrefix(out, "S-0001 Slice") {
 		t.Fatalf("story new: %s", out)
+	}
+	// a story need not belong to an epic (S-0092)
+	out, errOut, code = runIn(t, nested, "story", "new", "Standalone")
+	if code != 0 || !strings.HasPrefix(out, "S-0002 Standalone") {
+		t.Fatalf("story new without --epic: %d %s %s", code, out, errOut)
+	}
+	standalonePath := filepath.Join(root, "wip", "kanban", "stories", "S-0002-standalone.md")
+	b0, _ := os.ReadFile(standalonePath)
+	if bytes.Contains(b0, []byte("parent: E")) {
+		t.Errorf("standalone story got an epic parent:\n%s", b0)
 	}
 	out, _, _ = runIn(t, nested, "task", "new", "Piece", "--story", "S-0001", "--json")
 	var created map[string]any

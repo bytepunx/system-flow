@@ -35,9 +35,9 @@
 			.split(/[\s,]+/)
 			.map((v) => v.trim())
 			.filter(Boolean);
-	const ready = $derived(
-		title.trim() !== '' && body.trim() !== '' && (type === 'epic' || parent !== '') && !busy
-	);
+	// A story need not belong to an epic (S-0092): "No epic" (parent === '') is a real choice, not
+	// a placeholder to fill in.
+	const ready = $derived(title.trim() !== '' && body.trim() !== '' && !busy);
 
 	// The sections come from the project's item template, through flai. Text the designer has
 	// already written is never replaced: a change of type swaps the body only while it is still
@@ -121,10 +121,9 @@
 				<select
 					class="max-w-xs rounded border border-line-strong bg-surface px-2 py-1"
 					bind:value={parent}
-					required
 					data-testid="parent"
 				>
-					<option value="" disabled>choose an epic</option>
+					<option value="">No epic</option>
 					{#each epics as e (e.id)}<option value={e.id}>{e.id} {e.title}</option>{/each}
 				</select>
 			</label>

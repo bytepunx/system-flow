@@ -241,6 +241,20 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 		).rejects.toMatchObject({ status: 422, data: { findings: expect.any(Array) } });
 		expect(await readdir(join(dir, 'wip/kanban/stories'))).toEqual(before);
 	});
+	it('creates a story with no epic (S-0092)', async () => {
+		const { data } = await r.write<{ item: { id: string; parent?: string }; path: string }>(
+			'item.new',
+			{
+				type: 'story',
+				title: 'Standalone work',
+				nature: 'improvement',
+				body: '## Goal\nNo epic needed.\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n'
+			}
+		);
+		expect(data.item.parent ?? '').toBe('');
+		const file = await readFile(join(dir, data.path), 'utf8');
+		expect(file).not.toMatch(/parent: E-/);
+	});
 	it('reads what changes nothing without a request ID: a cancellation preview, a diff of nothing, stats', async () => {
 		const { data } = await r.run<{ dry_run: boolean; cancelled: unknown[] }>('item.move.preview', {
 			id: 'E-001'

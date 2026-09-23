@@ -150,8 +150,8 @@ func (it *Item) Validate() error {
 	if it.Type == Epic && it.Parent != "" {
 		errs = append(errs, "epics have no parent")
 	}
-	if it.Type != Epic && it.Parent == "" {
-		errs = append(errs, "parent is required for stories and tasks")
+	if it.Type == Task && it.Parent == "" {
+		errs = append(errs, "parent is required for tasks")
 	}
 	if it.Type == Story && it.Parent != "" && !strings.HasPrefix(it.Parent, "E-") {
 		errs = append(errs, "a story's parent must be an epic")

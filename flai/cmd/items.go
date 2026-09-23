@@ -126,12 +126,18 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 	c.Flags().StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	c.Flags().BoolVar(&printBody, "print-body", false, "print the body the template gives this type and create nothing")
 	if parentFlag != "" {
-		c.Flags().StringVar(&parent, parentFlag, "", "parent "+parentFlag+" ID")
-		c.PreRunE = func(cmd *cobra.Command, args []string) error {
-			if !printBody && parent == "" {
-				return fmt.Errorf("required flag \"%s\" not set", parentFlag)
+		help := "parent " + parentFlag + " ID"
+		if typ == workitem.Story {
+			help += " (optional: a story need not belong to one, S-0092)"
+		}
+		c.Flags().StringVar(&parent, parentFlag, "", help)
+		if typ != workitem.Story {
+			c.PreRunE = func(cmd *cobra.Command, args []string) error {
+				if !printBody && parent == "" {
+					return fmt.Errorf("required flag \"%s\" not set", parentFlag)
+				}
+				return nil
 			}
-			return nil
 		}
 	}
 	return c

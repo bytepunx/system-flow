@@ -77,13 +77,14 @@ describe('NewItemForm', () => {
 		]);
 	});
 
-	it('needs a title and, for a story, its epic; an epic needs no parent and gets the epic’s sections', async () => {
+	it('needs only a title and a body; a story needs no epic (S-0092), an epic needs no parent and gets its own sections', async () => {
 		backend();
 		c = mount(NewItemForm, { target: document.body, props: { oncreated: vi.fn() } });
 		await settle();
 		expect(button().disabled).toBe(true);
 		type(q<HTMLInputElement>('title'), 'Created from the board');
-		expect(button().disabled).toBe(true); // no epic chosen yet
+		expect(button().disabled).toBe(false); // no epic chosen, and none is needed
+		expect(q<HTMLSelectElement>('parent').value).toBe('');
 		type(q<HTMLSelectElement>('parent'), 'E-0006');
 		expect(button().disabled).toBe(false);
 
@@ -93,6 +94,25 @@ describe('NewItemForm', () => {
 		expect(q<HTMLTextAreaElement>('body').value).toBe(EPIC_BODY);
 		expect(button().textContent).toContain('Create epic');
 		expect(button().disabled).toBe(false);
+	});
+
+	it('creates a story with no epic when "No epic" stays chosen', async () => {
+		let sent: Record<string, unknown> | undefined;
+		backend((body) => {
+			sent = body;
+			return ok({ item: { id: 'S-0099' } });
+		});
+		const oncreated = vi.fn();
+		c = mount(NewItemForm, { target: document.body, props: { oncreated } });
+		await settle();
+		type(q<HTMLInputElement>('title'), 'Standalone');
+		expect(q<HTMLSelectElement>('parent').value).toBe('');
+		q<HTMLFormElement>('new-item').dispatchEvent(
+			new Event('submit', { bubbles: true, cancelable: true })
+		);
+		await settle();
+		expect(sent?.parent).toBe('');
+		expect(oncreated).toHaveBeenCalledWith('S-0099');
 	});
 
 	it('does not replace text the designer has written when the type changes', async () => {

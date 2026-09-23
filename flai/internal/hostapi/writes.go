@@ -481,9 +481,11 @@ func specs() map[string]spec {
 			}
 			args := []string{in.Type, "new", "--nature=" + nature, "--owner=" + owner(p)}
 			switch {
+			case in.Type == workitem.Story && in.Parent == "":
+				// no epic (S-0092): not every story belongs to one
 			case in.Type == workitem.Story:
 				if !anyItemID.MatchString(in.Parent) || !strings.HasPrefix(in.Parent, "E-") {
-					return nil, "", bad("a story needs its parent epic")
+					return nil, "", bad("a story's parent must be an epic")
 				}
 				args = append(args, "--epic="+in.Parent)
 			case in.Parent != "":
