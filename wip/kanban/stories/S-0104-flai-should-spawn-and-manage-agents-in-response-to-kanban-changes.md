@@ -3,12 +3,15 @@ id: S-0104
 type: story
 nature: feature
 title: Flai should spawn and manage agents in response to Kanban changes
-status: backlog
+status: ready
 parent: E-0008
 owner: alex
 created: 2026-09-23T16:50:50Z
-updated: 2026-09-23T16:50:50Z
-transitions: []
+updated: 2026-09-23T16:52:04Z
+transitions:
+  - to: ready
+    at: 2026-09-23T16:52:04Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---
