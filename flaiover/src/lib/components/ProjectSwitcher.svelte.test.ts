@@ -16,12 +16,14 @@ describe('ProjectSwitcher (S-0080)', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('shows nothing while at most one project is known', () => {
+	it('shows nothing before any project is known, and names the only one once there is one (S-0095)', () => {
 		c = mount(ProjectSwitcher, { target: document.body });
 		expect(document.querySelector('[data-testid="project-switcher"]')).toBeNull();
+		expect(document.querySelector('[data-testid="project-name"]')).toBeNull();
 		projectState.list = [{ key: 'harbour', name: 'Harbour', connected: true }];
 		flushSync();
 		expect(document.querySelector('[data-testid="project-switcher"]')).toBeNull();
+		expect(document.querySelector('[data-testid="project-name"]')?.textContent).toBe('Harbour');
 	});
 
 	it('lists every known project once there is more than one, current or not connected', () => {
@@ -36,7 +38,7 @@ describe('ProjectSwitcher (S-0080)', () => {
 		expect(options).toContain('Quay (not connected)');
 	});
 
-	it('picking an option chooses that project and reloads, so the page it is on starts fresh', () => {
+	it('picking an option switches to that project in place, without a reload (S-0095)', () => {
 		projectState.list = [
 			{ key: 'harbour', name: 'Harbour', connected: true },
 			{ key: 'quay', name: 'Quay', connected: true }
@@ -47,6 +49,6 @@ describe('ProjectSwitcher (S-0080)', () => {
 		select.value = 'quay';
 		select.dispatchEvent(new Event('change', { bubbles: true }));
 		expect(projectState.current).toBe('quay');
-		expect(location.reload).toHaveBeenCalled();
+		expect(location.reload).not.toHaveBeenCalled();
 	});
 });

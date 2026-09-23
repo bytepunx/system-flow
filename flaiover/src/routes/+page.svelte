@@ -80,10 +80,7 @@
 				<button
 					type="button"
 					class="text-left font-medium text-accent hover:underline"
-					onclick={() => {
-						projectState.pick(p.key);
-						location.reload();
-					}}
+					onclick={() => projectState.pick(p.key)}
 				>
 					{p.name}
 				</button>

@@ -56,6 +56,16 @@ class InboxState {
 		this.#source = null;
 	}
 
+	/** Another project was picked (S-0095): forget this one's entries, so none of the next project's
+	 * is announced as new, and listen to the new project's events instead. */
+	restart(): void {
+		if (!this.#source) return;
+		this.stop();
+		this.#known = null;
+		this.data = null;
+		this.start();
+	}
+
 	async refresh(): Promise<void> {
 		try {
 			const r = await api('/api/inbox');

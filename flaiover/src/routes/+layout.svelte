@@ -39,6 +39,7 @@
 	// navigation, so onMount alone would never see signedIn become true once the app has booted on
 	// /login itself, which following a login link always does.
 	let started = false;
+	let listTimer: ReturnType<typeof setInterval> | null = null;
 	$effect(() => {
 		const signedIn = page.url.pathname !== '/login';
 		if (signedIn && !started) {
@@ -46,12 +47,34 @@
 			inboxState.start();
 			hostFlai.start();
 			void projectState.refresh();
+			// A project whose flai connects later joins the switcher without a reload (S-0095).
+			listTimer = setInterval(() => void projectState.refresh(), 30000);
 		} else if (!signedIn && started) {
 			started = false;
 			inboxState.stop();
 			hostFlai.stop();
+			if (listTimer) clearInterval(listTimer);
+			listTimer = null;
 		}
 	});
+
+	// Switching project (S-0095): the badges in the header outlive the page, so they are pointed at
+	// the new project here; the page itself is keyed on the project below and remounts.
+	let shownProject: string | null | undefined;
+	$effect(() => {
+		const current = projectState.current;
+		if (shownProject !== undefined && current !== shownProject && started) {
+			inboxState.restart();
+			void hostFlai.refresh();
+		}
+		shownProject = current;
+	});
+
+	/** A nav link keeps the project it was followed from, so a copied link shows the same one. */
+	function withProject(href: string): string {
+		const key = projectState.current;
+		return key ? `${href}?project=${encodeURIComponent(key)}` : href;
+	}
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /><title>flaiover</title></svelte:head>
@@ -61,7 +84,8 @@
 		<nav class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
 			<span class="font-semibold tracking-tight text-accent">flaiover</span>
 			{#each nav as { href, label } (href)}
-				<a class="text-sm text-ink-soft hover:text-accent" {href}
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href is resolve()d in nav; only ?project= is added -->
+				<a class="text-sm text-ink-soft hover:text-accent" href={withProject(href)}
 					>{label}{#if label === 'Inbox'}<InboxBadge />{/if}</a
 				>
 			{/each}
@@ -82,6 +106,6 @@
 	</header>
 	{#if page.url.pathname !== '/login'}<HostFlaiBanner />{/if}
 	<main class="mx-auto max-w-6xl px-4 py-6">
-		{@render children()}
+		{#key projectState.current}{@render children()}{/key}
 	</main>
 </div>

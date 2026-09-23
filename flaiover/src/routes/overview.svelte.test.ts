@@ -113,14 +113,16 @@ describe('the root page (S-0080)', () => {
 				})
 			)
 		);
-		vi.stubGlobal('location', { ...window.location, reload: vi.fn() });
+		const reload = vi.fn();
+		vi.stubGlobal('location', { ...window.location, reload });
 		const { default: Overview } = await import('./+page.svelte');
 		const { projectState } = await import('$lib/project.svelte');
 		c = mount(Overview, { target: document.body });
 		await settle();
 		document.querySelector<HTMLButtonElement>('button')!.click();
 		expect(projectState.current).toBe('harbour');
-		expect(location.reload).toHaveBeenCalled();
+		// in place (S-0095): the layout remounts the page for the project picked, no reload
+		expect(reload).not.toHaveBeenCalled();
 		await settle(); // let anything still in flight land before unmount, not after
 	});
 });
