@@ -285,6 +285,9 @@ func Run(ctx context.Context, o Options) error {
 						return
 					case <-starter.again:
 						starter.look(cctx, true)
+					case <-time.After(time.Minute):
+						// an agent that outlived an earlier flai serve is not waited for
+						starter.look(cctx, false)
 					}
 				}
 			}()

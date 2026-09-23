@@ -419,7 +419,9 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	if len(cfg.Agent.Command) > 0 {
 		hosts[harness.Command] = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
 	}
+	self, _ := os.Executable()
 	return serve.AgentConfig{
+		Flai:      self,
 		Enabled:   cfg.ActionEnabled(hostapi.ActionAgent, root),
 		Command:   cfg.Agent.Command,
 		Harnesses: hosts,
