@@ -3,10 +3,10 @@ id: S-0101
 type: story
 nature: improvement
 title: Flai serve, dashboard, and mcp commands should work in parent folders without system-flow.yaml
-status: review
+status: done
 owner: alex
 created: 2026-09-23T05:18:13Z
-updated: 2026-09-23T05:41:56Z
+updated: 2026-09-23T05:46:03Z
 transitions:
   - to: ready
     at: 2026-09-23T05:21:25Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-23T05:41:56Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T05:46:03Z
+    by: alex
 tags: [flai]
 touches: [flai/cmd]
 ---
