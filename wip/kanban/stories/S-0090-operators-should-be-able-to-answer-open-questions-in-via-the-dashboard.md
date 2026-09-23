@@ -29,11 +29,11 @@ When an agent has a question, it should place that question in the inbox where t
 
 ## Acceptance criteria
 - [x] Operators need to be able to answer open questions in the dashboard
-- [ ] Open questions should block a story from being moved to review since the agent can't complete the story without the answer
+- [x] Open questions should block a story from being moved to review since the agent can't complete the story without the answer
 - [x] Answered open questions should not remain in the inbox
 
 ## Tasks
 - T-0334 flai stream answer moves a hand-written open question to Decisions; the dashboard's inbox offers it inline
 
 ## Notes
-Criterion 2 duplicates S-0089's own second criterion exactly (the two stories were filed four minutes apart) and is delivered there (`internal/workitem/rules.go`'s `Move`), not by this story's commits: S-0090 is in review with nothing of that rule in its own branch. Left unchecked here on purpose; it holds once S-0089 is accepted. This story stands on its own for what it actually adds: the answer capability itself (criterion 1), which criterion 3 follows from directly, since flai's `inbox.designer` re-reads the narrative fresh on every call, so a bullet `stream answer` removes is gone from the very next inbox read — no caching to invalidate, verified by a real narrative-file diff before/after in both `internal/workitem`'s and flaiover's own tests.
+Criterion 2 duplicates S-0089's own second criterion exactly (the two stories were filed four minutes apart); the rule itself (`internal/workitem/rules.go`'s `Move`) came with S-0089. Since S-0089's acceptance this branch is rebased onto it, and the two halves are joined here: the refusal now says how to answer (the dashboard's inbox, or `flai stream answer`), `TestAnsweringAnOpenQuestionUnblocksReview` holds that an unanswered question refuses review and answering it lets the story through, and `design/system/agent-narrative.md` records the rule. This story stands on its own for what it actually adds: the answer capability itself (criterion 1), which criterion 3 follows from directly, since flai's `inbox.designer` re-reads the narrative fresh on every call, so a bullet `stream answer` removes is gone from the very next inbox read — no caching to invalidate, verified by a real narrative-file diff before/after in both `internal/workitem`'s and flaiover's own tests.
