@@ -3,11 +3,11 @@ id: S-0103
 type: story
 nature: feature
 title: Extend existing data structures, APIs, and UI to track agent configuration
-status: review
+status: done
 parent: E-0008
 owner: alex
 created: 2026-09-23T16:46:55Z
-updated: 2026-09-23T17:22:24Z
+updated: 2026-09-23T20:18:12Z
 transitions:
   - to: ready
     at: 2026-09-23T16:52:02Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-23T17:22:24Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T20:18:12Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---
