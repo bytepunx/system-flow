@@ -57,6 +57,17 @@ var good = map[string]struct {
 	"checks.tail":       {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
 	"checks.run":        {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
 	"checks.cancel":     {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
+	// S-0105: the host's settings, each a flai command gated by the settings action
+	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
+	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}},` + rid + `}`,
+		"agent set --replace --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --harness=claude-code --model=claude-opus-5-5 --config=effort=high --json", ""},
+	"settings.agent":           {`{"name":"builder","attended_minutes":10,"command":["claude","-p","work on {story}; echo $HOME"],` + rid + `}`, "serve agent set --name=builder --attended-minutes=10 --json -- claude -p work on {story}; echo $HOME", ""},
+	"settings.harness":         {`{"name":"claude-code","program":"/opt/claude","args":["--permission-mode","acceptEdits"],` + rid + `}`, "serve agent harness claude-code --program=/opt/claude --json -- --permission-mode acceptEdits", ""},
+	"settings.check":           {`{"name":"flai","command":["scripts/flai-test.sh","--short"],` + rid + `}`, "serve checks set --name=flai --json -- scripts/flai-test.sh --short", ""},
+	"settings.checks_timeout":  {`{"minutes":20,` + rid + `}`, "serve checks timeout 20 --json", ""},
+	"settings.import":          {`{"folder":"/home/me/git","add":true,` + rid + `}`, "serve import add --json -- /home/me/git", ""},
+	"settings.mcp_token":       {`{` + rid + `}`, "mcp token --rotate --json", ""},
+	"settings.dashboard_token": {`{` + rid + `}`, "dashboard token --rotate --no-restart --json", ""},
 }
 
 // refused is, per method, params that must never reach a command line.
@@ -109,6 +120,19 @@ var refused = map[string][]string{
 	"checks.tail":       {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
 	"checks.run":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"checks.cancel":     {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
+		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
+	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
+		`{"agent":{"model":"m","config":{"k":"a\nb"}},` + rid + `}`},
+	"settings.agent": {`{"name":"--x",` + rid + `}`, `{"attended_minutes":99999,` + rid + `}`, `{"command":[],` + rid + `}`, `{"command":["","x"],` + rid + `}`,
+		`{"command":"claude -p",` + rid + `}`, `{"command":["claude","a\nb"],` + rid + `}`, `{` + rid + `}`},
+	"settings.harness": {`{"name":"command","program":"x",` + rid + `}`, `{"name":"--help","program":"x",` + rid + `}`, `{"name":"claude-code",` + rid + `}`,
+		`{"name":"claude-code","args":["a\nb"],` + rid + `}`, `{"name":"claude-code","args":"--x",` + rid + `}`},
+	"settings.check":           {`{"name":"--x","command":["a"],` + rid + `}`, `{"name":"a","command":[],` + rid + `}`, `{"name":"a","command":[" "],` + rid + `}`},
+	"settings.checks_timeout":  {`{"minutes":0,` + rid + `}`, `{"minutes":"20",` + rid + `}`},
+	"settings.import":          {`{"folder":"relative/git","add":true,` + rid + `}`, `{"folder":"/a/../b","add":true,` + rid + `}`, `{"folder":"/a",` + rid + `}`},
+	"settings.mcp_token":       {`"--force"`, `{}`},
+	"settings.dashboard_token": {`"--force"`, `{}`},
 }
 
 type recorder struct {
@@ -373,10 +397,13 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 	}
 }
 
-// Nothing a dashboard can ask for reads or changes what is enabled.
-func TestNoMethodTouchesTheHostConfiguration(t *testing.T) {
+// Nothing a dashboard can ask for changes the host's settings unless the
+// operator turned on the settings action in a shell (ADR-0029, S-0105), and
+// nothing it can ask for turns that action on or off, or reads the journal
+// or the rest of the configuration.
+func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 	for name := range Methods("test", nil) {
-		for _, word := range []string{"config", "enable", "disable", "action", "journal"} {
+		for _, word := range []string{"config", "journal", "enable", "disable"} {
 			if strings.Contains(name, word) {
 				t.Errorf("%s: the host's configuration and journal are the operator's, on the host", name)
 			}
@@ -384,15 +411,66 @@ func TestNoMethodTouchesTheHostConfiguration(t *testing.T) {
 	}
 	for name, sp := range specs() {
 		args, _, e := sp.build(channel.Project{Root: t.TempDir()}, json.RawMessage(good[name].params))
-		if e != nil {
+		if e != nil || len(args) == 0 {
 			continue
 		}
-		if len(args) > 0 && (args[0] == "config" || args[0] == "serve") {
-			t.Errorf("%s runs flai %s", name, args[0])
+		if args[0] == "config" {
+			t.Errorf("%s runs flai config", name)
+		}
+		host := args[0] == "serve" || args[0] == "agent" || (len(args) > 1 && args[1] == "token" && (args[0] == "dashboard" || args[0] == "mcp"))
+		if host && sp.action != ActionSettings {
+			t.Errorf("%s runs flai %s without the settings action", name, strings.Join(args[:2], " "))
+		}
+		if strings.HasPrefix(name, "settings.") && sp.action != ActionSettings {
+			t.Errorf("%s is not gated by the settings action", name)
 		}
 	}
 	if info := enabledActions(Host{}, "/x"); len(info) != len(Actions) || info[ActionPush] {
 		t.Errorf("project.info names every action and says none is on: %+v", info)
+	}
+}
+
+// S-0105: a setting kept for every project needs the settings action on for
+// every project; one of this project's needs it here; either refusal says
+// what the operator runs, and is journalled.
+func TestSettingsNeedTheShellsConsent(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	here := Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+	m := writeMethods(rec.run, time.Now, here)
+	if _, e := m["settings.action"](context.Background(), p, json.RawMessage(good["settings.action"].params)); e != nil {
+		t.Fatalf("a project's own setting, enabled here: %+v", e)
+	}
+	_, e := m["settings.agent"](context.Background(), p, json.RawMessage(good["settings.agent"].params))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") || e.Data.(map[string]any)["hostwide"] != true {
+		t.Fatalf("a host-wide setting, enabled here only: %+v", e)
+	}
+	_, e = writeMethods(rec.run, time.Now, Host{})["settings.action"](context.Background(), p, json.RawMessage(`{"action":"agent","on":true,"request_id":"req-00000002"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings") {
+		t.Fatalf("not enabled: %+v", e)
+	}
+	if len(rec.runs) != 1 {
+		t.Errorf("ran %d commands, want the one allowed", len(rec.runs))
+	}
+	if len(journal) != 2 || journal[0].Outcome != "done" || journal[0].Action != ActionSettings || journal[1].Outcome != "disabled" {
+		t.Errorf("journal: %+v", journal)
+	}
+}
+
+// S-0105: the settings page reads what the host keeps, and whether it may
+// change it here and everywhere, and never a token.
+func TestSettingsGetSaysWhatMayChange(t *testing.T) {
+	p := withDocs(t)
+	host := Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root },
+		Settings: func(root string) any { return map[string]any{"root": root} }}
+	res, e := MethodsFor("test", nil, host)["settings.get"](context.Background(), p, json.RawMessage(`{}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	got := res.(map[string]any)
+	if got["here"] != true || got["everywhere"] != false || got["enable_everywhere"] != "flai serve enable settings --all-projects" || got["host"].(map[string]any)["root"] != p.Root {
+		t.Errorf("settings.get: %+v", got)
 	}
 }
 

@@ -262,6 +262,13 @@ func TestDashboardLifecycle(t *testing.T) {
 	if code != 0 || string(rotated) == string(tokenData) || !strings.Contains(out, "token: "+strings.TrimSpace(string(rotated))) || !strings.Contains(strings.Join(f.calls, "\n"), "docker restart flaiover") || !strings.Contains(out, "restarted flaiover") {
 		t.Errorf("rotate: %d %s", code, out)
 	}
+	// S-0105: rotated with the dashboard left running, which takes the new token from the answer
+	before := len(f.calls)
+	out, _, code = runWith(t, root, f, "dashboard", "token", "--rotate", "--no-restart", "--json")
+	again, _ := os.ReadFile(tokenFile)
+	if code != 0 || string(again) == string(rotated) || !strings.Contains(out, `"restarted": false`) || !strings.Contains(out, strings.TrimSpace(string(again))) || strings.Contains(strings.Join(f.calls[before:], "\n"), "docker restart") {
+		t.Errorf("rotate --no-restart: %d %s", code, out)
+	}
 	// precedence: flag port beats manifest port; manifest port beat config's 4242
 	out, _, _ = runWith(t, root, &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}, "dashboard", "--port", "6000", "--json")
 	if !strings.Contains(out, `"url": "http://localhost:6000"`) {

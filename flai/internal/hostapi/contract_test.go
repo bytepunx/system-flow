@@ -22,7 +22,7 @@ func TestTheDashboardAsksForExactlyWhatFlaiOffers(t *testing.T) {
 		t.Fatal("REQUIRED_METHODS not found in agent.ts")
 	}
 	asked := map[string]bool{}
-	for _, m := range regexp.MustCompile(`'([a-z.]+)'`).FindAllSubmatch(block[1], -1) {
+	for _, m := range regexp.MustCompile(`'([a-z._]+)'`).FindAllSubmatch(block[1], -1) {
 		asked[string(m[1])] = true
 	}
 	offered := Methods("test", nil)

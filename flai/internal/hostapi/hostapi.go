@@ -160,6 +160,23 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// ready here (S-0079), what it started, and why a ready story waits. It
 		// is read-only, like everything about host actions: the dashboard shows
 		// it, and cannot start, stop, or configure anything.
+		// settings.get: the host's settings as they apply to this project, and
+		// whether the dashboard may change them here and host-wide (S-0105).
+		// Tokens are never in it: a rotation answers with the new one once.
+		"settings.get": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			if e := params(raw, &struct{}{}); e != nil {
+				return nil, e
+			}
+			out := map[string]any{
+				"here": host.enabled(ActionSettings, p.Root), "everywhere": host.enabledEverywhere(ActionSettings),
+				"enable": EnableCommand(ActionSettings), "enable_everywhere": EnableEverywhere(ActionSettings),
+			}
+			if host.Settings != nil {
+				out["host"] = host.Settings(p.Root)
+			}
+			return out, nil
+		},
+
 		"agent.status": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			if e := params(raw, &struct{}{}); e != nil {
 				return nil, e

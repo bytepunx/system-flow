@@ -176,12 +176,20 @@ const ActionDashboard = "dashboard"
 // the outcome (S-0082).
 const ActionChecks = "checks"
 
+// ActionSettings is the host action that lets a dashboard change the host's
+// settings for a project (S-0105): the other host actions, the agent and its
+// harnesses, the checks, the import folders, and the tokens. Those kept for
+// every project need it enabled for every project. It is turned on and off
+// in a shell on the host alone: no method changes it.
+const ActionSettings = "settings"
+
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
 	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
 	ActionAgent:     "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
+	ActionSettings:  "change this project's host settings from the dashboard: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 }
 
 // Host is what the host decides and records about host actions (ADR-0029).
@@ -195,6 +203,9 @@ type Host struct {
 	// (S-0079): what runs, the last start or failure, and why a ready story
 	// waits. Nil when nothing starts agents here.
 	Agent func(root string) any
+	// Settings reports the host's settings as they apply to a project
+	// (S-0105), for the dashboard's settings page. Nil when there are none.
+	Settings func(root string) any
 }
 
 // Entry is one host action asked for, whatever became of it.
@@ -225,6 +236,9 @@ type spec struct {
 	// uses names a host action this method performs as part of its work when
 	// it is enabled, and does without when it is not; it is journalled then.
 	uses string
+	// hostwide marks a setting kept for every project (S-0105): it needs its
+	// action enabled for every project, not this one only.
+	hostwide bool
 	// record journals every call under this name without gating it: an act
 	// on the host the operator consented to some other way (S-0098: import,
 	// by naming the folder the repository is in).
@@ -324,7 +338,16 @@ func decode[T any](raw json.RawMessage) (T, *channel.Error) {
 	return v, params(raw, &v)
 }
 
+// specs are every write, the settings among them (S-0105).
 func specs() map[string]spec {
+	table := itemSpecs()
+	for name, sp := range settingsSpecs() {
+		table[name] = sp
+	}
+	return table
+}
+
+func itemSpecs() map[string]spec {
 	type build = func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)
 	one := func(b build) spec { return spec{build: b} }
 	read := func(b build) spec { return spec{build: b, reads: true} }
@@ -1219,6 +1242,13 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				return nil, &channel.Error{Code: Disabled,
 					Message: fmt.Sprintf("the host action %q is not enabled for this project. On the host, in the project, run: %s", sp.action, EnableCommand(sp.action)),
 					Data:    map[string]any{"action": sp.action, "enable": EnableCommand(sp.action)}}
+			}
+			if sp.hostwide && !host.enabledEverywhere(sp.action) {
+				entry.Action, entry.Outcome = sp.action, "disabled"
+				host.record(entry)
+				return nil, &channel.Error{Code: Disabled,
+					Message: fmt.Sprintf("this setting is kept for every project on the host, so the host action %q must be enabled for every project. On the host run: %s", sp.action, EnableEverywhere(sp.action)),
+					Data:    map[string]any{"action": sp.action, "enable": EnableEverywhere(sp.action), "hostwide": true}}
 			}
 			r := Run{Dir: p.Root, Args: withJSON(args), Stdin: stdin}
 			if sp.progress {

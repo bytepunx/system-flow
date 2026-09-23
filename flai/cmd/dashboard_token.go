@@ -74,7 +74,7 @@ func tokenArgs(dir string) []string {
 }
 
 func newDashboardTokenCmd(a *app) *cobra.Command {
-	var rotate bool
+	var rotate, noRestart bool
 	c := &cobra.Command{
 		Use:   "token",
 		Short: "Print the dashboard token and login link; --rotate replaces it",
@@ -83,7 +83,9 @@ dashboard on first run and kept beside flai serve's state, next to flai's
 config file. Browsers use the login link, whose fragment never leaves the
 browser; agents send it as a bearer header. --rotate writes a new token in
 place and restarts the dashboard, which ends every session, for every
-project it serves, not only this one.`,
+project it serves, not only this one. With --no-restart the dashboard is
+not restarted, and keeps the old token until it is told the new one: its
+settings page rotates it that way and keeps its own session.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.projectOrNone()
@@ -106,7 +108,7 @@ project it serves, not only this one.`,
 				return err
 			}
 			restarted := false
-			if rotate {
+			if rotate && !noRestart {
 				if running, _ := a.containerRunning(s.Name); running {
 					if _, err := a.runner.Run("", "docker", "restart", s.Name); err != nil {
 						return err
@@ -125,5 +127,6 @@ project it serves, not only this one.`,
 		},
 	}
 	c.Flags().BoolVar(&rotate, "rotate", false, "replace the token and restart the dashboard, for every project it serves")
+	c.Flags().BoolVar(&noRestart, "no-restart", false, "with --rotate, leave the dashboard running: it is told the new token another way (S-0105, from its settings page)")
 	return c
 }

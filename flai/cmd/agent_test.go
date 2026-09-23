@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -102,5 +103,33 @@ func TestAStorysAgentIsSetAndEdited(t *testing.T) {
 	}
 	if _, errOut, code := runIn(t, root, "story", "new", "Bad", "--harness", "Bad Harness"); code == 0 || !strings.Contains(errOut, "not a name such as claude-code") {
 		t.Errorf("an invalid harness: %d %s", code, errOut)
+	}
+}
+
+// S-0105: the dashboard replaces the default whole and commits it, as its
+// other writes are committed.
+func TestTheDefaultAgentIsReplacedAndCommitted(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for _, c := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@example.invalid"}, {"config", "user.name", "T"}, {"add", "-A"}, {"commit", "-qm", "setup"}} {
+		if out, err := exec.Command("git", append([]string{"-C", root}, c...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %s", c, out)
+		}
+	}
+	runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-opus-5-5", "--config", "effort=high")
+	out, errOut, code := runIn(t, root, "agent", "set", "--replace", "--model", "claude-sonnet-5", "--autocommit", "--trailer", "Co-Authored-By: flaiover <flaiover@localhost>", "--json")
+	if code != 0 || !strings.Contains(out, `"model": "claude-sonnet-5"`) || strings.Contains(out, "claude-code") || strings.Contains(out, "effort") || !strings.Contains(out, `"commit"`) {
+		t.Fatalf("replace: %d %s %s", code, out, errOut)
+	}
+	log, _ := exec.Command("git", "-C", root, "log", "-1", "--format=%s%n%b", "--name-only").CombinedOutput()
+	if !strings.Contains(string(log), "chore: set the project's default agent") || !strings.Contains(string(log), "Co-Authored-By: flaiover") || !strings.Contains(string(log), "system-flow.yaml") {
+		t.Errorf("commit: %s", log)
+	}
+	if _, _, code := runIn(t, root, "agent", "clear", "--autocommit"); code != 0 {
+		t.Fatal("clear")
+	}
+	log, _ = exec.Command("git", "-C", root, "log", "-1", "--format=%s").CombinedOutput()
+	if !strings.Contains(string(log), "clear the project's default agent") {
+		t.Errorf("clear commit: %s", log)
 	}
 }

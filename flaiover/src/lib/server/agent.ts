@@ -92,7 +92,18 @@ export const REQUIRED_METHODS = [
 	'checks.status',
 	'checks.tail',
 	'checks.run',
-	'checks.cancel'
+	'checks.cancel',
+	// S-0105: the host's settings, gated by the settings host action
+	'settings.get',
+	'settings.action',
+	'settings.default_agent',
+	'settings.agent',
+	'settings.harness',
+	'settings.check',
+	'settings.checks_timeout',
+	'settings.import',
+	'settings.mcp_token',
+	'settings.dashboard_token'
 ];
 
 export type AgentStatus = {

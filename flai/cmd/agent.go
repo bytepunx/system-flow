@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -32,10 +33,11 @@ adds or replaces keys), and clear removes it.`,
   flai agent set --model claude-sonnet-5
   flai agent clear`,
 		Args: cobra.NoArgs,
-		RunE: func(*cobra.Command, []string) error { return a.showAgent() },
+		RunE: func(*cobra.Command, []string) error { return a.showAgent("") },
 	}
 	var harness, model string
-	var config, unset []string
+	var config, unset, trailers []string
+	var replace, autocommit bool
 	set := &cobra.Command{
 		Use:   "set",
 		Short: "Set the project's default harness, model, or options",
@@ -52,7 +54,11 @@ adds or replaces keys), and clear removes it.`,
 			if harness == "" && model == "" && len(cfg) == 0 && len(unset) == 0 {
 				return fmt.Errorf("nothing to set: give --harness, --model, --config key=value, or --unset key")
 			}
-			next := repo.Manifest.Agent.With(&manifest.Agent{Harness: harness, Model: model, Config: cfg})
+			base := repo.Manifest.Agent
+			if replace {
+				base = nil
+			}
+			next := base.With(&manifest.Agent{Harness: harness, Model: model, Config: cfg})
 			if next != nil {
 				for _, k := range unset {
 					delete(next.Config, k)
@@ -61,16 +67,22 @@ adds or replaces keys), and clear removes it.`,
 					next.Config = nil
 				}
 			}
+			if err := next.Validate(); err != nil {
+				return err
+			}
 			if err := manifest.WriteAgent(filepath.Join(repo.Root, manifest.File), next); err != nil {
 				return err
 			}
-			return a.showAgent()
+			return a.showAgent(a.commitManifest(repo, autocommit, "chore: set the project's default agent", trailers))
 		},
 	}
 	set.Flags().StringVar(&harness, "harness", "", "the harness that runs the agent, such as claude-code")
 	set.Flags().StringVar(&model, "model", "", "the model it runs, such as claude-opus-5-5")
 	set.Flags().StringArrayVar(&config, "config", nil, "an option for the harness, key=value (repeatable)")
 	set.Flags().StringArrayVar(&unset, "unset", nil, "remove an option by key (repeatable)")
+	set.Flags().BoolVar(&replace, "replace", false, "start from nothing: the default becomes exactly what is given")
+	set.Flags().BoolVar(&autocommit, "autocommit", false, "commit system-flow.yaml on its own, unless dashboard.autocommit is false")
+	set.Flags().StringArrayVar(&trailers, "trailer", nil, "a trailer line for the commit (repeatable)")
 	clearCmd := &cobra.Command{
 		Use:   "clear",
 		Short: "Remove the project's default agent; stories keep what they have",
@@ -83,14 +95,38 @@ adds or replaces keys), and clear removes it.`,
 			if err := manifest.WriteAgent(filepath.Join(repo.Root, manifest.File), nil); err != nil {
 				return err
 			}
-			return a.showAgent()
+			return a.showAgent(a.commitManifest(repo, autocommit, "chore: clear the project's default agent", trailers))
 		},
 	}
+	clearCmd.Flags().BoolVar(&autocommit, "autocommit", false, "commit system-flow.yaml on its own, unless dashboard.autocommit is false")
+	clearCmd.Flags().StringArrayVar(&trailers, "trailer", nil, "a trailer line for the commit (repeatable)")
 	c.AddCommand(set, clearCmd)
 	return c
 }
 
-func (a *app) showAgent() error {
+// commitManifest commits system-flow.yaml alone, when asked and the project
+// commits what flai writes for the dashboard; it says the commit, or nothing.
+func (a *app) commitManifest(repo *workitem.Repo, autocommit bool, msg string, trailers []string) string {
+	if !autocommit || !repo.Manifest.Autocommit() {
+		return ""
+	}
+	if len(trailers) > 0 {
+		msg += "\n\n" + strings.Join(trailers, "\n")
+	}
+	if _, err := a.runner.Run(repo.Root, "git", "add", "--", manifest.File); err != nil {
+		return ""
+	}
+	if _, err := a.runner.Run(repo.Root, "git", "commit", "-q", "-m", msg, "--", manifest.File); err != nil {
+		return ""
+	}
+	sha, err := a.runner.Run(repo.Root, "git", "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(sha)
+}
+
+func (a *app) showAgent(commit string) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
@@ -101,7 +137,11 @@ func (a *app) showAgent() error {
 		return err
 	}
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"agent": m.Agent})
+		out := map[string]any{"agent": m.Agent}
+		if commit != "" {
+			out["commit"] = commit
+		}
+		return a.printJSON(out)
 	}
 	if m.Agent.IsZero() {
 		fmt.Fprintln(a.out, "no default agent; new stories carry none (flai agent set --harness ... --model ...)")

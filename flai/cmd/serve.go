@@ -60,6 +60,12 @@ there does.`,
 			// Started in a folder that is not a project (S-0102), it serves the
 			// projects below it and offers the folder's other repositories for
 			// import, as flai dashboard there does (ADR-0036).
+			// The flai it runs for a dashboard reads and writes the configuration
+			// this one does, --config included (S-0105): a setting changed from
+			// the dashboard lands where flai serve reads it.
+			if _, path, err := a.loadConfig(); err == nil && path != "" {
+				_ = os.Setenv(config.EnvVar, path)
+			}
 			folder := ""
 			if repo, err := a.projectOrNone(); err == nil && repo == nil {
 				folder, _ = a.workingDir()

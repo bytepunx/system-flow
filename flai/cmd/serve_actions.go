@@ -45,6 +45,7 @@ func (a *app) host() hostapi.Host {
 			}
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st)}
 		},
+		Settings: a.hostSettings,
 		Record: func(e hostapi.Entry) {
 			if err := a.journal(e); err != nil {
 				a.logger().Warn("host action not journalled", "component", "serve", "action", e.Action, "err", err.Error())
@@ -297,18 +298,23 @@ journal.`,
 	var name string
 	var attended int
 	set := &cobra.Command{
-		Use:   "set -- <program> [args...]",
-		Short: "Set the command, as an argument list after --",
-		Args:  cobra.MinimumNArgs(1),
+		Use:   "set [--name] [--attended-minutes] [-- <program> [args...]]",
+		Short: "Set the command, as an argument list after --, or only the name and attended minutes",
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			if strings.TrimSpace(args[0]) == "" {
+			if len(args) == 0 && name == "" && attended <= 0 {
+				return fmt.Errorf("nothing to set: give -- <program> [args...], --name, or --attended-minutes")
+			}
+			if len(args) > 0 && strings.TrimSpace(args[0]) == "" {
 				return fmt.Errorf("the program is empty")
 			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
 				return err
 			}
-			cfg.Agent.Command = args
+			if len(args) > 0 {
+				cfg.Agent.Command = args
+			}
 			if name != "" {
 				cfg.Agent.Name = name
 			}
@@ -692,6 +698,65 @@ func settable() []string {
 	for _, n := range harness.Names() {
 		if n != harness.Command {
 			out = append(out, n)
+		}
+	}
+	return out
+}
+
+// hostSettings is the host's configuration as it applies to the project at
+// root, for the dashboard's settings page (S-0105). The tokens are not in
+// it: a rotation answers with the new one, once.
+func (a *app) hostSettings(root string) any {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	names := make([]string, 0, len(hostapi.Actions))
+	for n := range hostapi.Actions {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	actions := make([]map[string]any, 0, len(names))
+	for _, n := range names {
+		actions = append(actions, map[string]any{"name": n, "means": hostapi.Actions[n],
+			"here": cfg.ActionEnabled(n, root), "everywhere": cfg.ActionEnabled(n, config.AllProjects)})
+	}
+	harnesses := map[string]any{}
+	for _, n := range settable() {
+		h := a.harnessHost(cfg, n)
+		_, set := cfg.Agent.Harnesses[n]
+		harnesses[n] = map[string]any{"program": h.Program, "args": h.Args, "set": set}
+	}
+	command := cfg.Agent.Command
+	if command == nil {
+		command = []string{}
+	}
+	checks := cfg.Checks.Commands
+	if checks == nil {
+		checks = []config.NamedCommand{}
+	}
+	timeout := cfg.Checks.TimeoutMinutes
+	if timeout <= 0 {
+		timeout = int(serve.DefaultChecksTimeout / time.Minute)
+	}
+	roots := cfg.ImportRoots
+	if roots == nil {
+		roots = []string{}
+	}
+	out := map[string]any{
+		"actions": actions,
+		"agent": map[string]any{"name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "command": command,
+			"harnesses": harnesses},
+		"checks":       map[string]any{"commands": checks, "timeout_minutes": timeout},
+		"import_roots": roots,
+	}
+	if repo, err := workitem.Open(root); err == nil {
+		out["default_agent"] = repo.Manifest.Agent
+		out["manifest_checks"] = repo.Manifest.Checks
+		if st, running := readMCPState(repo, a.now()); running {
+			out["mcp"] = map[string]any{"running": true, "url": st.URL, "pid": st.PID}
+		} else {
+			out["mcp"] = map[string]any{"running": false}
 		}
 	}
 	return out

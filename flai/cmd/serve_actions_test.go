@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -330,5 +331,41 @@ func TestChecksConfigResolvesHostOverManifest(t *testing.T) {
 	runIn(t, root, "serve", "enable", "checks")
 	if cc, err := a.checksConfig(repo); err != nil || !cc.Enabled {
 		t.Errorf("enabled: %+v %v", cc, err)
+	}
+}
+
+// S-0105: the settings host action, the agent's name without a command, and
+// what the dashboard's settings page is told.
+func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "settings: off everywhere") || !strings.Contains(out, "only a shell turns this off") {
+		t.Errorf("actions names settings: %s", out)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "set", "--name", "builder", "--attended-minutes", "9"); code != 0 {
+		t.Fatalf("name without a command: %s", errOut)
+	}
+	cfg := (&app{}).agentConfig(root)
+	if cfg.Name != "builder" || cfg.Attended != 9*time.Minute || len(cfg.Command) != 0 {
+		t.Errorf("name and minutes: %+v", cfg)
+	}
+	runIn(t, root, "serve", "enable", "settings")
+	runIn(t, root, "serve", "checks", "set", "--name", "unit", "--", "go", "test", "./...")
+	runIn(t, root, "serve", "import", "add", t.TempDir())
+	runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-haiku-4-5")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"push accepted work`, `"name":"builder"`, `"attended_minutes":9`,
+		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"program":"claude","set":false}`,
+		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("settings lack %s:\n%s", want, got)
+		}
+	}
+	if strings.Contains(string(got), `"token"`) {
+		t.Errorf("no token in the settings: %s", got)
 	}
 }
