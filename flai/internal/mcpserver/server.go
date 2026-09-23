@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -49,6 +50,10 @@ type server struct {
 	maxWait time.Duration
 	runner  execx.Runner
 	closing <-chan struct{}
+
+	// when wait_for_work last answered: a thread written to since then wakes it
+	workMu    sync.Mutex
+	workSince time.Time
 }
 
 // New builds the MCP server with its tools and resources.
@@ -79,6 +84,7 @@ func New(opt Options) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{Name: "doc_get", Description: "A markdown document under the design, docs, or wip folders, by repository path."}, s.docGet)
 	mcp.AddTool(srv, &mcp.Tool{Name: "who_touches", Description: "In-progress and in-review items whose touches cover a path; ask before editing a path someone else is working on."}, s.whoTouches)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes. Hold this when idle to react to the designer within a second. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on (S-0097). Answers at once when there is something: reason resume with your own story still in progress; thread with threads awaiting you written to since it last answered; pull with the first ready story when the in-progress limit leaves room for it (pull it: item_move it to in-progress, then flai stream open on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, however long it takes, up to timeout_seconds; timed_out then says whether it is waiting for room (a story is ready, the limit is full) or for a story to be ready: call it again. Move your story to review first: while one of yours is in progress, it answers resume."}, s.waitForWork)
 	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches. Stories only unless all is set."}, s.board)
 	for _, key := range []string{"design", "docs"} {
 		srv.AddResourceTemplate(&mcp.ResourceTemplate{
