@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.18 - 2026-09-23
+
+- S-0097 Agents should connect to the MCP and consistently monitor for ready tickets (patch).
+
 ## 1.0.17 - 2026-09-21
 
 - S-0087 Moving a story to done merges it; a publish button on the board tags and pushes everything accumulated since the last one (patch).
