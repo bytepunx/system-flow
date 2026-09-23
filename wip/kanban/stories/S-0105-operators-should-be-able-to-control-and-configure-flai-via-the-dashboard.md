@@ -3,17 +3,20 @@ id: S-0105
 type: story
 nature: feature
 title: Operators should be able to control and configure flai via the dashboard
-status: in-progress
+status: review
 parent: E-0008
 owner: alex
 created: 2026-09-23T20:21:50Z
-updated: 2026-09-23T20:36:55Z
+updated: 2026-09-23T21:29:02Z
 transitions:
   - to: ready
     at: 2026-09-23T20:21:55Z
     by: alex
   - to: in-progress
     at: 2026-09-23T20:36:06Z
+    by: system-flow
+  - to: review
+    at: 2026-09-23T21:29:02Z
     by: system-flow
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
