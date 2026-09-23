@@ -3,17 +3,23 @@ id: S-0090
 type: story
 nature: improvement
 title: Operators should be able to answer open questions in via the dashboard
-status: ready
+status: review
 parent: E-0003
 owner: alex
 created: 2026-09-21T04:03:18Z
-updated: 2026-09-22T22:39:01Z
+updated: 2026-09-23T00:28:48Z
 transitions:
   - to: ready
     at: 2026-09-22T22:39:01Z
     by: alex
+  - to: in-progress
+    at: 2026-09-23T00:28:45Z
+    by: system-flow
+  - to: review
+    at: 2026-09-23T00:28:48Z
+    by: system-flow
 tags: [dashboard]
-touches: [flaiover/src]
+touches: [flai/cmd, flai/internal/hostapi, flai/internal/workitem, flaiover/src]
 ---
 # S-0090 Operators should be able to answer open questions in via the dashboard
 
@@ -22,10 +28,12 @@ touches: [flaiover/src]
 When an agent has a question, it should place that question in the inbox where the operator can answer it, have it recorded, and then the open question should close out.
 
 ## Acceptance criteria
-- [ ] Operators need to be able to answer open questions in the dashboard
+- [x] Operators need to be able to answer open questions in the dashboard
 - [ ] Open questions should block a story from being moved to review since the agent can't complete the story without the answer
-- [ ] Answered open questions should not remain in the inbox
+- [x] Answered open questions should not remain in the inbox
 
 ## Tasks
+- T-0334 flai stream answer moves a hand-written open question to Decisions; the dashboard's inbox offers it inline
 
 ## Notes
+Criterion 2 duplicates S-0089's own second criterion exactly (the two stories were filed four minutes apart) and is delivered there (`internal/workitem/rules.go`'s `Move`), not by this story's commits: S-0090 is in review with nothing of that rule in its own branch. Left unchecked here on purpose; it holds once S-0089 is accepted. This story stands on its own for what it actually adds: the answer capability itself (criterion 1), which criterion 3 follows from directly, since flai's `inbox.designer` re-reads the narrative fresh on every call, so a bullet `stream answer` removes is gone from the very next inbox read — no caching to invalidate, verified by a real narrative-file diff before/after in both `internal/workitem`'s and flaiover's own tests.
