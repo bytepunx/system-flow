@@ -3,10 +3,10 @@ id: S-0100
 type: story
 nature: remediation
 title: A work item being saved is never read half-written
-status: review
+status: done
 owner: alex
 created: 2026-09-23T05:10:18Z
-updated: 2026-09-23T05:15:16Z
+updated: 2026-09-23T05:45:55Z
 transitions:
   - to: ready
     at: 2026-09-23T05:10:28Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-23T05:15:16Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T05:45:55Z
+    by: alex
 tags: []
 touches: [flai/internal]
 ---
