@@ -1,10 +1,10 @@
 ---
 title: Active streams
-updated: 2026-09-22T23:52:42Z
+updated: 2026-09-23T00:02:53Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0088](S-0088.md) | The Review page doesn't render markdown in the narrative pane | ready | system-flow | 2026-09-22T23:51:26Z |
+| [S-0089](S-0089.md) | Inbox should not continue showing open items for stories that moved to review | ready | system-flow | 2026-09-23T00:02:41Z |
