@@ -3,11 +3,11 @@ id: S-0094
 type: story
 nature: remediation
 title: Tagging should occur before push
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-23T00:32:19Z
-updated: 2026-09-23T00:58:03Z
+updated: 2026-09-23T01:31:06Z
 transitions:
   - to: ready
     at: 2026-09-23T00:32:28Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-23T00:58:03Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T01:31:06Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flai/cmd, flai/internal/release]
 ---
