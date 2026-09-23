@@ -68,6 +68,18 @@ type AgentStart struct {
 	// project to count as attended; 6 when zero, one more than the longest
 	// an agent holds wait_for_events.
 	AttendedMinutes int `json:"attended_minutes,omitempty"`
+	// Harnesses are the operator's say about each harness a story may name
+	// (S-0104): the program that is run and the arguments that say what the
+	// agent may do. A harness not here runs with its adapter's defaults.
+	Harnesses map[string]HarnessHost `json:"harnesses,omitempty"`
+}
+
+// HarnessHost is the program a harness is and the operator's arguments to it.
+type HarnessHost struct {
+	Program string `json:"program,omitempty"`
+	// Args replace the adapter's defaults when set, even to an empty list;
+	// nil leaves them.
+	Args *[]string `json:"args,omitempty"`
 }
 
 // ChecksConfig is the operator's say about running checks for a story in

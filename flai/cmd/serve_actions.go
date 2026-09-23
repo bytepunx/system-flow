@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -261,19 +263,31 @@ append-only and yours: nothing a dashboard can ask for reads or changes it.`,
 func newServeAgentCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "agent",
-		Short: "The command flai serve starts when a story becomes ready and nobody is attending",
-		Long: `flai serve can start an agent session for you when a story becomes ready and
-no agent is attending the project. It is a host action, off until you enable
-it (flai serve enable agent), and it has no default command: you write one.
+		Short: "What flai serve starts when a story becomes ready: each story's harness, or your command",
+		Long: `flai serve can start an agent for each story that becomes ready, while the
+in-progress limit leaves room and no agent of yours is attending the project.
+It is a host action, off until you enable it (flai serve enable agent).
 
-The command is an argument list, run as it stands in the project's directory,
-as you, never through a shell. In an argument {story} is replaced by the
-story's ID and {root} by the project's directory; nothing else is interpreted.
-The session's environment carries FLAI_AGENT, FLAI_STORY, and FLAI_SESSION.
-One agent is started per project at a time; its output goes to a log beside
-flai serve's state, and every start and failure is in flai serve journal.`,
-		Example: `  flai serve agent set -- claude -p "Work on story {story} as the conventions say"
-  flai serve agent set --name builder -- /home/me/bin/start-agent {story}
+A story names its agent (flai agent, flai edit --harness): a harness, a
+model, and options. flai starts a harness it knows through its adapter
+(claude-code runs claude -p with the story's model, and flai's MCP server),
+with the program and the arguments you set for it here with flai serve agent
+harness, which say what the agent may do. A story names only tunables the
+adapter checks, never a program, a flag, or a permission.
+
+A story that names no harness, or names "command", is started with your
+command, when one is set: an argument list, run as it stands in the
+project's directory, as you, never through a shell. In an argument {story},
+{root}, {model}, and {harness} are replaced; nothing else is interpreted, and
+the story's options are in FLAI_AGENT_CONFIG as JSON.
+
+Every session's environment carries FLAI_AGENT (your --name and the story,
+such as agent-S-0104), FLAI_STORY, and FLAI_SESSION. Its output goes to a log
+beside flai serve's state, and every start and failure is in flai serve
+journal.`,
+		Example: `  flai serve agent harness claude-code
+  flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,mcp__flai
+  flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
   flai serve agent show
   flai serve enable agent
   flai serve agent clear`,
@@ -309,16 +323,16 @@ flai serve's state, and every start and failure is in flai serve journal.`,
 	}
 	set.Flags().StringVar(&name, "name", "", "the FLAI_AGENT the session works under (default agent)")
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "how recent a sign of an agent counts as attending (default 6)")
-	c.AddCommand(set,
+	c.AddCommand(set, newServeAgentHarnessCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
-		&cobra.Command{Use: "clear", Short: "Remove the command; nothing is started without one", Args: cobra.NoArgs,
+		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error {
 				cfg, path, err := a.loadConfig()
 				if err != nil {
 					return err
 				}
-				cfg.Agent = config.AgentStart{}
+				cfg.Agent = config.AgentStart{Harnesses: cfg.Agent.Harnesses}
 				if err := config.Save(path, cfg); err != nil {
 					return err
 				}
@@ -343,16 +357,20 @@ func (a *app) showAgentCommand() error {
 		if cmd == nil {
 			cmd = []string{}
 		}
-		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "enabled_here": enabled})
+		hosts := map[string]harness.Host{}
+		for _, name := range settable() {
+			hosts[name] = a.harnessHost(cfg, name)
+		}
+		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "harnesses": hosts, "enabled_here": enabled})
 	}
 	if len(cfg.Agent.Command) == 0 {
 		fmt.Fprintln(a.out, "no command is set, so nothing is started; flai serve agent set -- <program> [args...]")
 	} else {
-		quoted := make([]string, len(cfg.Agent.Command))
-		for i, arg := range cfg.Agent.Command {
-			quoted[i] = fmt.Sprintf("%q", arg)
-		}
-		fmt.Fprintf(a.out, "command: %s\n  run as it stands, in the project's directory, never through a shell\n", strings.Join(quoted, " "))
+		fmt.Fprintf(a.out, "command: %s\n  run as it stands, in the project's directory, never through a shell\n", quoteArgs(cfg.Agent.Command))
+	}
+	for _, name := range settable() {
+		h := a.harnessHost(cfg, name)
+		fmt.Fprintf(a.out, "harness %s: %s\n", name, quoteArgs(append([]string{h.Program}, h.Args...)))
 	}
 	if here != "" {
 		if enabled {
@@ -394,11 +412,19 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	if err != nil {
 		return serve.AgentConfig{}
 	}
+	hosts := map[string]harness.Host{}
+	for _, name := range settable() {
+		hosts[name] = a.harnessHost(cfg, name)
+	}
+	if len(cfg.Agent.Command) > 0 {
+		hosts[harness.Command] = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
+	}
 	return serve.AgentConfig{
-		Enabled:  cfg.ActionEnabled(hostapi.ActionAgent, root),
-		Command:  cfg.Agent.Command,
-		Name:     cfg.Agent.Name,
-		Attended: time.Duration(cfg.Agent.AttendedMinutes) * time.Minute,
+		Enabled:   cfg.ActionEnabled(hostapi.ActionAgent, root),
+		Command:   cfg.Agent.Command,
+		Harnesses: hosts,
+		Name:      cfg.Agent.Name,
+		Attended:  time.Duration(cfg.Agent.AttendedMinutes) * time.Minute,
 	}
 }
 
@@ -558,4 +584,113 @@ func (a *app) showChecksCommands() error {
 		}
 	}
 	return nil
+}
+
+// harnessHost is the program and arguments a harness runs with here: the
+// operator's where set, the adapter's defaults where not (S-0104).
+func (a *app) harnessHost(cfg config.Config, name string) harness.Host {
+	h := harness.Adapters[name].DefaultHost()
+	set := cfg.Agent.Harnesses[name]
+	if set.Program != "" {
+		h.Program = set.Program
+	}
+	if set.Args != nil {
+		h.Args = *set.Args
+	}
+	return h
+}
+
+func quoteArgs(args []string) string {
+	quoted := make([]string, len(args))
+	for i, arg := range args {
+		quoted[i] = fmt.Sprintf("%q", arg)
+	}
+	return strings.Join(quoted, " ")
+}
+
+// flai serve agent harness: the operator's program and arguments for a
+// harness a story may name (S-0104). Arguments after -- replace the
+// adapter's defaults, even with none; --reset goes back to the defaults.
+func newServeAgentHarnessCmd(a *app) *cobra.Command {
+	var program string
+	var reset bool
+	c := &cobra.Command{
+		Use:   "harness [<name>] [--program <path>] [--reset] [-- args...]",
+		Short: "Set the program a harness is and the arguments that say what its agent may do",
+		Long: `A story names its harness, such as claude-code; you say here what that is on
+this host. --program is what is run, and the arguments after -- replace the
+adapter's defaults, which say what the agent may do (for claude-code:
+--permission-mode acceptEdits --allowedTools Bash,mcp__flai). "--" with
+nothing after it runs it with none. --reset goes back to the defaults. With
+no name, every harness is shown.`,
+		Example: `  flai serve agent harness
+  flai serve agent harness claude-code --program /opt/claude/bin/claude
+  flai serve agent harness claude-code -- --permission-mode acceptEdits --allowedTools Bash,Edit,mcp__flai
+  flai serve agent harness claude-code --reset`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dash := cmd.ArgsLenAtDash()
+			names, rest := args, []string(nil)
+			if dash >= 0 {
+				names, rest = args[:dash], args[dash:]
+			}
+			if len(names) == 0 {
+				if dash >= 0 || program != "" || reset {
+					return fmt.Errorf("name the harness: %s", strings.Join(settable(), ", "))
+				}
+				return a.showAgentCommand()
+			}
+			if len(names) > 1 {
+				return fmt.Errorf("one harness at a time; arguments for it go after --")
+			}
+			name := names[0]
+			if !slices.Contains(settable(), name) {
+				return fmt.Errorf("there is no harness %q to set; there are: %s (the command is set with flai serve agent set)", name, strings.Join(settable(), ", "))
+			}
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			if cfg.Agent.Harnesses == nil {
+				cfg.Agent.Harnesses = map[string]config.HarnessHost{}
+			}
+			h := cfg.Agent.Harnesses[name]
+			if reset {
+				if program != "" || dash >= 0 {
+					return fmt.Errorf("--reset takes neither --program nor arguments")
+				}
+				h = config.HarnessHost{}
+			}
+			if program != "" {
+				h.Program = program
+			}
+			if dash >= 0 {
+				list := append([]string{}, rest...)
+				h.Args = &list
+			}
+			if h.Program == "" && h.Args == nil {
+				delete(cfg.Agent.Harnesses, name)
+			} else {
+				cfg.Agent.Harnesses[name] = h
+			}
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showAgentCommand()
+		},
+	}
+	c.Flags().StringVar(&program, "program", "", "the program the harness is on this host")
+	c.Flags().BoolVar(&reset, "reset", false, "go back to the adapter's program and arguments")
+	return c
+}
+
+// settable are the harnesses the operator sets with flai serve agent harness:
+// all but the command, which flai serve agent set sets.
+func settable() []string {
+	var out []string
+	for _, n := range harness.Names() {
+		if n != harness.Command {
+			out = append(out, n)
+		}
+	}
+	return out
 }

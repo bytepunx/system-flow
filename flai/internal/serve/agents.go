@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -44,6 +45,9 @@ type AgentConfig struct {
 	Command  []string
 	Name     string        // FLAI_AGENT; "agent" when empty
 	Attended time.Duration // how recent a sign of an agent counts; 6m when zero
+	// Harnesses are the program and arguments each harness runs with on this
+	// host, the command among them when one is set (S-0104).
+	Harnesses map[string]harness.Host
 }
 
 // AgentRun is one agent flai serve started, or failed to.

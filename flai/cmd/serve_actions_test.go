@@ -180,6 +180,53 @@ func TestServeAgentCommand(t *testing.T) {
 	}
 }
 
+// S-0104: what each harness a story may name is on this host, and what its
+// agent may do, are the operator's, set here and nowhere else.
+func TestServeAgentHarness(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, _, _ := runIn(t, root, "serve", "agent", "harness")
+	if !strings.Contains(out, `harness claude-code: "claude" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,mcp__flai"`) {
+		t.Errorf("the defaults: %s", out)
+	}
+	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude", "--", "--permission-mode", "bypassPermissions")
+	if code != 0 || !strings.Contains(out, `harness claude-code: "/opt/claude" "--permission-mode" "bypassPermissions"`) {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	got := (&app{}).agentConfig(root).Harnesses["claude-code"]
+	if got.Program != "/opt/claude" || strings.Join(got.Args, " ") != "--permission-mode bypassPermissions" {
+		t.Errorf("what flai serve is given: %+v", got)
+	}
+	// the program alone keeps the arguments; "--" alone means none
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/usr/bin/claude")
+	if got := (&app{}).agentConfig(root).Harnesses["claude-code"]; got.Program != "/usr/bin/claude" || len(got.Args) != 2 {
+		t.Errorf("program only: %+v", got)
+	}
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--")
+	if got := (&app{}).agentConfig(root).Harnesses["claude-code"]; len(got.Args) != 0 {
+		t.Errorf("no arguments: %+v", got)
+	}
+	// setting the command keeps the harnesses, and it is a harness of its own
+	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
+	cfg := (&app{}).agentConfig(root)
+	if cfg.Harnesses["command"].Program != "run-agent" || cfg.Harnesses["claude-code"].Program != "/usr/bin/claude" {
+		t.Errorf("both: %+v", cfg.Harnesses)
+	}
+	runIn(t, root, "serve", "agent", "clear")
+	if got := (&app{}).agentConfig(root).Harnesses["claude-code"]; got.Program != "/usr/bin/claude" {
+		t.Errorf("clear removes only the command: %+v", got)
+	}
+	out, _, _ = runIn(t, root, "serve", "agent", "harness", "claude-code", "--reset")
+	if !strings.Contains(out, `harness claude-code: "claude" "--permission-mode" "acceptEdits"`) {
+		t.Errorf("reset: %s", out)
+	}
+	for _, bad := range [][]string{{"command", "--program", "x"}, {"cursor"}, {"--program", "x"}, {"claude-code", "--reset", "--program", "x"}} {
+		if _, _, code := runIn(t, root, append([]string{"serve", "agent", "harness"}, bad...)...); code == 0 {
+			t.Errorf("%q was taken", bad)
+		}
+	}
+}
+
 // S-0082: the checks commands are the operator's, named argument lists with
 // no default, several at once, managed on the host and nowhere else.
 func TestServeChecksCommands(t *testing.T) {
