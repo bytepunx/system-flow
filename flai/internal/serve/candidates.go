@@ -150,10 +150,18 @@ func (f *offers) reconcile(ctx context.Context, entries []Entry) {
 		f.found = FindCandidates(f.o.ImportRoots(), served, taken)
 		f.scanned = now
 	}
-	// the dashboards served projects dial; a candidate has none of its own
+	// the dashboards served projects dial, and those flai dashboard started
+	// outside any project (S-0101); a candidate has none of its own
 	dashboards := map[string]Entry{}
 	for _, e := range entries {
 		dashboards[e.URL] = e
+	}
+	if recorded, err := f.o.Dir.Dashboards(); err == nil {
+		for _, db := range recorded {
+			if _, ok := dashboards[db.URL]; !ok {
+				dashboards[db.URL] = Entry{URL: db.URL, KeyFile: db.KeyFile}
+			}
+		}
 	}
 	want := map[string]Entry{}
 	for url, d := range dashboards {

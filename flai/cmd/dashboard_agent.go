@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -69,6 +71,9 @@ func (s dashboardSettings) dialURL() string {
 // running. It reports what it did; a failure here leaves a dashboard that
 // works as before, so it is told and not fatal.
 func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note string) {
+	if repo == nil {
+		return a.connectServeFolder(s)
+	}
 	entry := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
 	if entry.Key == "" {
 		return "  host flai: not connected, the manifest has no key (flai check says how to add one)\n"
@@ -135,4 +140,49 @@ func (h hostFlaiStatus) describe() string {
 		return fmt.Sprintf("  host flai: flai serve runs (pid %d) but is not connected: %s\n", h.PID, h.LastError)
 	}
 	return fmt.Sprintf("  host flai: flai serve runs (pid %d) and is connecting\n", h.PID)
+}
+
+// connectServeFolder is connectServe outside any project (S-0101): nothing is
+// registered; the dashboard is recorded so that flai serve offers it the
+// repositories to import, the folder is named for import, as flai serve
+// import add would, and flai serve is started when it is not running.
+func (a *app) connectServeFolder(s dashboardSettings) (note string) {
+	dir := a.serveDir()
+	if err := dir.AddDashboard(serve.Dashboard{URL: s.dialURL(), KeyFile: agentKeyPath(string(dir))}); err != nil {
+		return "  host flai: dashboard not recorded: " + err.Error() + "\n"
+	}
+	named := ""
+	if cfg, path, err := a.loadConfig(); err != nil {
+		named = "  import: this folder not named (" + err.Error() + ")\n"
+	} else if !slices.Contains(cfg.ImportRoots, s.Root) {
+		cfg.ImportRoots = append(cfg.ImportRoots, s.Root)
+		if err := config.Save(path, cfg); err != nil {
+			named = "  import: this folder not named (" + err.Error() + ")\n"
+		} else {
+			named = fmt.Sprintf("  import: %s is named for import (flai serve import remove . undoes it); its git repositories without system-flow.yaml are offered on the board\n", s.Root)
+		}
+	} else {
+		named = fmt.Sprintf("  import: %s is named for import; its git repositories without system-flow.yaml are offered on the board\n", s.Root)
+	}
+	start := a.ensureServe
+	if a.serveStarter != nil {
+		start = a.serveStarter
+	}
+	st, started, err := start()
+	switch {
+	case err != nil:
+		return named + "  host flai: flai serve did not start: " + err.Error() + "\n    start it with: flai serve start\n"
+	case started:
+		return named + fmt.Sprintf("  host flai: flai serve started (pid %d); no project here, so none is registered\n", st.PID)
+	}
+	return named + fmt.Sprintf("  host flai: flai serve is running (pid %d); no project here, so none is registered\n", st.PID)
+}
+
+// describeFolder is describe outside any project (S-0101): there is nothing
+// to be registered or connected here, only flai serve itself to report.
+func (h hostFlaiStatus) describeFolder() string {
+	if !h.Running {
+		return "  host flai: no project here; flai serve is not running, start it with flai serve start (or flai dashboard)\n"
+	}
+	return fmt.Sprintf("  host flai: no project here; flai serve runs (pid %d, since %s, serving %d project(s))\n", h.PID, h.Since, h.Projects)
 }

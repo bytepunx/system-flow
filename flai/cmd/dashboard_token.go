@@ -86,7 +86,7 @@ place and restarts the dashboard, which ends every session, for every
 project it serves, not only this one.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo, err := a.project()
+			repo, err := a.projectOrNone()
 			if err != nil {
 				return err
 			}

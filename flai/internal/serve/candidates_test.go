@@ -145,3 +145,45 @@ func TestARepositoryIsOfferedImportedAndThenServed(t *testing.T) {
 		return len(st.Offered) == 0
 	})
 }
+
+// S-0101: with no project served, a dashboard flai dashboard recorded
+// outside any project still has the repositories offered to it.
+func TestARepositoryIsOfferedToARecordedDashboardWithNoProjectServed(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	keyFile := filepath.Join(t.TempDir(), "agent.key")
+	if err := os.WriteFile(keyFile, []byte("s3cret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := dir.AddDashboard(Dashboard{URL: dash.URL, KeyFile: keyFile}); err != nil {
+		t.Fatal(err)
+	}
+	folder := t.TempDir()
+	repoAt(t, filepath.Join(folder, "widget"), false)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond,
+			ImportRoots: func() []string { return []string{folder} }, ScanEvery: time.Hour,
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+	if c := dash.Wait(t); c.Project != "import-widget" || c.Kind != channel.KindCandidate {
+		t.Errorf("offered: %q %q", c.Project, c.Kind)
+	}
+	// and a dashboard forgotten (stopped) is no longer offered anything new
+	if err := dir.ForgetDashboard(dash.URL); err != nil {
+		t.Fatal(err)
+	}
+	if dbs, _ := dir.Dashboards(); len(dbs) != 0 {
+		t.Errorf("dashboards after forgetting: %+v", dbs)
+	}
+}

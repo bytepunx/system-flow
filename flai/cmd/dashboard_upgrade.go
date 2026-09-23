@@ -74,7 +74,7 @@ process restarts.`,
 }
 
 func (a *app) runDashboardRestart(image, tag string, port int, bind string) error {
-	repo, err := a.project()
+	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ it. Reports plainly, not as an error, when the container is not running.`,
 }
 
 func (a *app) runDashboardCheck(image, tag string) error {
-	repo, err := a.project()
+	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ one is left exactly as it was, and this reports why.`,
 }
 
 func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) error {
-	repo, err := a.project()
+	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
 	}

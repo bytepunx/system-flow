@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -36,13 +37,23 @@ func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int
 	if err != nil {
 		return dashboardSettings{}, err
 	}
-	s := dashboardSettings{Image: cfg.Dashboard.Image, Tag: cfg.Dashboard.Tag, Port: cfg.Dashboard.Port, Bind: cfg.Dashboard.Bind, Root: repo.Root}
-	// The dashboard serves the main checkout: wip lives there, and a linked
-	// worktree on its own has no repository to point at (ADR-0019).
-	if repo.MainRoot != "" {
-		s.Root = repo.MainRoot
+	s := dashboardSettings{Image: cfg.Dashboard.Image, Tag: cfg.Dashboard.Tag, Port: cfg.Dashboard.Port, Bind: cfg.Dashboard.Bind}
+	// Outside any project (S-0101) the configuration alone decides, and Root
+	// is the folder it was run in.
+	var m manifest.Manifest
+	if repo == nil {
+		if s.Root, err = a.workingDir(); err != nil {
+			return dashboardSettings{}, err
+		}
+	} else {
+		m, s.Root = repo.Manifest, repo.Root
+		// The dashboard serves the main checkout: wip lives there, and a linked
+		// worktree on its own has no repository to point at (ADR-0019).
+		if repo.MainRoot != "" {
+			s.Root = repo.MainRoot
+		}
 	}
-	if d := repo.Manifest.Dashboard; d.Bind != "" {
+	if d := m.Dashboard; d.Bind != "" {
 		s.Bind = d.Bind
 	}
 	if bind != "" {
@@ -51,13 +62,13 @@ func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int
 	if s.Bind == "" {
 		s.Bind = defaultBind
 	}
-	if d := repo.Manifest.Dashboard; d.Image != "" {
+	if d := m.Dashboard; d.Image != "" {
 		s.Image = d.Image
 	}
-	if d := repo.Manifest.Dashboard; d.Tag != "" {
+	if d := m.Dashboard; d.Tag != "" {
 		s.Tag = d.Tag
 	}
-	if d := repo.Manifest.Dashboard; d.Port != 0 {
+	if d := m.Dashboard; d.Port != 0 {
 		s.Port = d.Port
 	}
 	if image != "" {
@@ -276,7 +287,7 @@ func (a *app) requireDocker() error {
 }
 
 func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build, noServe bool) error {
-	repo, err := a.project()
+	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
 	}
@@ -298,7 +309,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	already, _ := a.containerRunning(s.Name)
 	if !already {
 		if build {
-			if err := a.buildDashboardImage(repo.Root, s.ref()); err != nil {
+			if err := a.buildDashboardImage(s.Root, s.ref()); err != nil {
 				return err
 			}
 		} else if _, err := a.runner.Run("", "docker", "image", "inspect", s.ref()); err != nil || pull {
@@ -397,7 +408,7 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 		Short: "Stop this project's dashboard; the shared container stops only when it was the last project served",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo, err := a.project()
+			repo, err := a.projectOrNone()
 			if err != nil {
 				return err
 			}
@@ -439,6 +450,7 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 			if _, err := a.runner.Run("", "docker", "stop", s.Name); err != nil {
 				return err
 			}
+			_ = a.serveDir().ForgetDashboard(s.dialURL())
 			if a.jsonOut {
 				return a.printJSON(map[string]string{"container": s.Name, "state": "stopped"})
 			}
@@ -454,7 +466,7 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 		Short: "Show whether the dashboard container is running",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo, err := a.project()
+			repo, err := a.projectOrNone()
 			if err != nil {
 				return err
 			}
@@ -514,7 +526,11 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 					}
 					fmt.Fprintf(a.out, "  this container was started by an older flai and still has a project mounted (%s%s); restart it: flai dashboard stop, then flai dashboard\n", first, more)
 				}
-				fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
+				if repo == nil {
+					fmt.Fprint(a.out, a.hostFlai(s.Root).describeFolder())
+				} else {
+					fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
+				}
 			} else {
 				fmt.Fprintf(a.out, "%s not running; start with flai dashboard\n", s.Name)
 			}
@@ -530,7 +546,7 @@ func newDashboardLogsCmd(a *app) *cobra.Command {
 		Short: "Print the dashboard container's logs",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo, err := a.project()
+			repo, err := a.projectOrNone()
 			if err != nil {
 				return err
 			}
