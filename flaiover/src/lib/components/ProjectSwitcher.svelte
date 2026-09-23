@@ -27,7 +27,9 @@
 		>
 			<option value="" disabled>choose a project…</option>
 			{#each projectState.list as p (p.key)}
-				<option value={p.key}>{p.name}{p.connected ? '' : ' (not connected)'}</option>
+				<option value={p.key}
+					>{p.name}{p.candidate ? ' (not imported)' : p.connected ? '' : ' (not connected)'}</option
+				>
 			{/each}
 		</select>
 	</label>

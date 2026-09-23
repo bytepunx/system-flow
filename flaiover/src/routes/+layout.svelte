@@ -11,6 +11,7 @@
 	import { hostFlai } from '$lib/hostflai.svelte';
 	import { projectState } from '$lib/project.svelte';
 	import ProjectSwitcher from '$lib/components/ProjectSwitcher.svelte';
+	import ImportPrompt from '$lib/components/ImportPrompt.svelte';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -106,6 +107,12 @@
 	</header>
 	{#if page.url.pathname !== '/login'}<HostFlaiBanner />{/if}
 	<main class="mx-auto max-w-6xl px-4 py-6">
-		{#key projectState.current}{@render children()}{/key}
+		{#key projectState.current}
+			{#if projectState.project?.candidate}
+				<ImportPrompt project={projectState.project} />
+			{:else}
+				{@render children()}
+			{/if}
+		{/key}
 	</main>
 </div>

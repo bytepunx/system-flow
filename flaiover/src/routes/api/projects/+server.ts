@@ -21,7 +21,8 @@ export type ProjectGlance = ConnectedProject & {
 const GLANCE_TIMEOUT_MS = 3000;
 
 async function glanceOf(p: ConnectedProject): Promise<ProjectGlance> {
-	if (!p.connected) return p;
+	// a repository offered for import has no board or inbox to glance at (S-0098)
+	if (!p.connected || p.candidate) return p;
 	const hub = registry().peek(p.key);
 	if (!hub) return p;
 	const [board, inbox, agent] = await Promise.allSettled([

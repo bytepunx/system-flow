@@ -26,7 +26,8 @@ function connect(
 	}),
 	headers: Record<string, string> = {},
 	methods: string[] = REQUIRED_METHODS,
-	project: { key: string; name: string } = { key: 'harbour', name: 'Harbour' }
+	project: { key: string; name: string } = { key: 'harbour', name: 'Harbour' },
+	extra: Record<string, unknown> = {}
 ): Promise<Flai> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(url, { headers });
@@ -48,7 +49,8 @@ function connect(
 						nonce: mine,
 						flai: '9.9.9',
 						project,
-						methods
+						methods,
+						...extra
 					}
 				})
 			)
@@ -362,5 +364,40 @@ describe('AgentRegistry and AgentHub', () => {
 		// each project on its own is still reachable by name
 		expect(registry.hub('harbour').status().connected).toBe(true);
 		expect(registry.hub('quay').status().connected).toBe(true);
+	});
+
+	// S-0098: a repository offered for import connects as a candidate. It answers only the import
+	// methods by design, so nothing counts as missing; it is listed while connected and not after
+	// (it was imported, or its folder is no longer named); and it is never "the one project".
+	it('adopts a candidate as a repository offered for import', async () => {
+		const { registry, url } = await setup();
+		const project = await connect(url, KEY, () => ({ name: 'Harbour' }));
+		cleanup.push(() => project.ws.terminate());
+		const offered = await connect(
+			url,
+			KEY,
+			() => ({ tests: [] }),
+			{},
+			['import.preview', 'import.run'],
+			{ key: 'import-widget', name: 'widget' },
+			{ kind: 'candidate' }
+		);
+		expect(registry.peek('import-widget')?.status()).toMatchObject({
+			connected: true,
+			candidate: true,
+			missing: []
+		});
+		expect(registry.list()).toEqual([
+			expect.objectContaining({ key: 'harbour', connected: true }),
+			expect.objectContaining({ key: 'import-widget', candidate: true, connected: true })
+		]);
+		expect(registry.list()[0].candidate).toBeUndefined();
+		// one project and a candidate: a request with no ?project= still means the project
+		expect(registry.solo()).toBe(registry.peek('harbour'));
+
+		offered.ws.terminate();
+		await offered.closed;
+		await new Promise((r) => setTimeout(r, 20));
+		expect(registry.list().map((p) => p.key)).toEqual(['harbour']);
 	});
 });

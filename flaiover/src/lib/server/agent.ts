@@ -105,10 +105,20 @@ export type AgentStatus = {
 	serves?: { key: string; name: string };
 	/** Methods this dashboard needs and the connected flai does not offer: it is older than the dashboard. */
 	missing?: string[];
+	/** A repository offered for import, not a project yet (S-0098): it answers only import.preview and
+	 * import.run. */
+	candidate?: boolean;
 };
 
 /** One project as the registry knows it, for a project list or switcher. */
-export type ConnectedProject = { key: string; name: string; connected: boolean; since?: string };
+export type ConnectedProject = {
+	key: string;
+	name: string;
+	connected: boolean;
+	since?: string;
+	/** Offered for import, not a project yet (S-0098). */
+	candidate?: boolean;
+};
 
 type Pending = {
 	resolve: (v: unknown) => void;
@@ -129,6 +139,7 @@ type ConnInfo = {
 	flai: string;
 	project: { key: string; name: string };
 	missing: string[];
+	candidate?: boolean;
 };
 
 export type AgentOptions = { pingMs?: number; handshakeMs?: number; maxUnproven?: number };
@@ -160,6 +171,8 @@ export class AgentHub extends EventEmitter {
 	/** Whether the registry that made this hub was given a shared credential at all: false only when
 	 * the dashboard was started with none, which is true for every project alike, not a per-project fact. */
 	private configuredFlag: boolean;
+	/** Whether the last connection this hub adopted was a candidate (S-0098); kept once it goes. */
+	candidate = false;
 
 	constructor(opt: AgentOptions & { configured?: boolean } = {}) {
 		super();
@@ -182,6 +195,7 @@ export class AgentHub extends EventEmitter {
 		}
 		this.conn = ws;
 		this.info = info;
+		this.candidate = info.candidate === true;
 		log().info(
 			{ component: 'agent', flai: info.flai, project: info.project.key },
 			'host flai connected'
@@ -354,7 +368,15 @@ export class AgentRegistry extends EventEmitter {
 		const out: ConnectedProject[] = [];
 		for (const [key, h] of this.hubs) {
 			const st = h.status();
-			out.push({ key, name: st.serves?.name ?? key, connected: st.connected, since: st.since });
+			// a candidate that is gone was imported, or its folder is no longer named: not a project
+			if (h.candidate && !st.connected) continue;
+			out.push({
+				key,
+				name: st.serves?.name ?? key,
+				connected: st.connected,
+				since: st.since,
+				...(h.candidate ? { candidate: true } : {})
+			});
 		}
 		return out.sort((a, b) => a.key.localeCompare(b.key));
 	}
@@ -374,7 +396,8 @@ export class AgentRegistry extends EventEmitter {
 	 * seen every caller must start naming one, which the client does once it learns there are several.
 	 */
 	solo(): AgentHub {
-		const known = [...this.hubs.keys()];
+		// a repository offered for import is not a project a request with no ?project= could mean
+		const known = [...this.hubs.entries()].filter(([, h]) => !h.candidate).map(([k]) => k);
 		if (known.length === 1) return this.hubs.get(known[0])!;
 		if (!this.pending) this.pending = new AgentHub({ configured: this.key !== null });
 		return this.pending;
@@ -402,7 +425,12 @@ export class AgentRegistry extends EventEmitter {
 		this.unproven++;
 		let mine = '';
 		let theirs = '';
-		let hello: { flai?: string; project?: { key?: string; name?: string }; methods?: unknown } = {};
+		let hello: {
+			flai?: string;
+			project?: { key?: string; name?: string };
+			methods?: unknown;
+			kind?: unknown;
+		} = {};
 		let done = false;
 		const finish = () => {
 			if (!done) {
@@ -471,13 +499,19 @@ export class AgentRegistry extends EventEmitter {
 			}
 			finish();
 			ws.off('message', onMessage);
+			// A repository offered for import answers only the import methods, by design: nothing
+			// of a project's is missing from it (S-0098).
+			const candidate = hello.kind === 'candidate';
 			this.hub(projectKey).adopt(ws, {
 				since: new Date().toISOString(),
 				flai: String(hello.flai ?? ''),
 				project: { key: projectKey, name: String(hello.project?.name ?? '') },
-				missing: REQUIRED_METHODS.filter(
-					(m) => !(Array.isArray(hello.methods) ? hello.methods : []).includes(m)
-				)
+				missing: candidate
+					? []
+					: REQUIRED_METHODS.filter(
+							(m) => !(Array.isArray(hello.methods) ? hello.methods : []).includes(m)
+						),
+				candidate
 			});
 		};
 		ws.on('message', onMessage);

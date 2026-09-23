@@ -6,7 +6,14 @@
 const STORAGE_KEY = 'flaiover-project';
 const URL_PARAM = 'project';
 
-export type Project = { key: string; name: string; connected: boolean; since?: string };
+export type Project = {
+	key: string;
+	name: string;
+	connected: boolean;
+	since?: string;
+	/** A repository offered for import, not a project yet (S-0098). */
+	candidate?: boolean;
+};
 
 function stored(): string | null {
 	try {
@@ -31,6 +38,9 @@ class ProjectState {
 	/** What api() sends as ?project=, and what the switcher shows as current. null means "let the
 	 * server's own single-project fallback decide", which is right until there is more than one. */
 	current = $state<string | null>(null);
+	/** A repository being imported (S-0098): kept in the list, and so on the screen, after flai serve
+	 * stops offering it, until the operator has read what became of it and moved on. */
+	hold: Project | null = null;
 
 	constructor() {
 		if (typeof location !== 'undefined') {
@@ -49,17 +59,27 @@ class ProjectState {
 		return this.list.length > 1;
 	}
 
+	/** The projects proper, leaving out repositories offered for import (S-0098). */
+	get projects(): Project[] {
+		return this.list.filter((p) => !p.candidate);
+	}
+
 	async refresh(): Promise<void> {
 		try {
 			const r = await fetch('/api/projects');
 			if (!r.ok) return;
 			const body = (await r.json()) as { projects?: Project[] };
 			this.list = body.projects ?? [];
+			const held = this.hold;
+			if (held && !this.list.some((p) => p.key === held.key)) this.list = [...this.list, held];
 			this.loaded = true;
 			// A remembered or url-given key that no longer exists is not silently kept: with exactly
 			// one project connected there is a right answer regardless of what was remembered before.
 			if (this.list.length === 1) this.pick(this.list[0].key, false);
 			else if (this.current && !this.list.some((p) => p.key === this.current)) this.pick(null);
+			// one project and repositories offered for import: the project is still the one to show
+			// until the operator picks something else (S-0098)
+			if (!this.current && this.projects.length === 1) this.pick(this.projects[0].key, false);
 		} catch {
 			// offline, or nothing connected yet: keep what was chosen and try again later
 		}
@@ -100,5 +120,6 @@ export const projectState = new ProjectState();
 export function resetForTests(): void {
 	projectState.list = [];
 	projectState.loaded = false;
+	projectState.hold = null;
 	projectState.pick(null, false);
 }

@@ -84,8 +84,10 @@
 				>
 					{p.name}
 				</button>
-				<span class="ml-2 text-xs text-muted">{p.connected ? 'connected' : 'not connected'}</span>
-				{#if p.connected}
+				<span class="ml-2 text-xs text-muted"
+					>{p.candidate ? 'not imported' : p.connected ? 'connected' : 'not connected'}</span
+				>
+				{#if p.connected && !p.candidate}
 					<p class="mt-1 text-xs text-muted">
 						{p.review ?? '?'} in review · {p.threadsAwaiting ?? '?'} thread{p.threadsAwaiting === 1
 							? ''

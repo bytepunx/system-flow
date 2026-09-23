@@ -107,13 +107,15 @@ const CONFLICT = -32009;
 const REFUSED = -32010;
 const RULE = -32011;
 const DISABLED = -32012; // a host action the operator has not enabled (S-0078)
+const NOT_COMMITTED = -32013; // an import applied but not committed: a test failed (S-0098)
 const STATUS: Record<number, number> = {
 	[NOT_FOUND]: 404,
 	[INVALID_PARAMS]: 400,
 	[RULE]: 400,
 	[CONFLICT]: 409,
 	[REFUSED]: 422,
-	[DISABLED]: 403
+	[DISABLED]: 403,
+	[NOT_COMMITTED]: 422
 };
 
 /** Asks the named project's flai over the channel, whatever request (if any) is in progress. */

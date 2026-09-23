@@ -67,6 +67,12 @@ class InboxState {
 	}
 
 	async refresh(): Promise<void> {
+		// a repository offered for import has no inbox yet (S-0098)
+		if (projectState.project?.candidate) {
+			this.data = null;
+			this.error = null;
+			return;
+		}
 		try {
 			const r = await api('/api/inbox');
 			if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? r.statusText);
