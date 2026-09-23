@@ -322,6 +322,8 @@ flai mcp start    # the same server over HTTP, for an agent that cannot start a 
 { "mcpServers": { "flai": { "command": "flai", "args": ["mcp"] } } }
 ```
 
+Started in a folder that is not itself a project, such as `~/git`, `flai mcp` serves every system-flow project in that folder and up to three levels below it ([ADR-0036](../../design/adrs/0036-a-folder-that-is-not-a-project-is-served-whole-by-flai-mcp-and-flai-dashboard.md)). One agent started there works across all of them. `inbox`, `wait_for_work`, and `wait_for_events` cover every project and say which one each thing is in, and every other tool takes `project`: a key `inbox` lists, or the project's folder. A project created or imported below the folder joins within a few seconds. Started in a folder with no project below it at all, the server still starts and says there is none yet. Over HTTP (`flai mcp start` and the rest) it still serves one project, so run those in the project.
+
 | Tool | What it does |
 |------|--------------|
 | `inbox` | (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |

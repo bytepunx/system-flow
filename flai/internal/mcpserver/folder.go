@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
-	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -69,42 +67,6 @@ func addProjectTools(srv *mcp.Server, p projects) {
 
 // ---- a folder of projects (S-0101) ----
 
-// folderDepth is how far below the folder projects are looked for, as flai
-// serve looks for repositories to import: ~/git/p, ~/git/org/p, and one more.
-const folderDepth = 3
-
-var skipLooking = map[string]bool{"node_modules": true, "vendor": true, "dist": true, "build": true, "target": true, "__pycache__": true}
-
-// findProjects lists the system-flow projects in root and below it: folders
-// with a system-flow.yaml of their own, not looked into further. Hidden
-// folders (story worktrees live under .flai-cache) and build output never are.
-func findProjects(root string) []string {
-	var out []string
-	var walk func(dir string, depth int)
-	walk = func(dir string, depth int) {
-		if _, err := os.Stat(filepath.Join(dir, manifest.File)); err == nil {
-			out = append(out, dir)
-			return
-		}
-		if depth >= folderDepth {
-			return
-		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return
-		}
-		for _, e := range entries {
-			if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || skipLooking[e.Name()] {
-				continue
-			}
-			walk(filepath.Join(dir, e.Name()), depth+1)
-		}
-	}
-	walk(root, 0)
-	sort.Strings(out)
-	return out
-}
-
 // folder serves every project in a folder, found again every Rescan, so that
 // one created or imported while the agent works joins without a restart.
 type folder struct {
@@ -131,7 +93,7 @@ func (f *folder) all() []*server {
 	f.scanned = time.Now()
 	byRoot := map[string]*server{}
 	var list []*server
-	for _, root := range findProjects(f.root) {
+	for _, root := range workitem.FindProjects(f.root) {
 		s := f.byRoot[root]
 		if s == nil {
 			repo, err := workitem.Open(root)

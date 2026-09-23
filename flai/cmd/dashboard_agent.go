@@ -142,10 +142,11 @@ func (h hostFlaiStatus) describe() string {
 	return fmt.Sprintf("  host flai: flai serve runs (pid %d) and is connecting\n", h.PID)
 }
 
-// connectServeFolder is connectServe outside any project (S-0101): nothing is
-// registered; the dashboard is recorded so that flai serve offers it the
-// repositories to import, the folder is named for import, as flai serve
-// import add would, and flai serve is started when it is not running.
+// connectServeFolder is connectServe outside any project (S-0101): the
+// projects below the folder are registered, the dashboard is recorded so that
+// flai serve offers it the repositories to import even when none is, the
+// folder is named for import, as flai serve import add would, and flai serve
+// is started when it is not running.
 func (a *app) connectServeFolder(s dashboardSettings) (note string) {
 	dir := a.serveDir()
 	if err := dir.AddDashboard(serve.Dashboard{URL: s.dialURL(), KeyFile: agentKeyPath(string(dir))}); err != nil {
@@ -164,6 +165,24 @@ func (a *app) connectServeFolder(s dashboardSettings) (note string) {
 	} else {
 		named = fmt.Sprintf("  import: %s is named for import; its git repositories without system-flow.yaml are offered on the board\n", s.Root)
 	}
+	// the projects below the folder are served too, as flai mcp there serves them
+	var keys []string
+	for _, root := range workitem.FindProjects(s.Root) {
+		repo, err := workitem.Open(root)
+		if err != nil || repo.Manifest.Key == "" {
+			named += fmt.Sprintf("  %s: not registered (no key in its system-flow.yaml; flai check says how to add one)\n", root)
+			continue
+		}
+		if err := dir.Register(serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: root, URL: s.dialURL(), KeyFile: agentKeyPath(string(dir))}); err != nil {
+			named += fmt.Sprintf("  %s: not registered: %s\n", root, err)
+			continue
+		}
+		keys = append(keys, repo.Manifest.Key)
+	}
+	registered := "no project below this folder, so none is registered"
+	if len(keys) > 0 {
+		registered = fmt.Sprintf("registered the %d project(s) below this folder: %s", len(keys), strings.Join(keys, ", "))
+	}
 	start := a.ensureServe
 	if a.serveStarter != nil {
 		start = a.serveStarter
@@ -173,9 +192,9 @@ func (a *app) connectServeFolder(s dashboardSettings) (note string) {
 	case err != nil:
 		return named + "  host flai: flai serve did not start: " + err.Error() + "\n    start it with: flai serve start\n"
 	case started:
-		return named + fmt.Sprintf("  host flai: flai serve started (pid %d); no project here, so none is registered\n", st.PID)
+		return named + fmt.Sprintf("  host flai: flai serve started (pid %d); %s\n", st.PID, registered)
 	}
-	return named + fmt.Sprintf("  host flai: flai serve is running (pid %d); no project here, so none is registered\n", st.PID)
+	return named + fmt.Sprintf("  host flai: flai serve is running (pid %d); %s\n", st.PID, registered)
 }
 
 // describeFolder is describe outside any project (S-0101): there is nothing

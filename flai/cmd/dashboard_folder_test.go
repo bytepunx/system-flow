@@ -26,7 +26,7 @@ func TestDashboardInAFolderWithNoProject(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("dashboard: %d %s", code, errOut)
 	}
-	if !strings.Contains(out, "flaiover running at") || !strings.Contains(out, folder+" is named for import") || !strings.Contains(out, "no project here, so none is registered") {
+	if !strings.Contains(out, "flaiover running at") || !strings.Contains(out, folder+" is named for import") || !strings.Contains(out, "no project below this folder, so none is registered") {
 		t.Errorf("output: %s", out)
 	}
 	if projects, _ := dir.Projects(); len(projects) != 0 {
@@ -69,6 +69,32 @@ func TestDashboardInAFolderWithNoProject(t *testing.T) {
 	}
 	if dbs, _ := dir.Dashboards(); len(dbs) != 0 {
 		t.Errorf("still recorded: %+v", dbs)
+	}
+}
+
+// The projects below the folder are registered, as flai mcp there serves them.
+func TestDashboardInAFolderRegistersTheProjectsBelowIt(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	folder := t.TempDir()
+	for _, key := range []string{"alpha", "beta"} {
+		p := filepath.Join(folder, "org", key)
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		m := "version: 1\nname: " + key + "\nkey: " + key + "\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+		if err := os.WriteFile(filepath.Join(p, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, folder, f, "dashboard")
+	if code != 0 || !strings.Contains(out, "registered the 2 project(s) below this folder: alpha, beta") {
+		t.Fatalf("dashboard: %d %s %s", code, out, errOut)
+	}
+	projects, _ := serve.DirFor(cfg).Projects()
+	if len(projects) != 2 || projects[0].Key != "alpha" || projects[1].Root != filepath.Join(folder, "org", "beta") {
+		t.Errorf("registered: %+v", projects)
 	}
 }
 
