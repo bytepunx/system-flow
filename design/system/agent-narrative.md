@@ -70,7 +70,7 @@ T-0021 done. Config read/write with tests. Decided on plain encoding/json over v
 - `wait_for_events` returns at once when the cursor is already behind, so a change made between two calls is not lost; otherwise it blocks until something changes. It returns events in the same shape as `inbox` does, with the changed paths, and advances the cursor.
 - `board` returns what `flai board --json` prints: columns, limits, pull order, breaches.
 
-An agent that ends its turn calls `inbox` at the start of every turn. An agent that stays running holds `wait_for_events`. Either way a ready story found there is pulled when nothing is in progress, without waiting to be told.
+An agent that ends its turn calls `inbox` at the start of every turn. An agent that stays running, and has no story of its own in progress, holds `wait_for_work` (S-0097) and does what it answers: go back to its own story in progress (`resume`; a story is its own when its narrative was last written under its name), answer threads awaiting it written to since `wait_for_work` last answered (`thread`), or pull the first ready story in pull order once the in-progress limit leaves room (`pull`). Otherwise the call waits, re-deciding whenever a thread, item, or narrative file changes, and a timeout says what it is waiting for (`room` or `ready`), after which the agent calls it again. Either way a ready story is pulled without waiting to be told. Two agents told to pull the same story race on `item_move`, which refuses the second ("already in-progress"), and that one waits again. A thread awaiting the agent that was not written to since the last answer does not wake it, so a thread it cannot answer does not make it spin; `inbox` still lists every one.
 
 ## Obligations
 

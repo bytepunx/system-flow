@@ -71,7 +71,7 @@ Only the `ready` and `backlog` columns have an order, and only stories are in it
 
 `flai move` keeps the list true as stories change column: a story moved to `ready` is named after the ready stories already named and before any backlog story, wherever the list had it; a story moved anywhere else is removed, so one sent back to `backlog` returns to the unplaced ones. `flai board`, the MCP `board` and `inbox` tools, and the dashboard's board all lay out `backlog` and `ready` in this sequence, and the dashboard's drag within a column calls `flai order` (ADR-0016). An agent's MCP `inbox` reports a reordering of the stories it had already seen as a change.
 
-Ready means work starts (S-0079). An agent that is running hears of a ready story through `inbox` and `wait_for_events`. When none is, and the operator has enabled it on the host, `flai serve` starts their agent command for the first ready story in this order: once per story entering ready, one agent per project at a time, only while the in-progress limit leaves room and nobody is attending. See the operators' guide for what enabling it means.
+Ready means work starts (S-0079). An agent that is running and idle holds `wait_for_work` (S-0097), which names the story to pull as soon as one is ready and the in-progress limit leaves room; `inbox` lists ready stories to one that ends its turns. When none is, and the operator has enabled it on the host, `flai serve` starts their agent command for the first ready story in this order: once per story entering ready, one agent per project at a time, only while the in-progress limit leaves room and nobody is attending. See the operators' guide for what enabling it means.
 
 ## Blocking
 
