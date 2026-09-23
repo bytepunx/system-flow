@@ -3,12 +3,15 @@ id: S-0094
 type: story
 nature: remediation
 title: Tagging should occur before push
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-23T00:32:19Z
-updated: 2026-09-23T00:32:19Z
-transitions: []
+updated: 2026-09-23T00:34:08Z
+transitions:
+  - to: ready
+    at: 2026-09-23T00:32:28Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---
@@ -28,3 +31,5 @@ This should be corrected so that tagging occurs when the user says to push/publi
 ## Tasks
 
 ## Notes
+
+Once the tests pass, build the flai command locally and use bin/flai to tag this so the push results in a release so that the working environment can get an upgrade and begin functioning correctly again.
