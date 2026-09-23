@@ -156,6 +156,20 @@ What a compromised container could still do is what the dashboard itself does: a
 - **What flai serve reads.** Each registered project's design, docs, and wip folders and its manifest, looked at every 300 ms for changes (a stat of each file; a few hundred files cost well under a millisecond of CPU a look), and, when the dashboard asks, Markdown files under those three folders and nothing else: a path that climbs out, a link that leads out, another folder, or another file type is refused by flai, whatever the dashboard sends. The search index is built from the same files and kept in `flai serve`'s memory.
 - **Stopping the container.** The image's server now closes every connection five seconds after SIGTERM (`SHUTDOWN_TIMEOUT`, in seconds), so a container asked to stop does stop, even with event streams open; before, a server that had stopped listening could linger while its container showed as up.
 
+### Importing repositories from the board (S-0098)
+
+Name, on the host, a folder that holds git repositories which are not system-flow projects yet, and the board offers each of them for import ([ADR-0035](../../design/adrs/0035-repositories-under-folders-the-operator-names-can-be-imported-from-the-board.md)):
+
+```bash
+flai serve import add ~/git     # offer the repositories in it
+flai serve import list          # the folders named, and what is found in them now
+flai serve import remove ~/git
+```
+
+- **What is offered.** Every git repository in the folder, or up to three folders below it, with no `system-flow.yaml`. Nothing inside a repository, a hidden folder, or build output is looked at. `flai serve` looks again every 30 seconds, and `flai serve status` lists what it offers. A repository is offered to the dashboards the projects `flai serve` already serves connect to, so with no project served, nothing is offered.
+- **What naming a folder allows.** Anyone who can use the board can import any repository offered. An import writes the standard's files into the repository, runs the repository's own tests on this host as you (the checks `flai serve checks set` names, if any, else what the repository has: its Makefile's `test` target, `go test`, its package manager's test script, `cargo test`, pytest), and commits the import when they pass. Naming the folder is your say that this may happen to what is in it: no host action needs enabling as well. Name only folders whose repositories you would run tests from.
+- **What an import does.** It is `flai import --yes --commit` in the repository. A repository with uncommitted changes is refused, so the commit holds the import alone. When a test fails nothing is committed and the files stay for you to fix. Either way the repository is registered with `flai serve` and served as a project from then on, under a key made from its folder's name. Every import is in the journal (`flai serve journal`, action `import`).
+
 ## MCP over HTTP
 
 MCP is served by flai on the host, not by the dashboard ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)). An agent on the host needs nothing from you: `.mcp.json` starts `flai mcp` on stdio. For an agent that cannot start a process there, the same server runs over HTTP, one per project.
