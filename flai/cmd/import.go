@@ -19,7 +19,9 @@ import (
 
 type importOptions struct {
 	newOptions
-	dryRun bool
+	dryRun   bool
+	commit   bool
+	trailers []string
 }
 
 func newImportCmd(a *app) *cobra.Command {
@@ -34,11 +36,21 @@ new structure (git mv when tracked), detect code sub-projects by their build
 files, and write system-flow.yaml. Nothing existing is overwritten.
 
 Interactive in a terminal; --yes accepts every default; --dry-run prints the
-proposal and stops.`,
+proposal and stops.
+
+--commit (S-0098) then runs the repository's tests and commits the import:
+the host's checks when flai serve checks set names any, else what the
+repository has (its own Makefile's test target, go test, the package
+manager's test script, cargo test, pytest), and commits exactly the paths
+the import wrote or moved, only when every test passed or none were found.
+It needs a git repository with no uncommitted changes. When a test fails,
+the imported files are left uncommitted, the answer says which failed, and
+flai exits with code 5.`,
 		Example: `  flai import --dry-run
   flai import
   flai import ../legacy --yes --layout design=architecture
-  flai import --var description="Billing platform" --var owner=core`,
+  flai import --var description="Billing platform" --var owner=core
+  flai import ../legacy --yes --commit`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "."
@@ -55,6 +67,8 @@ proposal and stops.`,
 	f.StringArrayVar(&o.layout, "layout", nil, "name a layout folder, key=name (repeatable); defaults are proposed from what exists")
 	f.BoolVar(&o.dryRun, "dry-run", false, "print the proposal and change nothing")
 	f.BoolVar(&o.force, "force", false, "proceed even if system-flow.yaml already exists")
+	f.BoolVar(&o.commit, "commit", false, "then run the repository's tests and commit the import when they pass")
+	f.StringArrayVar(&o.trailers, "trailer", nil, "trailer line for the import's commit (repeatable, with --commit)")
 	return c
 }
 
@@ -66,6 +80,12 @@ func (a *app) runImport(dir string, o importOptions) error {
 	if an.Manifest && !o.force {
 		return fmt.Errorf("%s already has %s; use flai check, or --force to re-import", an.Root, manifest.File)
 	}
+	if o.commit && !o.dryRun {
+		if err := a.importPreflight(an); err != nil {
+			return err
+		}
+	}
+	ownMakefile := ownMakefileAt(an.Root)
 	src, m, err := a.resolveTemplate(o.templateRepo, o.ref, false)
 	if err != nil {
 		return err
@@ -104,7 +124,9 @@ func (a *app) runImport(dir string, o importOptions) error {
 	if a.jsonOut && o.dryRun {
 		return a.printJSON(map[string]any{"analysis": an, "plan": plan})
 	}
-	a.printProposal(an, plan, src, m)
+	if !a.jsonOut {
+		a.printProposal(an, plan, src, m)
+	}
 	if o.dryRun {
 		fmt.Fprintln(a.out, "\ndry run: nothing changed")
 		return nil
@@ -196,8 +218,28 @@ func (a *app) runImport(dir string, o importOptions) error {
 	if err != nil {
 		return err
 	}
+	var committed *importCommit
+	if o.commit {
+		c, err := a.commitImport(an.Root, ownMakefile, plan.Projects, res.Written, moved, o.trailers)
+		if err != nil {
+			return err
+		}
+		committed = &c
+	}
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck})
+		out := map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck}
+		if committed != nil {
+			out["key"] = repo.Manifest.Key
+			out["name"] = repo.Manifest.Name
+			out["commit"] = committed
+		}
+		if err := a.printJSON(out); err != nil {
+			return err
+		}
+		if committed != nil && !committed.Committed {
+			return &exitError{code: exitImportNotCommitted, msg: committed.Reason}
+		}
+		return nil
 	}
 	fmt.Fprintf(a.out, "\nImported %s\n  %d template files written, %d existing files kept\n", an.Root, len(res.Written), len(res.Skipped))
 	for _, mv := range moved {
@@ -213,8 +255,42 @@ func (a *app) runImport(dir string, o importOptions) error {
 	for _, f := range resCheck.Findings {
 		fmt.Fprintf(a.out, "    %s:%d: %s: %s: %s\n", f.Path, f.Line, f.Level, f.Rule, f.Message)
 	}
+	if committed != nil {
+		a.printImportCommit(*committed)
+		if !committed.Committed {
+			return &exitError{code: exitImportNotCommitted, msg: committed.Reason}
+		}
+		fmt.Fprintf(a.out, "\nNext:\n  read %s/conventions/README.md\n  flai epic new \"First deliverable\"\n", layout["design"])
+		return nil
+	}
 	fmt.Fprintf(a.out, "\nNext:\n  review the moves with git status\n  read %s/conventions/README.md\n  flai epic new \"First deliverable\"\n", layout["design"])
 	return nil
+}
+
+func (a *app) printImportCommit(c importCommit) {
+	switch c.Source {
+	case "none":
+		fmt.Fprintln(a.out, "  tests: none found (no Makefile test target, go.mod, package.json test script, Cargo.toml, or pytest setup)")
+	case "host":
+		fmt.Fprintln(a.out, "  tests: the checks this host names (flai serve checks)")
+	}
+	for _, t := range c.Tests {
+		state := "passed"
+		if !t.OK {
+			state = fmt.Sprintf("FAILED (exit %d)", t.ExitCode)
+		}
+		fmt.Fprintf(a.out, "  %s: %s in %ds\n", t.Name, state, t.Seconds)
+		if !t.OK {
+			for _, line := range strings.Split(strings.TrimRight(t.Output, "\n"), "\n") {
+				fmt.Fprintf(a.out, "      %s\n", line)
+			}
+		}
+	}
+	if c.Committed {
+		fmt.Fprintf(a.out, "  committed as %s\n", c.Commit)
+	} else {
+		fmt.Fprintf(a.out, "  not committed: %s\n", c.Reason)
+	}
 }
 
 func (a *app) printProposal(an *importer.Analysis, plan *importer.Plan, src template.Source, m template.Manifest) {
