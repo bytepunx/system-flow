@@ -108,7 +108,7 @@ func TestToolsAreAdvertised(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "board doc_get inbox item_get item_move thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches"
+	want := "board doc_get inbox item_edit item_get item_move item_new thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches"
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
 	}

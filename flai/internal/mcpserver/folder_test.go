@@ -124,7 +124,7 @@ func TestAFolderServesEveryProjectBelowIt(t *testing.T) {
 		names = append(names, tool.Name)
 	}
 	sort.Strings(names)
-	if strings.Join(names, " ") != "board doc_get inbox item_get item_move thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches" {
+	if strings.Join(names, " ") != "board doc_get inbox item_edit item_get item_move item_new thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches" {
 		t.Errorf("tools: %v", names)
 	}
 
