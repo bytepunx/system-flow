@@ -183,7 +183,8 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 				agent: false,
 				push: false,
 				dashboard: false,
-				checks: false
+				checks: false,
+				settings: false
 			});
 			await expect(r.write('push.run')).rejects.toMatchObject({
 				status: 403,
@@ -394,5 +395,114 @@ describe.skipIf(!haveFlai)('editing an item through flai', () => {
 		await expect(
 			r.write('item.edit', { id: data.item.id, hash: v3.hash, agent: { harness: '--by=eve' } })
 		).rejects.toMatchObject({ status: 400 });
+	});
+});
+
+// S-0105: the host's settings, changed through the flai built from this tree, as flai serve runs
+// it for the dashboard, against a configuration of the test's own.
+describe.skipIf(!haveFlai)('host settings through flai', () => {
+	let dir: string;
+	let r: Repo;
+	let cfgDir: string;
+	const was = process.env.FLAI_CONFIG;
+	type Settings = {
+		here: boolean;
+		everywhere: boolean;
+		host: {
+			actions: { name: string; here: boolean }[];
+			default_agent?: { harness?: string; model?: string };
+			agent: {
+				name: string;
+				command: string[];
+				harnesses: Record<string, { program: string; args: string[] }>;
+			};
+			checks: { commands: { name: string; command: string[] }[]; timeout_minutes: number };
+			import_roots: string[];
+		};
+	};
+	beforeAll(async () => {
+		dir = await mkdtemp(join(tmpdir(), 'flaiover-settings-'));
+		cfgDir = await mkdtemp(join(tmpdir(), 'flaiover-settings-cfg-'));
+		await cp(fixture, dir, { recursive: true });
+		process.env.FLAI_CONFIG = join(cfgDir, 'config.json');
+		r = new Repo(dir, flaiAsk(dir));
+	});
+	afterAll(async () => {
+		if (was === undefined) delete process.env.FLAI_CONFIG;
+		else process.env.FLAI_CONFIG = was;
+		await rm(dir, { recursive: true, force: true });
+		await rm(cfgDir, { recursive: true, force: true });
+	});
+
+	it('changes nothing until the shell turns settings on, then only what it allows', async () => {
+		const get = () => r.ask<Settings>('settings.get');
+		expect(await get()).toMatchObject({ here: false, everywhere: false });
+		await expect(r.write('settings.action', { action: 'push', on: true })).rejects.toMatchObject({
+			status: 403,
+			message: expect.stringContaining('flai serve enable settings')
+		});
+
+		await shell(dir, ['serve', 'enable', 'settings']);
+		await r.write('settings.action', { action: 'push', on: true });
+		let s = await get();
+		expect(s.here).toBe(true);
+		expect(s.host.actions.find((a) => a.name === 'push')?.here).toBe(true);
+		// settings itself is the shell's alone
+		await expect(
+			r.write('settings.action', { action: 'settings', on: false })
+		).rejects.toMatchObject({ status: 400 });
+		// a setting kept for every project needs settings on for every project
+		await expect(r.write('settings.agent', { name: 'builder' })).rejects.toMatchObject({
+			status: 403,
+			message: expect.stringContaining('--all-projects')
+		});
+
+		await r.write('settings.default_agent', {
+			agent: { harness: 'claude-code', model: 'claude-haiku-4-5', config: { effort: 'low' } }
+		});
+		expect(await readFile(join(dir, 'system-flow.yaml'), 'utf8')).toContain(
+			'agent:\n  harness: claude-code\n  model: claude-haiku-4-5\n  config:\n    effort: low\n'
+		);
+
+		await shell(dir, ['serve', 'enable', 'settings', '--all-projects']);
+		const folder = await mkdtemp(join(tmpdir(), 'flaiover-import-'));
+		await r.write('settings.agent', {
+			name: 'builder',
+			attended_minutes: 9,
+			command: ['run-agent', 'work on {story}; echo $HOME']
+		});
+		await r.write('settings.harness', {
+			name: 'claude-code',
+			program: '/opt/claude',
+			args: ['--permission-mode', 'bypassPermissions']
+		});
+		await r.write('settings.check', { name: 'unit', command: ['go', 'test', './...'] });
+		await r.write('settings.checks_timeout', { minutes: 20 });
+		await r.write('settings.import', { folder, add: true });
+		s = await get();
+		expect(s.everywhere).toBe(true);
+		expect(s.host.agent).toMatchObject({
+			name: 'builder',
+			command: ['run-agent', 'work on {story}; echo $HOME']
+		});
+		expect(s.host.agent.harnesses['claude-code']).toMatchObject({
+			program: '/opt/claude',
+			args: ['--permission-mode', 'bypassPermissions']
+		});
+		expect(s.host.checks).toEqual({
+			commands: [{ name: 'unit', command: ['go', 'test', './...'] }],
+			timeout_minutes: 20
+		});
+		expect(s.host.import_roots).toContain(folder);
+		expect(s.host.default_agent).toMatchObject({ model: 'claude-haiku-4-5' });
+
+		await r.write('settings.harness', { name: 'claude-code', reset: true });
+		await r.write('settings.check', { name: 'unit', command: null });
+		await r.write('settings.import', { folder, add: false });
+		s = await get();
+		expect(s.host.agent.harnesses['claude-code'].program).toBe('claude');
+		expect(s.host.checks.commands).toEqual([]);
+		expect(s.host.import_roots).not.toContain(folder);
+		await rm(folder, { recursive: true, force: true });
 	});
 });

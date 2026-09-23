@@ -24,7 +24,8 @@
 		{ href: resolve('/docs/[...path]', { path: '' }), label: 'Docs' },
 		{ href: resolve('/adrs'), label: 'ADRs' },
 		{ href: resolve('/search'), label: 'Search' },
-		{ href: resolve('/host'), label: 'Host' }
+		{ href: resolve('/host'), label: 'Host' },
+		{ href: resolve('/settings'), label: 'Settings' }
 	];
 	const modeLabel = {
 		system: 'theme: system',
