@@ -3,10 +3,10 @@ id: S-0099
 type: story
 nature: improvement
 title: The dashboard's favicon is the flai logo
-status: review
+status: done
 owner: alex
 created: 2026-09-23T04:57:07Z
-updated: 2026-09-23T05:00:11Z
+updated: 2026-09-23T05:04:08Z
 transitions:
   - to: ready
     at: 2026-09-23T04:57:15Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-23T05:00:11Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T05:04:08Z
+    by: alex
 tags: []
 touches: [flaiover/src]
 ---
