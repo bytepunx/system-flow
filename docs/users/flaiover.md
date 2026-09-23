@@ -24,6 +24,20 @@ A repository that is not a system-flow project yet can be imported from the boar
 
 While no project is chosen and more than one is known, the front page shows a list of every project instead of the usual overview, each with how many stories are in review, how many threads are awaiting you, and whether an agent is attending, so you can tell at a glance which one needs you.
 
+## Settings
+
+**Settings**, in the header, shows how flai on the host is set up for this project:
+- which host actions are on;
+- the default agent new stories get;
+- the command and harnesses that start agents;
+- the checks run on a story in review;
+- the folders the board offers repositories from;
+- the MCP server.
+
+It changes nothing until the operator runs `flai serve enable settings` on the host. Each section says so and names the command. After that, this project's own settings can be changed here: its host actions, its default agent, and its MCP token. The settings the host keeps for every project also need `flai serve enable settings --all-projects`.
+
+Commands are written one argument a line, and are run exactly as written, with no shell in between. Each section says whether the change was saved, or why flai refused it. Rotating the dashboard token keeps you logged in and shows the new login link once. Everyone else is logged out.
+
 ## Theme
 
 flaiover uses the brand palette in a light and a dark theme. It follows your system preference by default; the button at the right of the navigation cycles system, light, and dark, and the choice is remembered per browser. Both themes are checked for readable contrast, and the charts use palettes validated for colour-vision deficiency in each theme.

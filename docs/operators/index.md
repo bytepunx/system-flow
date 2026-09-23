@@ -149,6 +149,22 @@ What a compromised container could still do is what the dashboard itself does: a
 | `dashboard.autocommit` | `system-flow.yaml`, per project | `true` | Documents saved from the dashboard's editor are committed on the main checkout by `flai serve`, one path per commit, authored by your git identity, with a `Co-Authored-By: flaiover` trailer. `false` leaves them uncommitted: agents on story branches then do not see the edit until someone commits it, and an acceptance from the board lists it as an uncommitted change. Nothing is pushed ([ADR-0023](../../design/adrs/0023-documents-are-saved-through-flai.md)) |
 | `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths, for clones that are moved or shared. The dashboard no longer has any use for it. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
 
+### The settings host action: changing the host's settings from the dashboard (S-0105)
+
+Everything above is changed in a shell on the host, and stays that way until you turn on `settings` ([ADR-0039](../../design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md)). With it on, the dashboard's **Settings** page changes the same things through flai:
+
+```bash
+flai serve enable settings                  # this project: its host actions, its default agent, its MCP token
+flai serve enable settings --all-projects   # also what the host keeps for every project
+flai serve disable settings                 # only a shell turns it off
+```
+
+- **This project**, with `settings` on here: turn push, agent, checks, and dashboard on and off; set the default agent new stories get (written to `system-flow.yaml` and committed); rotate the project's MCP token.
+- **Every project**, with `settings` on for all of them: the agent's name, attended minutes, and command; each harness's program and the arguments that say what its agent may do; the checks and their time limit; the import folders; the dashboard token. These are kept in your flai configuration for every project, so one project's consent is not enough for them.
+- **Understand what enabling it means.** With `settings` on for every project, the dashboard token is worth a shell on this host as you. Whoever holds it can set the agent command or a check to anything, and turn on the action that runs it. With it on for one project, the token can turn on that project's push, agent, and checks, and run what you already set. Turn it on while you use it, and off again, if the dashboard is reachable by anyone but you.
+- The page never shows a token. Rotating the dashboard token from it keeps your browser logged in, shows the new login link once, and shuts out every other session and every agent that used the old token. Rotating the MCP token shows the new one once, and every agent connected over HTTP needs it.
+- Every change is a line in `flai serve journal`, as the flai command it ran, such as `flai serve enable push` or `flai serve import add -- /home/you/git`.
+
 ## The connection from flai on the host
 
 `flai dashboard` starts a second thing beside the container: `flai serve`, one process per user on the host, which opens a WebSocket to the dashboard's `/agent` endpoint and keeps it open. Over it the dashboard asks flai for named things and flai answers. The direction is deliberate: the container is given no socket, pipe, or address of the host's, and cannot start a conversation with it. It is the only way the dashboard reaches the project: everything it reads and everything it changes goes over it, and the container holds no file of the project ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). The image holds no `flai`, no `git`, and no `ssh`; commits made from the board are made by `flai serve` on the host as you, with your git configuration, and carry the dashboard's trailer.
@@ -281,7 +297,7 @@ Local stack: `PROJECT=$PWD docker compose -f flaiover/compose.yaml up --build` r
 
 ## Security posture
 
-The dashboard authenticates every request with the project token (above), and through `flai serve` it can change the project: moves, saves, acceptances. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. The container holds no file of the project and no git credential. Whether the token is the power to publish is yours to decide: it is not unless you enable the push action on the host (above), and it is once you do. Keep the dashboard off public addresses or behind a tunnel you trust all the same, and rotate the token (`flai dashboard token --rotate`) when in doubt.
+The dashboard authenticates every request with the project token (above), and through `flai serve` it can change the project: moves, saves, acceptances. By default it is published on every interface of the host so a team can reach it over a private network or VPN; beyond a trusted LAN put a TLS-terminating tunnel or proxy in front of it, because the token travels in clear over plain HTTP. To keep it to the machine it runs on, set `dashboard.bind: 127.0.0.1` in `system-flow.yaml` or config, or pass `--bind 127.0.0.1`. The container holds no file of the project and no git credential. Whether the token is the power to publish is yours to decide: it is not unless you enable the push action on the host (above), and it is once you do. Keep the dashboard off public addresses or behind a tunnel you trust all the same, and rotate the token (`flai dashboard token --rotate`, or from the Settings page) when in doubt. With the `settings` host action on for every project, the token is also the power to run any command on this host as you: see [the settings host action](#the-settings-host-action-changing-the-hosts-settings-from-the-dashboard-s-0105).
 
 ## Requirements
 

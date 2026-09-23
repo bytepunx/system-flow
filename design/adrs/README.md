@@ -44,3 +44,4 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0036](0036-a-folder-that-is-not-a-project-is-served-whole-by-flai-mcp-and-flai-dashboard.md) | A folder that is not a project is served whole by flai mcp and flai dashboard | accepted, refines 0030 |
 | [0037](0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md) | A story carries its agent, copied from the project's default when it is made | accepted |
 | [0038](0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md) | flai serve starts a story's own agent through an adapter, with what the operator allows | accepted, refines 0029 and 0037 |
+| [0039](0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md) | A settings host action, turned on only in a shell, lets the dashboard change the host's settings | accepted, refines 0029 |
