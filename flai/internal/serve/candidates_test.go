@@ -187,3 +187,72 @@ func TestARepositoryIsOfferedToARecordedDashboardWithNoProjectServed(t *testing.
 		t.Errorf("dashboards after forgetting: %+v", dbs)
 	}
 }
+
+// S-0102: flai serve started in a folder that is not a project serves the
+// projects below it, for the dashboard the registered ones reach, and offers
+// the folder's other repositories for import, as if the folder were named;
+// nothing of the folder is written to the registry.
+func TestServeStartedInAFolderServesAndOffersWhatIsBelowIt(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	harbour, key := scratchProject(t, "harbour")
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: harbour, URL: dash.URL, KeyFile: key}); err != nil {
+		t.Fatal(err)
+	}
+	folder := t.TempDir()
+	flow := filepath.Join(folder, "org", "flow")
+	repoAt(t, flow, false)
+	m := "version: 1\nname: Flow\nkey: flow\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	if err := os.WriteFile(filepath.Join(flow, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repoAt(t, filepath.Join(folder, "plain"), false)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
+			Folder: folder, ScanEvery: time.Hour,
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+
+	got := map[string]string{}
+	for range 3 {
+		c := dash.Wait(t)
+		got[c.Project] = c.Kind
+	}
+	if kind, ok := got["flow"]; !ok || kind != "" {
+		t.Errorf("the folder's project is served: %v", got)
+	}
+	if kind := got["import-plain"]; kind != channel.KindCandidate {
+		t.Errorf("the folder's repository is offered: %v", got)
+	}
+	if _, ok := got["harbour"]; !ok {
+		t.Errorf("the registered project: %v", got)
+	}
+	projects, _ := dir.Projects()
+	if len(projects) != 1 {
+		t.Errorf("the folder's projects were written to the registry: %+v", projects)
+	}
+	waitFor(t, "the status names the folder", func() bool {
+		st, _ := dir.ReadStatus(time.Now())
+		return st.Folder == folder && len(st.FolderProjects) == 1 && st.FolderProjects[0].Key == "flow"
+	})
+}
+
+// With no dashboard known, there is nowhere to serve the folder's projects.
+func TestAFolderWithNoDashboardServesNothing(t *testing.T) {
+	f := &offers{o: Options{Dir: DirFor(filepath.Join(t.TempDir(), "config.json")), Folder: t.TempDir(), Now: time.Now}}
+	if got := f.folderProjects(nil); len(got) != 0 {
+		t.Errorf("served: %+v", got)
+	}
+}

@@ -42,6 +42,10 @@ type Status struct {
 	Connections map[string]channel.State `json:"connections"` // by project root
 	// Offered are the repositories offered for import (S-0098).
 	Offered []Candidate `json:"offered,omitempty"`
+	// Folder is the folder flai serve was started in when it is not a project,
+	// and FolderProjects the projects below it that it serves (S-0102).
+	Folder         string  `json:"folder,omitempty"`
+	FolderProjects []Entry `json:"folder_projects,omitempty"`
 }
 
 // Dir is the directory that holds the registry and the state.
@@ -172,6 +176,10 @@ type Options struct {
 	ImportRoots func() []string
 	ScanEvery   time.Duration
 	ImportRun   hostapi.Runner
+	// Folder is the folder flai serve was started in when that is not a
+	// project (S-0102): the projects below it are served, and it is looked
+	// in for repositories to import, as if named. Empty otherwise.
+	Folder string
 }
 
 type running struct {
@@ -217,6 +225,7 @@ func Run(ctx context.Context, o Options) error {
 	started := o.Now().UTC().Format(time.RFC3339)
 	clients := map[string]*running{}
 	offered := &offers{o: o, running: map[string]*running{}}
+	var folderEntries []Entry
 	var mu sync.Mutex
 	defer func() {
 		offered.halt()
@@ -232,6 +241,8 @@ func Run(ctx context.Context, o Options) error {
 			o.Logger.Warn("registry unreadable", "component", "serve", "err", err.Error())
 			return
 		}
+		folderEntries = offered.folderProjects(entries)
+		entries = append(entries, folderEntries...)
 		mu.Lock()
 		defer mu.Unlock()
 		want := map[string]Entry{}
@@ -300,6 +311,7 @@ func Run(ctx context.Context, o Options) error {
 			st.Connections[root] = r.client.State()
 		}
 		st.Offered = offered.found
+		st.Folder, st.FolderProjects = o.Folder, folderEntries
 		mu.Unlock()
 		if err := o.Dir.write(o.Dir.status(), st); err != nil {
 			o.Logger.Warn("status not written", "component", "serve", "err", err.Error())

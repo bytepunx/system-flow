@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -13,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Candidate is a git repository under a folder the operator named that is
@@ -132,37 +134,110 @@ type offers struct {
 	found   []Candidate
 	scanned time.Time
 	rescan  atomic.Bool
+
+	// the projects below Options.Folder (S-0102), found again every ScanEvery
+	folderFound   []Entry
+	folderScanned time.Time
+}
+
+func (f *offers) every() time.Duration {
+	if f.o.ScanEvery > 0 {
+		return f.o.ScanEvery
+	}
+	return scanEvery
+}
+
+// importRoots are the folders named for import, and the folder flai serve
+// was started in when it is not a project (S-0102).
+func (f *offers) importRoots() []string {
+	var roots []string
+	if f.o.ImportRoots != nil {
+		roots = f.o.ImportRoots()
+	}
+	if f.o.Folder != "" && !slices.Contains(roots, f.o.Folder) {
+		roots = append(roots, f.o.Folder)
+	}
+	return roots
+}
+
+// dashboards are the dashboards served projects dial, and those flai
+// dashboard started outside any project (S-0101), by address.
+func (f *offers) dashboards(entries []Entry) map[string]Entry {
+	out := map[string]Entry{}
+	for _, e := range entries {
+		out[e.URL] = e
+	}
+	if recorded, err := f.o.Dir.Dashboards(); err == nil {
+		for _, db := range recorded {
+			if _, ok := out[db.URL]; !ok {
+				out[db.URL] = Entry{URL: db.URL, KeyFile: db.KeyFile}
+			}
+		}
+	}
+	return out
+}
+
+// folderProjects are the system-flow projects below the folder flai serve was
+// started in (S-0102), served as registered ones are, for as long as it runs
+// and without being written to the registry. Each is served for the first
+// dashboard, by address, that the registered projects or a recorded one
+// reach; with none there is nowhere to serve them yet. A project already
+// registered, or whose key another has, is left to the registry.
+func (f *offers) folderProjects(entries []Entry) []Entry {
+	if f.o.Folder == "" {
+		return nil
+	}
+	if now := f.o.Now(); f.folderScanned.IsZero() || now.Sub(f.folderScanned) >= f.every() || f.rescan.Load() {
+		f.folderFound = nil
+		for _, root := range workitem.FindProjects(f.o.Folder) {
+			m, err := manifest.Load(filepath.Join(root, manifest.File))
+			if err != nil || m.Key == "" {
+				continue
+			}
+			f.folderFound = append(f.folderFound, Entry{Key: m.Key, Name: m.Name, Root: root})
+		}
+		f.folderScanned = now
+	}
+	dashboards := f.dashboards(entries)
+	if len(dashboards) == 0 {
+		return nil
+	}
+	urls := make([]string, 0, len(dashboards))
+	for u := range dashboards {
+		urls = append(urls, u)
+	}
+	sort.Strings(urls)
+	d := dashboards[urls[0]]
+	roots, keys := map[string]bool{}, map[string]bool{}
+	for _, e := range entries {
+		roots[e.Root], keys[e.Key] = true, true
+	}
+	var out []Entry
+	for _, e := range f.folderFound {
+		if roots[e.Root] || keys[e.Key] {
+			continue
+		}
+		e.URL, e.KeyFile = d.URL, d.KeyFile
+		keys[e.Key] = true
+		out = append(out, e)
+	}
+	return out
 }
 
 func (f *offers) reconcile(ctx context.Context, entries []Entry) {
-	if f.o.ImportRoots == nil {
+	if f.o.ImportRoots == nil && f.o.Folder == "" {
 		return
 	}
-	every := f.o.ScanEvery
-	if every <= 0 {
-		every = scanEvery
-	}
-	if now := f.o.Now(); f.scanned.IsZero() || now.Sub(f.scanned) >= every || f.rescan.Swap(false) {
+	if now := f.o.Now(); f.scanned.IsZero() || now.Sub(f.scanned) >= f.every() || f.rescan.Swap(false) {
 		served, taken := map[string]bool{}, map[string]bool{}
 		for _, e := range entries {
 			served[e.Root], taken[e.Key] = true, true
 		}
-		f.found = FindCandidates(f.o.ImportRoots(), served, taken)
+		f.found = FindCandidates(f.importRoots(), served, taken)
 		f.scanned = now
 	}
-	// the dashboards served projects dial, and those flai dashboard started
-	// outside any project (S-0101); a candidate has none of its own
-	dashboards := map[string]Entry{}
-	for _, e := range entries {
-		dashboards[e.URL] = e
-	}
-	if recorded, err := f.o.Dir.Dashboards(); err == nil {
-		for _, db := range recorded {
-			if _, ok := dashboards[db.URL]; !ok {
-				dashboards[db.URL] = Entry{URL: db.URL, KeyFile: db.KeyFile}
-			}
-		}
-	}
+	// a candidate has no dashboard of its own
+	dashboards := f.dashboards(entries)
 	want := map[string]Entry{}
 	for url, d := range dashboards {
 		for _, c := range f.found {

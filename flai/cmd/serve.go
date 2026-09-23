@@ -43,7 +43,12 @@ host, and can ask only for the methods flai offers.
 flai dashboard registers the project and starts flai serve in the background
 when it is not running, so this command is for watching it work in a
 terminal, and for start, stop, and status. Its registry, state, and log live
-in a folder named serve beside flai's config file.`,
+in a folder named serve beside flai's config file.
+
+Started in a folder that is not a project, ~/git say, it also serves every
+system-flow project below the folder, for as long as it runs, and offers the
+folder's other git repositories for import on the board, as flai dashboard
+there does.`,
 		Example: `  flai serve            # in the foreground; Ctrl-C stops it
   flai serve start      # in the background
   flai serve status
@@ -52,7 +57,14 @@ in a folder named serve beside flai's config file.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: &serveMCP{a: a}, ImportRoots: a.importRoots})
+			// Started in a folder that is not a project (S-0102), it serves the
+			// projects below it and offers the folder's other repositories for
+			// import, as flai dashboard there does (ADR-0036).
+			folder := ""
+			if repo, err := a.projectOrNone(); err == nil && repo == nil {
+				folder, _ = a.workingDir()
+			}
+			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: &serveMCP{a: a}, ImportRoots: a.importRoots})
 		},
 	}
 	c.AddCommand(
@@ -176,6 +188,16 @@ func (a *app) printServeStatus() error {
 	}
 	if len(st.Projects) == 0 {
 		fmt.Fprintln(a.out, "  no projects registered; flai dashboard in a project registers it")
+	}
+	if st.Running && st.Status.Folder != "" {
+		fmt.Fprintf(a.out, "started in %s: serves the projects below it, and offers its other repositories for import\n", st.Status.Folder)
+		for _, p := range st.Status.FolderProjects {
+			line := "not connected"
+			if c, ok := st.Status.Connections[p.Root]; ok && c.Connected {
+				line = "connected since " + c.Since
+			}
+			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+		}
 	}
 	if st.Running && len(st.Status.Offered) > 0 {
 		fmt.Fprintln(a.out, "offered for import (flai serve import):")
