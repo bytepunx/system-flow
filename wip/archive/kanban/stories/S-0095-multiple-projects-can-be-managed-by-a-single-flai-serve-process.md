@@ -3,11 +3,11 @@ id: S-0095
 type: story
 nature: feature
 title: Multiple projects can be managed by a single flai serve process
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-23T02:05:47Z
-updated: 2026-09-23T02:35:25Z
+updated: 2026-09-23T03:21:24Z
 transitions:
   - to: ready
     at: 2026-09-23T02:06:00Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-23T02:35:25Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T03:21:24Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---
