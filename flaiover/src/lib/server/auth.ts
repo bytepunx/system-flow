@@ -108,7 +108,6 @@ export function decide(
 		path === '/login' ||
 		path === '/api/login' ||
 		path.startsWith('/_app/') ||
-		path === '/favicon.svg' ||
 		path === '/robots.txt'
 	) {
 		return { kind: 'allow' };
