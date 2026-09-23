@@ -39,3 +39,4 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0031](0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md) | The dashboard's container holds nothing of the project: a port and two secrets | accepted, supersedes 0022, 0026 and 0027, refines 0018 and 0029 |
 | [0032](0032-accepting-a-story-merges-it-publishing-is-a-deliberate-batched-step-over.md) | Accepting a story merges it; publishing is a deliberate, batched step over everything accumulated | accepted, refines 0019, 0025 and 0031 |
 | [0033](0033-one-login-token-and-one-agent-credential-per-user-serve-every-project.md) | One login token and one agent credential per user serve every project | accepted, refines 0018, 0029 and 0031 |
+| [0034](0034-flai-serve-keeps-each-served-project-s-http-mcp-server-running.md) | flai serve keeps each served project's HTTP MCP server running | accepted, refines 0030 |

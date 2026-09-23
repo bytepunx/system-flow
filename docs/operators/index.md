@@ -158,7 +158,9 @@ What a compromised container could still do is what the dashboard itself does: a
 
 ## MCP over HTTP
 
-MCP is served by flai on the host, not by the dashboard ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)). An agent on the host needs nothing from you: `.mcp.json` starts `flai mcp` on stdio. For an agent that cannot start a process there, run the same server over HTTP, one per project:
+MCP is served by flai on the host, not by the dashboard ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)). An agent on the host needs nothing from you: `.mcp.json` starts `flai mcp` on stdio. For an agent that cannot start a process there, the same server runs over HTTP, one per project.
+
+`flai serve` keeps it running for every project it serves ([ADR-0034](../../design/adrs/0034-flai-serve-keeps-each-served-project-s-http-mcp-server-running.md)): it starts one when it starts serving a project, starts it again if it stops, and stops it when the project is no longer served or `flai serve` stops, even when `flai serve` was killed. One you started yourself with `flai mcp start` is used as it is and never stopped by `flai serve`. `flai serve status` shows where each project's server listens. The first project gets `127.0.0.1:4243`, the next the next free port, and each keeps its port from then on. For a project no `flai serve` serves, start it by hand:
 
 ```bash
 flai mcp start      # in the background; flai mcp http runs it in the foreground
@@ -169,14 +171,14 @@ flai mcp stop
 
 | | |
 |-|-|
-| Address | `http://127.0.0.1:4243/mcp` unless `--addr` says otherwise. The address is remembered per project (`.flai-cache/mcp-http.addr`), so an agent's configuration survives a restart; a second project on the same machine needs another port |
+| Address | `http://127.0.0.1:4243/mcp` unless `--addr` says otherwise. The address is remembered per project (`.flai-cache/mcp-http.addr`), so an agent's configuration survives a restart; a second project on the same machine needs another port, which `flai serve` picks by itself (the next free one from 4243) |
 | Transport | MCP Streamable HTTP, answers as `application/json`. Clients on revisions up to 2025-11-25 get a session (`Mcp-Session-Id`), ended by `DELETE` or after `--idle` without a request (default 30 minutes), at most `--max-sessions` at once (default 16), after which `initialize` answers 503. Clients on 2026-07-28, which has no sessions, are served request by request at the same address |
 | Authentication | `Authorization: Bearer <token>` only, from `.flai-cache/mcp.token` (mode 0600, git-ignored, created when first needed). It is not the dashboard's token, and the dashboard's token does not open it. A request with an `Origin` header, which is what a browser sends, is refused with 403 |
 | The agent's name | The `X-Flai-Agent` header, else the client's own name, made safe for a file name. It is who thread entries and transitions are attributed to, and whose cursor `inbox` keeps |
 | Long requests | `wait_for_events` holds its request open until something changes, for up to five minutes. A proxy or tunnel in front must allow an idle response that long, or agents see their wait cut short. At most 64 requests are in flight at once; more answer 503 |
 | State and log | `.flai-cache/mcp-http.json` while it runs, `.flai-cache/mcp-http.log` for its events (`mcp server started`, `mcp session requested` with the agent and how many sessions are open, `mcp server stopped`) |
 | What it serves | The main checkout, read when it starts: restart it after changing `system-flow.yaml` |
-| Stopping | `flai mcp stop` ends held `wait_for_events` calls as waits that ran out, so a waiting agent gets an answer, not a broken connection, and simply starts a session again when the server is back |
+| Stopping | `flai mcp stop` ends held `wait_for_events` calls as waits that ran out, so a waiting agent gets an answer, not a broken connection, and simply starts a session again when the server is back. On a server `flai serve` keeps, `flai mcp stop` lasts only until its next look (within 15 seconds), when it is started again; to stop it for good, stop serving the project (`flai dashboard stop`) or stop `flai serve` |
 
 It listens on this machine only by default. `--addr 0.0.0.0:4243` or another interface is allowed and logged as a warning: the token travels in every request and flai does not encrypt it, so beyond the machine put an SSH forward, a tunnel, or a proxy that terminates TLS in front and give agents that address.
 

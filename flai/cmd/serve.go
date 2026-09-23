@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // flai serve is the process on the host that dashboards are reached through
@@ -112,6 +113,9 @@ type serveStatus struct {
 	Status   *serve.Status `json:"status,omitempty"`
 	Projects []serve.Entry `json:"projects"`
 	Dir      string        `json:"dir"`
+	// MCP is each project's HTTP MCP server that is running, by root: the
+	// one flai serve keeps (S-0096, ADR-0034), or one started by hand.
+	MCP map[string]mcpState `json:"mcp,omitempty"`
 }
 
 func (a *app) readServeStatus() (serveStatus, error) {
@@ -126,6 +130,18 @@ func (a *app) readServeStatus() (serveStatus, error) {
 	out := serveStatus{Projects: projects, Dir: string(dir)}
 	if st, alive := dir.ReadStatus(time.Now()); alive {
 		out.Running, out.Status = true, &st
+	}
+	for _, p := range projects {
+		repo, err := workitem.Open(p.Root)
+		if err != nil {
+			continue
+		}
+		if st, alive := readMCPState(repo, time.Now()); alive {
+			if out.MCP == nil {
+				out.MCP = map[string]mcpState{}
+			}
+			out.MCP[p.Root] = st
+		}
 	}
 	return out, nil
 }
@@ -154,6 +170,9 @@ func (a *app) printServeStatus() error {
 			}
 		}
 		fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+		if m, ok := st.MCP[p.Root]; ok {
+			fmt.Fprintf(a.out, "    mcp: %s (pid %d); flai mcp status prints an agent's configuration\n", m.URL, m.PID)
+		}
 	}
 	if len(st.Projects) == 0 {
 		fmt.Fprintln(a.out, "  no projects registered; flai dashboard in a project registers it")

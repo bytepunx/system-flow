@@ -329,7 +329,7 @@ flai mcp start    # the same server over HTTP, for an agent that cannot start a 
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
 | `wait_for_events` | Returns at once when something changed since this agent last looked, otherwise blocks until a thread, item, or narrative changes, or the timeout passes. Returns `events` in the same shape as `changes`, and the changed paths |
 
-An agent that cannot start a process on the host reaches the same server over HTTP. flai serves it itself, one server per project, on the host ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)); the dashboard is not involved and need not run:
+An agent that cannot start a process on the host reaches the same server over HTTP. flai serves it itself, one server per project, on the host ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)); the dashboard is not involved and need not run. When `flai serve` serves the project (which `flai dashboard` arranges), it keeps that server running for you ([ADR-0034](../../design/adrs/0034-flai-serve-keeps-each-served-project-s-http-mcp-server-running.md)), and `flai serve status` or `flai mcp status` says where it listens. Otherwise start it yourself:
 
 ```bash
 flai mcp start      # in the background, at http://127.0.0.1:4243/mcp unless --addr says otherwise
