@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 )
@@ -256,7 +257,7 @@ func (r *Repo) Save(it *Item) error {
 	if err := os.MkdirAll(filepath.Dir(it.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(it.Path, []byte(it.Marshal()), 0o644)
+	return atomicfile.WriteFile(it.Path, []byte(it.Marshal()), 0o644)
 }
 
 func lessID(a, b string) bool {

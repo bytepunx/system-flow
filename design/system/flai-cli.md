@@ -112,6 +112,7 @@ flai/
 │   ├── manifest/        # system-flow.yaml
 │   ├── template/        # clone, cache, render
 │   ├── workitem/        # parse, validate, transition, ID allocation, board, narratives, archive
+│   ├── atomicfile/      # replace a file in one step: a reader sees the old or the new, never half (S-0100)
 │   ├── execx/           # git and docker behind a Runner interface
 │   ├── logx/            # slog setup per the logging convention: levels incl. fatal, env and flag
 │   ├── narrative/       # wip/agents files
@@ -130,5 +131,7 @@ flai/
 ```
 
 External processes: `git` and `docker` are invoked as subprocesses and must be on `PATH`. See ADR 0010.
+
+Work items, `board.md`, narratives and their index, and threads (with the block mirrored into a narrative) are written with `atomicfile.WriteFile`, a temporary file beside the target renamed over it (S-0100). They are read while they change: by the MCP server's `inbox` and `wait_for_events`, by `flai serve`'s watcher, and by the dashboard through flai. `os.WriteFile` truncates first, and a reader in between saw an empty file ("no front matter", I-0036).
 
 Front matter is parsed with goccy/go-yaml but written by a small purpose-built emitter, so timestamps stay unquoted, sequences stay indented, and a `flai` edit never rewrites lines it did not change. Item bodies come from the template's `items/` when the project's template is in the cache, else from copies embedded in the binary.

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -67,7 +68,7 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 			return err
 		}
 		if parentPath != "" && parentWas != nil {
-			return os.WriteFile(parentPath, parentWas, 0o644)
+			return atomicfile.WriteFile(parentPath, parentWas, 0o644)
 		}
 		return nil
 	}

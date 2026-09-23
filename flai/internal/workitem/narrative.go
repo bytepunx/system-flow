@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 )
 
 // Narrative is the front matter of wip/agents/<story>.md.
@@ -66,7 +68,7 @@ func (n *Narrative) Save() error {
 	if err := os.MkdirAll(filepath.Dir(n.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(n.Path, []byte(n.Marshal()), 0o644)
+	return atomicfile.WriteFile(n.Path, []byte(n.Marshal()), 0o644)
 }
 
 // StreamOptions identify the agent opening or logging a stream.
@@ -337,7 +339,7 @@ func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 	if err := os.MkdirAll(r.AgentsDir(), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(r.AgentsDir(), "index.md"), []byte(b.String()), 0o644)
+	return atomicfile.WriteFile(filepath.Join(r.AgentsDir(), "index.md"), []byte(b.String()), 0o644)
 }
 
 // lastHeading returns the last markdown heading line in body, or "".

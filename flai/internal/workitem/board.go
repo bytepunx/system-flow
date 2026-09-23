@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 )
 
 // BoardFile is wip/kanban/board.md.
@@ -83,7 +85,7 @@ func (b *Board) Save(today string) error {
 	if err := os.MkdirAll(filepath.Dir(b.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(b.Path, []byte(sb.String()), 0o644)
+	return atomicfile.WriteFile(b.Path, []byte(sb.String()), 0o644)
 }
 
 // RemoveFromOrder drops id from the pull order.

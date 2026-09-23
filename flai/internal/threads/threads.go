@@ -16,6 +16,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -160,7 +161,7 @@ func (th *Thread) Save() error {
 	if err := os.MkdirAll(filepath.Dir(th.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(th.Path, []byte(th.Marshal()), 0o644)
+	return atomicfile.WriteFile(th.Path, []byte(th.Marshal()), 0o644)
 }
 
 // Entries parses the dated entries from the body, in order.
@@ -475,7 +476,7 @@ func MirrorNarrative(r *workitem.Repo, storyID string) error {
 	if doc == string(data) {
 		return nil
 	}
-	return os.WriteFile(path, []byte(doc), 0o644)
+	return atomicfile.WriteFile(path, []byte(doc), 0o644)
 }
 
 func num(id string) int {

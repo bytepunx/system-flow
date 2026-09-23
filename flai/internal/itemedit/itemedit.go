@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -257,7 +258,7 @@ func (u *undo) restore() error {
 	for _, f := range u.files {
 		var err error
 		if f.existed {
-			err = os.WriteFile(f.path, f.before, 0o644)
+			err = atomicfile.WriteFile(f.path, f.before, 0o644)
 		} else if rmErr := os.Remove(f.path); rmErr != nil && !os.IsNotExist(rmErr) {
 			err = rmErr
 		}
@@ -565,7 +566,7 @@ func retitleNarrative(repo *workitem.Repo, u *undo, it *workitem.Item, oldTitle 
 		return nil
 	}
 	u.note(path)
-	return os.WriteFile(path, []byte("---\n"+newFM+"---\n"+newBody), 0o644)
+	return atomicfile.WriteFile(path, []byte("---\n"+newFM+"---\n"+newBody), 0o644)
 }
 
 // relink rewrites links to the old file name in the Markdown of the
@@ -598,7 +599,7 @@ func relink(repo *workitem.Repo, u *undo, oldName, newName string) error {
 				return nil //nolint:nilerr // unreadable files are the check's to report
 			}
 			u.note(path)
-			return os.WriteFile(path, []byte(strings.ReplaceAll(string(data), oldName, newName)), 0o644)
+			return atomicfile.WriteFile(path, []byte(strings.ReplaceAll(string(data), oldName, newName)), 0o644)
 		})
 		if err != nil {
 			return err
