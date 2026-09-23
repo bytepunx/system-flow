@@ -3,10 +3,10 @@ id: S-0102
 type: story
 nature: remediation
 title: No project selector is visible
-status: review
+status: done
 owner: alex
 created: 2026-09-23T05:56:16Z
-updated: 2026-09-23T06:04:28Z
+updated: 2026-09-23T06:07:22Z
 transitions:
   - to: ready
     at: 2026-09-23T05:56:19Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-23T06:04:28Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T06:07:22Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 ---
