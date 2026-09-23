@@ -18,7 +18,7 @@ import { authenticate, decide, initAuth } from '$lib/server/auth';
 import { repo } from '$lib/server/repo';
 import { startNotifier } from '$lib/server/notify';
 import { projectIdentity, setIdentityHeaders } from '$lib/server/project';
-import { agent, exposeAgentUpgrade, withProject } from '$lib/server/agent';
+import { agent, exposeAgentUpgrade, registry, withProject } from '$lib/server/agent';
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
@@ -31,7 +31,8 @@ export const init: ServerInit = async () => {
 	const r = repo();
 	await r.watch();
 	// Webhook for new inbox entries, only when system-flow.yaml asks for it (S-0042). The manifest is
-	// asked of flai, which may not have connected yet: try now, and again whenever one connects.
+	// asked of flai, which may not have connected yet: try now, and again whenever one connects. The
+	// registry, not agent(): before any flai has connected agent() is a placeholder that never will.
 	let notifying = false;
 	const startNotifying = async () => {
 		if (notifying) return;
@@ -41,7 +42,7 @@ export const init: ServerInit = async () => {
 			log().debug({ component: 'notify', err: String(err) }, 'inbox webhook not started yet');
 		}
 	};
-	agent().on('connected', () => void startNotifying());
+	registry().on('connected', () => void startNotifying());
 	void startNotifying();
 	log().info(
 		{

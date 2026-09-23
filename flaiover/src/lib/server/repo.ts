@@ -5,7 +5,15 @@
 import { resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { agent, AgentError, connectedWithin, currentProjectKey, defaultProjectKey } from './agent';
+import {
+	agentFor,
+	AgentError,
+	concerns,
+	connectedWithin,
+	currentProjectKey,
+	defaultProjectKey,
+	registry
+} from './agent';
 import { log } from './log';
 
 export type Layout = { design: string; docs: string; wip: string };
@@ -108,8 +116,11 @@ const STATUS: Record<number, number> = {
 	[DISABLED]: 403
 };
 
-const viaChannel: Ask = (method, params, opt) =>
-	agent().ask(method, params, opt?.timeoutMs, opt?.onProgress);
+/** Asks the named project's flai over the channel, whatever request (if any) is in progress. */
+function viaChannel(key: string): Ask {
+	return (method, params, opt) =>
+		agentFor(key).ask(method, params, opt?.timeoutMs, opt?.onProgress);
+}
 
 /**
  * Repo is the dashboard's view of one system-flow repository. The project, its work items, and its
@@ -121,17 +132,24 @@ export class Repo extends EventEmitter {
 	readonly root: string;
 	private answers = new Map<string, Promise<unknown>>();
 	private listening = false;
+	private source: Ask;
+	private returned: (ms: number) => Promise<boolean>;
+	/** The project this Repo asks over the channel (S-0095); null for one given its own source. */
+	private channelKey: string | null;
 
 	constructor(
 		root = projectDir(),
-		private source: Ask = viaChannel,
+		source?: Ask,
 		/** Whether flai is back within ms, for the one retry of a write; tests give their own. */
-		private returned: (ms: number) => Promise<boolean> = source === viaChannel
-			? (ms) => connectedWithin(agent(), ms)
-			: async () => false
+		returned?: (ms: number) => Promise<boolean>,
+		key: string = currentProjectKey()
 	) {
 		super();
 		this.root = resolve(root);
+		this.channelKey = source ? null : key;
+		this.source = source ?? viaChannel(key);
+		this.returned =
+			returned ?? (source ? async () => false : (ms) => connectedWithin(agentFor(key), ms));
 	}
 
 	/** Ask flai, with its refusals as the HTTP statuses the routes answer with. */
@@ -273,15 +291,25 @@ export class Repo extends EventEmitter {
 	 * missed changes, so everything asked is forgotten and open pages are told to look again.
 	 */
 	async watch(): Promise<void> {
-		if (this.listening || this.source !== viaChannel) return;
+		const key = this.channelKey;
+		if (this.listening || key === null) return;
 		this.listening = true;
-		const hub = agent();
-		hub.on('change', (path: string) => this.changed(path));
-		hub.on('connected', () => this.changed('system-flow.yaml'));
+		// At the registry, not at a hub resolved now (S-0095): the project's flai may not have
+		// connected yet, and the default key follows whichever project is the only one when an event
+		// arrives, so a Repo made at startup, before any flai, still hears from the first to connect.
+		const reg = registry();
+		reg.on('change', (from: string, path: string) => {
+			if (concerns(key, from)) this.changed(path);
+		});
+		reg.on('connected', (from: string) => {
+			if (concerns(key, from)) this.changed('system-flow.yaml');
+		});
 		// What was asked of a flai that has gone is not shown as if it were current: without flai the
 		// routes answer 503, and the pages say why.
-		hub.on('gone', () => this.forget());
-		log().info({ component: 'watcher' }, 'listening for changes from the host flai');
+		reg.on('gone', (from: string) => {
+			if (concerns(key, from)) this.forget();
+		});
+		log().info({ component: 'watcher', project: key }, 'listening for changes from the host flai');
 	}
 
 	async close(): Promise<void> {

@@ -305,8 +305,12 @@ class UnknownProjectHub extends AgentHub {
  * that project's own AgentHub by the key hello names (S-0080). A dashboard with nothing configured,
  * or asked for a project it has never heard from, answers as AgentHub always has: 503 unconfigured,
  * or (new) 404 unknown.
+ *
+ * Every hub's 'connected', 'gone', and 'change' are re-emitted here with the project's key first
+ * (S-0095), so a listener can follow a project that has not connected yet, or follow "the one
+ * project" before there is one, instead of binding to whichever hub it happened to resolve first.
  */
-export class AgentRegistry {
+export class AgentRegistry extends EventEmitter {
 	private wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE });
 	private hubs = new Map<string, AgentHub>();
 	private unproven = 0;
@@ -318,6 +322,8 @@ export class AgentRegistry {
 		private key: string | null,
 		opt: AgentOptions = {}
 	) {
+		super();
+		this.setMaxListeners(0); // one Repo per project listens, however many projects there are
 		this.opt = opt;
 		this.handshakeMs = opt.handshakeMs ?? 5000;
 		this.maxUnproven = opt.maxUnproven ?? 4;
@@ -331,6 +337,9 @@ export class AgentRegistry {
 		if (!h) {
 			h = new AgentHub({ ...this.opt, configured: this.key !== null });
 			this.hubs.set(key, h);
+			h.on('connected', () => this.emit('connected', key));
+			h.on('gone', () => this.emit('gone', key));
+			h.on('change', (path: string) => this.emit('change', key, path));
 		}
 		return h;
 	}
@@ -523,10 +532,22 @@ export function withProject<T>(key: string, fn: () => T): T {
  * is the default, which a single-project dashboard vivifies the way it always has.
  */
 export function agent(): AgentHub {
-	const key = currentProjectKey();
+	return agentFor(currentProjectKey());
+}
+
+/** The named project's hub, resolved now, whatever request (if any) is in progress. */
+export function agentFor(key: string): AgentHub {
 	if (key === defaultProjectKey) return registry().solo();
 	const h = registry().peek(key);
 	return h ?? new UnknownProjectHub(key);
+}
+
+/** Whether an event the registry emitted for `from` concerns the project `key` stands for: the
+ * default key follows whichever project is the only one known when the event arrives. */
+export function concerns(key: string, from: string): boolean {
+	if (key !== defaultProjectKey) return key === from;
+	const solo = registry().solo();
+	return solo === registry().peek(from);
 }
 
 /** Every project a flai has named on this dashboard, for a switcher. */
