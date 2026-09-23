@@ -1,10 +1,13 @@
 <script lang="ts">
-	// Which project this tab looks at (S-0080, S-0095). Always names the active project once one is
-	// known, so the operator can tell at a glance which repository every screen is showing; with more
-	// than one it is a choice, and picking another switches every screen in place: the layout keys
-	// the page on the current project, so the page remounts, asks again, and reopens its event stream
-	// for the project picked.
+	// Which project this tab looks at (S-0080, S-0095), always a control (S-0102): the projects to
+	// switch between, and, in a group of their own, the repositories flai serve offers for import
+	// (S-0098), where picking one asks whether to import it. Picking switches every screen in place:
+	// the layout keys the page on the current project, so the page remounts, asks again, and reopens
+	// its event stream for the project picked.
 	import { projectState } from '$lib/project.svelte';
+
+	const projects = $derived(projectState.list.filter((p) => !p.candidate));
+	const offered = $derived(projectState.list.filter((p) => p.candidate));
 
 	function onchange(e: Event) {
 		projectState.pick((e.target as HTMLSelectElement).value || null);
@@ -16,25 +19,32 @@
 	}
 </script>
 
-{#if projectState.needsChoice}
-	<label class="flex items-center gap-1 text-sm" data-testid="project-switcher">
-		<span class="sr-only">Project</span>
-		<select
-			class="rounded border border-line-strong bg-surface px-2 py-1 text-sm"
-			value={projectState.current ?? ''}
-			{onchange}
-			{onfocus}
-		>
-			<option value="" disabled>choose a project…</option>
-			{#each projectState.list as p (p.key)}
-				<option value={p.key}
-					>{p.name}{p.candidate ? ' (not imported)' : p.connected ? '' : ' (not connected)'}</option
-				>
-			{/each}
-		</select>
-	</label>
-{:else if projectState.list.length === 1}
-	<span class="text-sm font-medium text-ink" data-testid="project-name" title="The project shown"
-		>{projectState.list[0].name}</span
+<label class="flex items-center gap-1 text-sm" data-testid="project-switcher">
+	<span class="sr-only">Project</span>
+	<select
+		class="rounded border border-line-strong bg-surface px-2 py-1 text-sm"
+		value={projectState.current ?? ''}
+		disabled={projectState.list.length === 0}
+		title={projectState.list.length === 0
+			? 'No project is connected yet: flai dashboard or flai serve on the host connects them'
+			: 'Switch project, or pick a repository to import it'}
+		{onchange}
+		{onfocus}
 	>
-{/if}
+		{#if projectState.list.length === 0}
+			<option value="">{projectState.loaded ? 'no project connected' : 'projects…'}</option>
+		{:else if !projectState.current}
+			<option value="" disabled>choose a project…</option>
+		{/if}
+		{#each projects as p (p.key)}
+			<option value={p.key}>{p.name}{p.connected ? '' : ' (not connected)'}</option>
+		{/each}
+		{#if offered.length}
+			<optgroup label="Not imported yet">
+				{#each offered as p (p.key)}
+					<option value={p.key}>{p.name} (not imported)</option>
+				{/each}
+			</optgroup>
+		{/if}
+	</select>
+</label>

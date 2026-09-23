@@ -16,14 +16,39 @@ describe('ProjectSwitcher (S-0080)', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('shows nothing before any project is known, and names the only one once there is one (S-0095)', () => {
+	it('is always a control: disabled with nothing connected, and a choice with one project (S-0102)', () => {
 		c = mount(ProjectSwitcher, { target: document.body });
-		expect(document.querySelector('[data-testid="project-switcher"]')).toBeNull();
-		expect(document.querySelector('[data-testid="project-name"]')).toBeNull();
+		const select = () =>
+			document.querySelector<HTMLSelectElement>('[data-testid="project-switcher"] select');
+		expect(select()?.disabled).toBe(true);
 		projectState.list = [{ key: 'harbour', name: 'Harbour', connected: true }];
+		projectState.pick('harbour', false);
 		flushSync();
-		expect(document.querySelector('[data-testid="project-switcher"]')).toBeNull();
-		expect(document.querySelector('[data-testid="project-name"]')?.textContent).toBe('Harbour');
+		expect(select()?.disabled).toBe(false);
+		expect(select()?.value).toBe('harbour');
+		expect([...select()!.options].map((o) => o.textContent)).toEqual(['Harbour']);
+	});
+
+	it('offers the repositories to import in a group of their own (S-0102)', () => {
+		projectState.list = [
+			{ key: 'harbour', name: 'Harbour', connected: true },
+			{ key: 'import-kickr', name: 'kickr', connected: true, candidate: true },
+			{ key: 'import-loci', name: 'loci', connected: true, candidate: true }
+		];
+		projectState.pick('harbour', false);
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		const group = document.querySelector('optgroup');
+		expect(group?.getAttribute('label')).toBe('Not imported yet');
+		expect([...group!.querySelectorAll('option')].map((o) => o.textContent)).toEqual([
+			'kickr (not imported)',
+			'loci (not imported)'
+		]);
+		// picking one is picking it: the layout then asks whether to import it
+		const select = document.querySelector('select')!;
+		select.value = 'import-loci';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+		expect(projectState.current).toBe('import-loci');
 	});
 
 	it('lists every known project once there is more than one, current or not connected', () => {
