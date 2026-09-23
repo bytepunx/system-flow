@@ -8,6 +8,7 @@
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
+	import { anyRunning, type HostAgent } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
@@ -85,15 +86,36 @@
 			// keep what we had: a failed question is not news
 		}
 	}
+	// What flai on the host knows of the agents it started (S-0104): a dot on each story's card and
+	// the notice above the board, from one answer. An agent ends without changing a file, so while
+	// one runs the board asks again now and then.
+	let hostAgent = $state<HostAgent | null>(null);
+	async function loadAgents() {
+		try {
+			const r = await api('/api/host-agent');
+			if (r.ok) hostAgent = await r.json();
+		} catch {
+			// keep what we had
+		}
+	}
+	const activity = $derived(hostAgent?.enabled ? (hostAgent.state?.stories ?? {}) : {});
+	$effect(() => {
+		if (!anyRunning(hostAgent)) return;
+		const t = setInterval(() => void loadAgents(), 15000);
+		return () => clearInterval(t);
+	});
+
 	const waitingIds = $derived(new Set(publishPlans.flatMap((p) => p.items.map((it) => it.id))));
 
 	onMount(() => {
 		load();
 		void loadPublish();
+		void loadAgents();
 		const es = new EventSource(projectState.tag('/api/events'));
 		es.addEventListener('change', () => {
 			load();
 			void loadPublish();
+			void loadAgents();
 		});
 		return () => es.close();
 	});
@@ -243,7 +265,7 @@
 </div>
 <div class="mb-3"><BoardLegend /></div>
 <UnpushedNotice refresh={loads} />
-<HostAgentNotice refresh={loads} />
+<HostAgentNotice status={hostAgent} />
 {#if notice}
 	<p
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'
@@ -370,6 +392,7 @@
 							draggable={board.writable}
 							dragging={dragging === c.id}
 							waiting={state === 'done' && waitingIds.has(c.id)}
+							activity={activity[c.id]}
 							ondragstart={() => {
 								dragging = c.id;
 								// the last action's notice must not read as this drag's result

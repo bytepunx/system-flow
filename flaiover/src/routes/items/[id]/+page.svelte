@@ -7,6 +7,7 @@
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import ItemEditor from '$lib/components/ItemEditor.svelte';
+	import StoryAgent from '$lib/components/StoryAgent.svelte';
 	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -290,6 +291,7 @@
 			<Threads on={item.id} {writable} />
 		</div>
 		<aside class="space-y-4 text-sm">
+			{#if item.type === 'story'}<StoryAgent story={item.id} />{/if}
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>
 				<ol class="space-y-1 text-xs">

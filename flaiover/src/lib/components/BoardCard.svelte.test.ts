@@ -205,4 +205,35 @@ describe('BoardCard', () => {
 		links[0].dispatchEvent(new Event('dragstart', { bubbles: true }));
 		expect(ondragstart).toHaveBeenCalledOnce();
 	});
+
+	// S-0104: what the story's agent is doing, as a dot beside the ID
+	it('shows a green, yellow, or red dot for the story’s agent, and none once it finished', () => {
+		const run = {
+			story: 'S-0048',
+			harness: 'claude-code',
+			model: 'claude-haiku-4-5',
+			command: 'claude',
+			agent: 'agent-S-0048',
+			started: '2026-09-23T18:00:00Z'
+		};
+		const dot = () => document.querySelector<HTMLElement>('[data-testid="agent-dot"]');
+		component = render(base);
+		expect(dot()).toBeNull();
+		for (const [state, colour] of [
+			['working', 'bg-good'],
+			['waiting', 'bg-warn'],
+			['failed', 'bg-danger']
+		] as const) {
+			unmount(component);
+			component = render(base, { activity: { state, why: 'why so', run } });
+			expect(dot()!.dataset.state).toBe(state);
+			expect(dot()!.className).toContain(colour);
+			expect(dot()!.getAttribute('aria-label')).toContain(
+				`agent ${state} (claude-code, claude-haiku-4-5)`
+			);
+		}
+		unmount(component);
+		component = render(base, { activity: { state: 'worked', run } });
+		expect(dot()).toBeNull();
+	});
 });

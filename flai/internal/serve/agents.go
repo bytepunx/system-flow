@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -524,4 +525,73 @@ func oneOrMany(n int, one, many string) string {
 		return one
 	}
 	return many
+}
+
+// Activity states of a story's agent (S-0104), as the dashboard shows them.
+const (
+	ActivityWorking = "working" // running
+	ActivityWaiting = "waiting" // running, and waiting for the designer
+	ActivityFailed  = "failed"  // ended, or never started, without its story in review
+	ActivityWorked  = "worked"  // ended with its story in review or done
+)
+
+// StoryActivity is what a story's agent is doing.
+type StoryActivity struct {
+	State string    `json:"state"`
+	Why   string    `json:"why,omitempty"`
+	Run   *AgentRun `json:"run"`
+	// Thread is the question a waiting agent asked, when it waits on one.
+	Thread string `json:"thread,omitempty"`
+}
+
+// Activity is what each story's newest agent is doing. One that runs is
+// waiting when it asked a question on its story that nobody has answered
+// yet (an open thread whose last entry is its own) or its story is blocked.
+func Activity(root string, st AgentState) map[string]StoryActivity {
+	out := map[string]StoryActivity{}
+	if len(st.Stories) == 0 {
+		return out
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return out
+	}
+	asked := map[string]*threads.Thread{} // story → the question its agent waits on
+	if all, err := threads.List(repo); err == nil {
+		for _, th := range all {
+			story := threads.StoryOf(repo, th)
+			run := st.Stories[story]
+			if !th.Open() || !run.live() {
+				continue
+			}
+			if e := th.Entries(); len(e) > 0 && e[len(e)-1].Author == run.Agent {
+				asked[story] = th
+			}
+		}
+	}
+	for id, run := range st.Stories {
+		a := StoryActivity{Run: run}
+		switch {
+		case run.live():
+			a.State = ActivityWorking
+			if th := asked[id]; th != nil {
+				a.State, a.Thread, a.Why = ActivityWaiting, th.ID, "waiting for an answer to "+th.ID+": "+th.Title
+			} else if it, err := repo.Get(id); err == nil {
+				for _, b := range it.Blocked {
+					if b.Until == "" {
+						a.State, a.Why = ActivityWaiting, "blocked: "+b.Reason
+					}
+				}
+			}
+		case run.Outcome == OutcomeWorked:
+			a.State = ActivityWorked
+		default:
+			a.State, a.Why = ActivityFailed, run.Why
+			if a.Why == "" {
+				a.Why = run.Error
+			}
+		}
+		out[id] = a
+	}
+	return out
 }

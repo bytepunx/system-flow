@@ -6,6 +6,8 @@
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
 	import { stripeFor, tintFor } from '$lib/cardcolour';
+	import type { StoryActivity } from '$lib/activity';
+	import AgentDot from './AgentDot.svelte';
 
 	type Card = {
 		id: string;
@@ -24,6 +26,7 @@
 		draggable = false,
 		dragging = false,
 		waiting = false,
+		activity,
 		ondragstart,
 		ondragend,
 		onkeydown
@@ -34,6 +37,8 @@
 		/** Merged to main but not yet published (S-0087); the done column's own state, meaningless
 		 * elsewhere. */
 		waiting?: boolean;
+		/** What the story's agent is doing (S-0104): a dot beside the ID. */
+		activity?: StoryActivity;
 		ondragstart?: () => void;
 		ondragend?: () => void;
 		/** Alt+arrow reorders a focused card on the board (S-0057); the card itself decides nothing. */
@@ -64,7 +69,9 @@
 		: ''}"
 >
 	<div class="flex items-center justify-between">
-		<span class="font-mono font-medium">{card.id}</span>
+		<span class="flex items-center gap-1.5"
+			><span class="font-mono font-medium">{card.id}</span><AgentDot {activity} /></span
+		>
 		<span class="text-muted">{age(card.age_seconds)}</span>
 	</div>
 	<div class="mt-1 leading-snug break-words">{card.title}</div>

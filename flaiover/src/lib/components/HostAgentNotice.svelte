@@ -3,36 +3,26 @@
 	// started one, for which story, by which command and when; that it could not; or why a ready
 	// story is waiting. It shows nothing while the operator has not enabled it. Starting, stopping,
 	// and configuring are done on the host; nothing here can.
+	// The board asks once and passes what it heard (S-0104), so that its cards' dots and this notice
+	// share one answer; without it the notice asks for itself.
 	import { api } from '$lib/api';
+	import type { HostAgent } from '$lib/activity';
 
-	type Run = {
-		story: string;
-		command: string;
-		agent: string;
-		started: string;
-		ended?: string;
-		exit?: number;
-		error?: string;
-	};
-	type Status = {
-		enabled: boolean;
-		state?: { command: string; running?: Run | null; last?: Run | null; waiting?: string };
-	};
-
-	let { refresh = 0 }: { refresh?: number } = $props();
-	let status = $state<Status | null>(null);
+	let { refresh = 0, status: given }: { refresh?: number; status?: HostAgent | null } = $props();
+	let asked = $state<HostAgent | null>(null);
+	const status = $derived(given !== undefined ? given : asked);
 
 	async function ask() {
 		try {
 			const r = await api('/api/host-agent');
-			if (r.ok) status = await r.json();
+			if (r.ok) asked = await r.json();
 		} catch {
 			// keep what we had
 		}
 	}
 	$effect(() => {
 		void refresh;
-		void ask();
+		if (given === undefined) void ask();
 	});
 
 	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
@@ -74,8 +64,10 @@
 			</p>
 		{/if}
 		<p class="mt-1 text-xs text-muted">
-			flai on the host starts <code>{st.command || 'the operator’s command'}</code> when a story becomes
-			ready and no agent is attending. Stopping an agent is done on the host; the dashboard cannot.
+			flai on the host starts each ready story's agent, or <code
+				>{st.command || 'the operator’s command'}</code
+			>, while the in-progress limit leaves room and no other agent is attending. Stopping an agent
+			is done on the host; the dashboard cannot.
 		</p>
 	</div>
 {/if}

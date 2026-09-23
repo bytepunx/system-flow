@@ -43,7 +43,7 @@ func (a *app) host() hostapi.Host {
 			if len(cfg.Agent.Command) > 0 {
 				command = filepath.Base(cfg.Agent.Command[0]) // its name, never its arguments
 			}
-			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting}
+			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st)}
 		},
 		Record: func(e hostapi.Entry) {
 			if err := a.journal(e); err != nil {

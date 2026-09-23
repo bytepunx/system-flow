@@ -76,4 +76,15 @@ describe('HostAgentNotice (S-0079)', () => {
 		});
 		expect(text()).toContain('ended 2026-09-20 16:30 UTC with exit code 2');
 	});
+
+	// S-0104: the board asks once and shares the answer with its cards
+	it('shows what it is given without asking for itself', async () => {
+		c = mount(HostAgentNotice, {
+			target: document.body,
+			props: { status: { enabled: true, state: { command: 'claude', running: run } } }
+		});
+		await settle();
+		expect(api).not.toHaveBeenCalled();
+		expect(text()).toContain('Agent started for S-0079 by claude as builder');
+	});
 });

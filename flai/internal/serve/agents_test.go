@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -364,4 +365,60 @@ func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 			t.Errorf("journal: %+v", j)
 		}
 	})
+}
+
+// S-0104: what each story's agent is doing, as the board's dots show it.
+func TestWhatEachStorysAgentIsDoing(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(3)
+	lab.hold()
+	asks, blocked, fails := lab.ready("Asks"), lab.ready("Blocked"), lab.ready("Fails")
+	lab.l.look(ctx, false)
+	waitFor(t, "three run", func() bool { return lab.run(asks).live() && lab.run(blocked).live() && lab.run(fails).live() })
+	act := func() map[string]StoryActivity { return Activity(lab.root, lab.state()) }
+	for _, id := range []string{asks, blocked, fails} {
+		if a := act()[id]; a.State != ActivityWorking || a.Run.Story != id {
+			t.Fatalf("%s at work: %+v", id, a)
+		}
+	}
+	// the agent asks the designer: it waits for the answer
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: asks, Author: "builder-" + asks, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a := act()[asks]; a.State != ActivityWaiting || a.Thread != th.ID || !strings.Contains(a.Why, "Which port?") {
+		t.Fatalf("asked: %+v", a)
+	}
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if a := act()[asks]; a.State != ActivityWorking {
+		t.Fatalf("answered: %+v", a)
+	}
+	// a blocked story's agent is waiting too
+	st, _ := lab.repo.Get(blocked)
+	if err := workitem.BlockItem(st, "the API key", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := lab.repo.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	if a := act()[blocked]; a.State != ActivityWaiting || a.Why != "blocked: the API key" {
+		t.Fatalf("blocked: %+v", a)
+	}
+	// one that ends with its story still in ready has failed; one that reached review has worked
+	lab.release(fails)
+	lab.move(asks, workitem.InProgress)
+	lab.move(asks, workitem.Review)
+	lab.release(asks)
+	waitFor(t, "both end", func() bool { return !lab.run(fails).live() && !lab.run(asks).live() })
+	if a := act()[fails]; a.State != ActivityFailed || !strings.Contains(a.Why, "in ready") {
+		t.Errorf("failed: %+v", a)
+	}
+	if a := act()[asks]; a.State != ActivityWorked {
+		t.Errorf("worked: %+v", a)
+	}
+	lab.release(blocked)
+	waitFor(t, "the last ends", func() bool { return !lab.run(blocked).live() })
 }
