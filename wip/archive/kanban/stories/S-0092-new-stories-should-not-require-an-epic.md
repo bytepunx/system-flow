@@ -3,11 +3,11 @@ id: S-0092
 type: story
 nature: improvement
 title: New stories should not require an epic
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-21T04:12:16Z
-updated: 2026-09-23T00:37:36Z
+updated: 2026-09-23T00:42:27Z
 transitions:
   - to: ready
     at: 2026-09-22T22:39:04Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-23T00:37:36Z
     by: system-flow
+  - to: done
+    at: 2026-09-23T00:42:27Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd, flai/internal/workitem, flai/internal/hostapi]
 ---
