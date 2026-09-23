@@ -40,6 +40,8 @@ type Status struct {
 	Started     string                   `json:"started"`
 	Updated     string                   `json:"updated"`
 	Connections map[string]channel.State `json:"connections"` // by project root
+	// Offered are the repositories offered for import (S-0098).
+	Offered []Candidate `json:"offered,omitempty"`
 }
 
 // Dir is the directory that holds the registry and the state.
@@ -163,6 +165,13 @@ type Options struct {
 	// nil runs none. MCPEvery is how often it is looked at.
 	MCP      MCP
 	MCPEvery time.Duration
+	// ImportRoots are the folders the operator named for repositories to
+	// import from the board (S-0098), asked at every look; nil offers none.
+	// ScanEvery is how often they are looked through; ImportRun runs the
+	// import (the flai that is running when nil).
+	ImportRoots func() []string
+	ScanEvery   time.Duration
+	ImportRun   hostapi.Runner
 }
 
 type running struct {
@@ -207,8 +216,10 @@ func Run(ctx context.Context, o Options) error {
 	}
 	started := o.Now().UTC().Format(time.RFC3339)
 	clients := map[string]*running{}
+	offered := &offers{o: o, running: map[string]*running{}}
 	var mu sync.Mutex
 	defer func() {
+		offered.halt()
 		for _, r := range clients {
 			r.halt()
 		}
@@ -280,6 +291,7 @@ func Run(ctx context.Context, o Options) error {
 			}()
 			o.Logger.Info("project served", "component", "serve", "root", root, "key", e.Key, "dashboard", e.URL)
 		}
+		offered.reconcile(ctx, entries)
 	}
 	writeStatus := func() {
 		mu.Lock()
@@ -287,6 +299,7 @@ func Run(ctx context.Context, o Options) error {
 		for root, r := range clients {
 			st.Connections[root] = r.client.State()
 		}
+		st.Offered = offered.found
 		mu.Unlock()
 		if err := o.Dir.write(o.Dir.status(), st); err != nil {
 			o.Logger.Warn("status not written", "component", "serve", "err", err.Error())

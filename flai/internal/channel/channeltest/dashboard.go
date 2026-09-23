@@ -28,6 +28,7 @@ type Dashboard struct {
 // Conn is one proven connection from a flai.
 type Conn struct {
 	Project string
+	Kind    string // what hello said: empty for a project, channel.KindCandidate for one offered for import
 	ws      *websocket.Conn
 }
 
@@ -62,6 +63,7 @@ func New(t *testing.T, key string) *Dashboard {
 		var hp struct {
 			Nonce   string          `json:"nonce"`
 			Project channel.Project `json:"project"`
+			Kind    string          `json:"kind"`
 		}
 		_ = json.Unmarshal(data, &hello)
 		_ = json.Unmarshal(hello.Params, &hp)
@@ -83,7 +85,7 @@ func New(t *testing.T, key string) *Dashboard {
 			_ = c.Close(websocket.StatusPolicyViolation, "bad proof")
 			return
 		}
-		d.Proven <- &Conn{Project: hp.Project.Key, ws: c}
+		d.Proven <- &Conn{Project: hp.Project.Key, Kind: hp.Kind, ws: c}
 		<-ctx.Done()
 	}))
 	t.Cleanup(srv.Close)

@@ -108,6 +108,9 @@ type Client struct {
 	Methods map[string]Method
 	Version string
 	Logger  *slog.Logger
+	// Kind is said in hello: empty for a project, KindCandidate for a
+	// repository offered for import (S-0098).
+	Kind string
 
 	// Tests shorten these.
 	MaxBytes   int // cap on one message, MaxMessage when zero
@@ -259,7 +262,14 @@ type helloParams struct {
 	// Methods are what this flai offers, so that a dashboard newer than the
 	// flai that serves it can say what is missing instead of failing page by page.
 	Methods []string `json:"methods"`
+	// Kind is empty for a project, and KindCandidate for a repository offered
+	// for import (S-0098), which answers only the import methods.
+	Kind string `json:"kind,omitempty"`
 }
+
+// KindCandidate marks a connection for a repository that is not a system-flow
+// project yet, which the board offers to import (S-0098).
+const KindCandidate = "candidate"
 
 type helloResult struct {
 	Nonce     string `json:"nonce"`
@@ -313,7 +323,7 @@ func (c *Client) serveOnce(ctx context.Context) error {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	params, _ := json.Marshal(helloParams{Protocol: Protocol, Nonce: mine, Flai: c.Version, Project: c.Project, Methods: names})
+	params, _ := json.Marshal(helloParams{Protocol: Protocol, Nonce: mine, Flai: c.Version, Project: c.Project, Methods: names, Kind: c.Kind})
 	if err := send(message{ID: json.RawMessage(`"hello"`), Method: "hello", Params: params}); err != nil {
 		return err
 	}

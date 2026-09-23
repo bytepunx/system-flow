@@ -52,7 +52,7 @@ in a folder named serve beside flai's config file.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: &serveMCP{a: a}})
+			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: &serveMCP{a: a}, ImportRoots: a.importRoots})
 		},
 	}
 	c.AddCommand(
@@ -93,7 +93,7 @@ in a folder named serve beside flai's config file.`,
 				return nil
 			},
 		},
-		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeChecksCmd(a),
+		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeChecksCmd(a),
 		&cobra.Command{
 			Use:   "status",
 			Short: "Whether flai serve runs, which projects it serves, and which dashboards have it connected",
@@ -176,6 +176,12 @@ func (a *app) printServeStatus() error {
 	}
 	if len(st.Projects) == 0 {
 		fmt.Fprintln(a.out, "  no projects registered; flai dashboard in a project registers it")
+	}
+	if st.Running && len(st.Status.Offered) > 0 {
+		fmt.Fprintln(a.out, "offered for import (flai serve import):")
+		for _, c := range st.Status.Offered {
+			fmt.Fprintf(a.out, "  %s  %s\n", c.Name, c.Root)
+		}
 	}
 	return nil
 }

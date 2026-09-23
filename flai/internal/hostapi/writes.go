@@ -225,6 +225,10 @@ type spec struct {
 	// uses names a host action this method performs as part of its work when
 	// it is enabled, and does without when it is not; it is journalled then.
 	uses string
+	// record journals every call under this name without gating it: an act
+	// on the host the operator consented to some other way (S-0098: import,
+	// by naming the folder the repository is in).
+	record string
 	// build validates and returns the arguments (without --json) and what goes on standard input.
 	build func(p channel.Project, raw json.RawMessage) (args []string, stdin string, err *channel.Error)
 	// exits maps exit codes that carry a payload on standard output to error codes.
@@ -1149,12 +1153,17 @@ func withJSON(args []string) []string {
 // writeMethods turns the specs into methods: validate, consult the journal,
 // run, and read the outcome the way the dashboard used to.
 func writeMethods(run Runner, now func() time.Time, host Host) map[string]channel.Method {
+	return methodsFrom(specs(), run, now, host)
+}
+
+// methodsFrom builds methods from a table of specs, with a journal of their own.
+func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host Host) map[string]channel.Method {
 	if run == nil {
 		run = ExecRunner
 	}
 	j := &journal{done: map[string]journalled{}, now: now}
 	out := map[string]channel.Method{}
-	for name, sp := range specs() {
+	for name, sp := range table {
 		out[name] = func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			args, stdin, e := sp.build(p, raw)
 			if e != nil {
@@ -1207,6 +1216,9 @@ func writeMethods(run Runner, now func() time.Time, host Host) map[string]channe
 			}
 			if entry.Action = sp.action; entry.Action == "" && sp.uses != "" && host.enabled(sp.uses, p.Root) {
 				entry.Action = sp.uses
+			}
+			if entry.Action == "" {
+				entry.Action = sp.record
 			}
 			if entry.Action != "" {
 				d := describe

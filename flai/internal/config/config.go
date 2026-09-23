@@ -48,6 +48,12 @@ type Config struct {
 	// manifest's own checks: are used instead; this is not among Keys, and
 	// flai serve checks manages it.
 	Checks ChecksConfig `json:"checks,omitzero"`
+	// ImportRoots are the folders flai serve looks in for repositories that
+	// are not system-flow projects yet, which the board then offers to import
+	// (S-0098). Naming a folder is the operator's consent to importing, and
+	// testing, what is in it. Absolute paths; flai serve import manages it,
+	// so it is not among Keys.
+	ImportRoots []string `json:"import_roots,omitempty"`
 }
 
 // AgentStart is the command flai serve starts an agent with.

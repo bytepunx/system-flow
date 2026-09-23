@@ -122,7 +122,11 @@ func (a *app) runImport(dir string, o importOptions) error {
 	plan := importer.BuildPlan(an, layout)
 
 	if a.jsonOut && o.dryRun {
-		return a.printJSON(map[string]any{"analysis": an, "plan": plan})
+		tests, from := a.importTests(an.Root, ownMakefile, plan.Projects)
+		if tests == nil {
+			tests = []importer.TestCommand{}
+		}
+		return a.printJSON(map[string]any{"analysis": an, "plan": plan, "tests": tests, "tests_from": from})
 	}
 	if !a.jsonOut {
 		a.printProposal(an, plan, src, m)
