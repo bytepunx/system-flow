@@ -159,13 +159,28 @@ type Options struct {
 	Agent func(root string) AgentConfig
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
+	// MCP keeps each served project's HTTP MCP server running (S-0096);
+	// nil runs none. MCPEvery is how often it is looked at.
+	MCP      MCP
+	MCPEvery time.Duration
 }
 
 type running struct {
-	entry  Entry
-	client *channel.Client
-	stop   context.CancelFunc
-	done   chan struct{}
+	entry   Entry
+	client  *channel.Client
+	stop    context.CancelFunc
+	done    chan struct{}
+	mcpDone chan struct{} // nil when no MCP server is kept for it
+}
+
+// halt stops the project's client and, when one is kept, its MCP server,
+// and waits for both.
+func (r *running) halt() {
+	r.stop()
+	<-r.done
+	if r.mcpDone != nil {
+		<-r.mcpDone
+	}
 }
 
 // Run serves every registered project until ctx ends. The registry is read
@@ -195,8 +210,7 @@ func Run(ctx context.Context, o Options) error {
 	var mu sync.Mutex
 	defer func() {
 		for _, r := range clients {
-			r.stop()
-			<-r.done
+			r.halt()
 		}
 		_ = os.Remove(o.Dir.status())
 	}()
@@ -215,8 +229,7 @@ func Run(ctx context.Context, o Options) error {
 		}
 		for root, r := range clients {
 			if e, ok := want[root]; !ok || e != r.entry {
-				r.stop()
-				<-r.done
+				r.halt()
 				delete(clients, root)
 				o.Logger.Info("project dropped", "component", "serve", "root", root)
 			}
@@ -233,6 +246,13 @@ func Run(ctx context.Context, o Options) error {
 			cctx, stop := context.WithCancel(ctx)
 			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, done: make(chan struct{})}
 			clients[root] = r
+			if o.MCP != nil {
+				r.mcpDone = make(chan struct{})
+				go func() {
+					superviseMCP(cctx, o, e)
+					close(r.mcpDone)
+				}()
+			}
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
 			starter.look(cctx, false) // learns what is ready now; starts nothing

@@ -270,6 +270,7 @@ func newMCPHTTPCmds(a *app) []*cobra.Command {
 	var addr string
 	var maxSessions int
 	var idle time.Duration
+	var exitWith int
 	flags := func(c *cobra.Command) {
 		c.Flags().StringVar(&addr, "addr", "", "address to listen on (default the last one used here, else "+mcpDefaultAddr+")")
 		c.Flags().IntVar(&maxSessions, "max-sessions", 16, "MCP sessions at once")
@@ -310,12 +311,19 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 			}
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
+			if exitWith > 0 {
+				ctx = exitWithProcess(ctx, exitWith)
+			}
 			listen := resolve(repo)
 			remember(repo, listen)
 			return a.serveMCPHTTP(ctx, repo, listen, maxSessions, idle)
 		},
 	}
 	flags(httpCmd)
+	// flai serve starts it with its own PID (S-0096): a flai serve that was
+	// killed never stops its children, so each goes by itself.
+	httpCmd.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")
+	_ = httpCmd.Flags().MarkHidden("exit-with")
 
 	start := &cobra.Command{
 		Use:   "start",

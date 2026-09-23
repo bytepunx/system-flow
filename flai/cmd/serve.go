@@ -51,7 +51,7 @@ in a folder named serve beside flai's config file.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig})
+			return serve.Run(ctx, serve.Options{Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: &serveMCP{a: a}})
 		},
 	}
 	c.AddCommand(
