@@ -3,17 +3,23 @@ id: S-0094
 type: story
 nature: remediation
 title: Tagging should occur before push
-status: ready
+status: review
 parent: E-0003
 owner: alex
 created: 2026-09-23T00:32:19Z
-updated: 2026-09-23T00:43:44Z
+updated: 2026-09-23T00:58:03Z
 transitions:
   - to: ready
     at: 2026-09-23T00:32:28Z
     by: alex
+  - to: in-progress
+    at: 2026-09-23T00:57:57Z
+    by: system-flow
+  - to: review
+    at: 2026-09-23T00:58:03Z
+    by: system-flow
 tags: [dashboard, cli]
-touches: [flaiover/src, flai/cmd]
+touches: [flai/cmd, flai/internal/release]
 ---
 # S-0094 Tagging should occur before push
 
@@ -24,12 +30,13 @@ After making changes to how the workflow should happen so that stories can batch
 This should be corrected so that tagging occurs when the user says to push/publish changes to the remote. It's very important that tagging occurs before the push to the remote.
 
 ## Acceptance criteria
-- [ ] No tagging is calculated when a story is moved to done
-- [ ] Tagging does occur when the user clicks push
-- [ ] Tagging must occur before the push to the remote
-- [ ] Tags must be included in the push to the remote
+- [x] No tagging is calculated when a story is moved to done
+- [x] Tagging does occur when the user clicks push
+- [x] Tagging must occur before the push to the remote
+- [x] Tags must be included in the push to the remote
 
 ## Tasks
+- T-0336 flai push --pending tags everything pending before it pushes
 
 ## Notes
 

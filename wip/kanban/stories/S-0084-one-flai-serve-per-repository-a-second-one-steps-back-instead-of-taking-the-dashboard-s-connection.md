@@ -3,14 +3,17 @@ id: S-0084
 type: story
 nature: remediation
 title: "One flai serve per repository: a second one steps back instead of taking the dashboard's connection"
-status: ready
+status: cancelled
 parent: E-0003
 owner: alex
 created: 2026-09-20T13:56:29Z
-updated: 2026-09-22T23:46:11Z
+updated: 2026-09-23T01:18:00Z
 transitions:
   - to: ready
     at: 2026-09-22T23:46:11Z
+    by: alex
+  - to: cancelled
+    at: 2026-09-23T01:18:00Z
     by: alex
 tags: [cli, dashboard]
 touches: [flai/cmd, flai/internal, flaiover/src, design/system, docs/operators]
@@ -29,6 +32,11 @@ A repository is served by one `flai serve` at a time. A second one, under anothe
 - [ ] What "eventually one per machine" would need (one registry for every configuration, where it lives, how an installed flai and a tree's flai share it) is written down as a follow-up, not built here
 
 ## Tasks
+- T-0337 A claim kept with the repository stops flai serve from dialing a project another live process already serves
+- T-0338 flai serve status, dashboard status, and serve actions say who holds a repository claimed elsewhere
+- T-0339 The dashboard refuses a newcomer while a healthy connection answers; a refused flai backs off instead of redialling
+- T-0340 Tried with two real flai builds and two configurations; one flai serve per machine written down as a follow-up
 
 ## Notes
 Asked for by the operator on 2026-09-20 after I-0029: the installed flai 1.6.1 under `~/.flai` and the tree's flai under `.flai-cache` both served this repository with the same agent credential, and replaced each other on the dashboard every few seconds (457 connections in 45 minutes). Whichever held the connection answered with its own version, methods, and host actions, so the dashboard said push was disabled and `push.run` missing although the tree's serve had both. "One flai serve per user" (ADR-0029) is only kept per configuration folder today. The operator's direction: one per repository now, one per machine eventually.
+- 2026-09-23T01:18:00Z: moved to cancelled: this defect no longer aligns correctly with a more global approach to having flai/flaiover capable of managing multiple repositories per host
