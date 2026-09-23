@@ -7,7 +7,11 @@
 	const status = $derived(hostFlai.status);
 	// Several projects and none chosen yet (S-0095): the status was asked for no project in
 	// particular, so "not connected" would be false; the switcher and the project list ask for a choice.
-	const choosing = $derived(projectState.needsChoice && !projectState.current);
+	// A repository offered for import has no project to show, connected or not (S-0098): its own
+	// page says what there is to say.
+	const choosing = $derived(
+		(projectState.needsChoice && !projectState.current) || !!projectState.project?.candidate
+	);
 </script>
 
 {#if status && !hostFlai.usable && !choosing}

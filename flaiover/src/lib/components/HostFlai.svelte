@@ -8,7 +8,10 @@
 
 	const status = $derived(hostFlai.status);
 	// Nothing to say about "the" host flai until a project is chosen among several (S-0095).
-	const choosing = $derived(projectState.needsChoice && !projectState.current);
+	// Nor for a repository offered for import, whose own page says what there is to say (S-0098).
+	const choosing = $derived(
+		(projectState.needsChoice && !projectState.current) || !!projectState.project?.candidate
+	);
 </script>
 
 {#if status?.configured && !choosing}

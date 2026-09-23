@@ -95,4 +95,28 @@ describe('HostFlaiBanner', () => {
 		expect(banner()?.textContent).toContain('flai dashboard stop');
 		unmount(c);
 	});
+
+	// Found live (S-0098): a repository offered for import answers no project.info and, once
+	// imported, is no longer connected as a candidate; neither is news the banner should give,
+	// since the import prompt says what there is to say.
+	it('says nothing for a repository offered for import, connected or not', () => {
+		projectState.list = [
+			{ key: 'harbour', name: 'Harbour', connected: true },
+			{ key: 'import-widget', name: 'widget', connected: true, candidate: true }
+		];
+		projectState.pick('import-widget', false);
+		const c = mount(HostFlaiBanner, { target: document.body });
+		hostFlai.status = { configured: true, connected: false };
+		flushSync();
+		expect(banner()).toBeNull();
+		hostFlai.status = {
+			configured: true,
+			connected: true,
+			error: 'flai offers no method project.info'
+		};
+		flushSync();
+		expect(banner()).toBeNull();
+		unmount(c);
+		resetForTests();
+	});
 });

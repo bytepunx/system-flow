@@ -9,7 +9,8 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = () =>
 	respond(async () => {
 		const status = agent().status();
-		if (!status.connected) return status;
+		// a repository offered for import has no project.info to ask for; answering at all is enough
+		if (!status.connected || status.candidate) return status;
 		if (status.missing?.length)
 			return {
 				...status,

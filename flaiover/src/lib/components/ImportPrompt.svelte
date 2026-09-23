@@ -101,7 +101,9 @@
 <section class="max-w-2xl" data-testid="import-prompt">
 	<h1 class="text-2xl font-semibold">{project.name}</h1>
 	<p class="mt-2 text-ink-soft">
-		This repository is not a system-flow project yet{preview?.analysis?.root
+		{result
+			? 'Imported into system-flow'
+			: 'This repository is not a system-flow project yet'}{preview?.analysis?.root
 			? ` (${preview.analysis.root})`
 			: ''}.
 	</p>
