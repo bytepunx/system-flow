@@ -305,7 +305,7 @@ An address beyond this machine is allowed and warned about: the token travels
 in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			repo, err := a.project()
+			repo, err := a.httpMCPProject()
 			if err != nil {
 				return err
 			}
@@ -330,7 +330,7 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 		Short: "Start the HTTP server in the background, if it is not running",
 		Args:  cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
-			repo, err := a.project()
+			repo, err := a.httpMCPProject()
 			if err != nil {
 				return err
 			}
@@ -366,7 +366,7 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 		Short: "Stop the HTTP server; every session ends",
 		Args:  cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
-			repo, err := a.project()
+			repo, err := a.httpMCPProject()
 			if err != nil {
 				return err
 			}
@@ -391,7 +391,7 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 		Short: "Whether the HTTP server runs for this project, where, and how an agent connects",
 		Args:  cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
-			repo, err := a.project()
+			repo, err := a.httpMCPProject()
 			if err != nil {
 				return err
 			}
@@ -423,7 +423,7 @@ one opens the dashboard, this one lets an agent act on the project. --rotate
 writes a new one and restarts a running server, which ends every session.`,
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
-			repo, err := a.project()
+			repo, err := a.httpMCPProject()
 			if err != nil {
 				return err
 			}
@@ -458,4 +458,14 @@ writes a new one and restarts a running server, which ends every session.`,
 	}
 	token.Flags().BoolVar(&rotate, "rotate", false, "replace the token")
 	return []*cobra.Command{httpCmd, start, stop, status, token}
+}
+
+// httpMCPProject is the project an HTTP MCP server serves: one, always
+// (ADR-0030). Outside any project it says what to run instead (S-0101).
+func (a *app) httpMCPProject() (*workitem.Repo, error) {
+	repo, err := a.projectOrNone()
+	if err == nil && repo == nil {
+		return nil, errors.New("flai mcp over HTTP serves one project, and there is none here or above; run it in a project (flai serve keeps one running for each project it serves), or run flai mcp on stdio here, which serves every project below this folder")
+	}
+	return repo, err
 }

@@ -85,6 +85,7 @@ const Edited = "edited"
 type Event struct {
 	workitem.Change
 	Summary string `json:"summary" jsonschema:"the change in words"`
+	Project string `json:"project,omitempty" jsonschema:"the project it happened in, when the server serves more than one"`
 }
 
 // catchUp returns what others changed since the cursor, the newest maxEvents

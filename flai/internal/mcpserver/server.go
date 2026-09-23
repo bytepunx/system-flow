@@ -27,7 +27,10 @@ import (
 
 // Options configure the server.
 type Options struct {
+	// Repo is the project served. Leave it nil and set Folder to serve every
+	// system-flow project in a folder and below it instead (S-0101).
 	Repo    *workitem.Repo
+	Folder  string
 	Agent   string           // the caller's identity on thread entries and transitions
 	Version string           // flai version, reported to clients
 	Now     func() time.Time // default time.Now
@@ -40,10 +43,14 @@ type Options struct {
 	// passed, so a server over HTTP can stop without cutting agents off
 	// (S-0076). The SDK does not tie a session's call to its HTTP request.
 	Closing <-chan struct{}
+	// Rescan is how often a folder is looked through again for projects;
+	// 5 seconds when zero.
+	Rescan time.Duration
 }
 
 type server struct {
 	repo    *workitem.Repo
+	key     string // the manifest's key, else the folder's name
 	agent   string
 	now     func() time.Time
 	poll    time.Duration
@@ -56,9 +63,9 @@ type server struct {
 	workSince time.Time
 }
 
-// New builds the MCP server with its tools and resources.
-func New(opt Options) *mcp.Server {
-	s := &server{repo: opt.Repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing}
+// newServer is the server for one project, with the defaults filled in.
+func newServer(opt Options, repo *workitem.Repo) *server {
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing}
 	if s.agent == "" {
 		s.agent = "agent"
 	}
@@ -71,21 +78,36 @@ func New(opt Options) *mcp.Server {
 	if s.maxWait <= 0 {
 		s.maxWait = 5 * time.Minute
 	}
+	s.key = repo.Manifest.Key
+	if s.key == "" {
+		s.key = filepath.Base(projectRoot(repo))
+	}
+	return s
+}
+
+// projectRoot is the main checkout's root, where wip lives.
+func projectRoot(repo *workitem.Repo) string {
+	if repo.MainRoot != "" {
+		return repo.MainRoot
+	}
+	return repo.Root
+}
+
+// New builds the MCP server with its tools and resources: for one project,
+// or, with Options.Folder and no Repo, for every project in a folder (S-0101).
+func New(opt Options) *mcp.Server {
+	if opt.Repo == nil {
+		return newFolderServer(opt)
+	}
+	s := newServer(opt, opt.Repo)
+	one := single{s}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
 		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names (item_move it to in-progress, then flai stream open on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready and the in-progress limit leaves room, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, touches, parent, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
 	})
-	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit, and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."}, s.inbox)
-	mcp.AddTool(srv, &mcp.Tool{Name: "thread_get", Description: "One thread with all of its dated entries."}, s.threadGet)
-	mcp.AddTool(srv, &mcp.Tool{Name: "thread_open", Description: "Open a thread on a repository path (optionally a heading in it) or a work item ID, to ask the designer a question or record a discussion."}, s.threadOpen)
-	mcp.AddTool(srv, &mcp.Tool{Name: "thread_reply", Description: "Add an entry to a thread as this agent. A reply from anyone but the opener marks the thread answered."}, s.threadReply)
-	mcp.AddTool(srv, &mcp.Tool{Name: "thread_resolve", Description: "Close a thread, optionally saying what settled it."}, s.threadResolve)
-	mcp.AddTool(srv, &mcp.Tool{Name: "item_get", Description: "A work item by ID (any zero padding): front matter, body, and children."}, s.itemGet)
-	mcp.AddTool(srv, &mcp.Tool{Name: "item_move", Description: "Transition a work item with the workflow rules enforced. Moving an item to cancelled also cancels everything open under it, and the result lists what went with it. Refuses to move a story or epic to done: acceptance is the operator's."}, s.itemMove)
-	mcp.AddTool(srv, &mcp.Tool{Name: "doc_get", Description: "A markdown document under the design, docs, or wip folders, by repository path."}, s.docGet)
-	mcp.AddTool(srv, &mcp.Tool{Name: "who_touches", Description: "In-progress and in-review items whose touches cover a path; ask before editing a path someone else is working on."}, s.whoTouches)
+	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
+	addProjectTools(srv, one)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes. Hold this when idle to react to the designer within a second. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on (S-0097). Answers at once when there is something: reason resume with your own story still in progress; thread with threads awaiting you written to since it last answered; pull with the first ready story when the in-progress limit leaves room for it (pull it: item_move it to in-progress, then flai stream open on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, however long it takes, up to timeout_seconds; timed_out then says whether it is waiting for room (a story is ready, the limit is full) or for a story to be ready: call it again. Move your story to review first: while one of yours is in progress, it answers resume."}, s.waitForWork)
-	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches. Stories only unless all is set."}, s.board)
 	for _, key := range []string{"design", "docs"} {
 		srv.AddResourceTemplate(&mcp.ResourceTemplate{
 			Name:        key,
@@ -111,6 +133,7 @@ type ThreadSummary struct {
 	LastBy    string         `json:"last_by"`
 	LastEntry string         `json:"last_entry" jsonschema:"text of the most recent entry"`
 	Awaiting  string         `json:"awaiting" jsonschema:"'you' when the last entry is not yours, else 'other'"`
+	Project   string         `json:"project,omitempty" jsonschema:"the project the thread is in, when the server serves more than one"`
 }
 
 // ThreadDetail is a thread with its entries.
@@ -138,8 +161,9 @@ func (s *server) detail(th *threads.Thread) ThreadDetail {
 
 // InboxIn filters the inbox.
 type InboxIn struct {
-	Story string `json:"story,omitempty" jsonschema:"only threads on this story and its tasks"`
-	All   bool   `json:"all,omitempty" jsonschema:"include threads awaiting someone else"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	Story   string `json:"story,omitempty" jsonschema:"only threads on this story and its tasks"`
+	All     bool   `json:"all,omitempty" jsonschema:"include threads awaiting someone else"`
 }
 
 // InboxOut is the agent's inbox.
@@ -214,7 +238,8 @@ func (s *server) boardView(all bool) (workitem.BoardView, error) {
 
 // BoardIn selects what the board shows.
 type BoardIn struct {
-	All bool `json:"all,omitempty" jsonschema:"include epics and tasks"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	All     bool   `json:"all,omitempty" jsonschema:"include epics and tasks"`
 }
 
 func (s *server) board(_ context.Context, _ *mcp.CallToolRequest, in BoardIn) (*mcp.CallToolResult, workitem.BoardView, error) {
@@ -230,7 +255,8 @@ func (s *server) board(_ context.Context, _ *mcp.CallToolRequest, in BoardIn) (*
 
 // ThreadIDIn names a thread.
 type ThreadIDIn struct {
-	ID string `json:"id" jsonschema:"thread ID such as TH-0001"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string `json:"id" jsonschema:"thread ID such as TH-0001"`
 }
 
 func (s *server) threadGet(_ context.Context, _ *mcp.CallToolRequest, in ThreadIDIn) (*mcp.CallToolResult, ThreadDetail, error) {
@@ -243,6 +269,7 @@ func (s *server) threadGet(_ context.Context, _ *mcp.CallToolRequest, in ThreadI
 
 // ThreadOpenIn opens a thread.
 type ThreadOpenIn struct {
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
 	On      string `json:"on" jsonschema:"repository path or work item ID the thread is about"`
 	Heading string `json:"heading,omitempty" jsonschema:"a heading in the document; it must exist"`
 	Title   string `json:"title"`
@@ -259,8 +286,9 @@ func (s *server) threadOpen(_ context.Context, _ *mcp.CallToolRequest, in Thread
 
 // ThreadReplyIn replies to a thread.
 type ThreadReplyIn struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string `json:"id"`
+	Text    string `json:"text"`
 }
 
 func (s *server) threadReply(_ context.Context, _ *mcp.CallToolRequest, in ThreadReplyIn) (*mcp.CallToolResult, ThreadDetail, error) {
@@ -273,8 +301,9 @@ func (s *server) threadReply(_ context.Context, _ *mcp.CallToolRequest, in Threa
 
 // ThreadResolveIn resolves a thread.
 type ThreadResolveIn struct {
-	ID     string `json:"id"`
-	Reason string `json:"reason,omitempty" jsonschema:"what settled it"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string `json:"id"`
+	Reason  string `json:"reason,omitempty" jsonschema:"what settled it"`
 }
 
 func (s *server) threadResolve(_ context.Context, _ *mcp.CallToolRequest, in ThreadResolveIn) (*mcp.CallToolResult, ThreadDetail, error) {
@@ -296,7 +325,8 @@ func (s *server) mirror(th *threads.Thread) error {
 
 // ItemIDIn names a work item.
 type ItemIDIn struct {
-	ID string `json:"id" jsonschema:"work item ID in any zero padding, such as S-39 or S-0039"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string `json:"id" jsonschema:"work item ID in any zero padding, such as S-39 or S-0039"`
 }
 
 // ItemBrief is a child or owner listing.
@@ -363,9 +393,10 @@ func (s *server) itemGet(_ context.Context, _ *mcp.CallToolRequest, in ItemIDIn)
 
 // ItemMoveIn transitions an item.
 type ItemMoveIn struct {
-	ID     string `json:"id"`
-	To     string `json:"to" jsonschema:"one of backlog, ready, in-progress, review, done, cancelled"`
-	Reason string `json:"reason,omitempty" jsonschema:"required for cancelled and for review back to in-progress"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string `json:"id"`
+	To      string `json:"to" jsonschema:"one of backlog, ready, in-progress, review, done, cancelled"`
+	Reason  string `json:"reason,omitempty" jsonschema:"required for cancelled and for review back to in-progress"`
 }
 
 // ItemMoveOut is the result of a transition.
@@ -405,7 +436,8 @@ func articled(typ string) string {
 
 // WhoTouchesIn asks who is working on a path.
 type WhoTouchesIn struct {
-	Path string `json:"path" jsonschema:"repository path or component name"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	Path    string `json:"path" jsonschema:"repository path or component name"`
 }
 
 // WhoTouchesOut lists the owners of a path.
@@ -440,7 +472,8 @@ func (s *server) whoTouches(_ context.Context, _ *mcp.CallToolRequest, in WhoTou
 
 // DocIn names a document.
 type DocIn struct {
-	Path string `json:"path" jsonschema:"repository path of a markdown file under design, docs, or wip"`
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	Path    string `json:"path" jsonschema:"repository path of a markdown file under design, docs, or wip"`
 }
 
 // DocOut is a document split at its front matter.
@@ -622,3 +655,15 @@ func (s *server) rel(p string) string {
 	}
 	return filepath.ToSlash(p)
 }
+
+// Each tool input names its project, when the server serves more than one.
+func (in InboxIn) project() string         { return in.Project }
+func (in BoardIn) project() string         { return in.Project }
+func (in ThreadIDIn) project() string      { return in.Project }
+func (in ThreadOpenIn) project() string    { return in.Project }
+func (in ThreadReplyIn) project() string   { return in.Project }
+func (in ThreadResolveIn) project() string { return in.Project }
+func (in ItemIDIn) project() string        { return in.Project }
+func (in ItemMoveIn) project() string      { return in.Project }
+func (in WhoTouchesIn) project() string    { return in.Project }
+func (in DocIn) project() string           { return in.Project }

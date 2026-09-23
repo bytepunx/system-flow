@@ -23,6 +23,11 @@ FLAI_AGENT. Register it in .mcp.json:
 
 Standard output is the protocol channel; log events go to standard error.
 
+Started in a folder that is not a project, ~/git say, it serves every
+system-flow project in the folder and below it (S-0101): inbox,
+wait_for_work, and wait_for_events cover them all, and the other tools take
+the project's key.
+
 An agent that cannot start a process here reaches the same server over
 Streamable HTTP (ADR-0030): flai mcp start runs it in the background for
 this project, flai mcp status says where it listens and what an agent's
@@ -35,14 +40,22 @@ configuration looks like, and flai mcp token prints its bearer token.`,
   flai mcp http         # over HTTP in the foreground; Ctrl-C stops it`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo, err := a.project()
+			repo, err := a.projectOrNone()
 			if err != nil {
 				return err
 			}
 			agent, _ := agentIdentity()
-			srv := mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner})
-			a.logger().Info("mcp server started", "component", "mcp", "agent", agent, "root", repo.Root)
-			return srv.Run(cmd.Context(), &mcp.StdioTransport{})
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner}
+			if repo == nil {
+				// Not in a project (S-0101): every project in this folder and below it.
+				if opt.Folder, err = a.workingDir(); err != nil {
+					return err
+				}
+				a.logger().Info("mcp server started", "component", "mcp", "agent", agent, "folder", opt.Folder)
+			} else {
+				a.logger().Info("mcp server started", "component", "mcp", "agent", agent, "root", repo.Root)
+			}
+			return mcpserver.New(opt).Run(cmd.Context(), &mcp.StdioTransport{})
 		},
 	}
 	c.AddCommand(newMCPHTTPCmds(a)...)
