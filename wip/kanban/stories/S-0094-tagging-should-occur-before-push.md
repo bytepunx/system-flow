@@ -7,7 +7,7 @@ status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-23T00:32:19Z
-updated: 2026-09-23T00:34:08Z
+updated: 2026-09-23T00:43:44Z
 transitions:
   - to: ready
     at: 2026-09-23T00:32:28Z
@@ -27,6 +27,7 @@ This should be corrected so that tagging occurs when the user says to push/publi
 - [ ] No tagging is calculated when a story is moved to done
 - [ ] Tagging does occur when the user clicks push
 - [ ] Tagging must occur before the push to the remote
+- [ ] Tags must be included in the push to the remote
 
 ## Tasks
 
