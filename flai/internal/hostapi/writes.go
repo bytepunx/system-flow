@@ -189,7 +189,7 @@ var Actions = map[string]string{
 	ActionAgent:     "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
-	ActionSettings:  "change this project's host settings from the dashboard: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
+	ActionSettings:  "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 }
 
 // Host is what the host decides and records about host actions (ADR-0029).
@@ -257,6 +257,9 @@ type spec struct {
 	// dashboard.stop) sets its own. A failed call is always "failed",
 	// err.Message, whichever this is.
 	describe func(res any, err *channel.Error) (outcome, detail string)
+	// say, when set, is the journal's line for a call that succeeded, made
+	// from what was asked (S-0105: which setting became what).
+	say func(raw json.RawMessage) string
 	// detachTimeout, when nonzero, runs the command with its own background
 	// context instead of the request's: a write whose own success can close
 	// the WebSocket connection the request arrived on (dashboard.restart
@@ -1281,6 +1284,9 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 					d = sp.describe
 				}
 				entry.Outcome, entry.Detail = d(res, rerr)
+				if sp.say != nil && rerr == nil {
+					entry.Detail = sp.say(raw)
+				}
 				host.record(entry)
 			}
 			return res, rerr

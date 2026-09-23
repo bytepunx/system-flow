@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -52,6 +53,9 @@ type mcpState struct {
 	Started string `json:"started"`
 	Updated string `json:"updated"`
 	Version string `json:"version"`
+	// ExitWith is the process it goes with (--exit-with), flai serve's when
+	// flai serve started it: a restart with a new token keeps it (S-0105).
+	ExitWith int `json:"exit_with,omitempty"`
 }
 
 func mcpFile(repo *workitem.Repo, name string) string { return filepath.Join(repo.CacheDir(), name) }
@@ -129,7 +133,7 @@ func mcpURL(addr net.Addr) string {
 }
 
 // serveMCPHTTP runs the server until ctx ends.
-func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string, maxSessions int, idle time.Duration) error {
+func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string, maxSessions int, idle time.Duration, exitWith int) error {
 	if st, alive := readMCPState(repo, time.Now()); alive {
 		return fmt.Errorf("flai mcp is already serving this project at %s (pid %d); flai mcp stop ends it", st.URL, st.PID)
 	}
@@ -158,7 +162,7 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 	// No write timeout: wait_for_events holds a request for up to five minutes.
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
-	st := mcpState{PID: os.Getpid(), Addr: ln.Addr().String(), URL: mcpURL(ln.Addr()), Started: time.Now().UTC().Format(time.RFC3339), Version: buildinfo.Version}
+	st := mcpState{PID: os.Getpid(), Addr: ln.Addr().String(), URL: mcpURL(ln.Addr()), Started: time.Now().UTC().Format(time.RFC3339), Version: buildinfo.Version, ExitWith: exitWith}
 	beat := func() error {
 		st.Updated = time.Now().UTC().Format(time.RFC3339)
 		return writeMCPState(repo, st)
@@ -316,7 +320,7 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 			}
 			listen := resolve(repo)
 			remember(repo, listen)
-			return a.serveMCPHTTP(ctx, repo, listen, maxSessions, idle)
+			return a.serveMCPHTTP(ctx, repo, listen, maxSessions, idle, exitWith)
 		},
 	}
 	flags(httpCmd)
@@ -436,11 +440,7 @@ writes a new one and restarts a running server, which ends every session.`,
 				if st, stopped, err := a.stopMCPHTTP(repo); err != nil {
 					return err
 				} else if stopped {
-					args := []string{"mcp", "http", "--addr", st.Addr}
-					if a.configPath != "" {
-						args = append(args, "--config", a.configPath)
-					}
-					if _, err := a.startMCPHTTP(repo, args); err != nil {
+					if _, err := a.startMCPHTTP(repo, restartArgs(st, a.configPath)); err != nil {
 						return err
 					}
 					restarted = true
@@ -468,4 +468,19 @@ func (a *app) httpMCPProject() (*workitem.Repo, error) {
 		return nil, errors.New("flai mcp over HTTP serves one project, and there is none here or above; run it in a project (flai serve keeps one running for each project it serves), or run flai mcp on stdio here, which serves every project below this folder")
 	}
 	return repo, err
+}
+
+// restartArgs start again, with a new token, the server that st was. One
+// flai serve started goes on going with it, so that it stays flai serve's
+// to supervise and to stop (S-0105: a rotation from the dashboard left one
+// running after flai serve had gone).
+func restartArgs(st mcpState, configPath string) []string {
+	args := []string{"mcp", "http", "--addr", st.Addr}
+	if st.ExitWith > 0 && serve.Alive(st.ExitWith) {
+		args = append(args, "--exit-with", strconv.Itoa(st.ExitWith))
+	}
+	if configPath != "" {
+		args = append(args, "--config", configPath)
+	}
+	return args
 }

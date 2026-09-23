@@ -9,13 +9,16 @@
 		model = $bindable(''),
 		config = $bindable(''),
 		defaults,
-		note
+		note,
+		isDefault = false
 	}: {
 		harness?: string;
 		model?: string;
 		config?: string;
 		defaults?: Agent;
 		note?: string;
+		/** Editing the project's default itself (S-0105): no "project default" line under it. */
+		isDefault?: boolean;
 	} = $props();
 
 	const defaultConfig = $derived(
@@ -57,6 +60,6 @@
 		</label>
 	</div>
 	<p class="mt-2 text-xs text-muted" data-testid="agent-default">
-		project default: {agentLine(defaults)}{note ? `. ${note}` : ''}
+		{isDefault ? (note ?? '') : `project default: ${agentLine(defaults)}${note ? `. ${note}` : ''}`}
 	</p>
 </fieldset>

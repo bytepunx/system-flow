@@ -210,6 +210,7 @@
 				bind:harness={dHarness}
 				bind:model={dModel}
 				bind:config={dConfig}
+				isDefault
 				note="Stored in system-flow.yaml and committed; empty fields leave it without them"
 			/>
 			<button

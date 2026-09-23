@@ -453,7 +453,7 @@ func TestSettingsNeedTheShellsConsent(t *testing.T) {
 	if len(rec.runs) != 1 {
 		t.Errorf("ran %d commands, want the one allowed", len(rec.runs))
 	}
-	if len(journal) != 2 || journal[0].Outcome != "done" || journal[0].Action != ActionSettings || journal[1].Outcome != "disabled" {
+	if len(journal) != 2 || journal[0].Outcome != "done" || journal[0].Action != ActionSettings || journal[0].Detail != "flai serve enable push" || journal[1].Outcome != "disabled" {
 		t.Errorf("journal: %+v", journal)
 	}
 }

@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -185,5 +187,24 @@ func TestMCPStateGoesStale(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, ".flai-cache", "mcp-http.json")); !os.IsNotExist(err) {
 		t.Error("and clears what was left")
+	}
+}
+
+// S-0105: a server flai serve started is started again with a new token as
+// flai serve's still, and one started by hand as it was.
+func TestARotatedServerKeepsWhatItWentWith(t *testing.T) {
+	st := mcpState{Addr: "127.0.0.1:4247", ExitWith: os.Getpid()}
+	if got := strings.Join(restartArgs(st, "/c/config.json"), " "); got != "mcp http --addr 127.0.0.1:4247 --exit-with "+strconv.Itoa(os.Getpid())+" --config /c/config.json" {
+		t.Errorf("serve's: %s", got)
+	}
+	st.ExitWith = 0
+	if got := strings.Join(restartArgs(st, ""), " "); got != "mcp http --addr 127.0.0.1:4247" {
+		t.Errorf("by hand: %s", got)
+	}
+	gone := exec.Command("true")
+	_ = gone.Run()
+	st.ExitWith = gone.Process.Pid
+	if got := strings.Join(restartArgs(st, ""), " "); strings.Contains(got, "--exit-with") {
+		t.Errorf("a flai serve that has gone is not waited on: %s", got)
 	}
 }

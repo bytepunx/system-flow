@@ -54,10 +54,10 @@ func argList(what string, list []string, needProgram bool) *channel.Error {
 
 func settingsSpecs() map[string]spec {
 	project := func(what string, b func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)) spec {
-		return spec{action: ActionSettings, describe: settingsDone(what), build: b}
+		return spec{action: ActionSettings, describe: settingsDone(what), say: sayArgs(b), build: b}
 	}
 	hostwide := func(what string, b func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)) spec {
-		return spec{action: ActionSettings, hostwide: true, describe: settingsDone(what), build: b}
+		return spec{action: ActionSettings, hostwide: true, describe: settingsDone(what), say: sayArgs(b), build: b}
 	}
 	return map[string]spec{
 		// settings.action: another host action on or off for this project.
@@ -284,3 +284,24 @@ func settingsSpecs() map[string]spec {
 
 // enabledEverywhere says whether an action is on for every project.
 func (h Host) enabledEverywhere(action string) bool { return h.enabled(action, config.AllProjects) }
+
+// sayArgs journals a settings change as the flai command it ran, which says
+// exactly what became what: "flai serve enable push", "flai serve import add
+// -- /home/me/git". The trailer and --json are left out; a token never is in
+// a command, only in its answer.
+func sayArgs(b func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)) func(json.RawMessage) string {
+	return func(raw json.RawMessage) string {
+		args, _, e := b(channel.Project{}, raw)
+		if e != nil {
+			return ""
+		}
+		out := []string{"flai"}
+		for _, a := range args {
+			if strings.HasPrefix(a, "--trailer=") {
+				continue
+			}
+			out = append(out, a)
+		}
+		return strings.Join(out, " ")
+	}
+}
