@@ -133,6 +133,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	// Registered apart from the list above so that stories adding commands at
 	// the same time do not meet on one line.
 	root.AddCommand(newAdrCmd(a))
+	root.AddCommand(newAgentCmd(a))
 	root.AddCommand(newServeCmd(a))
 	root.AddCommand(newHostAPICmd(a))
 	return root

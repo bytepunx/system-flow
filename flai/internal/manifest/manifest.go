@@ -34,6 +34,9 @@ type Manifest struct {
 	// configuration names none: that is the operator's choice of where to
 	// name them, not a merge of both.
 	Checks []NamedCommand `yaml:"checks,omitempty" json:"checks,omitempty"`
+	// Agent is the project's default agent, copied into every story created
+	// while it is set (S-0103). flai agent sets it.
+	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

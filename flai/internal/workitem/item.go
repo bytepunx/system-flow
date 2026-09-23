@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // Item types.
@@ -73,6 +75,9 @@ type Item struct {
 	Stream      string       `yaml:"stream" json:"stream"`
 	Tags        []string     `yaml:"tags" json:"tags"`
 	Touches     []string     `yaml:"touches" json:"touches,omitempty"` // paths or components the work changes (ADR-0019)
+	// Agent is who works the story: harness, model, and options (S-0103).
+	// Stories only; absent unless the project has defaults or one was given.
+	Agent *manifest.Agent `yaml:"agent" json:"agent,omitempty"`
 
 	Path     string `yaml:"-" json:"path"`     // file on disk
 	Archived bool   `yaml:"-" json:"archived"` // lives under wip/archive
@@ -201,6 +206,14 @@ func (it *Item) Validate() error {
 			errs = append(errs, fmt.Sprintf("estimate %q is not a Go duration like 4h or 90m", it.Estimate))
 		}
 	}
+	if !it.Agent.IsZero() {
+		if it.Type != Story {
+			errs = append(errs, "only a story carries an agent")
+		}
+		if err := it.Agent.Validate(); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
@@ -294,6 +307,9 @@ func (it *Item) Marshal() string {
 	fmt.Fprintf(&b, "tags: %s\n", FlowList(it.Tags))
 	if len(it.Touches) > 0 {
 		fmt.Fprintf(&b, "touches: %s\n", FlowList(it.Touches))
+	}
+	if !it.Agent.IsZero() {
+		b.WriteString(manifest.AgentBlock(it.Agent, ""))
 	}
 	b.WriteString("---\n")
 	b.WriteString(it.Body)

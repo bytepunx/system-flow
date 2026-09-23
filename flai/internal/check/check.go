@@ -145,6 +145,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Warning, "manifest.key", mf, keyLine(mf, "name"), "system-flow.yaml has no key; add a short one (for example the project's initials), which the dashboard's API and a hub use to name this project")
 	}
+	if err := m.Agent.Validate(); err != nil {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.agent", mf, keyLine(mf, "agent"), "%s; flai agent set replaces it", err)
+	}
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
 			c.add(Warning, "layout.lock", filepath.Join(c.repo.Root, "system-flow.yaml"), keyLine(filepath.Join(c.repo.Root, "system-flow.yaml"), "template"), "template %s is recorded but there is no system-flow.lock.yaml; run flai upgrade --relock", m.Template.Version)

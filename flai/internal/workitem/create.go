@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
@@ -23,7 +24,10 @@ type NewOptions struct {
 	Owner   string
 	Tags    []string
 	Touches []string
-	Now     time.Time
+	// Agent is who works a story, over the project's default (S-0103): what
+	// it sets wins, and the project's default fills in the rest.
+	Agent *manifest.Agent
+	Now   time.Time
 	// Body replaces what the template puts below the item's heading: the
 	// author's goal, criteria, and notes, written before the item exists
 	// (S-0059). The heading stays the one flai renders, so the ID and the
@@ -97,6 +101,11 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	}
 	it.Tags = append(it.Tags, opt.Tags...)
 	it.Touches = append(it.Touches, opt.Touches...)
+	if opt.Type == Story {
+		it.Agent = r.Manifest.Agent.With(opt.Agent)
+	} else if !opt.Agent.IsZero() {
+		return nil, fmt.Errorf("only a story carries an agent, not a %s", opt.Type)
+	}
 	if it.Tags == nil {
 		it.Tags = []string{}
 	}
