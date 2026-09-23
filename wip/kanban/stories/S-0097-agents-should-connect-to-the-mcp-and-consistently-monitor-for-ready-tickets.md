@@ -3,11 +3,14 @@ id: S-0097
 type: story
 nature: improvement
 title: Agents should connect to the MCP and consistently monitor for ready tickets
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-23T02:18:31Z
-updated: 2026-09-23T02:18:31Z
-transitions: []
+updated: 2026-09-23T02:18:42Z
+transitions:
+  - to: ready
+    at: 2026-09-23T02:18:42Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 ---

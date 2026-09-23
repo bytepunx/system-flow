@@ -3,11 +3,14 @@ id: S-0096
 type: story
 nature: feature
 title: Flai serve should start a flai mcp in the background as a child process
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-23T02:09:38Z
-updated: 2026-09-23T02:09:38Z
-transitions: []
+updated: 2026-09-23T02:09:42Z
+transitions:
+  - to: ready
+    at: 2026-09-23T02:09:42Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 ---
