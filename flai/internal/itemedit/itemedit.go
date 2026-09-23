@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -33,6 +34,9 @@ type Change struct {
 	Touches *[]string
 	Parent  *string
 	Body    *string // what lies below the heading; the heading is flai's
+	// Agent replaces a story's agent (S-0103) when set; ClearAgent removes it.
+	Agent      *manifest.Agent
+	ClearAgent bool
 }
 
 // Options parameterise an edit.
@@ -47,19 +51,23 @@ type Options struct {
 
 // View is an item as an editor loads it.
 type View struct {
-	ID       string   `json:"id"`
-	Type     string   `json:"type"`
-	Status   string   `json:"status"`
-	Title    string   `json:"title"`
-	Nature   string   `json:"nature"`
-	Tags     []string `json:"tags"`
-	Touches  []string `json:"touches"`
-	Parent   string   `json:"parent,omitempty"`
-	Body     string   `json:"body"` // below the heading
-	Path     string   `json:"path"`
-	Hash     string   `json:"hash"`
-	Editable bool     `json:"editable"`
-	Reason   string   `json:"reason,omitempty"` // why not
+	ID      string   `json:"id"`
+	Type    string   `json:"type"`
+	Status  string   `json:"status"`
+	Title   string   `json:"title"`
+	Nature  string   `json:"nature"`
+	Tags    []string `json:"tags"`
+	Touches []string `json:"touches"`
+	Parent  string   `json:"parent,omitempty"`
+	// Agent is the story's agent, and DefaultAgent the project's, which a
+	// story created now would get (S-0103).
+	Agent        *manifest.Agent `json:"agent,omitempty"`
+	DefaultAgent *manifest.Agent `json:"default_agent,omitempty"`
+	Body         string          `json:"body"` // below the heading
+	Path         string          `json:"path"`
+	Hash         string          `json:"hash"`
+	Editable     bool            `json:"editable"`
+	Reason       string          `json:"reason,omitempty"` // why not
 	// Natures and Parents are what the fields may be set to.
 	Natures []string `json:"natures"`
 	Parents []Option `json:"parents"`
@@ -76,7 +84,7 @@ type Result struct {
 	ID          string          `json:"id"`
 	Path        string          `json:"path"`
 	Hash        string          `json:"hash"`
-	Changed     []string        `json:"changed"` // title, nature, tags, touches, parent, goal, criteria, notes, body
+	Changed     []string        `json:"changed"` // title, nature, tags, touches, agent, parent, goal, criteria, notes, body
 	Renamed     string          `json:"renamed_from,omitempty"`
 	Files       []string        `json:"files"` // every file written or removed, relative to the checkout
 	Unchanged   bool            `json:"unchanged,omitempty"`
@@ -139,7 +147,7 @@ func Show(repo *workitem.Repo, id string) (*View, error) {
 		return nil, err
 	}
 	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches),
-		Parent: it.Parent, Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
+		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
 	v.Editable, v.Reason = editable(it)
 	if want := parentType(it.Type); want != "" {
 		items, err := repo.List(false)
@@ -349,6 +357,21 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 				it.Touches = nil
 			}
 			changed = append(changed, "touches")
+		}
+	}
+	if ch.ClearAgent || ch.Agent != nil {
+		if it.Type != workitem.Story {
+			return nil, invalid("%s is %s; only a story carries an agent", it.ID, it.Type)
+		}
+		next := ch.Agent
+		if ch.ClearAgent || next.IsZero() {
+			next = nil
+		} else if err := next.Validate(); err != nil {
+			return nil, invalid("%s", err)
+		}
+		if !sameAgent(it.Agent, next) {
+			it.Agent = next
+			changed = append(changed, "agent")
 		}
 	}
 	var newParent, formerParent *workitem.Item
@@ -625,4 +648,20 @@ func commit(r execx.Runner, dir string, files []string, msg string, trailers []s
 	}
 	out, err := r.Run(dir, "git", "rev-parse", "--short", "HEAD")
 	return strings.TrimSpace(out), true, err
+}
+
+// sameAgent reports whether two agents say the same thing.
+func sameAgent(a, b *manifest.Agent) bool {
+	if a.IsZero() || b.IsZero() {
+		return a.IsZero() && b.IsZero()
+	}
+	if a.Harness != b.Harness || a.Model != b.Model || len(a.Config) != len(b.Config) {
+		return false
+	}
+	for k, v := range a.Config {
+		if w, ok := b.Config[k]; !ok || w != v {
+			return false
+		}
+	}
+	return true
 }

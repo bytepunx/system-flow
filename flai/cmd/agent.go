@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // flai agent is the project's default agent (S-0103): the harness, model,
@@ -108,4 +109,57 @@ func (a *app) showAgent() error {
 	}
 	fmt.Fprintf(a.out, "default agent: %s\n  every story created from now on gets it; flai story new and flai edit override it for one story\n", m.Agent)
 	return nil
+}
+
+// agentFlags is the agent --harness, --model, and --agent-config give, nil
+// when none is given.
+func agentFlags(harness, model string, config []string) (*manifest.Agent, error) {
+	cfg, err := manifest.ParseConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	a := &manifest.Agent{Harness: harness, Model: model, Config: cfg}
+	if a.IsZero() {
+		return nil, nil
+	}
+	return a, a.Validate()
+}
+
+// editedAgent is the agent a story will have after flai edit's agent flags:
+// merged into what it has, or, with --clear-agent, exactly what is given; a
+// key given with no value (key=) is removed. Nil means none.
+func editedAgent(repo *workitem.Repo, id string, replace bool, harness, model string, config []string) (*manifest.Agent, error) {
+	cfg, err := manifest.ParseConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	var base *manifest.Agent
+	if !replace {
+		it, err := repo.Get(id)
+		if err != nil {
+			return nil, err
+		}
+		base = it.Agent
+	}
+	set := map[string]string{}
+	for k, v := range cfg {
+		if v != "" {
+			set[k] = v
+		}
+	}
+	next := base.With(&manifest.Agent{Harness: harness, Model: model, Config: set})
+	if next != nil {
+		for k, v := range cfg {
+			if v == "" {
+				delete(next.Config, k)
+			}
+		}
+		if len(next.Config) == 0 {
+			next.Config = nil
+		}
+		if next.IsZero() {
+			next = nil
+		}
+	}
+	return next, nil
 }

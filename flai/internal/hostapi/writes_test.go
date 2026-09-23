@@ -528,3 +528,43 @@ func TestAnOrdinaryWriteIsStillCancelledWithItsConnection(t *testing.T) {
 		t.Error("an ordinary write's exec context should be the request's own and so get cancelled with it")
 	}
 }
+
+// S-0103: the dashboard's agent reaches flai as flags, checked first, since
+// each value becomes an argument.
+func TestTheAgentReachesFlaiAsFlags(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+	m := writeMethods(rec.run, time.Now, Host{})
+	run := func(name, params string) ([]string, *channel.Error) {
+		n := len(rec.runs)
+		_, e := m[name](context.Background(), p, json.RawMessage(params))
+		if len(rec.runs) == n {
+			return nil, e
+		}
+		return rec.runs[len(rec.runs)-1].Args, e
+	}
+	args, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000001","agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}}}`)
+	joined := strings.Join(args, " ")
+	if e != nil || !strings.Contains(joined, "--harness=claude-code --model=claude-opus-5-5 --agent-config=effort=high") {
+		t.Errorf("item.new: %v %s", e, joined)
+	}
+	if _, e := run("item.new", `{"type":"epic","title":"T","body":"b","request_id":"req-00000002","agent":{"model":"x"}}`); e == nil {
+		t.Error("an epic was given an agent")
+	}
+	if _, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000003","agent":{"harness":"; rm -rf /"}}`); e == nil {
+		t.Error("an invalid harness reached a command line")
+	}
+	hash := strings.Repeat("a", 64)
+	args, e = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000004","agent":{"model":"claude-sonnet-5"}}`)
+	if e != nil || !strings.Contains(strings.Join(args, " "), "--clear-agent --model=claude-sonnet-5") {
+		t.Errorf("item.edit replaces: %v %v", e, args)
+	}
+	args, e = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000005","agent":null}`)
+	if e != nil || !strings.HasSuffix(strings.Join(args, " "), "--clear-agent --json") {
+		t.Errorf("item.edit clears: %v %v", e, args)
+	}
+	args, _ = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000006","title":"New"}`)
+	if strings.Contains(strings.Join(args, " "), "agent") {
+		t.Errorf("an edit without agent touched it: %v", args)
+	}
+}

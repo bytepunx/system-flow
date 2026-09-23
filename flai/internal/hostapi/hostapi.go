@@ -39,6 +39,8 @@ type ProjectInfo struct {
 	// HostActions are the host actions there are, and whether the operator
 	// enabled each for this project (S-0078). Read-only to the dashboard.
 	HostActions map[string]bool `json:"host_actions"`
+	// Agent is the project's default agent, which a story created now gets (S-0103).
+	Agent *manifest.Agent `json:"agent,omitempty"`
 }
 
 // ProjectTemplate is which template the project was made from, which the
@@ -151,7 +153,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return ProjectInfo{Version: m.Version, Name: m.Name, Key: m.Key, Description: m.Description, Owner: m.Owner, Repo: m.Repo,
 				Template: ProjectTemplate{Ref: m.Template.Ref, Version: m.Template.Version, Applied: m.Template.Applied},
 				Layout:   m.Layout, Projects: projects, Dashboard: ProjectDashboard{NotifyURL: m.Dashboard.NotifyURL, Autocommit: m.Autocommit()}, Flai: version,
-				HostActions: enabledActions(host, p.Root)}, nil
+				HostActions: enabledActions(host, p.Root), Agent: m.Agent}, nil
 		},
 
 		// agent.status: whether flai serve starts an agent when a story becomes

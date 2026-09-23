@@ -14,9 +14,10 @@ import (
 
 // flai edit changes a work item after it was made (S-0085).
 func newEditCmd(a *app) *cobra.Command {
-	var title, nature, parent, hash, message, byFlag string
+	var title, nature, parent, hash, message, byFlag, harness, model string
+	var agentConfig []string
 	var tags, touches, trailers []string
-	var clearTags, clearTouches, bodyStdin, autocommit, show bool
+	var clearTags, clearTouches, clearAgent, bodyStdin, autocommit, show bool
 	c := &cobra.Command{
 		Use:   "edit <id>",
 		Short: "Change an item's title, nature, tags, touches, parent, or body, checked and in one step",
@@ -63,6 +64,9 @@ the item changed.`,
 				if v.Type != "epic" {
 					fmt.Fprintf(a.out, "  touches: %s\n  parent: %s\n", strings.Join(v.Touches, ", "), v.Parent)
 				}
+				if v.Type == "story" {
+					fmt.Fprintf(a.out, "  agent: %s (project default: %s)\n", v.Agent, v.DefaultAgent)
+				}
 				fmt.Fprintf(a.out, "  file: %s\n  hash: %s\n", v.Path, v.Hash)
 				if !v.Editable {
 					fmt.Fprintf(a.out, "  not editable: %s\n", v.Reason)
@@ -97,6 +101,17 @@ the item changed.`,
 			case f.Changed("touches"):
 				ch.Touches = &touches
 			}
+			if clearAgent || f.Changed("harness") || f.Changed("model") || f.Changed("agent-config") {
+				next, err := editedAgent(repo, args[0], clearAgent, harness, model, agentConfig)
+				if err != nil {
+					return err
+				}
+				if next == nil {
+					ch.ClearAgent = true
+				} else {
+					ch.Agent = next
+				}
+			}
 			if bodyStdin {
 				data, err := io.ReadAll(cmd.InOrStdin())
 				if err != nil {
@@ -106,7 +121,7 @@ the item changed.`,
 				ch.Body = &body
 			}
 			if ch == (itemedit.Change{}) {
-				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --touches, --parent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
+				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --touches, --parent, --harness, --model, --agent-config, --clear-agent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
 			by, _ := agentIdentity()
 			if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
@@ -170,6 +185,10 @@ the item changed.`,
 	f.StringSliceVar(&touches, "touches", nil, "the paths or components the work changes, replacing the ones there")
 	f.BoolVar(&clearTouches, "clear-touches", false, "remove the list")
 	f.StringVar(&parent, "parent", "", "the new parent: an epic for a story, a story for a task")
+	f.StringVar(&harness, "harness", "", "a story's agent: the harness that runs it")
+	f.StringVar(&model, "model", "", "a story's agent: the model it runs")
+	f.StringArrayVar(&agentConfig, "agent-config", nil, "a story's agent: an option, key=value, and key= to remove one (repeatable)")
+	f.BoolVar(&clearAgent, "clear-agent", false, "remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those")
 	f.BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input")
 	f.StringVar(&hash, "hash", "", "the hash flai edit --show printed; a change made meanwhile is then a conflict")
 	f.StringVar(&byFlag, "by", "", "who edits, as agents are told (default: FLAI_AGENT, then the config author)")

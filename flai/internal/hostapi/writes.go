@@ -448,13 +448,14 @@ func specs() map[string]spec {
 
 		"item.new": {exits: map[int]int{4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
-				Type    string   `json:"type"`
-				Title   string   `json:"title"`
-				Nature  string   `json:"nature"`
-				Parent  string   `json:"parent"`
-				Tags    []string `json:"tags"`
-				Touches []string `json:"touches"`
-				Body    string   `json:"body"`
+				Type    string          `json:"type"`
+				Title   string          `json:"title"`
+				Nature  string          `json:"nature"`
+				Parent  string          `json:"parent"`
+				Tags    []string        `json:"tags"`
+				Touches []string        `json:"touches"`
+				Agent   *manifest.Agent `json:"agent"`
+				Body    string          `json:"body"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -508,6 +509,16 @@ func specs() map[string]spec {
 			for _, v := range in.Touches {
 				args = append(args, "--touches="+strings.TrimSpace(v))
 			}
+			if !in.Agent.IsZero() {
+				if in.Type != workitem.Story {
+					return nil, "", bad("only a story carries an agent")
+				}
+				agent, e := agentArgs(in.Agent)
+				if e != nil {
+					return nil, "", e
+				}
+				args = append(args, agent...)
+			}
 			return append(args, "--body-stdin", "--autocommit", "--trailer="+Trailer, "--", title), in.Body, nil
 		}},
 
@@ -537,6 +548,9 @@ func specs() map[string]spec {
 				Touches *[]string `json:"touches"`
 				Parent  *string   `json:"parent"`
 				Body    *string   `json:"body"`
+				// Agent replaces the story's agent: absent leaves it, null (or an
+				// empty object) removes it (S-0103)
+				Agent json.RawMessage `json:"agent"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -585,6 +599,17 @@ func specs() map[string]spec {
 					}
 					args = append(args, "--"+l.flag+"="+strings.TrimSpace(v))
 				}
+			}
+			if len(in.Agent) > 0 {
+				var agent *manifest.Agent
+				if err := json.Unmarshal(in.Agent, &agent); err != nil {
+					return nil, "", bad("agent is an object with harness, model, and config, or null: %s", err)
+				}
+				more, e := agentArgs(agent)
+				if e != nil {
+					return nil, "", e
+				}
+				args = append(append(args, "--clear-agent"), more...)
 			}
 			stdin := ""
 			if in.Body != nil {
@@ -1344,4 +1369,29 @@ func outcome(ran Ran, err error, exits map[int]int) (any, *channel.Error) {
 		data = trimmed
 	}
 	return Written{Data: data, Warnings: warnings}, nil
+}
+
+// agentArgs are the flags that give a story's agent (S-0103), each value
+// checked for shape first, since it becomes a command line argument.
+func agentArgs(a *manifest.Agent) ([]string, *channel.Error) {
+	if a.IsZero() {
+		return nil, nil
+	}
+	if err := a.Validate(); err != nil {
+		return nil, bad("%s", err)
+	}
+	var args []string
+	if a.Harness != "" {
+		args = append(args, "--harness="+a.Harness)
+	}
+	if a.Model != "" {
+		args = append(args, "--model="+a.Model)
+	}
+	for _, k := range a.ConfigKeys() {
+		if strings.TrimSpace(a.Config[k]) == "" {
+			return nil, bad("agent config %s has no value", k)
+		}
+		args = append(args, "--agent-config="+k+"="+a.Config[k])
+	}
+	return args, nil
 }

@@ -22,8 +22,8 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 }
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
-	var nature, owner, parent string
-	var tags, touches, trailers []string
+	var nature, owner, parent, harness, model string
+	var tags, touches, trailers, agentConfig []string
 	var bodyStdin, autocommit, printBody bool
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
@@ -62,9 +62,13 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 				fmt.Fprint(a.out, body)
 				return nil
 			}
+			agent, err := agentFlags(harness, model, agentConfig)
+			if err != nil {
+				return err
+			}
 			opt := workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
-				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Now: a.now(),
+				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Agent: agent, Now: a.now(),
 			}
 			if bodyStdin || autocommit {
 				if bodyStdin {
@@ -103,10 +107,7 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 				}
 				return nil
 			}
-			it, err := repo.Create(workitem.NewOptions{
-				Type: typ, Title: args[0], Nature: nature, Parent: parent,
-				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Now: a.now(),
-			})
+			it, err := repo.Create(opt)
 			if err != nil {
 				return err
 			}
@@ -125,6 +126,12 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the new item and its parent on their own, unless dashboard.autocommit is false")
 	c.Flags().StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	c.Flags().BoolVar(&printBody, "print-body", false, "print the body the template gives this type and create nothing")
+	if typ == workitem.Story {
+		// who works it (S-0103), over the project's default (flai agent)
+		c.Flags().StringVar(&harness, "harness", "", "the harness that runs the agent for this story, over the project's default")
+		c.Flags().StringVar(&model, "model", "", "the model it runs, over the project's default")
+		c.Flags().StringArrayVar(&agentConfig, "agent-config", nil, "an option for the harness, key=value, over the project's default (repeatable)")
+	}
 	if parentFlag != "" {
 		help := "parent " + parentFlag + " ID"
 		if typ == workitem.Story {
@@ -180,6 +187,9 @@ func newShowCmd(a *app) *cobra.Command {
 			fmt.Fprintf(a.out, "  owner: %s · created %s · updated %s\n", it.Owner, it.Created, it.Updated)
 			if len(it.Tags) > 0 {
 				fmt.Fprintf(a.out, "  tags: %s\n", strings.Join(it.Tags, ", "))
+			}
+			if !it.Agent.IsZero() {
+				fmt.Fprintf(a.out, "  agent: %s\n", it.Agent)
 			}
 			fmt.Fprintf(a.out, "  file: %s\n", relPath(repo.Root, it.Path))
 			if len(it.Transitions) > 0 {
