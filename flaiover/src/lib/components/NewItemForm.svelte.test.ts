@@ -194,4 +194,46 @@ describe('NewItemForm', () => {
 		expect(q<HTMLInputElement>('title').value).toBe('Refused');
 		expect(oncreated).not.toHaveBeenCalled();
 	});
+
+	// S-0103: a story's agent over the project's default, of which only what is typed is sent
+	it("shows the project's default agent and sends only the story's overrides", async () => {
+		let sent: Record<string, unknown> | undefined;
+		backend((body) => {
+			sent = body;
+			return ok({ item: { id: 'S-0100' } });
+		});
+		const inner = api.getMockImplementation()!;
+		api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) =>
+			url === '/api/manifest'
+				? ok({
+						agent: { harness: 'claude-code', model: 'claude-opus-5-5', config: { effort: 'high' } }
+					})
+				: inner(url, init)
+		);
+		c = mount(NewItemForm, { target: document.body, props: { oncreated: vi.fn() } });
+		await settle();
+		expect(q('agent-default').textContent).toContain(
+			'project default: claude-code, claude-opus-5-5, effort=high'
+		);
+		expect(q<HTMLInputElement>('agent-model').placeholder).toBe('claude-opus-5-5');
+		type(q<HTMLInputElement>('title'), 'With its own model');
+		type(q<HTMLTextAreaElement>('body'), '## Goal\nG\n');
+		type(q<HTMLInputElement>('agent-model'), 'claude-sonnet-5');
+		type(q<HTMLTextAreaElement>('agent-config'), 'max_turns=20');
+		q<HTMLFormElement>('new-item').dispatchEvent(
+			new Event('submit', { bubbles: true, cancelable: true })
+		);
+		await settle();
+		expect(sent?.agent).toEqual({ model: 'claude-sonnet-5', config: { max_turns: '20' } });
+
+		// a config line that is not key=value is said, and nothing is sent
+		sent = undefined;
+		type(q<HTMLTextAreaElement>('agent-config'), 'nonsense');
+		q<HTMLFormElement>('new-item').dispatchEvent(
+			new Event('submit', { bubbles: true, cancelable: true })
+		);
+		await settle();
+		expect(sent).toBeUndefined();
+		expect(q('refusal').textContent).toContain('agent config: "nonsense" is not key=value');
+	});
 });

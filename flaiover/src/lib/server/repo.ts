@@ -2,6 +2,7 @@
 // over the channel (ADR-0029), and the container holds no file of the project (ADR-0031). The
 // shapes mirror design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
+import type { Agent } from '$lib/agent';
 import { resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
@@ -31,6 +32,8 @@ export type Manifest = {
 	dashboard?: { image?: string; tag?: string; port?: number };
 	/** Host actions and whether the operator enabled each for this project, on the host (S-0078). */
 	host_actions?: Record<string, boolean>;
+	/** The project's default agent, which a story created now gets (S-0103). */
+	agent?: Agent;
 };
 
 export type Transition = { to: string; at: string; by: string };
@@ -65,6 +68,7 @@ export type Item = {
 	stream?: string;
 	tags?: string[];
 	touches?: string[]; // paths or components the work changes (ADR-0019)
+	agent?: Agent; // who works a story (S-0103)
 	path: string; // repo-relative
 	archived: boolean;
 	body: string;

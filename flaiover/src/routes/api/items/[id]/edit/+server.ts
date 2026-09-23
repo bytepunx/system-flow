@@ -1,6 +1,7 @@
 import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
+import type { Agent } from '$lib/agent';
 
 /**
  * An item's own words, changed after it was made (S-0085): title, nature, tags, touches, parent,
@@ -20,6 +21,9 @@ export type ItemView = {
 	tags: string[];
 	touches: string[];
 	parent?: string;
+	/** A story's agent, and the project's default a new story would get (S-0103). */
+	agent?: Agent;
+	default_agent?: Agent;
 	body: string;
 	path: string;
 	hash: string;
@@ -36,7 +40,7 @@ export const GET: RequestHandler = ({ params }) =>
 const FIELDS = ['title', 'nature', 'tags', 'touches', 'parent', 'body'] as const;
 
 /**
- * PUT { hash, title?, nature?, tags?, touches?, parent?, body? }: change what is given and leave the
+ * PUT { hash, title?, nature?, tags?, touches?, parent?, agent?, body? }: change what is given and leave the
  * rest. 409 { error, current, hash } when the item changed after it was read; 422 { error, findings }
  * when flai check refuses the change, and then nothing was changed; 400 for a value that is not
  * what it should be.
@@ -48,6 +52,8 @@ export const PUT: RequestHandler = ({ params, request }) =>
 			throw new RepoError(400, 'hash is required: the one the item was loaded with');
 		const change: Record<string, unknown> = { id: params.id, hash: body.hash };
 		for (const f of FIELDS) if (body[f] !== undefined && body[f] !== null) change[f] = body[f];
+		// a story's agent replaces what it has; null removes it (S-0103)
+		if (body.agent !== undefined) change.agent = body.agent;
 		if (Object.keys(change).length === 2) throw new RepoError(400, 'nothing to change');
 		const { data, warnings } = await repo().write<Record<string, unknown>>('item.edit', change);
 		return { ...data, log: warnings };

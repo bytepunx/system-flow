@@ -6,6 +6,8 @@
 	import { api } from '$lib/api';
 	import { NATURES } from '$lib/natures';
 	import { render } from '$lib/markdown';
+	import { agentFrom, parseConfig, type Agent } from '$lib/agent';
+	import AgentFields from './AgentFields.svelte';
 
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 	type Epic = { id: string; title: string; status: string; archived: boolean };
@@ -24,6 +26,11 @@
 	let body = $state('');
 	let templateBody = $state('');
 	let epics = $state<Epic[]>([]);
+	// a story's agent over the project's default (S-0103): only what is typed is sent
+	let harness = $state('');
+	let model = $state('');
+	let agentConfig = $state('');
+	let defaultAgent = $state<Agent | undefined>(undefined);
 	let error = $state<string | null>(null);
 	let findings = $state<Finding[]>([]);
 	let busy = $state(false);
@@ -71,13 +78,33 @@
 	$effect(() => {
 		void loadEpics();
 	});
+	async function loadDefaultAgent() {
+		try {
+			const r = await api('/api/manifest');
+			if (r.ok) defaultAgent = ((await r.json()) as { agent?: Agent }).agent;
+		} catch {
+			// no default shown; flai still applies it
+		}
+	}
+	$effect(() => {
+		void loadDefaultAgent();
+	});
 
 	async function create(e: Event) {
 		e.preventDefault();
 		if (!ready) return;
-		busy = true;
 		error = null;
 		findings = [];
+		let agent: Agent | undefined;
+		if (type === 'story') {
+			const parsed = parseConfig(agentConfig);
+			if ('error' in parsed) {
+				error = `agent config: ${parsed.error}`;
+				return;
+			}
+			agent = agentFrom(harness, model, parsed.config);
+		}
+		busy = true;
 		try {
 			const r = await api('/api/items', {
 				method: 'POST',
@@ -89,6 +116,7 @@
 					parent: type === 'story' ? parent : undefined,
 					tags: list(tags),
 					touches: list(touches),
+					agent,
 					body
 				})
 			});
@@ -175,6 +203,16 @@
 			/>
 		</label>
 	</div>
+
+	{#if type === 'story'}
+		<AgentFields
+			bind:harness
+			bind:model
+			bind:config={agentConfig}
+			defaults={defaultAgent}
+			note="Leave a field empty for the default; what you type is this story's"
+		/>
+	{/if}
 
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 		<label class="block text-sm">

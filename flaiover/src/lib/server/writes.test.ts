@@ -353,4 +353,46 @@ describe.skipIf(!haveFlai)('editing an item through flai', () => {
 			r.write('item.edit', { id: 'S-004', hash: v.hash, parent: 'E-999' })
 		).rejects.toMatchObject({ status: 404 });
 	});
+
+	// S-0103: a story's agent is set when it is created, shown, replaced, and removed
+	it("carries a story's agent through create, show, edit, and clear", async () => {
+		const { data } = await r.write<{ item: { id: string }; path: string }>('item.new', {
+			type: 'story',
+			title: 'Worked by a named agent',
+			nature: 'feature',
+			agent: { harness: 'claude-code', model: 'claude-opus-5-5', config: { effort: 'high' } },
+			body: '## Goal\nG.\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n'
+		});
+		const created = await readFile(join(dir, data.path), 'utf8');
+		expect(created).toContain(
+			'agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  config:\n    effort: high\n'
+		);
+		type Shown = View & { agent?: { model?: string; config?: Record<string, string> } };
+		const { data: v } = await r.run<Shown>('item.show', { id: data.item.id });
+		expect(v.agent).toEqual({
+			harness: 'claude-code',
+			model: 'claude-opus-5-5',
+			config: { effort: 'high' }
+		});
+
+		const { data: edited } = await r.write<{ changed: string[] }>('item.edit', {
+			id: data.item.id,
+			hash: v.hash,
+			agent: { model: 'claude-sonnet-5' }
+		});
+		expect(edited.changed).toEqual(['agent']);
+		const { data: v2 } = await r.run<Shown>('item.show', { id: data.item.id });
+		// the agent given replaces the story's whole agent
+		expect(v2.agent).toEqual({ model: 'claude-sonnet-5' });
+
+		await r.write('item.edit', { id: data.item.id, hash: v2.hash, agent: null });
+		const { data: v3 } = await r.run<Shown>('item.show', { id: data.item.id });
+		expect(v3.agent).toBeUndefined();
+		expect(await readFile(join(dir, data.path), 'utf8')).not.toContain('agent:');
+
+		// a harness that is not a name is refused before flai runs
+		await expect(
+			r.write('item.edit', { id: data.item.id, hash: v3.hash, agent: { harness: '--by=eve' } })
+		).rejects.toMatchObject({ status: 400 });
+	});
 });

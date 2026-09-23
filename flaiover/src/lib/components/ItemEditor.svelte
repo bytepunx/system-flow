@@ -5,6 +5,8 @@
 	// status, owner, and dates, is shown and is not a field.
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
+	import { agentFrom, configText, parseConfig, sameAgent, type Agent } from '$lib/agent';
+	import AgentFields from './AgentFields.svelte';
 
 	type View = {
 		id: string;
@@ -15,6 +17,8 @@
 		tags: string[];
 		touches: string[];
 		parent?: string;
+		agent?: Agent;
+		default_agent?: Agent;
 		body: string;
 		path: string;
 		hash: string;
@@ -37,6 +41,10 @@
 	let tags = $state('');
 	let touches = $state('');
 	let parent = $state('');
+	// the story's own agent (S-0103), which a save replaces
+	let harness = $state('');
+	let model = $state('');
+	let agentConfig = $state('');
 	let body = $state('');
 	let preview = $state(false);
 	let saving = $state(false);
@@ -58,6 +66,9 @@
 		tags = v.tags.join(', ');
 		touches = v.touches.join(', ');
 		parent = v.parent ?? '';
+		harness = v.agent?.harness ?? '';
+		model = v.agent?.model ?? '';
+		agentConfig = configText(v.agent?.config);
 		body = v.body;
 	}
 
@@ -87,13 +98,27 @@
 		if (!same(list(tags), view.tags)) out.tags = list(tags);
 		if (view.type !== 'epic' && !same(list(touches), view.touches)) out.touches = list(touches);
 		if (view.type !== 'epic' && parent && parent !== (view.parent ?? '')) out.parent = parent;
+		if (view.type === 'story') {
+			const parsed = parseConfig(agentConfig);
+			// a config line that is not key=value is said at save; nothing is sent until it is
+			const next = 'error' in parsed ? view.agent : agentFrom(harness, model, parsed.config);
+			if (!sameAgent(next, view.agent)) out.agent = next ?? null;
+		}
 		if (body.trim() !== view.body.trim()) out.body = body;
 		return out;
 	}
+	const configError = $derived.by(() => {
+		const parsed = parseConfig(agentConfig);
+		return 'error' in parsed ? `agent config: ${parsed.error}` : null;
+	});
 	const dirty = $derived(Object.keys(change()).length > 0);
 
 	async function save(hash?: string) {
 		if (!view || saving) return;
+		if (configError) {
+			error = configError;
+			return;
+		}
 		saving = true;
 		error = null;
 		findings = [];
@@ -198,6 +223,15 @@
 				</label>
 			{/if}
 		</div>
+		{#if view.type === 'story'}
+			<AgentFields
+				bind:harness
+				bind:model
+				bind:config={agentConfig}
+				defaults={view.default_agent}
+				note="Empty fields leave this story without them; the default applies only to new stories"
+			/>
+		{/if}
 		<div>
 			<div class="mb-1 flex items-center justify-between text-sm">
 				<span class="font-medium">Body</span>

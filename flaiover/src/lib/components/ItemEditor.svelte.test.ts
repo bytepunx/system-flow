@@ -160,4 +160,35 @@ describe('ItemEditor (S-0085)', () => {
 		expect(document.body.textContent).toContain('a closed item is not edited');
 		expect(document.querySelector('form')).toBeNull();
 	});
+
+	// S-0103: the story's own agent is shown, and a change replaces it; emptied, it is removed
+	it("edits the story's agent and sends it whole, or null when emptied", async () => {
+		const withAgent = {
+			...view,
+			agent: { harness: 'claude-code', model: 'claude-opus-5-5', config: { effort: 'high' } },
+			default_agent: { harness: 'claude-code', model: 'claude-opus-5-5' }
+		};
+		api.mockImplementation((_url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'PUT' ? answer(200, { changed: ['agent'] }) : answer(200, withAgent)
+			)
+		);
+		await mountIt();
+		const model = document.querySelector<HTMLInputElement>('[data-testid="agent-model"]')!;
+		expect(model.value).toBe('claude-opus-5-5');
+		expect(document.querySelector<HTMLTextAreaElement>('[data-testid="agent-config"]')!.value).toBe(
+			'effort=high'
+		);
+		type('[data-testid="agent-model"]', 'claude-sonnet-5');
+		await submit();
+		expect(sent()).toEqual({
+			agent: { harness: 'claude-code', model: 'claude-sonnet-5', config: { effort: 'high' } },
+			hash: view.hash
+		});
+		type('[data-testid="agent-harness"]', '');
+		type('[data-testid="agent-model"]', '');
+		type('[data-testid="agent-config"]', '');
+		await submit();
+		expect(sent()).toEqual({ agent: null, hash: view.hash });
+	});
 });

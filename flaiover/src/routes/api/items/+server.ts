@@ -21,11 +21,12 @@ export const GET: RequestHandler = ({ url }) =>
 	});
 
 /**
- * POST { type, title, nature?, parent?, tags?, touches?, body }: create an epic or a story with the
+ * POST { type, title, nature?, parent?, tags?, touches?, agent?, body }: create an epic or a story with the
  * designer's markdown as its body (S-0059; flai's item.new on the host, S-0075). flai does it as one
  * step (ADR-0016): the item from the project's template with the next ID, linked into its parent,
  * checked with it in place, committed on its own, owned by the manifest's owner. 400 when an
- * argument is not what it should be; 422 { error, findings } when the check refuses it, and then
+ * argument is not what it should be; a story's agent ({ harness?, model?, config? }, S-0103) goes over the
+ * project's default, which fills in the rest; 422 { error, findings } when the check refuses it, and then
  * nothing was created.
  */
 export const POST: RequestHandler = ({ request }) =>
@@ -38,6 +39,7 @@ export const POST: RequestHandler = ({ request }) =>
 			parent: body.parent,
 			tags: body.tags,
 			touches: body.touches,
+			agent: body.agent,
 			body: body.body
 		});
 		return { ...data, log: warnings };

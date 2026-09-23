@@ -12,6 +12,7 @@
 	import { resolve } from '$app/paths';
 	import { tick } from 'svelte';
 	import { render, enhance } from '$lib/markdown';
+	import { agentLine, type Agent } from '$lib/agent';
 
 	type Transition = { to: string; at: string; by: string };
 	type Block = { from: string; until?: string; reason: string };
@@ -31,6 +32,7 @@
 		stream?: string;
 		tags?: string[];
 		touches?: string[];
+		agent?: Agent;
 		path: string;
 		archived: boolean;
 		body: string;
@@ -370,12 +372,13 @@
 					be opened as a document.
 				</p>
 			{/if}
-			{#if item.tags?.length || item.touches?.length || item.owner || item.estimate}
+			{#if item.tags?.length || item.touches?.length || item.owner || item.estimate || item.agent}
 				<section class="rounded border border-line bg-surface p-3 text-xs">
 					{#if item.owner}<div>owner: {item.owner}</div>{/if}
 					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
 					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
 					{#if item.touches?.length}<div>touches: {item.touches.join(', ')}</div>{/if}
+					{#if item.agent}<div data-testid="item-agent">agent: {agentLine(item.agent)}</div>{/if}
 				</section>
 			{/if}
 		</aside>
