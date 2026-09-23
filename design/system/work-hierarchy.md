@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-09-20
+updated: 2026-09-23
 status: active
 ---
 
@@ -101,6 +101,11 @@ blocked:                         # optional, append-only, open interval has no `
 estimate: 4h                     # optional, Go duration, used for estimate-vs-actual
 tags: [cli, config]              # optional, free text
 stream: S-0004                    # tasks only: the narrative file in wip/agents they report to
+agent:                           # stories only, optional (S-0103): who works it
+  harness: claude-code
+  model: claude-opus-5-5
+  config:                        # optional: options for the harness
+    effort: high
 ---
 ```
 
@@ -112,7 +117,8 @@ Rules:
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the `done` or `cancelled` transition. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.
 - A cancelled epic has no open story and a cancelled story has no open task: cancelling a parent cancels what is open under it, including an item in `review`, which can be cancelled in no other way ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)). `flai check` reports a tree where this does not hold.
-- Who changes what after an item is made (S-0085). `title`, `nature`, `tags`, `touches`, `parent`, and the body below the heading are the item's own words and change with `flai edit`, or from a story's or an epic's page in the dashboard, which runs it. A title also lives in the heading, the file's name, the parent's list, and a story's narrative; `flai edit` keeps them in step, a hand edit does not. `id`, `type`, `status`, `transitions`, `blocked`, `owner`, `created`, and `updated` are the item's state and change only through the commands that own them (`flai move`, `flai block`, `flai accept`). No key is added to the front matter to record an edit: it is parsed strictly, and a key an older flai does not know would make it refuse the item.
+- Who changes what after an item is made (S-0085). `title`, `nature`, `tags`, `touches`, `parent`, a story's `agent`, and the body below the heading are the item's own words and change with `flai edit`, or from a story's or an epic's page in the dashboard, which runs it. A title also lives in the heading, the file's name, the parent's list, and a story's narrative; `flai edit` keeps them in step, a hand edit does not. `id`, `type`, `status`, `transitions`, `blocked`, `owner`, `created`, and `updated` are the item's state and change only through the commands that own them (`flai move`, `flai block`, `flai accept`). No key is added to the front matter to record an edit: it is parsed strictly, and a key an older flai does not know would make it refuse the item.
+- A story's `agent` names the harness, the model, and the harness's options that work it (S-0103, [ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)). A story made while the project has a default agent (`agent` in `system-flow.yaml`) gets a copy, with what `flai story new --harness --model --agent-config` or the dashboard gives laid over it. A story made with neither has no `agent` key, so a project that does not use agents stays readable by an older flai. Only a story carries one. `flai edit --harness/--model/--agent-config/--clear-agent`, MCP's `item_edit`, and the story's page change it.
 - A story cannot be `ready` without an acceptance criteria section with at least one checkbox. It can be `ready` and `in-progress` with no tasks, and cannot be `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)).
 
 ## Body structure

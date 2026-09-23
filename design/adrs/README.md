@@ -42,3 +42,4 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0034](0034-flai-serve-keeps-each-served-project-s-http-mcp-server-running.md) | flai serve keeps each served project's HTTP MCP server running | accepted, refines 0030 |
 | [0035](0035-repositories-under-folders-the-operator-names-can-be-imported-from-the-board.md) | Repositories under folders the operator names can be imported from the board | accepted, refines 0029 |
 | [0036](0036-a-folder-that-is-not-a-project-is-served-whole-by-flai-mcp-and-flai-dashboard.md) | A folder that is not a project is served whole by flai mcp and flai dashboard | accepted, refines 0030 |
+| [0037](0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md) | A story carries its agent, copied from the project's default when it is made | accepted |
