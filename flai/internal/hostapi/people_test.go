@@ -25,17 +25,13 @@ func TestKeyHashIsTheDashboardsHash(t *testing.T) {
 	}
 }
 
-func TestOpenQuestionsAndLastLogEntry(t *testing.T) {
-	body := "## Open questions\n- First?\n  continued here\n* Second?\n<!-- threads:start -->\n- TH-0001 generated\n<!-- threads:end -->\n- Third?\n\n## Log\n\n### 2026-09-20T08:00:00Z\nOpened.\n\n### 2026-09-20T09:00:00Z\nDid a thing.\nAnd another.\n\n## After\n### 2026-09-21T00:00:00Z\nnot the log\n"
-	got := openQuestions(body)
-	if strings.Join(got, "|") != "First? continued here|Second?|Third?" {
-		t.Errorf("questions: %q", got)
-	}
+func TestLastLogEntry(t *testing.T) {
+	body := "## Open questions\n- First?\n\n## Log\n\n### 2026-09-20T08:00:00Z\nOpened.\n\n### 2026-09-20T09:00:00Z\nDid a thing.\nAnd another.\n\n## After\n### 2026-09-21T00:00:00Z\nnot the log\n"
 	last := lastLogEntry(body)
 	if last == nil || last.At != "2026-09-20T09:00:00Z" || last.Text != "Did a thing.\nAnd another." {
 		t.Errorf("last log: %+v", last)
 	}
-	if openQuestions("## Log\n") != nil || lastLogEntry("no log\n") != nil {
+	if lastLogEntry("no log\n") != nil {
 		t.Error("nothing to find must find nothing")
 	}
 }
@@ -148,5 +144,39 @@ func TestInboxDesigner(t *testing.T) {
 	}
 	if e := byKind["overlap"]; e.Item == "" || !strings.Contains(e.Title, "also touches") || e.Key != "overlap:"+keyHash(e.Title) {
 		t.Errorf("overlap: %+v", e)
+	}
+}
+
+// A hand-written open question has no "answered" marker of its own (unlike
+// a thread), so once the story it belongs to no longer needs the designer
+// (in review, done, or cancelled), it is left out of the inbox whatever the
+// narrative still says (S-0089): the move-to-review rule (workitem package)
+// stops this from happening through flai move, but this is the inbox's own
+// guarantee, checked here by moving the status directly, bypassing that rule,
+// the way an item from before it existed could still be found.
+func TestInboxDesignerLeavesOutAQuestionOnceItsStoryNoLongerNeedsIt(t *testing.T) {
+	p := people(t)
+	repo, _ := workitem.Open(p.Root)
+	for _, status := range []string{workitem.Review, workitem.Done, workitem.Cancelled} {
+		it, err := repo.Get("S-0001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Status = status
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+		var in DesignerInbox
+		if err := call(t, p, "inbox.designer", `{}`, &in); err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range in.Entries {
+			if e.Kind == "question" {
+				t.Errorf("status %s: a question still shows: %+v", status, e)
+			}
+		}
+		if in.Counts["question"] != 0 {
+			t.Errorf("status %s: question count %d", status, in.Counts["question"])
+		}
 	}
 }

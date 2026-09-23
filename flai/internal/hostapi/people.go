@@ -69,8 +69,6 @@ type DesignerInbox struct {
 
 var logHeading = regexp.MustCompile(`^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)`)
 var sectionHeading = regexp.MustCompile(`^##\s`)
-var bullet = regexp.MustCompile(`^\s*[-*]\s+(.*\S)\s*$`)
-var continuation = regexp.MustCompile(`^\s{2,}\S`)
 
 // lastLogEntry is the last entry under ## Log: its timestamp and the lines under it.
 func lastLogEntry(body string) *LogEntry {
@@ -101,42 +99,6 @@ func lastLogEntry(body string) *LogEntry {
 		last.Text = strings.TrimSpace(strings.Join(text, "\n"))
 	}
 	return last
-}
-
-// openQuestions are the bullets under ## Open questions, outside the block
-// flai generates for threads.
-func openQuestions(body string) []string {
-	lines := strings.Split(body, "\n")
-	start := -1
-	for i, l := range lines {
-		if strings.TrimSpace(l) == "## Open questions" {
-			start = i
-			break
-		}
-	}
-	if start < 0 {
-		return nil
-	}
-	var out []string
-	generated := false
-	for _, line := range lines[start+1:] {
-		if sectionHeading.MatchString(line) {
-			break
-		}
-		switch {
-		case strings.Contains(line, "<!-- threads:start -->"):
-			generated = true
-		case strings.Contains(line, "<!-- threads:end -->"):
-			generated = false
-		case !generated:
-			if m := bullet.FindStringSubmatch(line); m != nil {
-				out = append(out, m[1])
-			} else if len(out) > 0 && continuation.MatchString(line) {
-				out[len(out)-1] += " " + strings.TrimSpace(line)
-			}
-		}
-	}
-	return out
 }
 
 // keyHash is the hash the dashboard has always keyed inbox entries with
@@ -289,19 +251,33 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 				add(InboxEntry{Key: "thread:" + th.ID, Kind: "thread", Title: th.Title, Detail: detail, Item: th.Anchor.Item, Path: th.Anchor.Path, At: last.At})
 			}
 
+			items, err := repo.List(false)
+			if err != nil {
+				return nil, failed(err)
+			}
+			byID := map[string]*workitem.Item{}
+			for _, it := range items {
+				byID[it.ID] = it
+			}
+
+			// A question lingers in a narrative until whoever wrote it removes
+			// it by hand (it is not a thread, so nothing marks it answered);
+			// once the story it belongs to is in review, done, or cancelled, or
+			// gone from this list (archived), it no longer needs the designer,
+			// so it is left out here whatever the narrative still says.
 			dir, list := narratives(repo)
 			for _, n := range list {
 				stream := str(n.fm["stream"], strings.TrimSuffix(n.name, ".md"))
-				for _, q := range openQuestions(n.body) {
+				story := byID[stream]
+				if story == nil || story.Status == workitem.Review || story.Status == workitem.Done || story.Status == workitem.Cancelled {
+					continue
+				}
+				for _, q := range workitem.OpenQuestions(n.body) {
 					add(InboxEntry{Key: "question:" + stream + ":" + keyHash(q), Kind: "question", Title: q,
 						Detail: "asked in the narrative of " + stream, Path: dir + "/" + n.name, At: str(n.fm["updated"], "")})
 				}
 			}
 
-			items, err := repo.List(false)
-			if err != nil {
-				return nil, failed(err)
-			}
 			for _, it := range items {
 				if it.Type == workitem.Story && it.Status == workitem.Review {
 					at := ""

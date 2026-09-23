@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -188,6 +189,48 @@ func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(r.AgentsDir(), "index.md"), []byte(b.String()), 0o644)
+}
+
+var narrativeSectionHeading = regexp.MustCompile(`^##\s`)
+var narrativeBullet = regexp.MustCompile(`^\s*[-*]\s+(.*\S)\s*$`)
+var narrativeContinuation = regexp.MustCompile(`^\s{2,}\S`)
+
+// OpenQuestions are the bullets under a narrative's ## Open questions,
+// outside the block flai generates to mirror threads (a mirrored thread is
+// tracked, and closes, as a thread; a hand-written bullet has no such
+// tracking, so it stays until whoever wrote it removes it by hand).
+func OpenQuestions(body string) []string {
+	lines := strings.Split(body, "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.TrimSpace(l) == "## Open questions" {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return nil
+	}
+	var out []string
+	generated := false
+	for _, line := range lines[start+1:] {
+		if narrativeSectionHeading.MatchString(line) {
+			break
+		}
+		switch {
+		case strings.Contains(line, "<!-- threads:start -->"):
+			generated = true
+		case strings.Contains(line, "<!-- threads:end -->"):
+			generated = false
+		case !generated:
+			if m := narrativeBullet.FindStringSubmatch(line); m != nil {
+				out = append(out, m[1])
+			} else if len(out) > 0 && narrativeContinuation.MatchString(line) {
+				out[len(out)-1] += " " + strings.TrimSpace(line)
+			}
+		}
+	}
+	return out
 }
 
 // lastHeading returns the last markdown heading line in body, or "".

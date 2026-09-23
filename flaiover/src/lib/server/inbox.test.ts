@@ -127,13 +127,35 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		expect(threads.map((t) => t.key)).toEqual(expected.map((t) => `thread:${t.id}`));
 	});
 
-	it('lists a story in review with a link to its review page', async () => {
+	// S-0089: an unresolved open question in a story's narrative refuses the
+	// move to review, naming which question, rather than letting the story go
+	// to review while the agent still cannot complete the work.
+	it('refuses to move a story to review while its narrative has an open question', async () => {
+		await expect(shell(dir, ['move', 'S-004', 'review', '--by', 'bot'])).rejects.toThrow(
+			'Which port should it use?'
+		);
+	});
+
+	it('lists a story in review with a link to its review page, and leaves out its answered question', async () => {
 		await shell(dir, ['move', 'T-003', 'done', '--by', 'bot']).catch(() => undefined);
 		await shell(dir, ['unblock', 'T-003']).catch(() => undefined);
+		// Answer it (remove the bullet, as the convention has an agent do by
+		// hand) before this move, the same as any story genuinely would.
+		const narrative = join(dir, 'wip/agents/S-004.md');
+		await writeFile(
+			narrative,
+			(await readFile(narrative, 'utf8')).replace('- Which port should it use?\n', '')
+		);
 		await shell(dir, ['move', 'S-004', 'review', '--by', 'bot']);
 		const fresh = new Repo(dir, flaiAsk(dir));
-		const review = (await inbox(fresh)).entries.filter((e) => e.kind === 'review');
+		const box = await inbox(fresh);
 		await fresh.close();
-		expect(review).toMatchObject([{ key: 'review:S-004', href: '/review/S-004' }]);
+		expect(box.entries.filter((e) => e.kind === 'review')).toMatchObject([
+			{ key: 'review:S-004', href: '/review/S-004' }
+		]);
+		// S-004's own open question is answered and gone; a story in review
+		// leaving one out regardless is flai's own guarantee (internal/workitem,
+		// internal/hostapi), not retested here through the real binary.
+		expect(box.entries.filter((e) => e.kind === 'question')).toEqual([]);
 	});
 });
