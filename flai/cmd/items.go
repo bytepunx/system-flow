@@ -15,7 +15,7 @@ import (
 func newItemCmd(a *app, typ string) *cobra.Command {
 	c := &cobra.Command{
 		Use:   typ,
-		Short: fmt.Sprintf("Create and inspect %ss", typ),
+		Short: fmt.Sprintf("Create %s (flai show prints one, flai move transitions it)", pluralType(typ)),
 	}
 	c.AddCommand(newItemNewCmd(a, typ))
 	return c
@@ -28,8 +28,8 @@ func newItemNewCmd(a *app, typ string) *cobra.Command {
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
-		Short: fmt.Sprintf("Create a %s from the item template", typ),
-		Long: fmt.Sprintf(`Create a %s from the project's item template with the next free ID,
+		Short: fmt.Sprintf("Create %s from the item template", withArticle(typ)),
+		Long: fmt.Sprintf(`Create %s from the project's item template with the next free ID,
 linked into its parent.
 
 With --body-stdin the body below the item's heading is read from standard
@@ -39,7 +39,7 @@ it reports anything the item introduces, the item is removed, its parent is
 restored, and the findings are printed (exit 4). --autocommit commits the new
 item and its parent on their own, unless the project sets
 dashboard.autocommit: false. Nothing is pushed. --print-body prints the body
-the template gives, for a form or a script to start from, and creates nothing.`, typ),
+the template gives, for a form or a script to start from, and creates nothing.`, withArticle(typ)),
 		Args: func(cmd *cobra.Command, args []string) error {
 			if printBody {
 				return cobra.NoArgs(cmd, args)
@@ -211,4 +211,20 @@ func newShowCmd(a *app) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+// pluralType is an item type's plural: epics, stories, tasks.
+func pluralType(typ string) string {
+	if typ == workitem.Story {
+		return "stories"
+	}
+	return typ + "s"
+}
+
+// withArticle is an item type with its indefinite article: an epic, a story.
+func withArticle(typ string) string {
+	if strings.IndexByte("aeiou", typ[0]) >= 0 {
+		return "an " + typ
+	}
+	return "a " + typ
 }

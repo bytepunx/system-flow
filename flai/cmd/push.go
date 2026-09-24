@@ -17,14 +17,14 @@ func newPushCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "push --pending",
 		Short: "Push an acceptance that was made and not pushed",
-		Long: `An acceptance made where there is no git credential, such as the dashboard
-container without a push key, is committed in the clone and not pushed.
-flai accept computes no release and creates no tag (S-0087): before
-deciding what to push, this tags everything release.Pending finds
-accumulated and unreleased since each component's last tag (the same
-computation flai release --pending uses), applies the version bump, and
-commits it, so a release is never a separate step someone has to remember
-(S-0094). Run this on the host, with your own credentials: when the main
+		Long: `An acceptance made where nothing could push it, such as one from the
+dashboard with the push host action off, is committed in the main checkout
+and not pushed. flai accept computes no release and creates no tag (S-0087):
+before deciding what to push, this computes the release of everything
+accepted and unreleased since each component's last tag (the same
+computation flai release --pending uses), applies the version bump, commits
+it, and tags it, so a release is never a separate step someone has to
+remember (S-0094). Run this on the host, with your own credentials: when the main
 checkout's branch is then ahead of its remote-tracking branch and the
 commits ahead include an acceptance or a release just tagged here, it
 pushes the branch and the tags together. It never forces. When the remote

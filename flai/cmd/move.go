@@ -19,9 +19,10 @@ func newMoveCmd(a *app) *cobra.Command {
 		Short: "Transition a work item, enforcing the workflow rules",
 		Long: `Move an item to a new state. States: ` + strings.Join(workitem.States, ", ") + `.
 
-Rules from design/system/workflow.md are enforced: a story needs tasks and
-acceptance criteria before ready, children must be closed before done, and
-cancelling or sending review back needs --reason. WIP limit breaches warn.
+Rules from design/system/workflow.md are enforced: a story needs acceptance
+criteria before ready, and at least one task and no open question in its
+narrative before review; children must be closed before done; cancelling or
+sending review back needs --reason. WIP limit breaches warn.
 
 Cancelling an epic cancels every open story under it and their open tasks;
 cancelling a story cancels its open tasks (ADR-0028). The items are listed

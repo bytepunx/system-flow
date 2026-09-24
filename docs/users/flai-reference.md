@@ -25,7 +25,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [doc](#flai-doc) | Read and save one markdown document for an editor |
 | [edit](#flai-edit) | Change an item's title, nature, tags, touches, parent, or body, checked and in one step |
-| [epic](#flai-epic) | Create and inspect epics |
+| [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
@@ -37,14 +37,14 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [order](#flai-order) | Place a ready or backlog story in the pull order |
 | [prime](#flai-prime) | Print the conventions an agent reads at session start, in order |
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
-| [release](#flai-release) | Compute a release for one item, or publish everything accumulated since it was last done |
+| [release](#flai-release) | Compute a release for one item, or publish everything accepted since the last release |
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
 | [show](#flai-show) | Print one work item with its children and history |
 | [stats](#flai-stats) | Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state |
-| [story](#flai-story) | Create and inspect storys |
+| [story](#flai-story) | Create stories (flai show prints one, flai move transitions it) |
 | [stream](#flai-stream) | Open and append to agent narratives in wip/agents |
-| [task](#flai-task) | Create and inspect tasks |
+| [task](#flai-task) | Create tasks (flai show prints one, flai move transitions it) |
 | [template](#flai-template) | Inspect, refresh, and switch the template source |
 | [thread](#flai-thread) | Threads between the designer and agents, anchored to documents and items (wip/threads) |
 | [touches](#flai-touches) | Set what a story or task is working on; flai check warns on overlap |
@@ -84,7 +84,7 @@ Subcommands:
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [doc](#flai-doc): Read and save one markdown document for an editor
 - [edit](#flai-edit): Change an item's title, nature, tags, touches, parent, or body, checked and in one step
-- [epic](#flai-epic): Create and inspect epics
+- [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
@@ -96,14 +96,14 @@ Subcommands:
 - [order](#flai-order): Place a ready or backlog story in the pull order
 - [prime](#flai-prime): Print the conventions an agent reads at session start, in order
 - [push](#flai-push): Push an acceptance that was made and not pushed
-- [release](#flai-release): Compute a release for one item, or publish everything accumulated since it was last done
+- [release](#flai-release): Compute a release for one item, or publish everything accepted since the last release
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
 - [show](#flai-show): Print one work item with its children and history
 - [stats](#flai-stats): Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state
-- [story](#flai-story): Create and inspect storys
+- [story](#flai-story): Create stories (flai show prints one, flai move transitions it)
 - [stream](#flai-stream): Open and append to agent narratives in wip/agents
-- [task](#flai-task): Create and inspect tasks
+- [task](#flai-task): Create tasks (flai show prints one, flai move transitions it)
 - [template](#flai-template): Inspect, refresh, and switch the template source
 - [thread](#flai-thread): Threads between the designer and agents, anchored to documents and items (wip/threads)
 - [touches](#flai-touches): Set what a story or task is working on; flai check warns on overlap
@@ -543,7 +543,7 @@ Flags:
 
 Read and write ~/.flai/config.json.
 
-Read and write the flai configuration file.
+Read and write the flai configuration file: ~/.flai/config.json, or the path in --config or FLAI\_CONFIG. The first command that needs it creates it with defaults. Unknown keys are refused.
 
 ```text
 Keys:
@@ -559,6 +559,8 @@ Keys:
   author
   worktrees.relative_paths
 ```
+
+dashboard.push\_key and dashboard.push\_known\_hosts are retired and ignored (ADR-0031); they stay settable so an old value can be cleared. The same file holds host\_actions, agent, checks, and import\_roots, which flai serve enable, disable, agent, checks, and import manage.
 
 Subcommands:
 
@@ -855,21 +857,21 @@ Flags:
 
 ### flai epic
 
-Create and inspect epics.
+Create epics (flai show prints one, flai move transitions it).
 
 Subcommands:
 
-- [new](#flai-epic-new): Create a epic from the item template
+- [new](#flai-epic-new): Create an epic from the item template
 
 #### flai epic new
 
-Create a epic from the item template.
+Create an epic from the item template.
 
 ```text
 flai epic new "<title>" [flags]
 ```
 
-Create a epic from the project's item template with the next free ID, linked into its parent.
+Create an epic from the project's item template with the next free ID, linked into its parent.
 
 With --body-stdin the body below the item's heading is read from standard input instead of the template's empty sections, and the creation is one step that happens or does not: flai check runs with the new item in place, and if it reports anything the item introduces, the item is removed, its parent is restored, and the findings are printed (exit 4). --autocommit commits the new item and its parent on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the body the template gives, for a form or a script to start from, and creates nothing.
 
@@ -1261,7 +1263,7 @@ flai move <id> <state> [flags]
 
 Move an item to a new state. States: backlog, ready, in-progress, review, done, cancelled.
 
-Rules from design/system/workflow.md are enforced: a story needs tasks and acceptance criteria before ready, children must be closed before done, and cancelling or sending review back needs --reason. WIP limit breaches warn.
+Rules from design/system/workflow.md are enforced: a story needs acceptance criteria before ready, and at least one task and no open question in its narrative before review; children must be closed before done; cancelling or sending review back needs --reason. WIP limit breaches warn.
 
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.
 
@@ -1382,7 +1384,7 @@ Push an acceptance that was made and not pushed.
 flai push --pending [flags]
 ```
 
-An acceptance made where there is no git credential, such as the dashboard container without a push key, is committed in the clone and not pushed. flai accept computes no release and creates no tag (S-0087): before deciding what to push, this tags everything release.Pending finds accumulated and unreleased since each component's last tag (the same computation flai release --pending uses), applies the version bump, and commits it, so a release is never a separate step someone has to remember (S-0094). Run this on the host, with your own credentials: when the main checkout's branch is then ahead of its remote-tracking branch and the commits ahead include an acceptance or a release just tagged here, it pushes the branch and the tags together. It never forces. When the remote has commits this clone lacks it refuses and says to fetch and merge first.
+An acceptance made where nothing could push it, such as one from the dashboard with the push host action off, is committed in the main checkout and not pushed. flai accept computes no release and creates no tag (S-0087): before deciding what to push, this computes the release of everything accepted and unreleased since each component's last tag (the same computation flai release --pending uses), applies the version bump, commits it, and tags it, so a release is never a separate step someone has to remember (S-0094). Run this on the host, with your own credentials: when the main checkout's branch is then ahead of its remote-tracking branch and the commits ahead include an acceptance or a release just tagged here, it pushes the branch and the tags together. It never forces. When the remote has commits this clone lacks it refuses and says to fetch and merge first.
 
 --publish also publishes each template component whose version those commits moved, as flai template push --tag does, after the push and never forced. It is what the dashboard's push action runs (flai serve enable push).
 
@@ -1405,7 +1407,7 @@ Flags:
 
 ### flai release
 
-Compute a release for one item, or publish everything accumulated since it was last done.
+Compute a release for one item, or publish everything accepted since the last release.
 
 ```text
 flai release <id> | --pending [flags]
@@ -1415,11 +1417,7 @@ Per design/conventions/git.md: the component the item delivers to gets the deliv
 
 flai accept never does this (S-0087): it only merges, archives, and commits.
 
-```text
-flai release --pending
-```
-
-computes one release per component, the highest delivery level among everything accepted and unreleased for it since its last tag, bumps and commits, tags, and pushes the branch and every tag together, three tags to a push (I-0026). Run again after a partial failure: what already tagged or pushed is not redone. flai push --pending does the same computing, applying, and tagging before it decides what to push (S-0094), so this command is for seeing or forcing it ahead of a push, not the only place it happens.
+flai release --pending computes one release per component, the highest delivery level among everything accepted and unreleased for it since its last tag, bumps and commits, tags, and pushes the branch and every tag together, three tags to a push (I-0026). Run again after a partial failure: what already tagged or pushed is not redone. flai push --pending does the same computing, applying, and tagging before it decides what to push (S-0094), so this command is for seeing or forcing it ahead of a push, not the only place it happens.
 
 Examples:
 
@@ -1838,7 +1836,7 @@ Flags:
 
 ### flai story
 
-Create and inspect storys.
+Create stories (flai show prints one, flai move transitions it).
 
 Subcommands:
 
@@ -1956,7 +1954,7 @@ Rebases story/&lt;story-id&gt; onto the branch checked out in the main checkout,
 
 ### flai task
 
-Create and inspect tasks.
+Create tasks (flai show prints one, flai move transitions it).
 
 Subcommands:
 

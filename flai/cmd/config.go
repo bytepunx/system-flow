@@ -13,10 +13,17 @@ func newConfigCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "config",
 		Short: "Read and write ~/.flai/config.json",
-		Long: `Read and write the flai configuration file.
+		Long: `Read and write the flai configuration file: ~/.flai/config.json, or the
+path in --config or FLAI_CONFIG. The first command that needs it creates it
+with defaults. Unknown keys are refused.
 
 Keys:
-  ` + strings.Join(config.Keys(), "\n  "),
+  ` + strings.Join(config.Keys(), "\n  ") + `
+
+dashboard.push_key and dashboard.push_known_hosts are retired and ignored
+(ADR-0031); they stay settable so an old value can be cleared. The same file
+holds host_actions, agent, checks, and import_roots, which flai serve enable,
+disable, agent, checks, and import manage.`,
 	}
 	c.AddCommand(newConfigGetCmd(a), newConfigSetCmd(a), newConfigPathCmd(a))
 	return c

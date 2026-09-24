@@ -66,7 +66,7 @@ func newReleaseCmd(a *app) *cobra.Command {
 	var dryRun, onlyPending bool
 	c := &cobra.Command{
 		Use:   "release <id> | --pending",
-		Short: "Compute a release for one item, or publish everything accumulated since it was last done",
+		Short: "Compute a release for one item, or publish everything accepted since the last release",
 		Long: `Per design/conventions/git.md: the component the item delivers to gets the
 delivery-type bump (epic major, feature story minor, remediation or
 improvement patch); every other component its commits touched gets a patch.
@@ -77,12 +77,10 @@ template component gets its version file and changelog bumped (commit them).
 
 flai accept never does this (S-0087): it only merges, archives, and commits.
 
-  flai release --pending
-
-computes one release per component, the highest delivery level among
-everything accepted and unreleased for it since its last tag, bumps and
-commits, tags, and pushes the branch and every tag together, three tags to a
-push (I-0026). Run again after a partial failure: what already tagged or
+flai release --pending computes one release per component, the highest
+delivery level among everything accepted and unreleased for it since its last
+tag, bumps and commits, tags, and pushes the branch and every tag together,
+three tags to a push (I-0026). Run again after a partial failure: what already tagged or
 pushed is not redone. flai push --pending does the same computing, applying,
 and tagging before it decides what to push (S-0094), so this command is for
 seeing or forcing it ahead of a push, not the only place it happens.`,
