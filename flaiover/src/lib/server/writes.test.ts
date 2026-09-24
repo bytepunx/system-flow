@@ -179,13 +179,15 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 		process.env.FLAI_CONFIG = join(host, 'config.json');
 		try {
 			const info = await r.ask<{ host_actions: Record<string, boolean> }>('project.info');
-			expect(info.host_actions).toEqual({
-				agent: false,
+			// every host action there is is named, and none is on: the list grows (settings in S-0105,
+			// host in S-0106), so it is not pinned here (S-0108)
+			expect(info.host_actions).toMatchObject({
 				push: false,
+				agent: false,
 				dashboard: false,
-				checks: false,
-				settings: false
+				checks: false
 			});
+			expect(Object.values(info.host_actions).every((on) => on === false)).toBe(true);
 			await expect(r.write('push.run')).rejects.toMatchObject({
 				status: 403,
 				message: expect.stringContaining('flai serve enable push'),
