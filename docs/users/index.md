@@ -1,6 +1,6 @@
 ---
 title: Users guide
-updated: 2026-09-15
+updated: 2026-09-24
 status: draft
 ---
 
@@ -10,7 +10,7 @@ system-flow is a way of running a software project from inside its own repositor
 
 | Folder | Holds | Who reads it |
 |--------|-------|--------------|
-| `design/` | Decisions (`adrs/`), the current design (`system/`), technology choices (`tech/`) | The people and agents building the system |
+| `design/` | Decisions (`adrs/`), the current design (`system/`), technology choices (`tech/`), how agents work here (`conventions/`), recurring friction (`issues/`) | The people and agents building the system |
 | `docs/` | Documentation per audience | Everyone else |
 | `wip/` | Work items on a kanban board, and the agents' running narrative | Anyone who wants to know what is happening right now |
 
@@ -60,7 +60,7 @@ tags: [cli]
 ## Notes
 ```
 
-The full rules are in [conventions.md](conventions.md).
+The layout, the work items, the workflow, and the narrative are explained in the [conventions guide](conventions.md).
 
 ## Getting started
 
@@ -78,3 +78,5 @@ Or convert an existing repository:
 cd existing-repo
 flai import
 ```
+
+Or build one by hand, to see what each piece is for: [Set up a conforming repository by hand](conventions.md#set-up-a-conforming-repository-by-hand).
