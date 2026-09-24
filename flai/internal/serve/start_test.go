@@ -65,6 +65,32 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 			t.Errorf("the run is not recorded where flai serve tracks it: %+v", got)
 		}
 	})
+	t.Run("past a full in-progress limit, with a warning", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		lab.limit(1)
+		busy := lab.ready("Busy")
+		lab.move(busy, workitem.InProgress)
+		id := lab.ready("Waits")
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r != nil {
+			t.Fatalf("the launcher started it with the limit full: %+v", r)
+		}
+		run, err := start(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !run.live() {
+			t.Errorf("not started: %+v", run)
+		}
+		lab.logs.mu.Lock()
+		logged := lab.logs.buf.String()
+		lab.logs.mu.Unlock()
+		if !strings.Contains(logged, `level=WARN msg="agent started past the in-progress limit"`) || !strings.Contains(logged, "story="+id) {
+			t.Errorf("no warning: %s", logged)
+		}
+		lab.release(id)
+	})
 	t.Run("refusals", func(t *testing.T) {
 		lab := newAgentLab(t)
 		lab.hold()
@@ -79,10 +105,7 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 		lab.l.look(ctx, false)
 		waitFor(t, "it runs", func() bool { return lab.run(running).live() })
 		refusedFor(t, lab, running, "agent is running")
-		// the limit full: Busy is in progress, and Running's agent holds a place
-		lab.limit(2)
 		other := lab.ready("Other")
-		refusedFor(t, lab, other, "in-progress limit leaves no room for "+other)
 		lab.release(running)
 		waitFor(t, "it ends", func() bool { return !lab.run(running).live() })
 		// asked

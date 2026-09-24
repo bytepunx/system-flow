@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -13,8 +14,9 @@ import (
 // rules about when: whether the story was ready before flai serve began,
 // whether it had an agent since it entered ready, and whoever is attending.
 // It is refused while the agent action is off for the project, when the
-// story is not in ready, while its agent runs or waits for an answer, when
-// nothing can start it, and while the in-progress limit is full.
+// story is not in ready, while its agent runs or waits for an answer, and
+// when nothing can start it. A full in-progress limit does not refuse it:
+// the operator's word goes past the limit, as a move does, with a warning.
 func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -51,12 +53,16 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
-	if ok, err := roomFor(e, st, it.ID); err != nil {
+	ok, err := roomFor(e, st, it.ID)
+	if err != nil {
 		return nil, err
-	} else if !ok {
-		return nil, refused("the in-progress limit leaves no room for %s", it.ID)
 	}
-	return StartNow(ctx, o, e, it.ID, "")
+	run, err := StartNow(ctx, o, e, it.ID, "")
+	if err == nil && !ok && o.Logger != nil {
+		o.Logger.Warn("agent started past the in-progress limit", "component", "serve", "story", it.ID,
+			"detail", fmt.Sprintf("the in-progress limit was full; %s's agent was started on the operator's word", it.ID))
+	}
+	return run, err
 }
 
 // roomFor says whether the in-progress limit leaves room for the ready story
