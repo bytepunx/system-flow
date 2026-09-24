@@ -3,15 +3,18 @@ id: S-0114
 type: story
 nature: remediation
 title: Flai serve should set up a timeout to check board status
-status: ready
+status: in-progress
 parent: E-0008
 owner: alex
 created: 2026-09-24T08:16:14Z
-updated: 2026-09-24T08:16:35Z
+updated: 2026-09-24T08:28:03Z
 transitions:
   - to: ready
     at: 2026-09-24T08:16:35Z
     by: alex
+  - to: in-progress
+    at: 2026-09-24T08:28:03Z
+    by: system-flow
 tags: [cli]
 touches: [flai/cmd]
 agent:
