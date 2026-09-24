@@ -3,11 +3,11 @@ id: S-0113
 type: story
 nature: improvement
 title: The new section for the host page for hosts needs improvement
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-24T07:40:17Z
-updated: 2026-09-24T07:50:39Z
+updated: 2026-09-24T07:52:26Z
 transitions:
   - to: ready
     at: 2026-09-24T07:40:35Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-24T07:50:39Z
     by: agent-S-0113
+  - to: done
+    at: 2026-09-24T07:52:26Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 agent:
