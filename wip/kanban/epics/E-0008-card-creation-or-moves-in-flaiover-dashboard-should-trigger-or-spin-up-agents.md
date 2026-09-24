@@ -6,7 +6,7 @@ title: Card creation or moves in flaiover dashboard should trigger or spin up ag
 status: backlog
 owner: alex
 created: 2026-09-23T16:43:01Z
-updated: 2026-09-23T20:21:50Z
+updated: 2026-09-24T08:16:14Z
 transitions: []
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
@@ -23,5 +23,6 @@ These agents need to "prime" context via ADRs and conventions for the story and 
 - S-0103 Extend existing data structures, APIs, and UI to track agent configuration
 - S-0104 Flai should spawn and manage agents in response to Kanban changes
 - S-0105 Operators should be able to control and configure flai via the dashboard
+- S-0114 Flai serve should set up a timeout to check board status
 
 ## Notes
