@@ -64,6 +64,26 @@ describe('HostProcesses', () => {
 		expect(api).toHaveBeenCalledWith('/api/host');
 	});
 
+	it('keeps Process narrow and gives State, Version, and Restarts equal, padded columns', async () => {
+		for (const enabled of [true, false]) {
+			await open(host({ host_enabled: enabled }));
+			expect(q('host-processes-table')!.classList).toContain('table-fixed');
+			const [process, ...rest] = [...document.querySelectorAll('thead th')];
+			expect(process.textContent).toBe('Process');
+			expect(process.classList).toContain('w-28');
+			const [state, version, restarts, actions] = rest;
+			for (const th of [state, version, restarts]) {
+				// no width of their own: a fixed table shares what is left between them equally
+				expect([...th.classList].filter((c) => /^w-/.test(c))).toEqual([]);
+				expect(th.classList).toContain('px-4');
+			}
+			expect(actions?.classList.contains('w-52') ?? false).toBe(enabled);
+			if (c) unmount(c);
+			c = undefined;
+			document.body.innerHTML = '';
+		}
+	});
+
 	it('offers start, stop, and restart per process, disabling what would do nothing', async () => {
 		await open(
 			host({

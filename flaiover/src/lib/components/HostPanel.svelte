@@ -168,7 +168,7 @@
 	});
 </script>
 
-<div class="max-w-2xl rounded border border-line bg-surface p-4 text-sm" data-testid="host-panel">
+<div class="max-w-3xl rounded border border-line bg-surface p-4 text-sm" data-testid="host-panel">
 	<h2 class="font-semibold text-ink">Dashboard</h2>
 
 	{#if !status && !loadFailed}

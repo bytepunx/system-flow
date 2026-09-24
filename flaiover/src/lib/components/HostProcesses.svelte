@@ -223,7 +223,7 @@
 </script>
 
 <div
-	class="mt-4 max-w-2xl rounded border border-line bg-surface p-4 text-sm"
+	class="mt-4 max-w-3xl rounded border border-line bg-surface p-4 text-sm"
 	data-testid="host-processes"
 >
 	<h2 class="font-semibold text-ink">
@@ -250,40 +250,46 @@
 			{/if}
 		</p>
 	{:else}
-		<table class="mt-2 w-full text-left">
+		<!-- Fixed layout (S-0113): Process and the actions keep set widths, and State, Version, and
+		     Restarts split the rest equally, padded apart; the MCP project list wraps under Process. -->
+		<table class="mt-2 w-full table-fixed text-left" data-testid="host-processes-table">
 			<thead class="text-muted">
 				<tr>
-					<th class="py-1 font-normal">Process</th>
-					<th class="py-1 font-normal">State</th>
-					<th class="py-1 font-normal">Version</th>
-					<th class="py-1 font-normal">Restarts</th>
-					{#if view.host_enabled}<th class="py-1"></th>{/if}
+					<th class="w-28 py-1 pr-4 font-normal">Process</th>
+					<th class="px-4 py-1 font-normal">State</th>
+					<th class="px-4 py-1 font-normal">Version</th>
+					<th class="px-4 py-1 font-normal">Restarts</th>
+					{#if view.host_enabled}<th class="w-52 py-1 pl-4"></th>{/if}
 				</tr>
 			</thead>
 			<tbody>
 				{#each rows as row (row.process)}
 					{@const state = stateOf(row.kids)}
 					<tr class="border-t border-line align-top" data-testid={`host-processes-${row.process}`}>
-						<td class="py-1">
+						<td class="py-1 pr-4">
 							<span class="font-mono">{row.label}</span>
 							{#if row.process === 'mcp' && row.kids.length}
-								<span class="block text-xs text-muted" data-testid="host-processes-mcp-projects"
+								<span
+									class="block text-xs break-words text-muted"
+									data-testid="host-processes-mcp-projects"
 									>{row.kids.map((k) => projectName(k.root)).join(', ')}</span
 								>
 							{/if}
 						</td>
 						<td
-							class="py-1"
+							class="px-4 py-1"
 							class:text-good={state === 'running'}
 							class:text-warn={state !== 'running'}
 							data-testid={`host-processes-${row.process}-state`}>{state}</td
 						>
-						<td class="py-1 font-mono" data-testid={`host-processes-${row.process}-version`}
+						<td class="px-4 py-1 font-mono" data-testid={`host-processes-${row.process}-version`}
 							>{versionsOf(row.kids)}</td
 						>
-						<td class="py-1">{row.kids.reduce((n, k) => n + k.restarts, 0)}</td>
+						<td class="px-4 py-1" data-testid={`host-processes-${row.process}-restarts`}
+							>{row.kids.reduce((n, k) => n + k.restarts, 0)}</td
+						>
 						{#if view.host_enabled}
-							<td class="py-1 text-right whitespace-nowrap">
+							<td class="py-1 pl-4 text-right whitespace-nowrap">
 								{#each ['start', 'stop', 'restart'] as const as action (action)}
 									<button
 										type="button"
