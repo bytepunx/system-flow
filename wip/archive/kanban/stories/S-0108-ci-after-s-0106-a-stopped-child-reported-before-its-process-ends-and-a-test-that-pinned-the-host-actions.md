@@ -3,10 +3,10 @@ id: S-0108
 type: story
 nature: remediation
 title: "CI after S-0106: a stopped child reported before its process ends, and a test that pinned the host actions"
-status: review
+status: done
 owner: alex
 created: 2026-09-24T03:22:00Z
-updated: 2026-09-24T03:34:32Z
+updated: 2026-09-24T04:29:53Z
 transitions:
   - to: ready
     at: 2026-09-24T03:22:25Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-24T03:34:32Z
     by: system-flow
+  - to: done
+    at: 2026-09-24T04:29:53Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/internal/host]
 ---
