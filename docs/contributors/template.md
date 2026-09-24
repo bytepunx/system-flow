@@ -88,11 +88,11 @@ variables:
 1. A `--var name=value` wins. A name the manifest does not define is an error.
 2. Otherwise the default. A default containing `{{` is itself a template and can use any variable listed before it and the [functions](#functions). An empty `project_name` defaults to the target directory's name.
 3. In a terminal, without `--defaults`, flai prompts with `prompt` and the default filled in. Anywhere else the default is taken without asking.
-4. A `required` variable left empty stops the render and names it.
+4. A `required` variable still empty after its default and the prompt stops the command before anything is written, and names it. An empty value given with `--var` is not caught this way ([I-0041](../../design/issues/I-0041-an-explicitly-empty-var-for-a-required-template-variable-passes-the-required-check-and-flai-new-writes-the-files-before-failing.md)).
 
 Every variable defined in the manifest is available in every rendered file, as `{{ .name }}`, even when its value is empty.
 
-Keep the five variables the template ships with: `project_name`, `project_key`, `description`, `owner`, `repo_url`. `flai upgrade` does not prompt. It renders with those five only, read back from the project's `system-flow.yaml` (`name`, `key`, `description`, `owner`, `repo`), so a file that uses a variable you added renders on `flai new` and fails on `flai upgrade`. Until upgrade learns more variables, derive anything else from those five in the template itself.
+Keep the five variables the template ships with: `project_name`, `project_key`, `description`, `owner`, `repo_url`. `flai upgrade` does not prompt. It renders with those five only, read back from the project's `system-flow.yaml` (`name`, `key`, `description`, `owner`, `repo`), so a file that uses a variable you added renders on `flai new` and fails on `flai upgrade` with `map has no entry for key`. Until upgrade learns more variables ([I-0040](../../design/issues/I-0040-flai-upgrade-renders-with-the-five-standard-variables-only-so-a-template-variable-a-fork-adds-fails-every-upgrade.md)), derive anything else from those five in the template itself, as in `#{{ .project_key }}-dev`.
 
 ### Built-in data
 
@@ -116,7 +116,7 @@ Available in every file under `root/` and in variable defaults, besides the vari
 | `slug` | Lower case, runs of other characters become `-` | `My Project!` gives `my-project` |
 | `upper`, `lower` | Change case | `{{ .project_key \| upper }}` |
 
-Everything else in Go [text/template](https://pkg.go.dev/text/template) works: `if`, `with`, `range`, comparisons. A reference to data that does not exist, such as a misspelt variable, stops the render and names the file.
+Everything else in Go [text/template](https://pkg.go.dev/text/template) works: `if`, `with`, `range`, comparisons. A reference to data that does not exist, such as a misspelt variable, stops the render and names the file and line.
 
 ## Render rules
 
