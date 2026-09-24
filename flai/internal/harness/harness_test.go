@@ -52,7 +52,9 @@ func TestClaudeCodeRunsHeadlessWithTheStorysModelAndFlaisMCP(t *testing.T) {
 	if !slices.Contains(argv, "--strict-mcp-config") {
 		t.Errorf("the agent's MCP servers are flai's alone: %q", argv)
 	}
-	if err := json.Unmarshal([]byte(raw), &mcp); err != nil || mcp.MCPServers["flai"].Command != "/usr/local/bin/flai" || !slices.Equal(mcp.MCPServers["flai"].Args, []string{"mcp"}) {
+	// the server is told the agent's name as an argument, which no environment
+	// a harness sets for it can replace (S-0114, I-0037)
+	if err := json.Unmarshal([]byte(raw), &mcp); err != nil || mcp.MCPServers["flai"].Command != "/usr/local/bin/flai" || !slices.Equal(mcp.MCPServers["flai"].Args, []string{"mcp", "--agent", "agent-S-0104"}) {
 		t.Fatalf("mcp config %s: %v", raw, err)
 	}
 

@@ -3,11 +3,11 @@ id: I-0037
 title: Agents flai serve starts for two stories share one agent name, so a thread one opens for the other never reads as awaiting it
 class: defect
 status: open
-count: 2
-cost: 4m
+count: 3
+cost: 7m
 first_reported: 2026-09-24T01:44:46Z
-last_reported: 2026-09-24T07:49:46Z
-updated: 2026-09-24T07:49:46Z
+last_reported: 2026-09-24T08:39:10Z
+updated: 2026-09-24T08:39:10Z
 ---
 
 # I-0037 Agents flai serve starts for two stories share one agent name, so a thread one opens for the other never reads as awaiting it
@@ -23,4 +23,8 @@ S-0107: agent-S-0107 opened TH-0004 on S-0106 for agent-S-0106. flai serve start
 ### 2026-09-24T07:49:46Z
 The reverse case: TH-0009, which S-0112's agent opened, read as awaiting S-0113's agent once the operator answered it, because both agents are named system-flow. S-0113's agent acted on it (T-0396) because the answer settled its own trailer decision. Otherwise the thread would have pulled it off its story.
 
+### 2026-09-24T08:39:10Z
+The launcher's own signs: every agent flai serve started connected to MCP as system-flow, so ownSigns excluded nothing and each of its own agents ending counted as someone attending for six minutes (08:05 to 08:11 and 08:21 to 08:27 on 2026-09-24), which is what S-0114 was filed for. Root cause found: the project's .claude/settings.local.json sets FLAI_AGENT=system-flow in its env, and Claude Code puts that into the MCP server it spawns, over the FLAI_AGENT flai serve set. Remediated in S-0114: the claude-code adapter passes the name as flai mcp --agent.
+
 ## Remediation
+Pass the agent's name to the MCP server as an argument, not through the environment: since S-0114 the claude-code adapter's `--mcp-config` runs `flai mcp --agent <name>`, which wins over any `FLAI_AGENT` the harness's settings put into the server's environment. Shell commands the agent runs still see the settings' `FLAI_AGENT`; an operator who sets one in `.claude/settings.local.json` should remove it, since flai serve sets the name itself.

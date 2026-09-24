@@ -48,8 +48,15 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	// whatever the project's .mcp.json says, which a headless session would
 	// not have approved, and no other: not the operator's own connectors and
 	// plugins, which S-0104's trial found loaded otherwise. The operator adds
-	// others with --mcp-config in the harness's arguments.
-	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "stdio", "command": r.Flai, "args": []string{"mcp"}}}})
+	// others with --mcp-config in the harness's arguments. The server is told
+	// the agent's name as an argument: the harness's own settings can put a
+	// FLAI_AGENT of their own into the servers it starts, which made every
+	// agent flai serve started one name (S-0114, I-0037).
+	args := []string{"mcp"}
+	if r.Name != "" {
+		args = append(args, "--agent", r.Name)
+	}
+	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "stdio", "command": r.Flai, "args": args}}})
 	if err != nil {
 		return Start{}, err
 	}

@@ -9,6 +9,7 @@ import (
 )
 
 func newMCPCmd(a *app) *cobra.Command {
+	var agentFlag string
 	c := &cobra.Command{
 		Use:   "mcp",
 		Short: "Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start",
@@ -44,7 +45,7 @@ configuration looks like, and flai mcp token prints its bearer token.`,
 			if err != nil {
 				return err
 			}
-			agent, _ := agentIdentity()
+			agent := mcpAgent(agentFlag)
 			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner}
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
@@ -58,6 +59,19 @@ configuration looks like, and flai mcp token prints its bearer token.`,
 			return mcpserver.New(opt).Run(cmd.Context(), &mcp.StdioTransport{})
 		},
 	}
+	c.Flags().StringVar(&agentFlag, "agent", "", "the agent this server serves, over FLAI_AGENT; flai serve names the agent it started this way")
 	c.AddCommand(newMCPHTTPCmds(a)...)
 	return c
+}
+
+// mcpAgent is who the server serves: --agent when given, else FLAI_AGENT.
+// flai serve passes the name as an argument because a harness's own settings
+// can replace the environment of the servers it starts, which made every
+// agent it started one name (S-0114, I-0037).
+func mcpAgent(flag string) string {
+	if flag != "" {
+		return flag
+	}
+	agent, _ := agentIdentity()
+	return agent
 }
