@@ -110,8 +110,13 @@ describe('StoryAgent (S-0104)', () => {
 			'agent failed (claude-code, claude-haiku-4-5): ended (exit 1) with S-0104 in in-progress'
 		);
 		expect(text()).toContain('ended 2026-09-23 18:30 UTC (exit 1)');
-		expect(document.querySelector('[data-testid="story-agent-failed"]')!.textContent).toContain(
-			'flow-S-0104.log'
+		const failed = document
+			.querySelector('[data-testid="story-agent-failed"]')!
+			.textContent!.replace(/\s+/g, ' ');
+		expect(failed).toContain('flow-S-0104.log');
+		// S-0116: either way to have flai start another
+		expect(failed).toContain(
+			'Moving the story back to ready starts another, and so does changing its agent while it is in ready.'
 		);
 	});
 });

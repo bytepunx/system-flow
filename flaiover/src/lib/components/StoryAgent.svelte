@@ -56,7 +56,7 @@
 			<p class="mt-1 text-xs text-muted" data-testid="story-agent-failed">
 				{#if activity.run.log}Its output is in <code class="break-all">{activity.run.log}</code> on the
 					host.{/if}
-				Moving the story back to ready starts another.
+				Moving the story back to ready starts another, and so does changing its agent while it is in ready.
 			</p>
 		{/if}
 	</section>
