@@ -2,15 +2,16 @@ import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
-const ACTIONS = ['restart'] as const;
+const ACTIONS = ['start', 'restart'] as const;
 type Action = (typeof ACTIONS)[number];
 
 /**
- * POST {action}: restart is the agent host action (flai's agent.restart,
- * S-0116): a new agent, in a new session, for a story in ready or in progress
- * whose agent dropped or failed. flai judges whether it may and says why not,
- * as a 400; it is 403 with what enables it while the operator has not (flai
- * serve enable agent).
+ * POST {action}: the agent host action. start (flai's agent.start, S-0115) has
+ * a ready story's agent started now, whatever flai serve's own rules say about
+ * when; restart (agent.restart, S-0116) has a new agent, in a new session,
+ * started for a story in ready or in progress whose agent dropped or failed.
+ * flai judges whether it may and says why not, as a 400; it is 403 with what
+ * enables it while the operator has not (flai serve enable agent).
  */
 export const POST: RequestHandler = ({ params, request }) =>
 	respond(async () => {

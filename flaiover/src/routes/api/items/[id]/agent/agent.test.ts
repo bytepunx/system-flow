@@ -70,6 +70,33 @@ describe('agent route over the channel (S-0116)', () => {
 		expect((await r.json()).error).toContain('flai serve enable agent');
 	});
 
+	// S-0115: a ready story's agent now
+	it('asks flai to start the story agent and passes on the run', async () => {
+		script = {
+			'agent.start': {
+				answer: { data: { story: 'S-0115', agent: 'agent-S-0115', pid: 43 }, warnings: [] }
+			}
+		};
+		const r = await doPost('S-0115', { action: 'start' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ story: 'S-0115', pid: 43 });
+		const write = asked.find((a) => a.method === 'agent.start');
+		expect(write?.params).toMatchObject({ id: 'S-0115' });
+		expect(typeof write?.params.request_id).toBe('string');
+		script = {
+			'agent.start': {
+				error: new AgentError(
+					400,
+					'S-0115 is in in-progress; only a story in ready is started',
+					-32011
+				)
+			}
+		};
+		const no = await doPost('S-0115', { action: 'start' });
+		expect(no.status).toBe(400);
+		expect((await no.json()).error).toContain('only a story in ready is started');
+	});
+
 	it('refuses an action it does not know without asking flai', async () => {
 		const r = await doPost('S-0116', { action: 'stop' });
 		expect(r.status).toBe(400);

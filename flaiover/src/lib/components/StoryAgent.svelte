@@ -3,7 +3,9 @@
 	// harness, the model, when it started, and why it waits or failed. It asks flai again when the
 	// project's files change and, while the agent runs, now and then, since an agent ends without
 	// changing a file. Nothing shows for a story no agent was started for. For a story in ready or
-	// in progress whose agent dropped or failed, Restart agent has flai start a new one (S-0116).
+	// in progress whose agent dropped or failed, Restart agent has flai start a new one (S-0116). For
+	// a story in ready that has had no agent, Start agent has flai start it now, and the panel says
+	// why flai serve has not (S-0115).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { projectState } from '$lib/project.svelte';
@@ -16,8 +18,8 @@
 		writable = false
 	}: { story: string; status?: string; writable?: boolean } = $props();
 	let status = $state<HostAgent | null>(null);
-	let restarting = $state(false);
-	let restartError = $state<string | null>(null);
+	let acting = $state<'start' | 'restart' | null>(null);
+	let actError = $state<{ action: 'start' | 'restart'; message: string } | null>(null);
 
 	async function ask() {
 		try {
@@ -45,25 +47,31 @@
 			activity?.state === 'failed' &&
 			(storyStatus === 'ready' || storyStatus === 'in-progress')
 	);
+	// A ready story no agent was started for; flai says why not when it refuses.
+	const canStart = $derived(writable && !!status?.enabled && storyStatus === 'ready' && !activity);
+	// Why flai serve has not started it, from the reasons it gives for each story that waits.
+	const waitingWhy = $derived(
+		status?.state?.waiting?.split('; ').find((w) => new RegExp(`\\b${story}\\b`).test(w))
+	);
 
-	async function restart() {
-		if (restarting) return;
-		restarting = true;
-		restartError = null;
+	async function act(action: 'start' | 'restart') {
+		if (acting) return;
+		acting = action;
+		actError = null;
 		try {
 			const r = await api(`/api/items/${story}/agent`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ action: 'restart' })
+				body: JSON.stringify({ action })
 			});
 			if (!r.ok) {
 				const body = (await r.json().catch(() => ({}))) as { error?: string };
-				restartError = body.error ?? 'the agent could not be restarted';
+				actError = { action, message: body.error ?? `the agent could not be ${action}ed` };
 			}
 		} catch (e) {
-			restartError = e instanceof Error ? e.message : String(e);
+			actError = { action, message: e instanceof Error ? e.message : String(e) };
 		}
-		restarting = false;
+		acting = null;
 		await ask();
 	}
 	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
@@ -94,14 +102,35 @@
 			{#if canRestart}
 				<button
 					class="mt-2 rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
-					onclick={restart}
-					disabled={restarting}
-					data-testid="story-agent-restart">{restarting ? 'Restarting…' : 'Restart agent'}</button
+					onclick={() => act('restart')}
+					disabled={acting !== null}
+					data-testid="story-agent-restart"
+					>{acting === 'restart' ? 'Restarting…' : 'Restart agent'}</button
 				>
 			{/if}
-			{#if restartError}
-				<p class="mt-1 text-xs text-warn" data-testid="story-agent-restart-error">{restartError}</p>
+			{#if actError?.action === 'restart'}
+				<p class="mt-1 text-xs text-warn" data-testid="story-agent-restart-error">
+					{actError.message}
+				</p>
 			{/if}
+		{/if}
+	</section>
+{:else if canStart || actError?.action === 'start'}
+	<section class="rounded border border-line bg-surface p-3" data-testid="story-agent">
+		<h2 class="mb-2 font-medium">Agent</h2>
+		<p class="text-xs" data-testid="story-agent-line">
+			flai serve has started no agent for this story{waitingWhy ? `: ${waitingWhy}` : '.'}
+		</p>
+		{#if canStart}
+			<button
+				class="mt-2 rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
+				onclick={() => act('start')}
+				disabled={acting !== null}
+				data-testid="story-agent-start">{acting === 'start' ? 'Starting…' : 'Start agent'}</button
+			>
+		{/if}
+		{#if actError?.action === 'start'}
+			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">{actError.message}</p>
 		{/if}
 	</section>
 {/if}
