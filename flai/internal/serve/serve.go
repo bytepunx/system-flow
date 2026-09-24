@@ -165,8 +165,9 @@ type Options struct {
 	Agent func(root string) AgentConfig
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
-	// MCP keeps each served project's HTTP MCP server running (S-0096);
-	// nil runs none. MCPEvery is how often it is looked at.
+	// MCP has each served project's HTTP MCP server kept by flai host
+	// (S-0096, S-0106); nil keeps none. MCPEvery is how often the host is
+	// told again when nothing changed.
 	MCP      MCP
 	MCPEvery time.Duration
 	// ImportRoots are the folders the operator named for repositories to
@@ -183,21 +184,16 @@ type Options struct {
 }
 
 type running struct {
-	entry   Entry
-	client  *channel.Client
-	stop    context.CancelFunc
-	done    chan struct{}
-	mcpDone chan struct{} // nil when no MCP server is kept for it
+	entry  Entry
+	client *channel.Client
+	stop   context.CancelFunc
+	done   chan struct{}
 }
 
-// halt stops the project's client and, when one is kept, its MCP server,
-// and waits for both.
+// halt stops the project's client and waits for it.
 func (r *running) halt() {
 	r.stop()
 	<-r.done
-	if r.mcpDone != nil {
-		<-r.mcpDone
-	}
 }
 
 // Run serves every registered project until ctx ends. The registry is read
@@ -268,13 +264,6 @@ func Run(ctx context.Context, o Options) error {
 			cctx, stop := context.WithCancel(ctx)
 			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, done: make(chan struct{})}
 			clients[root] = r
-			if o.MCP != nil {
-				r.mcpDone = make(chan struct{})
-				go func() {
-					superviseMCP(cctx, o, e)
-					close(r.mcpDone)
-				}()
-			}
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
 			starter.look(cctx, false) // learns what is ready now; starts nothing
@@ -322,11 +311,23 @@ func Run(ctx context.Context, o Options) error {
 		}
 	}
 
+	mcp := &mcpTeller{o: o}
+	tellMCP := func() {
+		mu.Lock()
+		roots := make([]string, 0, len(clients))
+		for root := range clients {
+			roots = append(roots, root)
+		}
+		mu.Unlock()
+		mcp.tell(roots)
+	}
+
 	tick := time.NewTicker(o.Every)
 	defer tick.Stop()
 	for {
 		reconcile()
 		writeStatus()
+		tellMCP()
 		select {
 		case <-ctx.Done():
 			return nil

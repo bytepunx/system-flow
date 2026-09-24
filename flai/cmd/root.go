@@ -15,8 +15,8 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/logx"
-	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // app carries state shared by all commands.
@@ -30,13 +30,13 @@ type app struct {
 	runner     execx.Runner
 	log        *slog.Logger // structured events on errOut, see design/conventions/logging.md
 
-	stdinIsTerminal *bool                              // tests override terminal detection
-	confirm         func(title string) (bool, error)   // tests answer confirmations
-	serveStarter    func() (serve.Status, bool, error) // tests do not start a process
-	cwd             string                             // tests override the working directory
-	clock           func() time.Time                   // tests override the clock
-	healthProbe     func(url string) bool              // tests fake the dashboard upgrade's health check
-	sleep           func(d time.Duration)              // tests skip a real poll delay (dashboard upgrade, checks cancel)
+	stdinIsTerminal *bool                             // tests override terminal detection
+	confirm         func(title string) (bool, error)  // tests answer confirmations
+	hostStarter     func() (host.Status, bool, error) // tests do not start a process
+	cwd             string                            // tests override the working directory
+	clock           func() time.Time                  // tests override the clock
+	healthProbe     func(url string) bool             // tests fake the dashboard upgrade's health check
+	sleep           func(d time.Duration)             // tests skip a real poll delay (dashboard upgrade, checks cancel)
 }
 
 // Execute runs the CLI and returns the process exit code.
@@ -135,6 +135,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(newAdrCmd(a))
 	root.AddCommand(newAgentCmd(a))
 	root.AddCommand(newServeCmd(a))
+	root.AddCommand(newHostCmd(a))
 	root.AddCommand(newHostAPICmd(a))
 	return root
 }

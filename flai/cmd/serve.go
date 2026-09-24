@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"sort"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -32,6 +32,7 @@ func (a *app) serveDir() serve.Dir {
 }
 
 func newServeCmd(a *app) *cobra.Command {
+	var exitWith int
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it",
@@ -40,23 +41,40 @@ opens a WebSocket to that project's dashboard and keeps it open; the
 dashboard asks, flai answers (ADR-0029). The dashboard never connects to the
 host, and can ask only for the methods flai offers.
 
-flai dashboard registers the project and starts flai serve in the background
-when it is not running, so this command is for watching it work in a
-terminal, and for start, stop, and status. Its registry, state, and log live
-in a folder named serve beside flai's config file.
+flai host runs it (S-0106): flai dashboard registers the project and starts
+flai host when it is not running, and the host starts flai serve and starts
+it again if it ends. flai serve tells the host which projects it serves, and
+the host keeps each one's MCP server; flai serve starts no process of MCP
+itself, and run by hand, outside a host, keeps none. This command is for
+watching it work in a terminal, and for start, stop, and status, which go
+through the host. Its registry, state, and log live in a folder named serve
+beside flai's config file.
 
 Started in a folder that is not a project, ~/git say, it also serves every
 system-flow project below the folder, for as long as it runs, and offers the
 folder's other git repositories for import on the board, as flai dashboard
 there does.`,
-		Example: `  flai serve            # in the foreground; Ctrl-C stops it
-  flai serve start      # in the background
+		Example: `  flai serve            # in the foreground, without a host; Ctrl-C stops it
+  flai serve start      # start flai host, which runs it
   flai serve status
-  flai serve stop`,
+  flai serve stop       # the host stops it until flai serve start`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
+			// the host starts it with its own PID: a host that was killed
+			// never stops its children, so each goes by itself (S-0106)
+			if exitWith > 0 {
+				ctx = exitWithProcess(ctx, exitWith)
+			}
+			// under a host, the host keeps the MCP servers flai serve asks for;
+			// outside one, none is kept (S-0106)
+			var mcp serve.MCP
+			if c, ok := host.FromEnv(); ok {
+				mcp = hostMCP{c: c}
+			} else {
+				a.logger().Info("not under flai host: no mcp server is kept", "component", "serve")
+			}
 			// Started in a folder that is not a project (S-0102), it serves the
 			// projects below it and offers the folder's other repositories for
 			// import, as flai dashboard there does (ADR-0036).
@@ -70,16 +88,18 @@ there does.`,
 			if repo, err := a.projectOrNone(); err == nil && repo == nil {
 				folder, _ = a.workingDir()
 			}
-			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: &serveMCP{a: a}, ImportRoots: a.importRoots})
+			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, ImportRoots: a.importRoots})
 		},
 	}
+	c.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")
+	_ = c.Flags().MarkHidden("exit-with")
 	c.AddCommand(
 		&cobra.Command{
 			Use:   "start",
-			Short: "Start flai serve in the background, if it is not running",
+			Short: "Start flai serve under flai host, starting the host if it is not running",
 			Args:  cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error {
-				st, started, err := a.ensureServe()
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				st, started, err := a.ensureServeUnderHost(cmd.Context())
 				if err != nil {
 					return err
 				}
@@ -87,7 +107,7 @@ there does.`,
 					return a.printJSON(map[string]any{"started": started, "pid": st.PID, "log": a.serveDir().Log()})
 				}
 				if started {
-					fmt.Fprintf(a.out, "flai serve started (pid %d); log: %s\n", st.PID, a.serveDir().Log())
+					fmt.Fprintf(a.out, "flai serve started by flai host (pid %d); log: %s\n", st.PID, a.serveDir().Log())
 				} else {
 					fmt.Fprintf(a.out, "flai serve is already running (pid %d, since %s)\n", st.PID, st.Started)
 				}
@@ -96,16 +116,24 @@ there does.`,
 		},
 		&cobra.Command{
 			Use:   "stop",
-			Short: "Stop the running flai serve",
+			Short: "Stop flai serve: the host stops it and keeps it stopped until flai serve start",
 			Args:  cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error {
+			RunE: func(cmd *cobra.Command, _ []string) error {
 				st, alive := a.serveDir().ReadStatus(time.Now())
 				if !alive {
 					fmt.Fprintln(a.out, "flai serve is not running")
 					return nil
 				}
-				if err := serve.Terminate(st.PID); err != nil {
-					return err
+				if c, _, err := a.hostDir().Client(time.Now()); err == nil {
+					if _, err := c.Act(cmd.Context(), host.Serve, "stop"); err != nil {
+						return err
+					}
+				}
+				// one the host did not start (flai serve in a terminal, or an older flai's)
+				if _, alive := a.serveDir().ReadStatus(time.Now()); alive {
+					if err := serve.Terminate(st.PID); err != nil {
+						return err
+					}
 				}
 				fmt.Fprintf(a.out, "flai serve stopped (pid %d)\n", st.PID)
 				return nil
@@ -214,42 +242,31 @@ func (a *app) printServeStatus() error {
 	return nil
 }
 
-// ensureServe starts flai serve detached unless one is running. It needs no
-// root: the process is this user's, and it stops with flai serve stop.
-func (a *app) ensureServe() (serve.Status, bool, error) {
+// ensureServeUnderHost has flai host run flai serve: it starts the host
+// when none runs, or asks the running one to start serve, and waits for
+// serve's first state. A serve already running, the host's or not, is used.
+func (a *app) ensureServeUnderHost(ctx context.Context) (serve.Status, bool, error) {
 	dir := a.serveDir()
 	if st, alive := dir.ReadStatus(time.Now()); alive {
 		return st, false, nil
 	}
-	exe, err := os.Executable()
-	if err != nil {
+	if _, started, err := a.ensureHost(); err != nil {
 		return serve.Status{}, false, err
+	} else if !started {
+		c, _, err := a.hostDir().Client(time.Now())
+		if err != nil {
+			return serve.Status{}, false, err
+		}
+		if _, err := c.Act(ctx, host.Serve, "start"); err != nil {
+			return serve.Status{}, false, err
+		}
 	}
-	if err := os.MkdirAll(string(dir), 0o700); err != nil {
-		return serve.Status{}, false, err
-	}
-	logFile, err := os.OpenFile(dir.Log(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return serve.Status{}, false, err
-	}
-	defer func() { _ = logFile.Close() }()
-	args := []string{"serve", "--config", config.ResolvePath(a.configPath)}
-	cmd := exec.CommandContext(context.WithoutCancel(context.Background()), exe, args...)
-	cmd.Stdout, cmd.Stderr = logFile, logFile
-	cmd.Env = append(os.Environ(), "LOG_FORMAT=json")
-	serve.Detach(cmd)
-	if err := cmd.Start(); err != nil {
-		return serve.Status{}, false, err
-	}
-	pid := cmd.Process.Pid
-	_ = cmd.Process.Release()
-	// It has started when it has written its first status.
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		if st, alive := dir.ReadStatus(time.Now()); alive && st.PID == pid {
+		if st, alive := dir.ReadStatus(time.Now()); alive {
 			return st, true, nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return serve.Status{}, false, fmt.Errorf("flai serve did not come up; see %s", dir.Log())
+	return serve.Status{}, false, fmt.Errorf("flai host runs but flai serve did not come up; see flai host status and %s", dir.Log())
 }

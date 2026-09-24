@@ -14,9 +14,9 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// S-0096: flai serve starts a server for every project it serves, so they
-// cannot all take the one default port: each takes the first free one from it,
-// and keeps it once used.
+// S-0096, S-0106: flai host starts a server for every project flai serve
+// serves, so they cannot all take the one default port: each takes the first
+// free one from it that no other project was given, and keeps it once used.
 func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
@@ -29,9 +29,13 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 		p, _ := strconv.Atoi(port)
 		return err == nil && host == "127.0.0.1" && p >= 4243 && p < 4243+mcpPorts
 	}
-	first, err := mcpAddrFor(repo)
+	first, err := mcpAddrFor(repo, nil)
 	if err != nil || !inRange(first) {
 		t.Fatalf("first free: %q %v", first, err)
+	}
+	// given to another project and not yet listening: not given again
+	if other, err := mcpAddrFor(repo, map[string]bool{first: true}); err != nil || other == first || !inRange(other) {
+		t.Errorf("with %s given to another: %q %v", first, other, err)
 	}
 	// that port taken (another project's server): the next free one
 	held, err := net.Listen("tcp", first)
@@ -39,7 +43,7 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = held.Close() }()
-	second, err := mcpAddrFor(repo)
+	second, err := mcpAddrFor(repo, nil)
 	if err != nil || !inRange(second) || second == first {
 		t.Errorf("with %s taken: %q %v", first, second, err)
 	}
@@ -50,13 +54,13 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:5999\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := mcpAddrFor(repo); got != "127.0.0.1:5999" {
+	if got, _ := mcpAddrFor(repo, nil); got != "127.0.0.1:5999" {
 		t.Errorf("remembered: %q", got)
 	}
 }
 
 // flai mcp http --exit-with stops the server once that process is gone: a
-// flai serve that was killed never stops its children itself.
+// flai host that was killed never stops its children itself.
 func TestMCPHTTPExitsWithTheProcessItWasGiven(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "tester")

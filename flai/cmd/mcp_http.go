@@ -439,6 +439,12 @@ writes a new one and restarts a running server, which ends every session.`,
 			if rotate {
 				if st, stopped, err := a.stopMCPHTTP(repo); err != nil {
 					return err
+				} else if stopped && a.hostKeeps(st) {
+					// the host that started it starts it again, on the new token (S-0106)
+					if err := a.awaitMCPRestart(repo, st.PID); err != nil {
+						return err
+					}
+					restarted = true
 				} else if stopped {
 					if _, err := a.startMCPHTTP(repo, restartArgs(st, a.configPath)); err != nil {
 						return err
@@ -468,6 +474,26 @@ func (a *app) httpMCPProject() (*workitem.Repo, error) {
 		return nil, errors.New("flai mcp over HTTP serves one project, and there is none here or above; run it in a project (flai serve keeps one running for each project it serves), or run flai mcp on stdio here, which serves every project below this folder")
 	}
 	return repo, err
+}
+
+// hostKeeps says whether the server st was is one flai host keeps: it goes
+// with the host that runs now, which starts it again once it has stopped.
+func (a *app) hostKeeps(st mcpState) bool {
+	h, alive := a.hostDir().ReadStatus(time.Now())
+	return alive && st.ExitWith == h.PID
+}
+
+// awaitMCPRestart waits for the host to start the project's server again
+// after the one with pid stopped.
+func (a *app) awaitMCPRestart(repo *workitem.Repo, pid int) error {
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		if st, alive := readMCPState(repo, time.Now()); alive && st.PID != pid {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("flai host did not start the MCP server again; flai host status says why")
 }
 
 // restartArgs start again, with a new token, the server that st was. One
