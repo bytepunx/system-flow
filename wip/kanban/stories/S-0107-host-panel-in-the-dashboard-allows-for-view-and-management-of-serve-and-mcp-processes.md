@@ -7,10 +7,15 @@ status: backlog
 parent: E-0003
 owner: alex
 created: 2026-09-24T01:26:46Z
-updated: 2026-09-24T01:26:46Z
+updated: 2026-09-24T01:28:08Z
 transitions: []
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
 ---
 # S-0107 Host panel in the dashboard allows for view and management of serve and MCP processes
 
