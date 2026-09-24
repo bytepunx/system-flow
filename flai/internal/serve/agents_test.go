@@ -38,6 +38,35 @@ type agentLab struct {
 	now     time.Time
 	o       Options
 	logs    lockedBuffer
+	skew    time.Duration // how far the launcher's clock is ahead of the wall
+}
+
+// advance moves the launcher's clock forward.
+func (lab *agentLab) advance(d time.Duration) {
+	lab.mu.Lock()
+	defer lab.mu.Unlock()
+	lab.skew += d
+}
+
+// clock is the launcher's now: the wall clock, moved by advance.
+func (lab *agentLab) clock() time.Time {
+	lab.mu.Lock()
+	defer lab.mu.Unlock()
+	return time.Now().Add(lab.skew)
+}
+
+// attend leaves the sign of someone attending, written at the launcher's now.
+func (lab *agentLab) attend() {
+	lab.t.Helper()
+	cursor := filepath.Join(lab.root, ".flai-cache", "mcp", "claude.json")
+	_ = os.MkdirAll(filepath.Dir(cursor), 0o755)
+	if err := os.WriteFile(cursor, []byte(`{}`), 0o600); err != nil {
+		lab.t.Fatal(err)
+	}
+	now := lab.clock()
+	if err := os.Chtimes(cursor, now, now); err != nil {
+		lab.t.Fatal(err)
+	}
 }
 
 // lockedBuffer is a log the stub's goroutines and the test share.
@@ -93,7 +122,7 @@ func newAgentLab(t *testing.T) *agentLab {
 		t.Fatal(err)
 	}
 	lab.cfg = AgentConfig{Enabled: true, Command: []string{lab.stub, "work on {story}", "--root={root}", "$(echo not a shell)"}, Name: "builder"}
-	o := Options{Dir: Dir(filepath.Join(t.TempDir(), "serve")), Logger: slog.New(slog.NewTextHandler(&lab.logs, nil)), Now: time.Now,
+	o := Options{Dir: Dir(filepath.Join(t.TempDir(), "serve")), Logger: slog.New(slog.NewTextHandler(&lab.logs, nil)), Now: lab.clock,
 		Agent: func(string) AgentConfig { return lab.cfg },
 		Host: hostapi.Host{Record: func(e hostapi.Entry) {
 			lab.mu.Lock()
@@ -309,6 +338,57 @@ func TestAnAgentsOwnSignsAreNotSomeoneAttending(t *testing.T) {
 	waitFor(t, "both end", func() bool { return !lab.run(first).live() && !lab.run(second).live() })
 }
 
+// S-0114: someone attending holds a ready story back for the attended window
+// and no longer. An agent at work on its own story keeps its sign fresh and
+// pulls nothing; after the window the story is started whoever is attending.
+func TestSomeoneAttendingHoldsAStoryBackForTheWindowThenItIsStarted(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(2)
+	lab.hold()
+	lab.attend()
+	a := lab.ready("A")
+	lab.l.look(ctx, false)
+	untilA := lab.l.held[a].Add(6 * time.Minute).UTC().Format(time.RFC3339)
+	if st := lab.state(); st.Running != nil || !strings.Contains(st.Waiting, "attending") || !strings.Contains(st.Waiting, "it sees "+a+" in its inbox and has until "+untilA+" to pull it") {
+		t.Fatalf("held: %+v", st)
+	}
+	// three minutes on, the sign is fresh again and a second story is ready:
+	// each has its own time, and the first's has not moved
+	lab.advance(3 * time.Minute)
+	lab.attend()
+	b := lab.ready("B")
+	lab.l.look(ctx, false)
+	untilB := lab.l.held[b].Add(6 * time.Minute).UTC().Format(time.RFC3339)
+	if st := lab.state(); st.Running != nil || !strings.Contains(st.Waiting, "has until "+untilA+" to pull it; ") || !strings.Contains(st.Waiting, "it sees "+b+" in its inbox and has until "+untilB+" to pull it") {
+		t.Fatalf("both held: %+v", st)
+	}
+	if lab.said(a) != 1 || lab.said(b) != 1 {
+		t.Errorf("logged %d for %s and %d for %s: once each", lab.said(a), a, lab.said(b), b)
+	}
+	// six minutes after A was first held, it is started, attended or not; B waits its own time
+	lab.advance(3 * time.Minute)
+	lab.attend()
+	lab.l.look(ctx, false)
+	waitFor(t, "A runs", func() bool { return lab.run(a).live() })
+	if st := lab.state(); lab.run(b) != nil || strings.Contains(st.Waiting, a) || !strings.Contains(st.Waiting, "has until "+untilB+" to pull it") {
+		t.Fatalf("A started and B held: %+v", st)
+	}
+	if _, held := lab.l.held[a]; held {
+		t.Error("A's hold outlived its start")
+	}
+	lab.advance(3 * time.Minute)
+	lab.attend()
+	lab.l.look(ctx, false)
+	waitFor(t, "B runs", func() bool { return lab.run(b).live() })
+	if st := lab.state(); st.Waiting != "" {
+		t.Errorf("nothing waits: %q", st.Waiting)
+	}
+	lab.release(a)
+	lab.release(b)
+	waitFor(t, "both end", func() bool { return !lab.run(a).live() && !lab.run(b).live() })
+}
+
 func TestAnAgentThatOutlivedFlaiServeIsSettled(t *testing.T) {
 	lab := newAgentLab(t)
 	id := lab.ready("Left running")
@@ -396,12 +476,18 @@ func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 	})
 	t.Run("someone is attending", func(t *testing.T) {
 		lab := newAgentLab(t)
-		_ = os.MkdirAll(filepath.Join(lab.root, ".flai-cache", "mcp"), 0o755)
-		_ = os.WriteFile(filepath.Join(lab.root, ".flai-cache", "mcp", "claude.json"), []byte(`{}`), 0o600)
+		lab.attend()
 		a := lab.ready("A")
 		lab.l.look(ctx, false)
 		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "attending") || !strings.Contains(st.Waiting, ".flai-cache/mcp/claude.json") || !strings.Contains(st.Waiting, a) || lab.said(a) != 1 {
 			t.Errorf("attended: %+v", st)
+		}
+		// the sign's age changes at every look; the reason does not, and is logged once
+		lab.advance(time.Minute)
+		lab.attend()
+		lab.l.look(ctx, false)
+		if st := lab.state(); st.Running != nil || !strings.Contains(st.Waiting, "attending") || lab.said(a) != 1 {
+			t.Errorf("attended a minute later: %+v, logged %d", st, lab.said(a))
 		}
 		// the index flai writes itself is no sign of an agent; an old cursor is none either
 		old := time.Now().Add(-time.Hour)
@@ -426,10 +512,23 @@ func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 			t.Fatal(err)
 		}
 		lab.l.look(ctx, false)
+		// whoever is attending, the limit is the reason while it is full
+		lab.attend()
 		waiting := lab.ready("Waiting")
 		lab.l.look(ctx, false)
-		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "limit leaves no room for "+waiting) || lab.said(waiting) != 1 {
+		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "limit leaves no room for "+waiting) || strings.Contains(st.Waiting, "attending") || lab.said(waiting) != 1 {
 			t.Errorf("over the limit: %+v", st)
+		}
+		// room again: the hold begins now, not while the limit was full
+		lab.advance(10 * time.Minute)
+		lab.attend()
+		lab.move(busy, workitem.Review)
+		lab.l.look(ctx, false)
+		if st := lab.state(); st.Running != nil || !strings.Contains(st.Waiting, "attending") || !strings.Contains(st.Waiting, "has until "+lab.l.held[waiting].Add(6*time.Minute).UTC().Format(time.RFC3339)) {
+			t.Errorf("held from when there was room: %+v", st)
+		}
+		if since := lab.l.held[waiting]; since.Before(lab.clock().Add(-time.Minute)) {
+			t.Errorf("the hold began at %s, not now", since)
 		}
 	})
 	t.Run("a command that cannot start is reported and journalled", func(t *testing.T) {

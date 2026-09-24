@@ -51,6 +51,15 @@ import (
 // README, nor do the cursor and the narrative of an agent flai serve started
 // itself.
 //
+// Someone attending holds a ready story back for that same window and no
+// longer (S-0114, ADR-0042): the launcher remembers when attendance became
+// the only thing keeping a story from its agent, and once that has lasted
+// attended_minutes, it starts the story whoever is attending. An agent at
+// work on its own story keeps its sign fresh for hours and pulls nothing;
+// an idle one holding wait_for_work pulls within the window. The hold is
+// the launcher's memory alone, so a restart gives the attending agent the
+// window again.
+//
 // Each command is run as it stands in the project's directory, never through
 // a shell. The story's ID is flai's own reading of the files, checked against
 // the form of an ID before it is put anywhere.
@@ -187,13 +196,14 @@ type launcher struct {
 	log    func(msg string, args ...any)
 
 	mu      sync.Mutex
-	said    map[string]string // why each skipped story waits, as last logged
-	waiting map[int]bool      // the PIDs of agents this launcher waits for
-	again   chan struct{}     // an agent ended: look again
+	said    map[string]string    // why each skipped story waits, as last logged
+	held    map[string]time.Time // since when someone attending is all that holds each story back
+	waiting map[int]bool         // the PIDs of agents this launcher waits for
+	again   chan struct{}        // an agent ended: look again
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1),
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, held: map[string]time.Time{}, waiting: map[int]bool{}, again: make(chan struct{}, 1),
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		}}
@@ -371,16 +381,25 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if len(nothing) > 0 {
 		sk.add(fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name")), nothing...)
 	}
+	l.forgetHolds(todo)
 	if len(todo) == 0 {
+		return
+	}
+	// A full limit is the reason, whoever is attending: attendance holds a
+	// story back only when the limit would let it start.
+	if free >= 0 && reserved >= free {
+		sk.add("the in-progress limit leaves no room for "+strings.Join(ids(todo), ", "), todo...)
 		return
 	}
 	within := cfg.Attended
 	if within <= 0 {
 		within = 6 * time.Minute
 	}
-	if yes, sign := attended(l.entry.Root, within, l.now(), ownSigns(l.entry.Root, st, within, l.now())); yes {
-		sk.add("an agent is attending the project ("+sign+"); it sees "+strings.Join(ids(todo), ", ")+" in its inbox", todo...)
-		return
+	now := l.now()
+	if yes, sign := attended(l.entry.Root, within, now, ownSigns(l.entry.Root, st, within, now)); yes {
+		todo = l.hold(&sk, todo, sign, now, within)
+	} else {
+		clear(l.held)
 	}
 	for i, s := range todo {
 		if free >= 0 && reserved >= free {
@@ -389,6 +408,53 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		}
 		if l.start(ctx, cfg, s) {
 			reserved++
+		}
+		delete(l.held, s.ID)
+	}
+}
+
+// hold is what someone attending does to the stories that could start: each
+// is held back from when the hold began until the attended window has
+// passed, and named with the time it has until, and the ones held that long
+// are returned to be started. A story first held now shares its time with
+// the others first held now, so one reason names them together.
+func (l *launcher) hold(sk *skips, todo []readyStory, sign string, now time.Time, within time.Duration) (due []readyStory) {
+	var untils []time.Time
+	byUntil := map[time.Time][]readyStory{}
+	for _, s := range todo {
+		since, ok := l.held[s.ID]
+		if !ok {
+			since = now
+			l.held[s.ID] = since
+		}
+		until := since.Add(within)
+		if !until.After(now) {
+			due = append(due, s)
+			continue
+		}
+		if _, seen := byUntil[until]; !seen {
+			untils = append(untils, until)
+		}
+		byUntil[until] = append(byUntil[until], s)
+	}
+	for _, until := range untils {
+		held := byUntil[until]
+		sk.add(fmt.Sprintf("an agent is attending the project (%s); it sees %s in its inbox and has until %s to pull %s",
+			sign, strings.Join(ids(held), ", "), until.UTC().Format(time.RFC3339), oneOrMany(len(held), "it", "them")), held...)
+	}
+	return due
+}
+
+// forgetHolds drops the holds of stories that are no longer waiting to be
+// started: pulled, started, or held for another reason.
+func (l *launcher) forgetHolds(todo []readyStory) {
+	keep := map[string]bool{}
+	for _, s := range todo {
+		keep[s.ID] = true
+	}
+	for id := range l.held {
+		if !keep[id] {
+			delete(l.held, id)
 		}
 	}
 }
@@ -411,17 +477,27 @@ func (k *skips) add(why string, stories ...readyStory) {
 }
 
 // say puts why each skipped story waits in the state's waiting, and logs a
-// story's reason when it is not the one last logged, so that a look every
+// story's reason when it is not the kind last logged, so that a look every
 // minute does not repeat it.
 func (l *launcher) say(k skips) {
 	why := strings.Join(k.whys, "; ")
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = why })
 	for _, id := range slices.Sorted(maps.Keys(k.story)) {
-		if l.said[id] != k.story[id] {
+		if _, said := l.said[id]; !said || kind(l.said[id]) != kind(k.story[id]) {
 			l.log("agent not started", "story", id, "why", k.story[id])
 		}
 	}
 	l.said = k.story
+}
+
+// kind is a reason without the detail in its parentheses: how long ago the
+// sign of an agent was written, or when a run started, changes at every
+// look and is not a new reason.
+func kind(why string) string {
+	if i := strings.Index(why, " ("); i >= 0 {
+		return why[:i]
+	}
+	return why
 }
 
 // tried says of a story that has had its agent since it entered ready what
