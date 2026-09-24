@@ -467,9 +467,29 @@ func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
 	for _, addr := range l.taken {
 		others[addr] = true
 	}
-	addr, err := mcpAddrFor(repo, others)
+	// the ports the other projects flai serve serves remember, so that a new
+	// one is not one of theirs (S-0110)
+	remembered := map[string]bool{}
+	if entries, err := l.a.serveDir().Projects(); err == nil {
+		for _, e := range entries {
+			if e.Root == repo.MainRoot {
+				continue
+			}
+			if other, err := workitem.Open(e.Root); err == nil {
+				if addr := rememberedMCPAddr(other); addr != "" {
+					remembered[addr] = true
+				}
+			}
+		}
+	}
+	addr, err := mcpAddrFor(repo, others, remembered)
 	if err != nil {
 		return "", err
+	}
+	if was := rememberedMCPAddr(repo); was != "" && was != addr {
+		// the server remembers the new one when it starts; an agent given the
+		// old one must be given this
+		l.a.logger().Warn("mcp address moved: another project the host runs has it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)
 	}
 	l.taken[repo.MainRoot] = addr
 	return addr, nil

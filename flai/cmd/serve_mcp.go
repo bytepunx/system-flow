@@ -21,10 +21,15 @@ const mcpPorts = 20
 // last, so an agent's configuration survives a restart, else the first free
 // port from mcpDefaultAddr's that is not among taken, since flai host starts
 // one for every project flai serve serves and they cannot all have the one
-// default (S-0096, S-0106).
-func mcpAddrFor(repo *workitem.Repo, taken map[string]bool) (string, error) {
-	if data, err := os.ReadFile(mcpFile(repo, mcpAddrFile)); err == nil && strings.TrimSpace(string(data)) != "" {
-		return strings.TrimSpace(string(data)), nil
+// default (S-0096, S-0106). A remembered address that is among taken, given
+// to another project already, is not given twice: two projects that
+// remembered the same port both got it, and one failed to listen on every
+// start (S-0110). A new port also leaves out avoid, the ports other projects
+// remember while their servers are not running yet, so that one move does
+// not push the next project off its port.
+func mcpAddrFor(repo *workitem.Repo, taken, avoid map[string]bool) (string, error) {
+	if addr := rememberedMCPAddr(repo); addr != "" && !taken[addr] {
+		return addr, nil
 	}
 	host, port, err := net.SplitHostPort(mcpDefaultAddr)
 	if err != nil {
@@ -36,7 +41,7 @@ func mcpAddrFor(repo *workitem.Repo, taken map[string]bool) (string, error) {
 	}
 	for p := first; p < first+mcpPorts; p++ {
 		addr := net.JoinHostPort(host, strconv.Itoa(p))
-		if !taken[addr] && freePort(addr) {
+		if !taken[addr] && !avoid[addr] && freePort(addr) {
 			return addr, nil
 		}
 	}
@@ -65,4 +70,14 @@ func exitWithProcess(ctx context.Context, pid int) context.Context {
 		}
 	}()
 	return ctx
+}
+
+// rememberedMCPAddr is the address the project's server last listened on,
+// or "" when it has none.
+func rememberedMCPAddr(repo *workitem.Repo) string {
+	data, err := os.ReadFile(mcpFile(repo, mcpAddrFile))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
