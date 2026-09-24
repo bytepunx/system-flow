@@ -3,12 +3,21 @@ id: T-0414
 type: task
 nature: remediation
 title: Record the added case in the living design and the operator and user docs
-status: backlog
+status: done
 parent: S-0116
 owner: alex
 created: 2026-09-24T08:46:28Z
-updated: 2026-09-24T08:46:28Z
-transitions: []
+updated: 2026-09-24T08:52:13Z
+transitions:
+  - to: ready
+    at: 2026-09-24T08:51:31Z
+    by: agent-S-0116
+  - to: in-progress
+    at: 2026-09-24T08:51:32Z
+    by: agent-S-0116
+  - to: done
+    at: 2026-09-24T08:52:13Z
+    by: agent-S-0116
 stream: S-0116
 tags: []
 touches: [design/system, docs/operators, docs/users]

@@ -3,12 +3,21 @@ id: T-0413
 type: task
 nature: remediation
 title: A story moved from backlog to ready with room in progress is started, per the designer's answer on TH-0010
-status: backlog
+status: done
 parent: S-0116
 owner: alex
 created: 2026-09-24T08:46:28Z
-updated: 2026-09-24T08:46:28Z
-transitions: []
+updated: 2026-09-24T09:00:42Z
+transitions:
+  - to: ready
+    at: 2026-09-24T08:52:13Z
+    by: agent-S-0116
+  - to: in-progress
+    at: 2026-09-24T08:52:14Z
+    by: agent-S-0116
+  - to: done
+    at: 2026-09-24T09:00:42Z
+    by: agent-S-0116
 stream: S-0116
 tags: []
 touches: [flai/internal/serve]

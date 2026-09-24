@@ -3,17 +3,20 @@ id: T-0412
 type: task
 nature: remediation
 title: The story page says changing the agent of a ready story starts another
-status: in-progress
+status: done
 parent: S-0116
 owner: alex
 created: 2026-09-24T08:46:27Z
-updated: 2026-09-24T08:49:21Z
+updated: 2026-09-24T08:51:31Z
 transitions:
   - to: ready
     at: 2026-09-24T08:49:21Z
     by: agent-S-0116
   - to: in-progress
     at: 2026-09-24T08:49:21Z
+    by: agent-S-0116
+  - to: done
+    at: 2026-09-24T08:51:31Z
     by: agent-S-0116
 stream: S-0116
 tags: []
