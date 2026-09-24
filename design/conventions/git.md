@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-09-15
+updated: 2026-09-24
 audience: agent
 order: 70
 status: active
@@ -38,5 +38,5 @@ How history is made in this repository.
 
 ## Project additions
 - Releases are per component with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`; the template is versioned in `template/template.yaml` and `template/CHANGELOG.md`. `flai accept <id> --by <operator> --trailer "Co-Authored-By: ..."` performs acceptance only (merge, done, archive, commit); `flai push --pending` computes and applies the release before it pushes (S-0094), the same computation `flai release --pending` (by hand, or the board's Publish action) does on its own when you want to see or force it ahead of a push: the component an accepted item delivers to (story tags `cli`, `dashboard`, `template`, or the epic's, and only a component its commits touched: tag a story with where it delivers, and when it touches two, put the main one first) gets the highest delivery-type bump among everything accepted for it since its last tag, every other touched component a patch, and design, docs, or wip-only items contribute nothing. Dependabot merges are a patch on the sub-project they touch, tagged by hand until they are items.
-- Commit messages end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` when an agent authored the change.
+- Commit messages end with a `Co-Authored-By:` trailer naming the model that authored the change, such as `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, when an agent authored it (TH-0009).
 - Each story is worked on `story/S-nnnn` in the worktree `flai stream open` creates under `.flai-cache/worktrees/` (ADR-0019). Story commits land there; `wip/` is written in the main checkout and committed by `flai accept`, which rebases and fast-forwards the branch into `main`. Run `flai stream sync` at every task transition so conflicts with the designer's edits stay small.
