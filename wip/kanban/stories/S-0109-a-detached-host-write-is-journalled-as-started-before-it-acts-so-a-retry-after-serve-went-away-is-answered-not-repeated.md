@@ -6,13 +6,18 @@ title: A detached host write is journalled as started before it acts, so a retry
 status: ready
 owner: alex
 created: 2026-09-24T03:26:14Z
-updated: 2026-09-24T03:52:38Z
+updated: 2026-09-24T06:35:16Z
 transitions:
   - to: ready
     at: 2026-09-24T03:52:38Z
     by: alex
 tags: [cli]
 touches: [flai/internal/hostapi]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
 ---
 # S-0109 A detached host write is journalled as started before it acts, so a retry after serve went away is answered, not repeated
 
