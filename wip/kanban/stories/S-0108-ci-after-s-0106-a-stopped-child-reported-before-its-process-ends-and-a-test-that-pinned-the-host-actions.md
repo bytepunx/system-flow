@@ -3,13 +3,19 @@ id: S-0108
 type: story
 nature: remediation
 title: "CI after S-0106: a stopped child reported before its process ends, and a test that pinned the host actions"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-09-24T03:22:00Z
-updated: 2026-09-24T03:22:00Z
-transitions: []
+updated: 2026-09-24T03:26:45Z
+transitions:
+  - to: ready
+    at: 2026-09-24T03:22:25Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-24T03:22:25Z
+    by: system-flow
 tags: [cli, dashboard]
-touches: [flai/internal/host, flaiover/src/lib/server]
+touches: [flai/internal/host]
 ---
 # S-0108 CI after S-0106: a stopped child reported before its process ends, and a test that pinned the host actions
 
@@ -25,6 +31,9 @@ CI is green again on main after S-0106's push: flai, release flai v1.15.0, flaio
 - [ ] the flai, flaiover, and system-flow check workflows pass on main, and flai's next release publishes
 
 ## Tasks
+- T-0382 flai host reports a child stopping, with its PID, until its process has ended
+- T-0383 flaiover's push-refusal test holds whatever host actions there are
+- T-0384 CI green on main; the release published
 
 ## Notes
 
