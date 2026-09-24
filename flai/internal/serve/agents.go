@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -25,11 +27,14 @@ import (
 //
 // flai serve sees the project's files change. It starts an agent for each
 // story in ready that has none, in pull order, if all of this holds: the
-// agent action is enabled for the project; the story entered ready after
-// flai serve began to serve it, and no agent has been started for it since;
-// the in-progress limit leaves room, counting an agent started for a story
-// still in ready as a story in progress; and nobody else is attending the
-// project.
+// agent action is enabled for the project; no agent has been started for the
+// story since it entered ready, whether that was before or after flai serve
+// began to serve it (S-0112: serve/agents.json remembers each story's runs
+// across a restart); the in-progress limit leaves room, counting an agent
+// started for a story still in ready as a story in progress; and nobody else
+// is attending the project. Each ready story it does not start, and has no
+// agent running, is named in the state's waiting with the reason, and logged
+// when its reason changes.
 //
 // The story says which harness works it, with which model and options (its
 // agent, S-0103); package harness turns that into a command, with the
@@ -182,14 +187,13 @@ type launcher struct {
 	log    func(msg string, args ...any)
 
 	mu      sync.Mutex
-	stale   map[string]bool // ready when flai serve began, and ready since
-	first   bool            // the first look only learns what is ready
-	waiting map[int]bool    // the PIDs of agents this launcher waits for
-	again   chan struct{}   // an agent ended: look again
+	said    map[string]string // why each skipped story waits, as last logged
+	waiting map[int]bool      // the PIDs of agents this launcher waits for
+	again   chan struct{}     // an agent ended: look again
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, first: true, waiting: map[int]bool{}, again: make(chan struct{}, 1),
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1),
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		}}
@@ -330,32 +334,21 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if err != nil {
 		return
 	}
-	ready := map[string]bool{}
-	for _, s := range stories {
-		ready[s.ID] = true
-	}
-	// What was ready when flai serve started is not news: a restart of flai
-	// serve must not start a session nobody asked for. A story stays stale
-	// until it leaves ready.
-	if l.first {
-		l.first, l.stale = false, ready
-		return
-	}
-	for id := range l.stale {
-		if !ready[id] {
-			delete(l.stale, id)
-		}
-	}
+	// The first look after flai serve starts is like any other: what keeps a
+	// restart from starting a story twice is its run in serve/agents.json,
+	// not what happened to be ready when flai serve began (S-0112).
 	l.settleOrphans()
 	cfg := l.config(l.entry.Root)
 	if cfg.Enabled {
 		l.resume(ctx, cfg)
 	}
+	var sk skips
+	defer func() { l.say(sk) }()
 	if len(stories) == 0 {
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = "" })
 		return
 	}
 	if !cfg.Enabled {
+		sk.add("the agent host action is off for this project", stories...)
 		return
 	}
 	st := l.dir.AgentStates()[l.entry.Root]
@@ -366,46 +359,84 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		run := st.Stories[s.ID]
 		switch {
 		case run.live():
-			reserved++ // started, and not in progress yet
-		case l.stale[s.ID]:
+			reserved++ // started, and not in progress yet: it has its agent
 		case run != nil && !startedBefore(run, s.Entered):
-			// tried since it entered ready: it waits to be moved again
+			sk.add(tried(s.ID, run), s)
 		case (s.Agent == nil || s.Agent.Harness == "") && !commandSet:
 			nothing = append(nothing, s) // nothing to start it with, which is no failure
 		default:
 			todo = append(todo, s)
 		}
 	}
-	if len(todo) == 0 {
-		why := ""
-		if len(nothing) > 0 {
-			why = fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name"))
-		}
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = why })
-		return
+	if len(nothing) > 0 {
+		sk.add(fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name")), nothing...)
 	}
-	wait := func(why string) {
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = why })
-		l.log("agent not started", "story", todo[0].ID, "why", why)
+	if len(todo) == 0 {
+		return
 	}
 	within := cfg.Attended
 	if within <= 0 {
 		within = 6 * time.Minute
 	}
 	if yes, sign := attended(l.entry.Root, within, l.now(), ownSigns(l.entry.Root, st, within, l.now())); yes {
-		wait("an agent is attending the project (" + sign + "); it sees the story in its inbox")
+		sk.add("an agent is attending the project ("+sign+"); it sees "+strings.Join(ids(todo), ", ")+" in its inbox", todo...)
 		return
 	}
 	for i, s := range todo {
 		if free >= 0 && reserved >= free {
-			wait(fmt.Sprintf("the in-progress limit leaves no room for %s", strings.Join(ids(todo[i:]), ", ")))
+			sk.add("the in-progress limit leaves no room for "+strings.Join(ids(todo[i:]), ", "), todo[i:]...)
 			return
 		}
 		if l.start(ctx, cfg, s) {
 			reserved++
 		}
 	}
-	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = "" })
+}
+
+// skips are the ready stories a look did not start, and why, in the order
+// said.
+type skips struct {
+	whys  []string
+	story map[string]string
+}
+
+func (k *skips) add(why string, stories ...readyStory) {
+	if k.story == nil {
+		k.story = map[string]string{}
+	}
+	k.whys = append(k.whys, why)
+	for _, s := range stories {
+		k.story[s.ID] = why
+	}
+}
+
+// say puts why each skipped story waits in the state's waiting, and logs a
+// story's reason when it is not the one last logged, so that a look every
+// minute does not repeat it.
+func (l *launcher) say(k skips) {
+	why := strings.Join(k.whys, "; ")
+	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.Waiting = why })
+	for _, id := range slices.Sorted(maps.Keys(k.story)) {
+		if l.said[id] != k.story[id] {
+			l.log("agent not started", "story", id, "why", k.story[id])
+		}
+	}
+	l.said = k.story
+}
+
+// tried says of a story that has had its agent since it entered ready what
+// became of it, and what starts another.
+func tried(id string, run *AgentRun) string {
+	what := "started " + run.Started
+	switch {
+	case run.Error != "":
+		what += ", could not start: " + run.Error
+	case run.Why != "":
+		what += ", " + run.Outcome + ": " + run.Why
+	case run.Outcome != "":
+		what += ", " + run.Outcome
+	}
+	return id + " has had its agent since it entered ready (" + what + "); it gets another when it enters ready again"
 }
 
 func ids(stories []readyStory) []string {

@@ -266,7 +266,7 @@ func Run(ctx context.Context, o Options) error {
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
-			starter.look(cctx, false) // learns what is ready now; starts nothing
+			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			go func() {
 				for {
 					select {

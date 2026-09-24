@@ -3,6 +3,7 @@
 package serve
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -35,6 +36,33 @@ type agentLab struct {
 	stub    string
 	outDir  string
 	now     time.Time
+	o       Options
+	logs    lockedBuffer
+}
+
+// lockedBuffer is a log the stub's goroutines and the test share.
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+// said counts the lines logged as agent not started for story.
+func (lab *agentLab) said(story string) int {
+	lab.logs.mu.Lock()
+	defer lab.logs.mu.Unlock()
+	n := 0
+	for line := range strings.Lines(lab.logs.buf.String()) {
+		if strings.Contains(line, `msg="agent not started"`) && strings.Contains(line, "story="+story+" ") {
+			n++
+		}
+	}
+	return n
 }
 
 func newAgentLab(t *testing.T) *agentLab {
@@ -65,7 +93,7 @@ func newAgentLab(t *testing.T) *agentLab {
 		t.Fatal(err)
 	}
 	lab.cfg = AgentConfig{Enabled: true, Command: []string{lab.stub, "work on {story}", "--root={root}", "$(echo not a shell)"}, Name: "builder"}
-	o := Options{Dir: Dir(filepath.Join(t.TempDir(), "serve")), Logger: slog.New(slog.DiscardHandler), Now: time.Now,
+	o := Options{Dir: Dir(filepath.Join(t.TempDir(), "serve")), Logger: slog.New(slog.NewTextHandler(&lab.logs, nil)), Now: time.Now,
 		Agent: func(string) AgentConfig { return lab.cfg },
 		Host: hostapi.Host{Record: func(e hostapi.Entry) {
 			lab.mu.Lock()
@@ -73,6 +101,7 @@ func newAgentLab(t *testing.T) *agentLab {
 			lab.journal = append(lab.journal, e)
 		}}}
 	_ = os.MkdirAll(string(o.Dir), 0o700)
+	lab.o = o
 	lab.l = newLauncher(o, Entry{Key: "t", Name: "t", Root: root})
 	lab.l.look(context.Background(), false) // what flai serve does when it begins to serve a project
 	return lab
@@ -172,10 +201,18 @@ func TestAStoryEnteringReadyStartsTheOperatorsCommand(t *testing.T) {
 	if len(j) != 1 || j[0].Action != hostapi.ActionAgent || j[0].Outcome != "done" || !strings.Contains(j[0].Detail, "started stub-agent (command) for "+id) || j[0].Project != "t" {
 		t.Errorf("journal: %+v", j)
 	}
-	// tried since it entered ready: another look starts nothing, until it enters ready again
+	// tried since it entered ready: another look starts nothing, until it
+	// enters ready again, and says so once
+	lab.l.look(ctx, false)
 	lab.l.look(ctx, false)
 	if len(lab.entries()) != 1 {
 		t.Errorf("started twice: %+v", lab.entries())
+	}
+	if w := lab.state().Waiting; !strings.Contains(w, id+" has had its agent since it entered ready") || !strings.Contains(w, "failed: ended (exit 0)") {
+		t.Errorf("waiting: %q", w)
+	}
+	if n := lab.said(id); n != 1 {
+		t.Errorf("logged %d times why %s waits", n, id)
 	}
 }
 
@@ -292,40 +329,78 @@ func TestAnAgentThatOutlivedFlaiServeIsSettled(t *testing.T) {
 	}
 }
 
+// S-0112: flai host restarts flai serve on every upgrade, host restart, and
+// crash. The first look after one starts what has had no agent since it
+// entered ready, and nothing that has.
+func TestARestartStartsWhatIsReadyAndNothingTwice(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	// tried: its agent ran and ended with the story still in ready
+	tried := lab.ready("Tried")
+	lab.l.look(ctx, false)
+	waitFor(t, "the first agent ended", func() bool { r := lab.run(tried); return r != nil && r.Ended != "" })
+	// running: its agent outlives the flai serve that started it
+	lab.hold()
+	running := lab.ready("Running")
+	lab.l.look(ctx, false)
+	waitFor(t, "the second agent runs", func() bool { return lab.run(running).live() })
+	// missed: it entered ready while no flai serve ran
+	missed := lab.ready("Missed")
+
+	fresh := newLauncher(lab.o, lab.l.entry)
+	fresh.look(ctx, false)
+	fresh.look(ctx, false)
+	waitFor(t, "the missed story's agent runs", func() bool { return lab.run(missed).live() })
+	started := map[string]int{}
+	for _, e := range lab.entries() {
+		for _, id := range []string{tried, running, missed} {
+			if strings.Contains(e.Detail, "for "+id) {
+				started[id]++
+			}
+		}
+	}
+	if started[tried] != 1 || started[running] != 1 || started[missed] != 1 {
+		t.Errorf("each story started once in all: %v, journal %+v", started, lab.entries())
+	}
+	if w := lab.state().Waiting; !strings.Contains(w, tried+" has had its agent since it entered ready") || strings.Contains(w, running) || strings.Contains(w, missed) {
+		t.Errorf("waiting: %q", w)
+	}
+	lab.release(running)
+	lab.release(missed)
+	waitFor(t, "both end", func() bool { return !lab.run(running).live() && !lab.run(missed).live() })
+}
+
 func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 	ctx := context.Background()
-	t.Run("what was ready before flai serve began is not news", func(t *testing.T) {
-		lab := newAgentLab(t)
-		lab.ready("Was ready")
-		fresh := newLauncher(Options{Dir: lab.l.dir, Logger: slog.New(slog.DiscardHandler), Now: time.Now, Agent: func(string) AgentConfig { return lab.cfg }}, lab.l.entry)
-		fresh.look(ctx, false)
-		fresh.look(ctx, false)
-		if st := lab.state(); st.Running != nil || st.Last != nil {
-			t.Errorf("a restart started a session: %+v", st)
-		}
-	})
 	t.Run("off, or nothing to start it with", func(t *testing.T) {
 		lab := newAgentLab(t)
 		lab.cfg.Enabled = false
-		lab.ready("A")
+		a := lab.ready("A")
 		lab.l.look(ctx, false)
+		if st := lab.state(); !strings.Contains(st.Waiting, "the agent host action is off") || lab.said(a) != 1 {
+			t.Errorf("off: %q, logged %d", st.Waiting, lab.said(a))
+		}
 		lab.cfg.Enabled, lab.cfg.Command = true, nil
 		b := lab.ready("B")
+		lab.l.look(ctx, false)
 		lab.l.look(ctx, false)
 		if st := lab.state(); st.Running != nil || st.Last != nil || len(lab.entries()) != 0 {
 			t.Errorf("started: %+v %+v", st, lab.entries())
 		}
-		if st := lab.state(); !strings.Contains(st.Waiting, b+" name no harness, and no command is set") {
+		if st := lab.state(); !strings.Contains(st.Waiting, a+", "+b+" name no harness, and no command is set") {
 			t.Errorf("waiting: %q", st.Waiting)
+		}
+		if lab.said(a) != 2 || lab.said(b) != 1 {
+			t.Errorf("logged %d for %s and %d for %s: once for each reason", lab.said(a), a, lab.said(b), b)
 		}
 	})
 	t.Run("someone is attending", func(t *testing.T) {
 		lab := newAgentLab(t)
 		_ = os.MkdirAll(filepath.Join(lab.root, ".flai-cache", "mcp"), 0o755)
 		_ = os.WriteFile(filepath.Join(lab.root, ".flai-cache", "mcp", "claude.json"), []byte(`{}`), 0o600)
-		lab.ready("A")
+		a := lab.ready("A")
 		lab.l.look(ctx, false)
-		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "attending") || !strings.Contains(st.Waiting, ".flai-cache/mcp/claude.json") {
+		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "attending") || !strings.Contains(st.Waiting, ".flai-cache/mcp/claude.json") || !strings.Contains(st.Waiting, a) || lab.said(a) != 1 {
 			t.Errorf("attended: %+v", st)
 		}
 		// the index flai writes itself is no sign of an agent; an old cursor is none either
@@ -351,9 +426,9 @@ func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 			t.Fatal(err)
 		}
 		lab.l.look(ctx, false)
-		lab.ready("Waiting")
+		waiting := lab.ready("Waiting")
 		lab.l.look(ctx, false)
-		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "limit") {
+		if st := lab.state(); st.Running != nil || st.Last != nil || !strings.Contains(st.Waiting, "limit leaves no room for "+waiting) || lab.said(waiting) != 1 {
 			t.Errorf("over the limit: %+v", st)
 		}
 	})
