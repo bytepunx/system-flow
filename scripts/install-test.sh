@@ -42,5 +42,15 @@ echo "install-test: flai self-upgrade --dir"
 "$DIR/flai" version | head -1
 
 echo "install-test: flai self-upgrade with no --dir needs no sudo, once installed under a directory the user owns"
-"$DIR/flai" self-upgrade --check | grep -q 'installed at '"$DIR"'/flai' \
+# $DIR is inside this project, where self-upgrade never installs (S-0111), so
+# the binary's own path is checked on a copy outside any project.
+OUTSIDE=$(mktemp -d)
+trap 'rm -rf "$OUTSIDE"' EXIT
+cp "$DIR/flai" "$OUTSIDE/flai"
+"$OUTSIDE/flai" self-upgrade --check | grep -q 'installed at '"$OUTSIDE"'/flai' \
   || { echo "install-test: self-upgrade with no --dir did not resolve to the installed binary's own path" >&2; exit 1; }
+
+echo "install-test: flai self-upgrade with no --dir, run from inside a project, resolves to HOME/.flai/bin"
+env -i HOME="$SCRATCH_HOME" PATH="$PATH" GITHUB_TOKEN="$TOKEN" \
+  "$DIR/flai" self-upgrade --check | grep -q 'installed at '"$SCRATCH_HOME"'/.flai/bin/flai' \
+  || { echo "install-test: self-upgrade inside a project did not resolve to \$HOME/.flai/bin" >&2; exit 1; }
