@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-23
+updated: 2026-09-24
 status: draft
 ---
 
@@ -353,7 +353,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `wait_for_work` | What to do when you have nothing to work on. Answers at once with `resume` and your own story if one is still in progress, `thread` and the threads awaiting you that were written to since it last answered, or `pull` and the first ready story when the in-progress limit leaves room. Otherwise it waits until one of those is true, up to the timeout, and then says whether it was waiting for room or for a story to be ready: call it again. Hold it whenever you are idle, and you pull the next story as soon as there is one |
 | `wait_for_events` | Returns at once when something changed since this agent last looked, otherwise blocks until a thread, item, or narrative changes, or the timeout passes. Returns `events` in the same shape as `changes`, and the changed paths |
 
-An agent that cannot start a process on the host reaches the same server over HTTP. flai serves it itself, one server per project, on the host ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)); the dashboard is not involved and need not run. When `flai serve` serves the project (which `flai dashboard` arranges), it keeps that server running for you ([ADR-0034](../../design/adrs/0034-flai-serve-keeps-each-served-project-s-http-mcp-server-running.md)), and `flai serve status` or `flai mcp status` says where it listens. Otherwise start it yourself:
+An agent that cannot start a process on the host reaches the same server over HTTP. flai serves it itself, one server per project, on the host ([ADR-0030](../../design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)); the dashboard is not involved and need not run. When `flai serve` serves the project (which `flai dashboard` arranges), `flai host` keeps that server running for you ([ADR-0040](../../design/adrs/0040-one-flai-host-per-machine-runs-flai-serve-and-each-project-s-mcp-server-as-its.md)). `flai host status` or `flai mcp status` says where it listens. Otherwise start it yourself:
 
 ```bash
 flai mcp start      # in the background, at http://127.0.0.1:4243/mcp unless --addr says otherwise
@@ -537,23 +537,39 @@ flai dashboard logs [-f]
 flai dashboard stop
 flai dashboard token           # print the token and login link
 flai dashboard token --rotate  # new token; a running dashboard restarts
-flai dashboard --no-serve      # do not register with, or start, flai serve
+flai dashboard --no-serve      # do not register with flai serve, or start flai host
 ```
+
+### flai host: the process that runs flai serve and the MCP servers
+
+`flai dashboard` also starts `flai host`, one process of yours per machine. It runs `flai serve` and each served project's MCP server over HTTP as its children. It starts them again if they end, and stops them all when it stops ([ADR-0040](../../design/adrs/0040-one-flai-host-per-machine-runs-flai-serve-and-each-project-s-mcp-server-as-its.md)). Its state, token, and log are in a folder named `host` beside flai's config file.
+
+```bash
+flai host status            # the host and each process it runs: state, PID, version, restarts
+flai host                   # run it in the foreground to watch it; Ctrl-C stops it and everything it runs
+flai host start             # in the background (flai dashboard does this for you)
+flai host restart serve     # serve, mcp, or all; start <process> and stop <process> too
+flai host check             # is a newer flai published?
+flai host upgrade           # install it and restart the host and everything it runs on it
+flai host stop              # the host and everything it runs
+```
+
+One host runs per machine: a second one is refused and told which runs. The host listens on `127.0.0.1:4241` (`FLAI_HOST_ADDR` moves it), where `flai serve` and these commands reach it with the token it wrote. [The operator guide](../operators/index.md#flai-host-the-process-that-runs-the-others-s-0106) has the rest.
 
 ### flai serve: flai on the host, for the dashboards
 
-`flai dashboard` also starts `flai serve`, a small process of yours on the host, and registers the project with it. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is how the dashboard reads everything it shows (the board, work items, threads, documents, decisions, the inbox, activity, and search) and how it hears that a file changed; and it is how the dashboard changes anything: every move, save, and acceptance made in the browser is done by `flai serve`, by running the same flai command you would have run, as the project's owner. Without `flai serve` the dashboard says on every page that it has no flai to ask. One `flai serve` serves every project you start a dashboard for.
+`flai dashboard` registers the project with `flai serve`, a small process of yours on the host that `flai host` runs. `flai serve` opens a connection to the project's dashboard and keeps it open, and the dashboard asks flai for what it needs over that connection; the dashboard never connects to the host. It is how the dashboard reads everything it shows (the board, work items, threads, documents, decisions, the inbox, activity, and search) and how it hears that a file changed; and it is how the dashboard changes anything: every move, save, and acceptance made in the browser is done by `flai serve`, by running the same flai command you would have run, as the project's owner. Without `flai serve` the dashboard says on every page that it has no flai to ask. One `flai serve` serves every project you start a dashboard for.
 
 ```bash
 flai serve status     # does it run, which projects, which dashboards have it connected
-flai serve            # run it in the foreground to watch it; Ctrl-C stops it
-flai serve start      # run it in the background (flai dashboard does this for you)
-flai serve stop
+flai serve            # run it in the foreground, outside flai host, to watch it; it keeps no MCP server then
+flai serve start      # have flai host run it, starting the host if needed (flai dashboard does this for you)
+flai serve stop       # the host stops it, and keeps it stopped until flai serve start
 ```
 
 `flai hostapi` shows what the dashboard can ask, and answers one question on the terminal: `flai hostapi` lists the methods, `flai hostapi board.get '{"all":true}'` prints what the board page is given.
 
-It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` ends it. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
+It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` stops it until `flai serve start`, and `flai host stop` stops it with everything else. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
 `flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets an acceptance made from the board be pushed and published:
 
@@ -564,10 +580,10 @@ flai serve disable push
 flai serve journal          # every host action asked for, and what became of it
 ```
 
-A second one, `agent`, starts an agent for each story that becomes ready: the harness and model the story names (see [Who works a story](#who-works-a-story-its-agent)), with the program and permissions you set for that harness on the host (`flai serve agent harness`), or a command you wrote for stories that name none (`flai serve agent set -- <program> [args...]`). Turn it on with `flai serve enable agent`. A third, `settings`, lets the dashboard's Settings page change all of this for you ([the operator guide](../operators/index.md#the-settings-host-action-changing-the-hosts-settings-from-the-dashboard-s-0105) says what that gives the dashboard token). What enabling either means, for who can publish a release and who can start a process on your machine, is in the operator guide; read it first.
+A second one, `agent`, starts an agent for each story that becomes ready: the harness and model the story names (see [Who works a story](#who-works-a-story-its-agent)), with the program and permissions you set for that harness on the host (`flai serve agent harness`), or a command you wrote for stories that name none (`flai serve agent set -- <program> [args...]`). Turn it on with `flai serve enable agent`. A third, `host`, lets the dashboard have `flai host` restart `flai serve` or the MCP servers, or upgrade flai and restart on it. A fourth, `settings`, lets the dashboard's Settings page change all of this for you ([the operator guide](../operators/index.md#the-settings-host-action-changing-the-hosts-settings-from-the-dashboard-s-0105) says what that gives the dashboard token). What enabling each means, for who can publish a release and who can start a process on your machine, is in the operator guide; read it first.
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 
-The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port. Nothing of the project is mounted into it: it is given its port, the login token, and a credential for the host's flai, and everything it shows and changes it asks of `flai serve` on your machine, which `flai dashboard` starts alongside it. Commits and acceptances made from the board are therefore made on your machine, as you, wherever the repository lies. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer. By default the container holds no git credential and an acceptance made from the board is pushed from a shell; `flai config set dashboard.push_key <path>` (or `--push-key`) gives it an SSH key to push with, checked before anything starts. Read [Pushing what the board accepts](../operators/index.md#pushing-what-the-board-accepts) first: it changes what the dashboard token is worth.
+The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port. Nothing of the project is mounted into it: it is given its port, the login token, and a credential for the host's flai, and everything it shows and changes it asks of `flai serve` on your machine, which `flai dashboard` has `flai host` start alongside it. Commits and acceptances made from the board are therefore made on your machine, as you, wherever the repository lies. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer. By default the container holds no git credential and an acceptance made from the board is pushed from a shell; `flai config set dashboard.push_key <path>` (or `--push-key`) gives it an SSH key to push with, checked before anything starts. Read [Pushing what the board accepts](../operators/index.md#pushing-what-the-board-accepts) first: it changes what the dashboard token is worth.
 
 The image lives on GHCR and is private while the repository is. When the pull is refused, `flai dashboard` logs Docker into the registry with `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` and retries once. The token needs the `read:packages` scope; `gh auth refresh -h github.com -s read:packages` adds it. Inside the monorepo, `--build` sidesteps the registry by building the image from `flaiover/` as `flaiover:local`.

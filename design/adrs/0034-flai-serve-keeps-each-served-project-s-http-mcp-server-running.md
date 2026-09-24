@@ -4,7 +4,7 @@ title: "flai serve keeps each served project's HTTP MCP server running"
 status: accepted
 date: 2026-09-23
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0040]
 refines: [ADR-0030]
 ---
 
