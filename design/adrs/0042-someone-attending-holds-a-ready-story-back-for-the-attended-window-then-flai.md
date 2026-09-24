@@ -4,7 +4,7 @@ title: "Someone attending holds a ready story back for the attended window, then
 status: accepted
 date: 2026-09-24
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0043]
 refines: [ADR-0038, ADR-0041]
 ---
 
