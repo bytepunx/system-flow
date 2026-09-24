@@ -6,10 +6,13 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -88,6 +91,48 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 		lab.logs.mu.Unlock()
 		if !strings.Contains(logged, `level=WARN msg="agent started past the in-progress limit"`) || !strings.Contains(logged, "story="+id) {
 			t.Errorf("no warning: %s", logged)
+		}
+		lab.release(id)
+	})
+	t.Run("the serving flai settles it and starts it again on an answer", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Asks")
+		run, err := start(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if lab.l.waiting[run.PID] {
+			t.Fatal("the serving launcher waits for a process it did not start")
+		}
+		lab.move(id, workitem.InProgress) // the agent pulled it
+		th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: run.Agent, Text: "Eight or nine?", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		lab.release(id)
+		// The command that started it has exited, and the process is gone:
+		// in this test the process stays this test's unreaped child, so a
+		// reaped one stands in for it.
+		gone := exec.Command("true")
+		_ = gone.Run()
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			r := *s.Stories[id]
+			r.PID = gone.Process.Pid
+			s.put(&r)
+		})
+		_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r.Ended == "" || r.Outcome != OutcomeAsked || r.Thread != th.ID {
+			t.Fatalf("not settled as asking: %+v", r)
+		}
+		if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs again", func() bool { return lab.run(id).live() })
+		if again := lab.run(id); again.Agent != run.Agent || again.Session != run.Session || again.Answered != th.ID {
+			t.Errorf("the same agent, in its session, for the answer: %+v, first %+v", again, run)
 		}
 		lab.release(id)
 	})

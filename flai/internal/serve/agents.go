@@ -415,7 +415,8 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 }
 
 // settleOrphans ends the runs whose process is gone while no launcher waits
-// for it: flai serve was restarted while they ran.
+// for it: flai serve was restarted while they ran, or a command started them
+// on the operator's word and handed them over (S-0115, S-0116).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
@@ -426,7 +427,7 @@ func (l *launcher) settleOrphans() {
 		ended.Ended = l.now().UTC().Format(time.RFC3339)
 		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, run.Story, run.Agent, nil)
 		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(&ended) })
-		l.log("agent ended while flai serve was away", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
+		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 	}
 }
 
