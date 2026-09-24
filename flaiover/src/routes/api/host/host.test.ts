@@ -139,12 +139,12 @@ describe('/api/host (S-0107)', () => {
 			['restart', 'all']
 		]) {
 			asked = [];
-			script[`host.${action}`] = { data: status };
+			script['host.process'] = { data: status };
 			const r = await post({ action, process });
 			expect(r.status).toBe(200);
 			expect(await r.json()).toMatchObject({ version: '1.9.0' });
-			expect(asked[0].method).toBe(`host.${action}`);
-			expect(asked[0].params.process).toBe(process);
+			expect(asked[0].method).toBe('host.process');
+			expect(asked[0].params).toMatchObject({ process, action });
 			expect(String(asked[0].params.request_id)).toMatch(/^[0-9a-f-]{36}$/);
 		}
 	});
@@ -161,7 +161,7 @@ describe('/api/host (S-0107)', () => {
 	});
 
 	it('answers with the host action’s refusal when it is not enabled', async () => {
-		script['host.restart'] = { error: new RepoError(403, 'the host action "host" is not enabled') };
+		script['host.process'] = { error: new RepoError(403, 'the host action "host" is not enabled') };
 		const r = await post({ action: 'restart', process: 'mcp' });
 		expect(r.status).toBe(403);
 		expect((await r.json()).error).toContain('not enabled');

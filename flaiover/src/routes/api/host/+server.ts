@@ -78,8 +78,8 @@ async function hostEnabled(): Promise<boolean> {
 
 /**
  * POST {action, process}: check asks whether a newer flai is released, changing nothing, a read;
- * start, stop, and restart of serve, the MCP servers, or all, and upgrade, are the host action,
- * gated the way the dashboard action is (flai serve enable host). Stopping or restarting serve,
+ * start, stop, and restart of serve, the MCP servers, or all (host.process), and upgrade, are the
+ * host action, gated the way the dashboard action is (flai serve enable host). Stopping or restarting serve,
  * and an upgrade, end the very connection this request came on: the page expects that and polls
  * GET until it answers again. Upgrade gets the longest timeout, since it downloads a release.
  */
@@ -106,8 +106,8 @@ export const POST: RequestHandler = ({ request }) =>
 			throw new RepoError(400, `process must be one of ${PROCESSES.join(', ')}`);
 		}
 		const { data, warnings } = await repo().write(
-			`host.${action}`,
-			{ process },
+			'host.process',
+			{ process, action },
 			{ timeoutMs: 60000 }
 		);
 		return { ...(data as Record<string, unknown>), log: warnings };
