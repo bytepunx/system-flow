@@ -141,17 +141,64 @@ func (lab *agentLab) ready(title string) string { return lab.readyWith(title, ni
 // readyWith makes a story with an agent and moves it to ready.
 func (lab *agentLab) readyWith(title string, a *manifest.Agent) string {
 	lab.t.Helper()
+	id := lab.backlog(title, a)
+	lab.toReady(id)
+	return id
+}
+
+// backlog makes a story with an agent and a criterion, in backlog.
+func (lab *agentLab) backlog(title string, a *manifest.Agent) string {
+	lab.t.Helper()
 	st, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: lab.epic.ID, Owner: "alex", Agent: a, Now: lab.now})
 	if err != nil {
 		lab.t.Fatal(err)
 	}
 	data, _ := os.ReadFile(st.Path)
 	_ = os.WriteFile(st.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644)
-	st, _ = lab.repo.Get(st.ID)
+	return st.ID
+}
+
+// toReady moves a story to ready, as the designer does from the board.
+func (lab *agentLab) toReady(id string) {
+	lab.t.Helper()
+	st, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
 	if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "", lab.now); err != nil {
 		lab.t.Fatal(err)
 	}
-	return st.ID
+}
+
+// S-0116: a story moved from backlog to ready gets its agent at the next look
+// while the in-progress limit has room, and once there is room when it has none.
+func TestAStoryMovedFromBacklogToReadyGetsItsAgentWhenThereIsRoom(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(1)
+	lab.hold()
+	first, second := lab.backlog("First", nil), lab.backlog("Second", nil)
+	lab.l.look(ctx, false)
+	if len(lab.entries()) != 0 {
+		t.Fatalf("a story in backlog was started: %+v", lab.entries())
+	}
+	lab.toReady(first)
+	lab.l.look(ctx, false)
+	waitFor(t, "the first story's agent runs", func() bool { return lab.run(first).live() })
+	// its agent pulls it; the limit is full when the second is moved to ready
+	lab.move(first, workitem.InProgress)
+	lab.toReady(second)
+	lab.l.look(ctx, false)
+	if lab.run(second) != nil || !strings.Contains(lab.state().Waiting, "limit leaves no room for "+second) {
+		t.Fatalf("started over the limit: %+v", lab.state())
+	}
+	// the first reaches review: there is room, and the second is started
+	lab.move(first, workitem.Review)
+	lab.l.look(ctx, false)
+	waitFor(t, "the second story's agent runs", func() bool { return lab.run(second).live() })
+	lab.release(first)
+	lab.release(second)
+	waitFor(t, "both end", func() bool { return !lab.run(first).live() && !lab.run(second).live() })
 }
 
 func (lab *agentLab) state() AgentState { return lab.l.dir.AgentStates()[lab.root] }
