@@ -3,17 +3,20 @@ id: T-0411
 type: task
 nature: remediation
 title: A ready story whose agent is changed after its agent ended gets another
-status: in-progress
+status: done
 parent: S-0116
 owner: alex
 created: 2026-09-24T08:46:27Z
-updated: 2026-09-24T08:46:44Z
+updated: 2026-09-24T08:49:21Z
 transitions:
   - to: ready
     at: 2026-09-24T08:46:44Z
     by: agent-S-0116
   - to: in-progress
     at: 2026-09-24T08:46:44Z
+    by: agent-S-0116
+  - to: done
+    at: 2026-09-24T08:49:21Z
     by: agent-S-0116
 stream: S-0116
 tags: []
