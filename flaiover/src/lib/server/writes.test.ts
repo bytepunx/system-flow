@@ -505,5 +505,5 @@ describe.skipIf(!haveFlai)('host settings through flai', () => {
 		expect(s.host.checks.commands).toEqual([]);
 		expect(s.host.import_roots).not.toContain(folder);
 		await rm(folder, { recursive: true, force: true });
-	});
+	}, 30000); // about twenty flai processes: 4.6 to 5.1 s on a loaded host, over the 5 s default (S-0116)
 });
