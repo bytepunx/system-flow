@@ -369,7 +369,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		} else if err := next.Validate(); err != nil {
 			return nil, invalid("%s", err)
 		}
-		if !sameAgent(it.Agent, next) {
+		if !it.Agent.Same(next) {
 			it.Agent = next
 			changed = append(changed, "agent")
 		}
@@ -648,20 +648,4 @@ func commit(r execx.Runner, dir string, files []string, msg string, trailers []s
 	}
 	out, err := r.Run(dir, "git", "rev-parse", "--short", "HEAD")
 	return strings.TrimSpace(out), true, err
-}
-
-// sameAgent reports whether two agents say the same thing.
-func sameAgent(a, b *manifest.Agent) bool {
-	if a.IsZero() || b.IsZero() {
-		return a.IsZero() && b.IsZero()
-	}
-	if a.Harness != b.Harness || a.Model != b.Model || len(a.Config) != len(b.Config) {
-		return false
-	}
-	for k, v := range a.Config {
-		if w, ok := b.Config[k]; !ok || w != v {
-			return false
-		}
-	}
-	return true
 }

@@ -30,7 +30,8 @@ import (
 // agent action is enabled for the project; no agent has been started for the
 // story since it entered ready, whether that was before or after flai serve
 // began to serve it (S-0112: serve/agents.json remembers each story's runs
-// across a restart); the in-progress limit leaves room, counting an agent
+// across a restart), or its agent has been changed since the last one was
+// started (S-0116); the in-progress limit leaves room, counting an agent
 // started for a story still in ready as a story in progress; and nobody else
 // is attending the project. Each ready story it does not start, and has no
 // agent running, is named in the state's waiting with the reason, and logged
@@ -120,6 +121,16 @@ type AgentRun struct {
 	Outcome string `json:"outcome,omitempty"`
 	Why     string `json:"why,omitempty"`
 	Thread  string `json:"thread,omitempty"`
+	// StoryAgent is the story's agent as it was when this run was started,
+	// empty when it named none, and nil on runs recorded before S-0116: a
+	// story whose agent has changed since is started again.
+	StoryAgent *manifest.Agent `json:"story_agent,omitempty"`
+}
+
+// agentChanged says whether the story's agent says something else than it
+// did when run was started. A run that did not record it counts as unchanged.
+func agentChanged(run *AgentRun, now *manifest.Agent) bool {
+	return run.StoryAgent != nil && !run.StoryAgent.Same(now)
 }
 
 // live is a run that has not ended.
@@ -370,7 +381,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		switch {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
-		case run != nil && !startedBefore(run, s.Entered):
+		case run != nil && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
 		case (s.Agent == nil || s.Agent.Harness == "") && !commandSet:
 			nothing = append(nothing, s) // nothing to start it with, which is no failure
@@ -512,7 +523,7 @@ func tried(id string, run *AgentRun) string {
 	case run.Outcome != "":
 		what += ", " + run.Outcome
 	}
-	return id + " has had its agent since it entered ready (" + what + "); it gets another when it enters ready again"
+	return id + " has had its agent since it entered ready (" + what + "); it gets another when it enters ready again or its agent is changed"
 }
 
 func ids(stories []readyStory) []string {
@@ -581,8 +592,10 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 			run.Session = after[0].Session
 		}
 	}
+	run.StoryAgent = &manifest.Agent{}
 	if story.Agent != nil {
 		run.Model = story.Agent.Model
+		run.StoryAgent = story.Agent
 	}
 	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionAgent, Method: "serve.agent", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
 	fail := func(err error) bool {

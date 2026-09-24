@@ -60,6 +60,22 @@ func (a *Agent) Validate() error {
 	return nil
 }
 
+// Same reports whether a and b say the same thing; nothing set is the same as nil.
+func (a *Agent) Same(b *Agent) bool {
+	if a.IsZero() || b.IsZero() {
+		return a.IsZero() && b.IsZero()
+	}
+	if a.Harness != b.Harness || a.Model != b.Model || len(a.Config) != len(b.Config) {
+		return false
+	}
+	for k, v := range a.Config {
+		if w, ok := b.Config[k]; !ok || w != v {
+			return false
+		}
+	}
+	return true
+}
+
 // ConfigKeys are the config's keys in order.
 func (a *Agent) ConfigKeys() []string {
 	if a == nil {

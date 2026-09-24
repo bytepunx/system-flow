@@ -245,6 +245,100 @@ func TestAStoryEnteringReadyStartsTheOperatorsCommand(t *testing.T) {
 	}
 }
 
+// setAgent changes a story's agent, as the dashboard or flai edit would.
+func (lab *agentLab) setAgent(id string, a *manifest.Agent) {
+	lab.t.Helper()
+	it, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	it.Agent = a
+	if err := lab.repo.Save(it); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// S-0116: a story in ready whose agent failed gets another once its agent is
+// changed, within the in-progress limit, and not while its agent runs.
+func TestAChangedAgentStartsAReadyStoryAgain(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(2)
+	started := func() int { return len(lab.entries()) }
+	ended := func(id string) func() bool {
+		return func() bool { r := lab.run(id); return r != nil && r.Ended != "" }
+	}
+	// a harness flai cannot start: the run fails, and records what it was started with
+	id := lab.readyWith("A", &manifest.Agent{Harness: "no-such-harness"})
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r == nil || r.Outcome != OutcomeFailed || r.StoryAgent == nil || r.StoryAgent.Harness != "no-such-harness" {
+		t.Fatalf("the failed start: %+v", r)
+	}
+	lab.l.look(ctx, false)
+	if started() != 1 || !strings.Contains(lab.state().Waiting, "it gets another when it enters ready again or its agent is changed") {
+		t.Fatalf("started again with nothing changed: %d, %q", started(), lab.state().Waiting)
+	}
+	// the designer changes its agent while it stays in ready
+	lab.setAgent(id, &manifest.Agent{Model: "m1"})
+	lab.l.look(ctx, false)
+	if started() != 2 {
+		t.Fatalf("a changed harness started nothing: %+v", lab.entries())
+	}
+	waitFor(t, "the second run ended", ended(id))
+	if r := lab.run(id); r.StoryAgent == nil || r.StoryAgent.Model != "m1" || r.Harness != harness.Command {
+		t.Errorf("the second run: %+v", r)
+	}
+	lab.l.look(ctx, false)
+	if started() != 2 {
+		t.Fatalf("started again with nothing changed since: %+v", lab.entries())
+	}
+	// a config value is a change; the in-progress limit still holds it back
+	busy := lab.ready("Busy")
+	lab.move(busy, workitem.InProgress)
+	other := lab.ready("Other")
+	lab.move(other, workitem.InProgress)
+	lab.setAgent(id, &manifest.Agent{Model: "m1", Config: map[string]string{"effort": "high"}})
+	lab.l.look(ctx, false)
+	if started() != 2 || !strings.Contains(lab.state().Waiting, "limit leaves no room for "+id) {
+		t.Fatalf("started over the limit: %d, %q", started(), lab.state().Waiting)
+	}
+	lab.move(busy, workitem.Review)
+	lab.hold()
+	lab.l.look(ctx, false)
+	waitFor(t, "the third run", func() bool { return lab.run(id).live() })
+	if started() != 3 || lab.run(id).StoryAgent.Config["effort"] != "high" {
+		t.Fatalf("room again: %+v", lab.run(id))
+	}
+	// a change while its agent runs starts nothing more
+	lab.setAgent(id, &manifest.Agent{Model: "m2"})
+	lab.l.look(ctx, false)
+	if started() != 3 {
+		t.Errorf("a change while its agent ran started another: %+v", lab.entries())
+	}
+	lab.release(id)
+	waitFor(t, "the third run ended", ended(id))
+}
+
+// A run recorded before S-0116 says nothing of the story's agent: it counts as
+// unchanged, so upgrading flai starts no story again on its own.
+func TestARunWithoutItsStorysAgentCountsAsUnchanged(t *testing.T) {
+	for _, c := range []struct {
+		run  *manifest.Agent
+		now  *manifest.Agent
+		want bool
+	}{
+		{nil, &manifest.Agent{Model: "m"}, false},
+		{&manifest.Agent{}, nil, false},
+		{&manifest.Agent{}, &manifest.Agent{Harness: "claude-code"}, true},
+		{&manifest.Agent{Model: "m", Config: map[string]string{"effort": "high"}}, &manifest.Agent{Model: "m", Config: map[string]string{"effort": "high"}}, false},
+		{&manifest.Agent{Model: "m", Config: map[string]string{"effort": "high"}}, &manifest.Agent{Model: "m", Config: map[string]string{"effort": "low"}}, true},
+	} {
+		if got := agentChanged(&AgentRun{StoryAgent: c.run}, c.now); got != c.want {
+			t.Errorf("run %+v, story %+v: changed %v, want %v", c.run, c.now, got, c.want)
+		}
+	}
+}
+
 // S-0104: one agent per story, as many as the in-progress limit leaves room
 // for, counting those started for stories still in ready.
 func TestAnAgentForEveryReadyStoryWithinTheLimit(t *testing.T) {
