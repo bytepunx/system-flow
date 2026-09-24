@@ -3,11 +3,11 @@ id: S-0116
 type: story
 nature: remediation
 title: when a story moves to ready, if there is available capacity, it should be assigned to an agent
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-24T08:37:20Z
-updated: 2026-09-24T09:20:01Z
+updated: 2026-09-24T20:31:41Z
 transitions:
   - to: ready
     at: 2026-09-24T08:37:26Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-24T09:20:01Z
     by: agent-S-0116
+  - to: done
+    at: 2026-09-24T20:31:41Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd, flai/internal/serve, flai/internal/hostapi, flai/internal/harness, flai/internal/config, flai/internal/manifest, flai/internal/itemedit, design/adrs, design/system, design/issues, docs/operators, docs/users]
 agent:
