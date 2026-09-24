@@ -7,8 +7,7 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0017
-  - S-0018
+  - S-0114
   - S-0019
   - S-0028
 ---
