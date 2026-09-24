@@ -93,6 +93,11 @@ export const REQUIRED_METHODS = [
 	'checks.tail',
 	'checks.run',
 	'checks.cancel',
+	// S-0106: flai host, reached through flai serve
+	'host.status',
+	'host.check',
+	'host.process',
+	'host.upgrade',
 	// S-0105: the host's settings, gated by the settings host action
 	'settings.get',
 	'settings.action',

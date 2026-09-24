@@ -176,6 +176,11 @@ const ActionDashboard = "dashboard"
 // the outcome (S-0082).
 const ActionChecks = "checks"
 
+// ActionHost is the host action that has flai host start, stop, or restart
+// flai serve and the MCP servers, and install the newest flai and restart on
+// it (S-0106).
+const ActionHost = "host"
+
 // ActionSettings is the host action that lets a dashboard change the host's
 // settings for a project (S-0105): the other host actions, the agent and its
 // harnesses, the checks, the import folders, and the tokens. Those kept for
@@ -189,6 +194,7 @@ var Actions = map[string]string{
 	ActionAgent:     "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
+	ActionHost:      "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
 	ActionSettings:  "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 }
 
@@ -1034,6 +1040,51 @@ func itemSpecs() map[string]spec {
 			return []string{"dashboard", "stop"}, "", nil
 		}},
 
+		// host.status and host.check: reads of flai host (S-0106): the host,
+		// and each process it keeps; whether a newer flai is published.
+		"host.status": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"host", "status"}, "", nil
+		}),
+		"host.check": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"host", "check"}, "", nil
+		}),
+
+		// host.process and host.upgrade: the host action (S-0106). Both are
+		// detached: restarting flai serve, or the host restarting on a new
+		// flai, ends the connection the request came on.
+		"host.process": {action: ActionHost, describe: describeHost, detachTimeout: 60 * time.Second, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Process string `json:"process"`
+				Action  string `json:"action"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if in.Process != "serve" && in.Process != "mcp" && in.Process != "all" {
+				return nil, "", bad("process must be serve, mcp, or all")
+			}
+			if in.Action != "start" && in.Action != "stop" && in.Action != "restart" {
+				return nil, "", bad("action must be start, stop, or restart")
+			}
+			return []string{"host", in.Action, in.Process}, "", nil
+		}, say: func(raw json.RawMessage) string {
+			var in struct{ Process, Action string }
+			_ = json.Unmarshal(raw, &in)
+			return in.Action + " " + in.Process
+		}},
+		"host.upgrade": {action: ActionHost, describe: describeHost, detachTimeout: 6 * time.Minute, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"host", "upgrade"}, "", nil
+		}},
+
 		// checks.status: a read of what flai checks status already reports:
 		// the current or last run for a story (S-0082).
 		"checks.status": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
@@ -1118,6 +1169,31 @@ func describeChecksRun(res any, err *channel.Error) (outcome, detail string) {
 		return "done", said.Story
 	}
 	return "done", said.Story + ": " + said.Outcome
+}
+
+// describeHost reads flai host upgrade's --json shape for the journal; a
+// process action says what was asked (its say).
+func describeHost(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Restarting bool `json:"restarting"`
+		Upgrade    struct {
+			Installed string `json:"installed"`
+			Previous  string `json:"previous"`
+			Current   string `json:"current"`
+		} `json:"upgrade"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	switch {
+	case said.Restarting:
+		return "done", fmt.Sprintf("installed flai %s over %s; the host restarts on it", said.Upgrade.Installed, said.Upgrade.Previous)
+	case said.Upgrade.Current != "":
+		return "done", "flai " + said.Upgrade.Current + " is the latest"
+	}
+	return "done", ""
 }
 
 // describeDashboardRestart, describeDashboardUpgrade, and describeDashboardStop

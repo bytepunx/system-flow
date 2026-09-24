@@ -54,9 +54,14 @@ var good = map[string]struct {
 	"dashboard.upgrade": {`{` + rid + `}`, "dashboard upgrade --json", ""},
 	"dashboard.stop":    {`{` + rid + `}`, "dashboard stop --json", ""},
 	"checks.status":     {`{"id":"S-0001"}`, "checks status S-0001 --json", ""},
-	"checks.tail":       {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
-	"checks.run":        {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
-	"checks.cancel":     {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
+	// S-0106: flai host, through flai serve
+	"host.status":   {`{}`, "host status --json", ""},
+	"host.check":    {`{}`, "host check --json", ""},
+	"host.process":  {`{"process":"serve","action":"restart",` + rid + `}`, "host restart serve --json", ""},
+	"host.upgrade":  {`{` + rid + `}`, "host upgrade --json", ""},
+	"checks.tail":   {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
+	"checks.run":    {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
+	"checks.cancel": {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}},` + rid + `}`,
@@ -117,9 +122,14 @@ var refused = map[string][]string{
 	"dashboard.upgrade": {`"--force"`, `{}`},
 	"dashboard.stop":    {`"--force"`, `{}`},
 	"checks.status":     {`{"id":"--help"}`, `{"id":"../S-0001"}`},
-	"checks.tail":       {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
-	"checks.run":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
-	"checks.cancel":     {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"host.status":       {`"--force"`},
+	"host.check":        {`"--force"`},
+	"host.process": {`{"process":"--config=/tmp/x","action":"stop",` + rid + `}`, `{"process":"serve","action":"--help",` + rid + `}`,
+		`{"process":"dashboard","action":"stop",` + rid + `}`, `{"process":"serve","action":"restart"}`},
+	"host.upgrade":  {`"--force"`, `{}`},
+	"checks.tail":   {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
+	"checks.run":    {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"checks.cancel": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -554,7 +564,7 @@ func TestChecksHostActionJournalEntry(t *testing.T) {
 // context instead.
 func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 	p := withDocs(t)
-	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run"} {
+	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run", "host.process", "host.upgrade"} {
 		t.Run(name, func(t *testing.T) {
 			parentCtx, cancelParent := context.WithCancel(context.Background())
 			t.Cleanup(cancelParent)
