@@ -3,10 +3,10 @@ id: S-0110
 type: story
 nature: remediation
 title: Two projects that remember the same MCP port both get it from flai host, and one crash-loops
-status: review
+status: done
 owner: alex
 created: 2026-09-24T04:49:46Z
-updated: 2026-09-24T04:54:50Z
+updated: 2026-09-24T05:21:52Z
 transitions:
   - to: ready
     at: 2026-09-24T04:49:46Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-24T04:54:50Z
     by: system-flow
+  - to: done
+    at: 2026-09-24T05:21:52Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 agent:
