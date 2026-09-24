@@ -3,11 +3,20 @@ id: S-0111
 type: story
 nature: remediation
 title: "flai self-upgrade never installs into a project: a binary run from a checkout upgrades into ~/.flai/bin, and flai host restarts on what was installed"
-status: backlog
+status: review
 owner: alex
 created: 2026-09-24T05:09:05Z
-updated: 2026-09-24T05:09:05Z
-transitions: []
+updated: 2026-09-24T05:12:35Z
+transitions:
+  - to: ready
+    at: 2026-09-24T05:09:06Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-09-24T05:09:06Z
+    by: system-flow
+  - to: review
+    at: 2026-09-24T05:12:35Z
+    by: system-flow
 tags: [cli]
 touches: [flai/cmd]
 agent:
@@ -24,12 +33,13 @@ Upgrading flai never writes a release into a repository. The installed flai live
 
 ## Acceptance criteria
 
-- [ ] `flai self-upgrade` with no `--dir`, run by a flai that sits inside a system-flow project (a checkout's `bin/flai`), installs to `$FLAI_INSTALL_DIR` or `~/.flai/bin` instead of over itself, says where, and says to put that folder on PATH ahead of the checkout
-- [ ] its up-to-date answer is about the flai in that folder, so a checkout's build never stops the home install from being made or upgraded
-- [ ] `flai host upgrade` restarts the host on the binary that was installed, so the host and its children run the installed flai after an upgrade
-- [ ] an installed flai outside any project (`~/.flai/bin`, `/usr/local/bin`) is still replaced in place, as before
+- [x] `flai self-upgrade` with no `--dir`, run by a flai that sits inside a system-flow project (a checkout's `bin/flai`), installs to `$FLAI_INSTALL_DIR` or `~/.flai/bin` instead of over itself, says where, and says to put that folder on PATH ahead of the checkout
+- [x] its up-to-date answer is about the flai in that folder, so a checkout's build never stops the home install from being made or upgraded
+- [x] `flai host upgrade` restarts the host on the binary that was installed, so the host and its children run the installed flai after an upgrade
+- [x] an installed flai outside any project (`~/.flai/bin`, `/usr/local/bin`) is still replaced in place, as before
 
 ## Tasks
+- T-0387 self-upgrade installs into ~/.flai/bin when the running flai is inside a project, and the host restarts on the installed binary
 
 ## Notes
 
