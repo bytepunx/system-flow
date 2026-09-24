@@ -3,15 +3,22 @@ id: S-0028
 type: story
 nature: feature
 title: Operator runbooks and settings index
-status: backlog
+status: ready
 parent: E-0004
 owner: alex
 created: 2026-09-15T22:50:52Z
-updated: 2026-09-15T22:50:52Z
-transitions: []
+updated: 2026-09-24T08:06:46Z
+transitions:
+  - to: ready
+    at: 2026-09-24T07:58:46Z
+    by: alex
 tags: [docs, operators]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
 ---
-
 # S-0028 Operator runbooks and settings index
 
 ## Goal
