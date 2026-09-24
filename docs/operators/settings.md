@@ -184,7 +184,6 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--all-projects` | [flai serve disable](../users/flai-reference.md#flai-serve-disable), [flai serve enable](../users/flai-reference.md#flai-serve-enable) |
 | `--apply` | [flai release](../users/flai-reference.md#flai-release) |
 | `--attach` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
-| `--attended-minutes` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set) |
 | `--autocommit` | [flai adr accept](../users/flai-reference.md#flai-adr-accept), [flai adr new](../users/flai-reference.md#flai-adr-new), [flai agent clear](../users/flai-reference.md#flai-agent-clear), [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--before` | [flai order](../users/flai-reference.md#flai-order) |
 | `--bind` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
