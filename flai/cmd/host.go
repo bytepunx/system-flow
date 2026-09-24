@@ -379,6 +379,11 @@ func (a *app) runHost(ctx context.Context) error {
 		Serve: l.serve, MCP: l.mcp, Check: l.check, Upgrade: l.upgrade, Grace: hostGrace,
 	})
 	if errors.Is(err, host.ErrRestart) {
+		// the upgrade may have installed elsewhere than this binary: a flai
+		// run from a checkout installs under ~/.flai/bin (S-0111)
+		if to := l.installedTo(); to != "" {
+			exe = to
+		}
 		a.logger().Info("host restarting on the upgraded flai", "component", "host", "exe", exe)
 		return host.Reexec(exe)
 	}
@@ -393,10 +398,11 @@ type hostLauncher struct {
 	config string
 	dir    string
 
-	mu    sync.Mutex
-	taken map[string]string // the MCP address given to each root, so two never share one
-	ver   string
-	verAt time.Time
+	mu        sync.Mutex
+	taken     map[string]string // the MCP address given to each root, so two never share one
+	installed string            // where the last upgrade installed flai
+	ver       string
+	verAt     time.Time
 }
 
 // version is the flai the children start from: the binary on disk, which an
@@ -541,7 +547,19 @@ func (l *hostLauncher) upgrade(ctx context.Context) (any, bool, error) {
 		return nil, false, err
 	}
 	_, installed := m["installed"]
+	if path, ok := m["path"].(string); ok && installed {
+		l.mu.Lock()
+		l.installed = path
+		l.mu.Unlock()
+	}
 	return m, installed, nil
+}
+
+// installedTo is where the last upgrade installed flai, "" when none did.
+func (l *hostLauncher) installedTo() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.installed
 }
 
 // hostMCP is flai serve's way to have its projects' MCP servers kept: it
