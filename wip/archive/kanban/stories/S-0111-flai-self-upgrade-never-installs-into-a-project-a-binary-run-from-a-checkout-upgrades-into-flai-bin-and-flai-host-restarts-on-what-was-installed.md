@@ -3,10 +3,10 @@ id: S-0111
 type: story
 nature: remediation
 title: "flai self-upgrade never installs into a project: a binary run from a checkout upgrades into ~/.flai/bin, and flai host restarts on what was installed"
-status: review
+status: done
 owner: alex
 created: 2026-09-24T05:09:05Z
-updated: 2026-09-24T05:12:35Z
+updated: 2026-09-24T05:56:10Z
 transitions:
   - to: ready
     at: 2026-09-24T05:09:06Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-24T05:12:35Z
     by: system-flow
+  - to: done
+    at: 2026-09-24T05:56:10Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 agent:
