@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -17,7 +18,7 @@ import (
 // The channel between the dashboard and flai on the host (ADR-0029). flai
 // dashboard makes the credential the two prove to each other, hands it to
 // the container as a secret, registers the project with flai serve, and
-// starts flai serve when it is not running. The credential is not the login
+// starts flai host, which runs flai serve, when it is not running. The credential is not the login
 // token: it opens nothing but the agent endpoint, and it is never sent.
 
 const (
@@ -67,9 +68,10 @@ func (s dashboardSettings) dialURL() string {
 	return fmt.Sprintf("http://%s:%d", host, s.Port)
 }
 
-// connectServe registers the project with flai serve and makes sure one is
-// running. It reports what it did; a failure here leaves a dashboard that
-// works as before, so it is told and not fatal.
+// connectServe registers the project with flai serve and makes sure flai
+// host runs, which runs flai serve (S-0106). It reports what it did; a
+// failure here leaves a dashboard that works as before, so it is told and not
+// fatal.
 func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note string) {
 	if repo == nil {
 		return a.connectServeFolder(s)
@@ -81,34 +83,36 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 	if err := a.serveDir().Register(entry); err != nil {
 		return "  host flai: not registered: " + err.Error() + "\n"
 	}
-	start := a.ensureServe
-	if a.serveStarter != nil {
-		start = a.serveStarter
-	}
-	st, started, err := start()
+	st, started, err := a.ensureHost()
 	switch {
 	case err != nil:
-		return "  host flai: registered, but flai serve did not start: " + err.Error() + "\n    start it with: flai serve start\n"
+		return "  host flai: registered, but flai host did not start: " + err.Error() + "\n    start it with: flai host start\n"
 	case started:
-		return fmt.Sprintf("  host flai: flai serve started (pid %d) and will connect to this dashboard; flai serve status shows it\n", st.PID)
+		return fmt.Sprintf("  host flai: flai host started (pid %d); it runs flai serve, which will connect to this dashboard; flai host status shows it\n", st.PID)
 	}
-	return fmt.Sprintf("  host flai: flai serve is running (pid %d) and will connect to this dashboard\n", st.PID)
+	return fmt.Sprintf("  host flai: flai host is running (pid %d); its flai serve will connect to this dashboard\n", st.PID)
 }
 
-// hostFlaiStatus is the part of flai serve's state about this project.
+// hostFlaiStatus is the part of flai serve's state about this project, and
+// whether flai host, which runs flai serve, runs (S-0106).
 type hostFlaiStatus struct {
-	Running    bool   `json:"running"`
-	PID        int    `json:"pid,omitempty"`
-	Since      string `json:"since,omitempty"`
-	Registered bool   `json:"registered"`
-	Connected  bool   `json:"connected"`
-	ConnSince  string `json:"connected_since,omitempty"`
-	LastError  string `json:"last_error,omitempty"`
-	Projects   int    `json:"projects"`
+	HostRunning bool   `json:"host_running"`
+	HostPID     int    `json:"host_pid,omitempty"`
+	Running     bool   `json:"running"`
+	PID         int    `json:"pid,omitempty"`
+	Since       string `json:"since,omitempty"`
+	Registered  bool   `json:"registered"`
+	Connected   bool   `json:"connected"`
+	ConnSince   string `json:"connected_since,omitempty"`
+	LastError   string `json:"last_error,omitempty"`
+	Projects    int    `json:"projects"`
 }
 
 func (a *app) hostFlai(root string) hostFlaiStatus {
 	out := hostFlaiStatus{}
+	if h, alive := a.hostDir().ReadStatus(time.Now()); alive {
+		out.HostRunning, out.HostPID = true, h.PID
+	}
 	st, err := a.readServeStatus()
 	if err != nil {
 		return out
@@ -130,8 +134,10 @@ func (a *app) hostFlai(root string) hostFlaiStatus {
 
 func (h hostFlaiStatus) describe() string {
 	switch {
+	case !h.Running && h.HostRunning:
+		return fmt.Sprintf("  host flai: flai host runs (pid %d) but flai serve does not; flai host status says why\n", h.HostPID)
 	case !h.Running:
-		return "  host flai: flai serve is not running; start it with flai serve start (or flai dashboard stop, then flai dashboard)\n"
+		return "  host flai: flai host is not running; start it with flai host start, which runs flai serve\n"
 	case !h.Registered:
 		return fmt.Sprintf("  host flai: flai serve runs (pid %d, since %s, %d project(s)) but this project is not registered with it; restart the dashboard\n", h.PID, h.Since, h.Projects)
 	case h.Connected:
@@ -183,25 +189,21 @@ func (a *app) connectServeFolder(s dashboardSettings) (note string) {
 	if len(keys) > 0 {
 		registered = fmt.Sprintf("registered the %d project(s) below this folder: %s", len(keys), strings.Join(keys, ", "))
 	}
-	start := a.ensureServe
-	if a.serveStarter != nil {
-		start = a.serveStarter
-	}
-	st, started, err := start()
+	st, started, err := a.ensureHost()
 	switch {
 	case err != nil:
-		return named + "  host flai: flai serve did not start: " + err.Error() + "\n    start it with: flai serve start\n"
+		return named + "  host flai: flai host did not start: " + err.Error() + "\n    start it with: flai host start\n"
 	case started:
-		return named + fmt.Sprintf("  host flai: flai serve started (pid %d); %s\n", st.PID, registered)
+		return named + fmt.Sprintf("  host flai: flai host started (pid %d) and runs flai serve; %s\n", st.PID, registered)
 	}
-	return named + fmt.Sprintf("  host flai: flai serve is running (pid %d); %s\n", st.PID, registered)
+	return named + fmt.Sprintf("  host flai: flai host is running (pid %d); %s\n", st.PID, registered)
 }
 
 // describeFolder is describe outside any project (S-0101): there is nothing
 // to be registered or connected here, only flai serve itself to report.
 func (h hostFlaiStatus) describeFolder() string {
 	if !h.Running {
-		return "  host flai: no project here; flai serve is not running, start it with flai serve start (or flai dashboard)\n"
+		return "  host flai: no project here; flai serve is not running, start it with flai host start (or flai dashboard)\n"
 	}
 	return fmt.Sprintf("  host flai: no project here; flai serve runs (pid %d, since %s, serving %d project(s))\n", h.PID, h.Since, h.Projects)
 }

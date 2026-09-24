@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
@@ -167,9 +168,9 @@ func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 	if a.clock == nil {
 		a.clock = func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) }
 	}
-	if a.serveStarter == nil {
-		// No test starts a real flai serve: the test binary is not flai.
-		a.serveStarter = func() (serve.Status, bool, error) { return serve.Status{PID: 4242}, true, nil }
+	if a.hostStarter == nil {
+		// No test starts a real flai host: the test binary is not flai.
+		a.hostStarter = func() (host.Status, bool, error) { return host.Status{PID: 4242}, true, nil }
 	}
 	if a.sleep == nil {
 		a.sleep = func(time.Duration) {} // tests never wait for a real interval

@@ -201,7 +201,7 @@ func (a *app) printServeStatus() error {
 		return a.printJSON(st)
 	}
 	if !st.Running {
-		fmt.Fprintln(a.out, "flai serve is not running (flai serve start, or flai dashboard in a project)")
+		fmt.Fprintln(a.out, "flai serve is not running (flai serve start, or flai host start, or flai dashboard in a project)")
 	} else {
 		fmt.Fprintf(a.out, "flai serve %s running since %s (pid %d)\n", st.Status.Version, st.Status.Started, st.Status.PID)
 	}

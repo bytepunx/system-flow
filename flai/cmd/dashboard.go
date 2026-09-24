@@ -114,8 +114,9 @@ and starts no second container. The container is given that port, the one
 login token, and the one credential flai serve proves itself with, kept
 beside flai serve's state, and nothing else: no file of any project is
 mounted into it (ADR-0031). Everything it shows and changes it asks of flai
-serve on this host, which this command registers the project with and
-starts. Image, tag, port, and bind come from flags, then the dashboard
+serve on this host, which this command registers the project with; it
+starts flai host, which runs flai serve and the MCP servers, when none runs
+(S-0106). Image, tag, port, and bind come from flags, then the dashboard
 section of system-flow.yaml, then config; they matter only the first time,
 when they decide what the shared container is started with.`,
 		Example: `  flai dashboard
@@ -140,7 +141,7 @@ when they decide what the shared container is started with.`,
 	f.BoolVar(&pull, "pull", false, "pull the image even if present")
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
-	f.BoolVar(&noServe, "no-serve", false, "do not register the project with flai serve or start it; the dashboard then has no flai on the host to ask (ADR-0029)")
+	f.BoolVar(&noServe, "no-serve", false, "do not register the project with flai serve or start flai host; the dashboard then has no flai on the host to ask (ADR-0029)")
 	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
 	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a),
 		newDashboardRestartCmd(a), newDashboardCheckCmd(a), newDashboardUpgradeCmd(a))
@@ -337,7 +338,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		}
 		a.logger().Info("dashboard started", "component", "dashboard", "container", s.Name, "id", short(id), "url", s.url(), "bind", s.Bind)
 	}
-	serveNote := "  host flai: not started (--no-serve); flai serve start connects it\n"
+	serveNote := "  host flai: not started (--no-serve); flai host start runs flai serve, which connects it\n"
 	if !noServe {
 		serveNote = a.connectServe(repo, s)
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
@@ -51,8 +52,9 @@ func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T
 	if strings.Contains(run, strings.TrimSpace(string(key))) || strings.Contains(out, strings.TrimSpace(string(key))) {
 		t.Error("the credential itself appears in the command line or the output")
 	}
-	if !strings.Contains(out, "host flai: flai serve started (pid 4242)") {
-		t.Errorf("output does not say flai serve was started:\n%s", out)
+	// S-0106: the dashboard boots flai host, which runs flai serve
+	if !strings.Contains(out, "host flai: flai host started (pid 4242); it runs flai serve") {
+		t.Errorf("output does not say flai host was started:\n%s", out)
 	}
 	entries, _ := serve.DirFor(cfg).Projects()
 	if len(entries) != 1 || entries[0].Key != "harbour" || entries[0].Root != root || entries[0].URL != "http://127.0.0.1:5555" || entries[0].KeyFile != keyFile {
@@ -65,6 +67,10 @@ func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T
 		Connections: map[string]channel.State{root: {URL: "http://127.0.0.1:5555", Connected: true, Since: "2026-09-20T07:00:01Z"}}}
 	data, _ := json.Marshal(st)
 	_ = os.WriteFile(filepath.Join(string(serve.DirFor(cfg)), "state.json"), data, 0o600)
+	// and flai host, which runs it (S-0106)
+	hst, _ := json.Marshal(host.Status{PID: os.Getpid(), Version: "test", Updated: time.Now().UTC().Format(time.RFC3339)})
+	_ = os.MkdirAll(string(host.DirFor(cfg)), 0o700)
+	_ = os.WriteFile(filepath.Join(string(host.DirFor(cfg)), "state.json"), hst, 0o600)
 	out, _, _ = runWith(t, root, f, "dashboard", "status")
 	if !strings.Contains(out, "host flai: connected since 2026-09-20T07:00:01Z") || !strings.Contains(out, "serving 1 project(s)") {
 		t.Errorf("status:\n%s", out)
@@ -73,7 +79,7 @@ func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T
 	var js struct {
 		HostFlai hostFlaiStatus `json:"host_flai"`
 	}
-	if err := json.Unmarshal([]byte(out), &js); err != nil || !js.HostFlai.Connected || !js.HostFlai.Registered || js.HostFlai.PID != os.Getpid() {
+	if err := json.Unmarshal([]byte(out), &js); err != nil || !js.HostFlai.Connected || !js.HostFlai.Registered || js.HostFlai.PID != os.Getpid() || !js.HostFlai.HostRunning || js.HostFlai.HostPID != os.Getpid() {
 		t.Errorf("status json: %v %+v\n%s", err, js, out)
 	}
 
