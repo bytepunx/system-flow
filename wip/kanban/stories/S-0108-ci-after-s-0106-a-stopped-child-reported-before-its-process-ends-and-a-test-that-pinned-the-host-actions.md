@@ -3,16 +3,19 @@ id: S-0108
 type: story
 nature: remediation
 title: "CI after S-0106: a stopped child reported before its process ends, and a test that pinned the host actions"
-status: in-progress
+status: review
 owner: alex
 created: 2026-09-24T03:22:00Z
-updated: 2026-09-24T03:26:45Z
+updated: 2026-09-24T03:34:32Z
 transitions:
   - to: ready
     at: 2026-09-24T03:22:25Z
     by: system-flow
   - to: in-progress
     at: 2026-09-24T03:22:25Z
+    by: system-flow
+  - to: review
+    at: 2026-09-24T03:34:32Z
     by: system-flow
 tags: [cli, dashboard]
 touches: [flai/internal/host]
@@ -25,9 +28,9 @@ CI is green again on main after S-0106's push: flai, release flai v1.15.0, flaio
 
 ## Acceptance criteria
 
-- [ ] `flai host` reports a child as stopped only once its process has ended; until then it is stopping, with its PID, and `TestTheHostKeepsTheMCPServersServeAsksFor` no longer races on a slow runner
-- [ ] flaiover's push-refusal test no longer breaks when a host action is added
-- [ ] `flai check --strict` has no warning on main
+- [x] `flai host` reports a child as stopped only once its process has ended; until then it is stopping, with its PID, and `TestTheHostKeepsTheMCPServersServeAsksFor` no longer races on a slow runner
+- [x] flaiover's push-refusal test no longer breaks when a host action is added
+- [x] `flai check --strict` has no warning on main
 - [ ] the flai, flaiover, and system-flow check workflows pass on main, and flai's next release publishes
 
 ## Tasks
