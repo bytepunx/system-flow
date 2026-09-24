@@ -1,10 +1,13 @@
-.PHONY: check flai test integration smoke install-test flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
+.PHONY: check flai flai-reference test integration smoke install-test flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
 
 flai: ## Build bin/flai from source
 	scripts/flai-build.sh
+
+flai-reference: ## Regenerate docs/users/flai-reference.md from the command help
+	scripts/flai-reference.sh
 
 test: ## Behavior tests (fast, run on every iteration)
 	scripts/test.sh
