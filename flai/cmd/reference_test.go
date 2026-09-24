@@ -127,3 +127,92 @@ func TestReferenceIsCurrent(t *testing.T) {
 		t.Fatal("docs/users/flai-reference.md is stale: run make flai-reference")
 	}
 }
+
+func TestRenderFlagIndex(t *testing.T) {
+	root := &cobra.Command{Use: "tool", Short: "A tool"}
+	root.PersistentFlags().BoolP("yes", "y", false, "answer yes")
+	group := &cobra.Command{Use: "item", Short: "Work with items"}
+	group.PersistentFlags().String("project", "", "the project")
+	show := &cobra.Command{Use: "show", Short: "Show one item", Run: func(*cobra.Command, []string) {}}
+	show.Flags().Int("depth", 2, "how deep")
+	show.Flags().Bool("dry", false, "change nothing")
+	show.Flags().String("secret", "", "hidden")
+	_ = show.Flags().MarkHidden("secret")
+	list := &cobra.Command{Use: "list", Short: "List items", Run: func(*cobra.Command, []string) {}}
+	list.Flags().IntP("depth", "d", 1, "how deep")
+	list.Flags().Bool("dry-run", false, "change nothing")
+	group.AddCommand(show, list)
+	root.AddCommand(group)
+
+	got := renderFlagIndex(root, "../ref.md")
+	want := "| Flag | Taken by |\n|------|----------|\n" +
+		"| `--depth` | [tool item show](../ref.md#tool-item-show) |\n" +
+		"| `-d`, `--depth` | [tool item list](../ref.md#tool-item-list) |\n" +
+		"| `--dry` | [tool item show](../ref.md#tool-item-show) |\n" +
+		"| `--dry-run` | [tool item list](../ref.md#tool-item-list) |\n" +
+		"| `--no-descriptions` | [tool completion bash](../ref.md#tool-completion-bash), [tool completion fish](../ref.md#tool-completion-fish), [tool completion powershell](../ref.md#tool-completion-powershell), [tool completion zsh](../ref.md#tool-completion-zsh) |\n" +
+		"| `--project` | [tool item](../ref.md#tool-item) |\n" +
+		"| `-y`, `--yes` | every command ([global flags](../ref.md#tool)) |\n"
+	if got != want {
+		t.Errorf("flag index:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestReferenceWritesFlagIndexBetweenMarkers(t *testing.T) {
+	dir := t.TempDir()
+	ref := filepath.Join(dir, "users", "flai-reference.md")
+	page := filepath.Join(dir, "operators", "settings.md")
+	_ = os.MkdirAll(filepath.Dir(ref), 0o755)
+	_ = os.MkdirAll(filepath.Dir(page), 0o755)
+	hand := "---\ntitle: Settings\nupdated: 2026-01-01\nstatus: active\n---\n\n# Settings\n\nupdated: prose stays.\n\n## Flags\n\n" +
+		flagIndexBegin + "\nold rows\n" + flagIndexEnd + "\n\nAfter the index.\n"
+	_ = os.WriteFile(page, []byte(hand), 0o644)
+	day1 := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	if _, errOut, code := runInAt(t, ".", day1, "reference", "--write", ref, "--settings", page); code != 0 {
+		t.Fatalf("write: %s", errOut)
+	}
+	got, _ := os.ReadFile(page)
+	for _, want := range []string{
+		"updated: 2026-09-01\n",
+		"\nupdated: prose stays.\n",
+		"| `--config` | every command ([global flags](../users/flai-reference.md#flai))",
+		"[flai board](../users/flai-reference.md#flai-board)",
+		"|\n" + flagIndexEnd + "\n\nAfter the index.\n",
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("page lacks %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(string(got), "old rows") {
+		t.Errorf("the old index was kept:\n%s", got)
+	}
+	out, _, _ := runInAt(t, ".", day1.AddDate(0, 0, 1), "reference", "--write", ref, "--settings", page)
+	if again, _ := os.ReadFile(page); string(again) != string(got) || !strings.Contains(out, page+" is up to date") {
+		t.Errorf("a current index was rewritten: %s", out)
+	}
+
+	_ = os.WriteFile(page, []byte("# No markers\n"), 0o644)
+	if _, errOut, code := runInAt(t, ".", day1, "reference", "--write", ref, "--settings", page); code == 0 || !strings.Contains(errOut, "no flag markers") {
+		t.Errorf("a page without markers: code %d, %s", code, errOut)
+	}
+	if _, errOut, code := runInAt(t, ".", day1, "reference", "--settings", page); code == 0 || !strings.Contains(errOut, "--settings needs --write") {
+		t.Errorf("--settings alone: code %d, %s", code, errOut)
+	}
+}
+
+// The committed flag index is what the help says now; make flai-reference
+// regenerates it with the reference.
+func TestFlagIndexIsCurrent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("reads the monorepo's docs")
+	}
+	page, err := os.ReadFile(settingsPage)
+	if err != nil {
+		t.Fatalf("read the settings index: %v", err)
+	}
+	_, rest, _ := strings.Cut(string(page), flagIndexBegin+"\n")
+	index, _, ok := strings.Cut(rest, flagIndexEnd)
+	if !ok || index != renderFlagIndex(newRootCmd(io.Discard, io.Discard), "../users/flai-reference.md") {
+		t.Fatal("the flag index in docs/operators/settings.md is stale: run make flai-reference")
+	}
+}

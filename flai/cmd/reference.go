@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -15,40 +16,61 @@ import (
 const referenceTitle = "flai command reference"
 
 func newReferenceCmd(a *app) *cobra.Command {
-	var write string
+	var write, settings string
 	c := &cobra.Command{
 		Use:   "reference",
 		Short: "Print the command reference as markdown, generated from this help",
 		Long: `Walk the command tree and print every command that help lists, with its
 usage, description, aliases, examples, and flags, as one markdown page. With
 --write the page replaces the file only when the commands changed, so its
-updated date moves only then. Maintainers run it as make flai-reference.`,
-		Example: `  flai reference --write docs/users/flai-reference.md`,
+updated date moves only then. With --settings as well, the index of every
+flag between the flag markers of that page is replaced, linked to the
+reference, and the rest of the page is left as it is. Maintainers run it as
+make flai-reference.`,
+		Example: `  flai reference --write docs/users/flai-reference.md --settings docs/operators/settings.md`,
 		Hidden:  true,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			body := renderReference(cmd.Root())
 			if write == "" {
-				_, err := fmt.Fprint(a.out, referencePage(a.now().Format("2006-01-02"), body))
+				if settings != "" {
+					return errors.New("--settings needs --write: the flag index links to the reference it writes")
+				}
+				_, err := fmt.Fprint(a.out, referencePage(a.now().Format("2006-01-02"), renderReference(cmd.Root())))
 				return err
 			}
-			old, err := os.ReadFile(write)
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("read the reference to compare: %w", err)
+			if err := a.writeReference(write, renderReference(cmd.Root())); err != nil {
+				return err
 			}
-			if err == nil && referenceBody(string(old)) == body {
-				fmt.Fprintf(a.out, "%s is up to date\n", write)
+			if settings == "" {
 				return nil
 			}
-			if err := os.WriteFile(write, []byte(referencePage(a.now().Format("2006-01-02"), body)), 0o644); err != nil {
-				return fmt.Errorf("write the reference: %w", err)
+			link, err := filepath.Rel(filepath.Dir(settings), write)
+			if err != nil {
+				return fmt.Errorf("link the flag index to the reference: %w", err)
 			}
-			fmt.Fprintf(a.out, "wrote %s\n", write)
-			return nil
+			return a.writeFlagIndex(settings, renderFlagIndex(cmd.Root(), filepath.ToSlash(link)))
 		},
 	}
 	c.Flags().StringVar(&write, "write", "", "file to write the page to, left alone when only the date would change")
+	c.Flags().StringVar(&settings, "settings", "", "page whose flag index to replace between its flag markers, left alone when it is current")
 	return c
+}
+
+// writeReference replaces the reference at path when its body changed.
+func (a *app) writeReference(path, body string) error {
+	old, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read the reference to compare: %w", err)
+	}
+	if err == nil && referenceBody(string(old)) == body {
+		fmt.Fprintf(a.out, "%s is up to date\n", path)
+		return nil
+	}
+	if err := os.WriteFile(path, []byte(referencePage(a.now().Format("2006-01-02"), body)), 0o644); err != nil {
+		return fmt.Errorf("write the reference: %w", err)
+	}
+	fmt.Fprintf(a.out, "wrote %s\n", path)
+	return nil
 }
 
 // referencePage is the reference with its front matter.

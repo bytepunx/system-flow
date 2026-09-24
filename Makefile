@@ -6,7 +6,7 @@ check: ## Validate this repo against the standard (flai check --strict)
 flai: ## Build bin/flai from source
 	scripts/flai-build.sh
 
-flai-reference: ## Regenerate docs/users/flai-reference.md from the command help
+flai-reference: ## Regenerate docs/users/flai-reference.md and the flag index in docs/operators/settings.md from the command help
 	scripts/flai-reference.sh
 
 test: ## Behavior tests (fast, run on every iteration)

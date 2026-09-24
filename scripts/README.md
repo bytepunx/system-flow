@@ -7,7 +7,7 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `env.sh` | Sourced by the others: puts Go, `~/go/bin`, and `./bin` on PATH, sets `FLAI_CONFIG` to `.flai-cache/config.json` |
 | `flai.sh` | Runs `bin/flai`, building it from `flai/` first if missing or stale |
 | `flai-build.sh` | Builds `bin/flai` from source |
-| `flai-reference.sh` | Regenerates `docs/users/flai-reference.md` from the command help (`go run`, leaves `bin/flai` alone) |
+| `flai-reference.sh` | Regenerates `docs/users/flai-reference.md` and the flag index in `docs/operators/settings.md` from the command help (`go run`, leaves `bin/flai` alone) |
 | `test.sh` | Behavior tests: `go test -race -short` in `flai/`, seconds, no external dependencies |
 | `integration.sh` | Integration tests: full `go test -race` including real git and the monorepo round-trip |
 | `smoke.sh` | Smoke tests: render the template and check it, then check this repository |
