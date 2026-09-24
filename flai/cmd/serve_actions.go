@@ -25,8 +25,9 @@ import (
 // Host actions (S-0078, ADR-0029): what flai serve may do on this host, with
 // the operator's credentials, because a dashboard asked. None is enabled
 // until the operator enables it by name, here, in a shell on the host. The
-// setting lives in the host's flai configuration; the journal lies beside
-// flai serve's state. No method a dashboard can ask for touches either.
+// setting lives in the host's flai configuration; the journal, and the
+// records that answer a repeated detached write (S-0109), lie beside flai
+// serve's state. No method a dashboard can ask for touches either.
 
 // host is the operator's say, read from the configuration at every question,
 // so that enabling and disabling take effect without a restart.
@@ -46,6 +47,7 @@ func (a *app) host() hostapi.Host {
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st)}
 		},
 		Settings: a.hostSettings,
+		Requests: a.serveDir().Requests,
 		Record: func(e hostapi.Entry) {
 			if err := a.journal(e); err != nil {
 				a.logger().Warn("host action not journalled", "component", "serve", "action", e.Action, "err", err.Error())

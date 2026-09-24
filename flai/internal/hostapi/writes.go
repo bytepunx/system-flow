@@ -143,6 +143,103 @@ func (j *journal) put(key string, res any, err *channel.Error) {
 	j.done[key] = journalled{at: j.now(), res: res, err: err}
 }
 
+// Request is the record of one detached write, kept by its request ID from
+// before it acts, so that a repeat is answered and not done again even when
+// the write ended the flai serve that took it (S-0109).
+type Request struct {
+	Started time.Time      `json:"started"`
+	PID     int            `json:"pid"`   // the flai serve that took it
+	Until   time.Time      `json:"until"` // forgotten after this
+	Done    bool           `json:"done"`
+	Result  *Written       `json:"result,omitempty"`
+	Err     *channel.Error `json:"error,omitempty"`
+}
+
+// Requests changes the records of detached writes under a lock, and keeps
+// what change leaves.
+type Requests func(change func(map[string]Request)) error
+
+// inMemory keeps the records for as long as the table lives.
+func inMemory() Requests {
+	var mu sync.Mutex
+	kept := map[string]Request{}
+	return func(change func(map[string]Request)) error {
+		mu.Lock()
+		defer mu.Unlock()
+		change(kept)
+		return nil
+	}
+}
+
+// begin records a detached write as started, unless its key is recorded
+// already: then it returns that record, and true. Records past their time
+// are forgotten first.
+func (rs Requests) begin(key string, now time.Time, keep time.Duration) (was Request, found bool, err error) {
+	err = rs(func(all map[string]Request) {
+		forgetOld(all, now)
+		if was, found = all[key]; !found {
+			all[key] = Request{Started: now, PID: os.Getpid(), Until: now.Add(keep)}
+		}
+	})
+	return was, found, err
+}
+
+// finish records what a detached write answered.
+func (rs Requests) finish(key string, now time.Time, res any, rerr *channel.Error) error {
+	return rs(func(all map[string]Request) {
+		forgetOld(all, now)
+		r := all[key]
+		r.Done, r.Until, r.Err = true, now.Add(journalKeeps), rerr
+		if w, ok := res.(Written); ok {
+			r.Result = &w
+		}
+		all[key] = r
+	})
+}
+
+// unrecorded adds to an answer that its outcome could not be recorded, so a
+// repeat will not be told it.
+func unrecorded(res any, rerr *channel.Error, err error) (any, *channel.Error) {
+	say := "the outcome could not be recorded, so a repeat of this request will not be told it: " + err.Error()
+	if w, ok := res.(Written); ok {
+		w.Warnings = append(w.Warnings, say)
+		return w, rerr
+	}
+	if rerr != nil {
+		rerr.Message += "; " + say
+	}
+	return res, rerr
+}
+
+func forgetOld(all map[string]Request, now time.Time) {
+	for k, r := range all {
+		if now.After(r.Until) {
+			delete(all, k)
+		}
+	}
+}
+
+// repeated answers a repeat of a detached write from its record: what it
+// answered, once it has; until then, that it is under way in this flai serve,
+// or that the flai serve that took it ended before it could say, which is
+// what a restart of flai serve itself looks like. It is never done again.
+func repeated(id string, r Request) (any, *channel.Error) {
+	if r.Done {
+		if r.Err != nil || r.Result == nil {
+			return nil, r.Err
+		}
+		return *r.Result, nil
+	}
+	started := r.Started.UTC().Format(time.RFC3339)
+	underWay := r.PID == os.Getpid()
+	say := fmt.Sprintf("request %s was started at %s and is still under way; it was not started again", id, started)
+	if !underWay {
+		say = fmt.Sprintf("request %s was started at %s by a flai serve (pid %d) that ended before it could say how it went; it was not done again", id, started, r.PID)
+	}
+	data, _ := json.Marshal(map[string]any{"repeat": map[string]any{"request_id": id, "started": started, "under_way": underWay}})
+	return Written{Data: data, Warnings: []string{say}}, nil
+}
+
 // contentHash is what docedit.Hash gives: a SHA-256 in hex.
 var contentHash = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
@@ -212,6 +309,9 @@ type Host struct {
 	// Settings reports the host's settings as they apply to a project
 	// (S-0105), for the dashboard's settings page. Nil when there are none.
 	Settings func(root string) any
+	// Requests keeps the records of detached writes where a restart of flai
+	// serve does not lose them (S-0109). Nil keeps them in memory.
+	Requests Requests
 }
 
 // Entry is one host action asked for, whatever became of it.
@@ -1289,6 +1389,10 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 		run = ExecRunner
 	}
 	j := &journal{done: map[string]journalled{}, now: now}
+	requests := host.Requests
+	if requests == nil {
+		requests = inMemory()
+	}
 	out := map[string]channel.Method{}
 	for name, sp := range table {
 		out[name] = func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
@@ -1329,6 +1433,21 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 					Message: fmt.Sprintf("this setting is kept for every project on the host, so the host action %q must be enabled for every project. On the host run: %s", sp.action, EnableEverywhere(sp.action)),
 					Data:    map[string]any{"action": sp.action, "enable": EnableEverywhere(sp.action), "hostwide": true}}
 			}
+			// A detached write is recorded before it acts, where a restart of
+			// flai serve does not lose it: its own success can end the serve
+			// taking it, before any answer is recorded, and the dashboard's
+			// repeat then reaches the next serve (S-0109, found live in
+			// S-0107: a serve restart ran twice).
+			detached := key != "" && sp.detachTimeout > 0
+			if detached {
+				was, found, err := requests.begin(key, now(), sp.detachTimeout+journalKeeps)
+				if err != nil {
+					return nil, &channel.Error{Code: channel.CodeInternal, Message: "the request could not be recorded before acting, so it was not done: " + err.Error()}
+				}
+				if found {
+					return repeated(id.RequestID, was)
+				}
+			}
 			r := Run{Dir: p.Root, Args: withJSON(args), Stdin: stdin}
 			if sp.progress {
 				r.OnEvent = func(ev map[string]any) { channel.Progress(ctx, ev) }
@@ -1345,7 +1464,11 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			// the very connection this write's success can sever — so only
 			// the ordinary case still checks it: a cancelled, non-detached
 			// request is not cached, in case its result is a half-answer.
-			if key != "" && (sp.detachTimeout > 0 || ctx.Err() == nil) {
+			if detached {
+				if err := requests.finish(key, now(), res, rerr); err != nil {
+					res, rerr = unrecorded(res, rerr, err)
+				}
+			} else if key != "" && ctx.Err() == nil {
 				j.put(key, res, rerr)
 			}
 			if entry.Action = sp.action; entry.Action == "" && sp.uses != "" && host.enabled(sp.uses, p.Root) {

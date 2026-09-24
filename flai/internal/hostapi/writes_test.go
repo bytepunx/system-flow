@@ -3,7 +3,10 @@ package hostapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -593,6 +596,127 @@ func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 				t.Errorf("%s: ran with the request's own context, not a detached one", name)
 			}
 		})
+	}
+}
+
+// detachedWrites are the methods whose record outlives flai serve (S-0109).
+func detachedWrites() []string {
+	var out []string
+	for name, sp := range specs() {
+		if sp.detachTimeout > 0 && !sp.reads {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// withRecords is the host for a method, keeping its records where the test
+// can read them, as a file beside flai serve's state would.
+func withRecords(name string, kept map[string]Request) Host {
+	h := hostFor(name)
+	h.Requests = func(change func(map[string]Request)) error { change(kept); return nil }
+	return h
+}
+
+// S-0109: a detached write is recorded before it acts, and its outcome when
+// it ends.
+func TestADetachedWriteIsRecordedBeforeItActs(t *testing.T) {
+	p := withDocs(t)
+	if len(detachedWrites()) < 6 {
+		t.Fatalf("detached writes: %v", detachedWrites())
+	}
+	for _, name := range detachedWrites() {
+		kept := map[string]Request{}
+		key := p.Root + "|" + name + "|req-00000001"
+		run := func(context.Context, Run) (Ran, error) {
+			if r, ok := kept[key]; !ok || r.Done || r.PID != os.Getpid() {
+				t.Errorf("%s acted before it was recorded as started: %+v", name, kept)
+			}
+			return Ran{Stdout: []byte(`{"n":1}`)}, nil
+		}
+		if _, e := writeMethods(run, time.Now, withRecords(name, kept))[name](context.Background(), p, json.RawMessage(good[name].params)); e != nil {
+			t.Fatalf("%s: %+v", name, e)
+		}
+		if r := kept[key]; !r.Done || r.Result == nil || string(r.Result.Data) != `{"n":1}` {
+			t.Errorf("%s: the outcome is not recorded: %+v", name, r)
+		}
+	}
+}
+
+// S-0109, found live in S-0107: a serve restart asked for from the dashboard
+// ran twice, because the serve that took it ended before recording it and
+// the next serve acted on the dashboard's repeat.
+func TestARepeatAfterServeWentAwayIsAnsweredNotDone(t *testing.T) {
+	p := withDocs(t)
+	now := time.Date(2026, 9, 24, 7, 0, 0, 0, time.UTC)
+	for _, name := range detachedWrites() {
+		kept := map[string]Request{}
+		ran := 0
+		run := func(context.Context, Run) (Ran, error) { ran++; return Ran{Stdout: []byte(`{"n":1}`)}, nil }
+		// The serve that took it recorded it as started, and ended.
+		gone := os.Getpid() + 1
+		kept[p.Root+"|"+name+"|req-00000001"] = Request{Started: now, PID: gone, Until: now.Add(time.Hour)}
+		// The next serve is asked again.
+		res, e := writeMethods(run, func() time.Time { return now.Add(time.Second) }, withRecords(name, kept))[name](context.Background(), p, json.RawMessage(good[name].params))
+		if e != nil || ran != 0 {
+			t.Fatalf("%s: ran %d times; %+v", name, ran, e)
+		}
+		w := res.(Written)
+		if string(w.Data) != `{"repeat":{"request_id":"req-00000001","started":"2026-09-24T07:00:00Z","under_way":false}}` || len(w.Warnings) != 1 || !strings.Contains(w.Warnings[0], "not done again") {
+			t.Errorf("%s answered %s %v", name, w.Data, w.Warnings)
+		}
+	}
+}
+
+// A repeat that arrives while the write is still running here is told it is
+// under way, and a repeat after it ended gets its answer, from the next
+// serve too.
+func TestARepeatOfADetachedWriteUnderWayOrDone(t *testing.T) {
+	p := withDocs(t)
+	const name = "host.upgrade"
+	kept := map[string]Request{}
+	var mu sync.Mutex
+	h := hostFor(name)
+	h.Requests = func(change func(map[string]Request)) error { mu.Lock(); defer mu.Unlock(); change(kept); return nil }
+	started, release := make(chan struct{}), make(chan struct{})
+	ran := 0
+	run := func(context.Context, Run) (Ran, error) {
+		ran++
+		close(started)
+		<-release
+		return Ran{Stdout: []byte(`{"restarting":true}`)}, nil
+	}
+	m := writeMethods(run, time.Now, h)[name]
+	done := make(chan any)
+	go func() {
+		res, _ := m(context.Background(), p, json.RawMessage(good[name].params))
+		done <- res
+	}()
+	<-started
+	res, e := m(context.Background(), p, json.RawMessage(good[name].params))
+	if w, ok := res.(Written); e != nil || !ok || !strings.Contains(string(w.Data), `"under_way":true`) {
+		t.Errorf("while under way: %#v %+v", res, e)
+	}
+	close(release)
+	first := <-done
+	again, e := writeMethods(run, time.Now, h)[name](context.Background(), p, json.RawMessage(good[name].params))
+	if e != nil || ran != 1 || string(again.(Written).Data) != string(first.(Written).Data) {
+		t.Errorf("after it ended, from the next serve: ran %d, %#v %+v", ran, again, e)
+	}
+}
+
+// A detached write whose record cannot be written is refused, not done
+// unrecorded.
+func TestADetachedWriteThatCannotBeRecordedIsNotDone(t *testing.T) {
+	p := withDocs(t)
+	for _, name := range detachedWrites() {
+		h := hostFor(name)
+		h.Requests = func(func(map[string]Request)) error { return errors.New("disk full") }
+		rec := &recorder{}
+		_, e := writeMethods(rec.run, time.Now, h)[name](context.Background(), p, json.RawMessage(good[name].params))
+		if e == nil || e.Code != channel.CodeInternal || !strings.Contains(e.Message, "disk full") || len(rec.runs) != 0 {
+			t.Errorf("%s: %+v, ran %d", name, e, len(rec.runs))
+		}
 	}
 }
 
