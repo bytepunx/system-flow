@@ -3,13 +3,21 @@ id: S-0106
 type: story
 nature: feature
 title: The flai host command should become a process-managing shell
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-24T01:23:37Z
-updated: 2026-09-24T01:23:37Z
-transitions: []
+updated: 2026-09-24T01:27:29Z
+transitions:
+  - to: ready
+    at: 2026-09-24T01:23:43Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
 ---
 # S-0106 The flai host command should become a process-managing shell
 
