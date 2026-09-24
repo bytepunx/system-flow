@@ -22,7 +22,6 @@
 	let dModel = $state('');
 	let dConfig = $state('');
 	let aName = $state('');
-	let aMinutes = $state('');
 	let aCommand = $state('');
 	let harnessForm = $state<Record<string, { program: string; args: string }>>({});
 	let checkForm = $state<Record<string, string>>({});
@@ -38,7 +37,6 @@
 		dModel = h.default_agent?.model ?? '';
 		dConfig = configText(h.default_agent?.config);
 		aName = h.agent.name ?? '';
-		aMinutes = h.agent.attended_minutes ? String(h.agent.attended_minutes) : '';
 		aCommand = lines(h.agent.command);
 		harnessForm = Object.fromEntries(
 			Object.entries(h.agent.harnesses).map(([n, x]) => [
@@ -106,7 +104,6 @@
 	function saveAgent() {
 		const params: Record<string, unknown> = {};
 		if (aName.trim()) params.name = aName.trim();
-		if (aMinutes.trim()) params.attended_minutes = Number(aMinutes);
 		const cmd = argv(aCommand);
 		if (cmd.length) params.command = cmd;
 		void change('agent', 'agent', params);
@@ -233,16 +230,6 @@
 						bind:value={aName}
 						placeholder="agent"
 						data-testid="agent-name"
-					/>
-				</label>
-				<label class="block">
-					<span class="mb-1 block text-xs text-muted">attended minutes</span>
-					<input
-						class="w-full rounded border border-line-strong bg-surface px-2 py-1"
-						bind:value={aMinutes}
-						placeholder="6"
-						inputmode="numeric"
-						data-testid="agent-minutes"
 					/>
 				</label>
 			</div>

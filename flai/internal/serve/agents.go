@@ -32,8 +32,7 @@ import (
 // began to serve it (S-0112: serve/agents.json remembers each story's runs
 // across a restart), or its agent has been changed since the last one was
 // started (S-0116); the in-progress limit leaves room, counting an agent
-// started for a story still in ready as a story in progress; and nobody else
-// is attending the project. Each ready story it does not start, and has no
+// started for a story still in ready as a story in progress. Each ready story it does not start, and has no
 // agent running, is named in the state's waiting with the reason, and logged
 // when its reason changes.
 //
@@ -42,24 +41,10 @@ import (
 // operator's program and arguments for the harness. A story that names no
 // harness is started with the operator's command, when one is set.
 //
-// Attending is judged from what flai can know without asking anyone: an agent
-// connected over MCP rewrites its cursor under .flai-cache/mcp at every look,
-// and one holding wait_for_events looks again at least every five minutes; an
-// agent at work writes its story's narrative under wip/agents. If the newest
-// of those files is younger than the operator's attended_minutes (six by
-// default), someone is attending, and they will see the ready story in their
-// inbox. Only a story's narrative counts there, not the generated index or a
-// README, nor do the cursor and the narrative of an agent flai serve started
-// itself.
-//
-// Someone attending holds a ready story back for that same window and no
-// longer (S-0114, ADR-0042): the launcher remembers when attendance became
-// the only thing keeping a story from its agent, and once that has lasted
-// attended_minutes, it starts the story whoever is attending. An agent at
-// work on its own story keeps its sign fresh for hours and pulls nothing;
-// an idle one holding wait_for_work pulls within the window. The hold is
-// the launcher's memory alone, so a restart gives the attending agent the
-// window again.
+// Nobody attending holds a ready story back any more (S-0116, ADR-0043): the
+// in-progress limit is all that does. An agent holding wait_for_work and the
+// launcher may both go for a story; the second move to in-progress is
+// refused, and the loser pulls the next one.
 //
 // Each command is run as it stands in the project's directory, never through
 // a shell. The story's ID is flai's own reading of the files, checked against
@@ -68,10 +53,9 @@ import (
 // AgentConfig is the operator's say about starting agents, read afresh at
 // every look so that enabling, disabling, and a new command need no restart.
 type AgentConfig struct {
-	Enabled  bool
-	Command  []string
-	Name     string        // FLAI_AGENT is this and the story's ID; "agent" when empty
-	Attended time.Duration // how recent a sign of an agent counts; 6m when zero
+	Enabled bool
+	Command []string
+	Name    string // FLAI_AGENT is this and the story's ID; "agent" when empty
 	// Harnesses are the program and arguments each harness runs with on this
 	// host, the command among them when one is set (S-0104).
 	Harnesses map[string]harness.Host
@@ -207,14 +191,13 @@ type launcher struct {
 	log    func(msg string, args ...any)
 
 	mu      sync.Mutex
-	said    map[string]string    // why each skipped story waits, as last logged
-	held    map[string]time.Time // since when someone attending is all that holds each story back
-	waiting map[int]bool         // the PIDs of agents this launcher waits for
-	again   chan struct{}        // an agent ended: look again
+	said    map[string]string // why each skipped story waits, as last logged
+	waiting map[int]bool      // the PIDs of agents this launcher waits for
+	again   chan struct{}     // an agent ended: look again
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, held: map[string]time.Time{}, waiting: map[int]bool{}, again: make(chan struct{}, 1),
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1),
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		}}
@@ -259,57 +242,6 @@ func readyStories(root string) (ready []readyStory, free int, err error) {
 		free = max(0, limit-view.Counts[workitem.InProgress])
 	}
 	return ready, free, nil
-}
-
-// attended reports the newest sign of an agent, if it is recent enough,
-// leaving out the files named in own: those of agents flai serve started.
-func attended(root string, within time.Duration, now time.Time, own map[string]bool) (bool, string) {
-	repo, err := workitem.Open(root)
-	if err != nil {
-		return false, ""
-	}
-	newest, which := time.Time{}, ""
-	look := func(pattern string, counts func(name string) bool) {
-		files, _ := filepath.Glob(pattern)
-		for _, f := range files {
-			if !counts(filepath.Base(f)) || own[f] {
-				continue
-			}
-			if info, err := os.Stat(f); err == nil && info.ModTime().After(newest) {
-				newest, which = info.ModTime(), f
-			}
-		}
-	}
-	look(filepath.Join(repo.CacheDir(), "mcp", "*.json"), func(string) bool { return true })
-	// a story's narrative, not the index flai writes or the template's README
-	look(filepath.Join(repo.AgentsDir(), "*.md"), func(name string) bool { return StoryID.MatchString(strings.TrimSuffix(name, ".md")) })
-	if which == "" || now.Sub(newest) > within {
-		return false, ""
-	}
-	rel, err := filepath.Rel(root, which)
-	if err != nil {
-		rel = which
-	}
-	return true, fmt.Sprintf("%s was written %s ago", filepath.ToSlash(rel), now.Sub(newest).Round(time.Second))
-}
-
-// ownSigns are the files an agent flai serve started writes, which are no
-// sign of anyone else attending: its MCP cursor and its story's narrative,
-// while it runs and for a while after.
-func ownSigns(root string, st AgentState, within time.Duration, now time.Time) map[string]bool {
-	repo, err := workitem.Open(root)
-	if err != nil {
-		return nil
-	}
-	out := map[string]bool{}
-	for id, run := range st.Stories {
-		ended, err := time.Parse(time.RFC3339, run.Ended)
-		if run.live() || (err == nil && now.Sub(ended) <= within) {
-			out[filepath.Join(repo.CacheDir(), "mcp", run.Agent+".json")] = true
-			out[filepath.Join(repo.AgentsDir(), id+".md")] = true
-		}
-	}
-	return out
 }
 
 // judge is how an agent that has ended left its story: worked, asked (a
@@ -392,26 +324,6 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if len(nothing) > 0 {
 		sk.add(fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name")), nothing...)
 	}
-	l.forgetHolds(todo)
-	if len(todo) == 0 {
-		return
-	}
-	// A full limit is the reason, whoever is attending: attendance holds a
-	// story back only when the limit would let it start.
-	if free >= 0 && reserved >= free {
-		sk.add("the in-progress limit leaves no room for "+strings.Join(ids(todo), ", "), todo...)
-		return
-	}
-	within := cfg.Attended
-	if within <= 0 {
-		within = 6 * time.Minute
-	}
-	now := l.now()
-	if yes, sign := attended(l.entry.Root, within, now, ownSigns(l.entry.Root, st, within, now)); yes {
-		todo = l.hold(&sk, todo, sign, now, within)
-	} else {
-		clear(l.held)
-	}
 	for i, s := range todo {
 		if free >= 0 && reserved >= free {
 			sk.add("the in-progress limit leaves no room for "+strings.Join(ids(todo[i:]), ", "), todo[i:]...)
@@ -419,53 +331,6 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		}
 		if l.start(ctx, cfg, s) {
 			reserved++
-		}
-		delete(l.held, s.ID)
-	}
-}
-
-// hold is what someone attending does to the stories that could start: each
-// is held back from when the hold began until the attended window has
-// passed, and named with the time it has until, and the ones held that long
-// are returned to be started. A story first held now shares its time with
-// the others first held now, so one reason names them together.
-func (l *launcher) hold(sk *skips, todo []readyStory, sign string, now time.Time, within time.Duration) (due []readyStory) {
-	var untils []time.Time
-	byUntil := map[time.Time][]readyStory{}
-	for _, s := range todo {
-		since, ok := l.held[s.ID]
-		if !ok {
-			since = now
-			l.held[s.ID] = since
-		}
-		until := since.Add(within)
-		if !until.After(now) {
-			due = append(due, s)
-			continue
-		}
-		if _, seen := byUntil[until]; !seen {
-			untils = append(untils, until)
-		}
-		byUntil[until] = append(byUntil[until], s)
-	}
-	for _, until := range untils {
-		held := byUntil[until]
-		sk.add(fmt.Sprintf("an agent is attending the project (%s); it sees %s in its inbox and has until %s to pull %s",
-			sign, strings.Join(ids(held), ", "), until.UTC().Format(time.RFC3339), oneOrMany(len(held), "it", "them")), held...)
-	}
-	return due
-}
-
-// forgetHolds drops the holds of stories that are no longer waiting to be
-// started: pulled, started, or held for another reason.
-func (l *launcher) forgetHolds(todo []readyStory) {
-	keep := map[string]bool{}
-	for _, s := range todo {
-		keep[s.ID] = true
-	}
-	for id := range l.held {
-		if !keep[id] {
-			delete(l.held, id)
 		}
 	}
 }
@@ -501,9 +366,8 @@ func (l *launcher) say(k skips) {
 	l.said = k.story
 }
 
-// kind is a reason without the detail in its parentheses: how long ago the
-// sign of an agent was written, or when a run started, changes at every
-// look and is not a new reason.
+// kind is a reason without the detail in its parentheses: when a run
+// started, or how it ended, is not a new reason.
 func kind(why string) string {
 	if i := strings.Index(why, " ("); i >= 0 {
 		return why[:i]
@@ -523,7 +387,7 @@ func tried(id string, run *AgentRun) string {
 	case run.Outcome != "":
 		what += ", " + run.Outcome
 	}
-	return id + " has had its agent since it entered ready (" + what + "); it gets another when it enters ready again or its agent is changed"
+	return id + " has had its agent since it entered ready (" + what + "); it gets another when it enters ready again, its agent is changed, or it is restarted (flai serve agent restart)"
 }
 
 func ids(stories []readyStory) []string {

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -342,12 +341,16 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "settings: off everywhere") || !strings.Contains(out, "only a shell turns this off") {
 		t.Errorf("actions names settings: %s", out)
 	}
-	if _, errOut, code := runIn(t, root, "serve", "agent", "set", "--name", "builder", "--attended-minutes", "9"); code != 0 {
-		t.Fatalf("name without a command: %s", errOut)
+	// --attended-minutes is retired (S-0116): still accepted, it says so and does nothing
+	if _, errOut, code := runIn(t, root, "serve", "agent", "set", "--name", "builder", "--attended-minutes", "9"); code != 0 || !strings.Contains(errOut, "attended-minutes") || !strings.Contains(errOut, "does nothing") {
+		t.Fatalf("name without a command: %d %s", code, errOut)
 	}
 	cfg := (&app{}).agentConfig(root)
-	if cfg.Name != "builder" || cfg.Attended != 9*time.Minute || len(cfg.Command) != 0 {
-		t.Errorf("name and minutes: %+v", cfg)
+	if cfg.Name != "builder" || len(cfg.Command) != 0 {
+		t.Errorf("name: %+v", cfg)
+	}
+	if loaded, _, _ := (&app{}).loadConfig(); loaded.Agent.AttendedMinutes != 0 {
+		t.Errorf("the retired minutes were stored: %+v", loaded.Agent)
 	}
 	runIn(t, root, "serve", "enable", "settings")
 	runIn(t, root, "serve", "checks", "set", "--name", "unit", "--", "go", "test", "./...")
@@ -358,7 +361,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
-	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"push accepted work`, `"name":"builder"`, `"attended_minutes":9`,
+	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"push accepted work`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"program":"claude","set":false}`,
 		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`} {
 		if !strings.Contains(string(got), want) {

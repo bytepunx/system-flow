@@ -33,7 +33,6 @@ function view(here: boolean, everywhere: boolean): SettingsView {
 			default_agent: { harness: 'claude-code', model: 'claude-haiku-4-5' },
 			agent: {
 				name: 'builder',
-				attended_minutes: 0,
 				command: ['run-agent', '{story}'],
 				harnesses: {
 					'claude-code': {

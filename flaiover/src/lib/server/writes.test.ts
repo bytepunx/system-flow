@@ -470,7 +470,6 @@ describe.skipIf(!haveFlai)('host settings through flai', () => {
 		const folder = await mkdtemp(join(tmpdir(), 'flaiover-import-'));
 		await r.write('settings.agent', {
 			name: 'builder',
-			attended_minutes: 9,
 			command: ['run-agent', 'work on {story}; echo $HOME']
 		});
 		await r.write('settings.harness', {

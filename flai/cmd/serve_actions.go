@@ -300,12 +300,18 @@ journal.`,
 	var name string
 	var attended int
 	set := &cobra.Command{
-		Use:   "set [--name] [--attended-minutes] [-- <program> [args...]]",
-		Short: "Set the command, as an argument list after --, or only the name and attended minutes",
+		Use:   "set [--name] [-- <program> [args...]]",
+		Short: "Set the command, as an argument list after --, or only the name",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) == 0 && name == "" && attended <= 0 {
-				return fmt.Errorf("nothing to set: give -- <program> [args...], --name, or --attended-minutes")
+			if attended > 0 {
+				fmt.Fprintln(a.errOut, "--attended-minutes is retired: nobody attending holds a ready story back any more (ADR-0043), so it does nothing")
+				if len(args) == 0 && name == "" {
+					return nil
+				}
+			}
+			if len(args) == 0 && name == "" {
+				return fmt.Errorf("nothing to set: give -- <program> [args...] or --name")
 			}
 			if len(args) > 0 && strings.TrimSpace(args[0]) == "" {
 				return fmt.Errorf("the program is empty")
@@ -320,9 +326,6 @@ journal.`,
 			if name != "" {
 				cfg.Agent.Name = name
 			}
-			if attended > 0 {
-				cfg.Agent.AttendedMinutes = attended
-			}
 			if err := config.Save(path, cfg); err != nil {
 				return err
 			}
@@ -330,7 +333,9 @@ journal.`,
 		},
 	}
 	set.Flags().StringVar(&name, "name", "", "the FLAI_AGENT the session works under (default agent)")
-	set.Flags().IntVar(&attended, "attended-minutes", 0, "how recent a sign of an agent counts as attending (default 6)")
+	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
+	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
+	_ = set.Flags().MarkHidden("attended-minutes")
 	c.AddCommand(set, newServeAgentHarnessCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
@@ -369,7 +374,7 @@ func (a *app) showAgentCommand() error {
 		for _, name := range settable() {
 			hosts[name] = a.harnessHost(cfg, name)
 		}
-		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "harnesses": hosts, "enabled_here": enabled})
+		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "harnesses": hosts, "enabled_here": enabled})
 	}
 	if len(cfg.Agent.Command) == 0 {
 		fmt.Fprintln(a.out, "no command is set, so a story that names no harness is not started; flai serve agent set -- <program> [args...]")
@@ -434,7 +439,6 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Command:   cfg.Agent.Command,
 		Harnesses: hosts,
 		Name:      cfg.Agent.Name,
-		Attended:  time.Duration(cfg.Agent.AttendedMinutes) * time.Minute,
 	}
 }
 
@@ -747,7 +751,7 @@ func (a *app) hostSettings(root string) any {
 	}
 	out := map[string]any{
 		"actions": actions,
-		"agent": map[string]any{"name": cfg.Agent.Name, "attended_minutes": cfg.Agent.AttendedMinutes, "command": command,
+		"agent": map[string]any{"name": cfg.Agent.Name, "command": command,
 			"harnesses": harnesses},
 		"checks":       map[string]any{"commands": checks, "timeout_minutes": timeout},
 		"import_roots": roots,

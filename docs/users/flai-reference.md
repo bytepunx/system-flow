@@ -1546,7 +1546,7 @@ Subcommands:
 
 - [clear](#flai-serve-agent-clear): Remove the command; a story with a harness is still started with it
 - [harness](#flai-serve-agent-harness): Set the program a harness is and the arguments that say what its agent may do
-- [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name and attended minutes
+- [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
 
 ##### flai serve agent clear
@@ -1585,17 +1585,16 @@ Flags:
 
 ##### flai serve agent set
 
-Set the command, as an argument list after --, or only the name and attended minutes.
+Set the command, as an argument list after --, or only the name.
 
 ```text
-flai serve agent set [--name] [--attended-minutes] [-- <program> [args...]] [flags]
+flai serve agent set [--name] [-- <program> [args...]] [flags]
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--attended-minutes` int | how recent a sign of an agent counts as attending (default 6) |
 | `--name` string | the FLAI\_AGENT the session works under (default agent) |
 
 ##### flai serve agent show

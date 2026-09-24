@@ -115,10 +115,12 @@ func settingsSpecs() map[string]spec {
 			return args, "", nil
 		}),
 
-		// settings.agent: the agent's name, attended minutes, and command,
-		// kept for every project. command null removes the command (and with
-		// it the name and minutes, as flai serve agent clear does).
-		"settings.agent": hostwide("the agent's name, minutes, or command changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// settings.agent: the agent's name and command, kept for every
+		// project. command null removes the command (and with it the name,
+		// as flai serve agent clear does). attended_minutes is retired
+		// (S-0116, ADR-0043): a dashboard that still sends it is not refused,
+		// and it changes nothing.
+		"settings.agent": hostwide("the agent's name or command changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			var in struct {
 				Name     string          `json:"name"`
 				Attended int             `json:"attended_minutes"`
@@ -137,12 +139,6 @@ func settingsSpecs() map[string]spec {
 				}
 				args = append(args, "--name="+in.Name)
 			}
-			if in.Attended != 0 {
-				if in.Attended < 1 || in.Attended > 1440 {
-					return nil, "", bad("attended minutes are 1 to 1440")
-				}
-				args = append(args, "--attended-minutes="+strconv.Itoa(in.Attended))
-			}
 			if len(in.Command) > 0 {
 				var cmd []string
 				if err := json.Unmarshal(in.Command, &cmd); err != nil {
@@ -154,7 +150,7 @@ func settingsSpecs() map[string]spec {
 				args = append(append(args, "--"), cmd...)
 			}
 			if len(args) == 3 {
-				return nil, "", bad("nothing to set: give name, attended_minutes, or command")
+				return nil, "", bad("nothing to set: give name or command")
 			}
 			return args, "", nil
 		}),

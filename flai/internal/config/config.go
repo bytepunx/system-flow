@@ -64,9 +64,9 @@ type AgentStart struct {
 	Command []string `json:"command,omitempty"`
 	// Name is the FLAI_AGENT the session works under; "agent" when empty.
 	Name string `json:"name,omitempty"`
-	// AttendedMinutes is how recent a sign of an agent must be for the
-	// project to count as attended; 6 when zero, one more than the longest
-	// an agent holds wait_for_events.
+	// AttendedMinutes is retired (S-0116, ADR-0043): nobody attending holds
+	// a ready story back any more. It is still read so that a configuration
+	// that sets it loads, and nothing uses it.
 	AttendedMinutes int `json:"attended_minutes,omitempty"`
 	// Harnesses are the operator's say about each harness a story may name
 	// (S-0104): the program that is run and the arguments that say what the

@@ -40,7 +40,6 @@ export type SettingsView = {
 		default_agent?: Agent | null;
 		agent: {
 			name: string;
-			attended_minutes: number;
 			command: string[];
 			harnesses: Record<string, Harness>;
 		};
