@@ -3,11 +3,11 @@ id: S-0028
 type: story
 nature: feature
 title: Operator runbooks and settings index
-status: review
+status: done
 parent: E-0004
 owner: alex
 created: 2026-09-15T22:50:52Z
-updated: 2026-09-24T09:42:40Z
+updated: 2026-09-24T20:49:58Z
 transitions:
   - to: ready
     at: 2026-09-24T07:58:46Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-24T09:42:40Z
     by: agent-S-0028
+  - to: done
+    at: 2026-09-24T20:49:58Z
+    by: alex
 tags: [docs, operators]
 touches: [docs/operators, flai/cmd, scripts, Makefile, design/system, design/conventions, design/issues]
 agent:
