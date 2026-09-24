@@ -1,0 +1,77 @@
+package serve
+
+import (
+	"context"
+
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
+)
+
+// Start starts a ready story's agent now, on the operator's word (S-0115):
+// flai serve agent start, or the story page's Start agent button. It is what
+// the launcher does when a story enters ready, without the launcher's own
+// rules about when: whether the story was ready before flai serve began,
+// whether it had an agent since it entered ready, and whoever is attending.
+// It is refused while the agent action is off for the project, when the
+// story is not in ready, while its agent runs or waits for an answer, when
+// nothing can start it, and while the in-progress limit is full.
+func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
+	cfg := o.Agent(e.Root)
+	if !cfg.Enabled {
+		return nil, refused("the agent host action is off for this project: flai serve enable agent")
+	}
+	if !StoryID.MatchString(story) {
+		return nil, refused("%q is not a story's ID", story)
+	}
+	repo, err := workitem.Open(e.Root)
+	if err != nil {
+		return nil, err
+	}
+	it, err := repo.Get(story)
+	if err != nil {
+		return nil, err
+	}
+	if it.Type != workitem.Story {
+		return nil, refused("%s is %s; only a story has an agent", it.ID, it.Type)
+	}
+	if it.Status != workitem.Ready {
+		why := "only a story in ready is started"
+		if it.Status == workitem.InProgress {
+			why += "; flai serve agent restart starts a new agent for one in progress whose agent dropped or failed"
+		}
+		return nil, refused("%s is in %s; %s", it.ID, it.Status, why)
+	}
+	st := o.Dir.AgentStates()[e.Root]
+	switch run := st.Stories[it.ID]; {
+	case run.live() && Alive(run.PID):
+		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
+	case run != nil && run.Outcome == OutcomeAsked:
+		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)
+	}
+	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
+	}
+	if ok, err := roomFor(e, st, it.ID); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, refused("the in-progress limit leaves no room for %s", it.ID)
+	}
+	return StartNow(ctx, o, e, it.ID, "")
+}
+
+// roomFor says whether the in-progress limit leaves room for the ready story
+// id, counting an agent running for another story still in ready as a story
+// in progress, as the launcher does.
+func roomFor(e Entry, st AgentState, id string) (bool, error) {
+	stories, free, err := readyStories(e.Root)
+	if err != nil {
+		return false, err
+	}
+	reserved := 0
+	for _, s := range stories {
+		if r := st.Stories[s.ID]; r.live() && s.ID != id {
+			reserved++
+		}
+	}
+	return free < 0 || reserved < free, nil
+}

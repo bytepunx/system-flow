@@ -15,7 +15,9 @@ import (
 //
 // The launcher starts an agent when a story enters ready. The operator can
 // also have one started from a shell or the story's page: flai serve agent
-// restart, for a story whose agent dropped or failed. It runs in a process
+// restart, for a story whose agent dropped or failed, and flai serve agent
+// start, for a story in ready whatever the launcher's rules say (S-0115,
+// start.go). Each runs in a process
 // of its own, not in flai serve. It starts the agent the way the launcher
 // does and records the run in serve/agents.json. The serving flai then
 // tracks the run as one of its own: the dot on the card, the outcome once
@@ -32,7 +34,9 @@ func refused(format string, args ...any) error { return &Refused{Why: fmt.Sprint
 // StartNow starts story's agent in project e as its files name it, records
 // the run in serve/agents.json, and journals it, as the launcher does.
 // Whether it should be started is the caller's to judge; restart says in the
-// agent's prompt why it was started again, empty when it entered ready.
+// agent's prompt why it was started again, empty when it entered ready. It
+// does not wait for the agent: the serving flai settles the run once the
+// process is gone.
 func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*AgentRun, error) {
 	if !StoryID.MatchString(story) {
 		return nil, refused("%q is not a story's ID", story)
@@ -46,6 +50,7 @@ func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*
 		return nil, err
 	}
 	l := newLauncher(o, e)
+	l.handOver = true
 	l.start(ctx, o.Agent(e.Root), readyStory{ID: it.ID, Agent: it.Agent, Restart: restart})
 	run := o.Dir.AgentStates()[e.Root].Stories[it.ID]
 	if run == nil {
@@ -99,17 +104,9 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
 	if it.Status == workitem.Ready {
-		stories, free, err := readyStories(e.Root)
-		if err != nil {
+		if ok, err := roomFor(e, st, it.ID); err != nil {
 			return nil, err
-		}
-		reserved := 0
-		for _, s := range stories {
-			if r := st.Stories[s.ID]; r.live() && s.ID != it.ID {
-				reserved++
-			}
-		}
-		if free >= 0 && reserved >= free {
+		} else if !ok {
 			return nil, refused("the in-progress limit leaves no room for %s", it.ID)
 		}
 	}

@@ -338,7 +338,7 @@ journal.`,
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
-	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentRestartCmd(a),
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
 		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,
@@ -789,19 +789,47 @@ and for a story in ready while the in-progress limit is full. The story
 page's Restart agent button runs this.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.restartAgent(args[0])
+			return a.agentNow(args[0], serve.Restart)
 		},
 	}
 }
 
-func (a *app) restartAgent(story string) error {
+func newServeAgentStartCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "start <story-id>",
+		Short: "Start a ready story's agent now, whatever flai serve's own rules say about when",
+		Long: `Starts the agent of a story in ready now, the way flai serve starts one
+when a story enters ready: the story's harness, model, and options, or the
+host's command. It starts whether or not the story was ready before flai
+serve began, whether or not it has had an agent since it entered ready, and
+whoever is attending the project. The run is recorded where the serving
+flai tracks it: the dot on the card, the outcome when it ends, the start
+again on an answer (S-0115).
+
+It refuses, and says why, while the agent action is off for the project,
+when the story is not in ready, while its agent runs or waits for an
+answer, when nothing can start it (no harness and no command), and while
+the in-progress limit is full. A story in progress whose agent dropped or
+failed gets a new one from flai serve agent restart. The story page's Start
+agent button runs this.`,
+		Example: `  flai serve agent start S-0115`,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return a.agentNow(args[0], serve.Start)
+		},
+	}
+}
+
+// agentNow starts story's agent on the operator's word, with start or
+// restart deciding whether it may, and prints the run.
+func (a *app) agentNow(story string, how func(context.Context, serve.Options, serve.Entry, string) (*serve.AgentRun, error)) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
 	}
 	o := serve.Options{Dir: a.serveDir(), Logger: a.logger(), Now: a.now, Agent: a.agentConfig, Host: a.host()}
 	e := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: mainRootOf(repo)}
-	run, err := serve.Restart(context.Background(), o, e, workitem.CanonicalID(story))
+	run, err := how(context.Background(), o, e, workitem.CanonicalID(story))
 	var no *serve.Refused
 	if errors.As(err, &no) {
 		return fmt.Errorf("rule: %s", no.Why)

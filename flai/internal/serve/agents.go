@@ -195,7 +195,12 @@ type launcher struct {
 	mu      sync.Mutex
 	said    map[string]string // why each skipped story waits, as last logged
 	waiting map[int]bool      // the PIDs of agents this launcher waits for
-	again   chan struct{}     // an agent ended: look again
+	// handOver leaves each agent it starts to the serving flai, which settles
+	// the run when its process is gone, instead of waiting for it: set for a
+	// start on the operator's word, from a process that exits once it has
+	// started the agent (S-0115).
+	handOver bool
+	again    chan struct{} // an agent ended: look again
 }
 
 func newLauncher(o Options, e Entry) *launcher {
@@ -522,7 +527,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	run.PID = cmd.Process.Pid
-	l.waiting[run.PID] = true
+	if !l.handOver {
+		l.waiting[run.PID] = true
+	}
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
 	if run.Answered != "" {
@@ -532,6 +539,11 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		l.record(entry)
 	}
 	l.log("agent started", "story", story.ID, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	if l.handOver {
+		_ = out.Close()
+		_ = cmd.Process.Release()
+		return true
+	}
 	go func() {
 		err := cmd.Wait()
 		_ = out.Close()

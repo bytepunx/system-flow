@@ -385,3 +385,37 @@ func TestServeAgentRestartSaysWhyItRefuses(t *testing.T) {
 		t.Errorf("no such story: %d %s", code, errOut)
 	}
 }
+
+// S-0115: flai serve agent start starts a ready story's agent now, recorded
+// where flai serve tracks it, and says why when it will not.
+func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	runIn(t, root, "epic", "new", "Epic")
+	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-slice.md")
+	s, _ := os.ReadFile(file)
+	_ = os.WriteFile(file, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
+	if _, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code == 0 || !strings.Contains(errOut, "rule: the agent host action is off for this project") {
+		t.Errorf("action off: %d %s", code, errOut)
+	}
+	runIn(t, root, "serve", "enable", "agent")
+	if _, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code == 0 || !strings.Contains(errOut, "rule: S-0001 is in backlog") {
+		t.Errorf("in backlog: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "ready"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code == 0 || !strings.Contains(errOut, "rule: S-0001 names no harness, and no command is set") {
+		t.Errorf("nothing to start it with: %d %s", code, errOut)
+	}
+	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	out, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1")
+	if code != 0 || !strings.HasPrefix(out, "started true (command) for S-0001 as agent-S-0001") {
+		t.Fatalf("start: %d %s %s", code, out, errOut)
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	if !strings.Contains(js, "started true (command) for S-0001") {
+		t.Errorf("the start is not journalled: %s", js)
+	}
+}
