@@ -3,11 +3,14 @@ id: S-0115
 type: story
 nature: feature
 title: "flai serve agent start <story> starts the story's agent on demand, and the story page has a button for it"
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-24T08:30:36Z
-updated: 2026-09-24T08:30:36Z
-transitions: []
+updated: 2026-09-24T08:32:38Z
+transitions:
+  - to: ready
+    at: 2026-09-24T08:32:38Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/internal/serve, flai/cmd, flaiover/src]
 agent:
