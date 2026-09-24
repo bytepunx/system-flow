@@ -4,7 +4,7 @@ title: "flai serve starts a story's own agent through an adapter, with what the 
 status: accepted
 date: 2026-09-23
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0041]
 refines: [ADR-0029, ADR-0037]
 ---
 
