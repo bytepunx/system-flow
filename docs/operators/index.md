@@ -1,10 +1,24 @@
 ---
 title: Operators guide
 updated: 2026-09-24
-status: draft
+status: active
 ---
 
 # system-flow for operators
+
+## Where things are
+
+| For | Where |
+|-----|-------|
+| Every setting: configuration keys, manifest keys, environment variables, container settings, flags | [settings.md](settings.md) |
+| Runbooks | [install](runbooks/install.md), [update](runbooks/update.md), [back up](runbooks/backup.md), [restore](runbooks/restore.md), [migrate](runbooks/migrate.md), [delete](runbooks/delete.md) ([index](runbooks/README.md)) |
+| The dashboard | `http://<host>:4242` by default (`dashboard.port`); `flai dashboard token` prints the login link. What each page does is in the [users guide](../users/flaiover.md) |
+| The dashboard's health and metrics | `/_health`, `/_ready`, and `/metrics` on the same address ([Telemetry](#telemetry)) |
+| Whether everything runs | `flai dashboard status` (the container and its host flai), `flai host status` (the host, `flai serve`, each MCP server), `flai serve status` (the projects served and the dashboards connected), `flai mcp status` (a project's MCP server) |
+| What the dashboard asked the host to do | `flai serve journal`; `flai serve actions` for what is enabled where |
+| Logs | `flai dashboard logs` (the container); `~/.flai/serve/serve.log`, each agent's under `~/.flai/serve/agents/`, each check run's under `~/.flai/serve/checks/`; `~/.flai/host/host.log`; a project's MCP server in its `.flai-cache/mcp-http.log` |
+| State and secrets on the host | `~/.flai/config.json`, and the folders `serve` and `host` beside it; what each file is, in the [backup runbook](runbooks/backup.md#what-exists-and-what-is-worth-keeping) |
+| Every command and flag | [the flai command reference](../users/flai-reference.md) |
 
 ## Running the dashboard
 

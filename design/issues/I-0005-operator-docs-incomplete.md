@@ -2,11 +2,11 @@
 id: I-0005
 title: Operator documentation has no runbooks or settings index
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-09-15T22:40:33Z
 last_reported: 2026-09-15T22:40:33Z
-updated: 2026-09-15T22:40:33Z
+updated: 2026-09-24T09:41:52Z
 ---
 
 # I-0005 Operator documentation has no runbooks or settings index
@@ -21,3 +21,4 @@ S-0026: noticed while adopting the conventions; no measured cost yet because no 
 
 ## Remediation
 S-0028 (operator runbooks and settings index) writes them. Close when it lands.
+Closed 2026-09-24T09:41:52Z: S-0028: docs/operators/settings.md indexes every setting and docs/operators/runbooks/ has install, update, backup, restore, migrate, and delete
