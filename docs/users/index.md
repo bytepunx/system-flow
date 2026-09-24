@@ -16,7 +16,7 @@ system-flow is a way of running a software project from inside its own repositor
 
 Two tools make it practical:
 
-- **flai** creates a conforming repository, converts an existing one, manages work items, checks the repo, and prints metrics. See [flai.md](flai.md).
+- **flai** creates a conforming repository, converts an existing one, manages work items, checks the repo, and prints metrics. See [flai.md](flai.md), and [flai-reference.md](flai-reference.md) for every command and flag.
 - **flaiover** is a local dashboard that renders the documentation, searches it, shows the board, and charts how work flows. See [flaiover.md](flaiover.md).
 
 ## Work items in one minute

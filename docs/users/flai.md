@@ -1,12 +1,12 @@
 ---
 title: flai CLI
 updated: 2026-09-24
-status: draft
+status: active
 ---
 
 # flai
 
-The system-flow command line tool. Full command reference will be generated from the CLI in story S-0017; the design is in [design/system/flai-cli.md](../../design/system/flai-cli.md). Implemented so far: `version` and `config`.
+The system-flow command line tool. This guide says how the commands fit together; [flai-reference.md](flai-reference.md) lists every command and flag, generated from `flai --help`. The design is in [design/system/flai-cli.md](../../design/system/flai-cli.md).
 
 ## Install
 
@@ -71,7 +71,7 @@ LOG_FORMAT=json flai check 2>events.jsonl
 
 ## Configuration
 
-`flai` keeps its settings in `~/.flai/config.json`. The first command that needs it creates the file with these defaults:
+`flai` keeps its settings in one JSON file per user: `~/.flai/config.json`, or the path in `--config`, or else `FLAI_CONFIG`. The first command that needs it creates it with these defaults:
 
 ```json
 {
@@ -83,12 +83,19 @@ LOG_FORMAT=json flai check 2>events.jsonl
     "image": "ghcr.io/bytepunx/flaiover",
     "tag": "latest",
     "port": 4242,
-    "bind": "0.0.0.0"
+    "bind": "0.0.0.0",
+    "push_key": "",
+    "push_known_hosts": ""
   },
   "cache_dir": "~/.flai/cache",
-  "author": "<your username>"
+  "author": "<your username>",
+  "worktrees": {
+    "relative_paths": false
+  }
 }
 ```
+
+A key flai does not know is refused when the file is read, so a typo is an error rather than a silent default. `flai host` and `flai serve` keep their state, tokens, and logs in the folders `host` and `serve` beside this file, so a different `FLAI_CONFIG` gives them a separate home too.
 
 Read and change it by dotted key:
 
@@ -102,7 +109,50 @@ flai config set worktrees.relative_paths true   # opt in to relative worktree li
 flai config path
 ```
 
-Point `template.repo` at any fork and `template.ref` at any branch, tag, or commit to use your own template. A local directory path also works, which is how the system-flow repo develops against its own `./template`. Git templates are cloned under `cache_dir`; set `FLAI_CACHE_DIR` before the first run to choose where that default lands (for example inside a repository or a CI workspace).
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `template.repo` | `https://github.com/bytepunx/system-flow-template` | Where `flai new`, `flai import`, and `flai upgrade` take the template from when `--template` is not given: a git URL or a local directory |
+| `template.ref` | `main` | The template's branch, tag, or commit, when `--ref` is not given |
+| `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs |
+| `dashboard.tag` | `latest` | The image's tag |
+| `dashboard.port` | `4242` | The host port the dashboard is published on |
+| `dashboard.bind` | `0.0.0.0` | The host address it is published on; `127.0.0.1` keeps it to this machine |
+| `dashboard.push_key`, `dashboard.push_known_hosts` | empty | Retired and ignored ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). They still load so an old file works, and `flai dashboard` names them when set; clear them with `flai config set dashboard.push_key ""` |
+| `cache_dir` | `~/.flai/cache`, or `FLAI_CACHE_DIR` when the file is created | Where git templates are cloned |
+| `author` | your login name | The default owner of new items and the default `--by` of transitions and acceptances |
+| `worktrees.relative_paths` | `false` | Create story worktrees with relative links (git 2.48 or newer); see [Relative worktree links](#relative-worktree-links-opt-in) |
+
+Point `template.repo` at any fork and `template.ref` at any branch, tag, or commit to use your own template. A local directory path also works, which is how the system-flow repo develops against its own `./template`. Git templates are cloned under `cache_dir`; set `FLAI_CACHE_DIR` before the first run to choose where that default lands (for example inside a repository or a CI workspace). For the dashboard, flags come first, then the `dashboard` section of the project's `system-flow.yaml`, then these keys.
+
+The same file holds what `flai serve` may do on this host. These keys are not reachable with `flai config set`, and nothing a dashboard can ask for writes them unless you enable the `settings` host action; each has its own command, run in a shell on the host:
+
+| Key | Set with | Meaning |
+|-----|----------|---------|
+| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `agent`, `dashboard`, `checks`, `settings`, `host`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do |
+| `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, and `{harness}` replaced |
+| `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
+| `agent.attended_minutes` | `flai serve agent set --attended-minutes` | How recent a sign of an agent must be for a project to count as attended, when no agent is started; 6 when unset |
+| `agent.harnesses.<name>.program`, `agent.harnesses.<name>.args` | `flai serve agent harness <name> --program <path> -- [args...]`, `--reset` | The program a harness is on this host, and the arguments that replace its adapter's defaults and say what the agent may do |
+| `checks.commands` | `flai serve checks set --name <name> -- <program> [args...]`, `flai serve checks clear [name]` | The named commands a story in review is checked with, in order, in its worktree; empty means the manifest's `checks:` |
+| `checks.timeout_minutes` | `flai serve checks timeout <minutes>` | The bound on one run of every check together; 15 when unset |
+| `import_roots` | `flai serve import add <folder>`, `flai serve import remove <folder>` | The folders whose git repositories the board offers to import |
+
+`flai serve agent show`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
+
+Environment variables flai reads:
+
+| Variable | Effect |
+|----------|--------|
+| `FLAI_CONFIG` | The config file, when `--config` is not given |
+| `FLAI_CACHE_DIR` | The `cache_dir` written when the config file is created |
+| `FLAI_AGENT`, `FLAI_SESSION` | Who writes narrative entries, thread entries, and transitions, and in which session; `FLAI_AGENT` is also the MCP server's agent |
+| `LOG_LEVEL`, `LOG_FORMAT` | See [Logging](#logging) |
+| `FLAI_HOST_ADDR` | Where `flai host` listens, `127.0.0.1:4241` by default |
+| `FLAI_RELEASES_API` | Another source of releases for `flai self-upgrade` and `flai host check` and `upgrade` |
+| `FLAI_INSTALL_DIR` | Where `flai self-upgrade` from a checkout installs (`~/.flai/bin` by default) |
+| `GITHUB_TOKEN`, `GH_TOKEN` | GitHub API and registry authentication for `flai self-upgrade` and `flai dashboard`; `gh auth token` is borrowed when neither is set |
+
+`flai host` sets `FLAI_HOST_URL` and `FLAI_HOST_TOKEN` for the processes it runs; do not set them yourself.
 
 ## Version
 
@@ -586,6 +636,6 @@ A second one, `agent`, starts an agent for each story that becomes ready: the ha
 
 The dashboard needs the project's token for everything but health and readiness. `flai dashboard` creates it at `.flai-cache/dashboard.token` on first run and prints a login link; open the link (or paste the token on the login page) and the browser keeps a session cookie. Tools send it as `Authorization: Bearer`. Details and the exposure table are in the operator guide.
 
-The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port. Nothing of the project is mounted into it: it is given its port, the login token, and a credential for the host's flai, and everything it shows and changes it asks of `flai serve` on your machine, which `flai dashboard` has `flai host` start alongside it. Commits and acceptances made from the board are therefore made on your machine, as you, wherever the repository lies. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer. By default the container holds no git credential and an acceptance made from the board is pushed from a shell; `flai config set dashboard.push_key <path>` (or `--push-key`) gives it an SSH key to push with, checked before anything starts. Read [Pushing what the board accepts](../operators/index.md#pushing-what-the-board-accepts) first: it changes what the dashboard token is worth.
+The container runs detached as `flaiover-<project>`, published on every interface of the host (`--bind`, or `dashboard.bind`, restricts it) on the configured port. Nothing of the project is mounted into it: it is given its port, the login token, and a credential for the host's flai, and everything it shows and changes it asks of `flai serve` on your machine, which `flai dashboard` has `flai host` start alongside it. Commits and acceptances made from the board are therefore made on your machine, as you, wherever the repository lies. Image, tag, port, and bind address come from flags, then the `dashboard` section of `system-flow.yaml`, then `~/.flai/config.json`. If Docker is not installed the command says so with an install pointer. The container holds no git credential: an acceptance made from the board is pushed from the host, by `flai serve` when the `push` host action is enabled, or with `flai push --pending` in a shell. The old `--push-key` flag and `dashboard.push_key` setting are retired and ignored.
 
 The image lives on GHCR and is private while the repository is. When the pull is refused, `flai dashboard` logs Docker into the registry with `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` and retries once. The token needs the `read:packages` scope; `gh auth refresh -h github.com -s read:packages` adds it. Inside the monorepo, `--build` sidesteps the registry by building the image from `flaiover/` as `flaiover:local`.
