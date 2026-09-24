@@ -372,3 +372,16 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 		t.Errorf("no token in the settings: %s", got)
 	}
 }
+
+// S-0116: flai serve agent restart says why it will not start an agent.
+func TestServeAgentRestartSaysWhyItRefuses(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	if _, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-0001"); code == 0 || !strings.Contains(errOut, "rule: the agent host action is off for this project") {
+		t.Errorf("action off: %d %s", code, errOut)
+	}
+	runIn(t, root, "serve", "enable", "agent")
+	if _, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-1"); code == 0 || !strings.Contains(errOut, "S-0001") {
+		t.Errorf("no such story: %d %s", code, errOut)
+	}
+}

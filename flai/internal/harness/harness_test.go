@@ -137,6 +137,22 @@ func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 	}
 }
 
+// S-0116: a restarted agent is told how its last one ended and to go on
+// from the story's narrative.
+func TestARestartedAgentIsToldHowTheLastOneEnded(t *testing.T) {
+	if p := Prompt(req(nil)); !strings.Contains(p, "because it entered ready.") {
+		t.Errorf("first start: %s", p)
+	}
+	r := req(nil)
+	r.Restart = "ended (exit 1) with S-0104 in in-progress"
+	p := Prompt(r)
+	for _, want := range []string{"because the operator restarted it: its last agent ended (exit 1) with S-0104 in in-progress.", "Current state and Next steps", "rather than starting over", "flai stream open S-0104", "flai move S-0104 review"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("restart prompt lacks %q:\n%s", want, p)
+		}
+	}
+}
+
 // S-0104: an agent that ended waiting for an answer is started again in the
 // session it had, told what was answered.
 func TestAnAnsweredAgentGoesOnInItsSession(t *testing.T) {

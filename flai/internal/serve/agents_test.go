@@ -5,6 +5,7 @@ package serve
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -685,4 +686,92 @@ func TestAnAgentThatEndedAskingIsStartedAgainWhenAnswered(t *testing.T) {
 	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "again for "+id) {
 		t.Errorf("journal: %+v", j)
 	}
+}
+
+// S-0116, ADR-0043: the operator restarts the agent of a story in ready or in
+// progress whose agent dropped or failed, and is told why when it cannot be.
+func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
+	ctx := context.Background()
+	restart := func(lab *agentLab, id string) (*AgentRun, error) {
+		return Restart(ctx, lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+	}
+	refusedFor := func(t *testing.T, lab *agentLab, id, want string) {
+		t.Helper()
+		_, err := restart(lab, id)
+		var no *Refused
+		if !errors.As(err, &no) || !strings.Contains(no.Why, want) {
+			t.Errorf("restart %s: %v, want refused for %q", id, err, want)
+		}
+	}
+	t.Run("a failed agent of a story in progress", func(t *testing.T) {
+		lab := newAgentLab(t)
+		id := lab.ready("A")
+		lab.l.look(ctx, false)
+		waitFor(t, "its agent ended", func() bool { r := lab.run(id); return r != nil && r.Ended != "" })
+		lab.move(id, workitem.InProgress) // the agent pulled it, then failed
+		first := lab.run(id)
+		run, err := restart(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if run.Session == first.Session || run.Agent != "builder-"+id || run.PID == 0 {
+			t.Errorf("a new session for the same agent: %+v, was %+v", run, first)
+		}
+		waitFor(t, "the new agent ran", func() bool { r := lab.run(id); return r.Started != first.Started || r.Session != first.Session })
+		if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "started stub-agent (command) for "+id) {
+			t.Errorf("journal: %+v", j)
+		}
+	})
+	t.Run("an agent whose process is gone", func(t *testing.T) {
+		lab := newAgentLab(t)
+		id := lab.ready("A")
+		lab.move(id, workitem.InProgress)
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			s.put(&AgentRun{Story: id, Agent: "builder-" + id, PID: 999999999, Started: time.Now().UTC().Format(time.RFC3339), Command: "stub-agent"})
+		})
+		if _, err := restart(lab, id); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("refusals", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		none := lab.backlog("Never started", nil)
+		refusedFor(t, lab, none, "is in backlog")
+		lab.toReady(none)
+		lab.limit(1)
+		busy := lab.ready("Busy")
+		lab.move(busy, workitem.InProgress)
+		refusedFor(t, lab, none, "flai serve has started no agent for "+none)
+		// running
+		lab.limit(5)
+		running := lab.ready("Running")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(running).live() })
+		refusedFor(t, lab, running, "agent is running")
+		// in ready with the limit full
+		lab.release(running)
+		waitFor(t, "it ends", func() bool { return !lab.run(running).live() })
+		lab.limit(1)
+		refusedFor(t, lab, running, "in-progress limit leaves no room for "+running)
+		// asked
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			r := *s.Stories[running]
+			r.Outcome, r.Thread = OutcomeAsked, "TH-0001"
+			s.put(&r)
+		})
+		refusedFor(t, lab, running, "waiting for an answer to TH-0001")
+		// nothing to start it with
+		lab.limit(5)
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			r := *s.Stories[running]
+			r.Outcome = OutcomeFailed
+			s.put(&r)
+		})
+		lab.cfg.Command = nil
+		refusedFor(t, lab, running, "names no harness, and no command is set")
+		// the action off
+		lab.cfg.Enabled = false
+		refusedFor(t, lab, running, "agent host action is off")
+	})
 }

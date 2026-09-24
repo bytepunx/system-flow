@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -336,7 +338,7 @@ journal.`,
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
-	c.AddCommand(set, newServeAgentHarnessCmd(a),
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentRestartCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
 		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,
@@ -766,4 +768,50 @@ func (a *app) hostSettings(root string) any {
 		}
 	}
 	return out
+}
+
+func newServeAgentRestartCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "restart <story-id>",
+		Short: "Start a new agent for a story in ready or in progress whose agent dropped or failed",
+		Long: `Starts a new agent, in a new session, for a story in ready or
+in-progress whose last agent flai serve started has ended or dropped, the
+way flai serve starts one when a story enters ready: the story's harness,
+model, and options, or the host's command. The agent is told how its last
+one ended and to go on from the story's narrative. The run is recorded
+where the serving flai tracks it: the dot on the card, the outcome, the
+restart on an answer (S-0116, ADR-0043).
+
+It refuses, and says why, while the agent action is off for the project,
+when the story is in another state, when flai serve has started no agent for
+it, while its agent runs or waits for an answer, when nothing can start it,
+and for a story in ready while the in-progress limit is full. The story
+page's Restart agent button runs this.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return a.restartAgent(args[0])
+		},
+	}
+}
+
+func (a *app) restartAgent(story string) error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	o := serve.Options{Dir: a.serveDir(), Logger: a.logger(), Now: a.now, Agent: a.agentConfig, Host: a.host()}
+	e := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: mainRootOf(repo)}
+	run, err := serve.Restart(context.Background(), o, e, workitem.CanonicalID(story))
+	var no *serve.Refused
+	if errors.As(err, &no) {
+		return fmt.Errorf("rule: %s", no.Why)
+	}
+	if err != nil {
+		return err
+	}
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"story": run.Story, "agent": run.Agent, "harness": run.Harness, "command": run.Command, "pid": run.PID, "log": run.Log, "started": run.Started})
+	}
+	fmt.Fprintf(a.out, "started %s (%s) for %s as %s (pid %d); log %s\n", run.Command, run.Harness, run.Story, run.Agent, run.PID, run.Log)
+	return nil
 }

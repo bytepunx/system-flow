@@ -31,10 +31,10 @@ import (
 // story since it entered ready, whether that was before or after flai serve
 // began to serve it (S-0112: serve/agents.json remembers each story's runs
 // across a restart), or its agent has been changed since the last one was
-// started (S-0116); the in-progress limit leaves room, counting an agent
-// started for a story still in ready as a story in progress. Each ready story it does not start, and has no
-// agent running, is named in the state's waiting with the reason, and logged
-// when its reason changes.
+// started (S-0116); and the in-progress limit leaves room, counting an agent
+// started for a story still in ready as a story in progress. Each ready
+// story it does not start, and has no agent running, is named in the state's
+// waiting with the reason, and logged when its reason changes.
 //
 // The story says which harness works it, with which model and options (its
 // agent, S-0103); package harness turns that into a command, with the
@@ -171,6 +171,8 @@ func (d Dir) agentStates() map[string]AgentState {
 func (d Dir) updateAgent(root string, change func(*AgentState)) {
 	agentsMu.Lock()
 	defer agentsMu.Unlock()
+	// flai serve agent restart writes here from a process of its own (S-0116).
+	defer lockFile(d.agents() + ".lock")()
 	all := d.agentStates()
 	st := all[root]
 	change(&st)
@@ -208,6 +210,9 @@ type readyStory struct {
 	ID      string
 	Agent   *manifest.Agent
 	Entered time.Time
+	// Restart says how its last agent ended, when the operator has it
+	// started again (S-0116); empty when it entered ready.
+	Restart string
 }
 
 // readyStories are the ready stories in pull order, and how many more
@@ -485,7 +490,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered}, cfg.host(name))
+		Session: run.Session, Answered: run.Answered, Restart: story.Restart}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}

@@ -37,6 +37,9 @@ type Request struct {
 	// Answered is the thread the agent asked on that has been answered: the
 	// agent ended while it waited, and is started again to go on (S-0104).
 	Answered string
+	// Restart says how the story's last agent ended, when the operator has
+	// had a new one started for it (S-0116); empty when it entered ready.
+	Restart string
 }
 
 // Host is the operator's say about one harness, from the host's configuration.
@@ -148,11 +151,15 @@ func Prompt(r Request) string {
 
 %[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
-	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, because it entered ready.
+	why := "because it entered ready."
+	if r.Restart != "" {
+		why = fmt.Sprintf("because the operator restarted it: its last agent %s. The story may already be in progress, with a narrative, a branch, and a worktree: if so, read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart)
+	}
+	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s
 
 Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md: prime your session with flai prime --cat, open the story with flai stream open %[2]s, write its tasks if it has none, and work them in the worktree that prints. Commit each task, keep the narrative's Current state and Next steps true, run flai stream sync %[2]s at every task transition, and call the flai MCP tool inbox there too.
 
-%[4]s`, r.Name, r.Story, r.Root, rules(r))
+%[4]s`, r.Name, r.Story, r.Root, rules(r), why)
 }
 
 func rules(r Request) string {
