@@ -30,3 +30,8 @@ dashboard:
   image: ghcr.io/bytepunx/flaiover
   tag: latest
   port: 4242
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
