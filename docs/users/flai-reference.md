@@ -1120,7 +1120,7 @@ flai issue summary
 Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start.
 
 ```text
-flai mcp
+flai mcp [flags]
 ```
 
 An MCP server for agent sessions (ADR-0020): the inbox of threads awaiting the agent, replies, work item and document reads, transitions with the workflow rules, who is touching a path, and wait\_for\_events, which blocks until the designer or another agent changes a thread, an item, or a narrative. Every write goes through the same code as the CLI. The agent is FLAI\_AGENT. Register it in .mcp.json:
@@ -1145,6 +1145,12 @@ flai mcp token
 flai mcp stop
 flai mcp http         # over HTTP in the foreground; Ctrl-C stops it
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--agent` string | the agent this server serves, over FLAI\_AGENT; flai serve names the agent it started this way |
 
 Subcommands:
 

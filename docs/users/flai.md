@@ -131,7 +131,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 | `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `agent`, `dashboard`, `checks`, `settings`, `host`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do |
 | `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, and `{harness}` replaced |
 | `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
-| `agent.attended_minutes` | `flai serve agent set --attended-minutes` | How recent a sign of an agent must be for a project to count as attended, when no agent is started; 6 when unset |
+| `agent.attended_minutes` | `flai serve agent set --attended-minutes` | How recent a sign of an agent must be for a project to count as attended, and how long someone attending holds a ready story back before it is started anyway; 6 when unset |
 | `agent.harnesses.<name>.program`, `agent.harnesses.<name>.args` | `flai serve agent harness <name> --program <path> -- [args...]`, `--reset` | The program a harness is on this host, and the arguments that replace its adapter's defaults and say what the agent may do |
 | `checks.commands` | `flai serve checks set --name <name> -- <program> [args...]`, `flai serve checks clear [name]` | The named commands a story in review is checked with, in order, in its worktree; empty means the manifest's `checks:` |
 | `checks.timeout_minutes` | `flai serve checks timeout <minutes>` | The bound on one run of every check together; 15 when unset |
@@ -145,7 +145,7 @@ Environment variables flai reads:
 |----------|--------|
 | `FLAI_CONFIG` | The config file, when `--config` is not given |
 | `FLAI_CACHE_DIR` | The `cache_dir` written when the config file is created |
-| `FLAI_AGENT`, `FLAI_SESSION` | Who writes narrative entries, thread entries, and transitions, and in which session; `FLAI_AGENT` is also the MCP server's agent |
+| `FLAI_AGENT`, `FLAI_SESSION` | Who writes narrative entries, thread entries, and transitions, and in which session; `FLAI_AGENT` is also the MCP server's agent unless `flai mcp --agent` names one |
 | `LOG_LEVEL`, `LOG_FORMAT` | See [Logging](#logging) |
 | `FLAI_HOST_ADDR` | Where `flai host` listens, `127.0.0.1:4241` by default |
 | `FLAI_RELEASES_API` | Another source of releases for `flai self-upgrade` and `flai host check` and `upgrade` |
@@ -391,6 +391,8 @@ flai mcp start    # the same server over HTTP, for an agent that cannot start a 
 { "mcpServers": { "flai": { "command": "flai", "args": ["mcp"] } } }
 ```
 
+The server works as the agent `FLAI_AGENT` names, or as `--agent` names when given: `flai mcp --agent agent-S-0104`. `flai serve` starts the agents it starts that way, so a `FLAI_AGENT` that an agent's own settings put into the server's environment (Claude Code's `env` in `.claude/settings.json` does that) cannot make every agent one name.
+
 Started in a folder that is not itself a project, such as `~/git`, `flai mcp` serves every system-flow project in that folder and up to three levels below it ([ADR-0036](../../design/adrs/0036-a-folder-that-is-not-a-project-is-served-whole-by-flai-mcp-and-flai-dashboard.md)). One agent started there works across all of them. `inbox`, `wait_for_work`, and `wait_for_events` cover every project and say which one each thing is in, and every other tool takes `project`: a key `inbox` lists, or the project's folder. A project created or imported below the folder joins within a few seconds. Started in a folder with no project below it at all, the server still starts and says there is none yet. Over HTTP (`flai mcp start` and the rest) it still serves one project, so run those in the project.
 
 | Tool | What it does |
@@ -431,7 +433,7 @@ The agent's configuration names that address and sends the token as a bearer; `X
 
 The tools and their behaviour are the same, because it is the same server. Keep the token out of the file: Claude Code expands `${VAR}` in `.mcp.json`, as above; for another client, check how it takes a secret. This token is the MCP server's own, not the dashboard's. The server listens on the host only; from another machine, reach it through an SSH forward or a tunnel that terminates TLS, as the operator guide describes. It serves the main checkout, and a second project on the same host needs another port (`--addr`, remembered per project). Until flaiover 0.22 the dashboard served MCP at its `/mcp`; that address now answers 410 and says to use this instead.
 
-"Since this agent last looked" is a marker per agent name (`FLAI_AGENT`) under `.flai-cache/mcp/`, outside git. It only decides which changes are news; ready work and open threads are listed on every call, so nothing depends on it. One look reports at most 50 changes, the newest, and says in `changes_omitted` (`events_omitted` for `wait_for_events`) how many older ones it left out; those are not reported later. The first look under a new name covers the last 24 hours and tells of stories and epics only, not task transitions: to an agent that has just arrived, a day of task moves is history, and `board` and `item_get` show how things stand. An agent that ends its turn between your messages calls `inbox` when it starts again and hears what you did in between; one that stays running holds `wait_for_events` and hears within a second. `flai move` records `FLAI_AGENT` as who moved an item when it is set, so an agent is not told about its own moves; a move on the dashboard's board is recorded as the project's `owner`.
+"Since this agent last looked" is a marker per agent name (`--agent`, else `FLAI_AGENT`) under `.flai-cache/mcp/`, outside git. It only decides which changes are news; ready work and open threads are listed on every call, so nothing depends on it. One look reports at most 50 changes, the newest, and says in `changes_omitted` (`events_omitted` for `wait_for_events`) how many older ones it left out; those are not reported later. The first look under a new name covers the last 24 hours and tells of stories and epics only, not task transitions: to an agent that has just arrived, a day of task moves is history, and `board` and `item_get` show how things stand. An agent that ends its turn between your messages calls `inbox` when it starts again and hears what you did in between; one that stays running holds `wait_for_events` and hears within a second. `flai move` records `FLAI_AGENT` as who moved an item when it is set, so an agent is not told about its own moves; a move on the dashboard's board is recorded as the project's `owner`.
 
 Design and docs files are also exposed as resources (`flai://design/...`, `flai://docs/...`). Everything the server writes goes through the same code as the CLI, so files stay the record and the dashboard shows agent replies as they land.
 
