@@ -127,9 +127,15 @@ describe('HostProcesses', () => {
 		q('host-processes-serve-restart')!.click();
 		await settleThrough();
 		expect(q('host-processes-reconnecting')).not.toBeNull();
-		api.mockResolvedValue(host());
-		await settleThrough();
+		// the old serve, still answering before it went down, is not taken for the new one
+		api.mockResolvedValueOnce(host());
+		const restarted = host({
+			children: [{ name: 'serve', state: 'running', pid: 4200, version: '1.9.0', restarts: 0 }]
+		});
+		api.mockResolvedValue(restarted);
+		await settleThrough(40);
 		expect(text('host-processes-message')).toBe('serve restarted; reconnected.');
+		expect(api.mock.calls.length).toBeGreaterThan(3);
 	});
 
 	it('checks for a newer flai as a read', async () => {
@@ -155,9 +161,28 @@ describe('HostProcesses', () => {
 		expect(text('host-processes-host')).toBe('1.10.0, pid 4100');
 	});
 
+	it('waits past the old host after an upgrade that answered before restarting', async () => {
+		await open(host(), fast);
+		api.mockResolvedValueOnce(
+			answer({ upgrade: { previous: '1.9.0', installed: '1.10.0' }, restarting: true })
+		);
+		api.mockResolvedValueOnce(host());
+		api.mockResolvedValue(host({ version: '1.10.0' }));
+		q('host-processes-upgrade')!.click();
+		await settleThrough(40);
+		expect(text('host-processes-message')).toBe(
+			'Upgraded flai 1.9.0 to 1.10.0; serve and MCP restarted.'
+		);
+	});
+
 	it('says so when the upgrade finds nothing newer, without waiting to reconnect', async () => {
 		await open(host(), fast);
-		api.mockResolvedValueOnce(answer({ current: '1.9.0', latest: '1.9.0', up_to_date: true }));
+		api.mockResolvedValueOnce(
+			answer({
+				upgrade: { current: '1.9.0', latest: '1.9.0', up_to_date: true },
+				restarting: false
+			})
+		);
 		q('host-processes-upgrade')!.click();
 		await settle();
 		expect(text('host-processes-message')).toBe('flai 1.9.0 is already the latest.');

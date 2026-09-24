@@ -89,19 +89,27 @@
 		return Promise.race([attempt, sleep(disconnectTimeoutMs).then(() => 'gone' as const)]);
 	}
 
-	async function waitForReconnect(done: (v: View & { running: true }) => string) {
+	type Running = View & { running: true };
+
+	// Polls until the host answers in a way `accept` takes, since what is still answering right
+	// after the request may be the old process, before it went down.
+	async function waitForReconnect(
+		done: (v: Running) => string,
+		accept: (v: Running) => boolean = () => true,
+		gaveUp = 'The host did not answer again in time; on the host, flai host status says more.'
+	) {
 		reconnecting = true;
 		const deadline = Date.now() + reconnectGiveUpMs;
 		while (Date.now() < deadline) {
 			await sleep(reconnectPollMs);
-			if ((await load()) && view?.running) {
+			if ((await load()) && view?.running && accept(view)) {
 				message = done(view);
 				reconnecting = false;
 				return;
 			}
 		}
 		reconnecting = false;
-		failed = 'The host did not answer again in time; on the host, flai host status says more.';
+		failed = gaveUp;
 	}
 
 	function refusal(body: unknown): string {
@@ -119,6 +127,7 @@
 		message = failed = null;
 		checkResult = null;
 		const endsConnection = process === 'serve' && action !== 'start';
+		const servePid = children.find((k) => k.name === 'serve')?.pid;
 		try {
 			const outcome = await post({ action, process }, endsConnection);
 			if (outcome === 'gone' && action === 'stop') {
@@ -128,7 +137,10 @@
 				return;
 			}
 			if (outcome === 'gone') {
-				await waitForReconnect(() => 'serve restarted; reconnected.');
+				await waitForReconnect(
+					() => 'serve restarted; reconnected.',
+					(v) => !servePid || v.children.find((k) => k.name === 'serve')?.pid !== servePid
+				);
 				return;
 			}
 			if (!outcome.ok) {
@@ -169,14 +181,16 @@
 				failed = refusal(outcome.body);
 				return;
 			}
-			if (outcome !== 'gone' && (outcome.body as Check).up_to_date) {
-				message = `flai ${before ?? ''} is already the latest.`;
+			// flai host upgrade answers {upgrade, restarting}: nothing installed, nothing restarts
+			if (outcome !== 'gone' && outcome.body.restarting === false) {
+				const up = (outcome.body.upgrade ?? {}) as Check;
+				message = `flai ${up.current ?? before ?? ''} is already the latest.`;
 				return;
 			}
-			await waitForReconnect((v) =>
-				v.version !== before
-					? `Upgraded flai ${before ?? ''} to ${v.version}; serve and MCP restarted.`
-					: `Reconnected; flai is still ${v.version}.`
+			await waitForReconnect(
+				(v) => `Upgraded flai ${before ?? ''} to ${v.version}; serve and MCP restarted.`,
+				(v) => v.version !== before,
+				`The host did not come back on a newer flai in time; on the host, flai host status says more.`
 			);
 		} finally {
 			busy = null;

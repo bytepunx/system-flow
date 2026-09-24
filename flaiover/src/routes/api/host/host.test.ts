@@ -45,7 +45,7 @@ describe('/api/host (S-0107)', () => {
 	afterAll(() => useRepo(null));
 
 	it('answers the host, its processes, and whether the host action is enabled', async () => {
-		script['host.status'] = { data: status };
+		script['host.status'] = { data: { running: true, status, dir: '/home/me/.flai/host' } };
 		script['project.info'] = { data: { host_actions: { host: true, dashboard: false } } };
 		const r = await GET({} as never);
 		expect(r.status).toBe(200);
@@ -56,7 +56,7 @@ describe('/api/host (S-0107)', () => {
 	});
 
 	it('reads the host action as off when project.info does not name it', async () => {
-		script['host.status'] = { data: status };
+		script['host.status'] = { data: { running: true, status } };
 		script['project.info'] = { data: { host_actions: { dashboard: true } } };
 		expect(await (await GET({} as never)).json()).toMatchObject({ host_enabled: false });
 	});
@@ -74,16 +74,28 @@ describe('/api/host (S-0107)', () => {
 	});
 
 	it('treats a flai serve with no host above it as no host, with the reason', async () => {
-		script['host.status'] = {
-			error: new RepoError(502, 'flai host is not running; start it with flai host start')
-		};
+		script['host.status'] = { data: { running: false, dir: '/home/me/.flai/host' } };
 		script['project.info'] = { data: { host_actions: { host: true } } };
 		const r = await GET({} as never);
 		expect(r.status).toBe(200);
 		expect(await r.json()).toMatchObject({
 			running: false,
-			reason: 'flai host is not running; start it with flai host start',
+			reason: 'flai host is not running',
 			host_enabled: true
+		});
+	});
+
+	it('names the host that runs for another config', async () => {
+		script['host.status'] = {
+			data: {
+				running: false,
+				elsewhere: { pid: 77, version: '1.9.0', config: '/home/me/.flai/config.json' }
+			}
+		};
+		script['project.info'] = { data: {} };
+		expect(await (await GET({} as never)).json()).toMatchObject({
+			running: false,
+			reason: "the machine's flai host (pid 77) runs for another config, /home/me/.flai/config.json"
 		});
 	});
 
@@ -138,10 +150,12 @@ describe('/api/host (S-0107)', () => {
 	});
 
 	it('upgrades flai with no process named', async () => {
-		script['host.upgrade'] = { data: { outcome: 'upgraded', from: '1.9.0', to: '1.10.0' } };
+		script['host.upgrade'] = {
+			data: { upgrade: { previous: '1.9.0', installed: '1.10.0' }, restarting: true }
+		};
 		const r = await post({ action: 'upgrade' });
 		expect(r.status).toBe(200);
-		expect(await r.json()).toMatchObject({ outcome: 'upgraded', to: '1.10.0' });
+		expect(await r.json()).toMatchObject({ restarting: true, upgrade: { installed: '1.10.0' } });
 		expect(asked[0].method).toBe('host.upgrade');
 		expect(asked[0].params.process).toBeUndefined();
 	});

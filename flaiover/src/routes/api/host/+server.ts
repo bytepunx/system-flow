@@ -15,7 +15,7 @@ export type HostChild = {
 	last_error?: string;
 };
 
-/** What flai host status --json reports (S-0106), asked as host.status, a read. */
+/** The running host: internal/host.Status (S-0106). */
 export type HostStatus = {
 	pid: number;
 	version: string;
@@ -23,6 +23,14 @@ export type HostStatus = {
 	updated?: string;
 	addr?: string;
 	children: HostChild[];
+};
+
+/** What flai host status --json reports (S-0106), asked as host.status, a read. */
+export type HostReport = {
+	running: boolean;
+	status?: HostStatus;
+	/** A host that holds the machine's address for another config file. */
+	elsewhere?: { pid: number; version: string; config?: string };
 };
 
 /** What GET answers: the host as it stands, or why there is none to show. */
@@ -36,24 +44,27 @@ const PROCESSES = ['serve', 'mcp', 'all'] as const;
 
 /**
  * GET: the host and the processes it keeps, and whether the operator has enabled the host action
- * (S-0107), which gates start, stop, restart, and upgrade. No flai connected, or a flai serve
- * that runs without a host, reads as not running with the reason, not an error: the panel says
+ * (S-0107), which gates start, stop, restart, and upgrade. No flai connected, or no host running
+ * for flai serve's config, reads as not running with the reason, not an error: the panel says
  * how to start one.
  */
 export const GET: RequestHandler = () =>
 	respond(async (): Promise<HostView> => {
+		let report: HostReport;
 		try {
-			const { data } = await repo().run<HostStatus>('host.status', {}, { timeoutMs: 15000 });
-			return { ...data, running: true, host_enabled: await hostEnabled() };
+			({ data: report } = await repo().run<HostReport>('host.status', {}, { timeoutMs: 15000 }));
 		} catch (e) {
 			if (e instanceof RepoError && e.status === 503) {
 				return { running: false, reason: 'no host flai is connected', host_enabled: false };
 			}
-			if (e instanceof RepoError && /not running/.test(e.message)) {
-				return { running: false, reason: e.message, host_enabled: await hostEnabled() };
-			}
 			throw e;
 		}
+		const host_enabled = await hostEnabled();
+		if (report.running && report.status) return { ...report.status, running: true, host_enabled };
+		const reason = report.elsewhere
+			? `the machine's flai host (pid ${report.elsewhere.pid}) runs for another config, ${report.elsewhere.config ?? 'unnamed'}`
+			: 'flai host is not running';
+		return { running: false, reason, host_enabled };
 	});
 
 async function hostEnabled(): Promise<boolean> {
