@@ -3,11 +3,11 @@ id: S-0107
 type: story
 nature: improvement
 title: Host panel in the dashboard allows for view and management of serve and MCP processes
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-24T01:26:46Z
-updated: 2026-09-24T04:09:05Z
+updated: 2026-09-24T04:31:28Z
 transitions:
   - to: ready
     at: 2026-09-24T01:28:15Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-24T04:09:05Z
     by: system-flow
+  - to: done
+    at: 2026-09-24T04:31:28Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 agent:
