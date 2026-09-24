@@ -55,6 +55,12 @@ func TestSelfUpgradeCommand(t *testing.T) {
 	defer srv.Close()
 	dir := t.TempDir()
 
+	// S-0107: FLAI_RELEASES_API is where releases come from when --api is not given
+	t.Setenv("FLAI_RELEASES_API", srv.URL)
+	if out, errOut, code := runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r"); code != 0 || !strings.Contains(out, "latest is 2.0.0") {
+		t.Fatalf("from FLAI_RELEASES_API: %d %s %s", code, out, errOut)
+	}
+	t.Setenv("FLAI_RELEASES_API", "")
 	out, errOut, code := runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", srv.URL)
 	if code != 0 || !strings.Contains(out, "latest is 2.0.0 (upgrade available)") {
 		t.Fatalf("check: %d %s %s", code, out, errOut)

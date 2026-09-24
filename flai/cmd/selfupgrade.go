@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -86,7 +87,14 @@ operation from a shell is install.sh at the repository root.`,
 	c.Flags().StringVar(&dir, "dir", "", "install into this directory instead of over the running binary")
 	c.Flags().BoolVar(&check, "check", false, "report the installed and latest versions without installing")
 	c.Flags().StringVar(&repo, "repo", "bytepunx/system-flow", "GitHub repository that publishes flai releases")
-	c.Flags().StringVar(&apiBase, "api", "https://api.github.com", "GitHub API base URL")
+	// FLAI_RELEASES_API points flai at another source of releases that
+	// answers as GitHub's API does: a mirror, or a test's stand-in. flai host
+	// upgrade and check run self-upgrade, so they follow it too (S-0107).
+	defaultAPI := "https://api.github.com"
+	if v := strings.TrimSpace(os.Getenv("FLAI_RELEASES_API")); v != "" {
+		defaultAPI = v
+	}
+	c.Flags().StringVar(&apiBase, "api", defaultAPI, "GitHub API base URL (default FLAI_RELEASES_API, else api.github.com)")
 	_ = c.Flags().MarkHidden("api")
 	return c
 }
