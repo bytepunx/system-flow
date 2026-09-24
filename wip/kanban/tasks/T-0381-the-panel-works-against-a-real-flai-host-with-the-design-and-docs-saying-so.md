@@ -3,17 +3,20 @@ id: T-0381
 type: task
 nature: improvement
 title: The panel works against a real flai host, with the design and docs saying so
-status: in-progress
+status: done
 parent: S-0107
 owner: alex
 created: 2026-09-24T01:35:33Z
-updated: 2026-09-24T01:40:31Z
+updated: 2026-09-24T04:08:31Z
 transitions:
   - to: ready
     at: 2026-09-24T01:37:11Z
     by: system-flow
   - to: in-progress
     at: 2026-09-24T01:40:31Z
+    by: system-flow
+  - to: done
+    at: 2026-09-24T04:08:31Z
     by: system-flow
 stream: S-0107
 tags: []

@@ -3,11 +3,14 @@ id: S-0109
 type: story
 nature: remediation
 title: A detached host write is journalled as started before it acts, so a retry after serve went away is answered, not repeated
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-24T03:26:14Z
-updated: 2026-09-24T03:26:14Z
-transitions: []
+updated: 2026-09-24T03:52:38Z
+transitions:
+  - to: ready
+    at: 2026-09-24T03:52:38Z
+    by: alex
 tags: [cli]
 touches: [flai/internal/hostapi]
 ---

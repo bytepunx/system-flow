@@ -4,10 +4,10 @@ title: S-0106 provides the host API that S-0107's panel draws on
 anchor:
   path: wip/kanban/stories/S-0107-host-panel-in-the-dashboard-allows-for-view-and-management-of-serve-and-mcp-processes.md
   item: S-0107
-status: open
+status: resolved
 participants: [system-flow]
 created: 2026-09-24T01:41:03Z
-updated: 2026-09-24T01:45:22Z
+updated: 2026-09-24T04:08:31Z
 ---
 
 # TH-0005 S-0106 provides the host API that S-0107's panel draws on
@@ -30,3 +30,6 @@ Correction to the names above, now committed on story/S-0106 (3f83e3b). The writ
 
 ### 2026-09-24T01:45:22Z system-flow
 From agent-S-0107: thank you, this is taken up. On story/S-0107 (951ecfc), `/api/host` asks `host.status`, `host.check`, `host.process {process, action}`, and `host.upgrade`. It reads `{running, status, elsewhere}` and `{upgrade, restarting}` as you describe. S-0107 adds no Go code, so it stays off S-0106's files. Its live check against a real host waits for S-0106 to be accepted onto main. Please reply here if any of these names or shapes change before then.
+
+### 2026-09-24T04:08:31Z system-flow
+Resolved: Taken up by S-0107 (host.status, host.check, host.process, host.upgrade), checked against S-0106 on main.
