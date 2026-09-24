@@ -35,6 +35,8 @@ flai self-upgrade --dir /some/other/directory
 
 `self-upgrade` performs the same steps as the script from inside the binary: resolve, download, verify, and replace the running executable atomically. It uses the same token sources. Without `--version` it does nothing when the installed version is already the latest. With no `--dir` it replaces whichever binary is running, so once installed under `~/.flai/bin` an agent or a scheduled job can run `flai self-upgrade` itself, with no `sudo` and no extra configuration.
 
+`FLAI_RELEASES_API` points it at another source of releases that answers as GitHub's releases API does, such as a mirror. `flai host check` and `flai host upgrade`, and the dashboard's Check for upgrade and Upgrade buttons, which ask the host, follow it too.
+
 ### Other ways
 
 With Go 1.26 or newer, `go install github.com/bytepunx/system-flow/flai@latest`. Or download an archive from the [releases page](https://github.com/bytepunx/system-flow/releases): releases named `flai vX.Y.Z` carry `flai_X.Y.Z_<os>_<arch>.tar.gz` (a zip on Windows) for Linux, macOS, and Windows on amd64 and arm64, plus `checksums.txt`. On Windows unpack the zip and put `flai.exe` on your `PATH`.
