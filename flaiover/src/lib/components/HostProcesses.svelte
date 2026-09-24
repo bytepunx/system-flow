@@ -82,8 +82,14 @@
 		{ ok: true; body: Record<string, unknown> } | { ok: false; body: unknown } | 'gone';
 
 	function post(body: Record<string, unknown>, mayEndConnection: boolean): Promise<Outcome> {
+		// The dashboard outlives serve: when serve goes down mid-request, the route answers 502 "the
+		// host flai went away before it answered", which for these writes is the work going ahead.
 		const attempt = api('/api/host', { method: 'POST', body: JSON.stringify(body) })
-			.then(async (r) => ({ ok: r.ok, body: await r.json().catch(() => ({})) }) as Outcome)
+			.then(async (r) =>
+				mayEndConnection && r.status === 502
+					? ('gone' as const)
+					: ({ ok: r.ok, body: await r.json().catch(() => ({})) } as Outcome)
+			)
 			.catch(() => 'gone' as const);
 		if (!mayEndConnection) return attempt;
 		return Promise.race([attempt, sleep(disconnectTimeoutMs).then(() => 'gone' as const)]);
@@ -147,8 +153,8 @@
 				failed = refusal(outcome.body);
 				return;
 			}
-			message = `${process === 'mcp' ? 'MCP' : process}: ${action === 'stop' ? 'stopped' : action === 'start' ? 'started' : 'restarted'}.`;
 			await load();
+			message = `${process === 'mcp' ? 'MCP' : process}: ${action === 'stop' ? 'stopped' : action === 'start' ? 'started' : 'restarted'}.`;
 		} finally {
 			busy = null;
 		}

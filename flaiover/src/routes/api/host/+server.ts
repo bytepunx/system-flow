@@ -97,8 +97,14 @@ export const POST: RequestHandler = ({ request }) =>
 			const { data } = await repo().run('host.check', {}, { timeoutMs: 120000 });
 			return data as Record<string, unknown>;
 		}
+		// A write that ends the connection it came on is not retried when the connection is lost:
+		// the serve that answers the retry has no record of it, and a serve restart ran twice.
 		if (action === 'upgrade') {
-			const { data, warnings } = await repo().write('host.upgrade', {}, { timeoutMs: 360000 });
+			const { data, warnings } = await repo().write(
+				'host.upgrade',
+				{},
+				{ timeoutMs: 360000, retry: false }
+			);
 			return { ...(data as Record<string, unknown>), log: warnings };
 		}
 		const process = body.process;
@@ -108,7 +114,7 @@ export const POST: RequestHandler = ({ request }) =>
 		const { data, warnings } = await repo().write(
 			'host.process',
 			{ process, action },
-			{ timeoutMs: 60000 }
+			{ timeoutMs: 60000, retry: process === 'mcp' }
 		);
 		return { ...(data as Record<string, unknown>), log: warnings };
 	});

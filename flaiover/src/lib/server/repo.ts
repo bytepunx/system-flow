@@ -95,6 +95,12 @@ export function projectDir(): string {
 
 /** Asks flai on the host for a named method (ADR-0029). Tests supply one that reads a fixture through flai. */
 export type AskOptions = { timeoutMs?: number; onProgress?: (value: unknown) => void };
+/**
+ * A write's options. retry: false is for a write whose success ends the connection it came on
+ * (restarting flai serve, S-0107): losing the connection is then the expected outcome, and the
+ * flai that answers the retry has no record of the request, so it would do it again.
+ */
+export type WriteOptions = AskOptions & { retry?: boolean };
 export type Ask = <T>(
 	method: string,
 	params?: Record<string, unknown>,
@@ -183,13 +189,14 @@ export class Repo extends EventEmitter {
 	 * and flai returns within a few seconds, the same request is sent once more and flai answers from
 	 * its journal if it had already done it: a retry can never move, accept, or save twice.
 	 */
-	async write<T>(method: string, params: Record<string, unknown> = {}, opt?: AskOptions) {
+	async write<T>(method: string, params: Record<string, unknown> = {}, opt?: WriteOptions) {
 		const body = { ...params, request_id: randomUUID() };
-		const timed = { timeoutMs: 60000, ...opt };
+		const { retry = true, ...rest } = opt ?? {};
+		const timed = { timeoutMs: 60000, ...rest };
 		try {
 			return await this.source<Written<T>>(method, body, timed).catch(async (e) => {
 				const lost = e instanceof AgentError && e.status === 502 && e.code === undefined;
-				if (!lost || !(await this.returned(5000))) throw e;
+				if (!lost || !retry || !(await this.returned(5000))) throw e;
 				return this.source<Written<T>>(method, body, timed);
 			});
 		} catch (e) {

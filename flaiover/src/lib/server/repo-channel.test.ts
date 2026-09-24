@@ -203,6 +203,19 @@ describe('Repo over the channel', () => {
 			new Repo('/nowhere', refusing, async () => true).write('item.move', { id: 'S-0001', to: 'x' })
 		).rejects.toMatchObject({ status: 400 });
 		expect(sent).toHaveLength(1);
+
+		// a write whose success ends the connection is not repeated: the flai that came back has
+		// no record of it and would do it again (S-0107, a serve restart that ran twice)
+		lose = true;
+		sent.length = 0;
+		await expect(
+			new Repo('/nowhere', ask, async () => true).write(
+				'host.process',
+				{ process: 'serve', action: 'restart' },
+				{ retry: false }
+			)
+		).rejects.toMatchObject({ status: 502 });
+		expect(sent).toHaveLength(1);
 	});
 
 	it('gives a conflict and a refusal their status and what flai sent with them', async () => {

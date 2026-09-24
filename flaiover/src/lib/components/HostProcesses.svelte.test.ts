@@ -13,7 +13,12 @@ const settleThrough = async (ms = 20) => {
 	await new Promise((r) => setTimeout(r, ms));
 	flushSync();
 };
-const answer = (body: unknown, ok = true) => ({ ok, statusText: 'Error', json: async () => body });
+const answer = (body: unknown, ok = true, status = ok ? 200 : 400) => ({
+	ok,
+	status,
+	statusText: 'Error',
+	json: async () => body
+});
 const host = (over: Record<string, unknown> = {}) =>
 	answer({
 		running: true,
@@ -136,6 +141,20 @@ describe('HostProcesses', () => {
 		await settleThrough(40);
 		expect(text('host-processes-message')).toBe('serve restarted; reconnected.');
 		expect(api.mock.calls.length).toBeGreaterThan(3);
+	});
+
+	it('takes the route’s 502 for serve going away as the restart going ahead', async () => {
+		await open(host(), fast);
+		api.mockResolvedValueOnce(
+			answer({ error: 'the host flai went away before it answered' }, false, 502)
+		);
+		api.mockResolvedValue(
+			host({ children: [{ name: 'serve', state: 'running', pid: 4300, restarts: 1 }] })
+		);
+		q('host-processes-serve-restart')!.click();
+		await settleThrough(40);
+		expect(q('host-processes-failed')).toBeNull();
+		expect(text('host-processes-message')).toBe('serve restarted; reconnected.');
 	});
 
 	it('checks for a newer flai as a read', async () => {

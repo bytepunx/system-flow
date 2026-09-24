@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Repo, useRepo, RepoError, type Ask } from '$lib/server/repo';
+import { AgentError } from '$lib/server/agent';
 
 type Handler = (event: never) => Promise<Response>;
 
@@ -158,6 +159,33 @@ describe('/api/host (S-0107)', () => {
 		expect(await r.json()).toMatchObject({ restarting: true, upgrade: { installed: '1.10.0' } });
 		expect(asked[0].method).toBe('host.upgrade');
 		expect(asked[0].params.process).toBeUndefined();
+	});
+
+	it('does not repeat a write that ends its own connection when the connection is lost', async () => {
+		// flai serve restarting drops the channel before it answers; the serve that comes back has
+		// no record of the request, so a retry would restart it again (found live, S-0107)
+		const sent: string[] = [];
+		const losing = (async (method: string, params: Record<string, unknown> = {}) => {
+			if (method.startsWith('host.')) sent.push(`${method} ${params.process ?? ''}`.trim());
+			throw new AgentError(502, 'the host flai went away before it answered');
+		}) as unknown as Ask;
+		useRepo(new Repo('/nowhere', losing, async () => true));
+		try {
+			for (const body of [
+				{ action: 'restart', process: 'serve' },
+				{ action: 'stop', process: 'all' },
+				{ action: 'upgrade' }
+			]) {
+				expect((await post(body)).status).toBe(502);
+			}
+			expect(sent).toEqual(['host.process serve', 'host.process all', 'host.upgrade']);
+			// the MCP servers going down leaves serve's connection alone: the usual one retry stands
+			sent.length = 0;
+			await post({ action: 'restart', process: 'mcp' });
+			expect(sent).toEqual(['host.process mcp', 'host.process mcp']);
+		} finally {
+			useRepo(new Repo('/nowhere', channel));
+		}
 	});
 
 	it('answers with the host action’s refusal when it is not enabled', async () => {
