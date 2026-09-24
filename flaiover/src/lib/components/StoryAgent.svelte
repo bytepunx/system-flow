@@ -2,15 +2,22 @@
 	// What the agent flai started for this story is doing (S-0104): the board card's dot, with the
 	// harness, the model, when it started, and why it waits or failed. It asks flai again when the
 	// project's files change and, while the agent runs, now and then, since an agent ends without
-	// changing a file. Nothing shows for a story no agent was started for.
+	// changing a file. Nothing shows for a story no agent was started for. For a story in ready or
+	// in progress whose agent dropped or failed, Restart agent has flai start a new one (S-0116).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { projectState } from '$lib/project.svelte';
 	import { activityLine, anyRunning, type HostAgent } from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 
-	let { story }: { story: string } = $props();
+	let {
+		story,
+		status: storyStatus = '',
+		writable = false
+	}: { story: string; status?: string; writable?: boolean } = $props();
 	let status = $state<HostAgent | null>(null);
+	let restarting = $state(false);
+	let restartError = $state<string | null>(null);
 
 	async function ask() {
 		try {
@@ -33,6 +40,32 @@
 	});
 
 	const activity = $derived(status?.enabled ? status.state?.stories?.[story] : undefined);
+	const canRestart = $derived(
+		writable &&
+			activity?.state === 'failed' &&
+			(storyStatus === 'ready' || storyStatus === 'in-progress')
+	);
+
+	async function restart() {
+		if (restarting) return;
+		restarting = true;
+		restartError = null;
+		try {
+			const r = await api(`/api/items/${story}/agent`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'restart' })
+			});
+			if (!r.ok) {
+				const body = (await r.json().catch(() => ({}))) as { error?: string };
+				restartError = body.error ?? 'the agent could not be restarted';
+			}
+		} catch (e) {
+			restartError = e instanceof Error ? e.message : String(e);
+		}
+		restarting = false;
+		await ask();
+	}
 	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
 </script>
 
@@ -58,6 +91,17 @@
 					host.{/if}
 				Moving the story back to ready starts another, and so does changing its agent while it is in ready.
 			</p>
+			{#if canRestart}
+				<button
+					class="mt-2 rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
+					onclick={restart}
+					disabled={restarting}
+					data-testid="story-agent-restart">{restarting ? 'Restarting…' : 'Restart agent'}</button
+				>
+			{/if}
+			{#if restartError}
+				<p class="mt-1 text-xs text-warn" data-testid="story-agent-restart-error">{restartError}</p>
+			{/if}
 		{/if}
 	</section>
 {/if}

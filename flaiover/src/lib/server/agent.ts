@@ -108,7 +108,9 @@ export const REQUIRED_METHODS = [
 	'settings.checks_timeout',
 	'settings.import',
 	'settings.mcp_token',
-	'settings.dashboard_token'
+	'settings.dashboard_token',
+	// S-0116: a new agent for a story whose agent dropped or failed, gated by the agent host action
+	'agent.restart'
 ];
 
 export type AgentStatus = {

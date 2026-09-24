@@ -291,7 +291,11 @@
 			<Threads on={item.id} {writable} />
 		</div>
 		<aside class="space-y-4 text-sm">
-			{#if item.type === 'story'}<StoryAgent story={item.id} />{/if}
+			{#if item.type === 'story'}<StoryAgent
+					story={item.id}
+					status={item.status}
+					writable={writable && !item.archived}
+				/>{/if}
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>
 				<ol class="space-y-1 text-xs">

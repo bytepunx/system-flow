@@ -258,10 +258,11 @@ var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 // template with the operator's own credentials (S-0078).
 const ActionPush = "push"
 
-// ActionAgent is the host action that starts the operator's agent command
-// when a story becomes ready and nobody is attending the project (S-0079).
-// No method of the channel asks for it: flai serve performs it itself, from
-// what it sees in the project's files.
+// ActionAgent is the host action that starts a story's agent when the story
+// becomes ready and the in-progress limit has room (S-0079, S-0104,
+// ADR-0043). flai serve performs that itself, from what it sees in the
+// project's files; the one method that asks for it is agent.restart, a new
+// agent for a story whose agent dropped or failed (S-0116).
 const ActionAgent = "agent"
 
 // ActionDashboard is the host action that restarts, upgrades, or stops the
@@ -288,7 +289,7 @@ const ActionSettings = "settings"
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
 	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
-	ActionAgent:     "start the command you set with flai serve agent set, on this machine and as you, whenever a story becomes ready and no agent is attending the project; whoever can move a story to ready, a holder of the dashboard token included, then starts it",
+	ActionAgent:     "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, and start a new one for a story whose agent dropped or failed; whoever can move a story to ready or press Restart agent, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
 	ActionHost:      "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
@@ -1250,7 +1251,42 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"checks", "cancel", in.ID}, "", nil
 		}},
+		// agent.restart: a new agent for a story whose agent dropped or
+		// failed (S-0116, ADR-0043); flai serve agent restart judges whether
+		// it may, and says why not.
+		"agent.restart": {action: ActionAgent, describe: describeAgentRestart, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			if !strings.HasPrefix(in.ID, "S-") {
+				return nil, "", bad("%s is not a story; only a story has an agent", in.ID)
+			}
+			return []string{"serve", "agent", "restart", in.ID}, "", nil
+		}},
 	}
+}
+
+// describeAgentRestart reads flai serve agent restart's --json shape for the
+// journal.
+func describeAgentRestart(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Story   string `json:"story"`
+		Agent   string `json:"agent"`
+		Command string `json:"command"`
+		PID     int    `json:"pid"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	return "done", fmt.Sprintf("restarted %s for %s as %s (pid %d)", said.Command, said.Story, said.Agent, said.PID)
 }
 
 // describeChecksRun reads flai checks run/cancel's own --json shape

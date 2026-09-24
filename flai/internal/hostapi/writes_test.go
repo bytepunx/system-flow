@@ -65,6 +65,7 @@ var good = map[string]struct {
 	"checks.tail":   {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
 	"checks.run":    {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
 	"checks.cancel": {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
+	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}},` + rid + `}`,
@@ -133,6 +134,7 @@ var refused = map[string][]string{
 	"checks.tail":   {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
 	"checks.run":    {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"checks.cancel": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.restart": {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -431,7 +433,9 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 			t.Errorf("%s runs flai config", name)
 		}
 		host := args[0] == "serve" || args[0] == "agent" || (len(args) > 1 && args[1] == "token" && (args[0] == "dashboard" || args[0] == "mcp"))
-		if host && sp.action != ActionSettings {
+		// S-0116: restarting a story's agent is the agent action's, and changes no setting
+		restart := name == "agent.restart" && sp.action == ActionAgent && strings.Join(args[:3], " ") == "serve agent restart"
+		if host && !restart && sp.action != ActionSettings {
 			t.Errorf("%s runs flai %s without the settings action", name, strings.Join(args[:2], " "))
 		}
 		if strings.HasPrefix(name, "settings.") && sp.action != ActionSettings {
@@ -508,10 +512,16 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	if got, _ := json.Marshal(res); string(got) != `{"enabled":false}` {
 		t.Errorf("on a host nobody touched: %s", got)
 	}
+	// Nothing the dashboard asks for stops or configures an agent; the one
+	// that starts one, for a story whose agent dropped or failed, needs the
+	// agent action (S-0116).
 	for name := range Methods("test", nil) {
-		if strings.HasPrefix(name, "agent.") && name != "agent.status" {
-			t.Errorf("%s: nothing the dashboard can ask for starts, stops, or configures an agent", name)
+		if strings.HasPrefix(name, "agent.") && name != "agent.status" && name != "agent.restart" {
+			t.Errorf("%s: nothing the dashboard can ask for stops or configures an agent", name)
 		}
+	}
+	if sp := specs()["agent.restart"]; sp.action != ActionAgent {
+		t.Errorf("agent.restart is gated by %q, not the agent action", sp.action)
 	}
 }
 

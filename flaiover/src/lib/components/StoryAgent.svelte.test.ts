@@ -46,9 +46,13 @@ describe('StoryAgent (S-0104)', () => {
 		vi.unstubAllGlobals();
 		document.body.innerHTML = '';
 	});
-	const show = async (stories: unknown, enabled = true) => {
+	const show = async (
+		stories: unknown,
+		enabled = true,
+		props: { status?: string; writable?: boolean } = {}
+	) => {
 		api.mockResolvedValue(answer({ enabled, state: { command: '', stories } }));
-		c = mount(StoryAgent, { target: document.body, props: { story: 'S-0104' } });
+		c = mount(StoryAgent, { target: document.body, props: { story: 'S-0104', ...props } });
 		await settle();
 	};
 
@@ -118,5 +122,63 @@ describe('StoryAgent (S-0104)', () => {
 		expect(failed).toContain(
 			'Moving the story back to ready starts another, and so does changing its agent while it is in ready.'
 		);
+	});
+
+	// S-0116: a story in ready or in progress whose agent dropped or failed gets a new one
+	describe('Restart agent', () => {
+		const failed = {
+			'S-0104': {
+				state: 'failed',
+				why: 'ended (exit 1) with S-0104 in in-progress',
+				run: { ...run, ended: '2026-09-23T18:30:00Z', exit: 1 }
+			}
+		};
+		const button = () =>
+			document.querySelector<HTMLButtonElement>('[data-testid="story-agent-restart"]');
+
+		it('is offered only for a failed agent of a story in ready or in progress, to a writer', async () => {
+			for (const [stories, props, offered] of [
+				[failed, { status: 'in-progress', writable: true }, true],
+				[failed, { status: 'ready', writable: true }, true],
+				[failed, { status: 'review', writable: true }, false],
+				[failed, { status: 'in-progress', writable: false }, false],
+				[{ 'S-0104': { state: 'working', run } }, { status: 'in-progress', writable: true }, false]
+			] as const) {
+				await show(stories, true, props);
+				expect(button() !== null, JSON.stringify(props)).toBe(offered);
+				unmount(c!);
+				c = undefined;
+			}
+		});
+
+		it('asks flai to restart it, and says why when flai refuses', async () => {
+			await show(failed, true, { status: 'in-progress', writable: true });
+			api.mockImplementation(async (path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? { ok: false, json: async () => ({ error: 'the in-progress limit leaves no room' }) }
+					: answer({ enabled: true, state: { command: '', stories: failed } })
+			);
+			button()!.click();
+			await settle();
+			const post = api.mock.calls.find((call) => (call[1] as RequestInit)?.method === 'POST')!;
+			expect(post[0]).toBe('/api/items/S-0104/agent');
+			expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ action: 'restart' });
+			expect(
+				document.querySelector('[data-testid="story-agent-restart-error"]')!.textContent
+			).toContain('the in-progress limit leaves no room');
+			// a restart that is taken: the page asks again and shows the new agent at work
+			api.mockImplementation(async (path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? { ok: true, json: async () => ({ story: 'S-0104' }) }
+					: answer({
+							enabled: true,
+							state: { command: '', stories: { 'S-0104': { state: 'working', run } } }
+						})
+			);
+			button()!.click();
+			await settle();
+			expect(text()).toContain('agent working');
+			expect(button()).toBeNull();
+		});
 	});
 });
