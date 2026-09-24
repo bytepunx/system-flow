@@ -7,6 +7,7 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
+  - S-0112
   - S-0109
 ---
 

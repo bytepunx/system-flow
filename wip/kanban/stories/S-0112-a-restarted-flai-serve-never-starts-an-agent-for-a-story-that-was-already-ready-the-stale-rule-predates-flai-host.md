@@ -3,11 +3,14 @@ id: S-0112
 type: story
 nature: remediation
 title: "A restarted flai serve never starts an agent for a story that was already ready: the stale rule predates flai host"
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-24T06:17:48Z
-updated: 2026-09-24T06:17:48Z
-transitions: []
+updated: 2026-09-24T06:18:31Z
+transitions:
+  - to: ready
+    at: 2026-09-24T06:18:31Z
+    by: alex
 tags: [cli]
 touches: [flai/internal/serve]
 agent:
