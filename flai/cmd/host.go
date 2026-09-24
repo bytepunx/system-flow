@@ -263,6 +263,8 @@ func (a *app) describeHost(st host.Status) {
 			line = fmt.Sprintf("running since %s (pid %d, flai %s)", c.Since, c.PID, c.Version)
 		case "external":
 			line = fmt.Sprintf("run by a process the host did not start (pid %d); stop it for the host to take over", c.PID)
+		case "stopping":
+			line = fmt.Sprintf("stopping (pid %d): asked to end, and given the grace period", c.PID)
 		}
 		if c.Restarts > 0 {
 			line += fmt.Sprintf(", %d restart(s)", c.Restarts)

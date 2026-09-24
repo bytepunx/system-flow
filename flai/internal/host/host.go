@@ -101,7 +101,8 @@ type Child struct {
 	Root string `json:"root,omitempty"`
 	// State is running; waiting, between an exit and the next start;
 	// external, when a process the host did not start already does the job;
-	// or stopped, when the operator stopped it.
+	// stopping, asked to stop while its process has not ended yet (with its
+	// PID); or stopped, when the operator stopped it and it has ended.
 	State string `json:"state"`
 	PID   int    `json:"pid,omitempty"`
 	Since string `json:"since,omitempty"`

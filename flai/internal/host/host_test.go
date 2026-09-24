@@ -314,6 +314,30 @@ func TestAChildThatWillNotStopIsKilled(t *testing.T) {
 	}
 }
 
+// S-0108: a child asked to stop is stopping, with its PID, for as long as
+// its process runs, and stopped only once it has gone. It said stopped at
+// once, and a slow runner caught the process still alive (CI after S-0106).
+func TestAChildIsStoppedOnlyOnceItsProcessHasEnded(t *testing.T) {
+	r := start(t, Options{MCP: func(string) (Spec, error) { return spec("stubborn")() }, Grace: time.Second})
+	ctx := context.Background()
+	if _, err := r.client.KeepMCP(ctx, []string{"/a"}); err != nil {
+		t.Fatal(err)
+	}
+	pid := childOf(r.until("a running", isRunning(MCP, "/a")), MCP, "/a").PID
+	time.Sleep(100 * time.Millisecond) // it has ignored SIGTERM by now
+	if _, err := r.client.Act(ctx, MCP, "stop"); err != nil {
+		t.Fatal(err)
+	}
+	st := r.until("a stopping", func(st Status) bool { return childOf(st, MCP, "/a").State == "stopping" })
+	if c := childOf(st, MCP, "/a"); c.PID != pid || !alive(pid) {
+		t.Errorf("stopping names the process that is still running: %+v, alive %v", c, alive(pid))
+	}
+	r.until("a stopped", func(st Status) bool { return childOf(st, MCP, "/a").State == "stopped" })
+	if alive(pid) {
+		t.Errorf("stopped, and pid %d still runs", pid)
+	}
+}
+
 func TestAnUpgradeThatInstalledRestartsTheHost(t *testing.T) {
 	installed := false
 	r := start(t, Options{Upgrade: func(context.Context) (any, bool, error) {

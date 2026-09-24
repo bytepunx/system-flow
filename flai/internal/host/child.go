@@ -76,6 +76,10 @@ func (c *child) state() Child {
 	defer c.mu.Unlock()
 	out := Child{Name: c.name, Root: c.root, Restarts: c.restarts, LastExit: c.lastExit, LastError: c.lastError}
 	switch {
+	case (c.paused || !c.want) && c.pid != 0:
+		// asked to stop, and its process has not ended yet: it is given the
+		// grace period, and says stopped only once it is gone (S-0108)
+		out.State, out.PID = "stopping", c.pid
 	case c.paused || !c.want:
 		out.State = "stopped"
 	case c.external != 0:
