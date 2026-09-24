@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-24T01:26:46Z
+updated: 2026-09-24T07:40:17Z
 transitions: []
 tags: []
 ---
@@ -52,6 +52,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0094 Tagging should occur before push
 - S-0095 Multiple projects can be managed by a single flai serve process
 - S-0107 Host panel in the dashboard allows for view and management of serve and MCP processes
+- S-0113 The new section for the host page for hosts needs improvement
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
