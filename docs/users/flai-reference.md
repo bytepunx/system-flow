@@ -1549,6 +1549,7 @@ Subcommands:
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
+- [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
 
 ##### flai serve agent clear
 
@@ -1616,6 +1617,24 @@ Print the command and whether the action is enabled here.
 
 ```text
 flai serve agent show
+```
+
+##### flai serve agent start
+
+Start a ready story's agent now, whatever flai serve's own rules say about when.
+
+```text
+flai serve agent start <story-id>
+```
+
+Starts the agent of a story in ready now, the way flai serve starts one when a story enters ready: the story's harness, model, and options, or the host's command. It starts whether or not the story was ready before flai serve began, whether or not it has had an agent since it entered ready, and whoever is attending the project. The run is recorded where the serving flai tracks it: the dot on the card, the outcome when it ends, the start again on an answer (S-0115).
+
+It refuses, and says why, while the agent action is off for the project, when the story is not in ready, while its agent runs or waits for an answer, when nothing can start it (no harness and no command), and while the in-progress limit is full. A story in progress whose agent dropped or failed gets a new one from flai serve agent restart. The story page's Start agent button runs this.
+
+Examples:
+
+```bash
+flai serve agent start S-0115
 ```
 
 #### flai serve checks
