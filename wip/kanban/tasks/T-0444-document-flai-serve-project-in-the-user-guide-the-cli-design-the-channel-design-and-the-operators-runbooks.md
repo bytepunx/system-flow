@@ -1,10 +1,10 @@
 ---
-id: T-0436
+id: T-0444
 type: task
 nature: feature
 title: Document flai serve project in the user guide, the CLI design, the channel design, and the operators' runbooks
 status: done
-parent: S-0118
+parent: S-0121
 owner: alex
 created: 2026-09-26T05:26:00Z
 updated: 2026-09-26T05:39:18Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:39:18Z
     by: agent-S-0118
-stream: S-0118
+stream: S-0121
 tags: []
 ---
 
-# T-0436 Document flai serve project in the user guide, the CLI design, the channel design, and the operators' runbooks
+# T-0444 Document flai serve project in the user guide, the CLI design, the channel design, and the operators' runbooks
 
 ## Work
 

@@ -12,7 +12,7 @@ import (
 // Found is a system-flow project flai serve found below a folder rather than
 // in its registry: below the folder it was started in (S-0102), or a git
 // repository with a system-flow.yaml below a folder named for import
-// (S-0117). It is served as registered projects are, for as long as it is
+// (S-0120). It is served as registered projects are, for as long as it is
 // there, without being written to the registry.
 type Found struct {
 	Entry

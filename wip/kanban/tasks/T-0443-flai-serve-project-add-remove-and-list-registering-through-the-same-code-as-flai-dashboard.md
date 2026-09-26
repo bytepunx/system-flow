@@ -1,10 +1,10 @@
 ---
-id: T-0435
+id: T-0443
 type: task
 nature: feature
 title: flai serve project add, remove, and list, registering through the same code as flai dashboard
 status: done
-parent: S-0118
+parent: S-0121
 owner: alex
 created: 2026-09-26T05:25:59Z
 updated: 2026-09-26T05:35:52Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:35:52Z
     by: agent-S-0118
-stream: S-0118
+stream: S-0121
 tags: []
 ---
 
-# T-0435 flai serve project add, remove, and list, registering through the same code as flai dashboard
+# T-0443 flai serve project add, remove, and list, registering through the same code as flai dashboard
 
 ## Work
 

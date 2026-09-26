@@ -1,5 +1,5 @@
 ---
-id: ADR-0044
+id: ADR-0045
 title: A system-flow repository under a folder named for import is served whether or not it is registered
 status: accepted
 date: 2026-09-26
@@ -8,11 +8,11 @@ superseded_by: []
 refines: [ADR-0035]
 ---
 
-# ADR-0044 A system-flow repository under a folder named for import is served whether or not it is registered
+# ADR-0045 A system-flow repository under a folder named for import is served whether or not it is registered
 
 ## Context
 
-[ADR-0035](0035-repositories-under-folders-the-operator-names-can-be-imported-from-the-board.md) has `flai serve` offer the board the git repositories with no `system-flow.yaml` below the folders the operator names (`import_roots`), and register one once it is imported from the board. A repository imported with `flai import` on the command line got a manifest and was never registered (I-0045, S-0117). `FindCandidates` skips any repository with a manifest, so such a repository was neither offered nor served, and nothing short of `flai dashboard` in it brought it to the board. The story asks that such a repository be served, or offered to be served, and not dropped from both.
+[ADR-0035](0035-repositories-under-folders-the-operator-names-can-be-imported-from-the-board.md) has `flai serve` offer the board the git repositories with no `system-flow.yaml` below the folders the operator names (`import_roots`), and register one once it is imported from the board. A repository imported with `flai import` on the command line got a manifest and was never registered (I-0047, S-0120). `FindCandidates` skips any repository with a manifest, so such a repository was neither offered nor served, and nothing short of `flai dashboard` in it brought it to the board. The story asks that such a repository be served, or offered to be served, and not dropped from both.
 
 ## Decision
 

@@ -1,17 +1,20 @@
 ---
-id: S-0119
+id: S-0122
 type: story
 nature: improvement
 title: The dashboard's settings page serves, removes, and shows the health of every project the host knows
-status: ready
+status: in-progress
 parent: E-0003
 owner: alex
 created: 2026-09-26T05:18:07Z
-updated: 2026-09-26T05:24:31Z
+updated: 2026-09-26T05:59:36Z
 transitions:
   - to: ready
     at: 2026-09-26T05:24:31Z
     by: alex
+  - to: in-progress
+    at: 2026-09-26T05:59:36Z
+    by: agent-S-0119
 tags: [dashboard, cli]
 touches: [flaiover, flai/internal/hostapi]
 agent:
@@ -20,7 +23,7 @@ agent:
   config:
     effort: high
 ---
-# S-0119 The dashboard's settings page serves, removes, and shows the health of every project the host knows
+# S-0122 The dashboard's settings page serves, removes, and shows the health of every project the host knows
 
 ## Goal
 
@@ -38,4 +41,4 @@ The operator manages the projects the dashboard shows from the dashboard: they s
 
 ## Notes
 
-Builds on the host channel methods that S-0118 adds, so pull S-0118 first. Related to [I-0045](../../../design/issues/I-0045-a-project-imported-with-flai-import-on-the-command-line-is-neither-served-nor-offered-so-the-dashboard-never-shows-it.md).
+Builds on the host channel methods that S-0121 adds, so pull S-0121 first. Related to [I-0047](../../../design/issues/I-0047-a-project-imported-with-flai-import-on-the-command-line-is-neither-served-nor-offered-so-the-dashboard-never-shows-it.md).

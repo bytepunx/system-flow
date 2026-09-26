@@ -164,7 +164,7 @@ type serveStatus struct {
 	MCP map[string]mcpState `json:"mcp,omitempty"`
 	// Unserved are the projects below the folders named for import that are
 	// not served, and why, worked out when flai serve does not run; when it
-	// runs they are in its status (S-0117).
+	// runs they are in its status (S-0120).
 	Unserved []serve.Found `json:"unserved,omitempty"`
 }
 

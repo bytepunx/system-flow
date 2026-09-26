@@ -48,7 +48,7 @@ type Status struct {
 	FolderProjects []Entry `json:"folder_projects,omitempty"`
 	// ImportProjects are the git repositories with a system-flow.yaml below
 	// the folders named for import that it serves, and Unserved the projects
-	// below either kind of folder that it does not, with why (S-0117).
+	// below either kind of folder that it does not, with why (S-0120).
 	ImportProjects []Entry `json:"import_projects,omitempty"`
 	Unserved       []Found `json:"unserved,omitempty"`
 }

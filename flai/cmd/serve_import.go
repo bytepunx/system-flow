@@ -27,7 +27,7 @@ tests, and commits the import when they pass. Naming a folder is your say that
 this may happen to what is in it; nothing else enables it.
 
 A repository there that has a system-flow.yaml already, imported on the
-command line say, is served as a project (S-0117), as a registered one is,
+command line say, is served as a project (S-0120), as a registered one is,
 for as long as it is there and without being written to the registry;
 flai serve status lists those it does not serve, and why.`,
 		Example: `  flai serve import add ~/git

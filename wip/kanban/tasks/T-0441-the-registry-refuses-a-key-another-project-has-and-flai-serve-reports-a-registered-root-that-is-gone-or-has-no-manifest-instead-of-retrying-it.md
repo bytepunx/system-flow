@@ -1,10 +1,10 @@
 ---
-id: T-0433
+id: T-0441
 type: task
 nature: feature
 title: The registry refuses a key another project has, and flai serve reports a registered root that is gone or has no manifest instead of retrying it
 status: done
-parent: S-0118
+parent: S-0121
 owner: alex
 created: 2026-09-26T05:25:59Z
 updated: 2026-09-26T05:28:34Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:28:34Z
     by: agent-S-0118
-stream: S-0118
+stream: S-0121
 tags: []
 ---
 
-# T-0433 The registry refuses a key another project has, and flai serve reports a registered root that is gone or has no manifest instead of retrying it
+# T-0441 The registry refuses a key another project has, and flai serve reports a registered root that is gone or has no manifest instead of retrying it
 
 ## Work
 

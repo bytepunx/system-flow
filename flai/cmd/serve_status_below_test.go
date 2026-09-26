@@ -29,7 +29,7 @@ func belowFolder(t *testing.T) string {
 	return folder
 }
 
-// S-0117: with flai serve not running, status still lists the projects below
+// S-0120: with flai serve not running, status still lists the projects below
 // the folders named for import, and why each is not served.
 func TestServeStatusListsTheProjectsBelowTheImportRootsNotServed(t *testing.T) {
 	home := t.TempDir()

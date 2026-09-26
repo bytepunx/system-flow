@@ -33,7 +33,7 @@ func projectAt(t *testing.T, dir, key string, git bool) {
 	}
 }
 
-// S-0117: the git repositories with a system-flow.yaml below a folder named
+// S-0120: the git repositories with a system-flow.yaml below a folder named
 // for import are found, as the projects below the folder flai serve was
 // started in are, each once and with why its manifest cannot serve it.
 func TestFindBelow(t *testing.T) {
@@ -118,7 +118,7 @@ func TestPlace(t *testing.T) {
 	}
 }
 
-// S-0117: a repository imported on the command line, below a folder named
+// S-0120: a repository imported on the command line, below a folder named
 // for import and not registered, is served, and the status says so, and
 // says why a project there is not.
 func TestServeServesTheProjectsBelowTheImportRoots(t *testing.T) {

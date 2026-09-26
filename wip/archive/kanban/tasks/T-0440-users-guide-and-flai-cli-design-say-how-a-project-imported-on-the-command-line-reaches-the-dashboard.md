@@ -1,10 +1,10 @@
 ---
-id: T-0432
+id: T-0440
 type: task
 nature: feature
 title: Users guide and flai-cli design say how a project imported on the command line reaches the dashboard
 status: done
-parent: S-0117
+parent: S-0120
 owner: alex
 created: 2026-09-26T05:25:44Z
 updated: 2026-09-26T05:38:53Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:38:53Z
     by: agent-S-0117
-stream: S-0117
+stream: S-0120
 tags: []
 ---
 
-# T-0432 Users guide and flai-cli design say how a project imported on the command line reaches the dashboard
+# T-0440 Users guide and flai-cli design say how a project imported on the command line reaches the dashboard
 
 ## Work
 

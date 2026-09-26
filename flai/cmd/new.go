@@ -27,7 +27,7 @@ type newOptions struct {
 	force        bool
 	noGit        bool
 	// origin is repo_url's default when the template gives none: the origin
-	// remote's web address, for an import (S-0117).
+	// remote's web address, for an import (S-0120).
 	origin string
 }
 
@@ -224,7 +224,7 @@ func (a *app) collectVars(m template.Manifest, o newOptions, dirName string) (ma
 }
 
 // givenVars are the --var values, name=value, with each checked that has a
-// check (repo_url, S-0117), so that a bad one is refused before anything is
+// check (repo_url, S-0120), so that a bad one is refused before anything is
 // written.
 func givenVars(items []string) (map[string]string, error) {
 	given, err := parsePairs(items, "var")

@@ -1,10 +1,10 @@
 ---
-id: T-0431
+id: T-0439
 type: task
 nature: feature
 title: The repo_url prompt defaults to the origin remote as an https URL and refuses a value that is not a URL
 status: done
-parent: S-0117
+parent: S-0120
 owner: alex
 created: 2026-09-26T05:25:44Z
 updated: 2026-09-26T05:34:41Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:34:41Z
     by: agent-S-0117
-stream: S-0117
+stream: S-0120
 tags: []
 ---
 
-# T-0431 The repo_url prompt defaults to the origin remote as an https URL and refuses a value that is not a URL
+# T-0439 The repo_url prompt defaults to the origin remote as an https URL and refuses a value that is not a URL
 
 ## Work
 

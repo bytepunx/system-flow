@@ -7,7 +7,7 @@ import (
 )
 
 // The system-flow projects below the folders named for import that are not
-// registered (S-0117): flai serve serves them, and flai serve status says so,
+// registered (S-0120): flai serve serves them, and flai serve status says so,
 // and why any it does not serve is not.
 
 // belowImportRoots is what flai serve does with the projects below the

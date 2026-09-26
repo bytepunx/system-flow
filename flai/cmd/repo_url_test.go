@@ -54,7 +54,7 @@ func TestCheckRepoURL(t *testing.T) {
 	}
 }
 
-// S-0117: an import offers the origin remote as an https URL for repo_url,
+// S-0120: an import offers the origin remote as an https URL for repo_url,
 // and refuses a value that is not a URL before writing anything.
 func TestImportTakesRepoURLFromOrigin(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {

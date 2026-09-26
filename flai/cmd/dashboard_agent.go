@@ -94,7 +94,7 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 }
 
 // serveEntry is what flai serve is told about a project to serve it for the
-// dashboard s: flai dashboard and flai import register the same (S-0117).
+// dashboard s: flai dashboard and flai import register the same (S-0120).
 func (a *app) serveEntry(repo *workitem.Repo, s dashboardSettings) serve.Entry {
 	return serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
 }

@@ -1004,7 +1004,7 @@ Interactive in a terminal; --yes accepts every default; --dry-run prints the pro
 
 --commit (S-0098) then runs the repository's tests and commits the import: the host's checks when flai serve checks set names any, else what the repository has (its own Makefile's test target, go test, the package manager's test script, cargo test, pytest), and commits exactly the paths the import wrote or moved, only when every test passed or none were found. It needs a git repository with no uncommitted changes. When a test fails, the imported files are left uncommitted, the answer says which failed, and flai exits with code 5.
 
-Once the manifest is written, a flai host running for this config is told to serve the project (S-0117): it is registered with flai serve as flai dashboard registers it, and the dashboard shows it in its switcher. With no host running, nothing is registered, and flai dashboard in the project serves it.
+Once the manifest is written, a flai host running for this config is told to serve the project (S-0120): it is registered with flai serve as flai dashboard registers it, and the dashboard shows it in its switcher. With no host running, nothing is registered, and flai dashboard in the project serves it.
 
 Examples:
 
@@ -1761,7 +1761,7 @@ The folders whose git repositories the board offers to import into system-flow.
 
 flai serve looks through each folder named here, and the folders in it to three levels, for git repositories with no system-flow.yaml, and offers each to the dashboards the projects it serves connect to: picking one there asks whether to import it. Importing runs flai import --commit in the repository, as you and on this host: it writes the standard's files, runs the repository's own tests, and commits the import when they pass. Naming a folder is your say that this may happen to what is in it; nothing else enables it.
 
-A repository there that has a system-flow.yaml already, imported on the command line say, is served as a project (S-0117), as a registered one is, for as long as it is there and without being written to the registry; flai serve status lists those it does not serve, and why.
+A repository there that has a system-flow.yaml already, imported on the command line say, is served as a project (S-0120), as a registered one is, for as long as it is there and without being written to the registry; flai serve status lists those it does not serve, and why.
 
 Examples:
 

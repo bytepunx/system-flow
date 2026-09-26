@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// The template's repo_url is the repository's web address (S-0117): an
+// The template's repo_url is the repository's web address (S-0120): an
 // import offers the origin remote made one, and a value that is not one is
 // refused, rather than written to system-flow.yaml as typed.
 

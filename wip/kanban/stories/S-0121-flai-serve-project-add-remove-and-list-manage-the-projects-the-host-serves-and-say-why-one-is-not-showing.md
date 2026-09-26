@@ -1,18 +1,21 @@
 ---
-id: S-0118
+id: S-0121
 type: story
 nature: improvement
 title: flai serve project add, remove, and list manage the projects the host serves and say why one is not showing
-status: in-progress
+status: review
 owner: alex
 created: 2026-09-26T05:18:06Z
-updated: 2026-09-26T05:35:26Z
+updated: 2026-09-26T05:58:39Z
 transitions:
   - to: ready
     at: 2026-09-26T05:24:21Z
     by: alex
   - to: in-progress
     at: 2026-09-26T05:24:40Z
+    by: agent-S-0118
+  - to: review
+    at: 2026-09-26T05:58:39Z
     by: agent-S-0118
 tags: [cli]
 touches: [flai/cmd/serve_project.go, flai/cmd/serve.go, flai/cmd/dashboard_agent.go, flai/internal/serve/serve.go, flai/internal/serve/projects.go, flai/internal/channel/channeltest, flaiover/src/lib/server/agent.ts, docs/users/flai.md, docs/users/flai-reference.md, docs/operators, design/system/flai-cli.md, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md]
@@ -22,7 +25,7 @@ agent:
   config:
     effort: high
 ---
-# S-0118 flai serve project add, remove, and list manage the projects the host serves and say why one is not showing
+# S-0121 flai serve project add, remove, and list manage the projects the host serves and say why one is not showing
 
 ## Goal
 
@@ -37,11 +40,13 @@ The operator can add a project to the host flai, remove it, and see why it is or
 - [x] Documented in `docs/users/flai.md`, `design/system/flai-cli.md`, and the operators' runbooks
 
 ## Tasks
-- T-0433 The registry refuses a key another project has, and flai serve reports a registered root that is gone or has no manifest instead of retrying it
-- T-0434 flai serve tells the dashboard a project was removed, and the switcher drops it without a restart
-- T-0435 flai serve project add, remove, and list, registering through the same code as flai dashboard
-- T-0436 Document flai serve project in the user guide, the CLI design, the channel design, and the operators' runbooks
+- T-0441 The registry refuses a key another project has, and flai serve reports a registered root that is gone or has no manifest instead of retrying it
+- T-0442 flai serve tells the dashboard a project was removed, and the switcher drops it without a restart
+- T-0443 flai serve project add, remove, and list, registering through the same code as flai dashboard
+- T-0444 Document flai serve project in the user guide, the CLI design, the channel design, and the operators' runbooks
 
 ## Notes
 
-Today the registry (`~/.flai/serve/projects.json`) can only be changed by `flai dashboard` or the board's import, and editing `~/.flai/config.json` has no effect on it. `flai serve import add|remove|list` manages the import roots, not the served projects, which is easy to confuse. Related to [I-0045](../../../design/issues/I-0045-a-project-imported-with-flai-import-on-the-command-line-is-neither-served-nor-offered-so-the-dashboard-never-shows-it.md).
+Delivered with one exception, which comes from S-0120 (accepted first). A project below a folder named for import is served whether registered or not, so `remove` unregisters it but the switcher keeps it; `remove` says so and names `flai serve import remove`. See the narrative's open question.
+
+Today the registry (`~/.flai/serve/projects.json`) can only be changed by `flai dashboard` or the board's import, and editing `~/.flai/config.json` has no effect on it. `flai serve import add|remove|list` manages the import roots, not the served projects, which is easy to confuse. Related to [I-0047](../../../design/issues/I-0047-a-project-imported-with-flai-import-on-the-command-line-is-neither-served-nor-offered-so-the-dashboard-never-shows-it.md).

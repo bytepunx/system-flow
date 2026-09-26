@@ -48,7 +48,7 @@ the imported files are left uncommitted, the answer says which failed, and
 flai exits with code 5.
 
 Once the manifest is written, a flai host running for this config is told
-to serve the project (S-0117): it is registered with flai serve as flai
+to serve the project (S-0120): it is registered with flai serve as flai
 dashboard registers it, and the dashboard shows it in its switcher. With no
 host running, nothing is registered, and flai dashboard in the project
 serves it.`,
@@ -243,7 +243,7 @@ func (a *app) runImport(dir string, o importOptions) error {
 		}
 		committed = &c
 	}
-	// 6. served by the host flai, so that the dashboard shows it (S-0117)
+	// 6. served by the host flai, so that the dashboard shows it (S-0120)
 	served := a.serveImported(repo)
 	if a.jsonOut {
 		out := map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck, "serve": served}

@@ -1,10 +1,10 @@
 ---
-id: T-0429
+id: T-0437
 type: task
 nature: feature
 title: flai import registers the project with flai serve when a host runs, and names the command that serves it when none does
 status: done
-parent: S-0117
+parent: S-0120
 owner: alex
 created: 2026-09-26T05:25:43Z
 updated: 2026-09-26T05:27:39Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:27:39Z
     by: agent-S-0117
-stream: S-0117
+stream: S-0120
 tags: []
 ---
 
-# T-0429 flai import registers the project with flai serve when a host runs, and names the command that serves it when none does
+# T-0437 flai import registers the project with flai serve when a host runs, and names the command that serves it when none does
 
 ## Work
 

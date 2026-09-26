@@ -1,10 +1,10 @@
 ---
-id: T-0430
+id: T-0438
 type: task
 nature: feature
 title: flai serve serves the unregistered projects under import_roots, and flai serve status says why any is not served
 status: done
-parent: S-0117
+parent: S-0120
 owner: alex
 created: 2026-09-26T05:25:44Z
 updated: 2026-09-26T05:32:25Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:32:25Z
     by: agent-S-0117
-stream: S-0117
+stream: S-0120
 tags: []
 ---
 
-# T-0430 flai serve serves the unregistered projects under import_roots, and flai serve status says why any is not served
+# T-0438 flai serve serves the unregistered projects under import_roots, and flai serve status says why any is not served
 
 ## Work
 

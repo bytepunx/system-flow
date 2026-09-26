@@ -144,7 +144,7 @@ type offers struct {
 	rescan  atomic.Bool
 
 	// the projects below Options.Folder (S-0102) and the import roots
-	// (S-0117), found again every ScanEvery, and where each was placed
+	// (S-0120), found again every ScanEvery, and where each was placed
 	folderFound   []Found
 	folderScanned time.Time
 	placed        []Found
@@ -189,7 +189,7 @@ func (d Dir) KnownDashboards(entries []Entry) map[string]Entry {
 
 // folderProjects are the system-flow projects below the folder flai serve was
 // started in (S-0102), and the git repositories with a system-flow.yaml below
-// the folders named for import (S-0117), that it serves as registered ones
+// the folders named for import (S-0120), that it serves as registered ones
 // are, for as long as it runs and without writing them to the registry. They
 // are found again every ScanEvery, and placed by Place: each is served for the
 // first dashboard, by address, that the registered projects or a recorded one
@@ -219,7 +219,7 @@ func (f *offers) folderProjects(entries []Entry) []Entry {
 // placement is what the status says of what folderProjects placed: the
 // projects served from the folder flai serve was started in (S-0102) and from
 // the folders named for import, and those below either that are not served,
-// with why (S-0117).
+// with why (S-0120).
 func (f *offers) placement() (folder, imported []Entry, unserved []Found) {
 	for _, p := range f.placed {
 		switch {

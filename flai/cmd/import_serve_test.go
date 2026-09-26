@@ -36,7 +36,7 @@ func importForServe(t *testing.T, args ...string) (root, out, errOut string, cod
 	return root, out, errOut, code
 }
 
-// S-0117: with no flai host running, nothing is registered and the import
+// S-0120: with no flai host running, nothing is registered and the import
 // names the one command that serves the project.
 func TestImportWithNoHostSaysWhatServesIt(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
@@ -53,7 +53,7 @@ func TestImportWithNoHostSaysWhatServesIt(t *testing.T) {
 	}
 }
 
-// S-0117: with a flai host running, the import registers the project with
+// S-0120: with a flai host running, the import registers the project with
 // flai serve as flai dashboard would, and says where the dashboard shows it,
 // with or without --commit, and committed or not: the legacy repository's
 // go module has no Go files, so go test fails and --commit exits 5.

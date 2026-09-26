@@ -1,10 +1,10 @@
 ---
-id: T-0434
+id: T-0442
 type: task
 nature: feature
 title: flai serve tells the dashboard a project was removed, and the switcher drops it without a restart
 status: done
-parent: S-0118
+parent: S-0121
 owner: alex
 created: 2026-09-26T05:25:59Z
 updated: 2026-09-26T05:30:23Z
@@ -18,11 +18,11 @@ transitions:
   - to: done
     at: 2026-09-26T05:30:23Z
     by: agent-S-0118
-stream: S-0118
+stream: S-0121
 tags: []
 ---
 
-# T-0434 flai serve tells the dashboard a project was removed, and the switcher drops it without a restart
+# T-0442 flai serve tells the dashboard a project was removed, and the switcher drops it without a restart
 
 ## Work
 

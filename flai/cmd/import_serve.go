@@ -8,7 +8,7 @@ import (
 )
 
 // A project imported on the command line is served as one imported from the
-// board is (S-0117): flai import registers it with flai serve when a flai host
+// board is (S-0120): flai import registers it with flai serve when a flai host
 // runs for the config, and otherwise says what serves it.
 
 // importServed is what flai import did to have the dashboard show the project.
