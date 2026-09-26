@@ -3,12 +3,15 @@ id: S-0123
 type: story
 nature: improvement
 title: A project served from below an import folder can be removed from the dashboard and served again
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-26T06:58:59Z
-updated: 2026-09-26T06:58:59Z
-transitions: []
+updated: 2026-09-26T07:04:27Z
+transitions:
+  - to: ready
+    at: 2026-09-26T07:04:27Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/internal/serve, flai/cmd, flaiover]
 agent:
