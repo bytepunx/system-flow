@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-09-18
+updated: 2026-09-26
 status: active
 ---
 
@@ -11,7 +11,7 @@ status: active
 | Host requirement | Any git with worktrees on `PATH`; the dev host has 2.47.3. flai shells out to it ([ADR 0010](../adrs/0010-shell-out-to-git-and-docker.md)) |
 | Image | The flaiover image installs Alpine's git, 2.54.0 at the time of writing, for acceptance from the dashboard |
 | Used for | Story branches and worktrees (`flai stream open`, `sync`, `accept`), release tags and pushes, template clones, `flai template push` |
-| Version-dependent | One thing: `worktrees.relative_paths`, which needs 2.48 for `git worktree add --relative-paths`. `flai/internal/gitver` reads the version; nothing else in flai branches on it |
+| Version-dependent | Two things. `worktrees.relative_paths` needs 2.48 for `git worktree add --relative-paths`. The trial merge at `flai stream sync` (S-0131) needs 2.38 for `git merge-tree --write-tree`, and is skipped with a warning below it. `flai/internal/gitver` reads the version; nothing else in flai branches on it |
 
 ## Why
 

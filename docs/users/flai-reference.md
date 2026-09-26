@@ -2050,6 +2050,8 @@ flai stream sync <story-id>
 
 Rebases story/&lt;story-id&gt; onto the branch checked out in the main checkout, stashing and restoring uncommitted work. Conflicts stop the rebase inside the worktree and are listed; resolve them, run git rebase --continue there, and sync again.
 
+After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. Each conflicting pair of stories has one thread, written by flai on the story that synced, which both stories' agents and the designer see in their inboxes; a sync that finds the pair merging cleanly again resolves it. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
+
 ### flai task
 
 Create tasks (flai show prints one, flai move transitions it).

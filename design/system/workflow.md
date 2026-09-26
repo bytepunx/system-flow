@@ -96,3 +96,12 @@ Each story is worked on `story/S-nnnn` in a worktree under `.flai-cache/worktree
 - **The operator's word.** `flai move <story> in-progress` and `item_move` warn and move it. `flai serve agent start` warns and starts it. `flai serve agent restart` of a held story in ready queues it.
 
 S-0129 built the dashboard's yellow card: a held story's card and page say why it waits and link the story it waits for ([flaiover-dashboard.md](flaiover-dashboard.md)). Still to come under E-0009, in this order: the trial merge and drift check at `flai stream sync`, and the notice at acceptance.
+
+S-0131 built the safety net at sync, which catches what the declared claims missed while both stories are still open:
+
+- **Trial merge.** After a clean rebase, `flai stream sync` merges the story branch with the branch of every other story in progress or in review with `git merge-tree --write-tree` (git 2.38 or newer), in git's object store only, so no worktree changes. It prints each branch it conflicts with and the conflicting paths, and each branch it merges cleanly with. An older git skips it with a warning.
+- **Conflict thread.** Each conflicting pair has one thread, written by `flai` on the story that synced and titled `S-nnnn and S-mmmm conflict when merged`, listing the paths and asking the two stories to settle who changes what: one narrows its change, or names the other in `after:`. A thread whose last entry is flai's awaits every agent and the designer, so both stories' agents see it in the MCP `inbox` and the designer in the dashboard's inbox. A later sync that finds the same paths writes nothing, new paths add an entry, and the thread is resolved once the pair merges cleanly or the other story is no longer open.
+- **Drift.** Sync lists the paths the branch changed since the main branch that the story's claim does not cover, leaving out the wip folder, with the `flai touches` command that widens it. A story whose claim is too narrow holds nothing it should.
+- **Not a failure.** A conflict with another branch, or a path outside the claim, does not fail the sync: its own rebase succeeded.
+
+Still to come under E-0009, in this order: `after:` and the notice at acceptance.

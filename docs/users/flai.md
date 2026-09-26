@@ -318,11 +318,25 @@ Only ready and backlog stories can be placed, and only relative to a story in th
 
 ```bash
 flai stream open S-0037        # narrative, plus branch story/S-0037 in .flai-cache/worktrees/S-0037
-flai stream sync S-0037        # rebase the branch onto main; run at every task transition
+flai stream sync S-0037        # rebase the branch onto main, then check it against the other open branches; run at every task transition
 flai stream open S-0037 --no-branch
 ```
 
 Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, stashing uncommitted work around it; conflicts stop inside the worktree and are listed, resolve them, `git rebase --continue`, and sync again. `flai accept` rebases, fast-forwards the branch into main, removes the worktree and branch, then tags and pushes.
+
+After a clean rebase, sync checks the branch against the other stories in progress or in review, so that two stories that change the same lines find out while both are still open, not when the second is accepted:
+
+```text
+story/S-0131 is rebased onto main
+story/S-0131 conflicts with story/S-0130 (in progress) in flai/cmd/edit.go; see TH-0024
+story/S-0131 merges cleanly with story/S-0129 (in review)
+story/S-0131 changed 1 path outside S-0131's touches: flai/internal/threads/threads.go
+widen them so that stories that overlap wait: flai touches S-0131 flai/cmd docs flai/internal/threads/threads.go
+```
+
+- **Conflicts.** Sync merges the two branches in git's object store only (`git merge-tree --write-tree`, git 2.38 or newer; an older git skips it with a warning), so nothing changes in either worktree. For each pair that conflicts, flai opens one thread on the story that synced, titled `S-0130 and S-0131 conflict when merged`, listing the paths. It shows in both stories' agents' MCP `inbox` and in the designer's inbox on the dashboard. Settle it between the two stories: one narrows its change, or names the other in `after:` and waits. A later sync with the same paths adds nothing, new paths add an entry, and flai resolves the thread once the two merge cleanly or the other story is no longer open.
+- **Outside the touches.** Sync lists the files the branch changed since main that the story's touches, and its open tasks', do not cover (see [Touches](#touches)), and prints the `flai touches` command that widens them. Touches that are too narrow let a story that overlaps start beside it.
+- Neither check fails the sync. `--json` adds `branches` (each with `story`, `status`, `branch`, `clean`, `conflicts`, and `thread`), `outside_touches`, and `trial_merge_skipped` when git is too old.
 
 #### Relative worktree links (opt-in)
 
