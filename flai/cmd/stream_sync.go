@@ -17,7 +17,8 @@ import (
 // The checks flai stream sync runs once its rebase is clean (S-0131,
 // ADR-0046): a trial merge with every other open story's branch, which
 // writes nothing to any worktree, to catch the overlaps the declared
-// touches missed while both stories are still open. A conflict is a thread
+// touches missed while both stories are still open, and the paths the
+// branch changed outside the story's claim, so that it is widened. A conflict is a thread
 // flai writes, one per pair of stories: a thread whose last entry is flai's
 // awaits every agent and the designer, so both stories' agents see it in
 // the MCP inbox and the designer in the dashboard's.
@@ -37,14 +38,19 @@ type branchCheck struct {
 type syncChecks struct {
 	Branches []branchCheck `json:"branches"`
 	Skipped  string        `json:"trial_merge_skipped,omitempty"`
+	Outside  []string      `json:"outside_touches"`
 }
 
-// checkSync trial-merges story's branch with the branch of every other story
+// checkSync lists the paths story's branch changed since base outside its
+// claim, and trial-merges the branch with the branch of every other story
 // in progress or in review that has one, in ID order.
-func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item) (syncChecks, error) {
-	out := syncChecks{Branches: []branchCheck{}}
+func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item, base string) (syncChecks, error) {
+	out := syncChecks{Branches: []branchCheck{}, Outside: []string{}}
 	items, err := repo.List(false)
 	if err != nil {
+		return out, err
+	}
+	if out.Outside, err = a.outsideClaim(repo, story, items, base); err != nil {
 		return out, err
 	}
 	var others []*workitem.Item
@@ -74,6 +80,40 @@ func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item) (syncChecks, 
 		out.Branches = append(out.Branches, branchCheck{Story: o.ID, Status: o.Status, Branch: storyBranch(o.ID), Clean: len(conflicts) == 0, Conflicts: conflicts})
 	}
 	return out, nil
+}
+
+// outsideClaim is the paths story's branch changed since it left base that
+// no entry of its claim (ADR-0046: its touches and its open tasks', a
+// component as its path) covers. The wip folder is flai's and is left out.
+func (a *app) outsideClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item, base string) ([]string, error) {
+	diff, err := a.runner.Run(repo.MainRoot, "git", "diff", "--name-only", base+"..."+storyBranch(story.ID))
+	if err != nil {
+		return nil, err
+	}
+	claim := workitem.NewHolds(items, repo.Manifest.Projects).Claim(story)
+	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/")
+	if wip == "" {
+		wip = "wip"
+	}
+	out := []string{}
+	for _, p := range strings.Split(diff, "\n") {
+		p = strings.TrimSpace(p)
+		if p == "" || coveredBy(p, []string{wip}) || coveredBy(p, claim) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+// coveredBy says whether path is one of entries or lies below one.
+func coveredBy(path string, entries []string) bool {
+	for _, e := range entries {
+		if path == e || strings.HasPrefix(path, e+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // trialMerge merges two branches in git's object store only and returns the
@@ -122,6 +162,10 @@ func printSyncChecks(w io.Writer, story *workitem.Item, c syncChecks) {
 			continue
 		}
 		fmt.Fprintf(w, "%s conflicts with %s (%s) in %s; see %s\n", mine, b.Branch, state, strings.Join(b.Conflicts, ", "), b.Thread)
+	}
+	if len(c.Outside) > 0 {
+		fmt.Fprintf(w, "%s changed %s outside %s's touches: %s\n", mine, plural(len(c.Outside), "path"), story.ID, strings.Join(c.Outside, ", "))
+		fmt.Fprintf(w, "widen them so that stories that overlap wait: flai touches %s %s\n", story.ID, strings.Join(append(append([]string{}, story.Touches...), c.Outside...), " "))
 	}
 }
 

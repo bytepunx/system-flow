@@ -110,6 +110,9 @@ func TestSyncTrialMergesOtherOpenBranches(t *testing.T) {
 			t.Errorf("sync output lacks %q:\n%s", want, out)
 		}
 	}
+	if strings.Contains(out, "outside") {
+		t.Errorf("S-0001 changed only what it touches:\n%s", out)
+	}
 	// the trial merge writes nothing to any worktree
 	for _, wt := range []string{one, two, three} {
 		if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
@@ -287,5 +290,46 @@ func TestSyncConflictIsAThreadInEveryInbox(t *testing.T) {
 	th2, _ = threads.Get(repo, "TH-0002")
 	if th2.Open() || !strings.Contains(th2.Entries()[len(th2.Entries())-1].Text, "S-0002 is cancelled, no longer open") {
 		t.Fatalf("not resolved when S-0002 closed: %+v", th2.Entries())
+	}
+}
+
+func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs/guide.md")
+	if _, errOut, code := runIn(t, root, "task", "new", "Design it", "--story", "S-0001", "--touches", "design"); code != 0 {
+		t.Fatal(errOut)
+	}
+	commitIn(t, wt, "docs/guide.md", "inside the story's touches\n")
+	commitIn(t, wt, "design/note.md", "inside its task's touches\n")
+	commitIn(t, wt, "docs/other.md", "outside\n")
+	commitIn(t, wt, "README.md", "outside\n")
+	commitIn(t, wt, "wip/stray.md", "flai's folder, left out\n")
+
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("sync: %d %s %s", code, out, errOut)
+	}
+	for _, want := range []string{
+		"story/S-0001 changed 2 paths outside S-0001's touches: README.md, docs/other.md",
+		"flai touches S-0001 docs/guide.md README.md docs/other.md",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("sync output lacks %q:\n%s", want, out)
+		}
+	}
+	out, _, _ = runIn(t, wt, "--json", "stream", "sync", "S-0001")
+	var res struct {
+		Outside []string `json:"outside_touches"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || strings.Join(res.Outside, ",") != "README.md,docs/other.md" {
+		t.Errorf("outside_touches: %v %s", err, out)
+	}
+
+	// widened as sync says, nothing is outside
+	if _, errOut, code := runIn(t, root, "touches", "S-0001", "docs/guide.md", "README.md", "docs/other.md"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if out, _, _ := runIn(t, wt, "stream", "sync", "S-0001"); strings.Contains(out, "outside") {
+		t.Errorf("widened, still outside:\n%s", out)
 	}
 }

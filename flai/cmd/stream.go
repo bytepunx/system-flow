@@ -82,7 +82,9 @@ newer), writing nothing to any worktree, and lists each branch it conflicts
 with and the conflicting paths. Each conflicting pair of stories has one
 thread, written by flai on the story that synced, which both stories' agents
 and the designer see in their inboxes; a sync that finds the pair merging
-cleanly again resolves it.`,
+cleanly again resolves it. It also lists the paths the branch changed since
+the main branch that the story's touches, and its open tasks', do not cover,
+so that they are widened with flai touches.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -100,7 +102,7 @@ cleanly again resolves it.`,
 				}
 				return err
 			}
-			checks, cerr := a.checkSync(repo, it)
+			checks, cerr := a.checkSync(repo, it, base)
 			if cerr != nil {
 				a.logger().Warn("story branch checks failed after the rebase", "component", "git", "story", it.ID, "err", cerr)
 			} else if err := a.reportConflicts(repo, it, &checks); err != nil {
@@ -108,7 +110,7 @@ cleanly again resolves it.`,
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": true,
-					"branches": checks.Branches, "trial_merge_skipped": checks.Skipped})
+					"branches": checks.Branches, "trial_merge_skipped": checks.Skipped, "outside_touches": checks.Outside})
 			}
 			fmt.Fprintf(a.out, "%s is rebased onto %s\n", storyBranch(it.ID), base)
 			printSyncChecks(a.out, it, checks)
