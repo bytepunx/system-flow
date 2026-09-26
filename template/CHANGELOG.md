@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.19 - 2026-09-26
+
+- S-0132 Accepting a story tells every open story that overlaps it which paths changed (patch).
+
 ## 1.0.18 - 2026-09-23
 
 - S-0097 Agents should connect to the MCP and consistently monitor for ready tickets (patch).
