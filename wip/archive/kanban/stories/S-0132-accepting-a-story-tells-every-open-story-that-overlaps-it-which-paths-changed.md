@@ -3,11 +3,11 @@ id: S-0132
 type: story
 nature: feature
 title: Accepting a story tells every open story that overlaps it which paths changed
-status: review
+status: done
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:23Z
-updated: 2026-09-26T18:26:29Z
+updated: 2026-09-26T21:09:40Z
 transitions:
   - to: ready
     at: 2026-09-26T17:50:41Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-26T18:26:29Z
     by: agent-S-0132
+  - to: done
+    at: 2026-09-26T21:09:40Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd, flai/internal/mcpserver, flai/internal/itemedit, docs, design/system, design/conventions, template/root/design/conventions]
 agent:
