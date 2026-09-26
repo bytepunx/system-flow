@@ -3,6 +3,7 @@ package cmd
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -76,11 +77,9 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 	if repo == nil {
 		return a.connectServeFolder(s)
 	}
-	entry := a.serveEntry(repo, s)
-	if entry.Key == "" {
+	if _, err := a.registerProject(repo, s); errors.Is(err, errNoKey) {
 		return "  host flai: not connected, the manifest has no key (flai check says how to add one)\n"
-	}
-	if err := a.serveDir().Register(entry); err != nil {
+	} else if err != nil {
 		return "  host flai: not registered: " + err.Error() + "\n"
 	}
 	st, started, err := a.ensureHost()
@@ -94,9 +93,15 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 }
 
 // serveEntry is what flai serve is told about a project to serve it for the
-// dashboard s: flai dashboard and flai import register the same (S-0120).
+// dashboard s: flai dashboard, flai import, and flai serve project add
+// register the same (S-0117, S-0118). The root is the main checkout, as the
+// dashboard serves it (ADR-0019), also for a project found below a folder.
 func (a *app) serveEntry(repo *workitem.Repo, s dashboardSettings) serve.Entry {
-	return serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
+	root := repo.Root
+	if repo.MainRoot != "" {
+		root = repo.MainRoot
+	}
+	return serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
 }
 
 // hostFlaiStatus is the part of flai serve's state about this project, and
@@ -185,7 +190,7 @@ func (a *app) connectServeFolder(s dashboardSettings) (note string) {
 			named += fmt.Sprintf("  %s: not registered (no key in its system-flow.yaml; flai check says how to add one)\n", root)
 			continue
 		}
-		if err := dir.Register(serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: root, URL: s.dialURL(), KeyFile: agentKeyPath(string(dir))}); err != nil {
+		if _, err := a.registerProject(repo, s); err != nil {
 			named += fmt.Sprintf("  %s: not registered: %s\n", root, err)
 			continue
 		}

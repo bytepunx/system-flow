@@ -27,7 +27,8 @@ func TestServeStatusReadsTheRegistryBesideTheConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	out, _, _ = runIn(t, home, "serve", "status")
-	if !strings.Contains(out, "harbour  http://127.0.0.1:4242  not connected") {
+	// a root that is not there says so rather than waiting to connect (S-0118)
+	if !strings.Contains(out, "harbour  http://127.0.0.1:4242  not served: the folder is gone") {
 		t.Errorf("status: %s", out)
 	}
 	out, _, _ = runIn(t, home, "serve", "status", "--json")

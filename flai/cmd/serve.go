@@ -139,7 +139,7 @@ there does.`,
 				return nil
 			},
 		},
-		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeChecksCmd(a),
+		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeProjectCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeChecksCmd(a),
 		&cobra.Command{
 			Use:   "status",
 			Short: "Whether flai serve runs, which projects it serves, and which dashboards have it connected",
@@ -166,6 +166,9 @@ type serveStatus struct {
 	// not served, and why, worked out when flai serve does not run; when it
 	// runs they are in its status (S-0120).
 	Unserved []serve.Found `json:"unserved,omitempty"`
+	// Unavailable are the registered projects that cannot be served, by
+	// root, and why (S-0118).
+	Unavailable map[string]string `json:"unavailable,omitempty"`
 }
 
 func (a *app) readServeStatus() (serveStatus, error) {
@@ -182,6 +185,12 @@ func (a *app) readServeStatus() (serveStatus, error) {
 		out.Running, out.Status = true, &st
 	}
 	for _, p := range projects {
+		if why := p.Unavailable(); why != "" {
+			if out.Unavailable == nil {
+				out.Unavailable = map[string]string{}
+			}
+			out.Unavailable[p.Root] = why
+		}
 		repo, err := workitem.Open(p.Root)
 		if err != nil {
 			continue
@@ -215,7 +224,9 @@ func (a *app) printServeStatus() error {
 	sort.Slice(st.Projects, func(i, j int) bool { return st.Projects[i].Key < st.Projects[j].Key })
 	for _, p := range st.Projects {
 		line := "not connected"
-		if st.Running {
+		if why, ok := st.Unavailable[p.Root]; ok {
+			line = "not served: " + why
+		} else if st.Running {
 			if c, ok := st.Status.Connections[p.Root]; ok && c.Connected {
 				line = "connected since " + c.Since
 			} else if ok && c.LastError != "" {
@@ -228,7 +239,7 @@ func (a *app) printServeStatus() error {
 		}
 	}
 	if len(st.Projects) == 0 {
-		fmt.Fprintln(a.out, "  no projects registered; flai dashboard in a project registers it")
+		fmt.Fprintln(a.out, "  no projects registered; flai serve project add, or flai dashboard, in a project registers it")
 	}
 	if st.Running && st.Status.Folder != "" {
 		fmt.Fprintf(a.out, "started in %s: serves the projects below it, and offers its other repositories for import\n", st.Status.Folder)

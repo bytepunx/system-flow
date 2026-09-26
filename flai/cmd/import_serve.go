@@ -47,11 +47,7 @@ func (a *app) serveImported(repo *workitem.Repo) importServed {
 		return out
 	}
 	dir := a.serveDir()
-	if err := ensureAgentKey(string(dir)); err != nil {
-		out.Reason = "the dashboard's credential was not written: " + err.Error()
-		return out
-	}
-	if err := dir.Register(a.serveEntry(repo, s)); err != nil {
+	if _, err := a.registerProject(repo, s); err != nil {
 		out.Reason = "not registered: " + err.Error()
 		return out
 	}

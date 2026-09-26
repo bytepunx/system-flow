@@ -1505,6 +1505,7 @@ Subcommands:
 - [enable](#flai-serve-enable): Let flai serve perform a host action for this project when its dashboard asks
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
 - [journal](#flai-serve-journal): Every host action a dashboard asked for: when, what, which project, for whom, and what became of it
+- [project](#flai-serve-project): The projects flai serve serves on the dashboard: add, remove, and list them, and why one is not showing
 - [start](#flai-serve-start): Start flai serve under flai host, starting the host if it is not running
 - [status](#flai-serve-status): Whether flai serve runs, which projects it serves, and which dashboards have it connected
 - [stop](#flai-serve-stop): Stop flai serve: the host stops it and keeps it stopped until flai serve start
@@ -1818,6 +1819,53 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `-n`, `--last` int | only the last n entries |
+
+#### flai serve project
+
+The projects flai serve serves on the dashboard: add, remove, and list them, and why one is not showing.
+
+flai serve serves each project registered with it on the dashboard its entry names. flai dashboard in a project registers it, and so does an import from the board; these commands do it on their own, without starting or stopping the dashboard, and say why a project is not showing.
+
+Not to be confused with flai serve import, which names the folders whose git repositories the board offers to import.
+
+Examples:
+
+```bash
+flai serve project add            # the project in this folder
+flai serve project add ~/git/blog
+flai serve project list
+flai serve project remove blog
+```
+
+Subcommands:
+
+- [add](#flai-serve-project-add): Serve the project in a folder (default: this one) on the dashboard
+- [list](#flai-serve-project-list): Every project served and how it is, the repositories offered for import, and the projects not served
+- [remove](#flai-serve-project-remove): Stop serving a project; none of its files is touched, and the dashboard keeps running
+
+##### flai serve project add
+
+Serve the project in a folder (default: this one) on the dashboard.
+
+```text
+flai serve project add [folder]
+```
+
+##### flai serve project list
+
+Every project served and how it is, the repositories offered for import, and the projects not served.
+
+```text
+flai serve project list
+```
+
+##### flai serve project remove
+
+Stop serving a project; none of its files is touched, and the dashboard keeps running.
+
+```text
+flai serve project remove <key|folder>
+```
 
 #### flai serve start
 
