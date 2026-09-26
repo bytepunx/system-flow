@@ -6,7 +6,7 @@ title: Agent Safety and Coordination
 status: backlog
 owner: alex
 created: 2026-09-26T07:10:42Z
-updated: 2026-09-26T07:10:42Z
+updated: 2026-09-26T07:17:08Z
 transitions: []
 tags: [cli]
 touches: [flai/cmd]
@@ -20,5 +20,6 @@ Right now, the operator can drag stories into ready and they will always be work
 flai needs mechanisms in place to avoid parallel changes to the same files.
 
 ## Stories
+- S-0124 Survey state of the art coordination mechanisms
 
 ## Notes
