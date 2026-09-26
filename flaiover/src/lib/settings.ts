@@ -9,6 +9,8 @@ export const SETTINGS_KINDS = [
 	'check',
 	'checks_timeout',
 	'import',
+	'serve',
+	'unserve',
 	'mcp_token',
 	'dashboard_token'
 ] as const;
@@ -28,6 +30,34 @@ export type HostAction = { name: string; means: string; here: boolean; everywher
 export type Harness = { program: string; args: string[]; set: boolean };
 export type NamedCommand = { name: string; command: string[] };
 
+/**
+ * A project flai serve serves, or one below a folder named for import that it does not (S-0122):
+ * from is registry, folder, or import; state is connected, connecting, not-connected,
+ * unavailable, or not-running.
+ */
+export type ServedProject = {
+	key: string;
+	name: string;
+	root: string;
+	from?: 'registry' | 'folder' | 'import';
+	/** The folder it is served below, when from is folder or import. */
+	below?: string;
+	state?: 'connected' | 'connecting' | 'not-connected' | 'unavailable' | 'not-running';
+	since?: string;
+	last_error?: string;
+	/** Why it is unavailable, or why it is not served. */
+	reason?: string;
+	/** Whether the settings action is on for it, so that the dashboard may serve or remove it. */
+	settings: boolean;
+};
+
+export type ProjectsView = {
+	running: boolean;
+	served: ServedProject[];
+	unserved: ServedProject[];
+	error?: string;
+};
+
 export type SettingsView = {
 	/** Whether the dashboard may change this project's own settings. */
 	here: boolean;
@@ -46,6 +76,7 @@ export type SettingsView = {
 		checks: { commands: NamedCommand[]; timeout_minutes: number };
 		manifest_checks?: NamedCommand[] | null;
 		import_roots: string[];
+		projects?: ProjectsView;
 		mcp?: { running: boolean; url?: string; pid?: number };
 		error?: string;
 	};
@@ -62,6 +93,22 @@ export function argv(text: string): string[] {
 		.split('\n')
 		.map((l) => l.replace(/\r$/, ''))
 		.filter((l) => l.trim() !== '');
+}
+
+/** What a served project's state says, in a few words. */
+export function health(p: ServedProject): string {
+	switch (p.state) {
+		case 'connected':
+			return p.since ? `connected since ${p.since}` : 'connected';
+		case 'not-connected':
+			return `not connected: ${p.last_error ?? 'no answer yet'}`;
+		case 'unavailable':
+			return `not served: ${p.reason ?? 'unavailable'}`;
+		case 'not-running':
+			return 'flai serve is not running';
+		default:
+			return 'connecting';
+	}
 }
 
 /** Whether the page may change a setting of this kind, and if not the command that allows it. */

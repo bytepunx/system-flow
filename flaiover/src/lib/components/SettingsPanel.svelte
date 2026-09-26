@@ -6,7 +6,16 @@
 	// through a shell, so nothing is quoted or split.
 	import { api } from '$lib/api';
 	import { agentFrom, configText, parseConfig } from '$lib/agent';
-	import { allowed, argv, lines, type SettingsKind, type SettingsView } from '$lib/settings';
+	import { projectState } from '$lib/project.svelte';
+	import {
+		allowed,
+		argv,
+		health,
+		lines,
+		type ServedProject,
+		type SettingsKind,
+		type SettingsView
+	} from '$lib/settings';
 	import AgentFields from './AgentFields.svelte';
 
 	let view = $state<SettingsView | null>(null);
@@ -29,6 +38,8 @@
 	let newCheckCommand = $state('');
 	let timeout = $state('');
 	let newFolder = $state('');
+	/** The root of the project whose Remove is waiting for a yes. */
+	let confirming = $state<string | null>(null);
 
 	function fill(v: SettingsView) {
 		const h = v.host;
@@ -108,6 +119,35 @@
 		if (cmd.length) params.command = cmd;
 		void change('agent', 'agent', params);
 	}
+	// A project served or removed through flai serve (S-0122). A served one connects within a second
+	// or two: the switcher is asked again until it has it, so it appears without a reload.
+	async function serveProject(p: ServedProject) {
+		if (!(await change('projects', 'serve', { root: p.root, key: p.key || undefined }))) return;
+		said.projects = { ok: true, text: `${p.key || p.root} is served; waiting for it to connect…` };
+		for (let i = 0; i < 30; i++) {
+			await projectState.refresh();
+			if (projectState.list.some((x) => x.key === p.key && !x.candidate && x.connected)) {
+				said.projects = { ok: true, text: `${p.key} is served, and in the switcher` };
+				return;
+			}
+			await new Promise((r) => setTimeout(r, 500));
+		}
+		said.projects = {
+			ok: true,
+			text: `${p.key || p.root} is served but has not connected yet; its state below says why`
+		};
+		await load();
+	}
+	async function unserveProject(p: ServedProject) {
+		confirming = null;
+		if (!(await change('projects', 'unserve', { root: p.root, key: p.key || undefined }))) return;
+		said.projects = {
+			ok: true,
+			text: `${p.key} is no longer served, and none of its files was touched. Serve it again with flai serve project add ${p.root}, on the host.`
+		};
+		await projectState.refresh();
+	}
+
 	async function rotate(section: string, kind: 'mcp_token' | 'dashboard_token') {
 		const body = await change(section, kind, {});
 		if (!body) return;
@@ -425,6 +465,109 @@
 				>
 			</div>
 			{@render result('import')}
+		</section>
+
+		<section data-testid="section-projects">
+			<h2 class="mb-2 font-medium">Projects, served by flai on this host</h2>
+			{#if h.projects?.error}
+				<p class="text-xs text-danger" role="alert">{h.projects.error}</p>
+			{:else if h.projects}
+				{#if !h.projects.running}
+					<p class="text-xs text-muted">
+						flai serve is not running, so no project is on the dashboard. On the host, run
+						<code class="rounded bg-surface px-1">flai serve start</code>.
+					</p>
+				{/if}
+				<ul class="space-y-2">
+					{#each h.projects.served as p (p.root)}
+						<li class="rounded border border-line p-2" data-testid="served-{p.key}">
+							<div class="flex flex-wrap items-baseline gap-2">
+								<span class="font-mono">{p.key}</span>
+								<span>{p.name}</span>
+								<code class="text-xs text-muted">{p.root}</code>
+							</div>
+							<p
+								class="text-xs {p.state === 'connected' ? 'text-good' : 'text-danger'}"
+								data-testid="health"
+							>
+								{health(p)}
+							</p>
+							{#if p.from !== 'registry'}
+								<p class="text-xs text-muted" data-testid="served-below">
+									Served because it is below <code>{p.below}</code>{p.from === 'import'
+										? ', named under Import folders; removing that folder stops it'
+										: ', the folder flai serve was started in'}.
+								</p>
+							{:else if confirming === p.root}
+								<div class="mt-1 text-xs" data-testid="confirm-remove">
+									<p>
+										Stop serving {p.name}? None of its files is touched and the dashboard keeps
+										running for the other projects. Serve it again with
+										<code>flai serve project add {p.root}</code> on the host.
+									</p>
+									<div class="mt-1 flex gap-2">
+										<button
+											class="rounded border border-danger px-2 text-danger disabled:opacity-50"
+											disabled={busy !== null}
+											data-testid="confirm-remove-yes"
+											onclick={() => unserveProject(p)}>Remove</button
+										>
+										<button
+											class="rounded border border-line-strong px-2"
+											data-testid="confirm-remove-no"
+											onclick={() => (confirming = null)}>Keep it</button
+										>
+									</div>
+								</div>
+							{:else}
+								<button
+									class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+									disabled={!p.settings || busy !== null}
+									data-testid="remove-project"
+									onclick={() => (confirming = p.root)}>Remove</button
+								>
+							{/if}
+							{#if p.from === 'registry' && !p.settings}
+								<p class="text-xs text-muted" data-testid="gate">
+									To remove it here, run <code class="rounded bg-surface px-1">{view.enable}</code>
+									on the host, in {p.root}.
+								</p>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+				{#if h.projects.served.length === 0}
+					<p class="text-xs text-muted">No project is served.</p>
+				{/if}
+				{#if h.projects.unserved.length}
+					<h3 class="mt-3 mb-1 text-xs font-medium">Below the import folders, not served</h3>
+					<ul class="space-y-2">
+						{#each h.projects.unserved as p (p.root)}
+							<li class="rounded border border-line p-2" data-testid="unserved-{p.key || p.root}">
+								<div class="flex flex-wrap items-baseline gap-2">
+									{#if p.key}<span class="font-mono">{p.key}</span>{/if}
+									{#if p.name}<span>{p.name}</span>{/if}
+									<code class="text-xs text-muted">{p.root}</code>
+								</div>
+								<p class="text-xs text-danger" data-testid="reason">{p.reason}</p>
+								<button
+									class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+									disabled={!p.settings || busy !== null}
+									data-testid="serve-project"
+									onclick={() => serveProject(p)}>Serve</button
+								>
+								{#if !p.settings}
+									<p class="text-xs text-muted" data-testid="gate">
+										To serve it here, run <code class="rounded bg-surface px-1">{view.enable}</code>
+										on the host, in {p.root}.
+									</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			{/if}
+			{@render result('projects')}
 		</section>
 
 		<section data-testid="section-tokens">

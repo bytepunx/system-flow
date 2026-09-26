@@ -6,6 +6,13 @@ import type { SettingsView } from '$lib/settings';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 
+// The switcher's list, which Serve asks again until the new project is in it (S-0122).
+const switcher = vi.hoisted(() => ({
+	list: [] as { key: string; name: string; connected: boolean; candidate?: boolean }[],
+	refresh: async () => {}
+}));
+vi.mock('$lib/project.svelte', () => ({ projectState: switcher }));
+
 const settle = async () => {
 	for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 0));
 	flushSync();
@@ -170,5 +177,143 @@ describe('SettingsPanel (S-0105)', () => {
 		q<HTMLButtonElement>('rotate-dashboard')!.click();
 		await settle();
 		expect(q('once-dashboard')!.textContent).toContain('http://x/login#token=abc');
+	});
+
+	describe('projects (S-0122)', () => {
+		const projects = (): SettingsView => {
+			const v = view(true, false);
+			v.host!.projects = {
+				running: true,
+				served: [
+					{
+						key: 'sf',
+						name: 'system-flow',
+						root: '/home/me/git/sf',
+						from: 'registry',
+						state: 'connected',
+						since: '2026-09-26T06:00:00Z',
+						settings: true
+					},
+					{
+						key: 'blog',
+						name: 'Blog',
+						root: '/home/me/git/blog',
+						from: 'registry',
+						state: 'not-connected',
+						last_error: 'dial: connection refused',
+						settings: false
+					},
+					{
+						key: 'notes',
+						name: 'Notes',
+						root: '/home/me/git/notes',
+						from: 'import',
+						below: '/home/me/git',
+						state: 'connected',
+						settings: true
+					}
+				],
+				unserved: [
+					{
+						key: 'shop',
+						name: 'Shop',
+						root: '/home/me/git/shop',
+						reason: 'no dashboard is known to serve it on',
+						settings: true
+					},
+					{
+						key: '',
+						name: '',
+						root: '/home/me/git/odd',
+						reason: 'its system-flow.yaml does not load',
+						settings: false
+					}
+				]
+			};
+			return v;
+		};
+
+		it('lists each served project with its health, and the ones not served with why', async () => {
+			backend(projects());
+			await show();
+			expect(q('served-sf')!.textContent).toContain('/home/me/git/sf');
+			expect(q('served-sf')!.textContent).toContain('connected since 2026-09-26T06:00:00Z');
+			expect(q('served-blog')!.textContent).toContain('not connected: dial: connection refused');
+			expect(
+				q('served-blog')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!
+					.disabled
+			).toBe(true);
+			expect(q('served-blog')!.querySelector('[data-testid="gate"]')!.textContent).toContain(
+				'flai serve enable settings'
+			);
+			// served from below an import folder: no Remove, but where it comes from
+			expect(q('served-notes')!.querySelector('[data-testid="remove-project"]')).toBeNull();
+			expect(q('served-notes')!.textContent).toContain('below /home/me/git');
+			expect(q('unserved-shop')!.textContent).toContain('no dashboard is known to serve it on');
+			expect(
+				q('unserved-shop')!.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
+					.disabled
+			).toBe(false);
+			expect(
+				q('unserved-/home/me/git/odd')!.querySelector<HTMLButtonElement>(
+					'[data-testid="serve-project"]'
+				)!.disabled
+			).toBe(true);
+		});
+
+		it('removes a project only once it is confirmed, and says how to add it back', async () => {
+			const sent = backend(projects());
+			const refresh = vi.spyOn(switcher, 'refresh');
+			await show();
+			q('served-sf')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!.click();
+			flushSync();
+			expect(q('confirm-remove')!.textContent).toContain('None of its files is touched');
+			q<HTMLButtonElement>('confirm-remove-no')!.click();
+			flushSync();
+			expect(q('confirm-remove')).toBeNull();
+			expect(sent).toEqual([]);
+
+			q('served-sf')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!.click();
+			flushSync();
+			q<HTMLButtonElement>('confirm-remove-yes')!.click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'unserve', root: '/home/me/git/sf', key: 'sf' }]);
+			expect(q('said-projects')!.textContent).toContain('flai serve project add /home/me/git/sf');
+			expect(refresh).toHaveBeenCalled();
+			refresh.mockRestore();
+		});
+
+		it('serves a project and waits for the switcher to have it', async () => {
+			const sent = backend(projects());
+			let asked = 0;
+			const refresh = vi.spyOn(switcher, 'refresh').mockImplementation(async () => {
+				if (++asked === 2) switcher.list = [{ key: 'shop', name: 'Shop', connected: true }];
+			});
+			await show();
+			q('unserved-shop')!
+				.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
+				.click();
+			for (let i = 0; i < 20 && !q('said-projects')?.textContent?.includes('switcher'); i++) {
+				await new Promise((r) => setTimeout(r, 100));
+				flushSync();
+			}
+			expect(sent).toEqual([{ kind: 'serve', root: '/home/me/git/shop', key: 'shop' }]);
+			expect(q('said-projects')!.textContent).toContain('shop is served, and in the switcher');
+			expect(asked).toBe(2);
+			refresh.mockRestore();
+			switcher.list = [];
+		});
+
+		it('says flai’s refusal', async () => {
+			backend(projects(), {
+				unserve: [403, { error: 'the host action "settings" is not enabled for /home/me/git/sf' }]
+			});
+			await show();
+			q('served-sf')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!.click();
+			flushSync();
+			q<HTMLButtonElement>('confirm-remove-yes')!.click();
+			await settle();
+			expect(q('said-projects')!.textContent).toContain('not enabled for /home/me/git/sf');
+		});
 	});
 });

@@ -369,7 +369,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"push accepted work`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"program":"claude","set":false}`,
 		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`,
-		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":`, `"unserved":[]}`} {
+		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":"`, `"unserved":[]}`} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("settings lack %s:\n%s", want, got)
 		}

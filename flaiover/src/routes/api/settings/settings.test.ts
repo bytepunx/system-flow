@@ -62,6 +62,19 @@ describe('/api/settings (S-0105)', () => {
 		expect(call.params.kind).toBeUndefined();
 	});
 
+	it('serves and removes a project through flai serve (S-0122)', async () => {
+		script['settings.serve'] = { data: { project: { key: 'shop' } } };
+		script['settings.unserve'] = { data: { removed: { key: 'blog' } } };
+		expect((await post({ kind: 'serve', root: '/home/me/git/shop', key: 'shop' })).status).toBe(
+			200
+		);
+		expect((await post({ kind: 'unserve', root: '/home/me/git/blog' })).status).toBe(200);
+		expect(asked.filter((a) => a.method.startsWith('settings.'))).toMatchObject([
+			{ method: 'settings.serve', params: { root: '/home/me/git/shop', key: 'shop' } },
+			{ method: 'settings.unserve', params: { root: '/home/me/git/blog' } }
+		]);
+	});
+
 	it('refuses a kind that is not a setting, and says what the host must enable', async () => {
 		expect((await post({ kind: 'config', key: 'x' })).status).toBe(400);
 		expect(asked.some((a) => a.method.startsWith('settings.'))).toBe(false);

@@ -780,6 +780,10 @@ func (a *app) servedView() map[string]any {
 	if err != nil {
 		return map[string]any{"error": err.Error()}
 	}
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
 	type project struct {
 		Key       string `json:"key"`
 		Name      string `json:"name"`
@@ -790,6 +794,9 @@ func (a *app) servedView() map[string]any {
 		Since     string `json:"since,omitempty"`
 		LastError string `json:"last_error,omitempty"`
 		Reason    string `json:"reason,omitempty"`
+		// Settings is whether the dashboard may serve or remove it: the
+		// settings action is on for it.
+		Settings bool `json:"settings"`
 	}
 	served := make([]project, 0, len(l.Served))
 	for _, p := range l.Served {
@@ -803,11 +810,11 @@ func (a *app) servedView() map[string]any {
 			}
 		}
 		served = append(served, project{Key: p.Key, Name: p.Name, Root: p.Root, From: p.From, Below: below,
-			State: p.State, Since: p.Since, LastError: p.LastError, Reason: p.Reason})
+			State: p.State, Since: p.Since, LastError: p.LastError, Reason: p.Reason, Settings: cfg.ActionEnabled(hostapi.ActionSettings, p.Root)})
 	}
 	unserved := make([]project, 0, len(l.Unserved))
 	for _, f := range l.Unserved {
-		unserved = append(unserved, project{Key: f.Key, Name: f.Name, Root: f.Root, Reason: f.Reason})
+		unserved = append(unserved, project{Key: f.Key, Name: f.Name, Root: f.Root, Reason: f.Reason, Settings: cfg.ActionEnabled(hostapi.ActionSettings, f.Root)})
 	}
 	return map[string]any{"running": l.Running, "served": served, "unserved": unserved}
 }
