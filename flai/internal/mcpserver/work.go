@@ -18,6 +18,7 @@ const (
 
 	WaitingForRoom  = "room"  // a story is ready, and the in-progress limit is full
 	WaitingForReady = "ready" // no story is ready
+	WaitingForHeld  = "held"  // every ready story is held by an open story's claim (S-0128)
 )
 
 // WorkIn bounds one wait.
@@ -30,15 +31,16 @@ type WorkOut struct {
 	Reason     string               `json:"reason" jsonschema:"resume: your story is still in progress, go back to it; thread: a thread awaiting you was written to; pull: pull story now; empty when it timed out"`
 	Story      *workitem.BoardCard  `json:"story,omitempty" jsonschema:"the story to resume or to pull"`
 	Threads    []ThreadSummary      `json:"threads" jsonschema:"threads awaiting you that were written to since wait_for_work last answered"`
-	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order"`
+	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds carries held with the reason and what clears it, and is not offered"`
 	CanPull    bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room to pull one"`
-	WaitingFor string               `json:"waiting_for,omitempty" jsonschema:"when it timed out: room, when a story is ready but the in-progress limit is full; ready, when no story is ready"`
+	WaitingFor string               `json:"waiting_for,omitempty" jsonschema:"when it timed out: room, when a story is ready but the in-progress limit is full; held, when every ready story is held (ready says why each is); ready, when no story is ready"`
 	TimedOut   bool                 `json:"timed_out"`
 }
 
 // work says what an idle agent should do now, if anything: resume its own
 // story, answer a thread written to since `since`, or pull the first ready
-// story when the in-progress limit leaves room. A thread that was already
+// story that is not held when the in-progress limit leaves room (a held one
+// keeps its place and is offered once clear, S-0128). A thread that was already
 // awaiting the agent before is not work here, so one the agent cannot answer
 // does not wake it again and again; inbox lists every thread awaiting it.
 func (s *server) work(since time.Time) (WorkOut, error) {
@@ -74,9 +76,10 @@ func (s *server) work(since time.Time) (WorkOut, error) {
 	switch {
 	case len(out.Threads) > 0:
 		out.Reason = WorkThread
+	case out.CanPull && workitem.FirstClear(out.Ready) != nil:
+		out.Reason, out.Story = WorkPull, workitem.FirstClear(out.Ready)
 	case out.CanPull && len(out.Ready) > 0:
-		card := out.Ready[0]
-		out.Reason, out.Story = WorkPull, &card
+		out.WaitingFor = WaitingForHeld
 	case len(out.Ready) > 0:
 		out.WaitingFor = WaitingForRoom
 	default:

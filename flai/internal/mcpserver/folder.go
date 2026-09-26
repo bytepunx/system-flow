@@ -15,7 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const inboxDescription = "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit, and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."
+const inboxDescription = "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit (one whose touches overlap a story in progress or in review carries held with the reason and what clears it: it is not offered), and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."
 
 // projects is what the tools are served for: one project, or every project
 // in a folder (S-0101).
@@ -64,7 +64,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	mcp.AddTool(srv, &mcp.Tool{Name: "item_move", Description: "Transition a work item with the workflow rules enforced. Moving an item to cancelled also cancels everything open under it, and the result lists what went with it. Refuses to move a story or epic to done: acceptance is the operator's."}, route(p, (*server).itemMove))
 	mcp.AddTool(srv, &mcp.Tool{Name: "doc_get", Description: "A markdown document under the design, docs, or wip folders, by repository path."}, route(p, (*server).docGet))
 	mcp.AddTool(srv, &mcp.Tool{Name: "who_touches", Description: "In-progress and in-review items whose touches cover a path; ask before editing a path someone else is working on."}, route(p, (*server).whoTouches))
-	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches. Stories only unless all is set."}, route(p, (*server).board))
+	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches; a ready story whose touches overlap a story in progress or in review carries held with the reason and what clears it. Stories only unless all is set."}, route(p, (*server).board))
 }
 
 // ---- a folder of projects (S-0101) ----
@@ -168,7 +168,7 @@ func newFolderServer(opt Options) *mcp.Server {
 		Instructions: "This server is the agent's view of every system-flow project in " + f.root + " and the folders below it (S-0101): it was started in a folder that is not itself a project. inbox, wait_for_work, and wait_for_events cover every project and say which one each thing is in; every other tool takes project, a key inbox lists (or the project's folder), and needs it whenever there is more than one project. Projects created or imported below the folder join within seconds. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review. Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names in the project it names (item_move it to in-progress with that project, then flai stream open in that project's folder on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready in some project whose in-progress limit leaves room, and waits otherwise; when it times out, call it again. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words: if it is your story, read it again with item_get before you go on. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. When a project's inbox reports unpushed, an acceptance was made where nothing could push it: in that project's folder on the host run git fetch, then flai push --pending, before anything else.",
 	})
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent in every project here, one entry per project with its key, name, and folder: " + inboxDescription + " Name project to see only that one; story needs project when there is more than one."}, fw.inbox)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on, across every project here (S-0097, S-0101). Answers at once with reason resume and your own story still in progress, in whichever project; thread with threads awaiting you written to since it last answered, each with its project; pull with the first ready story, in key order of projects and pull order within one, of a project whose in-progress limit leaves room (pull it: item_move it to in-progress with that project, then flai stream open in its folder on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, up to timeout_seconds; timed_out then says whether it is waiting for room or for a story to be ready: call it again."}, fw.work)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on, across every project here (S-0097, S-0101). Answers at once with reason resume and your own story still in progress, in whichever project; thread with threads awaiting you written to since it last answered, each with its project; pull with the first ready story that is not held, in key order of projects and pull order within one, of a project whose in-progress limit leaves room (pull it: item_move it to in-progress with that project, then flai stream open in its folder on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, up to timeout_seconds; timed_out then says whether it is waiting for room, for a held story to be clear (held: every ready story with room is held, and ready says why each is), or for a story to be ready: call it again."}, fw.work)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed in any project here since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes in any of them or the timeout passes. Each event names its project; changed paths are relative to the folder. At most 50 events per project, newest kept; events_omitted counts the rest."}, fw.events)
 	addProjectTools(srv, f)
 	return srv
@@ -259,7 +259,7 @@ type FolderWorkOut struct {
 func (fw *folderWaits) decide(since time.Time) (FolderWorkOut, error) {
 	out := FolderWorkOut{Threads: []ThreadSummary{}, Projects: []ProjectWork{}}
 	var pull *FolderWorkOut
-	anyReady := false
+	anyReady, anyRoom := false, false
 	for _, s := range fw.f.all() {
 		one, err := s.work(since)
 		if err != nil {
@@ -268,6 +268,7 @@ func (fw *folderWaits) decide(since time.Time) (FolderWorkOut, error) {
 		folder := fw.f.rel(projectRoot(s.repo))
 		out.Projects = append(out.Projects, ProjectWork{Project: s.key, Folder: folder, Ready: one.Ready, CanPull: one.CanPull})
 		anyReady = anyReady || len(one.Ready) > 0
+		anyRoom = anyRoom || (one.CanPull && len(one.Ready) > 0)
 		switch one.Reason {
 		case WorkResume:
 			res := out
@@ -281,9 +282,8 @@ func (fw *folderWaits) decide(since time.Time) (FolderWorkOut, error) {
 		}
 		// work() puts threads ahead of a pull; across projects a pull waits for
 		// every project's threads to be looked at first
-		if pull == nil && one.CanPull && len(one.Ready) > 0 {
-			card := one.Ready[0]
-			pull = &FolderWorkOut{Project: s.key, Folder: folder, Story: &card}
+		if card := workitem.FirstClear(one.Ready); pull == nil && one.CanPull && card != nil {
+			pull = &FolderWorkOut{Project: s.key, Folder: folder, Story: card}
 		}
 	}
 	switch {
@@ -291,6 +291,8 @@ func (fw *folderWaits) decide(since time.Time) (FolderWorkOut, error) {
 		out.Reason = WorkThread
 	case pull != nil:
 		out.Reason, out.Project, out.Folder, out.Story = WorkPull, pull.Project, pull.Folder, pull.Story
+	case anyRoom:
+		out.WaitingFor = WaitingForHeld
 	case anyReady:
 		out.WaitingFor = WaitingForRoom
 	default:

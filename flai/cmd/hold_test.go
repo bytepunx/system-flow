@@ -42,6 +42,18 @@ func heldProject(t *testing.T) string {
 
 const heldWhy = "held (overlap): touches flai, which holds flai/cmd that S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"
 
+// S-0128: moving a held story to in-progress warns, and moves it.
+func TestMovingAHeldStoryWarns(t *testing.T) {
+	root := heldProject(t)
+	out, errOut, code := runIn(t, root, "move", "S-0002", "in-progress")
+	if code != 0 || !strings.Contains(out, "S-0002 → in-progress") {
+		t.Fatalf("move: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "workflow policy warning") || !strings.Contains(errOut, "S-0002 is "+heldWhy) {
+		t.Errorf("no warning: %s", errOut)
+	}
+}
+
 // S-0128: flai board marks a held story and says why, as text and as JSON.
 func TestBoardMarksAHeldStory(t *testing.T) {
 	root := heldProject(t)

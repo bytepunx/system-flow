@@ -38,9 +38,9 @@ func makeProject(t *testing.T, dir, key string) *workitem.Repo {
 }
 
 // readyStoryIn makes a story with a criterion and moves it to ready.
-func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time) *workitem.Item {
+func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time, touches ...string) *workitem.Item {
 	t.Helper()
-	s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "alex", Now: at})
+	s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "alex", Touches: touches, Now: at})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,6 +193,43 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 	// the agent pulls it in that project
 	if out, failed := f.call(t, "item_move", map[string]any{"project": "beta", "id": story.ID, "to": "in-progress"}); failed != "" || out["status"] != "in-progress" {
 		t.Errorf("pull: %v %s", out, failed)
+	}
+}
+
+// S-0128: across a folder, wait_for_work passes over a held story to the
+// first clear one in any project, and says so when only held ones are left.
+func TestWaitForWorkAcrossAFolderSkipsHeldStories(t *testing.T) {
+	root := t.TempDir()
+	alpha := makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
+	open := readyStoryIn(t, alpha, "Open", t0, "flai")
+	if _, err := alpha.Transition(open, workitem.InProgress, "codex", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	held := readyStoryIn(t, alpha, "Held", t0, "flai/cmd")
+	clear := readyStoryIn(t, beta, "Clear", t0, "docs")
+	f := folderSetup(t, root)
+
+	out, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
+	if s, _ := out["story"].(map[string]any); out["reason"] != "pull" || out["project"] != "beta" || s["id"] != clear.ID {
+		t.Fatalf("the clear story in beta: %v", out)
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"project": "beta", "id": clear.ID, "to": "in-progress"}); failed != "" {
+		t.Fatal(failed)
+	}
+	quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
+	if quiet["timed_out"] != true || quiet["waiting_for"] != "held" || quiet["reason"] != "" {
+		t.Fatalf("only a held story is left: %v", quiet)
+	}
+	for _, p := range quiet["projects"].([]any) {
+		pw := p.(map[string]any)
+		if pw["project"] != "alpha" {
+			continue
+		}
+		card := pw["ready"].([]any)[0].(map[string]any)
+		if h, _ := card["held"].(map[string]any); card["id"] != held.ID || !strings.HasPrefix(h["reason"].(string), "held (overlap): touches flai/cmd, inside flai which "+open.ID) {
+			t.Errorf("alpha's ready: %v", pw["ready"])
+		}
 	}
 }
 

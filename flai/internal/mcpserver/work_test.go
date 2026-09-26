@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -130,6 +131,62 @@ func TestWaitForWorkWaitsForRoomUnderTheLimit(t *testing.T) {
 	}
 	if out := answered(t, done); out["reason"] != "pull" || storyOf(out) != first.ID {
 		t.Errorf("once there is room: %v", out)
+	}
+}
+
+// S-0128: a ready story whose claim overlaps an open story's is passed over
+// for the next clear one; when every ready story is held it waits, says so,
+// and offers the held one as soon as it is clear. The fixture's story, in
+// review, touches flai/internal/mcpserver.
+func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
+	f := setup(t)
+	f.toReview(t)
+	held := f.readyStory(t, "Held", t0, "flai/internal")
+	clear := f.readyStory(t, "Clear", t0)
+	if out := answered(t, f.held(t, 1)); out["reason"] != "pull" || storyOf(out) != clear.ID {
+		t.Fatalf("the clear story: %v", out)
+	}
+	c, _ := f.repo.Get(clear.ID)
+	if _, err := f.repo.Transition(c, workitem.InProgress, "codex", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.repo.OpenStream(c, workitem.StreamOptions{Agent: "codex", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	f.limitInProgress(t, 3)
+	quiet := answered(t, f.held(t, 1))
+	ready := quiet["ready"].([]any)
+	if quiet["timed_out"] != true || quiet["waiting_for"] != "held" || quiet["can_pull"] != true || len(ready) != 1 {
+		t.Fatalf("every ready story held: %v", quiet)
+	}
+	if h, _ := ready[0].(map[string]any)["held"].(map[string]any); h["code"] != "overlap" || !strings.Contains(h["reason"].(string), "starts when "+f.story.ID+" is accepted, cancelled, or sent back") {
+		t.Errorf("held: %v", ready[0])
+	}
+
+	// the open story's claim narrows: the held story is clear, and offered
+	done := f.held(t, 3)
+	time.Sleep(150 * time.Millisecond)
+	s, _ := f.repo.Get(f.story.ID)
+	s.Touches = []string{"design/system"}
+	if err := f.repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if out := answered(t, done); out["reason"] != "pull" || storyOf(out) != held.ID {
+		t.Errorf("once clear: %v", out)
+	}
+}
+
+// S-0128: item_move warns on a held story and moves it all the same.
+func TestItemMoveWarnsOnAHeldStory(t *testing.T) {
+	f := setup(t)
+	held := f.readyStory(t, "Held", t0, "flai/internal/mcpserver/work.go")
+	out, failed := f.call(t, "item_move", map[string]any{"id": held.ID, "to": "in-progress"})
+	if failed != "" || out["status"] != "in-progress" {
+		t.Fatalf("move: %v %s", out, failed)
+	}
+	want := held.ID + " is held (overlap): touches flai/internal/mcpserver/work.go, inside flai/internal/mcpserver which " + f.story.ID + " (in progress) touches"
+	if w := out["warnings"].([]any); len(w) != 1 || !strings.HasPrefix(w[0].(string), want) {
+		t.Errorf("warnings: %v", w)
 	}
 }
 

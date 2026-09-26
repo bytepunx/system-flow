@@ -124,8 +124,11 @@ func (v BoardView) ReadyInPullOrder() []BoardCard {
 
 // FirstPullable is the first ready story in pull order that is not held, or
 // nil when every one is (S-0128).
-func (v BoardView) FirstPullable() *BoardCard {
-	for _, c := range v.ReadyInPullOrder() {
+func (v BoardView) FirstPullable() *BoardCard { return FirstClear(v.ReadyInPullOrder()) }
+
+// FirstClear is the first of cards that is not held, or nil.
+func FirstClear(cards []BoardCard) *BoardCard {
+	for _, c := range cards {
 		if c.Held == nil {
 			return &c
 		}

@@ -86,6 +86,12 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	if to == InProgress && it.IsBlocked() {
 		warnings = append(warnings, fmt.Sprintf("%s has an open blocked interval", it.ID))
 	}
+	// A hold stops flai serve and wait_for_work, not a move (S-0128, ADR-0046).
+	if to == InProgress && from == Ready && it.Type == Story {
+		if h := NewHolds(opt.Items, r.Manifest.Projects).Of(it); h != nil {
+			warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, h.Reason))
+		}
+	}
 	if it.Type == Story && opt.Board != nil {
 		if limit, ok := opt.Board.WIPLimits[to]; ok && limit > 0 {
 			count := 1
