@@ -14,6 +14,7 @@
 	import { tick } from 'svelte';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
+	import type { Hold } from '$lib/activity';
 
 	type Transition = { to: string; at: string; by: string };
 	type Block = { from: string; until?: string; reason: string };
@@ -64,6 +65,8 @@
 			: []
 	);
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
+	// Another story's claim holds it in ready (S-0129): StoryAgent reads it from flai and says why.
+	let hold = $state<Hold | undefined>();
 	const narrative = $derived(
 		item?.type === 'story'
 			? `wip/${item.archived ? 'archive/agents' : 'agents'}/${item.id}.md`
@@ -217,6 +220,11 @@
 				<KindChips type={item.type} nature={item.nature} /> ·
 				<span class="font-medium">{item.status}</span>
 				{#if blocked}<span class="ml-1 font-semibold text-danger">BLOCKED</span>{/if}
+				{#if hold && item.type === 'story'}<span
+						class="ml-1 font-semibold text-warn"
+						title={hold.reason}
+						data-testid="held">HELD</span
+					>{/if}
 				{#if item.archived}· archived{/if}
 				{#if item.parent}· parent <a
 						class="underline"
@@ -295,6 +303,7 @@
 					story={item.id}
 					status={item.status}
 					writable={writable && !item.archived}
+					onhold={(h) => (hold = h)}
 				/>{/if}
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>

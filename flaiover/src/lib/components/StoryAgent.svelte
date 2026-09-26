@@ -6,18 +6,35 @@
 	// in progress whose agent dropped or failed, Retry, at the top right, has flai start a new one
 	// (S-0116), and hides once pressed until flai refuses or that one fails too (S-0118). For a story
 	// in ready that has had no agent, Start agent has flai start it now, and the panel says why flai
-	// serve has not (S-0115).
+	// serve has not (S-0115). For a story in ready that another's claim holds, it gives flai's reason
+	// with each story it names linked, whether or not the agent action is on, and hands the hold to
+	// the page for its header (S-0129). Start agent and Retry override a hold, as on the host.
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { projectState } from '$lib/project.svelte';
-	import { activityLine, anyRunning, type HostAgent } from '$lib/activity';
+	import { resolve } from '$app/paths';
+	import {
+		activityLine,
+		anyRunning,
+		reasonParts,
+		storyActivity,
+		type Hold,
+		type HostAgent
+	} from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 
 	let {
 		story,
 		status: storyStatus = '',
-		writable = false
-	}: { story: string; status?: string; writable?: boolean } = $props();
+		writable = false,
+		onhold
+	}: {
+		story: string;
+		status?: string;
+		writable?: boolean;
+		/** Told the story's hold each time it changes, undefined once it clears. */
+		onhold?: (hold: Hold | undefined) => void;
+	} = $props();
 	let status = $state<HostAgent | null>(null);
 	let acting = $state<'start' | 'restart' | null>(null);
 	let actError = $state<{ action: 'start' | 'restart'; message: string } | null>(null);
@@ -44,15 +61,26 @@
 		return () => clearInterval(t);
 	});
 
-	const activity = $derived(status?.enabled ? status.state?.stories?.[story] : undefined);
+	const activity = $derived(storyActivity(status)[story]);
+	$effect(() => {
+		onhold?.(activity?.hold);
+	});
+	// A held story's run is flai's stand-in when it never had an agent: it has not started.
+	const started = $derived(!!activity?.run.started);
 	const canRetry = $derived(
 		writable &&
-			activity?.state === 'failed' &&
+			!!status?.enabled &&
+			(activity?.state === 'failed' || (!!activity?.hold && activity.run.outcome === 'failed')) &&
 			activity.run.started !== retried &&
 			(storyStatus === 'ready' || storyStatus === 'in-progress')
 	);
 	// A ready story no agent was started for; flai says why not when it refuses.
-	const canStart = $derived(writable && !!status?.enabled && storyStatus === 'ready' && !activity);
+	const canStart = $derived(
+		writable &&
+			!!status?.enabled &&
+			storyStatus === 'ready' &&
+			(!activity || (!!activity.hold && !started))
+	);
 	// Why flai serve has not started it, from the reasons it gives for each story that waits.
 	const waitingWhy = $derived(
 		status?.state?.waiting?.split('; ').find((w) => new RegExp(`\\b${story}\\b`).test(w))
@@ -96,14 +124,25 @@
 				>
 			{/if}
 		</div>
-		<p class="text-xs" data-testid="story-agent-line">{activityLine(activity)}</p>
-		<p class="mt-1 text-xs text-muted">
-			{activity.run.agent}, started {at(activity.run.started)}{activity.run.ended
-				? `, ended ${at(activity.run.ended)}`
-				: ''}{activity.run.exit !== undefined && activity.run.exit !== null
-				? ` (exit ${activity.run.exit})`
-				: ''}
-		</p>
+		{#if activity.hold}
+			<p class="text-xs" data-testid="story-agent-held">
+				{#each reasonParts(activity.hold.reason) as part, i (i)}{#if part.id}<a
+							class="underline"
+							href={resolve('/items/[id]', { id: part.id })}>{part.text}</a
+						>{:else}{part.text}{/if}{/each}
+			</p>
+		{:else}
+			<p class="text-xs" data-testid="story-agent-line">{activityLine(activity)}</p>
+		{/if}
+		{#if started}
+			<p class="mt-1 text-xs text-muted">
+				{activity.run.agent}, started {at(activity.run.started)}{activity.run.ended
+					? `, ended ${at(activity.run.ended)}`
+					: ''}{activity.run.exit !== undefined && activity.run.exit !== null
+					? ` (exit ${activity.run.exit})`
+					: ''}
+			</p>
+		{/if}
 		{#if activity.state === 'waiting' && activity.thread}
 			<p class="mt-1 text-xs">It asked in {activity.thread}: answer it below and it goes on.</p>
 		{/if}
@@ -113,11 +152,22 @@
 					host.{/if}
 				Moving the story back to ready starts another, and so does changing its agent while it is in ready.
 			</p>
-			{#if actError?.action === 'restart'}
-				<p class="mt-1 text-xs text-warn" data-testid="story-agent-retry-error">
-					{actError.message}
-				</p>
-			{/if}
+		{/if}
+		{#if actError?.action === 'restart'}
+			<p class="mt-1 text-xs text-warn" data-testid="story-agent-retry-error">
+				{actError.message}
+			</p>
+		{/if}
+		{#if canStart}
+			<button
+				class="mt-2 rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
+				onclick={() => act('start')}
+				disabled={acting !== null}
+				data-testid="story-agent-start">{acting === 'start' ? 'Starting…' : 'Start agent'}</button
+			>
+		{/if}
+		{#if actError?.action === 'start'}
+			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">{actError.message}</p>
 		{/if}
 	</section>
 {:else if canStart || actError?.action === 'start'}

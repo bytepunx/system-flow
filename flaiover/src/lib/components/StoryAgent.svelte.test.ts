@@ -4,6 +4,9 @@ import StoryAgent from './StoryAgent.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+vi.mock('$app/paths', () => ({
+	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id)
+}));
 
 class FakeEventSource {
 	static opened: FakeEventSource[] = [];
@@ -357,6 +360,82 @@ describe('StoryAgent (S-0104)', () => {
 			await settle();
 			expect(text()).toContain('agent working');
 			expect(button()).toBeNull();
+		});
+	});
+
+	// S-0129: a story in ready another's claim holds says why, with each story it names linked
+	describe('held', () => {
+		const hold = {
+			code: 'overlap',
+			reason:
+				'held (overlap): touches flaiover, which S-0133 (in progress) touches; starts when S-0133 is accepted, cancelled, or sent back'
+		};
+		// flai's run for a held story that never had an agent names only the story
+		const standIn = { story: 'S-0104', command: '', agent: '', started: '' };
+		const held = { 'S-0104': { state: 'waiting', why: hold.reason, run: standIn, hold } };
+		const reason = () => document.querySelector<HTMLElement>('[data-testid="story-agent-held"]');
+		const start = () =>
+			document.querySelector<HTMLButtonElement>('[data-testid="story-agent-start"]');
+		const retry = () =>
+			document.querySelector<HTMLButtonElement>('[data-testid="story-agent-retry"]');
+
+		it('gives the full reason with each story linked, and no start it never had', async () => {
+			await show(held, true, { status: 'ready', writable: true });
+			expect(reason()!.textContent!.replace(/\s+/g, ' ').trim()).toBe(hold.reason);
+			const links = [...reason()!.querySelectorAll('a')].map((a) => [
+				a.textContent,
+				a.getAttribute('href')
+			]);
+			expect(links).toEqual([
+				['S-0133', '/items/S-0133'],
+				['S-0133', '/items/S-0133']
+			]);
+			expect(text()).not.toContain('started');
+			expect(document.querySelector('[data-testid="agent-dot"]')!.className).toContain(
+				'bg-dot-waiting'
+			);
+		});
+
+		it('shows while the agent action is off, without Start agent', async () => {
+			await show(held, false, { status: 'ready', writable: true });
+			expect(reason()).not.toBeNull();
+			expect(start()).toBeNull();
+		});
+
+		it('offers Start agent, which overrides a hold, and Retry for one whose agent failed', async () => {
+			await show(held, true, { status: 'ready', writable: true });
+			expect(start()).not.toBeNull();
+			expect(retry()).toBeNull();
+			unmount(c!);
+			c = undefined;
+			const failedRun = { ...run, ended: '2026-09-23T18:30:00Z', outcome: 'failed' };
+			await show({ 'S-0104': { ...held['S-0104'], run: failedRun } }, true, {
+				status: 'ready',
+				writable: true
+			});
+			expect(start()).toBeNull();
+			expect(retry()).not.toBeNull();
+			expect(text()).toContain('agent-S-0104, started 2026-09-23 18:00 UTC');
+		});
+
+		it('hands the hold to the page, and stops showing it once flai says it cleared', async () => {
+			let got: unknown = 'unset';
+			api.mockResolvedValue(answer({ enabled: true, state: { command: '', stories: held } }));
+			c = mount(StoryAgent, {
+				target: document.body,
+				props: {
+					story: 'S-0104',
+					status: 'ready',
+					onhold: (h) => (got = h)
+				}
+			});
+			await settle();
+			expect(got).toEqual(hold);
+			api.mockResolvedValue(answer({ enabled: true, state: { command: '', stories: {} } }));
+			FakeEventSource.opened[0].listeners.change();
+			await settle();
+			expect(reason()).toBeNull();
+			expect(got).toBeUndefined();
 		});
 	});
 });
