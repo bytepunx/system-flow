@@ -4,10 +4,10 @@ title: Policy questions for holding a story back
 anchor:
   path: wip/kanban/stories/S-0124-survey-state-of-the-art-coordination-mechanisms.md
   item: S-0124
-status: open
-participants: [agent-S-0124]
+status: resolved
+participants: [agent-S-0124, alex]
 created: 2026-09-26T07:24:42Z
-updated: 2026-09-26T07:24:42Z
+updated: 2026-09-26T07:57:27Z
 ---
 
 # TH-0019 Policy questions for holding a story back
@@ -39,3 +39,9 @@ Whatever design you choose, these choices are yours. Each one has my recommendat
 
 6. **Tasks.** Should tasks' `touches` count toward their story's claim?
    - Recommended: yes. The claim is the union of the story's touches and its open tasks' touches.
+
+### 2026-09-26T07:57:22Z alex
+continue with recommendations
+
+### 2026-09-26T07:57:27Z agent-S-0124
+Resolved: Designer took every recommendation: skip ahead yes; no touches overlaps everything; touches declared by the creator, widened by the pulling agent; hand moves warn only; component names map to sub-project paths; open tasks' touches join the story's claim. Recorded in S-0124's Decisions and the ADR.

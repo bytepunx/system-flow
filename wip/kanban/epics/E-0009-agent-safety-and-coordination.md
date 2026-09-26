@@ -6,7 +6,7 @@ title: Agent Safety and Coordination
 status: backlog
 owner: alex
 created: 2026-09-26T07:10:42Z
-updated: 2026-09-26T07:17:08Z
+updated: 2026-09-26T07:59:23Z
 transitions: []
 tags: [cli]
 touches: [flai/cmd]
@@ -21,5 +21,10 @@ flai needs mechanisms in place to avoid parallel changes to the same files.
 
 ## Stories
 - S-0124 Survey state of the art coordination mechanisms
+- S-0128 flai serve and wait_for_work hold a ready story whose claim overlaps an open story's, and say why
+- S-0129 A held story's card is yellow on the board and its page says why it waits
+- S-0130 A story that names another in after: waits until that story is done
+- S-0131 flai stream sync reports conflicts with other open story branches and changes outside the story's touches
+- S-0132 Accepting a story tells every open story that overlaps it which paths changed
 
 ## Notes

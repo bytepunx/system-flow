@@ -4,10 +4,10 @@ title: Which coordination design should flai build?
 anchor:
   path: wip/kanban/stories/S-0124-survey-state-of-the-art-coordination-mechanisms.md
   item: S-0124
-status: open
-participants: [agent-S-0124]
+status: resolved
+participants: [agent-S-0124, alex]
 created: 2026-09-26T07:24:35Z
-updated: 2026-09-26T07:24:35Z
+updated: 2026-09-26T07:54:43Z
 ---
 
 # TH-0018 Which coordination design should flai build?
@@ -33,3 +33,9 @@ The alternatives, briefly:
 This refines ADR-0019, which rejected locks because "a lock nobody releases blocks work". A hold here is released by acceptance, cancellation, or a return to backlog. It is visible with its reason, and you can override it with Start agent.
 
 Do you want design 1 in that order? Or a different design, or a different order?
+
+### 2026-09-26T07:54:38Z alex
+go with design 1
+
+### 2026-09-26T07:54:43Z agent-S-0124
+Resolved: Designer chose design 1, built in the recommended order: hold at pull on overlapping touches, after: dependencies, trial merge and drift check at sync, notice at accept. Recorded in S-0124's Decisions; the ADR follows once TH-0019 is answered.

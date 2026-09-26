@@ -3,12 +3,21 @@ id: T-0458
 type: task
 nature: research
 title: Author the stories under E-0009 that implement the chosen mechanism
-status: backlog
+status: done
 parent: S-0124
 owner: alex
 created: 2026-09-26T07:18:56Z
-updated: 2026-09-26T07:18:56Z
-transitions: []
+updated: 2026-09-26T08:00:00Z
+transitions:
+  - to: ready
+    at: 2026-09-26T07:58:50Z
+    by: agent-S-0124
+  - to: in-progress
+    at: 2026-09-26T07:58:50Z
+    by: agent-S-0124
+  - to: done
+    at: 2026-09-26T08:00:00Z
+    by: agent-S-0124
 stream: S-0124
 tags: []
 touches: [wip/kanban]
