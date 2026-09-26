@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -52,7 +52,7 @@ Keys only the `flai serve` commands on the host change, or the dashboard's Setti
 | `checks.commands[].name` | none: the manifest's `checks` apply | `flai serve checks set --name`, `flai serve checks clear` | The name of one check a story in review is run with ([The checks host action](index.md#the-checks-host-action-s-0082)) |
 | `checks.commands[].command` | none | `flai serve checks set --name <name> -- ...` | That check's argument list, never run through a shell |
 | `checks.timeout_minutes` | `15` | `flai serve checks timeout` | The bound on one run of every check together |
-| `import_roots` | none | `flai serve import add`, `flai serve import remove` | Folders whose git repositories the board offers to import ([Importing repositories](index.md#importing-repositories-from-the-board-s-0098)) |
+| `import_roots` | none | `flai serve import add`, `flai serve import remove` | Folders whose git repositories the board offers to import, and whose repositories with a `system-flow.yaml` `flai serve` serves ([Importing repositories](index.md#importing-repositories-from-the-board-s-0098)) |
 
 Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, and logs, not settings; the [backup runbook](runbooks/backup.md) lists them.
 

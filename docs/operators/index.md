@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -247,6 +247,7 @@ flai serve import remove ~/git
 - **What is offered.** Every git repository in the folder, or up to three folders below it, with no `system-flow.yaml`. Nothing inside a repository, a hidden folder, or build output is looked at. `flai serve` looks again every 30 seconds, and `flai serve status` lists what it offers. A repository is offered to the dashboards the projects `flai serve` already serves connect to, so with no project served, nothing is offered.
 - **What naming a folder allows.** Anyone who can use the board can import any repository offered. An import writes the standard's files into the repository, runs the repository's own tests on this host as you (the checks `flai serve checks set` names, if any, else what the repository has: its Makefile's `test` target, `go test`, its package manager's test script, `cargo test`, pytest), and commits the import when they pass. Naming the folder is your say that this may happen to what is in it: no host action needs enabling as well. Name only folders whose repositories you would run tests from.
 - **What an import does.** It is `flai import --yes --commit` in the repository. A repository with uncommitted changes is refused, so the commit holds the import alone. When a test fails nothing is committed and the files stay for you to fix. Either way the repository is registered with `flai serve` and served as a project from then on, under a key made from its folder's name. Every import is in the journal (`flai serve journal`, action `import`).
+- **What is served.** A git repository in the folder that has a `system-flow.yaml` already, imported on the command line say, is served as a project whether or not it is registered, for as long as it is there ([ADR-0044](../../adrs/0044-a-system-flow-repository-under-a-folder-named-for-import-is-served-whether-or.md)). Naming the folder therefore also lets anyone who can use the board read those projects and change them through the host actions enabled for them. `flai serve status` lists what it serves from the folder, and each project there it does not serve with why: its manifest does not load or has no key, another project has its key, no dashboard is known yet, or `flai serve` is not running.
 
 ## MCP over HTTP
 

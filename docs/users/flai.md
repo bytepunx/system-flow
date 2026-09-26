@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -135,7 +135,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 | `agent.harnesses.<name>.program`, `agent.harnesses.<name>.args` | `flai serve agent harness <name> --program <path> -- [args...]`, `--reset` | The program a harness is on this host, and the arguments that replace its adapter's defaults and say what the agent may do |
 | `checks.commands` | `flai serve checks set --name <name> -- <program> [args...]`, `flai serve checks clear [name]` | The named commands a story in review is checked with, in order, in its worktree; empty means the manifest's `checks:` |
 | `checks.timeout_minutes` | `flai serve checks timeout <minutes>` | The bound on one run of every check together; 15 when unset |
-| `import_roots` | `flai serve import add <folder>`, `flai serve import remove <folder>` | The folders whose git repositories the board offers to import |
+| `import_roots` | `flai serve import add <folder>`, `flai serve import remove <folder>` | The folders whose git repositories the board offers to import, and whose repositories with a `system-flow.yaml` `flai serve` serves |
 
 `flai serve agent show`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
 
@@ -200,6 +200,10 @@ flai import --yes --commit  # then run its tests, and commit the import if they 
 `import` scans the tree and proposes: the three documentation folders (reusing `docs/`, `design/`, or `wip/` if they exist, or names you choose with `--layout`), whole-folder moves for `adr/`, `adrs/`, `architecture/`, `doc/`, and `documentation/`, a list of loose markdown files to place, and the code sub-projects it found by their build files (`go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml`). Applying it creates the structure, renders every template file that does not already exist, performs the moves with `git mv` when the file is tracked, writes `system-flow.yaml` with the sub-projects, and runs `flai check`. Existing files are never overwritten; a conflicting move is reported and the source left in place. A repository that already has `system-flow.yaml` is refused unless `--force`.
 
 `--commit` makes the import end in a commit. The repository must be a git repository with no uncommitted changes, so that the commit holds the import and nothing of yours. After importing, it runs the repository's tests: the checks `flai serve checks set` names on this host, if any, else what the repository has (its own Makefile's `test` target, `go test ./...`, the package manager's test script, `cargo test`, or pytest). When they pass, or none are found, it commits exactly what the import wrote and moved. When one fails it commits nothing, shows what failed, and exits with code 5; the imported files stay in the working tree for you to fix and commit. The dashboard does the same when you import a repository from the board (see the dashboard guide).
+
+An imported project shows in the dashboard's project switcher without another step when `flai host` runs: once `system-flow.yaml` is written, with or without `--commit`, `import` registers the project with `flai serve`, as `flai dashboard` would, and says the address the dashboard shows it at. When no host runs it registers nothing and says so: `flai dashboard` in the project serves it, starting the dashboard and the host if they are not running. `--json` has the same as `serve`: `served`, `dashboard`, and, when it is not served, `reason` and `next`.
+
+The template's `repo_url` is offered as the repository's `origin` remote made a web address (`git@github.com:owner/repo.git` becomes `https://github.com/owner/repo`). `import` and `new` refuse a `repo_url` that is not an http or https address with a host and a path, at the prompt or given with `--var`, before anything is changed, and say why: `https://github.com:owner/repo` is refused.
 
 ## Manage the template source
 
@@ -622,6 +626,8 @@ flai serve stop       # the host stops it, and keeps it stopped until flai serve
 ```
 
 `flai hostapi` shows what the dashboard can ask, and answers one question on the terminal: `flai hostapi` lists the methods, `flai hostapi board.get '{"all":true}'` prints what the board page is given.
+
+A git repository with a `system-flow.yaml` below a folder named with `flai serve import add` is served too, registered or not, for as long as it is there (a repository imported on the command line before a host ran, say). `flai serve status` lists those it serves under `served from the folders named for import`, and under `not served` each project there it does not serve, with why: its `system-flow.yaml` does not load or has no key, another project has its key, no dashboard is known yet, or `flai serve` is not running.
 
 It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` stops it until `flai serve start`, and `flai host stop` stops it with everything else. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
