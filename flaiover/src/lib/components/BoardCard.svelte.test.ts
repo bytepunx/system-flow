@@ -236,4 +236,30 @@ describe('BoardCard', () => {
 		component = render(base, { activity: { state: 'worked', run } });
 		expect(dot()).toBeNull();
 	});
+
+	// S-0129: a held story in ready is yellow and says what it waits for, after BLOCKED
+	it('shows a held story’s yellow dot and what it waits for, after BLOCKED', () => {
+		const hold = {
+			code: 'overlap',
+			reason:
+				'held (overlap): touches flaiover, which S-0133 (in progress) touches; starts when S-0133 is accepted, cancelled, or sent back'
+		};
+		const activity = {
+			state: 'waiting' as const,
+			why: hold.reason,
+			run: { story: 'S-0048', command: '', agent: '', started: '' },
+			hold
+		};
+		const held = () => document.querySelector<HTMLElement>('[data-testid="held"]');
+		component = render({ ...base, blocked: true, parent: 'E-0009' }, { activity });
+		const dot = document.querySelector<HTMLElement>('[data-testid="agent-dot"]')!;
+		expect(dot.className).toContain('bg-dot-waiting');
+		expect(dot.getAttribute('aria-label')).toBe(hold.reason);
+		expect(held()!.textContent).toBe('held (overlap): S-0133');
+		const spans = [...details()!.children].map((e) => e.textContent?.trim());
+		expect(spans.indexOf('BLOCKED')).toBeLessThan(spans.indexOf('held (overlap): S-0133'));
+		unmount(component);
+		component = render(base, { activity: { ...activity, hold: undefined } });
+		expect(held()).toBeNull();
+	});
 });

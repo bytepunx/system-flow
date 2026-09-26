@@ -8,7 +8,7 @@
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
-	import { anyRunning, type HostAgent } from '$lib/activity';
+	import { anyRunning, storyActivity, type HostAgent } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
@@ -98,7 +98,7 @@
 			// keep what we had
 		}
 	}
-	const activity = $derived(hostAgent?.enabled ? (hostAgent.state?.stories ?? {}) : {});
+	const activity = $derived(storyActivity(hostAgent));
 	$effect(() => {
 		if (!anyRunning(hostAgent)) return;
 		const t = setInterval(() => void loadAgents(), 15000);
