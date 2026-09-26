@@ -131,6 +131,7 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | `FLAI_MODEL`, `FLAI_HARNESS` | `flai serve`, for your `agent.command` | The story's model and harness |
 | `FLAI_AGENT_CONFIG` | `flai serve`, for your `agent.command` | The story's `agent.config` as a JSON object |
 | `FLAI_ANSWERED` | `flai serve`, for an agent started again because its question was answered | The thread's ID |
+| `FLAI_COMMIT` | `flai serve`, for your `agent.command` started to commit what a story's worktree holds (`flai serve agent commit`) | The worktree's path |
 
 ### Read by install.sh
 

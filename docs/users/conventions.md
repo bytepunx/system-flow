@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -113,7 +113,7 @@ stateDiagram-v2
 
 Blocked is not a state. A blocked item keeps its column and carries a timestamped interval with a reason, so blocked time is measured apart from the time the item spends in its column.
 
-A story needs acceptance criteria, as at least one checkbox, to be `ready`. It needs no tasks until it is `in-progress`: the agent that starts it writes them. It cannot go to `review` without at least one task, or to `done` while a criterion is unchecked or a task is still open. Stories and epics always pass through `review`; tasks may go straight from `in-progress` to `done`, because acceptance happens at story level.
+A story needs acceptance criteria, as at least one checkbox, to be `ready`. It needs no tasks until it is `in-progress`: the agent that starts it writes them. It cannot go to `review` without at least one task or with anything uncommitted in its worktree, or to `done` while a criterion is unchecked or a task is still open. Stories and epics always pass through `review`; tasks may go straight from `in-progress` to `done`, because acceptance happens at story level.
 
 ### Files
 

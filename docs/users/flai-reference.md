@@ -1555,6 +1555,7 @@ flai serve agent clear
 Subcommands:
 
 - [clear](#flai-serve-agent-clear): Remove the command; a story with a harness is still started with it
+- [commit](#flai-serve-agent-commit): Start an agent to commit what a story in review left uncommitted in its worktree
 - [harness](#flai-serve-agent-harness): Set the program a harness is and the arguments that say what its agent may do
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
@@ -1567,6 +1568,24 @@ Remove the command; a story with a harness is still started with it.
 
 ```text
 flai serve agent clear
+```
+
+##### flai serve agent commit
+
+Start an agent to commit what a story in review left uncommitted in its worktree.
+
+```text
+flai serve agent commit <story-id>
+```
+
+Starts the story's agent, in a new session, to commit what its worktree under .flai-cache/worktrees holds and nothing else: a story in review whose worktree has uncommitted changes cannot be accepted, because acceptance merges the branch as it is committed and removes the worktree. The agent is told to commit the changes on the story branch the way the project's conventions say, to discard only what plainly does not belong in the repository, to log what it did in the narrative, and to leave the story in review. The run is recorded where the serving flai tracks it, like a start (S-0140).
+
+It refuses, and says why, while the agent action is off for the project, when the story is not in review, while its agent runs or waits for an answer, when the story has no worktree or the worktree has nothing uncommitted, and when nothing can start it. The Have an agent commit them button in the dashboard's acceptance confirmation runs this.
+
+Examples:
+
+```bash
+flai serve agent commit S-0140
 ```
 
 ##### flai serve agent harness
