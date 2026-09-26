@@ -242,7 +242,7 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 		"quay  http://127.0.0.1:4242  not served: the folder is gone",
 		"offered for import on the board (flai serve import):\n  widget  " + filepath.Join(git, "widget"),
 		"blog  http://127.0.0.1:4242  connecting (below a folder named for import)",
-		"not served, below the folders named for import:\n  notes  " + notes + "\n    its system-flow.yaml has no key",
+		"not served, below the folders named for import or the folder flai serve was started in:\n  notes  " + notes + "\n    its system-flow.yaml has no key",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list lacks %q:\n%s", want, out)

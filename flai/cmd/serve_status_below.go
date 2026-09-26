@@ -17,7 +17,8 @@ func (a *app) belowImportRoots(st serveStatus) (served []serve.Entry, unserved [
 	if st.Running {
 		return st.Status.ImportProjects, st.Status.Unserved
 	}
-	placed := serve.Place(serve.FindBelow("", a.importRoots()), st.Projects, a.serveDir().KnownDashboards(st.Projects))
+	removed, _ := a.serveDir().RemovedSet() // a list that does not read is flai serve's to warn of
+	placed := serve.Place(serve.FindBelow("", a.importRoots()), st.Projects, a.serveDir().KnownDashboards(st.Projects), removed)
 	for _, p := range placed {
 		if p.Reason == "" {
 			p.Reason = "flai serve is not running"

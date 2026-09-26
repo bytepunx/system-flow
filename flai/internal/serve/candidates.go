@@ -193,7 +193,8 @@ func (d Dir) KnownDashboards(entries []Entry) map[string]Entry {
 // are, for as long as it runs and without writing them to the registry. They
 // are found again every ScanEvery, and placed by Place: each is served for the
 // first dashboard, by address, that the registered projects or a recorded one
-// reach. What is not served, and why, is kept in placed for the status.
+// reach, unless the operator removed it (S-0123). What is not served, and
+// why, is kept in placed for the status.
 func (f *offers) folderProjects(entries []Entry) []Entry {
 	if f.o.Folder == "" && f.o.ImportRoots == nil {
 		return nil
@@ -206,7 +207,11 @@ func (f *offers) folderProjects(entries []Entry) []Entry {
 		f.folderFound = FindBelow(f.o.Folder, roots)
 		f.folderScanned = now
 	}
-	f.placed = Place(f.folderFound, entries, f.o.Dir.KnownDashboards(entries))
+	removed, err := f.o.Dir.RemovedSet()
+	if err != nil {
+		f.o.Logger.Warn("removed projects unreadable", "component", "serve", "err", err.Error())
+	}
+	f.placed = Place(f.folderFound, entries, f.o.Dir.KnownDashboards(entries), removed)
 	var out []Entry
 	for _, p := range f.placed {
 		if p.Reason == "" {

@@ -348,7 +348,7 @@ func (a *app) serveProjectList() error {
 		}
 	}
 	if len(l.Unserved) > 0 {
-		fmt.Fprintln(a.out, "not served, below the folders named for import:")
+		fmt.Fprintln(a.out, "not served, below the folders named for import or the folder flai serve was started in:")
 		for _, u := range l.Unserved {
 			fmt.Fprintf(a.out, "  %s  %s\n    %s\n", u.Name, u.Root, u.Reason)
 		}

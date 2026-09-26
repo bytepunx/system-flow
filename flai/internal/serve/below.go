@@ -20,6 +20,9 @@ type Found struct {
 	Imported bool `json:"imported,omitempty"`
 	// Reason says why it is not served; empty when it is.
 	Reason string `json:"reason,omitempty"`
+	// Removed is true when it is not served because the operator removed it
+	// (S-0123); flai serve project add serves it again.
+	Removed bool `json:"removed,omitempty"`
 }
 
 // FindBelow lists the system-flow projects below folder, and the git
@@ -62,11 +65,11 @@ func FindBelow(folder string, importRoots []string) []Found {
 
 // Place decides which of the found projects are served, and for which
 // dashboard: a registered one is left to the registry and left out; one
-// whose manifest does not load or has no key, or whose key a registered or
-// earlier project has, is not served, and says why; the rest are served for
-// the first dashboard, by address, of dashboards, and with none known they
-// are not served either.
-func Place(found []Found, registered []Entry, dashboards map[string]Entry) []Found {
+// whose root the operator removed (S-0123), whose manifest does not load or
+// has no key, or whose key a registered or earlier project has, is not
+// served, and says why; the rest are served for the first dashboard, by
+// address, of dashboards, and with none known they are not served either.
+func Place(found []Found, registered []Entry, dashboards map[string]Entry, removed map[string]bool) []Found {
 	roots, keys := map[string]bool{}, map[string]string{}
 	for _, e := range registered {
 		roots[e.Root], keys[e.Key] = true, e.Root
@@ -86,6 +89,9 @@ func Place(found []Found, registered []Entry, dashboards map[string]Entry) []Fou
 		switch {
 		case roots[f.Root]:
 			continue
+		case removed[f.Root]:
+			f.Removed = true
+			f.Reason = "removed from the dashboard; flai serve project add " + f.Root + ", or Serve on the settings page, serves it again"
 		case f.Reason != "":
 		case f.Key == "":
 			f.Reason = fmt.Sprintf("its %s has no key (flai check says how to add one)", manifest.File)

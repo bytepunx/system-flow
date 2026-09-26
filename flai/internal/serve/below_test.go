@@ -87,7 +87,7 @@ func TestPlace(t *testing.T) {
 	registered := []Entry{{Root: "/a/registered", Key: "reg"}, {Root: "/h/harbour", Key: "harbour", URL: "http://b", KeyFile: "kb"}}
 	dashboards := map[string]Entry{"http://b": {URL: "http://b", KeyFile: "kb"}, "http://a": {URL: "http://a", KeyFile: "ka"}}
 
-	got := Place(found, registered, dashboards)
+	got := Place(found, registered, dashboards, nil)
 	reasons := map[string]string{}
 	for _, f := range got {
 		reasons[f.Root] = f.Reason
@@ -111,10 +111,69 @@ func TestPlace(t *testing.T) {
 		}
 	}
 
-	for _, f := range Place(found[1:2], nil, nil) {
+	for _, f := range Place(found[1:2], nil, nil, nil) {
 		if !strings.Contains(f.Reason, "no dashboard") {
 			t.Errorf("with no dashboard: %+v", f)
 		}
+	}
+}
+
+// S-0123: a project the operator removed is not served from below a folder,
+// whether named for import or the one flai serve was started in, and says
+// so; a registered one is the registry's whatever the list says.
+func TestPlaceLeavesOutWhatTheOperatorRemoved(t *testing.T) {
+	found := []Found{
+		{Entry: Entry{Root: "/a/blog", Key: "blog"}, Imported: true},
+		{Entry: Entry{Root: "/f/notes", Key: "notes"}},
+		{Entry: Entry{Root: "/a/registered", Key: "reg"}},
+		{Entry: Entry{Root: "/a/kept", Key: "kept"}, Imported: true},
+	}
+	registered := []Entry{{Root: "/a/registered", Key: "reg"}}
+	dashboards := map[string]Entry{"http://a": {URL: "http://a", KeyFile: "ka"}}
+	removed := map[string]bool{"/a/blog": true, "/f/notes": true, "/a/registered": true}
+
+	by := map[string]Found{}
+	for _, f := range Place(found, registered, dashboards, removed) {
+		by[f.Root] = f
+	}
+	for _, root := range []string{"/a/blog", "/f/notes"} {
+		if f := by[root]; !f.Removed || f.URL != "" || !strings.Contains(f.Reason, "removed from the dashboard") || !strings.Contains(f.Reason, "flai serve project add "+root) {
+			t.Errorf("%s: %+v", root, f)
+		}
+	}
+	if _, ok := by["/a/registered"]; ok {
+		t.Error("a registered project is the registry's")
+	}
+	if f := by["/a/kept"]; f.Removed || f.Reason != "" || f.URL != "http://a" {
+		t.Errorf("kept: %+v", f)
+	}
+}
+
+func TestTheRemovedListRoundTrips(t *testing.T) {
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	if got, err := dir.RemovedRoots(); err != nil || got != nil {
+		t.Fatalf("no list: %v %v", got, err)
+	}
+	for _, r := range []string{"/b", "/a", "/b"} {
+		if err := dir.RemoveRoot(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, _ := dir.RemovedRoots(); strings.Join(got, ",") != "/a,/b" {
+		t.Errorf("list %v, want /a,/b once each", got)
+	}
+	if was, err := dir.RestoreRoot("/a"); !was || err != nil {
+		t.Errorf("restore /a: %v %v", was, err)
+	}
+	if was, err := dir.RestoreRoot("/a"); was || err != nil {
+		t.Errorf("restore /a again: %v %v", was, err)
+	}
+	if set, _ := dir.RemovedSet(); len(set) != 1 || !set["/b"] {
+		t.Errorf("set %v, want /b", set)
+	}
+	_ = os.WriteFile(filepath.Join(string(dir), "removed.json"), []byte("{"), 0o600)
+	if set, err := dir.RemovedSet(); err == nil || len(set) != 0 {
+		t.Errorf("a list that does not read: %v %v, want empty and an error", set, err)
 	}
 }
 
@@ -149,10 +208,10 @@ func TestServeServesTheProjectsBelowTheImportRoots(t *testing.T) {
 		}
 	})
 
-	got := map[string]string{}
+	got, conns := map[string]string{}, map[string]*channeltest.Conn{}
 	for range 2 {
 		c := dash.Wait(t)
-		got[c.Project] = c.Kind
+		got[c.Project], conns[c.Project] = c.Kind, c
 	}
 	if kind, ok := got["blog"]; !ok || kind != "" {
 		t.Errorf("the imported repository is served as a project: %v", got)
@@ -166,4 +225,28 @@ func TestServeServesTheProjectsBelowTheImportRoots(t *testing.T) {
 			len(st.Unserved) == 1 && st.Unserved[0].Root == filepath.Join(named, "nokey") && strings.Contains(st.Unserved[0].Reason, "no key") &&
 			len(st.Offered) == 0
 	})
+
+	// S-0123: removed, it is said to be removed and listed as not served, with why
+	blog := filepath.Join(named, "blog")
+	if err := dir.RemoveRoot(blog); err != nil {
+		t.Fatal(err)
+	}
+	if got := conns["blog"].Last(t); len(got) != 1 || got[0] != Removed {
+		t.Errorf("a removed project sent %v, want [%s]", got, Removed)
+	}
+	waitFor(t, "the status lists it as removed", func() bool {
+		st, _ := dir.ReadStatus(time.Now())
+		for _, u := range st.Unserved {
+			if u.Root == blog {
+				return u.Removed && len(st.ImportProjects) == 0
+			}
+		}
+		return false
+	})
+	// taken off the list, it is served again
+	if _, err := dir.RestoreRoot(blog); err != nil {
+		t.Fatal(err)
+	}
+	for conn := dash.Wait(t); conn.Project != "blog"; conn = dash.Wait(t) {
+	}
 }
