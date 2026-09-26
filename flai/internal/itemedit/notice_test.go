@@ -31,3 +31,25 @@ func TestNoticesStayBounded(t *testing.T) {
 		t.Errorf("the file is the owner's: %v %v", st, err)
 	}
 }
+
+// Overlap notices are a log of their own: an older flai reads every line of
+// the edit notices as an edit (S-0132).
+func TestOverlapsAreALogOfTheirOwn(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	RecordOverlap(repo, Overlap{At: "2026-09-26T18:00:00Z", By: "alex", ID: "S-0002", Title: "Open", Accepted: "S-0001", Paths: []string{"flai/cmd/a.go"}})
+	got := Overlaps(repo)
+	if len(got) != 1 || got[0].ID != "S-0002" || got[0].Accepted != "S-0001" || len(got[0].Paths) != 1 {
+		t.Errorf("overlaps: %+v", got)
+	}
+	if Notices(repo) != nil {
+		t.Errorf("an overlap is not an edit notice: %+v", Notices(repo))
+	}
+	if OverlapsPath(repo) == NoticesPath(repo) {
+		t.Error("two logs, two files")
+	}
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -37,6 +38,9 @@ type acceptResult struct {
 	// includes them in the acceptance commit; a dry run reports them so the
 	// choice can be made before confirming (S-0051).
 	Uncommitted []string `json:"uncommitted,omitempty"`
+	// The open stories told which paths the merge changed under their claim
+	// (S-0132).
+	Overlaps []itemedit.Overlap `json:"overlaps,omitempty"`
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -51,6 +55,8 @@ design/conventions/work-management.md and git.md:
   1. move the item to done (its rules apply: children closed, criteria checked)
   2. flai archive for the item and its children and narrative
   3. git commit the work item and archive
+  4. tell every story in progress or in review whose touches cover a path
+     the merge changed which paths those are, for its agent's MCP inbox
 
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087):
 that is a deliberate step of its own, run when the operator chooses to
@@ -169,7 +175,12 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 
 	// 0. bring the story branch into the main branch (ADR-0019)
+	var changed []string // what the merge brought, for the stories still open
 	if it.Type == workitem.Story {
+		before := ""
+		if hasBranch {
+			before = a.headOf(repo.MainRoot)
+		}
 		merged, err := a.mergeStoryBranch(repo, it.ID)
 		if err != nil {
 			return nil, err
@@ -177,6 +188,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		res.Merged = merged
 		if merged {
 			a.acceptStep(it, "merged", res.Branch+" rebased and fast-forwarded into the main branch")
+			if before != "" {
+				if changed, err = a.changedSince(repo.MainRoot, before); err != nil {
+					a.logger().Warn("overlap notices not sent", "component", "accept", "item", it.ID, "err", err)
+				}
+			}
 		}
 	}
 
@@ -238,6 +254,15 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	a.acceptStep(it, "committed", firstLine(msg))
+	// 4. tell the stories still open what changed under their claim (S-0132)
+	res.Overlaps = a.tellOverlaps(repo, it, orDefault(o.by, a.author()), changed)
+	if len(res.Overlaps) > 0 {
+		ids := make([]string, len(res.Overlaps))
+		for i, n := range res.Overlaps {
+			ids[i] = n.ID
+		}
+		a.acceptStep(it, "told", "told "+strings.Join(ids, ", ")+" which changed paths their claims cover")
+	}
 	return res, nil
 }
 
@@ -292,6 +317,9 @@ func (a *app) printAccept(res *acceptResult) error {
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}
 	fmt.Fprintln(a.out, "; nothing released yet, run flai release --pending to publish")
+	for _, n := range res.Overlaps {
+		fmt.Fprintf(a.out, "told %s it overlaps: %s\n", n.ID, strings.Join(n.Paths, ", "))
+	}
 	return nil
 }
 
