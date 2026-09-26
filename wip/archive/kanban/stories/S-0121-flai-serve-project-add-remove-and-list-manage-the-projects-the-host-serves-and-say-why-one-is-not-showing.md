@@ -3,10 +3,10 @@ id: S-0121
 type: story
 nature: improvement
 title: flai serve project add, remove, and list manage the projects the host serves and say why one is not showing
-status: review
+status: done
 owner: alex
 created: 2026-09-26T05:18:06Z
-updated: 2026-09-26T05:58:39Z
+updated: 2026-09-26T06:02:02Z
 transitions:
   - to: ready
     at: 2026-09-26T05:24:21Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-09-26T05:58:39Z
     by: agent-S-0118
+  - to: done
+    at: 2026-09-26T06:02:02Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd/serve_project.go, flai/cmd/serve.go, flai/cmd/dashboard_agent.go, flai/internal/serve/serve.go, flai/internal/serve/projects.go, flai/internal/channel/channeltest, flaiover/src/lib/server/agent.ts, docs/users/flai.md, docs/users/flai-reference.md, docs/operators, design/system/flai-cli.md, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md]
 agent:
