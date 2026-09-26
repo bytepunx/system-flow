@@ -7,7 +7,7 @@ status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T07:23:21Z
-updated: 2026-09-26T07:40:35Z
+updated: 2026-09-26T08:03:03Z
 transitions:
   - to: ready
     at: 2026-09-26T07:40:35Z
@@ -16,7 +16,7 @@ tags: [cli]
 touches: [flai/cmd]
 agent:
   harness: claude-code
-  model: claude-opus5
+  model: claude-opus-5-5
   config:
     effort: high
 ---
