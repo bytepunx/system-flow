@@ -219,6 +219,45 @@ describe('StoryAgent (S-0104)', () => {
 			expect(button()).not.toBeNull();
 		});
 
+		// S-0118: with the in-progress limit full, flai queues the new agent; its dot is yellow
+		it('is not offered once another agent is queued, and says it waits for room', async () => {
+			await show(failed, true, { status: 'ready', writable: true });
+			api.mockImplementation(async (path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? { ok: true, json: async () => ({ story: 'S-0104', queued: '2026-09-23T18:40:00Z' }) }
+					: answer({
+							enabled: true,
+							state: {
+								command: '',
+								stories: {
+									'S-0104': {
+										state: 'waiting',
+										why: 'queued: flai serve starts another agent when the in-progress limit has room',
+										run: { ...failed['S-0104'].run, queued: '2026-09-23T18:40:00Z' }
+									}
+								}
+							}
+						})
+			);
+			button()!.click();
+			await settle();
+			expect(button()).toBeNull();
+			expect(text()).toContain(
+				'agent waiting (claude-code, claude-haiku-4-5): queued: flai serve starts another agent when the in-progress limit has room'
+			);
+			expect(document.querySelector<HTMLElement>('[data-testid="agent-dot"]')!.dataset.state).toBe(
+				'waiting'
+			);
+			// a reload: still nothing to press
+			unmount(c!);
+			c = mount(StoryAgent, {
+				target: document.body,
+				props: { story: 'S-0104', status: 'ready', writable: true }
+			});
+			await settle();
+			expect(button()).toBeNull();
+		});
+
 		it("comes back, with flai's reason, when flai refuses", async () => {
 			await show(failed, true, { status: 'in-progress', writable: true });
 			api.mockImplementation(async (path: string, init?: RequestInit) =>

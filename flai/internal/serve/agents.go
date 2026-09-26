@@ -109,6 +109,10 @@ type AgentRun struct {
 	// empty when it named none, and nil on runs recorded before S-0116: a
 	// story whose agent has changed since is started again.
 	StoryAgent *manifest.Agent `json:"story_agent,omitempty"`
+	// Queued is when the operator asked for another agent after this one
+	// ended, for its story in ready while the in-progress limit was full:
+	// flai serve starts it as soon as there is room (S-0118).
+	Queued string `json:"queued,omitempty"`
 }
 
 // agentChanged says whether the story's agent says something else than it
@@ -323,11 +327,14 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		switch {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
-		case run != nil && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
+		case run != nil && run.Queued == "" && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
 		case (s.Agent == nil || s.Agent.Harness == "") && !commandSet:
 			nothing = append(nothing, s) // nothing to start it with, which is no failure
 		default:
+			if run != nil && run.Queued != "" {
+				s.Restart = restartWhy(run) // the operator's retry, waiting for room
+			}
 			todo = append(todo, s)
 		}
 	}
@@ -598,6 +605,8 @@ type StoryActivity struct {
 // Activity is what each story's newest agent is doing. One that runs is
 // waiting when it asked a question on its story that nobody has answered
 // yet (an open thread whose last entry is its own) or its story is blocked.
+// One that ended is waiting when it asked, or when the operator queued
+// another for its story in ready (S-0118).
 func Activity(root string, st AgentState) map[string]StoryActivity {
 	out := map[string]StoryActivity{}
 	if len(st.Stories) == 0 {
@@ -638,6 +647,8 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 			a.State = ActivityWorked
 		case run.Outcome == OutcomeAsked:
 			a.State, a.Thread, a.Why = ActivityWaiting, run.Thread, run.Why
+		case run.Queued != "" && inReady(repo, id):
+			a.State, a.Why = ActivityWaiting, "queued: flai serve starts another agent when the in-progress limit has room"
 		default:
 			a.State, a.Why = ActivityFailed, run.Why
 			if a.Why == "" {
@@ -647,6 +658,13 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 		out[id] = a
 	}
 	return out
+}
+
+// inReady says whether story is in ready: a retry queued for it waits only
+// while it is.
+func inReady(repo *workitem.Repo, story string) bool {
+	it, err := repo.Get(story)
+	return err == nil && it.Status == workitem.Ready
 }
 
 // asking is the open thread on story whose last entry is agent's: a question

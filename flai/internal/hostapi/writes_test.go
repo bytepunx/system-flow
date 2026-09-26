@@ -795,3 +795,15 @@ func TestTheAgentReachesFlaiAsFlags(t *testing.T) {
 		t.Errorf("an edit without agent touched it: %v", args)
 	}
 }
+
+// S-0118: a restart that flai queued for want of room is journalled as queued,
+// not as a start with no process.
+func TestAnAgentRestartThatWasQueuedIsJournalledAsQueued(t *testing.T) {
+	describe := describeAgentNow("restarted")
+	if _, detail := describe(Written{Data: json.RawMessage(`{"story":"S-0001","agent":"agent-S-0001","queued":"2026-09-26T03:00:00Z"}`)}, nil); detail != "queued another agent for S-0001 until the in-progress limit has room" {
+		t.Errorf("queued: %q", detail)
+	}
+	if _, detail := describe(Written{Data: json.RawMessage(`{"story":"S-0001","agent":"agent-S-0001","command":"claude","pid":42}`)}, nil); detail != "restarted claude for S-0001 as agent-S-0001 (pid 42)" {
+		t.Errorf("started: %q", detail)
+	}
+}

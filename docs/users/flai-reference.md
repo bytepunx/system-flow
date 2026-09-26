@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -1595,7 +1595,9 @@ flai serve agent restart <story-id>
 
 Starts a new agent, in a new session, for a story in ready or in-progress whose last agent flai serve started has ended or dropped, the way flai serve starts one when a story enters ready: the story's harness, model, and options, or the host's command. The agent is told how its last one ended and to go on from the story's narrative. The run is recorded where the serving flai tracks it: the dot on the card, the outcome, the restart on an answer (S-0116, ADR-0043).
 
-It refuses, and says why, while the agent action is off for the project, when the story is in another state, when flai serve has started no agent for it, while its agent runs or waits for an answer, when nothing can start it, and for a story in ready while the in-progress limit is full. The story page's Restart agent button runs this.
+For a story in ready while the in-progress limit is full it queues the new agent instead: flai serve starts it as soon as the limit has room, as it starts a story that enters ready, and until then the story's agent reads as waiting, queued (S-0118).
+
+It refuses, and says why, while the agent action is off for the project, when the story is in another state, when flai serve has started no agent for it, while its agent runs or waits for an answer, when one is already queued, and when nothing can start it. The story page's Retry button runs this.
 
 ##### flai serve agent set
 

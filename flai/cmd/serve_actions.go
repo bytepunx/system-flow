@@ -782,11 +782,15 @@ one ended and to go on from the story's narrative. The run is recorded
 where the serving flai tracks it: the dot on the card, the outcome, the
 restart on an answer (S-0116, ADR-0043).
 
+For a story in ready while the in-progress limit is full it queues the new
+agent instead: flai serve starts it as soon as the limit has room, as it
+starts a story that enters ready, and until then the story's agent reads as
+waiting, queued (S-0118).
+
 It refuses, and says why, while the agent action is off for the project,
 when the story is in another state, when flai serve has started no agent for
-it, while its agent runs or waits for an answer, when nothing can start it,
-and for a story in ready while the in-progress limit is full. The story
-page's Restart agent button runs this.`,
+it, while its agent runs or waits for an answer, when one is already queued,
+and when nothing can start it. The story page's Retry button runs this.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return a.agentNow(args[0], serve.Restart)
@@ -822,7 +826,8 @@ button runs this.`,
 }
 
 // agentNow starts story's agent on the operator's word, with start or
-// restart deciding whether it may, and prints the run.
+// restart deciding whether it may, and prints the run, or that it was
+// queued.
 func (a *app) agentNow(story string, how func(context.Context, serve.Options, serve.Entry, string) (*serve.AgentRun, error)) error {
 	repo, err := a.project()
 	if err != nil {
@@ -837,6 +842,13 @@ func (a *app) agentNow(story string, how func(context.Context, serve.Options, se
 	}
 	if err != nil {
 		return err
+	}
+	if run.Queued != "" {
+		if a.jsonOut {
+			return a.printJSON(map[string]any{"story": run.Story, "agent": run.Agent, "queued": run.Queued})
+		}
+		fmt.Fprintf(a.out, "queued another agent for %s: the in-progress limit leaves no room, and flai serve starts it when there is\n", run.Story)
+		return nil
 	}
 	if a.jsonOut {
 		return a.printJSON(map[string]any{"story": run.Story, "agent": run.Agent, "harness": run.Harness, "command": run.Command, "pid": run.PID, "log": run.Log, "started": run.Started})

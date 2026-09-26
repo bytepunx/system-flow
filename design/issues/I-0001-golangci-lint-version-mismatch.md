@@ -3,11 +3,11 @@ id: I-0001
 title: golangci-lint on the host is v1 but the config is v2
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 5m
 first_reported: 2026-09-15T16:31:32Z
-last_reported: 2026-09-15T18:11:49Z
-updated: 2026-09-15T22:40:33Z
+last_reported: 2026-09-26T03:11:53Z
+updated: 2026-09-26T03:11:53Z
 ---
 
 # I-0001 golangci-lint on the host is v1 but the config is v2
@@ -25,6 +25,9 @@ S-0007: scratch binary gone; reinstalled.
 
 ### 2026-09-15T18:11:49Z
 S-0008: reinstalled again.
+
+### 2026-09-26T03:11:53Z
+S-0118, 2026-09-26: the host's golangci-lint is still v1. I installed v2.5.0 into the worktree's bin/ with go install to run make flai-test.
 
 ## Remediation
 `scripts/install-tools.sh` installs v2 into `bin/` (git-ignored) so it persists across sessions; the operator can run it once. Close when the host has v2 or the script is in routine use.

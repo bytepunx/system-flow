@@ -1,0 +1,23 @@
+---
+id: I-0045
+title: "Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has"
+class: defect
+status: open
+count: 1
+cost: 5m
+first_reported: 2026-09-26T03:11:49Z
+last_reported: 2026-09-26T03:11:49Z
+updated: 2026-09-26T03:11:49Z
+---
+
+# I-0045 Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has
+
+## Description
+Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has
+
+## Instances
+
+### 2026-09-26T03:11:49Z
+S-0118, 2026-09-26: make flai-test on this macOS host fails TestRunChecksSubstitutesStoryAndRootAndRunsInTheWorktree (got /var/folders/..., want /private/var/folders/...), TestAcceptRefusesBeforeChangingAnythingWithoutIdentity (the acceptance went ahead instead of refusing for a missing identity), and install-test.sh's self-upgrade path check (mktemp -d gives /var, flai reports /private/var). All three fail the same way on a clean checkout of main, so the story's own change is not the cause. The remaining tiers were run one by one to cover the story's change.
+
+## Remediation
