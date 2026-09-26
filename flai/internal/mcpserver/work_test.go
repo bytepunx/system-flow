@@ -176,6 +176,33 @@ func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
 	}
 }
 
+// S-0130: a ready story that names, in after:, a story not yet done is
+// passed over, and the ready list says what it waits for.
+func TestWaitForWorkPassesOverAStoryWaitingForAnother(t *testing.T) {
+	f := setup(t)
+	f.toReview(t)
+	waits := f.readyStory(t, "Waits", t0)
+	waits.After = []string{f.story.ID}
+	if err := f.repo.Save(waits); err != nil {
+		t.Fatal(err)
+	}
+	clear := f.readyStory(t, "Clear", t0.Add(time.Second))
+	out := answered(t, f.held(t, 1))
+	if out["reason"] != "pull" || storyOf(out) != clear.ID {
+		t.Fatalf("the clear story: %v", out)
+	}
+	want := "held (after): waits for " + f.story.ID + " (in review); starts when " + f.story.ID + " is done"
+	var held map[string]any
+	for _, c := range out["ready"].([]any) {
+		if card := c.(map[string]any); card["id"] == waits.ID {
+			held, _ = card["held"].(map[string]any)
+		}
+	}
+	if held["code"] != "after" || held["reason"] != want {
+		t.Errorf("held: %v in %v", held, out["ready"])
+	}
+}
+
 // S-0128: item_move warns on a held story and moves it all the same.
 func TestItemMoveWarnsOnAHeldStory(t *testing.T) {
 	f := setup(t)

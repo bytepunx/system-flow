@@ -119,3 +119,50 @@ func TestAHeldStoryStartsOnTheOperatorsWord(t *testing.T) {
 	}
 	lab.release(id)
 }
+
+// S-0130: the launcher does not start a ready story that names, in after:, a
+// story that is not done, says why, and starts it once that story is done.
+func TestAStoryWaitsForTheStoryItNamesInAfter(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(2)
+	lab.hold()
+	first := lab.backlog("First", nil)
+	then := lab.backlog("Then", nil)
+	st, err := lab.repo.Get(then)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.After = []string{first}
+	if err := lab.repo.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	lab.toReady(then)
+	lab.l.look(ctx, false)
+	why := "held (after): waits for " + first + " (in backlog); starts when " + first + " is done"
+	if lab.run(then) != nil {
+		t.Fatalf("started a story whose after: story is in backlog: %+v", lab.state().Stories)
+	}
+	if a := Activity(lab.root, lab.state())[then]; a.State != ActivityWaiting || a.Why != why || a.Hold == nil || a.Hold.Code != workitem.HoldAfter {
+		t.Errorf("activity: %+v", a)
+	}
+
+	// the named story is done and archived: the waiting one starts
+	f, _ := lab.repo.Get(first)
+	f.Status = workitem.Done
+	if err := lab.repo.Save(f); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := lab.repo.List(false)
+	plan, err := lab.repo.PlanArchive(items, []string{first})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := lab.repo.Archive(plan); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "the waiting story's agent runs", func() bool { return lab.run(then).live() })
+	lab.release(then)
+	waitFor(t, "it ends", func() bool { return !lab.run(then).live() })
+}

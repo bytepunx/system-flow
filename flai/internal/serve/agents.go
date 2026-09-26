@@ -260,7 +260,7 @@ func readyStories(root string) (ready []readyStory, holds *workitem.Holds, free 
 	if limit, ok := view.WIPLimits[workitem.InProgress]; ok && limit > 0 {
 		free = max(0, limit-view.Counts[workitem.InProgress])
 	}
-	return ready, workitem.NewHolds(items, repo.Manifest.Projects), free, nil
+	return ready, repo.Holds(items), free, nil
 }
 
 // agentStarted is how a hold names a story in ready whose agent has been
@@ -706,7 +706,7 @@ func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 	if err != nil {
 		return nil
 	}
-	holds := workitem.NewHolds(items, repo.Manifest.Projects)
+	holds := repo.Holds(items)
 	var ready []*workitem.Item
 	for _, it := range items {
 		if it.Type != workitem.Story || it.Status != workitem.Ready {

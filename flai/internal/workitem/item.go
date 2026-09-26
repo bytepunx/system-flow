@@ -75,6 +75,9 @@ type Item struct {
 	Stream      string       `yaml:"stream" json:"stream"`
 	Tags        []string     `yaml:"tags" json:"tags"`
 	Touches     []string     `yaml:"touches" json:"touches,omitempty"` // paths or components the work changes (ADR-0019)
+	// After names the stories that must be done before this story starts
+	// (S-0130, ADR-0046). Stories only.
+	After []string `yaml:"after" json:"after,omitempty"`
 	// Agent is who works the story: harness, model, and options (S-0103).
 	// Stories only; absent unless the project has defaults or one was given.
 	Agent *manifest.Agent `yaml:"agent" json:"agent,omitempty"`
@@ -163,6 +166,14 @@ func (it *Item) Validate() error {
 	}
 	if it.Type == Task && it.Parent != "" && !strings.HasPrefix(it.Parent, "S-") {
 		errs = append(errs, "a task's parent must be a story")
+	}
+	if len(it.After) > 0 && it.Type != Story {
+		errs = append(errs, "after is for stories, and this is a "+it.Type)
+	}
+	for i, id := range it.After {
+		if !idPattern.MatchString(id) || !strings.HasPrefix(id, "S-") {
+			errs = append(errs, fmt.Sprintf("after[%d] %q is not a story ID like S-0001", i, id))
+		}
 	}
 	for _, name := range []string{"created", "updated"} {
 		v := it.Created
@@ -307,6 +318,9 @@ func (it *Item) Marshal() string {
 	fmt.Fprintf(&b, "tags: %s\n", FlowList(it.Tags))
 	if len(it.Touches) > 0 {
 		fmt.Fprintf(&b, "touches: %s\n", FlowList(it.Touches))
+	}
+	if len(it.After) > 0 {
+		fmt.Fprintf(&b, "after: %s\n", FlowList(it.After))
 	}
 	if !it.Agent.IsZero() {
 		b.WriteString(manifest.AgentBlock(it.Agent, ""))

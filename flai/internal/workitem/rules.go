@@ -88,7 +88,7 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	}
 	// A hold stops flai serve and wait_for_work, not a move (S-0128, ADR-0046).
 	if to == InProgress && from == Ready && it.Type == Story {
-		if h := NewHolds(opt.Items, r.Manifest.Projects).Of(it); h != nil {
+		if h := r.Holds(opt.Items).Of(it); h != nil {
 			warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, h.Reason))
 		}
 	}

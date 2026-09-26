@@ -1,6 +1,8 @@
 package workitem
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -152,5 +154,111 @@ func TestBoardMarksHeldStories(t *testing.T) {
 	items[2].Touches = []string{"flai/cmd/board.go"}
 	if first := NewBoardView(items, board, time.Now(), false, nil, holdProjects).FirstPullable(); first != nil {
 		t.Errorf("every ready story is held, yet %s is pullable", first.ID)
+	}
+}
+
+// waiting is S-0009, ready, naming stories in after:.
+func waiting(names ...string) *Item {
+	s := claimed("S-0009", Ready, "flai/cmd")
+	s.After = names
+	return s
+}
+
+// S-0130, ADR-0046: a ready story waits for every story it names in after:
+// that is not done; a cancelled or missing one keeps the hold and says so.
+func TestHoldsByAfter(t *testing.T) {
+	done := claimed("S-0002", Done, "docs")
+	archived := claimed("S-0003", Done, "docs")
+	archived.Archived = true
+	cancelled := claimed("S-0004", Cancelled, "docs")
+	items := []*Item{
+		claimed("S-0001", Backlog, "docs"), done, archived, cancelled,
+		claimed("S-0005", Review, "docs"), claimed("S-0006", Ready, "docs"),
+	}
+	cases := []struct {
+		name  string
+		ready *Item
+		code  string
+		why   string
+	}{
+		{"nothing named", waiting(), "", ""},
+		{"done and archived done", waiting("S-2", "S-0003"), "", ""},
+		{"the story itself is left to flai check", waiting("S-0009"), "", ""},
+		{"one in backlog",
+			waiting("S-1"),
+			HoldAfter, "held (after): waits for S-0001 (in backlog); starts when S-0001 is done"},
+		{"two, one done, repeats once",
+			waiting("S-0005", "S-0002", "S-0006", "S-5"),
+			HoldAfter, "held (after): waits for S-0005 (in review) and S-0006 (ready); starts when S-0005 and S-0006 are done"},
+		{"cancelled keeps the hold",
+			waiting("S-0004"),
+			HoldAfter, "held (after): waits for S-0004 (cancelled); starts when S-0004 is done; S-0004 was cancelled, so drop it from after: if S-0009 no longer needs it"},
+		{"no such story keeps the hold",
+			waiting("S-0077"),
+			HoldAfter, "held (after): waits for S-0077 (no such story); starts when S-0077 is done; S-0077 names no story, so fix after:"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			h := NewHolds(append(items, c.ready), holdProjects).Of(c.ready)
+			switch {
+			case c.code == "" && h != nil:
+				t.Fatalf("held: %+v", h)
+			case c.code != "" && h == nil:
+				t.Fatal("not held")
+			case h != nil && (h.Code != c.code || h.Reason != c.why):
+				t.Errorf("hold = %s: %s\nwant   %s: %s", h.Code, h.Reason, c.code, c.why)
+			}
+		})
+	}
+}
+
+// S-0130: after: and an overlap together are held (after), and the reason
+// says both, so that "starts when" is true.
+func TestHoldsByAfterAndOverlap(t *testing.T) {
+	open := claimed("S-0001", InProgress, "flai")
+	ready := waiting("S-0001")
+	h := NewHolds([]*Item{open, ready}, holdProjects).Of(ready)
+	want := "held (after): waits for S-0001 (in progress); starts when S-0001 is done; also held (overlap): touches flai/cmd, inside flai which S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"
+	if h == nil || h.Code != HoldAfter || h.Reason != want {
+		t.Errorf("hold = %+v\nwant reason %s", h, want)
+	}
+}
+
+// S-0130: a repository's holds find a named story in the archive when only
+// the active items were read, as flai serve and moves read them.
+func TestRepoHoldsLookInTheArchive(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "E", "")
+	archive := func(title, status string) {
+		s := mustCreate(t, r, Story, title, "E-0001")
+		if err := os.Remove(s.Path); err != nil {
+			t.Fatal(err)
+		}
+		s.Status, s.Archived = status, true
+		s.Path = filepath.Join(r.ItemDir(Story, true), filepath.Base(s.Path))
+		if err := os.MkdirAll(filepath.Dir(s.Path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := r.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	archive("Done first", Done)
+	archive("Given up", Cancelled)
+	ready := mustCreate(t, r, Story, "Waits", "E-0001")
+	items, err := r.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready.After = []string{"S-0001"}
+	if h := r.Holds(items).Of(ready); h != nil {
+		t.Errorf("an archived done story holds: %s", h.Reason)
+	}
+	if h := NewHolds(items, nil).Of(ready); h == nil || !strings.Contains(h.Reason, "S-0001 (no such story)") {
+		t.Errorf("without the archive, S-0001 should read as missing: %+v", h)
+	}
+	ready.After = []string{"S-0002"}
+	if h := r.Holds(items).Of(ready); h == nil || !strings.Contains(h.Reason, "S-0002 (cancelled)") {
+		t.Errorf("an archived cancelled story should hold: %+v", h)
 	}
 }

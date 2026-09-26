@@ -200,6 +200,80 @@ func TestTouchesOverlap(t *testing.T) {
 	}
 }
 
+// S-0130, ADR-0046: an after: entry that names no story, the story itself,
+// or something other than a story is an error, and so is a cycle, once.
+func TestAfterRules(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	s1 := mustItem(t, repo, workitem.Story, "One", e.ID)
+	s2 := mustItem(t, repo, workitem.Story, "Two", e.ID)
+	s3 := mustItem(t, repo, workitem.Story, "Three", e.ID)
+	task := mustItem(t, repo, workitem.Task, "Task", s1.ID)
+	set := func(it *workitem.Item, after ...string) {
+		it.After = after
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	findings := func() []string {
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, f := range res.Findings {
+			if f.Rule == "story.after" || (f.Rule == "item.front-matter" && strings.Contains(f.Message, "after")) {
+				out = append(out, filepath.Base(f.Path)[:6]+": "+f.Message)
+			}
+		}
+		return out
+	}
+
+	set(s2, "S-0001")
+	set(s3, "S-0001", "S-0002")
+	if got := findings(); len(got) != 0 {
+		t.Errorf("sound after: reported %v", got)
+	}
+
+	set(s1, "S-0009", "S-0001")
+	set(task, "S-0002")
+	got := strings.Join(findings(), "\n")
+	for _, want := range []string{
+		"S-0001: after names S-0009, which does not exist",
+		"S-0001: after names S-0001 itself",
+		"T-0001: after is for stories, and this is a task",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
+		}
+	}
+
+	set(task)
+	set(s1, "T-0001")
+	if got := strings.Join(findings(), "\n"); !strings.Contains(got, `after[0] "T-0001" is not a story ID`) {
+		t.Errorf("a task in after: not reported:\n%s", got)
+	}
+
+	// S-0001 waits for S-0003, which waits for S-0001 and S-0002, and S-0002
+	// waits for S-0001: two cycles through S-0001, reported on it only.
+	set(s1, "S-0003")
+	got = strings.Join(findings(), "\n")
+	if !strings.Contains(got, "S-0001: after forms a cycle, S-0001 waits for S-0003 waits for S-0001") {
+		t.Errorf("cycle not reported on S-0001:\n%s", got)
+	}
+	if n := strings.Count(got, "forms a cycle"); n != 1 {
+		t.Errorf("a cycle is reported once, got %d:\n%s", n, got)
+	}
+}
+
 func mustItem(t *testing.T, r *workitem.Repo, typ, title, parent string) *workitem.Item {
 	t.Helper()
 	it, err := r.Create(workitem.NewOptions{Type: typ, Title: title, Parent: parent, Owner: "t", Now: now})

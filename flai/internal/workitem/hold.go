@@ -10,14 +10,16 @@ import (
 
 // Holds on ready stories (S-0128, ADR-0046). A story's claim is its touches
 // and those of its tasks that are not done or cancelled. A ready story whose
-// claim overlaps the claim of a story in progress or in review is held: flai
+// claim overlaps the claim of a story in progress or in review is held, and
+// so is one that names in after: a story that is not done (S-0130): flai
 // serve does not start its agent and wait_for_work does not offer it. The
 // operator's own moves only warn.
 
-// Hold reason codes. ADR-0046's after: is a third, in a story of its own.
+// Hold reason codes.
 const (
 	HoldOverlap   = "overlap"    // its claim overlaps an open story's
 	HoldNoTouches = "no-touches" // its claim or an open story's is empty
+	HoldAfter     = "after"      // a story it names in after: is not done (S-0130)
 )
 
 // Hold is why a ready story waits: a reason code, and one line with the
@@ -33,6 +35,10 @@ type Holds struct {
 	projects []manifest.Project
 	tasks    map[string][]*Item // open tasks by story
 	open     []openClaim
+	stories  map[string]*Item // every story given, archived ones included
+	// lookup finds a story named in after: that was not given, such as an
+	// archived one when only the active items were read.
+	lookup func(id string) *Item
 }
 
 type openClaim struct {
@@ -44,10 +50,13 @@ type openClaim struct {
 // NewHolds reads the open stories' claims from items; projects are the
 // manifest's sub-projects, whose names and tags a claim reads as their paths.
 func NewHolds(items []*Item, projects []manifest.Project) *Holds {
-	h := &Holds{projects: projects, tasks: map[string][]*Item{}}
+	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}}
 	for _, it := range items {
 		if !it.Archived && it.Type == Task && !it.Closed() {
 			h.tasks[it.Parent] = append(h.tasks[it.Parent], it)
+		}
+		if it.Type == Story {
+			h.stories[it.ID] = it
 		}
 	}
 	for _, it := range items {
@@ -60,6 +69,19 @@ func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 		case Review:
 			h.Open(it, "in review")
 		}
+	}
+	return h
+}
+
+// Holds judges ready stories against items, as NewHolds does, and finds a
+// story named in after: in the archive when items do not hold it.
+func (r *Repo) Holds(items []*Item) *Holds {
+	h := NewHolds(items, r.Manifest.Projects)
+	h.lookup = func(id string) *Item {
+		if it, err := r.Get(id); err == nil && it.Type == Story {
+			return it
+		}
+		return nil
 	}
 	return h
 }
@@ -106,9 +128,85 @@ func (h *Holds) path(entry string) string {
 	return e
 }
 
-// Of is why story is held, or nil when it is not. Every open story that
-// holds it is named, in ID order.
+// Of is why story is held, or nil when it is not. Every story that holds it
+// is named, in ID order. A story held both by after: and by an overlap is
+// held (after), and its reason says both.
 func (h *Holds) Of(story *Item) *Hold {
+	after, overlap := h.after(story), h.overlap(story)
+	switch {
+	case after == nil:
+		return overlap
+	case overlap == nil:
+		return after
+	}
+	return &Hold{Code: HoldAfter, Reason: after.Reason + "; also " + overlap.Reason}
+}
+
+// after is why story waits for the stories it names in after:, or nil when
+// each of them is done. One that was cancelled keeps the hold, and so does
+// one that does not exist: flai check reports it, and the operator decides.
+func (h *Holds) after(story *Item) *Hold {
+	var waits, ids, notes []string
+	seen := map[string]bool{}
+	for _, e := range story.After {
+		id := CanonicalID(e)
+		if id == story.ID || seen[id] {
+			continue
+		}
+		seen[id] = true
+		it := h.story(id)
+		switch {
+		case it == nil:
+			waits = append(waits, id+" (no such story)")
+			notes = append(notes, id+" names no story, so fix after:")
+		case it.Status == Done:
+			continue
+		case it.Status == Cancelled:
+			waits = append(waits, id+" (cancelled)")
+			notes = append(notes, id+" was cancelled, so drop it from after: if "+story.ID+" no longer needs it")
+		default:
+			waits = append(waits, id+" ("+stateLabel(it.Status)+")")
+		}
+		ids = append(ids, id)
+	}
+	if len(waits) == 0 {
+		return nil
+	}
+	reason := fmt.Sprintf("held (after): waits for %s; starts when %s %s done", and(waits), and(ids), oneOrMany(len(ids), "is", "are"))
+	if len(notes) > 0 {
+		reason += "; " + strings.Join(notes, "; ")
+	}
+	return &Hold{Code: HoldAfter, Reason: reason}
+}
+
+// story finds a story by ID among those given, else through lookup.
+func (h *Holds) story(id string) *Item {
+	if it, ok := h.stories[id]; ok {
+		return it
+	}
+	if h.lookup == nil {
+		return nil
+	}
+	it := h.lookup(id)
+	h.stories[id] = it
+	return it
+}
+
+// stateLabel is how a reason names a story's state.
+func stateLabel(status string) string {
+	switch status {
+	case Backlog:
+		return "in backlog"
+	case InProgress:
+		return "in progress"
+	case Review:
+		return "in review"
+	}
+	return status
+}
+
+// overlap is why story's claim is held by the open stories', or nil.
+func (h *Holds) overlap(story *Item) *Hold {
 	claim := h.Claim(story)
 	var others []openClaim
 	for _, o := range h.open {
