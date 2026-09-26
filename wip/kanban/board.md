@@ -7,7 +7,7 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0126
+  - S-0125
 ---
 
 # Board

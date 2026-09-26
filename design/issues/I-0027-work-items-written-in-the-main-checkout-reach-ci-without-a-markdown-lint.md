@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 2
-cost: 8m
+count: 3
+cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-26T07:22:40Z
-updated: 2026-09-26T07:22:40Z
+last_reported: 2026-09-26T07:34:08Z
+updated: 2026-09-26T07:34:08Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -22,5 +22,8 @@ Work items written in the main checkout reach CI without a markdown lint
 
 ### 2026-09-26T07:22:40Z
 S-0122's acceptance (32f53ab) committed wip/archive/agents/S-0122.md and its archived story with a double blank line (MD012), and TH-0012 with emphasis as a heading (MD036); the system-flow check run on main (36225691919) failed at Lint markdown after flai push --pending on 2026-09-26. The archive is not the agent's to edit, so main stays red until the operator fixes or allows it.
+
+### 2026-09-26T07:34:08Z
+S-0126: make lint-md in the main checkout found six findings in files no agent linted before they were written there: S-0124's story (MD009, MD012), S-0127's story heading (MD026), and TH-0012 (MD036, already in TH-0017). None in S-0126's files; left to their owners.
 
 ## Remediation

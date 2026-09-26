@@ -3,12 +3,18 @@ id: S-0127
 type: story
 nature: improvement
 title: Threads should visually delineate between agent text and operator text
-status: backlog
+status: in-progress
 parent: E-0003
 owner: alex
 created: 2026-09-26T07:31:07Z
-updated: 2026-09-26T07:34:30Z
-transitions: []
+updated: 2026-09-26T07:40:38Z
+transitions:
+  - to: ready
+    at: 2026-09-26T07:40:19Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-26T07:40:38Z
+    by: agent-S-0127
 tags: [dashboard]
 touches: [flaiover/src]
 agent:
