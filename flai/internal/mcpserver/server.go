@@ -226,7 +226,7 @@ func (s *server) boardView(all bool) (workitem.BoardView, error) {
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
-	view := workitem.NewBoardView(items, board, s.now(), all, release.PendingIDs(s.runner, s.repo.Root, s.repo.Manifest, s.repo))
+	view := workitem.NewBoardView(items, board, s.now(), all, release.PendingIDs(s.runner, s.repo.Root, s.repo.Manifest, s.repo), s.repo.Manifest.Projects)
 	root := s.repo.MainRoot
 	if root == "" {
 		root = s.repo.Root

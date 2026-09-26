@@ -160,7 +160,7 @@ func TestBoardViewColumnsReadInPullOrder(t *testing.T) {
 		}
 		return
 	}
-	v := NewBoardView(items, b, now, false, nil)
+	v := NewBoardView(items, b, now, false, nil, nil)
 	if got, want := ids(v.Columns[Ready]), []string{"S-0002", "S-0001"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("ready: got %v want %v", got, want)
 	}
@@ -170,7 +170,7 @@ func TestBoardViewColumnsReadInPullOrder(t *testing.T) {
 	if got, want := ids(v.ReadyInPullOrder()), []string{"S-0002", "S-0001"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("ReadyInPullOrder: got %v want %v", got, want)
 	}
-	all := NewBoardView(items, b, now, true, nil)
+	all := NewBoardView(items, b, now, true, nil, nil)
 	if got, want := ids(all.Columns[Ready]), []string{"S-0002", "S-0001", "T-0001"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("with tasks, stories take the sequence in the stories' places: got %v want %v", got, want)
 	}

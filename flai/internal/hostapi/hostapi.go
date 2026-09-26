@@ -208,7 +208,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if err != nil {
 				return nil, failed(err)
 			}
-			return workitem.NewBoardView(items, board, now(), in.All, release.PendingIDs(execx.System{}, repo.Root, repo.Manifest, repo)), nil
+			return workitem.NewBoardView(items, board, now(), in.All, release.PendingIDs(execx.System{}, repo.Root, repo.Manifest, repo), repo.Manifest.Projects), nil
 		},
 
 		// items.list: by type and state; the archive and the bodies on request.

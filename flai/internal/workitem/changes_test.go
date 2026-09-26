@@ -73,7 +73,7 @@ func TestBoardViewReadyInPullOrder(t *testing.T) {
 		{ID: "T-0001", Type: Task, Status: Ready, Created: "2026-09-19T11:00:00Z"},
 		{ID: "S-0009", Type: Story, Status: Ready, Archived: true}}
 	board := &Board{WIPLimits: map[string]int{InProgress: 2, Ready: 2}, Order: []string{"S-0003", "S-0001"}}
-	v := NewBoardView(items, board, now, false, nil)
+	v := NewBoardView(items, board, now, false, nil, nil)
 	var ids []string
 	for _, c := range v.ReadyInPullOrder() {
 		ids = append(ids, c.ID)
@@ -87,7 +87,7 @@ func TestBoardViewReadyInPullOrder(t *testing.T) {
 	if len(v.Breaches) != 1 || v.Columns[Ready][0].Age != "1h" {
 		t.Errorf("breaches %v, age %q", v.Breaches, v.Columns[Ready][0].Age)
 	}
-	if len(NewBoardView(items, board, now, true, nil).Columns[Ready]) != 4 {
+	if len(NewBoardView(items, board, now, true, nil, nil).Columns[Ready]) != 4 {
 		t.Error("all adds the task and still leaves the archived story out")
 	}
 }

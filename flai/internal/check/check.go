@@ -385,16 +385,11 @@ func (c *checker) overlap() {
 			if a.it.ID == b.it.ID || a.it.Parent == b.it.ID || b.it.Parent == a.it.ID {
 				continue
 			}
-			if pathsOverlap(a.path, b.path) {
+			if workitem.PathsOverlap(a.path, b.path) {
 				c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, a.path, b.it.ID, b.path)
 			}
 		}
 	}
-}
-
-func pathsOverlap(a, b string) bool {
-	a, b = strings.TrimSuffix(a, "/"), strings.TrimSuffix(b, "/")
-	return a == b || strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
 }
 
 func (c *checker) narratives() {

@@ -291,10 +291,14 @@ func TestStoryWithoutTasksMovesUntilReview(t *testing.T) {
 }
 
 // readyStory creates a story with criteria and moves it to ready as the
-// designer at the given time.
-func (f *fixture) readyStory(t *testing.T, title string, at time.Time) *workitem.Item {
+// designer at the given time. It touches a path of its own unless touches
+// are given, so that no open story holds it (S-0128).
+func (f *fixture) readyStory(t *testing.T, title string, at time.Time, touches ...string) *workitem.Item {
 	t.Helper()
-	s, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: f.story.Parent, Owner: "alex", Now: at})
+	if touches == nil {
+		touches = []string{"docs/" + strings.ToLower(strings.ReplaceAll(title, " ", "-"))}
+	}
+	s, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: f.story.Parent, Owner: "alex", Touches: touches, Now: at})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,6 +427,41 @@ func TestBoardToolMatchesTheSharedView(t *testing.T) {
 	if n := len(all["columns"].(map[string]any)["backlog"].([]any)); n < 2 {
 		t.Errorf("all adds the epic and the task: %d", n)
 	}
+}
+
+// S-0128: the board and inbox mark a ready story whose claim overlaps an
+// open story's as held, with the reason; the fixture's story is in progress
+// and touches flai/internal/mcpserver.
+func TestBoardAndInboxMarkHeldStories(t *testing.T) {
+	f := setup(t)
+	held := f.readyStory(t, "Overlaps", t0, "flai/internal")
+	free := f.readyStory(t, "Elsewhere", t0)
+	bare := f.readyStory(t, "Declares nothing", t0, []string{}...)
+	want := map[string]string{
+		held.ID: "held (overlap): touches flai/internal, which holds flai/internal/mcpserver that " + f.story.ID + " (in progress) touches; starts when " + f.story.ID + " is accepted, cancelled, or sent back",
+		free.ID: "",
+		bare.ID: "held (no-touches): declares no touches, so it may change what " + f.story.ID + " (in progress) changes; starts when it declares touches that overlap no open story's, or when " + f.story.ID + " is accepted, cancelled, or sent back",
+	}
+	check := func(what string, cards []any) {
+		t.Helper()
+		if len(cards) != 3 {
+			t.Fatalf("%s: %v", what, cards)
+		}
+		for _, c := range cards {
+			card := c.(map[string]any)
+			got := ""
+			if h, ok := card["held"].(map[string]any); ok {
+				got = h["reason"].(string)
+			}
+			if id := card["id"].(string); got != want[id] {
+				t.Errorf("%s: %s held %q, want %q", what, id, got, want[id])
+			}
+		}
+	}
+	board, _ := f.call(t, "board", map[string]any{})
+	check("board", board["columns"].(map[string]any)["ready"].([]any))
+	inbox, _ := f.call(t, "inbox", map[string]any{})
+	check("inbox", inbox["ready"].([]any))
 }
 
 func TestPullOrderChangeIsReportedOnlyWhenPrioritiesChange(t *testing.T) {

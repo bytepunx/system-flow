@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
 )
 
@@ -26,6 +27,8 @@ type BoardCard struct {
 	Age         string   `json:"age_in_column"`
 	AgeSecs     int64    `json:"age_in_column_seconds"`
 	Touches     []string `json:"touches,omitempty"`
+	// Held is why a ready story is not started or offered (S-0128).
+	Held *Hold `json:"held,omitempty"`
 }
 
 // BoardView is the board with its cards: one reading of the repository for
@@ -43,12 +46,15 @@ type BoardView struct {
 }
 
 // NewBoardView lays the active items out by column. Stories only unless all.
+// A ready story whose claim overlaps an open story's is marked held (S-0128);
+// projects are the manifest's sub-projects, whose names a claim reads as paths.
 // Acceptance archives a story the moment it merges (S-0087); pendingPublish
 // names the stories a release has not yet covered, so a done, archived story
 // still on the done column until it is published, instead of vanishing the
 // instant it is accepted, before anyone has had the chance to see it there.
-func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool) BoardView {
+func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool, projects []manifest.Project) BoardView {
 	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}}
+	holds := NewHolds(items, projects)
 	// A parent is looked up among every item given, archived ones included.
 	titles := map[string]string{}
 	for _, it := range items {
@@ -60,12 +66,16 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			continue
 		}
 		age := now.Sub(it.EnteredAt())
-		v.Columns[it.Status] = append(v.Columns[it.Status], BoardCard{
+		card := BoardCard{
 			ID: it.ID, Type: it.Type, Title: it.Title, Nature: it.Nature, Parent: it.Parent,
 			ParentTitle: titles[it.Parent], Status: it.Status, EnteredAt: it.EnteredAt().UTC().Format(TimeFormat),
 			Blocked: it.IsBlocked(), Age: HumanDuration(age), AgeSecs: int64(age.Seconds()),
 			Touches: it.Touches,
-		})
+		}
+		if it.Type == Story && it.Status == Ready && !it.Archived {
+			card.Held = holds.Of(it)
+		}
+		v.Columns[it.Status] = append(v.Columns[it.Status], card)
 		if it.Type == Story {
 			v.Counts[it.Status]++
 		}
@@ -110,6 +120,17 @@ func (v BoardView) ReadyInPullOrder() []BoardCard {
 		}
 	}
 	return out
+}
+
+// FirstPullable is the first ready story in pull order that is not held, or
+// nil when every one is (S-0128).
+func (v BoardView) FirstPullable() *BoardCard {
+	for _, c := range v.ReadyInPullOrder() {
+		if c.Held == nil {
+			return &c
+		}
+	}
+	return nil
 }
 
 // CanPull reports whether the in-progress limit leaves room for one more story.

@@ -30,7 +30,7 @@ func newBoardCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo))
+			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo), repo.Manifest.Projects)
 			if u := pending.Detect(a.runner, mainRootOf(repo)); u.Pending() {
 				view.Unpushed = u
 			}
@@ -54,9 +54,15 @@ func newBoardCmd(a *app) *cobra.Command {
 					if cd.Blocked {
 						flag = " BLOCKED"
 					}
+					if cd.Held != nil {
+						flag += " HELD"
+					}
 					fmt.Fprintf(a.out, "  %-6s %-46s %-12s %6s%s\n", cd.ID, truncate(cd.Title, 46), cd.Nature, cd.Age, flag)
 					if len(cd.Touches) > 0 {
 						fmt.Fprintf(a.out, "         touches %s\n", strings.Join(cd.Touches, ", "))
+					}
+					if cd.Held != nil {
+						fmt.Fprintf(a.out, "         %s\n", cd.Held.Reason)
 					}
 				}
 			}

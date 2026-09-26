@@ -22,7 +22,7 @@ func TestArchivedDoneStoryStaysUntilPublished(t *testing.T) {
 	pending := map[string]bool{"S-0001": true, "S-0003": true}
 	now := time.Date(2026, 9, 21, 12, 0, 0, 0, time.UTC)
 
-	v := NewBoardView(items, board, now, false, pending)
+	v := NewBoardView(items, board, now, false, pending, nil)
 	got := ids(v.Columns[Done])
 	if len(got) != 1 || got[0] != "S-0001" {
 		t.Errorf("done column: %v", got)
@@ -32,7 +32,7 @@ func TestArchivedDoneStoryStaysUntilPublished(t *testing.T) {
 	}
 
 	// nothing named as pending: the old behaviour, nothing archived shows
-	if v := NewBoardView(items, board, now, false, nil); len(v.Columns[Done]) != 0 {
+	if v := NewBoardView(items, board, now, false, nil, nil); len(v.Columns[Done]) != 0 {
 		t.Errorf("no pending map: %v", ids(v.Columns[Done]))
 	}
 }
