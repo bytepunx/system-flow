@@ -16,7 +16,7 @@ func (r *Repo) Uncommitted(storyID string) ([]string, error) {
 		return nil, nil
 	}
 	path := r.WorktreePath(storyID)
-	if _, err := os.Stat(path); err != nil {
+	if !exists(path) {
 		return nil, nil
 	}
 	out, err := r.Git.Run(path, "git", "status", "--porcelain")
@@ -49,6 +49,11 @@ func Shorten(paths []string, max int) string {
 		return strings.Join(paths, ", ")
 	}
 	return fmt.Sprintf("%s and %d more", strings.Join(paths[:max], ", "), len(paths)-max)
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 var porcelainLine = regexp.MustCompile(`^\s*\S{1,2}\s+(.+)$`)
