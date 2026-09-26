@@ -1,4 +1,3 @@
-// Package mcpserver serves a system-flow repository to agents over the
 // Model Context Protocol (ADR-0020). Files stay the record: every tool reads
 // and writes the same files, through the same code, as the flai CLI. The
 // server is for agents, so it never accepts a story; that is the operator's.
@@ -103,7 +102,7 @@ func New(opt Options) *mcp.Server {
 	s := newServer(opt, opt.Repo)
 	one := single{s}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names (item_move it to in-progress, then flai stream open on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready and the in-progress limit leaves room, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, touches, after, agent, parent, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names (item_move it to in-progress, then flai stream open on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready and the in-progress limit leaves room, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. Reply to threads with thread_reply and ask the designer questions with thread_open. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, touches, agent, parent, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
 	})
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
 	addProjectTools(srv, one)
@@ -582,11 +581,20 @@ func (s *server) snapshot() map[string]string {
 			return nil
 		})
 	}
-	// an edit's notice is written after its files: a waiting agent wakes for it too
-	if info, err := os.Stat(itemedit.NoticesPath(s.repo)); err == nil {
-		out[itemedit.NoticesPath(s.repo)] = fmt.Sprintf("%d/%d", info.ModTime().UnixNano(), info.Size())
+	// an edit's notice is written after its files, and an overlap's has no
+	// file of its own: a waiting agent wakes for them too
+	for _, log := range noticeLogs(s.repo) {
+		if info, err := os.Stat(log); err == nil {
+			out[log] = fmt.Sprintf("%d/%d", info.ModTime().UnixNano(), info.Size())
+		}
 	}
 	return out
+}
+
+// noticeLogs are the logs under .flai-cache whose lines arrive as events:
+// edits (S-0085) and overlaps at acceptance (S-0132).
+func noticeLogs(repo *workitem.Repo) []string {
+	return []string{itemedit.NoticesPath(repo), itemedit.OverlapsPath(repo)}
 }
 
 func diff(before, after map[string]string) []string {
@@ -638,8 +646,12 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 				// the notices wake a waiting agent and are not a path of the
 				// repository to show it: what they say arrives as events
 				shown := changed[:0]
+				logs := map[string]bool{}
+				for _, log := range noticeLogs(s.repo) {
+					logs[log] = true
+				}
 				for _, p := range changed {
-					if p != itemedit.NoticesPath(s.repo) {
+					if !logs[p] {
 						shown = append(shown, s.rel(p))
 					}
 				}

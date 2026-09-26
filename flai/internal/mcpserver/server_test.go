@@ -638,3 +638,67 @@ func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 		t.Fatal("wait_for_events never returned")
 	}
 }
+
+// S-0132: an open story whose claim covers what an accepted story changed is
+// told which paths changed, once, whoever accepted; a waiting agent wakes for
+// it, and the log is not shown to it as a path.
+func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
+	f := setup(t)
+	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
+		t.Fatal("first look")
+	}
+	at := f.clock.Add(30 * time.Second)
+	*f.clock = f.clock.Add(time.Minute)
+	itemedit.RecordOverlap(f.repo, itemedit.Overlap{At: at.Format(workitem.TimeFormat), By: "alex", ID: f.story.ID, Title: "Open", Accepted: "S-0099", Paths: []string{"flai/cmd/a.go", "docs/b.md"}})
+	out, _ := f.call(t, "inbox", map[string]any{})
+	changes := out["changes"].([]any)
+	if len(changes) != 1 {
+		t.Fatalf("one overlap: %v", changes)
+	}
+	c := changes[0].(map[string]any)
+	if c["kind"] != "overlapped" || c["id"] != f.story.ID || c["cause"] != "S-0099" || c["to"] != "flai/cmd/a.go,docs/b.md" {
+		t.Errorf("the change: %v", c)
+	}
+	if s := c["summary"].(string); !strings.Contains(s, "S-0099 was accepted by alex and changed flai/cmd/a.go, docs/b.md") || !strings.Contains(s, "flai stream sync "+f.story.ID) {
+		t.Errorf("summary: %s", s)
+	}
+	if again, _ := f.call(t, "inbox", map[string]any{}); len(again["changes"].([]any)) != 0 {
+		t.Errorf("told once: %v", again["changes"])
+	}
+
+	*f.clock = f.clock.Add(time.Minute)
+	stamp := f.clock.Format(workitem.TimeFormat)
+	done := make(chan map[string]any, 1)
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+		done <- out
+	}()
+	time.Sleep(150 * time.Millisecond)
+	itemedit.RecordOverlap(f.repo, itemedit.Overlap{At: stamp, By: "alex", ID: f.story.ID, Title: "Open", Accepted: "S-0098", Paths: []string{"flai/cmd/c.go"}})
+	select {
+	case w := <-done:
+		events := w["events"].([]any)
+		if w["timed_out"] == true || len(events) != 1 || events[0].(map[string]any)["cause"] != "S-0098" {
+			t.Errorf("wait: %v", w)
+		}
+		for _, p := range w["changed"].([]any) {
+			if strings.Contains(p.(string), ".flai-cache") {
+				t.Errorf("the log wakes the agent and is not shown to it as a path: %v", w["changed"])
+			}
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+}
+
+// An overlap's summary names at most maxPaths paths; to has them all.
+func TestAnOverlapSummaryBoundsItsPaths(t *testing.T) {
+	var paths []string
+	for i := 0; i < maxPaths+3; i++ {
+		paths = append(paths, fmt.Sprintf("p/%d.go", i))
+	}
+	s := describe(workitem.Change{ID: "S-0002", Title: "Open", Kind: Overlapped, Cause: "S-0001", To: strings.Join(paths, ","), By: "alex"})
+	if !strings.Contains(s, "and 3 more") || strings.Contains(s, "p/10.go") {
+		t.Errorf("summary: %s", s)
+	}
+}

@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -81,6 +82,14 @@ func (s *server) saveCursor(c cursor) {
 // body with flai edit; To names what of it changed.
 const Edited = "edited"
 
+// Overlapped is the kind of the change to an open story when a story whose
+// changes its claim covers is accepted: Cause is the accepted story, To the
+// paths, comma separated (S-0132).
+const Overlapped = "overlapped"
+
+// maxPaths is how many paths an overlap's summary names; To has them all.
+const maxPaths = 10
+
 // Event is one thing that changed since the agent last looked.
 type Event struct {
 	workitem.Change
@@ -120,20 +129,29 @@ func (s *server) catchUp() ([]Event, int, error) {
 	// They are not in the items' front matter, which is strict and shared
 	// with older flai; flai edit notes them beside the cursors.
 	since := cur.since(now).UTC().Truncate(time.Second)
-	for _, n := range itemedit.Notices(s.repo) {
-		at, err := time.Parse(workitem.TimeFormat, n.At)
-		c := workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At}
-		news := at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])
-		if err != nil || n.By == s.agent || !news {
-			continue
+	noticed := func(c workitem.Change) {
+		at, err := time.Parse(workitem.TimeFormat, c.At)
+		if err != nil || !(at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])) {
+			return
 		}
 		if c.At == next.Seen {
 			next.Keys[c.Key()] = true
 		}
 		if !cur.known && c.Type == workitem.Task {
-			continue
+			return
 		}
 		events = append(events, Event{Change: c, Summary: describe(c)})
+	}
+	for _, n := range itemedit.Notices(s.repo) {
+		if n.By != s.agent {
+			noticed(workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At})
+		}
+	}
+	// Open stories that an acceptance changed paths under (S-0132): the
+	// change is on the open story, caused by the accepted one, and names the
+	// paths. Whoever accepted, it is news to the open story's agent.
+	for _, o := range itemedit.Overlaps(s.repo) {
+		noticed(workitem.Change{ID: o.ID, Type: workitem.Story, Title: o.Title, Kind: Overlapped, To: strings.Join(o.Paths, ","), By: o.By, Cause: o.Accepted, At: o.At})
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].At < events[j].At })
 	omitted := 0
@@ -201,6 +219,13 @@ func describe(c workitem.Change) string {
 		return c.ID + " " + c.Title + " was unblocked"
 	case Edited:
 		return c.ID + " " + c.Title + " was edited" + who + ": " + strings.ReplaceAll(c.To, ",", ", ") + ". Read it again before you go on"
+	case Overlapped:
+		paths := strings.Split(c.To, ",")
+		named := strings.Join(paths, ", ")
+		if len(paths) > maxPaths {
+			named = strings.Join(paths[:maxPaths], ", ") + fmt.Sprintf(" and %d more", len(paths)-maxPaths)
+		}
+		return c.Cause + " was accepted" + who + " and changed " + named + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	}
 	return c.ID + " " + c.Kind
 }
