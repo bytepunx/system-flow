@@ -73,6 +73,17 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 				}
 			}
 		}
+		// Work left uncommitted in the worktree stops the acceptance later,
+		// when its agent has gone (S-0140). A worktree git cannot read here
+		// (I-0017) is not a reason to refuse: say so and move.
+		if it.Type == Story {
+			dirty, err := r.Uncommitted(it.ID)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("%s's worktree was not checked for uncommitted changes: %v", it.ID, err))
+			} else if len(dirty) > 0 {
+				return nil, fmt.Errorf("rule: %s", r.UncommittedRule(it.ID, dirty, "it goes to review"))
+			}
+		}
 	case Done:
 		for _, c := range children {
 			if !c.Closed() {

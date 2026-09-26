@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 )
@@ -25,6 +26,9 @@ type Repo struct {
 	// (a story branch under .flai-cache/worktrees, ADR-0019), else Root.
 	// wip/ always lives in the main checkout so the board stays live.
 	MainRoot string
+	// Git runs git for the rules that ask it: a story goes to review only
+	// with its worktree committed (S-0140). Nil skips them.
+	Git execx.Runner
 }
 
 // Open finds the manifest above start and returns a Repo.

@@ -52,6 +52,7 @@ func (a *app) project() (*workitem.Repo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w (run flai new or flai import first)", err)
 	}
+	repo.Git = a.runner
 	cacheDir := config.Default().CacheDir
 	if cfg, _, err := a.loadConfig(); err == nil {
 		cacheDir = cfg.CacheDir

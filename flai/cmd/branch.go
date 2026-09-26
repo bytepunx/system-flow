@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
@@ -172,32 +171,10 @@ func (a *app) dirtyOutsideWip(repo *workitem.Repo) []string {
 	}
 	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
 	var out []string
-	for _, p := range porcelainPaths(st) {
+	for _, p := range workitem.PorcelainPaths(st) {
 		if !strings.HasPrefix(p, wip) {
 			out = append(out, p)
 		}
 	}
 	return out
-}
-
-var porcelainLine = regexp.MustCompile(`^\s*\S{1,2}\s+(.+)$`)
-
-// porcelainPaths extracts the paths from `git status --porcelain` output.
-// The runner trims the whole output, so the first line may have lost the
-// leading space of an unstaged status (" M path"); parse by shape, not by
-// column. Renames report the new path.
-func porcelainPaths(out string) []string {
-	var paths []string
-	for _, line := range strings.Split(out, "\n") {
-		m := porcelainLine.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-		p := strings.Trim(m[1], `"`)
-		if i := strings.LastIndex(p, " -> "); i >= 0 {
-			p = p[i+4:]
-		}
-		paths = append(paths, p)
-	}
-	return paths
 }

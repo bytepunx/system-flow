@@ -163,5 +163,5 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 }
 
 func rules(r Request) string {
-	return fmt.Sprintf(`When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on. If you end while the question is open, flai starts you again when it is answered. When every acceptance criterion is met, move %[1]s to review with flai move %[1]s review and end. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
+	return fmt.Sprintf(`When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on. If you end while the question is open, flai starts you again when it is answered. When every acceptance criterion is met, commit everything outstanding in the worktree, so that git status there is clean, then move %[1]s to review with flai move %[1]s review and end: the move is refused while anything is uncommitted. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
 }

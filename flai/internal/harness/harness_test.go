@@ -130,7 +130,7 @@ func TestTheOperatorsCommandGetsTheModelAndTheConfig(t *testing.T) {
 
 func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 	p := Prompt(req(nil))
-	for _, want := range []string{"agent-S-0104", "flai stream open S-0104", "no other story", "thread_open", "wait_for_events", "flai move S-0104 review", "flai block S-0104"} {
+	for _, want := range []string{"agent-S-0104", "flai stream open S-0104", "no other story", "thread_open", "wait_for_events", "flai move S-0104 review", "commit everything outstanding in the worktree", "refused while anything is uncommitted", "flai block S-0104"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt lacks %q", want)
 		}

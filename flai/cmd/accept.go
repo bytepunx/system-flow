@@ -38,6 +38,10 @@ type acceptResult struct {
 	// includes them in the acceptance commit; a dry run reports them so the
 	// choice can be made before confirming (S-0051).
 	Uncommitted []string `json:"uncommitted,omitempty"`
+	// WorktreeUncommitted are the uncommitted paths in the story's worktree.
+	// They block acceptance: the branch is merged as it is committed, and
+	// the worktree is removed with it (S-0140).
+	WorktreeUncommitted []string `json:"worktree_uncommitted,omitempty"`
 	// The open stories told which paths the merge changed under their claim
 	// (S-0132).
 	Overlaps []itemedit.Overlap `json:"overlaps,omitempty"`
@@ -160,6 +164,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			if _, err := a.runner.Run(wt, "git", "rev-parse", "--git-dir"); err != nil {
 				a.logger().Warn("story worktree cannot be opened by git", "component", "git", "worktree", relPath(repo.MainRoot, wt), "err", err)
 				res.Blockers = append(res.Blockers, fmt.Sprintf("git cannot open the story worktree %s from here: the paths git keeps for it do not exist in this environment, which happens when the dashboard sees the repository at a different path than the host does. Accept from a shell on the host with flai accept %s, or stop the dashboard and start it with flai dashboard, which mounts the repository at its host path", relPath(repo.MainRoot, wt), it.ID))
+			} else if dirty, err := repo.Uncommitted(it.ID); err == nil && len(dirty) > 0 {
+				res.WorktreeUncommitted = dirty
+				res.Blockers = append(res.Blockers, repo.UncommittedRule(it.ID, dirty, "accepting"))
 			}
 		}
 	}
