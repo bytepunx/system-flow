@@ -3,11 +3,14 @@ id: S-0119
 type: story
 nature: feature
 title: Build a version of the flaiover dashboard for arm64
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-26T03:14:08Z
-updated: 2026-09-26T03:14:08Z
-transitions: []
+updated: 2026-09-26T03:15:49Z
+transitions:
+  - to: ready
+    at: 2026-09-26T03:15:49Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 agent:
