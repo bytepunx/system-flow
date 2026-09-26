@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,18 @@ type fakeRunner struct {
 	containerRef   map[string]string // container name -> the ref it was last started with
 	containerImage map[string]string // container name -> the image ID it was started from (a snapshot, not re-derived, so a later change to imageIDs is a real difference a check can find)
 	probeAddr      string            // host:port `docker port` reports for the upgrade probe container; default 127.0.0.1:19999
+
+	daemonPlatform string            // what `docker version` reports the server runs; default linux/amd64
+	imagePlatforms map[string]string // ref -> the os/arch of the local image; default the daemon's
+	published      []string          // platforms the registry has an image for; default any
+}
+
+// platform is the daemon's os/arch.
+func (f *fakeRunner) platform() string {
+	if f.daemonPlatform != "" {
+		return f.daemonPlatform
+	}
+	return "linux/amd64"
 }
 
 // idFor is the image ID a pull or inspect of ref reports right now.
@@ -88,6 +101,8 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		return "", nil
 	}
 	switch args[0] {
+	case "version":
+		return f.platform(), nil
 	case "image":
 		ref := args[2]
 		if !f.images[ref] {
@@ -96,13 +111,30 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		if len(args) >= 5 && args[3] == "--format" && args[4] == "{{.Id}}" {
 			return f.idFor(ref), nil
 		}
+		if len(args) >= 5 && args[3] == "--format" && args[4] == "{{.Os}}/{{.Architecture}}" {
+			if p, ok := f.imagePlatforms[ref]; ok {
+				return p, nil
+			}
+			return f.platform(), nil
+		}
 		return "[]", nil
 	case "pull":
-		if f.private[args[2]] && !f.loggedIn {
-			return "", fmt.Errorf("docker pull --quiet %s: exit status 1\nError response from daemon: error from registry: unauthorized", args[2])
+		ref, platform := args[len(args)-1], ""
+		if len(args) >= 5 && args[2] == "--platform" {
+			platform = args[3]
 		}
-		f.images[args[2]] = true
-		return args[2], nil
+		if f.private[ref] && !f.loggedIn {
+			return "", fmt.Errorf("docker pull --quiet %s: exit status 1\nError response from daemon: error from registry: unauthorized", ref)
+		}
+		if f.published != nil && !slices.Contains(f.published, platform) {
+			return "", fmt.Errorf("docker pull --quiet %s: exit status 1\nError response from daemon: no matching manifest for %s in the manifest list entries", ref, platform)
+		}
+		f.images[ref] = true
+		if f.imagePlatforms == nil {
+			f.imagePlatforms = map[string]string{}
+		}
+		f.imagePlatforms[ref] = orDefault(platform, f.platform())
+		return ref, nil
 	case "build":
 		f.images[args[4]] = true
 		return "sha256:built", nil
@@ -212,7 +244,7 @@ func TestDashboardLifecycle(t *testing.T) {
 	joined := strings.Join(f.calls, "\n")
 	for _, want := range []string{
 		"docker image inspect ghcr.io/bytepunx/flaiover:0.2.0",
-		"docker pull --quiet ghcr.io/bytepunx/flaiover:0.2.0",
+		"docker pull --quiet --platform linux/amd64 ghcr.io/bytepunx/flaiover:0.2.0",
 		"--name flaiover",
 		"--publish 0.0.0.0:5555:3000",
 		"--mount type=bind,source=" + filepath.Join(serveDir, "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
@@ -295,7 +327,7 @@ func TestDashboardLifecycle(t *testing.T) {
 	}
 	h := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
 	_, _, _ = runWith(t, root, h, "dashboard", "--pull")
-	if !strings.Contains(strings.Join(h.calls, "\n"), "docker pull --quiet ghcr.io/bytepunx/flaiover:latest") {
+	if !strings.Contains(strings.Join(h.calls, "\n"), "docker pull --quiet --platform linux/amd64 ghcr.io/bytepunx/flaiover:latest") {
 		t.Error("--pull should pull")
 	}
 	// already running for this same project: still registers, says so, starts no second container
@@ -335,6 +367,42 @@ func TestDashboardLifecycle(t *testing.T) {
 	}
 }
 
+// S-0119: the pull asks for the daemon's platform, a present image built for
+// another platform is pulled again, and a registry with nothing for the
+// platform gets an error that names it.
+func TestDashboardPullsTheDaemonsPlatform(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	img := "ghcr.io/bytepunx/flaiover:latest"
+
+	f := &fakeRunner{daemonPlatform: "linux/arm64", images: map[string]bool{}, running: map[string]bool{}}
+	_, errOut, code := runWith(t, root, f, "dashboard", "--pull")
+	if joined := strings.Join(f.calls, "\n"); code != 0 || !strings.Contains(joined, "docker pull --quiet --platform linux/arm64 "+img) {
+		t.Fatalf("the pull should name the daemon's platform: %d %s\n%s", code, errOut, joined)
+	}
+
+	// An amd64 image pulled before an arm64 one was published is replaced.
+	g := &fakeRunner{daemonPlatform: "linux/arm64", images: map[string]bool{img: true}, imagePlatforms: map[string]string{img: "linux/amd64"}, running: map[string]bool{}}
+	_, errOut, code = runWith(t, root, g, "dashboard")
+	if joined := strings.Join(g.calls, "\n"); code != 0 || !strings.Contains(joined, "docker pull --quiet --platform linux/arm64 "+img) || g.imagePlatforms[img] != "linux/arm64" {
+		t.Fatalf("an image for another platform should be pulled again: %d %s\n%s", code, errOut, joined)
+	}
+
+	// A present image for the daemon's platform is reused.
+	h := &fakeRunner{daemonPlatform: "linux/arm64", images: map[string]bool{img: true}, imagePlatforms: map[string]string{img: "linux/arm64"}, running: map[string]bool{}}
+	_, _, _ = runWith(t, root, h, "dashboard")
+	if strings.Contains(strings.Join(h.calls, "\n"), "docker pull") {
+		t.Errorf("pulled although present for this platform:\n%s", strings.Join(h.calls, "\n"))
+	}
+
+	// Nothing published for the platform: say which, and what to do.
+	m := &fakeRunner{daemonPlatform: "linux/arm64", published: []string{"linux/amd64"}, images: map[string]bool{}, running: map[string]bool{}}
+	_, errOut, code = runWith(t, root, m, "dashboard")
+	if code == 0 || !strings.Contains(errOut, "has no image for linux/arm64") || !strings.Contains(errOut, "--build") || strings.Contains(strings.Join(m.calls, "\n"), "docker run") {
+		t.Errorf("no image for the platform: %d %s", code, errOut)
+	}
+}
+
 func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("GITHUB_TOKEN", "")
@@ -346,7 +414,7 @@ func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, private: map[string]bool{img: true}}
 	out, errOut, code := runWith(t, root, f, "dashboard")
 	joined := strings.Join(f.calls, "\n")
-	if code != 0 || !strings.Contains(joined, "docker login ghcr.io --username tester --password-stdin <ghp_fake>") || strings.Count(joined, "docker pull --quiet "+img) != 2 || !strings.Contains(out, "http://localhost:4242") {
+	if code != 0 || !strings.Contains(joined, "docker login ghcr.io --username tester --password-stdin <ghp_fake>") || strings.Count(joined, "docker pull --quiet --platform linux/amd64 "+img) != 2 || !strings.Contains(out, "http://localhost:4242") {
 		t.Fatalf("login retry: %d %s %s\n%s", code, out, errOut, joined)
 	}
 	if strings.Contains(errOut, "ghp_fake") {

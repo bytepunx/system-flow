@@ -153,12 +153,25 @@ const (
 	localTag   = "local"
 )
 
-// pullDashboardImage pulls the image; when the registry refuses, it logs
-// Docker in with the GitHub token sources and tries once more. The flaiover
-// package on GHCR is private while the repository is.
+// pullDashboardImage pulls the image for the daemon's platform; when the
+// registry refuses, it logs Docker in with the GitHub token sources and
+// tries once more. The flaiover package on GHCR is private while the
+// repository is.
 func (a *app) pullDashboardImage(s dashboardSettings) error {
-	a.logger().Info("pulling image", "component", "dashboard", "image", s.ref())
-	_, err := a.runner.Run("", "docker", "pull", "--quiet", s.ref())
+	platform := a.dockerPlatform()
+	a.logger().Info("pulling image", "component", "dashboard", "image", s.ref(), "platform", platform)
+	pull := func() error {
+		args := []string{"pull", "--quiet"}
+		if platform != "" {
+			args = append(args, "--platform", platform)
+		}
+		_, err := a.runner.Run("", "docker", append(args, s.ref())...)
+		if err != nil && noManifest(err) {
+			return fmt.Errorf("%s has no image for %s: %w; pick a tag published for it, or build one from the system-flow monorepo with flai dashboard --build", s.ref(), orDefault(platform, "this Docker daemon's platform"), err)
+		}
+		return err
+	}
+	err := pull()
 	if err == nil {
 		return nil
 	}
@@ -175,10 +188,41 @@ func (a *app) pullDashboardImage(s dashboardSettings) error {
 	if _, lerr := a.runner.RunInput("", "docker", token+"\n", "login", registry, "--username", user, "--password-stdin"); lerr != nil {
 		return fmt.Errorf("docker login %s failed: %w; the token needs the read:packages scope (`gh auth refresh -h github.com -s read:packages`) or the package must be public", registry, lerr)
 	}
-	if _, err := a.runner.Run("", "docker", "pull", "--quiet", s.ref()); err != nil {
+	if err := pull(); err != nil {
+		if noManifest(err) {
+			return err
+		}
 		return fmt.Errorf("%w; logged into %s as %s but the pull was still refused: the token needs read:packages, or the package must be public", err, registry, user)
 	}
 	return nil
+}
+
+// dockerPlatform is the daemon's platform, os/arch, such as linux/arm64, or
+// "" when the daemon does not say. It is the daemon's and not flai's own
+// GOOS/GOARCH: an amd64 flai under Rosetta talks to an arm64 daemon.
+func (a *app) dockerPlatform() string {
+	out, err := a.runner.Run("", "docker", "version", "--format", "{{.Server.Os}}/{{.Server.Arch}}")
+	out = strings.TrimSpace(out)
+	if err != nil || strings.HasPrefix(out, "/") || strings.HasSuffix(out, "/") {
+		return ""
+	}
+	return out
+}
+
+// imagePlatform is the os/arch a local image was built for, or "" when it
+// is not present.
+func (a *app) imagePlatform(ref string) string {
+	out, err := a.runner.Run("", "docker", "image", "inspect", ref, "--format", "{{.Os}}/{{.Architecture}}")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// noManifest reports a pull the registry answered with no image for the
+// platform asked for.
+func noManifest(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "no matching manifest")
 }
 
 // buildDashboardImage builds flaiover:local from flaiover/ in a monorepo
@@ -283,6 +327,22 @@ func (a *app) staleMounts(container string) []string {
 	return stale
 }
 
+// needsPull says whether ref must be pulled before it is run: it is not
+// present, or it was built for a platform other than the daemon's, as an
+// amd64 image pulled on an arm64 host before an arm64 one was published.
+func (a *app) needsPull(ref string) bool {
+	have := a.imagePlatform(ref)
+	if have == "" {
+		return true
+	}
+	want := a.dockerPlatform()
+	if want != "" && have != want {
+		a.logger().Info("image is for another platform", "component", "dashboard", "image", ref, "have", have, "want", want)
+		return true
+	}
+	return false
+}
+
 func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
@@ -313,7 +373,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 			if err := a.buildDashboardImage(s.Root, s.ref()); err != nil {
 				return err
 			}
-		} else if _, err := a.runner.Run("", "docker", "image", "inspect", s.ref()); err != nil || pull {
+		} else if pull || a.needsPull(s.ref()) {
 			if err := a.pullDashboardImage(s); err != nil {
 				return err
 			}
