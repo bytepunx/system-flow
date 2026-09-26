@@ -3,17 +3,20 @@ id: T-0470
 type: task
 nature: feature
 title: Show a held story's yellow dot and a short hold line on its board card
-status: in-progress
+status: done
 parent: S-0129
 owner: alex
 created: 2026-09-26T17:54:07Z
-updated: 2026-09-26T17:54:12Z
+updated: 2026-09-26T17:55:49Z
 transitions:
   - to: ready
     at: 2026-09-26T17:54:12Z
     by: agent-S-0129
   - to: in-progress
     at: 2026-09-26T17:54:12Z
+    by: agent-S-0129
+  - to: done
+    at: 2026-09-26T17:55:49Z
     by: agent-S-0129
 stream: S-0129
 tags: []

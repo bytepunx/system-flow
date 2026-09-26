@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:22Z
-updated: 2026-09-26T17:53:30Z
+updated: 2026-09-26T17:55:03Z
 transitions:
   - to: ready
     at: 2026-09-26T17:50:30Z
@@ -38,6 +38,10 @@ Add the explicit dependency of [ADR-0046](../../../design/adrs/0046-a-ready-stor
 - [ ] `design/system/work-hierarchy.md`, `workflow.md`, `flai-cli.md`, and `docs/users/flai.md` describe the field; `make test`, lint, and flaiover's tests pass.
 
 ## Tasks
+- T-0473 Stories carry after:, flai check keeps it sound, and a ready story waits for what it names
+- T-0474 Set and clear after: with flai edit, MCP item_edit, and the host API
+- T-0475 The dashboard's story editor sets and clears after
+- T-0476 Describe after: for builders and users
 
 ## Notes
 

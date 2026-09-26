@@ -3,14 +3,20 @@ id: T-0471
 type: task
 nature: feature
 title: Say on a held story's page why it waits, linking each story the reason names
-status: ready
+status: done
 parent: S-0129
 owner: alex
 created: 2026-09-26T17:54:07Z
-updated: 2026-09-26T17:54:12Z
+updated: 2026-09-26T17:58:29Z
 transitions:
   - to: ready
     at: 2026-09-26T17:54:12Z
+    by: agent-S-0129
+  - to: in-progress
+    at: 2026-09-26T17:55:49Z
+    by: agent-S-0129
+  - to: done
+    at: 2026-09-26T17:58:29Z
     by: agent-S-0129
 stream: S-0129
 tags: []

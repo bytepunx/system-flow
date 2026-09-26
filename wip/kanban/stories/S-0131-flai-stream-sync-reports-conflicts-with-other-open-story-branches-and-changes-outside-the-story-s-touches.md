@@ -3,15 +3,18 @@ id: S-0131
 type: story
 nature: feature
 title: flai stream sync reports conflicts with other open story branches and changes outside the story's touches
-status: ready
+status: in-progress
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:22Z
-updated: 2026-09-26T17:50:35Z
+updated: 2026-09-26T18:05:56Z
 transitions:
   - to: ready
     at: 2026-09-26T17:50:35Z
     by: alex
+  - to: in-progress
+    at: 2026-09-26T18:04:23Z
+    by: agent-S-0131
 tags: [cli]
 touches: [flai/cmd, flai/internal/mcpserver, docs, design/system]
 agent:
@@ -35,6 +38,10 @@ Build the safety net of [ADR-0046](../../../design/adrs/0046-a-ready-story-whose
 - [ ] `design/system/workflow.md`, `flai-cli.md`, and `docs/users/flai.md` describe it.
 
 ## Tasks
+- T-0477 flai stream sync trial-merges the branch with every other open story branch and reports the conflicts
+- T-0478 A conflict found at sync is a thread flai writes on the story, naming both stories and the paths
+- T-0479 flai stream sync lists the paths the branch changed outside the story's touches
+- T-0480 Describe the sync checks for builders and users
 
 ## Notes
 

@@ -3,14 +3,20 @@ id: T-0472
 type: task
 nature: feature
 title: Document the held card and try it in a browser against a scratch flai serve
-status: ready
+status: done
 parent: S-0129
 owner: alex
 created: 2026-09-26T17:54:08Z
-updated: 2026-09-26T17:54:12Z
+updated: 2026-09-26T18:03:12Z
 transitions:
   - to: ready
     at: 2026-09-26T17:54:12Z
+    by: agent-S-0129
+  - to: in-progress
+    at: 2026-09-26T17:58:29Z
+    by: agent-S-0129
+  - to: done
+    at: 2026-09-26T18:03:12Z
     by: agent-S-0129
 stream: S-0129
 tags: []
