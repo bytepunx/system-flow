@@ -118,7 +118,7 @@ func (a *app) serveProjectAdd(args []string) error {
 		}
 		return a.printJSON(out)
 	}
-	fmt.Fprintf(a.out, "%s (%s) is served on the dashboard at %s\n", e.Key, e.Root, s.url())
+	fmt.Fprintf(a.out, "%s (%s) is registered with flai serve, for the dashboard at %s\n", e.Key, e.Root, s.url())
 	switch {
 	case herr != nil:
 		fmt.Fprintf(a.out, "  host flai: registered, but flai host did not start: %s\n    start it with: flai host start\n", herr)

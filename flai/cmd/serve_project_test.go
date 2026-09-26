@@ -45,7 +45,7 @@ func TestServeProjectAddRegistersAndRefuses(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("add: %d %s %s", code, out, errOut)
 	}
-	if !strings.Contains(out, "harbour ("+harbour+") is served on the dashboard at http://localhost:4242") || !strings.Contains(out, "flai host started (pid 4242)") {
+	if !strings.Contains(out, "harbour ("+harbour+") is registered with flai serve, for the dashboard at http://localhost:4242") || !strings.Contains(out, "flai host started (pid 4242)") {
 		t.Errorf("add said:\n%s", out)
 	}
 	dir := serve.DirFor(cfg)
