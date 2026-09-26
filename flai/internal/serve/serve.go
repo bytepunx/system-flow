@@ -308,16 +308,7 @@ func Run(ctx context.Context, o Options) error {
 		}
 		st.Offered = offered.found
 		st.Folder = o.Folder
-		for _, p := range offered.placed {
-			switch {
-			case p.Reason != "":
-				st.Unserved = append(st.Unserved, p)
-			case p.Imported:
-				st.ImportProjects = append(st.ImportProjects, p.Entry)
-			default:
-				st.FolderProjects = append(st.FolderProjects, p.Entry)
-			}
-		}
+		st.FolderProjects, st.ImportProjects, st.Unserved = offered.placement()
 		mu.Unlock()
 		if err := o.Dir.write(o.Dir.status(), st); err != nil {
 			o.Logger.Warn("status not written", "component", "serve", "err", err.Error())

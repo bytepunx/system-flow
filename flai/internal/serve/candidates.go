@@ -216,6 +216,24 @@ func (f *offers) folderProjects(entries []Entry) []Entry {
 	return out
 }
 
+// placement is what the status says of what folderProjects placed: the
+// projects served from the folder flai serve was started in (S-0102) and from
+// the folders named for import, and those below either that are not served,
+// with why (S-0117).
+func (f *offers) placement() (folder, imported []Entry, unserved []Found) {
+	for _, p := range f.placed {
+		switch {
+		case p.Reason != "":
+			unserved = append(unserved, p)
+		case p.Imported:
+			imported = append(imported, p.Entry)
+		default:
+			folder = append(folder, p.Entry)
+		}
+	}
+	return folder, imported, unserved
+}
+
 func (f *offers) reconcile(ctx context.Context, entries []Entry) {
 	if f.o.ImportRoots == nil && f.o.Folder == "" {
 		return
