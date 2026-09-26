@@ -1,6 +1,6 @@
 ---
 title: System design index
-updated: 2026-09-15
+updated: 2026-09-26
 status: active
 ---
 
@@ -25,5 +25,6 @@ Living documents describing system-flow as it currently is. Read them in this or
 | [flaiover-dashboard.md](flaiover-dashboard.md) | The `flaiover` web dashboard |
 | [pushing-from-the-board.md](pushing-from-the-board.md) | The finding of S-0052: the ways an acceptance made from the board could be pushed, what was tried, the recommendation, and the operator's decision (ADR-0026) |
 | [dashboard-host-channel.md](dashboard-host-channel.md) | The finding of S-0071: what the dashboard does with the mounted clone, how flai on the host and the dashboard could talk with flai dialling in, what was tried, what each way exposes, the recommendation, and the operator's decision |
+| [agent-coordination.md](agent-coordination.md) | The finding of S-0124: what flai does today when stories run in parallel, how others decide whether work may run at once, the ranked designs, and the designer's decision |
 | [devex.md](devex.md) | Developer experience and operations components shipped by the template |
 | [brief.md](brief.md) | The original brief, kept verbatim for reference |
