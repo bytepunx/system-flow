@@ -757,6 +757,7 @@ func (a *app) hostSettings(root string) any {
 			"harnesses": harnesses},
 		"checks":       map[string]any{"commands": checks, "timeout_minutes": timeout},
 		"import_roots": roots,
+		"projects":     a.servedView(),
 	}
 	if repo, err := workitem.Open(root); err == nil {
 		out["default_agent"] = repo.Manifest.Agent
@@ -768,6 +769,47 @@ func (a *app) hostSettings(root string) any {
 		}
 	}
 	return out
+}
+
+// servedView is what the settings page shows of the projects flai serve
+// serves, and of those below the folders named for import that it does not,
+// with why (S-0122): what flai serve project list says, without the
+// dashboard's address or the credential's path.
+func (a *app) servedView() map[string]any {
+	l, err := a.listServedProjects()
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	type project struct {
+		Key       string `json:"key"`
+		Name      string `json:"name"`
+		Root      string `json:"root"`
+		From      string `json:"from,omitempty"`
+		Below     string `json:"below,omitempty"`
+		State     string `json:"state,omitempty"`
+		Since     string `json:"since,omitempty"`
+		LastError string `json:"last_error,omitempty"`
+		Reason    string `json:"reason,omitempty"`
+	}
+	served := make([]project, 0, len(l.Served))
+	for _, p := range l.Served {
+		below := ""
+		switch p.From {
+		case "import":
+			below = a.importRootOf(p.Root)
+		case "folder":
+			if st, alive := a.serveDir().ReadStatus(a.now()); alive {
+				below = st.Folder
+			}
+		}
+		served = append(served, project{Key: p.Key, Name: p.Name, Root: p.Root, From: p.From, Below: below,
+			State: p.State, Since: p.Since, LastError: p.LastError, Reason: p.Reason})
+	}
+	unserved := make([]project, 0, len(l.Unserved))
+	for _, f := range l.Unserved {
+		unserved = append(unserved, project{Key: f.Key, Name: f.Name, Root: f.Root, Reason: f.Reason})
+	}
+	return map[string]any{"running": l.Running, "served": served, "unserved": unserved}
 }
 
 func newServeAgentRestartCmd(a *app) *cobra.Command {

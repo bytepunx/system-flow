@@ -52,6 +52,36 @@ func argList(what string, list []string, needProgram bool) *channel.Error {
 	return nil
 }
 
+// servedProject is what settings.serve and settings.unserve are asked about:
+// the project's folder, and its key when it has one, for the journal.
+type servedProject struct {
+	Root string `json:"root"`
+	Key  string `json:"key"`
+}
+
+// served is settings.serve (flai serve project add) or settings.unserve
+// (flai serve project remove), about the project in the folder given.
+func served(what, verb string) spec {
+	build := func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		in, e := decode[servedProject](raw)
+		if e != nil {
+			return nil, "", e
+		}
+		if !filepath.IsAbs(in.Root) || filepath.Clean(in.Root) != in.Root || strings.ContainsAny(in.Root, "\x00\n\r") {
+			return nil, "", bad("%q is not an absolute, clean path", in.Root)
+		}
+		if in.Key != "" && !checkName.MatchString(in.Key) {
+			return nil, "", bad("%q is not a project key", in.Key)
+		}
+		return []string{"serve", "project", verb, "--", in.Root}, "", nil
+	}
+	return spec{action: ActionSettings, describe: settingsDone(what), say: sayArgs(build), build: build,
+		about: func(raw json.RawMessage) (string, string) {
+			in, _ := decode[servedProject](raw)
+			return in.Key, in.Root
+		}}
+}
+
 func settingsSpecs() map[string]spec {
 	project := func(what string, b func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)) spec {
 		return spec{action: ActionSettings, describe: settingsDone(what), say: sayArgs(b), build: b}
@@ -255,6 +285,15 @@ func settingsSpecs() map[string]spec {
 			}
 			return []string{"serve", "import", "remove", "--", in.Folder}, "", nil
 		}),
+
+		// settings.serve and settings.unserve: a project flai serve serves on
+		// the dashboard, registered or no longer (S-0122), as flai serve
+		// project add and remove do in a shell. Gated by the settings action
+		// of the project served or removed, not of the one the request
+		// arrives through: a project to serve has no connection yet, and
+		// one to remove may have lost its own.
+		"settings.serve":   served("a project served", "add"),
+		"settings.unserve": served("a project no longer served", "remove"),
 
 		// settings.mcp_token: a new token for this project's HTTP MCP server,
 		// which is restarted with it; every agent connected over HTTP must be

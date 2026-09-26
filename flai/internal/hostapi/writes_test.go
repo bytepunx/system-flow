@@ -76,6 +76,8 @@ var good = map[string]struct {
 	"settings.check":           {`{"name":"flai","command":["scripts/flai-test.sh","--short"],` + rid + `}`, "serve checks set --name=flai --json -- scripts/flai-test.sh --short", ""},
 	"settings.checks_timeout":  {`{"minutes":20,` + rid + `}`, "serve checks timeout 20 --json", ""},
 	"settings.import":          {`{"folder":"/home/me/git","add":true,` + rid + `}`, "serve import add --json -- /home/me/git", ""},
+	"settings.serve":           {`{"root":"/home/me/git/blog","key":"blog",` + rid + `}`, "serve project add --json -- /home/me/git/blog", ""},
+	"settings.unserve":         {`{"root":"/home/me/git/blog",` + rid + `}`, "serve project remove --json -- /home/me/git/blog", ""},
 	"settings.mcp_token":       {`{` + rid + `}`, "mcp token --rotate --json", ""},
 	"settings.dashboard_token": {`{` + rid + `}`, "dashboard token --rotate --no-restart --json", ""},
 }
@@ -148,6 +150,8 @@ var refused = map[string][]string{
 	"settings.check":           {`{"name":"--x","command":["a"],` + rid + `}`, `{"name":"a","command":[],` + rid + `}`, `{"name":"a","command":[" "],` + rid + `}`},
 	"settings.checks_timeout":  {`{"minutes":0,` + rid + `}`, `{"minutes":"20",` + rid + `}`},
 	"settings.import":          {`{"folder":"relative/git","add":true,` + rid + `}`, `{"folder":"/a/../b","add":true,` + rid + `}`, `{"folder":"/a",` + rid + `}`},
+	"settings.serve":           {`{"root":"blog",` + rid + `}`, `{"root":"/a/../b",` + rid + `}`, `{"root":"--help",` + rid + `}`, `{"root":"/a","key":"--x",` + rid + `}`, `{"root":"/a"}`},
+	"settings.unserve":         {`{"key":"blog",` + rid + `}`, `{"root":"/a\nb",` + rid + `}`, `{"root":"/a","key":"a b",` + rid + `}`},
 	"settings.mcp_token":       {`"--force"`, `{}`},
 	"settings.dashboard_token": {`"--force"`, `{}`},
 }
@@ -474,6 +478,37 @@ func TestSettingsNeedTheShellsConsent(t *testing.T) {
 	}
 	if len(journal) != 2 || journal[0].Outcome != "done" || journal[0].Action != ActionSettings || journal[0].Detail != "flai serve enable push" || journal[1].Outcome != "disabled" {
 		t.Errorf("journal: %+v", journal)
+	}
+}
+
+// S-0122: serving or removing a project asks the settings action of that
+// project, not of the one the request arrives through, and the journal names
+// the project served or removed.
+func TestServingAProjectNeedsItsOwnConsent(t *testing.T) {
+	p := withDocs(t)
+	const blog = "/home/me/git/blog"
+	var journal []Entry
+	host := Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == blog }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"removed":{"key":"blog"}}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	if _, e := m["settings.unserve"](context.Background(), p, json.RawMessage(`{"root":"`+blog+`","key":"blog",`+rid+`}`)); e != nil {
+		t.Fatalf("enabled for the project removed, not for the one asking: %+v", e)
+	}
+	_, e := m["settings.serve"](context.Background(), p, json.RawMessage(`{"root":"/home/me/git/notes","key":"notes","request_id":"req-00000002"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "not enabled for /home/me/git/notes") || !strings.Contains(e.Message, "flai serve enable settings") {
+		t.Fatalf("enabled for the project asking only: %+v", e)
+	}
+	if len(rec.runs) != 1 || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "serve project remove --json -- "+blog {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+	if len(journal) != 2 {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if j := journal[0]; j.Outcome != "done" || j.Action != ActionSettings || j.Project != "blog" || j.Root != blog || j.Detail != "flai serve project remove -- "+blog {
+		t.Errorf("removed: %+v", j)
+	}
+	if j := journal[1]; j.Outcome != "disabled" || j.Project != "notes" || j.Root != "/home/me/git/notes" {
+		t.Errorf("refused: %+v", j)
 	}
 }
 

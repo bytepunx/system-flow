@@ -336,8 +336,13 @@ func TestChecksConfigResolvesHostOverManifest(t *testing.T) {
 // S-0105: the settings host action, the agent's name without a command, and
 // what the dashboard's settings page is told.
 func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
 	root := tempProject(t)
+	// S-0122: the served projects, without the dashboard's address or the credential's path
+	if err := serve.DirFor(cfgPath).Register(serve.Entry{Key: "harbour", Name: "Harbour", Root: "/p/harbour", URL: "http://127.0.0.1:4242", KeyFile: "/p/harbour/k"}); err != nil {
+		t.Fatal(err)
+	}
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "settings: off everywhere") || !strings.Contains(out, "only a shell turns this off") {
 		t.Errorf("actions names settings: %s", out)
 	}
@@ -363,12 +368,13 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"push accepted work`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"program":"claude","set":false}`,
-		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`} {
+		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`,
+		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":`, `"unserved":[]}`} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("settings lack %s:\n%s", want, got)
 		}
 	}
-	if strings.Contains(string(got), `"token"`) {
+	if strings.Contains(string(got), `"token"`) || strings.Contains(string(got), "4242") || strings.Contains(string(got), "/p/harbour/k") {
 		t.Errorf("no token in the settings: %s", got)
 	}
 }

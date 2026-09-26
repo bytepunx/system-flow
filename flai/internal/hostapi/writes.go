@@ -351,6 +351,12 @@ type spec struct {
 	// on the host the operator consented to some other way (S-0098: import,
 	// by naming the folder the repository is in).
 	record string
+	// about names the project the write changes when it is not the one the
+	// request arrives through (S-0122: serving or removing a project from
+	// the settings page, which may have no connection of its own): the
+	// action is asked of that project, and the journal names it. Called
+	// only once build has accepted the params.
+	about func(raw json.RawMessage) (key, root string)
 	// build validates and returns the arguments (without --json) and what goes on standard input.
 	build func(p channel.Project, raw json.RawMessage) (args []string, stdin string, err *channel.Error)
 	// exits maps exit codes that carry a payload on standard output to error codes.
@@ -1472,11 +1478,16 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			}
 			_ = json.Unmarshal(raw, &id)
 			entry := Entry{At: now().UTC().Format(time.RFC3339), Method: name, Project: p.Key, Root: p.Root, By: owner(p), RequestID: id.RequestID}
-			if sp.action != "" && !host.enabled(sp.action, p.Root) {
+			which := "this project"
+			if sp.about != nil {
+				entry.Project, entry.Root = sp.about(raw)
+				which = entry.Root
+			}
+			if sp.action != "" && !host.enabled(sp.action, entry.Root) {
 				entry.Action, entry.Outcome = sp.action, "disabled"
 				host.record(entry)
 				return nil, &channel.Error{Code: Disabled,
-					Message: fmt.Sprintf("the host action %q is not enabled for this project. On the host, in the project, run: %s", sp.action, EnableCommand(sp.action)),
+					Message: fmt.Sprintf("the host action %q is not enabled for %s. On the host, in the project, run: %s", sp.action, which, EnableCommand(sp.action)),
 					Data:    map[string]any{"action": sp.action, "enable": EnableCommand(sp.action)}}
 			}
 			if sp.hostwide && !host.enabledEverywhere(sp.action) {
