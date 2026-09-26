@@ -3,12 +3,18 @@ id: S-0129
 type: story
 nature: feature
 title: A held story's card is yellow on the board and its page says why it waits
-status: backlog
+status: in-progress
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:21Z
-updated: 2026-09-26T07:59:21Z
-transitions: []
+updated: 2026-09-26T17:50:35Z
+transitions:
+  - to: ready
+    at: 2026-09-26T17:50:20Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-26T17:50:35Z
+    by: agent-S-0129
 tags: [dashboard]
 touches: [flaiover]
 agent:

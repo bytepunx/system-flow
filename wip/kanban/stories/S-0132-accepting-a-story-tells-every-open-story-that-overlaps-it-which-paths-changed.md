@@ -3,12 +3,15 @@ id: S-0132
 type: story
 nature: feature
 title: Accepting a story tells every open story that overlaps it which paths changed
-status: backlog
+status: ready
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:23Z
-updated: 2026-09-26T07:59:23Z
-transitions: []
+updated: 2026-09-26T17:50:41Z
+transitions:
+  - to: ready
+    at: 2026-09-26T17:50:41Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd, flai/internal/mcpserver, docs, design/system]
 agent:
