@@ -74,7 +74,12 @@ func newStreamSyncCmd(a *app) *cobra.Command {
 		Long: `Rebases story/<story-id> onto the branch checked out in the main checkout,
 stashing and restoring uncommitted work. Conflicts stop the rebase inside the
 worktree and are listed; resolve them, run git rebase --continue there, and
-sync again.`,
+sync again.
+
+After a clean rebase it trial-merges the branch with the branch of every other
+story in progress or in review (git merge-tree --write-tree, git 2.38 or
+newer), writing nothing to any worktree, and lists each branch it conflicts
+with and the conflicting paths.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -86,15 +91,22 @@ sync again.`,
 				return err
 			}
 			base, conflicts, err := a.syncStoryBranch(repo, it.ID)
-			if a.jsonOut {
-				_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": err == nil})
-			}
 			if err != nil {
+				if a.jsonOut {
+					_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": false})
+				}
 				return err
 			}
-			if !a.jsonOut {
-				fmt.Fprintf(a.out, "%s is rebased onto %s\n", storyBranch(it.ID), base)
+			checks, cerr := a.checkSync(repo, it)
+			if cerr != nil {
+				a.logger().Warn("story branch checks failed after the rebase", "component", "git", "story", it.ID, "err", cerr)
 			}
+			if a.jsonOut {
+				return a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": true,
+					"branches": checks.Branches, "trial_merge_skipped": checks.Skipped})
+			}
+			fmt.Fprintf(a.out, "%s is rebased onto %s\n", storyBranch(it.ID), base)
+			printSyncChecks(a.out, it, checks)
 			return nil
 		},
 	}

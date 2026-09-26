@@ -14,6 +14,10 @@ import (
 // links and the extensions.relativeWorktrees repository extension.
 var RelativeWorktrees = Version{Major: 2, Minor: 48}
 
+// MergeTree is the first git whose merge-tree has --write-tree, the trial
+// merge flai stream sync runs against other story branches (S-0131).
+var MergeTree = Version{Major: 2, Minor: 38}
+
 // Version is a git release, major and minor; patch levels never matter here.
 type Version struct{ Major, Minor int }
 
