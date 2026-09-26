@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:21Z
-updated: 2026-09-26T17:50:35Z
+updated: 2026-09-26T17:54:08Z
 transitions:
   - to: ready
     at: 2026-09-26T17:50:20Z
@@ -38,6 +38,9 @@ Show the operator the hold of [ADR-0046](../../../design/adrs/0046-a-ready-story
 - [ ] `design/system/flaiover-dashboard.md` describes it; flaiover's tests and lint pass; it was tried in a browser against a flai serve with two scratch stories whose touches overlap.
 
 ## Tasks
+- T-0470 Show a held story's yellow dot and a short hold line on its board card
+- T-0471 Say on a held story's page why it waits, linking each story the reason names
+- T-0472 Document the held card and try it in a browser against a scratch flai serve
 
 ## Notes
 
