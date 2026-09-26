@@ -400,4 +400,32 @@ describe('AgentRegistry and AgentHub', () => {
 		await new Promise((r) => setTimeout(r, 20));
 		expect(registry.list().map((p) => p.key)).toEqual(['harbour']);
 	});
+
+	// S-0118: flai serve says `removed` before it drops a project that left its registry. The
+	// project leaves the list once its connection closes, while one that only lost its flai (a
+	// restart) stays; a new connection for the key brings it back.
+	it('drops a project its flai said was removed, and takes it back when it connects again', async () => {
+		const { registry, url } = await setup();
+		const harbour = await connect(url, KEY);
+		cleanup.push(() => harbour.ws.terminate());
+		const quay = await connect(url, KEY, () => ({ name: 'Quay' }), {}, REQUIRED_METHODS, {
+			key: 'quay',
+			name: 'Quay'
+		});
+		quay.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'removed', params: { project: 'quay' } }));
+		quay.ws.close();
+		await quay.closed;
+		harbour.ws.terminate();
+		await harbour.closed;
+		await new Promise((r) => setTimeout(r, 20));
+		expect(registry.list()).toEqual([expect.objectContaining({ key: 'harbour', connected: false })]);
+		expect(registry.solo()).toBe(registry.peek('harbour'));
+
+		const back = await connect(url, KEY, () => ({ name: 'Quay' }), {}, REQUIRED_METHODS, {
+			key: 'quay',
+			name: 'Quay'
+		});
+		cleanup.push(() => back.ws.terminate());
+		expect(registry.list().map((p) => p.key)).toEqual(['harbour', 'quay']);
+	});
 });

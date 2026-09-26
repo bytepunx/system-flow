@@ -137,5 +137,26 @@ func (c *Conn) Next(t *testing.T) (method string, params json.RawMessage) {
 	return m.Method, m.Params
 }
 
+// Last reads what flai sends until it closes the connection, and returns the
+// notifications' methods in order.
+func (c *Conn) Last(t *testing.T) []string {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var out []string
+	for {
+		_, data, err := c.ws.Read(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				t.Fatal("flai did not close the connection")
+			}
+			return out
+		}
+		var m msg
+		_ = json.Unmarshal(data, &m)
+		out = append(out, m.Method)
+	}
+}
+
 // Close drops the connection from the dashboard's side.
 func (c *Conn) Close() { _ = c.ws.Close(websocket.StatusGoingAway, "gone") }

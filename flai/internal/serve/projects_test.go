@@ -123,3 +123,54 @@ func TestAnUnavailableProjectIsReportedOnceAndServedWhenItComesBack(t *testing.T
 		t.Errorf("said %d times that it came back", n)
 	}
 }
+
+func TestARemovedProjectIsSaidToBeRemovedBeforeItsConnectionEnds(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	root, key := scratchProject(t, "harbour")
+	e := Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: key}
+	if err := dir.Register(e); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: time.Hour,
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				// the test dashboard answers no ping: none is sent while the test runs
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+
+	// changed but still the project: dropped and dialled again, not removed
+	conn := dash.Wait(t)
+	e.Name = "Harbour"
+	_ = dir.Register(e)
+	if got := conn.Last(t); len(got) != 0 {
+		t.Errorf("a changed entry sent %v", got)
+	}
+	conn = dash.Wait(t)
+
+	// unavailable: not removed, it is still registered and list says why
+	manifest := filepath.Join(root, "system-flow.yaml")
+	saved, _ := os.ReadFile(manifest)
+	_ = os.Remove(manifest)
+	if got := conn.Last(t); len(got) != 0 {
+		t.Errorf("an unavailable project sent %v", got)
+	}
+	_ = os.WriteFile(manifest, saved, 0o644)
+	conn = dash.Wait(t)
+
+	// unregistered: removed, then closed
+	_ = dir.Unregister(root)
+	if got := conn.Last(t); len(got) != 1 || got[0] != Removed {
+		t.Errorf("an unregistered project sent %v, want [%s]", got, Removed)
+	}
+}

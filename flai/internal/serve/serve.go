@@ -272,6 +272,12 @@ func Run(ctx context.Context, o Options) error {
 		unavailable = gone
 		for root, r := range clients {
 			if e, ok := want[root]; !ok || e != r.entry {
+				// A project that left the registry, or is served under another
+				// key, is said to be removed first, so that the dashboard drops
+				// it rather than show it as waiting for flai (S-0118).
+				if _, unavailable := gone[root]; (!ok && !unavailable) || (ok && e.Key != r.entry.Key) {
+					r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
+				}
 				r.halt()
 				delete(clients, root)
 				o.Logger.Info("project dropped", "component", "serve", "root", root)

@@ -10,6 +10,11 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
+// Removed is the notification flai serve sends a dashboard just before it
+// drops a project that is no longer registered (S-0118), so that the
+// dashboard's switcher drops it too instead of showing it as not connected.
+const Removed = "removed"
+
 // Unavailable says why a registered project cannot be served (S-0118): its
 // folder is gone, it has no system-flow.yaml or one that does not load or has
 // no key, or the agent credential cannot be read. Empty when it can be.

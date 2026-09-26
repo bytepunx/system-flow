@@ -193,6 +193,9 @@ export class AgentHub extends EventEmitter {
 	private configuredFlag: boolean;
 	/** Whether the last connection this hub adopted was a candidate (S-0098); kept once it goes. */
 	candidate = false;
+	/** Whether its flai said the project is no longer served (S-0118): unregistered with flai serve
+	 * project remove or flai dashboard stop. A new connection for the key clears it. */
+	removed = false;
 
 	constructor(opt: AgentOptions & { configured?: boolean } = {}) {
 		super();
@@ -216,6 +219,7 @@ export class AgentHub extends EventEmitter {
 		this.conn = ws;
 		this.info = info;
 		this.candidate = info.candidate === true;
+		this.removed = false;
 		log().info(
 			{ component: 'agent', flai: info.flai, project: info.project.key },
 			'host flai connected'
@@ -258,6 +262,11 @@ export class AgentHub extends EventEmitter {
 		if (m.method === 'change' && m.id === undefined) {
 			const path = (m.params as { path?: unknown } | undefined)?.path;
 			if (typeof path === 'string' && path) this.emit('change', path);
+			return;
+		}
+		// flai serve no longer serves the project, and is about to close (S-0118)
+		if (m.method === 'removed' && m.id === undefined) {
+			this.removed = true;
 			return;
 		}
 		// A step of a request still being answered (an acceptance), by the request's ID.
@@ -388,8 +397,9 @@ export class AgentRegistry extends EventEmitter {
 		const out: ConnectedProject[] = [];
 		for (const [key, h] of this.hubs) {
 			const st = h.status();
-			// a candidate that is gone was imported, or its folder is no longer named: not a project
-			if (h.candidate && !st.connected) continue;
+			// a candidate that is gone was imported, or its folder is no longer named, and a project
+			// flai said was removed is no longer served: neither is a project to show (S-0118)
+			if ((h.candidate || h.removed) && !st.connected) continue;
 			out.push({
 				key,
 				name: st.serves?.name ?? key,
@@ -417,7 +427,9 @@ export class AgentRegistry extends EventEmitter {
 	 */
 	solo(): AgentHub {
 		// a repository offered for import is not a project a request with no ?project= could mean
-		const known = [...this.hubs.entries()].filter(([, h]) => !h.candidate).map(([k]) => k);
+		const known = [...this.hubs.entries()]
+			.filter(([, h]) => !h.candidate && !(h.removed && !h.status().connected))
+			.map(([k]) => k);
 		if (known.length === 1) return this.hubs.get(known[0])!;
 		if (!this.pending) this.pending = new AgentHub({ configured: this.key !== null });
 		return this.pending;
