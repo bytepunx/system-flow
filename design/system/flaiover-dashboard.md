@@ -8,7 +8,7 @@ status: active
 
 `flaiover` is the web view of a conforming repo. It renders every markdown document, searches `design/` and `wip/`, shows the kanban board, and charts the flow metrics defined in [metrics.md](metrics.md). It runs locally in Docker with the repo mounted read-write and is started by `flai dashboard`.
 
-Source: `./flaiover` in this monorepo. Image: `ghcr.io/bytepunx/flaiover`.
+Source: `./flaiover` in this monorepo. Image: `ghcr.io/bytepunx/flaiover`, one multi-platform manifest for `linux/amd64` and `linux/arm64` under each tag (S-0119).
 
 ## Shape
 
@@ -124,6 +124,7 @@ Server builds a MiniSearch index over title, tags, ID, headings, and body text o
 
 ## Runtime
 
+- The image is built by `release-flaiover.yml` on an amd64 runner for both platforms, with QEMU for arm64 (S-0119). The Dockerfile's build stage runs on `$BUILDPLATFORM` for every target: the SvelteKit output and the production `node_modules` are plain JavaScript, so only the runtime stage's `apk add tini` runs emulated. A production dependency that ships a native binary would break the arm64 image and would need the build stage to run on the target platform instead. `flai dashboard` pulls the image for the Docker daemon's platform (`docker version`), not flai's own architecture, and pulls again when the image it has was built for another platform.
 - Container listens on `3000`, named `flaiover` for every project on the host, not for one of them: `flai dashboard` starts it once and every later call, from any project, registers with the running one. It is published on the configured host port, default `4242`, on every interface by default (`dashboard.bind` or `--bind` restricts it, for example to `127.0.0.1`), and runs as the host user (`--user uid:gid`), so that it can read the two secret files, which are the host user's alone; the image must work as an arbitrary non-root UID: no privileged ports, no writes outside `/tmp`, and a writable working directory is not assumed.
 - `flai dashboard` gives the container a published port and two secrets mounted read-only under `/run/secrets` (the login token and the agent credential), and nothing else: no project volume, no `PROJECT_DIR`, no git identity, excludes, or push key (S-0077, [ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md), which supersedes ADR-0022, ADR-0026, and ADR-0027). Since S-0080 both secrets are per user, kept beside `flai serve`'s own state, not any one project's `.flai-cache`; every project registered with the same `flai serve` is handed the same two files ([ADR-0033](../adrs/0033-one-login-token-and-one-agent-credential-per-user-serve-every-project.md)). `PROJECT_DIR` remains only as how tests and development outside Docker name the directory that `testing.ts` asks flai about. `flai dashboard status` reads a running container's mounts, says when one was started by an older flai and still has a project mounted, and lists every project it currently serves.
 - Everything the dashboard shows and everything it changes is asked of flai on the host (S-0073 to S-0075, below); the image holds no `flai`, `git`, or `ssh`, and `/_ready` is not ready without a connected flai.
