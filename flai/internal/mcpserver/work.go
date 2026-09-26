@@ -18,7 +18,7 @@ const (
 
 	WaitingForRoom  = "room"  // a story is ready, and the in-progress limit is full
 	WaitingForReady = "ready" // no story is ready
-	WaitingForHeld  = "held"  // every ready story is held by an open story's claim (S-0128)
+	WaitingForHeld  = "held"  // every ready story is held by an open story's claim or its after (S-0128, S-0130)
 )
 
 // WorkIn bounds one wait.
@@ -31,7 +31,7 @@ type WorkOut struct {
 	Reason     string               `json:"reason" jsonschema:"resume: your story is still in progress, go back to it; thread: a thread awaiting you was written to; pull: pull story now; empty when it timed out"`
 	Story      *workitem.BoardCard  `json:"story,omitempty" jsonschema:"the story to resume or to pull"`
 	Threads    []ThreadSummary      `json:"threads" jsonschema:"threads awaiting you that were written to since wait_for_work last answered"`
-	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds carries held with the reason and what clears it, and is not offered"`
+	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds, or that waits for a story it names in after, carries held with the reason and what clears it, and is not offered"`
 	CanPull    bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room to pull one"`
 	WaitingFor string               `json:"waiting_for,omitempty" jsonschema:"when it timed out: room, when a story is ready but the in-progress limit is full; held, when every ready story is held (ready says why each is); ready, when no story is ready"`
 	TimedOut   bool                 `json:"timed_out"`

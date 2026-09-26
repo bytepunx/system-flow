@@ -15,7 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const inboxDescription = "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit (one whose touches overlap a story in progress or in review carries held with the reason and what clears it: it is not offered), and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."
+const inboxDescription = "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit (one whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it: it is not offered), and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."
 
 // projects is what the tools are served for: one project, or every project
 // in a folder (S-0101).
@@ -64,7 +64,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	mcp.AddTool(srv, &mcp.Tool{Name: "item_move", Description: "Transition a work item with the workflow rules enforced. Moving an item to cancelled also cancels everything open under it, and the result lists what went with it. Refuses to move a story or epic to done: acceptance is the operator's."}, route(p, (*server).itemMove))
 	mcp.AddTool(srv, &mcp.Tool{Name: "doc_get", Description: "A markdown document under the design, docs, or wip folders, by repository path."}, route(p, (*server).docGet))
 	mcp.AddTool(srv, &mcp.Tool{Name: "who_touches", Description: "In-progress and in-review items whose touches cover a path; ask before editing a path someone else is working on."}, route(p, (*server).whoTouches))
-	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches; a ready story whose touches overlap a story in progress or in review carries held with the reason and what clears it. Stories only unless all is set."}, route(p, (*server).board))
+	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches; a ready story whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it. Stories only unless all is set."}, route(p, (*server).board))
 }
 
 // ---- a folder of projects (S-0101) ----

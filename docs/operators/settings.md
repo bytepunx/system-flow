@@ -177,7 +177,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | Flag | Taken by |
 |------|----------|
 | `--addr` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
-| `--after` | [flai order](../users/flai-reference.md#flai-order) |
+| `--after` | [flai edit](../users/flai-reference.md#flai-edit), [flai order](../users/flai-reference.md#flai-order) |
 | `--agent` | [flai mcp](../users/flai-reference.md#flai-mcp) |
 | `--agent-config` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--all` | [flai board](../users/flai-reference.md#flai-board), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai thread list](../users/flai-reference.md#flai-thread-list) |
@@ -195,6 +195,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--check` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--class` | [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--clear` | [flai touches](../users/flai-reference.md#flai-touches) |
+| `--clear-after` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-agent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-tags` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-touches` | [flai edit](../users/flai-reference.md#flai-edit) |

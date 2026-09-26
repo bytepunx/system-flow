@@ -363,6 +363,23 @@ ready
 
 You can still start it yourself: `flai move S-0130 in-progress` and `flai serve agent start S-0130` warn and go ahead.
 
+### Waiting for another story
+
+```bash
+flai edit S-0131 --after S-0129,S-0130     # S-0131 starts once both are done
+flai edit S-0131 --clear-after
+```
+
+Some stories depend on another for a reason that is not about files: they build on its API, or on what its research found. Name those stories in `after` and the story is held in ready until every one of them is done, however little they touch in common:
+
+```text
+         held (after): waits for S-0129 (in progress) and S-0130 (ready); starts when S-0129 and S-0130 are done
+```
+
+A story named that is cancelled keeps the hold, and the reason says so: drop it from `after` if the story no longer needs it. `flai check` refuses an `after` that names a story that does not exist, the story itself, or a cycle (`S-0131` waits for `S-0132`, which waits for `S-0131`). The dashboard's story editor and the MCP `item_edit` tool set it too.
+
+A flai older than the one that brought `after` refuses to read a story that carries it, so upgrade the flai on your host (`flai self-upgrade`) before you use it.
+
 ### Threads
 
 ```bash
@@ -386,10 +403,11 @@ flai edit S-0085 --nature improvement --tag dashboard --tag cli --touches flaiov
 flai edit S-0085 --parent E-0004                # an open epic for a story, an open story for a task
 flai edit S-0085 --body-stdin --hash <hash> < body.md
 flai edit S-0085 --clear-tags --clear-touches
+flai edit S-0085 --after S-0084                 # hold it until S-0084 is done; --clear-after lets it go
 flai edit S-0085 --harness claude-code --model claude-sonnet-5 --agent-config effort=high
 ```
 
-`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
+`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's `after` and agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
 
 A title lives in several places, and a retitle keeps them in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name under design, docs, and wip (from a story's worktree only under wip, because design and docs there are another branch's). With `--hash`, the one `--show` printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. `flai check` runs with the change in place: what the change introduces refuses it, every file is put back, and the findings are printed (exit 4). What is simply not allowed, a nature there is not, an epic as a task's parent, is said as a `rule:`. `--autocommit` commits every file the edit touched in one commit; nothing is pushed.
 
@@ -414,11 +432,11 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 
 | Tool | What it does |
 |------|--------------|
-| `inbox` | (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit and `held` with why on a story an open story's claim holds, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
+| `inbox` | (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit and `held` with why on a story an open story's claim holds or that waits for a story it names in `after`, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, and the hash of its file; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
-| `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
+| `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` replaces the stories a story waits for and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served |
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
 | `wait_for_work` | What to do when you have nothing to work on. Answers at once with `resume` and your own story if one is still in progress, `thread` and the threads awaiting you that were written to since it last answered, or `pull` and the first ready story that is not held when the in-progress limit leaves room. Otherwise it waits until one of those is true, up to the timeout, and then says whether it was waiting for room, for a held story to be clear (`held`: each ready story says why), or for a story to be ready: call it again. Hold it whenever you are idle, and you pull the next story as soon as there is one |

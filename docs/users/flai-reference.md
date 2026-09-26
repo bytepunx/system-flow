@@ -24,7 +24,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [doc](#flai-doc) | Read and save one markdown document for an editor |
-| [edit](#flai-edit) | Change an item's title, nature, tags, touches, parent, or body, checked and in one step |
+| [edit](#flai-edit) | Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
@@ -83,7 +83,7 @@ Subcommands:
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [doc](#flai-doc): Read and save one markdown document for an editor
-- [edit](#flai-edit): Change an item's title, nature, tags, touches, parent, or body, checked and in one step
+- [edit](#flai-edit): Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
@@ -808,7 +808,7 @@ flai doc show design/system/overview.md --json
 
 ### flai edit
 
-Change an item's title, nature, tags, touches, parent, or body, checked and in one step.
+Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step.
 
 ```text
 flai edit <id> [flags]
@@ -817,6 +817,8 @@ flai edit <id> [flags]
 Change what an item says about itself. Any of the fields and the body can change together. What is the item's state stays flai's and is changed by its own commands: status by flai move, blocking by flai block, never here.
 
 A retitle keeps everything that carries the title in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name in design, docs, and wip. A new parent must be an open item of the right type; the item leaves the old parent's list and joins the new one. An archived or closed item is refused.
+
+--after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). flai check refuses a story that does not exist and a cycle.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the title, and flai writes it. With --hash, the hash flai edit --show printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. flai check runs with the change in place: if it reports anything the change introduces, every file is put back and the findings are printed (exit 4). --autocommit commits every file the edit touched in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
@@ -829,6 +831,7 @@ flai edit S-0085 --show
 flai edit S-0085 --title "Items are editable from the dashboard" --autocommit
 flai edit S-0085 --tag dashboard --tag cli --touches flaiover/src
 flai edit S-0085 --parent E-0004
+flai edit S-0130 --after S-0128,S-0129
 flai edit S-0085 --body-stdin --hash 3f0c... < body.md
 ```
 
@@ -836,10 +839,12 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--after` strings | the stories a story waits for until they are done, replacing the ones there |
 | `--agent-config` stringArray | a story's agent: an option, key=value, and key= to remove one (repeatable) |
 | `--autocommit` | commit every file the edit touched, unless dashboard.autocommit is false |
 | `--body-stdin` | read the body below the heading from standard input |
 | `--by` string | who edits, as agents are told (default: FLAI\_AGENT, then the config author) |
+| `--clear-after` | remove the stories a story waits for |
 | `--clear-agent` | remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those |
 | `--clear-tags` | remove every tag |
 | `--clear-touches` | remove the list |
