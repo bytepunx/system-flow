@@ -76,7 +76,7 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 	if repo == nil {
 		return a.connectServeFolder(s)
 	}
-	entry := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
+	entry := a.serveEntry(repo, s)
 	if entry.Key == "" {
 		return "  host flai: not connected, the manifest has no key (flai check says how to add one)\n"
 	}
@@ -91,6 +91,12 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 		return fmt.Sprintf("  host flai: flai host started (pid %d); it runs flai serve, which will connect to this dashboard; flai host status shows it\n", st.PID)
 	}
 	return fmt.Sprintf("  host flai: flai host is running (pid %d); its flai serve will connect to this dashboard\n", st.PID)
+}
+
+// serveEntry is what flai serve is told about a project to serve it for the
+// dashboard s: flai dashboard and flai import register the same (S-0117).
+func (a *app) serveEntry(repo *workitem.Repo, s dashboardSettings) serve.Entry {
+	return serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: s.Root, URL: s.dialURL(), KeyFile: agentKeyPath(string(a.serveDir()))}
 }
 
 // hostFlaiStatus is the part of flai serve's state about this project, and

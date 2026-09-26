@@ -45,7 +45,13 @@ manager's test script, cargo test, pytest), and commits exactly the paths
 the import wrote or moved, only when every test passed or none were found.
 It needs a git repository with no uncommitted changes. When a test fails,
 the imported files are left uncommitted, the answer says which failed, and
-flai exits with code 5.`,
+flai exits with code 5.
+
+Once the manifest is written, a flai host running for this config is told
+to serve the project (S-0117): it is registered with flai serve as flai
+dashboard registers it, and the dashboard shows it in its switcher. With no
+host running, nothing is registered, and flai dashboard in the project
+serves it.`,
 		Example: `  flai import --dry-run
   flai import
   flai import ../legacy --yes --layout design=architecture
@@ -230,8 +236,10 @@ func (a *app) runImport(dir string, o importOptions) error {
 		}
 		committed = &c
 	}
+	// 6. served by the host flai, so that the dashboard shows it (S-0117)
+	served := a.serveImported(repo)
 	if a.jsonOut {
-		out := map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck}
+		out := map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck, "serve": served}
 		if committed != nil {
 			out["key"] = repo.Manifest.Key
 			out["name"] = repo.Manifest.Name
@@ -259,6 +267,7 @@ func (a *app) runImport(dir string, o importOptions) error {
 	for _, f := range resCheck.Findings {
 		fmt.Fprintf(a.out, "    %s:%d: %s: %s: %s\n", f.Path, f.Line, f.Level, f.Rule, f.Message)
 	}
+	a.printImportServed(served)
 	if committed != nil {
 		a.printImportCommit(*committed)
 		if !committed.Committed {
