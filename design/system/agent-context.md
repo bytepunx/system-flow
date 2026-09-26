@@ -138,3 +138,5 @@ The 2026 preprints are not peer reviewed and disagree on cost; only their direct
 - The harness prompt, `CLAUDE.md`, the template, and a new MCP `prime` tool switch to `flai prime --story` as soon as it exists.
 
 A story's topics are its own and its epic's `topics`, plus the name, tags, and kind of the sub-projects its tags or claim reach, plus `code` when one of them is not the template.
+
+The stories under E-0010 that build it, in order: S-0134 (topics on documents, `flai adr topics`, the check, every convention at `[all]`), S-0135 (topics on stories and epics, and a story's derived topics), S-0136 (`flai prime --story` filters conventions), S-0137 (design, tech, ADRs by topic, links, ranking, and the catalog), S-0138 (the harness, `CLAUDE.md`, the template, and an MCP `prime` tool switch to it).
