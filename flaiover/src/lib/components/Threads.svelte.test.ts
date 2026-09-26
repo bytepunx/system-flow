@@ -75,4 +75,129 @@ describe('Threads', () => {
 		expect(operator.querySelector('.prose')!.className).toContain('bg-primary-soft');
 		expect(operator.textContent).toContain('alex');
 	});
+
+	const numbered = (n: number) => ({
+		...thread(`Question ${n}.`),
+		id: `TH-000${n}`,
+		title: `Q${n}`
+	});
+	const pagers = () => [...document.querySelectorAll('nav[data-pager]')] as HTMLElement[];
+	const arrow = (pager: HTMLElement, which: 'previous' | 'next') =>
+		pager.querySelector(`button[aria-label="${which} thread"]`) as HTMLButtonElement;
+
+	it('shows one thread at a time with its place above and below (S-0133)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		expect(document.querySelectorAll('article')).toHaveLength(1);
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0001');
+		const [above, below] = pagers();
+		expect(above.dataset.pager).toBe('above');
+		expect(below.dataset.pager).toBe('below');
+		expect(above.compareDocumentPosition(document.querySelector('article')!)).toBe(
+			Node.DOCUMENT_POSITION_FOLLOWING
+		);
+		for (const p of [above, below]) {
+			expect(p.querySelector('span')!.textContent).toBe('1 of 3');
+			expect(arrow(p, 'previous').disabled).toBe(true);
+			expect(arrow(p, 'next').disabled).toBe(false);
+		}
+	});
+
+	it('moves between threads with the arrows, above or below, and stops at the ends (S-0133)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		arrow(pagers()[0], 'next').click();
+		flushSync();
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0002');
+		expect(document.querySelector('article')!.textContent).toContain('Question 2.');
+		arrow(pagers()[1], 'next').click();
+		flushSync();
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0003');
+		for (const p of pagers()) {
+			expect(p.querySelector('span')!.textContent).toBe('3 of 3');
+			expect(arrow(p, 'next').disabled).toBe(true);
+		}
+		arrow(pagers()[1], 'previous').click();
+		flushSync();
+		expect(pagers()[0].querySelector('span')!.textContent).toBe('2 of 3');
+	});
+
+	it('keeps the thread being read when the list reloads, and its place when it leaves (S-0133)', async () => {
+		let list = [1, 2, 3].map(numbered);
+		api.mockImplementation(async (path: string) => ({
+			ok: true,
+			json: async () => (path.startsWith('/api/threads?') ? list : {})
+		}));
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+		arrow(pagers()[0], 'next').click();
+		flushSync();
+
+		// A reply reloads the list; a new thread ahead of this one must not move the reader.
+		list = [numbered(4), ...list];
+		const input = document.querySelector('article input') as HTMLInputElement;
+		input.value = 'ok';
+		input.dispatchEvent(new Event('input'));
+		(document.querySelector('article form') as HTMLFormElement).requestSubmit();
+		await settle();
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0002');
+		expect(pagers()[0].querySelector('span')!.textContent).toBe('3 of 4');
+
+		// Resolving it drops it from the list: the thread now in its place is shown.
+		list = list.filter((t) => t.id !== 'TH-0002');
+		(
+			[...document.querySelectorAll('article button')].find(
+				(b) => b.textContent === 'resolve'
+			) as HTMLButtonElement
+		).click();
+		await settle();
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0003');
+		expect(pagers()[0].querySelector('span')!.textContent).toBe('3 of 3');
+	});
+
+	it('shows a thread just opened (S-0133)', async () => {
+		let list = [1, 2].map(numbered);
+		api.mockImplementation(async (path: string, init?: { method?: string }) => {
+			if (init?.method === 'POST') {
+				list = [...list, numbered(3)];
+				return { ok: true, json: async () => ({ id: 'TH-0003' }) };
+			}
+			return { ok: true, json: async () => list };
+		});
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		(
+			[...document.querySelectorAll('button')].find(
+				(b) => b.textContent === 'new thread'
+			) as HTMLButtonElement
+		).click();
+		flushSync();
+		const form = document.querySelector('section > form') as HTMLFormElement;
+		for (const [sel, value] of [
+			['input', 'Q3'],
+			['textarea', 'Question 3.']
+		]) {
+			const el = form.querySelector(sel) as HTMLInputElement;
+			el.value = value;
+			el.dispatchEvent(new Event('input'));
+		}
+		form.requestSubmit();
+		await settle();
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0003');
+		expect(pagers()[0].querySelector('span')!.textContent).toBe('3 of 3');
+	});
+
+	it('shows no pager for a single thread (S-0133)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [numbered(1)] });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		expect(document.querySelectorAll('article')).toHaveLength(1);
+		expect(pagers()).toHaveLength(0);
+	});
 });

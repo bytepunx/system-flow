@@ -37,6 +37,16 @@
 	let text = $state('');
 	let heading = $state('');
 	let replies = $state<Record<string, string>>({});
+	// One thread is shown at a time (S-0133). The one being read is held by ID so a reload
+	// keeps it; when it drops out of the list, the thread now in its place is shown.
+	let current = $state<string | null>(null);
+	const index = $derived(
+		Math.max(
+			0,
+			threads.findIndex((t) => t.id === current)
+		)
+	);
+	const shown = $derived(threads[index]);
 
 	$effect(() => {
 		if (compose && writable) {
@@ -47,7 +57,15 @@
 
 	async function load() {
 		const r = await api(`/api/threads?on=${encodeURIComponent(on)}${showResolved ? '&all=1' : ''}`);
-		if (r.ok) threads = await r.json();
+		if (!r.ok) return;
+		const was = index;
+		threads = await r.json();
+		if (!threads.some((t) => t.id === current))
+			current = threads[Math.min(was, threads.length - 1)]?.id ?? null;
+	}
+	function go(step: number) {
+		const t = threads[index + step];
+		if (t) current = t.id;
 	}
 	$effect(() => {
 		void on;
@@ -65,12 +83,14 @@
 		const data = await r.json().catch(() => ({}));
 		if (!r.ok) notice = `refused: ${data.error ?? r.statusText}`;
 		await load();
-		return r.ok;
+		return r.ok ? data : null;
 	}
 
 	async function open() {
 		if (!title.trim() || !text.trim()) return;
-		if (await post('/api/threads', { on, heading: heading || undefined, title, text })) {
+		const opened = await post('/api/threads', { on, heading: heading || undefined, title, text });
+		if (opened) {
+			if (typeof opened.id === 'string') current = opened.id;
 			title = text = heading = '';
 			composing = false;
 		}
@@ -137,8 +157,37 @@
 	{#if threads.length === 0}
 		<p class="mt-2 text-xs text-muted">No threads here.</p>
 	{/if}
-	{#each threads as t (t.id)}
-		<article class="mt-3 rounded border border-line bg-surface p-3">
+	{#snippet pager(where: 'above' | 'below')}
+		{#if threads.length > 1}
+			<nav
+				class="mt-3 flex items-center gap-2 text-xs"
+				aria-label="threads {where}"
+				data-pager={where}
+			>
+				<span class="text-muted" aria-live={where === 'above' ? 'polite' : 'off'}
+					>{index + 1} of {threads.length}</span
+				>
+				<button
+					type="button"
+					class="rounded border border-line-strong px-1.5 disabled:opacity-40"
+					aria-label="previous thread"
+					disabled={index === 0}
+					onclick={() => go(-1)}>←</button
+				>
+				<button
+					type="button"
+					class="rounded border border-line-strong px-1.5 disabled:opacity-40"
+					aria-label="next thread"
+					disabled={index === threads.length - 1}
+					onclick={() => go(1)}>→</button
+				>
+			</nav>
+		{/if}
+	{/snippet}
+	{@render pager('above')}
+	{#if shown}
+		{@const t = shown}
+		<article class="mt-3 rounded border border-line bg-surface p-3" data-thread={t.id}>
 			<header class="flex flex-wrap items-center gap-2">
 				<span class="font-mono text-xs text-muted">{t.id}</span>
 				<span class="font-medium">{t.title}</span>
@@ -202,5 +251,6 @@
 				</form>
 			{/if}
 		</article>
-	{/each}
+	{/if}
+	{@render pager('below')}
 </section>
