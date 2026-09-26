@@ -427,6 +427,8 @@ A title lives in several places, and a retitle keeps them in step: the front mat
 
 Agents connected over MCP are told of an edit someone else made, as a change of kind `edited` that names what changed. That comes from a small log under `.flai-cache`, outside git, like an agent's read marker: hand edits of a file are not reported, as before.
 
+They are also told when an accepted story changed paths their own story claims, as a change of kind `overlapped` on their story. `cause` is the accepted story and `to` lists the paths. The agent syncs its story and runs its tests again before it goes on. See acceptance, below.
+
 ### Serving agents over MCP
 
 ```bash
@@ -446,7 +448,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 
 | Tool | What it does |
 |------|--------------|
-| `inbox` | (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit and `held` with why on a story an open story's claim holds or that waits for a story it names in `after`, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
+| `inbox` | (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what. Since S-0132 it reports `overlapped`: a story was accepted, `cause`, that changed paths this story claims, `to`.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit and `held` with why on a story an open story's claim holds, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, and the hash of its file; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
@@ -591,6 +593,8 @@ flai push --pending                    # tag whatever has accumulated and push i
 ```
 
 Acceptance is one step, and for a story it is the only way to reach done: `flai move S-0031 done` from review, a card dropped on done in the dashboard, and `flai accept S-0031` all run the same flow with the same flags. It rebases the story branch and fast-forwards it into the main branch, moves the item to done (the same rules as `flai move`), archives it with its children and narrative, and commits. It computes no release, creates no tag, and pushes nothing: that is a deliberate step of its own, not tied to any one item, done by whichever of the two commands below you reach for. `--dry-run` prints anything that would block acceptance and any uncommitted files outside `wip/`, and stops without refusing; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean outside `wip/` so the acceptance commit holds only acceptance, unless you pass `--yes`, which includes those files in it. From the dashboard the same choice is a checkbox in the confirmation.
+
+Acceptance then tells the stories still in progress or in review what it changed under them. For each one whose `touches`, with those of its open tasks, cover a path the merge brought into the main branch, it records which paths those are. A story with no touches is told of every path. The command prints `told S-0040 it overlaps: flai/cmd/accept.go`, `--json` lists them in `overlaps`, and the story's agent sees it in its MCP `inbox` as an `overlapped` change. Acceptance from the dashboard does the same.
 
 Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review; an experiment story (ADR-0025) is refused outright and stays on its branch, since accepting it onto main is not what an experiment is for. `flai board` says when something is accepted and not pushed (`accepted, not pushed: S-0031 (3 commit(s) ahead of origin/main)`), `flai board --json` carries it as `unpushed`, and one command on the host finishes the job — computing and tagging whatever release has accumulated since each component's last tag, then pushing branch and tags together, before anything else is decided:
 

@@ -131,7 +131,8 @@ func (s *server) catchUp() ([]Event, int, error) {
 	since := cur.since(now).UTC().Truncate(time.Second)
 	noticed := func(c workitem.Change) {
 		at, err := time.Parse(workitem.TimeFormat, c.At)
-		if err != nil || !(at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])) {
+		news := at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])
+		if err != nil || !news {
 			return
 		}
 		if c.At == next.Seen {

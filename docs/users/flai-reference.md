@@ -126,6 +126,8 @@ The operator's acceptance step as one command, per design/conventions/work-manag
 1. move the item to done (its rules apply: children closed, criteria checked)
 2. flai archive for the item and its children and narrative
 3. git commit the work item and archive
+4. tell every story in progress or in review whose touches cover a path
+   the merge changed which paths those are, for its agent's MCP inbox
 ```
 
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087): that is a deliberate step of its own, run when the operator chooses to publish what has accumulated on main, not tied to any one item. See flai release --pending.

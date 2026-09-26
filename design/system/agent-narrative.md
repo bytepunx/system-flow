@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-09-19
+updated: 2026-09-26
 status: active
 ---
 
@@ -67,6 +67,7 @@ T-0021 done. Config read/write with tests. Decided on plain encoding/json over v
 - Changes are derived from the files, not recorded anew: `transitions` carry `to`, `at`, and `by`; `blocked` intervals carry `from`, `until`, and `reason`; `board.md` carries `order`. A change whose `by` is this agent is not reported back to it, which is why `flai move`, `block`, and `unblock` record `FLAI_AGENT` when it is set.
 - "Since this agent last looked" is a cursor per agent name under `.flai-cache/mcp/`, outside git. It is a read marker, a cache in the sense of the overview's principle that tooling never owns state: losing it repeats or skips the report of a change and loses nothing else, because ready work and open threads are state and are always listed. With no cursor, the last 24 hours are reported.
 - Edits are the one change that is not derived from the items' files (S-0085). When someone changes an item's title, fields, or body with `flai edit` or from the dashboard, flai notes who and what in `.flai-cache/edits.jsonl`, and `inbox` and `wait_for_events` report the entries by others as `edited` changes whose `to` names what changed. An agent told so reads its story again before going on. The note is a log beside the cursors, not a key in the front matter, because items are parsed strictly and an older flai reading the same repository would refuse an item with a key it does not know. Losing the log loses only the telling; a hand edit of a file is, as before, not reported.
+- Overlaps at acceptance are the other (S-0132, [ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). `flai accept` notes, in `.flai-cache/overlaps.jsonl`, each open story whose claim covers a path the accepted story's merge changed. `inbox` and `wait_for_events` report each note once as an `overlapped` change on the open story, with `cause` the accepted story and `to` the paths, and with a summary that names at most ten of them. They report it whoever accepted, since the news is for the open story's agent. The log is kept apart from `edits.jsonl` because an older flai reads every line there as an edit. An agent told so syncs its story and runs its tests again before going on.
 - `wait_for_events` returns at once when the cursor is already behind, so a change made between two calls is not lost; otherwise it blocks until something changes. It returns events in the same shape as `inbox` does, with the changed paths, and advances the cursor.
 - `board` returns what `flai board --json` prints: columns, limits, pull order, breaches.
 
