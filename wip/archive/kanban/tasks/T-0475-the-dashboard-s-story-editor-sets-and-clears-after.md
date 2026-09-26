@@ -3,17 +3,20 @@ id: T-0475
 type: task
 nature: feature
 title: The dashboard's story editor sets and clears after
-status: in-progress
+status: done
 parent: S-0130
 owner: alex
 created: 2026-09-26T17:55:02Z
-updated: 2026-09-26T18:12:45Z
+updated: 2026-09-26T18:16:42Z
 transitions:
   - to: ready
     at: 2026-09-26T17:55:12Z
     by: agent-S-0130
   - to: in-progress
     at: 2026-09-26T18:12:45Z
+    by: agent-S-0130
+  - to: done
+    at: 2026-09-26T18:16:42Z
     by: agent-S-0130
 stream: S-0130
 tags: []

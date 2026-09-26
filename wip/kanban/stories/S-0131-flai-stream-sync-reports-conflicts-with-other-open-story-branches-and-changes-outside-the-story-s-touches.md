@@ -3,17 +3,20 @@ id: S-0131
 type: story
 nature: feature
 title: flai stream sync reports conflicts with other open story branches and changes outside the story's touches
-status: in-progress
+status: review
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:59:22Z
-updated: 2026-09-26T18:13:56Z
+updated: 2026-09-26T18:15:33Z
 transitions:
   - to: ready
     at: 2026-09-26T17:50:35Z
     by: alex
   - to: in-progress
     at: 2026-09-26T18:04:23Z
+    by: agent-S-0131
+  - to: review
+    at: 2026-09-26T18:15:33Z
     by: agent-S-0131
 tags: [cli]
 touches: [flai/cmd, flai/internal/mcpserver, docs, design/system, flai/internal/gitver, design/tech]
