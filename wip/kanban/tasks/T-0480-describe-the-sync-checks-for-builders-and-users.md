@@ -3,17 +3,20 @@ id: T-0480
 type: task
 nature: feature
 title: Describe the sync checks for builders and users
-status: in-progress
+status: done
 parent: S-0131
 owner: alex
 created: 2026-09-26T18:05:56Z
-updated: 2026-09-26T18:10:50Z
+updated: 2026-09-26T18:15:05Z
 transitions:
   - to: ready
     at: 2026-09-26T18:06:14Z
     by: agent-S-0131
   - to: in-progress
     at: 2026-09-26T18:10:50Z
+    by: agent-S-0131
+  - to: done
+    at: 2026-09-26T18:15:05Z
     by: agent-S-0131
 stream: S-0131
 tags: []
