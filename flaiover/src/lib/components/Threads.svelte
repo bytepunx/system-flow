@@ -2,6 +2,7 @@
 	// Threads anchored to a document or item (ADR-0020): read from
 	// wip/threads, written through flai. `on` is a repository path or item ID.
 	import { api } from '$lib/api';
+	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
 
 	type Entry = { at: string; author: string; text: string };
@@ -157,7 +158,12 @@
 							<span class="font-mono">{e.at}</span>
 							{e.author}
 						</div>
-						<p class="whitespace-pre-wrap">{e.text}</p>
+						<!-- Entries are markdown, as they are in the thread's file (S-0126). Authors write
+						     repository paths, so relative links resolve from the root. -->
+						<div class="prose prose-sm max-w-none">
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -- repository markdown, rendered client side as every document is -->
+							{@html render(e.text, '')}
+						</div>
 					</li>
 				{/each}
 			</ol>

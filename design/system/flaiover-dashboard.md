@@ -195,7 +195,7 @@ The dashboard becomes the designer's workbench: authenticated (ADR-0018), able t
 
 - Authentication: one login token per user, shared by every project the container serves, kept beside `flai serve`'s own state and mounted read-only (S-0080, [ADR-0033](../adrs/0033-one-login-token-and-one-agent-credential-per-user-serve-every-project.md)); `Authorization: Bearer` primary, HttpOnly cookie set by `/login` from a URL fragment; `/_health` and `/_ready` open; `/metrics` behind the token unless `FLAIOVER_METRICS_PUBLIC=true`.
 - Editing: body editable, flai-owned front matter read-only, save validated by `flai check`, committed on `main` with the designer as author, content-hash conflict detection.
-- Threads: `wip/threads/*.md` rendered beside their anchor; posting writes through `flai thread`.
+- Threads: `wip/threads/*.md` rendered beside their anchor, each entry as markdown with the explorer's renderer and relative links resolved from the repository root (S-0126); posting writes through `flai thread`.
 - Review: branch diff against `main`, criteria, narrative, threads, `flai accept` and send-back.
 - Presence and inbox: derived from `wip/agents` and threads; optional notifications.
 - Hub readiness: every `/api/*` response carries `project: { name, key }`. MCP was served at `/mcp` until S-0076 and is flai's on the host since ([ADR-0030](../adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md)); how a dashboard and a host reach each other was decided by ADR-0029.
