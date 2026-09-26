@@ -10,7 +10,7 @@ Moving flai and the dashboard to another machine, moving a project on one, bring
 
 ## To another machine
 
-The host's registry (`serve/projects.json`, `dashboards.json`) and the host actions in the configuration name projects by absolute path and the credential by its file's path, so they are not carried over: on the new machine each project is registered again, which also rewrites them.
+The host's registry (`serve/projects.json`, `removed.json`, `dashboards.json`) and the host actions in the configuration name projects by absolute path and the credential by its file's path, so they are not carried over: on the new machine each project is registered again, which also rewrites them.
 
 ### flai
 

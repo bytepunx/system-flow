@@ -137,13 +137,20 @@
 	async function serveProject(p: ServedProject) {
 		if (!(await change('projects', 'serve', { root: p.root, key: p.key || undefined }))) return;
 		said.projects = { ok: true, text: `${p.key || p.root} is served; waiting for it to connect…` };
-		said.projects = (await until(() => inSwitcher(p.key)))
+		const joined = await until(() => inSwitcher(p.key));
+		said.projects = joined
 			? { ok: true, text: `${p.key} is served, and in the switcher` }
 			: {
 					ok: true,
 					text: `${p.key || p.root} is served but has not connected yet; its state below says why`
 				};
-		await load();
+		// flai serve writes what it serves once a second: read it until it agrees with the switcher
+		for (let i = 0; i < (joined ? 6 : 1); i++) {
+			if (i) await new Promise((r) => setTimeout(r, 500));
+			await load();
+			const now = view?.host?.projects?.served.find((x) => x.root === p.root);
+			if (!joined || now?.state === 'connected') break;
+		}
 	}
 	async function unserveProject(p: ServedProject) {
 		confirming = null;
