@@ -11,13 +11,20 @@ import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
 import { proof, registry, REQUIRED_METHODS, resetAgent, withProject } from './agent';
-import { knownRepos, repo, useRepo, type Repo } from './repo';
+import { knownRepos, Repo, repo, useRepo, type Ask } from './repo';
 
 const KEY = 'shared-credential-for-tests';
 
 type Flai = { ws: WebSocket; change: (path: string) => void };
 
-function connect(url: string, project: { key: string; name: string }): Promise<Flai> {
+/** What a fake flai answers a request with; by default, its project's manifest for every method. */
+type Answer = (method: string) => unknown;
+
+function connect(
+	url: string,
+	project: { key: string; name: string },
+	answer?: Answer
+): Promise<Flai> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(url);
 		const mine = 'd'.repeat(32);
@@ -61,7 +68,7 @@ function connect(url: string, project: { key: string; name: string }): Promise<F
 					JSON.stringify({
 						jsonrpc: '2.0',
 						id: m.id,
-						result: {
+						result: answer?.(m.method) ?? {
 							name: project.name,
 							version: 1,
 							layout: { design: 'design', docs: 'docs', wip: 'wip' }
@@ -162,5 +169,43 @@ describe('live changes per project (S-0095)', () => {
 		const b = withProject('beta', () => repo());
 		// no project context here, as for the notifier or a change handler
 		expect((await b.manifest()).name).toBe('Beta');
+	});
+
+	// S-0117: a Repo made for a request that names its project was never watched, so its answers
+	// were kept until the container restarted: stories accepted and archived elsewhere stayed in the
+	// done lane of /api/board?project=sf while /api/board showed them gone.
+	it("a named project's Repo from repo() forgets its board when that project's flai reports a change", async () => {
+		let stories = ['S-0028', 'S-0115', 'S-0116'];
+		const asked: string[] = [];
+		const sf = await connect(url, { key: 'sf', name: 'SF' }, (method) => {
+			asked.push(method);
+			return method === 'board.get' ? { done: [...stories] } : undefined;
+		});
+		flais.push(sf);
+		// as hooks.server.ts runs a request with ?project=sf; nothing calls watch() on it
+		const r = withProject('sf', () => repo());
+
+		expect(await r.boardView()).toEqual({ done: ['S-0028', 'S-0115', 'S-0116'] });
+		stories = [];
+		sf.change('wip/kanban/stories/S-0115-accepted-elsewhere.md');
+		await settle();
+
+		expect(await withProject('sf', () => repo().boardView())).toEqual({ done: [] });
+		expect(asked.filter((m) => m === 'board.get')).toHaveLength(2);
+	});
+
+	it('a Repo given its own source does not listen, and watching twice listens once', async () => {
+		const reg = registry();
+		const before = reg.listenerCount('change');
+		const own = new Repo('/own', (async () => ({})) as Ask);
+		await own.watch();
+		expect(reg.listenerCount('change')).toBe(before);
+
+		const r = withProject('gamma', () => repo());
+		await r.watch();
+		await r.watch();
+		expect(reg.listenerCount('change')).toBe(before + 1);
+		expect(reg.listenerCount('connected')).toBeGreaterThan(0);
+		expect(reg.listenerCount('gone')).toBeGreaterThan(0);
 	});
 });

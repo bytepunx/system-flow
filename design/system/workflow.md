@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -71,7 +71,7 @@ Only the `ready` and `backlog` columns have an order, and only stories are in it
 
 `flai move` keeps the list true as stories change column: a story moved to `ready` is named after the ready stories already named and before any backlog story, wherever the list had it; a story moved anywhere else is removed, so one sent back to `backlog` returns to the unplaced ones. `flai board`, the MCP `board` and `inbox` tools, and the dashboard's board all lay out `backlog` and `ready` in this sequence, and the dashboard's drag within a column calls `flai order` (ADR-0016). An agent's MCP `inbox` reports a reordering of the stories it had already seen as a change.
 
-Ready means work starts (S-0079). An agent that is running and idle holds `wait_for_work` (S-0097), which names the story to pull as soon as one is ready and the in-progress limit leaves room; `inbox` lists ready stories to one that ends its turns. When none is, and the operator has enabled it on the host, `flai serve` starts each ready story's agent in this order: once per story entering ready, and again when its agent is changed while it is in ready (S-0116), only while the in-progress limit leaves room, whoever is attending ([ADR-0043](../adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)). A story in ready or in progress whose agent dropped or failed gets a new one on the operator's word: `flai serve agent restart`, or Restart agent on its page. A story in ready gets its agent at once on the operator's word, whatever the launcher's own rules say: `flai serve agent start`, or Start agent on its page (S-0115). See the operators' guide for what enabling it means.
+Ready means work starts (S-0079). An agent that is running and idle holds `wait_for_work` (S-0097), which names the story to pull as soon as one is ready and the in-progress limit leaves room; `inbox` lists ready stories to one that ends its turns. When none is, and the operator has enabled it on the host, `flai serve` starts each ready story's agent in this order: once per story entering ready, and again when its agent is changed while it is in ready (S-0116), only while the in-progress limit leaves room, whoever is attending ([ADR-0043](../adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)). A story in ready or in progress whose agent dropped or failed gets a new one on the operator's word: `flai serve agent restart`, or Retry on its page. For a story in ready while the in-progress limit is full, that queues the agent, and flai serve starts it once there is room (S-0118, [ADR-0044](../adrs/0044-a-retry-of-a-failed-agent-on-a-ready-story-with-the-in-progress-limit-full-is.md)). A story in ready gets its agent at once on the operator's word, whatever the launcher's own rules say: `flai serve agent start`, or Start agent on its page (S-0115). See the operators' guide for what enabling it means.
 
 ## Blocking
 

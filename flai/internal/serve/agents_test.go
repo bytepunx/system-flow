@@ -733,6 +733,82 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+	// S-0118: a retry for a story in ready while the limit is full waits for
+	// room, and flai serve starts it as it starts a story entering ready
+	t.Run("a story in ready while the in-progress limit is full is queued", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		lab.limit(1)
+		id := lab.ready("A")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		lab.release(id)
+		waitFor(t, "it ends in ready", func() bool { return !lab.run(id).live() })
+		busy := lab.ready("Busy")
+		lab.move(busy, workitem.InProgress)
+		first := lab.run(id)
+
+		run, err := restart(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if run.Queued == "" || run.Started != first.Started || run.PID != first.PID {
+			t.Errorf("queued, not started: %+v, was %+v", run, first)
+		}
+		if r := lab.run(id); r.Queued == "" || r.Started != first.Started {
+			t.Errorf("recorded: %+v", r)
+		}
+		a := Activity(lab.root, lab.state())[id]
+		if a.State != ActivityWaiting || !strings.Contains(a.Why, "queued") {
+			t.Errorf("a queued agent waits: %+v", a)
+		}
+		if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "queued another agent for "+id) {
+			t.Errorf("journal: %+v", j)
+		}
+		refusedFor(t, lab, id, "already queued")
+
+		// no room: the launcher leaves it queued
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r.Started != first.Started || r.Queued == "" {
+			t.Errorf("started with no room: %+v", r)
+		}
+		if w := lab.state().Waiting; !strings.Contains(w, "in-progress limit leaves no room for "+id) {
+			t.Errorf("waiting: %q", w)
+		}
+		// room: it starts, and the new run is no longer queued
+		lab.move(busy, workitem.Review)
+		lab.l.look(ctx, false)
+		waitFor(t, "the queued agent started", func() bool { return lab.run(id).Started != first.Started || lab.run(id).Session != first.Session })
+		if r := lab.run(id); r.Queued != "" || r.PID == 0 {
+			t.Errorf("the new run: %+v", r)
+		}
+		lab.release(id)
+		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+		// ended again, in ready, not queued: the launcher holds it as before
+		if a := Activity(lab.root, lab.state())[id]; a.State != ActivityFailed {
+			t.Errorf("after the queued agent failed: %+v", a)
+		}
+	})
+	t.Run("a queued story that leaves ready is not waiting", func(t *testing.T) {
+		lab := newAgentLab(t)
+		id := lab.ready("A")
+		lab.move(id, workitem.InProgress)
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			s.put(&AgentRun{Story: id, Agent: "builder-" + id, Started: "2026-09-26T00:00:00Z", Ended: "2026-09-26T00:01:00Z",
+				Outcome: OutcomeFailed, Why: "ended (exit 1)", Queued: "2026-09-26T00:02:00Z"})
+		})
+		if a := Activity(lab.root, lab.state())[id]; a.State != ActivityFailed {
+			t.Errorf("in progress, a queued retry is moot: %+v", a)
+		}
+		// in progress, a retry starts at once, queued or not
+		run, err := restart(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if run.Queued != "" || run.PID == 0 {
+			t.Errorf("started: %+v", run)
+		}
+	})
 	t.Run("refusals", func(t *testing.T) {
 		lab := newAgentLab(t)
 		lab.hold()
@@ -749,11 +825,9 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		lab.l.look(ctx, false)
 		waitFor(t, "it runs", func() bool { return lab.run(running).live() })
 		refusedFor(t, lab, running, "agent is running")
-		// in ready with the limit full
 		lab.release(running)
 		waitFor(t, "it ends", func() bool { return !lab.run(running).live() })
 		lab.limit(1)
-		refusedFor(t, lab, running, "in-progress limit leaves no room for "+running)
 		// asked
 		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
 			r := *s.Stories[running]

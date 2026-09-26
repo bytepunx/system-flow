@@ -1,5 +1,6 @@
 // What a story's agent is doing (S-0104), as flai on the host reports it in agent.status: working
-// (green), waiting for the designer (yellow), failed (red), or worked, which shows no dot.
+// (green), waiting for the designer or, queued by a retry, for room (yellow), failed (red), or
+// worked, which shows no dot.
 
 export type AgentRun = {
 	story: string;
@@ -15,6 +16,8 @@ export type AgentRun = {
 	log?: string;
 	outcome?: 'worked' | 'failed';
 	why?: string;
+	/** When the operator queued another agent for its story, waiting for room (S-0118). */
+	queued?: string;
 };
 
 export type ActivityState = 'working' | 'waiting' | 'failed' | 'worked';

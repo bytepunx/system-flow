@@ -386,6 +386,57 @@ func TestServeAgentRestartSaysWhyItRefuses(t *testing.T) {
 	}
 }
 
+// S-0118: flai serve agent restart queues the agent of a story in ready
+// while the in-progress limit is full, and says so.
+func TestServeAgentRestartQueuesWhenTheLimitIsFull(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	root := tempProject(t)
+	runIn(t, root, "epic", "new", "Epic")
+	for _, s := range []struct{ id, file string }{{"S-0001", "S-0001-slice.md"}, {"S-0002", "S-0002-busy.md"}} {
+		runIn(t, root, "story", "new", strings.TrimSuffix(s.file[7:], ".md"), "--epic", "E-0001")
+		file := filepath.Join(root, "wip/kanban/stories", s.file)
+		body, _ := os.ReadFile(file)
+		_ = os.WriteFile(file, []byte(strings.Replace(string(body), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
+		if _, errOut, code := runIn(t, root, "move", s.id, "ready"); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	runIn(t, root, "serve", "enable", "agent")
+	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	if out, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code != 0 {
+		t.Fatalf("start: %d %s %s", code, out, errOut)
+	}
+	// its agent failed with the story in ready; another story takes the only slot
+	agents := filepath.Join(string(serve.DirFor(cfg)), "agents.json")
+	var all map[string]serve.AgentState
+	data, _ := os.ReadFile(agents)
+	if err := json.Unmarshal(data, &all); err != nil {
+		t.Fatal(err)
+	}
+	for key, st := range all {
+		r := st.Stories["S-0001"]
+		r.PID, r.Ended, r.Outcome, r.Why = 0, r.Started, serve.OutcomeFailed, "ended (exit 1) with S-0001 in ready"
+		all[key] = st
+	}
+	data, _ = json.Marshal(all)
+	_ = os.WriteFile(agents, data, 0o600)
+	runIn(t, root, "move", "S-0002", "in-progress")
+	_ = os.WriteFile(filepath.Join(root, "wip/kanban/board.md"), []byte("---\ntitle: Board\nstatus: active\nwip_limits:\n  ready: 5\n  in-progress: 1\n  review: 3\n---\n\n# Board\n"), 0o644)
+
+	out, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-1")
+	if code != 0 || !strings.HasPrefix(out, "queued another agent for S-0001: the in-progress limit leaves no room") {
+		t.Fatalf("restart: %d %s %s", code, out, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-1"); code == 0 || !strings.Contains(errOut, "already queued") {
+		t.Errorf("twice: %d %s", code, errOut)
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	if !strings.Contains(js, "queued another agent for S-0001") {
+		t.Errorf("the queue is not journalled: %s", js)
+	}
+}
+
 // S-0115: flai serve agent start starts a ready story's agent now, recorded
 // where flai serve tracks it, and says why when it will not.
 func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {

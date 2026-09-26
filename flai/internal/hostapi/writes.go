@@ -290,7 +290,7 @@ const ActionSettings = "settings"
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
 	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
-	ActionAgent:     "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, start a ready story's agent on demand, and start a new one for a story whose agent dropped or failed; whoever can move a story to ready or press Start agent or Restart agent, a holder of the dashboard token included, then starts it",
+	ActionAgent:     "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, start a ready story's agent on demand, and start or queue a new one for a story whose agent dropped or failed; whoever can move a story to ready or press Start agent or Retry, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
 	ActionHost:      "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
@@ -1296,8 +1296,12 @@ func describeAgentNow(did string) func(res any, err *channel.Error) (outcome, de
 			Agent   string `json:"agent"`
 			Command string `json:"command"`
 			PID     int    `json:"pid"`
+			Queued  string `json:"queued"`
 		}
 		_ = json.Unmarshal(w.Data, &said)
+		if said.Queued != "" {
+			return "done", fmt.Sprintf("queued another agent for %s until the in-progress limit has room", said.Story)
+		}
 		return "done", fmt.Sprintf("%s %s for %s as %s (pid %d)", did, said.Command, said.Story, said.Agent, said.PID)
 	}
 }

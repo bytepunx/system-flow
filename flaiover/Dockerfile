@@ -9,7 +9,10 @@
 ARG NODE_VERSION=24
 
 # ---- flaiover build --------------------------------------------------------
-FROM node:${NODE_VERSION}-alpine AS build
+# Runs on the build platform for every target (S-0119): the build output and the
+# production node_modules are plain JavaScript, so only the runtime stage runs
+# emulated when CI builds linux/arm64 on an amd64 runner.
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-alpine AS build
 ARG FLAI_COMMIT=unknown
 WORKDIR /src/flaiover
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0

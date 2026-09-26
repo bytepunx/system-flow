@@ -1,6 +1,6 @@
 ---
 title: "Runbook: install"
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -75,6 +75,7 @@ If the download is refused, the repository is private and no token was found: `g
 |------|----|
 | The port is taken | `flai dashboard --port 8080`, or `flai config set dashboard.port 8080` |
 | The pull is refused | The token lacks `read:packages`: step 1 again, or `flai dashboard --build` in the monorepo |
+| The pull says the tag has no image for your platform | Tags published before S-0119 are amd64 only; use `--tag latest` or a newer version, or `flai dashboard --build` in the monorepo |
 | `flai host` will not start: another program holds `127.0.0.1:4241` | Set `FLAI_HOST_ADDR` to another loopback address for every flai you run |
 | `flai dashboard` is refused because a host runs with another configuration | One host runs per machine, for one configuration; use the same `FLAI_CONFIG`, or stop the other host with `flai host stop` |
 | Pages say no flai is connected | `flai serve status` says why; `flai host restart serve` |

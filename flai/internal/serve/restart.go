@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -63,11 +64,13 @@ func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*
 }
 
 // Restart starts a new agent, in a new session, for a story in ready or in
-// progress whose last agent flai serve started has ended or dropped. It is
-// refused while the agent action is off for the project, when the story is
-// in another state, when no agent was started for it, while its agent runs
-// or waits for an answer, when nothing can start it, and for a story in
-// ready while the in-progress limit is full.
+// progress whose last agent flai serve started has ended or dropped. For a
+// story in ready while the in-progress limit is full, it queues one instead
+// and returns the run with Queued set: flai serve starts it when there is
+// room, as it starts a story that enters ready (S-0118). It is refused while
+// the agent action is off for the project, when the story is in another
+// state, when no agent was started for it, while its agent runs or waits for
+// an answer, when one is already queued, and when nothing can start it.
 func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -99,6 +102,8 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)
+	case run.Queued != "" && it.Status == workitem.Ready:
+		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when the in-progress limit has room", it.ID, run.Queued)
 	}
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
@@ -107,16 +112,41 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		if ok, err := roomFor(e, st, it.ID); err != nil {
 			return nil, err
 		} else if !ok {
-			return nil, refused("the in-progress limit leaves no room for %s", it.ID)
+			return queue(o, e, run), nil
 		}
 	}
-	why := "ended"
-	if run.Why != "" {
-		why = run.Why
-	} else if run.live() {
-		why = "dropped: its process is gone"
+	return StartNow(ctx, o, e, it.ID, restartWhy(run))
+}
+
+// restartWhy says how run ended, for the prompt of the agent started after it.
+func restartWhy(run *AgentRun) string {
+	switch {
+	case run.Why != "":
+		return run.Why
+	case run.live():
+		return "dropped: its process is gone"
 	}
-	return StartNow(ctx, o, e, it.ID, why)
+	return "ended"
+}
+
+// queue marks run's story for another agent once the in-progress limit has
+// room, and journals it. The serving flai's next look with room starts it.
+func queue(o Options, e Entry, run *AgentRun) *AgentRun {
+	now := time.Now
+	if o.Now != nil {
+		now = o.Now
+	}
+	queued := *run
+	queued.Queued = now().UTC().Format(time.RFC3339)
+	o.Dir.updateAgent(e.Root, func(s *AgentState) { s.put(&queued) })
+	if o.Host.Record != nil {
+		o.Host.Record(hostapi.Entry{At: queued.Queued, Action: hostapi.ActionAgent, Method: "serve.agent", Project: e.Key, Root: e.Root, By: "flai serve",
+			Outcome: "done", Detail: fmt.Sprintf("queued another agent for %s: the in-progress limit leaves no room, and flai serve starts it when there is", run.Story)})
+	}
+	if o.Logger != nil {
+		o.Logger.Info("agent queued", "component", "serve", "project", e.Key, "story", run.Story)
+	}
+	return &queued
 }
 
 // lockFile holds path, made for the purpose, until the returned func is

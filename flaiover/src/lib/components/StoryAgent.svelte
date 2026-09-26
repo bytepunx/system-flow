@@ -3,9 +3,10 @@
 	// harness, the model, when it started, and why it waits or failed. It asks flai again when the
 	// project's files change and, while the agent runs, now and then, since an agent ends without
 	// changing a file. Nothing shows for a story no agent was started for. For a story in ready or
-	// in progress whose agent dropped or failed, Restart agent has flai start a new one (S-0116). For
-	// a story in ready that has had no agent, Start agent has flai start it now, and the panel says
-	// why flai serve has not (S-0115).
+	// in progress whose agent dropped or failed, Retry, at the top right, has flai start a new one
+	// (S-0116), and hides once pressed until flai refuses or that one fails too (S-0118). For a story
+	// in ready that has had no agent, Start agent has flai start it now, and the panel says why flai
+	// serve has not (S-0115).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { projectState } from '$lib/project.svelte';
@@ -20,6 +21,8 @@
 	let status = $state<HostAgent | null>(null);
 	let acting = $state<'start' | 'restart' | null>(null);
 	let actError = $state<{ action: 'start' | 'restart'; message: string } | null>(null);
+	// The failed run Retry was pressed for: the button stays hidden while flai has it.
+	let retried = $state<string | null>(null);
 
 	async function ask() {
 		try {
@@ -42,9 +45,10 @@
 	});
 
 	const activity = $derived(status?.enabled ? status.state?.stories?.[story] : undefined);
-	const canRestart = $derived(
+	const canRetry = $derived(
 		writable &&
 			activity?.state === 'failed' &&
+			activity.run.started !== retried &&
 			(storyStatus === 'ready' || storyStatus === 'in-progress')
 	);
 	// A ready story no agent was started for; flai says why not when it refuses.
@@ -58,6 +62,7 @@
 		if (acting) return;
 		acting = action;
 		actError = null;
+		if (action === 'restart') retried = activity?.run.started ?? null;
 		try {
 			const r = await api(`/api/items/${story}/agent`, {
 				method: 'POST',
@@ -71,6 +76,7 @@
 		} catch (e) {
 			actError = { action, message: e instanceof Error ? e.message : String(e) };
 		}
+		if (actError) retried = null;
 		acting = null;
 		await ask();
 	}
@@ -79,9 +85,17 @@
 
 {#if activity}
 	<section class="rounded border border-line bg-surface p-3" data-testid="story-agent">
-		<h2 class="mb-2 flex items-center gap-2 font-medium">
-			<AgentDot {activity} /> Agent
-		</h2>
+		<div class="mb-2 flex items-center gap-2">
+			<h2 class="flex items-center gap-2 font-medium"><AgentDot {activity} /> Agent</h2>
+			{#if canRetry}
+				<button
+					class="ml-auto rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
+					onclick={() => act('restart')}
+					disabled={acting !== null}
+					data-testid="story-agent-retry">Retry</button
+				>
+			{/if}
+		</div>
 		<p class="text-xs" data-testid="story-agent-line">{activityLine(activity)}</p>
 		<p class="mt-1 text-xs text-muted">
 			{activity.run.agent}, started {at(activity.run.started)}{activity.run.ended
@@ -99,17 +113,8 @@
 					host.{/if}
 				Moving the story back to ready starts another, and so does changing its agent while it is in ready.
 			</p>
-			{#if canRestart}
-				<button
-					class="mt-2 rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
-					onclick={() => act('restart')}
-					disabled={acting !== null}
-					data-testid="story-agent-restart"
-					>{acting === 'restart' ? 'Restarting…' : 'Restart agent'}</button
-				>
-			{/if}
 			{#if actError?.action === 'restart'}
-				<p class="mt-1 text-xs text-warn" data-testid="story-agent-restart-error">
+				<p class="mt-1 text-xs text-warn" data-testid="story-agent-retry-error">
 					{actError.message}
 				</p>
 			{/if}
