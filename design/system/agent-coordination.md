@@ -101,4 +101,13 @@ The September 2026 preprints are not peer reviewed; only their central ideas are
 
 ## Decision
 
-Open: the designer's answers are gathered in threads on S-0124 and recorded here and in an ADR.
+[ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md), 2026-09-26. The designer chose design 1 on TH-0018 and took every policy recommendation on TH-0019:
+
+- A story's claim is its `touches` and its open tasks' `touches`, with sub-project names and tags read as their paths. The claim holds while the story is in progress or in review.
+- A ready story is held when its claim overlaps an open story's claim, when its claim is empty or an open story's is, or when it names a story in `after:` that is not done.
+- The launcher and `wait_for_work` take the first ready story that is not held, in pull order. A held story keeps its place.
+- `flai move` warns on a held story and does not refuse it. Start agent overrides the hold.
+- The card is yellow and says the reason and what clears it.
+- `flai stream sync` trial-merges open branches and reports paths changed outside the claim. Acceptance tells overlapping open stories what changed.
+
+The stories that build it are under E-0009. Until they are accepted, flai behaves as described in "What flai does today".
