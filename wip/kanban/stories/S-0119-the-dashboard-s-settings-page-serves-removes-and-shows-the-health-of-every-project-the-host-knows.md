@@ -3,12 +3,15 @@ id: S-0119
 type: story
 nature: improvement
 title: The dashboard's settings page serves, removes, and shows the health of every project the host knows
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-26T05:18:07Z
-updated: 2026-09-26T05:18:07Z
-transitions: []
+updated: 2026-09-26T05:24:31Z
+transitions:
+  - to: ready
+    at: 2026-09-26T05:24:31Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover, flai/internal/hostapi]
 agent:

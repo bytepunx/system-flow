@@ -1,12 +1,13 @@
 ---
 title: Board
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 wip_limits:
   ready: 5
   in-progress: 2
   review: 3
-order: []
+order:
+  - S-0119
 ---
 
 # Board
