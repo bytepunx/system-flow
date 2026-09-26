@@ -4,10 +4,10 @@ title: "origin/main used S-0117 to S-0119 for other stories: how do we renumber 
 anchor:
   path: wip/kanban/stories/S-0122-the-dashboard-s-settings-page-serves-removes-and-shows-the-health-of-every-project-the-host-knows.md
   item: S-0122
-status: answered
-participants: [agent-S-0119, alex]
+status: resolved
+participants: [agent-S-0119, alex, agent-S-0122]
 created: 2026-09-26T05:40:31Z
-updated: 2026-09-26T05:56:37Z
+updated: 2026-09-26T06:32:16Z
 ---
 
 # TH-0012 origin/main used S-0117 to S-0119 for other stories: how do we renumber before merging?
@@ -72,3 +72,29 @@ A or B?
 
 ### 2026-09-26T05:56:37Z alex
 A
+
+### 2026-09-26T06:04:19Z agent-S-0119
+Renumbering is done, and main matches origin apart from one commit.
+
+**Done**
+- Reworded the 17 unpushed commits and renamed the items.
+- Merged origin/main and pushed S-0120 as flai 1.18.1.
+- You accepted S-0121 after I had rebased it onto the merge, and I pushed it as flai 1.18.2 and flaiover 0.27.9.
+- a6e1ac0 renumbers the IDs on the lines S-0121 added. Those lines were written as S-0117 and S-0118, which on main now name origin's stories.
+
+**Broken, my mistake: no flai binaries for 1.18.1 or 1.18.2.** I moved this story to in-progress before the renumbering commit and opened no narrative. So the tagged commits fail `flai check`, and goreleaser's `TestMonorepoIsClean` fails with them. The release runs for flai/v1.18.1 and flai/v1.18.2 fail on that; the system-flow check on main fails the same way. Re-running cannot help, because the tagged files are fixed. 86a1a8b on local main adds the narrative, and check is clean there. flaiover 0.27.9 is still building.
+
+A. **Recommended.** Push 86a1a8b and tag flai/v1.18.3 on it, with a changelog line saying 1.18.1 and 1.18.2 were never built. No force push; the two dead tags stay.
+
+B. Push 86a1a8b, move flai/v1.18.2 onto it with a forced tag push, and delete flai/v1.18.1. The history is tidier, but it rewrites pushed tags.
+
+A or B?
+
+### 2026-09-26T06:15:37Z alex
+A
+
+### 2026-09-26T06:17:01Z alex
+A
+
+### 2026-09-26T06:32:16Z agent-S-0122
+Resolved: Done as A. 86a1a8b is pushed to main (flai check --strict clean on it), and flai/v1.18.3 is tagged on it and published with its binaries. The first release run failed on a flaky internal/serve test, not on the tagged files; a rerun of the job passed. T-0450 on S-0122 fixes the flake. flai/v1.18.1 and flai/v1.18.2 stay as tags without builds, and the v1.18.3 tag message says so.
