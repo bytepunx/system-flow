@@ -128,9 +128,10 @@ func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
 	}
 }
 
-// S-0121 on S-0120: a registered project below a folder named for import is
-// unregistered, and remove says flai serve goes on serving it from there.
-func TestServeProjectRemoveSaysAProjectBelowAnImportFolderStaysServed(t *testing.T) {
+// S-0123: a registered project below a folder named for import is
+// unregistered and put on the list of removed projects, so that flai serve
+// does not serve it from there either.
+func TestServeProjectRemoveListsARegisteredProjectBelowAnImportFolder(t *testing.T) {
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
 	t.Setenv("FLAI_CONFIG", cfg)
@@ -144,11 +145,94 @@ func TestServeProjectRemoveSaysAProjectBelowAnImportFolderStaysServed(t *testing
 		t.Fatal(errOut)
 	}
 	out, errOut, code := serveProjectRun(t, home, "remove", "blog")
-	if code != 0 || !strings.Contains(out, "but it is below "+git+", named for import, so flai serve goes on serving it from there; flai serve import remove "+git+" stops that") {
+	if code != 0 || !strings.Contains(out, "blog ("+blog+") is no longer registered") ||
+		!strings.Contains(out, "it is below "+git+", which flai serve serves from, so it is on the list of removed projects") {
 		t.Errorf("remove: %d %s %s", code, out, errOut)
 	}
-	if got, _ := serve.DirFor(cfg).Projects(); len(got) != 0 {
+	dir := serve.DirFor(cfg)
+	if got, _ := dir.Projects(); len(got) != 0 {
 		t.Errorf("registry: %+v", got)
+	}
+	if got, _ := dir.RemovedRoots(); len(got) != 1 || got[0] != blog {
+		t.Errorf("removed: %v", got)
+	}
+}
+
+// S-0123: a project served from below a folder named for import, or below
+// the folder flai serve was started in, is put on the list by remove, by key
+// or by folder, shown as removed by list, and taken off by add, which serves
+// it from there again without registering it.
+func TestServeProjectRemoveAndAddAProjectServedFromBelowAFolder(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	git := filepath.Join(home, "git")
+	blog := keyedProject(t, git, "blog")
+	_ = os.MkdirAll(filepath.Join(blog, ".git"), 0o755)
+	if _, errOut, code := runIn(t, home, "serve", "import", "add", git); code != 0 {
+		t.Fatal(errOut)
+	}
+	started := filepath.Join(home, "work")
+	notes := keyedProject(t, started, "notes")
+	dir := serve.DirFor(cfg)
+	// flai serve runs in home/work, serving blog and notes from below
+	now := time.Now().UTC().Format(time.RFC3339)
+	st, _ := json.Marshal(serve.Status{PID: os.Getpid(), Version: "test", Started: now, Updated: now, Folder: started,
+		FolderProjects: []serve.Entry{{Key: "notes", Name: "notes", Root: notes, URL: "http://127.0.0.1:4242"}},
+		ImportProjects: []serve.Entry{{Key: "blog", Name: "blog", Root: blog, URL: "http://127.0.0.1:4242"}}})
+	_ = os.MkdirAll(string(dir), 0o700)
+	_ = os.WriteFile(filepath.Join(string(dir), "state.json"), st, 0o600)
+	before := snapshot(t, git)
+
+	out, errOut, code := serveProjectRun(t, home, "remove", "blog")
+	if code != 0 || !strings.Contains(out, "blog ("+blog+") is no longer served, and none of its files was touched") ||
+		!strings.Contains(out, "it is below "+git+", which flai serve serves from") ||
+		!strings.Contains(out, "flai serve project add "+blog+" serves it again") {
+		t.Errorf("remove blog: %d %s %s", code, out, errOut)
+	}
+	js, errOut, code := serveProjectRun(t, notes, "remove", ".", "--json")
+	var got struct {
+		Removed    serve.Entry `json:"removed"`
+		Registered bool        `json:"registered"`
+		Listed     string      `json:"listed_below"`
+	}
+	if code != 0 || json.Unmarshal([]byte(js), &got) != nil || got.Removed.Root != notes || got.Registered || got.Listed != started {
+		t.Errorf("remove notes by folder: %d %s %s", code, js, errOut)
+	}
+	if roots, _ := dir.RemovedRoots(); strings.Join(roots, ",") != blog+","+notes {
+		t.Errorf("removed: %v", roots)
+	}
+	if got, _ := dir.Projects(); len(got) != 0 {
+		t.Errorf("registered: %+v", got)
+	}
+	if after := snapshot(t, git); !equalMaps(before, after) {
+		t.Errorf("files changed:\nbefore %v\nafter  %v", before, after)
+	}
+
+	// flai serve not running: list works it out, and says blog was removed
+	_ = os.Remove(filepath.Join(string(dir), "state.json"))
+	out, _, _ = serveProjectRun(t, home, "list")
+	if !strings.Contains(out, "  blog  "+blog+"\n    removed from the dashboard; flai serve project add "+blog) {
+		t.Errorf("list:\n%s", out)
+	}
+
+	out, errOut, code = serveProjectRun(t, home, "add", blog)
+	if code != 0 || !strings.Contains(out, "blog ("+blog+") is off the list of removed projects, so flai serve serves it again from below "+git) {
+		t.Errorf("add blog: %d %s %s", code, out, errOut)
+	}
+	if roots, _ := dir.RemovedRoots(); len(roots) != 1 || roots[0] != notes {
+		t.Errorf("removed after add: %v", roots)
+	}
+	if got, _ := dir.Projects(); len(got) != 0 {
+		t.Errorf("add registered a project served from below: %+v", got)
+	}
+	// notes is no longer below a folder flai serve serves from: add registers it
+	out, errOut, code = serveProjectRun(t, notes, "add")
+	if code != 0 || !strings.Contains(out, "notes ("+notes+") is off the list of removed projects\nnotes ("+notes+") is registered with flai serve") {
+		t.Errorf("add notes: %d %s %s", code, out, errOut)
+	}
+	if roots, _ := dir.RemovedRoots(); len(roots) != 0 {
+		t.Errorf("removed after add: %v", roots)
 	}
 }
 

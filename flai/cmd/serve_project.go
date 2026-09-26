@@ -47,6 +47,12 @@ names. flai dashboard in a project registers it, and so does an import from the
 board; these commands do it on their own, without starting or stopping the
 dashboard, and say why a project is not showing.
 
+A project below a folder named for import, or below the folder flai serve
+was started in, is served without being registered. Removing one puts its
+folder on flai serve's list of removed projects, which it does not serve
+from below a folder; add takes it off the list, and it is served from there
+again.
+
 Not to be confused with flai serve import, which names the folders whose git
 repositories the board offers to import.`,
 		Example: `  flai serve project add            # the project in this folder
@@ -101,17 +107,41 @@ func (a *app) serveProjectAdd(args []string) error {
 	if err != nil {
 		return err
 	}
+	if repo.Manifest.Key == "" {
+		return fmt.Errorf("%s not served: %w", folder, errNoKey)
+	}
+	// one the operator removed from below a folder flai serve serves from is
+	// served from there again, as it was, rather than registered (S-0123)
+	root := mainRootOf(repo)
+	restored, err := a.serveDir().RestoreRoot(root)
+	if err != nil {
+		return err
+	}
+	below := ""
+	if restored {
+		below = a.servedBelow(root)
+	}
 	s, err := a.dashboardSettings(repo, "", "", 0, "")
 	if err != nil {
 		return err
 	}
-	e, err := a.registerProject(repo, s)
-	if err != nil {
-		return fmt.Errorf("%s not served: %w", folder, err)
+	e := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: root}
+	if below == "" {
+		if e, err = a.registerProject(repo, s); err != nil {
+			return fmt.Errorf("%s not served: %w", folder, err)
+		}
 	}
 	st, started, herr := a.ensureHost()
 	if a.jsonOut {
-		out := map[string]any{"project": e, "dashboard": s.url(), "host_started": started}
+		out := map[string]any{"project": e, "host_started": started}
+		if below != "" {
+			out["served_below"] = below
+		} else {
+			out["dashboard"] = s.url()
+		}
+		if restored {
+			out["restored"] = true
+		}
 		if herr != nil {
 			out["host_error"] = herr.Error()
 		} else {
@@ -119,7 +149,14 @@ func (a *app) serveProjectAdd(args []string) error {
 		}
 		return a.printJSON(out)
 	}
-	fmt.Fprintf(a.out, "%s (%s) is registered with flai serve, for the dashboard at %s\n", e.Key, e.Root, s.url())
+	if below != "" {
+		fmt.Fprintf(a.out, "%s (%s) is off the list of removed projects, so flai serve serves it again from below %s, as it did before it was removed\n", e.Key, e.Root, below)
+	} else {
+		if restored {
+			fmt.Fprintf(a.out, "%s (%s) is off the list of removed projects\n", e.Key, e.Root)
+		}
+		fmt.Fprintf(a.out, "%s (%s) is registered with flai serve, for the dashboard at %s\n", e.Key, e.Root, s.url())
+	}
 	switch {
 	case herr != nil:
 		fmt.Fprintf(a.out, "  host flai: registered, but flai host did not start: %s\n    start it with: flai host start\n", herr)
@@ -154,60 +191,105 @@ func (a *app) serveProjectRemove(arg string) error {
 	// a folder inside the project, or a worktree of it, names the project too
 	if _, err := os.Stat(folder); err == nil {
 		if repo, err := workitem.Open(folder); err == nil {
-			if folder = repo.Root; repo.MainRoot != "" {
-				folder = repo.MainRoot
-			}
+			folder = mainRootOf(repo)
 		}
 	}
-	names := func(e serve.Entry) bool { return e.Key == arg || e.Root == folder }
 	// a key first: a folder named like a key must not stand for the project it is in
+	byKey := func(e serve.Entry) bool { return arg != "" && e.Key == arg }
+	byRoot := func(e serve.Entry) bool { return e.Root == folder }
+	below := a.projectsBelow()
 	var found *serve.Entry
-	for _, same := range []func(serve.Entry) bool{
-		func(e serve.Entry) bool { return e.Key == arg },
-		func(e serve.Entry) bool { return e.Root == folder },
-	} {
+	registered := false
+	for _, same := range []func(serve.Entry) bool{byKey, byRoot} {
 		for i := range all {
 			if found == nil && same(all[i]) {
-				found = &all[i]
+				found, registered = &all[i], true
+			}
+		}
+		// one served from below a folder, not registered (S-0120, S-0102), is
+		// put on the list of removed projects instead (S-0123)
+		for _, f := range below {
+			if found == nil && same(f.Entry) {
+				found = &f.Entry
 			}
 		}
 	}
 	if found == nil {
-		if st, alive := dir.ReadStatus(time.Now()); alive {
-			for _, e := range st.FolderProjects {
-				if names(e) {
-					return fmt.Errorf("%s is not registered: flai serve serves it because it was started in %s, which it is below", e.Key, st.Folder)
-				}
-			}
-			for _, e := range st.ImportProjects {
-				if names(e) {
-					return fmt.Errorf("%s is not registered: flai serve serves it because it is below %s, named for import; flai serve import remove %s stops that", e.Key, a.importRootOf(e.Root), a.importRootOf(e.Root))
-				}
-			}
-		}
 		return fmt.Errorf("no project %s is served; flai serve project list shows those that are", arg)
 	}
-	if err := dir.Unregister(found.Root); err != nil {
-		return err
+	if registered {
+		if err := dir.Unregister(found.Root); err != nil {
+			return err
+		}
 	}
-	// below a folder named for import, flai serve goes on serving it from there (S-0120)
-	still := a.importRootOf(found.Root)
+	// below a folder flai serve serves from, it would go on serving it from
+	// there: it is kept off with the list
+	from := a.servedBelow(found.Root)
+	if from != "" {
+		if err := dir.RemoveRoot(found.Root); err != nil {
+			return err
+		}
+	}
 	if a.jsonOut {
-		out := map[string]any{"removed": found}
-		if still != "" {
-			out["still_served_below"] = still
+		out := map[string]any{"removed": found, "registered": registered}
+		if from != "" {
+			out["listed_below"] = from
 		}
 		return a.printJSON(out)
 	}
-	fmt.Fprintf(a.out, "%s (%s) is no longer registered, and none of its files was touched\n", found.Key, found.Root)
-	switch _, alive := dir.ReadStatus(time.Now()); {
-	case still != "":
-		fmt.Fprintf(a.out, "  but it is below %s, named for import, so flai serve goes on serving it from there; flai serve import remove %s stops that\n", still, still)
-	case alive:
+	name := found.Key
+	if name == "" {
+		name = found.Name
+	}
+	if registered {
+		fmt.Fprintf(a.out, "%s (%s) is no longer registered, and none of its files was touched\n", name, found.Root)
+	} else {
+		fmt.Fprintf(a.out, "%s (%s) is no longer served, and none of its files was touched\n", name, found.Root)
+	}
+	if from != "" {
+		fmt.Fprintf(a.out, "  it is below %s, which flai serve serves from, so it is on the list of removed projects, and not served from there\n", from)
+	}
+	if _, alive := dir.ReadStatus(time.Now()); alive {
 		fmt.Fprintln(a.out, "  flai serve drops it within a second, and the dashboard's switcher with it")
 	}
-	fmt.Fprintln(a.out, "  the dashboard keeps running for the other projects; flai serve project add serves it again")
+	fmt.Fprintf(a.out, "  the dashboard keeps running for the other projects; flai serve project add %s serves it again\n", found.Root)
 	return nil
+}
+
+// projectsBelow are the projects below the folder flai serve was started in
+// and the folders named for import, served or not: from flai serve's state
+// when it runs, and those it would find below the import folders either way.
+func (a *app) projectsBelow() []serve.Found {
+	var out []serve.Found
+	if st, alive := a.serveDir().ReadStatus(time.Now()); alive {
+		for _, e := range st.FolderProjects {
+			out = append(out, serve.Found{Entry: e})
+		}
+		for _, e := range st.ImportProjects {
+			out = append(out, serve.Found{Entry: e, Imported: true})
+		}
+		out = append(out, st.Unserved...)
+	}
+	return append(out, serve.FindBelow("", a.importRoots())...)
+}
+
+// servedBelow is the folder flai serve serves root from, if it is below one:
+// a folder named for import, or the folder a running flai serve was started
+// in (S-0102). Empty otherwise.
+func (a *app) servedBelow(root string) string {
+	if r := a.importRootOf(root); r != "" {
+		return r
+	}
+	if st, alive := a.serveDir().ReadStatus(time.Now()); alive && st.Folder != "" && within(st.Folder, root) {
+		return st.Folder
+	}
+	return ""
+}
+
+// within says whether root is folder or below it.
+func within(folder, root string) bool {
+	rel, err := filepath.Rel(folder, root)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // importRootOf is the folder named for import that root is served below, as
@@ -219,7 +301,7 @@ func (a *app) importRootOf(root string) string {
 			continue
 		}
 		for _, r := range roots {
-			if rel, err := filepath.Rel(r, root); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			if within(r, root) {
 				return r
 			}
 		}

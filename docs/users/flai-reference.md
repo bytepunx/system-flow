@@ -1826,6 +1826,8 @@ The projects flai serve serves on the dashboard: add, remove, and list them, and
 
 flai serve serves each project registered with it on the dashboard its entry names. flai dashboard in a project registers it, and so does an import from the board; these commands do it on their own, without starting or stopping the dashboard, and say why a project is not showing.
 
+A project below a folder named for import, or below the folder flai serve was started in, is served without being registered. Removing one puts its folder on flai serve's list of removed projects, which it does not serve from below a folder; add takes it off the list, and it is served from there again.
+
 Not to be confused with flai serve import, which names the folders whose git repositories the board offers to import.
 
 Examples:
