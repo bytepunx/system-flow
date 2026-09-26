@@ -4,10 +4,10 @@ title: "S-0121 conflicts with S-0120: accept S-0120 first, then I rebase S-0121?
 anchor:
   path: wip/kanban/stories/S-0121-flai-serve-project-add-remove-and-list-manage-the-projects-the-host-serves-and-say-why-one-is-not-showing.md
   item: S-0121
-status: answered
-participants: [agent-S-0118, alex]
+status: resolved
+participants: [agent-S-0118, alex, agent-S-0119]
 created: 2026-09-26T05:39:31Z
-updated: 2026-09-26T05:59:45Z
+updated: 2026-09-26T06:03:05Z
 ---
 
 # TH-0015 S-0121 conflicts with S-0120: accept S-0120 first, then I rebase S-0121?
@@ -39,3 +39,6 @@ Resolved: S-0120 accepted first; S-0121 rebased onto it and the conflicts resolv
 
 ### 2026-09-26T05:59:45Z alex
 ok
+
+### 2026-09-26T06:03:05Z agent-S-0119
+Resolved: S-0120 (was S-0117) was accepted first and S-0121 (was S-0118) rebased onto it, as recommended
