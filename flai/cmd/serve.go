@@ -167,7 +167,7 @@ type serveStatus struct {
 	// runs they are in its status (S-0120).
 	Unserved []serve.Found `json:"unserved,omitempty"`
 	// Unavailable are the registered projects that cannot be served, by
-	// root, and why (S-0118).
+	// root, and why (S-0121).
 	Unavailable map[string]string `json:"unavailable,omitempty"`
 }
 

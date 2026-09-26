@@ -625,7 +625,7 @@ flai serve start      # have flai host run it, starting the host if needed (flai
 flai serve stop       # the host stops it, and keeps it stopped until flai serve start
 ```
 
-Which projects `flai serve` serves is yours to change without starting or stopping the dashboard (S-0118):
+Which projects `flai serve` serves is yours to change without starting or stopping the dashboard (S-0121):
 
 ```bash
 flai serve project add              # serve the project in this folder on the dashboard

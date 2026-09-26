@@ -32,7 +32,7 @@ func serveProjectRun(t *testing.T, cwd string, args ...string) (string, string, 
 	return runWithApp(t, &app{cwd: cwd}, append([]string{"serve", "project"}, args...)...)
 }
 
-// S-0118: flai serve project add registers the project in a folder, the
+// S-0121: flai serve project add registers the project in a folder, the
 // current one by default, as flai dashboard does, and refuses what cannot be
 // served, naming why.
 func TestServeProjectAddRegistersAndRefuses(t *testing.T) {
@@ -86,7 +86,7 @@ func TestServeProjectAddRegistersAndRefuses(t *testing.T) {
 	}
 }
 
-// S-0118: flai serve project remove unregisters by key or by folder and
+// S-0121: flai serve project remove unregisters by key or by folder and
 // touches none of the project's files.
 func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
 	home := t.TempDir()
@@ -128,7 +128,7 @@ func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
 	}
 }
 
-// S-0118 on S-0117: a registered project below a folder named for import is
+// S-0121 on S-0120: a registered project below a folder named for import is
 // unregistered, and remove says flai serve goes on serving it from there.
 func TestServeProjectRemoveSaysAProjectBelowAnImportFolderStaysServed(t *testing.T) {
 	home := t.TempDir()
@@ -190,7 +190,7 @@ func equalMaps(a, b map[string]string) bool {
 	return true
 }
 
-// S-0118: flai serve project list shows each served project and how it is,
+// S-0121: flai serve project list shows each served project and how it is,
 // the repositories offered for import, and the projects under the import
 // folders that are not served; flai serve status names an unavailable one.
 func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
@@ -209,7 +209,7 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 		t.Fatal(err)
 	}
 	// an import folder with a repository to offer, a project flai serve serves
-	// from there (S-0117), and one it cannot serve
+	// from there (S-0120), and one it cannot serve
 	git := filepath.Join(home, "git")
 	_ = os.MkdirAll(filepath.Join(git, "widget", ".git"), 0o755)
 	blog := keyedProject(t, git, "blog")

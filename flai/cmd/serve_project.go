@@ -16,7 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// flai serve project manages the projects flai serve serves (S-0118): the
+// flai serve project manages the projects flai serve serves (S-0121): the
 // registry flai dashboard writes, changed and read on its own, with the
 // reason a project is not showing on the dashboard.
 
@@ -190,7 +190,7 @@ func (a *app) serveProjectRemove(arg string) error {
 	if err := dir.Unregister(found.Root); err != nil {
 		return err
 	}
-	// below a folder named for import, flai serve goes on serving it from there (S-0117)
+	// below a folder named for import, flai serve goes on serving it from there (S-0120)
 	still := a.importRootOf(found.Root)
 	if a.jsonOut {
 		out := map[string]any{"removed": found}
@@ -211,7 +211,7 @@ func (a *app) serveProjectRemove(arg string) error {
 }
 
 // importRootOf is the folder named for import that root is served below, as
-// flai serve finds them (S-0117), or empty.
+// flai serve finds them (S-0120), or empty.
 func (a *app) importRootOf(root string) string {
 	roots := a.importRoots()
 	for _, f := range serve.FindBelow("", roots) {
@@ -232,7 +232,7 @@ type servedProject struct {
 	serve.Entry
 	// From is registry for a registered project; folder for one served
 	// because flai serve was started in a folder above it (S-0102); import
-	// for one below a folder named for import (S-0117).
+	// for one below a folder named for import (S-0120).
 	From string `json:"from"`
 	// State is connected, connecting, not-connected, unavailable, or
 	// not-running (flai serve is not).
@@ -247,7 +247,7 @@ type projectListing struct {
 	Served     []servedProject   `json:"served"`
 	Candidates []serve.Candidate `json:"candidates"`
 	// Unserved are the projects below the folders named for import, or the
-	// folder flai serve was started in, that it does not serve, and why (S-0117).
+	// folder flai serve was started in, that it does not serve, and why (S-0120).
 	Unserved []serve.Found `json:"unserved"`
 	Roots    []string      `json:"import_roots"`
 }

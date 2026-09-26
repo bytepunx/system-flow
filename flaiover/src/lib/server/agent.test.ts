@@ -401,7 +401,7 @@ describe('AgentRegistry and AgentHub', () => {
 		expect(registry.list().map((p) => p.key)).toEqual(['harbour']);
 	});
 
-	// S-0118: flai serve says `removed` before it drops a project that left its registry. The
+	// S-0121: flai serve says `removed` before it drops a project that left its registry. The
 	// project leaves the list once its connection closes, while one that only lost its flai (a
 	// restart) stays; a new connection for the key brings it back.
 	it('drops a project its flai said was removed, and takes it back when it connects again', async () => {

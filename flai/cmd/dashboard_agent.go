@@ -94,7 +94,7 @@ func (a *app) connectServe(repo *workitem.Repo, s dashboardSettings) (note strin
 
 // serveEntry is what flai serve is told about a project to serve it for the
 // dashboard s: flai dashboard, flai import, and flai serve project add
-// register the same (S-0117, S-0118). The root is the main checkout, as the
+// register the same (S-0120, S-0121). The root is the main checkout, as the
 // dashboard serves it (ADR-0019), also for a project found below a folder.
 func (a *app) serveEntry(repo *workitem.Repo, s dashboardSettings) serve.Entry {
 	root := repo.Root

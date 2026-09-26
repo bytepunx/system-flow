@@ -11,11 +11,11 @@ import (
 )
 
 // Removed is the notification flai serve sends a dashboard just before it
-// drops a project that is no longer registered (S-0118), so that the
+// drops a project that is no longer registered (S-0121), so that the
 // dashboard's switcher drops it too instead of showing it as not connected.
 const Removed = "removed"
 
-// Unavailable says why a registered project cannot be served (S-0118): its
+// Unavailable says why a registered project cannot be served (S-0121): its
 // folder is gone, it has no system-flow.yaml or one that does not load or has
 // no key, or the agent credential cannot be read. Empty when it can be.
 func (e Entry) Unavailable() string {
@@ -45,7 +45,7 @@ func (e Entry) Unavailable() string {
 
 // keyTaken is the entry other than the one at root that has key, if any: two
 // roots with one key would take turns replacing each other's connection in
-// the dashboard (S-0118).
+// the dashboard (S-0121).
 func keyTaken(all []Entry, key, root string) error {
 	for _, x := range all {
 		if x.Key == key && x.Root != root {

@@ -193,7 +193,7 @@ export class AgentHub extends EventEmitter {
 	private configuredFlag: boolean;
 	/** Whether the last connection this hub adopted was a candidate (S-0098); kept once it goes. */
 	candidate = false;
-	/** Whether its flai said the project is no longer served (S-0118): unregistered with flai serve
+	/** Whether its flai said the project is no longer served (S-0121): unregistered with flai serve
 	 * project remove or flai dashboard stop. A new connection for the key clears it. */
 	removed = false;
 
@@ -264,7 +264,7 @@ export class AgentHub extends EventEmitter {
 			if (typeof path === 'string' && path) this.emit('change', path);
 			return;
 		}
-		// flai serve no longer serves the project, and is about to close (S-0118)
+		// flai serve no longer serves the project, and is about to close (S-0121)
 		if (m.method === 'removed' && m.id === undefined) {
 			this.removed = true;
 			return;
@@ -398,7 +398,7 @@ export class AgentRegistry extends EventEmitter {
 		for (const [key, h] of this.hubs) {
 			const st = h.status();
 			// a candidate that is gone was imported, or its folder is no longer named, and a project
-			// flai said was removed is no longer served: neither is a project to show (S-0118)
+			// flai said was removed is no longer served: neither is a project to show (S-0121)
 			if ((h.candidate || h.removed) && !st.connected) continue;
 			out.push({
 				key,

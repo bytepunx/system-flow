@@ -53,7 +53,7 @@ type Status struct {
 	ImportProjects []Entry `json:"import_projects,omitempty"`
 	Unserved       []Found `json:"unserved,omitempty"`
 	// Unavailable are the registered projects not served, by root, and why
-	// (S-0118): the folder is gone or has no manifest, say.
+	// (S-0121): the folder is gone or has no manifest, say.
 	Unavailable map[string]string `json:"unavailable,omitempty"`
 }
 
@@ -106,7 +106,7 @@ func (d Dir) write(path string, v any) error {
 }
 
 // Register adds the project or replaces the entry with its root. A key
-// another root has is refused (S-0118).
+// another root has is refused (S-0121).
 func (d Dir) Register(e Entry) error {
 	if e.Root == "" || e.URL == "" || e.KeyFile == "" || e.Key == "" {
 		return errors.New("a project needs a root, a key, a dashboard address, and a credential file")
@@ -254,7 +254,7 @@ func Run(ctx context.Context, o Options) error {
 		mu.Lock()
 		defer mu.Unlock()
 		// A project that cannot be served is said once, when it goes and when
-		// it comes back, not tried and logged at every tick (S-0118).
+		// it comes back, not tried and logged at every tick (S-0121).
 		want, gone := map[string]Entry{}, map[string]string{}
 		for _, e := range entries {
 			if why := e.Unavailable(); why != "" {
@@ -274,7 +274,7 @@ func Run(ctx context.Context, o Options) error {
 			if e, ok := want[root]; !ok || e != r.entry {
 				// A project that left the registry, or is served under another
 				// key, is said to be removed first, so that the dashboard drops
-				// it rather than show it as waiting for flai (S-0118).
+				// it rather than show it as waiting for flai (S-0121).
 				if _, unavailable := gone[root]; (!ok && !unavailable) || (ok && e.Key != r.entry.Key) {
 					r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
 				}
