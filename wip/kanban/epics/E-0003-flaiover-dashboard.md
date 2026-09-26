@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-24T08:37:20Z
+updated: 2026-09-26T02:42:25Z
 transitions: []
 tags: []
 ---
@@ -54,6 +54,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0107 Host panel in the dashboard allows for view and management of serve and MCP processes
 - S-0113 The new section for the host page for hosts needs improvement
 - S-0116 when a story moves to ready, if there is available capacity, it should be assigned to an agent
+- S-0117 Every project's cache on the dashboard forgets what flai says changed
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
