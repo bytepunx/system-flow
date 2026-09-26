@@ -412,13 +412,17 @@ describe('AgentRegistry and AgentHub', () => {
 			key: 'quay',
 			name: 'Quay'
 		});
-		quay.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'removed', params: { project: 'quay' } }));
+		quay.ws.send(
+			JSON.stringify({ jsonrpc: '2.0', method: 'removed', params: { project: 'quay' } })
+		);
 		quay.ws.close();
 		await quay.closed;
 		harbour.ws.terminate();
 		await harbour.closed;
 		await new Promise((r) => setTimeout(r, 20));
-		expect(registry.list()).toEqual([expect.objectContaining({ key: 'harbour', connected: false })]);
+		expect(registry.list()).toEqual([
+			expect.objectContaining({ key: 'harbour', connected: false })
+		]);
 		expect(registry.solo()).toBe(registry.peek('harbour'));
 
 		const back = await connect(url, KEY, () => ({ name: 'Quay' }), {}, REQUIRED_METHODS, {
