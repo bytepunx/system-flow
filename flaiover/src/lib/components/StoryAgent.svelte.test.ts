@@ -124,8 +124,9 @@ describe('StoryAgent (S-0104)', () => {
 		);
 	});
 
-	// S-0116: a story in ready or in progress whose agent dropped or failed gets a new one
-	describe('Restart agent', () => {
+	// S-0116: a story in ready or in progress whose agent dropped or failed gets a new one; S-0118:
+	// from Retry at the top right of the pane, which hides once pressed
+	describe('Retry', () => {
 		const failed = {
 			'S-0104': {
 				state: 'failed',
@@ -134,7 +135,9 @@ describe('StoryAgent (S-0104)', () => {
 			}
 		};
 		const button = () =>
-			document.querySelector<HTMLButtonElement>('[data-testid="story-agent-restart"]');
+			document.querySelector<HTMLButtonElement>('[data-testid="story-agent-retry"]');
+		const posts = () =>
+			api.mock.calls.filter((call) => (call[1] as RequestInit)?.method === 'POST');
 
 		it('is offered only for a failed agent of a story in ready or in progress, to a writer', async () => {
 			for (const [stories, props, offered] of [
@@ -142,16 +145,81 @@ describe('StoryAgent (S-0104)', () => {
 				[failed, { status: 'ready', writable: true }, true],
 				[failed, { status: 'review', writable: true }, false],
 				[failed, { status: 'in-progress', writable: false }, false],
-				[{ 'S-0104': { state: 'working', run } }, { status: 'in-progress', writable: true }, false]
+				[{ 'S-0104': { state: 'working', run } }, { status: 'in-progress', writable: true }, false],
+				[
+					{ 'S-0104': { state: 'waiting', why: 'blocked: on hold', run } },
+					{ status: 'in-progress', writable: true },
+					false
+				]
 			] as const) {
 				await show(stories, true, props);
-				expect(button() !== null, JSON.stringify(props)).toBe(offered);
+				expect(button() !== null, JSON.stringify(stories) + JSON.stringify(props)).toBe(offered);
 				unmount(c!);
 				c = undefined;
 			}
 		});
 
-		it('asks flai to restart it, and says why when flai refuses', async () => {
+		it('sits in the header, at the right of the pane', async () => {
+			await show(failed, true, { status: 'in-progress', writable: true });
+			const header = button()!.parentElement!;
+			expect(header.querySelector('h2')!.textContent).toContain('Agent');
+			expect(header.parentElement).toBe(section());
+			expect(button()!.className).toContain('ml-auto');
+			expect(button()!.textContent).toBe('Retry');
+		});
+
+		it('asks flai to start another, and is gone from the moment it is pressed', async () => {
+			await show(failed, true, { status: 'in-progress', writable: true });
+			let taken: (v: unknown) => void = () => {};
+			api.mockImplementation((path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? new Promise((r) => (taken = r))
+					: Promise.resolve(answer({ enabled: true, state: { command: '', stories: failed } }))
+			);
+			button()!.click();
+			flushSync();
+			// pressed: hidden while flai has it, so it cannot be pressed twice
+			expect(button()).toBeNull();
+			const post = posts()[0];
+			expect(post[0]).toBe('/api/items/S-0104/agent');
+			expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ action: 'restart' });
+			// flai took it, and the state has not caught up yet: still hidden
+			taken({ ok: true, json: async () => ({ story: 'S-0104' }) });
+			await settle();
+			expect(button()).toBeNull();
+			expect(posts()).toHaveLength(1);
+			// the new agent at work
+			api.mockResolvedValue(
+				answer({
+					enabled: true,
+					state: { command: '', stories: { 'S-0104': { state: 'working', run } } }
+				})
+			);
+			FakeEventSource.opened[0].listeners.change();
+			await settle();
+			expect(text()).toContain('agent working');
+			expect(button()).toBeNull();
+			// and when that one fails too, Retry is back
+			api.mockResolvedValue(
+				answer({
+					enabled: true,
+					state: {
+						command: '',
+						stories: {
+							'S-0104': {
+								state: 'failed',
+								run: { ...run, started: '2026-09-23T19:00:00Z', ended: '2026-09-23T19:10:00Z' }
+							}
+						}
+					}
+				})
+			);
+			FakeEventSource.opened[0].listeners.change();
+			await settle();
+			expect(button()).not.toBeNull();
+		});
+
+		it("comes back, with flai's reason, when flai refuses", async () => {
 			await show(failed, true, { status: 'in-progress', writable: true });
 			api.mockImplementation(async (path: string, init?: RequestInit) =>
 				init?.method === 'POST'
@@ -160,25 +228,10 @@ describe('StoryAgent (S-0104)', () => {
 			);
 			button()!.click();
 			await settle();
-			const post = api.mock.calls.find((call) => (call[1] as RequestInit)?.method === 'POST')!;
-			expect(post[0]).toBe('/api/items/S-0104/agent');
-			expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ action: 'restart' });
 			expect(
-				document.querySelector('[data-testid="story-agent-restart-error"]')!.textContent
+				document.querySelector('[data-testid="story-agent-retry-error"]')!.textContent
 			).toContain('the in-progress limit leaves no room');
-			// a restart that is taken: the page asks again and shows the new agent at work
-			api.mockImplementation(async (path: string, init?: RequestInit) =>
-				init?.method === 'POST'
-					? { ok: true, json: async () => ({ story: 'S-0104' }) }
-					: answer({
-							enabled: true,
-							state: { command: '', stories: { 'S-0104': { state: 'working', run } } }
-						})
-			);
-			button()!.click();
-			await settle();
-			expect(text()).toContain('agent working');
-			expect(button()).toBeNull();
+			expect(button()).not.toBeNull();
 		});
 	});
 
@@ -202,7 +255,7 @@ describe('StoryAgent (S-0104)', () => {
 				[{}, true, { status: 'ready', writable: false }, false],
 				[{}, false, { status: 'ready', writable: true }, false],
 				[{ 'S-0104': { state: 'working', run } }, true, { status: 'ready', writable: true }, false],
-				// Restart agent is the way for one whose agent failed
+				// Retry is the way for one whose agent failed
 				[failed, true, { status: 'ready', writable: true }, false]
 			] as const) {
 				await show(stories, enabled, props);
