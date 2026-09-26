@@ -46,6 +46,11 @@ type Status struct {
 	// and FolderProjects the projects below it that it serves (S-0102).
 	Folder         string  `json:"folder,omitempty"`
 	FolderProjects []Entry `json:"folder_projects,omitempty"`
+	// ImportProjects are the git repositories with a system-flow.yaml below
+	// the folders named for import that it serves, and Unserved the projects
+	// below either kind of folder that it does not, with why (S-0117).
+	ImportProjects []Entry `json:"import_projects,omitempty"`
+	Unserved       []Found `json:"unserved,omitempty"`
 }
 
 // Dir is the directory that holds the registry and the state.
@@ -221,7 +226,6 @@ func Run(ctx context.Context, o Options) error {
 	started := o.Now().UTC().Format(time.RFC3339)
 	clients := map[string]*running{}
 	offered := &offers{o: o, running: map[string]*running{}}
-	var folderEntries []Entry
 	var mu sync.Mutex
 	defer func() {
 		offered.halt()
@@ -237,8 +241,7 @@ func Run(ctx context.Context, o Options) error {
 			o.Logger.Warn("registry unreadable", "component", "serve", "err", err.Error())
 			return
 		}
-		folderEntries = offered.folderProjects(entries)
-		entries = append(entries, folderEntries...)
+		entries = append(entries, offered.folderProjects(entries)...)
 		mu.Lock()
 		defer mu.Unlock()
 		want := map[string]Entry{}
@@ -304,7 +307,17 @@ func Run(ctx context.Context, o Options) error {
 			st.Connections[root] = r.client.State()
 		}
 		st.Offered = offered.found
-		st.Folder, st.FolderProjects = o.Folder, folderEntries
+		st.Folder = o.Folder
+		for _, p := range offered.placed {
+			switch {
+			case p.Reason != "":
+				st.Unserved = append(st.Unserved, p)
+			case p.Imported:
+				st.ImportProjects = append(st.ImportProjects, p.Entry)
+			default:
+				st.FolderProjects = append(st.FolderProjects, p.Entry)
+			}
+		}
 		mu.Unlock()
 		if err := o.Dir.write(o.Dir.status(), st); err != nil {
 			o.Logger.Warn("status not written", "component", "serve", "err", err.Error())

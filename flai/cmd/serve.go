@@ -162,6 +162,10 @@ type serveStatus struct {
 	// MCP is each project's HTTP MCP server that is running, by root: the
 	// one flai serve keeps (S-0096, ADR-0034), or one started by hand.
 	MCP map[string]mcpState `json:"mcp,omitempty"`
+	// Unserved are the projects below the folders named for import that are
+	// not served, and why, worked out when flai serve does not run; when it
+	// runs they are in its status (S-0117).
+	Unserved []serve.Found `json:"unserved,omitempty"`
 }
 
 func (a *app) readServeStatus() (serveStatus, error) {
@@ -198,6 +202,9 @@ func (a *app) printServeStatus() error {
 		return err
 	}
 	if a.jsonOut {
+		if !st.Running {
+			_, st.Unserved = a.belowImportRoots(st)
+		}
 		return a.printJSON(st)
 	}
 	if !st.Running {
@@ -233,6 +240,7 @@ func (a *app) printServeStatus() error {
 			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
 		}
 	}
+	a.printBelowImportRoots(st)
 	if st.Running && len(st.Status.Offered) > 0 {
 		fmt.Fprintln(a.out, "offered for import (flai serve import):")
 		for _, c := range st.Status.Offered {

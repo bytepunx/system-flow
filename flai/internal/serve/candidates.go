@@ -14,7 +14,6 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
-	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Candidate is a git repository under a folder the operator named that is
@@ -38,13 +37,37 @@ var skipScanning = map[string]bool{"node_modules": true, "vendor": true, "dist":
 const CandidatePrefix = hostapi.CandidatePrefix
 
 // FindCandidates lists the git repositories under roots with no
-// system-flow.yaml of their own, other than those already served. A folder
-// that is a repository is not looked into further, hidden folders and build
-// output never are, and nothing is followed through a symbolic link. Each
-// key, after CandidatePrefix, is the folder's name made safe and unique,
-// taken keys (the served projects') included: it becomes the project's key.
+// system-flow.yaml of their own, other than those already served. Each key,
+// after CandidatePrefix, is the folder's name made safe and unique, taken
+// keys (the served projects') included: it becomes the project's key.
 func FindCandidates(roots []string, served, taken map[string]bool) []Candidate {
 	var out []Candidate
+	for _, dir := range repositories(roots) {
+		if !served[dir] && !exists(filepath.Join(dir, manifest.File)) {
+			out = append(out, Candidate{Root: dir, Name: filepath.Base(dir)})
+		}
+	}
+	used := map[string]bool{}
+	for k := range taken {
+		used[k] = true
+	}
+	for i := range out {
+		base := slug(out[i].Name)
+		key := base
+		for n := 2; used[key]; n++ {
+			key = fmt.Sprintf("%s-%d", base, n)
+		}
+		used[key] = true
+		out[i].Key = CandidatePrefix + key
+	}
+	return out
+}
+
+// repositories lists the git repositories under roots, each once, sorted. A
+// folder that is a repository is not looked into further, hidden folders and
+// build output never are, and nothing is followed through a symbolic link.
+func repositories(roots []string) []string {
+	var out []string
 	seen := map[string]bool{}
 	var walk func(dir string, depth int)
 	walk = func(dir string, depth int) {
@@ -53,9 +76,7 @@ func FindCandidates(roots []string, served, taken map[string]bool) []Candidate {
 		}
 		seen[dir] = true
 		if isRepository(dir) {
-			if !served[dir] && !exists(filepath.Join(dir, manifest.File)) {
-				out = append(out, Candidate{Root: dir, Name: filepath.Base(dir)})
-			}
+			out = append(out, dir)
 			return
 		}
 		if depth >= candidateDepth {
@@ -77,20 +98,7 @@ func FindCandidates(roots []string, served, taken map[string]bool) []Candidate {
 			walk(filepath.Clean(abs), 0)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Root < out[j].Root })
-	used := map[string]bool{}
-	for k := range taken {
-		used[k] = true
-	}
-	for i := range out {
-		base := slug(out[i].Name)
-		key := base
-		for n := 2; used[key]; n++ {
-			key = fmt.Sprintf("%s-%d", base, n)
-		}
-		used[key] = true
-		out[i].Key = CandidatePrefix + key
-	}
+	sort.Strings(out)
 	return out
 }
 
@@ -135,9 +143,11 @@ type offers struct {
 	scanned time.Time
 	rescan  atomic.Bool
 
-	// the projects below Options.Folder (S-0102), found again every ScanEvery
-	folderFound   []Entry
+	// the projects below Options.Folder (S-0102) and the import roots
+	// (S-0117), found again every ScanEvery, and where each was placed
+	folderFound   []Found
 	folderScanned time.Time
+	placed        []Found
 }
 
 func (f *offers) every() time.Duration {
@@ -160,14 +170,14 @@ func (f *offers) importRoots() []string {
 	return roots
 }
 
-// dashboards are the dashboards served projects dial, and those flai
-// dashboard started outside any project (S-0101), by address.
-func (f *offers) dashboards(entries []Entry) map[string]Entry {
+// KnownDashboards are the dashboards the entries dial, and those flai
+// dashboard recorded when started outside any project (S-0101), by address.
+func (d Dir) KnownDashboards(entries []Entry) map[string]Entry {
 	out := map[string]Entry{}
 	for _, e := range entries {
 		out[e.URL] = e
 	}
-	if recorded, err := f.o.Dir.Dashboards(); err == nil {
+	if recorded, err := d.Dashboards(); err == nil {
 		for _, db := range recorded {
 			if _, ok := out[db.URL]; !ok {
 				out[db.URL] = Entry{URL: db.URL, KeyFile: db.KeyFile}
@@ -178,48 +188,30 @@ func (f *offers) dashboards(entries []Entry) map[string]Entry {
 }
 
 // folderProjects are the system-flow projects below the folder flai serve was
-// started in (S-0102), served as registered ones are, for as long as it runs
-// and without being written to the registry. Each is served for the first
-// dashboard, by address, that the registered projects or a recorded one
-// reach; with none there is nowhere to serve them yet. A project already
-// registered, or whose key another has, is left to the registry.
+// started in (S-0102), and the git repositories with a system-flow.yaml below
+// the folders named for import (S-0117), that it serves as registered ones
+// are, for as long as it runs and without writing them to the registry. They
+// are found again every ScanEvery, and placed by Place: each is served for the
+// first dashboard, by address, that the registered projects or a recorded one
+// reach. What is not served, and why, is kept in placed for the status.
 func (f *offers) folderProjects(entries []Entry) []Entry {
-	if f.o.Folder == "" {
+	if f.o.Folder == "" && f.o.ImportRoots == nil {
 		return nil
 	}
 	if now := f.o.Now(); f.folderScanned.IsZero() || now.Sub(f.folderScanned) >= f.every() || f.rescan.Load() {
-		f.folderFound = nil
-		for _, root := range workitem.FindProjects(f.o.Folder) {
-			m, err := manifest.Load(filepath.Join(root, manifest.File))
-			if err != nil || m.Key == "" {
-				continue
-			}
-			f.folderFound = append(f.folderFound, Entry{Key: m.Key, Name: m.Name, Root: root})
+		var roots []string
+		if f.o.ImportRoots != nil {
+			roots = f.o.ImportRoots()
 		}
+		f.folderFound = FindBelow(f.o.Folder, roots)
 		f.folderScanned = now
 	}
-	dashboards := f.dashboards(entries)
-	if len(dashboards) == 0 {
-		return nil
-	}
-	urls := make([]string, 0, len(dashboards))
-	for u := range dashboards {
-		urls = append(urls, u)
-	}
-	sort.Strings(urls)
-	d := dashboards[urls[0]]
-	roots, keys := map[string]bool{}, map[string]bool{}
-	for _, e := range entries {
-		roots[e.Root], keys[e.Key] = true, true
-	}
+	f.placed = Place(f.folderFound, entries, f.o.Dir.KnownDashboards(entries))
 	var out []Entry
-	for _, e := range f.folderFound {
-		if roots[e.Root] || keys[e.Key] {
-			continue
+	for _, p := range f.placed {
+		if p.Reason == "" {
+			out = append(out, p.Entry)
 		}
-		e.URL, e.KeyFile = d.URL, d.KeyFile
-		keys[e.Key] = true
-		out = append(out, e)
 	}
 	return out
 }
@@ -237,7 +229,7 @@ func (f *offers) reconcile(ctx context.Context, entries []Entry) {
 		f.scanned = now
 	}
 	// a candidate has no dashboard of its own
-	dashboards := f.dashboards(entries)
+	dashboards := f.o.Dir.KnownDashboards(entries)
 	want := map[string]Entry{}
 	for url, d := range dashboards {
 		for _, c := range f.found {

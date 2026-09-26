@@ -24,7 +24,12 @@ the dashboards the projects it serves connect to: picking one there asks
 whether to import it. Importing runs flai import --commit in the repository, as
 you and on this host: it writes the standard's files, runs the repository's own
 tests, and commits the import when they pass. Naming a folder is your say that
-this may happen to what is in it; nothing else enables it.`,
+this may happen to what is in it; nothing else enables it.
+
+A repository there that has a system-flow.yaml already, imported on the
+command line say, is served as a project (S-0117), as a registered one is,
+for as long as it is there and without being written to the registry;
+flai serve status lists those it does not serve, and why.`,
 		Example: `  flai serve import add ~/git
   flai serve import list
   flai serve import remove ~/git`,
@@ -58,7 +63,7 @@ this may happen to what is in it; nothing else enables it.`,
 				return a.printJSON(map[string]any{"roots": cfg.ImportRoots, "config": path})
 			}
 			if add {
-				fmt.Fprintf(a.out, "%s: its git repositories without system-flow.yaml are offered for import\n  flai serve looks again within 30 seconds; flai serve import list shows what it finds\n", dir)
+				fmt.Fprintf(a.out, "%s: its git repositories without system-flow.yaml are offered for import, and those with one are served\n  flai serve looks again within 30 seconds; flai serve import list shows what it finds\n", dir)
 			} else {
 				fmt.Fprintf(a.out, "%s: no longer looked in\n", dir)
 			}
