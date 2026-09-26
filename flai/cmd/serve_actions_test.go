@@ -476,3 +476,28 @@ func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
 		t.Errorf("the start is not journalled: %s", js)
 	}
 }
+
+// S-0140: flai serve agent commit starts an agent to commit what a story in
+// review left uncommitted in its worktree, and says why when it will not.
+func TestServeAgentCommitStartsAnAgentForAnUncommittedWorktree(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	runIn(t, root, "epic", "new", "Epic")
+	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-slice.md")
+	s, _ := os.ReadFile(file)
+	_ = os.WriteFile(file, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
+	if _, errOut, code := runIn(t, root, "serve", "agent", "commit", "S-1"); code == 0 || !strings.Contains(errOut, "rule: the agent host action is off for this project") {
+		t.Errorf("action off: %d %s", code, errOut)
+	}
+	runIn(t, root, "serve", "enable", "agent")
+	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	for _, args := range [][]string{{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"task", "new", "Do", "--story", "S-0001"}, {"move", "S-0001", "review"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %s", args, errOut)
+		}
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "commit", "S-1"); code == 0 || !strings.Contains(errOut, "rule: S-0001 has no worktree at .flai-cache/worktrees/S-0001") {
+		t.Errorf("no worktree: %d %s", code, errOut)
+	}
+}

@@ -82,7 +82,8 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 // {story}, {root}, {model}, and {harness} replaced in its arguments. The
 // story's config is not interpreted: it is handed over as FLAI_AGENT_CONFIG,
 // a JSON object, for the command to read if it wants. Started again after
-// its question was answered, it has FLAI_ANSWERED, the thread's ID.
+// its question was answered, it has FLAI_ANSWERED, the thread's ID; started
+// to commit what a story's worktree holds, FLAI_COMMIT, the worktree (S-0140).
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -116,6 +117,9 @@ func (command) Start(r Request, host Host) (Start, error) {
 	env := []string{"FLAI_MODEL=" + model, "FLAI_HARNESS=" + harness, "FLAI_AGENT_CONFIG=" + string(cfg)}
 	if r.Answered != "" {
 		env = append(env, "FLAI_ANSWERED="+r.Answered)
+	}
+	if r.Commit != "" {
+		env = append(env, "FLAI_COMMIT="+r.Commit)
 	}
 	return Start{Harness: Command, Argv: argv, Env: env}, nil
 }

@@ -67,6 +67,7 @@ var good = map[string]struct {
 	"checks.cancel": {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
 	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
+	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}},` + rid + `}`,
@@ -140,6 +141,7 @@ var refused = map[string][]string{
 	"checks.cancel": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.restart": {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.start":   {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -441,7 +443,7 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 		}
 		host := args[0] == "serve" || args[0] == "agent" || (len(args) > 1 && args[1] == "token" && (args[0] == "dashboard" || args[0] == "mcp"))
 		// S-0116, S-0115: starting a story's agent is the agent action's, and changes no setting
-		now := (name == "agent.restart" || name == "agent.start") && sp.action == ActionAgent && strings.Join(args[:3], " ") == "serve "+strings.Replace(name, ".", " ", 1)
+		now := (name == "agent.restart" || name == "agent.start" || name == "agent.commit") && sp.action == ActionAgent && strings.Join(args[:3], " ") == "serve "+strings.Replace(name, ".", " ", 1)
 		if host && !now && sp.action != ActionSettings {
 			t.Errorf("%s runs flai %s without the settings action", name, strings.Join(args[:2], " "))
 		}
@@ -550,10 +552,11 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	if got, _ := json.Marshal(res); string(got) != `{"enabled":false}` {
 		t.Errorf("on a host nobody touched: %s", got)
 	}
-	// Nothing the dashboard asks for stops or configures an agent; the two
-	// that start one, a ready story's now (S-0115) and a new one for a story
-	// whose agent dropped or failed (S-0116), need the agent action.
-	starts := map[string]bool{"agent.restart": true, "agent.start": true}
+	// Nothing the dashboard asks for stops or configures an agent; the three
+	// that start one, a ready story's now (S-0115), a new one for a story
+	// whose agent dropped or failed (S-0116), and one to commit what a story
+	// in review left uncommitted (S-0140), need the agent action.
+	starts := map[string]bool{"agent.restart": true, "agent.start": true, "agent.commit": true}
 	for name := range Methods("test", nil) {
 		if strings.HasPrefix(name, "agent.") && name != "agent.status" && !starts[name] {
 			t.Errorf("%s: nothing the dashboard can ask for stops or configures an agent", name)
@@ -835,11 +838,15 @@ func TestTheAgentReachesFlaiAsFlags(t *testing.T) {
 // S-0118: a restart that flai queued for want of room is journalled as queued,
 // not as a start with no process.
 func TestAnAgentRestartThatWasQueuedIsJournalledAsQueued(t *testing.T) {
-	describe := describeAgentNow("restarted")
+	describe := describeAgentNow("restarted", "")
 	if _, detail := describe(Written{Data: json.RawMessage(`{"story":"S-0001","agent":"agent-S-0001","queued":"2026-09-26T03:00:00Z"}`)}, nil); detail != "queued another agent for S-0001 until the in-progress limit has room" {
 		t.Errorf("queued: %q", detail)
 	}
 	if _, detail := describe(Written{Data: json.RawMessage(`{"story":"S-0001","agent":"agent-S-0001","command":"claude","pid":42}`)}, nil); detail != "restarted claude for S-0001 as agent-S-0001 (pid 42)" {
 		t.Errorf("started: %q", detail)
+	}
+	commit := describeAgentNow("started", " to commit what its worktree holds")
+	if _, detail := commit(Written{Data: json.RawMessage(`{"story":"S-0001","agent":"agent-S-0001","command":"claude","pid":42}`)}, nil); detail != "started claude for S-0001 as agent-S-0001 to commit what its worktree holds (pid 42)" {
+		t.Errorf("commit: %q", detail)
 	}
 }

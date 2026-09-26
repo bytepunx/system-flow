@@ -176,3 +176,26 @@ func TestAnAnsweredAgentGoesOnInItsSession(t *testing.T) {
 		t.Errorf("command env: %q", cmd.Env)
 	}
 }
+
+// S-0140: an agent started to commit a story's worktree is told to do that
+// and nothing else; the operator's command is told the worktree.
+func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
+	r := req(nil)
+	r.Commit = "/repo/.flai-cache/worktrees/S-0104"
+	p := Prompt(r)
+	for _, want := range []string{"agent-S-0104", "work left uncommitted in story S-0104's worktree, /repo/.flai-cache/worktrees/S-0104", "Do only this", "on story/S-0104", "Do not move S-0104", "flai stream log S-0104", "thread_open on S-0104"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("commit prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "flai move S-0104 review") {
+		t.Errorf("a commit run is not told to work the story to review:\n%s", p)
+	}
+	st, err := command{}.Start(r, Host{Program: "run"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(strings.Join(st.Env, "\n"), "FLAI_COMMIT=/repo/.flai-cache/worktrees/S-0104") {
+		t.Errorf("env: %v", st.Env)
+	}
+}

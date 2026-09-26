@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/watch"
@@ -194,6 +195,9 @@ type Options struct {
 	// project (S-0102): the projects below it are served, and it is looked
 	// in for repositories to import, as if named. Empty otherwise.
 	Folder string
+	// Git asks git what a story's worktree holds, for flai serve agent
+	// commit (S-0140); the system's git when nil.
+	Git execx.Runner
 }
 
 type running struct {

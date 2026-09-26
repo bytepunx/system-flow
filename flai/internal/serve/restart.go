@@ -39,20 +39,26 @@ func refused(format string, args ...any) error { return &Refused{Why: fmt.Sprint
 // does not wait for the agent: the serving flai settles the run once the
 // process is gone.
 func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*AgentRun, error) {
-	if !StoryID.MatchString(story) {
-		return nil, refused("%q is not a story's ID", story)
+	return startNow(ctx, o, e, readyStory{ID: story, Restart: restart})
+}
+
+// startNow is StartNow for what want says, its agent read from the story.
+func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentRun, error) {
+	if !StoryID.MatchString(want.ID) {
+		return nil, refused("%q is not a story's ID", want.ID)
 	}
 	repo, err := workitem.Open(e.Root)
 	if err != nil {
 		return nil, err
 	}
-	it, err := repo.Get(story)
+	it, err := repo.Get(want.ID)
 	if err != nil {
 		return nil, err
 	}
+	want.ID, want.Agent = it.ID, it.Agent
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.start(ctx, o.Agent(e.Root), readyStory{ID: it.ID, Agent: it.Agent, Restart: restart})
+	l.start(ctx, o.Agent(e.Root), want)
 	run := o.Dir.AgentStates()[e.Root].Stories[it.ID]
 	if run == nil {
 		return nil, fmt.Errorf("the run for %s was not recorded in %s", it.ID, o.Dir.agents())

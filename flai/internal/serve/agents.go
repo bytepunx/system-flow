@@ -225,7 +225,10 @@ type readyStory struct {
 	// Restart says how its last agent ended, when the operator has it
 	// started again (S-0116); empty when it entered ready.
 	Restart string
-	item    *workitem.Item
+	// Commit is the story's worktree, when the operator has its agent
+	// started to commit what the worktree holds (S-0140).
+	Commit string
+	item   *workitem.Item
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
@@ -518,7 +521,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, Restart: story.Restart}, cfg.host(name))
+		Session: run.Session, Answered: run.Answered, Restart: story.Restart, Commit: story.Commit}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}
@@ -557,6 +560,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
 	if run.Answered != "" {
 		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s answered (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.Answered, run.PID, run.Log)
+	}
+	if story.Commit != "" {
+		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s to commit what its worktree holds (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
 	}
 	if l.record != nil {
 		l.record(entry)

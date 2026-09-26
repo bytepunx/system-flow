@@ -40,6 +40,10 @@ type Request struct {
 	// Restart says how the story's last agent ended, when the operator has
 	// had a new one started for it (S-0116); empty when it entered ready.
 	Restart string
+	// Commit is the story's worktree, when the operator has had an agent
+	// started to commit what it holds and nothing else (S-0140); empty
+	// otherwise.
+	Commit string
 }
 
 // Host is the operator's say about one harness, from the host's configuration.
@@ -144,8 +148,16 @@ func options(harness string, config map[string]string, takes map[string]option) 
 
 // Prompt is what the agent is asked to do: work its story, and nothing
 // else, the way the project's conventions say, asking the designer through
-// flai when it needs them. A resumed agent is told its question was answered.
+// flai when it needs them. A resumed agent is told its question was answered;
+// one started to commit a worktree is told to do only that (S-0140).
 func Prompt(r Request) string {
+	if r.Commit != "" && r.Answered == "" {
+		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
+
+Do only this. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md, for how commits are made here. In the worktree, read git status and git diff. Commit the changes on story/%[2]s, in commits whose messages name %[2]s and say what changed and why, after the lint and tests the project runs for what they touch; fix what they find only when it is part of the same work. Discard a file only when it is plainly output that does not belong in the repository, and say which in the story's narrative with flai stream log %[2]s. Do not move %[2]s or its tasks, do not change anything the uncommitted work does not already change, and do not start other work. When git status in the worktree is clean, log what you committed with flai stream log %[2]s and end.
+
+If a change cannot be committed without the designer deciding something, ask with the flai MCP tool thread_open on %[2]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on.`, r.Name, r.Story, r.Commit)
+	}
 	if r.Answered != "" {
 		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.
 

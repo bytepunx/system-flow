@@ -114,7 +114,9 @@ export const REQUIRED_METHODS = [
 	// S-0116: a new agent for a story whose agent dropped or failed, gated by the agent host action
 	'agent.restart',
 	// S-0115: a ready story's agent now, gated by the agent host action
-	'agent.start'
+	'agent.start',
+	// S-0140: an agent to commit what a story in review left uncommitted, gated by the agent host action
+	'agent.commit'
 ];
 
 export type AgentStatus = {
