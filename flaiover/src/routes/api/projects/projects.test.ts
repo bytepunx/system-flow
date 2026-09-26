@@ -149,4 +149,94 @@ describe('/api/projects (S-0080)', () => {
 			server.close();
 		}
 	}, 15000);
+
+	it('adds what flai serve serves: a served project not connected carries why, and one never connected here is listed (S-0122)', async () => {
+		const server = http.createServer();
+		server.on('upgrade', (req, socket, head) =>
+			(registry() as unknown as AgentRegistry).handleUpgrade(req, socket, head)
+		);
+		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+		const port = (server.address() as AddressInfo).port;
+		registry().hub('quay'); // named here once, not connected now
+		const answer = (method: string) => {
+			if (method === 'settings.get')
+				return {
+					host: {
+						projects: {
+							running: true,
+							served: [
+								{
+									key: 'harbour',
+									name: 'Harbour',
+									root: '/r/harbour',
+									state: 'connected',
+									settings: true
+								},
+								{
+									key: 'quay',
+									name: 'Quay',
+									root: '/r/quay',
+									state: 'not-connected',
+									last_error: 'dial: connection refused',
+									settings: true
+								},
+								{
+									key: 'dock',
+									name: 'Dock',
+									root: '/r/dock',
+									state: 'unavailable',
+									reason: 'no system-flow.yaml',
+									settings: true
+								}
+							],
+							unserved: [
+								{
+									key: 'loci',
+									name: 'loci',
+									root: '/i/loci',
+									reason: 'not registered',
+									settings: true
+								}
+							]
+						}
+					}
+				};
+			if (method === 'board.get') return { columns: {} };
+			if (method === 'inbox.designer') return { counts: {} };
+			return { state: {} };
+		};
+		const flai = await connect(`ws://127.0.0.1:${port}/agent`, answer, {
+			key: 'harbour',
+			name: 'Harbour'
+		});
+		try {
+			const body = await (await GET({} as never)).json();
+			const rows = Object.fromEntries(
+				body.projects.map((p: { key: string }) => [p.key, p])
+			) as Record<string, Record<string, unknown>>;
+			expect(Object.keys(rows)).toEqual(['dock', 'harbour', 'quay']); // not loci: it is not served
+			expect(rows.harbour).toMatchObject({ connected: true, served: true });
+			expect(rows.harbour.lastError).toBeUndefined();
+			expect(rows.quay).toMatchObject({
+				connected: false,
+				served: true,
+				lastError: 'dial: connection refused'
+			});
+			expect(rows.dock).toMatchObject({
+				name: 'Dock',
+				connected: false,
+				served: true,
+				lastError: 'no system-flow.yaml'
+			});
+		} finally {
+			flai.terminate();
+			server.close();
+		}
+	});
+
+	it('without a connected project to ask, lists what the registry knows, none of it marked served', async () => {
+		registry().hub('quay');
+		const body = await (await GET({} as never)).json();
+		expect(body.projects).toEqual([{ key: 'quay', name: 'quay', connected: false }]);
+	});
 });

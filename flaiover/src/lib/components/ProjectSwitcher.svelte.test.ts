@@ -76,4 +76,50 @@ describe('ProjectSwitcher (S-0080)', () => {
 		expect(projectState.current).toBe('quay');
 		expect(location.reload).not.toHaveBeenCalled();
 	});
+
+	it('tells a served project that is not connected apart from a connected one, and links to the settings page (S-0122)', () => {
+		projectState.list = [
+			{ key: 'harbour', name: 'Harbour', connected: true, served: true },
+			{ key: 'quay', name: 'Quay', connected: false, served: true, lastError: 'dial: refused' },
+			{ key: 'import-loci', name: 'loci', connected: true, candidate: true }
+		];
+		projectState.pick('harbour', false);
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		const options = [...document.querySelectorAll('option')];
+		expect(options.map((o) => o.textContent)).toEqual([
+			'Harbour',
+			'Quay (served, not connected)',
+			'loci (not imported)'
+		]);
+		expect(options[1].title).toBe('dial: refused');
+		const why = document.querySelector<HTMLAnchorElement>('[data-testid="project-switcher-why"]');
+		expect(why?.getAttribute('href')).toBe('/settings');
+		expect(why?.textContent).toBe('1 not connected: why?');
+		expect(why?.title).toBe('Quay: dial: refused');
+	});
+
+	it('shows no settings link while every project is connected', () => {
+		projectState.list = [
+			{ key: 'harbour', name: 'Harbour', connected: true },
+			{ key: 'import-loci', name: 'loci', connected: false, candidate: true }
+		];
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		expect(document.querySelector('[data-testid="project-switcher-why"]')).toBeNull();
+	});
+
+	it('from a project that is not connected, the settings link goes by way of one that is', () => {
+		projectState.list = [
+			{ key: 'harbour', name: 'Harbour', connected: true },
+			{ key: 'quay', name: 'Quay', connected: false, served: true }
+		];
+		projectState.pick('quay', false);
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		const why = document.querySelector<HTMLAnchorElement>('[data-testid="project-switcher-why"]')!;
+		why.addEventListener('click', (e) => e.preventDefault());
+		why.click();
+		expect(projectState.current).toBe('harbour');
+	});
 });

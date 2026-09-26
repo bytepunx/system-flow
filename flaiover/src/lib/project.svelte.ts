@@ -13,6 +13,10 @@ export type Project = {
 	since?: string;
 	/** A repository offered for import, not a project yet (S-0098). */
 	candidate?: boolean;
+	/** flai serve serves it (S-0122). */
+	served?: boolean;
+	/** Why flai serve has it not connected, when it says. */
+	lastError?: string;
 };
 
 function stored(): string | null {
