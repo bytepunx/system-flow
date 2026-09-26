@@ -3,12 +3,15 @@ id: S-0126
 type: story
 nature: remediation
 title: "Threads don’t correctly render markdown"
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-26T07:30:00Z
-updated: 2026-09-26T07:30:00Z
-transitions: []
+updated: 2026-09-26T07:30:10Z
+transitions:
+  - to: ready
+    at: 2026-09-26T07:30:10Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 agent:
