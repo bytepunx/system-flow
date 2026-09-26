@@ -2,14 +2,17 @@ import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
-/** GET ?on=<path|item>&all=1 : threads, unresolved unless all=1. */
+/** GET ?on=<path|item>&all=1 : threads, unresolved unless all=1, each entry marked operator when the operator wrote it. */
 export const GET: RequestHandler = ({ url }) =>
 	respond(async () => {
 		const on = url.searchParams.get('on');
 		const all = url.searchParams.get('all') === '1';
 		const r = repo();
-		const list = on ? await r.threadsFor(on) : await r.threads();
-		return all ? list : list.filter((t) => t.status !== 'resolved');
+		const [list, operator] = await Promise.all([on ? r.threadsFor(on) : r.threads(), r.operator()]);
+		return (all ? list : list.filter((t) => t.status !== 'resolved')).map((t) => ({
+			...t,
+			entries: (t.entries ?? []).map((e) => ({ ...e, operator: e.author === operator }))
+		}));
 	});
 
 /** POST { on, heading?, title, text }: open a thread as the designer (flai's thread.new on the host). */

@@ -39,7 +39,8 @@ export type Manifest = {
 export type Transition = { to: string; at: string; by: string };
 export type Block = { from: string; until?: string; reason: string };
 
-export type ThreadEntry = { at: string; author: string; text: string };
+// operator is set by /api/threads: whether the operator wrote the entry rather than an agent (S-0127).
+export type ThreadEntry = { at: string; author: string; text: string; operator?: boolean };
 export type Thread = {
 	id: string;
 	title: string;
@@ -247,6 +248,11 @@ export class Repo extends EventEmitter {
 
 	async layout(): Promise<Layout> {
 		return (await this.manifest()).layout;
+	}
+
+	/** Who the operator is: the manifest's owner, else "designer", as flai decides for its writes and inbox. */
+	async operator(): Promise<string> {
+		return (await this.manifest()).owner || 'designer';
 	}
 
 	/** Every thread, resolved ones included, sorted by ID (ADR-0020), as flai reads them. */

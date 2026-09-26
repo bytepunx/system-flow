@@ -5,7 +5,7 @@
 	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
 
-	type Entry = { at: string; author: string; text: string };
+	type Entry = { at: string; author: string; text: string; operator?: boolean };
 	type Thread = {
 		id: string;
 		title: string;
@@ -151,16 +151,25 @@
 					>
 				{/if}
 			</header>
+			<!-- The operator's entries sit on the right in the primary tint, agents' on the left in
+			     the neutral one, so who said what reads at a glance (S-0127). -->
 			<ol class="mt-2 space-y-2">
 				{#each t.entries as e (e.at + e.author)}
-					<li class="text-sm">
+					<li
+						class="flex flex-col text-sm {e.operator ? 'items-end' : 'items-start'}"
+						data-from={e.operator ? 'operator' : 'agent'}
+					>
 						<div class="text-xs text-muted">
 							<span class="font-mono">{e.at}</span>
 							{e.author}
 						</div>
 						<!-- Entries are markdown, as they are in the thread's file (S-0126). Authors write
 						     repository paths, so relative links resolve from the root. -->
-						<div class="prose prose-sm max-w-none">
+						<div
+							class="prose prose-sm mt-0.5 max-w-[85%] rounded-lg border px-3 py-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 {e.operator
+								? 'border-primary bg-primary-soft'
+								: 'border-line bg-raised'}"
+						>
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -- repository markdown, rendered client side as every document is -->
 							{@html render(e.text, '')}
 						</div>

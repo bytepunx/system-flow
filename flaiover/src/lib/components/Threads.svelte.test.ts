@@ -48,4 +48,31 @@ describe('Threads', () => {
 		);
 		expect(entry.textContent).not.toContain('**');
 	});
+
+	it("sets the operator's entries apart from agents' by side and colour (S-0127)", async () => {
+		const t = {
+			...thread('A question for you.'),
+			entries: [
+				{
+					at: '2026-09-26T07:00:00Z',
+					author: 'agent-S-0001',
+					text: 'A question for you.',
+					operator: false
+				},
+				{ at: '2026-09-26T07:05:00Z', author: 'alex', text: 'Yes, do that.', operator: true }
+			]
+		};
+		api.mockResolvedValue({ ok: true, json: async () => [t] });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		const [agent, operator] = [...document.querySelectorAll('article > ol > li')] as HTMLElement[];
+		expect(agent.dataset.from).toBe('agent');
+		expect(agent.className).toContain('items-start');
+		expect(agent.querySelector('.prose')!.className).toContain('bg-raised');
+		expect(operator.dataset.from).toBe('operator');
+		expect(operator.className).toContain('items-end');
+		expect(operator.querySelector('.prose')!.className).toContain('bg-primary-soft');
+		expect(operator.textContent).toContain('alex');
+	});
 });
