@@ -71,6 +71,7 @@ function backend(over: {
 	checksCancel?: () => unknown;
 	checksTail?: () => unknown;
 	narrative?: string;
+	agent?: () => unknown;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
@@ -96,6 +97,8 @@ function backend(over: {
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
 		if (url.endsWith('/diff')) return over.diff ? over.diff() : json(DIFF);
+		if (url.endsWith('/agent') && init?.method === 'POST')
+			return over.agent ? over.agent() : json({ error: 'no agent' }, 400);
 		if (url.endsWith('/acceptance'))
 			return json(
 				over.preview ?? {
@@ -161,6 +164,35 @@ describe('Review', () => {
 		flushSync();
 		expect(document.body.textContent).toContain('+three');
 		expect(document.body.textContent).toContain('-two');
+	});
+
+	// S-0140: work left uncommitted in the story's worktree blocks acceptance, and the page offers
+	// to have an agent commit it.
+	it('offers to have an agent commit what the worktree holds, and keeps Accept off', async () => {
+		backend({
+			preview: {
+				branch: 'story/S-0041',
+				worktree_uncommitted: ['docs/left.md'],
+				blockers: [
+					'the worktree .flai-cache/worktrees/S-0041 has uncommitted changes (docs/left.md); commit them on story/S-0041, or discard them, before accepting'
+				],
+				plan: null
+			},
+			agent: () => json({ story: 'S-0041', agent: 'agent-S-0041', pid: 7 })
+		});
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		const box = document.querySelector('[data-testid="worktree-uncommitted"]');
+		expect(box?.textContent).toContain('docs/left.md');
+		expect(document.body.textContent).not.toContain('This cannot be accepted from here yet');
+		expect(button('Accept').disabled).toBe(true);
+		button('Have an agent commit them').click();
+		await settle();
+		expect(calls('/agent')).toHaveLength(1);
+		expect(JSON.parse(String((calls('/agent')[0][1] as { body: string }).body))).toEqual({
+			action: 'commit'
+		});
+		expect(box?.textContent).toContain('agent-S-0041 is committing them (pid 7)');
 	});
 
 	it('accepts as a stream: each step, then the tags, and says it was not pushed', async () => {

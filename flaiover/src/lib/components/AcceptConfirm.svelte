@@ -2,6 +2,7 @@
 	// Moving a story to done is acceptance (S-0046): show what it will do
 	// before it happens. Cancelling changes nothing; the card stays in review.
 	import UnreleasedList from './UnreleasedList.svelte';
+	import WorktreeUncommitted, { otherBlockers } from './WorktreeUncommitted.svelte';
 	import { api } from '$lib/api';
 
 	type Version = string | { Major: number; Minor: number; Patch: number };
@@ -51,36 +52,7 @@
 	let include = $state(false);
 	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 
-	// The worktree's uncommitted paths have their own box, with the way to have them committed
-	// (S-0140); flai's blocker saying the same is not repeated above it.
-	const worktreeBlocker = (b: string) =>
-		!!preview?.worktree_uncommitted?.length &&
-		b.startsWith('the worktree ') &&
-		b.includes('has uncommitted changes');
-	const blockers = $derived((preview?.blockers ?? []).filter((b) => !worktreeBlocker(b)));
-	let committing = $state(false);
-	let committed = $state<string | null>(null);
-	let commitError = $state<string | null>(null);
-
-	async function haveCommitted() {
-		committing = true;
-		commitError = null;
-		try {
-			const r = await api(`/api/items/${id}/agent`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ action: 'commit' })
-			});
-			const data = await r.json();
-			if (!r.ok) commitError = data.error ?? r.statusText;
-			else
-				committed = `${data.agent ?? 'an agent'} is committing them (pid ${data.pid}). Accept once it has finished: open this again to see.`;
-		} catch (e) {
-			commitError = e instanceof Error ? e.message : String(e);
-		} finally {
-			committing = false;
-		}
-	}
+	const blockers = $derived(preview ? otherBlockers(preview) : []);
 
 	const v = (x: Version) => (typeof x === 'string' ? x : `${x.Major}.${x.Minor}.${x.Patch}`);
 
@@ -89,8 +61,6 @@
 		preview = null;
 		error = null;
 		include = false;
-		committed = null;
-		commitError = null;
 		api(`/api/items/${target}/acceptance`)
 			.then(async (r) => {
 				const data = await r.json();
@@ -143,32 +113,12 @@
 				</div>
 			{/if}
 			{#if preview.worktree_uncommitted?.length}
-				<div
-					class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger"
-					role="group"
-					data-testid="worktree-uncommitted"
-				>
-					<p class="font-medium">Uncommitted changes in the story's worktree:</p>
-					<ul class="mt-1 ml-4 list-disc font-mono text-xs">
-						{#each preview.worktree_uncommitted as p (p)}<li>{p}</li>{/each}
-					</ul>
-					<p class="mt-2">
-						Acceptance merges the branch as it is committed and removes the worktree, so it waits
-						until these are committed on {preview.branch ?? 'the story branch'}.
-					</p>
-					{#if committed}
-						<p class="mt-2 font-medium" role="status">{committed}</p>
-					{:else}
-						<button
-							type="button"
-							class="mt-2 rounded border border-line-strong bg-surface px-2 py-1 text-ink hover:bg-raised disabled:opacity-50"
-							disabled={committing || busy}
-							onclick={haveCommitted}
-							>{committing ? 'Starting an agent…' : 'Have an agent commit them'}</button
-						>
-					{/if}
-					{#if commitError}<p class="mt-2" role="alert">{commitError}</p>{/if}
-				</div>
+				<WorktreeUncommitted
+					{id}
+					paths={preview.worktree_uncommitted}
+					branch={preview.branch}
+					disabled={busy}
+				/>
 			{/if}
 			{#if preview.uncommitted?.length}
 				<div class="mt-3 rounded border border-warn bg-warn-soft p-2 text-warn" role="group">

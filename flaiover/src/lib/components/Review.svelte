@@ -3,6 +3,7 @@
 	// is being discussed, what changed, and what accepting will do; then accept
 	// as the designer with each step shown, or send back with a reason.
 	import UnreleasedList from './UnreleasedList.svelte';
+	import WorktreeUncommitted, { otherBlockers } from './WorktreeUncommitted.svelte';
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { criteriaOf, readNdjson, sectionOf } from '$lib/review';
@@ -33,6 +34,8 @@
 		branch?: string;
 		blockers?: string[];
 		uncommitted?: string[];
+		/** Uncommitted paths in the story's worktree: they block acceptance (S-0140). */
+		worktree_uncommitted?: string[];
 		plan?: {
 			level: string;
 			commits: string[];
@@ -120,6 +123,7 @@
 			!result &&
 			!!preview &&
 			!preview.blockers?.length &&
+			!preview.worktree_uncommitted?.length &&
 			!needsChoice
 	);
 
@@ -475,15 +479,25 @@
 			{:else if !preview && !result}
 				<p class="text-muted">Working it out…</p>
 			{:else if preview}
-				{#if preview.blockers?.length}
+				{#if otherBlockers(preview).length}
 					<div
 						class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"
 						role="alert"
 					>
 						<p class="font-medium">This cannot be accepted from here yet:</p>
 						<ul class="mt-1 ml-4 list-disc">
-							{#each preview.blockers as b (b)}<li>{b}</li>{/each}
+							{#each otherBlockers(preview) as b (b)}<li>{b}</li>{/each}
 						</ul>
+					</div>
+				{/if}
+				{#if preview.worktree_uncommitted?.length}
+					<div class="mb-2">
+						<WorktreeUncommitted
+							{id}
+							paths={preview.worktree_uncommitted}
+							branch={preview.branch}
+							disabled={running || !writable}
+						/>
 					</div>
 				{/if}
 				{#if preview.uncommitted?.length}
