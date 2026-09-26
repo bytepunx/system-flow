@@ -1,6 +1,6 @@
 ---
 title: "Runbook: migrate"
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -39,7 +39,7 @@ The host's registry (`serve/projects.json`, `dashboards.json`) and the host acti
    flai serve import list     # import folders: flai serve import remove the old ones, add the new
    ```
 
-4. Clone each project, or put it back from its bundle ([restore.md](restore.md#flai), step 4), and in each, register it and turn on again the host actions you want for it:
+4. Clone each project, or put it back from its bundle ([restore.md](restore.md#flai), step 4), and in each, register it and turn on again the host actions you want for it (`flai serve project add` registers it without starting the dashboard):
 
    ```bash
    flai dashboard
@@ -57,7 +57,7 @@ Nothing moves: the first `flai dashboard` on the new machine starts a container 
 
 ## A project to another folder on the same machine
 
-1. In the project, before moving it: `flai dashboard stop`, and `flai serve disable <action>` for each host action on for it (`flai serve actions` lists them).
+1. In the project, before moving it: `flai serve project remove .` (which leaves the dashboard running for your other projects; `flai dashboard stop` also stops it if this was the last), and `flai serve disable <action>` for each host action on for it (`flai serve actions` lists them).
 2. Move it, then reconnect its story worktrees, which git links by absolute path:
 
    ```bash
@@ -67,7 +67,7 @@ Nothing moves: the first `flai dashboard` on the new machine starts a container 
    ```
 
    With `worktrees.relative_paths` on, worktrees made since then need no repair; it has a cost, in [the flai guide](../../users/flai.md#relative-worktree-links-opt-in).
-3. Register it again, and enable its host actions again: `flai dashboard`, `flai serve enable <action>`.
+3. Register it again, and enable its host actions again: `flai serve project add` (or `flai dashboard`), `flai serve enable <action>`. Forgot step 1? `flai serve project list` shows the old folder as not served because it is gone; `flai serve project remove <key>` takes it out, and then `add` in the new folder is not refused for its key.
 
 ## A project to a newer template
 

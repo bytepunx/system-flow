@@ -1,6 +1,6 @@
 ---
 title: "Runbook: delete"
-updated: 2026-09-24
+updated: 2026-09-26
 status: active
 ---
 
@@ -12,14 +12,14 @@ Taking flai and the dashboard off a machine. Your projects are git repositories 
 
 Removing the dashboard alone leaves flai working in a shell.
 
-1. See which projects it serves: `flai dashboard status`.
+1. See which projects it serves: `flai serve project list`.
 2. In each of them, or in the folder you started it from, take it out:
 
    ```bash
    flai dashboard stop
    ```
 
-   Each unregisters its project from `flai serve`. The shared `flaiover` container stops when the last one is gone, and Docker removes it, since it was started with `--rm`. To stop it at once whatever is registered: `docker stop flaiover`.
+   Each unregisters its project from `flai serve`, as `flai serve project remove <key>` does, which works for a project whose folder is already gone. The shared `flaiover` container stops when the last one is gone, and Docker removes it, since it was started with `--rm`. To stop it at once whatever is registered: `docker stop flaiover`.
 3. Remove the image, and a local build if you made one:
 
    ```bash

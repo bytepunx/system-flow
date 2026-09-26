@@ -625,11 +625,22 @@ flai serve start      # have flai host run it, starting the host if needed (flai
 flai serve stop       # the host stops it, and keeps it stopped until flai serve start
 ```
 
+Which projects `flai serve` serves is yours to change without starting or stopping the dashboard (S-0118):
+
+```bash
+flai serve project add              # serve the project in this folder on the dashboard
+flai serve project add ~/git/blog   # or the one in that folder
+flai serve project list             # every project served and how it is, and what is not served
+flai serve project remove blog      # by key or folder; the dashboard's switcher drops it within a second
+```
+
+`add` registers the project as `flai dashboard` does, for the dashboard address your configuration names, and starts `flai host` when it is not running. It refuses a folder with no `system-flow.yaml`, a manifest with no `key`, and a key another served project has, and says which. `remove` touches none of the project's files and leaves the dashboard running for your other projects. `list` (and `--json`) shows each served project with its key, folder, dashboard address, and whether it is connected, the last error if not, or why it cannot be served: its folder is gone, it has no `system-flow.yaml`, or the manifest has no key. `flai serve` says that once in its log rather than trying it every second, and `flai serve status` shows it too. After the served projects `list` shows the repositories offered for import on the board and the projects under your import folders that nothing serves, each with the command that serves it. Do not confuse it with `flai serve import`, which names the folders whose repositories the board offers to import.
+
 `flai hostapi` shows what the dashboard can ask, and answers one question on the terminal: `flai hostapi` lists the methods, `flai hostapi board.get '{"all":true}'` prints what the board page is given.
 
 A git repository with a `system-flow.yaml` below a folder named with `flai serve import add` is served too, registered or not, for as long as it is there (a repository imported on the command line before a host ran, say). `flai serve status` lists those it serves under `served from the folders named for import`, and under `not served` each project there it does not serve, with why: its `system-flow.yaml` does not load or has no key, another project has its key, no dashboard is known yet, or `flai serve` is not running.
 
-It needs no root and no configuration. `flai dashboard stop` takes the project out of it and leaves it running for your other projects; `flai serve stop` stops it until `flai serve start`, and `flai host stop` stops it with everything else. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
+It needs no root and no configuration. `flai dashboard stop`, like `flai serve project remove`, takes the project out of it and leaves it running for your other projects; `flai serve stop` stops it until `flai serve start`, and `flai host stop` stops it with everything else. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
 `flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets an acceptance made from the board be pushed and published:
 
