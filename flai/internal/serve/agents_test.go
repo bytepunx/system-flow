@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -99,7 +100,8 @@ func newAgentLab(t *testing.T) *agentLab {
 	script := "#!/bin/sh\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
 		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; } > \"$out\"\n" +
-		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n"
+		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
+		"touch \"" + lab.outDir + "/ended-$$\"\n"
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +117,39 @@ func newAgentLab(t *testing.T) *agentLab {
 	lab.o = o
 	lab.l = newLauncher(o, Entry{Key: "t", Name: "t", Root: root})
 	lab.l.look(context.Background(), false) // what flai serve does when it begins to serve a project
+	// Registered after the temp folders, so it runs before they are removed:
+	// a stub still writing, or the launcher recording that one ended, would
+	// otherwise put a file in a folder as testing removes it.
+	t.Cleanup(lab.settle)
 	return lab
+}
+
+// startedPID finds the process ID in a journal entry for a started agent.
+var startedPID = regexp.MustCompile(`\(pid (\d+)\)`)
+
+// settle ends every stub still held and waits, for a few seconds at most,
+// until each stub the journal says was started has marked its exit and the
+// launcher has recorded as ended each agent it waits for.
+func (lab *agentLab) settle() {
+	_ = os.Remove(filepath.Join(lab.outDir, "hold"))
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		lab.l.mu.Lock()
+		waiting := len(lab.l.waiting)
+		lab.l.mu.Unlock()
+		ended := waiting == 0
+		for _, e := range lab.entries() {
+			if m := startedPID.FindStringSubmatch(e.Detail); m != nil {
+				if _, err := os.Stat(filepath.Join(lab.outDir, "ended-"+m[1])); err != nil {
+					ended = false
+				}
+			}
+		}
+		if ended {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 func (lab *agentLab) ready(title string) string { return lab.readyWith(title, nil) }
