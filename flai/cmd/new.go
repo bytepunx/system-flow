@@ -26,6 +26,9 @@ type newOptions struct {
 	defaults     bool
 	force        bool
 	noGit        bool
+	// origin is repo_url's default when the template gives none: the origin
+	// remote's web address, for an import (S-0117).
+	origin string
 }
 
 func newNewCmd(a *app) *cobra.Command {
@@ -166,7 +169,7 @@ func (a *app) resolveTemplate(repo, ref string, refresh bool) (template.Source, 
 
 // collectVars merges --var values, evaluated defaults, and prompts.
 func (a *app) collectVars(m template.Manifest, o newOptions, dirName string) (map[string]any, error) {
-	given, err := parsePairs(o.vars, "var")
+	given, err := givenVars(o.vars)
 	if err != nil {
 		return nil, err
 	}
@@ -194,6 +197,9 @@ func (a *app) collectVars(m template.Manifest, o newOptions, dirName string) (ma
 		if v.Name == "project_name" && def == "" {
 			def = dirName
 		}
+		if v.Name == repoURLVar && def == "" {
+			def = o.origin
+		}
 		val := def
 		if interactive {
 			val, err = a.prompt(v, def)
@@ -204,6 +210,11 @@ func (a *app) collectVars(m template.Manifest, o newOptions, dirName string) (ma
 		if v.Required && val == "" {
 			missing = append(missing, v.Name)
 		}
+		if v.Name == repoURLVar {
+			if err := checkRepoURL(val); err != nil {
+				return nil, err
+			}
+		}
 		vars[v.Name] = val
 	}
 	if len(missing) > 0 {
@@ -212,21 +223,37 @@ func (a *app) collectVars(m template.Manifest, o newOptions, dirName string) (ma
 	return vars, nil
 }
 
+// givenVars are the --var values, name=value, with each checked that has a
+// check (repo_url, S-0117), so that a bad one is refused before anything is
+// written.
+func givenVars(items []string) (map[string]string, error) {
+	given, err := parsePairs(items, "var")
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := given[repoURLVar]; ok {
+		if err := checkRepoURL(v); err != nil {
+			return nil, err
+		}
+	}
+	return given, nil
+}
+
 func (a *app) prompt(v template.Variable, def string) (string, error) {
 	val := def
 	title := v.Prompt
 	if title == "" {
 		title = v.Name
 	}
-	in := huh.NewInput().Title(title).Value(&val)
-	if v.Required {
-		in = in.Validate(func(s string) error {
-			if strings.TrimSpace(s) == "" {
-				return fmt.Errorf("%s is required", v.Name)
-			}
-			return nil
-		})
-	}
+	in := huh.NewInput().Title(title).Value(&val).Validate(func(s string) error {
+		if v.Required && strings.TrimSpace(s) == "" {
+			return fmt.Errorf("%s is required", v.Name)
+		}
+		if v.Name == repoURLVar {
+			return checkRepoURL(s)
+		}
+		return nil
+	})
 	if err := huh.NewForm(huh.NewGroup(in)).Run(); err != nil {
 		return "", err
 	}

@@ -79,6 +79,9 @@ serves it.`,
 }
 
 func (a *app) runImport(dir string, o importOptions) error {
+	if _, err := givenVars(o.vars); err != nil {
+		return err
+	}
 	an, err := importer.Scan(dir)
 	if err != nil {
 		return err
@@ -172,7 +175,11 @@ func (a *app) runImport(dir string, o importOptions) error {
 	}
 
 	// 2. render the template without overwriting anything
-	vars, err := a.collectVars(m, newOptions{vars: o.vars, defaults: !interactive}, filepath.Base(an.Root))
+	origin := ""
+	if an.Git {
+		origin = a.originURL(an.Root)
+	}
+	vars, err := a.collectVars(m, newOptions{vars: o.vars, defaults: !interactive, origin: origin}, filepath.Base(an.Root))
 	if err != nil {
 		return err
 	}
