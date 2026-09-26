@@ -7,7 +7,7 @@ status: backlog
 parent: E-0010
 owner: alex
 created: 2026-09-26T07:23:21Z
-updated: 2026-09-26T07:23:21Z
+updated: 2026-09-26T07:27:08Z
 transitions: []
 tags: [cli]
 touches: [flai/cmd]
@@ -21,8 +21,13 @@ agent:
 
 ## Goal
 
+Research methods for determining the relevant documentation (adrs, conventions, etc) and excepts from them in order to build up the right context for an agent that is receiving instructions from completing coding tasks.
+
+Use threads to communicate with the operator on decisions and direction. Author an ADR with the outcomes and then craft stories for epic 10 to implement the decisions made.
+
 ## Acceptance criteria
-- [ ]
+- [ ] New ADR capturing the solution to focused agent context building
+- [ ] Stories for epic 10 capturing the work necessary to implement it
 
 ## Tasks
 
