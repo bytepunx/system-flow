@@ -3,11 +3,14 @@ id: E-0008
 type: epic
 nature: feature
 title: Card creation or moves in flaiover dashboard should trigger or spin up agents
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-23T16:43:01Z
-updated: 2026-09-24T08:16:14Z
-transitions: []
+updated: 2026-09-26T07:06:40Z
+transitions:
+  - to: ready
+    at: 2026-09-26T07:06:40Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---

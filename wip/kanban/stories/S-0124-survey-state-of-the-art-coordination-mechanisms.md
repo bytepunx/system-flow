@@ -3,12 +3,18 @@ id: S-0124
 type: story
 nature: research
 title: Survey state of the art coordination mechanisms
-status: backlog
+status: in-progress
 parent: E-0009
 owner: alex
 created: 2026-09-26T07:17:08Z
-updated: 2026-09-26T07:17:08Z
-transitions: []
+updated: 2026-09-26T07:18:56Z
+transitions:
+  - to: ready
+    at: 2026-09-26T07:17:53Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-26T07:18:07Z
+    by: agent-S-0124
 tags: [cli]
 touches: [flai/cmd]
 agent:
@@ -33,5 +39,9 @@ Use threads so we can discuss your findings and select a direction and document 
 - [ ] New stories are authored for this parent epic (0009) that will support the implementation of the mechanism(s) we choose
 
 ## Tasks
+- T-0455 Survey coordination mechanisms and map what flai has today into a findings document
+- T-0456 Discuss the findings with the designer in threads and settle a direction
+- T-0457 Write the ADR for the chosen coordination mechanism
+- T-0458 Author the stories under E-0009 that implement the chosen mechanism
 
 ## Notes
