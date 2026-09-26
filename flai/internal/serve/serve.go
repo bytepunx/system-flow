@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,6 +52,9 @@ type Status struct {
 	// below either kind of folder that it does not, with why (S-0120).
 	ImportProjects []Entry `json:"import_projects,omitempty"`
 	Unserved       []Found `json:"unserved,omitempty"`
+	// Unavailable are the registered projects not served, by root, and why
+	// (S-0118): the folder is gone or has no manifest, say.
+	Unavailable map[string]string `json:"unavailable,omitempty"`
 }
 
 // Dir is the directory that holds the registry and the state.
@@ -101,13 +105,17 @@ func (d Dir) write(path string, v any) error {
 	return os.Rename(tmp, path)
 }
 
-// Register adds the project or replaces the entry with its root.
+// Register adds the project or replaces the entry with its root. A key
+// another root has is refused (S-0118).
 func (d Dir) Register(e Entry) error {
 	if e.Root == "" || e.URL == "" || e.KeyFile == "" || e.Key == "" {
 		return errors.New("a project needs a root, a key, a dashboard address, and a credential file")
 	}
 	all, err := d.Projects()
 	if err != nil {
+		return err
+	}
+	if err := keyTaken(all, e.Key, e.Root); err != nil {
 		return err
 	}
 	out := []Entry{}
@@ -226,6 +234,7 @@ func Run(ctx context.Context, o Options) error {
 	started := o.Now().UTC().Format(time.RFC3339)
 	clients := map[string]*running{}
 	offered := &offers{o: o, running: map[string]*running{}}
+	unavailable := map[string]string{}
 	var mu sync.Mutex
 	defer func() {
 		offered.halt()
@@ -244,10 +253,23 @@ func Run(ctx context.Context, o Options) error {
 		entries = append(entries, offered.folderProjects(entries)...)
 		mu.Lock()
 		defer mu.Unlock()
-		want := map[string]Entry{}
+		// A project that cannot be served is said once, when it goes and when
+		// it comes back, not tried and logged at every tick (S-0118).
+		want, gone := map[string]Entry{}, map[string]string{}
 		for _, e := range entries {
+			if why := e.Unavailable(); why != "" {
+				gone[e.Root] = why
+				if unavailable[e.Root] != why {
+					o.Logger.Warn("registered project not served", "component", "serve", "root", e.Root, "key", e.Key, "reason", why)
+				}
+				continue
+			}
 			want[e.Root] = e
+			if _, was := unavailable[e.Root]; was {
+				o.Logger.Info("registered project can be served again", "component", "serve", "root", e.Root, "key", e.Key)
+			}
 		}
+		unavailable = gone
 		for root, r := range clients {
 			if e, ok := want[root]; !ok || e != r.entry {
 				r.halt()
@@ -309,6 +331,9 @@ func Run(ctx context.Context, o Options) error {
 		st.Offered = offered.found
 		st.Folder = o.Folder
 		st.FolderProjects, st.ImportProjects, st.Unserved = offered.placement()
+		if len(unavailable) > 0 {
+			st.Unavailable = maps.Clone(unavailable)
+		}
 		mu.Unlock()
 		if err := o.Dir.write(o.Dir.status(), st); err != nil {
 			o.Logger.Warn("status not written", "component", "serve", "err", err.Error())
