@@ -3,12 +3,15 @@ id: S-0133
 type: story
 nature: improvement
 title: Show one thread at a time
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-09-26T17:35:44Z
-updated: 2026-09-26T17:35:44Z
-transitions: []
+updated: 2026-09-26T17:48:30Z
+transitions:
+  - to: ready
+    at: 2026-09-26T17:48:30Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src]
 agent:
