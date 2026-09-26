@@ -103,7 +103,7 @@ func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
 
 	// by key, from inside another registered project: the key wins
 	out, errOut, code := serveProjectRun(t, lighthouse, "remove", "harbour")
-	if code != 0 || !strings.Contains(out, "harbour ("+harbour+") is no longer served, and none of its files was touched") {
+	if code != 0 || !strings.Contains(out, "harbour ("+harbour+") is no longer registered, and none of its files was touched") {
 		t.Fatalf("remove by key: %d %s %s", code, out, errOut)
 	}
 	dir := serve.DirFor(cfg)
@@ -125,6 +125,30 @@ func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
 	}
 	if _, errOut, code := serveProjectRun(t, home, "remove", "harbour"); code == 0 || !strings.Contains(errOut, "no project harbour is served") {
 		t.Errorf("removing what is not served: %d %s", code, errOut)
+	}
+}
+
+// S-0118 on S-0117: a registered project below a folder named for import is
+// unregistered, and remove says flai serve goes on serving it from there.
+func TestServeProjectRemoveSaysAProjectBelowAnImportFolderStaysServed(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	git := filepath.Join(home, "git")
+	blog := keyedProject(t, git, "blog")
+	_ = os.MkdirAll(filepath.Join(blog, ".git"), 0o755)
+	if _, errOut, code := serveProjectRun(t, blog, "add"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, home, "serve", "import", "add", git); code != 0 {
+		t.Fatal(errOut)
+	}
+	out, errOut, code := serveProjectRun(t, home, "remove", "blog")
+	if code != 0 || !strings.Contains(out, "but it is below "+git+", named for import, so flai serve goes on serving it from there; flai serve import remove "+git+" stops that") {
+		t.Errorf("remove: %d %s %s", code, out, errOut)
+	}
+	if got, _ := serve.DirFor(cfg).Projects(); len(got) != 0 {
+		t.Errorf("registry: %+v", got)
 	}
 }
 
@@ -184,10 +208,15 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 	if err := os.RemoveAll(quay); err != nil {
 		t.Fatal(err)
 	}
-	// an import folder with a repository to offer and a project nobody serves
+	// an import folder with a repository to offer, a project flai serve serves
+	// from there (S-0117), and one it cannot serve
 	git := filepath.Join(home, "git")
 	_ = os.MkdirAll(filepath.Join(git, "widget", ".git"), 0o755)
 	blog := keyedProject(t, git, "blog")
+	_ = os.MkdirAll(filepath.Join(blog, ".git"), 0o755)
+	notes := filepath.Join(git, "notes")
+	_ = os.MkdirAll(filepath.Join(notes, ".git"), 0o755)
+	_ = os.WriteFile(filepath.Join(notes, "system-flow.yaml"), []byte("version: 1\nname: notes\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
 	c, _, err := config.Load(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -199,7 +228,9 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 	// flai serve runs, with harbour connected
 	now := time.Now().UTC().Format(time.RFC3339)
 	st, _ := json.Marshal(serve.Status{PID: os.Getpid(), Version: "test", Started: now, Updated: now,
-		Connections: map[string]channel.State{harbour: {URL: "http://127.0.0.1:4242", Connected: true, Since: "2026-09-26T05:00:00Z"}}})
+		Connections:    map[string]channel.State{harbour: {URL: "http://127.0.0.1:4242", Connected: true, Since: "2026-09-26T05:00:00Z"}},
+		ImportProjects: []serve.Entry{{Key: "blog", Name: "blog", Root: blog, URL: "http://127.0.0.1:4242"}},
+		Unserved:       []serve.Found{{Entry: serve.Entry{Name: "notes", Root: notes}, Imported: true, Reason: "its system-flow.yaml has no key"}}})
 	_ = os.WriteFile(filepath.Join(string(serve.DirFor(cfg)), "state.json"), st, 0o600)
 
 	out, errOut, code := serveProjectRun(t, home, "list")
@@ -210,7 +241,8 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 		"harbour  http://127.0.0.1:4242  connected since 2026-09-26T05:00:00Z",
 		"quay  http://127.0.0.1:4242  not served: the folder is gone",
 		"offered for import on the board (flai serve import):\n  widget  " + filepath.Join(git, "widget"),
-		"projects under the import folders that are not served:\n  blog  " + blog + "\n    flai serve project add " + blog,
+		"blog  http://127.0.0.1:4242  connecting (below a folder named for import)",
+		"not served, below the folders named for import:\n  notes  " + notes + "\n    its system-flow.yaml has no key",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list lacks %q:\n%s", want, out)
@@ -222,10 +254,10 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 	if err := json.Unmarshal([]byte(js), &l); err != nil {
 		t.Fatalf("json: %v\n%s", err, js)
 	}
-	if !l.Running || len(l.Served) != 2 || l.Served[0].State != "connected" || l.Served[1].State != "unavailable" || l.Served[1].Reason != "the folder is gone" {
+	if !l.Running || len(l.Served) != 3 || l.Served[0].From != "import" || l.Served[1].State != "connected" || l.Served[2].State != "unavailable" || l.Served[2].Reason != "the folder is gone" {
 		t.Errorf("served: %+v", l.Served)
 	}
-	if len(l.Candidates) != 1 || l.Candidates[0].Name != "widget" || len(l.Unserved) != 1 || l.Unserved[0].Key != "blog" {
+	if len(l.Candidates) != 1 || l.Candidates[0].Name != "widget" || len(l.Unserved) != 1 || l.Unserved[0].Root != notes {
 		t.Errorf("candidates %+v, unserved %+v", l.Candidates, l.Unserved)
 	}
 

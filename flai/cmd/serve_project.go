@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -158,6 +159,7 @@ func (a *app) serveProjectRemove(arg string) error {
 			}
 		}
 	}
+	names := func(e serve.Entry) bool { return e.Key == arg || e.Root == folder }
 	// a key first: a folder named like a key must not stand for the project it is in
 	var found *serve.Entry
 	for _, same := range []func(serve.Entry) bool{
@@ -173,8 +175,13 @@ func (a *app) serveProjectRemove(arg string) error {
 	if found == nil {
 		if st, alive := dir.ReadStatus(time.Now()); alive {
 			for _, e := range st.FolderProjects {
-				if e.Key == arg || e.Root == folder {
+				if names(e) {
 					return fmt.Errorf("%s is not registered: flai serve serves it because it was started in %s, which it is below", e.Key, st.Folder)
+				}
+			}
+			for _, e := range st.ImportProjects {
+				if names(e) {
+					return fmt.Errorf("%s is not registered: flai serve serves it because it is below %s, named for import; flai serve import remove %s stops that", e.Key, a.importRootOf(e.Root), a.importRootOf(e.Root))
 				}
 			}
 		}
@@ -183,23 +190,50 @@ func (a *app) serveProjectRemove(arg string) error {
 	if err := dir.Unregister(found.Root); err != nil {
 		return err
 	}
+	// below a folder named for import, flai serve goes on serving it from there (S-0117)
+	still := a.importRootOf(found.Root)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"removed": found})
+		out := map[string]any{"removed": found}
+		if still != "" {
+			out["still_served_below"] = still
+		}
+		return a.printJSON(out)
 	}
-	fmt.Fprintf(a.out, "%s (%s) is no longer served, and none of its files was touched\n", found.Key, found.Root)
-	if _, alive := dir.ReadStatus(time.Now()); alive {
+	fmt.Fprintf(a.out, "%s (%s) is no longer registered, and none of its files was touched\n", found.Key, found.Root)
+	switch _, alive := dir.ReadStatus(time.Now()); {
+	case still != "":
+		fmt.Fprintf(a.out, "  but it is below %s, named for import, so flai serve goes on serving it from there; flai serve import remove %s stops that\n", still, still)
+	case alive:
 		fmt.Fprintln(a.out, "  flai serve drops it within a second, and the dashboard's switcher with it")
 	}
 	fmt.Fprintln(a.out, "  the dashboard keeps running for the other projects; flai serve project add serves it again")
 	return nil
 }
 
+// importRootOf is the folder named for import that root is served below, as
+// flai serve finds them (S-0117), or empty.
+func (a *app) importRootOf(root string) string {
+	roots := a.importRoots()
+	for _, f := range serve.FindBelow("", roots) {
+		if f.Root != root {
+			continue
+		}
+		for _, r := range roots {
+			if rel, err := filepath.Rel(r, root); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				return r
+			}
+		}
+	}
+	return ""
+}
+
 // servedProject is one project flai serve serves, and how it is.
 type servedProject struct {
 	serve.Entry
-	// Folder is true for a project served because flai serve was started in
-	// a folder above it (S-0102), and not registered.
-	Folder bool `json:"folder,omitempty"`
+	// From is registry for a registered project; folder for one served
+	// because flai serve was started in a folder above it (S-0102); import
+	// for one below a folder named for import (S-0117).
+	From string `json:"from"`
 	// State is connected, connecting, not-connected, unavailable, or
 	// not-running (flai serve is not).
 	State     string `json:"state"`
@@ -208,39 +242,32 @@ type servedProject struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
-// unservedProject is a system-flow project under an import folder that
-// flai serve does not serve.
-type unservedProject struct {
-	Key  string `json:"key,omitempty"`
-	Name string `json:"name"`
-	Root string `json:"root"`
-	// Next is what serves it.
-	Next string `json:"next"`
-}
-
 type projectListing struct {
 	Running    bool              `json:"running"`
 	Served     []servedProject   `json:"served"`
 	Candidates []serve.Candidate `json:"candidates"`
-	Unserved   []unservedProject `json:"unserved"`
-	Roots      []string          `json:"import_roots"`
+	// Unserved are the projects below the folders named for import, or the
+	// folder flai serve was started in, that it does not serve, and why (S-0117).
+	Unserved []serve.Found `json:"unserved"`
+	Roots    []string      `json:"import_roots"`
 }
 
 func (a *app) listServedProjects() (projectListing, error) {
-	dir := a.serveDir()
-	registered, err := dir.Projects()
+	ss, err := a.readServeStatus()
 	if err != nil {
 		return projectListing{}, err
 	}
-	out := projectListing{Served: []servedProject{}, Candidates: []serve.Candidate{}, Unserved: []unservedProject{}, Roots: []string{}}
-	st, alive := dir.ReadStatus(time.Now())
-	out.Running = alive
-	describe := func(e serve.Entry, folder bool) servedProject {
-		p := servedProject{Entry: e, Folder: folder}
+	out := projectListing{Running: ss.Running, Served: []servedProject{}, Candidates: []serve.Candidate{}, Unserved: []serve.Found{}, Roots: []string{}}
+	var st serve.Status
+	if ss.Running {
+		st = *ss.Status
+	}
+	describe := func(e serve.Entry, from string) servedProject {
+		p := servedProject{Entry: e, From: from}
 		switch c, ok := st.Connections[e.Root]; {
-		case !folder && e.Unavailable() != "":
-			p.State, p.Reason = "unavailable", e.Unavailable()
-		case !alive:
+		case ss.Unavailable[e.Root] != "":
+			p.State, p.Reason = "unavailable", ss.Unavailable[e.Root]
+		case !ss.Running:
 			p.State = "not-running"
 		case ok && c.Connected:
 			p.State, p.Since = "connected", c.Since
@@ -252,16 +279,15 @@ func (a *app) listServedProjects() (projectListing, error) {
 		return p
 	}
 	served, taken := map[string]bool{}, map[string]bool{}
-	for _, e := range registered {
-		out.Served = append(out.Served, describe(e, false))
-		served[e.Root], taken[e.Key] = true, true
-	}
-	if alive {
-		for _, e := range st.FolderProjects {
-			out.Served = append(out.Served, describe(e, true))
+	add := func(entries []serve.Entry, from string) {
+		for _, e := range entries {
+			out.Served = append(out.Served, describe(e, from))
 			served[e.Root], taken[e.Key] = true, true
 		}
 	}
+	add(ss.Projects, "registry")
+	add(st.FolderProjects, "folder")
+	add(st.ImportProjects, "import")
 	sort.Slice(out.Served, func(i, j int) bool { return out.Served[i].Key < out.Served[j].Key })
 
 	cfg, _, err := a.loadConfig()
@@ -272,21 +298,8 @@ func (a *app) listServedProjects() (projectListing, error) {
 	if found := serve.FindCandidates(cfg.ImportRoots, served, taken); found != nil {
 		out.Candidates = found
 	}
-	seen := map[string]bool{}
-	for _, r := range cfg.ImportRoots {
-		for _, root := range workitem.FindProjects(r) {
-			if served[root] || seen[root] {
-				continue
-			}
-			seen[root] = true
-			u := unservedProject{Name: filepath.Base(root), Root: root, Next: "flai serve project add " + root}
-			if m, err := manifest.Load(filepath.Join(root, manifest.File)); err != nil {
-				u.Next = "fix its " + manifest.File + ": " + err.Error()
-			} else if u.Key, u.Name = m.Key, m.Name; m.Key == "" {
-				u.Next = "give its " + manifest.File + " a key (flai check says how), then flai serve project add " + root
-			}
-			out.Unserved = append(out.Unserved, u)
-		}
+	if _, unserved := a.belowImportRoots(ss); unserved != nil {
+		out.Unserved = unserved
 	}
 	return out, nil
 }
@@ -320,8 +333,11 @@ func (a *app) serveProjectList() error {
 			state = "not connected: flai serve is not running"
 		}
 		how := ""
-		if p.Folder {
+		switch p.From {
+		case "folder":
 			how = " (below the folder flai serve was started in)"
+		case "import":
+			how = " (below a folder named for import)"
 		}
 		fmt.Fprintf(a.out, "  %s  %s  %s%s\n    %s\n", p.Key, p.URL, state, how, p.Root)
 	}
@@ -332,9 +348,9 @@ func (a *app) serveProjectList() error {
 		}
 	}
 	if len(l.Unserved) > 0 {
-		fmt.Fprintln(a.out, "projects under the import folders that are not served:")
+		fmt.Fprintln(a.out, "not served, below the folders named for import:")
 		for _, u := range l.Unserved {
-			fmt.Fprintf(a.out, "  %s  %s\n    %s\n", u.Name, u.Root, u.Next)
+			fmt.Fprintf(a.out, "  %s  %s\n    %s\n", u.Name, u.Root, u.Reason)
 		}
 	}
 	return nil
