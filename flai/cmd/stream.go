@@ -79,7 +79,10 @@ sync again.
 After a clean rebase it trial-merges the branch with the branch of every other
 story in progress or in review (git merge-tree --write-tree, git 2.38 or
 newer), writing nothing to any worktree, and lists each branch it conflicts
-with and the conflicting paths.`,
+with and the conflicting paths. Each conflicting pair of stories has one
+thread, written by flai on the story that synced, which both stories' agents
+and the designer see in their inboxes; a sync that finds the pair merging
+cleanly again resolves it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -100,6 +103,8 @@ with and the conflicting paths.`,
 			checks, cerr := a.checkSync(repo, it)
 			if cerr != nil {
 				a.logger().Warn("story branch checks failed after the rebase", "component", "git", "story", it.ID, "err", cerr)
+			} else if err := a.reportConflicts(repo, it, &checks); err != nil {
+				a.logger().Warn("conflict threads not written", "component", "threads", "story", it.ID, "err", err)
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": true,
