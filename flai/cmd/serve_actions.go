@@ -889,8 +889,8 @@ review. The run is recorded where the serving flai tracks it, like a start
 It refuses, and says why, while the agent action is off for the project,
 when the story is not in review, while its agent runs or waits for an
 answer, when the story has no worktree or the worktree has nothing
-uncommitted, and when nothing can start it. The story page's Have an agent
-commit it button runs this.`,
+uncommitted, and when nothing can start it. The Have an agent commit them
+button in the dashboard's acceptance confirmation runs this.`,
 		Example: `  flai serve agent commit S-0140`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {

@@ -21,6 +21,8 @@
 		resumed?: boolean;
 		blockers?: string[];
 		uncommitted?: string[];
+		/** Uncommitted paths in the story's worktree: they block acceptance (S-0140). */
+		worktree_uncommitted?: string[];
 		plan?: {
 			level: string;
 			commits: string[];
@@ -49,6 +51,37 @@
 	let include = $state(false);
 	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 
+	// The worktree's uncommitted paths have their own box, with the way to have them committed
+	// (S-0140); flai's blocker saying the same is not repeated above it.
+	const worktreeBlocker = (b: string) =>
+		!!preview?.worktree_uncommitted?.length &&
+		b.startsWith('the worktree ') &&
+		b.includes('has uncommitted changes');
+	const blockers = $derived((preview?.blockers ?? []).filter((b) => !worktreeBlocker(b)));
+	let committing = $state(false);
+	let committed = $state<string | null>(null);
+	let commitError = $state<string | null>(null);
+
+	async function haveCommitted() {
+		committing = true;
+		commitError = null;
+		try {
+			const r = await api(`/api/items/${id}/agent`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'commit' })
+			});
+			const data = await r.json();
+			if (!r.ok) commitError = data.error ?? r.statusText;
+			else
+				committed = `${data.agent ?? 'an agent'} is committing them (pid ${data.pid}). Accept once it has finished: open this again to see.`;
+		} catch (e) {
+			commitError = e instanceof Error ? e.message : String(e);
+		} finally {
+			committing = false;
+		}
+	}
+
 	const v = (x: Version) => (typeof x === 'string' ? x : `${x.Major}.${x.Minor}.${x.Patch}`);
 
 	$effect(() => {
@@ -56,6 +89,8 @@
 		preview = null;
 		error = null;
 		include = false;
+		committed = null;
+		commitError = null;
 		api(`/api/items/${target}/acceptance`)
 			.then(async (r) => {
 				const data = await r.json();
@@ -99,12 +134,40 @@
 		{:else if !preview}
 			<p class="mt-3 text-muted">Working out what acceptance will do…</p>
 		{:else}
-			{#if preview.blockers?.length}
+			{#if blockers.length}
 				<div class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">
 					<p class="font-medium">This cannot be accepted from here yet:</p>
 					<ul class="mt-1 ml-4 list-disc">
-						{#each preview.blockers as b (b)}<li>{b}</li>{/each}
+						{#each blockers as b (b)}<li>{b}</li>{/each}
 					</ul>
+				</div>
+			{/if}
+			{#if preview.worktree_uncommitted?.length}
+				<div
+					class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger"
+					role="group"
+					data-testid="worktree-uncommitted"
+				>
+					<p class="font-medium">Uncommitted changes in the story's worktree:</p>
+					<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+						{#each preview.worktree_uncommitted as p (p)}<li>{p}</li>{/each}
+					</ul>
+					<p class="mt-2">
+						Acceptance merges the branch as it is committed and removes the worktree, so it waits
+						until these are committed on {preview.branch ?? 'the story branch'}.
+					</p>
+					{#if committed}
+						<p class="mt-2 font-medium" role="status">{committed}</p>
+					{:else}
+						<button
+							type="button"
+							class="mt-2 rounded border border-line-strong bg-surface px-2 py-1 text-ink hover:bg-raised disabled:opacity-50"
+							disabled={committing || busy}
+							onclick={haveCommitted}
+							>{committing ? 'Starting an agent…' : 'Have an agent commit them'}</button
+						>
+					{/if}
+					{#if commitError}<p class="mt-2" role="alert">{commitError}</p>{/if}
 				</div>
 			{/if}
 			{#if preview.uncommitted?.length}
@@ -170,7 +233,12 @@
 			<button
 				type="button"
 				class="rounded bg-primary px-3 py-1 text-on-primary disabled:opacity-50"
-				disabled={busy || !!error || !preview || !!preview.blockers?.length || needsChoice}
+				disabled={busy ||
+					!!error ||
+					!preview ||
+					!!preview.blockers?.length ||
+					!!preview.worktree_uncommitted?.length ||
+					needsChoice}
 				onclick={confirm}>{busy ? 'Accepting…' : 'Accept'}</button
 			>
 		</div>

@@ -219,4 +219,74 @@ describe('AcceptConfirm', () => {
 		expect(([...document.querySelectorAll('button')][1] as HTMLButtonElement).disabled).toBe(true);
 		unmount(c);
 	});
+
+	// S-0140: work left uncommitted in the story's worktree blocks acceptance, and the confirmation
+	// offers to have an agent commit it.
+	it('offers to have an agent commit what the worktree holds, and keeps Accept off', async () => {
+		api.mockImplementation(async (path: string, init?: RequestInit) => {
+			if (path === '/api/items/S-0140/acceptance')
+				return json({
+					id: 'S-0140',
+					branch: 'story/S-0140',
+					worktree_uncommitted: ['flai/cmd/move.go', 'docs/left.md'],
+					blockers: [
+						'the worktree .flai-cache/worktrees/S-0140 has uncommitted changes (flai/cmd/move.go, docs/left.md); commit them on story/S-0140, or discard them, before accepting',
+						'git has no committer identity here'
+					],
+					plan: null
+				});
+			if (path === '/api/items/S-0140/agent') {
+				expect(JSON.parse(String(init?.body))).toEqual({ action: 'commit' });
+				return json({ story: 'S-0140', agent: 'agent-S-0140', pid: 44 });
+			}
+			throw new Error(`unexpected ${path}`);
+		});
+		const onconfirm = vi.fn();
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0140', onconfirm, oncancel: vi.fn() }
+		});
+		await settle();
+		const box = document.querySelector('[data-testid="worktree-uncommitted"]');
+		expect(box?.textContent).toContain('flai/cmd/move.go');
+		expect(box?.textContent).toContain('docs/left.md');
+		const alert = document.querySelector('[role="alert"]')?.textContent ?? '';
+		expect(alert).toContain('git has no committer identity');
+		expect(alert).not.toContain('has uncommitted changes');
+		const accept = [...document.querySelectorAll('button')].find((b) => b.textContent === 'Accept');
+		expect(accept?.disabled).toBe(true);
+		const commit = [...document.querySelectorAll('button')].find(
+			(b) => b.textContent === 'Have an agent commit them'
+		);
+		commit!.click();
+		await settle();
+		expect(api).toHaveBeenCalledWith('/api/items/S-0140/agent', expect.anything());
+		expect(box?.textContent).toContain('agent-S-0140 is committing them (pid 44)');
+		expect(onconfirm).not.toHaveBeenCalled();
+		unmount(c);
+	});
+
+	it('says why an agent could not be started to commit', async () => {
+		api.mockImplementation(async (path: string) =>
+			path.endsWith('/acceptance')
+				? json({ id: 'S-0140', worktree_uncommitted: ['x.go'], blockers: [], plan: null })
+				: json({ error: 'the host action "agent" is not enabled: flai serve enable agent' }, false)
+		);
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0140', onconfirm: vi.fn(), oncancel: vi.fn() }
+		});
+		await settle();
+		[...document.querySelectorAll('button')]
+			.find((b) => b.textContent === 'Have an agent commit them')!
+			.click();
+		await settle();
+		expect(document.body.textContent).toContain('flai serve enable agent');
+		expect(
+			[...document.querySelectorAll('button')].some(
+				(b) => b.textContent === 'Have an agent commit them'
+			)
+		).toBe(true);
+		unmount(c);
+	});
 });

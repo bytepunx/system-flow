@@ -97,6 +97,33 @@ describe('agent route over the channel (S-0116)', () => {
 		expect((await no.json()).error).toContain('only a story in ready is started');
 	});
 
+	// S-0140: an agent to commit what a story in review left uncommitted in its worktree
+	it('asks flai to start an agent to commit the worktree and passes on its refusal', async () => {
+		script = {
+			'agent.commit': {
+				answer: { data: { story: 'S-0140', agent: 'agent-S-0140', pid: 44 }, warnings: [] }
+			}
+		};
+		const r = await doPost('S-0140', { action: 'commit' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ story: 'S-0140', pid: 44 });
+		const write = asked.find((a) => a.method === 'agent.commit');
+		expect(write?.params).toMatchObject({ id: 'S-0140' });
+		expect(typeof write?.params.request_id).toBe('string');
+		script = {
+			'agent.commit': {
+				error: new AgentError(
+					400,
+					'the worktree .flai-cache/worktrees/S-0140 has nothing uncommitted',
+					-32011
+				)
+			}
+		};
+		const no = await doPost('S-0140', { action: 'commit' });
+		expect(no.status).toBe(400);
+		expect((await no.json()).error).toContain('has nothing uncommitted');
+	});
+
 	it('refuses an action it does not know without asking flai', async () => {
 		const r = await doPost('S-0116', { action: 'stop' });
 		expect(r.status).toBe(400);
