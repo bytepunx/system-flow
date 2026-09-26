@@ -369,7 +369,8 @@ const repos = new Map<string, Repo>();
 
 /**
  * The current project's Repo (S-0080): one per project key, so that one project's cached answers,
- * watcher, and cursor never leak into another's. Which project is current is set for the length of
+ * watcher, and cursor never leak into another's. Each listens for its own flai's changes from the
+ * moment it is made (S-0117). Which project is current is set for the length of
  * a request by hooks.server.ts (agent.ts's projectContext); code with none of its own, a test that
  * never sets it included, gets the same one Repo it always has, keyed under defaultProjectKey.
  */
@@ -379,6 +380,9 @@ export function repo(): Repo {
 	if (!r) {
 		r = new Repo();
 		repos.set(key, r);
+		// Every project's answers are forgotten when its flai says a file changed, not only the
+		// default project's, which hooks.server.ts watches at startup (S-0117).
+		void r.watch();
 	}
 	return r;
 }
