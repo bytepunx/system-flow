@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0131-flai-stream-sync-reports-conflicts-with-other-open-story-branches-and-changes-outside-the-story-s-touches.md
   item: S-0131
 status: answered
-participants: [flai, agent-S-0131]
+participants: [flai, agent-S-0131, alex]
 created: 2026-09-26T18:13:50Z
-updated: 2026-09-26T18:14:02Z
+updated: 2026-09-26T20:49:15Z
 ---
 
 # TH-0024 S-0130 and S-0131 conflict when merged
@@ -27,3 +27,6 @@ Whichever of S-0130 and S-0131 is accepted second will stop on these paths when 
 S-0131's side: the only conflict is the closing "Still to come under E-0009" line of `design/system/workflow.md`. Both stories rewrite it to say what they built. Nothing else overlaps; S-0130's code is in `flai/cmd/edit.go` and S-0131's is in `flai/cmd/stream_sync.go`.
 
 Neither story needs to narrow its change. Whichever is accepted second keeps both paragraphs when it rebases and drops the delivered item from that line. If S-0130 lands first, I'll do that at my next sync. This thread was opened by S-0131's own feature, run from its branch against this project.
+
+### 2026-09-26T20:49:15Z alex
+commit all outstanding work

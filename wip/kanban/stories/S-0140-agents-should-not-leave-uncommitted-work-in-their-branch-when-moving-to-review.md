@@ -3,11 +3,14 @@ id: S-0140
 type: story
 nature: remediation
 title: Agents should not leave uncommitted work in their branch when moving to review
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-26T20:55:06Z
-updated: 2026-09-26T20:55:06Z
-transitions: []
+updated: 2026-09-26T20:55:15Z
+transitions:
+  - to: ready
+    at: 2026-09-26T20:55:15Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 agent:
