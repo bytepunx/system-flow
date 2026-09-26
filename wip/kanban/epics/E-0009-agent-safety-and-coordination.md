@@ -3,11 +3,14 @@ id: E-0009
 type: epic
 nature: feature
 title: Agent Safety and Coordination
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-26T07:10:42Z
-updated: 2026-09-26T07:59:23Z
-transitions: []
+updated: 2026-09-26T17:47:56Z
+transitions:
+  - to: ready
+    at: 2026-09-26T17:47:56Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 ---

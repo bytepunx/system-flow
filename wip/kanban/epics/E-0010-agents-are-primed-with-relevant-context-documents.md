@@ -3,11 +3,14 @@ id: E-0010
 type: epic
 nature: feature
 title: Agents are primed with relevant context documents
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-26T07:20:38Z
-updated: 2026-09-26T17:46:25Z
-transitions: []
+updated: 2026-09-26T17:48:00Z
+transitions:
+  - to: ready
+    at: 2026-09-26T17:48:00Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 ---

@@ -3,11 +3,11 @@ id: S-0125
 type: story
 nature: research
 title: Determine how to prime context with relevant documentation only
-status: review
+status: done
 parent: E-0010
 owner: alex
 created: 2026-09-26T07:23:21Z
-updated: 2026-09-26T17:47:07Z
+updated: 2026-09-26T17:48:17Z
 transitions:
   - to: ready
     at: 2026-09-26T07:40:35Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-26T17:47:07Z
     by: agent-S-0125
+  - to: done
+    at: 2026-09-26T17:48:17Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 agent:
