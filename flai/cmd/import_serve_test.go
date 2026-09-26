@@ -54,32 +54,38 @@ func TestImportWithNoHostSaysWhatServesIt(t *testing.T) {
 }
 
 // S-0117: with a flai host running, the import registers the project with
-// flai serve as flai dashboard would, and says where the dashboard shows it.
+// flai serve as flai dashboard would, and says where the dashboard shows it,
+// with or without --commit, and committed or not: the legacy repository's
+// go module has no Go files, so go test fails and --commit exits 5.
 func TestImportWithAHostRegistersTheProject(t *testing.T) {
-	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
-	fakeRunning(t, string(host.DirFor(cfg)))
-	dir := serve.DirFor(cfg)
-	fakeRunning(t, string(dir))
+	for args, exit := range map[string]int{"": 0, "--commit": exitImportNotCommitted} {
+		t.Run("import "+args, func(t *testing.T) {
+			cfg := filepath.Join(t.TempDir(), "cfg.json")
+			t.Setenv("FLAI_CONFIG", cfg)
+			fakeRunning(t, string(host.DirFor(cfg)))
+			dir := serve.DirFor(cfg)
+			fakeRunning(t, string(dir))
 
-	root, out, errOut, code := importForServe(t)
-	if code != 0 {
-		t.Fatalf("import: %d %s", code, errOut)
-	}
-	if want := "dashboard: served by the host flai at http://localhost:4242"; !strings.Contains(out, want) {
-		t.Errorf("missing %q in:\n%s", want, out)
-	}
-	projects, err := dir.Projects()
-	if err != nil || len(projects) != 1 {
-		t.Fatalf("registry: %+v %v", projects, err)
-	}
-	p := projects[0]
-	want := serve.Entry{Key: "legacy", Name: filepath.Base(root), Root: root, URL: "http://127.0.0.1:4242", KeyFile: filepath.Join(string(dir), "dashboard.agent-key")}
-	if p != want {
-		t.Errorf("entry:\n got %+v\nwant %+v", p, want)
-	}
-	if b, err := os.ReadFile(p.KeyFile); err != nil || strings.TrimSpace(string(b)) == "" {
-		t.Errorf("credential not written: %v", err)
+			root, out, errOut, code := importForServe(t, strings.Fields(args)...)
+			if code != exit {
+				t.Fatalf("import: %d %s\n%s", code, errOut, out)
+			}
+			if want := "dashboard: served by the host flai at http://localhost:4242"; !strings.Contains(out, want) {
+				t.Errorf("missing %q in:\n%s", want, out)
+			}
+			projects, err := dir.Projects()
+			if err != nil || len(projects) != 1 {
+				t.Fatalf("registry: %+v %v", projects, err)
+			}
+			p := projects[0]
+			want := serve.Entry{Key: "legacy", Name: filepath.Base(root), Root: root, URL: "http://127.0.0.1:4242", KeyFile: filepath.Join(string(dir), "dashboard.agent-key")}
+			if p != want {
+				t.Errorf("entry:\n got %+v\nwant %+v", p, want)
+			}
+			if b, err := os.ReadFile(p.KeyFile); err != nil || strings.TrimSpace(string(b)) == "" {
+				t.Errorf("credential not written: %v", err)
+			}
+		})
 	}
 }
 
