@@ -40,13 +40,15 @@ export type ServedProject = {
 	name: string;
 	root: string;
 	from?: 'registry' | 'folder' | 'import';
-	/** The folder it is served below, when from is folder or import. */
+	/** The folder flai serve serves from that it is below, if any: removing it lists it as removed. */
 	below?: string;
 	state?: 'connected' | 'connecting' | 'not-connected' | 'unavailable' | 'not-running';
 	since?: string;
 	last_error?: string;
 	/** Why it is unavailable, or why it is not served. */
 	reason?: string;
+	/** Not served because the operator removed it from below a folder; Serve brings it back (S-0123). */
+	removed?: boolean;
 	/** Whether the settings action is on for it, so that the dashboard may serve or remove it. */
 	settings: boolean;
 };

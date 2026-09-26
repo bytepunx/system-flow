@@ -227,6 +227,14 @@ describe('SettingsPanel (S-0105)', () => {
 						root: '/home/me/git/odd',
 						reason: 'its system-flow.yaml does not load',
 						settings: false
+					},
+					{
+						key: 'diary',
+						name: 'Diary',
+						root: '/home/me/git/diary',
+						reason: 'removed from the dashboard; flai serve project add /home/me/git/diary',
+						removed: true,
+						settings: true
 					}
 				]
 			};
@@ -246,9 +254,20 @@ describe('SettingsPanel (S-0105)', () => {
 			expect(q('served-blog')!.querySelector('[data-testid="gate"]')!.textContent).toContain(
 				'flai serve enable settings'
 			);
-			// served from below an import folder: no Remove, but where it comes from
-			expect(q('served-notes')!.querySelector('[data-testid="remove-project"]')).toBeNull();
+			// served from below an import folder: where it comes from, and Remove (S-0123)
 			expect(q('served-notes')!.textContent).toContain('below /home/me/git');
+			expect(
+				q('served-notes')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!
+					.disabled
+			).toBe(false);
+			// removed from below a folder: said so, and Serve brings it back
+			expect(q('unserved-diary')!.textContent).toContain(
+				'Removed from the dashboard; Serve brings it back.'
+			);
+			expect(
+				q('unserved-diary')!.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
+					.disabled
+			).toBe(false);
 			expect(q('unserved-shop')!.textContent).toContain('no dashboard is known to serve it on');
 			expect(
 				q('unserved-shop')!.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
@@ -281,6 +300,59 @@ describe('SettingsPanel (S-0105)', () => {
 			expect(q('said-projects')!.textContent).toContain('flai serve project add /home/me/git/sf');
 			expect(refresh).toHaveBeenCalled();
 			refresh.mockRestore();
+		});
+
+		it('removes a project served from below a folder, waits for the switcher to drop it, and says Serve brings it back (S-0123)', async () => {
+			const sent = backend(projects(), {
+				unserve: [200, { removed: { key: 'notes' }, listed_below: '/home/me/git' }]
+			});
+			switcher.list = [{ key: 'notes', name: 'Notes', connected: true }];
+			let asked = 0;
+			const refresh = vi.spyOn(switcher, 'refresh').mockImplementation(async () => {
+				if (++asked === 2) switcher.list = [];
+			});
+			await show();
+			q('served-notes')!
+				.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!
+				.click();
+			flushSync();
+			expect(q('confirm-remove')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'It is below /home/me/git, so it is listed below as removed, and Serve there brings it back'
+			);
+			q<HTMLButtonElement>('confirm-remove-yes')!.click();
+			for (let i = 0; i < 20 && asked < 2; i++) {
+				await new Promise((r) => setTimeout(r, 100));
+				flushSync();
+			}
+			await settle();
+			expect(sent).toEqual([{ kind: 'unserve', root: '/home/me/git/notes', key: 'notes' }]);
+			expect(q('said-projects')!.textContent).toContain(
+				'It is listed below as removed, and Serve there brings it back.'
+			);
+			expect(asked).toBe(2);
+			refresh.mockRestore();
+			switcher.list = [];
+		});
+
+		it('serves a removed project again and waits for the switcher to have it (S-0123)', async () => {
+			const sent = backend(projects(), {
+				serve: [200, { project: { key: 'diary' }, served_below: '/home/me/git', restored: true }]
+			});
+			const refresh = vi.spyOn(switcher, 'refresh').mockImplementation(async () => {
+				switcher.list = [{ key: 'diary', name: 'Diary', connected: true }];
+			});
+			await show();
+			q('unserved-diary')!
+				.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
+				.click();
+			for (let i = 0; i < 20 && !q('said-projects')?.textContent?.includes('switcher'); i++) {
+				await new Promise((r) => setTimeout(r, 100));
+				flushSync();
+			}
+			expect(sent).toEqual([{ kind: 'serve', root: '/home/me/git/diary', key: 'diary' }]);
+			expect(q('said-projects')!.textContent).toContain('diary is served, and in the switcher');
+			refresh.mockRestore();
+			switcher.list = [];
 		});
 
 		it('serves a project and waits for the switcher to have it', async () => {

@@ -785,36 +785,34 @@ func (a *app) servedView() map[string]any {
 		return map[string]any{"error": err.Error()}
 	}
 	type project struct {
-		Key       string `json:"key"`
-		Name      string `json:"name"`
-		Root      string `json:"root"`
-		From      string `json:"from,omitempty"`
+		Key  string `json:"key"`
+		Name string `json:"name"`
+		Root string `json:"root"`
+		From string `json:"from,omitempty"`
+		// Below is the folder it is below that flai serve serves from, when
+		// it is: removing it puts it on the list of removed projects.
 		Below     string `json:"below,omitempty"`
 		State     string `json:"state,omitempty"`
 		Since     string `json:"since,omitempty"`
 		LastError string `json:"last_error,omitempty"`
 		Reason    string `json:"reason,omitempty"`
+		// Removed is whether it is not served because the operator removed
+		// it (S-0123).
+		Removed bool `json:"removed,omitempty"`
 		// Settings is whether the dashboard may serve or remove it: the
 		// settings action is on for it.
 		Settings bool `json:"settings"`
 	}
 	served := make([]project, 0, len(l.Served))
 	for _, p := range l.Served {
-		below := ""
-		switch p.From {
-		case "import":
-			below = a.importRootOf(p.Root)
-		case "folder":
-			if st, alive := a.serveDir().ReadStatus(a.now()); alive {
-				below = st.Folder
-			}
-		}
+		// a registered one below such a folder too: removing it lists it (S-0123)
+		below := a.servedBelow(p.Root)
 		served = append(served, project{Key: p.Key, Name: p.Name, Root: p.Root, From: p.From, Below: below,
 			State: p.State, Since: p.Since, LastError: p.LastError, Reason: p.Reason, Settings: cfg.ActionEnabled(hostapi.ActionSettings, p.Root)})
 	}
 	unserved := make([]project, 0, len(l.Unserved))
 	for _, f := range l.Unserved {
-		unserved = append(unserved, project{Key: f.Key, Name: f.Name, Root: f.Root, Reason: f.Reason, Settings: cfg.ActionEnabled(hostapi.ActionSettings, f.Root)})
+		unserved = append(unserved, project{Key: f.Key, Name: f.Name, Root: f.Root, Reason: f.Reason, Removed: f.Removed, Settings: cfg.ActionEnabled(hostapi.ActionSettings, f.Root)})
 	}
 	return map[string]any{"running": l.Running, "served": served, "unserved": unserved}
 }

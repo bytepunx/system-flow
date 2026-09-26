@@ -120,32 +120,43 @@
 		void change('agent', 'agent', params);
 	}
 	// A project served or removed through flai serve (S-0122). A served one connects within a second
-	// or two: the switcher is asked again until it has it, so it appears without a reload.
+	// or two, and a removed one is dropped as soon: the switcher is asked again until it agrees, so
+	// it changes without a reload, and then the list is read again. A project served from below a
+	// folder is not registered: removing it puts it on flai serve's list of removed projects, and
+	// Serve takes it off (S-0123).
+	const inSwitcher = (key: string) =>
+		projectState.list.some((x) => x.key === key && !x.candidate && x.connected);
+	async function until(done: () => boolean) {
+		for (let i = 0; i < 30; i++) {
+			await projectState.refresh();
+			if (done()) return true;
+			await new Promise((r) => setTimeout(r, 500));
+		}
+		return false;
+	}
 	async function serveProject(p: ServedProject) {
 		if (!(await change('projects', 'serve', { root: p.root, key: p.key || undefined }))) return;
 		said.projects = { ok: true, text: `${p.key || p.root} is served; waiting for it to connect…` };
-		for (let i = 0; i < 30; i++) {
-			await projectState.refresh();
-			if (projectState.list.some((x) => x.key === p.key && !x.candidate && x.connected)) {
-				said.projects = { ok: true, text: `${p.key} is served, and in the switcher` };
-				return;
-			}
-			await new Promise((r) => setTimeout(r, 500));
-		}
-		said.projects = {
-			ok: true,
-			text: `${p.key || p.root} is served but has not connected yet; its state below says why`
-		};
+		said.projects = (await until(() => inSwitcher(p.key)))
+			? { ok: true, text: `${p.key} is served, and in the switcher` }
+			: {
+					ok: true,
+					text: `${p.key || p.root} is served but has not connected yet; its state below says why`
+				};
 		await load();
 	}
 	async function unserveProject(p: ServedProject) {
 		confirming = null;
-		if (!(await change('projects', 'unserve', { root: p.root, key: p.key || undefined }))) return;
+		const body = await change('projects', 'unserve', { root: p.root, key: p.key || undefined });
+		if (!body) return;
 		said.projects = {
 			ok: true,
-			text: `${p.key} is no longer served, and none of its files was touched. Serve it again with flai serve project add ${p.root}, on the host.`
+			text: body.listed_below
+				? `${p.key} is no longer served, and none of its files was touched. It is listed below as removed, and Serve there brings it back.`
+				: `${p.key} is no longer served, and none of its files was touched. Serve it again with flai serve project add ${p.root}, on the host.`
 		};
-		await projectState.refresh();
+		await until(() => !inSwitcher(p.key));
+		await load();
 	}
 
 	async function rotate(section: string, kind: 'mcp_token' | 'dashboard_token') {
@@ -495,15 +506,22 @@
 							{#if p.from !== 'registry'}
 								<p class="text-xs text-muted" data-testid="served-below">
 									Served because it is below <code>{p.below}</code>{p.from === 'import'
-										? ', named under Import folders; removing that folder stops it'
+										? ', named under Import folders'
 										: ', the folder flai serve was started in'}.
 								</p>
-							{:else if confirming === p.root}
+							{/if}
+							{#if confirming === p.root}
 								<div class="mt-1 text-xs" data-testid="confirm-remove">
 									<p>
 										Stop serving {p.name}? None of its files is touched and the dashboard keeps
-										running for the other projects. Serve it again with
-										<code>flai serve project add {p.root}</code> on the host.
+										running for the other projects.
+										{#if p.below}
+											It is below <code>{p.below}</code>, so it is listed below as removed, and
+											Serve there brings it back.
+										{:else}
+											Serve it again with
+											<code>flai serve project add {p.root}</code> on the host.
+										{/if}
 									</p>
 									<div class="mt-1 flex gap-2">
 										<button
@@ -527,7 +545,7 @@
 									onclick={() => (confirming = p.root)}>Remove</button
 								>
 							{/if}
-							{#if p.from === 'registry' && !p.settings}
+							{#if !p.settings}
 								<p class="text-xs text-muted" data-testid="gate">
 									To remove it here, run <code class="rounded bg-surface px-1">{view.enable}</code>
 									on the host, in {p.root}.
@@ -540,7 +558,9 @@
 					<p class="text-xs text-muted">No project is served.</p>
 				{/if}
 				{#if h.projects.unserved.length}
-					<h3 class="mt-3 mb-1 text-xs font-medium">Below the import folders, not served</h3>
+					<h3 class="mt-3 mb-1 text-xs font-medium">
+						Below the import folders or the folder flai serve was started in, not served
+					</h3>
 					<ul class="space-y-2">
 						{#each h.projects.unserved as p (p.root)}
 							<li class="rounded border border-line p-2" data-testid="unserved-{p.key || p.root}">
@@ -549,7 +569,9 @@
 									{#if p.name}<span>{p.name}</span>{/if}
 									<code class="text-xs text-muted">{p.root}</code>
 								</div>
-								<p class="text-xs text-danger" data-testid="reason">{p.reason}</p>
+								<p class="text-xs {p.removed ? 'text-muted' : 'text-danger'}" data-testid="reason">
+									{p.removed ? 'Removed from the dashboard; Serve brings it back.' : p.reason}
+								</p>
 								<button
 									class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
 									disabled={!p.settings || busy !== null}

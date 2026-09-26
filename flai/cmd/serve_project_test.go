@@ -215,6 +215,11 @@ func TestServeProjectRemoveAndAddAProjectServedFromBelowAFolder(t *testing.T) {
 	if !strings.Contains(out, "  blog  "+blog+"\n    removed from the dashboard; flai serve project add "+blog) {
 		t.Errorf("list:\n%s", out)
 	}
+	// and the settings page is told it was removed, so that Serve brings it back
+	view, _ := json.Marshal((&app{cwd: home}).servedView())
+	if !strings.Contains(string(view), `"root":"`+blog+`","reason":"removed from the dashboard;`) || !strings.Contains(string(view), `"removed":true`) {
+		t.Errorf("settings view: %s", view)
+	}
 
 	out, errOut, code = serveProjectRun(t, home, "add", blog)
 	if code != 0 || !strings.Contains(out, "blog ("+blog+") is off the list of removed projects, so flai serve serves it again from below "+git) {
