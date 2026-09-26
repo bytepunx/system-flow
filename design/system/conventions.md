@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-09-15
+updated: 2026-09-26
 status: active
 ---
 
@@ -105,6 +105,8 @@ A conflict between 1 and 2 or 3 is logged in the narrative's Decisions and, if i
 ## Priming
 
 The template's `CLAUDE.md` opens with a priming section: read `design/conventions/README.md` and every file it lists in order, then `wip/agents/index.md`, then the board, before any change. It also states the precedence order and what to do when a convention conflicts with an instruction or seems wrong. Norms are not repeated in `CLAUDE.md`; it points at the convention files. `flai prime` (S-0025) prints the same set in read order, with `--cat` for full content, so a hook or a script can load it in one call.
+
+[ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) (S-0125) narrows priming to the story: conventions, design, tech files, and ADRs carry `topics`, on the file and on any heading as `<!-- topics: a, b -->`, with `[all]` for every story, and `flai prime --story S-nnnn` prints the conventions' matching sections, the design and ADRs the story's topics, links, and ranking select, and a catalog of the rest. Every convention starts as `[all]`. The stories under E-0010 build it; until they are accepted, priming is as the paragraph above says. The survey behind it is [agent-context.md](agent-context.md).
 
 ## Tooling
 

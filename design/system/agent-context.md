@@ -129,4 +129,12 @@ The 2026 preprints are not peer reviewed and disagree on cost; only their direct
 
 ## Decision
 
-Pending the designer's answers on S-0125's threads.
+[ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md), 2026-09-26. On TH-0020 the designer chose design 1 with one change: conventions are selected section by section, by `topics` on the file and on headings, a name chosen so as not to overload `tags`, which decide release components. On TH-0021:
+
+- `topics` may be set on an accepted ADR, with `flai adr topics` (not derived from the documents that link it).
+- Conventions, `design/system`, and `design/tech` files carry `topics`; `[all]` is core. A convention without `topics` is `[all]`; a design or tech file without it is selected only by links or ranking.
+- Every convention starts as `[all]`; the designer narrows them afterwards.
+- No budget: everything selected is loaded; ranking adds a fixed five ADRs and five design sections.
+- The harness prompt, `CLAUDE.md`, the template, and a new MCP `prime` tool switch to `flai prime --story` as soon as it exists.
+
+A story's topics are its own and its epic's `topics`, plus the name, tags, and kind of the sub-projects its tags or claim reach, plus `code` when one of them is not the template.

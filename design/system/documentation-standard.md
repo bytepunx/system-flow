@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-09-15
+updated: 2026-09-26
 status: active
 ---
 
@@ -43,7 +43,7 @@ status: active             # active | draft | deprecated
 
 - `design/conventions/` files are edited above the marker only through the template (and `flai upgrade`); a project edits below the marker. An agent that thinks a baseline rule is wrong proposes the change, it does not make it.
 - `design/system` and `design/tech` are edited in place. If a change reverses an earlier decision, write an ADR first, then update the living document and link the ADR.
-- `design/adrs` are never edited after acceptance except to set `superseded_by`. The tooling holds this: `flai doc` refuses the body of an accepted, superseded, or deprecated ADR, in the dashboard's editor too, and only `flai adr new --supersedes` sets `superseded_by` (S-0060). A proposed ADR is a draft and is edited like any document.
+- `design/adrs` are never edited after acceptance except to set `superseded_by`. The tooling holds this: `flai doc` refuses the body of an accepted, superseded, or deprecated ADR, in the dashboard's editor too, and only `flai adr new --supersedes` sets `superseded_by` (S-0060). A proposed ADR is a draft and is edited like any document. [ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) adds `topics` as a second key that may be set on an accepted ADR, with `flai adr topics`, once E-0010 builds it.
 - `wip/kanban` items are edited by agents and by `flai`. Human edits are welcome but must keep front matter valid; `flai check` validates it.
 - `wip/agents` narratives are append-only in the log section. The summary sections at the top are rewritten as understanding improves.
 
