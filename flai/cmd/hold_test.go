@@ -88,3 +88,60 @@ func TestBoardMarksAHeldStory(t *testing.T) {
 		t.Errorf("in progress: %+v", ip)
 	}
 }
+
+// S-0130: flai edit --after makes a ready story wait for another, flai board
+// says so, flai check refuses a story that does not exist and a cycle, and
+// --clear-after lets it go.
+func TestEditAfterHoldsAStoryUntilTheOtherIsDone(t *testing.T) {
+	root := heldProject(t)
+	if _, errOut, code := runIn(t, root, "story", "new", "Later", "--epic", "E-0001", "--touches", "docs"); code != 0 {
+		t.Fatal(errOut)
+	}
+	matches, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", "S-0003-*.md"))
+	body, _ := os.ReadFile(matches[0])
+	_ = os.WriteFile(matches[0], []byte(strings.Replace(string(body), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] done\n", 1)), 0o644)
+	if _, errOut, code := runIn(t, root, "move", "S-0003", "ready"); code != 0 {
+		t.Fatal(errOut)
+	}
+
+	out, errOut, code := runIn(t, root, "edit", "S-0003", "--after", "S-2")
+	if code != 0 || !strings.Contains(out, "S-0003: changed after") {
+		t.Fatalf("edit: %d %s %s", code, out, errOut)
+	}
+	if item, _ := os.ReadFile(matches[0]); !strings.Contains(string(item), "\nafter: [S-0002]\n") {
+		t.Errorf("the item:\n%s", item)
+	}
+	if out, _, _ := runIn(t, root, "edit", "S-0003", "--show"); !strings.Contains(out, "  after: S-0002\n") {
+		t.Errorf("show:\n%s", out)
+	}
+	if out, _, _ := runIn(t, root, "board"); !strings.Contains(out, "held (after): waits for S-0002 (ready); starts when S-0002 is done\n") {
+		t.Errorf("board:\n%s", out)
+	}
+
+	for _, c := range []struct {
+		args []string
+		code int
+		says string
+	}{
+		{[]string{"edit", "S-0003", "--after", "S-0009"}, 4, "after names S-0009, which does not exist"},
+		{[]string{"edit", "S-0002", "--after", "S-0003"}, 4, "after forms a cycle, S-0002 waits for S-0003 waits for S-0002"},
+		{[]string{"edit", "S-0003", "--after", "S-3"}, 1, "a story cannot wait for itself"},
+		{[]string{"edit", "S-0003", "--after", "E-0001"}, 1, "name stories, such as S-0001"},
+		{[]string{"edit", "S-0003", "--after", "S-0001", "--clear-after"}, 1, "contradict"},
+	} {
+		out, errOut, code := runIn(t, root, c.args...)
+		if code != c.code || !strings.Contains(out+errOut, c.says) {
+			t.Errorf("%v: %d\n%s%s", c.args, code, out, errOut)
+		}
+	}
+
+	if out, errOut, code := runIn(t, root, "edit", "S-0003", "--clear-after"); code != 0 || !strings.Contains(out, "changed after") {
+		t.Fatalf("clear: %d %s %s", code, out, errOut)
+	}
+	if item, _ := os.ReadFile(matches[0]); strings.Contains(string(item), "after:") {
+		t.Errorf("after: stays:\n%s", item)
+	}
+	if out, _, _ := runIn(t, root, "board"); strings.Contains(out, "held (after)") {
+		t.Errorf("still held:\n%s", out)
+	}
+}

@@ -3,10 +3,12 @@ package mcpserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -54,6 +56,7 @@ type ItemEditIn struct {
 	Nature  *string   `json:"nature,omitempty"`
 	Tags    *[]string `json:"tags,omitempty" jsonschema:"replaces the tags; an empty list removes them"`
 	Touches *[]string `json:"touches,omitempty" jsonschema:"replaces the touches; an empty list removes them"`
+	After   *[]string `json:"after,omitempty" jsonschema:"a story's: replaces the stories it waits for until they are done (it is held in ready meanwhile); an empty list removes them"`
 	Parent  *string   `json:"parent,omitempty"`
 	// Agent replaces a story's agent; ClearAgent removes it.
 	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, and config"`
@@ -66,17 +69,25 @@ func (in ItemEditIn) project() string { return in.Project }
 // ItemEditOut is what an edit changed.
 type ItemEditOut struct {
 	ID        string   `json:"id"`
-	Changed   []string `json:"changed" jsonschema:"title, nature, tags, touches, agent, parent, goal, criteria, notes, body"`
+	Changed   []string `json:"changed" jsonschema:"title, nature, tags, touches, after, agent, parent, goal, criteria, notes, body"`
 	Unchanged bool     `json:"unchanged,omitempty"`
 	Hash      string   `json:"hash"`
 }
 
 func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEditIn) (*mcp.CallToolResult, ItemEditOut, error) {
-	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Touches: in.Touches, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent}
+	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Touches: in.Touches, After: in.After, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent}
 	if ch == (itemedit.Change{}) {
-		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, touches, parent, agent, clear_agent, or body")
+		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, touches, after, parent, agent, clear_agent, or body")
 	}
 	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, NoCommit: true, Now: s.now()})
+	if r, ok := docedit.IsRefused(err); ok {
+		// the findings are what the agent fixes, not only how many there are
+		msgs := make([]string, len(r.Findings))
+		for i, f := range r.Findings {
+			msgs[i] = f.Rule + ": " + f.Message
+		}
+		return nil, ItemEditOut{}, fmt.Errorf("%w: %s", err, strings.Join(msgs, "; "))
+	}
 	if err != nil {
 		return nil, ItemEditOut{}, err
 	}

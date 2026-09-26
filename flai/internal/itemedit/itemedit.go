@@ -1,8 +1,9 @@
 // Package itemedit changes a work item after it was created (S-0085): its
-// title, nature, tags, touches, parent, and the body below its heading, in
-// one step that is checked and committed the way a document save is
-// (ADR-0023). What is the item's state stays flai's and is not reachable from
-// here: ID, type, status, transitions, blocked intervals, owner, and dates.
+// title, nature, tags, touches, a story's after: (S-0130), parent, and the
+// body below its heading, in one step that is checked and committed the way
+// a document save is (ADR-0023). What is the item's state stays flai's and
+// is not reachable from here: ID, type, status, transitions, blocked
+// intervals, owner, and dates.
 //
 // A title lives in several places. A retitle keeps them in step: the front
 // matter, the heading, the file's name, the line in the parent's list, the
@@ -32,8 +33,11 @@ type Change struct {
 	Nature  *string
 	Tags    *[]string
 	Touches *[]string
-	Parent  *string
-	Body    *string // what lies below the heading; the heading is flai's
+	// After replaces the stories a story waits for (S-0130); an empty list
+	// removes them.
+	After  *[]string
+	Parent *string
+	Body   *string // what lies below the heading; the heading is flai's
 	// Agent replaces a story's agent (S-0103) when set; ClearAgent removes it.
 	Agent      *manifest.Agent
 	ClearAgent bool
@@ -58,6 +62,7 @@ type View struct {
 	Nature  string   `json:"nature"`
 	Tags    []string `json:"tags"`
 	Touches []string `json:"touches"`
+	After   []string `json:"after"` // stories this story waits for (S-0130)
 	Parent  string   `json:"parent,omitempty"`
 	// Agent is the story's agent, and DefaultAgent the project's, which a
 	// story created now would get (S-0103).
@@ -84,7 +89,7 @@ type Result struct {
 	ID          string          `json:"id"`
 	Path        string          `json:"path"`
 	Hash        string          `json:"hash"`
-	Changed     []string        `json:"changed"` // title, nature, tags, touches, agent, parent, goal, criteria, notes, body
+	Changed     []string        `json:"changed"` // title, nature, tags, touches, after, agent, parent, goal, criteria, notes, body
 	Renamed     string          `json:"renamed_from,omitempty"`
 	Files       []string        `json:"files"` // every file written or removed, relative to the checkout
 	Unchanged   bool            `json:"unchanged,omitempty"`
@@ -146,7 +151,7 @@ func Show(repo *workitem.Repo, id string) (*View, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches),
+	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches), After: orEmpty(it.After),
 		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
 	v.Editable, v.Reason = editable(it)
 	if want := parentType(it.Type); want != "" {
@@ -198,6 +203,36 @@ func cleanList(what string, in []string) ([]string, error) {
 		}
 		seen[v] = true
 		out = append(out, v)
+	}
+	return out, nil
+}
+
+var storyID = regexp.MustCompile(`^S-\d{3,}$`)
+
+// storyIDs is an after: list in canonical IDs, without repeats: stories
+// only, and not it. That each exists and no cycle forms is the check's.
+func storyIDs(it *workitem.Item, in []string) ([]string, error) {
+	if it.Type != workitem.Story && len(in) > 0 {
+		return nil, invalid("%s is a %s; only a story waits for others in after", it.ID, it.Type)
+	}
+	out := []string{}
+	seen := map[string]bool{}
+	for _, v := range in {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		id := workitem.CanonicalID(v)
+		if !storyID.MatchString(id) {
+			return nil, invalid("after %q: name stories, such as S-0001", v)
+		}
+		if id == it.ID {
+			return nil, invalid("after %s: a story cannot wait for itself", id)
+		}
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
 	}
 	return out, nil
 }
@@ -357,6 +392,19 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 				it.Touches = nil
 			}
 			changed = append(changed, "touches")
+		}
+	}
+	if ch.After != nil {
+		after, err := storyIDs(it, *ch.After)
+		if err != nil {
+			return nil, err
+		}
+		if !same(after, orEmpty(it.After)) {
+			it.After = after
+			if len(after) == 0 {
+				it.After = nil
+			}
+			changed = append(changed, "after")
 		}
 	}
 	if ch.ClearAgent || ch.Agent != nil {

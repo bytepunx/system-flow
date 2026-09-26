@@ -686,6 +686,7 @@ func itemSpecs() map[string]spec {
 				Nature  *string   `json:"nature"`
 				Tags    *[]string `json:"tags"`
 				Touches *[]string `json:"touches"`
+				After   *[]string `json:"after"` // stories a story waits for (S-0130)
 				Parent  *string   `json:"parent"`
 				Body    *string   `json:"body"`
 				// Agent replaces the story's agent: absent leaves it, null (or an
@@ -725,7 +726,7 @@ func itemSpecs() map[string]spec {
 			for _, l := range []struct {
 				flag, clear string
 				values      *[]string
-			}{{"tag", "--clear-tags", in.Tags}, {"touches", "--clear-touches", in.Touches}} {
+			}{{"tag", "--clear-tags", in.Tags}, {"touches", "--clear-touches", in.Touches}, {"after", "--clear-after", in.After}} {
 				if l.values == nil {
 					continue
 				}

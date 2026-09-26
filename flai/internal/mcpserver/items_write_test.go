@@ -64,3 +64,26 @@ func toStrings(v any) []string {
 	}
 	return out
 }
+
+// S-0130: item_edit sets a story's after:, which item_get shows, refuses a
+// story that does not exist, and an empty list removes it.
+func TestItemEditSetsAndClearsAfter(t *testing.T) {
+	f := setup(t)
+	later := f.readyStory(t, "Later", t0)
+	ed, failed := f.call(t, "item_edit", map[string]any{"id": later.ID, "after": []string{f.story.ID}})
+	if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "after" {
+		t.Fatalf("set: %v %s", ed, failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": later.ID}); strings.Join(toStrings(got["after"]), ",") != f.story.ID {
+		t.Errorf("item_get: %v", got["after"])
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": later.ID, "after": []string{"S-0999"}}); !strings.Contains(failed, "S-0999, which does not exist") {
+		t.Errorf("a missing story: %q", failed)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": later.ID, "after": []string{}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "after" {
+		t.Errorf("clear: %v %s", ed, failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": later.ID}); got["after"] != nil {
+		t.Errorf("cleared: %v", got["after"])
+	}
+}
