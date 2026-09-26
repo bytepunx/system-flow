@@ -4,8 +4,8 @@ import type { RequestHandler } from './$types';
 import type { Agent } from '$lib/agent';
 
 /**
- * An item's own words, changed after it was made (S-0085): title, nature, tags, touches, parent,
- * and the body below its heading. flai does it on the host (item.show, item.edit, which are
+ * An item's own words, changed after it was made (S-0085): title, nature, tags, touches, a story's
+ * after (S-0130), parent, and the body below its heading. flai does it on the host (item.show, item.edit, which are
  * `flai edit`): a retitle is kept in step in the file's name, the parent's list, the narrative, and
  * links; the repository is checked with the change in place; one commit holds every file touched.
  * What is the item's state (ID, type, status, transitions, blocks, owner, dates) is not reachable
@@ -20,6 +20,8 @@ export type ItemView = {
 	nature: string;
 	tags: string[];
 	touches: string[];
+	/** The stories a story waits for until they are done (S-0130). */
+	after?: string[];
 	parent?: string;
 	/** A story's agent, and the project's default a new story would get (S-0103). */
 	agent?: Agent;
@@ -37,10 +39,10 @@ export type ItemView = {
 export const GET: RequestHandler = ({ params }) =>
 	respond(async () => (await repo().run<ItemView>('item.show', { id: params.id })).data);
 
-const FIELDS = ['title', 'nature', 'tags', 'touches', 'parent', 'body'] as const;
+const FIELDS = ['title', 'nature', 'tags', 'touches', 'after', 'parent', 'body'] as const;
 
 /**
- * PUT { hash, title?, nature?, tags?, touches?, parent?, agent?, body? }: change what is given and leave the
+ * PUT { hash, title?, nature?, tags?, touches?, after?, parent?, agent?, body? }: change what is given and leave the
  * rest. 409 { error, current, hash } when the item changed after it was read; 422 { error, findings }
  * when flai check refuses the change, and then nothing was changed; 400 for a value that is not
  * what it should be.

@@ -161,6 +161,43 @@ describe('ItemEditor (S-0085)', () => {
 		expect(document.querySelector('form')).toBeNull();
 	});
 
+	// S-0130: a story's after: is shown and sent as a list; emptied, it is sent empty and removed
+	it('edits the stories a story waits for', async () => {
+		api.mockImplementation((_url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'PUT'
+					? answer(200, { changed: ['after'] })
+					: answer(200, { ...view, after: ['S-0005'] })
+			)
+		);
+		await mountIt();
+		const field = document.querySelector<HTMLInputElement>('[data-testid="edit-after"]')!;
+		expect(field.value).toBe('S-0005');
+		expect(document.body.textContent).toContain('held, until each of these is done');
+		type('[data-testid="edit-after"]', 'S-0005, S-0006');
+		await submit();
+		expect(sent()).toEqual({ after: ['S-0005', 'S-0006'], hash: view.hash });
+		type('[data-testid="edit-after"]', '');
+		await submit();
+		expect(sent()).toEqual({ after: [], hash: view.hash });
+	});
+
+	it('has no after field for an epic, and sends none for a story whose flai does not know it', async () => {
+		api.mockImplementation((_url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'PUT' ? answer(200, { changed: ['title'] }) : answer(200, view)
+			)
+		);
+		await mountIt();
+		type('[data-testid="edit-title"]', 'Renamed');
+		await submit();
+		expect(sent()).toEqual({ title: 'Renamed', hash: view.hash });
+		unmount(c!);
+		api.mockResolvedValue(answer(200, { ...view, type: 'epic', parent: undefined }));
+		await mountIt();
+		expect(document.querySelector('[data-testid="edit-after"]')).toBeNull();
+	});
+
 	// S-0103: the story's own agent is shown, and a change replaces it; emptied, it is removed
 	it("edits the story's agent and sends it whole, or null when emptied", async () => {
 		const withAgent = {

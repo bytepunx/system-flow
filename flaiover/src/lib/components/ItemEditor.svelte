@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Edit a story's or an epic's own words where it is read (S-0085): title, nature, tags, what it
-	// touches, its parent, and the body below its heading. flai on the host makes every change and
+	// touches, the stories a story waits for (S-0130), its parent, and the body below its heading. flai on the host makes every change and
 	// decides what is allowed; this form only collects it. What is the item's state, its ID, type,
 	// status, owner, and dates, is shown and is not a field.
 	import { api } from '$lib/api';
@@ -16,6 +16,8 @@
 		nature: string;
 		tags: string[];
 		touches: string[];
+		/** the stories a story waits for (S-0130); a flai before it does not send it */
+		after?: string[];
 		parent?: string;
 		agent?: Agent;
 		default_agent?: Agent;
@@ -40,6 +42,7 @@
 	let nature = $state('');
 	let tags = $state('');
 	let touches = $state('');
+	let after = $state('');
 	let parent = $state('');
 	// the story's own agent (S-0103), which a save replaces
 	let harness = $state('');
@@ -65,6 +68,7 @@
 		nature = v.nature;
 		tags = v.tags.join(', ');
 		touches = v.touches.join(', ');
+		after = (v.after ?? []).join(', ');
 		parent = v.parent ?? '';
 		harness = v.agent?.harness ?? '';
 		model = v.agent?.model ?? '';
@@ -98,6 +102,7 @@
 		if (!same(list(tags), view.tags)) out.tags = list(tags);
 		if (view.type !== 'epic' && !same(list(touches), view.touches)) out.touches = list(touches);
 		if (view.type !== 'epic' && parent && parent !== (view.parent ?? '')) out.parent = parent;
+		if (view.type === 'story' && !same(list(after), view.after ?? [])) out.after = list(after);
 		if (view.type === 'story') {
 			const parsed = parseConfig(agentConfig);
 			// a config line that is not key=value is said at save; nothing is sent until it is
@@ -220,6 +225,20 @@
 						bind:value={touches}
 						placeholder="paths or components, comma separated"
 					/>
+				</label>
+			{/if}
+			{#if view.type === 'story'}
+				<label class="block text-sm">
+					<span class="mb-1 block font-medium">Waits for</span>
+					<input
+						class="w-full rounded border border-line-strong px-2 py-1 font-mono text-xs"
+						bind:value={after}
+						placeholder="stories, such as S-0012, comma separated"
+						data-testid="edit-after"
+					/>
+					<span class="mt-1 block text-xs text-muted"
+						>It stays in ready, held, until each of these is done.</span
+					>
 				</label>
 			{/if}
 		</div>

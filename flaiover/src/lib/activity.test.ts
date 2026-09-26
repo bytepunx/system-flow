@@ -78,6 +78,23 @@ describe('a held story (S-0129)', () => {
 		expect(holdWaitsFor(noTouches)).toEqual(['S-0128', 'S-0131']);
 		expect(holdWaitsFor({ code: 'overlap', reason: 'held (overlap)' })).toEqual([]);
 	});
+	// S-0130: after: names the stories to wait for; a note may name the story itself, and a story
+	// held by after: and an overlap has two clauses of what clears it
+	it('waits for the stories a story names in after, and for an overlap besides', () => {
+		const cancelled = {
+			code: 'after',
+			reason:
+				'held (after): waits for S-0004 (cancelled); starts when S-0004 is done; S-0004 was cancelled, so drop it from after: if S-0009 no longer needs it'
+		};
+		const both = {
+			code: 'after',
+			reason:
+				'held (after): waits for S-0001 (in backlog); starts when S-0001 is done; also held (overlap): touches flai/cmd, inside flai which S-0002 (in progress) touches; starts when S-0002 is accepted, cancelled, or sent back'
+		};
+		expect(holdWaitsFor(cancelled)).toEqual(['S-0004']);
+		expect(holdWaitsFor(both)).toEqual(['S-0001', 'S-0002']);
+		expect(holdLine(both)).toBe('held (after): S-0001, S-0002');
+	});
 	it('puts the code and the stories it waits for on the card', () => {
 		expect(holdLine(overlap)).toBe('held (overlap): S-0128');
 		expect(holdLine(noTouches)).toBe('held (no-touches): S-0128, S-0131');

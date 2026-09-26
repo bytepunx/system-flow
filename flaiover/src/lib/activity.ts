@@ -24,8 +24,9 @@ export type AgentRun = {
 export type ActivityState = 'working' | 'waiting' | 'failed' | 'worked';
 
 /**
- * Why a story in ready waits for another's claim (S-0128, ADR-0046): `overlap` or `no-touches`, and
- * flai's reason, which names every open story that holds it and ends with what clears it.
+ * Why a story in ready waits for another's claim (S-0128, ADR-0046): `overlap` or `no-touches`, or
+ * for a story it names in after: (`after`, S-0130), and flai's reason, which names every story that
+ * holds it and says what clears it.
  */
 export type Hold = { code: string; reason: string };
 
@@ -75,10 +76,14 @@ export function storyActivity(h: HostAgent | null): Record<string, StoryActivity
 
 const storyID = /\bS-\d+\b/g;
 
-/** The stories a hold waits for: those its reason names after `starts when`, in order, once each. */
+/**
+ * The stories a hold waits for: those its reason names in each `starts when` clause, up to the next
+ * semicolon, in order, once each. A hold that is `after` and `overlap` too has two such clauses, and
+ * a note after one may name the story itself, which it does not wait for (S-0130).
+ */
 export function holdWaitsFor(h: Hold): string[] {
-	const at = h.reason.lastIndexOf('starts when');
-	return [...new Set(h.reason.slice(at < 0 ? 0 : at).match(storyID) ?? [])];
+	const clauses = [...h.reason.matchAll(/starts when ([^;]*)/g)].map((m) => m[1]);
+	return [...new Set(clauses.flatMap((c) => c.match(storyID) ?? []))];
 }
 
 /** The card's short line for a hold: its code and the stories it waits for. */
