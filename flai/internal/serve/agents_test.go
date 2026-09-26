@@ -162,10 +162,14 @@ func (lab *agentLab) readyWith(title string, a *manifest.Agent) string {
 	return id
 }
 
-// backlog makes a story with an agent and a criterion, in backlog.
-func (lab *agentLab) backlog(title string, a *manifest.Agent) string {
+// backlog makes a story with an agent and a criterion, in backlog. It
+// touches a path of its own, so that no other story holds it (S-0128).
+func (lab *agentLab) backlog(title string, a *manifest.Agent, touches ...string) string {
 	lab.t.Helper()
-	st, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: lab.epic.ID, Owner: "alex", Agent: a, Now: lab.now})
+	if touches == nil {
+		touches = []string{"docs/" + strings.ToLower(strings.ReplaceAll(title, " ", "-"))}
+	}
+	st, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: lab.epic.ID, Owner: "alex", Agent: a, Touches: touches, Now: lab.now})
 	if err != nil {
 		lab.t.Fatal(err)
 	}

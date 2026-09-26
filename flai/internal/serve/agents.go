@@ -42,7 +42,10 @@ import (
 // harness is started with the operator's command, when one is set.
 //
 // Nobody attending holds a ready story back any more (S-0116, ADR-0043): the
-// in-progress limit is all that does. An agent holding wait_for_work and the
+// in-progress limit does, and so does a claim (S-0128, ADR-0046). A ready
+// story whose claim overlaps the claim of a story in progress, in review, or
+// in ready with an agent started for it is held: it is skipped, keeps its
+// place, and is started first once it is clear. An agent holding wait_for_work and the
 // launcher may both go for a story; the second move to in-progress is
 // refused, and the loser pulls the next one.
 //
@@ -222,22 +225,24 @@ type readyStory struct {
 	// Restart says how its last agent ended, when the operator has it
 	// started again (S-0116); empty when it entered ready.
 	Restart string
+	item    *workitem.Item
 }
 
-// readyStories are the ready stories in pull order, and how many more
-// stories the in-progress limit leaves room for, -1 when there is none.
-func readyStories(root string) (ready []readyStory, free int, err error) {
+// readyStories are the ready stories in pull order, the claims of the open
+// stories they are held by, and how many more stories the in-progress limit
+// leaves room for, -1 when there is none.
+func readyStories(root string) (ready []readyStory, holds *workitem.Holds, free int, err error) {
 	repo, err := workitem.Open(root)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 	items, err := repo.List(false)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 	board, err := repo.LoadBoard()
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
@@ -248,15 +253,19 @@ func readyStories(root string) (ready []readyStory, free int, err error) {
 	view := workitem.NewBoardView(items, board, time.Now(), false, nil, repo.Manifest.Projects)
 	for _, c := range view.ReadyInPullOrder() {
 		if it := byID[c.ID]; it != nil && c.Type == workitem.Story && !c.Blocked {
-			ready = append(ready, readyStory{ID: c.ID, Agent: it.Agent, Entered: it.EnteredAt()})
+			ready = append(ready, readyStory{ID: c.ID, Agent: it.Agent, Entered: it.EnteredAt(), item: it})
 		}
 	}
 	free = -1
 	if limit, ok := view.WIPLimits[workitem.InProgress]; ok && limit > 0 {
 		free = max(0, limit-view.Counts[workitem.InProgress])
 	}
-	return ready, free, nil
+	return ready, workitem.NewHolds(items, repo.Manifest.Projects), free, nil
 }
+
+// agentStarted is how a hold names a story in ready whose agent has been
+// started: it claims its paths from then, not once its agent pulls it.
+const agentStarted = "its agent started"
 
 // judge is how an agent that has ended left its story: worked, asked (a
 // question of its own on the story is open and unanswered), or failed.
@@ -297,7 +306,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if l.config == nil {
 		return
 	}
-	stories, free, err := readyStories(l.entry.Root)
+	stories, holds, free, err := readyStories(l.entry.Root)
 	if err != nil {
 		return
 	}
@@ -320,13 +329,14 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	}
 	st := l.dir.AgentStates()[l.entry.Root]
 	commandSet := cfg.host(harness.Command).Program != ""
-	var todo, nothing []readyStory
+	var todo, nothing, noRoom []readyStory
 	reserved := 0
 	for _, s := range stories {
 		run := st.Stories[s.ID]
 		switch {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
+			holds.Open(s.item, agentStarted)
 		case run != nil && run.Queued == "" && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
 		case (s.Agent == nil || s.Agent.Harness == "") && !commandSet:
@@ -341,14 +351,19 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if len(nothing) > 0 {
 		sk.add(fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name")), nothing...)
 	}
-	for i, s := range todo {
-		if free >= 0 && reserved >= free {
-			sk.add("the in-progress limit leaves no room for "+strings.Join(ids(todo[i:]), ", "), todo[i:]...)
-			return
-		}
-		if l.start(ctx, cfg, s) {
+	for _, s := range todo {
+		switch h := holds.Of(s.item); {
+		case h != nil:
+			sk.add(s.ID+" "+h.Reason, s)
+		case free >= 0 && reserved >= free:
+			noRoom = append(noRoom, s)
+		case l.start(ctx, cfg, s):
 			reserved++
+			holds.Open(s.item, agentStarted)
 		}
+	}
+	if len(noRoom) > 0 {
+		sk.add("the in-progress limit leaves no room for "+strings.Join(ids(noRoom), ", "), noRoom...)
 	}
 }
 
@@ -600,20 +615,42 @@ type StoryActivity struct {
 	Run   *AgentRun `json:"run"`
 	// Thread is the question a waiting agent asked, when it waits on one.
 	Thread string `json:"thread,omitempty"`
+	// Hold is why a story in ready waits for another's claim (S-0128); Why
+	// says the same.
+	Hold *workitem.Hold `json:"hold,omitempty"`
 }
 
 // Activity is what each story's newest agent is doing. One that runs is
 // waiting when it asked a question on its story that nobody has answered
 // yet (an open thread whose last entry is its own) or its story is blocked.
 // One that ended is waiting when it asked, or when the operator queued
-// another for its story in ready (S-0118).
+// another for its story in ready (S-0118). A story in ready that a claim
+// holds is waiting with the hold's reason, whether or not it has had an
+// agent (S-0128): one that never had one is given a run that names only the
+// story and the harness and model it asks for.
 func Activity(root string, st AgentState) map[string]StoryActivity {
-	out := map[string]StoryActivity{}
-	if len(st.Stories) == 0 {
-		return out
-	}
 	repo, err := workitem.Open(root)
 	if err != nil {
+		return map[string]StoryActivity{}
+	}
+	out := runActivity(repo, st)
+	for id, h := range held(repo, st) {
+		run := st.Stories[id]
+		if run == nil {
+			run = &AgentRun{Story: id}
+			if it, err := repo.Get(id); err == nil && it.Agent != nil {
+				run.Harness, run.Model = it.Agent.Harness, it.Agent.Model
+			}
+		}
+		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: run, Hold: h}
+	}
+	return out
+}
+
+// runActivity is what each story's newest run is doing.
+func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
+	out := map[string]StoryActivity{}
+	if len(st.Stories) == 0 {
 		return out
 	}
 	asked := map[string]*threads.Thread{} // story → the question its agent waits on
@@ -656,6 +693,37 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 			}
 		}
 		out[id] = a
+	}
+	return out
+}
+
+// held are the stories in ready with no agent running that a claim holds,
+// counting the claim of each story in ready whose agent runs, as the
+// launcher does. One whose agent ended asking is left out: it is started
+// again when it is answered, held or not.
+func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
+	items, err := repo.List(false)
+	if err != nil {
+		return nil
+	}
+	holds := workitem.NewHolds(items, repo.Manifest.Projects)
+	var ready []*workitem.Item
+	for _, it := range items {
+		if it.Type != workitem.Story || it.Status != workitem.Ready {
+			continue
+		}
+		switch run := st.Stories[it.ID]; {
+		case run.live():
+			holds.Open(it, agentStarted)
+		case run == nil || run.Outcome != OutcomeAsked:
+			ready = append(ready, it)
+		}
+	}
+	out := map[string]*workitem.Hold{}
+	for _, it := range ready {
+		if h := holds.Of(it); h != nil {
+			out[it.ID] = h
+		}
 	}
 	return out
 }

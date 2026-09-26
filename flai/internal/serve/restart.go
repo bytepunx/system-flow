@@ -65,7 +65,8 @@ func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*
 
 // Restart starts a new agent, in a new session, for a story in ready or in
 // progress whose last agent flai serve started has ended or dropped. For a
-// story in ready while the in-progress limit is full, it queues one instead
+// story in ready while the in-progress limit is full or a claim holds it
+// (S-0128), it queues one instead
 // and returns the run with Queued set: flai serve starts it when there is
 // room, as it starts a story that enters ready (S-0118). It is refused while
 // the agent action is off for the project, when the story is in another
@@ -109,9 +110,10 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
 	if it.Status == workitem.Ready {
-		if ok, err := roomFor(e, st, it.ID); err != nil {
+		// held, like no room, queues it: flai serve starts it once it is clear (S-0128)
+		if ok, hold, err := roomFor(e, st, it.ID); err != nil {
 			return nil, err
-		} else if !ok {
+		} else if !ok || hold != nil {
 			return queue(o, e, run), nil
 		}
 	}

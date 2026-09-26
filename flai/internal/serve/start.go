@@ -15,8 +15,9 @@ import (
 // whether it had an agent since it entered ready, and whoever is attending.
 // It is refused while the agent action is off for the project, when the
 // story is not in ready, while its agent runs or waits for an answer, and
-// when nothing can start it. A full in-progress limit does not refuse it:
-// the operator's word goes past the limit, as a move does, with a warning.
+// when nothing can start it. A full in-progress limit does not refuse it,
+// and nor does a hold (S-0128): the operator's word goes past both, as a
+// move does, with a warning.
 func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -53,7 +54,7 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
-	ok, err := roomFor(e, st, it.ID)
+	ok, hold, err := roomFor(e, st, it.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,22 +63,35 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 		o.Logger.Warn("agent started past the in-progress limit", "component", "serve", "story", it.ID,
 			"detail", fmt.Sprintf("the in-progress limit was full; %s's agent was started on the operator's word", it.ID))
 	}
+	if err == nil && hold != nil && o.Logger != nil {
+		o.Logger.Warn("agent started for a held story", "component", "serve", "story", it.ID,
+			"detail", fmt.Sprintf("%s was %s; its agent was started on the operator's word", it.ID, hold.Reason))
+	}
 	return run, err
 }
 
 // roomFor says whether the in-progress limit leaves room for the ready story
 // id, counting an agent running for another story still in ready as a story
-// in progress, as the launcher does.
-func roomFor(e Entry, st AgentState, id string) (bool, error) {
-	stories, free, err := readyStories(e.Root)
+// in progress, as the launcher does, and whether a claim holds it.
+func roomFor(e Entry, st AgentState, id string) (bool, *workitem.Hold, error) {
+	stories, holds, free, err := readyStories(e.Root)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	reserved := 0
+	var self *workitem.Item
 	for _, s := range stories {
 		if r := st.Stories[s.ID]; r.live() && s.ID != id {
 			reserved++
+			holds.Open(s.item, agentStarted)
+		}
+		if s.ID == id {
+			self = s.item
 		}
 	}
-	return free < 0 || reserved < free, nil
+	var hold *workitem.Hold
+	if self != nil {
+		hold = holds.Of(self)
+	}
+	return free < 0 || reserved < free, hold, nil
 }
