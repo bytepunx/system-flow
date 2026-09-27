@@ -3,12 +3,15 @@ id: S-0138
 type: story
 nature: feature
 title: Agents flai starts, and any agent with a story, prime with flai prime --story
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:25Z
-updated: 2026-09-26T17:46:25Z
-transitions: []
+updated: 2026-09-26T22:40:39Z
+transitions:
+  - to: ready
+    at: 2026-09-26T22:40:39Z
+    by: alex
 tags: [cli, template]
 touches: [flai/internal/harness, flai/internal/mcpserver, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/root/design/conventions/session-start.md, design/conventions/session-start.md, docs/users]
 agent:

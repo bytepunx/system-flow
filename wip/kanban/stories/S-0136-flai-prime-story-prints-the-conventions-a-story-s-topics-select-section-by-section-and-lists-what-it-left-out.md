@@ -3,12 +3,15 @@ id: S-0136
 type: story
 nature: feature
 title: flai prime --story prints the conventions a story's topics select, section by section, and lists what it left out
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:25Z
-updated: 2026-09-26T17:46:25Z
-transitions: []
+updated: 2026-09-26T22:40:33Z
+transitions:
+  - to: ready
+    at: 2026-09-26T22:40:33Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd/prime.go, flai/internal/conventions, flai/internal/context]
 agent:

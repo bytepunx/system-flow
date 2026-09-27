@@ -3,12 +3,15 @@ id: S-0135
 type: story
 nature: feature
 title: Stories and epics carry topics, and flai works out a story's topics from them, its epic, and the projects its tags and claim reach
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:02Z
-updated: 2026-09-26T17:46:02Z
-transitions: []
+updated: 2026-09-26T22:40:29Z
+transitions:
+  - to: ready
+    at: 2026-09-26T22:40:29Z
+    by: alex
 tags: [cli, dashboard]
 touches: [flai/internal/workitem, flai/cmd, flai/internal/mcpserver, flai/internal/hostapi, flaiover/src, design/system/work-hierarchy.md]
 agent:

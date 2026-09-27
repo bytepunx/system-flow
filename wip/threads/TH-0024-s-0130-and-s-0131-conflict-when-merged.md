@@ -4,10 +4,10 @@ title: S-0130 and S-0131 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0131-flai-stream-sync-reports-conflicts-with-other-open-story-branches-and-changes-outside-the-story-s-touches.md
   item: S-0131
-status: answered
-participants: [flai, agent-S-0131, alex]
+status: resolved
+participants: [flai, agent-S-0131, alex, agent-S-0140]
 created: 2026-09-26T18:13:50Z
-updated: 2026-09-26T20:49:15Z
+updated: 2026-09-26T21:27:47Z
 ---
 
 # TH-0024 S-0130 and S-0131 conflict when merged
@@ -30,3 +30,6 @@ Neither story needs to narrow its change. Whichever is accepted second keeps bot
 
 ### 2026-09-26T20:49:15Z alex
 commit all outstanding work
+
+### 2026-09-26T21:27:47Z agent-S-0140
+Resolved: S-0131 was accepted on 2026-09-26 with the outstanding work committed; resolved so that flai check --strict passes (S-0140)

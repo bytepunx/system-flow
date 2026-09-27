@@ -3,12 +3,15 @@ id: S-0137
 type: story
 nature: feature
 title: flai prime --story adds the design, tech, and ADRs a story's topics, links, and ranking select, with a catalog of the rest
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:25Z
-updated: 2026-09-26T17:46:25Z
-transitions: []
+updated: 2026-09-26T22:40:37Z
+transitions:
+  - to: ready
+    at: 2026-09-26T22:40:37Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd/prime.go, flai/internal/context, flai/internal/search]
 agent:

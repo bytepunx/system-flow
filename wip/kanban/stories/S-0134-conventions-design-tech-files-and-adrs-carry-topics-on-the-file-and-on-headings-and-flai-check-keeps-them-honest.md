@@ -3,12 +3,15 @@ id: S-0134
 type: story
 nature: feature
 title: Conventions, design, tech files, and ADRs carry topics on the file and on headings, and flai check keeps them honest
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:02Z
-updated: 2026-09-26T17:46:02Z
-transitions: []
+updated: 2026-09-26T22:40:26Z
+transitions:
+  - to: ready
+    at: 2026-09-26T22:40:26Z
+    by: alex
 tags: [cli, template]
 touches: [flai/internal/conventions, flai/internal/adr, flai/internal/docedit, flai/internal/check, flai/cmd, template/root/design, design/conventions, design/system]
 agent:
