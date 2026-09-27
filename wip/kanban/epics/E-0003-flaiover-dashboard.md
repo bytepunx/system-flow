@@ -6,7 +6,7 @@ title: flaiover dashboard
 status: backlog
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-26T17:35:44Z
+updated: 2026-09-27T04:06:55Z
 transitions: []
 tags: []
 ---
@@ -60,6 +60,7 @@ A SvelteKit and Tailwind dashboard, published as a Docker image, that renders al
 - S-0126 Threads don’t correctly render markdown
 - S-0127 Threads should visually delineate between agent text and operator text
 - S-0133 Show one thread at a time
+- S-0141 Create checkboxes for displaying each work item type
 
 ## Notes
 Defined from the brief in the root CLAUDE.md.
