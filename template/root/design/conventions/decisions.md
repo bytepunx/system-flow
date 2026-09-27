@@ -4,6 +4,7 @@ updated: 2026-09-15
 audience: agent
 order: 40
 status: active
+topics: [all]
 ---
 
 # Decisions

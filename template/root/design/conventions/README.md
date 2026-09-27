@@ -1,6 +1,7 @@
 ---
 title: Agent conventions
 updated: 2026-09-15
+topics: [all]
 ---
 
 # Agent conventions

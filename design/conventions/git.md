@@ -4,6 +4,7 @@ updated: 2026-09-24
 audience: agent
 order: 70
 status: active
+topics: [all]
 ---
 
 # Git

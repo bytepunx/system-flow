@@ -149,3 +149,61 @@ func mustHash(t *testing.T, p string) string {
 	}
 	return h
 }
+
+// S-0134: a project made before conventions carried topics gets topics:
+// [all] on every convention from flai upgrade, and keeps its additions.
+func TestUpgradeBringsConventionTopics(t *testing.T) {
+	const tpl = "../../../template"
+	m, err := template.LoadManifest(tpl)
+	if err != nil {
+		t.Skip("the monorepo's template is not present")
+	}
+	src := template.Source{Repo: tpl, Local: true, Dir: tpl}
+	v := vars()
+	for _, k := range []string{"owner", "repo_url", "today"} {
+		v[k] = ""
+	}
+	opts := template.Options{Vars: v, Source: src}
+	root := t.TempDir()
+	res, err := template.Render(m, tpl, root, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, "design", "conventions")
+	files, _ := filepath.Glob(filepath.Join(dir, "*.md"))
+	if len(files) == 0 {
+		t.Fatal("the template renders no conventions")
+	}
+	// as the project was: no topics, and a rule of its own below the marker
+	for _, f := range files {
+		b, _ := os.ReadFile(f)
+		if !strings.Contains(string(b), "\ntopics: [all]\n") {
+			t.Fatalf("the template's %s has no topics: [all]", filepath.Base(f))
+		}
+		old := strings.Replace(string(b), "topics: [all]\n", "", 1)
+		if err := os.WriteFile(f, []byte(old), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		res.Hashes[filepath.ToSlash(filepath.Join("design", "conventions", filepath.Base(f)))] = lock.Hash([]byte(old))
+		if filepath.Base(f) != "README.md" {
+			_ = os.WriteFile(f, []byte(old+"- A rule of this project.\n"), 0o644)
+		}
+	}
+	lk := &lock.Lock{Template: lock.Template{Version: "1.0.0"}, Files: res.Hashes}
+	plan, err := Compute(root, m, src, opts, lk, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(root, plan, Policy{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		b, _ := os.ReadFile(f)
+		if !strings.Contains(string(b), "\ntopics: [all]\n") {
+			t.Errorf("%s has no topics after the upgrade:\n%s", filepath.Base(f), b)
+		}
+		if filepath.Base(f) != "README.md" && !strings.HasSuffix(string(b), "- A rule of this project.\n") {
+			t.Errorf("%s lost the project's addition:\n%s", filepath.Base(f), b)
+		}
+	}
+}

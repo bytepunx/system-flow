@@ -4,6 +4,7 @@ updated: 2026-09-15
 audience: agent
 order: 100
 status: active
+topics: [all]
 ---
 
 # Continuous improvement

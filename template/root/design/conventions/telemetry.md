@@ -4,6 +4,7 @@ updated: 2026-09-16
 audience: agent
 order: 120
 status: active
+topics: [all]
 ---
 
 # Telemetry
