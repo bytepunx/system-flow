@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.20 - 2026-09-27
+
+- S-0140 Agents should not leave uncommitted work in their branch when moving to review (patch).
+
 ## 1.0.19 - 2026-09-26
 
 - S-0132 Accepting a story tells every open story that overlaps it which paths changed (patch).
