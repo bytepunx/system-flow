@@ -64,4 +64,3 @@ Tried end to end on 2026-09-26 (T-0449), in headless Chrome against a flaiover d
 - Serve on gamma returned flai's refusal: "not served: its system-flow.yaml has no key". Serve cannot succeed today; see TH-0016.
 - With delta's folder moved away, the switcher showed "delta (served, not connected)", titled "the folder is gone", and beside it "1 not connected: why?" linking to `/settings`. Following the link from delta's board switched to alpha and opened Settings.
 - eta, committed below the import folder, joined the switcher without a reload after flai serve's next scan.
-
