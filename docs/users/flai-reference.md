@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-09-26
+updated: 2026-09-27
 status: active
 ---
 
@@ -157,6 +157,7 @@ Subcommands:
 
 - [accept](#flai-adr-accept): Accept a proposed ADR: status accepted, dated today, index row updated
 - [new](#flai-adr-new): Record a new ADR: number, file, front matter, and index row are supplied
+- [topics](#flai-adr-topics): Set the topics of an ADR of any status, and nothing else
 
 #### flai adr accept
 
@@ -166,7 +167,7 @@ Accept a proposed ADR: status accepted, dated today, index row updated.
 flai adr accept <number> [flags]
 ```
 
-Only a proposed ADR can be accepted. Once accepted an ADR is immutable except for superseded\_by: to change the decision, record a new ADR that supersedes it.
+Only a proposed ADR can be accepted. Once accepted an ADR is immutable except for superseded\_by and topics: to change the decision, record a new ADR that supersedes it.
 
 Flags:
 
@@ -205,6 +206,30 @@ Flags:
 | `--refines` strings | ADR this one refines (repeatable) |
 | `--status` string | proposed or accepted (default `proposed`) |
 | `--supersedes` strings | ADR this one supersedes (repeatable): 7, 0007, or ADR-0007 |
+| `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+#### flai adr topics
+
+Set the topics of an ADR of any status, and nothing else.
+
+```text
+flai adr topics <number> <topic>... [flags]
+```
+
+Set which stories an ADR is for (ADR-0047): topics replaces the topics key in the ADR's front matter, or adds it at the end, and changes nothing else. With superseded\_by it is the one key an accepted ADR may gain. A topic is a word; all is every story, and the others are the words flai check knows: each sub-project's name, tags, and kind in system-flow.yaml, and code. Topics may be separate arguments or comma separated. flai check runs with the change in place: a finding it introduces, such as a topic nothing uses, puts the file back and exits 4.
+
+Examples:
+
+```bash
+flai adr topics ADR-0019 cli template
+flai adr topics 47 all --autocommit
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit the change on its own, unless dashboard.autocommit is false |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
 
 ### flai agent

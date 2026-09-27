@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-26
+updated: 2026-09-27
 status: active
 ---
 
@@ -524,11 +524,24 @@ flai adr new "The dashboard authenticates every request with a project token" --
 flai adr new --print-body > decision.md         # the sections of your design/adrs/0000-template.md
 flai adr new "Replace the SPA with server rendering" --status accepted --supersedes 7 --body-stdin --autocommit < decision.md
 flai adr accept 27                               # a proposed ADR becomes accepted, dated today
+flai adr topics 27 cli template                  # the stories it is for, on an ADR of any status
 ```
 
-`flai adr new` takes the next number from the files in `design/adrs` (one more than the highest; gaps are not filled), names the file `NNNN-slug.md`, writes `id`, `title`, `status` (`proposed` unless you say `--status accepted`), `date`, `supersedes`, `superseded_by`, and `refines`, adds the row to `design/adrs/README.md`, and sets `superseded_by` on each ADR it supersedes, which is the one edit allowed to an accepted ADR. The body is your template's sections, or standard input with `--body-stdin`. `flai check` runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. `--autocommit` makes one `docs: ADR-NNNN <title>` commit of what was written, unless the project sets `dashboard.autocommit: false`; nothing is pushed.
+`flai adr new` takes the next number from the files in `design/adrs` (one more than the highest; gaps are not filled), names the file `NNNN-slug.md`, writes `id`, `title`, `status` (`proposed` unless you say `--status accepted`), `date`, `supersedes`, `superseded_by`, and `refines`, adds the row to `design/adrs/README.md`, and sets `superseded_by` on each ADR it supersedes, one of the two edits allowed to an accepted ADR (the other is `flai adr topics`). The body is your template's sections, or standard input with `--body-stdin`. `flai check` runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. `--autocommit` makes one `docs: ADR-NNNN <title>` commit of what was written, unless the project sets `dashboard.autocommit: false`; nothing is pushed.
 
-`flai check` warns with `adr.index` when an ADR file has no row in the index or a row has no file. An accepted ADR is immutable: `flai doc` refuses its body, and so does the dashboard's editor.
+`flai adr topics` sets which stories an ADR is for: it writes `topics: [cli, template]` into the front matter, in place of the key when it is there and at the end otherwise, and changes nothing else. It works on an ADR of any status, since `topics`, with `superseded_by`, is the one key an accepted ADR may gain. Topics are separate arguments or comma separated. Each is a word, and `flai check` must know it: `all` (every story), `code`, or a sub-project's name, tag, or kind in `system-flow.yaml`. A topic it does not know is refused, the file is put back, and the exit code is 4. `--autocommit` and `--trailer` work as for `flai adr new`.
+
+`flai check` warns with `adr.index` when an ADR file has no row in the index or a row has no file. An accepted ADR is immutable but for its `topics`: `flai doc save` refuses any other change, and the dashboard's editor shows it read-only.
+
+### Topics on documents
+
+Conventions, `design/system` and `design/tech` files, and ADRs say which stories they are for with `topics: [...]` in their front matter, and any heading can narrow that with a comment at the end of its line ([ADR-0047](../../design/adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md)):
+
+```markdown
+## Go <!-- topics: cli, go -->
+```
+
+A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, or a sub-project's name, tag, or kind. Nothing selects documents by topic yet: `flai prime --story` will.
 
 ## Edit a document through flai
 

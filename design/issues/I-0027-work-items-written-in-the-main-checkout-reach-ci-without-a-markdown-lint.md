@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 3
+count: 4
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-26T07:34:08Z
-updated: 2026-09-26T07:34:08Z
+last_reported: 2026-09-27T04:08:25Z
+updated: 2026-09-27T04:08:25Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -25,5 +25,8 @@ S-0122's acceptance (32f53ab) committed wip/archive/agents/S-0122.md and its arc
 
 ### 2026-09-26T07:34:08Z
 S-0126: make lint-md in the main checkout found six findings in files no agent linted before they were written there: S-0124's story (MD009, MD012), S-0127's story heading (MD026), and TH-0012 (MD036, already in TH-0017). None in S-0126's files; left to their owners.
+
+### 2026-09-27T04:08:25Z
+S-0134 (2026-09-27): make smoke failed on six lint errors in wip files main already carried: the S-0122 archive (TH-0017's fix was never made) and now S-0124's archived narrative (three leftover lines, MD026/MD029). Fixed on main in 88e345f under TH-0017's answer A.
 
 ## Remediation

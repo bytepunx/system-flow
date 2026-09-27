@@ -19,7 +19,7 @@ Precedence when rules conflict: an explicit instruction from the operator in thi
 | Path | Purpose | You may |
 |------|---------|---------|
 | `design/conventions/` | How agents work here, one file per topic | Read all of it every session. Add project rules below the marker only. |
-| `design/adrs/` | Architecture decisions, one per file, immutable once accepted | Add a new ADR. Never edit an accepted one except to set `superseded_by`. |
+| `design/adrs/` | Architecture decisions, one per file, immutable once accepted | Add a new ADR. Never edit an accepted one except to set `superseded_by` or its `topics` (`flai adr topics`). |
 | `design/system/` | The living design, always current | Edit whenever a conversation resolves a new detail, direction, standard, or decision. |
 | `design/tech/` | Every technology in use, its version, where, and why | Edit whenever a dependency is added, upgraded, or removed. |
 | `design/issues/` | Recurring friction, defects, blockers, with counts and cost | Record occurrences; keep `summary.md` current. |

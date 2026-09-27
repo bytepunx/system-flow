@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-09-26
+updated: 2026-09-27
 status: active
 topics: [all]
 ---
@@ -23,6 +23,8 @@ status: active             # active | draft | deprecated
 ---
 ```
 
+`design/system` and `design/tech` files also carry `topics`, the stories they are for, and conventions and ADRs may ([Topics](conventions.md#topics)); `flai check` warns about a design or tech file without them.
+
 `README.md` files are folder indexes and are exempt. ADRs, work items, and convention files have their own richer schemas; conventions add `audience: agent` and `order`, see [conventions.md](conventions.md). See [work-hierarchy.md](work-hierarchy.md) and the ADR template in `design/adrs/0000-template.md`.
 
 ## Naming
@@ -44,7 +46,7 @@ status: active             # active | draft | deprecated
 
 - `design/conventions/` files are edited above the marker only through the template (and `flai upgrade`); a project edits below the marker. An agent that thinks a baseline rule is wrong proposes the change, it does not make it.
 - `design/system` and `design/tech` are edited in place. If a change reverses an earlier decision, write an ADR first, then update the living document and link the ADR.
-- `design/adrs` are never edited after acceptance except to set `superseded_by`. The tooling holds this: `flai doc` refuses the body of an accepted, superseded, or deprecated ADR, in the dashboard's editor too, and only `flai adr new --supersedes` sets `superseded_by` (S-0060). A proposed ADR is a draft and is edited like any document. [ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) adds `topics` as a second key that may be set on an accepted ADR, with `flai adr topics`, once E-0010 builds it.
+- `design/adrs` are never edited after acceptance except to set `superseded_by` or `topics` ([ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md)). The tooling holds this: `flai doc` refuses any other change to an accepted, superseded, or deprecated ADR, and the dashboard's editor shows one read-only; only `flai adr new --supersedes` sets `superseded_by` (S-0060), and `flai adr topics` sets `topics` on an ADR of any status (S-0134). A proposed ADR is a draft and is edited like any document.
 - `wip/kanban` items are edited by agents and by `flai`. Human edits are welcome but must keep front matter valid; `flai check` validates it.
 - `wip/agents` narratives are append-only in the log section. The summary sections at the top are rewritten as understanding improves.
 

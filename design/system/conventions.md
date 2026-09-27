@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-09-26
+updated: 2026-09-27
 status: active
 topics: [conventions, template]
 ---
@@ -66,6 +66,7 @@ updated: 2026-09-15
 audience: agent
 order: 20
 status: active
+topics: [all]
 ---
 
 # Communication
@@ -92,6 +93,20 @@ Rules:
 - Everything above the marker is the template's and is replaced by `flai upgrade`. Everything below is the project's and is preserved.
 - No agent-tool-specific content. `CLAUDE.md` is the Claude Code entry point and points here; another tool's entry file can do the same.
 
+## Topics
+
+A convention says which stories it is for, as design, tech files, and ADRs do ([ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md), S-0134):
+
+- **On the file.** `topics: [...]` in the front matter. `all` means every story. A convention without `topics` is read as `[all]`; a design, tech, or ADR file without it is selected only by links or ranking, and `flai check` warns (`doc.topics`) about a `design/system` or `design/tech` file without it.
+- **On a heading.** A comment at the end of the heading's line, `## Go <!-- topics: cli, go -->`, narrows everything down to the next heading at the same level or higher. A heading without one takes its parent's topics, and the top headings take the file's. The comment does not render, and MD033 is off. Headings inside fenced code are not headings.
+- **Vocabulary.** A topic is a word. The words a story can match without declaring them come from `system-flow.yaml`: each sub-project's name, tags, and kind, and `code`; with `all`, they are what `flai check` accepts, and it warns (`doc.topic`) on any other topic on a file or a heading. S-0135 adds the topics stories and epics declare. The template's baseline uses only generic words (`all`, `code`, a kind); a project uses its own below the marker or in its design.
+- **ADRs.** `topics` is, with `superseded_by`, the one key an accepted ADR may gain: `flai adr topics ADR-nnnn <topics>` sets it on an ADR of any status, and `flai doc save` takes a save of an accepted ADR only when its `topics` are all it changes.
+- **Rollout.** Every convention, in the template and here, starts as `topics: [all]` for the designer to narrow. Every `design/system` and `design/tech` file here has topics.
+
+`flai/internal/topics` parses them: the file's topics and the body split into sections by heading, each with its heading path and effective topics. Nothing selects documents by topic until `flai prime --story` (S-0136, S-0137).
+
+`flai upgrade` replaces everything above a convention's marker, front matter included, so a project's narrower `topics` on a baseline file, or a heading comment above the marker, goes back to the template's on the next upgrade.
+
 ## Precedence
 
 When rules conflict, in this order:
@@ -107,7 +122,7 @@ A conflict between 1 and 2 or 3 is logged in the narrative's Decisions and, if i
 
 The template's `CLAUDE.md` opens with a priming section: read `design/conventions/README.md` and every file it lists in order, then `wip/agents/index.md`, then the board, before any change. It also states the precedence order and what to do when a convention conflicts with an instruction or seems wrong. Norms are not repeated in `CLAUDE.md`; it points at the convention files. `flai prime` (S-0025) prints the same set in read order, with `--cat` for full content, so a hook or a script can load it in one call.
 
-[ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) (S-0125) narrows priming to the story: conventions, design, tech files, and ADRs carry `topics`, on the file and on any heading as `<!-- topics: a, b -->`, with `[all]` for every story, and `flai prime --story S-nnnn` prints the conventions' matching sections, the design and ADRs the story's topics, links, and ranking select, and a catalog of the rest. Every convention starts as `[all]`. The stories under E-0010 build it; until they are accepted, priming is as the paragraph above says. The survey behind it is [agent-context.md](agent-context.md).
+[ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) (S-0125) narrows priming to the story: conventions, design, tech files, and ADRs carry `topics`, on the file and on any heading as `<!-- topics: a, b -->`, with `[all]` for every story, and `flai prime --story S-nnnn` prints the conventions' matching sections, the design and ADRs the story's topics, links, and ranking select, and a catalog of the rest. Every convention starts as `[all]`. S-0134 made topics parseable, settable, and checked ([Topics](#topics)); until the rest of E-0010 is accepted, priming is as the paragraph above says. The survey behind it is [agent-context.md](agent-context.md).
 
 ## Tooling
 
@@ -115,7 +130,7 @@ The template's `CLAUDE.md` opens with a priming section: read `design/convention
 |------|-----------|
 | `system-flow.yaml` | No new key; the folder is `<layout.design>/conventions` |
 | `flai new` | Renders the baseline folder from the template |
-| `flai check` | Rules `conventions.front-matter`, `conventions.index`, `conventions.marker`, `conventions.length` |
+| `flai check` | Rules `conventions.front-matter`, `conventions.index`, `conventions.marker`, `conventions.length`, and `doc.topic` for a topic nothing uses |
 | `flai prime` | Prints paths (or content) in `order` |
 | `flai upgrade` | Merges each file above its marker, like `CLAUDE.md` |
 | `flaiover` | Conventions appear in the documentation explorer and search with the rest of `design/` |
