@@ -2,6 +2,7 @@
 title: Pushing an acceptance made from the board
 updated: 2026-09-19
 status: active
+topics: [cli, dashboard]
 ---
 
 # Pushing an acceptance made from the board

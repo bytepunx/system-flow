@@ -2,6 +2,7 @@
 title: Agent conventions
 updated: 2026-09-26
 status: active
+topics: [conventions, template]
 ---
 
 # Agent conventions

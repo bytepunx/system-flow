@@ -2,6 +2,7 @@
 title: Search
 updated: 2026-09-20
 status: active
+topics: [cli, dashboard]
 ---
 
 # Search

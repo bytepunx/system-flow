@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -55,6 +56,7 @@ type checker struct {
 	items []*workitem.Item
 	byID  map[string]*workitem.Item
 	res   *Result
+	vocab map[string]bool // topics a story can have (ADR-0047)
 }
 
 // Run executes every rule against the repo.
@@ -623,6 +625,9 @@ func (c *checker) documentation() {
 				return nil //nolint:nilerr // recorded as a finding
 			}
 			isADR := filepath.Base(filepath.Dir(path)) == "adrs" && adrName.MatchString(d.Name())
+			if key == "design" {
+				c.docTopics(path, string(data), isADR)
+			}
 			if isADR {
 				num := adrName.FindStringSubmatch(d.Name())[1]
 				if f.ID != "ADR-"+num {
@@ -642,6 +647,73 @@ func (c *checker) documentation() {
 			return nil
 		})
 	}
+}
+
+// Code is the topic of every sub-project that is not the template (ADR-0047).
+const Code = "code"
+
+// Vocabulary is every topic a story can have without declaring it: all,
+// code, and each sub-project's name, tags, and kind (ADR-0047). S-0135 adds
+// the topics stories and epics declare.
+func Vocabulary(repo *workitem.Repo) map[string]bool {
+	v := map[string]bool{topics.All: true, Code: true}
+	for _, p := range repo.Manifest.Projects {
+		for _, w := range append([]string{p.Name, p.Kind}, p.Tags...) {
+			if w != "" {
+				v[w] = true
+			}
+		}
+	}
+	return v
+}
+
+// docTopics checks the topics of a design file: design/system and
+// design/tech files declare them, and every topic on the file or a heading
+// is one a story can have. ADRs may leave them out.
+func (c *checker) docTopics(path, content string, isADR bool) {
+	rel, _ := filepath.Rel(c.repo.Manifest.Dir(c.repo.Root, "design"), path)
+	folder := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
+	if !isADR && folder != "system" && folder != "tech" {
+		return
+	}
+	doc, err := topics.Parse(content, nil)
+	if err != nil {
+		c.add(Warning, "doc.topics", path, keyLine(path, "topics"), "%v", err)
+		return
+	}
+	if !doc.Declared && !isADR {
+		c.add(Warning, "doc.topics", path, 1, "no topics; say which stories it is for, such as topics: [all] or a sub-project's name, tag, or kind (ADR-0047)")
+	}
+	c.topicWords(path, doc)
+}
+
+// topicWords warns on each topic of a document that no story can have.
+func (c *checker) topicWords(path string, doc *topics.Doc) {
+	if c.vocab == nil {
+		c.vocab = Vocabulary(c.repo)
+	}
+	unknown := func(line int, where string, list []string) {
+		for _, t := range list {
+			if !c.vocab[t] {
+				c.add(Warning, "doc.topic", path, line, "topic %q %s is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml (%s)", t, where, strings.Join(c.words(), ", "))
+			}
+		}
+	}
+	if doc.Declared {
+		unknown(keyLine(path, "topics"), "in the front matter", doc.Topics)
+	}
+	for _, s := range doc.Sections {
+		unknown(s.Line, "on heading \""+s.Heading+"\"", s.Own)
+	}
+}
+
+func (c *checker) words() []string {
+	var out []string
+	for w := range c.vocab {
+		out = append(out, w)
+	}
+	sort.Strings(out)
+	return out
 }
 
 var (
@@ -691,6 +763,18 @@ func (c *checker) conventions() {
 			}
 		}
 		c.add(f.Level, f.Rule, path, line, "%s", f.Message)
+	}
+	for _, f := range set.Files {
+		if _, bad := errs[f.Path]; bad {
+			continue
+		}
+		path := filepath.Join(c.repo.Root, f.Path)
+		doc, err := topics.Parse(f.Raw, []string{topics.All})
+		if err != nil {
+			c.add(Warning, "doc.topics", path, keyLine(path, "topics"), "%v", err)
+			continue
+		}
+		c.topicWords(path, doc)
 	}
 }
 

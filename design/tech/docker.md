@@ -2,6 +2,7 @@
 title: Docker
 updated: 2026-09-18
 status: active
+topics: [dashboard]
 ---
 
 # Docker

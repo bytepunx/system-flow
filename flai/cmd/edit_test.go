@@ -32,7 +32,7 @@ func editProject(t *testing.T) string {
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-a-plain-story.md")
 	s, _ := os.ReadFile(file)
 	_ = os.WriteFile(file, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] it works\n", 1)), 0o644)
-	_ = os.WriteFile(filepath.Join(root, "design/system/plan.md"), []byte("---\ntitle: Plan\nupdated: 2026-09-01\n---\n\n# Plan\n\nSee [the story](../../wip/kanban/stories/S-0001-a-plain-story.md).\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "design/system/plan.md"), []byte("---\ntitle: Plan\nupdated: 2026-09-01\ntopics: [all]\n---\n\n# Plan\n\nSee [the story](../../wip/kanban/stories/S-0001-a-plain-story.md).\n"), 0o644)
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-q", "-m", "init")
 	for _, args := range [][]string{{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001"}} {

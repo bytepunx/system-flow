@@ -2,6 +2,7 @@
 title: flai CLI
 updated: 2026-09-26
 status: active
+topics: [cli]
 ---
 
 # flai CLI

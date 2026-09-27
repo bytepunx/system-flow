@@ -2,6 +2,7 @@
 title: Node.js and pnpm
 updated: 2026-09-15
 status: active
+topics: [sveltekit]
 ---
 
 # Node.js and pnpm

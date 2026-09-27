@@ -2,6 +2,7 @@
 title: Go libraries
 updated: 2026-09-20
 status: active
+topics: [go]
 ---
 
 # Go libraries used by flai

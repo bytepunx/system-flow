@@ -2,6 +2,7 @@
 title: Git
 updated: 2026-09-26
 status: active
+topics: [cli]
 ---
 
 # Git

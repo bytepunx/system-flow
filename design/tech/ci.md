@@ -2,6 +2,7 @@
 title: CI and repository automation
 updated: 2026-09-15
 status: active
+topics: [code]
 ---
 
 # CI and repository automation

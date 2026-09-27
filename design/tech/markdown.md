@@ -2,6 +2,7 @@
 title: Markdown rendering
 updated: 2026-09-15
 status: active
+topics: [dashboard]
 ---
 
 # Markdown rendering in flaiover

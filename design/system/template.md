@@ -2,6 +2,7 @@
 title: Template repository
 updated: 2026-09-24
 status: active
+topics: [template]
 ---
 
 # Template repository

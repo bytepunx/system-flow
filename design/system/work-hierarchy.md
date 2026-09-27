@@ -2,6 +2,7 @@
 title: Work item hierarchy and schema
 updated: 2026-09-26
 status: active
+topics: [all]
 ---
 
 # Work item hierarchy and schema

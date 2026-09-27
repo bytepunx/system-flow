@@ -2,6 +2,7 @@
 title: Charts
 updated: 2026-09-15
 status: active
+topics: [dashboard]
 ---
 
 # Charts

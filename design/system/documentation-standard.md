@@ -2,6 +2,7 @@
 title: Documentation standard
 updated: 2026-09-26
 status: active
+topics: [all]
 ---
 
 # Documentation standard

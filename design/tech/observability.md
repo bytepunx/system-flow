@@ -2,6 +2,7 @@
 title: Logging and telemetry libraries
 updated: 2026-09-16
 status: active
+topics: [code]
 ---
 
 # Logging and telemetry libraries

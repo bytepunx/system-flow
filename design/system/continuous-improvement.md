@@ -2,6 +2,7 @@
 title: Continuous improvement
 updated: 2026-09-15
 status: active
+topics: [cli, conventions]
 ---
 
 # Continuous improvement

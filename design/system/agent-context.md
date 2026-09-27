@@ -2,6 +2,7 @@
 title: Priming an agent with the documentation its story needs
 updated: 2026-09-26
 status: active
+topics: [cli, conventions]
 ---
 
 # Priming an agent with the documentation its story needs

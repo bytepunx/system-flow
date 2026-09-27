@@ -276,6 +276,15 @@ func TestAdrTopics(t *testing.T) {
 		t.Errorf("replaced, not added twice:\n%s", data)
 	}
 
+	// a topic nothing uses is refused by the check, and the file is as it was
+	held, _ := os.ReadFile(path)
+	if out, errOut, code := runIn(t, root, "adr", "topics", "1", "golang"); code != exitDocRefused || !strings.Contains(out, "doc.topic") || !strings.Contains(errOut, "nothing was changed") {
+		t.Errorf("an unknown topic: %d %s %s", code, out, errOut)
+	}
+	if data, _ := os.ReadFile(path); string(data) != string(held) {
+		t.Errorf("the refused topics are not kept:\n%s", data)
+	}
+
 	for _, c := range []struct {
 		args []string
 		want string

@@ -2,6 +2,7 @@
 title: Original brief
 updated: 2026-09-15
 status: active
+topics: [all]
 ---
 
 # Original brief

@@ -2,6 +2,7 @@
 title: SvelteKit, Svelte, Vite, TypeScript, tests
 updated: 2026-09-20
 status: active
+topics: [sveltekit]
 ---
 
 # SvelteKit stack

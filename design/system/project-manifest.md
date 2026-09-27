@@ -2,6 +2,7 @@
 title: Project manifest
 updated: 2026-09-23
 status: active
+topics: [cli, template]
 ---
 
 # Project manifest

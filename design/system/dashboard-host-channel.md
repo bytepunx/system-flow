@@ -2,6 +2,7 @@
 title: A channel between the dashboard and flai on the host
 updated: 2026-09-26
 status: active
+topics: [cli, dashboard]
 ---
 
 # A channel between the dashboard and flai on the host

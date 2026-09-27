@@ -2,6 +2,7 @@
 title: System overview
 updated: 2026-09-18
 status: active
+topics: [all]
 ---
 
 # System overview

@@ -2,6 +2,7 @@
 title: Workflow and board policies
 updated: 2026-09-26
 status: active
+topics: [all]
 ---
 
 # Workflow and board policies

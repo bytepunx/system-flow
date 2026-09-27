@@ -2,6 +2,7 @@
 title: Coordinating stories that run in parallel
 updated: 2026-09-26
 status: active
+topics: [cli, dashboard]
 ---
 
 # Coordinating stories that run in parallel

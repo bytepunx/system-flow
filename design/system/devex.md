@@ -2,6 +2,7 @@
 title: Developer experience and operations
 updated: 2026-09-15
 status: active
+topics: [code, template]
 ---
 
 # Developer experience and operations

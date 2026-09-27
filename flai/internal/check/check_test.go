@@ -330,3 +330,52 @@ func TestThreadRules(t *testing.T) {
 		t.Errorf("the good and archived threads must pass: %v", got)
 	}
 }
+
+// ADR-0047: design and tech files declare topics, and every topic on a
+// convention, design, tech, or ADR file is one a story can have.
+func TestTopicRules(t *testing.T) {
+	repo, err := workitem.Open("testdata/bad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range res.Findings {
+		if f.Rule == "doc.topics" || f.Rule == "doc.topic" {
+			if f.Level != Warning {
+				t.Errorf("topic findings are warnings: %+v", f)
+			}
+			msg, _, _ := strings.Cut(f.Message, " (")
+			got = append(got, fmt.Sprintf("%s:%d %s %s", f.Path, f.Line, f.Rule, msg))
+		}
+	}
+	want := []string{
+		`design/adrs/0001-first.md:10 doc.topic topic "adr-nope" on heading "Scope" is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
+		`design/conventions/session-start.md:7 doc.topic topic "conv-nope" in the front matter is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
+		`design/system/topical.md:4 doc.topic topic "nope" in the front matter is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
+		`design/system/topical.md:13 doc.topic topic "also-nope" on heading "Part" is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
+		`design/tech/untopical.md:1 doc.topics no topics; say which stories it is for, such as topics: [all] or a sub-project's name, tag, or kind`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("topic findings:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestVocabularyIsTheManifestsWords(t *testing.T) {
+	repo, err := workitem.Open("../../..")
+	if err != nil {
+		t.Skip("monorepo not present")
+	}
+	v := Vocabulary(repo)
+	for _, w := range []string{"all", "code", "flai", "go", "cli", "flaiover", "sveltekit", "dashboard", "template", "conventions"} {
+		if !v[w] {
+			t.Errorf("%s is a topic here", w)
+		}
+	}
+	if len(v) != 10 {
+		t.Errorf("vocabulary = %v", v)
+	}
+}

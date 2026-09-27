@@ -2,6 +2,7 @@
 title: Tailwind CSS
 updated: 2026-09-15
 status: active
+topics: [sveltekit]
 ---
 
 # Tailwind CSS

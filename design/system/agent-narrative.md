@@ -2,6 +2,7 @@
 title: Agent narrative
 updated: 2026-09-26
 status: active
+topics: [all]
 ---
 
 # Agent narrative
