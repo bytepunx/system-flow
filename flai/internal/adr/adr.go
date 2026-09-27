@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -405,13 +406,7 @@ func Accept(repo *workitem.Repo, r execx.Runner, n int, opt Options) (*Result, e
 			changed = append(changed, index)
 		}
 	}
-	title := ""
-	for _, l := range strings.Split(newFM, "\n") {
-		if strings.HasPrefix(l, "title:") {
-			title = strings.Trim(strings.TrimSpace(strings.TrimPrefix(l, "title:")), `"`)
-		}
-	}
-	res := &Result{ID: adrID(n), Number: n, Title: title, Status: "accepted", Path: relTo(repo.Root, path), Warnings: []check.Finding{}}
+	res := &Result{ID: adrID(n), Number: n, Title: titleOf(newFM), Status: "accepted", Path: relTo(repo.Root, path), Warnings: []check.Finding{}}
 	for _, p := range changed {
 		res.Changed = append(res.Changed, relTo(repo.Root, p))
 	}
@@ -426,6 +421,89 @@ func Accept(repo *workitem.Repo, r execx.Runner, n int, opt Options) (*Result, e
 		res.commit(r, repo.Root, fmt.Sprintf("docs: %s accepted", res.ID), opt.Trailers)
 	}
 	return res, nil
+}
+
+// SetTopics writes topics on an ADR of any status and changes nothing else
+// (ADR-0047): with superseded_by, the one key an accepted ADR may gain.
+// Topics are words; flai check refuses one that nothing uses, and every file
+// is then as it was. Topics equal to the ADR's own change nothing.
+func SetTopics(repo *workitem.Repo, r execx.Runner, n int, list []string, opt Options) (*Result, error) {
+	if opt.Now.IsZero() {
+		opt.Now = time.Now()
+	}
+	var clean []string
+	for _, t := range list {
+		for _, w := range topics.Split(t) {
+			if !topics.Valid(w) {
+				return nil, fmt.Errorf("rule: topic %q is not a word; a topic is letters, digits, dot, dash, or underscore, such as cli or go", w)
+			}
+			clean = append(clean, w)
+		}
+	}
+	clean = topics.Split(strings.Join(clean, " "))
+	if len(clean) == 0 {
+		return nil, fmt.Errorf("rule: give at least one topic, such as all, code, or a sub-project's name, tag, or kind")
+	}
+	dir := Dir(repo)
+	present, err := files(dir)
+	if err != nil {
+		return nil, err
+	}
+	name, ok := present[n]
+	if !ok {
+		return nil, fmt.Errorf("rule: there is no %s", adrID(n))
+	}
+	path := filepath.Join(dir, name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	fm, _, err := workitem.SplitFrontMatter(string(data))
+	if err != nil {
+		return nil, fmt.Errorf("%s has no front matter to set topics in: %w", adrID(n), err)
+	}
+	newFM := topics.SetInFrontMatter(fm, clean)
+	text := "---\n" + newFM + strings.TrimPrefix(string(data), "---\n"+fm)
+	res := &Result{ID: adrID(n), Number: n, Title: titleOf(fm), Status: statusOf(fm), Path: relTo(repo.Root, path), Changed: []string{}, Warnings: []check.Finding{}}
+	if text == string(data) {
+		return res, nil
+	}
+	before, err := check.Run(repo, opt.Now)
+	if err != nil {
+		return nil, err
+	}
+	snap := &snapshot{was: map[string][]byte{path: data}}
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		return nil, err
+	}
+	res.Changed = []string{res.Path}
+	if refused, err := introduced(repo, before, opt.Now); err != nil || len(refused) > 0 {
+		_ = snap.undo()
+		if err != nil {
+			return nil, err
+		}
+		return nil, &docedit.RefusedError{Path: res.Path, Reason: fmt.Sprintf("flai check has %d finding(s) with these topics on %s; nothing was changed", len(refused), res.ID), Findings: refused}
+	}
+	if opt.Autocommit && repo.Manifest.Autocommit() {
+		res.commit(r, repo.Root, fmt.Sprintf("docs: %s topics %s", res.ID, strings.Join(clean, ", ")), opt.Trailers)
+	}
+	return res, nil
+}
+
+func titleOf(fm string) string {
+	for _, l := range strings.Split(fm, "\n") {
+		if strings.HasPrefix(l, "title:") {
+			return strings.Trim(strings.TrimSpace(strings.TrimPrefix(l, "title:")), `"`)
+		}
+	}
+	return ""
+}
+
+func statusOf(fm string) string {
+	if f := strings.Fields(strings.TrimPrefix(statusRe.FindString(fm), "status:")); len(f) > 0 {
+		return f[0]
+	}
+	return ""
 }
 
 // introduced returns the findings that were not there before.

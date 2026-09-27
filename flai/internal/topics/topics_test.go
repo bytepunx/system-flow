@@ -159,3 +159,31 @@ func TestTopicsThatAreNotAList(t *testing.T) {
 		t.Fatalf("no front matter: %+v %v", d, err)
 	}
 }
+
+func TestSetInFrontMatter(t *testing.T) {
+	cases := []struct{ fm, want string }{
+		{"id: ADR-0001\nstatus: accepted", "id: ADR-0001\nstatus: accepted\ntopics: [cli, go]"},
+		{"id: ADR-0001\ntopics: [x]\nstatus: accepted", "id: ADR-0001\ntopics: [cli, go]\nstatus: accepted"},
+		{"id: ADR-0001\ntopics:\n  - x\n  - y\nstatus: accepted", "id: ADR-0001\ntopics: [cli, go]\nstatus: accepted"},
+		{"id: ADR-0001\ntopics:\n- x\nstatus: accepted", "id: ADR-0001\ntopics: [cli, go]\nstatus: accepted"},
+		{"id: ADR-0001\n", "id: ADR-0001\ntopics: [cli, go]\n"},
+	}
+	for _, c := range cases {
+		if got := SetInFrontMatter(c.fm, []string{"cli", "go"}); got != c.want {
+			t.Errorf("SetInFrontMatter(%q) = %q, want %q", c.fm, got, c.want)
+		}
+	}
+	if got := WithoutTopics("id: A\ntopics: [x]\nstatus: s"); got != "id: A\nstatus: s" {
+		t.Errorf("WithoutTopics = %q", got)
+	}
+	for _, w := range []string{"cli", "go", "a.b", "code_quality", "x-1"} {
+		if !Valid(w) {
+			t.Errorf("%q is a word", w)
+		}
+	}
+	for _, w := range []string{"", "-x", "a b", "a,b", "[x]", "é"} {
+		if Valid(w) {
+			t.Errorf("%q is not a word", w)
+		}
+	}
+}

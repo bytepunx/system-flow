@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -141,9 +142,17 @@ func ModeOf(repo *workitem.Repo, abs string) (mode, reason string) {
 	case under(repo.AgentsDir()):
 		return Body, "flai owns a narrative's front matter"
 	case acceptedADR(repo, abs):
-		return None, "an accepted ADR is immutable: to change the decision, record a new ADR that supersedes it (flai adr new --supersedes)"
+		return None, "an accepted ADR is immutable but for its topics (flai adr topics): to change the decision, record a new ADR that supersedes it (flai adr new --supersedes)"
 	}
 	return Full, ""
+}
+
+// onlyTopics reports whether two versions of a document differ in the
+// topics key of their front matter and nowhere else.
+func onlyTopics(old, content string) bool {
+	oldFM, oldBody, err1 := workitem.SplitFrontMatter(old)
+	newFM, newBody, err2 := workitem.SplitFrontMatter(content)
+	return err1 == nil && err2 == nil && oldBody == newBody && topics.WithoutTopics(oldFM) == topics.WithoutTopics(newFM)
 }
 
 var (
@@ -154,7 +163,7 @@ var (
 // acceptedADR reports whether the file is an ADR that has been accepted. A
 // proposed ADR is still a draft and is edited like any document; once
 // accepted, only flai adr new sets superseded_by on it (S-0060, settling
-// what S-0040 left open).
+// what S-0040 left open), and its topics may change (ADR-0047).
 func acceptedADR(repo *workitem.Repo, abs string) bool {
 	if filepath.Base(filepath.Dir(abs)) != "adrs" || !adrFile.MatchString(filepath.Base(abs)) {
 		return false
@@ -207,6 +216,9 @@ func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOpti
 	}
 	old := string(oldData)
 	mode, reason := ModeOf(repo, abs)
+	if mode == None && acceptedADR(repo, abs) && onlyTopics(old, content) {
+		mode = Full // the one change an accepted ADR takes from a save
+	}
 	if mode == None {
 		return nil, &RefusedError{Path: clean, Reason: clean + " cannot be edited here: " + reason}
 	}

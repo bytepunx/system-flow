@@ -241,3 +241,80 @@ func TestAdrSlugIsCutAtAWord(t *testing.T) {
 		t.Errorf("a long title gives a file name that ends on a whole word:\n%s", out)
 	}
 }
+
+// ADR-0047: topics is the one key besides superseded_by an accepted ADR may
+// gain, with flai adr topics, and nothing else about it changes.
+func TestAdrTopics(t *testing.T) {
+	root := adrProject(t)
+	path := filepath.Join(root, "design/adrs/0001-first.md")
+	before, _ := os.ReadFile(path)
+	out, errOut, code := runIn(t, root, "adr", "topics", "ADR-0001", "code,all", "code", "--autocommit", "--trailer", "Co-Authored-By: Olive <olive@example.invalid>")
+	if code != 0 || !strings.Contains(out, "ADR-0001 First (accepted)") || !strings.Contains(out, "topics set and committed") {
+		t.Fatalf("adr topics: %d %s %s", code, out, errOut)
+	}
+	after, _ := os.ReadFile(path)
+	if want := strings.Replace(string(before), "superseded_by: []\n---\n", "superseded_by: []\ntopics: [code, all]\n---\n", 1); string(after) != want {
+		t.Errorf("only the key is added, at the end of the front matter:\n%s", after)
+	}
+	if msg := gitIn(t, root, "log", "-1", "--format=%s%n%b"); !strings.Contains(msg, "docs: ADR-0001 topics code, all") || !strings.Contains(msg, "Co-Authored-By: Olive") {
+		t.Errorf("commit: %s", msg)
+	}
+	if st := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); st != "" {
+		t.Errorf("only the ADR changed, and it is committed: %q", st)
+	}
+
+	// replaced in place, on a proposed ADR as on an accepted one
+	if _, errOut, code := runIn(t, root, "adr", "new", "A draft"); code != 0 {
+		t.Fatal(errOut)
+	}
+	draft := filepath.Join(root, "design/adrs/0008-a-draft.md")
+	_, _, _ = runIn(t, root, "adr", "topics", "8", "code")
+	if out, errOut, code := runIn(t, root, "adr", "topics", "8", "all"); code != 0 || !strings.Contains(out, "(proposed)") {
+		t.Fatalf("a proposed ADR: %d %s %s", code, out, errOut)
+	}
+	if data, _ := os.ReadFile(draft); strings.Count(string(data), "topics:") != 1 || !strings.Contains(string(data), "superseded_by: []\ntopics: [all]\n---\n") {
+		t.Errorf("replaced, not added twice:\n%s", data)
+	}
+
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"adr", "topics", "1"}, "requires at least 2 arg"},
+		{[]string{"adr", "topics", "1", "a;b"}, "is not a word"},
+		{[]string{"adr", "topics", "1", " , "}, "at least one topic"},
+		{[]string{"adr", "topics", "99", "all"}, "no ADR-0099"},
+	} {
+		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("flai %v: %d %s, want %q", c.args, code, errOut, c.want)
+		}
+	}
+}
+
+// A save of an accepted ADR goes through when its topics are all it changes.
+func TestDocSaveTakesTopicsAloneOnAnAcceptedAdr(t *testing.T) {
+	root := adrProject(t)
+	rel := "design/adrs/0002-second.md"
+	content, hash, mode := showDoc(t, root, rel)
+	if mode != "none" {
+		t.Fatalf("the editor still shows an accepted ADR read-only: %s", mode)
+	}
+	withTopics := strings.Replace(content, "superseded_by: []\n", "superseded_by: []\ntopics: [all]\n", 1)
+	if out, errOut, code := runStdin(t, root, withTopics, "doc", "save", rel, "--hash", hash); code != 0 {
+		t.Fatalf("a topics-only save: %d %s %s", code, out, errOut)
+	}
+	if data, _ := os.ReadFile(filepath.Join(root, rel)); string(data) != withTopics {
+		t.Errorf("saved as given:\n%s", data)
+	}
+	content, hash, _ = showDoc(t, root, rel)
+	for name, changed := range map[string]string{
+		"the body":             strings.Replace(content, "## Decision\n\nd\n", "## Decision\n\nrewritten\n", 1),
+		"another key":          strings.Replace(content, "status: accepted", "status: deprecated", 1),
+		"topics and the body":  strings.Replace(strings.Replace(content, "topics: [all]", "topics: [code]", 1), "\nc\n", "\nchanged\n", 1),
+		"the front matter out": strings.Replace(content, "---\n", "", 1),
+	} {
+		if _, errOut, code := runStdin(t, root, changed, "doc", "save", rel, "--hash", hash); code != exitDocRefused || !strings.Contains(errOut, "flai adr topics") {
+			t.Errorf("changing %s is refused: %d %s", name, code, errOut)
+		}
+	}
+}

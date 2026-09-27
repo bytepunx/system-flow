@@ -17,7 +17,7 @@ func newAdrCmd(a *app) *cobra.Command {
 		Use:   "adr",
 		Short: "Record architecture decisions",
 	}
-	c.AddCommand(newAdrNewCmd(a), newAdrAcceptCmd(a))
+	c.AddCommand(newAdrNewCmd(a), newAdrAcceptCmd(a), newAdrTopicsCmd(a))
 	return c
 }
 
@@ -158,8 +158,8 @@ func newAdrAcceptCmd(a *app) *cobra.Command {
 		Use:   "accept <number>",
 		Short: "Accept a proposed ADR: status accepted, dated today, index row updated",
 		Long: `Only a proposed ADR can be accepted. Once accepted an ADR is immutable
-except for superseded_by: to change the decision, record a new ADR that
-supersedes it.`,
+except for superseded_by and topics: to change the decision, record a new
+ADR that supersedes it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -179,6 +179,51 @@ supersedes it.`,
 				return err
 			}
 			return a.printADR(res, "accepted")
+		},
+	}
+	c.Flags().BoolVar(&opt.Autocommit, "autocommit", false, "commit the change on its own, unless dashboard.autocommit is false")
+	c.Flags().StringArrayVar(&opt.Trailers, "trailer", nil, "trailer line for the commit (repeatable)")
+	return c
+}
+
+func newAdrTopicsCmd(a *app) *cobra.Command {
+	var opt adr.Options
+	c := &cobra.Command{
+		Use:   "topics <number> <topic>...",
+		Short: "Set the topics of an ADR of any status, and nothing else",
+		Long: `Set which stories an ADR is for (ADR-0047): topics replaces the topics key
+in the ADR's front matter, or adds it at the end, and changes nothing else.
+With superseded_by it is the one key an accepted ADR may gain. A topic is a
+word; all is every story, and the others are the words flai check knows: each
+sub-project's name, tags, and kind in system-flow.yaml, and code. Topics
+may be separate arguments or comma separated. flai check runs with the
+change in place: a finding it introduces, such as a topic nothing uses, puts
+the file back and exits 4.`,
+		Example: `  flai adr topics ADR-0019 cli template
+  flai adr topics 47 all --autocommit`,
+		Args: cobra.MinimumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			n, err := adrNumber(args[0])
+			if err != nil {
+				return err
+			}
+			opt.Now = a.now()
+			res, err := adr.SetTopics(repo, a.runner, n, args[1:], opt)
+			if rerr, ok := a.refusedADR(err); ok {
+				return rerr
+			}
+			if err != nil {
+				return err
+			}
+			verb := "topics set"
+			if len(res.Changed) == 0 {
+				verb = "topics unchanged"
+			}
+			return a.printADR(res, verb)
 		},
 	}
 	c.Flags().BoolVar(&opt.Autocommit, "autocommit", false, "commit the change on its own, unless dashboard.autocommit is false")

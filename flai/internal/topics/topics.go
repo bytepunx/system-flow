@@ -168,3 +168,51 @@ func split(body string, offset int, file []string) []Section {
 	flush()
 	return out
 }
+
+var (
+	wordRe   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+	keyRe    = regexp.MustCompile(`^topics:`)
+	nestedRe = regexp.MustCompile(`^([ \t]+|-[ \t]|-$)`)
+)
+
+// Valid reports whether a topic is one word: letters, digits, dot, dash, or
+// underscore, starting with a letter or digit.
+func Valid(t string) bool { return wordRe.MatchString(t) }
+
+// SetInFrontMatter writes topics into a front matter block, in place of the
+// key when it is there and at the end otherwise, and changes nothing else.
+// No topics removes the key.
+func SetInFrontMatter(fm string, list []string) string {
+	line := ""
+	if len(list) > 0 {
+		line = "topics: [" + strings.Join(list, ", ") + "]"
+	}
+	lines := strings.Split(fm, "\n")
+	var out []string
+	done := false
+	for i := 0; i < len(lines); i++ {
+		if !keyRe.MatchString(lines[i]) {
+			out = append(out, lines[i])
+			continue
+		}
+		for i+1 < len(lines) && nestedRe.MatchString(lines[i+1]) {
+			i++ // a block list's items belong to the key
+		}
+		if line != "" && !done {
+			out = append(out, line)
+		}
+		done = true
+	}
+	if !done && line != "" {
+		if n := len(out); n > 0 && out[n-1] == "" {
+			out = append(out[:n-1], line, "")
+		} else {
+			out = append(out, line)
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+// WithoutTopics is a front matter block with its topics key taken out, to
+// compare two blocks on everything but their topics.
+func WithoutTopics(fm string) string { return SetInFrontMatter(fm, nil) }
