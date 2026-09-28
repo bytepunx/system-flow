@@ -64,7 +64,7 @@ type Pack struct {
 // open-issues table printed after the conventions.
 func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conventions.Set, issues string) (*Pack, error) {
 	names := topics.Names(storyTopics)
-	p := &Pack{Story: story, Title: title, Topics: storyTopics, Issues: issues, Conventions: []Convention{}}
+	p := &Pack{Story: story, Title: title, Topics: storyTopics, Issues: issues, Conventions: []Convention{}, Omitted: []string{}}
 	if set.README != "" {
 		rel, err := filepath.Rel(root, filepath.Join(set.Dir, "README.md"))
 		if err != nil {
