@@ -6,7 +6,7 @@ title: Agent Status, Telemetry, and Stream
 status: backlog
 owner: alex
 created: 2026-09-28T22:51:06Z
-updated: 2026-09-28T22:52:25Z
+updated: 2026-09-28T23:26:54Z
 transitions: []
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
@@ -18,5 +18,6 @@ touches: [flaiover/src, flai/cmd]
 The operator can view a feed window for each active agent, each task and story now get token and pricing (where available) front-matter. New charts help operators understand how tokens are user per unit of time in relation to story/task completion and the relative cost (or estimated cost).
 
 ## Stories
+- S-0142 Add a stream window to the activity page agent panes
 
 ## Notes
