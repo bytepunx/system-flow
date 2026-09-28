@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.21 - 2026-09-28
+
+- S-0134 Conventions, design, tech files, and ADRs carry topics on the file and on headings, and flai check keeps them honest (patch).
+
 ## 1.0.20 - 2026-09-27
 
 - S-0140 Agents should not leave uncommitted work in their branch when moving to review (patch).
