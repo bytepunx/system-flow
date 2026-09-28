@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,5 +54,43 @@ func TestTopicsOnStoriesAndEpics(t *testing.T) {
 	}
 	if item, _ := os.ReadFile(epic[0]); strings.Contains(string(item), "topics:") {
 		t.Errorf("topics stay:\n%s", item)
+	}
+}
+
+// S-0135: flai show prints a story's topics with their sources, and --json
+// returns every source; an epic shows its own.
+func TestShowPrintsAStorysTopics(t *testing.T) {
+	root := heldProject(t)
+	if _, errOut, code := runIn(t, root, "edit", "E-0001", "--topics", "release"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "edit", "S-0002", "--topics", "logging"); code != 0 {
+		t.Fatal(errOut)
+	}
+	out, errOut, code := runIn(t, root, "show", "S-0002")
+	if code != 0 {
+		t.Fatal(errOut)
+	}
+	want := "  topics:\n    logging  own\n    release  epic E-0001\n    flai     flai by touches cli (S-0002)\n    cli      flai by touches cli (S-0002)\n    go       flai by touches cli (S-0002)\n    code     flai is code\n    all      every story\n"
+	if !strings.Contains(out, want) {
+		t.Errorf("show:\n%s\nwant:\n%s", out, want)
+	}
+	out, _, _ = runIn(t, root, "show", "S-0002", "--json")
+	var view struct {
+		Item   struct{ Topics []string }
+		Topics []struct {
+			Topic   string
+			Sources []struct{ Kind, Item, Project, Via string }
+		}
+	}
+	if err := json.Unmarshal([]byte(out), &view); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(view.Item.Topics, ",") != "logging" || len(view.Topics) != 7 || view.Topics[2].Topic != "flai" ||
+		view.Topics[2].Sources[0] != (struct{ Kind, Item, Project, Via string }{"claim", "S-0002", "flai", "cli"}) {
+		t.Errorf("json: %+v", view)
+	}
+	if out, _, _ := runIn(t, root, "show", "E-0001"); !strings.Contains(out, "  topics: release\n") {
+		t.Errorf("epic:\n%s", out)
 	}
 }

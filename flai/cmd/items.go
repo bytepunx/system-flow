@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
+	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -173,8 +174,19 @@ func newShowCmd(a *app) *cobra.Command {
 				return err
 			}
 			children := workitem.Children(items, it.ID)
+			// a story's topics and where each came from (S-0135, ADR-0047)
+			var storyTopics []topics.StoryTopic
+			if it.Type == workitem.Story {
+				if storyTopics, err = topics.ForStory(repo, it.ID); err != nil {
+					return err
+				}
+			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"item": it, "children": children})
+				out := map[string]any{"item": it, "children": children}
+				if storyTopics != nil {
+					out["topics"] = storyTopics
+				}
+				return a.printJSON(out)
 			}
 			fmt.Fprintf(a.out, "%s %s\n", it.ID, it.Title)
 			fmt.Fprintf(a.out, "  %s · %s · %s", it.Type, it.Nature, it.Status)
@@ -191,6 +203,19 @@ func newShowCmd(a *app) *cobra.Command {
 			fmt.Fprintf(a.out, "  owner: %s · created %s · updated %s\n", it.Owner, it.Created, it.Updated)
 			if len(it.Tags) > 0 {
 				fmt.Fprintf(a.out, "  tags: %s\n", strings.Join(it.Tags, ", "))
+			}
+			switch {
+			case storyTopics != nil:
+				fmt.Fprintln(a.out, "  topics:")
+				width := 0
+				for _, t := range storyTopics {
+					width = max(width, len(t.Topic))
+				}
+				for _, t := range storyTopics {
+					fmt.Fprintf(a.out, "    %-*s  %s\n", width, t.Topic, t.Summary())
+				}
+			case len(it.Topics) > 0:
+				fmt.Fprintf(a.out, "  topics: %s\n", strings.Join(it.Topics, ", "))
 			}
 			if !it.Agent.IsZero() {
 				fmt.Fprintf(a.out, "  agent: %s\n", it.Agent)

@@ -650,7 +650,7 @@ func (c *checker) documentation() {
 }
 
 // Code is the topic of every sub-project that is not the template (ADR-0047).
-const Code = "code"
+const Code = topics.Code
 
 // Vocabulary is every topic a story can have: all, code, each sub-project's
 // name, tags, and kind (ADR-0047), and the topics that the stories and epics
