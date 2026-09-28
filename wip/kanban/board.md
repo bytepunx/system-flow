@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0135
   - S-0136
   - S-0137
   - S-0138
