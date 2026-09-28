@@ -1408,12 +1408,16 @@ flai prime [flags]
 
 List design/conventions in read order (README first, then by order) so an agent, a hook, or a script can load them in one call. --cat prints the content of each file with a header instead of the paths.
 
+--story S-nnnn prints the context pack for an agent working that story (ADR-0047): a header naming the story, its topics and where each came from, and the size of what follows; then every convention as --cat prints it, with the sections whose topics include neither all nor one of the story's left out (the front matter, the baseline marker, and the Project additions heading always stay); the open issues; and one line per section left out, with its topics. With every section at [all] the text below the header is --cat's.
+
 Examples:
 
 ```bash
 flai prime
 flai prime --cat
 flai prime --json
+flai prime --story S-0136
+flai prime --story S-0136 --json
 ```
 
 Flags:
@@ -1421,6 +1425,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--cat` | print file contents instead of paths |
+| `--story` string | print the context pack for this story: the convention sections its topics select, and what was left out |
 
 ### flai push
 

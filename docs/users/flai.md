@@ -567,7 +567,7 @@ Conventions, `design/system` and `design/tech` files, and ADRs say which stories
 ## Go <!-- topics: cli, go -->
 ```
 
-A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). Nothing selects documents by topic yet: `flai prime --story` will.
+A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). `flai prime --story` selects conventions by them ([Prime a session](#prime-a-session)); design, tech files, and ADRs are not selected by topic yet.
 
 ## Edit a document through flai
 
@@ -606,9 +606,13 @@ The table shows completed and cancelled counts, throughput per week, current WIP
 flai prime          # paths of design/conventions in read order, README first
 flai prime --cat    # the same files' contents, each under a header
 flai prime --json
+flai prime --story S-0136         # the conventions S-0136's topics select, and what was left out
+flai prime --story S-0136 --json
 ```
 
-Agents read these before any change; a shell hook or a wrapper can pipe `flai prime --cat` into the session. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once.
+Agents read these before any change; a shell hook or a wrapper can pipe `flai prime --cat` into the session.
+
+`--story` prints what an agent working that story needs of the conventions. A header names the story, its topics and where each came from (as `flai show` gives them), and the size of what follows. Then comes each convention as `--cat` prints it, with every section whose topics include neither `all` nor one of the story's left out ([Topics on documents](#topics-on-documents)). The front matter, the baseline marker, and the `## Project additions` heading always stay, and so does the heading above a section that is kept. The open issues follow, then one line per section left out with its topics, such as `code-quality.md § Rules › Go (go)`, so you know the rule exists and where to read it. While every convention is `[all]` the text below the header is exactly `--cat`'s. `--json` returns the same as data: per convention, the sections kept and left out with their heading paths, lines, and topics. An ID that is unknown, archived, or not a story is refused with a message naming it. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once.
 
 ## Record recurring friction
 
