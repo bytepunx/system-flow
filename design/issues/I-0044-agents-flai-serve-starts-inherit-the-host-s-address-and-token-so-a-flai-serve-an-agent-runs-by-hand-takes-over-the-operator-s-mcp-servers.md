@@ -3,11 +3,11 @@ id: I-0044
 title: Agents flai serve starts inherit the host's address and token, so a flai serve an agent runs by hand takes over the operator's MCP servers
 class: defect
 status: open
-count: 2
-cost: 7m
+count: 3
+cost: 6m
 first_reported: 2026-09-24T09:26:17Z
-last_reported: 2026-09-26T18:02:36Z
-updated: 2026-09-26T18:02:36Z
+last_reported: 2026-09-28T23:07:11Z
+updated: 2026-09-28T23:07:11Z
 ---
 
 # I-0044 Agents flai serve starts inherit the host's address and token, so a flai serve an agent runs by hand takes over the operator's MCP servers
@@ -22,5 +22,8 @@ Agents flai serve starts inherit the host's address and token, so a flai serve a
 
 ### 2026-09-26T18:02:36Z
 2026-09-26, S-0129: agent-S-0129, started by the operator's flai serve, again had FLAI_HOST_URL, FLAI_HOST_TOKEN, and FLAI_CONFIG=~/.flai/config.json in its environment, so its first scripts/flai.sh calls (task new, move, stream log) ran against the operator's config rather than .flai-cache/config.json. No harm this time. The browser trial's scratch flai host and serve were started with all three unset, their own HOME and config, and FLAI_HOST_ADDR=127.0.0.1:4299, and stopped by PID.
+
+### 2026-09-28T23:07:11Z
+2026-09-28, S-0141: agent-S-0141, started by the operator's flai serve, again had FLAI_HOST_URL, FLAI_HOST_TOKEN, and FLAI_CONFIG=~/.flai/config.json in its environment, and FLAI_AGENT=system-flow, so its first scripts/flai.sh calls (move, stream open, task new, stream log) ran against the operator's config. No harm. Later calls and the tiers ran with the three unset. The browser check started no flai host or serve: the dev server ran with FLAIOVER_AUTH=off and /api/board stubbed in the browser.
 
 ## Remediation
