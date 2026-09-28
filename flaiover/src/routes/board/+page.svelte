@@ -6,6 +6,8 @@
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
+	import BoardTypes from '$lib/components/BoardTypes.svelte';
+	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import { anyRunning, storyActivity, type HostAgent } from '$lib/activity';
@@ -42,7 +44,6 @@
 
 	const states = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'];
 	let board = $state<Board | null>(null);
-	let all = $state(false);
 	let notice = $state<{ kind: 'error' | 'warn' | 'ok'; text: string } | null>(null);
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
@@ -120,8 +121,9 @@
 		return () => es.close();
 	});
 
+	// The types ticked above the board (S-0141); WIP counts and reordering count stories regardless.
 	const cards = (state: string) =>
-		(board?.columns[state] ?? []).filter((c) => all || c.type === 'story');
+		(board?.columns[state] ?? []).filter((c) => boardTypes.shown[c.type as ItemType]);
 	const count = (state: string) =>
 		(board?.columns[state] ?? []).filter((c) => c.type === 'story').length;
 
@@ -243,9 +245,7 @@
 
 <div class="mb-3 flex flex-wrap items-center gap-4">
 	<h1 class="text-2xl font-semibold">Board</h1>
-	<label class="flex items-center gap-2 text-sm"
-		><input type="checkbox" bind:checked={all} /> epics and tasks too</label
-	>
+	<BoardTypes />
 	{#if board?.writable}
 		<!-- Creating is a write through flai (S-0059): no flai, no action. -->
 		<a
