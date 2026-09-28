@@ -7,13 +7,14 @@ status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:25Z
-updated: 2026-09-26T22:40:39Z
+updated: 2026-09-28T22:57:09Z
 transitions:
   - to: ready
     at: 2026-09-26T22:40:39Z
     by: alex
 tags: [cli, template]
 touches: [flai/internal/harness, flai/internal/mcpserver, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/root/design/conventions/session-start.md, design/conventions/session-start.md, docs/users]
+after: [S-0137]
 agent:
   harness: claude-code
   model: claude-opus-5-5
