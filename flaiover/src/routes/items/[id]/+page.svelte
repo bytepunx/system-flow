@@ -34,6 +34,7 @@
 		stream?: string;
 		tags?: string[];
 		touches?: string[];
+		topics?: string[];
 		agent?: Agent;
 		path: string;
 		archived: boolean;
@@ -387,11 +388,14 @@
 					be opened as a document.
 				</p>
 			{/if}
-			{#if item.tags?.length || item.touches?.length || item.owner || item.estimate || item.agent}
+			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent}
 				<section class="rounded border border-line bg-surface p-3 text-xs">
 					{#if item.owner}<div>owner: {item.owner}</div>{/if}
 					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
 					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
+					{#if item.topics?.length}<div data-testid="item-topics">
+							topics: {item.topics.join(', ')}
+						</div>{/if}
 					{#if item.touches?.length}<div>touches: {item.touches.join(', ')}</div>{/if}
 					{#if item.agent}<div data-testid="item-agent">agent: {agentLine(item.agent)}</div>{/if}
 				</section>

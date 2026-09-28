@@ -22,6 +22,7 @@
 	let nature = $state('feature');
 	let parent = $state('');
 	let tags = $state('');
+	let topics = $state('');
 	let touches = $state('');
 	let body = $state('');
 	let templateBody = $state('');
@@ -115,6 +116,7 @@
 					nature,
 					parent: type === 'story' ? parent : undefined,
 					tags: list(tags),
+					topics: list(topics),
 					touches: list(touches),
 					agent,
 					body
@@ -191,6 +193,17 @@
 				bind:value={tags}
 				placeholder="dashboard cli"
 				data-testid="tags"
+			/>
+		</label>
+		<label class="block text-sm">
+			<span class="mb-1 block text-xs text-muted"
+				>topics, optional: what it is about beyond its components</span
+			>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-3 py-1.5"
+				bind:value={topics}
+				placeholder="logging release"
+				data-testid="topics"
 			/>
 		</label>
 		<label class="block text-sm">

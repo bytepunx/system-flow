@@ -139,6 +139,7 @@ describe('NewItemForm', () => {
 		type(q<HTMLSelectElement>('nature'), 'improvement');
 		type(q<HTMLInputElement>('tags'), 'dashboard, cli');
 		type(q<HTMLInputElement>('touches'), 'flaiover/src');
+		type(q<HTMLInputElement>('topics'), 'logging release');
 		type(
 			q<HTMLTextAreaElement>('body'),
 			'## Goal\nG\n\n## Acceptance criteria\n- [ ] one\n\n## Tasks\n\n## Notes\n'
@@ -153,6 +154,7 @@ describe('NewItemForm', () => {
 			nature: 'improvement',
 			parent: 'E-0006',
 			tags: ['dashboard', 'cli'],
+			topics: ['logging', 'release'],
 			touches: ['flaiover/src'],
 			body: '## Goal\nG\n\n## Acceptance criteria\n- [ ] one\n\n## Tasks\n\n## Notes\n'
 		});

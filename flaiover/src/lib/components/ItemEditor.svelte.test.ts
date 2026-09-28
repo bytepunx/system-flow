@@ -198,6 +198,41 @@ describe('ItemEditor (S-0085)', () => {
 		expect(document.querySelector('[data-testid="edit-after"]')).toBeNull();
 	});
 
+	// S-0135: a story's or epic's topics are shown next to its tags and sent as a list; emptied,
+	// they are sent empty and removed
+	it('edits the topics of a story and of an epic', async () => {
+		api.mockImplementation((_url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'PUT'
+					? answer(200, { changed: ['topics'] })
+					: answer(200, { ...view, topics: ['logging'] })
+			)
+		);
+		await mountIt();
+		const field = document.querySelector<HTMLInputElement>('[data-testid="edit-topics"]')!;
+		expect(field.value).toBe('logging');
+		expect(document.body.textContent).toContain('beyond the components its tags and touches reach');
+		type('[data-testid="edit-topics"]', 'logging, release');
+		await submit();
+		expect(sent()).toEqual({ topics: ['logging', 'release'], hash: view.hash });
+		type('[data-testid="edit-topics"]', '');
+		await submit();
+		expect(sent()).toEqual({ topics: [], hash: view.hash });
+		unmount(c!);
+		api.mockReset();
+		api.mockImplementation((_url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'PUT'
+					? answer(200, { changed: ['topics'] })
+					: answer(200, { ...view, type: 'epic', parent: undefined })
+			)
+		);
+		await mountIt();
+		type('[data-testid="edit-topics"]', 'release');
+		await submit();
+		expect(sent()).toEqual({ topics: ['release'], hash: view.hash });
+	});
+
 	// S-0103: the story's own agent is shown, and a change replaces it; emptied, it is removed
 	it("edits the story's agent and sends it whole, or null when emptied", async () => {
 		const withAgent = {

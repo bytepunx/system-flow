@@ -69,6 +69,7 @@ export type Item = {
 	stream?: string;
 	tags?: string[];
 	touches?: string[]; // paths or components the work changes (ADR-0019)
+	topics?: string[]; // what a story or epic is about beyond its components (S-0135, ADR-0047)
 	agent?: Agent; // who works a story (S-0103)
 	path: string; // repo-relative
 	archived: boolean;

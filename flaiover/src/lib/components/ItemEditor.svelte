@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Edit a story's or an epic's own words where it is read (S-0085): title, nature, tags, what it
-	// touches, the stories a story waits for (S-0130), its parent, and the body below its heading. flai on the host makes every change and
+	// Edit a story's or an epic's own words where it is read (S-0085): title, nature, tags, its topics
+	// (S-0135), what it touches, the stories a story waits for (S-0130), its parent, and the body below its heading. flai on the host makes every change and
 	// decides what is allowed; this form only collects it. What is the item's state, its ID, type,
 	// status, owner, and dates, is shown and is not a field.
 	import { api } from '$lib/api';
@@ -16,6 +16,8 @@
 		nature: string;
 		tags: string[];
 		touches: string[];
+		/** what a story or epic is about beyond its components (S-0135); a flai before it does not send it */
+		topics?: string[];
 		/** the stories a story waits for (S-0130); a flai before it does not send it */
 		after?: string[];
 		parent?: string;
@@ -42,6 +44,7 @@
 	let nature = $state('');
 	let tags = $state('');
 	let touches = $state('');
+	let topics = $state('');
 	let after = $state('');
 	let parent = $state('');
 	// the story's own agent (S-0103), which a save replaces
@@ -68,6 +71,7 @@
 		nature = v.nature;
 		tags = v.tags.join(', ');
 		touches = v.touches.join(', ');
+		topics = (v.topics ?? []).join(', ');
 		after = (v.after ?? []).join(', ');
 		parent = v.parent ?? '';
 		harness = v.agent?.harness ?? '';
@@ -100,6 +104,7 @@
 		if (title.trim() !== view.title) out.title = title;
 		if (nature !== view.nature) out.nature = nature;
 		if (!same(list(tags), view.tags)) out.tags = list(tags);
+		if (!same(list(topics), view.topics ?? [])) out.topics = list(topics);
 		if (view.type !== 'epic' && !same(list(touches), view.touches)) out.touches = list(touches);
 		if (view.type !== 'epic' && parent && parent !== (view.parent ?? '')) out.parent = parent;
 		if (view.type === 'story' && !same(list(after), view.after ?? [])) out.after = list(after);
@@ -216,6 +221,18 @@
 					bind:value={tags}
 					placeholder="comma separated"
 				/>
+			</label>
+			<label class="block text-sm">
+				<span class="mb-1 block font-medium">Topics</span>
+				<input
+					class="w-full rounded border border-line-strong px-2 py-1"
+					bind:value={topics}
+					placeholder="such as logging, release; comma separated"
+					data-testid="edit-topics"
+				/>
+				<span class="mt-1 block text-xs text-muted"
+					>What it is about beyond the components its tags and touches reach.</span
+				>
 			</label>
 			{#if view.type !== 'epic'}
 				<label class="block text-sm">
