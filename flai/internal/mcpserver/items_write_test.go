@@ -87,3 +87,32 @@ func TestItemEditSetsAndClearsAfter(t *testing.T) {
 		t.Errorf("cleared: %v", got["after"])
 	}
 }
+
+// S-0135: item_new and item_edit set a story's or epic's topics, item_get
+// shows them, a task is refused them, and an empty list removes them.
+func TestItemNewAndEditCarryTopics(t *testing.T) {
+	f := setup(t)
+	out, failed := f.call(t, "item_new", map[string]any{"type": "epic", "title": "Logs", "topics": []string{"logging"}})
+	if failed != "" || strings.Join(toStrings(out["topics"]), ",") != "logging" {
+		t.Fatalf("new epic: %v %s", out, failed)
+	}
+	ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "topics": []string{"release", "logging"}})
+	if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "topics" {
+		t.Fatalf("set: %v %s", ed, failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID}); strings.Join(toStrings(got["topics"]), ",") != "release,logging" {
+		t.Errorf("item_get: %v", got["topics"])
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "topics": []string{"not one"}}); !strings.Contains(failed, "one word") {
+		t.Errorf("two words: %q", failed)
+	}
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "T", "parent": f.story.ID, "topics": []string{"logging"}}); !strings.Contains(failed, "stories and epics") {
+		t.Errorf("a task's topics: %q", failed)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "topics": []string{}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "topics" {
+		t.Errorf("clear: %v %s", ed, failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID}); got["topics"] != nil {
+		t.Errorf("cleared: %v", got["topics"])
+	}
+}

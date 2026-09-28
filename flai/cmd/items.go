@@ -23,7 +23,7 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
 	var nature, owner, parent, harness, model string
-	var tags, touches, trailers, agentConfig []string
+	var tags, touches, topics, trailers, agentConfig []string
 	var bodyStdin, autocommit, printBody bool
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
@@ -68,7 +68,7 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 			}
 			opt := workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
-				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Agent: agent, Now: a.now(),
+				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Topics: topics, Agent: agent, Now: a.now(),
 			}
 			if bodyStdin || autocommit {
 				if bodyStdin {
@@ -122,6 +122,10 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 	c.Flags().StringVar(&owner, "owner", "", "owner (default: config author)")
 	c.Flags().StringSliceVar(&tags, "tag", nil, "tag (repeatable or comma separated)")
 	c.Flags().StringSliceVar(&touches, "touches", nil, "paths or components this work changes (repeatable or comma separated)")
+	if typ != workitem.Task {
+		// what it is about beyond its components (S-0135, ADR-0047)
+		c.Flags().StringSliceVar(&topics, "topics", nil, "topics the "+typ+" is about beyond the components it reaches, such as logging or release (repeatable or comma separated)")
+	}
 	c.Flags().BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input; checked before it is kept")
 	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the new item and its parent on their own, unless dashboard.autocommit is false")
 	c.Flags().StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")

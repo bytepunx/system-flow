@@ -652,11 +652,16 @@ func (c *checker) documentation() {
 // Code is the topic of every sub-project that is not the template (ADR-0047).
 const Code = "code"
 
-// Vocabulary is every topic a story can have without declaring it: all,
-// code, and each sub-project's name, tags, and kind (ADR-0047). S-0135 adds
-// the topics stories and epics declare.
-func Vocabulary(repo *workitem.Repo) map[string]bool {
+// Vocabulary is every topic a story can have: all, code, each sub-project's
+// name, tags, and kind (ADR-0047), and the topics that the stories and epics
+// among items declare (S-0135).
+func Vocabulary(repo *workitem.Repo, items []*workitem.Item) map[string]bool {
 	v := map[string]bool{topics.All: true, Code: true}
+	for _, it := range items {
+		for _, t := range it.Topics {
+			v[t] = true
+		}
+	}
 	for _, p := range repo.Manifest.Projects {
 		for _, w := range append([]string{p.Name, p.Kind}, p.Tags...) {
 			if w != "" {
@@ -690,12 +695,12 @@ func (c *checker) docTopics(path, content string, isADR bool) {
 // topicWords warns on each topic of a document that no story can have.
 func (c *checker) topicWords(path string, doc *topics.Doc) {
 	if c.vocab == nil {
-		c.vocab = Vocabulary(c.repo)
+		c.vocab = Vocabulary(c.repo, c.items)
 	}
 	unknown := func(line int, where string, list []string) {
 		for _, t := range list {
 			if !c.vocab[t] {
-				c.add(Warning, "doc.topic", path, line, "topic %q %s is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml (%s)", t, where, strings.Join(c.words(), ", "))
+				c.add(Warning, "doc.topic", path, line, "topic %q %s is used by nothing: not all, code, a sub-project's name, tag, or kind in system-flow.yaml, nor a story's or epic's topics (%s)", t, where, strings.Join(c.words(), ", "))
 			}
 		}
 	}

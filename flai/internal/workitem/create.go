@@ -24,6 +24,8 @@ type NewOptions struct {
 	Owner   string
 	Tags    []string
 	Touches []string
+	// Topics are what a story or epic is about (S-0135, ADR-0047).
+	Topics []string
 	// Agent is who works a story, over the project's default (S-0103): what
 	// it sets wins, and the project's default fills in the rest.
 	Agent *manifest.Agent
@@ -101,6 +103,14 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	}
 	it.Tags = append(it.Tags, opt.Tags...)
 	it.Touches = append(it.Touches, opt.Touches...)
+	topics, err := CleanTopics(opt.Topics)
+	if err != nil {
+		return nil, err
+	}
+	if len(topics) > 0 && opt.Type == Task {
+		return nil, fmt.Errorf("only stories and epics carry topics, not a task")
+	}
+	it.Topics = append(it.Topics, topics...)
 	if opt.Type == Story {
 		it.Agent = r.Manifest.Agent.With(opt.Agent)
 	} else if !opt.Agent.IsZero() {
@@ -126,6 +136,25 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		}
 	}
 	return it, nil
+}
+
+// CleanTopics trims a topics list, drops empty entries and repeats, and
+// refuses an entry that is not one word.
+func CleanTopics(in []string) ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	for _, t := range in {
+		t = strings.TrimSpace(t)
+		if t == "" || seen[t] {
+			continue
+		}
+		if !ValidTopic(t) {
+			return nil, fmt.Errorf("topic %q is not one word: use letters, digits, dot, dash, or underscore, such as logging or release", t)
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	return out, nil
 }
 
 // itemHeading is the first heading of a rendered item body, "# ID Title".

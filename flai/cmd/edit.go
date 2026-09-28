@@ -16,11 +16,11 @@ import (
 func newEditCmd(a *app) *cobra.Command {
 	var title, nature, parent, hash, message, byFlag, harness, model string
 	var agentConfig []string
-	var tags, touches, after, trailers []string
-	var clearTags, clearTouches, clearAfter, clearAgent, bodyStdin, autocommit, show bool
+	var tags, touches, topics, after, trailers []string
+	var clearTags, clearTouches, clearTopics, clearAfter, clearAgent, bodyStdin, autocommit, show bool
 	c := &cobra.Command{
 		Use:   "edit <id>",
-		Short: "Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step",
+		Short: "Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step",
 		Long: `Change what an item says about itself. Any of the fields and the body can
 change together. What is the item's state stays flai's and is changed by its
 own commands: status by flai move, blocking by flai block, never here.
@@ -30,6 +30,10 @@ the heading, the file's name, the line in the parent's list, the story's
 narrative, and links to the old file name in design, docs, and wip. A new
 parent must be an open item of the right type; the item leaves the old
 parent's list and joins the new one. An archived or closed item is refused.
+
+--topics names what a story or epic is about beyond the components its tags
+and touches reach, such as logging or release (ADR-0047); flai show prints a
+story's topics with where each came from.
 
 --after names the stories a story waits for: while any of them is not done,
 the story is held in ready, and flai serve and wait_for_work pass it over
@@ -50,6 +54,7 @@ the item changed.`,
   flai edit S-0085 --tag dashboard --tag cli --touches flaiover/src
   flai edit S-0085 --parent E-0004
   flai edit S-0130 --after S-0128,S-0129
+  flai edit S-0135 --topics logging,release
   flai edit S-0085 --body-stdin --hash 3f0c... < body.md`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -66,6 +71,9 @@ the item changed.`,
 					return a.printJSON(v)
 				}
 				fmt.Fprintf(a.out, "%s %s\n  %s, %s, %s\n  tags: %s\n", v.ID, v.Title, v.Type, v.Nature, v.Status, strings.Join(v.Tags, ", "))
+				if v.Type != "task" {
+					fmt.Fprintf(a.out, "  topics: %s\n", strings.Join(v.Topics, ", "))
+				}
 				if v.Type != "epic" {
 					fmt.Fprintf(a.out, "  touches: %s\n  parent: %s\n", strings.Join(v.Touches, ", "), v.Parent)
 				}
@@ -107,6 +115,14 @@ the item changed.`,
 				ch.Touches = &touches
 			}
 			switch {
+			case clearTopics && f.Changed("topics"):
+				return fmt.Errorf("--topics and --clear-topics contradict each other")
+			case clearTopics:
+				ch.Topics = &[]string{}
+			case f.Changed("topics"):
+				ch.Topics = &topics
+			}
+			switch {
 			case clearAfter && f.Changed("after"):
 				return fmt.Errorf("--after and --clear-after contradict each other")
 			case clearAfter:
@@ -134,7 +150,7 @@ the item changed.`,
 				ch.Body = &body
 			}
 			if ch == (itemedit.Change{}) {
-				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, --clear-agent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
+				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, --clear-agent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
 			by, _ := agentIdentity()
 			if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
@@ -197,6 +213,8 @@ the item changed.`,
 	f.BoolVar(&clearTags, "clear-tags", false, "remove every tag")
 	f.StringSliceVar(&touches, "touches", nil, "the paths or components the work changes, replacing the ones there")
 	f.BoolVar(&clearTouches, "clear-touches", false, "remove the list")
+	f.StringSliceVar(&topics, "topics", nil, "what a story or epic is about, such as logging or release, replacing the ones there")
+	f.BoolVar(&clearTopics, "clear-topics", false, "remove a story's or epic's topics")
 	f.StringSliceVar(&after, "after", nil, "the stories a story waits for until they are done, replacing the ones there")
 	f.BoolVar(&clearAfter, "clear-after", false, "remove the stories a story waits for")
 	f.StringVar(&parent, "parent", "", "the new parent: an epic for a story, a story for a task")

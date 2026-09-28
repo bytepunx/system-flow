@@ -416,6 +416,17 @@ func needID(id string) *channel.Error {
 	return nil
 }
 
+// topicWords refuses a topic that is not one word (ADR-0047) before flai is
+// asked, so that the dashboard says why.
+func topicWords(list []string) *channel.Error {
+	for _, v := range list {
+		if v = strings.TrimSpace(v); v != "" && !workitem.ValidTopic(v) {
+			return bad("topic %q is not one word: letters, digits, dot, dash, or underscore", v)
+		}
+	}
+	return nil
+}
+
 func adrNo(v string) (string, *channel.Error) {
 	m := adrNumber.FindStringSubmatch(strings.TrimSpace(v))
 	if m == nil {
@@ -595,6 +606,7 @@ func itemSpecs() map[string]spec {
 				Parent  string          `json:"parent"`
 				Tags    []string        `json:"tags"`
 				Touches []string        `json:"touches"`
+				Topics  []string        `json:"topics"` // what a story or epic is about (S-0135)
 				Agent   *manifest.Agent `json:"agent"`
 				Body    string          `json:"body"`
 			}](raw)
@@ -637,6 +649,9 @@ func itemSpecs() map[string]spec {
 			case in.Parent != "":
 				return nil, "", bad("an epic has no parent")
 			}
+			if e := topicWords(in.Topics); e != nil {
+				return nil, "", e
+			}
 			for flag, values := range map[string][]string{"tag": in.Tags, "touches": in.Touches} {
 				for _, v := range values {
 					if !listValue.MatchString(strings.TrimSpace(v)) {
@@ -649,6 +664,9 @@ func itemSpecs() map[string]spec {
 			}
 			for _, v := range in.Touches {
 				args = append(args, "--touches="+strings.TrimSpace(v))
+			}
+			for _, v := range in.Topics {
+				args = append(args, "--topics="+strings.TrimSpace(v))
 			}
 			if !in.Agent.IsZero() {
 				if in.Type != workitem.Story {
@@ -687,7 +705,8 @@ func itemSpecs() map[string]spec {
 				Nature  *string   `json:"nature"`
 				Tags    *[]string `json:"tags"`
 				Touches *[]string `json:"touches"`
-				After   *[]string `json:"after"` // stories a story waits for (S-0130)
+				Topics  *[]string `json:"topics"` // what a story or epic is about (S-0135)
+				After   *[]string `json:"after"`  // stories a story waits for (S-0130)
 				Parent  *string   `json:"parent"`
 				Body    *string   `json:"body"`
 				// Agent replaces the story's agent: absent leaves it, null (or an
@@ -724,10 +743,15 @@ func itemSpecs() map[string]spec {
 				}
 				args = append(args, "--parent="+*in.Parent)
 			}
+			if in.Topics != nil {
+				if e := topicWords(*in.Topics); e != nil {
+					return nil, "", e
+				}
+			}
 			for _, l := range []struct {
 				flag, clear string
 				values      *[]string
-			}{{"tag", "--clear-tags", in.Tags}, {"touches", "--clear-touches", in.Touches}, {"after", "--clear-after", in.After}} {
+			}{{"tag", "--clear-tags", in.Tags}, {"touches", "--clear-touches", in.Touches}, {"topics", "--clear-topics", in.Topics}, {"after", "--clear-after", in.After}} {
 				if l.values == nil {
 					continue
 				}

@@ -23,6 +23,7 @@ type ItemNewIn struct {
 	Parent  string          `json:"parent,omitempty" jsonschema:"a story's epic (optional), a task's story (required)"`
 	Tags    []string        `json:"tags,omitempty"`
 	Touches []string        `json:"touches,omitempty" jsonschema:"paths or components the work changes"`
+	Topics  []string        `json:"topics,omitempty" jsonschema:"a story's or epic's: what it is about beyond the components its tags and touches reach, such as logging or release"`
 	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, and config, over the project's default, which fills in what is not given"`
 	Body    string          `json:"body,omitempty" jsonschema:"the goal, criteria, and notes below the heading; the template's empty sections when not given"`
 }
@@ -39,7 +40,7 @@ func (s *server) itemNew(_ context.Context, _ *mcp.CallToolRequest, in ItemNewIn
 		owner = s.agent
 	}
 	it, err := s.repo.Create(workitem.NewOptions{Type: in.Type, Title: strings.TrimSpace(in.Title), Nature: nature, Parent: in.Parent, Owner: owner,
-		Tags: in.Tags, Touches: in.Touches, Agent: in.Agent, Body: in.Body, Now: s.now()})
+		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, Agent: in.Agent, Body: in.Body, Now: s.now()})
 	if err != nil {
 		return nil, ItemOut{}, err
 	}
@@ -56,6 +57,7 @@ type ItemEditIn struct {
 	Nature  *string   `json:"nature,omitempty"`
 	Tags    *[]string `json:"tags,omitempty" jsonschema:"replaces the tags; an empty list removes them"`
 	Touches *[]string `json:"touches,omitempty" jsonschema:"replaces the touches; an empty list removes them"`
+	Topics  *[]string `json:"topics,omitempty" jsonschema:"a story's or epic's: replaces what it is about, such as logging or release; an empty list removes them"`
 	After   *[]string `json:"after,omitempty" jsonschema:"a story's: replaces the stories it waits for until they are done (it is held in ready meanwhile); an empty list removes them"`
 	Parent  *string   `json:"parent,omitempty"`
 	// Agent replaces a story's agent; ClearAgent removes it.
@@ -69,15 +71,15 @@ func (in ItemEditIn) project() string { return in.Project }
 // ItemEditOut is what an edit changed.
 type ItemEditOut struct {
 	ID        string   `json:"id"`
-	Changed   []string `json:"changed" jsonschema:"title, nature, tags, touches, after, agent, parent, goal, criteria, notes, body"`
+	Changed   []string `json:"changed" jsonschema:"title, nature, tags, topics, touches, after, agent, parent, goal, criteria, notes, body"`
 	Unchanged bool     `json:"unchanged,omitempty"`
 	Hash      string   `json:"hash"`
 }
 
 func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEditIn) (*mcp.CallToolResult, ItemEditOut, error) {
-	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Touches: in.Touches, After: in.After, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent}
+	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Topics: in.Topics, Touches: in.Touches, After: in.After, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent}
 	if ch == (itemedit.Change{}) {
-		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, touches, after, parent, agent, clear_agent, or body")
+		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, topics, touches, after, parent, agent, clear_agent, or body")
 	}
 	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, NoCommit: true, Now: s.now()})
 	if r, ok := docedit.IsRefused(err); ok {

@@ -170,14 +170,13 @@ func split(body string, offset int, file []string) []Section {
 }
 
 var (
-	wordRe   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 	keyRe    = regexp.MustCompile(`^topics:`)
 	nestedRe = regexp.MustCompile(`^([ \t]+|-[ \t]|-$)`)
 )
 
 // Valid reports whether a topic is one word: letters, digits, dot, dash, or
 // underscore, starting with a letter or digit.
-func Valid(t string) bool { return wordRe.MatchString(t) }
+func Valid(t string) bool { return workitem.ValidTopic(t) }
 
 // SetInFrontMatter writes topics into a front matter block, in place of the
 // key when it is there and at the end otherwise, and changes nothing else.

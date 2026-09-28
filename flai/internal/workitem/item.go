@@ -75,6 +75,10 @@ type Item struct {
 	Stream      string       `yaml:"stream" json:"stream"`
 	Tags        []string     `yaml:"tags" json:"tags"`
 	Touches     []string     `yaml:"touches" json:"touches,omitempty"` // paths or components the work changes (ADR-0019)
+	// Topics are what a story or epic is about beyond the components it
+	// reaches, such as logging or release (S-0135, ADR-0047). Stories and
+	// epics only.
+	Topics []string `yaml:"topics" json:"topics,omitempty"`
 	// After names the stories that must be done before this story starts
 	// (S-0130, ADR-0046). Stories only.
 	After []string `yaml:"after" json:"after,omitempty"`
@@ -173,6 +177,14 @@ func (it *Item) Validate() error {
 	for i, id := range it.After {
 		if !idPattern.MatchString(id) || !strings.HasPrefix(id, "S-") {
 			errs = append(errs, fmt.Sprintf("after[%d] %q is not a story ID like S-0001", i, id))
+		}
+	}
+	if len(it.Topics) > 0 && it.Type == Task {
+		errs = append(errs, "topics are for stories and epics, and this is a task")
+	}
+	for i, t := range it.Topics {
+		if !ValidTopic(t) {
+			errs = append(errs, fmt.Sprintf("topics[%d] %q is not one word of letters, digits, dot, dash, or underscore", i, t))
 		}
 	}
 	for _, name := range []string{"created", "updated"} {
@@ -316,6 +328,9 @@ func (it *Item) Marshal() string {
 		fmt.Fprintf(&b, "stream: %s\n", it.Stream)
 	}
 	fmt.Fprintf(&b, "tags: %s\n", FlowList(it.Tags))
+	if len(it.Topics) > 0 {
+		fmt.Fprintf(&b, "topics: %s\n", FlowList(it.Topics))
+	}
 	if len(it.Touches) > 0 {
 		fmt.Fprintf(&b, "touches: %s\n", FlowList(it.Touches))
 	}
@@ -331,10 +346,15 @@ func (it *Item) Marshal() string {
 }
 
 var (
+	topicPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 	idPattern    = regexp.MustCompile(`^[EST]-\d{3,}$`)
 	plainPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 _./,()'!?&+@-]*$`)
 	reserved     = map[string]bool{"true": true, "false": true, "null": true, "yes": true, "no": true, "on": true, "off": true, "~": true}
 )
+
+// ValidTopic reports whether a topic is one word: letters, digits, dot,
+// dash, or underscore, starting with a letter or digit (ADR-0047).
+func ValidTopic(t string) bool { return topicPattern.MatchString(t) }
 
 // Scalar renders a string as a YAML scalar, plain when safe and double-quoted
 // otherwise.

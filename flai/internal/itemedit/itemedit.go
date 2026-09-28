@@ -1,5 +1,6 @@
 // Package itemedit changes a work item after it was created (S-0085): its
-// title, nature, tags, touches, a story's after: (S-0130), parent, and the
+// title, nature, tags, touches, a story's or epic's topics (S-0135), a
+// story's after: (S-0130), parent, and the
 // body below its heading, in one step that is checked and committed the way
 // a document save is (ADR-0023). What is the item's state stays flai's and
 // is not reachable from here: ID, type, status, transitions, blocked
@@ -33,6 +34,9 @@ type Change struct {
 	Nature  *string
 	Tags    *[]string
 	Touches *[]string
+	// Topics replaces what a story or epic is about (S-0135); an empty list
+	// removes them.
+	Topics *[]string
 	// After replaces the stories a story waits for (S-0130); an empty list
 	// removes them.
 	After  *[]string
@@ -62,7 +66,8 @@ type View struct {
 	Nature  string   `json:"nature"`
 	Tags    []string `json:"tags"`
 	Touches []string `json:"touches"`
-	After   []string `json:"after"` // stories this story waits for (S-0130)
+	Topics  []string `json:"topics"` // what a story or epic is about (S-0135)
+	After   []string `json:"after"`  // stories this story waits for (S-0130)
 	Parent  string   `json:"parent,omitempty"`
 	// Agent is the story's agent, and DefaultAgent the project's, which a
 	// story created now would get (S-0103).
@@ -89,7 +94,7 @@ type Result struct {
 	ID          string          `json:"id"`
 	Path        string          `json:"path"`
 	Hash        string          `json:"hash"`
-	Changed     []string        `json:"changed"` // title, nature, tags, touches, after, agent, parent, goal, criteria, notes, body
+	Changed     []string        `json:"changed"` // title, nature, tags, topics, touches, after, agent, parent, goal, criteria, notes, body
 	Renamed     string          `json:"renamed_from,omitempty"`
 	Files       []string        `json:"files"` // every file written or removed, relative to the checkout
 	Unchanged   bool            `json:"unchanged,omitempty"`
@@ -151,7 +156,7 @@ func Show(repo *workitem.Repo, id string) (*View, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches), After: orEmpty(it.After),
+	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches), Topics: orEmpty(it.Topics), After: orEmpty(it.After),
 		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
 	v.Editable, v.Reason = editable(it)
 	if want := parentType(it.Type); want != "" {
@@ -376,6 +381,19 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if !same(tags, orEmpty(it.Tags)) {
 			it.Tags = tags
 			changed = append(changed, "tags")
+		}
+	}
+	if ch.Topics != nil {
+		topics, err := workitem.CleanTopics(*ch.Topics)
+		if err != nil {
+			return nil, invalid("%s", err)
+		}
+		if it.Type == workitem.Task && len(topics) > 0 {
+			return nil, invalid("%s is a task; topics belong to stories and epics", it.ID)
+		}
+		if !same(topics, orEmpty(it.Topics)) {
+			it.Topics = topics
+			changed = append(changed, "topics")
 		}
 	}
 	if ch.Touches != nil {

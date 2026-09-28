@@ -353,10 +353,10 @@ func TestTopicRules(t *testing.T) {
 		}
 	}
 	want := []string{
-		`design/adrs/0001-first.md:10 doc.topic topic "adr-nope" on heading "Scope" is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
-		`design/conventions/session-start.md:7 doc.topic topic "conv-nope" in the front matter is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
-		`design/system/topical.md:4 doc.topic topic "nope" in the front matter is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
-		`design/system/topical.md:13 doc.topic topic "also-nope" on heading "Part" is used by nothing: not all, code, nor a sub-project's name, tag, or kind in system-flow.yaml`,
+		`design/adrs/0001-first.md:10 doc.topic topic "adr-nope" on heading "Scope" is used by nothing: not all, code, a sub-project's name, tag, or kind in system-flow.yaml, nor a story's or epic's topics`,
+		`design/conventions/session-start.md:7 doc.topic topic "conv-nope" in the front matter is used by nothing: not all, code, a sub-project's name, tag, or kind in system-flow.yaml, nor a story's or epic's topics`,
+		`design/system/topical.md:4 doc.topic topic "nope" in the front matter is used by nothing: not all, code, a sub-project's name, tag, or kind in system-flow.yaml, nor a story's or epic's topics`,
+		`design/system/topical.md:13 doc.topic topic "also-nope" on heading "Part" is used by nothing: not all, code, a sub-project's name, tag, or kind in system-flow.yaml, nor a story's or epic's topics`,
 		`design/tech/untopical.md:1 doc.topics no topics; say which stories it is for, such as topics: [all] or a sub-project's name, tag, or kind`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
@@ -369,7 +369,7 @@ func TestVocabularyIsTheManifestsWords(t *testing.T) {
 	if err != nil {
 		t.Skip("monorepo not present")
 	}
-	v := Vocabulary(repo)
+	v := Vocabulary(repo, nil)
 	for _, w := range []string{"all", "code", "flai", "go", "cli", "flaiover", "sveltekit", "dashboard", "template", "conventions"} {
 		if !v[w] {
 			t.Errorf("%s is a topic here", w)
@@ -377,5 +377,28 @@ func TestVocabularyIsTheManifestsWords(t *testing.T) {
 	}
 	if len(v) != 10 {
 		t.Errorf("vocabulary = %v", v)
+	}
+}
+
+// S-0135: the topics stories and epics declare are topics a document may
+// name; the fixture's epic says logging and a story release, which
+// topical.md's last heading uses without a finding.
+func TestVocabularyHasTheItemsTopics(t *testing.T) {
+	repo, err := workitem.Open("testdata/bad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := Vocabulary(repo, items)
+	for _, w := range []string{"logging", "release", "all", "code"} {
+		if !v[w] {
+			t.Errorf("%s is a topic of the fixture: %v", w, v)
+		}
+	}
+	if v["nope"] {
+		t.Errorf("nope is no one's topic")
 	}
 }
