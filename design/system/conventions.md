@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-09-27
+updated: 2026-09-28
 status: active
 topics: [conventions, template]
 ---
@@ -105,7 +105,7 @@ A convention says which stories it is for, as design, tech files, and ADRs do ([
 
 `flai/internal/topics` parses them: the file's topics and the body split into sections by heading, each with its heading path and effective topics. Nothing selects documents by topic until `flai prime --story` (S-0136, S-0137).
 
-`flai upgrade` replaces everything above a convention's marker, front matter included, so a project's narrower `topics` on a baseline file, or a heading comment above the marker, goes back to the template's on the next upgrade.
+`flai upgrade` takes everything above a convention's marker from the template, with one exception: a project's own `topics` on the file stay (TH-0028). `system-flow.lock.yaml` records the topics the template gave each marker file; on upgrade a project's topics that differ from that record are the project's and are kept, and topics that match it, or no topics, take the new template's. With nothing recorded (a lock written before S-0134, or no lock), a project's topics are kept. A heading comment above the marker is the template's; a project narrows a baseline heading in its additions.
 
 ## Precedence
 

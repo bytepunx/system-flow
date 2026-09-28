@@ -8,12 +8,16 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Classes of change for one path.
@@ -32,6 +36,7 @@ type Change struct {
 	content []byte      // new content to write (merged for Merge)
 	mode    fs.FileMode // from the template
 	NewHash string      `json:"new_hash"`
+	topics  []string    // the template's topics on a marker file, for the lock
 }
 
 // Plan is the whole upgrade.
@@ -72,7 +77,7 @@ func Compute(root string, m template.Manifest, src template.Source, opt template
 		if owned(rel) {
 			return
 		}
-		rendered = append(rendered, Change{Path: rel, content: content, mode: mode, NewHash: lock.Hash(content)})
+		rendered = append(rendered, Change{Path: rel, content: content, mode: mode, NewHash: lock.Hash(content), topics: Topics(content)})
 	}
 	if _, err := template.Render(m, src.Dir, root, opt); err != nil {
 		return nil, err
@@ -88,7 +93,7 @@ func Compute(root string, m template.Manifest, src template.Source, opt template
 			c.Class = Same
 		case hasMarker(existing) && hasMarker(c.content):
 			c.Class = Merge
-			c.content = merge(c.content, existing)
+			c.content = merge(c.content, existing, recorded(lk, c.Path))
 			if bytes.Equal(existing, c.content) {
 				c.Class = Same
 			}
@@ -110,11 +115,61 @@ func hasMarker(b []byte) bool { return bytes.Contains(b, []byte(conventions.Mark
 func owned(rel string) bool { return rel == "system-flow.yaml" }
 
 // merge takes the template's text above the marker and the project's text
-// from the marker on.
-func merge(tpl, project []byte) []byte {
+// from the marker on. The project's topics stay when the project set them:
+// when they differ from the topics the template last gave the file (was),
+// or, with nothing recorded, when the project has any.
+func merge(tpl, project []byte, was []string) []byte {
 	i := bytes.Index(tpl, []byte(conventions.Marker))
 	j := bytes.Index(project, []byte(conventions.Marker))
-	return append(append([]byte{}, tpl[:i]...), project[j:]...)
+	out := append(append([]byte{}, tpl[:i]...), project[j:]...)
+	own := Topics(project)
+	if own == nil || (was != nil && slices.Equal(own, was)) {
+		return out
+	}
+	fm, _, err := workitem.SplitFrontMatter(string(out))
+	if err != nil {
+		return out
+	}
+	return []byte("---\n" + topics.SetInFrontMatter(fm, own) + strings.TrimPrefix(string(out), "---\n"+fm))
+}
+
+// Topics reads the topics on a marker file's front matter: nil for a file
+// without the marker, without front matter, or without topics.
+func Topics(content []byte) []string {
+	if !hasMarker(content) {
+		return nil
+	}
+	fm, _, err := workitem.SplitFrontMatter(string(content))
+	if err != nil {
+		return nil
+	}
+	t, err := topics.FromFrontMatter(fm)
+	if err != nil || len(t) == 0 {
+		return nil
+	}
+	return t
+}
+
+// TopicsOf reads the topics on each marker file among paths under root, for
+// the lock of a project just rendered.
+func TopicsOf(root string, paths []string) map[string][]string {
+	out := map[string][]string{}
+	for _, rel := range paths {
+		if b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel))); err == nil {
+			if t := Topics(b); t != nil {
+				out[rel] = t
+			}
+		}
+	}
+	return out
+}
+
+// recorded is the topics the lock says the template last gave path.
+func recorded(lk *lock.Lock, path string) []string {
+	if lk == nil {
+		return nil
+	}
+	return lk.Topics[path]
 }
 
 // Policy decides conflicts: a map from path to "keep" or "replace".
@@ -152,23 +207,30 @@ func Apply(root string, plan *Plan, policy Policy) ([]string, error) {
 // NewLock builds the lock after an upgrade: every rendered path with the
 // template's hash, so a kept conflict stays a divergence next time.
 func NewLock(plan *Plan, src template.Source, version string, now time.Time) *lock.Lock {
-	l := &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: version, Applied: now.UTC().Format("2006-01-02T15:04:05Z")}, Files: map[string]string{}}
+	l := &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: version, Applied: now.UTC().Format("2006-01-02T15:04:05Z")}, Files: map[string]string{}, Topics: map[string][]string{}}
 	for _, c := range plan.Changes {
 		l.Files[c.Path] = c.NewHash
+		if c.topics != nil {
+			l.Topics[c.Path] = c.topics
+		}
 	}
 	return l
 }
 
 // Relock hashes the current project files for every template path without
-// changing them, so a hand-assembled project can start upgrading.
+// changing them, so a hand-assembled project can start upgrading. The
+// topics recorded are the template's, so a project's own stay its own.
 func Relock(root string, m template.Manifest, src template.Source, opt template.Options, now time.Time) (*lock.Lock, error) {
-	l := &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: now.UTC().Format("2006-01-02T15:04:05Z")}, Files: map[string]string{}}
+	l := &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: now.UTC().Format("2006-01-02T15:04:05Z")}, Files: map[string]string{}, Topics: map[string][]string{}}
 	opt.Collect = func(rel string, content []byte, mode fs.FileMode) {
 		if owned(rel) {
 			return
 		}
 		if h, err := lock.HashFile(filepath.Join(root, filepath.FromSlash(rel))); err == nil {
 			l.Files[rel] = h
+		}
+		if t := Topics(content); t != nil {
+			l.Topics[rel] = t
 		}
 	}
 	if _, err := template.Render(m, src.Dir, root, opt); err != nil {

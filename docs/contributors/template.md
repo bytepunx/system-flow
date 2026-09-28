@@ -1,6 +1,6 @@
 ---
 title: Template guide
-updated: 2026-09-24
+updated: 2026-09-28
 status: active
 ---
 
@@ -140,7 +140,7 @@ Rendering is not the end of a file's life: `flai upgrade` renders the template a
 |--------------------|---------|
 | Missing | Adds it |
 | Identical to the new render | Leaves it |
-| Carries `<!-- system-flow:end-of-baseline -->`, and so does the template's | Takes the template's text above the marker and keeps the project's from the marker down |
+| Carries `<!-- system-flow:end-of-baseline -->`, and so does the template's | Takes the template's text above the marker and keeps the project's from the marker down. The one exception is `topics` in the front matter: the lock records the topics the template gave the file, and a project's topics that differ from them are kept |
 | Unchanged since it was rendered, by the hash in `system-flow.lock.yaml` | Replaces it |
 | Anything else | Reports a conflict: keep, replace, or diff in a terminal; `--keep-all` or `--replace-all` otherwise |
 

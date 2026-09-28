@@ -9,6 +9,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
@@ -154,6 +155,10 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dest, p)); err != nil {
 			t.Errorf("missing %s", p)
 		}
+	}
+	// The lock records the template's topics on each convention (S-0134).
+	if lk, err := lock.Load(dest); err != nil || lk == nil || strings.Join(lk.Topics["design/conventions/git.md"], ",") != "all" {
+		t.Errorf("lock topics: %+v %v", lk, err)
 	}
 	// No template syntax left behind, and every front matter block parses.
 	err = filepath.WalkDir(dest, func(path string, d os.DirEntry, err error) error {

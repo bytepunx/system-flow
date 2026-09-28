@@ -207,3 +207,115 @@ func TestUpgradeBringsConventionTopics(t *testing.T) {
 		}
 	}
 }
+
+// S-0134: the merge keeps the topics a project set on a convention, and
+// takes the template's when the project has none or has what the template
+// last gave it.
+func TestMergeKeepsTheProjectsTopics(t *testing.T) {
+	const marker = "<!-- system-flow:end-of-baseline -->"
+	file := func(topics, body string) []byte {
+		fm := "---\ntitle: X\n"
+		if topics != "" {
+			fm += "topics: [" + topics + "]\n"
+		}
+		return []byte(fm + "order: 10\n---\n\n# X\n\n" + body + "\n\n" + marker + "\n\n## Project additions\n- mine\n")
+	}
+	tpl := file("code", "v2")
+	cases := []struct {
+		name, project string
+		was           []string
+		want          string
+	}{
+		{"unchanged since applied", "all", []string{"all"}, "code"},
+		{"narrowed by the project", "cli, go", []string{"all"}, "cli, go"},
+		{"nothing recorded", "cli", nil, "cli"},
+		{"no topics in the project", "", []string{"all"}, "code"},
+		{"the template's already", "code", []string{"all"}, "code"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := string(merge(tpl, file(c.project, "v1"), c.was))
+			want := string(file(c.want, "v2"))
+			if got != want {
+				t.Errorf("got:\n%s\nwant:\n%s", got, want)
+			}
+		})
+	}
+	if Topics([]byte("---\ntopics: [code]\n---\n\n# no marker\n")) != nil {
+		t.Error("a file without the marker has no topics to record")
+	}
+}
+
+func TestLockRoundTripsTopics(t *testing.T) {
+	root := t.TempDir()
+	lk := &lock.Lock{Files: map[string]string{"a.md": "h"}, Topics: map[string][]string{"a.md": {"cli", "go"}, "b.md": {"all"}}}
+	if err := lock.Save(root, lk); err != nil {
+		t.Fatal(err)
+	}
+	back, err := lock.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(back.Topics["a.md"], ",") != "cli,go" || strings.Join(back.Topics["b.md"], ",") != "all" {
+		t.Errorf("topics: %v", back.Topics)
+	}
+}
+
+// S-0134: a project that narrows a convention's topics keeps them through
+// flai upgrade, and a convention it left alone takes the template's.
+func TestUpgradeKeepsNarrowedConventionTopics(t *testing.T) {
+	const tpl = "../../../template"
+	m, err := template.LoadManifest(tpl)
+	if err != nil {
+		t.Skip("the monorepo's template is not present")
+	}
+	src := template.Source{Repo: tpl, Local: true, Dir: tpl}
+	v := vars()
+	for _, k := range []string{"owner", "repo_url", "today"} {
+		v[k] = ""
+	}
+	opts := template.Options{Vars: v, Source: src}
+	root := t.TempDir()
+	res, err := template.Render(m, tpl, root, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lk := &lock.Lock{Template: lock.Template{Version: m.Version}, Files: res.Hashes, Topics: TopicsOf(root, res.Written)}
+	narrowed := filepath.Join(root, "design", "conventions", "code-quality.md")
+	left := filepath.Join(root, "design", "conventions", "git.md")
+	if strings.Join(lk.Topics["design/conventions/code-quality.md"], ",") != "all" {
+		t.Fatalf("the lock does not record the template's topics: %v", lk.Topics)
+	}
+	edit := func(p, from, to string) {
+		b, _ := os.ReadFile(p)
+		if !strings.Contains(string(b), from) {
+			t.Fatalf("%s has no %q", p, from)
+		}
+		_ = os.WriteFile(p, []byte(strings.Replace(string(b), from, to, 1)), 0o644)
+	}
+	edit(narrowed, "topics: [all]", "topics: [code]")
+	// as if the template had given git.md other topics before
+	edit(left, "topics: [all]", "topics: [old]")
+	lk.Topics["design/conventions/git.md"] = []string{"old"}
+	plan, err := Compute(root, m, src, opts, lk, m.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(root, plan, Policy{}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(narrowed); !strings.Contains(string(b), "\ntopics: [code]\n") {
+		t.Errorf("the project's topics were not kept:\n%s", b)
+	}
+	if b, _ := os.ReadFile(left); !strings.Contains(string(b), "\ntopics: [all]\n") {
+		t.Errorf("the template's topics were not taken:\n%s", b)
+	}
+	nl := NewLock(plan, src, m.Version, time.Now())
+	if strings.Join(nl.Topics["design/conventions/code-quality.md"], ",") != "all" {
+		t.Errorf("the new lock must record the template's topics, not the project's: %v", nl.Topics["design/conventions/code-quality.md"])
+	}
+	rl, err := Relock(root, m, src, opts, time.Now())
+	if err != nil || strings.Join(rl.Topics["design/conventions/code-quality.md"], ",") != "all" {
+		t.Errorf("relock must record the template's topics: %v %v", rl.Topics, err)
+	}
+}

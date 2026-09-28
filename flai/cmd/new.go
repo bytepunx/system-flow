@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/upgrade"
 )
 
 type newOptions struct {
@@ -99,7 +100,7 @@ func (a *app) runNew(dir string, o newOptions) error {
 	if _, err := manifest.Load(filepath.Join(dest, manifest.File)); err != nil {
 		return fmt.Errorf("rendered project has an invalid manifest: %w", err)
 	}
-	if err := lock.Save(dest, &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: a.now().UTC().Format("2006-01-02T15:04:05Z")}, Files: res.Hashes}); err != nil {
+	if err := lock.Save(dest, &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: a.now().UTC().Format("2006-01-02T15:04:05Z")}, Files: res.Hashes, Topics: upgrade.TopicsOf(dest, res.Written)}); err != nil {
 		return err
 	}
 

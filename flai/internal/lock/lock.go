@@ -21,6 +21,9 @@ const File = "system-flow.lock.yaml"
 type Lock struct {
 	Template Template          `yaml:"template"`
 	Files    map[string]string `yaml:"files"` // project-relative path -> sha256
+	// Topics is the template's topics on each marker file it rendered, so
+	// upgrade can tell a project's own topics from the template's (S-0134).
+	Topics map[string][]string `yaml:"topics,omitempty"`
 }
 
 // Template is the source that was applied.
@@ -81,6 +84,17 @@ func Save(root string, l *Lock) error {
 		sort.Strings(paths)
 		for _, p := range paths {
 			fmt.Fprintf(&b, "  %q: %s\n", p, l.Files[p])
+		}
+	}
+	if len(l.Topics) > 0 {
+		b.WriteString("topics:\n")
+		paths := make([]string, 0, len(l.Topics))
+		for p := range l.Topics {
+			paths = append(paths, p)
+		}
+		sort.Strings(paths)
+		for _, p := range paths {
+			fmt.Fprintf(&b, "  %q: [%s]\n", p, strings.Join(l.Topics[p], ", "))
 		}
 	}
 	return os.WriteFile(filepath.Join(root, File), []byte(b.String()), 0o644)
