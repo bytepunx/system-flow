@@ -394,6 +394,31 @@ A story named that is cancelled keeps the hold, and the reason says so: drop it 
 
 A flai older than the one that brought `after` refuses to read a story that carries it, so upgrade the flai on your host (`flai self-upgrade`) before you use it.
 
+### A story's topics
+
+```bash
+flai story new "Structured request logs" --epic E-0004 --topics logging
+flai epic new "Release automation" --topics release
+flai edit S-0131 --topics logging,release    # replaces them; --clear-topics removes them
+flai show S-0131                              # the story's topics and where each came from
+```
+
+`topics` say what a story or epic is about beyond the components it reaches, in words such as `logging` or `release` ([ADR-0047](../../design/adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md)). They choose what an agent working the story is primed with, as the topics on documents do (below); `tags` still say which component a story delivers to and so which release it cuts. Each topic is one word of letters, digits, dot, dash, or underscore. A task carries none.
+
+You rarely need to write many. flai works out a story's topics from its own and its epic's, from the name, tags, and kind of every sub-project in `system-flow.yaml` that one of its tags names or its touches (and its open tasks' touches) reach, `code` when one of those is not the template, and `all`. `flai show` lists them:
+
+```text
+  topics:
+    logging    own
+    flai       flai by tag cli and touches flai/internal/logx (S-0131)
+    cli        flai by tag cli and touches flai/internal/logx (S-0131)
+    go         flai by tag cli and touches flai/internal/logx (S-0131)
+    code       flai is code
+    all        every story
+```
+
+`flai show --json` returns the same under `topics`, with every source: its `kind` (`own`, `epic`, `tag`, `claim`, `code`, `all`), the `item` that says it, the sub-project (`project`) it reached, and the tag or touch (`via`) that reached it. A touch outside every sub-project, such as `design/system`, adds nothing. The dashboard's story and epic editors, and the MCP `item_new` and `item_edit` tools, set topics too. As with `after`, a flai older than the one that brought `topics` refuses to read an item that carries them: upgrade the flai on your host first.
+
 ### Threads
 
 ```bash
@@ -418,10 +443,11 @@ flai edit S-0085 --parent E-0004                # an open epic for a story, an o
 flai edit S-0085 --body-stdin --hash <hash> < body.md
 flai edit S-0085 --clear-tags --clear-touches
 flai edit S-0085 --after S-0084                 # hold it until S-0084 is done; --clear-after lets it go
+flai edit S-0085 --topics logging               # what it is about; --clear-topics removes them
 flai edit S-0085 --harness claude-code --model claude-sonnet-5 --agent-config effort=high
 ```
 
-`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's `after` and agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
+`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's or epic's `topics`, a story's `after` and agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
 
 A title lives in several places, and a retitle keeps them in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name under design, docs, and wip (from a story's worktree only under wip, because design and docs there are another branch's). With `--hash`, the one `--show` printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. `flai check` runs with the change in place: what the change introduces refuses it, every file is put back, and the findings are printed (exit 4). What is simply not allowed, a nature there is not, an epic as a task's parent, is said as a `rule:`. `--autocommit` commits every file the edit touched in one commit; nothing is pushed.
 
@@ -529,7 +555,7 @@ flai adr topics 27 cli template                  # the stories it is for, on an 
 
 `flai adr new` takes the next number from the files in `design/adrs` (one more than the highest; gaps are not filled), names the file `NNNN-slug.md`, writes `id`, `title`, `status` (`proposed` unless you say `--status accepted`), `date`, `supersedes`, `superseded_by`, and `refines`, adds the row to `design/adrs/README.md`, and sets `superseded_by` on each ADR it supersedes, one of the two edits allowed to an accepted ADR (the other is `flai adr topics`). The body is your template's sections, or standard input with `--body-stdin`. `flai check` runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. `--autocommit` makes one `docs: ADR-NNNN <title>` commit of what was written, unless the project sets `dashboard.autocommit: false`; nothing is pushed.
 
-`flai adr topics` sets which stories an ADR is for: it writes `topics: [cli, template]` into the front matter, in place of the key when it is there and at the end otherwise, and changes nothing else. It works on an ADR of any status, since `topics`, with `superseded_by`, is the one key an accepted ADR may gain. Topics are separate arguments or comma separated. Each is a word, and `flai check` must know it: `all` (every story), `code`, or a sub-project's name, tag, or kind in `system-flow.yaml`. A topic it does not know is refused, the file is put back, and the exit code is 4. `--autocommit` and `--trailer` work as for `flai adr new`.
+`flai adr topics` sets which stories an ADR is for: it writes `topics: [cli, template]` into the front matter, in place of the key when it is there and at the end otherwise, and changes nothing else. It works on an ADR of any status, since `topics`, with `superseded_by`, is the one key an accepted ADR may gain. Topics are separate arguments or comma separated. Each is a word, and `flai check` must know it: `all` (every story), `code`, a sub-project's name, tag, or kind in `system-flow.yaml`, or a topic a story or epic declares. A topic it does not know is refused, the file is put back, and the exit code is 4. `--autocommit` and `--trailer` work as for `flai adr new`.
 
 `flai check` warns with `adr.index` when an ADR file has no row in the index or a row has no file. An accepted ADR is immutable but for its `topics`: `flai doc save` refuses any other change, and the dashboard's editor shows it read-only.
 
@@ -541,7 +567,7 @@ Conventions, `design/system` and `design/tech` files, and ADRs say which stories
 ## Go <!-- topics: cli, go -->
 ```
 
-A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, or a sub-project's name, tag, or kind. Nothing selects documents by topic yet: `flai prime --story` will.
+A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). Nothing selects documents by topic yet: `flai prime --story` will.
 
 ## Edit a document through flai
 

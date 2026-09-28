@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-09-27
+updated: 2026-09-28
 status: active
 ---
 
@@ -199,6 +199,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--clear-after` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-agent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-tags` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--clear-topics` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-touches` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--commit` | [flai import](../users/flai-reference.md#flai-import) |
 | `--config` | every command ([global flags](../users/flai-reference.md#flai)), [flai agent set](../users/flai-reference.md#flai-agent-set) |
@@ -263,6 +264,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--template` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template show](../users/flai-reference.md#flai-template-show), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--title` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--top` | [flai order](../users/flai-reference.md#flai-order) |
+| `--topics` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--touches` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--trailer` | [flai accept](../users/flai-reference.md#flai-accept), [flai adr accept](../users/flai-reference.md#flai-adr-accept), [flai adr new](../users/flai-reference.md#flai-adr-new), [flai adr topics](../users/flai-reference.md#flai-adr-topics), [flai agent clear](../users/flai-reference.md#flai-agent-clear), [flai agent set](../users/flai-reference.md#flai-agent-set), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai import](../users/flai-reference.md#flai-import), [flai move](../users/flai-reference.md#flai-move), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--type` | [flai stats](../users/flai-reference.md#flai-stats) |

@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-09-27
+updated: 2026-09-28
 status: active
 ---
 
@@ -24,7 +24,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [doc](#flai-doc) | Read and save one markdown document for an editor |
-| [edit](#flai-edit) | Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step |
+| [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
@@ -83,7 +83,7 @@ Subcommands:
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [doc](#flai-doc): Read and save one markdown document for an editor
-- [edit](#flai-edit): Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step
+- [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
@@ -835,7 +835,7 @@ flai doc show design/system/overview.md --json
 
 ### flai edit
 
-Change an item's title, nature, tags, touches, after, parent, or body, checked and in one step.
+Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step.
 
 ```text
 flai edit <id> [flags]
@@ -844,6 +844,8 @@ flai edit <id> [flags]
 Change what an item says about itself. Any of the fields and the body can change together. What is the item's state stays flai's and is changed by its own commands: status by flai move, blocking by flai block, never here.
 
 A retitle keeps everything that carries the title in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name in design, docs, and wip. A new parent must be an open item of the right type; the item leaves the old parent's list and joins the new one. An archived or closed item is refused.
+
+--topics names what a story or epic is about beyond the components its tags and touches reach, such as logging or release (ADR-0047); flai show prints a story's topics with where each came from.
 
 --after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). flai check refuses a story that does not exist and a cycle.
 
@@ -859,6 +861,7 @@ flai edit S-0085 --title "Items are editable from the dashboard" --autocommit
 flai edit S-0085 --tag dashboard --tag cli --touches flaiover/src
 flai edit S-0085 --parent E-0004
 flai edit S-0130 --after S-0128,S-0129
+flai edit S-0135 --topics logging,release
 flai edit S-0085 --body-stdin --hash 3f0c... < body.md
 ```
 
@@ -874,6 +877,7 @@ Flags:
 | `--clear-after` | remove the stories a story waits for |
 | `--clear-agent` | remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those |
 | `--clear-tags` | remove every tag |
+| `--clear-topics` | remove a story's or epic's topics |
 | `--clear-touches` | remove the list |
 | `--harness` string | a story's agent: the harness that runs it |
 | `--hash` string | the hash flai edit --show printed; a change made meanwhile is then a conflict |
@@ -884,6 +888,7 @@ Flags:
 | `--show` | print the fields, the body, the hash, and whether the item may be edited |
 | `--tag` strings | the tags, replacing the ones there (repeatable or comma separated) |
 | `--title` string | the new title |
+| `--topics` strings | what a story or epic is about, such as logging or release, replacing the ones there |
 | `--touches` strings | the paths or components the work changes, replacing the ones there |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
 
@@ -917,6 +922,7 @@ Flags:
 | `--owner` string | owner (default: config author) |
 | `--print-body` | print the body the template gives this type and create nothing |
 | `--tag` strings | tag (repeatable or comma separated) |
+| `--topics` strings | topics the epic is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
 
@@ -2012,6 +2018,7 @@ Flags:
 | `--owner` string | owner (default: config author) |
 | `--print-body` | print the body the template gives this type and create nothing |
 | `--tag` strings | tag (repeatable or comma separated) |
+| `--topics` strings | topics the story is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
 
