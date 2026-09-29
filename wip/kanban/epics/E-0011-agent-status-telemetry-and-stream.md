@@ -6,7 +6,7 @@ title: Agent Status, Telemetry, and Stream
 status: in-progress
 owner: alex
 created: 2026-09-28T22:51:06Z
-updated: 2026-09-29T07:07:54Z
+updated: 2026-09-29T19:40:33Z
 transitions:
   - to: ready
     at: 2026-09-29T00:33:59Z
@@ -26,5 +26,6 @@ The operator can view a feed window for each active agent, each task and story n
 ## Stories
 - S-0142 Add a stream window to the activity page agent panes
 - S-0143 Stories and Tasks track tokens and cost
+- S-0163 Improved Charts
 
 ## Notes
