@@ -11,7 +11,6 @@ import (
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
-	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -71,11 +70,11 @@ the pack it would get today.`,
 			for rel, e := range errs {
 				a.logger().Warn("convention file unreadable", "component", "conventions", "path", rel, "err", e.Error())
 			}
+			if story != "" {
+				return a.primeStory(repo, story)
+			}
 			list, _ := issues.List(repo)
 			table := issues.SummaryTable(list)
-			if story != "" {
-				return a.primeStory(repo, set, story, table)
-			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"dir": relPath(repo.Root, set.Dir), "files": set.Files, "readme": set.README != "", "open_issues": len(strings.Split(strings.TrimSpace(table), "\n")) - 2})
 			}
@@ -111,63 +110,17 @@ the pack it would get today.`,
 	return c
 }
 
-// primeStory prints the context pack for a story (ADR-0047): the conventions
-// its topics select (S-0136), then the design, tech, and ADRs its topics,
-// links, and ranking select, and a catalog of the rest (S-0137). An archived
-// story gets the pack it would get today, which is how a pack is replayed.
-func (a *app) primeStory(repo *workitem.Repo, set *conventions.Set, id, table string) error {
-	it, err := repo.Get(id)
-	if err != nil {
-		return fmt.Errorf("flai prime --story %s: %w; give the ID of a story", id, err)
-	}
-	if it.Type != workitem.Story {
-		return fmt.Errorf("flai prime --story %s: %s is %s, not a story", id, it.ID, it.Type)
-	}
-	storyTopics, err := topics.ForStory(repo, it.ID)
+// primeStory prints the context pack for a story (ADR-0047), as
+// ctxpack.ForStory builds it.
+func (a *app) primeStory(repo *workitem.Repo, id string) error {
+	pack, err := ctxpack.ForStory(repo, id)
 	if err != nil {
 		return err
 	}
-	pack, err := ctxpack.Build(repo.Root, it.ID, it.Title, storyTopics, set, table)
-	if err != nil {
-		return err
-	}
-	docs, err := ctxpack.LoadDocs(repo.Root, repo.Manifest.Dir(repo.Root, "design"))
-	if err != nil {
-		return fmt.Errorf("flai prime --story %s: reading the design documents: %w", id, err)
-	}
-	sources, err := storySources(repo, it)
-	if err != nil {
-		return err
-	}
-	pack.AddDesign(ctxpack.Design(docs, topics.Names(storyTopics), sources, ctxpack.Query(it.Title, it.Body)))
 	if a.jsonOut {
 		return a.printJSON(pack)
 	}
 	fmt.Fprint(a.out, pack.Header())
 	fmt.Fprint(a.out, pack.Body())
 	return nil
-}
-
-// storySources is the story, its epic, and its tasks, archived or not, for
-// the documents they link.
-func storySources(repo *workitem.Repo, story *workitem.Item) ([]ctxpack.Source, error) {
-	src := func(it *workitem.Item) ctxpack.Source {
-		return ctxpack.Source{ID: it.ID, Path: relPath(repo.Root, it.Path), Body: it.Body}
-	}
-	out := []ctxpack.Source{src(story)}
-	if story.Parent != "" {
-		if epic, err := repo.Get(story.Parent); err == nil {
-			out = append(out, src(epic))
-		}
-	}
-	items, err := repo.List(true)
-	if err != nil {
-		return nil, err
-	}
-	for _, it := range items {
-		if it.Type == workitem.Task && it.Parent == story.ID {
-			out = append(out, src(it))
-		}
-	}
-	return out, nil
 }
