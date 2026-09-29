@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 9
+count: 10
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-29T22:51:11Z
-updated: 2026-09-29T22:51:11Z
+last_reported: 2026-09-29T23:48:59Z
+updated: 2026-09-29T23:48:59Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -43,5 +43,8 @@ S-0164's smoke tier: the markdown lint still fails on wip/threads/TH-0035 on mai
 
 ### 2026-09-29T22:51:11Z
 S-0166: the story's title, written in the main checkout, ended in a period, so its heading failed MD026 in scripts/lint-md.sh; retitled without it. TH-0035 fails MD024 (two log headings alike), left to its owner.
+
+### 2026-09-29T23:48:59Z
+S-0167's smoke tier: markdown lint fails on wip/threads/TH-0035 (MD024, two log headings alike), a thread written in the main checkout and committed to main unlinted.
 
 ## Remediation
