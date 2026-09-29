@@ -6,7 +6,7 @@ title: Usability Improvements
 status: backlog
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-29T05:52:49Z
+updated: 2026-09-29T05:55:11Z
 transitions: []
 tags: [dashboard]
 topics: [front-end]
@@ -22,5 +22,6 @@ There are a number of odd patterns that cause confusion in the dashboard UI/UX. 
 - S-0150 Agent status and updates on board need to be collapsible
 - S-0151 Temporary banner notifications should be dismissible
 - S-0153 Threads in the story pages are supposed to be paged
+- S-0154 Story pages receive live updates
 
 ## Notes
