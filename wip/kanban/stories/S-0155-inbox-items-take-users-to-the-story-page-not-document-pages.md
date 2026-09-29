@@ -3,12 +3,15 @@ id: S-0155
 type: story
 nature: improvement
 title: Inbox items take users to the story page, not document pages
-status: backlog
+status: ready
 parent: E-0013
 owner: alex
 created: 2026-09-29T05:57:30Z
-updated: 2026-09-29T05:57:30Z
-transitions: []
+updated: 2026-09-29T06:04:02Z
+transitions:
+  - to: ready
+    at: 2026-09-29T06:04:02Z
+    by: alex
 tags: [dashboard]
 topics: [client-side]
 touches: [flaiover/src]

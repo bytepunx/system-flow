@@ -3,12 +3,15 @@ id: S-0154
 type: story
 nature: feature
 title: Story pages receive live updates
-status: backlog
+status: ready
 parent: E-0013
 owner: alex
 created: 2026-09-29T05:55:11Z
-updated: 2026-09-29T05:55:11Z
-transitions: []
+updated: 2026-09-29T06:04:14Z
+transitions:
+  - to: ready
+    at: 2026-09-29T06:04:14Z
+    by: alex
 tags: [dashboard, cli]
 topics: [client-side, server-side]
 touches: [flaiover/src, flai/cmd]
