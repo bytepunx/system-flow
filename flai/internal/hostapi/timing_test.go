@@ -60,14 +60,14 @@ func TestReadMethodsMarkWhereTheTimeGoes(t *testing.T) {
 func TestAFlaiItRunsIsAPhaseNamedForTheCommand(t *testing.T) {
 	p := harbour(t)
 	rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
-	m := writeMethods(rec.run, time.Now, Host{})["stats.get"]
+	m := writeMethods(rec.run, time.Now, Host{})["dashboard.status"]
 	got := phases(t, func(ctx context.Context) error {
 		if _, rerr := m(ctx, p, json.RawMessage(`{}`)); rerr != nil {
 			return rerr
 		}
 		return nil
 	})
-	if got["exec.flai.stats"] != 1 {
+	if got["exec.flai.dashboard.status"] != 1 {
 		t.Errorf("phases %v", got)
 	}
 }

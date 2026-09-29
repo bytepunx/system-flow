@@ -533,18 +533,6 @@ func itemSpecs() map[string]spec {
 
 	return map[string]spec{
 		"item.move": {build: moveArgs},
-		// A move that only previews a cancellation changes nothing and needs no request ID.
-		"item.move.preview": read(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				ID string `json:"id"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			b, _ := json.Marshal(map[string]any{"id": in.ID, "to": workitem.Cancelled, "dry_run": true})
-			return moveArgs(p, b)
-		}),
-
 		"item.order": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID     string `json:"id"`
@@ -696,22 +684,10 @@ func itemSpecs() map[string]spec {
 			return append(args, "--body-stdin", "--autocommit", "--trailer="+Trailer, "--", title), in.Body, nil
 		}},
 
-		// item.show and item.edit: an item's own words, changed after it was made
-		// (S-0085). flai edit does the work: the retitle kept in step everywhere,
-		// the parents' lists, the check with the change in place, one commit.
-		"item.show": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				ID string `json:"id"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			if e := needID(in.ID); e != nil {
-				return nil, "", e
-			}
-			return []string{"edit", in.ID, "--show"}, "", nil
-		}),
-
+		// item.edit: an item's own words, changed after it was made (S-0085),
+		// from what item.show read. flai edit does the work: the retitle kept in
+		// step everywhere, the parents' lists, the check with the change in
+		// place, one commit.
 		"item.edit": {exits: map[int]int{3: Conflict, 4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID      string    `json:"id"`
@@ -818,19 +794,6 @@ func itemSpecs() map[string]spec {
 			return []string{in.Type, "new", "--print-body"}, "", nil
 		}),
 
-		"accept.preview": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				ID string `json:"id"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			if e := needID(in.ID); e != nil {
-				return nil, "", e
-			}
-			return []string{"accept", in.ID, "--dry-run"}, "", nil
-		}),
-
 		"accept.run": {progress: true, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
@@ -850,19 +813,6 @@ func itemSpecs() map[string]spec {
 			}
 			return args, "", nil
 		}},
-
-		"stream.diff": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				ID string `json:"id"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			if e := needID(in.ID); e != nil {
-				return nil, "", e
-			}
-			return []string{"stream", "diff", in.ID}, "", nil
-		}),
 
 		"stream.log": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
@@ -1071,45 +1021,6 @@ func itemSpecs() map[string]spec {
 			return []string{"adr", "accept", n, "--autocommit", "--trailer=" + Trailer}, "", nil
 		}},
 
-		"stats.get": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				Since string `json:"since"`
-				Type  string `json:"type"`
-				By    string `json:"by"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			args := []string{"stats"}
-			if in.Since != "" {
-				if !sinceValue.MatchString(in.Since) {
-					return nil, "", bad("since is a number and d, w, or h")
-				}
-				args = append(args, "--since="+in.Since)
-			}
-			if in.Type != "" {
-				if !itemType[in.Type] {
-					return nil, "", bad("type must be epic, story, or task")
-				}
-				args = append(args, "--type="+in.Type)
-			}
-			if in.By != "" {
-				if in.By != "nature" && in.By != "type" && in.By != "parent" {
-					return nil, "", bad("by must be nature, type, or parent")
-				}
-				args = append(args, "--by="+in.By)
-			}
-			return args, "", nil
-		}),
-
-		// exit 3 is a remote that has moved: said as a conflict, with its reason (S-0078)
-		"push.pending": {reads: true, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			if _, e := decode[struct{}](raw); e != nil {
-				return nil, "", e
-			}
-			return []string{"push", "--pending", "--dry-run"}, "", nil
-		}},
-
 		// push.run: the host action. flai push --pending --publish as the
 		// operator: the branch and the release tags of accepted work (a new
 		// release only with ActionAutoPublish on, S-0144), then the template where
@@ -1121,16 +1032,6 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"push", "--pending", "--publish"}, "", nil
 		}},
-
-		// publish.preview: everything release.Pending would release, without
-		// changing anything, so the board can show it before the operator asks
-		// for it (S-0087).
-		"publish.preview": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			if _, e := decode[struct{}](raw); e != nil {
-				return nil, "", e
-			}
-			return []string{"release", "--pending", "--dry-run"}, "", nil
-		}),
 
 		// publish.run: the host action, the same one push.run uses (ADR-0031,
 		// S-0078): flai release --pending as the operator, applying, tagging,

@@ -369,7 +369,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return out, nil
 		},
 	}
-	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), writeMethods(Commands, now, host)} {
+	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), readMethods(now, host), writeMethods(Commands, now, host)} {
 		for name, m := range more {
 			table[name] = m
 		}
