@@ -3,11 +3,11 @@ id: S-0141
 type: story
 nature: improvement
 title: Create checkboxes for displaying each work item type
-status: review
+status: done
 parent: E-0003
 owner: alex
 created: 2026-09-27T04:06:55Z
-updated: 2026-09-28T23:07:45Z
+updated: 2026-09-29T00:33:03Z
 transitions:
   - to: ready
     at: 2026-09-28T22:56:39Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-28T23:07:45Z
     by: agent-S-0141
+  - to: done
+    at: 2026-09-29T00:33:03Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src, design/issues/I-0044-agents-flai-serve-starts-inherit-the-host-s-address-and-token-so-a-flai-serve-an-agent-runs-by-hand-takes-over-the-operator-s-mcp-servers.md, design/issues/summary.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 agent:
