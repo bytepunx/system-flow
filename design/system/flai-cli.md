@@ -137,7 +137,7 @@ flai/
 │   ├── check/           # reference validator, rule names are stable identifiers
 │   ├── conventions/     # loads and validates design/conventions
 │   ├── issues/          # design/issues: record, bump, close, summary
-│   ├── release/         # semver plan from item, commits, and manifest components; tags and version files
+│   ├── release/         # semver plan from item, commits, and manifest components; tags and version files; pending releases from a history kept per process (S-0157)
 │   ├── lock/            # system-flow.lock.yaml
 │   ├── upgrade/         # classify add, merge, replace, conflict; apply with a policy
 │   ├── publish/         # push a local template to its remote: clone, replace, commit, tag, push
@@ -153,6 +153,8 @@ flai/
 External processes: `git` and `docker` are invoked as subprocesses and must be on `PATH`. See ADR 0010.
 
 Every request `flai serve` answers over the channel, and every request `flai mcp` answers on stdio or HTTP, is timed inside flai from when it was read to when its answer is ready to write, and logged once as `request answered` with its method or tool, duration, size, and phases (S-0152). `perf.Track` marks a phase in the context the request carries; the host API's read methods mark opening the repository, listing items, loading the board, threads, narratives, the check, documents, and search, and `execx.Timed` and the write table mark each process flai starts. The dashboard's own duration for a request, less flai's, is the transport. `flai hostapi --timing` times one method with no transport at all, and `FLAI_PPROF_ADDR` offers Go's profiles on a loopback address. What the measurements found is in [server-performance.md](server-performance.md).
+
+`release.Pending`, which every board asks through `PendingIDs`, reads git through a history kept per repository root for the life of the process (S-0157, `flai/internal/release/history.go`). `git show-ref --head --tags -d` gives HEAD and every tag and is the key: while it is unchanged, that is the only process. When it changes, one `git log` reads the commits added since the kept HEAD with their files; when HEAD moved where the kept commits do not reach, the whole history is read again. The files of an accepted item's commits not yet read come from one `git diff-tree --stdin`, and the template's boundary from `git log -S` on its version line, asked again only when that version changed or a commit added since touched `template.yaml`. A commit's subject, parents, the IDs its message names in brackets, and its files never change for its hash and are kept; the plans are worked out again at every call from the work items, whose tags and nature can change without a commit. The first call in a process, and every one-shot `flai board`, reads the whole history: four processes. The per-process computation it replaced is kept in `history_test.go` as the reference a test holds it to.
 
 Work items, `board.md`, narratives and their index, and threads (with the block mirrored into a narrative) are written with `atomicfile.WriteFile`, a temporary file beside the target renamed over it (S-0100). They are read while they change: by the MCP server's `inbox` and `wait_for_events`, by `flai serve`'s watcher, and by the dashboard through flai. `os.WriteFile` truncates first, and a reader in between saw an empty file ("no front matter", I-0036).
 
