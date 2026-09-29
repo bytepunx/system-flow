@@ -17,6 +17,16 @@ transitions:
 tags: [dashboard, cli]
 topics: [client-side, server-side]
 touches: [flaiover/src, flai/cmd]
+usage:
+  source: sum
+  seconds: 741
+  models:
+    - model: claude-fable-5-1
+      input: 96
+      output: 39175
+      cache_read: 5516982
+      cache_write: 171726
+      cost: 6.7735
 ---
 # E-0014 Build real, collapsible diffs in the review screen
 
