@@ -7,8 +7,8 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0142
   - S-0143
+  - S-0153
 ---
 
 # Board
