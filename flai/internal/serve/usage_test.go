@@ -167,15 +167,12 @@ func TestAnAgentsStoryIsMeasuredWhenATaskIsDoneAndWhenItEnds(t *testing.T) {
 		t.Errorf("measured %d times while the agent ran, want once", n)
 	}
 	lab.release(story)
-	waitFor(t, "the story is measured", func() bool {
-		u := lab.usageOf(story)
-		return u != nil && !u.Estimated && u.Cost() == 0.75
+	waitFor(t, "the story and its epic are measured", func() bool {
+		u, e := lab.usageOf(story), lab.usageOf(lab.epic.ID)
+		return u != nil && !u.Estimated && u.Cost() == 0.75 && e != nil && e.Cost() == 0.75
 	})
 	if u := lab.usageOf(task); u == nil || u.Cost() != 0.75 || u.Models[0].Output != 99 {
 		t.Errorf("task usage after the run = %+v, want the session's totals, all in its window", u)
-	}
-	if u := lab.usageOf(lab.epic.ID); u == nil || u.Cost() != 0.75 {
-		t.Errorf("epic usage = %+v", u)
 	}
 }
 
