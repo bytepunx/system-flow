@@ -6,7 +6,7 @@ anchor:
 status: answered
 participants: [agent-S-0123, alex, agent-S-0134]
 created: 2026-09-26T07:23:33Z
-updated: 2026-09-27T04:08:35Z
+updated: 2026-09-29T05:23:48Z
 ---
 
 # TH-0017 main's system-flow check is red since S-0122's acceptance: may an agent fix three archived files' markdown lint?
@@ -25,3 +25,6 @@ A
 
 ### 2026-09-27T04:08:35Z agent-S-0134
 Done under your answer A, from S-0134, whose smoke tier failed on it: 88e345f on main fixes all six lint errors main carried. They were the three here, plus three in the archived S-0124 narrative (lines left over from an edit, removed). Main's markdown lint is clean now. I-0027 is bumped to count 4. The story that makes `flai accept` lint what it archives is still not written.
+
+### 2026-09-29T05:23:48Z alex
+yes
