@@ -6,7 +6,7 @@ title: Agents are primed with relevant context documents
 status: in-progress
 owner: alex
 created: 2026-09-26T07:20:38Z
-updated: 2026-09-29T03:08:49Z
+updated: 2026-09-29T04:57:00Z
 transitions:
   - to: ready
     at: 2026-09-26T17:48:00Z
@@ -34,5 +34,6 @@ Instead of feeding agents dispatched to work stories with every ADR and conventi
 - S-0146 A story's context pack fits a size budget, with briefs of what its topics and links select
 - S-0147 Agents fetch a design section on demand: doc_search, and a heading on doc_get and flai doc show
 - S-0148 Agents flai starts, and any agent with a story, prime with the budgeted pack and fetch what it briefs
+- S-0149 Provide briefs in cases where large files are part of context
 
 ## Notes
