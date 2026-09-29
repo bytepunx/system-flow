@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0155
   - S-0154
   - S-0150
   - S-0151

@@ -31,7 +31,7 @@ usage:
       output: 148
       cache_read: 4701702
       cache_write: 29192
-      cost: 1.8729
+      cost: 1.8715
 ---
 # T-0546 Measure the dashboard's requests on this repository and record what is slow
 

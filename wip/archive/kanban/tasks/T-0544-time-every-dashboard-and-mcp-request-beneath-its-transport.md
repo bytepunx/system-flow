@@ -31,7 +31,7 @@ usage:
       output: 268
       cache_read: 3725002
       cache_write: 42411
-      cost: 1.4915
+      cost: 1.4904
 ---
 # T-0544 Time every dashboard and MCP request beneath its transport
 

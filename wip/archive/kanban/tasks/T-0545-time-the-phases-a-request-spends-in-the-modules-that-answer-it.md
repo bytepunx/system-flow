@@ -31,7 +31,7 @@ usage:
       output: 651
       cache_read: 8800495
       cache_write: 58072
-      cost: 3.5071
+      cost: 3.5046
 ---
 # T-0545 Time the phases a request spends in the modules that answer it
 
