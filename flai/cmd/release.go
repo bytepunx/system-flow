@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -200,18 +201,18 @@ func (a *app) publishPending(dryRun bool) error {
 		return err
 	}
 	if dryRun {
-		plans, err := release.Pending(a.runner, repo.Root, repo.Manifest, repo)
+		pub, err := preview.Publish(a.runner, repo)
 		if err != nil {
 			return err
 		}
 		if a.jsonOut {
-			return a.printJSON(map[string]any{"plans": plans, "dry_run": true})
+			return a.printJSON(pub)
 		}
-		if len(plans) == 0 {
+		if len(pub.Plans) == 0 {
 			fmt.Fprintln(a.out, "nothing pending")
 			return nil
 		}
-		for _, p := range plans {
+		for _, p := range pub.Plans {
 			a.printPendingPlan(p)
 		}
 		fmt.Fprintln(a.out, "dry run: nothing changed")

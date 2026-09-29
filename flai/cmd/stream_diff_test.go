@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 )
 
 // reviewProject is a git project with story S-0001 in progress on its branch.
@@ -66,14 +68,14 @@ func TestStreamDiff(t *testing.T) {
 	if code != 0 {
 		t.Fatal(errOut)
 	}
-	var d streamDiff
+	var d storygit.Diff
 	if err := json.Unmarshal([]byte(out), &d); err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
 	if d.Branch != "story/S-0001" || d.Commits != 1 || d.Base == "" || !d.Truncated {
 		t.Errorf("header: %+v", d)
 	}
-	got := map[string]diffFile{}
+	got := map[string]storygit.DiffFile{}
 	for _, f := range d.Files {
 		got[f.Path] = f
 	}
@@ -95,7 +97,7 @@ func TestStreamDiff(t *testing.T) {
 	if f := got["docs/blob.bin"]; !f.Binary || f.Patch != "" {
 		t.Errorf("binary: %+v", f)
 	}
-	if f := got["docs/huge.md"]; !f.Truncated || len(f.Patch) > diffFileLimit || f.Additions != 4000 {
+	if f := got["docs/huge.md"]; !f.Truncated || len(f.Patch) > storygit.DiffFileLimit || f.Additions != 4000 {
 		t.Errorf("truncated: status %s, %d bytes, +%d, truncated %v", f.Status, len(f.Patch), f.Additions, f.Truncated)
 	}
 	text, _, _ := runIn(t, root, "stream", "diff", "S-0001")

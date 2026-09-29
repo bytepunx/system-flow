@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
 )
 
@@ -88,7 +89,7 @@ func TestMoveCancelledCascadesAndReportsJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatal(errOut)
 	}
-	var res cancelResult
+	var res preview.Cancellation
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}

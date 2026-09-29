@@ -34,7 +34,7 @@ for dashboards and scripts.`,
 			if err != nil {
 				return err
 			}
-			window, err := parseWindow(since)
+			window, err := metrics.ParseWindow(since)
 			if err != nil {
 				return err
 			}
@@ -50,30 +50,10 @@ for dashboards and scripts.`,
 			return nil
 		},
 	}
-	c.Flags().StringVar(&since, "since", "30d", "window for completed items: 7d, 90d, 12w, 720h")
+	c.Flags().StringVar(&since, "since", metrics.DefaultWindow, "window for completed items: 7d, 90d, 12w, 720h")
 	c.Flags().StringVar(&typ, "type", workitem.Story, "item type: epic, story, task")
 	c.Flags().StringVar(&by, "by", "", "group by nature, type, or parent")
 	return c
-}
-
-func parseWindow(s string) (time.Duration, error) {
-	s = strings.TrimSpace(s)
-	if strings.HasSuffix(s, "d") || strings.HasSuffix(s, "w") {
-		var n int
-		unit := s[len(s)-1]
-		if _, err := fmt.Sscanf(s[:len(s)-1], "%d", &n); err != nil || n <= 0 {
-			return 0, fmt.Errorf("--since expects a window like 30d, 12w, or 720h, got %q", s)
-		}
-		if unit == 'w' {
-			n *= 7
-		}
-		return time.Duration(n) * 24 * time.Hour, nil
-	}
-	d, err := time.ParseDuration(s)
-	if err != nil || d <= 0 {
-		return 0, fmt.Errorf("--since expects a window like 30d, 12w, or 720h, got %q", s)
-	}
-	return d, nil
 }
 
 func printSummary(a *app, rep *metrics.Report) {

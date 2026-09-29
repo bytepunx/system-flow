@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
-	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -60,54 +60,42 @@ told by the MCP inbox.`,
 			if err != nil {
 				return err
 			}
-			var plans []*release.PendingPlan
+			autoPublish := cfg.ActionEnabled(hostapi.ActionAutoPublish, root)
+			var p *preview.Pushing
 			var newTags []string
 			switch {
-			case !cfg.ActionEnabled(hostapi.ActionAutoPublish, root):
 			case dryRun:
-				plans, err = release.Pending(a.runner, root, repo.Manifest, repo)
+				p, err = preview.PushDryRun(a.runner, root, repo, autoPublish)
+			case autoPublish:
+				var plans []*release.PendingPlan
+				if plans, newTags, err = a.computeApplyAndTagPending(root, repo); err == nil {
+					p, err = preview.Push(a.runner, root, plans, newTags)
+				}
 			default:
-				plans, newTags, err = a.computeApplyAndTagPending(root, repo)
+				p, err = preview.Push(a.runner, root, nil, nil)
+			}
+			if preview.IsDiverged(err) {
+				// exit 3: a caller that is not a person (the dashboard's push
+				// action) tells a remote that moved from a failure of flai's
+				return &exitError{code: exitPushDiverged, msg: err.Error()}
 			}
 			if err != nil {
 				return err
 			}
-
-			u := pending.Detect(a.runner, root)
+			result, plans, u := p.Result, p.Plans, p.Unpushed
 			if u == nil {
-				u = pending.TagsOnly(a.runner, root, newTags)
-			}
-			result := map[string]any{"pushed": false}
-			if len(plans) > 0 {
-				result["release"] = plans
-			}
-			switch {
-			case u == nil && len(newTags) > 0:
+				if a.jsonOut {
+					return a.printJSON(result)
+				}
+				if reason, ok := result["reason"]; ok {
+					fmt.Fprintln(a.out, reason)
+					return nil
+				}
 				// tagged and committed locally, but nothing ahead of a remote
 				// to push to (no upstream configured): say what was done.
-				if a.jsonOut {
-					result["tags"] = newTags
-					return a.printJSON(result)
-				}
 				fmt.Fprintf(a.out, "tagged locally: %s (no upstream to push to)\n", strings.Join(newTags, ", "))
 				return nil
-			case u == nil:
-				result["reason"] = "nothing pending"
-			case !u.Pending() && len(newTags) == 0:
-				result["reason"] = fmt.Sprintf("%s is ahead of %s by %d commit(s), none of them an acceptance; that is yours to push with git", u.Branch, u.Upstream, u.Commits)
-			case u.Behind > 0:
-				// exit 3: a caller that is not a person (the dashboard's push
-				// action) tells a remote that moved from a failure of flai's
-				return &exitError{code: exitPushDiverged, msg: fmt.Sprintf("conflict: %s and %s have diverged: %d commit(s) here and %d there. Fetch and merge first (git fetch %s && git merge %s), then run this again; flai never forces a push", u.Branch, u.Upstream, u.Commits, u.Behind, u.Remote, u.Upstream)}
 			}
-			if reason, ok := result["reason"]; ok {
-				if a.jsonOut {
-					return a.printJSON(result)
-				}
-				fmt.Fprintln(a.out, reason)
-				return nil
-			}
-			result["unpushed"] = u
 			// which templates those commits moved is asked before the push:
 			// afterwards nothing is ahead and nothing says so
 			var moved []string
@@ -122,14 +110,13 @@ told by the MCP inbox.`,
 				what += ", then publish " + strings.Join(moved, ", ")
 			}
 			if dryRun {
-				result["dry_run"] = true
 				if a.jsonOut {
 					return a.printJSON(result)
 				}
 				if len(plans) > 0 {
 					fmt.Fprintln(a.out, "would also tag, first:")
-					for _, p := range plans {
-						a.printPendingPlan(p)
+					for _, pl := range plans {
+						a.printPendingPlan(pl)
 					}
 				}
 				fmt.Fprintf(a.out, "would push %s\ndry run: nothing pushed\n", what)

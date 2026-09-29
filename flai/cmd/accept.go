@@ -2,14 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/bytepunx/system-flow/flai/internal/itemedit"
-	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -19,32 +16,6 @@ type acceptOptions struct {
 	by       string
 	trailers []string
 	dryRun   bool
-}
-
-// acceptResult is what acceptance did, or under dryRun what it would do.
-// Acceptance merges, moves to done, and archives; it computes no release, no
-// tag, and no push (S-0087) — see flai release --pending for that, run when
-// the operator chooses to publish what has accumulated on main.
-type acceptResult struct {
-	ID       string   `json:"id"`
-	Status   string   `json:"status"`
-	DryRun   bool     `json:"dry_run,omitempty"`
-	Resumed  bool     `json:"resumed,omitempty"` // the item was already done but never archived
-	Branch   string   `json:"branch,omitempty"`
-	Merged   bool     `json:"merged"`
-	Archived int      `json:"archived"`
-	Blockers []string `json:"blockers,omitempty"` // what would stop acceptance before it changes anything
-	// Uncommitted paths outside wip. The real run refuses them unless --yes
-	// includes them in the acceptance commit; a dry run reports them so the
-	// choice can be made before confirming (S-0051).
-	Uncommitted []string `json:"uncommitted,omitempty"`
-	// WorktreeUncommitted are the uncommitted paths in the story's worktree.
-	// They block acceptance: the branch is merged as it is committed, and
-	// the worktree is removed with it (S-0140).
-	WorktreeUncommitted []string `json:"worktree_uncommitted,omitempty"`
-	// The open stories told which paths the merge changed under their claim
-	// (S-0132).
-	Overlaps []itemedit.Overlap `json:"overlaps,omitempty"`
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -103,83 +74,22 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 }
 
 // acceptItem runs the acceptance flow for a story or an epic.
-func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*acceptResult, error) {
-	// Without git (a project that is not a repository) acceptance is the
-	// transition and the archive; with git it also merges and commits.
-	useGit := a.inGitWorkTree(repo.MainRoot)
-	if it.Type == workitem.Task {
-		return nil, fmt.Errorf("%s is a task; accept its story instead", it.ID)
+func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*preview.Acceptance, error) {
+	res, err := preview.Accept(a.runner, repo, it, orDefault(o.by, a.author()), a.now(), a.logger())
+	if err != nil {
+		return nil, err
 	}
-	res := &acceptResult{ID: it.ID, Status: it.Status, DryRun: o.dryRun}
-	switch {
-	case it.Status == workitem.Done && !it.Archived:
-		// Done without acceptance: finish the job rather than refuse it.
-		res.Resumed = true
-	case it.Closed():
-		return nil, fmt.Errorf("%s is already %s", it.ID, it.Status)
-	case it.Type == workitem.Story && it.Status != workitem.Review:
-		return nil, fmt.Errorf("%s is %s; a story is accepted from review", it.ID, it.Status)
-	}
-	if useGit {
-		res.Uncommitted = a.dirtyOutsideWip(repo)
-	}
+	res.DryRun = o.dryRun
 	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun {
 		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
-	}
-	// Preflight: everything that would fail midway is checked before the
-	// first change, so a story is never left half accepted.
-	if useGit {
-		if _, err := a.runner.Run(repo.MainRoot, "git", "var", "GIT_COMMITTER_IDENT"); err != nil {
-			res.Blockers = append(res.Blockers, "git has no committer identity here; set user.name and user.email (git config), or restart the dashboard with flai dashboard so it passes yours into the container")
-		}
-	} else if _, err := os.Stat(filepath.Join(repo.MainRoot, ".git")); err == nil {
-		res.Blockers = append(res.Blockers, "this is a git repository but git cannot be run here; accept from a shell with flai accept "+it.ID)
-	}
-	// The workflow's own rules for done (open tasks, unticked criteria) are
-	// checked on a copy before the branch is merged: a story that cannot be
-	// done must not have its branch merged and its worktree removed first,
-	// which is what happened until S-0041 found it from the review page.
-	if !res.Resumed {
-		if items, err := repo.List(false); err == nil {
-			probe := *it
-			probe.Transitions = append([]workitem.Transition(nil), it.Transitions...)
-			for _, st := range stepsToDone(it.Status) {
-				if _, err := repo.Move(&probe, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items}); err != nil {
-					res.Blockers = append(res.Blockers, strings.TrimPrefix(err.Error(), "rule: "))
-					break
-				}
-			}
-		}
-	}
-	// A nature that is not accepted onto main (an experiment, ADR-0025) is
-	// refused here, before the merge.
-	if _, err := release.LevelFor(it); err != nil {
-		res.Blockers = append(res.Blockers, err.Error())
-	}
-	// A story worktree git cannot open from here (I-0017): its links are
-	// absolute host paths, and this process sees the repository somewhere
-	// else. Say what to do instead of failing later with git's own error.
-	if wt := repo.WorktreePath(it.ID); useGit && it.Type == workitem.Story {
-		if _, err := os.Stat(wt); err == nil {
-			if _, err := a.runner.Run(wt, "git", "rev-parse", "--git-dir"); err != nil {
-				a.logger().Warn("story worktree cannot be opened by git", "component", "git", "worktree", relPath(repo.MainRoot, wt), "err", err)
-				res.Blockers = append(res.Blockers, fmt.Sprintf("git cannot open the story worktree %s from here: the paths git keeps for it do not exist in this environment, which happens when the dashboard sees the repository at a different path than the host does. Accept from a shell on the host with flai accept %s, or stop the dashboard and start it with flai dashboard, which mounts the repository at its host path", relPath(repo.MainRoot, wt), it.ID))
-			} else if dirty, err := repo.Uncommitted(it.ID); err == nil && len(dirty) > 0 {
-				res.WorktreeUncommitted = dirty
-				res.Blockers = append(res.Blockers, repo.UncommittedRule(it.ID, dirty, "accepting"))
-			}
-		}
 	}
 	if len(res.Blockers) > 0 && !o.dryRun {
 		return nil, fmt.Errorf("%s cannot be accepted yet: %s", it.ID, strings.Join(res.Blockers, "; "))
 	}
-	hasBranch := it.Type == workitem.Story && useGit && a.branchExists(repo.MainRoot, storyBranch(it.ID))
-	if hasBranch {
-		res.Branch = storyBranch(it.ID)
-	}
 	if o.dryRun {
 		return res, nil
 	}
+	useGit, hasBranch := a.inGitWorkTree(repo.MainRoot), res.Branch != ""
 
 	// 0. bring the story branch into the main branch (ADR-0019)
 	var changed []string // what the merge brought, for the stories still open
@@ -213,7 +123,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	if !res.Resumed {
-		for _, st := range stepsToDone(it.Status) {
+		for _, st := range preview.StepsToDone(it.Status) {
 			if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {
 				return nil, err
 			}
@@ -276,20 +186,6 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	return res, nil
 }
 
-// stepsToDone is the walk from a state to done, one transition at a time.
-func stepsToDone(status string) []string {
-	path := []string{workitem.Ready, workitem.InProgress, workitem.Review, workitem.Done}
-	if status == workitem.Backlog {
-		return path
-	}
-	for i, st := range path {
-		if st == status {
-			return path[i+1:]
-		}
-	}
-	return []string{workitem.Done}
-}
-
 // acceptStep logs one completed step of an acceptance as an info event with
 // stable fields, so a client such as the dashboard can show progress while
 // the command runs (S-0041). The message is fixed; what varies is in fields.
@@ -297,7 +193,7 @@ func (a *app) acceptStep(it *workitem.Item, step, detail string) {
 	a.logger().Info("acceptance step", "component", "accept", "item", it.ID, "step", step, "detail", detail)
 }
 
-func (a *app) printAccept(res *acceptResult) error {
+func (a *app) printAccept(res *preview.Acceptance) error {
 	if a.jsonOut {
 		return a.printJSON(res)
 	}

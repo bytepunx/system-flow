@@ -7,42 +7,27 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Story branches (ADR-0019): each story is worked on story/S-nnnn in a git
 // worktree under .flai-cache/worktrees; wip/ stays in the main checkout so
 // the board is live. stream open creates the branch, stream sync rebases it
-// onto the main branch, accept merges it and removes the worktree.
+// onto the main branch, accept merges it and removes the worktree. What is
+// only read of them is in storygit, which flai serve's reads share (S-0159);
+// these run it with the command's runner.
 
-const storyBranchPrefix = "story/"
+func storyBranch(id string) string { return storygit.Branch(id) }
 
-func storyBranch(id string) string { return storyBranchPrefix + id }
+func (a *app) inGitWorkTree(root string) bool { return storygit.InWorkTree(a.runner, root) }
 
-// inGitWorkTree reports whether root is inside a git work tree.
-func (a *app) inGitWorkTree(root string) bool {
-	if _, err := a.runner.LookPath("git"); err != nil {
-		return false
-	}
-	_, err := a.runner.Run(root, "git", "rev-parse", "--is-inside-work-tree")
-	return err == nil
-}
-
-// mainBranch is the branch checked out in the main checkout.
 func (a *app) mainBranch(mainRoot string) (string, error) {
-	out, err := a.runner.Run(mainRoot, "git", "rev-parse", "--abbrev-ref", "HEAD")
-	if err != nil {
-		return "", err
-	}
-	if out == "HEAD" {
-		return "", fmt.Errorf("the main checkout has a detached HEAD; check out a branch first")
-	}
-	return out, nil
+	return storygit.MainBranch(a.runner, mainRoot)
 }
 
 func (a *app) branchExists(root, branch string) bool {
-	_, err := a.runner.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	return err == nil
+	return storygit.BranchExists(a.runner, root, branch)
 }
 
 // openStoryBranch creates story/<id> from the main branch and checks it out
@@ -160,21 +145,4 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string) (bool, error) {
 	}
 	a.logger().Info("story branch merged", "component", "git", "branch", branch)
 	return true, nil
-}
-
-// dirtyOutsideWip lists uncommitted paths that are not under the wip
-// folder, which accumulates transitions between story landings by design.
-func (a *app) dirtyOutsideWip(repo *workitem.Repo) []string {
-	st, err := a.runner.Run(repo.MainRoot, "git", "status", "--porcelain")
-	if err != nil {
-		return nil // not a repository: nothing to be dirty
-	}
-	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
-	var out []string
-	for _, p := range workitem.PorcelainPaths(st) {
-		if !strings.HasPrefix(p, wip) {
-			out = append(out, p)
-		}
-	}
-	return out
 }
