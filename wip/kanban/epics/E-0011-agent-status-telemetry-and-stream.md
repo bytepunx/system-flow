@@ -3,11 +3,14 @@ id: E-0011
 type: epic
 nature: feature
 title: Agent Status, Telemetry, and Stream
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-28T22:51:06Z
-updated: 2026-09-29T00:24:52Z
-transitions: []
+updated: 2026-09-29T00:33:59Z
+transitions:
+  - to: ready
+    at: 2026-09-29T00:33:59Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 ---
