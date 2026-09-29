@@ -130,7 +130,10 @@ func TestTheOperatorsCommandGetsTheModelAndTheConfig(t *testing.T) {
 
 func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 	p := Prompt(req(nil))
-	for _, want := range []string{"agent-S-0104", "flai stream open S-0104", "no other story", "thread_open", "wait_for_events", "flai move S-0104 review", "commit everything outstanding in the worktree", "refused while anything is uncommitted", "flai block S-0104"} {
+	if strings.Contains(p, "--cat") {
+		t.Errorf("an agent with a story primes with its pack, not every convention:\n%s", p)
+	}
+	for _, want := range []string{"agent-S-0104", "prime your session with flai prime --story S-0104,", "read what the catalog lists when you need it", "flai stream open S-0104", "no other story", "thread_open", "wait_for_events", "flai move S-0104 review", "commit everything outstanding in the worktree", "refused while anything is uncommitted", "flai block S-0104"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt lacks %q", want)
 		}
