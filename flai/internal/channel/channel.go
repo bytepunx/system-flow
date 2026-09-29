@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 )
 
 // Protocol is the version both sides name in hello.
@@ -118,6 +120,9 @@ type Client struct {
 	MinBackoff time.Duration
 	MaxBackoff time.Duration
 	Now        func() time.Time
+	// Slow is how long a request may take before its "request answered"
+	// event is logged at info; perf.Slow() when zero (S-0152).
+	Slow time.Duration
 
 	mu     sync.Mutex
 	state  State
@@ -152,6 +157,9 @@ func (c *Client) defaults() {
 	}
 	if c.Now == nil {
 		c.Now = time.Now
+	}
+	if c.Slow <= 0 {
+		c.Slow = perf.Slow()
 	}
 	if c.Logger == nil {
 		c.Logger = slog.New(slog.DiscardHandler)
@@ -423,15 +431,28 @@ func (c *Client) serveOnce(ctx context.Context) error {
 			inflight.Store(string(m.ID), stop)
 			go func(m message) {
 				defer func() { stop(); inflight.Delete(string(m.ID)) }()
+				// timed from here, after the message was read and before it
+				// is written: what the dashboard waits beyond it is the transport
+				tctx, rec := perf.StartAt(rctx, c.Now)
 				out := message{ID: m.ID}
-				res, rerr := c.call(rctx, m)
+				res, rerr := c.call(tctx, m)
 				if rerr != nil {
 					out.Error = rerr
-				} else if b, err := json.Marshal(res); err != nil {
-					out.Error = &Error{Code: CodeInternal, Message: err.Error()}
 				} else {
-					out.Result = b
+					done := perf.Track(tctx, "encode")
+					b, err := json.Marshal(res)
+					done()
+					if err != nil {
+						out.Error = &Error{Code: CodeInternal, Message: err.Error()}
+					} else {
+						out.Result = b
+					}
 				}
+				answered := perf.Answered{Transport: "channel", Method: m.Method, Project: c.Project.Key, Bytes: len(out.Result)}
+				if out.Error != nil {
+					answered.Err = out.Error.Message
+				}
+				rec.Log(c.Logger, answered, c.Slow)
 				if err := send(out); err != nil && out.Error == nil {
 					_ = send(message{ID: m.ID, Error: &Error{Code: CodeInternal, Message: err.Error()}})
 				}

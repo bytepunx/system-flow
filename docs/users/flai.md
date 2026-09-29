@@ -63,11 +63,28 @@ Command output goes to stdout. Everything else is a structured log event on stde
 | `--verbose` | Debug level, overrides `LOG_LEVEL` |
 | `LOG_LEVEL` | `debug`, `info` (default), `warn`, `error`, `fatal` |
 | `LOG_FORMAT` | `text` or `json`; default text on a terminal, json otherwise |
+| `FLAI_SLOW_REQUEST` | How long a request to `flai serve` or `flai mcp` may take before its `request answered` event is logged at `INFO` rather than `DEBUG`; a Go duration, default `500ms` |
 
 ```bash
 flai board 2>/dev/null                 # output only
 LOG_FORMAT=json flai check 2>events.jsonl
 ```
+
+### Request timing (S-0152)
+
+`flai serve` and `flai mcp` log one `request answered` event, component `perf`, for every request they answer: a dashboard's method over the channel, or an MCP request, named by its tool for a tool call. It is measured inside flai, from when the request was read to when its answer is ready to write, so a request's duration in the dashboard's own log, less this one, is the transport.
+
+| Field | Holds |
+|-------|-------|
+| `transport` | `channel` (the dashboard) or `mcp` |
+| `method` | The method, or the MCP tool |
+| `project` | The project's key, over the channel |
+| `duration_ms` | The time flai took to answer |
+| `bytes` | The answer's size: the JSON result over the channel, a tool's text over MCP |
+| `phases` | Where the time went, longest first, as `name=milliseconds`, with `xN` for a step taken N times; phases nest and overlap, so they need not add up |
+| `err` | The error answered, if any |
+
+A request that takes `FLAI_SLOW_REQUEST` or longer is logged at `INFO`; the rest at `DEBUG`. `wait_for_work` and `wait_for_events` wait by design and are logged at `DEBUG` however long they take.
 
 ## Configuration
 

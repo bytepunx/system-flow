@@ -112,6 +112,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `FLAI_SESSION` | none | Which session a narrative entry belongs to |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `fatal` ([Logging](../users/flai.md#logging)) |
 | `LOG_FORMAT` | text on a terminal, JSON otherwise | `text` or `json` |
+| `FLAI_SLOW_REQUEST` | `500ms` | How long a request to `flai serve` or `flai mcp` may take before its `request answered` event is logged at `info` rather than `debug` ([Request timing](../users/flai.md#request-timing-s-0152)) |
 | `FLAI_HOST_ADDR` | `127.0.0.1:4241` | Where `flai host` listens; set it for every flai you run when another program holds the port ([flai host](index.md#flai-host-the-process-that-runs-the-others-s-0106)) |
 | `FLAI_RELEASES_API` | `https://api.github.com` | Another source of releases for `flai self-upgrade`, `flai host check`, and `flai host upgrade` |
 | `FLAI_INSTALL_DIR` | `~/.flai/bin` | Where `flai self-upgrade`, run from a checkout's own build, installs a release |

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 )
 
 // fakeDashboard is the other end: it answers hello, checks the proof, and
@@ -244,5 +247,59 @@ func TestACancelledRequestStops(t *testing.T) {
 	case <-stopped:
 	case <-time.After(3 * time.Second):
 		t.Fatal("the method was not cancelled")
+	}
+}
+
+// lockedBuffer is a log destination a test reads while the client writes.
+type lockedBuffer struct {
+	mu sync.Mutex
+	b  strings.Builder
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
+func TestEachRequestIsTimedBeneathTheTransport(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	var logs lockedBuffer
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Version: "test", Slow: time.Nanosecond,
+		Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
+		Methods: map[string]Method{"board.get": func(ctx context.Context, _ Project, _ json.RawMessage) (any, *Error) {
+			defer perf.Track(ctx, "items.list")()
+			return map[string]string{"board": "ok"}, nil
+		}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { c.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	conn := waitProven(t, d)
+	if got := d.ask(conn, "1", "board.get", `{"project":"harbour"}`); got.Error != nil {
+		t.Fatalf("board.get: %+v", got.Error)
+	}
+	var ev map[string]any
+	for _, line := range strings.Split(logs.String(), "\n") {
+		if strings.Contains(line, `"request answered"`) {
+			if err := json.Unmarshal([]byte(line), &ev); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if ev == nil {
+		t.Fatalf("no request answered event in %s", logs.String())
+	}
+	phases, _ := ev["phases"].(string)
+	if ev["level"] != "INFO" || ev["transport"] != "channel" || ev["method"] != "board.get" || ev["project"] != "harbour" ||
+		ev["bytes"] != float64(len(`{"board":"ok"}`)) || ev["duration_ms"] == nil ||
+		!strings.Contains(phases, "items.list=") || !strings.Contains(phases, "encode=") {
+		t.Errorf("event %v", ev)
 	}
 }

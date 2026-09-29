@@ -154,7 +154,7 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 		Token: token, ProjectKey: repo.Manifest.Key, ProjectName: repo.Manifest.Name,
 		MaxSessions: maxSessions, Idle: idle, Logger: log,
 		NewServer: func(agent string) *mcp.Server {
-			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing})
+			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger()})
 		},
 	})
 	mux := http.NewServeMux()
