@@ -189,3 +189,7 @@ Measured on 2026-09-29 on the S-0146 branch, with every convention still `[all]`
 | S-0146 | 207 KB | 57 KB | 120 KB: ADR-0049, `agent-context.md`, `flai-cli.md` | 53 | named |
 
 ADR-0049's estimate of 80 KB for S-0138 missed the 9 KB open-issues table and the header, and S-0138 was re-scoped after it to name 36 KB instead of 9 KB. The conventions and issues are more than half the budget before anything else. What takes packs furthest over is what stories and tasks name: a task that writes out `design/system/flai-cli.md` as a file to update loads all 86 KB of it. TH-0032 proposes briefing a path written out in plain text, keeping links and ADR IDs whole.
+
+### Paths written out
+
+[ADR-0050](../adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md) (S-0149) refines ADR-0049's named step. A document the story, its epic, or its tasks name only by its repository path written out is briefed when the file is larger than an eighth of the budget (10 KB at 80 KB), and loads whole at or under it. A markdown link or an ADR ID to the same document still loads it whole, and a `#fragment` link still loads its section; the brief then outlines the rest with that section marked loaded. The brief's reason is `named in <ID>`, and the pack tells the agent that the story named the document, that it is briefed for its size, and that the agent reads it, or the sections it will change, before relying on it or changing it. A link is a reading instruction; a path is a pointer to where the work lands.
