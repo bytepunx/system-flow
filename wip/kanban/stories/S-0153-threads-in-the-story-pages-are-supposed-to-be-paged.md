@@ -3,15 +3,18 @@ id: S-0153
 type: story
 nature: remediation
 title: Threads in the story pages are supposed to be paged
-status: ready
+status: in-progress
 parent: E-0013
 owner: alex
 created: 2026-09-29T05:52:49Z
-updated: 2026-09-29T05:57:53Z
+updated: 2026-09-29T06:44:20Z
 transitions:
   - to: ready
     at: 2026-09-29T05:57:53Z
     by: alex
+  - to: in-progress
+    at: 2026-09-29T06:44:20Z
+    by: agent-S-0153
 tags: [dashboard]
 topics: [client-side]
 touches: [flaiover/src]

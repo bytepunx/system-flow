@@ -3,12 +3,18 @@ id: S-0152
 type: story
 nature: research
 title: Identify issues with responses from the server side
-status: backlog
+status: in-progress
 parent: E-0012
 owner: alex
 created: 2026-09-29T05:49:48Z
-updated: 2026-09-29T05:49:48Z
-transitions: []
+updated: 2026-09-29T06:45:00Z
+transitions:
+  - to: ready
+    at: 2026-09-29T06:44:46Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T06:45:00Z
+    by: agent-S-0152
 tags: [cli]
 topics: [server-side]
 touches: [flai/cmd]

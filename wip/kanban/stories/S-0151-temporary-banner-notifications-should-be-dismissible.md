@@ -3,12 +3,15 @@ id: S-0151
 type: story
 nature: improvement
 title: Temporary banner notifications should be dismissible
-status: backlog
+status: ready
 parent: E-0013
 owner: alex
 created: 2026-09-29T05:45:39Z
-updated: 2026-09-29T05:45:39Z
-transitions: []
+updated: 2026-09-29T06:44:33Z
+transitions:
+  - to: ready
+    at: 2026-09-29T06:44:33Z
+    by: alex
 tags: [dashboard]
 topics: [client-side]
 touches: [flaiover/src]
