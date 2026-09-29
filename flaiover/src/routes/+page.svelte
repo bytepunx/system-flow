@@ -12,7 +12,8 @@
 	};
 
 	let manifest = $state<Manifest | null>(null);
-	let items = $state<Item[]>([]);
+	let items = $state<Item[]>([]); // the active items: the archive is only counted (S-0162)
+	let archived = $state<number | null>(null);
 	let error = $state<string | null>(null);
 	let glances = $state<ProjectGlance[]>([]);
 	let filter = $state('');
@@ -25,9 +26,8 @@
 	);
 
 	const statuses = ['backlog', 'ready', 'in-progress', 'review', 'done'];
-	const active = $derived(items.filter((i) => !i.archived));
 	const count = (type: string, status: string) =>
-		active.filter((i) => i.type === type && i.status === status).length;
+		items.filter((i) => i.type === type && i.status === status).length;
 
 	// The project list: shown while more than one project is known and none is chosen yet, in place
 	// of the summary below, which needs one project named to ask anything of (S-0080).
@@ -35,10 +35,15 @@
 
 	async function loadOverview() {
 		try {
-			const [m, i] = await Promise.all([api('/api/manifest'), api('/api/items')]);
+			const [m, i, n] = await Promise.all([
+				api('/api/manifest'),
+				api('/api/items?archived=false'),
+				api('/api/items/count')
+			]);
 			if (!m.ok) throw new Error((await m.json()).error ?? m.statusText);
 			manifest = await m.json();
 			items = await i.json();
+			archived = n.ok ? (await n.json()).archived : null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
@@ -112,8 +117,7 @@
 			{manifest.description}
 		</p>{/if}
 	<p class="mt-1 text-xs text-muted">
-		template {manifest.template?.version ?? '?'} · {active.length} active items · {items.length -
-			active.length} archived
+		template {manifest.template?.version ?? '?'} · {items.length} active items · {archived ?? '?'} archived
 	</p>
 
 	<div class="mt-6 overflow-x-auto">

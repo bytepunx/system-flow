@@ -28,7 +28,7 @@ describe('Repo over the channel', () => {
 		await r.items();
 		await r.items();
 		expect(calls.map((c) => c.method)).toEqual(['project.info', 'items.list']);
-		expect(calls[1].params).toEqual({ archived: true, bodies: true });
+		expect(calls[1].params).toEqual({ archived: false });
 
 		// a flai that went away: nothing it said is shown as current
 		r.forget();
@@ -40,6 +40,25 @@ describe('Repo over the channel', () => {
 		expect(seen).toEqual(['wip/kanban/stories/S-0001-a.md']);
 		await r.items();
 		expect(calls.map((c) => c.method)).toEqual(['project.info', 'items.list', 'items.list']);
+	});
+
+	it('asks for the archive and a type only when asked, never for bodies, each query kept on its own (S-0162)', async () => {
+		const { ask, calls } = fake({ 'items.list': [], 'items.count': { active: 3, archived: 9 } });
+		const r = new Repo('/nowhere', ask);
+		await r.items();
+		await r.items({ archive: true });
+		await r.items({ type: 'epic', archive: true });
+		await r.items({ type: 'epic', status: 'ready' });
+		await r.items({ archive: true });
+		expect(await r.itemCount()).toEqual({ active: 3, archived: 9 });
+		expect(calls.map((c) => c.params)).toEqual([
+			{ archived: false },
+			{ archived: true },
+			{ archived: true, type: 'epic' },
+			{ archived: false, type: 'epic', status: 'ready' },
+			{}
+		]);
+		expect(calls.at(-1)?.method).toBe('items.count');
 	});
 
 	it('gives an item the shape the pages expect from what flai marshals', async () => {

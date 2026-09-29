@@ -77,12 +77,18 @@ export type Item = {
 	body: string;
 };
 
+/** Which items to ask flai for: by type and state, and the archive only where it is shown (S-0162). */
+export type ItemQuery = { type?: string; status?: string; archive?: boolean };
+
+/** How many items are active and how many archived (flai's items.count, S-0162). */
+export type ItemCount = { active: number; archived: number };
+
+/** A folder or Markdown file of the documentation trees: a file's title, not its front matter (S-0162). */
 export type DocNode = {
 	name: string;
 	path: string; // repo-relative, forward slashes
 	kind: 'dir' | 'file';
 	title?: string;
-	frontMatter?: Record<string, unknown>;
 	children?: DocNode[];
 };
 
@@ -285,13 +291,23 @@ export class Repo extends EventEmitter {
 		return this.remember<T>('board', 'board.get', { all: true });
 	}
 
-	/** All work items from kanban and archive, sorted by ID, as flai reads them. */
-	async items(): Promise<Item[]> {
-		const raw = await this.remember<FlaiItem[]>('items', 'items.list', {
-			archived: true,
-			bodies: true
-		});
+	/**
+	 * Work items from kanban, and the archive with them when asked, sorted by ID, as flai reads
+	 * them, without their bodies: a body is asked for when its item is opened (S-0162). Each query
+	 * is kept on its own.
+	 */
+	async items(q: ItemQuery = {}): Promise<Item[]> {
+		const params: Record<string, unknown> = { archived: q.archive === true };
+		if (q.type) params.type = q.type;
+		if (q.status) params.status = q.status;
+		const key = `items:${q.archive ? 'archive' : 'active'}:${q.type ?? ''}:${q.status ?? ''}`;
+		const raw = await this.remember<FlaiItem[]>(key, 'items.list', params);
 		return raw.map(fromFlai);
+	}
+
+	/** How many items are active and how many archived, without asking for the archive (S-0162). */
+	async itemCount(): Promise<ItemCount> {
+		return this.remember<ItemCount>('items:count', 'items.count');
 	}
 
 	/** Find an item by ID in any padding (S-32, S-032, S-0032 name the same item). */
@@ -304,7 +320,7 @@ export class Repo extends EventEmitter {
 		return { item: fromFlai(got.item), children: (got.children ?? []).map(fromFlai) };
 	}
 
-	/** Documentation trees: design (all types), docs, and wip, each Markdown file with its front matter. */
+	/** Documentation trees: design (all types), docs, and wip, each Markdown file with its title. */
 	async docsTree(): Promise<DocNode[]> {
 		return this.remember<DocNode[]>('docs', 'docs.tree');
 	}
@@ -409,6 +425,7 @@ type FlaiItem = Omit<Item, 'blocked' | 'tags' | 'touches' | 'transitions'> & {
 function fromFlai(it: FlaiItem): Item {
 	return {
 		...it,
+		body: it.body ?? '',
 		parent: it.parent || undefined,
 		owner: it.owner || undefined,
 		estimate: it.estimate || undefined,

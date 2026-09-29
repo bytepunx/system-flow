@@ -15,7 +15,7 @@ describe('Repo on the metrics fixture', () => {
 		expect(m.layout).toEqual({ design: 'design', docs: 'docs', wip: 'wip' });
 	});
 	it('lists items across kanban and archive, sorted, with derived fields', async () => {
-		const items = await r.items();
+		const items = await r.items({ archive: true });
 		expect(items.map((i) => i.id)).toEqual([
 			'E-001',
 			'S-001',
@@ -59,6 +59,18 @@ describe('Repo on the metrics fixture', () => {
 		expect((await r.itemById('E-0001')).item.id).toBe('E-001');
 		await expect(r.itemById('X-001')).rejects.toBeInstanceOf(RepoError);
 	});
+	it('lists the active items alone unless the archive is asked for, without bodies (S-0162)', async () => {
+		const active = await r.items();
+		const all = await r.items({ archive: true });
+		expect(active.length).toBeGreaterThan(0);
+		expect(active.every((i) => !i.archived)).toBe(true);
+		expect(all.every((i) => i.body === '')).toBe(true);
+		expect(await r.itemCount()).toEqual({
+			active: active.length,
+			archived: all.length - active.length
+		});
+		expect((await r.items({ type: 'epic', archive: true })).map((i) => i.id)).toEqual(['E-001']);
+	});
 	it('builds the documentation trees', async () => {
 		const trees = await r.docsTree();
 		expect(trees.map((t) => t.path)).toEqual(['design', 'docs', 'wip']);
@@ -81,7 +93,7 @@ describe('Repo on the metrics fixture', () => {
 describe.skipIf(!existsSync(resolve(monorepo, 'system-flow.yaml')))('Repo on the monorepo', () => {
 	it('reads every item with a consistent status', async () => {
 		const r = new Repo(monorepo, flaiAsk(monorepo));
-		const items = await r.items();
+		const items = await r.items({ archive: true });
 		expect(items.length).toBeGreaterThan(50);
 		for (const it of items) {
 			expect(it.status, it.path).toBe(it.transitions.at(-1)?.to ?? 'backlog');

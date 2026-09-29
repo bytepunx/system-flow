@@ -21,14 +21,18 @@ describe('the root page (S-0080)', () => {
 	};
 
 	it('shows the single-project overview while at most one project is known', async () => {
+		const asked: string[] = [];
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async (url: string) => {
+				asked.push(url);
 				if (url.startsWith('/api/projects'))
 					return answer({ projects: [{ key: 'harbour', name: 'Harbour', connected: true }] });
 				if (url.startsWith('/api/manifest'))
 					return answer({ name: 'Harbour', description: 'a project' });
-				if (url.startsWith('/api/items')) return answer([]);
+				if (url.startsWith('/api/items/count')) return answer({ active: 1, archived: 812 });
+				if (url.startsWith('/api/items'))
+					return answer([{ id: 'S-0001', type: 'story', status: 'ready', title: 'Berths' }]);
 				return answer({});
 			})
 		);
@@ -37,6 +41,16 @@ describe('the root page (S-0080)', () => {
 		await settle();
 		expect(document.querySelector('[data-testid="project-list"]')).toBeNull();
 		expect(document.body.textContent).toContain('Harbour');
+		// the active items and the archive's size, not the archive (S-0162)
+		expect(
+			asked
+				.filter((u) => u.startsWith('/api/items'))
+				.map((u) => u.replace(/[?&]project=[^&]*$/, ''))
+				.sort()
+		).toEqual(['/api/items/count', '/api/items?archived=false']);
+		expect(document.body.textContent!.replace(/\s+/g, ' ')).toContain(
+			'1 active items · 812 archived'
+		);
 	});
 
 	it('shows a list of projects, each with its glance, while more than one is known and none chosen', async () => {

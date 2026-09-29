@@ -73,7 +73,7 @@
 		const target = path;
 		acknowledged = false;
 		void load(target);
-		api('/api/items')
+		api('/api/items?archived=false')
 			.then(async (r) => (workers = r.ok ? await r.json() : []))
 			.catch(() => (workers = []));
 	});

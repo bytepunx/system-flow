@@ -2,17 +2,19 @@ import { repo } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
-/** GET /api/items?type=story&status=review&archived=false */
+/**
+ * GET /api/items?type=story&status=review&archived=false. flai is asked for the type and state, and
+ * for the archive unless archived=false (S-0162): a page that does not show the archive says so.
+ */
 export const GET: RequestHandler = ({ url }) =>
 	respond(async () => {
-		const type = url.searchParams.get('type');
-		const status = url.searchParams.get('status');
 		const archived = url.searchParams.get('archived');
-		let items = await repo().items();
-		if (type) items = items.filter((it) => it.type === type);
-		if (status) items = items.filter((it) => it.status === status);
-		if (archived === 'true' || archived === 'false')
-			items = items.filter((it) => it.archived === (archived === 'true'));
+		let items = await repo().items({
+			type: url.searchParams.get('type') ?? undefined,
+			status: url.searchParams.get('status') ?? undefined,
+			archive: archived !== 'false'
+		});
+		if (archived === 'true') items = items.filter((it) => it.archived);
 		return items.map((it) => {
 			const { body, ...rest } = it;
 			void body;

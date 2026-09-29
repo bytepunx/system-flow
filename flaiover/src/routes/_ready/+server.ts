@@ -14,7 +14,8 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
 /** Readiness: each dependency checked with a short timeout; names the one that failed. */
 export const GET = async () => {
 	const checks: Record<string, { ok: boolean; detail?: string }> = {};
-	// The project and its items are asked of flai on the host (ADR-0029): without it nothing is ready.
+	// The project is asked of flai on the host (ADR-0029): without it nothing is ready. The manifest
+	// alone says flai answers for it (S-0162); the items are asked for by the pages that show them.
 	const host = agent().status();
 	checks.host_flai = {
 		ok: host.connected,
@@ -27,12 +28,6 @@ export const GET = async () => {
 		checks.project = { ok: true, detail: m.name };
 	} catch (e) {
 		checks.project = { ok: false, detail: e instanceof Error ? e.message : String(e) };
-	}
-	try {
-		await withTimeout(repo().items());
-		checks.items = { ok: true };
-	} catch (e) {
-		checks.items = { ok: false, detail: e instanceof Error ? e.message : String(e) };
 	}
 	const ok = Object.values(checks).every((c) => c.ok);
 	return json({ status: ok ? 'ready' : 'not ready', checks }, { status: ok ? 200 : 503 });

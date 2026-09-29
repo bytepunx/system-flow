@@ -33,7 +33,7 @@
 	const touchingNow = $derived(touching(current, workers));
 	async function loadWorkers() {
 		try {
-			const r = await api('/api/items');
+			const r = await api('/api/items?archived=false');
 			if (r.ok) {
 				workers = (await r.json()) as Worker[];
 			}

@@ -15,6 +15,7 @@ const answers: Record<string, unknown> = {
 	'project.info': project,
 	'board.get': { columns: {} },
 	'items.list': [],
+	'items.count': { active: 0, archived: 0 },
 	'item.get': {
 		item: { id: 'S-0001', transitions: null, blocked: null, tags: null },
 		children: null
@@ -41,6 +42,7 @@ async function held() {
 			r.manifest(),
 			r.boardView(),
 			r.items(),
+			r.itemCount(),
 			r.itemById('S-0001'),
 			r.threads(),
 			r.threadsFor('S-0001'),
@@ -107,6 +109,7 @@ describe('Repo.changed forgets what the changed file affects (S-0161)', () => {
 			'docs.tree',
 			'inbox.designer',
 			'item.get',
+			'items.count',
 			'items.list',
 			'stats.get',
 			'threads.list',
