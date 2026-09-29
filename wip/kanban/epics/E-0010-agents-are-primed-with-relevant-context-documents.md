@@ -6,7 +6,7 @@ title: Agents are primed with relevant context documents
 status: in-progress
 owner: alex
 created: 2026-09-26T07:20:38Z
-updated: 2026-09-29T01:57:32Z
+updated: 2026-09-29T03:08:49Z
 transitions:
   - to: ready
     at: 2026-09-26T17:48:00Z
@@ -29,7 +29,10 @@ Instead of feeding agents dispatched to work stories with every ADR and conventi
 - S-0135 Stories and epics carry topics, and flai works out a story's topics from them, its epic, and the projects its tags and claim reach
 - S-0136 flai prime --story prints the conventions a story's topics select, section by section, and lists what it left out
 - S-0137 flai prime --story adds the design, tech, and ADRs a story's topics, links, and ranking select, with a catalog of the rest
-- S-0138 Agents flai starts, and any agent with a story, prime with flai prime --story
+- S-0138 The MCP prime tool returns a story's context pack, built by the same code as flai prime --story
 - S-0145 Look for relevant approaches to prime context without overloading agent
+- S-0146 A story's context pack fits a size budget, with briefs of what its topics and links select
+- S-0147 Agents fetch a design section on demand: doc_search, and a heading on doc_get and flai doc show
+- S-0148 Agents flai starts, and any agent with a story, prime with the budgeted pack and fetch what it briefs
 
 ## Notes

@@ -33,3 +33,5 @@ Change `harness.Prompt` so the story prompt says to prime with `flai prime --sto
 - The prompt names `flai prime --story <id>`; `harness` tests pass.
 
 ## Notes
+
+Taken back on 2026-09-29 by the designer's decision on TH-0030: agents keep priming with `--cat` until the pack has a budget (ADR-0049). S-0148 makes this change with ADR-0049's wording.

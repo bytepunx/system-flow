@@ -33,3 +33,5 @@ Say in `CLAUDE.md`, `template/root/CLAUDE.md.tmpl`, and the baseline `session-st
 - The four files and the design say the same; the template version and changelog record it; `make smoke` passes.
 
 ## Notes
+
+Taken back on 2026-09-29 by the designer's decision on TH-0030: agents keep priming with `--cat` until the pack has a budget (ADR-0049). S-0148 makes this change with ADR-0049's wording.
