@@ -6,7 +6,7 @@ title: Agents are primed with relevant context documents
 status: in-progress
 owner: alex
 created: 2026-09-26T07:20:38Z
-updated: 2026-09-28T23:04:29Z
+updated: 2026-09-29T01:57:32Z
 transitions:
   - to: ready
     at: 2026-09-26T17:48:00Z
@@ -30,5 +30,6 @@ Instead of feeding agents dispatched to work stories with every ADR and conventi
 - S-0136 flai prime --story prints the conventions a story's topics select, section by section, and lists what it left out
 - S-0137 flai prime --story adds the design, tech, and ADRs a story's topics, links, and ranking select, with a catalog of the rest
 - S-0138 Agents flai starts, and any agent with a story, prime with flai prime --story
+- S-0145 Look for relevant approaches to prime context without overloading agent
 
 ## Notes
