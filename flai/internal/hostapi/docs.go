@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -19,14 +21,14 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// DocNode is one folder or Markdown file of the document tree.
+// DocNode is one folder or Markdown file of the document tree: a file's
+// title, not its front matter, which doc.get reads (S-0162).
 type DocNode struct {
-	Name        string         `json:"name"`
-	Path        string         `json:"path"` // relative to the repository, forward slashes
-	Kind        string         `json:"kind"` // dir or file
-	Title       string         `json:"title,omitempty"`
-	FrontMatter map[string]any `json:"frontMatter,omitempty"`
-	Children    []*DocNode     `json:"children,omitempty"`
+	Name     string     `json:"name"`
+	Path     string     `json:"path"` // relative to the repository, forward slashes
+	Kind     string     `json:"kind"` // dir or file
+	Title    string     `json:"title,omitempty"`
+	Children []*DocNode `json:"children,omitempty"`
 }
 
 // Doc is one Markdown file: its front matter, the body under it, and the file as it is.
@@ -153,32 +155,110 @@ func docPath(root, rel string) (string, *channel.Error) {
 	return abs, nil
 }
 
-func tree(root, rel string) *DocNode {
+// racyWindow is how long after a file's modification time its title is
+// still not trusted, as internal/workitem's store trusts an item: a second
+// write within the timestamp granularity could leave the same time and size.
+const racyWindow = 2 * time.Second
+
+// titles keeps each document's title by file, so that a long-running flai
+// (serve) reads again only the files that changed since it last walked the
+// tree (S-0162). A title is kept while the file is the same file with the
+// modification time and size it had when it was read, and that read came
+// later than racyWindow after it was modified.
+type titles struct {
+	mu    sync.Mutex
+	files map[string]*keptTitle // by absolute path
+	reads int                   // files read, for tests
+}
+
+type keptTitle struct {
+	info    fs.FileInfo
+	title   string
+	trusted bool
+}
+
+var (
+	docTitles   = map[string]*titles{} // by repository root
+	docTitlesMu sync.Mutex
+)
+
+func titlesFor(root string) *titles {
+	docTitlesMu.Lock()
+	defer docTitlesMu.Unlock()
+	t := docTitles[root]
+	if t == nil {
+		t = &titles{files: map[string]*keptTitle{}}
+		docTitles[root] = t
+	}
+	return t
+}
+
+// title is the front matter's title of the file at abs, read again only when
+// the file may have changed since it was kept. ok is false when it cannot be
+// read. The caller holds t.mu.
+func (t *titles) title(abs string, info fs.FileInfo, seen map[string]bool) (string, bool) {
+	seen[abs] = true
+	if k := t.files[abs]; k != nil && k.trusted && os.SameFile(k.info, info) &&
+		k.info.ModTime().Equal(info.ModTime()) && k.info.Size() == info.Size() {
+		return k.title, true
+	}
+	readAt := time.Now()
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		delete(t.files, abs)
+		return "", false
+	}
+	t.reads++
+	fm, _ := frontMatter(string(data))
+	title, _ := fm["title"].(string)
+	t.files[abs] = &keptTitle{info: info, title: title, trusted: info.ModTime().Before(readAt.Add(-racyWindow))}
+	return title, true
+}
+
+// docsTree walks the manifest's three folders into their trees, each
+// Markdown file with its title, reading only the files that changed since
+// the last walk of root.
+func docsTree(root string, dirs []string) []*DocNode {
+	t := titlesFor(root)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	seen := map[string]bool{}
+	roots := []*DocNode{}
+	for _, d := range dirs {
+		roots = append(roots, t.tree(root, d, seen))
+	}
+	for abs := range t.files {
+		if !seen[abs] {
+			delete(t.files, abs)
+		}
+	}
+	return roots
+}
+
+func (t *titles) tree(root, rel string, seen map[string]bool) *DocNode {
 	node := &DocNode{Name: filepath.Base(rel), Path: rel, Kind: "dir", Children: []*DocNode{}}
 	entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(rel)))
 	if err != nil {
 		return node
 	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
-	for _, e := range entries {
+	for _, e := range entries { // os.ReadDir sorts by name
 		if strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		child := rel + "/" + e.Name()
 		switch {
 		case e.IsDir():
-			node.Children = append(node.Children, tree(root, child))
+			node.Children = append(node.Children, t.tree(root, child, seen))
 		case strings.HasSuffix(e.Name(), ".md") && e.Type().IsRegular():
-			data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(child)))
+			info, err := e.Info()
 			if err != nil {
+				continue // removed since the folder was read
+			}
+			title, ok := t.title(filepath.Join(root, filepath.FromSlash(child)), info, seen)
+			if !ok {
 				continue
 			}
-			fm, _ := frontMatter(string(data))
-			n := &DocNode{Name: e.Name(), Path: child, Kind: "file", FrontMatter: fm}
-			if t, ok := fm["title"].(string); ok {
-				n.Title = t
-			}
-			node.Children = append(node.Children, n)
+			node.Children = append(node.Children, &DocNode{Name: e.Name(), Path: child, Kind: "file", Title: title})
 		}
 	}
 	return node
@@ -205,18 +285,14 @@ var adrFile = regexp.MustCompile(`^\d{4}-.*\.md$`)
 
 func docMethods() map[string]channel.Method {
 	return map[string]channel.Method{
-		// docs.tree: the manifest's three folders, every Markdown file with its front matter.
+		// docs.tree: the manifest's three folders, every Markdown file with its title.
 		"docs.tree": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
 			defer perf.Track(ctx, "docs.walk")()
 			dirs, err := layoutDirs(p.Root)
 			if err != nil {
 				return nil, failed(err)
 			}
-			roots := []*DocNode{}
-			for _, d := range dirs {
-				roots = append(roots, tree(p.Root, d))
-			}
-			return roots, nil
+			return docsTree(p.Root, dirs), nil
 		},
 
 		// doc.get: one Markdown file under those folders.

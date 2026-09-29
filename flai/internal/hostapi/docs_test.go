@@ -1,10 +1,12 @@
 package hostapi
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 )
@@ -55,14 +57,10 @@ func TestDocsTree(t *testing.T) {
 	if len(roots) != 3 || roots[0].Path != "design" || roots[1].Path != "docs" || roots[2].Path != "wip" {
 		t.Fatalf("roots: %+v", roots)
 	}
-	ov := find(roots, "design/system/overview.md")
-	if ov == nil || ov.Kind != "file" || ov.Title != "Overview" || ov.FrontMatter["updated"] != "2026-09-20" || ov.FrontMatter["status"] != "active" {
+	if ov := find(roots, "design/system/overview.md"); ov == nil || ov.Kind != "file" || ov.Title != "Overview" || ov.Name != "overview.md" {
 		t.Errorf("overview: %+v", ov)
 	}
-	if tags, ok := ov.FrontMatter["tags"].([]any); !ok || len(tags) != 2 {
-		t.Errorf("tags: %#v", ov.FrontMatter["tags"])
-	}
-	if n := find(roots, "design/system/plain.md"); n == nil || n.Title != "" || n.FrontMatter != nil {
+	if n := find(roots, "design/system/plain.md"); n == nil || n.Title != "" {
 		t.Errorf("a file without front matter: %+v", n)
 	}
 	for _, gone := range []string{"design/system/.hidden/x.md", "design/system/diagram.png", "secret.md", "src/notes.md"} {
@@ -72,6 +70,71 @@ func TestDocsTree(t *testing.T) {
 	}
 	if n := find(roots, "wip/kanban/stories"); n == nil || n.Kind != "dir" || len(n.Children) == 0 {
 		t.Errorf("wip stories: %+v", n)
+	}
+}
+
+// TestDocsTreeKeepsTitles: a warm walk reads no file; a file that changes is
+// read again, and one added or removed is in the next answer or not (S-0162).
+func TestDocsTreeKeepsTitles(t *testing.T) {
+	p := withDocs(t)
+	past := time.Now().Add(-time.Hour)
+	_ = filepath.WalkDir(p.Root, func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			_ = os.Chtimes(path, past, past)
+		}
+		return nil
+	})
+	reads := func() int {
+		tt := titlesFor(p.Root)
+		tt.mu.Lock()
+		defer tt.mu.Unlock()
+		return tt.reads
+	}
+	var roots []*DocNode
+	if err := call(t, p, "docs.tree", `{}`, &roots); err != nil {
+		t.Fatal(err)
+	}
+	cold := reads()
+	if cold == 0 {
+		t.Fatal("the first walk read no file")
+	}
+	if err := call(t, p, "docs.tree", `{}`, &roots); err != nil {
+		t.Fatal(err)
+	}
+	if got := reads(); got != cold {
+		t.Errorf("a warm walk read %d files", got-cold)
+	}
+	if ov := find(roots, "design/system/overview.md"); ov == nil || ov.Title != "Overview" {
+		t.Errorf("a kept title: %+v", ov)
+	}
+
+	ov := filepath.Join(p.Root, "design/system/overview.md")
+	if err := os.WriteFile(ov, []byte("---\ntitle: Overview, retitled\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Remove(filepath.Join(p.Root, "docs/users/index.md"))
+	_ = os.WriteFile(filepath.Join(p.Root, "docs/users/new.md"), []byte("---\ntitle: New\n---\n"), 0o644)
+	if err := call(t, p, "docs.tree", `{}`, &roots); err != nil {
+		t.Fatal(err)
+	}
+	if got := reads() - cold; got != 2 {
+		t.Errorf("read %d files after one changed and one was added, want 2", got)
+	}
+	if n := find(roots, "design/system/overview.md"); n == nil || n.Title != "Overview, retitled" {
+		t.Errorf("a changed title: %+v", n)
+	}
+	if find(roots, "docs/users/index.md") != nil {
+		t.Error("a removed file is in the tree")
+	}
+	if n := find(roots, "docs/users/new.md"); n == nil || n.Title != "New" {
+		t.Errorf("an added file: %+v", n)
+	}
+	tt := titlesFor(p.Root)
+	tt.mu.Lock()
+	_, kept := tt.files[filepath.Join(p.Root, "docs/users/index.md")]
+	tt.mu.Unlock()
+	if kept {
+		t.Error("a removed file's title is still kept")
 	}
 }
 
