@@ -6,7 +6,7 @@ title: Usability Improvements
 status: backlog
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-29T05:28:11Z
+updated: 2026-09-29T05:31:24Z
 transitions: []
 tags: [dashboard]
 topics: [front-end]
@@ -19,5 +19,6 @@ touches: [flaiover/src]
 There are a number of odd patterns that cause confusion in the dashboard UI/UX. We need to catalog and address these to improve the usability and utility of the system.
 
 ## Stories
+- S-0150 Agent status and updates on board need to be collapsible
 
 ## Notes
