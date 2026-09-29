@@ -200,3 +200,113 @@ func TestSlug(t *testing.T) {
 		}
 	}
 }
+
+func TestRankAddsTheBestADRsAndSectionsNothingChose(t *testing.T) {
+	s := fixture(t)
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0007"}})
+	s.Rank("herons on the estuary at the turn of the tide", 5, 1)
+	got := chosen(s)
+	if got["design/adrs/0007-seventh.md"] != "linked from S-0001" {
+		t.Errorf("a chosen ADR was ranked again: %v", got)
+	}
+	var ranked []string
+	for k, v := range got {
+		if strings.HasPrefix(v, "rank ") {
+			ranked = append(ranked, k+" = "+v)
+		}
+	}
+	slices.Sort(ranked)
+	if len(ranked) != 6 || got["design/system/plain.md § Heron migration"] != "rank 1" {
+		t.Errorf("ranked %v", ranked)
+	}
+	for _, id := range []string{"ADR-0006", "ADR-0008", "ADR-0009", "ADR-0010", "ADR-0011"} {
+		if !s.Whole(s.byID[id]) {
+			t.Errorf("%s not ranked: %v", id, ranked)
+		}
+	}
+	if s.Loaded(s.byID["ADR-0012"]) {
+		t.Errorf("an unrelated ADR ranked: %v", ranked)
+	}
+}
+
+func TestRankLeavesOutSupersededADRs(t *testing.T) {
+	s := fixture(t)
+	s.Rank("the first way", 5, 0)
+	if s.Loaded(s.byID["ADR-0001"]) || s.byPath["design/adrs/0003-third.md"] == nil || !s.Loaded(s.byID["ADR-0003"]) {
+		t.Errorf("got %v", chosen(s))
+	}
+}
+
+func TestQueryIsTitleGoalAndCriteria(t *testing.T) {
+	body := "# S-0001 T\n\n## Goal\n\nHerons.\n\n## Acceptance criteria\n- [ ] Tides.\n\n## Notes\n\nCompilers.\n"
+	q := Query("Title words", body)
+	for _, want := range []string{"Title words", "Herons.", "Tides."} {
+		if !strings.Contains(q, want) {
+			t.Errorf("missing %q in %q", want, q)
+		}
+	}
+	if strings.Contains(q, "Compilers") {
+		t.Errorf("notes in %q", q)
+	}
+	if q := Query("T", "just text"); !strings.Contains(q, "just text") {
+		t.Errorf("no sections: %q", q)
+	}
+}
+
+func TestItemsGroupRunsAndPrintWholeDocumentsRaw(t *testing.T) {
+	s := fixture(t)
+	s.ByTopics([]string{"cli", "go"})
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "design/tech/go.md"}})
+	items := s.Items()
+	var got []string
+	for _, it := range items {
+		got = append(got, it.Path+" § "+it.Label+" = "+it.Reason+" "+strings.Join(it.Also, ";"))
+		if it.Size != len(it.Text) {
+			t.Errorf("size %d of %d", it.Size, len(it.Text))
+		}
+	}
+	want := []string{
+		"design/system/cli.md § The CLI = topics: cli ",
+		"design/system/cli.md § Prime = topics: cli ",
+		"design/tech/go.md §  = topics: go linked from S-0001",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q", got)
+	}
+	if !strings.Contains(items[0].Text, "## Rules") || strings.Contains(items[0].Text, "Board view") || !reflect.DeepEqual(items[0].Heading, []string{"The CLI"}) {
+		t.Errorf("first run %+v", items[0])
+	}
+	if !strings.HasPrefix(items[2].Text, "---\ntitle: Go") || items[2].Heading != nil {
+		t.Errorf("whole document %+v", items[2])
+	}
+}
+
+func TestCatalogListsWhatIsNotLoadedAndOutlinesWhatIsInPart(t *testing.T) {
+	s := fixture(t)
+	s.ByTopics([]string{"cli"})
+	notLoaded, inPart := s.Catalog()
+	if len(inPart) != 1 || inPart[0].Path != "design/system/cli.md" {
+		t.Fatalf("in part %+v", inPart)
+	}
+	want := []Outline{{1, "The CLI", true}, {2, "Rules", true}, {3, "Board view", false}, {2, "Prime", true}}
+	if !reflect.DeepEqual(inPart[0].Outline, want) {
+		t.Errorf("outline %+v", inPart[0].Outline)
+	}
+	if len(notLoaded) != 16 {
+		t.Errorf("%d not loaded: %+v", len(notLoaded), notLoaded)
+	}
+	for _, e := range notLoaded {
+		if e.Path == "design/adrs/0001-first.md" && (!reflect.DeepEqual(e.SupersededBy, []string{"ADR-0003"}) || e.Title != "First") {
+			t.Errorf("superseded entry %+v", e)
+		}
+		if e.Outline != nil {
+			t.Errorf("outline on a document not loaded: %+v", e)
+		}
+	}
+}
+
+func TestTermsDropStopwordsAndRepeats(t *testing.T) {
+	if got := Terms("The heron and the Tide, a heron: x"); !slices.Equal(got, []string{"heron", "tide"}) {
+		t.Errorf("got %v", got)
+	}
+}
