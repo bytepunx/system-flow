@@ -411,8 +411,8 @@ func brief(it *workitem.Item) ItemBrief {
 	return ItemBrief{ID: it.ID, Type: it.Type, Title: it.Title, Status: it.Status, Touches: it.Touches}
 }
 
-func (s *server) itemOut(it *workitem.Item) (ItemOut, error) {
-	items, err := s.repo.List(true)
+func (s *server) itemOut(ctx context.Context, it *workitem.Item) (ItemOut, error) {
+	items, err := s.listItems(ctx)
 	if err != nil {
 		return ItemOut{}, err
 	}
@@ -438,12 +438,14 @@ func (s *server) itemOut(it *workitem.Item) (ItemOut, error) {
 	return out, nil
 }
 
-func (s *server) itemGet(_ context.Context, _ *mcp.CallToolRequest, in ItemIDIn) (*mcp.CallToolResult, ItemOut, error) {
+func (s *server) itemGet(ctx context.Context, _ *mcp.CallToolRequest, in ItemIDIn) (*mcp.CallToolResult, ItemOut, error) {
+	done := perf.Track(ctx, "repo.get")
 	it, err := s.repo.Get(in.ID)
+	done()
 	if err != nil {
 		return nil, ItemOut{}, err
 	}
-	out, err := s.itemOut(it)
+	out, err := s.itemOut(ctx, it)
 	return nil, out, err
 }
 

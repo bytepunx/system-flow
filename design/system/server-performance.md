@@ -80,6 +80,26 @@ The pauses the operator sees come from these adding up. A board load asks `board
 
 What is not a cause: the file watchers. `flai serve` walks the three folders every 300 ms and each waiting MCP call every 250 ms; one walk of 1078 files takes 5.6 ms.
 
+## After the stories
+
+Each story remeasures what its cause cost, on the same host and repository, and records it here.
+
+### Cause 1: work items kept between requests (S-0156)
+
+`flai serve` and `flai mcp` keep the items they have parsed and read again only the files that changed ([flai-cli.md](flai-cli.md#internal-structure)). Measured on 2026-09-29 with 1078 Markdown files, load about 1: the dashboard's methods called five times in one process through the table `flai serve` answers with, timed by the same recorder, and the MCP tools five times each over stdio against `flai mcp` built from the story's branch. The first call of a process is cold; the others are warm.
+
+| Request | `repo.list` cold | `repo.list` warm | Warm total |
+|---------|------------------|------------------|------------|
+| `board.get` | 122 ms | 4 to 5 ms | 232 ms, of which `release.pending` 227 (cause 2) |
+| `item.get` | | 3.4 to 4.5 ms | 4 ms |
+| `items.list` (archive, bodies) | | 3.7 to 4.1 ms | 8 ms, of which `encode` 4 |
+| MCP `inbox` | 117 ms | 4 to 5 ms, once | 241 ms, of which `release.pending` 226 |
+| MCP `board` | | 4.1 to 4.3 ms | 236 ms, of which `release.pending` 226 |
+| MCP `wait_for_work` | | 4 to 5 ms per look | `release.pending` 223 to 248 per look |
+| MCP `item_get` | | 3.4 to 4.8 ms | 4 ms |
+
+`inbox` lists the items once for the board and the changes, where it listed them twice. What is left of a board load is cause 2: this measurement found 69 git processes where S-0152 found 25, as more items were accepted since the last release.
+
 ## Stories
 
 Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`.

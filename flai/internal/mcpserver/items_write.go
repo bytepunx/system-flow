@@ -30,7 +30,7 @@ type ItemNewIn struct {
 
 func (in ItemNewIn) project() string { return in.Project }
 
-func (s *server) itemNew(_ context.Context, _ *mcp.CallToolRequest, in ItemNewIn) (*mcp.CallToolResult, ItemOut, error) {
+func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNewIn) (*mcp.CallToolResult, ItemOut, error) {
 	nature := in.Nature
 	if nature == "" {
 		nature = "feature"
@@ -44,7 +44,7 @@ func (s *server) itemNew(_ context.Context, _ *mcp.CallToolRequest, in ItemNewIn
 	if err != nil {
 		return nil, ItemOut{}, err
 	}
-	out, err := s.itemOut(it)
+	out, err := s.itemOut(ctx, it)
 	return nil, out, err
 }
 
