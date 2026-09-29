@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { criteriaOf, patchLines, readNdjson, sectionOf, toggleCriterion } from './review';
+import {
+	criteriaOf,
+	patchLines,
+	patchRuns,
+	readNdjson,
+	sectionOf,
+	toggleCriterion
+} from './review';
 
 const STORY = `# S-0041 Review
 
@@ -38,6 +45,35 @@ describe('review helpers', () => {
 		const lines = patchLines('@@ -1,2 +1,2 @@\n one\n-two\n+2\n\\ No newline at end of file');
 		expect(lines.map((l) => l.kind)).toEqual(['hunk', 'context', 'del', 'add', 'note']);
 		expect(patchLines('')).toEqual([]);
+	});
+	it('takes the sign of an added or removed line out of its text (S-0164)', () => {
+		const lines = patchLines(
+			'@@ -1,3 +1,3 @@\n one\n-\ttwo\n+-2\n \n\\ No newline at end of file\n'
+		);
+		expect(lines).toEqual([
+			{ kind: 'hunk', sign: '', text: '@@ -1,3 +1,3 @@' },
+			{ kind: 'context', sign: '', text: 'one' },
+			{ kind: 'del', sign: '-', text: '\ttwo' },
+			{ kind: 'add', sign: '+', text: '-2' },
+			{ kind: 'context', sign: '', text: '' },
+			{ kind: 'note', sign: '', text: '\\ No newline at end of file' }
+		]);
+	});
+	it('gathers consecutive added lines and removed lines into runs (S-0164)', () => {
+		const runs = patchRuns(
+			'@@ -1,4 +1,5 @@\n-a\n-b\n+c\n+d\n+e\n same\n+f\n@@ -9,2 +10,1 @@\n-g\n last\n'
+		);
+		expect(runs.map((r) => [r.kind, r.lines.map((l) => l.text)])).toEqual([
+			['hunk', ['@@ -1,4 +1,5 @@']],
+			['del', ['a', 'b']],
+			['add', ['c', 'd', 'e']],
+			['context', ['same']],
+			['add', ['f']],
+			['hunk', ['@@ -9,2 +10,1 @@']],
+			['del', ['g']],
+			['context', ['last']]
+		]);
+		expect(patchRuns('')).toEqual([]);
 	});
 	it('delivers NDJSON lines as they arrive, across chunk boundaries', async () => {
 		const enc = new TextEncoder();

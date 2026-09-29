@@ -74,7 +74,7 @@
 										? 'bg-danger-soft text-danger'
 										: l.kind === 'hunk'
 											? 'text-muted'
-											: ''}">{l.text || ' '}</span
+											: ''}">{(l.sign || (l.kind === 'context' ? ' ' : '')) + l.text}</span
 							>{/each}</pre>
 					{#if f.truncated}
 						<p class="border-t border-line px-2 py-1 text-xs text-muted">Cut for size.</p>

@@ -23,23 +23,41 @@ export function sectionOf(markdown: string, heading: string): string {
 	return (end < 0 ? rest : rest.slice(0, end)).join('\n').trim();
 }
 
-export type PatchLine = { kind: 'hunk' | 'add' | 'del' | 'context' | 'note'; text: string };
+export type PatchKind = 'hunk' | 'add' | 'del' | 'context' | 'note';
+/** One line of a patch: `sign` is its + or -, empty for the rest, and `text` is the line without it. */
+export type PatchLine = { kind: PatchKind; sign: '+' | '-' | ''; text: string };
 
-/** A unified patch as lines with their kind, so a view can colour them and still show + and -. */
+/**
+ * A unified patch as lines with their kind, the sign of an added or removed line apart from its
+ * text, so a view can put it in a margin. A hunk header and a "no newline" note keep their whole
+ * text; the empty line the patch's last newline leaves is not a line.
+ */
 export function patchLines(patch: string): PatchLine[] {
 	if (!patch) return [];
-	return patch.split('\n').map((text) => ({
-		text,
-		kind: text.startsWith('@@')
-			? 'hunk'
-			: text.startsWith('+')
-				? 'add'
-				: text.startsWith('-')
-					? 'del'
-					: text.startsWith('\\')
-						? 'note'
-						: 'context'
-	}));
+	const lines = patch.split('\n');
+	if (lines[lines.length - 1] === '') lines.pop();
+	return lines.map((raw): PatchLine => {
+		if (raw.startsWith('@@')) return { kind: 'hunk', sign: '', text: raw };
+		if (raw.startsWith('\\')) return { kind: 'note', sign: '', text: raw };
+		if (raw.startsWith('+')) return { kind: 'add', sign: '+', text: raw.slice(1) };
+		if (raw.startsWith('-')) return { kind: 'del', sign: '-', text: raw.slice(1) };
+		// a context line begins with the space that stands where a sign would
+		return { kind: 'context', sign: '', text: raw.startsWith(' ') ? raw.slice(1) : raw };
+	});
+}
+
+/** Consecutive lines of one kind: a view outlines a run of added or of removed lines as one block. */
+export type PatchRun = { kind: PatchKind; lines: PatchLine[] };
+
+/** A unified patch as runs: every line beside its neighbours of the same kind, in the patch's order. */
+export function patchRuns(patch: string): PatchRun[] {
+	const runs: PatchRun[] = [];
+	for (const line of patchLines(patch)) {
+		const last = runs[runs.length - 1];
+		if (last && last.kind === line.kind) last.lines.push(line);
+		else runs.push({ kind: line.kind, lines: [line] });
+	}
+	return runs;
 }
 
 /**
