@@ -170,30 +170,43 @@ func TouchedFiles(r execx.Runner, root string, commits []string) ([]string, erro
 // <name>/vX.Y.Z tag for code components, template.yaml for the template.
 func CurrentVersion(r execx.Runner, root string, p manifest.Project) (Version, error) {
 	if p.Kind == "template" {
-		data, err := os.ReadFile(filepath.Join(root, p.Path, "template.yaml"))
-		if err != nil {
-			return Version{}, err
-		}
-		for _, l := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(l, "version:") {
-				if v, ok := ParseVersion(strings.TrimSpace(strings.TrimPrefix(l, "version:"))); ok {
-					return v, nil
-				}
-			}
-		}
-		return Version{}, fmt.Errorf("%s/template.yaml has no semver version", p.Path)
+		return templateVersion(root, p)
 	}
 	out, err := r.Run(root, "git", "tag", "--list", p.Name+"/v*")
 	if err != nil {
 		return Version{}, err
 	}
+	return highestTag(strings.Split(strings.TrimSpace(out), "\n"), p.Name), nil
+}
+
+// templateVersion reads the version: line of a template's template.yaml.
+func templateVersion(root string, p manifest.Project) (Version, error) {
+	data, err := os.ReadFile(filepath.Join(root, p.Path, "template.yaml"))
+	if err != nil {
+		return Version{}, err
+	}
+	for _, l := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(l, "version:") {
+			if v, ok := ParseVersion(strings.TrimSpace(strings.TrimPrefix(l, "version:"))); ok {
+				return v, nil
+			}
+		}
+	}
+	return Version{}, fmt.Errorf("%s/template.yaml has no semver version", p.Path)
+}
+
+// highestTag is the highest version among the tags named <name>/vX.Y.Z.
+func highestTag(tags []string, name string) Version {
 	var best Version
-	for _, t := range strings.Split(strings.TrimSpace(out), "\n") {
-		if v, ok := ParseVersion(strings.TrimPrefix(t, p.Name+"/")); ok && less(best, v) {
+	for _, t := range tags {
+		if !strings.HasPrefix(t, name+"/v") {
+			continue
+		}
+		if v, ok := ParseVersion(strings.TrimPrefix(t, name+"/")); ok && less(best, v) {
 			best = v
 		}
 	}
-	return best, nil
+	return best
 }
 
 func less(a, b Version) bool {
@@ -213,15 +226,21 @@ func Compute(r execx.Runner, root string, m manifest.Manifest, it *workitem.Item
 	if err != nil {
 		return nil, err
 	}
-	plan := &Plan{Item: it.ID, Title: it.Title, Level: level}
-	plan.Commits, err = Commits(r, root, it.ID)
+	commits, err := Commits(r, root, it.ID)
 	if err != nil {
 		return nil, err
 	}
-	files, err := TouchedFiles(r, root, plan.Commits)
+	files, err := TouchedFiles(r, root, commits)
 	if err != nil {
 		return nil, err
 	}
+	return computePlan(m, it, parent, deliver, level, commits, files, func(p manifest.Project) (Version, error) { return CurrentVersion(r, root, p) })
+}
+
+// computePlan is Compute once the item's commits, the files they touched, and a way
+// to find a component's current version are known.
+func computePlan(m manifest.Manifest, it, parent *workitem.Item, deliver, level string, commits, files []string, current func(manifest.Project) (Version, error)) (*Plan, error) {
+	plan := &Plan{Item: it.ID, Title: it.Title, Level: level, Commits: commits}
 	touched := map[string][]string{}
 	for _, f := range files {
 		matched := false
@@ -264,7 +283,7 @@ func Compute(r execx.Runner, root string, m manifest.Manifest, it *workitem.Item
 		if !was && !isDelivered {
 			continue
 		}
-		cur, err := CurrentVersion(r, root, p)
+		cur, err := current(p)
 		if err != nil {
 			return nil, err
 		}
@@ -465,55 +484,51 @@ func higher(a, b string) string {
 
 var acceptedSubject = regexp.MustCompile(`^chore: \[([EST]-\d+)\] accept and archive`)
 
-// acceptedIDsIn lists the items accepted by a commit in revRange (a git
-// revision range, or a single ref meaning everything reachable from it),
-// each once, oldest first.
-func acceptedIDsIn(r execx.Runner, root, revRange string) ([]string, error) {
-	out, err := r.Run(root, "git", "log", "--reverse", "--format=%s", revRange)
-	if err != nil {
-		return nil, err
-	}
-	var ids []string
-	seen := map[string]bool{}
-	for _, l := range strings.Split(out, "\n") {
-		if m := acceptedSubject.FindStringSubmatch(l); m != nil && !seen[m[1]] {
-			seen[m[1]] = true
-			ids = append(ids, m[1])
-		}
-	}
-	return ids, nil
-}
-
-// componentBoundary is the ref marking the last publish for a component, or
-// "" when it has never been released: everything accepted since is pending.
-// A code component's tag is that ref directly. A template has no local tag
-// (Tag creates none for it; its version lives in template.yaml, published to
-// its own remote); the commit that set its current version stands in.
-func componentBoundary(r execx.Runner, root string, p manifest.Project, cur Version) (string, error) {
-	if cur == (Version{}) {
-		return "", nil
-	}
-	if p.Kind != "template" {
-		return p.Name + "/v" + cur.String(), nil
-	}
-	out, err := r.Run(root, "git", "log", "-n1", "--format=%H", "-S", "version: "+cur.String(), "--", filepath.Join(p.Path, "template.yaml"))
-	if err != nil {
-		return "", err
-	}
-	// No commit found (unlikely, since CurrentVersion just read this version from
-	// the file): walk the full history rather than fail the whole batch over it.
-	if strings.TrimSpace(out) == "" {
-		return "", nil
-	}
-	return strings.TrimSpace(out), nil
-}
-
 // Pending computes the batch: one PendingPlan per component with something
 // accepted and unreleased for it, from every item a "chore: [ID] accept and
 // archive" commit names since that component's last publish (S-0087). An
 // item is looked up once and its Compute()-equivalent reused for every
-// component it touches or delivers to.
+// component it touches or delivers to. What it needs of git comes from the
+// repository's kept history (S-0157): one git process while HEAD and the
+// tags are unchanged.
 func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) ([]*PendingPlan, error) {
+	if len(m.Projects) == 0 {
+		return nil, nil // no component, nothing to release, and no git asked
+	}
+	kept.Lock()
+	defer kept.Unlock()
+	h, err := readHistory(r, root)
+	if err != nil {
+		return nil, err
+	}
+	type since struct {
+		cur Version
+		ids []string
+	}
+	ranges := make([]since, len(m.Projects))
+	var commits []string
+	for i, proj := range m.Projects {
+		cur, err := h.currentVersion(root, proj)
+		if err != nil {
+			return nil, err
+		}
+		boundary, err := h.boundary(r, root, proj, cur)
+		if err != nil {
+			return nil, err
+		}
+		ids, err := h.accepted(r, root, boundary)
+		if err != nil {
+			return nil, err
+		}
+		ranges[i] = since{cur, ids}
+		for _, id := range ids {
+			commits = append(commits, h.itemCommits(id)...)
+		}
+	}
+	if err := h.list(r, root, commits); err != nil {
+		return nil, err
+	}
+
 	plans := map[string]*Plan{} // item ID -> its own plan, computed once
 	itemPlan := func(id string) (*Plan, error) {
 		if p, ok := plans[id]; ok {
@@ -527,7 +542,12 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 		if it.Parent != "" {
 			parent, _ = repo.Get(it.Parent)
 		}
-		p, err := Compute(r, root, m, it, parent, "")
+		level, err := LevelFor(it)
+		if err != nil {
+			return nil, err
+		}
+		commits := h.itemCommits(id)
+		p, err := computePlan(m, it, parent, "", level, commits, h.files(commits), func(p manifest.Project) (Version, error) { return h.currentVersion(root, p) })
 		if err != nil {
 			return nil, err
 		}
@@ -536,23 +556,8 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 	}
 
 	var out []*PendingPlan
-	for _, proj := range m.Projects {
-		cur, err := CurrentVersion(r, root, proj)
-		if err != nil {
-			return nil, err
-		}
-		boundary, err := componentBoundary(r, root, proj, cur)
-		if err != nil {
-			return nil, err
-		}
-		revRange := "HEAD"
-		if boundary != "" {
-			revRange = boundary + "..HEAD"
-		}
-		ids, err := acceptedIDsIn(r, root, revRange)
-		if err != nil {
-			return nil, err
-		}
+	for i, proj := range m.Projects {
+		cur, ids := ranges[i].cur, ranges[i].ids
 		pp := &PendingPlan{Component: proj, From: cur}
 		seenFile := map[string]bool{}
 		for _, id := range ids {
