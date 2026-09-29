@@ -9,6 +9,7 @@
 	import {
 		bucketsFor,
 		build,
+		completedIn,
 		controls,
 		FLOW_KINDS,
 		hasSpend,
@@ -20,6 +21,7 @@
 		titleOf,
 		USAGE_KINDS,
 		WINDOWS,
+		withUsage,
 		type BucketSize,
 		type By,
 		type Kind,
@@ -55,11 +57,9 @@
 	const buckets = $derived(bucketsFor(since));
 	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket));
 	const spend = $derived(report?.usage?.spend?.[report.type]);
-	const spenders = $derived(
-		report?.items.filter(
-			(i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic)
-		) ?? []
-	);
+	// the items the window holds, which the tables list as the charts plot them (S-0166)
+	const spenders = $derived(report ? withUsage(report, epic || undefined) : []);
+	const completed = $derived(report ? completedIn(report) : []);
 	/** What the items done in the window spent, and what that comes to, in a line. */
 	const usageSummary = $derived.by(() => {
 		const u = report?.usage;
@@ -85,17 +85,22 @@
 	const perMinute = (m: { tokens_per_minute?: number; tokens_per_hour?: number }) =>
 		m.tokens_per_minute ?? (m.tokens_per_hour !== undefined ? m.tokens_per_hour / 60 : undefined);
 
+	// the latest question asked: an answer to an earlier one, arriving after it, is not drawn
+	let asked = 0;
 	async function load() {
-		error = null;
+		const mine = ++asked;
 		// an hour is laid out over 31 days or less: a longer window goes by the day
 		if (!buckets.includes(bucket)) bucket = 'day';
 		const r = await api(`/api/stats?since=${since}&type=${type}&bucket=${bucket}`);
+		const body = await r.json();
+		if (mine !== asked) return;
 		if (!r.ok) {
-			error = (await r.json()).error ?? r.statusText;
+			error = body.error ?? r.statusText;
 			report = null;
 			return;
 		}
-		report = normalise(await r.json());
+		error = null;
+		report = normalise(body);
 	}
 	onMount(() => {
 		// the statistics are read from the work items (S-0161)
@@ -135,6 +140,7 @@
 			class="rounded border border-line-strong bg-surface px-2 py-1"
 			bind:value={since}
 			onchange={load}
+			data-testid="window"
 			>{#each WINDOWS as w (w)}<option value={w}>{w}</option>{/each}</select
 		></label
 	>
@@ -287,7 +293,7 @@
 							><th class="pr-4">cycle</th><th class="pr-4">lead</th><th>blocked</th></tr
 						></thead
 					><tbody
-						>{#each report.items.filter((i) => i.completed) as i (i.id)}<tr
+						>{#each completed as i (i.id)}<tr
 								><td class="pr-4 font-mono">{i.id}</td><td class="py-0.5 pr-4"
 									><KindChips nature={i.nature} /></td
 								><td class="pr-4">{i.completed?.slice(0, 10)}</td><td class="pr-4"

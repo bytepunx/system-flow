@@ -255,3 +255,90 @@ describe('the charts page (S-0163)', () => {
 		expect(text('[data-testid="usage-table"] thead')).toContain('tokens/agent minute');
 	});
 });
+
+describe('the window (S-0166)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const now = '2026-09-29T21:00:00Z';
+	/** A report for the window asked for, with an item done a day ago and one done 20 days ago. */
+	const reportFor = (since: string) => {
+		const days = parseInt(since);
+		const done = (id: string, completed: string) => ({
+			id,
+			type: 'story',
+			nature: 'feature',
+			title: id,
+			status: 'done',
+			created: '2026-09-01T00:00:00Z',
+			started: '2026-09-01T00:00:00Z',
+			completed,
+			cycle_time_seconds: 3600,
+			blocked_seconds: 0,
+			time_in_state_seconds: {}
+		});
+		const items = [done('S-0001', '2026-09-28T21:00:00Z'), done('S-0002', '2026-09-09T21:00:00Z')];
+		const start = new Date(Date.parse(now) - days * 86400e3).toISOString().replace('.000', '');
+		return {
+			...reportIn('day'),
+			generated_at: now,
+			window_days: days,
+			window_start: start,
+			items: items.filter((i) => i.completed >= start)
+		};
+	};
+	const pending: { since: string; release: () => void }[] = [];
+	let hold = false;
+	beforeEach(() => {
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const since = new URL(url, 'http://localhost').searchParams.get('since') ?? '30d';
+			if (hold) await new Promise<void>((release) => pending.push({ since, release }));
+			return answer(reportFor(since));
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		hold = false;
+		pending.length = 0;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+	});
+	type Drawn = { xAxis: { min: number; max: number }; series: { data: { id: string }[] }[] };
+	const drawn = () => setOption.mock.calls.at(-1)![0] as Drawn;
+	const ids = () => drawn().series.flatMap((s) => s.data.map((d) => d.id));
+
+	it('asks flai for the window chosen and redraws the axis and the points to it', async () => {
+		at.params.kind = 'cycle-time';
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+		expect(drawn().xAxis.min).toBe(Date.parse('2026-08-30T21:00:00Z'));
+		expect(drawn().xAxis.max).toBe(Date.parse(now));
+		expect(ids().sort()).toEqual(['S-0001', 'S-0002']);
+		await choose('window', '7d');
+		expect(api.mock.calls.at(-1)![0]).toBe('/api/stats?since=7d&type=story&bucket=day');
+		expect(drawn().xAxis.min).toBe(Date.parse('2026-09-22T21:00:00Z'));
+		expect(ids()).toEqual(['S-0001']);
+	});
+
+	it('draws the window chosen last, whatever order the answers come in', async () => {
+		at.params.kind = 'cycle-time';
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+		hold = true;
+		await choose('window', '90d');
+		await choose('window', '7d');
+		expect(pending.map((p) => p.since)).toEqual(['90d', '7d']);
+		pending[1].release();
+		await settle();
+		pending[0].release();
+		await settle();
+		expect(drawn().xAxis.min).toBe(Date.parse('2026-09-22T21:00:00Z'));
+		expect(ids()).toEqual(['S-0001']);
+	});
+});

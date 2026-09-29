@@ -6,6 +6,7 @@ import {
 	cfd,
 	completionCost,
 	completionTime,
+	completedIn,
 	bucketLabel,
 	bucketsFor,
 	controls,
@@ -27,6 +28,7 @@ import {
 	tokensPerItem,
 	tokensSpent,
 	models,
+	withUsage,
 	type Bucket,
 	type Report
 } from './charts';
@@ -323,6 +325,44 @@ describe('chart builders', () => {
 			expect(o.series.length, k).toBeGreaterThan(0);
 		}
 	});
+	it("every chart spans the report's window and plots only the items completed in it (S-0166)", () => {
+		type Axis = { xAxis: { min?: number; max?: number; data?: string[] } };
+		const end = Date.parse('2026-09-01T12:00:00Z');
+		const hour = 3600e3;
+		// the report's own window, 2 August 12:00 to 1 September 12:00
+		const month = Date.parse('2026-08-02T12:00:00Z');
+		expect((cycleTime(report, light) as Axis).xAxis).toMatchObject({ min: month, max: end });
+		expect((completionTime(report, light) as Axis).xAxis).toMatchObject({ min: month, max: end });
+		// a series by the day starts on the day that holds the window's start
+		const day = Date.parse('2026-08-02T00:00:00Z');
+		expect((burnUp(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
+		expect((cfd(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
+		// spend over time: from the bucket that holds the start to the one that holds now, half a
+		// bucket either side
+		expect((tokensSpent(report, light) as Axis).xAxis).toMatchObject({
+			min: day - 12 * hour,
+			max: Date.parse('2026-09-01T00:00:00Z') + 12 * hour
+		});
+		const weekly = { ...report, usage: { ...report.usage!, bucket: 'week' as const } };
+		expect((costSpent(weekly, light) as Axis).xAxis).toMatchObject({
+			min: Date.parse('2026-07-27T00:00:00Z') - 84 * hour,
+			max: Date.parse('2026-08-31T00:00:00Z') + 84 * hour
+		});
+
+		// a narrower window moves the axis and drops S-001, completed on 3 August
+		const narrow: Report = { ...report, window_days: 7, window_start: '2026-08-10T00:00:00Z' };
+		const from = Date.parse('2026-08-10T00:00:00Z');
+		const ct = cycleTime(narrow, light) as Axis & { series: { data: { id: string }[] }[] };
+		expect(ct.xAxis).toMatchObject({ min: from, max: end });
+		expect(ct.series.flatMap((s) => s.data.map((d) => d.id))).toEqual(['S-002']);
+		expect((timeInState(narrow, light) as Axis).xAxis.data).toEqual(['S-002']);
+		expect((cost(narrow, light) as Axis).xAxis.data).toEqual(['S-002*']);
+		const es = estimates(narrow, light) as { series: { data: unknown[] }[] };
+		expect(es.series[0].data).toEqual([]);
+		expect((tokenRate(narrow, light) as Axis).xAxis.min).toBe(from - 12 * hour);
+		expect(completedIn(narrow).map((i) => i.id)).toEqual(['S-002']);
+		expect(withUsage(narrow).map((i) => i.id)).toEqual(['S-002']);
+	});
 	it('cycle time carries p50 and p85 reference lines and colours by nature in fixed slots', () => {
 		const o = cycleTime(report, light) as {
 			series: {
@@ -420,11 +460,11 @@ describe('chart builders', () => {
 			'all models'
 		]);
 		expect(o.xAxis.type).toBe('time');
-		// buckets are UTC, and the axis runs a bucket either side of the one day drawn
+		// buckets are UTC, and the axis spans the window's days, not the one day drawn (S-0166)
 		expect(o.useUTC).toBe(true);
 		expect([o.xAxis.min, o.xAxis.max, o.xAxis.minInterval]).toEqual([
-			Date.parse('2026-08-02T00:00:00Z'),
-			Date.parse('2026-08-04T00:00:00Z'),
+			Date.parse('2026-08-01T12:00:00Z'),
+			Date.parse('2026-09-01T12:00:00Z'),
 			86400e3
 		]);
 		expect(o.yAxis.name).toBe('tokens per agent minute');

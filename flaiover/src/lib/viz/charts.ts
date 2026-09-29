@@ -274,6 +274,39 @@ export function human(seconds: number): string {
 	return `${Math.round((seconds / 86400) * 10) / 10}d`;
 }
 
+/** The window a report covers, in milliseconds, from its start to its now; none when it says neither. */
+function windowOf(r: Report): { start: number; end: number } | undefined {
+	const start = Date.parse(r.window_start);
+	const end = Date.parse(r.generated_at);
+	return Number.isNaN(start) || Number.isNaN(end) ? undefined : { start, end };
+}
+/** Whether an item was completed in the report's window (S-0166): the items a chart per item plots. */
+function doneInWindow(r: Report, i: ItemMetrics): boolean {
+	if (!i.completed) return false;
+	const w = windowOf(r);
+	if (!w) return true;
+	const at = Date.parse(i.completed);
+	return at >= w.start && at <= w.end;
+}
+/** The items completed in the report's window. */
+export const completedIn = (r: Report) => r.items.filter((i) => doneInWindow(r, i));
+const DAY_MS = 86400e3;
+/** The start of the hour, the UTC day, or the ISO week from its Monday that holds a moment. */
+function floorTo(ms: number, bucket: BucketSize): number {
+	if (bucket === 'hour') return Math.floor(ms / 3600e3) * 3600e3;
+	const day = Math.floor(ms / DAY_MS) * DAY_MS;
+	return bucket === 'day' ? day : day - ((new Date(day).getUTCDay() + 6) % 7) * DAY_MS;
+}
+/**
+ * A time axis's ends: the report's window (S-0166), whatever the data it holds. A series by the day
+ * starts at the day that holds the window's start, so that its first point is on the axis.
+ */
+function span(r: Report, daily = false): Opt {
+	const w = windowOf(r);
+	if (!w) return {};
+	return { min: daily ? floorTo(w.start, 'day') : w.start, max: w.end };
+}
+
 type Opt = Record<string, unknown>;
 function base(t: Theme, extra: Opt = {}): Opt {
 	return {
@@ -341,8 +374,8 @@ function refLine(t: Theme, data: Opt[], formatter: string): Opt {
 
 /** Cycle time scatter: one point per completed item, p50 and p85 reference lines, coloured by nature (at most three groups per the all-pairs rule; the rest fold into Other). */
 export function cycleTime(r: Report, t: Theme, epic?: string): Opt {
-	const done = r.items.filter(
-		(i) => i.completed && i.cycle_time_seconds !== undefined && (!epic || i.parent === epic)
+	const done = completedIn(r).filter(
+		(i) => i.cycle_time_seconds !== undefined && (!epic || i.parent === epic)
 	);
 	const natures = [...new Set(done.map((i) => i.nature))];
 	const top = natures.slice(0, 3);
@@ -377,7 +410,7 @@ export function cycleTime(r: Report, t: Theme, epic?: string): Opt {
 			formatter: (p: { data: { id: string; title: string; value: [string, number] } }) =>
 				`${p.data.id} ${p.data.title}<br/>${p.data.value[1]} days · ${p.data.value[0].slice(0, 10)}`
 		}),
-		xAxis: axisX(t, { type: 'time' }),
+		xAxis: axisX(t, { type: 'time', ...span(r) }),
 		yAxis: axisY(t, { type: 'value', name: 'days', nameTextStyle: { color: t.textSecondary } }),
 		series
 	});
@@ -400,7 +433,7 @@ export function burnUp(r: Report, t: Theme, epic = 'all'): Opt {
 			trigger: 'axis',
 			axisPointer: { type: 'cross', label: { backgroundColor: t.grid, color: t.text } }
 		}),
-		xAxis: axisX(t, { type: 'time' }),
+		xAxis: axisX(t, { type: 'time', ...span(r, true) }),
 		yAxis: axisY(t, {
 			type: 'value',
 			name: plural(r.type),
@@ -427,7 +460,7 @@ export function cfd(r: Report, t: Theme): Opt {
 	return base(t, {
 		legend: legend(t, true),
 		tooltip: tooltip(t, { trigger: 'axis', axisPointer: { type: 'line' } }),
-		xAxis: axisX(t, { type: 'time' }),
+		xAxis: axisX(t, { type: 'time', ...span(r, true) }),
 		yAxis: axisY(t, { type: 'value', minInterval: 1 }),
 		series
 	});
@@ -435,7 +468,7 @@ export function cfd(r: Report, t: Theme): Opt {
 
 /** Time in state: one stacked bar per completed item, hours per state. */
 export function timeInState(r: Report, t: Theme, epic?: string): Opt {
-	const done = r.items.filter((i) => i.completed && (!epic || i.parent === epic));
+	const done = completedIn(r).filter((i) => !epic || i.parent === epic);
 	const series = STATES.map((st) => ({
 		name: st,
 		type: 'bar',
@@ -558,7 +591,9 @@ export function aging(r: Report, t: Theme, epic?: string): Opt {
 
 /** Estimate versus actual: one point per estimated, completed item; the diagonal is the perfect estimate. */
 export function estimates(r: Report, t: Theme): Opt {
-	const pts = r.items.filter((i) => i.estimate_seconds && i.cycle_time_seconds !== undefined);
+	const pts = completedIn(r).filter(
+		(i) => i.estimate_seconds && i.cycle_time_seconds !== undefined
+	);
 	const max = Math.max(
 		1,
 		...pts.flatMap((i) => [hours(i.estimate_seconds!), hours(i.cycle_time_seconds!)])
@@ -612,8 +647,11 @@ export function models(r: Report): string[] {
 function modelColor(t: Theme, model: string): string {
 	return t.series[modelSlot(model)];
 }
-const withUsage = (r: Report, epic?: string) =>
-	r.items.filter((i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic));
+/** The items completed in the window that carry usage, of an epic when one is chosen. */
+export const withUsage = (r: Report, epic?: string) =>
+	completedIn(r).filter(
+		(i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic)
+	);
 
 /** The series flai laid out for a type; none from a flai older than S-0163. */
 export function bucketsOf(r: Report, type: string = r.type): Bucket[] {
@@ -654,13 +692,14 @@ function hover(bucket: BucketSize, say: (v: number) => string, per: string) {
 }
 const BUCKET_MS: Record<BucketSize, number> = {
 	hour: 3600e3,
-	day: 86400e3,
-	week: 7 * 86400e3
+	day: DAY_MS,
+	week: 7 * DAY_MS
 };
 /**
- * What the charts over time share: buckets are UTC, so the axis is; it runs from a bucket before
- * the first drawn to one after the last, so that a single bucket is not a mark alone on an axis
- * of its own making, and its ticks are no finer than a bucket.
+ * What the charts over time share: buckets are UTC, so the axis is; it spans the report's window
+ * (S-0166), from the bucket that holds its start to the one that holds its now, with half a bucket
+ * either side so that the mark of each is whole, and its ticks are no finer than a bucket. A
+ * report without a window runs from a bucket before the first drawn to one after the last.
  */
 function overTime(
 	t: Theme,
@@ -670,9 +709,15 @@ function overTime(
 	say: (v: number) => string,
 	per: string
 ) {
-	const size = BUCKET_MS[bucketSize(r)];
+	const bucket = bucketSize(r);
+	const size = BUCKET_MS[bucket];
+	const w = windowOf(r);
 	const at = series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0])));
-	const range = at.length > 0 ? { min: Math.min(...at) - size, max: Math.max(...at) + size } : {};
+	const range = w
+		? { min: floorTo(w.start, bucket) - size / 2, max: floorTo(w.end, bucket) + size / 2 }
+		: at.length > 0
+			? { min: Math.min(...at) - size, max: Math.max(...at) + size }
+			: {};
 	return {
 		useUTC: true,
 		// room for the legend above the axis name, which a legend of four would run into
@@ -681,7 +726,7 @@ function overTime(
 		tooltip: tooltip(t, {
 			trigger: 'axis',
 			axisPointer: { type: 'line', lineStyle: { color: t.textSecondary, width: 1 } },
-			formatter: hover(bucketSize(r), say, per)
+			formatter: hover(bucket, say, per)
 		}),
 		xAxis: axisX(t, { type: 'time', minInterval: size, ...range }),
 		yAxis: axisY(t, {
@@ -978,7 +1023,7 @@ function completion(r: Report, t: Theme, against: 'time' | 'cost'): Opt {
 		xAxis: axisX(
 			t,
 			against === 'time'
-				? { type: 'time' }
+				? { type: 'time', ...span(r) }
 				: {
 						type: 'value',
 						name: 'US dollars spent',
