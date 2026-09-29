@@ -44,26 +44,50 @@ Computed over a window (default 30 days, by `completed`) and groupable by `type`
 - **Cancellation rate**: cancelled over cancelled plus done.
 - **Time-in-state share**: total time per state as a share of total lead time, the chart that shows which part of the process to optimise.
 
-## Usage (S-0143)
+## Usage (S-0143, S-0163)
 
-What agents spent on items, from each item's `usage` front matter ([work-hierarchy.md](work-hierarchy.md), [ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)). An item without `usage`, or with an empty one, has no usage values and is left out of every usage aggregate.
+What agents spent on items, from each item's `usage` front matter ([work-hierarchy.md](work-hierarchy.md), [ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)), and how it is laid out over time ([ADR-0053](../adrs/0053-usage-is-charted-as-spend-over-time-in-buckets-for-every-item-type-at-once-and.md)). An item without `usage`, or with an empty one, has no usage values and is left out of every usage aggregate.
 
 | Value | Definition |
 |-------|------------|
 | Tokens | Sum over the item's models of `input + output + cache_read + cache_write` |
 | Cost | Sum over the item's models of `cost`, in US dollars |
-| Agent hours | `seconds / 3600` |
-| Token rate | Tokens over agent hours; absent when `seconds` is 0 |
-| Per model | The same for each model the item lists: its tokens, its cost, and its tokens over the item's agent hours |
+| Agent minutes | `seconds / 60` |
+| Token rate | Tokens over agent minutes; absent when `seconds` is 0 |
+| Per model | The same for each model the item lists: its tokens, its cost, and its tokens over the item's agent minutes |
 | Estimated | The item's `estimated` |
 
 Aggregates cover the items of the report's type that entered `done` in the window and carry usage; cancelled items are left out:
 
 - **Totals**: items, tokens, cost, agent seconds, and whether any is estimated.
-- **Per model**: for each model, the items it worked on, its tokens and cost over them, and its tokens over the agent hours of those items.
+- **Per model**: for each model, the items it worked on, its tokens and cost over them, and its tokens over the agent minutes of those items.
 - **Completion against time and cost**: the items in order of `completed` (then ID), each point carrying `completed`, the ID, and the cumulative count of items, tokens, and cost up to and including it. Per model, the same over the items that model worked on, counting that model's tokens and cost.
 
-`flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage` (`items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`).
+### Spend over time (S-0163)
+
+Spend is laid out in buckets, for epics, for stories, and for tasks, whatever the report's type. Each type is summed over its own items: a story's usage holds its tasks' and is never added to them.
+
+| Term | Definition |
+|------|------------|
+| Bucket | An hour, a day, or an ISO week starting Monday, in UTC, named by its start. A day unless asked otherwise. An hour needs a window of 31 days or less |
+| An item's bucket | The one that holds the moment it entered `done`. Its whole usage counts there |
+| Series | For a type, one point per bucket from the bucket of the first item of that type done in the window with usage, to the bucket that holds now. A bucket with no such item is a point of zeros. A type with no such item has no points |
+
+A set of items, whether those of a bucket, of a type over the window, or of either that one model worked on, has these values:
+
+| Value | Definition |
+|-------|------------|
+| Items, tokens, cost, seconds | Their count and the sums of their tokens, cost, and agent seconds. For a model: the items it worked on, its own tokens and cost, and those items' agent seconds |
+| Estimated | Whether any of them is |
+| Tokens per item | Tokens over items: the mean an item took |
+| Cost per item | Cost over items |
+| Tokens per minute | Tokens over agent minutes |
+| Tokens per dollar | Tokens over cost |
+| Mean tokens, mean cost | Of a bucket only: the running mean per bucket, the sum from the first bucket of the series to this one over the number of those buckets |
+
+A value is absent when its divisor is zero.
+
+`flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, and since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, and its `models`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
 
 ## Charts
 
@@ -77,8 +101,13 @@ Aggregates cover the items of the report's type that entered `done` in the windo
 | Throughput | Bar per week | With nature breakdown |
 | Aging WIP | Active items by age since started, against the 85th percentile | Flags items likely to be late |
 | Estimate vs actual | Scatter, only items with `estimate` | |
-| Token rate | One point per item with usage and agent time, per model: x completed date (started for an open item), y the model's tokens per agent hour | By type: epic, story, task |
-| Cost | Bar per item with usage, stacked by model | Estimated costs marked |
+| Token rate | Per model, one point per bucket with agent time: the model's tokens per agent minute over the items done in the bucket | Of the report's type. Replaces the point per item in tokens per agent hour (S-0163) |
+| Tokens per bucket | Bar per bucket, the tokens of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Titled by the bucket: tokens per day |
+| Tokens per item | One point per bucket with items: tokens per item, one series per type | Or one series per model, for the report's type |
+| Tokens per dollar | Per model, one point per bucket with cost: tokens over cost | Of the report's type |
+| Cost per bucket | Bar per bucket, the cost of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Estimated costs marked |
+| Cost per item | One point per bucket with items: cost per item, one series per type | Or one series per model, for the report's type |
+| Cost by item | Bar per item with usage, stacked by model | Estimated costs marked |
 | Completion against time | Per model, cumulative items done over time | The per model `done` series |
 | Completion against cost | Per model, cumulative items done over cumulative cost | The same series, x cost |
 
@@ -94,6 +123,7 @@ So that `flai stats` and the dashboard agree to the second:
 - Throughput per week is completed items in the window divided by window days over seven. Weekly buckets are ISO weeks starting Monday.
 - Flow efficiency averages `(cycle - blocked) / cycle` over completed items with a positive cycle time.
 - Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
+- A bucket holds the moments from its start up to, not including, the next one's. A week's bucket starts on the Monday of the ISO week, at 00:00:00 UTC. The running mean divides by the number of buckets from the first of the series, empty ones counted.
 
 ## Data access
 
