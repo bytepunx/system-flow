@@ -16,6 +16,17 @@ transitions:
     by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
+usage:
+  source: sum
+  seconds: 1917
+  estimated: true
+  models:
+    - model: claude-fable-5-1
+      input: 178
+      output: 1236
+      cache_read: 19720001
+      cache_write: 356115
+      cost: 32.726
 ---
 # E-0011 Agent Status, Telemetry, and Stream
 
