@@ -25,7 +25,12 @@ export type Inbox = {
 type FlaiEntry = Omit<InboxEntry, 'href'> & { path?: string };
 
 /** Where an entry leads: the review page for a story in review, a question's own narrative document (even once it also carries an item id, to answer it in place), a thread on an item to that item's page opened on the thread (S-0155), else its item, else its document. */
-export function hrefFor(e: { kind: InboxKind; key?: string; item?: string; path?: string }): string {
+export function hrefFor(e: {
+	kind: InboxKind;
+	key?: string;
+	item?: string;
+	path?: string;
+}): string {
 	if (e.kind === 'review' && e.item) return `/review/${e.item}`;
 	if (e.kind === 'question' && e.path) return `/docs/${e.path}`;
 	const thread = e.kind === 'thread' ? e.key?.replace(/^thread:/, '') : undefined;

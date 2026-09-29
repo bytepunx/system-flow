@@ -23,9 +23,12 @@ const thread = (text: string) => ({
 	entries: [{ at: '2026-09-26T07:00:00Z', author: 'agent', text }]
 });
 
+const scrollIntoView = Element.prototype.scrollIntoView;
+
 describe('Threads', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	afterEach(() => {
+		Element.prototype.scrollIntoView = scrollIntoView;
 		if (c) unmount(c);
 		c = undefined;
 		api.mockReset();
@@ -276,6 +279,43 @@ describe('Threads', () => {
 
 		expect(entryTexts()).toEqual(['Entry 1.', 'Entry 2.']);
 		expect(toggle()).toBeNull();
+	});
+
+	it('opens on the thread a link names and brings it into view (S-0155)', async () => {
+		const scroll = vi.fn();
+		Element.prototype.scrollIntoView = scroll;
+		let list = [1, 2, 3].map(numbered);
+		api.mockImplementation(async (path: string) => ({
+			ok: true,
+			json: async () => (path.startsWith('/api/threads?') ? list : {})
+		}));
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001', select: 'TH-0002' } });
+		await settle();
+
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0002');
+		for (const p of pagers()) expect(p.querySelector('span')!.textContent).toBe('2 of 3');
+		expect(scroll).toHaveBeenCalledTimes(1);
+		expect(scroll.mock.instances[0]).toBe(document.querySelector('section[data-threads]'));
+
+		// Paging away and a reload keep the reader where they went, not where the link pointed.
+		arrow(pagers()[0], 'next').click();
+		flushSync();
+		list = [...list, numbered(4)];
+		const input = document.querySelector('article input') as HTMLInputElement;
+		input.value = 'ok';
+		input.dispatchEvent(new Event('input'));
+		(document.querySelector('article form') as HTMLFormElement).requestSubmit();
+		await settle();
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0003');
+		expect(scroll).toHaveBeenCalledTimes(1);
+	});
+
+	it('opens on the first thread when the one a link names is not there (S-0155)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [1, 2].map(numbered) });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001', select: 'TH-0009' } });
+		await settle();
+
+		expect(document.querySelector('article')!.dataset.thread).toBe('TH-0001');
 	});
 
 	it('shows no pager for a single thread (S-0133)', async () => {

@@ -4,6 +4,7 @@
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
+	import { tick } from 'svelte';
 
 	type Entry = { at: string; author: string; text: string; operator?: boolean };
 	type Thread = {
@@ -20,13 +21,16 @@
 		on,
 		headings = [],
 		writable = true,
-		compose
+		compose,
+		select
 	}: {
 		on: string;
 		headings?: string[];
 		writable?: boolean;
 		/** A heading to start a new thread on: opens the composer with it selected (the editor's "open a thread on this heading", S-0040). */
 		compose?: string;
+		/** A thread to open on, such as the one an inbox entry leads to (S-0155). */
+		select?: string;
 	} = $props();
 
 	let threads = $state<Thread[]>([]);
@@ -78,6 +82,15 @@
 		const t = threads[index + step];
 		if (t) current = t.id;
 	}
+	// The thread a link names is opened, and the section brought into view, once it is in the
+	// list; a reload after the reader pages away leaves them where they are (S-0155).
+	let section = $state<HTMLElement>();
+	let selected: string | undefined;
+	$effect(() => {
+		if (!select || select === selected || !threads.some((t) => t.id === select)) return;
+		selected = current = select;
+		void tick().then(() => section?.scrollIntoView?.({ block: 'start' }));
+	});
 	$effect(() => {
 		void on;
 		void showResolved;
@@ -151,7 +164,7 @@
 	{/if}
 {/snippet}
 
-<section class="mt-6 text-sm" data-threads={on}>
+<section bind:this={section} class="mt-6 text-sm" data-threads={on}>
 	<div class="flex flex-wrap items-center gap-3">
 		<h2 class="font-medium">Threads</h2>
 		{@render pager('above')}

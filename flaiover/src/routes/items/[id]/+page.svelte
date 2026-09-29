@@ -299,7 +299,7 @@
 					{@html html}
 				</article>
 			{/if}
-			<Threads on={item.id} {writable} />
+			<Threads on={item.id} {writable} select={page.url.searchParams.get('thread') ?? undefined} />
 		</div>
 		<aside class="space-y-4 text-sm">
 			{#if item.type === 'story'}<StoryAgent
