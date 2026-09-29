@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import HostAgentNotice from './HostAgentNotice.svelte';
+import type { HostAgent } from '$lib/activity';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -12,6 +13,7 @@ const settle = async () => {
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
 const notice = () => document.querySelector<HTMLElement>('[data-testid="host-agent"]');
 const text = () => notice()!.textContent!.replace(/\s+/g, ' ');
+const toggle = () => document.querySelector<HTMLButtonElement>('[data-testid="host-agent-toggle"]');
 const run = {
 	story: 'S-0079',
 	command: 'claude',
@@ -27,6 +29,7 @@ describe('HostAgentNotice (S-0079)', () => {
 		c = undefined;
 		api.mockReset();
 		document.body.innerHTML = '';
+		localStorage.clear();
 	});
 	const show = async (body: unknown) => {
 		api.mockResolvedValue(answer(body));
@@ -48,7 +51,9 @@ describe('HostAgentNotice (S-0079)', () => {
 		await show({ enabled: true, state: { command: 'claude', running: run } });
 		expect(text()).toContain('Agent started for S-0079 by claude as builder, 2026-09-20 16:00 UTC');
 		expect(text()).toContain('Stopping an agent is done on the host; the dashboard cannot');
-		expect(document.querySelectorAll('button')).toHaveLength(0);
+		// its one button collapses it; nothing here acts on the agent
+		expect(document.querySelectorAll('button')).toHaveLength(1);
+		expect(toggle()).not.toBeNull();
 	});
 
 	it('says when a command could not be started, and why a ready story waits', async () => {
@@ -74,7 +79,13 @@ describe('HostAgentNotice (S-0079)', () => {
 			enabled: true,
 			state: { command: 'claude', last: { ...run, ended: '2026-09-20T16:30:00Z', exit: 2 } }
 		});
+		expect(text()).toContain('Agent ended');
 		expect(text()).toContain('ended 2026-09-20 16:30 UTC with exit code 2');
+	});
+
+	it('says why a ready story waits when no agent has run', async () => {
+		await show({ enabled: true, state: { command: 'claude', waiting: 'S-0150 waits for room' } });
+		expect(text()).toContain('A ready story is waiting: S-0150 waits for room.');
 	});
 
 	// S-0104: the board asks once and shares the answer with its cards
@@ -86,5 +97,67 @@ describe('HostAgentNotice (S-0079)', () => {
 		await settle();
 		expect(api).not.toHaveBeenCalled();
 		expect(text()).toContain('Agent started for S-0079 by claude as builder');
+	});
+
+	// S-0150: the caret collapses the notice to its bold title, and a new status opens it again
+	describe('collapsing', () => {
+		const given = (state: HostAgent['state']): HostAgent => ({ enabled: true, state });
+		const mountWith = async (status: HostAgent) => {
+			c = mount(HostAgentNotice, { target: document.body, props: { status } });
+			await settle();
+		};
+		const click = async () => {
+			toggle()!.click();
+			await settle();
+		};
+
+		it('collapses to its title and expands again', async () => {
+			await mountWith(given({ command: 'claude', running: run }));
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('true');
+			await click();
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('false');
+			expect(text().trim()).toBe('▸Agent started');
+			await click();
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('true');
+			expect(text()).toContain('Agent started for S-0079 by claude as builder');
+		});
+
+		it('keeps the collapse across a reload and an equal answer', async () => {
+			await mountWith(given({ command: 'claude', running: run }));
+			await click();
+			unmount(c!);
+			// the board's 15 s re-ask hands over a fresh object that says the same
+			await mountWith(given({ command: 'claude', running: { ...run } }));
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('false');
+			expect(text().trim()).toBe('▸Agent started');
+		});
+
+		it('opens again when the status changes', async () => {
+			const props = $state({ status: given({ command: 'claude', running: run }) });
+			c = mount(HostAgentNotice, { target: document.body, props });
+			await settle();
+			await click();
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('false');
+			props.status = given({ command: 'claude', running: { ...run } });
+			await settle();
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('false');
+			props.status = given({
+				command: 'claude',
+				last: { ...run, ended: '2026-09-20T16:30:00Z', exit: 0 }
+			});
+			await settle();
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('true');
+			expect(text()).toContain('Agent ended: the one started for S-0079');
+			// and the old status coming back does not collapse it again
+			props.status = given({ command: 'claude', running: run });
+			await settle();
+			expect(toggle()!.getAttribute('aria-expanded')).toBe('true');
+		});
+
+		it('collapses a failure to its title', async () => {
+			await mountWith(given({ command: 'claude', last: { ...run, error: 'not found' } }));
+			await click();
+			expect(text().trim()).toBe('▸No agent could be started');
+		});
 	});
 });

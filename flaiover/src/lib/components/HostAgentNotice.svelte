@@ -5,6 +5,8 @@
 	// and configuring are done on the host; nothing here can.
 	// The board asks once and passes what it heard (S-0104), so that its cards' dots and this notice
 	// share one answer; without it the notice asks for itself.
+	// The caret beside its bold title collapses it to that title (S-0150). The collapse is kept per
+	// browser against what the notice says, so a reload keeps it and any change to it opens it again.
 	import { api } from '$lib/api';
 	import type { HostAgent } from '$lib/activity';
 
@@ -27,7 +29,52 @@
 
 	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
 	const st = $derived(status?.enabled ? status.state : undefined);
+
+	const KEY = 'flaiover-host-agent-collapsed';
+	function stored(): string | null {
+		try {
+			return localStorage.getItem(KEY);
+		} catch {
+			return null;
+		}
+	}
+	function keep(v: string | null) {
+		try {
+			if (v === null) localStorage.removeItem(KEY);
+			else localStorage.setItem(KEY, v);
+		} catch {
+			// a browser that stores nothing collapses for this page only
+		}
+	}
+	// What the notice says; the 15 s re-ask returns an equal one, which leaves a collapse alone.
+	const said = $derived(
+		st ? JSON.stringify([st.command, st.running ?? null, st.last ?? null, st.waiting ?? null]) : ''
+	);
+	let collapsed = $state<string | null>(stored());
+	const open = $derived(collapsed !== said);
+	$effect(() => {
+		if (said && collapsed !== null && collapsed !== said) {
+			collapsed = null;
+			keep(null);
+		}
+	});
+	function toggle() {
+		collapsed = open ? said : null;
+		keep(collapsed);
+	}
 </script>
+
+{#snippet title(text: string)}
+	<button
+		type="button"
+		class="cursor-pointer font-semibold"
+		aria-expanded={open}
+		data-testid="host-agent-toggle"
+		onclick={toggle}
+		><span aria-hidden="true" class="inline-block w-3 text-xs text-muted">{open ? '▾' : '▸'}</span
+		>{text}</button
+	>
+{/snippet}
 
 {#if st && (st.running || st.last || st.waiting)}
 	<div
@@ -37,36 +84,46 @@
 	>
 		{#if st.running}
 			<p>
-				<span class="font-semibold">Agent started</span> for {st.running.story} by
-				<code class="rounded bg-surface px-1">{st.running.command}</code> as {st.running.agent}, {at(
-					st.running.started
-				)}. It is running on the host.
+				{@render title('Agent started')}
+				{#if open}for {st.running.story} by
+					<code class="rounded bg-surface px-1">{st.running.command}</code> as {st.running.agent}, {at(
+						st.running.started
+					)}. It is running on the host.{/if}
 			</p>
 		{:else if st.last?.error}
 			<p class="text-danger" data-testid="host-agent-failed">
-				<span class="font-semibold">No agent could be started</span> for {st.last.story}:
-				<code class="rounded bg-surface px-1">{st.last.command}</code>
-				{st.last.error} ({at(st.last.started)}). The operator sets the command on the host with
-				<code class="rounded bg-surface px-1">flai serve agent set</code>.
+				{@render title('No agent could be started')}
+				{#if open}for {st.last.story}:
+					<code class="rounded bg-surface px-1">{st.last.command}</code>
+					{st.last.error} ({at(st.last.started)}). The operator sets the command on the host with
+					<code class="rounded bg-surface px-1">flai serve agent set</code>.{/if}
 			</p>
 		{:else if st.last}
 			<p>
-				The agent started for {st.last.story} by
-				<code class="rounded bg-surface px-1">{st.last.command}</code>
-				{at(st.last.started)} ended{st.last.ended ? ` ${at(st.last.ended)}` : ''}{st.last.exit
-					? ` with exit code ${st.last.exit}`
-					: ''}.
+				{@render title('Agent ended')}{#if open}: the one started for {st.last.story} by
+					<code class="rounded bg-surface px-1">{st.last.command}</code>
+					{at(st.last.started)} ended{st.last.ended ? ` ${at(st.last.ended)}` : ''}{st.last.exit
+						? ` with exit code ${st.last.exit}`
+						: ''}.{/if}
+			</p>
+		{:else}
+			<p>
+				{@render title('A ready story is waiting')}{#if open}:
+					<span data-testid="host-agent-waiting">{st.waiting}</span>.{/if}
 			</p>
 		{/if}
-		{#if st.waiting}
-			<p class="mt-1 text-xs" data-testid="host-agent-waiting">
-				A ready story is waiting: {st.waiting}.
+		{#if open}
+			{#if st.waiting && (st.running || st.last)}
+				<p class="mt-1 text-xs" data-testid="host-agent-waiting">
+					A ready story is waiting: {st.waiting}.
+				</p>
+			{/if}
+			<p class="mt-1 text-xs text-muted">
+				flai on the host starts each ready story's agent{#if st.command}, or <code
+						>{st.command}</code
+					> for a story that names no harness{/if}, while the in-progress limit leaves room.
+				Stopping an agent is done on the host; the dashboard cannot.
 			</p>
 		{/if}
-		<p class="mt-1 text-xs text-muted">
-			flai on the host starts each ready story's agent{#if st.command}, or <code>{st.command}</code> for
-				a story that names no harness{/if}, while the in-progress limit leaves room. Stopping an
-			agent is done on the host; the dashboard cannot.
-		</p>
 	</div>
 {/if}
