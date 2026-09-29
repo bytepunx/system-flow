@@ -390,10 +390,10 @@ func (fw *folderWaits) work(ctx context.Context, _ *mcp.CallToolRequest, in Work
 	return nil, answer(out), nil
 }
 
-func (fw *folderWaits) catchUp() ([]Event, int, error) {
+func (fw *folderWaits) catchUp(ctx context.Context) ([]Event, int, error) {
 	events, omitted := []Event{}, 0
 	for _, s := range fw.f.all() {
-		some, n, err := s.catchUp()
+		some, n, err := s.catchUp(ctx)
 		if err != nil {
 			return nil, 0, fmt.Errorf("%s: %w", s.key, err)
 		}
@@ -407,7 +407,7 @@ func (fw *folderWaits) catchUp() ([]Event, int, error) {
 }
 
 func (fw *folderWaits) events(ctx context.Context, _ *mcp.CallToolRequest, in WaitIn) (*mcp.CallToolResult, WaitOut, error) {
-	events, omitted, err := fw.catchUp()
+	events, omitted, err := fw.catchUp(ctx)
 	if err != nil {
 		return nil, WaitOut{}, err
 	}
@@ -430,7 +430,7 @@ func (fw *folderWaits) events(ctx context.Context, _ *mcp.CallToolRequest, in Wa
 			}
 			out.Changed = append(out.Changed, fw.f.rel(p))
 		}
-		events, omitted, err := fw.catchUp()
+		events, omitted, err := fw.catchUp(ctx)
 		out.Events, out.Omitted = events, omitted
 		return true, err
 	})

@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -102,11 +103,16 @@ type Event struct {
 // all of them: what a look leaves out never comes back in a later one. A
 // first look, with no cursor, is told of stories and epics only; a day of
 // task transitions is history to an agent that has just arrived, not news.
-func (s *server) catchUp() ([]Event, int, error) {
-	items, err := s.repo.List(true)
+func (s *server) catchUp(ctx context.Context) ([]Event, int, error) {
+	items, err := s.listItems(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
+	return s.catchUpWith(items)
+}
+
+// catchUpWith is catchUp over items already listed, archive included.
+func (s *server) catchUpWith(items []*workitem.Item) ([]Event, int, error) {
 	board, err := s.repo.LoadBoard()
 	if err != nil {
 		return nil, 0, err

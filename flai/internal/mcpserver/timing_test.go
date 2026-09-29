@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -89,5 +90,48 @@ func TestEachToolCallIsTimedBeneathTheTransport(t *testing.T) {
 	// a request that is not a tool call is named by its method
 	if got["tools/call"] != nil || len(got) < 3 {
 		t.Errorf("methods timed: %v", got)
+	}
+}
+
+// inbox lists the items once for the board and the changes (S-0156).
+func TestInboxListsItemsOnce(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var logs lockedBuffer
+	srv := New(Options{Repo: repo, Agent: "claude", Version: "test",
+		Logger: slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})), Slow: time.Nanosecond})
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ct, st := mcp.NewInMemoryTransports()
+	if _, err := srv.Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, nil).Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	if res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "inbox", Arguments: map[string]any{}}); err != nil || res.IsError {
+		t.Fatalf("inbox: %v %+v", err, res)
+	}
+	phases, _ := logs.answered(t)["inbox"]["phases"].(string)
+	lists := 0
+	for _, p := range strings.Fields(phases) {
+		if name, took, _ := strings.Cut(p, "="); name == "repo.list" {
+			lists = 1
+			if _, n, ok := strings.Cut(took, "x"); ok {
+				lists, _ = strconv.Atoi(n)
+			}
+		}
+	}
+	if lists != 1 {
+		t.Errorf("inbox listed the items %d times: %s", lists, phases)
 	}
 }

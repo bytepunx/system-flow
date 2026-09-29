@@ -217,7 +217,12 @@ func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) 
 		}
 		out.Threads = append(out.Threads, sum)
 	}
-	view, err := s.boardView(ctx, false)
+	// one list for the board and the changes (S-0156)
+	items, err := s.listItems(ctx)
+	if err != nil {
+		return nil, InboxOut{}, err
+	}
+	view, err := s.boardViewOf(ctx, items, false)
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
@@ -226,7 +231,7 @@ func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) 
 		out.Ready = []workitem.BoardCard{}
 	}
 	done = perf.Track(ctx, "changes.read")
-	out.Changes, out.Omitted, err = s.catchUp()
+	out.Changes, out.Omitted, err = s.catchUpWith(items)
 	done()
 	if err != nil {
 		return nil, InboxOut{}, err
@@ -235,15 +240,24 @@ func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) 
 }
 
 func (s *server) boardView(ctx context.Context, all bool) (workitem.BoardView, error) {
-	// true: a done story stays visible until it is published (S-0087), which
-	// NewBoardView decides from PendingIDs, not from this flag.
-	done := perf.Track(ctx, "repo.list")
-	items, err := s.repo.List(true)
-	done()
+	items, err := s.listItems(ctx)
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
-	done = perf.Track(ctx, "board.load")
+	return s.boardViewOf(ctx, items, all)
+}
+
+// listItems lists every item, archive included: a done story stays visible
+// until it is published (S-0087), which NewBoardView decides from
+// PendingIDs, not from the list.
+func (s *server) listItems(ctx context.Context) ([]*workitem.Item, error) {
+	defer perf.Track(ctx, "repo.list")()
+	return s.repo.List(true)
+}
+
+// boardViewOf is the board of items listed with listItems.
+func (s *server) boardViewOf(ctx context.Context, items []*workitem.Item, all bool) (workitem.BoardView, error) {
+	done := perf.Track(ctx, "board.load")
 	board, err := s.repo.LoadBoard()
 	done()
 	if err != nil {
@@ -701,7 +715,7 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 	// Anything that happened between two calls is behind the cursor already:
 	// report it now rather than wait for the next change.
 	before := s.snapshot()
-	if events, omitted, err := s.catchUp(); err != nil {
+	if events, omitted, err := s.catchUp(ctx); err != nil {
 		return nil, WaitOut{}, err
 	} else if len(events) > 0 {
 		return nil, WaitOut{Events: events, Omitted: omitted, Changed: []string{}}, nil
@@ -735,7 +749,7 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 				changed = shown
 				// Paths say something changed (a thread, a narrative, this
 				// agent's own write); events say what others did to work items.
-				events, omitted, err := s.catchUp()
+				events, omitted, err := s.catchUp(ctx)
 				if err != nil {
 					return nil, WaitOut{}, err
 				}
