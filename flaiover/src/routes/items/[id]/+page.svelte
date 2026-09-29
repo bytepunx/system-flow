@@ -16,7 +16,7 @@
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
 	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
-	import type { Hold } from '$lib/activity';
+	import type { Hold, StoryActivity } from '$lib/activity';
 
 	type Transition = { to: string; at: string; by: string };
 	type Block = { from: string; until?: string; reason: string };
@@ -71,6 +71,8 @@
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
 	// Another story's claim holds it in ready (S-0129): StoryAgent reads it from flai and says why.
 	let hold = $state<Hold | undefined>();
+	// What the story's agent is doing, for its threads to say it is working on a reply (S-0154).
+	let activity = $state<StoryActivity | undefined>();
 	const narrative = $derived(
 		item?.type === 'story'
 			? `wip/${item.archived ? 'archive/agents' : 'agents'}/${item.id}.md`
@@ -329,7 +331,12 @@
 					{@html html}
 				</article>
 			{/if}
-			<Threads on={item.id} {writable} select={page.url.searchParams.get('thread') ?? undefined} />
+			<Threads
+				on={item.id}
+				{writable}
+				select={page.url.searchParams.get('thread') ?? undefined}
+				agent={item.type === 'story' ? activity : undefined}
+			/>
 		</div>
 		<aside class="space-y-4 text-sm">
 			{#if item.type === 'story'}<StoryAgent
@@ -337,6 +344,7 @@
 					status={item.status}
 					writable={writable && !item.archived}
 					onhold={(h) => (hold = h)}
+					onactivity={(a) => (activity = a)}
 				/>{/if}
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>

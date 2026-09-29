@@ -104,6 +104,43 @@ describe('the item page (S-0154)', () => {
 		expect(enhance).toHaveBeenCalledTimes(2);
 	});
 
+	it("says in the story's thread that its agent is working on the operator's reply", async () => {
+		const reply = {
+			id: 'TH-0040',
+			title: 'Which animation?',
+			anchor: { path: story.path, item: 'S-0154' },
+			status: 'answered',
+			participants: ['agent-S-0154', 'alex'],
+			updated: '2026-09-29T08:05:00Z',
+			entries: [
+				{ at: '2026-09-29T08:00:00Z', author: 'agent-S-0154', text: 'Dots or a bar?' },
+				{ at: '2026-09-29T08:05:00Z', author: 'alex', text: 'Dots.', operator: true }
+			]
+		};
+		const run = {
+			story: 'S-0154',
+			command: 'claude',
+			agent: 'agent-S-0154',
+			started: '2026-09-29T07:06:00Z'
+		};
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/items/S-0154') return answer({ item: story, children: [] });
+			if (url === '/api/board') return answer({ writable: false });
+			if (url.startsWith('/api/threads')) return answer([reply]);
+			if (url === '/api/host-agent')
+				return answer({
+					enabled: true,
+					state: { command: 'claude', stories: { 'S-0154': { state: 'working', run } } }
+				});
+			return answer({});
+		});
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		expect(document.querySelector('[data-testid="agent-working"]')!.textContent).toContain(
+			'agent-S-0154 is working on your reply'
+		);
+	});
+
 	it('stops following the project once it is left', async () => {
 		serve(story);
 		c = mount(ItemPage, { target: document.body });

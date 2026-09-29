@@ -19,7 +19,8 @@
 		reasonParts,
 		storyActivity,
 		type Hold,
-		type HostAgent
+		type HostAgent,
+		type StoryActivity
 	} from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 
@@ -27,13 +28,16 @@
 		story,
 		status: storyStatus = '',
 		writable = false,
-		onhold
+		onhold,
+		onactivity
 	}: {
 		story: string;
 		status?: string;
 		writable?: boolean;
 		/** Told the story's hold each time it changes, undefined once it clears. */
 		onhold?: (hold: Hold | undefined) => void;
+		/** Told what the story's agent is doing each time it changes, for its threads (S-0154). */
+		onactivity?: (activity: StoryActivity | undefined) => void;
 	} = $props();
 	let status = $state<HostAgent | null>(null);
 	let acting = $state<'start' | 'restart' | null>(null);
@@ -68,6 +72,9 @@
 	const activity = $derived(storyActivity(status)[story]);
 	$effect(() => {
 		onhold?.(activity?.hold);
+	});
+	$effect(() => {
+		onactivity?.(activity);
 	});
 	// A held story's run is flai's stand-in when it never had an agent: it has not started.
 	const started = $derived(!!activity?.run.started);

@@ -6,6 +6,7 @@
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import { debounced, listen } from '$lib/events';
+	import type { StoryActivity } from '$lib/activity';
 
 	type Entry = { at: string; author: string; text: string; operator?: boolean };
 	type Thread = {
@@ -23,7 +24,8 @@
 		headings = [],
 		writable = true,
 		compose,
-		select
+		select,
+		agent
 	}: {
 		on: string;
 		headings?: string[];
@@ -32,6 +34,8 @@
 		compose?: string;
 		/** A thread to open on, such as the one an inbox entry leads to (S-0155). */
 		select?: string;
+		/** What the story's agent is doing, on a story's page (S-0154). */
+		agent?: StoryActivity;
 	} = $props();
 
 	let threads = $state<Thread[]>([]);
@@ -56,6 +60,15 @@
 	// earlier ones, per thread and kept while paging (S-0153, TH-0035).
 	const LATEST = 2;
 	let earlier = $state<Record<string, boolean>>({});
+
+	/**
+	 * Whether the story's agent is at work on the operator's reply that ends this thread (S-0154):
+	 * it runs, or it ended asking this thread and flai is starting it again now that it is answered.
+	 */
+	function working(t: Thread): boolean {
+		if (!agent || t.status === 'resolved' || !t.entries.at(-1)?.operator) return false;
+		return agent.state === 'working' || (agent.state === 'waiting' && agent.thread === t.id);
+	}
 
 	$effect(() => {
 		if (compose && writable) {
@@ -279,6 +292,24 @@
 					</li>
 				{/each}
 			</ol>
+			{#if working(t)}
+				<!-- On the agent's side, where its answer will appear; still for a reader who asks for less motion. -->
+				<p
+					class="mt-2 flex items-center gap-2 text-xs text-muted"
+					role="status"
+					data-testid="agent-working"
+				>
+					<span class="flex gap-1" aria-hidden="true">
+						{#each [0, 150, 300] as delay (delay)}
+							<span
+								class="h-1.5 w-1.5 rounded-full bg-dot-working motion-safe:animate-bounce"
+								style="animation-delay: {delay}ms"
+							></span>
+						{/each}
+					</span>
+					{agent?.run.agent || 'the agent'} is working on your reply
+				</p>
+			{/if}
 			{#if writable}
 				<form
 					class="mt-2 flex gap-2"

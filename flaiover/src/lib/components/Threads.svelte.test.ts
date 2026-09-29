@@ -126,6 +126,59 @@ describe('Threads', () => {
 		expect(events.heard).toHaveLength(0);
 	});
 
+	describe("the agent working on the operator's reply (S-0154)", () => {
+		const replied = (status = 'answered') => ({
+			...thread('Which port?'),
+			status,
+			entries: [
+				{ at: '2026-09-26T07:00:00Z', author: 'agent-S-0001', text: 'Which port?' },
+				{ at: '2026-09-26T07:05:00Z', author: 'alex', text: 'Use port 8080.', operator: true }
+			]
+		});
+		const run = {
+			story: 'S-0001',
+			command: 'claude',
+			agent: 'agent-S-0001',
+			started: '2026-09-26T06:00:00Z'
+		};
+		const shown = async (t: unknown, agent?: unknown) => {
+			api.mockResolvedValue({ ok: true, json: async () => [t] });
+			c = mount(Threads, { target: document.body, props: { on: 'S-0001', agent } as never });
+			await settle();
+			return document.querySelector<HTMLElement>('[data-testid="agent-working"]');
+		};
+
+		it("shows a moving line on the agent's side while the agent works after a reply", async () => {
+			const line = await shown(replied(), { state: 'working', run });
+			expect(line).not.toBeNull();
+			expect(line!.getAttribute('role')).toBe('status');
+			expect(line!.textContent).toContain('agent-S-0001 is working on your reply');
+			const dots = line!.querySelectorAll('[aria-hidden="true"] > span');
+			expect(dots).toHaveLength(3);
+			expect(dots[0].className).toContain('motion-safe:animate-bounce');
+		});
+
+		it('shows it while flai starts again the agent that ended asking this thread', async () => {
+			const ended = { ...run, ended: '2026-09-26T07:01:00Z' };
+			expect(
+				await shown(replied(), { state: 'waiting', thread: 'TH-0001', run: ended })
+			).not.toBeNull();
+		});
+
+		it("shows nothing after an agent's entry, on a resolved thread, or with no agent", async () => {
+			expect(await shown(thread('Which port?'), { state: 'working', run })).toBeNull();
+			unmount(c!);
+			expect(await shown(replied('resolved'), { state: 'working', run })).toBeNull();
+			unmount(c!);
+			expect(await shown(replied())).toBeNull();
+			unmount(c!);
+			// waiting on another question, or finished: not at work on this reply
+			expect(await shown(replied(), { state: 'waiting', thread: 'TH-0002', run })).toBeNull();
+			unmount(c!);
+			expect(await shown(replied(), { state: 'worked', run })).toBeNull();
+		});
+	});
+
 	it('shows one thread at a time with its place above and below (S-0133)', async () => {
 		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });
 		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
