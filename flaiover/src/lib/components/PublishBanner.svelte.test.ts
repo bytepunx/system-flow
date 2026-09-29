@@ -72,6 +72,11 @@ describe('PublishBanner', () => {
 		expect(onpublished).toHaveBeenCalledOnce();
 		const done = document.querySelector('[data-testid="published"]')!.textContent!;
 		expect(done).toContain('Published cli/v1.1.0, pushed.');
+		// S-0151: the result is dismissed by its X, and the plan stays
+		document.querySelector<HTMLButtonElement>('[data-testid="dismiss"]')!.click();
+		flushSync();
+		expect(document.querySelector('[data-testid="published"]')).toBeNull();
+		expect(pending()).not.toBeNull();
 	});
 
 	it('shows why a publish was refused and keeps the pending plan visible', async () => {

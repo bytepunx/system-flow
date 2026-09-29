@@ -3,6 +3,7 @@
 	import { projectState } from '$lib/project.svelte';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
+	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 
 	type Adr = {
 		path: string;
@@ -70,14 +71,14 @@
 	{/if}
 </div>
 {#if notice}
-	<p
+	<DismissibleNotice
 		class="mt-2 rounded border p-2 text-sm {notice.kind === 'error'
 			? 'border-danger bg-danger-soft text-danger'
 			: 'border-good bg-good-soft text-good'}"
-		role="status"
-	>
-		{notice.text}
-	</p>
+		testid="adrs-notice"
+		text={notice.text}
+		ondismiss={() => (notice = null)}
+	/>
 {/if}
 <p class="mt-1 text-sm text-muted">
 	{adrs.length} records. Superseded decisions point at their successors.

@@ -10,6 +10,7 @@
 	import { compose, headingAt, headingsOf, splitRaw } from '$lib/edit';
 	import { touching, type Worker } from '$lib/touches';
 	import Threads from '$lib/components/Threads.svelte';
+	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 
 	type Doc = {
 		path: string;
@@ -229,9 +230,12 @@
 		</div>
 
 		{#if notice}
-			<p class="mt-3 rounded border border-good bg-good-soft p-2 text-sm text-good" role="status">
-				{notice}
-			</p>
+			<DismissibleNotice
+				class="mt-3 rounded border border-good bg-good-soft p-2 text-sm text-good"
+				testid="doc-editor-notice"
+				text={notice}
+				ondismiss={() => (notice = null)}
+			/>
 		{/if}
 		{#if error}
 			<div

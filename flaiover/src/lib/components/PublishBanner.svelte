@@ -5,6 +5,7 @@
 	// gate the old automatic push used). The plan is shown before it runs, same as an acceptance's
 	// preview; what happened after, success or flai's error verbatim, same as the review page.
 	import { api } from '$lib/api';
+	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 
 	type PendingItem = { id: string; title: string; level: string };
 	type PendingPlan = {
@@ -57,13 +58,12 @@
 </script>
 
 {#if result}
-	<p
+	<DismissibleNotice
 		class="mb-2 rounded border border-good bg-good-soft p-2 text-xs text-good"
-		role="status"
-		data-testid="published"
-	>
-		{result}
-	</p>
+		testid="published"
+		text={result}
+		ondismiss={() => (result = null)}
+	/>
 {/if}
 {#if plans.length > 0}
 	<div

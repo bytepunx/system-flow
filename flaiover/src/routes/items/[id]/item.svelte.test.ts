@@ -141,6 +141,31 @@ describe('the item page (S-0154)', () => {
 		);
 	});
 
+	it('dismisses the notice a refused edit leaves by its X (S-0151)', async () => {
+		const ticked = {
+			...story,
+			body: '# S-0154\n\n## Goal\n\nPages follow the project.\n\n## Acceptance criteria\n\n- [ ] Live\n'
+		};
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/items/S-0154') return answer({ item: ticked, children: [] });
+			if (url === '/api/board') return answer({ writable: true });
+			if (url === '/api/items/S-0154/edit')
+				return { ok: false, json: async () => ({ error: 'the story is being edited' }) };
+			if (url.startsWith('/api/threads')) return answer([]);
+			return answer({ enabled: false });
+		});
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		const box = document.querySelector<HTMLInputElement>('input[aria-label="criterion 1"]')!;
+		box.click();
+		await settle();
+		const notice = () => document.querySelector('[data-testid="item-notice"]');
+		expect(notice()!.textContent).toBe('refused: the story is being edited');
+		document.querySelector<HTMLButtonElement>('[data-testid="dismiss"]')!.click();
+		flushSync();
+		expect(notice()).toBeNull();
+	});
+
 	it('stops following the project once it is left', async () => {
 		serve(story);
 		c = mount(ItemPage, { target: document.body });

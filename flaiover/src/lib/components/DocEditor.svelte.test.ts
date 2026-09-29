@@ -82,6 +82,10 @@ describe('DocEditor', () => {
 			content: DOC.replace('text', 'better text')
 		});
 		expect(document.body.textContent).toContain('committed as abc1234');
+		// S-0151: the saved notice is dismissed by its X
+		document.querySelector<HTMLButtonElement>('[data-testid="dismiss"]')!.click();
+		flushSync();
+		expect(document.querySelector('[data-testid="doc-editor-notice"]')).toBeNull();
 	});
 
 	it('shows flai-owned front matter read-only and sends it back unchanged', async () => {

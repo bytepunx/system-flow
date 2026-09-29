@@ -12,6 +12,7 @@
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import { anyRunning, storyActivity, type HostAgent } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
+	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
 		canReorderOnto,
@@ -267,15 +268,17 @@
 <UnpushedNotice refresh={loads} />
 <HostAgentNotice status={hostAgent} />
 {#if notice}
-	<p
+	<DismissibleNotice
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'
 			? 'border-danger bg-danger-soft text-danger'
 			: notice.kind === 'warn'
 				? 'border-warn bg-warn-soft text-warn'
 				: 'border-good bg-good-soft text-good'}"
-	>
-		{notice.text}
-	</p>
+		role={notice.kind === 'error' ? 'alert' : 'status'}
+		testid="board-notice"
+		text={notice.text}
+		ondismiss={() => (notice = null)}
+	/>
 {/if}
 {#if board}
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
