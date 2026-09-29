@@ -95,15 +95,26 @@ func TestPushPendingReleasesNothingByDefault(t *testing.T) {
 	if plan, _, _ := runIn(t, root, "release", "--pending", "--dry-run"); !strings.Contains(plan, "1.1.0") {
 		t.Errorf("the release still waits to be published: %s", plan)
 	}
+	// TH-0031: what was pushed unreleased is not lost to the next publish
+	pubOut, errOut, code := runIn(t, root, "release", "--pending")
+	if code != 0 {
+		t.Fatalf("publish: %s", errOut)
+	}
+	if tags := gitIn(t, remote, "tag", "--list"); !strings.Contains(tags, "cli/v1.1.0") {
+		t.Errorf("the publish tagged and pushed the pushed acceptance: %s %s", tags, pubOut)
+	}
+	if strings.TrimSpace(gitIn(t, remote, "rev-parse", "main")) != strings.TrimSpace(gitIn(t, root, "rev-parse", "main")) {
+		t.Error("the version-bump commit reached the remote")
+	}
 }
 
 // S-0094: flai accept computes no release (S-0087), so nothing tags it until
-// something does. With the publish host action enabled (S-0144), a push
+// something does. With the auto-publish host action enabled (S-0144), a push
 // does, before the push itself, not as a separate step.
 func TestPushPendingTagsWhatAcceptLeftUnreleased(t *testing.T) {
 	root, remote := researchProject(t, "feature", true)
-	if _, errOut, code := runIn(t, root, "serve", "enable", "publish"); code != 0 {
-		t.Fatalf("enable publish: %s", errOut)
+	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-publish"); code != 0 {
+		t.Fatalf("enable auto-publish: %s", errOut)
 	}
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -171,6 +182,31 @@ func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 	_, errOut, code := runIn(t, root, "push", "--pending")
 	if code != exitPushDiverged || !strings.Contains(errOut, "have diverged") || !strings.Contains(errOut, "never forces") {
 		t.Errorf("diverged: refuse with its own exit code, say to fetch and merge, never force: %d %s", code, errOut)
+	}
+}
+
+// S-0144: with auto-publish turned on after an acceptance was pushed, the
+// next push tags it and sends the tag alone, since the remote has the commit.
+func TestPushPendingAutoPublishesAnAcceptanceAlreadyPushed(t *testing.T) {
+	root, remote := researchProject(t, "feature", true)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	if _, errOut, code := runIn(t, root, "push", "--pending"); code != 0 {
+		t.Fatalf("push: %s", errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-publish"); code != 0 {
+		t.Fatalf("enable auto-publish: %s", errOut)
+	}
+	out, errOut, code := runIn(t, root, "push", "--pending")
+	if code != 0 || !strings.Contains(out, "pushed tags cli/v1.1.0 to origin") {
+		t.Fatalf("push with auto-publish: %d %s %s", code, out, errOut)
+	}
+	if tags := gitIn(t, remote, "tag", "--list"); !strings.Contains(tags, "cli/v1.1.0") {
+		t.Errorf("the tag reached the remote: %s", tags)
+	}
+	if again, _, _ := runIn(t, root, "push", "--pending"); !strings.Contains(again, "nothing pending") {
+		t.Errorf("a second run: %s", again)
 	}
 }
 

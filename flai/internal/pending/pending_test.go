@@ -140,3 +140,15 @@ func TestBatches(t *testing.T) {
 		t.Error("the tags given are not changed")
 	}
 }
+
+// S-0144: tags made on commits the remote already has go without the branch.
+func TestPushes(t *testing.T) {
+	ahead := &Unpushed{Branch: "main", Commits: 1, Tags: []string{"a/v1"}}
+	if got := ahead.Pushes(); !reflect.DeepEqual(got, [][]string{{"main", "a/v1"}}) {
+		t.Errorf("commits ahead: the branch with its tags: %v", got)
+	}
+	tagsOnly := &Unpushed{Branch: "main", Tags: []string{"a/v1", "a/v2", "a/v3", "b/v1"}}
+	if got := tagsOnly.Pushes(); !reflect.DeepEqual(got, [][]string{{"a/v1", "a/v2", "a/v3"}, {"b/v1"}}) {
+		t.Errorf("nothing ahead: the tags alone, three to a push: %v", got)
+	}
+}

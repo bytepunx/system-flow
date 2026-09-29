@@ -1437,7 +1437,7 @@ flai push --pending [flags]
 
 An acceptance made where nothing could push it, such as one from the dashboard with the push host action off, is committed in the main checkout and not pushed. Run this on the host, with your own credentials: when the main checkout's branch is ahead of its remote-tracking branch and the commits ahead include an acceptance or a release tagged here, it pushes the branch and the tags together. It never forces. When the remote has commits this clone lacks it refuses and says to fetch and merge first.
 
-It releases nothing of its own accord: what is accepted waits, unreleased, to be published together by flai release --pending or the board's Publish (S-0144, ADR-0032). With the publish host action enabled for the project (flai serve enable publish), it first computes the release of everything accepted and unreleased since each component's last tag, applies the version bump, commits it, and tags it, so every push publishes (S-0094).
+It releases nothing of its own accord: what is accepted waits, unreleased, to be published together by flai release --pending or the board's Publish (S-0144, ADR-0032). With the auto-publish host action enabled for the project (flai serve enable auto-publish), it first computes the release of everything accepted and unreleased since each component's last tag, applies the version bump, commits it, and tags it, so every push publishes (S-0094).
 
 --publish also publishes each template component whose version those commits moved, as flai template push --tag does, after the push and never forced. It is what the dashboard's push action runs (flai serve enable push).
 
@@ -1470,7 +1470,7 @@ Per design/conventions/git.md: the component the item delivers to gets the deliv
 
 flai accept never does this (S-0087): it only merges, archives, and commits.
 
-flai release --pending computes one release per component, the highest delivery level among everything accepted and unreleased for it since its last tag, bumps and commits, tags, and pushes the branch and every tag together, three tags to a push (I-0026). Run again after a partial failure: what already tagged or pushed is not redone. flai push --pending does the same computing, applying, and tagging before it decides what to push (S-0094), so this command is for seeing or forcing it ahead of a push, not the only place it happens.
+flai release --pending computes one release per component, the highest delivery level among everything accepted and unreleased for it since its last tag, bumps and commits, tags, and pushes the branch and every tag together, three tags to a push (I-0026). Run again after a partial failure: what already tagged or pushed is not redone. Tags on commits the remote already has, such as an acceptance pushed before it was released, are pushed on their own. flai push --pending does the same computing, applying, and tagging before it pushes only with the auto-publish host action enabled (S-0144); otherwise this is where what has accumulated is released, when you choose.
 
 Examples:
 

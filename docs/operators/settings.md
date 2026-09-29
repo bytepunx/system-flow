@@ -43,7 +43,7 @@ Keys only the `flai serve` commands on the host change, or the dashboard's Setti
 
 | Key | Default | Changed with | For |
 |-----|---------|--------------|-----|
-| `host_actions.<name>` | absent: every action off | `flai serve enable`, `flai serve disable` | For each host action (`push`, `publish`, `agent`, `checks`, `dashboard`, `host`, `settings`), the main checkouts it is on for, or `*` for every project ([The push host action](index.md#the-push-host-action); `publish` makes every push release first: [Publishing at every push](index.md#accepting-and-pushing-release-nothing-publishing-does-s-0087-s-0144)) |
+| `host_actions.<name>` | absent: every action off | `flai serve enable`, `flai serve disable` | For each host action (`push`, `auto-publish`, `agent`, `checks`, `dashboard`, `host`, `settings`), the main checkouts it is on for, or `*` for every project ([The push host action](index.md#the-push-host-action); `auto-publish` makes every push release first: [Publishing at every push](index.md#accepting-and-pushing-release-nothing-publishing-does-s-0087-s-0144)) |
 | `agent.command` | none | `flai serve agent set -- ...`, `flai serve agent clear` | What starts a ready story's agent when the story names no harness ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.name` | `agent` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents flai serve starts |
 | `agent.attended_minutes` | `6` | `flai serve agent set --attended-minutes` | How recent a sign of someone attending must be, and how long it holds a ready story back |

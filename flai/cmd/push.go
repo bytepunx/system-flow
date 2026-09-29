@@ -28,8 +28,8 @@ this clone lacks it refuses and says to fetch and merge first.
 
 It releases nothing of its own accord: what is accepted waits, unreleased,
 to be published together by flai release --pending or the board's Publish
-(S-0144, ADR-0032). With the publish host action enabled for the project
-(flai serve enable publish), it first computes the release of everything
+(S-0144, ADR-0032). With the auto-publish host action enabled for the project
+(flai serve enable auto-publish), it first computes the release of everything
 accepted and unreleased since each component's last tag, applies the
 version bump, commits it, and tags it, so every push publishes (S-0094).
 
@@ -53,7 +53,7 @@ told by the MCP inbox.`,
 			root := mainRootOf(repo)
 
 			// Tag whatever release has accumulated before deciding what to
-			// push (S-0094), only when the operator enabled publish: off, the
+			// push (S-0094), only when the operator enabled auto-publish: off, the
 			// accepted work waits to be released together (S-0144). A dry run
 			// only previews the plan; nothing is applied or tagged.
 			cfg, _, err := a.loadConfig()
@@ -63,7 +63,7 @@ told by the MCP inbox.`,
 			var plans []*release.PendingPlan
 			var newTags []string
 			switch {
-			case !cfg.ActionEnabled(hostapi.ActionPublish, root):
+			case !cfg.ActionEnabled(hostapi.ActionAutoPublish, root):
 			case dryRun:
 				plans, err = release.Pending(a.runner, root, repo.Manifest, repo)
 			default:
@@ -74,6 +74,9 @@ told by the MCP inbox.`,
 			}
 
 			u := pending.Detect(a.runner, root)
+			if u == nil {
+				u = pending.TagsOnly(a.runner, root, newTags)
+			}
 			result := map[string]any{"pushed": false}
 			if len(plans) > 0 {
 				result["release"] = plans
@@ -112,6 +115,9 @@ told by the MCP inbox.`,
 				moved = a.templatesMoved(repo, root, u.Upstream)
 			}
 			what := fmt.Sprintf("%s to %s: %s%s", strings.Join(u.Acceptances, ", "), u.Remote, u.Branch, tagsNote(u.Tags))
+			if u.Commits == 0 {
+				what = fmt.Sprintf("tags %s to %s", strings.Join(u.Tags, ", "), u.Remote)
+			}
 			if len(moved) > 0 {
 				what += ", then publish " + strings.Join(moved, ", ")
 			}
@@ -129,7 +135,7 @@ told by the MCP inbox.`,
 				fmt.Fprintf(a.out, "would push %s\ndry run: nothing pushed\n", what)
 				return nil
 			}
-			for _, refs := range pending.Batches(u.Branch, u.Tags) {
+			for _, refs := range u.Pushes() {
 				if _, err := a.runner.Run(root, "git", append([]string{"push", u.Remote}, refs...)...); err != nil {
 					return fmt.Errorf("the push failed and nothing was forced: %s. If the remote moved, fetch and merge, then run this again", firstLine(err.Error()))
 				}

@@ -81,9 +81,11 @@ flai release --pending computes one release per component, the highest
 delivery level among everything accepted and unreleased for it since its last
 tag, bumps and commits, tags, and pushes the branch and every tag together,
 three tags to a push (I-0026). Run again after a partial failure: what already tagged or
-pushed is not redone. flai push --pending does the same computing, applying,
-and tagging before it decides what to push (S-0094), so this command is for
-seeing or forcing it ahead of a push, not the only place it happens.`,
+pushed is not redone. Tags on commits the remote already has, such as an
+acceptance pushed before it was released, are pushed on their own. flai push
+--pending does the same computing, applying, and tagging before it pushes
+only with the auto-publish host action enabled (S-0144); otherwise this is
+where what has accumulated is released, when you choose.`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run
@@ -150,8 +152,8 @@ seeing or forcing it ahead of a push, not the only place it happens.`,
 // release.Pending finds since each component's last tag, applied (version
 // files and one changelog entry, committed) and tagged on HEAD, before
 // anything is pushed. flai accept computes none of this (it only merges,
-// archives, and commits): a push must, so that tagging a release is never a
-// separate step someone has to remember. TagPending is idempotent, so a
+// archives, and commits), and flai push does only with the auto-publish host
+// action enabled (S-0144). TagPending is idempotent, so a
 // partial failure here and a rerun does not retag what already tagged.
 func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*release.PendingPlan, []string, error) {
 	plans, err := release.Pending(a.runner, root, repo.Manifest, repo)
@@ -220,6 +222,9 @@ func (a *app) publishPending(dryRun bool) error {
 		return err
 	}
 	u := pending.Detect(a.runner, repo.Root)
+	if u == nil {
+		u = pending.TagsOnly(a.runner, repo.Root, tags)
+	}
 	result := map[string]any{"plans": plans, "tags": tags, "pushed": false}
 	if u == nil {
 		if len(plans) == 0 {
@@ -238,7 +243,7 @@ func (a *app) publishPending(dryRun bool) error {
 		fmt.Fprintf(a.out, "published locally: %s (no upstream to push to)\n", summarizePlans(plans))
 		return nil
 	}
-	for _, batch := range pending.Batches(u.Branch, u.Tags) {
+	for _, batch := range u.Pushes() {
 		if _, err := a.runner.Run(repo.Root, "git", append([]string{"push", "-q", u.Remote}, batch...)...); err != nil {
 			result["push_error"] = firstLine(err.Error())
 			if a.jsonOut {
