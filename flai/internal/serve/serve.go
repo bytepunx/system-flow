@@ -301,6 +301,11 @@ func Run(ctx context.Context, o Options) error {
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
+			// An agent starting or ending changes no file: the dashboard is told
+			// so that a story page shows it at once (S-0154).
+			starter.changed = func(story string) {
+				r.client.Notify(AgentChanged, map[string]string{"project": e.Key, "story": story})
+			}
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			go func() {
 				for {

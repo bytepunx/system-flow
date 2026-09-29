@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/channel/channeltest"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func scratchProject(t *testing.T, key string) (root, keyFile string) {
@@ -215,4 +216,95 @@ func TestAChangedFileReachesTheDashboardAsANotification(t *testing.T) {
 	if method != "change" || p.Project != "harbour" || p.Path != "wip/kanban/stories/S-0001-a.md" {
 		t.Errorf("notification: %s %s", method, params)
 	}
+}
+
+// S-0154: an agent starting or ending changes no file of the project, so flai
+// serve tells the dashboard with the notification agent, naming the story.
+func TestServeTellsTheDashboardWhenAStorysAgentStartsAndEnds(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	// The launcher records the ended agent and looks again after Run returns:
+	// its folder is removed once that is done, not while it writes.
+	host, err := os.MkdirTemp("", "serve-agent-changed")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		for range 50 {
+			if os.RemoveAll(host) == nil {
+				return
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		t.Errorf("%s not removed", host)
+	})
+	dir := DirFor(filepath.Join(host, "config.json"))
+	root, key := scratchProject(t, "harbour")
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: key}); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	stub := filepath.Join(t.TempDir(), "stub-agent")
+	if err := os.WriteFile(stub, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
+			Agent: func(string) AgentConfig { return AgentConfig{Enabled: true, Command: []string{stub}, Name: "builder"} },
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+	conn := dash.Wait(t)
+
+	// made ready once the dashboard listens, so that the start is heard
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	epic, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Epic", Owner: "alex", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Story", Parent: epic.ID, Owner: "alex", Touches: []string{"docs/story"}, Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(st.Path)
+	_ = os.WriteFile(st.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644)
+	if st, err = repo.Get(st.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.Transition(st, workitem.Ready, "alex", "", now); err != nil {
+		t.Fatal(err)
+	}
+
+	told := 0
+	for told < 2 {
+		method, params := conn.Next(t)
+		if method != AgentChanged {
+			continue
+		}
+		var p map[string]string
+		_ = json.Unmarshal(params, &p)
+		if p["project"] != "harbour" || p["story"] != st.ID {
+			t.Fatalf("agent said %v, want the project harbour and the story %s", p, st.ID)
+		}
+		told++
+	}
+	waitFor(t, "the agent's end is recorded", func() bool {
+		run := dir.AgentStates()[root].Stories[st.ID]
+		return run != nil && !run.live()
+	})
 }

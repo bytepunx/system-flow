@@ -209,6 +209,18 @@ type launcher struct {
 	// started the agent (S-0115).
 	handOver bool
 	again    chan struct{} // an agent ended: look again
+	// changed is told the story whose run was recorded as started, not
+	// started, or ended: none of these changes a file of the project, so
+	// flai serve says so to the dashboard (S-0154). Nil tells no one.
+	changed func(story string)
+}
+
+// told records a run in the host's state and tells changed its story.
+func (l *launcher) told(run *AgentRun) {
+	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
+	if l.changed != nil {
+		l.changed(run.Story)
+	}
 }
 
 func newLauncher(o Options, e Entry) *launcher {
@@ -456,7 +468,7 @@ func (l *launcher) settleOrphans() {
 		ended := *run
 		ended.Ended = l.now().UTC().Format(time.RFC3339)
 		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, run.Story, run.Agent, nil)
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(&ended) })
+		l.told(&ended)
 		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 		l.measure(run.Story)
 	}
@@ -506,7 +518,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionAgent, Method: "serve.agent", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
 	fail := func(err error) bool {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
+		l.told(run)
 		what := run.Command
 		if what == "" {
 			what = "an agent"
@@ -562,7 +574,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	if !l.handOver {
 		l.waiting[run.PID] = true
 	}
-	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
+	l.told(run)
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
 	if run.Answered != "" {
 		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s answered (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.Answered, run.PID, run.Log)
@@ -592,7 +604,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
 		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, story.ID, run.Agent, &code)
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(&ended) })
+		l.told(&ended)
 		l.mu.Lock()
 		delete(l.waiting, run.PID)
 		l.mu.Unlock()
