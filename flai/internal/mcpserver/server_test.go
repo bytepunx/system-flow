@@ -112,8 +112,11 @@ func TestToolsAreAdvertised(t *testing.T) {
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
 	}
-	if in := f.cs.InitializeResult().Instructions; !strings.Contains(in, "doc_search") || !strings.Contains(in, "doc_get and its heading") {
-		t.Errorf("the instructions do not say how to read design on demand: %s", in)
+	in := f.cs.InitializeResult().Instructions
+	for _, want := range []string{"When you start work on a story, call prime with it", "A brief is not the document", "doc_get and its heading before relying on it or changing what it describes", "doc_search"} {
+		if !strings.Contains(in, want) {
+			t.Errorf("the instructions do not say to prime with the pack and fetch what it briefs (%q): %s", want, in)
+		}
 	}
 }
 

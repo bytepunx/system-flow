@@ -127,6 +127,12 @@ func TestAFolderServesEveryProjectBelowIt(t *testing.T) {
 	if strings.Join(names, " ") != "board doc_get doc_search inbox item_edit item_get item_move item_new prime thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches" {
 		t.Errorf("tools: %v", names)
 	}
+	in := f.cs.InitializeResult().Instructions
+	for _, want := range []string{"When you start work on a story, call prime with it", "A brief is not the document", "doc_get and its heading before relying on it or changing what it describes", "doc_search"} {
+		if !strings.Contains(in, want) {
+			t.Errorf("the instructions do not say to prime with the pack and fetch what it briefs (%q): %s", want, in)
+		}
+	}
 
 	out, failed := f.call(t, "inbox", map[string]any{})
 	if failed != "" || strings.Join(projectKeys(out), " ") != "alpha beta" {
