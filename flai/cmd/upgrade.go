@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/prompt"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/upgrade"
 )
@@ -162,9 +162,9 @@ unresolved. A dirty git tree is refused unless --force.`,
 // askConflict prompts for one conflict, with a diff on request.
 func (a *app) askConflict(root, tplDir string, m template.Manifest, opt template.Options, path string) (string, error) {
 	for {
-		choice := "keep"
-		if err := huh.NewForm(huh.NewGroup(huh.NewSelect[string]().Title("Conflict: "+path+" was changed in this project and in the template").
-			Options(huh.NewOption("keep the project's version", "keep"), huh.NewOption("replace with the template's version", "replace"), huh.NewOption("show diff", "diff")).Value(&choice))).Run(); err != nil {
+		choice, err := a.prompts().Select("Conflict: "+path+" was changed in this project and in the template",
+			[]prompt.Option{{Label: "keep the project's version", Value: "keep"}, {Label: "replace with the template's version", Value: "replace"}, {Label: "show diff", Value: "diff"}}, "keep")
+		if err != nil {
 			return "", err
 		}
 		if choice != "diff" {

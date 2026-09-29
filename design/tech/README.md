@@ -1,6 +1,6 @@
 ---
 title: Technology index
-updated: 2026-09-20
+updated: 2026-09-29
 status: active
 ---
 
@@ -13,7 +13,6 @@ One file per technology. Each records the version in use, where it is used, why 
 | Go | 1.26 | flai | [go.md](go.md) |
 | Cobra | v1.10.2 | flai | [go-libraries.md](go-libraries.md) |
 | goccy/go-yaml | v1.19 | flai | [go-libraries.md](go-libraries.md) |
-| charmbracelet/huh | v1.0 | flai | [go-libraries.md](go-libraries.md) |
 | golangci-lint | v2.5 | flai | [go.md](go.md) |
 | GoReleaser | v2 (pinned in scripts/install-tools.sh) | flai | [go.md](go.md) |
 | Node.js | 24 LTS (`.nvmrc`; dev host runs 25) | flaiover | [node.md](node.md) |

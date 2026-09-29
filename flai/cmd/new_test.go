@@ -11,6 +11,8 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/prompt"
+	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
 const miniTemplate = "../internal/template/testdata/mini"
@@ -185,5 +187,33 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 	claude, _ := os.ReadFile(filepath.Join(dest, "CLAUDE.md"))
 	if !strings.Contains(string(claude), "# sample") || !strings.Contains(string(claude), "system-flow:end-of-baseline") {
 		t.Error("CLAUDE.md baseline not rendered as expected")
+	}
+}
+
+func TestNewAsksForEachVariableAtATerminal(t *testing.T) {
+	var out strings.Builder
+	tty := true
+	a := &app{out: &out, stdinIsTerminal: &tty,
+		prompter: prompt.New(strings.NewReader("\n\nOwner\nnot a url\nhttps://example.org/o/r\n"), &out)}
+	m := template.Manifest{Variables: []template.Variable{
+		{Name: "project_name", Prompt: "Project name"},
+		{Name: "owner", Required: true},
+		{Name: repoURLVar, Prompt: "Repository URL"},
+	}}
+	vars, err := a.collectVars(m, newOptions{}, "demo")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, &out)
+	}
+	if vars["project_name"] != "demo" || vars["owner"] != "Owner" || vars[repoURLVar] != "https://example.org/o/r" {
+		t.Errorf("vars: %v", vars)
+	}
+	s := out.String()
+	for _, want := range []string{"Project name [demo]: ", "  owner is required\n", "Repository URL: "} {
+		if !strings.Contains(s, want) {
+			t.Errorf("the prompts do not say %q:\n%s", want, s)
+		}
+	}
+	if n := strings.Count(s, "Repository URL: "); n != 2 {
+		t.Errorf("asked for the URL %d times, want 2 (one refused):\n%s", n, s)
 	}
 }

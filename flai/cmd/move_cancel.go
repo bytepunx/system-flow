@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/huh"
-
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -169,12 +167,7 @@ func (a *app) printLeftBehind(left []leftBehind, dryRun bool) {
 
 // ask puts a yes or no question to the terminal.
 func (a *app) ask(title string) (bool, error) {
-	if a.confirm != nil {
-		return a.confirm(title)
-	}
-	ok := false
-	err := huh.NewForm(huh.NewGroup(huh.NewConfirm().Title(title).Value(&ok))).Run()
-	return ok, err
+	return a.prompts().Confirm(title, false)
 }
 
 // plural is "1 item" or "3 items".

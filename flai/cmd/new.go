@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/prompt"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/upgrade"
 )
@@ -241,13 +241,12 @@ func givenVars(items []string) (map[string]string, error) {
 }
 
 func (a *app) prompt(v template.Variable, def string) (string, error) {
-	val := def
 	title := v.Prompt
 	if title == "" {
 		title = v.Name
 	}
-	in := huh.NewInput().Title(title).Value(&val).Validate(func(s string) error {
-		if v.Required && strings.TrimSpace(s) == "" {
+	return a.prompts().Input(title, "", def, func(s string) error {
+		if v.Required && s == "" {
 			return fmt.Errorf("%s is required", v.Name)
 		}
 		if v.Name == repoURLVar {
@@ -255,10 +254,15 @@ func (a *app) prompt(v template.Variable, def string) (string, error) {
 		}
 		return nil
 	})
-	if err := huh.NewForm(huh.NewGroup(in)).Run(); err != nil {
-		return "", err
+}
+
+// prompts is where interactive questions are asked: the terminal, unless a
+// test gave the app its own.
+func (a *app) prompts() *prompt.Prompter {
+	if a.prompter == nil {
+		a.prompter = prompt.New(os.Stdin, a.out)
 	}
-	return strings.TrimSpace(val), nil
+	return a.prompter
 }
 
 func (a *app) isTerminal() bool {

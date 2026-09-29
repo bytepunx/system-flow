@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/prompt"
 )
 
 // cancelProject is an epic with two stories, one in progress with a task and
@@ -120,11 +122,14 @@ func TestMoveCancelledAsksOnATerminal(t *testing.T) {
 	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	run := func(answer bool, args ...string) (string, string, int, int) {
 		var out, errOut bytes.Buffer
-		asked := 0
 		tty := true
+		reply := "n\n"
+		if answer {
+			reply = "y\n"
+		}
 		a := &app{out: &out, errOut: &errOut, cwd: root, stdinIsTerminal: &tty,
-			clock:   func() time.Time { return time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC) },
-			confirm: func(string) (bool, error) { asked++; return answer, nil }}
+			clock:    func() time.Time { return time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC) },
+			prompter: prompt.New(strings.NewReader(reply), &out)}
 		cmd := newRootCmdWith(a)
 		cmd.SetArgs(args)
 		code := 0
@@ -132,7 +137,7 @@ func TestMoveCancelledAsksOnATerminal(t *testing.T) {
 			a.fail(err)
 			code = 1
 		}
-		return out.String(), errOut.String(), code, asked
+		return out.String(), errOut.String(), code, strings.Count(out.String(), "[y/N]")
 	}
 	out, errOut, code, asked := run(false, "move", "E-0001", "cancelled", "--reason", "why")
 	if code == 0 || asked != 1 || !strings.Contains(errOut, "nothing was cancelled") || !strings.Contains(out, "also cancels 4 items") {

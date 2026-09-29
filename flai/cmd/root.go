@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/logx"
+	"github.com/bytepunx/system-flow/flai/internal/prompt"
 )
 
 // app carries state shared by all commands.
@@ -31,7 +32,7 @@ type app struct {
 	log        *slog.Logger // structured events on errOut, see design/conventions/logging.md
 
 	stdinIsTerminal *bool                             // tests override terminal detection
-	confirm         func(title string) (bool, error)  // tests answer confirmations
+	prompter        *prompt.Prompter                  // tests answer prompts; the terminal otherwise
 	hostStarter     func() (host.Status, bool, error) // tests do not start a process
 	cwd             string                            // tests override the working directory
 	clock           func() time.Time                  // tests override the clock

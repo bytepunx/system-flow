@@ -7,12 +7,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/importer"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/prompt"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -120,7 +120,8 @@ func (a *app) runImport(dir string, o importOptions) error {
 	if interactive {
 		for _, k := range m.LayoutKeys() {
 			v := layout[k]
-			if err := huh.NewForm(huh.NewGroup(huh.NewInput().Title("Folder for " + k).Description("Default from the template or an existing folder").Value(&v))).Run(); err != nil {
+			v, err := a.prompts().Input("Folder for "+k, "Default from the template or an existing folder", v, nil)
+			if err != nil {
 				return err
 			}
 			if strings.TrimSpace(v) != "" {
@@ -145,8 +146,8 @@ func (a *app) runImport(dir string, o importOptions) error {
 		return nil
 	}
 	if interactive {
-		ok := true
-		if err := huh.NewForm(huh.NewGroup(huh.NewConfirm().Title("Apply this proposal?").Value(&ok))).Run(); err != nil {
+		ok, err := a.prompts().Confirm("Apply this proposal?", true)
+		if err != nil {
 			return err
 		}
 		if !ok {
@@ -159,7 +160,7 @@ func (a *app) runImport(dir string, o importOptions) error {
 	for _, mv := range plan.FolderMoves {
 		do := true
 		if interactive {
-			if err := huh.NewForm(huh.NewGroup(huh.NewConfirm().Title(fmt.Sprintf("Move %s/ into %s/?", mv.From, mv.To)).Value(&do))).Run(); err != nil {
+			if do, err = a.prompts().Confirm(fmt.Sprintf("Move %s/ into %s/?", mv.From, mv.To), true); err != nil {
 				return err
 			}
 		}
@@ -195,13 +196,13 @@ func (a *app) runImport(dir string, o importOptions) error {
 		if !interactive || skipAll {
 			break
 		}
-		choice := "leave"
-		opts := make([]huh.Option[string], 0, len(dests)+1)
+		opts := make([]prompt.Option, 0, len(dests)+1)
 		for _, d := range dests {
-			opts = append(opts, huh.NewOption(d, d))
+			opts = append(opts, prompt.Option{Label: d, Value: d})
 		}
-		opts = append(opts, huh.NewOption("skip all remaining", "skip"))
-		if err := huh.NewForm(huh.NewGroup(huh.NewSelect[string]().Title("Where does " + md + " belong?").Options(opts...).Value(&choice))).Run(); err != nil {
+		opts = append(opts, prompt.Option{Label: "skip all remaining", Value: "skip"})
+		choice, err := a.prompts().Select("Where does "+md+" belong?", opts, "leave")
+		if err != nil {
 			return err
 		}
 		switch choice {

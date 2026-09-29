@@ -1,6 +1,6 @@
 ---
 title: Go libraries
-updated: 2026-09-20
+updated: 2026-09-29
 status: active
 topics: [go]
 ---
@@ -13,8 +13,6 @@ Versions are pinned in `flai/go.mod`; the ones here are the majors we track.
 |---------|---------|---------|--------------|
 | `github.com/spf13/cobra` | v1.10.2 | Command tree, flags, help, completion | The de facto Go CLI framework, agents know it well |
 | `github.com/goccy/go-yaml` | v1.19 | Parse and write front matter, `system-flow.yaml`, `template.yaml` | Actively maintained, preserves comments better than `gopkg.in/yaml.v3`, which is archived |
-| `github.com/charmbracelet/huh` | v1.0 | Interactive prompts for `new` and `import` | Composable forms, accessible mode, works non-interactively when answers are given by flags |
-| `github.com/charmbracelet/lipgloss` | v1 | Table and board rendering | Same ecosystem as huh |
 | `github.com/coder/websocket` | v1.8 | `flai serve`: the WebSocket flai opens to the dashboard's agent endpoint (ADR-0029, S-0072); also the stand-in dashboard in `internal/channel/channeltest` | Maintained (ISC), no dependencies, context-aware reads and writes, concurrent writers, a ping API; `gorilla/websocket` is stable but slow-moving and deadline-driven |
 | `github.com/modelcontextprotocol/go-sdk` | v1.8.0 | `flai mcp`: MCP server, stdio transport and, since S-0076, its Streamable HTTP handler in both modes (`internal/mcphttp`); typed tools with inferred JSON schemas; in-memory transports and its own client in tests | The official SDK, maintained with the specification; hand-rolling JSON-RPC and schema inference would be the alternative |
 | `golang.org/x/term` | v0.46 | Detect whether stdin is a terminal, to decide between prompting and defaults | Standard extended library |
@@ -26,6 +24,13 @@ Deliberately not used:
 - `go-git`: cloning with branches, submodules, and credentials is more reliable by shelling out to the user's `git`. See [ADR 0010](../adrs/0010-shell-out-to-git-and-docker.md).
 - Docker SDK: same reasoning, `docker` on `PATH` is required and invoked as a subprocess.
 - Markdown parsers: `flai` only needs front matter and headings, a small hand-written splitter is enough.
+- Prompt and terminal UI libraries (`charmbracelet/huh`, `bubbletea`, `lipgloss`): removed in S-0160. See below.
+
+## Prompts (S-0160)
+
+flai asks few questions: the template's variables and the layout in `new` and `import`, whether to apply an import and move its folders, where a loose markdown file belongs, how to settle an upgrade conflict, and whether to cancel what is open under an item. `internal/prompt` asks them a line at a time on the terminal, with the standard library: a value with a default and a check, yes or no with a default, or one of a few numbered options. Every question has a flag or `--yes` that answers it without a terminal.
+
+Until S-0160 they were `charmbracelet/huh` forms. huh brings in `bubbles/textarea`, and through it `atotto/clipboard`, which looks for clipboard programs on `PATH` when its package loads, whether flai prompts or not. On a host whose `PATH` has 54 entries, 17 of them Windows folders under `/mnt`, that took 145 ms of every flai process ([cause 5](../system/server-performance.md#what-it-says)). The alternatives were huh fields that do not use `textarea`, which does not help because huh imports it whichever fields are used; a `replace` of `atotto/clipboard` with an empty module, which `go install` of flai refuses; and huh behind a build tag or a second binary, which keeps a dependency tree of 25 modules for six questions. Dropping huh took those 25 modules out of `go.mod`. What was lost is arrow-key selection and the form styling. The decision is [ADR-0052](../adrs/0052-flai-asks-its-questions-a-line-at-a-time-with-its-own-prompt-package-not-with.md), which refines [ADR-0006](../adrs/0006-go-for-the-cli.md).
 
 No library watches files. `flai serve` tells a dashboard which files changed (S-0073) by polling: `internal/watch` stats the manifest's three folders and the manifest every 300 ms and reports a file once it has looked the same for one tick. `fsnotify` was the alternative; inotify, kqueue, and Windows each have limits of their own (watches per user, a descriptor per file, no recursion), and a walk of a few hundred Markdown files costs less than the difference is worth. `wait_for_events` in `flai mcp` polls for the same reason.
 
