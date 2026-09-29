@@ -3,12 +3,15 @@ id: S-0168
 type: story
 nature: remediation
 title: Several Charts Don't Use Window correctly
-status: backlog
+status: ready
 parent: E-0013
 owner: alex
 created: 2026-09-29T23:43:11Z
-updated: 2026-09-29T23:43:11Z
-transitions: []
+updated: 2026-09-29T23:43:21Z
+transitions:
+  - to: ready
+    at: 2026-09-29T23:43:21Z
+    by: alex
 tags: [dashboard]
 topics: [client-side-charts]
 touches: [flaiover/src]

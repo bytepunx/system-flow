@@ -3,11 +3,14 @@ id: S-0169
 type: story
 nature: remediation
 title: Replace Bad Use Charts
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-29T23:50:42Z
-updated: 2026-09-29T23:50:42Z
-transitions: []
+updated: 2026-09-29T23:50:44Z
+transitions:
+  - to: ready
+    at: 2026-09-29T23:50:44Z
+    by: alex
 tags: [dashboard, cli]
 topics: [server-side, client-side]
 touches: [flaiover/src, flai/cmd]
