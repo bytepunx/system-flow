@@ -48,6 +48,7 @@ export const REQUIRED_METHODS = [
 	'project.info',
 	'board.get',
 	'items.list',
+	'items.count',
 	'item.get',
 	'threads.list',
 	'docs.tree',

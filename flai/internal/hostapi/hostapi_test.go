@@ -191,6 +191,14 @@ func TestItemsListAndGet(t *testing.T) {
 		}
 	}
 
+	var n ItemCount
+	if err := call(t, p, "items.count", `{}`, &n); err != nil || n.Active != 4 || n.Archived != 2 {
+		t.Errorf("items.count: %+v %+v", err, n)
+	}
+	if err := call(t, p, "items.count", `[]`, &n); err == nil || err.Code != channel.CodeInvalidParams {
+		t.Errorf("items.count with params that are not an object: %+v", err)
+	}
+
 	var got ItemWithChildren
 	for _, id := range []string{"S-0001", "s-1", "S-01"} {
 		if err := call(t, p, "item.get", `{"id":"`+id+`"}`, &got); err != nil || got.Item.ID != "S-0001" || len(got.Children) != 1 || got.Children[0].ID != "T-0001" || got.Item.Body == "" {

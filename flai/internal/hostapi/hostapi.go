@@ -67,6 +67,12 @@ type ItemWithChildren struct {
 	Children []*workitem.Item `json:"children"`
 }
 
+// ItemCount is what items.count answers.
+type ItemCount struct {
+	Active   int `json:"active"`
+	Archived int `json:"archived"`
+}
+
 var (
 	itemID   = regexp.MustCompile(`(?i)^[EST]-?\d{1,6}$`)
 	itemType = map[string]bool{"": true, workitem.Epic: true, workitem.Story: true, workitem.Task: true}
@@ -301,6 +307,32 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				}
 			}
 			return relative(repo.MainRoot, keep, in.Bodies), nil
+		},
+
+		// items.count: how many items are active and how many archived, for a
+		// page that shows the archive's size and not the archive (S-0162).
+		"items.count": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			if e := params(raw, &struct{}{}); e != nil {
+				return nil, e
+			}
+			repo, e := open(ctx, p)
+			if e != nil {
+				return nil, e
+			}
+			defer perf.Track(ctx, "repo.list")()
+			items, err := repo.List(true)
+			if err != nil {
+				return nil, failed(err)
+			}
+			var n ItemCount
+			for _, it := range items {
+				if it.Archived {
+					n.Archived++
+				} else {
+					n.Active++
+				}
+			}
+			return n, nil
 		},
 
 		// item.get: one item in any padding, with its children, archive included.

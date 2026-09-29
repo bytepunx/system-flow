@@ -30,6 +30,7 @@ func TestReadMethodsMarkWhereTheTimeGoes(t *testing.T) {
 		"board.get":      {"repo.open", "repo.list", "board.load", "release.pending", "board.view"},
 		"item.get":       {"repo.open", "repo.get", "repo.list"},
 		"items.list":     {"repo.open", "repo.list"},
+		"items.count":    {"repo.open", "repo.list"},
 		"threads.list":   {"repo.open", "threads.read", "threads.view"},
 		"inbox.designer": {"repo.open", "threads.read", "repo.list", "narratives.read", "check.overlap"},
 		"activity.get":   {"repo.open", "repo.list", "narratives.read"},
