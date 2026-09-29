@@ -20,6 +20,10 @@ describe('sseStream', () => {
 		expect(await readChunk(reader)).toContain('event: ready');
 		r.emit('change', 'design/x.md');
 		expect(await readChunk(reader)).toContain('data: {"path":"design/x.md"}');
+		r.emit('change', 'wip/agents/S-0161.md', 'narrative');
+		expect(await readChunk(reader)).toContain(
+			'data: {"path":"wip/agents/S-0161.md","kind":"narrative"}'
+		);
 		ac.abort();
 		expect((await reader.read()).done).toBe(true);
 		expect(r.listenerCount('change')).toBe(0);

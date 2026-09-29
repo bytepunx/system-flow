@@ -3,7 +3,7 @@
 // shapes mirror design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
 import type { Agent } from '$lib/agent';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import {
@@ -16,6 +16,7 @@ import {
 	registry
 } from './agent';
 import { log } from './log';
+import { kindOf, type Change, type ChangeKind } from '$lib/changes';
 
 export type Layout = { design: string; docs: string; wip: string };
 
@@ -140,12 +141,15 @@ function viaChannel(key: string): Ask {
  * Repo is the dashboard's view of one system-flow repository. The project, its work items, and its
  * threads are asked of flai on the host over the channel and kept until flai says a file changed
  * (S-0073), and so are documents, narratives, the inbox, and search (S-0074): nothing here reads a
- * file of the project. A change is announced as 'change' with the repo-relative path, and a story's
- * agent starting or ending as 'agent' with the story's ID (S-0154).
+ * file of the project. A change forgets only the answers read from its kind of file (S-0161). It is
+ * announced as 'change' with the repo-relative path and its kind, and a story's agent starting or
+ * ending as 'agent' with the story's ID (S-0154).
  */
 export class Repo extends EventEmitter {
 	readonly root: string;
 	private answers = new Map<string, Promise<unknown>>();
+	/** The manifest's layout as last read, to tell what kind of file a change is (S-0161). */
+	private seen: Layout | null = null;
 	private listening = false;
 	private source: Ask;
 	private returned: (ms: number) => Promise<boolean>;
@@ -230,11 +234,18 @@ export class Repo extends EventEmitter {
 		this.answers.clear();
 	}
 
-	/** A file of the project changed, by flai's word: forget what was asked and tell the listeners. */
+	/**
+	 * A file of the project changed, by flai's word: forget the answers read from its kind of file
+	 * (S-0161), and tell the listeners the path and its kind. Until the layout is known every answer
+	 * is forgotten, and the manifest is asked for so that the next change is told apart.
+	 */
 	changed(path: string): void {
-		this.answers.clear();
-		log().debug({ component: 'watcher', path }, 'file changed');
-		this.emit('change', path);
+		const change: Change = { path, kind: kindOf(path, this.seen) };
+		if (change.kind === 'project') this.seen = null;
+		for (const key of [...this.answers.keys()]) if (forgets(key, change)) this.answers.delete(key);
+		if (!this.seen) void this.manifest().catch(() => {});
+		log().debug({ component: 'watcher', path, kind: change.kind }, 'file changed');
+		this.emit('change', path, change.kind);
 	}
 
 	async manifest(): Promise<Manifest> {
@@ -245,6 +256,7 @@ export class Repo extends EventEmitter {
 				'system-flow.yaml is missing layout.design, layout.docs, or layout.wip'
 			);
 		}
+		this.seen = m.layout;
 		return m;
 	}
 
@@ -340,6 +352,39 @@ export class Repo extends EventEmitter {
 	async close(): Promise<void> {
 		this.answers.clear();
 	}
+}
+
+/**
+ * What each remembered answer is read from in flai (S-0161), by its key up to the first colon: a
+ * change of another kind leaves it kept. project.info is read from the manifest alone, which
+ * forgets everything; a thread's view names its story, read from the items; docs.tree carries
+ * every file's front matter under the three folders. doc:<path> is read from its own file only.
+ */
+const READS: Record<string, ChangeKind[]> = {
+	project: [],
+	board: ['item'],
+	items: ['item'],
+	item: ['item'],
+	stats: ['item'],
+	threads: ['thread', 'item'],
+	inbox: ['item', 'thread', 'narrative'],
+	activity: ['item', 'narrative'],
+	adrs: ['adr'],
+	docs: ['item', 'narrative', 'thread', 'adr', 'document']
+};
+
+/** Whether change makes the answer kept under key stale; an answer the table does not name always is. */
+function forgets(key: string, change: Change): boolean {
+	if (change.kind === 'project' || change.kind === 'other') return true;
+	const at = key.indexOf(':');
+	const name = at < 0 ? key : key.slice(0, at);
+	if (name === 'doc') return clean(key.slice(at + 1)) === clean(change.path);
+	const reads = READS[name];
+	return !reads || reads.includes(change.kind);
+}
+
+function clean(rel: string): string {
+	return posix.normalize(rel.replaceAll('\\', '/')).replace(/^(\.\/|\/)+/, '');
 }
 
 export class RepoError extends Error {

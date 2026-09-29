@@ -22,7 +22,8 @@ export function sseStream(
 					finish();
 				}
 			};
-			const send = (path: string) => safe(`event: change\ndata: ${JSON.stringify({ path })}\n\n`);
+			const send = (path: string, kind?: string) =>
+				safe(`event: change\ndata: ${JSON.stringify({ path, kind })}\n\n`);
 			const agent = (story: string) => safe(`event: agent\ndata: ${JSON.stringify({ story })}\n\n`);
 			const ping = setInterval(() => safe(': ping\n\n'), pingMs);
 			const finish = () => {
