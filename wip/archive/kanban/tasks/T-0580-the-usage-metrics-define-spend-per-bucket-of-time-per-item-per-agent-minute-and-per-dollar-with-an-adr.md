@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 14
-      output: 89
-      cache_read: 1118650
-      cache_write: 14413
-      cost: 1.847
+      input: 10
+      output: 6572
+      cache_read: 1114175
+      cache_write: 18893
+      cost: 0.9851
 ---
 # T-0580 The usage metrics define spend per bucket of time, per item, per agent minute, and per dollar, with an ADR
 

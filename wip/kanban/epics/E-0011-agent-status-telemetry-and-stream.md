@@ -3,10 +3,10 @@ id: E-0011
 type: epic
 nature: feature
 title: Agent Status, Telemetry, and Stream
-status: in-progress
+status: done
 owner: alex
 created: 2026-09-28T22:51:06Z
-updated: 2026-09-29T19:40:33Z
+updated: 2026-09-29T21:04:14Z
 transitions:
   - to: ready
     at: 2026-09-29T00:33:59Z
@@ -14,19 +14,24 @@ transitions:
   - to: in-progress
     at: 2026-09-29T07:07:54Z
     by: alex
+  - to: review
+    at: 2026-09-29T21:04:12Z
+    by: alex
+  - to: done
+    at: 2026-09-29T21:04:14Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 usage:
   source: sum
-  seconds: 1917
-  estimated: true
+  seconds: 1979
   models:
     - model: claude-fable-5-1
-      input: 178
-      output: 1236
-      cache_read: 19720001
-      cache_write: 356115
-      cost: 32.726
+      input: 188
+      output: 126649
+      cache_read: 21472492
+      cache_write: 364102
+      cost: 18.9845
 ---
 # E-0011 Agent Status, Telemetry, and Stream
 

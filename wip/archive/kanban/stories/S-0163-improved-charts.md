@@ -31,15 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1917
-  estimated: true
+  seconds: 1979
   models:
     - model: claude-fable-5-1
-      input: 178
-      output: 1236
-      cache_read: 19720001
-      cache_write: 356115
-      cost: 32.726
+      input: 188
+      output: 126649
+      cache_read: 21472492
+      cache_write: 364102
+      cost: 18.9845
 ---
 # S-0163 Improved Charts
 

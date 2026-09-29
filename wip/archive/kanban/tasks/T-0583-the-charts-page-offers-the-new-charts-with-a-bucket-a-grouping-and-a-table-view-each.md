@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 34
-      output: 283
-      cache_read: 5305249
-      cache_write: 37492
-      cost: 8.7091
+      input: 46
+      output: 30987
+      cache_read: 5253645
+      cache_write: 89084
+      cost: 4.6449
 ---
 # T-0583 The charts page offers the new charts with a bucket, a grouping, and a table view each
 

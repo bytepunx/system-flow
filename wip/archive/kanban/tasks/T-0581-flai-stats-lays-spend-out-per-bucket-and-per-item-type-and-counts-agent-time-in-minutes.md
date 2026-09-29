@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 24
-      output: 250
-      cache_read: 2242934
-      cache_write: 37468
-      cost: 3.7175
+      input: 20
+      output: 13226
+      cache_read: 2242383
+      cache_write: 38023
+      cost: 1.9826
 ---
 # T-0581 flai stats lays spend out per bucket and per item type, and counts agent time in minutes
 

@@ -3,11 +3,14 @@ id: E-0014
 type: epic
 nature: feature
 title: Build real, collapsible diffs in the review screen
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-29T19:57:06Z
-updated: 2026-09-29T19:57:06Z
-transitions: []
+updated: 2026-09-29T21:02:58Z
+transitions:
+  - to: ready
+    at: 2026-09-29T21:02:58Z
+    by: alex
 tags: [dashboard, cli]
 topics: [client-side, server-side]
 touches: [flaiover/src, flai/cmd]

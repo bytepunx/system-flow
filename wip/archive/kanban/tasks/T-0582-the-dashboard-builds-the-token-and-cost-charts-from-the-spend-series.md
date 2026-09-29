@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 54
-      output: 389
-      cache_read: 6583078
-      cache_write: 87639
-      cost: 10.8739
+      input: 57
+      output: 38689
+      cache_read: 6559487
+      cache_write: 111227
+      cost: 5.7994
 ---
 # T-0582 The dashboard builds the token and cost charts from the spend series
 

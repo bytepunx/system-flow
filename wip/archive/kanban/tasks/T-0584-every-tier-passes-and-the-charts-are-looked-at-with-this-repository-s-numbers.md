@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 18
-      output: 77
-      cache_read: 3007419
-      cache_write: 15920
-      cost: 4.9281
+      input: 26
+      output: 17535
+      cache_read: 2972920
+      cache_write: 50411
+      cost: 2.6285
 ---
 # T-0584 Every tier passes and the charts are looked at with this repository's numbers
 
