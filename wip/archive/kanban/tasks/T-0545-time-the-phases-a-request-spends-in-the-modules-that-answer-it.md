@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 651
-      cache_read: 8800495
-      cache_write: 58072
-      cost: 3.5046
+      input: 96
+      output: 33575
+      cache_read: 8761347
+      cache_write: 97214
+      cost: 3.2019
 ---
 # T-0545 Time the phases a request spends in the modules that answer it
 

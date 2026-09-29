@@ -31,15 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1054
-  estimated: true
+  seconds: 1101
   models:
     - model: claude-opus-5-5
-      input: 244
-      output: 1506
-      cache_read: 21641985
-      cache_write: 254594
-      cost: 8.6626
+      input: 258
+      output: 90171
+      cache_read: 23529885
+      cache_write: 261083
+      cost: 8.5991
 ---
 # S-0152 Identify issues with responses from the server side
 

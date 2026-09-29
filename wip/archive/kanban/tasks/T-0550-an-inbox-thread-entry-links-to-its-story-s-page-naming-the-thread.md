@@ -30,7 +30,7 @@ usage:
       output: 158
       cache_read: 945479
       cache_write: 7307
-      cost: 0.377
+      cost: 0.3759
 ---
 
 # T-0550 An inbox thread entry links to its story's page naming the thread

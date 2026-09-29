@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 148
-      cache_read: 4701702
-      cache_write: 29192
-      cost: 1.8715
+      input: 51
+      output: 17931
+      cache_read: 4678966
+      cache_write: 51917
+      cost: 1.7099
 ---
 # T-0546 Measure the dashboard's requests on this repository and record what is slow
 

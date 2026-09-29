@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 268
-      cache_read: 3725002
-      cache_write: 42411
-      cost: 1.4904
+      input: 41
+      output: 14279
+      cache_read: 3726080
+      cache_write: 41344
+      cost: 1.3617
 ---
 # T-0544 Time every dashboard and MCP request beneath its transport
 

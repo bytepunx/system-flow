@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 146
-      cache_read: 2593077
-      cache_write: 14421
-      cost: 1.0315
+      input: 28
+      output: 9883
+      cache_read: 2578875
+      cache_write: 28615
+      cost: 0.9425
 ---
 # T-0547 Write the stories that fix what the measurement found
 
