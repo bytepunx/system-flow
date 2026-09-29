@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 4
+count: 5
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-27T04:08:25Z
-updated: 2026-09-27T04:08:25Z
+last_reported: 2026-09-29T07:21:07Z
+updated: 2026-09-29T07:21:07Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -28,5 +28,8 @@ S-0126: make lint-md in the main checkout found six findings in files no agent l
 
 ### 2026-09-27T04:08:25Z
 S-0134 (2026-09-27): make smoke failed on six lint errors in wip files main already carried: the S-0122 archive (TH-0017's fix was never made) and now S-0124's archived narrative (three leftover lines, MD026/MD029). Fixed on main in 88e345f under TH-0017's answer A.
+
+### 2026-09-29T07:21:07Z
+Found by S-0154's smoke run: wip/threads/TH-0035 (written in the main checkout during S-0153) fails markdownlint MD024 at line 59 (two entries headed with the same timestamp and author), so scripts/lint-md.sh and make smoke fail on main. Left for the thread's owner; S-0154 does not touch it.
 
 ## Remediation
