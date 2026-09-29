@@ -3,12 +3,15 @@ id: S-0163
 type: story
 nature: feature
 title: Improved Charts
-status: backlog
+status: ready
 parent: E-0011
 owner: alex
 created: 2026-09-29T19:40:33Z
-updated: 2026-09-29T19:40:33Z
-transitions: []
+updated: 2026-09-29T20:14:01Z
+transitions:
+  - to: ready
+    at: 2026-09-29T20:14:01Z
+    by: alex
 tags: [dashboard, cli]
 topics: [client-side, server-side, analytics]
 touches: [flaiover/src, flai/cmd]
