@@ -80,6 +80,8 @@ Cause 2 is gone since S-0157: `release.Pending` reads git through a history kept
 
 The pauses the operator sees come from these adding up. A board load asks `board.get` (190 ms), `publish.preview` (235 ms), and `push.pending` (157 ms), and `/api/projects` asks `board.get`, `inbox.designer`, and `agent.status` again (about 360 ms). Each of them reads every work item from disk, and the three that start flai also pay the 145 ms start. They run at once, on a host where agents keep asking the same MCP tools, so they compete for the disk and the CPU.
 
+Cause 3 is gone since S-0158: `inbox.designer` runs the `wip.overlap` rule alone, over the items it has already listed, and `check.run` is no longer one of its phases. On 2026-09-29, on the same host and repository, it took 11 to 14 ms, median 12.7 ms, against 170 to 195 ms, median 178 ms, before the change the same hour; its phases were `threads.read` 5.6, `repo.list` 4.7, and `check.overlap` under 0.1 ms.
+
 What is not a cause: the file watchers. `flai serve` walks the three folders every 300 ms and each waiting MCP call every 250 ms; one walk of 1078 files takes 5.6 ms.
 
 ## After the stories
