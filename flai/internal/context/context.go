@@ -372,8 +372,8 @@ const (
 )
 
 var groupHead = map[string]string{
-	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the whole document, or the section, with the MCP doc_get or flai doc show <path>, before relying on it or changing what it describes.\n",
-	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, each by its decision sentence. When one bears on the story, read it whole with the MCP doc_get or flai doc show <path> before relying on it.\n\n",
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
+	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, each by its decision sentence. When one bears on the story, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
 }
 
 // group is the heading an item prints under, empty for one loaded.
@@ -434,7 +434,7 @@ func (p *Pack) writeCatalog(b *strings.Builder) {
 	if len(c.NotLoaded) == 0 && len(c.InPart) == 0 {
 		return
 	}
-	b.WriteString("\ncatalog\n=======\n\nRead any of these with flai doc show <path> or the MCP doc_get.\n")
+	b.WriteString("\ncatalog\n=======\n\nRead any of these, or one section with its heading, with the MCP doc_get or flai doc show <path> --heading \"<heading>\"; find sections by their words with doc_search or flai doc search.\n")
 	if len(c.NotLoaded) > 0 {
 		b.WriteString("\nNot loaded:\n\n")
 		for _, e := range c.NotLoaded {

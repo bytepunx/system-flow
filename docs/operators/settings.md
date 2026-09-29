@@ -217,13 +217,14 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
 | `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--hash` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
-| `--heading` | [flai thread new](../users/flai-reference.md#flai-thread-new) |
+| `--heading` | [flai doc show](../users/flai-reference.md#flai-doc-show), [flai thread new](../users/flai-reference.md#flai-thread-new) |
 | `--idle` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
 | `--image` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
+| `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search) |
 | `--max-sessions` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
 | `--message` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
 | `--model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |

@@ -23,7 +23,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [completion](#flai-completion) | Generate the autocompletion script for the specified shell |
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
-| [doc](#flai-doc) | Read and save one markdown document for an editor |
+| [doc](#flai-doc) | Search, read, and save markdown documents |
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
@@ -82,7 +82,7 @@ Subcommands:
 - [completion](#flai-completion): Generate the autocompletion script for the specified shell
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
-- [doc](#flai-doc): Read and save one markdown document for an editor
+- [doc](#flai-doc): Search, read, and save markdown documents
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
@@ -783,14 +783,15 @@ Flags:
 
 ### flai doc
 
-Read and save one markdown document for an editor.
+Search, read, and save markdown documents.
 
-The save path for documents edited in the dashboard (ADR-0023). flai decides what may be edited, detects a concurrent change by a content hash, validates with the check, and commits the one path.
+The save path for documents edited in the dashboard (ADR-0023). flai decides what may be edited, detects a concurrent change by a content hash, validates with the check, and commits the one path. flai doc search and flai doc show --heading are how an agent reads design on demand (ADR-0049).
 
 Subcommands:
 
 - [save](#flai-doc-save): Save a document from standard input: conflict check, flai check, commit
-- [show](#flai-doc-show): Print a document with its content hash and what may be edited
+- [search](#flai-doc-search): Rank the sections of design and docs against a query
+- [show](#flai-doc-show): Print a document with its content hash and what may be edited, or one section of it
 
 #### flai doc save
 
@@ -817,21 +818,53 @@ Flags:
 | `--no-commit` | save without committing |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 
-#### flai doc show
+#### flai doc search
 
-Print a document with its content hash and what may be edited.
+Rank the sections of design and docs against a query.
 
 ```text
-flai doc show <path>
+flai doc search <query>... [flags]
+```
+
+Ranks every section of the design and docs folders, the conventions among them, by BM25 against the query, as the MCP doc\_search tool does (ADR-0049). Sections are cut as flai prime --story cuts them, each down to the next heading of any level. Prints at most 20, best first: the path and heading path, the size, and the first lines. Read one with flai doc show &lt;path&gt; --heading "&lt;heading&gt;".
+
+Examples:
+
+```bash
+flai doc search context pack budget
+flai doc search --limit 5 --json worktree
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--limit` int | at most this many sections (20 at most) (default `20`) |
+
+#### flai doc show
+
+Print a document with its content hash and what may be edited, or one section of it.
+
+```text
+flai doc show <path> [flags]
 ```
 
 Modes: full (body and front matter: design and docs), body (flai owns the front matter: work items, narratives, board.md), none (generated files, threads, issues, the archive), with the reason.
+
+With --heading, prints only that section and the sections below it, as the MCP doc\_get tool returns it with a heading (ADR-0049): the text, or with --json its path, heading path, line, size, and text. A heading is its text, a heading path such as "Commands › flai prime" (&gt; also joins), or its anchor slug; one that names no section, or more than one, is refused with the headings to choose from. A section has no save hash: save edits the whole document.
 
 Examples:
 
 ```bash
 flai doc show design/system/overview.md --json
+flai doc show design/system/flai-cli.md --heading "Commands › flai prime"
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--heading` string | print only the section under this heading, with the sections below it |
 
 ### flai edit
 
