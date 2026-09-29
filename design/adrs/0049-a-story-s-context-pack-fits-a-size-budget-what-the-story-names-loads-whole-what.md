@@ -1,7 +1,7 @@
 ---
 id: ADR-0049
 title: "A story's context pack fits a size budget: what the story names loads whole, what its topics and links select loads as briefs, ranking fills the rest, and the agent fetches sections on demand"
-status: proposed
+status: accepted
 date: 2026-09-29
 supersedes: []
 superseded_by: []
