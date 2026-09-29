@@ -4,6 +4,9 @@ import NewItemForm from './NewItemForm.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+vi.mock('$app/paths', () => ({
+	resolve: (route: string, p?: { id: string }) => route.replace('[id]', p?.id ?? '')
+}));
 
 const settle = async () => {
 	for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0));
@@ -14,9 +17,12 @@ const STORY_BODY = '## Goal\n\n## Acceptance criteria\n- [ ]\n\n## Tasks\n\n## N
 const EPIC_BODY = '## Outcome\n\n## Stories\n\n## Notes\n';
 
 function backend(
-	create: (body: Record<string, unknown>) => unknown = () => ok({ item: { id: 'S-0099' } })
+	create: (body: Record<string, unknown>) => unknown = () => ok({ item: { id: 'S-0099' } }),
+	move: (id: string, to: string) => unknown = (id, to) => ok({ id, status: to })
 ) {
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+		const moving = url.match(/^\/api\/items\/([^/]+)\/move$/);
+		if (moving) return move(moving[1], JSON.parse(init!.body!).to);
 		if (url.startsWith('/api/items/template'))
 			return ok({ body: url.endsWith('epic') ? EPIC_BODY : STORY_BODY });
 		if (url.startsWith('/api/items?'))
@@ -237,5 +243,76 @@ describe('NewItemForm', () => {
 		await settle();
 		expect(sent).toBeUndefined();
 		expect(q('refusal').textContent).toContain('agent config: "nonsense" is not key=value');
+	});
+
+	// S-0167: the board's lane menu opens the form on a lane, and the item is moved there once made
+	describe('the lane it starts in', () => {
+		const submit = async (lane?: 'backlog' | 'ready' | 'in-progress') => {
+			const moves: string[] = [];
+			backend(undefined, (id, to) => {
+				moves.push(`${id}→${to}`);
+				return ok({ id, status: to });
+			});
+			const oncreated = vi.fn();
+			c = mount(NewItemForm, {
+				target: document.body,
+				props: lane ? { oncreated, initialLane: lane } : { oncreated }
+			});
+			await settle();
+			type(q<HTMLInputElement>('title'), 'From a lane');
+			q<HTMLFormElement>('new-item').dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true })
+			);
+			await settle();
+			return { moves, oncreated };
+		};
+
+		it('is backlog unless given, and backlog needs no move', async () => {
+			const { moves, oncreated } = await submit();
+			expect(q<HTMLSelectElement>('lane').value).toBe('backlog');
+			expect([...q<HTMLSelectElement>('lane').options].map((o) => o.value)).toEqual([
+				'backlog',
+				'ready',
+				'in-progress'
+			]);
+			expect(moves).toEqual([]);
+			expect(oncreated).toHaveBeenCalledWith('S-0099');
+		});
+
+		it('moves a new item to ready, and through ready to in-progress', async () => {
+			let run = await submit('ready');
+			expect(run.moves).toEqual(['S-0099→ready']);
+			expect(run.oncreated).toHaveBeenCalledWith('S-0099');
+			unmount(c!);
+			document.body.innerHTML = '';
+			run = await submit('in-progress');
+			expect(run.moves).toEqual(['S-0099→ready', 'S-0099→in-progress']);
+			expect(run.oncreated).toHaveBeenCalledWith('S-0099');
+		});
+
+		it('says which move was refused, links the item made, and does not make it again', async () => {
+			backend(undefined, () => ({
+				ok: false,
+				statusText: 'Unprocessable',
+				json: async () => ({ error: 'rule: a story needs an acceptance criterion' })
+			}));
+			const oncreated = vi.fn();
+			c = mount(NewItemForm, {
+				target: document.body,
+				props: { oncreated, initialLane: 'in-progress' }
+			});
+			await settle();
+			type(q<HTMLInputElement>('title'), 'Not ready');
+			q<HTMLFormElement>('new-item').dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true })
+			);
+			await settle();
+			expect(q('refusal').textContent).toContain(
+				'S-0099 was created, but moving it to ready was refused: rule: a story needs an acceptance criterion'
+			);
+			expect(q<HTMLAnchorElement>('created').getAttribute('href')).toBe('/items/S-0099');
+			expect(oncreated).not.toHaveBeenCalled();
+			expect(button().disabled).toBe(true);
+		});
 	});
 });

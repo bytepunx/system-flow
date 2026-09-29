@@ -3,21 +3,34 @@
 	// (S-0059). The ID, file name, front matter, parent link, and commit are flai's: this form
 	// sends the text and the few choices that are the designer's to make, and shows what flai
 	// answered. No front matter is shown, because none of it is the designer's to write.
+	import { untrack } from 'svelte';
 	import { api } from '$lib/api';
+	import { resolve } from '$app/paths';
 	import { NATURES } from '$lib/natures';
 	import { render } from '$lib/markdown';
 	import { agentFrom, parseConfig, type Agent } from '$lib/agent';
 	import AgentFields from './AgentFields.svelte';
+	import { movesTo, START_LANES, type StartLane } from '$lib/lanes';
 
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 	type Epic = { id: string; title: string; status: string; archived: boolean };
 
 	let {
 		oncreated,
-		initialType = 'story'
-	}: { oncreated: (id: string) => void; initialType?: 'epic' | 'story' } = $props();
+		initialType = 'story',
+		initialLane = 'backlog'
+	}: {
+		oncreated: (id: string) => void;
+		initialType?: 'epic' | 'story';
+		initialLane?: StartLane;
+	} = $props();
 
-	let type = $state<'epic' | 'story'>(initialType);
+	// The props say where the form starts; from there the choices are the designer's.
+	let type = $state<'epic' | 'story'>(untrack(() => initialType));
+	// The lane it starts in (S-0167): flai makes every item in backlog, and the form moves it on.
+	let lane = $state<StartLane>(untrack(() => initialLane));
+	// Made, but not moved as far as asked: it exists, so the form must not make it again.
+	let created = $state<string | null>(null);
 	let title = $state('');
 	let nature = $state('feature');
 	let parent = $state('');
@@ -45,7 +58,7 @@
 			.filter(Boolean);
 	// A story need not belong to an epic (S-0092): "No epic" (parent === '') is a real choice, not
 	// a placeholder to fill in.
-	const ready = $derived(title.trim() !== '' && body.trim() !== '' && !busy);
+	const ready = $derived(title.trim() !== '' && body.trim() !== '' && !busy && !created);
 
 	// The sections come from the project's item template, through flai. Text the designer has
 	// already written is never replaced: a change of type swaps the body only while it is still
@@ -129,7 +142,22 @@
 				findings = answer.findings ?? [];
 				return;
 			}
-			oncreated(answer.item.id);
+			const id = answer.item.id as string;
+			// Each move is one of flai's, with its rules: a story needs acceptance criteria to be ready.
+			for (const to of movesTo(lane)) {
+				const m = await api(`/api/items/${id}/move`, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ to })
+				});
+				if (!m.ok) {
+					const refused = await m.json().catch(() => ({}));
+					created = id;
+					error = `${id} was created, but moving it to ${to} was refused: ${refused.error ?? m.statusText}`;
+					return;
+				}
+			}
+			oncreated(id);
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -158,6 +186,16 @@
 				</select>
 			</label>
 		{/if}
+		<label class="text-sm">
+			<span class="mb-1 block text-xs text-muted">starts in</span>
+			<select
+				class="rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={lane}
+				data-testid="lane"
+			>
+				{#each START_LANES as l (l)}<option value={l}>{l}</option>{/each}
+			</select>
+		</label>
 		<label class="text-sm">
 			<span class="mb-1 block text-xs text-muted">nature</span>
 			<select
@@ -258,6 +296,13 @@
 			data-testid="refusal"
 		>
 			<p>{error}</p>
+			{#if created}
+				<p class="mt-1">
+					<a class="underline" href={resolve('/items/[id]', { id: created })} data-testid="created"
+						>Open {created}</a
+					> to move it from there.
+				</p>
+			{/if}
 			{#if findings.length}
 				<ul class="mt-1 list-disc pl-5">
 					{#each findings as f (f.rule + f.path + f.line + f.message)}
