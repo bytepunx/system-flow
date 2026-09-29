@@ -3,12 +3,15 @@ id: S-0149
 type: story
 nature: improvement
 title: Provide briefs in cases where large files are part of context
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-29T04:57:00Z
-updated: 2026-09-29T04:57:00Z
-transitions: []
+updated: 2026-09-29T04:58:25Z
+transitions:
+  - to: ready
+    at: 2026-09-29T04:58:25Z
+    by: alex
 tags: [cli]
 topics: [context]
 touches: [flai/cmd]

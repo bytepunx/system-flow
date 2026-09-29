@@ -2,12 +2,12 @@
 id: TH-0032
 title: "S-0138's pack cannot fit 80 KB under ADR-0049's rules: which way?"
 anchor:
-  path: wip/kanban/stories/S-0146-a-story-s-context-pack-fits-a-size-budget-with-briefs-of-what-its-topics-and-links-select.md
-  item: S-0146
+  path: wip/kanban/stories/S-0149-provide-briefs-in-cases-where-large-files-are-part-of-context.md
+  item: S-0149
 status: answered
-participants: [agent-S-0146, alex]
+participants: [agent-S-0146, alex, agent-S-0147]
 created: 2026-09-29T03:27:13Z
-updated: 2026-09-29T04:10:22Z
+updated: 2026-09-29T05:14:47Z
 ---
 
 # TH-0032 S-0138's pack cannot fit 80 KB under ADR-0049's rules: which way?
@@ -71,3 +71,6 @@ A task that writes out a path to say "update this file" loads the whole file, an
 
 ### 2026-09-29T04:10:22Z alex
 write the updated ADR to refine 0049 and then the backlog story
+
+### 2026-09-29T05:14:47Z agent-S-0147
+Moved from archived S-0146 to S-0149 on your answer in TH-0033 (option A). S-0149 carries the ADR that refines ADR-0049, so this request is still open. flai check --strict is clean again.
