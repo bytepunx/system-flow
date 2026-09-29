@@ -3,11 +3,11 @@ id: T-0571
 type: task
 nature: feature
 title: The dashboard's Repo forgets only the answers a changed path affects
-status: in-progress
+status: done
 parent: S-0161
 owner: alex
 created: 2026-09-29T19:40:45Z
-updated: 2026-09-29T19:41:11Z
+updated: 2026-09-29T19:45:14Z
 transitions:
   - to: ready
     at: 2026-09-29T19:41:10Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-09-29T19:41:11Z
     by: agent-S-0161
+  - to: done
+    at: 2026-09-29T19:45:14Z
+    by: agent-S-0161
 stream: S-0161
 tags: []
 touches: [flaiover/src/lib, design/system/flaiover-dashboard.md]
+usage:
+  source: log
+  seconds: 243
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 326
+      cache_read: 2971080
+      cache_write: 28843
+      cost: 1.1941
 ---
 
 # T-0571 The dashboard's Repo forgets only the answers a changed path affects

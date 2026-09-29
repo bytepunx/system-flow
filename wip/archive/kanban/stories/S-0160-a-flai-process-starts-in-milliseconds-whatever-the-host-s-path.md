@@ -3,11 +3,11 @@ id: S-0160
 type: story
 nature: remediation
 title: A flai process starts in milliseconds whatever the host's PATH
-status: in-progress
+status: done
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:30Z
-updated: 2026-09-29T19:38:50Z
+updated: 2026-09-29T19:55:09Z
 transitions:
   - to: ready
     at: 2026-09-29T19:18:48Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-09-29T19:33:57Z
     by: agent-S-0160
+  - to: review
+    at: 2026-09-29T19:43:35Z
+    by: agent-S-0160
+  - to: done
+    at: 2026-09-29T19:55:09Z
+    by: alex
 tags: [cli]
 topics: [server-side, back-end]
 touches: [flai/cmd, flai/internal/prompt, flai/go.mod, flai/go.sum, design/tech/go-libraries.md, design/tech/README.md, design/adrs, design/system/server-performance.md]
@@ -25,15 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 392
-  estimated: true
+  seconds: 600
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 613
-      cache_read: 4001253
-      cache_write: 107282
-      cost: 1.6334
+      input: 142
+      output: 39654
+      cache_read: 7049339
+      cache_write: 134381
+      cost: 3.2786
 ---
 # S-0160 A flai process starts in milliseconds whatever the host's PATH
 

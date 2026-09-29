@@ -3,14 +3,17 @@ id: T-0572
 type: task
 nature: feature
 title: Pages gather changes that arrive together, and the board asks again only when a work item changed
-status: ready
+status: in-progress
 parent: S-0161
 owner: alex
 created: 2026-09-29T19:40:45Z
-updated: 2026-09-29T19:41:11Z
+updated: 2026-09-29T19:45:14Z
 transitions:
   - to: ready
     at: 2026-09-29T19:41:11Z
+    by: agent-S-0161
+  - to: in-progress
+    at: 2026-09-29T19:45:14Z
     by: agent-S-0161
 stream: S-0161
 tags: []

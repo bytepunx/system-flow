@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 338
-      cache_read: 2375523
-      cache_write: 38807
-      cost: 0.9598
+      input: 48
+      output: 13327
+      cache_read: 2369171
+      cache_write: 45163
+      cost: 1.1019
 ---
 
 # T-0569 flai asks its prompts through a line-based prompt package and no longer depends on huh

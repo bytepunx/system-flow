@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 119
-      cache_read: 903724
-      cache_write: 9652
-      cost: 0.3631
+      input: 18
+      output: 5042
+      cache_read: 896288
+      cache_write: 17086
+      cost: 0.4169
 ---
 
 # T-0570 Measure flai version's start on this host and record it in the design
