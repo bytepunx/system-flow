@@ -19,14 +19,14 @@ topics: [front-end]
 touches: [flaiover/src]
 usage:
   source: sum
-  seconds: 2630
+  seconds: 2881
   models:
     - model: claude-opus-5-5
-      input: 718
-      output: 176938
-      cache_read: 41747470
-      cache_write: 742694
-      cost: 17.8328
+      input: 792
+      output: 188684
+      cache_read: 44115981
+      cache_write: 818887
+      cost: 19.1513
 ---
 # E-0013 Usability Improvements
 
