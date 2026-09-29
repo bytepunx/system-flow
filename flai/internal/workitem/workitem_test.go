@@ -263,6 +263,79 @@ func TestMoveRules(t *testing.T) {
 	}
 }
 
+// S-0167, ADR-0055: every column but done has a way back one column.
+func TestMoveBack(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "E", "")
+	s := mustCreate(t, r, Story, "S", "E-0001")
+	s.Body = strings.Replace(s.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] works\n", 1)
+	_ = r.Save(s)
+
+	mustMove(t, r, s, Ready, "")
+	mustMove(t, r, s, Backlog, "")
+	if board, _ := r.LoadBoard(); len(board.Order) != 0 {
+		t.Errorf("a story back in backlog keeps its place in the ready order: %v", board.Order)
+	}
+	mustMove(t, r, s, Ready, "")
+	mustMove(t, r, s, InProgress, "")
+	mustMove(t, r, s, Ready, "")
+	if board, _ := r.LoadBoard(); len(board.Order) != 1 || board.Order[0] != "S-0001" {
+		t.Errorf("a story back in ready is not in the pull order: %v", board.Order)
+	}
+	mustMove(t, r, s, Cancelled, "not now")
+	mustMove(t, r, s, Backlog, "")
+	want := []string{Ready, Backlog, Ready, InProgress, Ready, Cancelled, Backlog}
+	if len(s.Transitions) != len(want) {
+		t.Fatalf("history: %+v", s.Transitions)
+	}
+	for i, to := range want {
+		if s.Transitions[i].To != to {
+			t.Errorf("transition %d is to %s, want %s", i, s.Transitions[i].To, to)
+		}
+	}
+	if err := s.Validate(); err != nil {
+		t.Errorf("moved item invalid: %v", err)
+	}
+
+	// backlog has no way back, and cancelled goes back only to backlog
+	items, _ := r.List(false)
+	if _, err := r.Move(s, Cancelled, MoveOptions{Now: t0, Items: items, Reason: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{Ready, InProgress, Review, Done} {
+		if _, err := r.Move(s, to, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "allowed: backlog") {
+			t.Errorf("cancelled to %s: %v", to, err)
+		}
+	}
+}
+
+func TestDoneIsFinal(t *testing.T) {
+	r := newProject(t)
+	s := mustCreate(t, r, Story, "S", "")
+	s.Status = Done
+	s.Transitions = []Transition{{To: Done, At: t0.Format(TimeFormat), By: "test"}}
+	items, _ := r.List(false)
+	for _, to := range []string{Backlog, Ready, InProgress, Review, Cancelled} {
+		if _, err := r.Move(s, to, MoveOptions{Now: t0, Items: items, Reason: "x"}); err == nil || !strings.Contains(err.Error(), "done is terminal") {
+			t.Errorf("done to %s: %v", to, err)
+		}
+	}
+}
+
+func TestReopenUnderCancelledParent(t *testing.T) {
+	r := newProject(t)
+	e := mustCreate(t, r, Epic, "E", "")
+	s := mustCreate(t, r, Story, "S", "E-0001")
+	mustMove(t, r, s, Cancelled, "gone")
+	mustMove(t, r, e, Cancelled, "gone")
+	items, _ := r.List(false)
+	if _, err := r.Move(s, Backlog, MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), "parent E-0001 is cancelled") {
+		t.Errorf("reopened under a cancelled epic: %v", err)
+	}
+	mustMove(t, r, e, Backlog, "")
+	mustMove(t, r, s, Backlog, "")
+}
+
 func TestWIPWarningAndBlocks(t *testing.T) {
 	r := newProject(t)
 	mustCreate(t, r, Epic, "E", "")

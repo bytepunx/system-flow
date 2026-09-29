@@ -1353,6 +1353,8 @@ Move an item to a new state. States: backlog, ready, in-progress, review, done, 
 
 Rules from design/system/workflow.md are enforced: a story needs acceptance criteria before ready, and at least one task and no open question in its narrative before review; children must be closed before done; cancelling or sending review back needs --reason. WIP limit breaches warn.
 
+An item also moves back one column: ready to backlog, in-progress to ready, review to in-progress, cancelled to backlog, the last only while its parent is not cancelled (ADR-0055). Done is final.
+
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.
 
 Moving a story from review to done is acceptance: it runs the same flow as flai accept (merge the story branch, archive, commit), with the same flags. There is no other way for a story to become done. Acceptance computes no release; see flai release --pending.
@@ -1363,6 +1365,7 @@ Examples:
 flai move S-004 in-progress
 flai move T-021 done
 flai move S-004 in-progress --reason "tests missing"   # from review
+flai move S-006 backlog                                # from ready, or from cancelled
 flai move S-009 cancelled --reason "superseded by S-012"
 flai move E-003 cancelled --reason "a different route" --dry-run
 ```

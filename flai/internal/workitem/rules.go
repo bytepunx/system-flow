@@ -10,12 +10,14 @@ import (
 
 // allowed lists the transitions from each state (ADR-0004, workflow.md).
 // Tasks may also go straight from in-progress to done: review is the
-// human acceptance step and happens at story level.
+// human acceptance step and happens at story level. Every state but done
+// has a way back a column (ADR-0055): done is acceptance, and final.
 var allowed = map[string][]string{
 	Backlog:    {Ready, Cancelled},
-	Ready:      {InProgress, Cancelled},
-	InProgress: {Review, Cancelled},
+	Ready:      {InProgress, Backlog, Cancelled},
+	InProgress: {Review, Ready, Cancelled},
 	Review:     {Done, InProgress},
+	Cancelled:  {Backlog},
 }
 
 // MoveOptions parameterise a transition.
@@ -53,6 +55,15 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	}
 	if (to == Cancelled || (from == Review && to == InProgress)) && strings.TrimSpace(opt.Reason) == "" {
 		return nil, fmt.Errorf("rule: moving %s to %s needs --reason", it.ID, to)
+	}
+	// Nothing open lives under a cancelled parent (ADR-0028), so an item comes
+	// back from cancelled only after its parent has.
+	if from == Cancelled && it.Parent != "" {
+		for _, p := range opt.Items {
+			if p.ID == it.Parent && p.Status == Cancelled {
+				return nil, fmt.Errorf("rule: %s cannot go back to %s while its parent %s is cancelled; move %s back first", it.ID, to, p.ID, p.ID)
+			}
+		}
 	}
 	children := Children(opt.Items, it.ID)
 	switch to {

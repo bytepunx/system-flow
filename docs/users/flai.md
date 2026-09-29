@@ -299,7 +299,11 @@ flai move S-0001 done --by alex # needs every task closed and every criterion ch
 flai move S-0001 in-progress --reason "tests missing"     # from review
 flai move S-0002 cancelled --reason "superseded by S-0005"
 flai move E-0003 cancelled --reason "a different route" --dry-run   # what would go with it
+flai move S-0003 backlog        # back from ready, or reopened from cancelled
+flai move S-0004 ready          # back from in-progress; it goes last in the ready order
 ```
+
+An item moves back one column from ready, in-progress, review, or cancelled, and never out of done ([ADR-0055](../../design/adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)). A reopened item is refused while its parent is cancelled; move the parent back first. What its cancellation cancelled under it stays cancelled. Until it closes again it has no completed time, lead time, or cycle time in `flai stats`.
 
 ### Tokens and cost
 

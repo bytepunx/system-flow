@@ -150,10 +150,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		rep.Items = append(rep.Items, m)
 	}
 	inWindow := func(it *workitem.Item) bool {
-		c := it.FirstAt(workitem.Done)
-		if c.IsZero() {
-			c = it.FirstAt(workitem.Cancelled)
-		}
+		c := it.CompletedAt()
 		return !c.IsZero() && !c.Before(start) && !c.After(opt.Now)
 	}
 	rep.Summary = summarise("", items, perItem, inWindow, opt)
@@ -218,10 +215,7 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 	created, _ := time.Parse(workitem.TimeFormat, it.Created)
 	committed := it.FirstAt(workitem.Ready)
 	started := it.FirstAt(workitem.InProgress)
-	completed := it.FirstAt(workitem.Done)
-	if completed.IsZero() {
-		completed = it.FirstAt(workitem.Cancelled)
-	}
+	completed := it.CompletedAt()
 	set := func(t time.Time) string {
 		if t.IsZero() {
 			return ""

@@ -201,7 +201,9 @@ func (it *Item) Validate() error {
 		}
 	}
 	for i, tr := range it.Transitions {
-		if !contains(States, tr.To) || tr.To == Backlog {
+		// Creation is backlog and is not recorded; backlog is entered again only
+		// by a move back (ADR-0055).
+		if !contains(States, tr.To) || (i == 0 && tr.To == Backlog) {
 			errs = append(errs, fmt.Sprintf("transitions[%d].to %q is not a state that can be entered", i, tr.To))
 		}
 		if _, err := time.Parse(TimeFormat, tr.At); err != nil {
@@ -289,6 +291,17 @@ func (it *Item) IsBlocked() bool {
 // Closed reports whether the item is done or cancelled.
 func (it *Item) Closed() bool {
 	return it.Status == Done || it.Status == Cancelled
+}
+
+// CompletedAt is when the item closed: its last transition while it is done
+// or cancelled, zero while it is open, so an item moved back out of cancelled
+// is not completed (ADR-0055).
+func (it *Item) CompletedAt() time.Time {
+	if !it.Closed() || len(it.Transitions) == 0 {
+		return time.Time{}
+	}
+	t, _ := time.Parse(TimeFormat, it.Transitions[len(it.Transitions)-1].At)
+	return t
 }
 
 // Marshal renders the item back to a markdown document. The front matter is

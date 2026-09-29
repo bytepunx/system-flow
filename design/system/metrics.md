@@ -16,7 +16,7 @@ Everything the dashboard charts is derived from work item front matter. This doc
 | `created` | Front matter `created` |
 | `committed` | `at` of the first transition to `ready` |
 | `started` | `at` of the first transition to `in-progress` |
-| `completed` | `at` of the transition to `done` or `cancelled` |
+| `completed` | `at` of the last transition, while the item is `done` or `cancelled`; none while it is open, so an item moved back out of `cancelled` is not completed until it closes again ([ADR-0055](../adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)) |
 | `state_intervals` | For each transition, the interval from its `at` to the next transition's `at` (or now), labelled with the state entered |
 | `blocked_total` | Sum of `blocked` intervals, open intervals end at now |
 

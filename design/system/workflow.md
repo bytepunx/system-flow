@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-09-26
+updated: 2026-09-29
 status: active
 topics: [all]
 ---
@@ -55,6 +55,9 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 | in-progress to review | Agent | At least one task exists, no open question in the narrative, nothing uncommitted in the story's worktree (S-0140: `flai move` and `item_move` refuse it, naming the paths), acceptance criteria self-checked, narrative summary current |
 | review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. For a story this transition is acceptance, however it is made: `flai accept`, `flai move <story> done`, a card dropped on done, or the item page button all run the same flow (S-0046). `flai accept` does the acceptance: rebase and merge the story branch, move to done, archive, commit. Its preview lists anything uncommitted in the story's worktree (`worktree_uncommitted`) and blocks on it before anything is merged; `flai serve agent commit <story>`, or **Have an agent commit them** in the dashboard's confirmation, starts the story's agent to commit it (S-0140). Nothing is tagged or pushed at acceptance (S-0087, ADR-0032): publishing what has accumulated is `flai release --pending`, a deliberate step of its own, run by hand or from the board's Publish action, see `design/conventions/git.md` |
 | review to in-progress | Human | Reason appended to story notes |
+| ready to backlog, in-progress to ready | Human | A step back one column, from the board's lane menu or `flai move` ([ADR-0055](../adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)). A reason is optional and appended to the notes when given. A story back in ready goes last in the ready order; one back in backlog leaves the order |
+| cancelled to backlog | Human | Reopens a cancelled item; refused while its parent is cancelled, which is moved back first. What its cancellation cancelled under it stays cancelled. The item is not completed again until it closes ([ADR-0055](../adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)) |
+| done to anything | Nobody | Done is final: acceptance merged and archived the work |
 | backlog, ready, or in-progress to cancelled | Human | Reason appended to the item's notes. Everything open under the item is cancelled with it ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)) |
 | review to cancelled | Only a parent's cancellation | An item in review is accepted or sent back; it is cancelled only with its epic or story |
 
