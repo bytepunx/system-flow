@@ -3,11 +3,11 @@ id: S-0157
 type: story
 nature: improvement
 title: Pending releases are worked out without starting a git process per accepted item
-status: review
+status: done
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:28Z
-updated: 2026-09-29T19:37:45Z
+updated: 2026-09-29T19:41:17Z
 transitions:
   - to: ready
     at: 2026-09-29T19:18:25Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-29T19:37:45Z
     by: agent-S-0157
+  - to: done
+    at: 2026-09-29T19:41:17Z
+    by: alex
 tags: [cli]
 topics: [server-side, back-end]
 touches: [flai/internal/release, design/system/server-performance.md, design/system/flai-cli.md]
