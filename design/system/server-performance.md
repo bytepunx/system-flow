@@ -104,6 +104,22 @@ Each story remeasures what its cause cost, on the same host and repository, and 
 
 `inbox` lists the items once for the board and the changes, where it listed them twice. What is left of a board load is cause 2: this measurement found 69 git processes where S-0152 found 25, as more items were accepted since the last release.
 
+### Cause 4: the dashboard's reads answered in flai serve's process (S-0159)
+
+`publish.preview`, `push.pending`, `stats.get`, `stream.diff`, `item.show`, `item.move.preview`, and `accept.preview` start no flai: `flai serve` answers them from the code the commands print with, over the items and git history it keeps (causes 1 and 2), with the answer the command gave ([flai-cli.md](flai-cli.md#commands)). Their `request answered` events have no `exec.flai` phase; each names its work, such as `push.preview` or `stats.compute`. Measured on 2026-09-29, on the same host and repository, load about 2: each method called six times in one process through the table `flai serve` answers with, the first call cold, beside the command run three times by a flai built from `main` the same hour, which already starts in about 6 ms (cause 5) and keeps nothing between runs.
+
+| Method | A flai process (S-0152) | A flai process, same hour | In-process, cold | In-process, warm | Warm, where the time went |
+|--------|-------------------------|---------------------------|------------------|------------------|---------------------------|
+| `publish.preview` | 235 to 276 ms | 81 ms | 75 ms | 7.2 to 8.3 ms | `release.pending` 6.9, one `git show-ref` |
+| `push.pending` | 157 ms | 24 to 26 ms | 20 ms | 17 to 19 ms | seven git processes: `tag` 6.8, `rev-list` 5.1, `rev-parse` 3.5, `log` 2.6 |
+| `stats.get` | 282 ms | 139 to 142 ms | 125 ms | 9.1 to 10.6 ms | `stats.compute` 8.2 |
+| `stream.diff`, 24 files | 261 ms | 83 to 89 ms | 74 ms | 73 to 75 ms | one `git diff` per file, 64 ms |
+| `item.show` | 167 ms | 9 to 12 ms | 0.6 ms | 0.3 to 1.3 ms | |
+| `item.move.preview`, an epic | | 16 ms | 5.8 ms | 4.9 to 5.8 ms | three `git rev-parse` |
+| `accept.preview`, refused | | 9 ms | 2.1 ms | 1.9 to 2.6 ms | one `git rev-parse` |
+
+`publish.preview` and `push.pending`, which the board asks for at every change, answer in under 20 ms once warm. What is left is git's: `push.pending` asks git where the branch stands against its remote at every call, and `stream.diff` reads each file's patch with a process of its own, which grows with the story.
+
 ### Cause 5: a flai process starts without searching PATH (S-0160)
 
 flai asks its questions through a prompt package of its own and no longer depends on `huh`, so nothing searches `PATH` when flai starts ([ADR-0052](../adrs/0052-flai-asks-its-questions-a-line-at-a-time-with-its-own-prompt-package-not-with.md), [go-libraries.md](../tech/go-libraries.md#prompts-s-0160)). On 2026-09-29, on the same host with its own `PATH` of 54 entries, 17 under `/mnt`, `flai version` took 5.5 to 8.3 ms over 30 runs, median 5.8 ms, against 160 to 178 ms, median 163 ms, for `main` built the same hour. `GODEBUG=inittrace=1 flai version` shows no package init over 0.6 ms, where `atotto/clipboard` took 171 ms.
