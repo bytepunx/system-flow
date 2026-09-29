@@ -85,7 +85,7 @@ A story in review has a review page: open it from the card in the review column,
 
 - The acceptance criteria, with which are ticked and how many.
 - The narrative's current state and next steps, as the agent left them, with a link to the whole narrative.
-- What the story's branch changes against main: the files, with lines added and removed, and the hunks when you open a file. Large patches are cut and marked; the rest is a `git diff` away. A story that was not worked on a branch says so instead.
+- What the story's branch changes against main: a line per file, with its path and the lines added and removed. Click the line, which has an arrow at its start, to open the file's changes below it, and again to close them. A removed line has `-` in the margin and a dim red background, an added line `+` and a dim green one, and lines removed or added one after another share one brighter outline, so a block that was replaced reads as two blocks, the old above the new. Large patches are cut and marked; the rest is a `git diff` away. A story that was not worked on a branch says so instead.
 - What accepting will do: the branch that is merged, anything that blocks acceptance from here, and any uncommitted files outside `wip/`, which you choose to include or deal with first. Changes left uncommitted in the story's worktree block it: **Have an agent commit them** starts the story's agent to commit them on its branch, once the operator has turned on the `agent` host action, and you accept when it has finished. Accepting cuts no release by itself (S-0087); publishing what has accumulated is a step of its own, from the done column.
 - The threads on the story, where you can ask before deciding.
 
