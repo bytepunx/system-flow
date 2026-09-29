@@ -27,6 +27,16 @@ blocked:
     reason: waiting
 estimate: 20h
 tags: []
+usage:
+  source: log
+  seconds: 1200
+  models:
+    - model: claude-opus-5-5
+      input: 1000
+      output: 9000
+      cache_read: 2900000
+      cache_write: 90000
+      cost: 1.5
 ---
 
 # S-001 One

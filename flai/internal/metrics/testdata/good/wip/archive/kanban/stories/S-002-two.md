@@ -22,6 +22,23 @@ transitions:
     at: 2026-08-12T09:30:00Z
     by: alex
 tags: []
+usage:
+  source: log
+  seconds: 600
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 500
+      output: 4500
+      cache_read: 900000
+      cache_write: 95000
+      cost: 0.5
+    - model: claude-haiku-4-5
+      input: 100
+      output: 900
+      cache_read: 99000
+      cache_write: 0
+      cost: 0.02
 ---
 
 # S-002 Two

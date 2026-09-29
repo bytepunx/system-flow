@@ -114,6 +114,7 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 		says("item.move.preview", answered("item.move.preview", `{"id":"E-0001"}`, "move", "E-0001", "cancelled", "--by=designer", "--reason=preview", "--dry-run"), `"dry_run":true`)
 		answered("stats.get", `{}`, "stats")
 		answered("stats.get", `{"since":"12w","type":"task","by":"parent"}`, "stats", "--since=12w", "--type=task", "--by=parent")
+		says("stats.get by the hour", answered("stats.get", `{"since":"7d","bucket":"hour"}`, "stats", "--since=7d", "--bucket=hour"), `"bucket":"hour"`, `"spend":{"epic":`)
 		return answered("push.pending", `{}`, "push", "--pending", "--dry-run"), answered("publish.preview", `{}`, "release", "--pending", "--dry-run")
 	}
 

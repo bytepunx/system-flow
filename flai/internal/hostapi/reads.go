@@ -156,9 +156,10 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 		// stats.get: flow metrics, as flai stats prints them.
 		"stats.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			in, e := decode[struct {
-				Since string `json:"since"`
-				Type  string `json:"type"`
-				By    string `json:"by"`
+				Since  string `json:"since"`
+				Type   string `json:"type"`
+				By     string `json:"by"`
+				Bucket string `json:"bucket"`
 			}](raw)
 			if e != nil {
 				return nil, e
@@ -172,6 +173,9 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			if in.By != "" && in.By != "nature" && in.By != "type" && in.By != "parent" {
 				return nil, bad("by must be nature, type, or parent")
 			}
+			if in.Bucket != "" && in.Bucket != metrics.BucketHour && in.Bucket != metrics.BucketDay && in.Bucket != metrics.BucketWeek {
+				return nil, bad("bucket must be hour, day, or week")
+			}
 			return answer(ctx, p, "stats.compute", nil, func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
 				since := in.Since
 				if since == "" {
@@ -181,11 +185,14 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 				if err != nil {
 					return nil, err
 				}
+				if err := metrics.CheckBucket(in.Bucket, window); err != nil {
+					return nil, err
+				}
 				items, err := repo.List(true)
 				if err != nil {
 					return nil, err
 				}
-				return metrics.Compute(items, metrics.Options{Now: now(), Since: window, Type: in.Type, By: in.By}), nil
+				return metrics.Compute(items, metrics.Options{Now: now(), Since: window, Type: in.Type, By: in.By, Bucket: in.Bucket}), nil
 			})
 		},
 

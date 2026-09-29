@@ -17,7 +17,7 @@ var readPhase = map[string]struct{ params, phase string }{
 	"item.move.preview": {`{"id":"E-0001"}`, "cancel.preview"},
 	"accept.preview":    {`{"id":"S-0001"}`, "accept.preview"},
 	"stream.diff":       {`{"id":"S-0001"}`, "stream.diff"},
-	"stats.get":         {`{"since":"12w","type":"story","by":"nature"}`, "stats.compute"},
+	"stats.get":         {`{"since":"12w","type":"story","by":"nature","bucket":"week"}`, "stats.compute"},
 	"push.pending":      {`{}`, "push.preview"},
 	"publish.preview":   {`{}`, "release.pending"},
 }
@@ -28,7 +28,7 @@ var readRefused = map[string][]string{
 	"item.move.preview": {`{"id":"../x"}`},
 	"accept.preview":    {`{"id":"--no-push"}`},
 	"stream.diff":       {`{"id":"../../etc"}`},
-	"stats.get":         {`{"since":"30d; ls"}`, `{"type":"folder"}`, `{"by":"owner"}`},
+	"stats.get":         {`{"since":"30d; ls"}`, `{"type":"folder"}`, `{"by":"owner"}`, `{"bucket":"minute"}`, `{"bucket":"--json"}`},
 	"push.pending":      {`"--force"`},
 	"publish.preview":   {`"--force"`},
 }

@@ -16,6 +16,9 @@ type Options struct {
 	Since time.Duration // window for completed items, default 30 days
 	Type  string        // item type to aggregate, default story
 	By    string        // optional grouping: nature, type, parent
+	// Bucket is what spend over time is laid out in: hour, day, or week,
+	// default day (S-0163).
+	Bucket string
 }
 
 // ItemMetrics are the per-item derived values.
@@ -124,6 +127,9 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	if opt.Type == "" {
 		opt.Type = workitem.Story
 	}
+	if opt.Bucket == "" {
+		opt.Bucket = DefaultBucket
+	}
 	start := opt.Now.Add(-opt.Since)
 
 	var items []*workitem.Item
@@ -184,6 +190,8 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.CFD = cfd(items, opt.Now)
 	rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85)
 	rep.Usage = spendReport(items, start, opt.Now)
+	rep.Usage.Bucket = opt.Bucket
+	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {

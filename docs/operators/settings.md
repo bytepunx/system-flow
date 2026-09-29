@@ -193,6 +193,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--bind` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--body-stdin` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--bottom` | [flai order](../users/flai-reference.md#flai-order) |
+| `--bucket` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--budget` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--build` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai edit](../users/flai-reference.md#flai-edit), [flai move](../users/flai-reference.md#flai-move), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |

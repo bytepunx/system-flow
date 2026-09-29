@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -19,22 +18,26 @@ type ModelSpend struct {
 	Model  string  `json:"model"`
 	Tokens int64   `json:"tokens"`
 	Cost   float64 `json:"cost"`
-	// TokensPerHour is tokens over the hours agents worked on the item, or
-	// on the items the model worked on; absent when they worked none.
-	TokensPerHour *float64 `json:"tokens_per_hour,omitempty"`
+	// TokensPerMinute is tokens over the minutes agents worked on the item,
+	// or on the items the model worked on; absent when they worked none.
+	// TokensPerHour is sixty times that, for what was written to flai 1.25
+	// (ADR-0053).
+	TokensPerMinute *float64 `json:"tokens_per_minute,omitempty"`
+	TokensPerHour   *float64 `json:"tokens_per_hour,omitempty"`
 	// Items counts the items the model worked on, in a total.
 	Items int `json:"items,omitempty"`
 }
 
 // ItemUsage is what agents spent on one item.
 type ItemUsage struct {
-	Source        string       `json:"source"`
-	Tokens        int64        `json:"tokens"`
-	Cost          float64      `json:"cost"`
-	Seconds       int64        `json:"seconds"`
-	TokensPerHour *float64     `json:"tokens_per_hour,omitempty"`
-	Estimated     bool         `json:"estimated,omitempty"`
-	Models        []ModelSpend `json:"models"`
+	Source          string       `json:"source"`
+	Tokens          int64        `json:"tokens"`
+	Cost            float64      `json:"cost"`
+	Seconds         int64        `json:"seconds"`
+	TokensPerMinute *float64     `json:"tokens_per_minute,omitempty"`
+	TokensPerHour   *float64     `json:"tokens_per_hour,omitempty"`
+	Estimated       bool         `json:"estimated,omitempty"`
+	Models          []ModelSpend `json:"models"`
 }
 
 // SpendPoint is one item done, in order of completion, with what had been
@@ -64,14 +67,19 @@ type UsageReport struct {
 	// same for the items each model worked on, counting that model's spend.
 	Done    []SpendPoint            `json:"done"`
 	ByModel map[string][]SpendPoint `json:"by_model"`
+	// Bucket is what Spend's series are laid out in: hour, day, or week.
+	// Spend is what was spent on epics, on stories, and on tasks, in all
+	// and over time, whatever type the report is about (S-0163).
+	Bucket string                `json:"bucket"`
+	Spend  map[string]*TypeSpend `json:"spend"`
 }
 
 func perHour(tokens, seconds int64) *float64 {
-	if seconds <= 0 {
-		return nil
-	}
-	r := float64(tokens) / (float64(seconds) / 3600)
-	return &r
+	return over(float64(tokens), float64(seconds)/3600)
+}
+
+func perMinute(tokens, seconds int64) *float64 {
+	return over(float64(tokens), float64(seconds)/60)
 }
 
 // itemUsage is what an item's usage comes to; nil when it has none.
@@ -80,9 +88,10 @@ func itemUsage(u *usage.Usage) *ItemUsage {
 		return nil
 	}
 	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, Models: []ModelSpend{}}
-	out.TokensPerHour = perHour(out.Tokens, u.Seconds)
+	out.TokensPerMinute, out.TokensPerHour = perMinute(out.Tokens, u.Seconds), perHour(out.Tokens, u.Seconds)
 	for _, m := range u.Models {
-		out.Models = append(out.Models, ModelSpend{Model: m.Model, Tokens: m.Tokens(), Cost: m.Cost, TokensPerHour: perHour(m.Tokens(), u.Seconds)})
+		out.Models = append(out.Models, ModelSpend{Model: m.Model, Tokens: m.Tokens(), Cost: m.Cost,
+			TokensPerMinute: perMinute(m.Tokens(), u.Seconds), TokensPerHour: perHour(m.Tokens(), u.Seconds)})
 	}
 	return out
 }
@@ -91,24 +100,7 @@ func itemUsage(u *usage.Usage) *ItemUsage {
 // them out against time and cost.
 func spendReport(items []*workitem.Item, start, now time.Time) UsageReport {
 	rep := UsageReport{Models: []ModelSpend{}, Done: []SpendPoint{}, ByModel: map[string][]SpendPoint{}}
-	type done struct {
-		at time.Time
-		it *workitem.Item
-	}
-	var list []done
-	for _, it := range items {
-		at := it.FirstAt(workitem.Done)
-		if at.IsZero() || at.Before(start) || at.After(now) || it.Usage.Empty() {
-			continue
-		}
-		list = append(list, done{at, it})
-	}
-	sort.SliceStable(list, func(i, j int) bool {
-		if !list[i].at.Equal(list[j].at) {
-			return list[i].at.Before(list[j].at)
-		}
-		return workitem.CanonicalID(list[i].it.ID) < workitem.CanonicalID(list[j].it.ID)
-	})
+	list := spent(items, start, now)
 	models := map[string]*ModelSpend{}
 	seconds := map[string]int64{}
 	for _, d := range list {
@@ -134,7 +126,7 @@ func spendReport(items []*workitem.Item, start, now time.Time) UsageReport {
 		}
 	}
 	for name, ms := range models {
-		ms.TokensPerHour = perHour(ms.Tokens, seconds[name])
+		ms.TokensPerMinute, ms.TokensPerHour = perMinute(ms.Tokens, seconds[name]), perHour(ms.Tokens, seconds[name])
 		rep.Models = append(rep.Models, *ms)
 	}
 	slices.SortFunc(rep.Models, func(a, b ModelSpend) int { return strings.Compare(a.Model, b.Model) })

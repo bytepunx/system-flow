@@ -48,6 +48,15 @@ func TestStatsCommand(t *testing.T) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}
 	}
+	// what the two stories done in the window spent, per story, per minute
+	// of agent work, and per dollar, then per model (S-0163)
+	for _, want := range []string{"usage: 4.1M tokens · $2.02 (estimated in part) · 30m0s of agent work, over 2 done",
+		"per story 2.0M tokens, $1.01 · per agent minute 136.7K tokens · per dollar 2.0M tokens",
+		"claude-haiku-4-5  100.0K tokens · $0.02 · 10.0K tokens/min (1)", "claude-opus-5-5  4.0M tokens · $2.00 · 133.3K tokens/min (2)"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
 	out, _, _ = a("stats", "--by", "nature", "--since", "6w")
 	if !strings.Contains(out, "[feature]") || !strings.Contains(out, "[research]") {
 		t.Errorf("grouped:\n%s", out)
@@ -65,5 +74,35 @@ func TestStatsCommand(t *testing.T) {
 	}
 	if _, errOut, code := a("stats", "--since", "soon"); code == 0 || !strings.Contains(errOut, "--since") {
 		t.Errorf("bad window: %s", errOut)
+	}
+	out, _, code = a("stats", "--json", "--bucket", "week")
+	var spent struct {
+		Usage struct {
+			Bucket string `json:"bucket"`
+			Spend  map[string]struct {
+				Items   int `json:"items"`
+				Buckets []struct {
+					At    string `json:"at"`
+					Items int    `json:"items"`
+				} `json:"buckets"`
+			} `json:"spend"`
+		} `json:"usage"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &spent) != nil {
+		t.Fatalf("json by the week: %d %s", code, out)
+	}
+	u := spent.Usage
+	// S-002 was done on 12 August, a Wednesday; now is in the week of 31 August
+	if st := u.Spend["story"]; u.Bucket != "week" || st.Items != 2 || len(st.Buckets) != 5 || st.Buckets[0].At != "2026-08-03T00:00:00Z" || st.Buckets[1].Items != 1 {
+		t.Errorf("stories by the week: %+v", u)
+	}
+	if ta := u.Spend["task"]; ta.Items != 1 || len(u.Spend["epic"].Buckets) != 0 {
+		t.Errorf("tasks and epics by the week: %+v", u)
+	}
+	if _, errOut, code := a("stats", "--bucket", "minute"); code == 0 || !strings.Contains(errOut, "hour, day, or week") {
+		t.Errorf("a bucket that is not one: %s", errOut)
+	}
+	if _, errOut, code := a("stats", "--bucket", "hour", "--since", "90d"); code == 0 || !strings.Contains(errOut, "31 days or less") {
+		t.Errorf("an hour over 90 days: %s", errOut)
 	}
 }

@@ -2073,7 +2073,7 @@ Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state,
 flai stats [flags]
 ```
 
-The reference implementation of design/system/metrics.md. Aggregates cover items completed in the window (default 30d); WIP and aging are as of now. Items that carry usage add what agents spent on those done in the window: tokens, cost, and tokens per hour of agent work, in total and per model. --json includes per-item values, weekly throughput, burn-up and cumulative flow series, aging items, and usage with items done against time and cost, for dashboards and scripts.
+The reference implementation of design/system/metrics.md. Aggregates cover items completed in the window (default 30d); WIP and aging are as of now. Items that carry usage add what agents spent on those done in the window: tokens, cost, and agent time, what that comes to per item, per minute of agent work, and per dollar, and the same per model. --json includes per-item values, weekly throughput, burn-up and cumulative flow series, aging items, and usage: items done against time and cost, and under usage.spend what was spent on epics, on stories, and on tasks over time, one point per --bucket (hour, day, or week) from the first with spend to now, for dashboards and scripts. A bucket of an hour needs a window of 31 days or less.
 
 Examples:
 
@@ -2081,12 +2081,14 @@ Examples:
 flai stats
 flai stats --since 90d --by nature
 flai stats --type task --json
+flai stats --since 7d --bucket hour --json
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--bucket` string | what --json lays spend over time out in: hour, day, or week (default `day`) |
 | `--by` string | group by nature, type, or parent |
 | `--since` string | window for completed items: 7d, 90d, 12w, 720h (default `30d`) |
 | `--type` string | item type: epic, story, task (default `story`) |
