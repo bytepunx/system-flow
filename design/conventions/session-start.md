@@ -1,6 +1,6 @@
 ---
 title: Session start
-updated: 2026-09-19
+updated: 2026-09-29
 audience: agent
 order: 10
 status: active
@@ -14,11 +14,12 @@ What to load before touching anything, how to resume after a crash, and how to l
 ## Rules
 
 - Read, in order, before any change: this folder as listed in `README.md`, then `CLAUDE.md`, then `wip/agents/index.md`, then `wip/kanban/board.md`.
+- Prime with `flai prime --story <id>` when you have a story to work, and with `flai prime --cat` when you do not. The story's pack prints the conventions without the sections its topics leave out, then the design, tech, and ADRs the story selects, and a catalog of every document it did not load; with the `flai` MCP server connected, the tool `prime` returns the same pack. Read what the catalog lists, and a section the pack says it left out, when the work needs it.
 - If `wip/agents/index.md` lists an active stream, read that narrative's `## Current state` and `## Next steps` before anything else. Assume it is true until `git status` says otherwise.
 - Run `git status` and compare with the narrative. Uncommitted changes the narrative does not mention are the first thing to reconcile, and the reconciliation goes in the log.
 - Append a log entry to the narrative stating that a session started or recovered, and what state you found.
 - If no stream is active, pull the top story from the board's `order` that is `ready`, respecting the WIP limit, and open its narrative with `flai stream open`. Do not start a `backlog` story; refine it to `ready` first and say so. With the `flai` MCP server connected, `inbox` lists the ready stories in pull order and what changed while you were away; use it instead of inferring the board from files. A ready story may have no tasks: writing them is the first thing you do once it is `in-progress`, as `work-management.md` describes.
-- If `FLAI_STORY` is set in your environment, flai started this session on the host because that story became ready and nobody was attending the project (`FLAI_STARTED_BY` says `flai-serve`). Prime as always, then call `inbox`: pull that story if it is still ready and the limit allows, otherwise the first ready story, otherwise nothing. Work as in any session. When nothing is left for you to pull, hold `wait_for_work` instead of ending the session, and pull the next story it names: flai starts one agent per project at a time, so while you wait, the next ready story is yours.
+- If `FLAI_STORY` is set in your environment, flai started this session on the host because that story became ready and nobody was attending the project (`FLAI_STARTED_BY` says `flai-serve`). Prime with `flai prime --story` on that story, then call `inbox`: pull that story if it is still ready and the limit allows, otherwise the first ready story, otherwise nothing. Work as in any session. When nothing is left for you to pull, hold `wait_for_work` instead of ending the session, and pull the next story it names: flai starts one agent per project at a time, so while you wait, the next ready story is yours.
 - Do not re-derive facts already recorded in the narrative, the story, or `design/system`. Read them.
 - Do not read the whole repository to orient yourself. The four documents above plus the active story and its design links are enough; go wider only when a task needs it.
 - Before any long-running or risky operation, rewrite `## Current state` and `## Next steps` so a crash mid-operation loses nothing.

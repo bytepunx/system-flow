@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.22 - 2026-09-29
+
+- S-0138 Agents flai starts, and any agent with a story, prime with flai prime --story (patch).
+
 ## 1.0.21 - 2026-09-28
 
 - S-0134 Conventions, design, tech files, and ADRs carry topics on the file and on headings, and flai check keeps them honest (patch).

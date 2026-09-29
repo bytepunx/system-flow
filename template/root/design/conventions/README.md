@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-09-28
+updated: 2026-09-29
 topics: [all]
 ---
 
@@ -28,4 +28,4 @@ How agents work in this repository. Read every file below, in this order, at the
 - Rules are imperative. Rationale, when it exists, is a link to `design/system` or an ADR.
 - Everything above the `<!-- system-flow:end-of-baseline -->` line in each file is the template's baseline and is replaced by `flai upgrade`, except the file's `topics`, which stay as this project sets them. Everything below it under `## Project additions` belongs to this project.
 - Precedence when rules conflict: an explicit instruction from the operator in the current conversation, then project additions, then the baseline, then your own defaults. Log any conflict in the narrative. Never deviate silently and never edit a baseline rule; propose the edit instead.
-- `flai prime` prints these files in order; `flai prime --cat` prints their content.
+- `flai prime` prints these files in order; `flai prime --cat` prints their content. `flai prime --story <id>` prints what a story needs of them, with the design, tech, and ADRs it selects and a catalog of the rest.
