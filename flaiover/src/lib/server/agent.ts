@@ -182,8 +182,9 @@ function same(a: string, b: string): boolean {
 
 /**
  * One project's connection: at most one proven flai at a time, and the requests waiting on it.
- * Emits 'connected' when a flai has proven itself, 'gone' when it is lost, and 'change' with a
- * repo-relative path when flai says a file of the project changed (S-0073). An AgentHub never does
+ * Emits 'connected' when a flai has proven itself, 'gone' when it is lost, 'change' with a
+ * repo-relative path when flai says a file of the project changed (S-0073), and 'agent' with a
+ * story's ID when flai serve says that story's agent started or ended (S-0154). An AgentHub never does
  * its own handshake: a registry proves the shared credential and hands it a socket already proven,
  * so "no host flai has ever named this project" (unknown) can be told apart from "flai is not
  * connected right now" (this hub exists, `status().connected` is false).
@@ -268,6 +269,12 @@ export class AgentHub extends EventEmitter {
 		if (m.method === 'change' && m.id === undefined) {
 			const path = (m.params as { path?: unknown } | undefined)?.path;
 			if (typeof path === 'string' && path) this.emit('change', path);
+			return;
+		}
+		// a story's agent started or ended, which changes no file (S-0154)
+		if (m.method === 'agent' && m.id === undefined) {
+			const story = (m.params as { story?: unknown } | undefined)?.story;
+			if (typeof story === 'string' && story) this.emit('agent', story);
 			return;
 		}
 		// flai serve no longer serves the project, and is about to close (S-0121)
@@ -355,7 +362,7 @@ class UnknownProjectHub extends AgentHub {
  * or asked for a project it has never heard from, answers as AgentHub always has: 503 unconfigured,
  * or (new) 404 unknown.
  *
- * Every hub's 'connected', 'gone', and 'change' are re-emitted here with the project's key first
+ * Every hub's 'connected', 'gone', 'change', and 'agent' are re-emitted here with the project's key first
  * (S-0095), so a listener can follow a project that has not connected yet, or follow "the one
  * project" before there is one, instead of binding to whichever hub it happened to resolve first.
  */
@@ -389,6 +396,7 @@ export class AgentRegistry extends EventEmitter {
 			h.on('connected', () => this.emit('connected', key));
 			h.on('gone', () => this.emit('gone', key));
 			h.on('change', (path: string) => this.emit('change', key, path));
+			h.on('agent', (story: string) => this.emit('agent', key, story));
 		}
 		return h;
 	}

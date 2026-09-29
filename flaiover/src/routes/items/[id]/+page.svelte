@@ -11,7 +11,8 @@
 	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { debounced, listen } from '$lib/events';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
 	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
@@ -78,17 +79,33 @@
 				: null
 	);
 
-	async function load() {
+	// What the body was last rendered for, with whether it was editable: a live reload that changes
+	// neither leaves the body alone (keep), so a change elsewhere in the project does not redraw its
+	// diagrams (S-0154). Every other load draws it again, as a refused tick needs.
+	let rendered = '';
+	// Whether the dashboard may write is asked once per item, not at every change.
+	let writableFor = '';
+	async function load(keep = false) {
 		const r = await api(`/api/items/${id}`);
 		if (!r.ok) {
 			error = (await r.json()).error ?? r.statusText;
 			return;
 		}
 		const data = await r.json();
+		error = null;
 		item = data.item;
 		children = data.children;
-		html = render(item!.body, item!.path);
-		writable = (await (await api('/api/board')).json()).writable;
+		if (writableFor !== item!.id) {
+			writable = (await (await api('/api/board')).json()).writable;
+			writableFor = item!.id;
+		}
+		const next = render(item!.body, item!.path);
+		if (keep && next + canEdit === rendered) return;
+		// cleared first, so that the same body is drawn again rather than left as it was
+		html = '';
+		await tick();
+		html = next;
+		rendered = next + canEdit;
 		await tick();
 		if (content) await enhance(content, themeState.dark);
 		if (canEdit) wireCriteria();
@@ -146,6 +163,15 @@
 	$effect(() => {
 		void id;
 		load();
+	});
+	// The item, its history, its children, and its body follow the project as it changes (S-0154).
+	onMount(() => {
+		const later = debounced(() => void load(true));
+		const stop = listen({ change: later });
+		return () => {
+			stop();
+			later.stop();
+		};
 	});
 
 	async function post(path: string, body: Record<string, unknown>) {
@@ -285,7 +311,11 @@
 				<div class="mt-4">
 					<ItemEditor
 						id={item.id}
-						oncancel={() => (editing = false)}
+						oncancel={() => {
+							// the body may have changed while it was edited: draw it with its criteria wired
+							editing = false;
+							void load();
+						}}
 						onsaved={async (changed) => {
 							editing = false;
 							notice = changed.length ? `saved: ${changed.join(', ')}` : 'nothing changed';

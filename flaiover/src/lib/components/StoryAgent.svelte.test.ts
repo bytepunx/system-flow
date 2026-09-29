@@ -10,11 +10,11 @@ vi.mock('$app/paths', () => ({
 
 class FakeEventSource {
 	static opened: FakeEventSource[] = [];
-	listeners: Record<string, () => void> = {};
+	listeners: Record<string, (e?: { data: string }) => void> = {};
 	constructor(public url: string) {
 		FakeEventSource.opened.push(this);
 	}
-	addEventListener(kind: string, f: () => void) {
+	addEventListener(kind: string, f: (e?: { data: string }) => void) {
 		this.listeners[kind] = f;
 	}
 	close() {}
@@ -98,6 +98,36 @@ describe('StoryAgent (S-0104)', () => {
 			'agent waiting (claude-code, claude-haiku-4-5): waiting for an answer to TH-0009: Which port?'
 		);
 		expect(text()).toContain('It asked in TH-0009: answer it below and it goes on.');
+	});
+
+	// S-0154: flai serve says when a story's agent starts or ends, which changes no file.
+	it("asks again when flai serve says this story's agent started or ended, not another's", async () => {
+		await show({ 'S-0104': { state: 'working', run } });
+		const asked = () => api.mock.calls.filter(([url]) => url === '/api/host-agent').length;
+		const before = asked();
+		const agent = (story: string) =>
+			FakeEventSource.opened[0].listeners.agent({ data: JSON.stringify({ story }) });
+		agent('S-0001');
+		await settle();
+		expect(asked()).toBe(before);
+		api.mockResolvedValue(
+			answer({
+				enabled: true,
+				state: {
+					command: '',
+					stories: {
+						'S-0104': {
+							state: 'worked',
+							run: { ...run, ended: '2026-09-23T18:30:00Z', outcome: 'worked' }
+						}
+					}
+				}
+			})
+		);
+		agent('S-0104');
+		await settle();
+		expect(asked()).toBe(before + 1);
+		expect(text()).toContain('agent finished (claude-code, claude-haiku-4-5)');
 	});
 
 	it('says why it failed and where its output is', async () => {

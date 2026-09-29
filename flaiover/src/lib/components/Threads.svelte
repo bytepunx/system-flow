@@ -4,7 +4,8 @@
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { debounced, listen } from '$lib/events';
 
 	type Entry = { at: string; author: string; text: string; operator?: boolean };
 	type Thread = {
@@ -95,6 +96,15 @@
 		void on;
 		void showResolved;
 		void load();
+	});
+	// A reply, a new thread, or a resolution by anyone shows without a reload (S-0154).
+	onMount(() => {
+		const later = debounced(() => void load());
+		const stop = listen({ change: later });
+		return () => {
+			stop();
+			later.stop();
+		};
 	});
 
 	async function post(path: string, body: Record<string, unknown>) {

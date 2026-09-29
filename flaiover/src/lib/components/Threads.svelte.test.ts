@@ -8,6 +8,17 @@ vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id ?? '')
 }));
 
+// The page's live events, as listen() would deliver them, with no wait for changes to settle.
+const events = vi.hoisted(() => ({ heard: [] as { change?: (path: string) => void }[] }));
+vi.mock('$lib/events', () => ({
+	listen: (l: { change?: (path: string) => void }) => {
+		events.heard.push(l);
+		return () => events.heard.splice(events.heard.indexOf(l), 1);
+	},
+	debounced: (f: () => void) => Object.assign(() => f(), { stop: () => {} })
+}));
+const changed = (path: string) => events.heard.forEach((l) => l.change?.(path));
+
 const settle = async () => {
 	for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0));
 	flushSync();
@@ -87,6 +98,33 @@ describe('Threads', () => {
 	const pagers = () => [...document.querySelectorAll('nav[data-pager]')] as HTMLElement[];
 	const arrow = (pager: HTMLElement, which: 'previous' | 'next') =>
 		pager.querySelector(`button[aria-label="${which} thread"]`) as HTMLButtonElement;
+
+	it('shows a reply as soon as the project says its thread changed, and stops listening once gone (S-0154)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [thread('Which port?')] });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+		expect(document.querySelectorAll('article > ol > li')).toHaveLength(1);
+
+		const answered = {
+			...thread('Which port?'),
+			status: 'answered',
+			entries: [
+				...thread('Which port?').entries,
+				{ at: '2026-09-26T07:05:00Z', author: 'alex', text: 'Use port 8080.', operator: true }
+			]
+		};
+		api.mockResolvedValue({ ok: true, json: async () => [answered] });
+		changed('wip/threads/TH-0001-a-question.md');
+		await settle();
+		const entries = document.querySelectorAll('article > ol > li');
+		expect(entries).toHaveLength(2);
+		expect(entries[1].textContent).toContain('Use port 8080.');
+		expect(document.querySelector('article header')!.textContent).toContain('answered');
+
+		unmount(c);
+		c = undefined;
+		expect(events.heard).toHaveLength(0);
+	});
 
 	it('shows one thread at a time with its place above and below (S-0133)', async () => {
 		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });

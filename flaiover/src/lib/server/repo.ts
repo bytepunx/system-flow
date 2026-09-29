@@ -140,7 +140,8 @@ function viaChannel(key: string): Ask {
  * Repo is the dashboard's view of one system-flow repository. The project, its work items, and its
  * threads are asked of flai on the host over the channel and kept until flai says a file changed
  * (S-0073), and so are documents, narratives, the inbox, and search (S-0074): nothing here reads a
- * file of the project. A change is announced as 'change' with the repo-relative path.
+ * file of the project. A change is announced as 'change' with the repo-relative path, and a story's
+ * agent starting or ending as 'agent' with the story's ID (S-0154).
  */
 export class Repo extends EventEmitter {
 	readonly root: string;
@@ -320,6 +321,10 @@ export class Repo extends EventEmitter {
 		const reg = registry();
 		reg.on('change', (from: string, path: string) => {
 			if (concerns(key, from)) this.changed(path);
+		});
+		// an agent's run is asked of flai each time, not remembered: nothing to forget (S-0154)
+		reg.on('agent', (from: string, story: string) => {
+			if (concerns(key, from)) this.emit('agent', story);
 		});
 		reg.on('connected', (from: string) => {
 			if (concerns(key, from)) this.changed('system-flow.yaml');

@@ -238,6 +238,29 @@ describe('AgentRegistry and AgentHub', () => {
 		expect(events.at(-1)).toBe('gone');
 	});
 
+	// S-0154: an agent starting or ending changes no file, and flai serve says so of itself.
+	it("passes on flai serve's word that a story's agent started or ended", async () => {
+		const { hub, url } = await setup();
+		const stories: string[] = [];
+		hub.on('agent', (story: string) => stories.push(story));
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		flai.ws.send(
+			JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'agent',
+				params: { project: 'harbour', story: 'S-0154' }
+			})
+		);
+		// not a story, and not a notification: neither is announced
+		flai.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'agent', params: { story: 7 } }));
+		flai.ws.send(
+			JSON.stringify({ jsonrpc: '2.0', id: 98, method: 'agent', params: { story: 'S-1' } })
+		);
+		await new Promise((r) => setTimeout(r, 50));
+		expect(stories).toEqual(['S-0154']);
+	});
+
 	it('says what a flai older than the dashboard does not offer', async () => {
 		const { hub, url } = await setup();
 		const old = await connect(url, KEY, undefined, {}, ['project.info', 'board.get']);

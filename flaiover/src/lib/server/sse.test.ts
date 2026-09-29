@@ -24,6 +24,18 @@ describe('sseStream', () => {
 		expect((await reader.read()).done).toBe(true);
 		expect(r.listenerCount('change')).toBe(0);
 	});
+	it("sends a story's agent starting or ending as an agent event (S-0154)", async () => {
+		const r = fakeRepo();
+		const ac = new AbortController();
+		const reader = sseStream(r, ac.signal, 60000).getReader();
+		await readChunk(reader);
+		r.emit('agent', 'S-0154');
+		const got = await readChunk(reader);
+		expect(got).toContain('event: agent');
+		expect(got).toContain('data: {"story":"S-0154"}');
+		ac.abort();
+		expect(r.listenerCount('agent')).toBe(0);
+	});
 	it('survives cancel followed by abort and abort followed by cancel', async () => {
 		const r = fakeRepo();
 		const ac = new AbortController();

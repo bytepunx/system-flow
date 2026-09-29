@@ -15,7 +15,7 @@ import { knownRepos, Repo, repo, useRepo, type Ask } from './repo';
 
 const KEY = 'shared-credential-for-tests';
 
-type Flai = { ws: WebSocket; change: (path: string) => void };
+type Flai = { ws: WebSocket; change: (path: string) => void; agent: (story: string) => void };
 
 /** What a fake flai answers a request with; by default, its project's manifest for every method. */
 type Answer = (method: string) => unknown;
@@ -37,6 +37,14 @@ function connect(
 						jsonrpc: '2.0',
 						method: 'change',
 						params: { project: project.key, path }
+					})
+				),
+			agent: (story) =>
+				ws.send(
+					JSON.stringify({
+						jsonrpc: '2.0',
+						method: 'agent',
+						params: { project: project.key, story }
 					})
 				)
 		};
@@ -146,6 +154,27 @@ describe('live changes per project (S-0095)', () => {
 
 		expect(heardA).toEqual(['system-flow.yaml', 'wip/kanban/board.md']);
 		expect(heardB).toEqual(['system-flow.yaml', 'wip/kanban/stories/S-0002-b.md']);
+	});
+
+	// S-0154: a story's agent starting or ending reaches the Repo of its project, and no other.
+	it("each Repo hears its own flai say a story's agent started or ended", async () => {
+		const a = withProject('alpha', () => repo());
+		const b = withProject('beta', () => repo());
+		await a.watch();
+		await b.watch();
+		const storiesA: string[] = [];
+		const storiesB: string[] = [];
+		a.on('agent', (s: string) => storiesA.push(s));
+		b.on('agent', (s: string) => storiesB.push(s));
+
+		const fa = await connect(url, { key: 'alpha', name: 'Alpha' });
+		const fb = await connect(url, { key: 'beta', name: 'Beta' });
+		flais.push(fa, fb);
+		fa.agent('S-0001');
+		await settle();
+
+		expect(storiesA).toEqual(['S-0001']);
+		expect(storiesB).toEqual([]);
 	});
 
 	it('the default Repo stops following a project once a second one connects', async () => {

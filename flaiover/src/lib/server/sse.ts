@@ -23,12 +23,14 @@ export function sseStream(
 				}
 			};
 			const send = (path: string) => safe(`event: change\ndata: ${JSON.stringify({ path })}\n\n`);
+			const agent = (story: string) => safe(`event: agent\ndata: ${JSON.stringify({ story })}\n\n`);
 			const ping = setInterval(() => safe(': ping\n\n'), pingMs);
 			const finish = () => {
 				if (closed) return;
 				closed = true;
 				clearInterval(ping);
 				r.off('change', send);
+				r.off('agent', agent);
 				signal.removeEventListener('abort', finish);
 				try {
 					controller.close();
@@ -38,6 +40,7 @@ export function sseStream(
 			};
 			cleanup = finish;
 			r.on('change', send);
+			r.on('agent', agent);
 			signal.addEventListener('abort', finish);
 			safe('event: ready\ndata: {}\n\n');
 		},

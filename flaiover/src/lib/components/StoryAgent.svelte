@@ -1,8 +1,8 @@
 <script lang="ts">
 	// What the agent flai started for this story is doing (S-0104): the board card's dot, with the
 	// harness, the model, when it started, and why it waits or failed. It asks flai again when the
-	// project's files change and, while the agent runs, now and then, since an agent ends without
-	// changing a file. Nothing shows for a story no agent was started for. For a story in ready or
+	// project's files change, when flai serve says the story's agent started or ended (S-0154), and,
+	// while the agent runs, now and then, for a flai that does not say so. Nothing shows for a story no agent was started for. For a story in ready or
 	// in progress whose agent dropped or failed, Retry, at the top right, has flai start a new one
 	// (S-0116), and hides once pressed until flai refuses or that one fails too (S-0118). For a story
 	// in ready that has had no agent, Start agent has flai start it now, and the panel says why flai
@@ -11,7 +11,7 @@
 	// the page for its header (S-0129). Start agent and Retry override a hold, as on the host.
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import { projectState } from '$lib/project.svelte';
+	import { listen } from '$lib/events';
 	import { resolve } from '$app/paths';
 	import {
 		activityLine,
@@ -51,9 +51,13 @@
 	}
 	onMount(() => {
 		void ask();
-		const es = new EventSource(projectState.tag('/api/events'));
-		es.addEventListener('change', () => void ask());
-		return () => es.close();
+		// flai serve says when this story's agent starts or ends, which changes no file (S-0154)
+		return listen({
+			change: () => void ask(),
+			agent: (s) => {
+				if (s === story) void ask();
+			}
+		});
 	});
 	$effect(() => {
 		if (!anyRunning(status)) return;

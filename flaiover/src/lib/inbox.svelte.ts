@@ -3,6 +3,7 @@
 // with optional desktop notifications for entries that appear while open.
 import { api } from '$lib/api';
 import { projectState } from './project.svelte';
+import { debounced, listen } from './events';
 
 export type InboxEntry = {
 	key: string;
@@ -35,31 +36,28 @@ class InboxState {
 	/** "granted", "denied", "default", or "unsupported". */
 	permission = $state<string>('default');
 	#known: Set<string> | null = null;
-	#source: EventSource | null = null;
-	#timer: ReturnType<typeof setTimeout> | null = null;
+	#unlisten: (() => void) | null = null;
+	// a save touches several files; one refresh after they settle
+	#later = debounced(() => void this.refresh());
 
 	start(): void {
-		if (this.#source || typeof window === 'undefined') return;
+		if (this.#unlisten || typeof window === 'undefined') return;
 		this.permission = 'Notification' in window ? Notification.permission : 'unsupported';
 		this.notify = localStorage.getItem(NOTIFY_KEY) === 'on' && this.permission === 'granted';
 		void this.refresh();
-		this.#source = new EventSource(projectState.tag('/api/events'));
-		this.#source.addEventListener('change', () => {
-			// a save touches several files; one refresh after they settle
-			if (this.#timer) clearTimeout(this.#timer);
-			this.#timer = setTimeout(() => void this.refresh(), 300);
-		});
+		this.#unlisten = listen({ change: this.#later });
 	}
 
 	stop(): void {
-		this.#source?.close();
-		this.#source = null;
+		this.#unlisten?.();
+		this.#unlisten = null;
+		this.#later.stop();
 	}
 
 	/** Another project was picked (S-0095): forget this one's entries, so none of the next project's
 	 * is announced as new, and listen to the new project's events instead. */
 	restart(): void {
-		if (!this.#source) return;
+		if (!this.#unlisten) return;
 		this.stop();
 		this.#known = null;
 		this.data = null;
