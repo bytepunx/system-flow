@@ -124,6 +124,33 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 			message: expect.stringContaining('only stories are in the pull order')
 		});
 	});
+	it("sets a column's WIP limit, and the board reads it (S-0167)", async () => {
+		const { data } = await r.write<{ column: string; limit: number }>('board.limit', {
+			column: 'in-progress',
+			limit: 4
+		});
+		expect(data).toMatchObject({ column: 'in-progress', limit: 4 });
+		expect((await board(new Repo(dir, flaiAsk(dir)))).wip_limits['in-progress']).toBe(4);
+		expect(await readFile(join(dir, 'wip/kanban/board.md'), 'utf8')).toContain(
+			'  in-progress: 4\n'
+		);
+		await expect(r.write('board.limit', { column: 'backlog', limit: 1 })).rejects.toMatchObject({
+			status: 400,
+			message: expect.stringContaining('has no WIP limit')
+		});
+		await expect(r.write('board.limit', { column: 'ready', limit: -1 })).rejects.toMatchObject({
+			status: 400
+		});
+	});
+	it('moves a story back a column (S-0167, ADR-0055)', async () => {
+		const { data } = await r.write<{ id: string; status: string }>('item.move', {
+			id: 'S-004',
+			to: 'ready'
+		});
+		expect(data).toMatchObject({ id: 'S-004', status: 'ready' });
+		const back = await r.write<{ status: string }>('item.move', { id: 'S-004', to: 'backlog' });
+		expect(back.data.status).toBe('backlog');
+	});
 	it('asks flai, offline, whether an acceptance is unpushed (S-0063)', async () => {
 		const { execFileSync } = await import('node:child_process');
 		const base = await mkdtemp(join(tmpdir(), 'flaiover-unpushed-'));

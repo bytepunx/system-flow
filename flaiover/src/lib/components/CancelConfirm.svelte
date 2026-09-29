@@ -71,7 +71,9 @@
 		aria-labelledby="cancel-title"
 	>
 		<h2 id="cancel-title" class="text-base font-semibold">Cancel {id}?</h2>
-		<p class="mt-1 text-muted">Cancelled is final: a cancelled item cannot be moved again.</p>
+		<p class="mt-1 text-muted">
+			A cancelled item can be moved back to backlog later; what it cancels under it stays cancelled.
+		</p>
 		{#if error}
 			<p class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">
 				{error}

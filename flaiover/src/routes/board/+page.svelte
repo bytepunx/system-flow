@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
+	import LaneMenu, { type LaneAction } from '$lib/components/LaneMenu.svelte';
+	import LaneMoveDialog from '$lib/components/LaneMoveDialog.svelte';
+	import WipLimitDialog from '$lib/components/WipLimitDialog.svelte';
+	import { backOf, forwardOf } from '$lib/lanes';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
@@ -192,6 +197,101 @@
 		if (p) void place(c.id, p, refocus);
 	}
 
+	// A lane's right-click menu (S-0167): create an item starting there, move its stories a column
+	// forward or back, or change its WIP limit. Opened on a card, the move starts with that story.
+	let laneMenu = $state<{ lane: string; x: number; y: number; card?: string } | null>(null);
+	let laneMove = $state<{ from: string; to: string; picked: string[] } | null>(null);
+	let laneLimit = $state<string | null>(null);
+	const laneStories = (lane: string) =>
+		(board?.columns[lane] ?? [])
+			.filter((c) => c.type === 'story')
+			.map((c) => ({ id: c.id, title: c.title }));
+
+	function openLaneMenu(e: MouseEvent, lane: string) {
+		// Shift with the mouse keeps the browser's own menu, for a card's link
+		if (!board?.writable || (e.shiftKey && e.button === 2)) return;
+		e.preventDefault();
+		const card = (e.target as HTMLElement | null)
+			?.closest('[data-card]')
+			?.getAttribute('data-card');
+		let { clientX: x, clientY: y } = e;
+		if (x === 0 && y === 0) {
+			// from the keyboard: beside what has focus
+			const box = (e.target as HTMLElement).getBoundingClientRect();
+			x = box.left + 8;
+			y = box.bottom;
+		}
+		notice = null;
+		laneMenu = { lane, x, y, card: card ?? undefined };
+	}
+	function pickLane(action: LaneAction) {
+		const { lane, card } = laneMenu!;
+		laneMenu = null;
+		if (action === 'create') {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it
+			void goto(resolve('/new') + `?status=${encodeURIComponent(lane)}`);
+			return;
+		}
+		if (action === 'limit') {
+			laneLimit = lane;
+			return;
+		}
+		const to = action === 'forward' ? forwardOf(lane) : backOf(lane);
+		if (!to) return;
+		const picked = card && cardOf(card)?.type === 'story' ? [card] : [];
+		laneMove = { from: lane, to, picked };
+	}
+
+	// One move after another, each by flai's rules; one notice says what moved and what was refused.
+	async function moveStories(ids: string[], to: string, reason: string) {
+		const moved: string[] = [];
+		const refused: string[] = [];
+		const warnings: string[] = [];
+		for (const id of ids) {
+			const r = await api(`/api/items/${id}/move`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ to, reason: reason || undefined })
+			});
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) refused.push(`${id}: ${body.error ?? r.statusText}`);
+			else {
+				moved.push(id);
+				warnings.push(...(body.warnings ?? []));
+			}
+		}
+		const text = [
+			moved.length ? `${moved.join(', ')} → ${to}.` : '',
+			refused.length ? `Refused: ${refused.join('; ')}.` : '',
+			warnings.join(' ')
+		]
+			.filter(Boolean)
+			.join(' ');
+		notice = {
+			kind: !moved.length ? 'error' : refused.length || warnings.length ? 'warn' : 'ok',
+			text
+		};
+		laneMove = null;
+		await load();
+	}
+
+	async function setLimit(lane: string, limit: number) {
+		const r = await api('/api/board/limit', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ column: lane, limit })
+		});
+		const body = await r.json().catch(() => ({}));
+		if (!r.ok) notice = { kind: 'error', text: body.error ?? r.statusText };
+		else
+			notice = {
+				kind: 'ok',
+				text: limit ? `WIP limit for ${lane}: ${limit}` : `${lane} has no WIP limit`
+			};
+		laneLimit = null;
+		await load();
+	}
+
 	async function move(id: string, to: string, includeUncommitted = false, why?: string) {
 		notice = null;
 		let reason = why;
@@ -239,6 +339,37 @@
 			await move(id, 'done', include);
 			accepting = null;
 		}}
+	/>
+{/if}
+
+{#if laneMenu}
+	<LaneMenu
+		lane={laneMenu.lane}
+		x={laneMenu.x}
+		y={laneMenu.y}
+		onpick={pickLane}
+		onclose={() => (laneMenu = null)}
+	/>
+{/if}
+
+{#if laneMove}
+	<LaneMoveDialog
+		from={laneMove.from}
+		to={laneMove.to}
+		stories={laneStories(laneMove.from)}
+		picked={laneMove.picked}
+		oncancel={() => (laneMove = null)}
+		onconfirm={(ids, reason) => moveStories(ids, laneMove!.to, reason)}
+	/>
+{/if}
+
+{#if laneLimit && board}
+	<WipLimitDialog
+		lane={laneLimit}
+		limit={board.wip_limits[laneLimit]}
+		count={count(laneLimit)}
+		oncancel={() => (laneLimit = null)}
+		onconfirm={(n) => setLimit(laneLimit!, n)}
 	/>
 {/if}
 
@@ -299,6 +430,8 @@
 					: 'border-line '}"
 				role="group"
 				aria-label={state}
+				data-lane={state}
+				oncontextmenu={(e) => openLaneMenu(e, state)}
 				ondragover={(e) => {
 					if (!board?.writable || !dragging) return;
 					const from = cardOf(dragging);
