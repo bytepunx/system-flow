@@ -3,11 +3,11 @@ id: T-0572
 type: task
 nature: feature
 title: Pages gather changes that arrive together, and the board asks again only when a work item changed
-status: in-progress
+status: done
 parent: S-0161
 owner: alex
 created: 2026-09-29T19:40:45Z
-updated: 2026-09-29T19:45:14Z
+updated: 2026-09-29T19:55:18Z
 transitions:
   - to: ready
     at: 2026-09-29T19:41:11Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-09-29T19:45:14Z
     by: agent-S-0161
+  - to: done
+    at: 2026-09-29T19:55:18Z
+    by: agent-S-0161
 stream: S-0161
 tags: []
 touches: [flaiover/src, design/system]
+usage:
+  source: log
+  seconds: 604
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 109
+      output: 32858
+      cache_read: 8019788
+      cache_write: 107163
+      cost: 3.1189
 ---
 
 # T-0572 Pages gather changes that arrive together, and the board asks again only when a work item changed

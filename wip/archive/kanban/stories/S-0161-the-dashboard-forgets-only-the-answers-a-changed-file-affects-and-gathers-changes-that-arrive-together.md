@@ -3,11 +3,11 @@ id: S-0161
 type: story
 nature: improvement
 title: The dashboard forgets only the answers a changed file affects, and gathers changes that arrive together
-status: in-progress
+status: done
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:30Z
-updated: 2026-09-29T19:40:45Z
+updated: 2026-09-29T19:57:22Z
 transitions:
   - to: ready
     at: 2026-09-29T19:18:54Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-09-29T19:38:13Z
     by: agent-S-0161
+  - to: review
+    at: 2026-09-29T19:56:43Z
+    by: agent-S-0161
+  - to: done
+    at: 2026-09-29T19:57:22Z
+    by: alex
 tags: [dashboard]
 topics: [server-side, back-end]
-touches: [flaiover/src]
+touches: [flaiover/src, design/system/flaiover-dashboard.md, design/system/server-performance.md, docs/users/flaiover.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,15 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 444
-  estimated: true
+  seconds: 1146
   models:
     - model: claude-opus-5-5
-      input: 100
-      output: 759
-      cache_read: 5351914
-      cache_write: 135988
-      cost: 2.1845
+      input: 208
+      output: 62845
+      cache_read: 15338728
+      cache_write: 204961
+      cost: 5.9652
 ---
 # S-0161 The dashboard forgets only the answers a changed file affects, and gathers changes that arrive together
 

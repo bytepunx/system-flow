@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 326
-      cache_read: 2971080
-      cache_write: 28843
-      cost: 1.1941
+      input: 40
+      output: 12129
+      cache_read: 2960369
+      cache_write: 39557
+      cost: 1.1513
 ---
 
 # T-0571 The dashboard's Repo forgets only the answers a changed path affects
