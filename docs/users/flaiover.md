@@ -107,7 +107,7 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. Pick a window, an item type, and where it applies an epic. Every chart has a table view under it and follows the light or dark theme.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in two groups: flow, and usage. Pick a window, and the controls the chart offers: an item type, an epic, and on the usage charts over time what a bar or a point covers (an hour, a day, or a week) and what to compare. Every chart has a table view under it and follows the light or dark theme.
 
 | Chart | Shows |
 |-------|-------|
@@ -118,12 +118,32 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Throughput | Completions per week, by nature |
 | Aging work in progress | In-progress work against the p85 cycle time line |
 | Estimate versus actual | Estimated against actual hours |
-| Token rate | Tokens per hour of agent work, one point per item and model |
-| Cost | What each completed item cost, stacked by model; an asterisk marks an item whose cost is estimated in part |
+| Token rate | Tokens per minute of agent work over time, one line per model |
+| Tokens per day | The tokens spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
+| Tokens per item | The tokens an item took on average, over time: a line for epics, for stories, and for tasks, or a line per model |
+| Tokens per dollar | How many tokens a dollar bought, over time, one line per model |
+| Cost per day | The dollars spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
+| Cost per item | What an item cost on average, over time: a line for epics, for stories, and for tasks, or a line per model |
+| Cost by item | What each completed item cost, stacked by model; an asterisk marks an item whose cost is estimated in part |
 | Completion over time | Items done over time, per model |
 | Completion against cost | Items done against dollars spent, per model |
 
-The last four read what agents spent on each item: its tokens and cost, which flai records from the logs of the agents `flai serve` starts (see [Tokens and cost](flai.md#tokens-and-cost)). Each model keeps its colour on every chart. Until items carry usage, they say so and how to fill in stories worked before. An item's page shows its usage, per model, beside its other fields.
+The usage charts read what agents spent on each item: its tokens and cost, which flai records from the logs of the agents `flai serve` starts (see [Tokens and cost](flai.md#tokens-and-cost)). Each model keeps its colour and its mark on every chart. Until items carry usage, they say so and how to fill in stories worked before. An item's page shows its usage, per model, beside its other fields.
+
+### Spend over time
+
+Token rate, Tokens per day, Tokens per item, Tokens per dollar, Cost per day, and Cost per item lay what was spent out over time.
+
+- **What a point covers.** Choose **per** hour, day, or week. Tokens per day and Cost per day are renamed for it: Cost per hour, Tokens per week. An hour is offered over a window of 31 days or less. Days and hours are UTC.
+- **When an item counts.** Everything an item's agents spent counts in the hour, day, or week in which the item was accepted as done, not when the tokens were used. An item that is not done, or was cancelled, is not counted.
+- **Which items.** The charts cover the item type you choose. A story's spend includes its tasks', and an epic's its stories', so the types are never added together.
+- **Comparing.** On Tokens per item and Cost per item, **compare** item types to see epics, stories, and tasks side by side, or models to see each model's average over the items of the chosen type that it worked on. Click a name in the legend to hide a line, such as epics, which dwarf the others.
+- **The dashed lines.** On Tokens per day and Cost per day, the mean per day so far, from the first day with spend, days with nothing done counted. On Token rate and Tokens per dollar with more than one model, all models together.
+- **The strip above the chart** says what the items done in the window spent, and what that comes to per item, per minute of agent work, and per dollar.
+
+The table view lists each hour, day, or week in which items were done, newest first, with every number the charts draw.
+
+These charts need a flai on the host as new as the dashboard. With an older one they say so: upgrade it with `flai self-upgrade`.
 
 ## Docs
 

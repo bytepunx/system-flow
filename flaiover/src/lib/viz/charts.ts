@@ -231,6 +231,29 @@ export const SPEND_KINDS: readonly Kind[] = [
 /** The charts per item, which compare the item types, or the models on one type. */
 export const PER_ITEM_KINDS: readonly Kind[] = ['tokens-per-item', 'cost-per-item'];
 export type By = 'type' | 'model';
+/** The windows the charts page offers. */
+export const WINDOWS = ['1d', '7d', '30d', '90d', '365d'] as const;
+/** The buckets a window can be laid out in: flai lays out by the hour over 31 days or less. */
+export function bucketsFor(since: string): BucketSize[] {
+	const days = since.endsWith('w') ? parseInt(since) * 7 : parseInt(since);
+	return BUCKETS.filter((b) => b !== 'hour' || days <= MAX_HOUR_WINDOW_DAYS);
+}
+/**
+ * The controls a chart uses. Spend over time is summed by flai, so no epic narrows it; a chart
+ * per item by type shows every type, so none is chosen.
+ */
+export function controls(kind: Kind, by: By) {
+	const spend = SPEND_KINDS.includes(kind);
+	const perItem = PER_ITEM_KINDS.includes(kind);
+	return {
+		type: !(perItem && by === 'type'),
+		epic:
+			!spend &&
+			!['cfd', 'throughput', 'estimates', 'completion-time', 'completion-cost'].includes(kind),
+		bucket: spend,
+		by: perItem
+	};
+}
 /** A chart's title: the charts of what a bucket spent are named for the bucket. */
 export function titleOf(kind: Kind, bucket: BucketSize = 'day'): string {
 	if (kind === 'tokens-spent') return `Tokens per ${bucket}`;
@@ -841,6 +864,39 @@ function perItem(r: Report, t: Theme, what: 'tokens' | 'cost', by: By): Opt {
 }
 export const tokensPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'tokens', by);
 export const costPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'cost', by);
+
+/** One row of a spend chart's table: a bucket, and whose spend in it the row is. */
+export type SpendRow = Spend & { at: string; of: string; mean_tokens?: number; mean_cost?: number };
+/**
+ * What a chart over time plots, as rows: by type, each bucket of each item type in which items
+ * were done; otherwise each such bucket of the report's type, whole, with its running means,
+ * and then per model. Newest first.
+ */
+export function spendRows(r: Report, kind: Kind, by: By = 'type'): SpendRow[] {
+	const rows: SpendRow[] = [];
+	const put = (b: Bucket, of: string, s: Spend, means: boolean) =>
+		rows.push({
+			...s,
+			at: b.at,
+			of,
+			mean_tokens: means ? b.mean_tokens : undefined,
+			mean_cost: means ? b.mean_cost : undefined
+		});
+	if (PER_ITEM_KINDS.includes(kind) && by === 'type') {
+		for (const type of TYPES)
+			for (const b of bucketsOf(r, type)) if (b.items > 0) put(b, type, b, false);
+	} else {
+		for (const b of bucketsOf(r)) {
+			if (b.items === 0) continue;
+			const { models, ...whole } = b;
+			put(b, models && models.length > 1 ? ALL : r.type, whole, true);
+			for (const m of models ?? []) put(b, m.model, m, false);
+		}
+	}
+	// newest bucket first; within a bucket, the order the rows were put in
+	const seq = new Map(rows.map((row, i) => [row, i]));
+	return rows.sort((a, b) => (a.at !== b.at ? (a.at < b.at ? 1 : -1) : seq.get(a)! - seq.get(b)!));
+}
 
 /**
  * Cost: one bar per completed item with usage, in order of completion, stacked by model. An item

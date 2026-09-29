@@ -7,6 +7,8 @@ import {
 	completionCost,
 	completionTime,
 	bucketLabel,
+	bucketsFor,
+	controls,
 	cost,
 	costPerItem,
 	costSpent,
@@ -513,6 +515,28 @@ describe('chart builders', () => {
 		]);
 		expect(values(o.series[2]).map((v) => v[1])).toEqual([2000000, 2000000]);
 		expect(o.yAxis.name).toBe('tokens per US dollar');
+	});
+	it('offers each chart the controls it uses, and an hour over 31 days or less', () => {
+		expect(bucketsFor('7d')).toEqual(['hour', 'day', 'week']);
+		expect(bucketsFor('30d')).toEqual(['hour', 'day', 'week']);
+		expect(bucketsFor('90d')).toEqual(['day', 'week']);
+		expect(bucketsFor('12w')).toEqual(['day', 'week']);
+		expect(controls('tokens-per-item', 'type')).toEqual({
+			type: false,
+			epic: false,
+			bucket: true,
+			by: true
+		});
+		expect(controls('tokens-per-item', 'model').type).toBe(true);
+		expect(controls('token-rate', 'type')).toEqual({
+			type: true,
+			epic: false,
+			bucket: true,
+			by: false
+		});
+		expect(controls('cost', 'type')).toEqual({ type: true, epic: true, bucket: false, by: false });
+		expect(controls('cfd', 'type').epic).toBe(false);
+		expect(controls('cycle-time', 'model').epic).toBe(true);
 	});
 	it('names a bucket as a reader does, and says when a flai sends no spend', () => {
 		expect(bucketLabel('2026-09-29T19:00:00Z', 'hour')).toBe('2026-09-29 19:00 UTC');
