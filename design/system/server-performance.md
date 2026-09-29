@@ -104,6 +104,10 @@ Each story remeasures what its cause cost, on the same host and repository, and 
 
 `inbox` lists the items once for the board and the changes, where it listed them twice. What is left of a board load is cause 2: this measurement found 69 git processes where S-0152 found 25, as more items were accepted since the last release.
 
+### Cause 5: a flai process starts without searching PATH (S-0160)
+
+flai asks its questions through a prompt package of its own and no longer depends on `huh`, so nothing searches `PATH` when flai starts ([ADR-0052](../adrs/0052-flai-asks-its-questions-a-line-at-a-time-with-its-own-prompt-package-not-with.md), [go-libraries.md](../tech/go-libraries.md#prompts-s-0160)). On 2026-09-29, on the same host with its own `PATH` of 54 entries, 17 under `/mnt`, `flai version` took 5.5 to 8.3 ms over 30 runs, median 5.8 ms, against 160 to 178 ms, median 163 ms, for `main` built the same hour. `GODEBUG=inittrace=1 flai version` shows no package init over 0.6 ms, where `atotto/clipboard` took 171 ms.
+
 ## Stories
 
 Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`.
