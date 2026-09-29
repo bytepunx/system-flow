@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-09-28
+updated: 2026-09-29
 status: active
 topics: [all]
 ---
@@ -54,6 +54,14 @@ Stories and epics may carry `topics`, a list of words naming what the work is ab
 - `all`.
 
 A touch outside every sub-project, such as `design/system`, and a tag that names none add nothing. `flai show S-nnnn` prints the story's topics with where each came from, and `--json` returns every source (`own`, `epic`, `tag`, `claim`, `code`, `all`, with the item, the sub-project, and the tag or touch). The topics stories and epics declare are words that `flai check` accepts on a document's topics. A task carries none. As with `after`, a flai older than S-0135 refuses an item that carries `topics`: upgrade the flai on the host first.
+
+Epics, stories, and tasks may carry `usage`, what agents spent on them: the tokens each model read and wrote, what they cost in US dollars, and the seconds of agent work ([ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md), S-0143). No command takes it as an argument; flai writes it:
+
+- `flai serve` measures a story from the logs it keeps of the agents it started for the story, and each of its tasks from the part of those logs when the task was in progress, when an agent ends and when a task of a running agent enters done; `flai serve agent usage --write` does the same by hand. Such usage has `source: log`. How the logs are read is in [flai-cli.md](flai-cli.md).
+- Whenever an item enters done, by `flai move`, MCP's `item_move`, or `flai accept`, each item above it whose usage was not measured is given the sum of its children's, archived ones and cancelled ones included, up to its epic, with `source: sum`. A story measured from its log keeps its measurement, which already holds its tasks'; its epic sums it with its other stories.
+- A task's usage is its story's session totals in the share of their input and cache tokens its window holds, so it is `estimated`; so is any cost the harness did not report, priced at the rate the logs report for the model.
+
+Only agents flai serve starts with the `claude-code` harness are measured: their stream-json logs are the only record flai reads. As with `after`, a flai older than S-0143 refuses an item that carries `usage`: upgrade the flai on the host before any item is measured.
 
 ## States
 
@@ -120,6 +128,17 @@ agent:                           # stories only, optional (S-0103): who works it
   model: claude-opus-5-5
   config:                        # optional: options for the harness
     effort: high
+usage:                           # optional, written by flai (S-0143): what agents spent on it
+  source: log                    # log: measured from the agents' logs | sum: summed from its children
+  seconds: 1083                  # agent work
+  estimated: true                # optional: some cost was apportioned or estimated, not reported
+  models:                        # one entry per model, by name
+    - model: claude-opus-5-5
+      input: 256                 # tokens
+      output: 89342
+      cache_read: 19723140
+      cache_write: 327605
+      cost: 8.1258               # US dollars
 ---
 ```
 
@@ -131,7 +150,7 @@ Rules:
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the `done` or `cancelled` transition. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.
 - A cancelled epic has no open story and a cancelled story has no open task: cancelling a parent cancels what is open under it, including an item in `review`, which can be cancelled in no other way ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)). `flai check` reports a tree where this does not hold.
-- Who changes what after an item is made (S-0085). `title`, `nature`, `tags`, `touches`, `parent`, a story's or epic's `topics`, a story's `after` and `agent`, and the body below the heading are the item's own words and change with `flai edit`, or from a story's or an epic's page in the dashboard, which runs it. A title also lives in the heading, the file's name, the parent's list, and a story's narrative; `flai edit` keeps them in step, a hand edit does not. `id`, `type`, `status`, `transitions`, `blocked`, `owner`, `created`, and `updated` are the item's state and change only through the commands that own them (`flai move`, `flai block`, `flai accept`). No key is added to the front matter to record an edit: it is parsed strictly, and a key an older flai does not know would make it refuse the item.
+- Who changes what after an item is made (S-0085). `title`, `nature`, `tags`, `touches`, `parent`, a story's or epic's `topics`, a story's `after` and `agent`, and the body below the heading are the item's own words and change with `flai edit`, or from a story's or an epic's page in the dashboard, which runs it. A title also lives in the heading, the file's name, the parent's list, and a story's narrative; `flai edit` keeps them in step, a hand edit does not. `id`, `type`, `status`, `transitions`, `blocked`, `owner`, `created`, `updated`, and `usage` are the item's state and change only through the commands that own them (`flai move`, `flai block`, `flai accept`, and for `usage` `flai serve`). No key is added to the front matter to record an edit: it is parsed strictly, and a key an older flai does not know would make it refuse the item.
 - A story's `agent` names the harness, the model, and the harness's options that work it (S-0103, [ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)). A story made while the project has a default agent (`agent` in `system-flow.yaml`) gets a copy, with what `flai story new --harness --model --agent-config` or the dashboard gives laid over it. A story made with neither has no `agent` key, so a project that does not use agents stays readable by an older flai. Only a story carries one. `flai edit --harness/--model/--agent-config/--clear-agent`, MCP's `item_edit`, and the story's page change it.
 - A story cannot be `ready` without an acceptance criteria section with at least one checkbox. It can be `ready` and `in-progress` with no tasks, and cannot be `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)).
 

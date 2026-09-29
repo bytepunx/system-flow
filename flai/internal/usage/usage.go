@@ -4,9 +4,12 @@
 package usage
 
 import (
+	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Sources of an item's usage.
@@ -146,4 +149,36 @@ func Same(a, b *Usage) bool {
 		return a.Empty() && b.Empty()
 	}
 	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && slices.Equal(a.Models, b.Models)
+}
+
+// Summary says in a line what was spent: tokens, cost, time, and where the
+// numbers came from.
+func (u *Usage) Summary() string {
+	cost := fmt.Sprintf("$%.2f", u.Cost())
+	if u.Estimated {
+		cost += " (estimated)"
+	}
+	from := "measured from its agents' logs"
+	if u.Source == SourceSum {
+		from = "summed from its children"
+	}
+	return fmt.Sprintf("%s tokens · %s · %s of agent work · %s", Count(u.Tokens()), cost, (time.Duration(u.Seconds) * time.Second).String(), from)
+}
+
+// String is a model's line: its tokens by kind, and its cost.
+func (m Model) String() string {
+	return fmt.Sprintf("%s  input %s · output %s · cache read %s · cache write %s · $%.4f", m.Model, Count(m.Input), Count(m.Output), Count(m.CacheRead), Count(m.CacheWrite), m.Cost)
+}
+
+// Count is a count of tokens made short: 950, 12.3K, 20.1M.
+func Count(n int64) string {
+	switch {
+	case n >= 1_000_000_000:
+		return fmt.Sprintf("%.1fB", float64(n)/1e9)
+	case n >= 1_000_000:
+		return fmt.Sprintf("%.1fM", float64(n)/1e6)
+	case n >= 10_000:
+		return fmt.Sprintf("%.1fK", float64(n)/1e3)
+	}
+	return strconv.FormatInt(n, 10)
 }

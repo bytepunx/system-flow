@@ -220,6 +220,12 @@ func newShowCmd(a *app) *cobra.Command {
 			if !it.Agent.IsZero() {
 				fmt.Fprintf(a.out, "  agent: %s\n", it.Agent)
 			}
+			if !it.Usage.Empty() {
+				fmt.Fprintf(a.out, "  usage: %s\n", it.Usage.Summary())
+				for _, m := range it.Usage.Models {
+					fmt.Fprintf(a.out, "    %s\n", m)
+				}
+			}
 			fmt.Fprintf(a.out, "  file: %s\n", relPath(repo.Root, it.Path))
 			if len(it.Transitions) > 0 {
 				fmt.Fprintln(a.out, "  history:")

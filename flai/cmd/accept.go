@@ -221,6 +221,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		if err := repo.Save(it); err != nil {
 			return nil, err
 		}
+		if _, err := repo.RollUp(it); err != nil {
+			return nil, err
+		}
 		if it.Type == workitem.Story {
 			if err := board.Save(a.now().Format("2006-01-02")); err != nil {
 				return nil, err

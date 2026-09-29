@@ -201,3 +201,13 @@ func diff(a, b float64) float64 {
 	}
 	return b - a
 }
+
+func TestSummaryAndCount(t *testing.T) {
+	u := &Usage{Source: SourceSum, Seconds: 3725, Estimated: true, Models: []Model{{Model: opus, Input: 256, Output: 89342, CacheRead: 19723140, CacheWrite: 327605, Cost: 8.1258}}}
+	if got := u.Summary(); got != "20.1M tokens · $8.13 (estimated) · 1h2m5s of agent work · summed from its children" {
+		t.Errorf("summary = %q", got)
+	}
+	if got := u.Models[0].String(); got != "claude-opus-5-5  input 256 · output 89.3K · cache read 19.7M · cache write 327.6K · $8.1258" {
+		t.Errorf("model = %q", got)
+	}
+}

@@ -12,6 +12,9 @@ type MoveResult struct {
 	// the order of CancelPlan, each as it was before: a cancelled parent
 	// takes everything open under it along (S-0070).
 	Cancelled []Cascaded
+	// RolledUp lists the items above one that entered done whose usage was
+	// summed again (S-0143).
+	RolledUp []string
 }
 
 // Cascaded is one item a cancellation takes with it, and the state it was in.
@@ -86,6 +89,11 @@ func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time) (*M
 	}
 	for _, c := range changed {
 		if err := r.Save(c); err != nil {
+			return nil, err
+		}
+	}
+	if to == Done {
+		if res.RolledUp, err = r.RollUp(it); err != nil {
 			return nil, err
 		}
 	}

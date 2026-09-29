@@ -269,6 +269,17 @@ flai move S-0002 cancelled --reason "superseded by S-0005"
 flai move E-0003 cancelled --reason "a different route" --dry-run   # what would go with it
 ```
 
+### Tokens and cost
+
+An item may carry `usage`: the tokens each model read and wrote on it, what they cost in US dollars, and how long agents worked ([ADR-0051](../../design/adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)). You never type it. `flai serve` measures a story, and each of its tasks, from the logs of the agents it started for the story (see [flai serve agent usage](#flai-serve-flai-on-the-host-for-the-dashboards)). Whenever an item enters done, whether by `flai move`, the MCP `item_move`, or `flai accept`, each item above it that was not measured gets the sum of its children's, up to its epic: an epic always sums its stories. `flai show` prints it:
+
+```text
+  usage: 20.1M tokens · $8.13 · 18m3s of agent work · measured from its agents' logs
+    claude-opus-5-5  input 256 · output 89.3K · cache read 19.7M · cache write 327.6K · $8.1258
+```
+
+`(estimated)` after the cost means some of it was not reported by the harness: a task's share of its story's session, or a run that ended without its totals, priced at the rate the logs report for the model. `flai show --json` returns it under `item.usage`, and `flai stats` charts it ([Flow metrics](#flow-metrics)). A flai older than the one that brought `usage` refuses an item that carries it: upgrade the flai on your host first.
+
 ### Cancelling
 
 Cancelling an epic cancels every story under it that is still open and their open tasks; cancelling a story cancels its open tasks. Items that are done or already cancelled are left alone. `flai move` lists what will be cancelled first and, on a terminal, asks before doing it (`--yes` skips the question, `--dry-run` only lists). Each cancelled item records its own transition and a note that names the cause, such as `E-0003 cancelled: a different route`, so an archived task still says why it ended.

@@ -15,6 +15,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
 // Item types.
@@ -85,6 +86,9 @@ type Item struct {
 	// Agent is who works the story: harness, model, and options (S-0103).
 	// Stories only; absent unless the project has defaults or one was given.
 	Agent *manifest.Agent `yaml:"agent" json:"agent,omitempty"`
+	// Usage is the tokens and cost agents spent on the item, measured from
+	// their logs or summed from its children (S-0143).
+	Usage *usage.Usage `yaml:"usage" json:"usage,omitempty"`
 
 	Path     string `yaml:"-" json:"path"`     // file on disk
 	Archived bool   `yaml:"-" json:"archived"` // lives under wip/archive
@@ -224,6 +228,7 @@ func (it *Item) Validate() error {
 	if open > 1 {
 		errs = append(errs, "more than one open blocked interval")
 	}
+	errs = append(errs, usageErrors(it.Usage)...)
 	if it.Estimate != "" {
 		if _, err := time.ParseDuration(it.Estimate); err != nil {
 			errs = append(errs, fmt.Sprintf("estimate %q is not a Go duration like 4h or 90m", it.Estimate))
@@ -339,6 +344,9 @@ func (it *Item) Marshal() string {
 	}
 	if !it.Agent.IsZero() {
 		b.WriteString(manifest.AgentBlock(it.Agent, ""))
+	}
+	if it.Usage != nil {
+		b.WriteString(usageBlock(it.Usage))
 	}
 	b.WriteString("---\n")
 	b.WriteString(it.Body)
