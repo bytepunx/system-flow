@@ -3,11 +3,23 @@ id: E-0004
 type: epic
 nature: feature
 title: User-facing documentation
-status: backlog
+status: done
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-15T22:50:52Z
-transitions: []
+updated: 2026-09-29T03:19:21Z
+transitions:
+  - to: ready
+    at: 2026-09-29T03:19:15Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T03:19:18Z
+    by: alex
+  - to: review
+    at: 2026-09-29T03:19:19Z
+    by: alex
+  - to: done
+    at: 2026-09-29T03:19:21Z
+    by: alex
 tags: []
 ---
 

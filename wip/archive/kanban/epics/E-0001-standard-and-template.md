@@ -3,11 +3,23 @@ id: E-0001
 type: epic
 nature: feature
 title: system-flow standard and template
-status: backlog
+status: done
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-19T02:05:29Z
-transitions: []
+updated: 2026-09-29T03:18:43Z
+transitions:
+  - to: ready
+    at: 2026-09-29T03:18:34Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T03:18:36Z
+    by: alex
+  - to: review
+    at: 2026-09-29T03:18:41Z
+    by: alex
+  - to: done
+    at: 2026-09-29T03:18:43Z
+    by: alex
 tags: []
 ---
 

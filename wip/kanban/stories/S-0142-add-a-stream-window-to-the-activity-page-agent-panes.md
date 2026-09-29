@@ -3,12 +3,15 @@ id: S-0142
 type: story
 nature: feature
 title: Add a stream window to the activity page agent panes
-status: backlog
+status: ready
 parent: E-0011
 owner: alex
 created: 2026-09-28T23:26:54Z
-updated: 2026-09-28T23:26:54Z
-transitions: []
+updated: 2026-09-29T03:17:59Z
+transitions:
+  - to: ready
+    at: 2026-09-29T03:17:59Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 agent:

@@ -3,11 +3,17 @@ id: E-0003
 type: epic
 nature: feature
 title: flaiover dashboard
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-09-15T16:09:00Z
-updated: 2026-09-27T04:06:55Z
-transitions: []
+updated: 2026-09-29T03:18:59Z
+transitions:
+  - to: ready
+    at: 2026-09-29T03:18:53Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T03:18:59Z
+    by: alex
 tags: []
 ---
 

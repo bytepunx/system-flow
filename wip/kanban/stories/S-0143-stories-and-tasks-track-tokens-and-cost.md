@@ -3,12 +3,15 @@ id: S-0143
 type: story
 nature: feature
 title: Stories and Tasks track tokens and cost
-status: backlog
+status: ready
 parent: E-0011
 owner: alex
 created: 2026-09-29T00:24:52Z
-updated: 2026-09-29T00:24:52Z
-transitions: []
+updated: 2026-09-29T03:18:02Z
+transitions:
+  - to: ready
+    at: 2026-09-29T03:18:02Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 agent:

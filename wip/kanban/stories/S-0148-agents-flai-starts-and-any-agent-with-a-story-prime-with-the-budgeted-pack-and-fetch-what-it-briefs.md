@@ -38,3 +38,5 @@ Agents use the budgeted context pack once S-0146 and S-0147 have landed, as [ADR
 ## Notes
 
 Last of the three stories that build ADR-0049, from TH-0030. S-0138's commits "the prompt flai serve gives an agent primes with flai prime --story" and "CLAUDE.md and session-start.md prime with --story when there is a story", reverted there, hold a first draft of the wording, without ADR-0049's brief and fetch.
+
+From S-0146 (TH-0032, 2026-09-29): the designer kept 80 KB and every brief, so packs of code stories are over budget until the conventions narrow, provided the agent reads a full document when its brief shows it bears on the story. The prompt, `CLAUDE.md`, and `session-start.md` must say that, as the pack's `briefs` and `decisions` headings do.
