@@ -209,6 +209,13 @@ func TestDocumentsAndResources(t *testing.T) {
 	if !strings.Contains(doc["body"].(string), "## Shape") {
 		t.Errorf("body: %v", doc)
 	}
+	part, failed := f.call(t, "doc_get", map[string]any{"path": "design/system/plan.md", "heading": "shape"})
+	if failed != "" || part["heading"] != "Shape" || part["body"] != "## Shape\ntext\n" || part["line"] != float64(7) || !strings.Contains(part["front_matter"].(string), "title: Plan") {
+		t.Errorf("doc_get with a heading: %v %s", part, failed)
+	}
+	if _, failed := f.call(t, "doc_get", map[string]any{"path": "design/system/plan.md", "heading": "Size"}); !strings.Contains(failed, `its headings are: "Plan", "Shape"`) {
+		t.Errorf("an unknown heading: %q", failed)
+	}
 	for _, bad := range []string{"secret.md", "../outside.md", "design/system/plan.txt", "/etc/passwd", "design/../secret.md"} {
 		if _, failed := f.call(t, "doc_get", map[string]any{"path": bad}); failed == "" {
 			t.Errorf("%s must be refused", bad)

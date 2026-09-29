@@ -85,14 +85,24 @@ path, the size, and the first lines. Read one with flai doc show <path>
 }
 
 func newDocShowCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var heading string
+	c := &cobra.Command{
 		Use:   "show <path>",
-		Short: "Print a document with its content hash and what may be edited",
+		Short: "Print a document with its content hash and what may be edited, or one section of it",
 		Long: `Modes: full (body and front matter: design and docs), body (flai owns the
 front matter: work items, narratives, board.md), none (generated files,
-threads, issues, the archive), with the reason.`,
-		Example: `  flai doc show design/system/overview.md --json`,
-		Args:    cobra.ExactArgs(1),
+threads, issues, the archive), with the reason.
+
+With --heading, prints only that section and the sections below it, as the
+MCP doc_get tool returns it with a heading (ADR-0049): the text, or with
+--json its path, heading path, line, size, and text. A heading is its text,
+a heading path such as "Commands › flai prime" (> also joins), or its anchor
+slug; one that names no section, or more than one, is refused with the
+headings to choose from. A section has no save hash: save edits the whole
+document.`,
+		Example: `  flai doc show design/system/overview.md --json
+  flai doc show design/system/flai-cli.md --heading "Commands › flai prime"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
@@ -101,6 +111,17 @@ threads, issues, the archive), with the reason.`,
 			doc, err := docedit.Show(repo, args[0])
 			if err != nil {
 				return err
+			}
+			if heading != "" {
+				part, err := ctxpack.Section(doc.Path, doc.Content, heading)
+				if err != nil {
+					return err
+				}
+				if a.jsonOut {
+					return a.printJSON(part)
+				}
+				fmt.Fprint(a.out, part.Text)
+				return nil
 			}
 			if a.jsonOut {
 				return a.printJSON(doc)
@@ -113,6 +134,8 @@ threads, issues, the archive), with the reason.`,
 			return nil
 		},
 	}
+	c.Flags().StringVar(&heading, "heading", "", "print only the section under this heading, with the sections below it")
+	return c
 }
 
 func newDocSaveCmd(a *app) *cobra.Command {

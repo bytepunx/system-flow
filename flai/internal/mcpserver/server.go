@@ -492,12 +492,15 @@ func (s *server) whoTouches(_ context.Context, _ *mcp.CallToolRequest, in WhoTou
 type DocIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
 	Path    string `json:"path" jsonschema:"repository path of a markdown file under design, docs, or wip"`
+	Heading string `json:"heading,omitempty" jsonschema:"a heading in the document, by its text, a heading path such as Commands › flai prime, or its anchor slug: only that section and the sections below it are returned"`
 }
 
-// DocOut is a document split at its front matter.
+// DocOut is a document split at its front matter, or one section of it.
 type DocOut struct {
 	Path        string `json:"path"`
 	FrontMatter string `json:"front_matter" jsonschema:"the YAML front matter, without the --- fences"`
+	Heading     string `json:"heading,omitempty" jsonschema:"with a heading asked for, the heading path of the section found; body is then that section and the sections below it"`
+	Line        int    `json:"line,omitempty" jsonschema:"with a heading asked for, the line of the section's heading in the file"`
 	Body        string `json:"body"`
 }
 
@@ -521,6 +524,13 @@ func (s *server) docGet(_ context.Context, _ *mcp.CallToolRequest, in DocIn) (*m
 	out := DocOut{Path: filepath.ToSlash(filepath.Clean(in.Path)), Body: string(data)}
 	if fm, body, err := workitem.SplitFrontMatter(string(data)); err == nil {
 		out.FrontMatter, out.Body = fm, body
+	}
+	if in.Heading != "" {
+		part, err := ctxpack.Section(out.Path, string(data), in.Heading)
+		if err != nil {
+			return nil, DocOut{}, err
+		}
+		out.Heading, out.Line, out.Body = part.Heading, part.Line, part.Text
 	}
 	return nil, out, nil
 }

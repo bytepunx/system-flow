@@ -282,3 +282,27 @@ func TestDocSearchRanksSections(t *testing.T) {
 		t.Errorf("stopwords: %d %s", code, errOut)
 	}
 }
+
+// S-0147: flai doc show --heading prints one section; without it, as before.
+func TestDocShowHeadingPrintsOneSection(t *testing.T) {
+	root := docProject(t)
+	out, errOut, code := runIn(t, root, "doc", "show", "design/system/plan.md", "--heading", "Plan › Shape")
+	if code != 0 || out != "## Shape\ntext\n" {
+		t.Errorf("text: %d %q %s", code, out, errOut)
+	}
+	out, errOut, code = runIn(t, root, "doc", "show", "design/system/plan.md", "--heading", "shape", "--json")
+	var part struct {
+		Path, Heading, Text string
+		Line, Size          int
+		Hash                *string
+	}
+	if err := json.Unmarshal([]byte(out), &part); code != 0 || err != nil || part.Path != "design/system/plan.md" || part.Heading != "Shape" || part.Line != 9 || part.Size != len(part.Text) || part.Hash != nil {
+		t.Errorf("json: %d %s %s", code, out, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "doc", "show", "design/system/plan.md", "--heading", "Size"); code == 0 || !strings.Contains(errOut, `its headings are: \"Plan\", \"Shape\"`) {
+		t.Errorf("unknown heading: %d %s", code, errOut)
+	}
+	if content, hash, mode := showDoc(t, root, "design/system/plan.md"); content != designDoc || hash == "" || mode != "full" {
+		t.Errorf("without a heading: %q %q %q", content, hash, mode)
+	}
+}
