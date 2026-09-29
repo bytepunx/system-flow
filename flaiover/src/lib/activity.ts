@@ -24,6 +24,39 @@ export type AgentRun = {
 export type ActivityState = 'working' | 'waiting' | 'failed' | 'worked';
 
 /**
+ * One thing a story's agent said or did, as flai reads it from the agent's log (S-0142): `session`
+ * (it started), `text`, `thinking`, `tool` (a call, with the tool's name), `result` (what a tool
+ * answered), `task` (a background task), `end` (how the session ended), or `output` (a line that is
+ * not the harness's stream). `error` marks a result or an end that failed.
+ */
+export type AgentStreamEntry = {
+	kind: 'session' | 'text' | 'thinking' | 'tool' | 'result' | 'task' | 'end' | 'output';
+	tool?: string;
+	text: string;
+	error?: boolean;
+};
+
+/**
+ * One read of a story's agent's stream (flai's agent.stream): the entries from byte `from` to
+ * `next`, where the next read starts; `more` when the log goes on past it. `started` names the run:
+ * another run writes another log.
+ */
+export type AgentStreamRead = {
+	story: string;
+	agent: string;
+	started: string;
+	ended?: string;
+	running: boolean;
+	outcome?: string;
+	from: number;
+	next: number;
+	size: number;
+	more?: boolean;
+	skipped?: number;
+	entries: AgentStreamEntry[];
+};
+
+/**
  * Why a story in ready waits for another's claim (S-0128, ADR-0046): `overlap` or `no-touches`, or
  * for a story it names in after: (`after`, S-0130), and flai's reason, which names every story that
  * holds it and says what clears it.

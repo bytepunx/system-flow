@@ -1,7 +1,13 @@
 <script lang="ts">
-	// Who is working on what (S-0042), from the narratives.
+	// Who is working on what (S-0042), from the narratives, and since S-0142 what each story's agent
+	// is saying and doing: a card whose story has had an agent flai serve started shows its stream,
+	// open while the agent runs, and an agent at work on a story with no narrative yet gets a card of
+	// its own.
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
+	import { activityLine, type StoryActivity } from '$lib/activity';
+	import AgentDot from './AgentDot.svelte';
+	import AgentStream from './AgentStream.svelte';
 
 	type Stream = {
 		stream: string;
@@ -16,10 +22,20 @@
 		last_log?: { at: string; text: string };
 		path: string;
 	};
-	let { streams }: { streams: Stream[] } = $props();
+	let { streams, agents = {} }: { streams: Stream[]; agents?: Record<string, StoryActivity> } =
+		$props();
+
+	const live = (a: StoryActivity | undefined) => a?.state === 'working' || a?.state === 'waiting';
+	// An agent that has started, which a held story's stand-in run has not.
+	const ran = (a: StoryActivity | undefined): a is StoryActivity => !!a?.run.started;
+	const unnarrated = $derived(
+		Object.entries(agents)
+			.filter(([id, a]) => ran(a) && live(a) && !streams.some((s) => s.stream === id))
+			.sort(([a], [b]) => a.localeCompare(b))
+	);
 </script>
 
-{#if !streams.length}
+{#if !streams.length && !unnarrated.length}
 	<p class="text-sm text-muted">No active streams: no story has an open narrative.</p>
 {/if}
 <ul class="space-y-3">
@@ -58,6 +74,25 @@
 			<p class="mt-2 text-xs">
 				<a class="underline" href={resolve('/docs/[...path]', { path: s.path })}>narrative</a>
 			</p>
+			{#if ran(agents[s.stream])}
+				{@const a = agents[s.stream]}
+				<p class="mt-2 flex items-center gap-2 text-xs">
+					<AgentDot activity={a} /><span class="text-muted">{activityLine(a)}</span>
+				</p>
+				<AgentStream story={s.stream} started={a.run.started} open={live(a)} />
+			{/if}
+		</li>
+	{/each}
+	{#each unnarrated as [id, a] (id)}
+		<li class="rounded border border-line bg-surface p-3 text-sm" data-testid="unnarrated">
+			<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+				<a class="font-mono font-medium underline" href={resolve('/items/[id]', { id })}>{id}</a>
+				<span class="min-w-0 flex-1 text-muted">no narrative yet</span>
+			</div>
+			<p class="mt-2 flex items-center gap-2 text-xs">
+				<AgentDot activity={a} /><span class="text-muted">{activityLine(a)} · {a.run.agent}</span>
+			</p>
+			<AgentStream story={id} started={a.run.started} />
 		</li>
 	{/each}
 </ul>

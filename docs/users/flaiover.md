@@ -97,6 +97,8 @@ You can ask the browser to tell you when something new arrives: tick "Desktop no
 
 Activity shows who is working on what: one card per story with an open narrative, with the agent and session that last wrote it, how long ago, the story's state, the task in progress, whether anything in it is blocked, and the last line of its log. Nothing is recorded to produce this. An agent that stops writing does not disappear; its card simply grows older.
 
+When `flai serve` started an agent for the story, the card also shows the agent's dot and what it is doing, and a **stream** window: what the agent said, each tool it called (`▸ Bash List files`) and what the tool answered (`↳ …`, in red when it failed), its background tasks, and how its session ended, read by flai from the log it gave the agent. The window is open while the agent runs and follows it every two seconds, staying at the newest entry unless you scroll up. Once the agent has ended the window is closed; open it to read what it did. Long answers are cut to their start, and older entries are in the log on the host (`flai serve agent stream <story>` prints it there). An agent at work on a story that has no narrative yet gets a card of its own. Your flai on the host needs to be as new as the dashboard for this: an older one is named in the banner, and the window says it cannot read.
+
 ## Charts
 
 Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. Pick a window, an item type, and where it applies an epic. Every chart has a table view under it and follows the light or dark theme.
