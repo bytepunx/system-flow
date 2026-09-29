@@ -211,3 +211,23 @@ func TestSummaryAndCount(t *testing.T) {
 		t.Errorf("model = %q", got)
 	}
 }
+
+func TestWindowsAddUpAndRatesComeFromResultsAlone(t *testing.T) {
+	p := writeLog(t, "a.log", run1...)
+	rec, err := Read(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := func(s string) time.Time { v, _ := time.Parse(time.RFC3339, s); return v }
+	both := rec.Windows([]Span{{at("2026-09-29T10:00:00Z"), at("2026-09-29T10:05:00Z")}, {From: at("2026-09-29T10:05:00Z")}}, nil)
+	if both.Source != SourceLog || diff(both.Cost(), 1.5) > 1e-3 || both.Seconds != 600 {
+		t.Errorf("windows = %+v", both)
+	}
+	rates, err := ReadRates(p, filepath.Join(t.TempDir(), "gone.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff(rates[opus], 1.2/4912) > 1e-12 || diff(rates[haiku], 0.3/355) > 1e-12 {
+		t.Errorf("rates = %v", rates)
+	}
+}

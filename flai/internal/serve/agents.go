@@ -198,6 +198,7 @@ type launcher struct {
 	record func(hostapi.Entry)
 	now    func() time.Time
 	log    func(msg string, args ...any)
+	warn   func(msg string, args ...any)
 
 	mu      sync.Mutex
 	said    map[string]string // why each skipped story waits, as last logged
@@ -214,6 +215,9 @@ func newLauncher(o Options, e Entry) *launcher {
 	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1),
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
+		},
+		warn: func(msg string, args ...any) {
+			o.Logger.Warn(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		}}
 }
 
@@ -317,6 +321,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	// restart from starting a story twice is its run in serve/agents.json,
 	// not what happened to be ready when flai serve began (S-0112).
 	l.settleOrphans()
+	l.measureDone(l.dir.AgentStates()[l.entry.Root])
 	cfg := l.config(l.entry.Root)
 	if cfg.Enabled {
 		l.resume(ctx, cfg)
@@ -453,6 +458,7 @@ func (l *launcher) settleOrphans() {
 		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, run.Story, run.Agent, nil)
 		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(&ended) })
 		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
+		l.measure(run.Story)
 	}
 }
 
@@ -591,6 +597,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		delete(l.waiting, run.PID)
 		l.mu.Unlock()
 		l.log("agent ended", "story", story.ID, "pid", run.PID, "exit", code, "outcome", ended.Outcome)
+		l.measure(story.ID)
 		select {
 		case l.again <- struct{}{}:
 		default:

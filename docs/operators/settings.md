@@ -182,7 +182,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--after` | [flai edit](../users/flai-reference.md#flai-edit), [flai order](../users/flai-reference.md#flai-order) |
 | `--agent` | [flai mcp](../users/flai-reference.md#flai-mcp) |
 | `--agent-config` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
-| `--all` | [flai board](../users/flai-reference.md#flai-board), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai thread list](../users/flai-reference.md#flai-thread-list) |
+| `--all` | [flai board](../users/flai-reference.md#flai-board), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage), [flai thread list](../users/flai-reference.md#flai-thread-list) |
 | `--all-projects` | [flai serve disable](../users/flai-reference.md#flai-serve-disable), [flai serve enable](../users/flai-reference.md#flai-serve-enable) |
 | `--apply` | [flai release](../users/flai-reference.md#flai-release) |
 | `--attach` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
@@ -276,5 +276,6 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `-v`, `--verbose` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--version` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--wait` | [flai checks tail](../users/flai-reference.md#flai-checks-tail) |
+| `--write` | [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage) |
 | `-y`, `--yes` | every command ([global flags](../users/flai-reference.md#flai)) |
 <!-- flags:end -->

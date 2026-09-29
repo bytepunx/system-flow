@@ -319,3 +319,60 @@ func estimate(m Model, rates Rates) Model {
 	m.Cost = float64(m.Tokens()) * rates[m.Model]
 	return m
 }
+
+// Span is an interval of time; a zero To is open.
+type Span struct {
+	From, To time.Time
+}
+
+// Windows is what was spent over the spans, as Window is for one; nil when
+// nothing was.
+func (rec *Record) Windows(spans []Span, rates Rates) *Usage {
+	var out *Usage
+	for _, s := range spans {
+		w := rec.Window(s.From, s.To, rates)
+		if w == nil {
+			continue
+		}
+		if out == nil {
+			out = &Usage{Source: SourceLog}
+		}
+		out.Add(w)
+	}
+	if out != nil {
+		out.Tidy()
+	}
+	return out
+}
+
+// ReadRates are the rates the results in the logs report, read without the
+// rest of each log.
+func ReadRates(paths ...string) (Rates, error) {
+	rec := &Record{reported: map[string]map[string]Model{}}
+	for _, p := range paths {
+		f, err := os.Open(p)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("reading the agent log %s: %w", p, err)
+		}
+		r := bufio.NewReaderSize(f, 256<<10)
+		for {
+			raw, err := r.ReadBytes('\n')
+			if len(raw) > 0 && raw[0] == '{' && bytes.Contains(raw, []byte(`"type":"result"`)) {
+				var e line
+				if json.Unmarshal(raw, &e) == nil && e.Type == "result" {
+					// a session per log is enough to weigh the rates by
+					e.SessionID = p + "\x00" + e.SessionID
+					rec.addResult(e, "")
+				}
+			}
+			if err != nil {
+				break
+			}
+		}
+		_ = f.Close()
+	}
+	return rec.Rates(), nil
+}

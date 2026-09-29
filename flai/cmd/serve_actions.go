@@ -341,7 +341,7 @@ journal.`,
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
-	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStreamCmd(a),
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
 		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,

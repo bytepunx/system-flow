@@ -1635,6 +1635,7 @@ Subcommands:
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
 - [stream](#flai-serve-agent-stream): Print what a story's agent said and did, from the log flai serve gave it
+- [usage](#flai-serve-agent-usage): Measure the tokens and cost a story's agents spent, from the logs flai serve kept
 
 ##### flai serve agent clear
 
@@ -1768,6 +1769,33 @@ Flags:
 |------|---------|
 | `-f`, `--follow` | go on printing until the agent ends |
 | `--from` int | the byte offset of the log to read from (default: its last 256 KiB) (default `-1`) |
+
+##### flai serve agent usage
+
+Measure the tokens and cost a story's agents spent, from the logs flai serve kept.
+
+```text
+flai serve agent usage [story-id...] [flags]
+```
+
+Measures what the agents flai serve started for a story spent, from the logs it keeps of them in the serve folder beside flai's config file: the story whole, and each of its tasks over the intervals it was in progress (S-0143, ADR-0051). Only Claude Code's stream-json is read. Each session's last result gives its tokens and cost per model; what came after it, a run still going or one that died, is counted from its calls and priced at the rate the logs report for the model, and marked estimated. A task gets its story's totals in the share of the input and cache tokens of the calls made while it was in progress, and is marked estimated.
+
+It prints what it finds. --write records it in the items' usage, as flai serve does when an agent ends, and sums the story's epic again. --all measures every story of the project flai serve has kept a log for, to fill in stories worked before flai measured them. Use the flai your flai serve runs, or give its configuration with --config, so that the logs are the ones it keeps.
+
+Examples:
+
+```bash
+flai serve agent usage S-0142
+flai serve agent usage S-0142 --write
+flai serve agent usage --all --write --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--all` | every story flai serve has kept a log for |
+| `--write` | record what the logs say in the items' usage |
 
 #### flai serve checks
 
