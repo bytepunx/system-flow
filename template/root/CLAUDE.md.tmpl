@@ -8,7 +8,7 @@ This repository follows the system-flow standard. This file is the map. The norm
 
 Before any change, read in this order:
 
-1. `{{ .layout.design }}/conventions/README.md` and every file it lists, in its order. These are the rules you work by. `flai prime --cat` prints them in one call.
+1. `{{ .layout.design }}/conventions/README.md` and every file it lists, in its order. These are the rules you work by. With a story to work, prime with `flai prime --story <id>` (or the `flai` MCP tool `prime`): within a size budget it prints the conventions the story's topics select and what the story names, whole, and briefs the design, tech, and ADRs its topics and links select. A brief is not the document: when one bears on the story, read the section that does, or the whole document, with the MCP tool `doc_get` and its heading (`flai doc show <path> --heading "<heading>"`) before relying on it or changing what it describes; `doc_search` (`flai doc search`) finds sections by their words. Without a story, `flai prime --cat` prints every convention whole.
 2. `{{ .layout.wip }}/agents/index.md`. If a stream is active, read its `## Current state` and `## Next steps`, run `git status`, reconcile, read its `## Open questions` (threads are mirrored there; `flai thread list` shows them all), and append a log entry. With the `flai` MCP server connected (`.mcp.json`), call `inbox` here and at the start of every turn, at every task transition, and before moving a story to review: it lists threads awaiting you, the ready stories in pull order, and what others changed since you last looked. Whenever you have no story of your own in progress, hold `wait_for_work` and do what it answers: it names the next story to pull as soon as one is ready and the WIP limit leaves room.
 3. `{{ .layout.wip }}/kanban/board.md`. If no stream is active, pull the top `ready` story in `order` within the WIP limit and open its narrative with `flai stream open`, write its tasks if it has none, then work in the worktree it prints and run `flai stream sync` at every task transition.
 
@@ -18,7 +18,7 @@ Precedence when rules conflict: an explicit instruction from the operator in thi
 
 | Path | Purpose | You may |
 |------|---------|---------|
-| `{{ .layout.design }}/conventions/` | How agents work here, one file per topic | Read all of it every session. Add project rules below the marker only. |
+| `{{ .layout.design }}/conventions/` | How agents work here, one file per topic | Read what `flai prime` gives you every session. Add project rules below the marker only. |
 | `{{ .layout.design }}/adrs/` | Architecture decisions, one per file, immutable once accepted | Add a new ADR. Never edit an accepted one except to set `superseded_by` or its `topics` (`flai adr topics`). |
 | `{{ .layout.design }}/system/` | The living design, always current | Edit whenever a conversation resolves a new detail, direction, standard, or decision. |
 | `{{ .layout.design }}/tech/` | Every technology in use, its version, where, and why | Edit whenever a dependency is added, upgraded, or removed. |

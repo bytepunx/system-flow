@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.22 - 2026-09-29
+
+- S-0148 Agents flai starts, and any agent with a story, prime with the budgeted pack and fetch what it briefs (patch).
+
 ## 1.0.21 - 2026-09-28
 
 - S-0134 Conventions, design, tech files, and ADRs carry topics on the file and on headings, and flai check keeps them honest (patch).
