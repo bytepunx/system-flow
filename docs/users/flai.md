@@ -128,7 +128,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 
 | Key | Set with | Meaning |
 |-----|----------|---------|
-| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `agent`, `dashboard`, `checks`, `settings`, `host`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do |
+| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `publish`, `agent`, `dashboard`, `checks`, `settings`, `host`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do |
 | `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, and `{harness}` replaced |
 | `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
 | `agent.attended_minutes` | none | Retired ([ADR-0043](../../design/adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)): a configuration that sets it still loads, and nothing reads it. `flai serve agent set --attended-minutes` is accepted and does nothing |
@@ -647,22 +647,23 @@ Issues live in `design/issues/`, one file per recurring problem with a class (`d
 flai release S-0031 --dry-run          # what a release would look like now
 flai accept S-0031 --by alex           # move to done, archive, commit — no release, no tag, no push
 flai accept E-0002 --by alex           # an epic: the same
-flai push --pending                    # tag whatever has accumulated and push it, from the host
+flai push --pending                    # push what was accepted, from the host; releases nothing by default
+flai release --pending                 # publish: tag whatever has accumulated and push it
 ```
 
 Acceptance is one step, and for a story it is the only way to reach done: `flai move S-0031 done` from review, a card dropped on done in the dashboard, and `flai accept S-0031` all run the same flow with the same flags. It rebases the story branch and fast-forwards it into the main branch, moves the item to done (the same rules as `flai move`), archives it with its children and narrative, and commits. It computes no release, creates no tag, and pushes nothing: that is a deliberate step of its own, not tied to any one item, done by whichever of the two commands below you reach for. `--dry-run` prints anything that would block acceptance and any uncommitted files outside `wip/`, and stops without refusing; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean outside `wip/` so the acceptance commit holds only acceptance, unless you pass `--yes`, which includes those files in it. From the dashboard the same choice is a checkbox in the confirmation.
 
 Acceptance then tells the stories still in progress or in review what it changed under them. For each one whose `touches`, with those of its open tasks, cover a path the merge brought into the main branch, it records which paths those are. A story with no touches is told of every path. The command prints `told S-0040 it overlaps: flai/cmd/accept.go`, `--json` lists them in `overlaps`, and the story's agent sees it in its MCP `inbox` as an `overlapped` change. Acceptance from the dashboard does the same.
 
-Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review; an experiment story (ADR-0025) is refused outright and stays on its branch, since accepting it onto main is not what an experiment is for. `flai board` says when something is accepted and not pushed (`accepted, not pushed: S-0031 (3 commit(s) ahead of origin/main)`), `flai board --json` carries it as `unpushed`, and one command on the host finishes the job — computing and tagging whatever release has accumulated since each component's last tag, then pushing branch and tags together, before anything else is decided:
+Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review; an experiment story (ADR-0025) is refused outright and stays on its branch, since accepting it onto main is not what an experiment is for. `flai board` says when something is accepted and not pushed (`accepted, not pushed: S-0031 (3 commit(s) ahead of origin/main)`), `flai board --json` carries it as `unpushed`, and one command on the host pushes it. It releases nothing unless the `publish` host action is on for the project (`flai serve enable publish`, off by default, S-0144): then it first computes and tags whatever release has accumulated since each component's last tag, and pushes branch and tags together:
 
 ```bash
-flai push --pending             # tag whatever has accumulated and push it, branch and tags together
-flai push --pending --dry-run   # say what would be tagged and pushed
+flai push --pending             # push the branch and any tags already made; with publish on, tag the pending release first
+flai push --pending --dry-run   # say what would be pushed, and tagged when publish is on
 flai push --pending --publish   # also publish the template when those commits moved its version
 ```
 
-It only acts when the commits ahead of the remote include an acceptance, or there is a release to tag from one already pushed; ordinary commits are yours to push with git. It never forces: when the remote has commits this clone lacks it refuses and tells you to fetch and merge first. It answers from what this clone knows, so a push made from another clone is not seen until you fetch. `flai release --pending` does the same computing, applying, and tagging on its own, ahead of a push, for seeing or forcing it separately; the acceptance commit is pushed either way, released or not.
+It only acts when the commits ahead of the remote include an acceptance or a release tag, or, with `publish` on, there is a release to tag from one already pushed; ordinary commits are yours to push with git. It never forces: when the remote has commits this clone lacks it refuses and tells you to fetch and merge first. It answers from what this clone knows, so a push made from another clone is not seen until you fetch. `flai release --pending` is how what has accumulated is published when you choose, so that several acceptances release together: it computes, applies, tags, and pushes. The acceptance commit is pushed either way, released or not.
 
 A story that is `done` but was never accepted (an older flai, a hand edit) is flagged by `flai check` as `story.unaccepted`, and `flai accept` completes it.
 
@@ -749,7 +750,7 @@ A git repository with a `system-flow.yaml` below a folder named with `flai serve
 
 It needs no root and no configuration. `flai dashboard stop`, like `flai serve project remove`, takes the project out of it and leaves it running for your other projects; `flai serve stop` stops it until `flai serve start`, and `flai host stop` stops it with everything else. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its list of removed projects (`removed.json`), its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
-`flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets an acceptance made from the board be pushed and published:
+`flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets an acceptance made from the board be pushed, and published when you press Publish:
 
 ```bash
 flai serve actions          # what there is, what each means, and where each is on
@@ -757,6 +758,8 @@ flai serve enable push      # for this project; --all-projects for every project
 flai serve disable push
 flai serve journal          # every host action asked for, and what became of it
 ```
+
+`publish`, off by default, makes every push of accepted work release first, from the board or `flai push --pending` in any shell that uses this configuration. Off, acceptances wait, unreleased, to be published together from Publish or `flai release --pending` (S-0144).
 
 A second one, `agent`, starts an agent for each story that becomes ready: the harness and model the story names (see [Who works a story](#who-works-a-story-its-agent)), with the program and permissions you set for that harness on the host (`flai serve agent harness`), or a command you wrote for stories that name none (`flai serve agent set -- <program> [args...]`). Turn it on with `flai serve enable agent`. A story in ready or in progress whose agent dropped or failed gets a new one with `flai serve agent restart <story>`, or **Retry** on its page. For a story in ready while the in-progress limit is full, the new agent is queued and starts as soon as there is room. The new agent is told how the last one ended and goes on from the story's narrative. flai serve does not start a story that is held (see [Touches](#touches)), and says why on the board; a restart of one is queued until it is clear. A story in ready gets its agent at once, whatever flai serve's own rules say, held or past the limit, with `flai serve agent start <story>`, or **Start agent** on its page. A story in review whose agent left changes uncommitted in its worktree, which blocks its acceptance, gets an agent to commit them, and do nothing else, with `flai serve agent commit <story>`, or **Have an agent commit them** in the acceptance confirmation or on its review page. A third, `host`, lets the dashboard have `flai host` restart `flai serve` or the MCP servers, or upgrade flai and restart on it. A fourth, `settings`, lets the dashboard's Settings page change all of this for you ([the operator guide](../operators/index.md#the-settings-host-action-changing-the-hosts-settings-from-the-dashboard-s-0105) says what that gives the dashboard token). What enabling each means, for who can publish a release and who can start a process on your machine, is in the operator guide; read it first.
 

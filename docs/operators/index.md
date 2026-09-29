@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-09-26
+updated: 2026-09-29
 status: active
 ---
 
@@ -69,13 +69,22 @@ Before this release, `flai dashboard` started a container per project, each with
 
 The dashboard has one login token, shared by every project it serves, and so one holder. What it does for a given project is recorded as that project's manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. All of it is done by `flai serve` on the host, as you: commits carry your git identity and the dashboard's `Co-Authored-By` trailer.
 
-### Accepting computes no release; pushing does, before it pushes (S-0087, S-0094)
+### Accepting and pushing release nothing; publishing does (S-0087, S-0144)
 
-A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Releasing what has accumulated happens at the push, covering everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three. This was once a step you had to remember to take deliberately, separate from pushing (S-0087); since S-0094 pushing does it for you, first, so a release is never a step someone forgot.
+A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Pushing it releases nothing either, unless you choose otherwise (below). A release is cut when you publish, and covers everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three.
 
-**Pushing, which now also releases.** `flai push --pending`, on the host, tags everything accumulated and unreleased for each component since its last tag — the highest delivery type among what is pending, not a sum — bumps and commits the version files, then pushes the branch and every tag together with your own credentials. `--dry-run` shows the release it would tag, and what it would push, and changes nothing. It never forces, and refuses when the remote has moved until you fetch and merge; run it again after it fails partway (a tag made, the push not) and it does not redo what already succeeded. `--publish` also publishes the template when its version moved. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying "accepted, not pushed" until it is pushed; an agent session that is running does this itself when `inbox` reports it. From the board, once you enable the push action (below), the standing notice's **Push now** button does the same thing and reports the tags it just made.
+**Pushing.** `flai push --pending`, on the host, pushes the branch, and any tag already made and not yet pushed, with your own credentials. `--dry-run` shows what it would push and changes nothing. It never forces, and refuses when the remote has moved until you fetch and merge; run it again after it fails partway and it does not redo what already succeeded. `--publish` also publishes the template when its version moved. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying "accepted, not pushed" until it is pushed; an agent session that is running does this itself when `inbox` reports it. From the board, once you enable the push action (below), the standing notice's **Push now** button does the same thing.
 
-**Publishing, separately, when you want to see or force it ahead of a push.** On the host, `flai release --pending` does the same computing, applying, and tagging `flai push --pending` now does, on its own — useful for seeing the release before deciding to push, or for cutting one without pushing yet. `--dry-run` shows what it would do and changes nothing; run again after a partial failure. From the board, once you enable the push action, the done column shows a card as **published** or **waiting to publish**, and a banner at its top lists what publishing now would release — which components, which bump, which stories — with its own **Publish** button; off, the banner says what enables it and changes nothing; the dashboard cannot enable it itself.
+**Publishing, when you choose.** On the host, `flai release --pending` tags everything accumulated and unreleased for each component since its last tag (the highest delivery type among what is pending, not a sum), bumps and commits the version files, and pushes the branch and every tag together. `--dry-run` shows what it would do and changes nothing; run again after a partial failure. From the board, once you enable the push action, the done column shows a card as **published** or **waiting to publish**, and a banner at its top lists what publishing now would release (which components, which bump, which stories) with its own **Publish** button. Off, the banner says what enables it and changes nothing; the dashboard cannot enable it itself.
+
+**Publishing at every push, if you want it.** From S-0094 until S-0144, every push first tagged everything accumulated, so each acceptance an agent pushed was released on its own. That is now a setting of its own, the `publish` host action, off by default ([ADR-0048](../../design/adrs/0048-pushing-accepted-work-releases-nothing-unless-the-publish-host-action-is-enabled.md)). With it on for a project, `flai push --pending` and **Push now** tag the pending release first, then push it with the branch, and `--dry-run` previews that release:
+
+```bash
+flai serve enable publish     # every push of this project also releases; --all-projects for every project
+flai serve disable publish    # pushing releases nothing again; publish from Publish or flai release --pending
+```
+
+`flai push --pending` reads it from the flai configuration it runs with, so a push from your shell, from an agent's, or from the board each follows the configuration of the flai that ran it. Enabling `push` alone never turns it on.
 
 ### The push host action
 
@@ -92,7 +101,7 @@ Enabling and disabling take effect at once, with no restart. The setting is `hos
 
 **Understand what enabling it means.** The dashboard token becomes the power to publish: whoever holds it can publish any release accumulated so far, and push what any story an agent has put in review adds once accepted, with your git credentials and with nobody at the keyboard. A compromised dashboard container could ask for the same. If that is more than you want a token to be worth, leave it off and publish and push by hand, or from a timer of your own.
 
-With it on, the done column's Publish button and the standing "accepted, not pushed" notice's **Push now** button both work; the confirmation for each says what it will do before you click it. Both are refused (HTTP 403) and journalled while it is off, and say what enables it. Neither ever forces a push, and when the remote has moved they are refused with the reason and the command to run by hand.
+With it on, the done column's Publish button and the standing "accepted, not pushed" notice's **Push now** button both work (Push now releases only with `publish` on as well); the confirmation for each says what it will do before you click it. Both are refused (HTTP 403) and journalled while it is off, and say what enables it. Neither ever forces a push, and when the remote has moved they are refused with the reason and the command to run by hand.
 
 The journal is `journal.jsonl` beside `flai serve`'s state (the `serve` folder next to your flai configuration), mode 0600, one line per request: when, the action, the method, the project, for whom (the manifest's `owner`), the request, and the outcome (`done`, `failed`, or `disabled`) with what was pushed and published or why not.
 

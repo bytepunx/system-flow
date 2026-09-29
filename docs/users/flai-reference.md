@@ -1435,7 +1435,9 @@ Push an acceptance that was made and not pushed.
 flai push --pending [flags]
 ```
 
-An acceptance made where nothing could push it, such as one from the dashboard with the push host action off, is committed in the main checkout and not pushed. flai accept computes no release and creates no tag (S-0087): before deciding what to push, this computes the release of everything accepted and unreleased since each component's last tag (the same computation flai release --pending uses), applies the version bump, commits it, and tags it, so a release is never a separate step someone has to remember (S-0094). Run this on the host, with your own credentials: when the main checkout's branch is then ahead of its remote-tracking branch and the commits ahead include an acceptance or a release just tagged here, it pushes the branch and the tags together. It never forces. When the remote has commits this clone lacks it refuses and says to fetch and merge first.
+An acceptance made where nothing could push it, such as one from the dashboard with the push host action off, is committed in the main checkout and not pushed. Run this on the host, with your own credentials: when the main checkout's branch is ahead of its remote-tracking branch and the commits ahead include an acceptance or a release tagged here, it pushes the branch and the tags together. It never forces. When the remote has commits this clone lacks it refuses and says to fetch and merge first.
+
+It releases nothing of its own accord: what is accepted waits, unreleased, to be published together by flai release --pending or the board's Publish (S-0144, ADR-0032). With the publish host action enabled for the project (flai serve enable publish), it first computes the release of everything accepted and unreleased since each component's last tag, applies the version bump, commits it, and tags it, so every push publishes (S-0094).
 
 --publish also publishes each template component whose version those commits moved, as flai template push --tag does, after the push and never forced. It is what the dashboard's push action runs (flai serve enable push).
 
