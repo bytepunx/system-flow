@@ -19,14 +19,14 @@ topics: [front-end, back-end]
 touches: [flaiover/src, flai/cmd]
 usage:
   source: sum
-  seconds: 4951
+  seconds: 5977
   models:
     - model: claude-opus-5-5
-      input: 1026
-      output: 352833
-      cache_read: 73638022
-      cache_write: 1094023
-      cost: 30.5406
+      input: 1230
+      output: 444181
+      cache_read: 93447661
+      cache_write: 1383344
+      cost: 38.6449
 ---
 # E-0012 Performance Analysis and Improvements
 
