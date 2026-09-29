@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -144,6 +145,58 @@ func TestInboxDesigner(t *testing.T) {
 	}
 	if e := byKind["overlap"]; e.Item == "" || !strings.Contains(e.Title, "also touches") || e.Key != "overlap:"+keyHash(e.Title) {
 		t.Errorf("overlap: %+v", e)
+	}
+}
+
+// The inbox runs the overlap rule alone, not the whole check (S-0158), and
+// lists what the check's wip.overlap findings say, in the check's order.
+func TestInboxDesignerOverlapsAreTheChecksFindings(t *testing.T) {
+	p := people(t)
+	repo, _ := workitem.Open(p.Root)
+	// A third story in progress over both, and S-0001's task over S-0002's
+	// path: several findings, and a parent and child that do not overlap.
+	tugs, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Tugs", Parent: "E-0001", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(tugs.Path)
+	_ = os.WriteFile(tugs.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] works\n", 1)), 0o644)
+	for i, to := range []string{workitem.Ready, workitem.InProgress} {
+		it, _ := repo.Get(tugs.ID)
+		if _, err := repo.Transition(it, to, "claude", "", t0.Add(time.Duration(50+i)*time.Minute)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for id, touches := range map[string][]string{tugs.ID: {"flai"}, "T-0001": {"flai/cmd/move.go"}} {
+		it, _ := repo.Get(id)
+		it.Touches = touches
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	res, err := check.Run(repo, t0.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want []string
+	for _, f := range res.Findings {
+		if f.Rule == "wip.overlap" {
+			want = append(want, f.Message)
+		}
+	}
+	var in DesignerInbox
+	if err := call(t, p, "inbox.designer", `{}`, &in); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, e := range in.Entries {
+		if e.Kind == "overlap" {
+			got = append(got, e.Title)
+		}
+	}
+	if len(want) < 3 || strings.Join(got, "\n") != strings.Join(want, "\n") || in.Counts["overlap"] != len(want) {
+		t.Errorf("inbox overlaps\n%s\ncheck's wip.overlap\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
 

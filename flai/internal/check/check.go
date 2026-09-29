@@ -79,14 +79,27 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.conventions()
 	c.issues()
 	c.threads()
-	sort.SliceStable(c.res.Findings, func(i, j int) bool {
-		a, b := c.res.Findings[i], c.res.Findings[j]
+	sortFindings(c.res.Findings)
+	return c.res, nil
+}
+
+// Overlaps returns the wip.overlap findings of Run among items, in Run's
+// order, without the other rules: the designer's inbox lists them (S-0158).
+func Overlaps(repo *workitem.Repo, items []*workitem.Item) []Finding {
+	c := &checker{repo: repo, items: items, res: &Result{}}
+	c.overlap()
+	sortFindings(c.res.Findings)
+	return c.res.Findings
+}
+
+func sortFindings(fs []Finding) {
+	sort.SliceStable(fs, func(i, j int) bool {
+		a, b := fs[i], fs[j]
 		if a.Path != b.Path {
 			return a.Path < b.Path
 		}
 		return a.Line < b.Line
 	})
-	return c.res, nil
 }
 
 func (c *checker) add(level, rule, path string, line int, format string, args ...any) {

@@ -31,7 +31,7 @@ func TestReadMethodsMarkWhereTheTimeGoes(t *testing.T) {
 		"item.get":       {"repo.open", "repo.get", "repo.list"},
 		"items.list":     {"repo.open", "repo.list"},
 		"threads.list":   {"repo.open", "threads.read", "threads.view"},
-		"inbox.designer": {"repo.open", "threads.read", "repo.list", "narratives.read", "check.run"},
+		"inbox.designer": {"repo.open", "threads.read", "repo.list", "narratives.read", "check.overlap"},
 		"activity.get":   {"repo.open", "repo.list", "narratives.read"},
 		"docs.tree":      {"docs.walk"},
 		"project.info":   {"manifest.load"},
@@ -50,6 +50,9 @@ func TestReadMethodsMarkWhereTheTimeGoes(t *testing.T) {
 			if got[name] != 1 {
 				t.Errorf("%s: phase %s counted %d times, want once; phases %v", method, name, got[name], got)
 			}
+		}
+		if method == "inbox.designer" && got["check.run"] != 0 {
+			t.Errorf("inbox.designer runs the whole check (S-0158): phases %v", got)
 		}
 	}
 }

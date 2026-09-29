@@ -306,23 +306,18 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 				}
 			}
 
-			// Overlapping touches are the check's rule, which has one implementation.
-			done = perf.Track(ctx, "check.run")
-			res, err := check.Run(repo, now())
+			// Overlapping touches are the check's rule, which has one
+			// implementation; only that rule runs here, over the items listed
+			// above (S-0158).
+			done = perf.Track(ctx, "check.overlap")
+			overlaps := check.Overlaps(repo, items)
 			done()
-			if err != nil {
-				out.Notes = append(out.Notes, "Overlapping touches are not listed: "+err.Error())
-			} else {
-				for _, f := range res.Findings {
-					if f.Rule != "wip.overlap" {
-						continue
-					}
-					e := InboxEntry{Key: "overlap:" + keyHash(f.Message), Kind: "overlap", Title: f.Message}
-					if m := leadingID.FindStringSubmatch(f.Message); m != nil {
-						e.Item = m[1]
-					}
-					add(e)
+			for _, f := range overlaps {
+				e := InboxEntry{Key: "overlap:" + keyHash(f.Message), Kind: "overlap", Title: f.Message}
+				if m := leadingID.FindStringSubmatch(f.Message); m != nil {
+					e.Item = m[1]
 				}
+				add(e)
 			}
 			out.Total = len(out.Entries)
 			return out, nil
