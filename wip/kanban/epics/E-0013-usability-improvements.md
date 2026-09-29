@@ -1,0 +1,23 @@
+---
+id: E-0013
+type: epic
+nature: improvement
+title: Usability Improvements
+status: backlog
+owner: alex
+created: 2026-09-29T05:28:11Z
+updated: 2026-09-29T05:28:11Z
+transitions: []
+tags: [dashboard]
+topics: [front-end]
+touches: [flaiover/src]
+---
+# E-0013 Usability Improvements
+
+## Outcome
+
+There are a number of odd patterns that cause confusion in the dashboard UI/UX. We need to catalog and address these to improve the usability and utility of the system.
+
+## Stories
+
+## Notes
