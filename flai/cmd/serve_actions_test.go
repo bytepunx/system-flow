@@ -45,8 +45,8 @@ func TestHostActionPush(t *testing.T) {
 	before := head(remote)
 	// S-0087: acceptance itself never pushes or tags, whatever the push
 	// action is set to; it only merges, archives, and commits locally.
-	// S-0094: the tag is computed and created at push instead, not a
-	// separate step, so it is not missing here for anyone to notice.
+	// S-0144: nor does pushing, unless publish is enabled too; releasing
+	// waits for Publish, so acceptances batch into one release.
 	out, _, code := runIn(t, root, "hostapi", "accept.run", `{"id":"S-0001","include_uncommitted":true,"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a09"}`)
 	if code != 0 || head(remote) != before || head(root) == before {
 		t.Fatalf("an acceptance with the action off: accepted here, nothing pushed: %d %s", code, out)
@@ -70,7 +70,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, checks, dashboard, host, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, checks, dashboard, host, publish, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -87,10 +87,13 @@ func TestHostActionPush(t *testing.T) {
 		t.Errorf("per project: %s", info)
 	}
 
-	// on: pushed, tagging what accept left unreleased first (S-0094)
+	// on: pushed, and with publish off nothing tagged (S-0144)
 	out, _, code = runIn(t, root, "hostapi", "push.run", pushRequest)
-	if code != 0 || !strings.Contains(out, `"pushed":true`) || !strings.Contains(out, `"tags":["cli/v1.1.0"]`) || head(remote) != head(root) {
+	if code != 0 || !strings.Contains(out, `"pushed":true`) || strings.Contains(out, "cli/v1.1.0") || head(remote) != head(root) {
 		t.Fatalf("enabled: %d %s", code, out)
+	}
+	if tags := gitIn(t, root, "tag", "--list"); strings.Contains(tags, "cli/v1.1.0") {
+		t.Errorf("pushing released nothing: %s", tags)
 	}
 	out, _, _ = runIn(t, root, "hostapi", "push.run", `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a11"}`)
 	if !strings.Contains(out, "nothing pending") {
@@ -103,7 +106,7 @@ func TestHostActionPush(t *testing.T) {
 	if err := json.Unmarshal([]byte(js), &entries); err != nil || len(entries) != 3 {
 		t.Fatalf("journal: %v %s", err, js)
 	}
-	for i, want := range []struct{ outcome, detail string }{{"disabled", ""}, {"done", "pushed with tags cli/v1.1.0"}, {"done", "nothing pushed: nothing pending"}} {
+	for i, want := range []struct{ outcome, detail string }{{"disabled", ""}, {"done", "pushed"}, {"done", "nothing pushed: nothing pending"}} {
 		e := entries[i]
 		if e.Outcome != want.outcome || e.Detail != want.detail || e.Action != "push" || e.Method != "push.run" || e.Root != root || e.By == "" || e.At == "" {
 			t.Errorf("entry %d: %+v", i, e)

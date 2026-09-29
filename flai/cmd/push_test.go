@@ -63,11 +63,48 @@ func TestPushPending(t *testing.T) {
 	}
 }
 
+// S-0144: by default a push releases nothing. What is accepted waits,
+// unreleased, to be published together (ADR-0032), however many pushes
+// carry it to the remote.
+func TestPushPendingReleasesNothingByDefault(t *testing.T) {
+	root, remote := researchProject(t, "feature", true)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	if dry, _, _ := runIn(t, root, "push", "--pending", "--dry-run"); strings.Contains(dry, "would also tag") || !strings.Contains(dry, "would push S-0001") {
+		t.Errorf("the dry run previews no release: %s", dry)
+	}
+	out, errOut, code := runIn(t, root, "push", "--pending", "--json")
+	if code != 0 {
+		t.Fatalf("push: %s", errOut)
+	}
+	var got struct {
+		Pushed  bool     `json:"pushed"`
+		Tags    []string `json:"tags"`
+		Release []any    `json:"release"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil || !got.Pushed || len(got.Tags) != 0 || len(got.Release) != 0 {
+		t.Fatalf("push --json: %v %s", err, out)
+	}
+	if tags := gitIn(t, root, "tag", "--list") + gitIn(t, remote, "tag", "--list"); strings.Contains(tags, "v1.1.0") {
+		t.Errorf("no tag here or there: %s", tags)
+	}
+	if log := gitIn(t, root, "log", "--format=%s"); strings.Contains(log, "chore: publish") {
+		t.Errorf("no version-bump commit: %s", log)
+	}
+	if plan, _, _ := runIn(t, root, "release", "--pending", "--dry-run"); !strings.Contains(plan, "1.1.0") {
+		t.Errorf("the release still waits to be published: %s", plan)
+	}
+}
+
 // S-0094: flai accept computes no release (S-0087), so nothing tags it until
-// something does; this is the one place it happens, before the push itself,
-// not a separate step left for someone to remember.
+// something does. With the publish host action enabled (S-0144), a push
+// does, before the push itself, not as a separate step.
 func TestPushPendingTagsWhatAcceptLeftUnreleased(t *testing.T) {
 	root, remote := researchProject(t, "feature", true)
+	if _, errOut, code := runIn(t, root, "serve", "enable", "publish"); code != 0 {
+		t.Fatalf("enable publish: %s", errOut)
+	}
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}

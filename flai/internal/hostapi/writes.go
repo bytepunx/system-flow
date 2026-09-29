@@ -258,6 +258,14 @@ var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 // template with the operator's own credentials (S-0078).
 const ActionPush = "push"
 
+// ActionPublish is the host action that has every push of accepted work,
+// flai push --pending wherever it runs, first tag a release of everything
+// accumulated (S-0094). Off, which is the default, a push tags nothing and
+// releasing waits for flai release --pending or the board's Publish, so
+// acceptances batch into one release (S-0144, ADR-0032). No method asks for
+// it: flai push reads it.
+const ActionPublish = "publish"
+
 // ActionAgent is the host action that starts a story's agent when the story
 // becomes ready and the in-progress limit has room (S-0079, S-0104,
 // ADR-0043). flai serve performs that itself, from what it sees in the
@@ -290,7 +298,8 @@ const ActionSettings = "settings"
 
 // Actions are the host actions there are, with what each lets a dashboard do.
 var Actions = map[string]string{
-	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
+	ActionPush:      "push accepted work, and publish everything merged and unreleased since each component's last tag when you press Publish, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
+	ActionPublish:   "tag a release of everything merged and unreleased since each component's last tag every time accepted work is pushed, from the board or by flai push --pending, so each push publishes; off, pushing releases nothing, and what is accepted waits to be published together from Publish or flai release --pending",
 	ActionAgent:     "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, start a ready story's agent on demand, start or queue a new one for a story whose agent dropped or failed, and start one to commit what a story in review left uncommitted in its worktree; whoever can move a story to ready or press Start agent, Retry, or Have an agent commit them, a holder of the dashboard token included, then starts it",
 	ActionDashboard: "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:    "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
@@ -1096,9 +1105,10 @@ func itemSpecs() map[string]spec {
 		}},
 
 		// push.run: the host action. flai push --pending --publish as the
-		// operator: the branch and the release tags of accepted work, then the
-		// template where its publish remote is behind. Never forced; when the
-		// remote has moved it refuses (exit 3) and says to fetch and merge.
+		// operator: the branch and the release tags of accepted work (a new
+		// release only with ActionPublish on, S-0144), then the template where
+		// its publish remote is behind. Never forced; when the remote has moved
+		// it refuses (exit 3) and says to fetch and merge.
 		"push.run": {action: ActionPush, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
