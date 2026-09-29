@@ -6,7 +6,7 @@ title: Agent Status, Telemetry, and Stream
 status: backlog
 owner: alex
 created: 2026-09-28T22:51:06Z
-updated: 2026-09-28T23:26:54Z
+updated: 2026-09-29T00:24:52Z
 transitions: []
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
@@ -19,5 +19,6 @@ The operator can view a feed window for each active agent, each task and story n
 
 ## Stories
 - S-0142 Add a stream window to the activity page agent panes
+- S-0143 Stories and Tasks track tokens and cost
 
 ## Notes
