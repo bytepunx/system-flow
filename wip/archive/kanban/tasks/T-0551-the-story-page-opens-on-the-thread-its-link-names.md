@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 204
-      cache_read: 1556830
-      cache_write: 25421
-      cost: 0.6242
+      input: 31
+      output: 6421
+      cache_read: 1550357
+      cache_write: 31889
+      cost: 0.6937
 ---
 
 # T-0551 The story page opens on the thread its link names

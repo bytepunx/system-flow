@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 64
-      cache_read: 688383
-      cache_write: 6344
-      cost: 0.2741
+      input: 14
+      output: 2819
+      cache_read: 680722
+      cache_write: 14002
+      cost: 0.3046
 ---
 
 # T-0552 The dashboard design and user guide say where an inbox thread leads

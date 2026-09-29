@@ -31,15 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 325
-  estimated: true
+  seconds: 376
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 836
-      cache_read: 5457929
-      cache_write: 128718
-      cost: 2.204
+      input: 132
+      output: 27367
+      cache_read: 6607347
+      cache_write: 135907
+      cost: 2.9566
 ---
 # S-0155 Inbox items take users to the story page, not document pages
 

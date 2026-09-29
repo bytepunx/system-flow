@@ -3,25 +3,30 @@ id: E-0013
 type: epic
 nature: improvement
 title: Usability Improvements
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-29T05:57:30Z
-transitions: []
+updated: 2026-09-29T07:07:20Z
+transitions:
+  - to: ready
+    at: 2026-09-29T07:07:18Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T07:07:20Z
+    by: alex
 tags: [dashboard]
 topics: [front-end]
 touches: [flaiover/src]
 usage:
   source: sum
-  seconds: 966
-  estimated: true
+  seconds: 1942
   models:
     - model: claude-opus-5-5
-      input: 286
-      output: 40924
-      cache_read: 15903140
-      cache_write: 298641
-      cost: 6.4549
+      input: 530
+      output: 131567
+      cache_read: 33410534
+      cache_write: 519496
+      cost: 13.4716
 ---
 # E-0013 Usability Improvements
 

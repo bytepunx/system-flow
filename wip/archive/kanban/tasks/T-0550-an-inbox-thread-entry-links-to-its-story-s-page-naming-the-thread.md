@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 158
-      cache_read: 945479
-      cache_write: 7307
-      cost: 0.3759
+      input: 19
+      output: 3867
+      cache_read: 933582
+      cache_write: 19203
+      cost: 0.4178
 ---
 
 # T-0550 An inbox thread entry links to its story's page naming the thread

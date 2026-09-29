@@ -3,11 +3,17 @@ id: E-0012
 type: epic
 nature: improvement
 title: Performance Analysis and Improvements
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-09-29T05:26:40Z
-updated: 2026-09-29T07:00:31Z
-transitions: []
+updated: 2026-09-29T07:07:30Z
+transitions:
+  - to: ready
+    at: 2026-09-29T07:07:28Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T07:07:30Z
+    by: alex
 tags: [dashboard, cli]
 topics: [front-end, back-end]
 touches: [flaiover/src, flai/cmd]
