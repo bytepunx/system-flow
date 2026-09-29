@@ -6,7 +6,7 @@ title: Usability Improvements
 status: in-progress
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-29T07:07:20Z
+updated: 2026-09-29T22:37:02Z
 transitions:
   - to: ready
     at: 2026-09-29T07:07:18Z
@@ -40,5 +40,6 @@ There are a number of odd patterns that cause confusion in the dashboard UI/UX. 
 - S-0153 Threads in the story pages are supposed to be paged
 - S-0154 Story pages receive live updates
 - S-0155 Inbox items take users to the story page, not document pages
+- S-0165 Tokens rate chart should express token use in minutes
 
 ## Notes
