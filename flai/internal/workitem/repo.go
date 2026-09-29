@@ -121,7 +121,8 @@ func (r *Repo) ItemDir(typ string, archived bool) string {
 }
 
 // List loads every item, optionally including the archive. Items are sorted
-// by ID.
+// by ID. Each is the caller's own copy; only files that changed since the
+// process last read them are read again (S-0156).
 func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	var items []*Item
 	scopes := []bool{false}
@@ -130,25 +131,14 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	}
 	for _, archived := range scopes {
 		for _, typ := range Types {
-			dir := r.ItemDir(typ, archived)
-			entries, err := os.ReadDir(dir)
-			if os.IsNotExist(err) {
-				continue
-			}
+			found, err := parsed.list(r.ItemDir(typ, archived))
 			if err != nil {
 				return nil, err
 			}
-			for _, e := range entries {
-				if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") || strings.HasPrefix(e.Name(), "_") {
-					continue
-				}
-				it, err := ReadItem(filepath.Join(dir, e.Name()))
-				if err != nil {
-					return nil, err
-				}
+			for _, it := range found {
 				it.Archived = archived
-				items = append(items, it)
 			}
+			items = append(items, found...)
 		}
 	}
 	sort.Slice(items, func(i, j int) bool { return lessID(items[i].ID, items[j].ID) })
@@ -202,7 +192,7 @@ func (r *Repo) Get(id string) (*Item, error) {
 			if len(matches) == 0 {
 				continue
 			}
-			it, err := ReadItem(matches[0])
+			it, err := parsed.get(matches[0])
 			if err != nil {
 				return nil, err
 			}
