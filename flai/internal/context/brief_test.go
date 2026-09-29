@@ -148,6 +148,24 @@ func TestRankedSectionsFillTheBudgetInRankOrder(t *testing.T) {
 	}
 }
 
+func TestTheBriefsAreKeptWhenTheyTakeThePackOverTheBudget(t *testing.T) {
+	base, _ := budgetPack(t, DefaultBudget, []string{"cli", "go", "dashboard"}, nil, "")
+	named := 0
+	for _, it := range base.Items {
+		if it.Step != StepBriefed {
+			t.Fatalf("only briefs expected: %+v", it)
+		}
+		named++
+	}
+	p, _ := budgetPack(t, base.Size.Bytes-100, []string{"cli", "go", "dashboard"}, nil, "herons")
+	if p.Exceeded != ExceededBriefs || len(p.Items) != named || len(ranked(p)) != 0 {
+		t.Errorf("exceeded %q, %d items of %d, ranked %v", p.Exceeded, len(p.Items), named, ranked(p))
+	}
+	if !strings.Contains(p.Header(), "over budget: the conventions, what is named, and the briefs exceed it, so nothing is ranked; every brief is kept") {
+		t.Errorf("header:\n%s", p.Header())
+	}
+}
+
 func TestTheHeaderSaysWhatAloneExceedsTheBudget(t *testing.T) {
 	p, _ := budgetPack(t, 1, []string{"cli"}, []Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0002"}}, "herons")
 	if p.Exceeded != ExceededConventions || len(p.Items) != 0 || len(p.Catalog.NotLoaded) != 17 {

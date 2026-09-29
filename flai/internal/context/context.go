@@ -56,6 +56,7 @@ type Size struct {
 const (
 	ExceededConventions = "conventions"
 	ExceededNamed       = "named"
+	ExceededBriefs      = "briefs"
 )
 
 // Pack is the context pack for one story.
@@ -64,7 +65,7 @@ type Pack struct {
 	Title       string              `json:"title"`
 	Topics      []topics.StoryTopic `json:"topics"`
 	Budget      int                 `json:"budget"`             // bytes the pack is fitted to
-	Exceeded    string              `json:"exceeded,omitempty"` // conventions or named, when that alone is over the budget
+	Exceeded    string              `json:"exceeded,omitempty"` // conventions, named, or briefs: the part that takes the pack over the budget
 	Size        Size                `json:"size"`               // of Header and Body together
 	README      *Convention         `json:"readme,omitempty"`
 	Conventions []Convention        `json:"conventions"`
@@ -151,8 +152,9 @@ func Design(docs []*Doc, storyTopics []string, sources []Source) *Selection {
 // budget leaves with the sections that rank highest against query, and adds
 // the catalog. When the conventions alone exceed the budget the pack is
 // the conventions and a catalog of every document; when the conventions and
-// what the story names exceed it, everything named is still loaded and
-// nothing is ranked. Either is recorded in Exceeded.
+// what the story names exceed it, everything named is still loaded; when
+// the briefs take it over, every brief is still printed (TH-0032). In the
+// last two nothing is ranked. Which part took it over is in Exceeded.
 func (p *Pack) AddDesign(s *Selection, query string) {
 	p.size()
 	if p.Size.Bytes > p.Budget {
@@ -167,6 +169,9 @@ func (p *Pack) AddDesign(s *Selection, query string) {
 		p.Exceeded = ExceededNamed
 	}
 	p.take(s)
+	if p.Exceeded == "" && p.Size.Bytes > p.Budget {
+		p.Exceeded = ExceededBriefs
+	}
 	if p.Exceeded != "" {
 		return
 	}
@@ -367,8 +372,8 @@ const (
 )
 
 var groupHead = map[string]string{
-	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story's topics select, each as its title, size, reason, first paragraph, and outline. Read a section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", before changing what it describes.\n",
-	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, each by its decision sentence. Read one whole with the MCP doc_get or flai doc show <path>.\n\n",
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the whole document, or the section, with the MCP doc_get or flai doc show <path>, before relying on it or changing what it describes.\n",
+	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, each by its decision sentence. When one bears on the story, read it whole with the MCP doc_get or flai doc show <path> before relying on it.\n\n",
 }
 
 // group is the heading an item prints under, empty for one loaded.
@@ -477,6 +482,8 @@ func (p *Pack) Header() string {
 		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
 	case ExceededNamed:
 		b.WriteString("over budget: the conventions and what the story, its epic, and its tasks name exceed it, so nothing is ranked; a story that names more than the budget holds is a story to split (ADR-0049)\n")
+	case ExceededBriefs:
+		b.WriteString("over budget: the conventions, what is named, and the briefs exceed it, so nothing is ranked; every brief is kept, and narrowing the conventions' topics makes room (ADR-0049, TH-0032)\n")
 	}
 	b.WriteString("contents, in bytes:\n")
 	row := func(n int, what, name string) { fmt.Fprintf(&b, "  %6d  %-10s  %s\n", n, what, name) }

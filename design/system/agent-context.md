@@ -167,3 +167,23 @@ A cli story's pack was about 500 KB: 22 design and tech files by topics, about 3
 ## Fitting the pack to a budget
 
 S-0145 (2026-09-29) measured the S-0138 pack at 541 KB, about 135k tokens, against the 25k-token cap on an MCP tool result, and surveyed twelve ways of feeding an agent less: heading topics, a budget, BM25 and embedding retrieval, on-demand MCP tools, harness hooks, a memory layer, model-written digests, a scout sub-agent, prompt caching, a `context:` list, and splitting the long documents. The breakdown, the estimates, the comparison, and the recommendation are the proposed [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md): a size budget, whole bodies only for what the story names, briefs (title, first paragraph, outline; an ADR's decision sentence) for what topics and links select, ranked sections to fill the budget, and `doc_search` plus a `heading` on `doc_get` so the agent fetches a section when it needs it. Estimated at about 80 KB for S-0138 with today's conventions. It supersedes ADR-0047's no-budget choice if accepted; the rest of ADR-0047 stands.
+
+### As built, with a budget
+
+S-0146 built ADR-0049's budget, briefs, and ranked fill in `flai/internal/context` ([flai-cli.md](flai-cli.md)). Choices ADR-0049 left open:
+
+- The budget counts everything `flai prime --story` prints, the header included. A project sets it as `prime.budget` in `system-flow.yaml`, because a pack is the same for every agent on the project; `--budget` overrides it for one run.
+- Briefs are never cut (TH-0032, the designer's choice). When the conventions, what is named, and the briefs exceed the budget, the header says which part took it over (`exceeded`: `conventions`, `named`, or `briefs`) and nothing is ranked. The pack tells the agent that a brief is not the document, and to read one whole when it bears on the story.
+- Design briefs print under one `briefs` heading, ADR briefs one line each under `decisions`, each with its first reason and a count of the others; the JSON keeps every reason.
+- The one step also reaches an ADR that refines a named or briefed one. A decision sentence of under five words, a bold lead-in, takes the next sentence with it.
+- The ranked step tries every section that matches in rank order, not five and five, and keeps each that fits; an ADR whole first, then its best section.
+
+Measured on 2026-09-29 on the S-0146 branch, with every convention still `[all]`:
+
+| Story | Pack | Conventions and issues | Named | Briefs | Over by |
+|-------|------|------------------------|-------|--------|---------|
+| S-0138 | 125 KB | 57 KB | 36 KB: ADR-0047, ADR-0049, `conventions.md` | 55, 14 KB of text | named |
+| S-0141 | 160 KB | 57 KB | 72 KB: `flaiover-dashboard.md` | 49 | named |
+| S-0146 | 207 KB | 57 KB | 120 KB: ADR-0049, `agent-context.md`, `flai-cli.md` | 53 | named |
+
+ADR-0049's estimate of 80 KB for S-0138 missed the 9 KB open-issues table and the header, and S-0138 was re-scoped after it to name 36 KB instead of 9 KB. The conventions and issues are more than half the budget before anything else. What takes packs furthest over is what stories and tasks name: a task that writes out `design/system/flai-cli.md` as a file to update loads all 86 KB of it. TH-0032 proposes briefing a path written out in plain text, keeping links and ADR IDs whole.
