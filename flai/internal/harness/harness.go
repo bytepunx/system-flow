@@ -169,7 +169,7 @@ If a change cannot be committed without the designer deciding something, ask wit
 	}
 	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s
 
-Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md: prime your session with flai prime --cat, open the story with flai stream open %[2]s, write its tasks if it has none, and work them in the worktree that prints. Commit each task, keep the narrative's Current state and Next steps true, run flai stream sync %[2]s at every task transition, and call the flai MCP tool inbox there too.
+Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md: prime your session with flai prime --story %[2]s (or the flai MCP tool prime), which prints the conventions that apply and what the story names whole, and briefs the design and ADRs its topics and links select, within a size budget. A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Open the story with flai stream open %[2]s, write its tasks if it has none, and work them in the worktree that prints. Commit each task, keep the narrative's Current state and Next steps true, run flai stream sync %[2]s at every task transition, and call the flai MCP tool inbox there too.
 
 %[4]s`, r.Name, r.Story, r.Root, rules(r), why)
 }
