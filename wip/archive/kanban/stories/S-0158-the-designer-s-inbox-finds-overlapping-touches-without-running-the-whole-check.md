@@ -3,11 +3,11 @@ id: S-0158
 type: story
 nature: improvement
 title: The designer's inbox finds overlapping touches without running the whole check
-status: review
+status: done
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:29Z
-updated: 2026-09-29T19:33:41Z
+updated: 2026-09-29T19:41:29Z
 transitions:
   - to: ready
     at: 2026-09-29T19:18:28Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-09-29T19:33:41Z
     by: agent-S-0158
+  - to: done
+    at: 2026-09-29T19:41:29Z
+    by: alex
 tags: [cli]
 topics: [server-side, back-end]
 touches: [flai/internal/hostapi, flai/internal/check, design/system/flai-cli.md, design/system/server-performance.md, docs/users/flai.md]
