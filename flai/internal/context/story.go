@@ -55,7 +55,7 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	pack.AddDesign(Design(docs, topics.Names(storyTopics), sources), Query(it.Title, it.Body))
+	pack.AddDesign(Design(docs, topics.Names(storyTopics), sources, BriefOver(size)), Query(it.Title, it.Body))
 	return pack, nil
 }
 

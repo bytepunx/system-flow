@@ -138,10 +138,13 @@ func (p *Pack) size() {
 
 // Design runs the steps that choose design, tech, and ADRs for a story, in
 // the order ADR-0049 gives: what the story, its epic, and its tasks name, to
-// load whole; what its topics select, to brief; and the ADRs one step from
-// both, to brief. The ranked step runs in AddDesign, against the budget.
-func Design(docs []*Doc, storyTopics []string, sources []Source) *Selection {
+// load whole, save a large document named only by its path written out,
+// which is briefed when it is over briefOver bytes (ADR-0050); what its
+// topics select, to brief; and the ADRs one step from both, to brief. The
+// ranked step runs in AddDesign, against the budget.
+func Design(docs []*Doc, storyTopics []string, sources []Source, briefOver int) *Selection {
 	s := NewSelection(docs)
+	s.BriefOver = briefOver
 	s.Linked(sources)
 	s.ByTopics(storyTopics)
 	s.Step()
@@ -372,9 +375,13 @@ const (
 )
 
 var groupHead = map[string]string{
-	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
-	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, each by its decision sentence. When one bears on the story, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name by a path written out and that are too large to load whole (reason: named in <ID>), then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
+	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, and those named by a path written out and too large to load whole, each by its decision sentence. When one bears on the story, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
 }
+
+// namedBrief follows the line naming a brief of a document the story named
+// by its path written out (ADR-0050).
+const namedBrief = "The story names this file; it is briefed for its size. Decide from the brief whether the work needs its body, and read the file, or the sections you will change, before relying on it or changing it.\n"
 
 // group is the heading an item prints under, empty for one loaded.
 func group(it Item) string {
@@ -398,6 +405,9 @@ func (it Item) Printed() string {
 		return fmt.Sprintf("- %s %s (%s; %s): %s\n", it.ID, it.Title, it.Path, it.briefReason(), it.Text)
 	case groupBriefs:
 		head := fmt.Sprintf("\n%s: %s (%d bytes; %s)\n", it.Path, it.Title, it.Whole, it.briefReason())
+		if strings.HasPrefix(it.Reason, NamedIn) {
+			head += namedBrief
+		}
 		if it.Text == "" {
 			return head
 		}

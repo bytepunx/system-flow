@@ -212,6 +212,10 @@ type Selection struct {
 	choices []*choice
 	briefs  []*brief // in the order they were found
 	briefOf map[*Doc]*brief
+	// BriefOver is the size above which a document named only by its path
+	// written out is briefed instead of loaded whole (ADR-0050); zero loads
+	// every named document whole.
+	BriefOver int
 }
 
 // NewSelection starts a selection over docs with nothing chosen.
@@ -362,8 +366,9 @@ type Source struct {
 
 // ref is a document, or part of one, that a text links or names.
 type ref struct {
-	doc  *Doc
-	secs []int // nil for the whole document
+	doc     *Doc
+	secs    []int // nil for the whole document
+	written bool  // named by its repository path written out, not linked or by ID
 }
 
 var (
@@ -403,7 +408,7 @@ func (s *Selection) refs(text, from string) []ref {
 	plain := linkRe.ReplaceAllString(text, "]()")
 	for _, d := range s.Docs {
 		if strings.Contains(plain, d.Path) {
-			out = append(out, ref{doc: d})
+			out = append(out, ref{doc: d, written: true})
 		}
 	}
 	for _, m := range adrIDRe.FindAllStringSubmatch(text, -1) {
@@ -446,14 +451,46 @@ func Slug(heading string) string {
 
 // Linked chooses what the story, its epic, and its tasks link or name, to
 // load whole, with the reason "linked from <ID>". A superseded ADR gives
-// way to what supersedes it.
+// way to what supersedes it. A document named only by its path written out
+// and larger than BriefOver is briefed instead, with the reason "named in
+// <ID>", once every link and ID has been chosen, so that a link or an ID
+// anywhere still loads it (ADR-0050).
 func (s *Selection) Linked(sources []Source) {
+	type later struct {
+		doc *Doc
+		id  string
+	}
+	var written []later
 	for _, src := range sources {
 		for _, r := range s.refs(src.Body, src.Path) {
+			if r.written && s.BriefOver > 0 && len(r.doc.Raw) > s.BriefOver {
+				written = append(written, later{r.doc, src.ID})
+				continue
+			}
 			s.chooseRef(r, StepNamed, "linked from "+src.ID)
 		}
 	}
+	for _, w := range written {
+		reason := NamedIn + w.id
+		switch {
+		case w.doc.Kind == KindADR:
+			s.briefADR(w.doc, reason)
+		case s.Whole(w.doc):
+			s.choose(w.doc, w.doc.all(), "", reason)
+		default:
+			s.addBrief(w.doc, reason, nil)
+		}
+	}
 }
+
+// NamedIn starts the reason of a brief of a document the story, its epic,
+// or a task named by its path written out: "named in T-0525".
+const NamedIn = "named in "
+
+// BriefOver is the size above which a document named only by its path
+// written out is briefed, for a pack of budget bytes: an eighth of it
+// (ADR-0050).
+func BriefOver(budget int) int { return budget / 8 }
 
 func (s *Selection) chooseRef(r ref, step, reason string) {
 	switch {

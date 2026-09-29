@@ -173,6 +173,74 @@ func TestLinkedResolvesTheLinksOfAnArchivedItem(t *testing.T) {
 	}
 }
 
+func TestLinkedBriefsALargeDocumentNamedOnlyByItsPathWrittenOut(t *testing.T) {
+	task := Source{ID: "T-0001", Path: "wip/kanban/tasks/T-0001-x.md", Body: "Update design/system/cli.md and design/tech/go.md."}
+	s := fixture(t)
+	s.BriefOver = 200
+	s.Linked([]Source{task})
+	if got := chosen(s); !reflect.DeepEqual(got, map[string]string{"design/tech/go.md": "linked from T-0001"}) {
+		t.Errorf("chosen %v", got)
+	}
+	if got := briefed(s); !reflect.DeepEqual(got, map[string]string{"design/system/cli.md": "named in T-0001"}) {
+		t.Errorf("briefed %v", got)
+	}
+
+	s = fixture(t)
+	s.Linked([]Source{task})
+	if got := chosen(s); got["design/system/cli.md"] != "linked from T-0001" || len(briefed(s)) != 0 {
+		t.Errorf("with no BriefOver every named document loads whole: %v, briefed %v", got, briefed(s))
+	}
+}
+
+func TestALinkOrAnIDLoadsWhatAPathWrittenOutWouldBrief(t *testing.T) {
+	s := fixture(t)
+	s.BriefOver = 140
+	s.Linked([]Source{
+		{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "Change design/system/cli.md, design/adrs/0002-second.md, and design/adrs/0005-fifth.md."},
+		{ID: "T-0001", Path: "wip/kanban/tasks/T-0001-x.md", Body: "Read [the CLI](../../../design/system/cli.md) and ADR-0002 first."},
+	})
+	want := map[string]string{
+		"design/system/cli.md":       "linked from T-0001 (also named in S-0001)",
+		"design/adrs/0002-second.md": "linked from T-0001 (also named in S-0001)",
+	}
+	if got := chosen(s); !reflect.DeepEqual(got, want) {
+		t.Errorf("chosen %v", got)
+	}
+	if got := briefed(s); !reflect.DeepEqual(got, map[string]string{"design/adrs/0005-fifth.md": "named in S-0001"}) {
+		t.Errorf("briefed %v", got)
+	}
+}
+
+func TestAFragmentLinkLoadsItsSectionAndAPathWrittenOutBriefsTheRest(t *testing.T) {
+	s := fixture(t)
+	s.BriefOver = 200
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "See [charts](../../../design/system/dashboard.md#charts); design/system/dashboard.md is where it lands."}})
+	want := map[string]string{
+		"design/system/dashboard.md § Charts":           "linked from S-0001",
+		"design/system/dashboard.md § Charts › Colours": "linked from S-0001",
+	}
+	if got := chosen(s); !reflect.DeepEqual(got, want) {
+		t.Errorf("chosen %v", got)
+	}
+	b := s.briefOf[s.byPath["design/system/dashboard.md"]]
+	if b == nil || b.reason != "named in S-0001" {
+		t.Fatalf("briefed %v", briefed(s))
+	}
+	if text := s.designBrief(b); !strings.Contains(text, "- Charts (loaded)\n") || !strings.Contains(text, "- Login\n") {
+		t.Errorf("brief %q", text)
+	}
+}
+
+func TestStepDoesNotFollowADocumentBriefedForItsSize(t *testing.T) {
+	s := fixture(t)
+	s.BriefOver = 200
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "design/system/cli.md"}})
+	s.Step()
+	if s.Briefed(s.byID["ADR-0002"]) || s.Loaded(s.byID["ADR-0002"]) {
+		t.Errorf("followed a brief's links: %v", briefed(s))
+	}
+}
+
 func TestASupersededADRGivesWayToWhatSupersedesIt(t *testing.T) {
 	s := fixture(t)
 	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "As ADR-0001 says."}})

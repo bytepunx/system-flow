@@ -91,7 +91,7 @@ func budgetPack(t *testing.T, budget int, storyTopics []string, sources []Source
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := Design(fixture(t).Docs, storyTopics, sources)
+	s := Design(fixture(t).Docs, storyTopics, sources, BriefOver(budget))
 	p.AddDesign(s, query)
 	return p, s
 }
@@ -186,5 +186,31 @@ func TestTheHeaderSaysWhatAloneExceedsTheBudget(t *testing.T) {
 	if !strings.Contains(p.Header(), "over budget: the conventions and what the story, its epic, and its tasks name exceed it") ||
 		!strings.Contains(p.Header(), "  named       design/adrs/0002-second.md\n") {
 		t.Errorf("header:\n%s", p.Header())
+	}
+}
+
+func TestAPackSaysABriefOfWhatTheStoryNamesIsForItsSize(t *testing.T) {
+	task := Source{ID: "T-0001", Path: "wip/kanban/tasks/T-0001-x.md", Body: "Update design/system/cli.md."}
+	p, _ := budgetPack(t, 2000, nil, []Source{task}, "")
+	var it *Item
+	for i := range p.Items {
+		if p.Items[i].Path == "design/system/cli.md" {
+			it = &p.Items[i]
+		}
+	}
+	if it == nil || it.Step != StepBriefed || it.Reason != "named in T-0001" {
+		t.Fatalf("items %+v", p.Items)
+	}
+	body := p.Body()
+	if !strings.Contains(body, "\ndesign/system/cli.md: The CLI (328 bytes; named in T-0001)\n"+namedBrief+"\n") {
+		t.Errorf("brief not marked as named:\n%s", body)
+	}
+	if !strings.Contains(body, "name by a path written out and that are too large to load whole") {
+		t.Errorf("briefs heading does not say what a named brief is:\n%s", body)
+	}
+
+	p, _ = budgetPack(t, DefaultBudget, nil, []Source{task}, "")
+	if len(p.Items) == 0 || p.Items[0].Path != "design/system/cli.md" || p.Items[0].Step != StepNamed || p.Items[0].Heading != nil {
+		t.Errorf("a document under an eighth of the budget is not loaded whole: %+v", p.Items)
 	}
 }
