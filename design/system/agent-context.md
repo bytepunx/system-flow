@@ -162,7 +162,7 @@ The replay on 2026-09-29 (S-0137 notes) re-ran the archive with today's document
 | Topics and ranking, no step | 68 |
 | Ranking alone, top 5 | 47 |
 
-A cli story's pack was about 500 KB: 22 design and tech files by topics, about 30 ADRs by links, and 10 ranked items. `flai prime --cat` is 56 KB. The bulk is whole-file topics (`[all]` on seven `design/system` files, `cli` on `flai-cli.md`) and the ADRs `flai-cli.md § Commands` links. Heading topics on those files are the remedy ADR-0047 names. TH-0029 asks the designer about it before S-0138 switches agents to the pack.
+A cli story's pack was about 500 KB: 22 design and tech files by topics, about 30 ADRs by links, and 10 ranked items. `flai prime --cat` is 56 KB. The bulk is whole-file topics (`[all]` on seven `design/system` files, `cli` on `flai-cli.md`) and the ADRs `flai-cli.md § Commands` links. Heading topics on those files are the remedy ADR-0047 names. TH-0029 and TH-0030 asked the designer about it; [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) answers with a budget and briefs, and S-0148 switches agents to the pack once S-0146 and S-0147 build them.
 
 ## Fitting the pack to a budget
 
