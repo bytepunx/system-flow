@@ -11,6 +11,17 @@ transitions: []
 tags: [dashboard, cli]
 topics: [front-end, back-end]
 touches: [flaiover/src, flai/cmd]
+usage:
+  source: sum
+  seconds: 879
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 224
+      output: 1360
+      cache_read: 19048908
+      cache_write: 240173
+      cost: 7.6365
 ---
 # E-0012 Performance Analysis and Improvements
 
