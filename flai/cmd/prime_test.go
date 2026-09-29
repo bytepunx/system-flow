@@ -52,20 +52,20 @@ func TestPrimeStory(t *testing.T) {
 	if !ok || !strings.HasPrefix(head, "S-004 context pack\n") || !strings.Contains(head, "story: S-004 Four\n") || !strings.Contains(head, "  all  every story\n") {
 		t.Fatalf("header:\n%s", out)
 	}
-	if body != cat {
-		t.Errorf("with every convention at [all] the pack is prime --cat:\n%s\n---\n%s", body, cat)
+	if !strings.HasPrefix(body, cat) || !strings.HasSuffix(body, "\ndesign/system/overview.md\n=========================\nreason: topics: all\n\n---\ntitle: Overview\nupdated: 2026-08-01\ntopics: [all]\n---\n\n# Overview\n") {
+		t.Errorf("with every convention at [all] the pack is prime --cat, then the design:\n%s\n---\n%s", body, cat)
 	}
 	if !strings.Contains(head, fmt.Sprintf("size: %d bytes, %d", len(body), strings.Count(body, "\n"))) {
 		t.Errorf("size:\n%s", head)
 	}
-	for _, id := range []string{"S-1", "S-0999"} {
+	for _, id := range []string{"E-1", "S-0999"} {
 		_, errOut, code = runIn(t, dir, "prime", "--story", id)
 		if code == 0 || !strings.Contains(errOut, "flai prime --story "+id) {
 			t.Errorf("%s should fail naming it: %d %s", id, code, errOut)
 		}
 	}
-	if _, errOut, _ = runIn(t, dir, "prime", "--story", "S-1"); !strings.Contains(errOut, "S-001 is archived") {
-		t.Errorf("archived: %s", errOut)
+	if out, errOut, code = runIn(t, dir, "prime", "--story", "S-1"); code != 0 || !strings.HasPrefix(out, "S-001 context pack\n") {
+		t.Errorf("an archived story gets a pack: %d %s", code, errOut)
 	}
 
 	root := tempProject(t)
@@ -128,5 +128,105 @@ func TestPrimeStory(t *testing.T) {
 		len(v.Conventions) != 1 || len(v.Conventions[0].Kept) != 3 || len(v.Conventions[0].LeftOut) != 2 ||
 		v.Conventions[0].LeftOut[0].Heading != "Svelte" || v.Conventions[0].LeftOut[0].Topics[0] != "svelte" || len(v.LeftOut) != 2 {
 		t.Errorf("json: %+v", v)
+	}
+}
+
+func TestPrimeStoryDesign(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("design/conventions/README.md", "# Conventions\n")
+	write("design/system/cli.md", "---\ntitle: CLI\nupdated: 2026-09-28\nstatus: active\ntopics: [go]\n---\n\n# CLI\n\n## Commands\n\nAs ADR-0002 decides.\n\n## Board <!-- topics: dashboard -->\n\nThe board.\n")
+	write("design/system/other.md", "---\ntitle: Other\nupdated: 2026-09-28\nstatus: active\n---\n\n# Other\n\nNothing.\n")
+	adr := func(n, title, fm string) {
+		write("design/adrs/"+n+".md", "---\nid: ADR-"+n[:4]+"\ntitle: "+title+"\nstatus: accepted\ndate: 2026-09-01\n"+fm+"---\n\n# ADR-"+n[:4]+" "+title+"\n\n## Decision\n\n"+title+".\n")
+	}
+	adr("0001-old", "Old", "superseded_by: [ADR-0003]\n")
+	adr("0002-linked", "Linked", "")
+	adr("0003-new", "New", "")
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Slice", "--epic", "E-0001", "--topics", "go"); code != 0 {
+		t.Fatal(errOut)
+	}
+	story, err := filepath.Glob(filepath.Join(root, "wip", "kanban", "stories", "S-0001-*.md"))
+	if err != nil || len(story) != 1 {
+		t.Fatal(story, err)
+	}
+	data, err := os.ReadFile(story[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(story[0], []byte(strings.Replace(string(data), "## Goal\n", "## Goal\n\nKeep to ADR-0001.\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code := runIn(t, root, "prime", "--story", "S-0001")
+	if code != 0 {
+		t.Fatalf("prime --story: %s", errOut)
+	}
+	for _, want := range []string{
+		"design: 3 items, ",
+		"catalog: 2 documents not loaded, 1 loaded in part\n",
+		"\ndesign/system/cli.md § CLI\n",
+		"reason: topics: go\n\n# CLI\n\n## Commands\n\nAs ADR-0002 decides.\n\n\n",
+		"\ndesign/adrs/0003-new.md\n=======================\nreason: supersedes ADR-0001\n\n---\nid: ADR-0003\n",
+		"\ndesign/adrs/0002-linked.md\n==========================\nreason: linked from design/system/cli.md § Commands\n",
+		"\ncatalog\n=======\n",
+		"- design/system/other.md: Other\n",
+		"- design/adrs/0001-old.md: Old (superseded by ADR-0003)\n",
+		"- design/system/cli.md: CLI\n  - CLI (loaded)\n    - Commands (loaded)\n    - Board\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "The board.") {
+		t.Errorf("printed a section whose topics miss:\n%s", out)
+	}
+	head, body, _ := strings.Cut(out, " lines below this header\n\n")
+	if !strings.Contains(head, fmt.Sprintf("size: %d bytes, %d", len(body), strings.Count(body, "\n"))) {
+		t.Errorf("size:\n%s", head)
+	}
+
+	out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--json")
+	var v struct {
+		Size  struct{ Bytes int } `json:"size"`
+		Items []struct {
+			Path    string   `json:"path"`
+			Heading []string `json:"heading"`
+			Reason  string   `json:"reason"`
+			Size    int      `json:"size"`
+			Text    string   `json:"text"`
+		} `json:"items"`
+		Catalog struct {
+			NotLoaded []struct{ Path string } `json:"not_loaded"`
+			InPart    []struct {
+				Path    string `json:"path"`
+				Outline []struct {
+					Heading string `json:"heading"`
+					Loaded  bool   `json:"loaded"`
+				} `json:"outline"`
+			} `json:"in_part"`
+		} `json:"catalog"`
+	}
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatalf("json: %v %s", err, out)
+	}
+	if len(v.Items) != 3 || v.Items[0].Path != "design/system/cli.md" || strings.Join(v.Items[0].Heading, "/") != "CLI" || v.Items[0].Reason != "topics: go" ||
+		v.Items[0].Size != len(v.Items[0].Text) || v.Items[1].Reason != "supersedes ADR-0001" || v.Items[2].Path != "design/adrs/0002-linked.md" ||
+		len(v.Catalog.NotLoaded) != 2 || len(v.Catalog.InPart) != 1 || len(v.Catalog.InPart[0].Outline) != 3 || v.Catalog.InPart[0].Outline[2].Loaded {
+		t.Errorf("json: %+v", v)
+	}
+	if v.Size.Bytes <= v.Items[0].Size+v.Items[1].Size+v.Items[2].Size {
+		t.Errorf("the size leaves out the items: %d", v.Size.Bytes)
 	}
 }

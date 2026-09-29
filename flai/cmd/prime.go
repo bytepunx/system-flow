@@ -32,8 +32,16 @@ content of each file with a header instead of the paths.
 and the size of what follows; then every convention as --cat prints it, with
 the sections whose topics include neither all nor one of the story's left
 out (the front matter, the baseline marker, and the Project additions heading
-always stay); the open issues; and one line per section left out, with its
-topics. With every section at [all] the text below the header is --cat's.`,
+always stay); the open issues; then the design/system, design/tech, and ADR
+sections the story selects, each headed with its path, heading path, and
+reason: those whose topics match; those the story, its epic, and its tasks
+link or name, and the ADRs those link or refine, a superseded ADR replaced by
+what supersedes it; and the five ADRs and five design sections ranked highest
+against the story's title, goal, and criteria. Then a catalog of every
+document not loaded, with the outline of those loaded in part, and one line
+per convention section left out, with its topics. Nothing prints twice: the
+first reason wins and the others are listed on it. An archived story gets
+the pack it would get today.`,
 		Example: `  flai prime
   flai prime --cat
   flai prime --json
@@ -99,21 +107,21 @@ topics. With every section at [all] the text below the header is --cat's.`,
 		},
 	}
 	c.Flags().BoolVar(&cat, "cat", false, "print file contents instead of paths")
-	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the convention sections its topics select, and what was left out")
+	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions, design, tech, and ADRs it selects, and a catalog of the rest")
 	return c
 }
 
-// primeStory prints the context pack for an active story (ADR-0047, S-0136).
+// primeStory prints the context pack for a story (ADR-0047): the conventions
+// its topics select (S-0136), then the design, tech, and ADRs its topics,
+// links, and ranking select, and a catalog of the rest (S-0137). An archived
+// story gets the pack it would get today, which is how a pack is replayed.
 func (a *app) primeStory(repo *workitem.Repo, set *conventions.Set, id, table string) error {
 	it, err := repo.Get(id)
 	if err != nil {
-		return fmt.Errorf("flai prime --story %s: %w; give the ID of an active story", id, err)
+		return fmt.Errorf("flai prime --story %s: %w; give the ID of a story", id, err)
 	}
 	if it.Type != workitem.Story {
 		return fmt.Errorf("flai prime --story %s: %s is %s, not a story", id, it.ID, it.Type)
-	}
-	if it.Archived {
-		return fmt.Errorf("flai prime --story %s: %s is archived; a pack is for a story still being worked", id, it.ID)
 	}
 	storyTopics, err := topics.ForStory(repo, it.ID)
 	if err != nil {
@@ -123,10 +131,43 @@ func (a *app) primeStory(repo *workitem.Repo, set *conventions.Set, id, table st
 	if err != nil {
 		return err
 	}
+	docs, err := ctxpack.LoadDocs(repo.Root, repo.Manifest.Dir(repo.Root, "design"))
+	if err != nil {
+		return fmt.Errorf("flai prime --story %s: reading the design documents: %w", id, err)
+	}
+	sources, err := storySources(repo, it)
+	if err != nil {
+		return err
+	}
+	pack.AddDesign(ctxpack.Design(docs, topics.Names(storyTopics), sources, ctxpack.Query(it.Title, it.Body)))
 	if a.jsonOut {
 		return a.printJSON(pack)
 	}
 	fmt.Fprint(a.out, pack.Header())
 	fmt.Fprint(a.out, pack.Body())
 	return nil
+}
+
+// storySources is the story, its epic, and its tasks, archived or not, for
+// the documents they link.
+func storySources(repo *workitem.Repo, story *workitem.Item) ([]ctxpack.Source, error) {
+	src := func(it *workitem.Item) ctxpack.Source {
+		return ctxpack.Source{ID: it.ID, Path: relPath(repo.Root, it.Path), Body: it.Body}
+	}
+	out := []ctxpack.Source{src(story)}
+	if story.Parent != "" {
+		if epic, err := repo.Get(story.Parent); err == nil {
+			out = append(out, src(epic))
+		}
+	}
+	items, err := repo.List(true)
+	if err != nil {
+		return nil, err
+	}
+	for _, it := range items {
+		if it.Type == workitem.Task && it.Parent == story.ID {
+			out = append(out, src(it))
+		}
+	}
+	return out, nil
 }

@@ -1,7 +1,8 @@
 // Package context builds the context pack an agent working a story is primed
 // with (ADR-0047). This part selects the conventions: each file in read order
 // with the sections whose topics miss the story's left out, and a list of
-// what was left out so the agent knows the rule exists.
+// what was left out so the agent knows the rule exists. design.go, rank.go,
+// and items.go select the design, tech, and ADRs and catalog the rest.
 package context
 
 import (
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
@@ -57,6 +59,15 @@ type Pack struct {
 	Issues      string              `json:"-"` // the open-issues table, empty when none is open
 	OpenIssues  int                 `json:"open_issues"`
 	Omitted     []string            `json:"left_out"` // one line per outermost section left out
+	Items       []Item              `json:"items"`    // the design, tech, and ADRs chosen, in the order chosen
+	Catalog     Catalog             `json:"catalog"`
+}
+
+// Catalog is every design, tech, and ADR document the pack does not print
+// whole.
+type Catalog struct {
+	NotLoaded []Entry `json:"not_loaded"`
+	InPart    []Entry `json:"in_part"`
 }
 
 // Build selects the conventions of set for a story with the given topics.
@@ -64,7 +75,8 @@ type Pack struct {
 // open-issues table printed after the conventions.
 func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conventions.Set, issues string) (*Pack, error) {
 	names := topics.Names(storyTopics)
-	p := &Pack{Story: story, Title: title, Topics: storyTopics, Issues: issues, Conventions: []Convention{}, Omitted: []string{}}
+	p := &Pack{Story: story, Title: title, Topics: storyTopics, Issues: issues, Conventions: []Convention{}, Omitted: []string{}, Items: []Item{},
+		Catalog: Catalog{NotLoaded: []Entry{}, InPart: []Entry{}}}
 	if set.README != "" {
 		rel, err := filepath.Rel(root, filepath.Join(set.Dir, "README.md"))
 		if err != nil {
@@ -91,9 +103,32 @@ func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conv
 	for _, c := range p.files() {
 		p.Omitted = append(p.Omitted, c.Omitted()...)
 	}
+	p.size()
+	return p, nil
+}
+
+func (p *Pack) size() {
 	body := p.Body()
 	p.Size = Size{Bytes: len(body), Lines: strings.Count(body, "\n")}
-	return p, nil
+}
+
+// Design runs the steps that choose design, tech, and ADRs for a story, in
+// the order ADR-0047 gives: by topics, linked from the story, its epic, and
+// its tasks, one step further from both, then ranked against query.
+func Design(docs []*Doc, storyTopics []string, sources []Source, query string) *Selection {
+	s := NewSelection(docs)
+	s.ByTopics(storyTopics)
+	s.Linked(sources)
+	s.Step(StepTopics, StepLinked)
+	s.Rank(query, Ranked, Ranked)
+	return s
+}
+
+// AddDesign puts what a selection chose, and its catalog, into the pack.
+func (p *Pack) AddDesign(s *Selection) {
+	p.Items = s.Items()
+	p.Catalog.NotLoaded, p.Catalog.InPart = s.Catalog()
+	p.size()
 }
 
 // files is the README, when there is one, then the conventions in read order.
@@ -221,8 +256,10 @@ func (c Convention) label(p Piece) string {
 }
 
 // Body is the pack as flai prime --story prints it below its header: every
-// file under the header flai prime --cat gives it, the open-issues table,
-// then what was left out. With nothing left out it is flai prime --cat.
+// convention under the header flai prime --cat gives it, the open-issues
+// table, each design item headed with its path, heading path, and reason,
+// the catalog, then what was left out. With nothing left out and no design
+// documents it is flai prime --cat.
 func (p *Pack) Body() string {
 	var b strings.Builder
 	for i, c := range p.files() {
@@ -234,6 +271,18 @@ func (p *Pack) Body() string {
 	if p.Issues != "" {
 		fmt.Fprintf(&b, "\nopen issues\n===========\n\n%s", p.Issues)
 	}
+	for _, it := range p.Items {
+		head := it.Path
+		if it.Label != "" {
+			head += " § " + it.Label
+		}
+		reason := it.Reason
+		if len(it.Also) > 0 {
+			reason += "; also " + strings.Join(it.Also, "; ")
+		}
+		fmt.Fprintf(&b, "\n%s\n%s\nreason: %s\n\n%s", head, strings.Repeat("=", utf8.RuneCountInString(head)), reason, it.Text)
+	}
+	p.writeCatalog(&b)
 	if len(p.Omitted) > 0 {
 		b.WriteString("\nleft out\n========\n\n")
 		for _, l := range p.Omitted {
@@ -241,6 +290,38 @@ func (p *Pack) Body() string {
 		}
 	}
 	return b.String()
+}
+
+// writeCatalog lists the design documents not printed whole.
+func (p *Pack) writeCatalog(b *strings.Builder) {
+	c := p.Catalog
+	if len(c.NotLoaded) == 0 && len(c.InPart) == 0 {
+		return
+	}
+	b.WriteString("\ncatalog\n=======\n\nRead any of these with flai doc show <path> or the MCP doc_get.\n")
+	if len(c.NotLoaded) > 0 {
+		b.WriteString("\nNot loaded:\n\n")
+		for _, e := range c.NotLoaded {
+			fmt.Fprintf(b, "- %s: %s", e.Path, e.Title)
+			if len(e.SupersededBy) > 0 {
+				fmt.Fprintf(b, " (superseded by %s)", strings.Join(e.SupersededBy, ", "))
+			}
+			b.WriteString("\n")
+		}
+	}
+	if len(c.InPart) > 0 {
+		b.WriteString("\nLoaded in part, the sections above marked loaded:\n\n")
+		for _, e := range c.InPart {
+			fmt.Fprintf(b, "- %s: %s\n", e.Path, e.Title)
+			for _, o := range e.Outline {
+				mark := ""
+				if o.Loaded {
+					mark = " (loaded)"
+				}
+				fmt.Fprintf(b, "%s- %s%s\n", strings.Repeat("  ", o.Level), o.Heading, mark)
+			}
+		}
+	}
 }
 
 // Header names the story, its topics and where each came from, and the size
@@ -257,6 +338,18 @@ func (p *Pack) Header() string {
 	}
 	for _, t := range p.Topics {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, t.Topic, t.Summary())
+	}
+	if len(p.Items) > 0 {
+		steps := map[string]int{}
+		bytes := 0
+		for _, it := range p.Items {
+			steps[it.Step]++
+			bytes += it.Size
+		}
+		fmt.Fprintf(&b, "design: %d items, %d bytes (by topics %d, linked %d, ranked %d)\n", len(p.Items), bytes, steps[StepTopics], steps[StepLinked], steps[StepRanked])
+	}
+	if n, m := len(p.Catalog.NotLoaded), len(p.Catalog.InPart); n+m > 0 {
+		fmt.Fprintf(&b, "catalog: %d documents not loaded, %d loaded in part\n", n, m)
 	}
 	if len(p.Omitted) > 0 {
 		fmt.Fprintf(&b, "left out: %d sections, listed at the end\n", len(p.Omitted))
