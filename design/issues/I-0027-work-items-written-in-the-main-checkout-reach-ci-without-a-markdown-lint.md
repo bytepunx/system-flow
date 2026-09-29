@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 5
+count: 6
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-29T07:21:07Z
-updated: 2026-09-29T07:21:07Z
+last_reported: 2026-09-29T20:27:08Z
+updated: 2026-09-29T20:27:08Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -31,5 +31,8 @@ S-0134 (2026-09-27): make smoke failed on six lint errors in wip files main alre
 
 ### 2026-09-29T07:21:07Z
 Found by S-0154's smoke run: wip/threads/TH-0035 (written in the main checkout during S-0153) fails markdownlint MD024 at line 59 (two entries headed with the same timestamp and author), so scripts/lint-md.sh and make smoke fail on main. Left for the thread's owner; S-0154 does not touch it.
+
+### 2026-09-29T20:27:08Z
+S-0162's smoke tier stopped at markdown lint: wip/threads/TH-0035 on main has MD024 (duplicate heading from two thread entries logged in the same second by one agent). A thread written through flai in the main checkout reached main without a lint.
 
 ## Remediation
