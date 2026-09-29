@@ -162,7 +162,7 @@ The replay on 2026-09-29 (S-0137 notes) re-ran the archive with today's document
 | Topics and ranking, no step | 68 |
 | Ranking alone, top 5 | 47 |
 
-A cli story's pack was about 500 KB: 22 design and tech files by topics, about 30 ADRs by links, and 10 ranked items. `flai prime --cat` is 56 KB. The bulk is whole-file topics (`[all]` on seven `design/system` files, `cli` on `flai-cli.md`) and the ADRs `flai-cli.md § Commands` links. Heading topics on those files are the remedy ADR-0047 names. TH-0029 and TH-0030 asked the designer about it; [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) answers with a budget and briefs, and S-0148 switches agents to the pack once S-0146 and S-0147 build them.
+A cli story's pack was about 500 KB: 22 design and tech files by topics, about 30 ADRs by links, and 10 ranked items. `flai prime --cat` is 56 KB. The bulk is whole-file topics (`[all]` on seven `design/system` files, `cli` on `flai-cli.md`) and the ADRs `flai-cli.md § Commands` links. Heading topics on those files are the remedy ADR-0047 names. TH-0029 and TH-0030 asked the designer about it; [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) answers with a budget and briefs, and S-0148 switched agents to the pack once S-0146 and S-0147 built them.
 
 ## Fitting the pack to a budget
 
@@ -187,3 +187,7 @@ Measured on 2026-09-29 on the S-0146 branch, with every convention still `[all]`
 | S-0146 | 207 KB | 57 KB | 120 KB: ADR-0049, `agent-context.md`, `flai-cli.md` | 53 | named |
 
 ADR-0049's estimate of 80 KB for S-0138 missed the 9 KB open-issues table and the header, and S-0138 was re-scoped after it to name 36 KB instead of 9 KB. The conventions and issues are more than half the budget before anything else. What takes packs furthest over is what stories and tasks name: a task that writes out `design/system/flai-cli.md` as a file to update loads all 86 KB of it. TH-0032 proposes briefing a path written out in plain text, keeping links and ADR IDs whole.
+
+### Agents prime with the pack
+
+Since S-0148 the harness prompt, the MCP servers' instructions, `CLAUDE.md`, and `session-start.md` tell an agent with a story to prime with `flai prime --story <id>` or the MCP `prime`, and one without a story to prime with `flai prime --cat` ([conventions.md](conventions.md#priming)). The step [What an agent loads today](#what-an-agent-loads-today) measured is replaced: the pack instead of every convention, then what the agent fetches. The fetch is the agent's to choose, so every one of them carries the same rule: a brief is not the document, and when one bears on the story the agent reads the section that does, or the whole document, with `doc_get` and its heading before relying on it or changing what it describes. Packs of code stories stay over the 80 KB budget until the conventions' topics narrow (TH-0032); S-0148's own was 116 KB, over by what it names.

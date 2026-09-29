@@ -628,7 +628,7 @@ flai prime --story S-0137 --budget 120KB
 flai prime --story S-0137 --json
 ```
 
-Agents read these before any change; a shell hook or a wrapper can pipe `flai prime --cat` into the session. Agents still prime with `--cat` until S-0148 switches them to the pack (ADR-0049). The MCP tool `prime` returns the same pack as `--story --json`, and takes `budget` too.
+Agents read these before any change. An agent with a story primes with `flai prime --story <id>`, or the MCP tool `prime`, which returns the same pack as `--story --json` and takes `budget` too: the prompt `flai serve` gives the agents it starts says so, as do the MCP server's instructions, `CLAUDE.md`, and `session-start.md`. They also tell the agent that a brief is not the document, and to read the section that bears on the story with `doc_get` and its `heading` before relying on it or changing what it describes. Without a story an agent primes with `flai prime --cat`; a shell hook or a wrapper can pipe either into the session.
 
 `--story` prints what an agent working that story needs: its context pack, fitted to a size budget ([ADR-0047](../../design/adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md), [ADR-0049](../../design/adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md)). The budget is `--budget`, else `prime.budget` in `system-flow.yaml`, else 80 KB: bytes, or a number with `KB` or `MB`. It counts everything printed, the header included.
 
