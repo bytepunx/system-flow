@@ -24,10 +24,12 @@ export type Inbox = {
 
 type FlaiEntry = Omit<InboxEntry, 'href'> & { path?: string };
 
-/** Where an entry leads: the review page for a story in review, a question's own narrative document (even once it also carries an item id, to answer it in place), else its item, else its document. */
-export function hrefFor(e: { kind: InboxKind; item?: string; path?: string }): string {
+/** Where an entry leads: the review page for a story in review, a question's own narrative document (even once it also carries an item id, to answer it in place), a thread on an item to that item's page opened on the thread (S-0155), else its item, else its document. */
+export function hrefFor(e: { kind: InboxKind; key?: string; item?: string; path?: string }): string {
 	if (e.kind === 'review' && e.item) return `/review/${e.item}`;
 	if (e.kind === 'question' && e.path) return `/docs/${e.path}`;
+	const thread = e.kind === 'thread' ? e.key?.replace(/^thread:/, '') : undefined;
+	if (e.item && thread) return `/items/${e.item}?thread=${encodeURIComponent(thread)}`;
 	if (e.item) return `/items/${e.item}`;
 	if (e.path) return `/docs/${e.path}`;
 	return '/board';
@@ -47,7 +49,7 @@ export async function inbox(repo: Repo): Promise<Inbox> {
 			detail: e.detail || undefined,
 			at: e.at || undefined,
 			item: e.item || undefined,
-			href: hrefFor({ kind: e.kind, item: e.item, path })
+			href: hrefFor({ kind: e.kind, key: e.key, item: e.item, path })
 		}))
 	};
 }

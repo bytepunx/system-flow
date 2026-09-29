@@ -23,6 +23,20 @@ describe('where an inbox entry leads', () => {
 		expect(hrefFor({ kind: 'thread', path: 'design/system/overview.md' })).toBe(
 			'/docs/design/system/overview.md'
 		);
+		expect(
+			hrefFor({ kind: 'thread', key: 'thread:TH-0007', path: 'design/system/overview.md' })
+		).toBe('/docs/design/system/overview.md');
+	});
+
+	it('sends a thread on a story to the story page, opened on that thread (S-0155)', () => {
+		expect(
+			hrefFor({
+				kind: 'thread',
+				key: 'thread:TH-0032',
+				item: 'S-0149',
+				path: 'wip/kanban/stories/S-0149-a.md'
+			})
+		).toBe('/items/S-0149?thread=TH-0032');
 		expect(hrefFor({ kind: 'question', path: 'wip/agents/S-0001.md' })).toBe(
 			'/docs/wip/agents/S-0001.md'
 		);
