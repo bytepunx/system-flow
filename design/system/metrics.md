@@ -37,7 +37,7 @@ Cancelled items are excluded from lead and cycle time aggregates but included in
 
 Computed over a window (default 30 days, by `completed`) and groupable by `type`, `nature`, and `parent`.
 
-- **Throughput**: items completed per week.
+- **Throughput**: items completed per week, one bucket per ISO week of the window, a week with nothing done among them with zero (S-0166).
 - **Cycle time distribution**: median, 85th percentile, and max. The 85th percentile is the number used for forecasting.
 - **WIP**: count of items in `in-progress` plus `review` at each point in time, reconstructed from transitions.
 - **Flow efficiency**: `(cycle time - blocked time) / cycle time`, averaged.
@@ -91,23 +91,25 @@ A value is absent when its divisor is zero.
 
 ## Charts
 
+Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
+
 | Chart | Data | Notes |
 |-------|------|-------|
 | Kanban board | Current status of active items grouped by column, with age in column and blocked flag | Age in column is now minus last transition |
-| Cycle time scatter | One point per completed story, x completed date, y cycle time, with 50th and 85th percentile lines | Filter by nature |
-| Burn-up | Per epic or whole repo, cumulative stories created versus done over time | Scope line and done line, forecast line from throughput |
-| Cumulative flow diagram | Stacked count of items per state per day | Widening bands show where work piles up |
-| Time in state | Stacked bar per completed story, or aggregate share | The process optimisation chart |
-| Throughput | Bar per week | With nature breakdown |
+| Cycle time scatter | One point per story completed in the window, x completed date, y cycle time, with 50th and 85th percentile lines | Filter by nature |
+| Burn-up | Per epic or whole repo, cumulative stories created versus done, per day of the window | Scope line and done line, forecast line from throughput |
+| Cumulative flow diagram | Stacked count of items per state per day of the window | Widening bands show where work piles up |
+| Time in state | Stacked bar per story completed in the window, or aggregate share | The process optimisation chart |
+| Throughput | Bar per week of the window | With nature breakdown |
 | Aging WIP | Active items by age since started, against the 85th percentile | Flags items likely to be late |
-| Estimate vs actual | Scatter, only items with `estimate` | |
+| Estimate vs actual | Scatter, only items completed in the window with `estimate` | |
 | Token rate | Per model, one point per bucket with agent time: the model's tokens per agent minute over the items done in the bucket | Of the report's type. Replaces the point per item in tokens per agent hour (S-0163) |
 | Tokens per bucket | Bar per bucket, the tokens of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Titled by the bucket: tokens per day |
 | Tokens per item | One point per bucket with items: tokens per item, one series per type | Or one series per model, for the report's type |
 | Tokens per dollar | Per model, one point per bucket with cost: tokens over cost | Of the report's type |
 | Cost per bucket | Bar per bucket, the cost of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Estimated costs marked |
 | Cost per item | One point per bucket with items: cost per item, one series per type | Or one series per model, for the report's type |
-| Cost by item | Bar per item with usage, stacked by model | Estimated costs marked |
+| Cost by item | Bar per item completed in the window with usage, stacked by model | Estimated costs marked |
 | Completion against time | Per model, cumulative items done over time | The per model `done` series |
 | Completion against cost | Per model, cumulative items done over cumulative cost | The same series, x cost |
 
@@ -119,8 +121,8 @@ So that `flai stats` and the dashboard agree to the second:
 - The backlog interval starts at `created`. An open item's current interval ends at now. Closed items accrue nothing after `completed`.
 - Queue time exists only when both `committed` and `started` exist and `started` is not before `committed`.
 - Cycle time exists only when the item was started. An item cancelled from backlog has a lead time but no cycle time and is excluded from cycle aggregates.
-- Burn-up counts an item in scope from its `created` day and excludes cancelled items. Cumulative flow uses the item's state at the end of each day (23:59:59 UTC).
-- Throughput per week is completed items in the window divided by window days over seven. Weekly buckets are ISO weeks starting Monday.
+- Burn-up counts an item in scope from its `created` day and excludes cancelled items. Cumulative flow uses the item's state at the end of each day (23:59:59 UTC). Both run from the day that holds the window's start, or the first item's `created` day if that is later, to today (S-0166).
+- Throughput per week is completed items in the window divided by window days over seven. Weekly buckets are ISO weeks starting Monday, from the one that holds the window's start to the one that holds now.
 - Flow efficiency averages `(cycle - blocked) / cycle` over completed items with a positive cycle time.
 - Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
 - A bucket holds the moments from its start up to, not including, the next one's. A week's bucket starts on the Monday of the ISO week, at 00:00:00 UTC. The running mean divides by the number of buckets from the first of the series, empty ones counted.

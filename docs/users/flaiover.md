@@ -107,15 +107,15 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in two groups: flow, and usage. Pick a window, and the controls the chart offers: an item type, an epic, and on the usage charts over time what a bar or a point covers (an hour, a day, or a week) and what to compare. Every chart has a table view under it and follows the light or dark theme.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in two groups: flow, and usage. Pick a window, and the controls the chart offers: an item type, an epic, and on the usage charts over time what a bar or a point covers (an hour, a day, or a week) and what to compare. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. Aging work in progress is as of now whatever the window.
 
 | Chart | Shows |
 |-------|-------|
-| Cycle time | One point per completed item, with the p50 and p85 lines |
-| Burn-up | Scope against done over time |
-| Cumulative flow | How many items sit in each state each day |
-| Time in state | Where each completed item spent its time, and the share across all of them |
-| Throughput | Completions per week, by nature |
+| Cycle time | One point per item completed in the window, with the p50 and p85 lines |
+| Burn-up | Scope against done, each day of the window |
+| Cumulative flow | How many items sit in each state, each day of the window |
+| Time in state | Where each item completed in the window spent its time, and the share across all of them |
+| Throughput | Completions per week of the window, by nature, weeks with none included |
 | Aging work in progress | In-progress work against the p85 cycle time line |
 | Estimate versus actual | Estimated against actual hours |
 | Token rate | Tokens per minute of agent work over time, one line per model |
@@ -124,7 +124,7 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Tokens per dollar | How many tokens a dollar bought, over time, one line per model |
 | Cost per day | The dollars spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
 | Cost per item | What an item cost on average, over time: a line for epics, for stories, and for tasks, or a line per model |
-| Cost by item | What each completed item cost, stacked by model; an asterisk marks an item whose cost is estimated in part |
+| Cost by item | What each item completed in the window cost, stacked by model; an asterisk marks an item whose cost is estimated in part |
 | Completion over time | Items done over time, per model |
 | Completion against cost | Items done against dollars spent, per model |
 
