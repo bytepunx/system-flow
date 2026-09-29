@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 7
+count: 8
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-29T20:59:54Z
-updated: 2026-09-29T20:59:54Z
+last_reported: 2026-09-29T21:21:56Z
+updated: 2026-09-29T21:21:56Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -37,5 +37,8 @@ S-0162's smoke tier stopped at markdown lint: wip/threads/TH-0035 on main has MD
 
 ### 2026-09-29T20:59:54Z
 S-0163's smoke tier: the markdown lint still fails on wip/threads/TH-0035 on main (MD024, two entries headed with the same second and author), the third story in a day to meet it. The tier also stops a step earlier, at flai check --strict, on four warnings that are the operator's to clear: E-0003, E-0010, and E-0012 are done and not archived, and TH-0032 is answered on an archived story. Nothing of S-0163 is in either.
+
+### 2026-09-29T21:21:56Z
+S-0164's smoke tier: the markdown lint still fails on wip/threads/TH-0035 on main (MD024), the fourth story in a day to meet it. The tier stops a step earlier, at flai check --strict, on five warnings that are the operator's to clear: E-0003, E-0010, E-0011, and E-0012 are done and not archived, and TH-0032 is answered on an archived story. Nothing of S-0164 is in either.
 
 ## Remediation
