@@ -48,14 +48,20 @@ func TestPrimeStory(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("prime --story: %s", errOut)
 	}
-	head, body, ok := strings.Cut(out, " lines below this header\n\n")
+	i := strings.Index(out, "contents, in bytes:\n")
+	n := strings.Index(out[max(i, 0):], "\n\n")
+	ok := i >= 0 && n >= 0
+	head, body := out, ""
+	if ok {
+		head, body = out[:i+n+2], out[i+n+2:]
+	}
 	if !ok || !strings.HasPrefix(head, "S-004 context pack\n") || !strings.Contains(head, "story: S-004 Four\n") || !strings.Contains(head, "  all  every story\n") {
 		t.Fatalf("header:\n%s", out)
 	}
-	if !strings.HasPrefix(body, cat) || !strings.HasSuffix(body, "\ndesign/system/overview.md\n=========================\nreason: topics: all\n\n---\ntitle: Overview\nupdated: 2026-08-01\ntopics: [all]\n---\n\n# Overview\n") {
+	if !strings.HasPrefix(body, cat) || !strings.HasSuffix(body, "\ndesign/system/overview.md: Overview (70 bytes; topics: all)\n") {
 		t.Errorf("with every convention at [all] the pack is prime --cat, then the design:\n%s\n---\n%s", body, cat)
 	}
-	if !strings.Contains(head, fmt.Sprintf("size: %d bytes, %d", len(body), strings.Count(body, "\n"))) {
+	if !strings.Contains(head, fmt.Sprintf("size: %d bytes, %d lines", len(out), strings.Count(out, "\n"))) {
 		t.Errorf("size:\n%s", head)
 	}
 	for _, id := range []string{"E-1", "S-0999"} {
@@ -90,7 +96,7 @@ func TestPrimeStory(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("prime --story: %s", errOut)
 	}
-	for _, want := range []string{"  go   own\n", "left out: 2 sections, listed at the end\n", "- Standard library testing only.", "<!-- system-flow:end-of-baseline -->\n\n## Project additions <!-- topics: svelte -->\n",
+	for _, want := range []string{"  go   own\n", "  left out    2 convention sections, listed at the end\n", "- Standard library testing only.", "<!-- system-flow:end-of-baseline -->\n\n## Project additions <!-- topics: svelte -->\n",
 		"\nleft out\n========\n\n- code-quality.md § Rules › Svelte (svelte)\n- code-quality.md § Project additions (svelte)\n"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q:\n%s", want, out)
@@ -174,37 +180,47 @@ func TestPrimeStoryDesign(t *testing.T) {
 		t.Fatalf("prime --story: %s", errOut)
 	}
 	for _, want := range []string{
-		"design: 3 items, ",
-		"catalog: 2 documents not loaded, 1 loaded in part\n",
-		"\ndesign/system/cli.md § CLI\n",
-		"reason: topics: go\n\n# CLI\n\n## Commands\n\nAs ADR-0002 decides.\n\n\n",
+		"size: ",
+		"; budget 81920 bytes\n",
+		"  named       design/adrs/0003-new.md\n",
+		"  briefed     design/system/cli.md\n",
+		"  briefed     1 ADR by its decision sentence, on one line\n",
+		"  ranked      design/system/cli.md § Commands\n",
 		"\ndesign/adrs/0003-new.md\n=======================\nreason: supersedes ADR-0001\n\n---\nid: ADR-0003\n",
-		"\ndesign/adrs/0002-linked.md\n==========================\nreason: linked from design/system/cli.md § Commands\n",
+		"\nbriefs\n======\n",
+		"\ndesign/system/cli.md: CLI (",
+		" bytes; topics: go)\n\nAs ADR-0002 decides.\n\n- Commands (selected, loaded)\n- Board\n",
+		"\ndecisions\n=========\n",
+		"- ADR-0002 Linked (design/adrs/0002-linked.md; linked from design/system/cli.md): Linked.\n",
+		"\ndesign/system/cli.md § Commands\n",
+		"reason: rank 1\n\n## Commands\n\nAs ADR-0002 decides.\n",
 		"\ncatalog\n=======\n",
 		"- design/system/other.md: Other\n",
 		"- design/adrs/0001-old.md: Old (superseded by ADR-0003)\n",
-		"- design/system/cli.md: CLI\n  - CLI (loaded)\n    - Commands (loaded)\n    - Board\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q:\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "The board.") {
-		t.Errorf("printed a section whose topics miss:\n%s", out)
+	if strings.Contains(out, "The board.") || strings.Contains(out, "over budget") {
+		t.Errorf("printed a section whose topics miss, or is over budget:\n%s", out)
 	}
-	head, body, _ := strings.Cut(out, " lines below this header\n\n")
-	if !strings.Contains(head, fmt.Sprintf("size: %d bytes, %d", len(body), strings.Count(body, "\n"))) {
-		t.Errorf("size:\n%s", head)
+	if !strings.Contains(out, fmt.Sprintf("size: %d bytes, %d lines, this header included", len(out), strings.Count(out, "\n"))) {
+		t.Errorf("size is not the pack's (%d bytes):\n%s", len(out), out)
 	}
 
 	out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--json")
 	var v struct {
-		Size  struct{ Bytes int } `json:"size"`
-		Items []struct {
+		Size   struct{ Bytes int } `json:"size"`
+		Budget int                 `json:"budget"`
+		Items  []struct {
 			Path    string   `json:"path"`
+			ID      string   `json:"id"`
 			Heading []string `json:"heading"`
+			Step    string   `json:"step"`
 			Reason  string   `json:"reason"`
 			Size    int      `json:"size"`
+			Whole   int      `json:"whole"`
 			Text    string   `json:"text"`
 		} `json:"items"`
 		Catalog struct {
@@ -221,12 +237,37 @@ func TestPrimeStoryDesign(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &v); err != nil {
 		t.Fatalf("json: %v %s", err, out)
 	}
-	if len(v.Items) != 3 || v.Items[0].Path != "design/system/cli.md" || strings.Join(v.Items[0].Heading, "/") != "CLI" || v.Items[0].Reason != "topics: go" ||
-		v.Items[0].Size != len(v.Items[0].Text) || v.Items[1].Reason != "supersedes ADR-0001" || v.Items[2].Path != "design/adrs/0002-linked.md" ||
-		len(v.Catalog.NotLoaded) != 2 || len(v.Catalog.InPart) != 1 || len(v.Catalog.InPart[0].Outline) != 3 || v.Catalog.InPart[0].Outline[2].Loaded {
+	if len(v.Items) != 4 || v.Items[0].Path != "design/adrs/0003-new.md" || v.Items[0].Step != "named" || v.Items[0].Reason != "supersedes ADR-0001" ||
+		v.Items[1].Path != "design/system/cli.md" || v.Items[1].Step != "briefed" || v.Items[1].Whole == 0 || v.Items[1].Size != len(v.Items[1].Text) ||
+		v.Items[2].ID != "ADR-0002" || v.Items[2].Text != "Linked." || v.Items[3].Step != "ranked" || strings.Join(v.Items[3].Heading, "/") != "CLI/Commands" ||
+		len(v.Catalog.NotLoaded) != 2 || len(v.Catalog.InPart) != 0 || v.Budget != 81920 {
 		t.Errorf("json: %+v", v)
 	}
 	if v.Size.Bytes <= v.Items[0].Size+v.Items[1].Size+v.Items[2].Size {
 		t.Errorf("the size leaves out the items: %d", v.Size.Bytes)
+	}
+
+	out, _, code = runIn(t, root, "prime", "--story", "S-0001", "--budget", "1")
+	if code != 0 || !strings.Contains(out, "; budget 1 bytes\nover budget: the conventions alone exceed it") || strings.Contains(out, "reason:") {
+		t.Errorf("--budget 1 (%d):\n%s", code, out)
+	}
+	mf := filepath.Join(root, "system-flow.yaml")
+	data, err = os.ReadFile(mf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mf, append(data, []byte("prime:\n  budget: 2KB\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, _, _ = runIn(t, root, "prime", "--story", "S-0001"); !strings.Contains(out, "; budget 2048 bytes\n") {
+		t.Errorf("prime.budget not the default:\n%s", out)
+	}
+	if out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--budget", "100KB"); !strings.Contains(out, "; budget 102400 bytes\n") {
+		t.Errorf("--budget does not win over prime.budget:\n%s", out)
+	}
+	for _, args := range [][]string{{"prime", "--story", "S-0001", "--budget", "lots"}, {"prime", "--budget", "80KB"}} {
+		if _, errOut, code := runIn(t, root, args...); code == 0 || !strings.Contains(errOut, "budget") {
+			t.Errorf("%v: code %d, %s", args, code, errOut)
+		}
 	}
 }

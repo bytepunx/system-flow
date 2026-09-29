@@ -12,7 +12,7 @@ import (
 const adrTemplate = "---\nid: ADR-0000\ntitle: Template\nstatus: template\ndate: 2026-09-15\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-0000 Title\n\n## Context\n\nWhy.\n\n## Decision\n\nWhat.\n\n## Consequences\n\nSo.\n\n## Alternatives considered\n\nOthers.\n"
 
 func adrFile(n, title, status string) string {
-	return "---\nid: ADR-" + n + "\ntitle: " + title + "\nstatus: " + status + "\ndate: 2026-09-01\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-" + n + " " + title + "\n\n## Context\n\nc\n\n## Decision\n\nd\n\n## Consequences\n\ne\n\n## Alternatives considered\n\nf\n"
+	return "---\nid: ADR-" + n + "\ntitle: " + title + "\nstatus: " + status + "\ndate: 2026-09-01\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-" + n + " " + title + "\n\n## Context\n\nc\n\n## Decision\n\nd.\n\n## Consequences\n\ne\n\n## Alternatives considered\n\nf\n"
 }
 
 // adrProject is a git project with ADRs 0001, 0002, and 0007 (a gap), a
@@ -82,7 +82,7 @@ func TestAdrNew(t *testing.T) {
 		t.Errorf("the superseded ADR's row says so:\n%s", index)
 	}
 	old, _ := os.ReadFile(filepath.Join(root, "design/adrs/0002-second.md"))
-	if !strings.Contains(string(old), "superseded_by: [ADR-0008]\n") || !strings.Contains(string(old), "## Decision\n\nd\n") {
+	if !strings.Contains(string(old), "superseded_by: [ADR-0008]\n") || !strings.Contains(string(old), "## Decision\n\nd.\n") {
 		t.Errorf("superseded_by is set and nothing else changes:\n%s", old)
 	}
 	show := gitIn(t, root, "show", "--stat", "--format=%an|%s|%b", "HEAD")
@@ -212,7 +212,7 @@ func TestAcceptedAdrCannotBeEdited(t *testing.T) {
 	if doc.Mode != "none" || !strings.Contains(doc.Reason, "immutable") || !strings.Contains(doc.Reason, "supersedes") {
 		t.Errorf("accepted: %+v", doc)
 	}
-	_, errOut, code := runStdin(t, root, strings.Replace(doc.Content, "## Decision\n\nd\n", "## Decision\n\nrewritten\n", 1), "doc", "save", "design/adrs/0001-first.md", "--hash", doc.Hash)
+	_, errOut, code := runStdin(t, root, strings.Replace(doc.Content, "## Decision\n\nd.\n", "## Decision\n\nrewritten.\n", 1), "doc", "save", "design/adrs/0001-first.md", "--hash", doc.Hash)
 	if code != 4 || !strings.Contains(errOut, "immutable") {
 		t.Errorf("a save is refused: %d %s", code, errOut)
 	}
@@ -317,7 +317,7 @@ func TestDocSaveTakesTopicsAloneOnAnAcceptedAdr(t *testing.T) {
 	}
 	content, hash, _ = showDoc(t, root, rel)
 	for name, changed := range map[string]string{
-		"the body":             strings.Replace(content, "## Decision\n\nd\n", "## Decision\n\nrewritten\n", 1),
+		"the body":             strings.Replace(content, "## Decision\n\nd.\n", "## Decision\n\nrewritten.\n", 1),
 		"another key":          strings.Replace(content, "status: accepted", "status: deprecated", 1),
 		"topics and the body":  strings.Replace(strings.Replace(content, "topics: [all]", "topics: [code]", 1), "\nc\n", "\nchanged\n", 1),
 		"the front matter out": strings.Replace(content, "---\n", "", 1),

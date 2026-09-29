@@ -10,13 +10,20 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// ForStory builds the context pack for a story (ADR-0047): the conventions
-// its topics select (S-0136), the open issues, then the design, tech, and
-// ADRs its topics, links, and ranking select, and a catalog of the rest
-// (S-0137). flai prime --story and the MCP prime tool both call it. An
-// archived story gets the pack it would get today, which is how a pack is
-// replayed.
-func ForStory(repo *workitem.Repo, id string) (*Pack, error) {
+// ForStory builds the context pack for a story (ADR-0047), fitted to a
+// budget (ADR-0049): the conventions its topics select (S-0136), the open
+// issues, then what the story, its epic, and its tasks name, briefs of the
+// design, tech, and ADRs its topics and one link step select, the sections
+// that rank highest to fill the budget, and a catalog of the rest (S-0137,
+// S-0146). budget is a size as ParseSize reads it; empty means the
+// project's prime.budget, else DefaultBudget. flai prime --story and the MCP
+// prime tool both call it. An archived story gets the pack it would get
+// today, which is how a pack is replayed.
+func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
+	size, err := Budget(budget, repo.Manifest.Prime.Budget)
+	if err != nil {
+		return nil, err
+	}
 	it, err := repo.Get(id)
 	if err != nil {
 		return nil, fmt.Errorf("flai prime --story %s: %w; give the ID of a story", id, err)
@@ -36,7 +43,7 @@ func ForStory(repo *workitem.Repo, id string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	pack, err := Build(repo.Root, it.ID, it.Title, storyTopics, set, issues.SummaryTable(list))
+	pack, err := Build(repo.Root, it.ID, it.Title, storyTopics, set, issues.SummaryTable(list), size)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +55,7 @@ func ForStory(repo *workitem.Repo, id string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	pack.AddDesign(Design(docs, topics.Names(storyTopics), sources, Query(it.Title, it.Body)))
+	pack.AddDesign(Design(docs, topics.Names(storyTopics), sources), Query(it.Title, it.Body))
 	return pack, nil
 }
 

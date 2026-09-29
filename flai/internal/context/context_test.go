@@ -122,7 +122,7 @@ func TestBuildWithEverythingKeptIsPrimeCat(t *testing.T) {
 		{Topic: "dashboard", Sources: []topics.Source{{Kind: topics.FromEpic, Item: "E-0001"}}},
 		{Topic: topics.All, Sources: []topics.Source{{Kind: topics.FromAll}}},
 	}
-	p, err := Build("/r", "S-0001", "A story", st, set, table)
+	p, err := Build("/r", "S-0001", "A story", st, set, table, DefaultBudget)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,30 +132,32 @@ func TestBuildWithEverythingKeptIsPrimeCat(t *testing.T) {
 	if p.Body() != want {
 		t.Errorf("body is not prime --cat:\n%s", p.Body())
 	}
-	if p.Size.Bytes != len(want) || p.Size.Lines != strings.Count(want, "\n") || p.OpenIssues != 1 {
+	h := p.Header()
+	if p.Size.Bytes != len(h)+len(want) || p.Size.Lines != strings.Count(h+want, "\n") || p.OpenIssues != 1 {
 		t.Errorf("size %+v, open issues %d", p.Size, p.OpenIssues)
 	}
-	h := p.Header()
 	for _, s := range []string{
 		"S-0001 context pack\n===================\n\n",
 		"story: S-0001 A story\n",
 		"  go         own\n",
 		"  dashboard  epic E-0001\n",
-		fmt.Sprintf("size: %d bytes, %d lines below this header\n\n", len(want), strings.Count(want, "\n")),
+		fmt.Sprintf("size: %d bytes, %d lines, this header included; budget %d bytes\n", len(h)+len(want), strings.Count(h+want, "\n"), DefaultBudget),
+		fmt.Sprintf("  %6d  convention  design/conventions/code-quality.md\n", len(quality)),
+		"      22  issues      1 open\n",
 	} {
 		if !strings.Contains(h, s) {
 			t.Errorf("header lacks %q:\n%s", s, h)
 		}
 	}
-	if strings.Contains(h, "left out") {
+	if strings.Contains(h, "left out") || strings.Contains(h, "over budget") {
 		t.Errorf("nothing was left out:\n%s", h)
 	}
 
-	p, _ = Build("/r", "S-0001", "A story", st[:1], set, table)
+	p, _ = Build("/r", "S-0001", "A story", st[:1], set, table, DefaultBudget)
 	if !strings.HasSuffix(p.Body(), "\nleft out\n========\n\n- code-quality.md § Rules › Svelte (dashboard)\n- code-quality.md § When in doubt (dashboard)\n- code-quality.md § Project additions (dashboard)\n") {
 		t.Errorf("left out list:\n%s", p.Body())
 	}
-	if !strings.Contains(p.Header(), "left out: 3 sections, listed at the end\n") {
+	if !strings.Contains(p.Header(), "left out    3 convention sections, listed at the end\n") {
 		t.Errorf("header:\n%s", p.Header())
 	}
 }

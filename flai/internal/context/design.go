@@ -24,11 +24,14 @@ const (
 	KindADR    = "adr"
 )
 
-// Steps of the pack that select design documents, in the order they run.
+// Steps of the pack that select design documents, in the order they run
+// (ADR-0049): what the story, its epic, and its tasks name loads whole;
+// what topics select, and the ADRs one step from either, are briefed;
+// ranked sections fill what the budget leaves.
 const (
-	StepTopics = "topics"
-	StepLinked = "linked"
-	StepRanked = "ranked"
+	StepNamed   = "named"
+	StepBriefed = "briefed"
+	StepRanked  = "ranked"
 )
 
 // folders maps each kind to its folder under design/, in the order the
@@ -186,20 +189,23 @@ type choice struct {
 	also   []string
 }
 
-// Selection is what the pack loads of the design documents: each section
-// is owned by the first reason that chose it, so nothing prints twice, and
-// later reasons for it are listed on that one.
+// Selection is what the pack loads and briefs of the design documents: each
+// section loaded is owned by the first reason that chose it, so nothing
+// prints twice, and later reasons for it are listed on that one; each
+// document briefed has one brief, likewise.
 type Selection struct {
 	Docs    []*Doc
 	byPath  map[string]*Doc
 	byID    map[string]*Doc
 	owner   map[*Doc][]int // the choice owning each section, -1 when none
 	choices []*choice
+	briefs  []*brief // in the order they were found
+	briefOf map[*Doc]*brief
 }
 
 // NewSelection starts a selection over docs with nothing chosen.
 func NewSelection(docs []*Doc) *Selection {
-	s := &Selection{Docs: docs, byPath: map[string]*Doc{}, byID: map[string]*Doc{}, owner: map[*Doc][]int{}}
+	s := &Selection{Docs: docs, byPath: map[string]*Doc{}, byID: map[string]*Doc{}, owner: map[*Doc][]int{}, briefOf: map[*Doc]*brief{}}
 	for _, d := range docs {
 		s.byPath[d.Path] = d
 		if d.ID != "" {
@@ -289,30 +295,36 @@ func (s *Selection) Superseded(d *Doc) bool {
 	return d.Kind == KindADR && s.anyPresent(d.SupersededBy)
 }
 
-// ByTopics chooses every section whose topics match the story's, with the
-// reason "topics: " and the topics that matched. An ADR matched in any
-// section is chosen whole, or what supersedes it.
+// ByTopics briefs every design and tech file with a section whose topics
+// match the story's, with the reason "topics: " and the topics that
+// matched, and every ADR likewise, or what supersedes it (ADR-0049).
 func (s *Selection) ByTopics(story []string) {
 	for _, d := range s.Docs {
-		byReason := map[string][]int{}
-		var order []string
+		var secs []int
+		var words []string
 		for i, sec := range d.Sections {
-			hit := matched(sec.Topics, story)
-			if len(hit) == 0 {
+			m := matched(sec.Topics, story)
+			if len(m) == 0 {
 				continue
 			}
-			r := "topics: " + strings.Join(hit, ", ")
-			if _, ok := byReason[r]; !ok {
-				order = append(order, r)
+			secs = append(secs, i)
+			for _, w := range m {
+				if !slices.Contains(words, w) {
+					words = append(words, w)
+				}
 			}
-			byReason[r] = append(byReason[r], i)
 		}
-		for _, r := range order {
-			if d.Kind == KindADR && s.Superseded(d) {
-				s.chooseADR(d, StepTopics, r)
-				break
-			}
-			s.choose(d, byReason[r], StepTopics, r)
+		if len(secs) == 0 {
+			continue
+		}
+		r := "topics: " + strings.Join(words, ", ")
+		switch {
+		case d.Kind == KindADR:
+			s.briefADR(d, r)
+		case s.Whole(d):
+			s.choose(d, d.all(), "", r)
+		default:
+			s.addBrief(d, r, secs)
 		}
 	}
 }
@@ -421,13 +433,13 @@ func Slug(heading string) string {
 	return b.String()
 }
 
-// Linked chooses what the story, its epic, and its tasks link or name, with
-// the reason "linked from <ID>". A superseded ADR gives way to what
-// supersedes it.
+// Linked chooses what the story, its epic, and its tasks link or name, to
+// load whole, with the reason "linked from <ID>". A superseded ADR gives
+// way to what supersedes it.
 func (s *Selection) Linked(sources []Source) {
 	for _, src := range sources {
 		for _, r := range s.refs(src.Body, src.Path) {
-			s.chooseRef(r, StepLinked, "linked from "+src.ID)
+			s.chooseRef(r, StepNamed, "linked from "+src.ID)
 		}
 	}
 }
@@ -443,32 +455,44 @@ func (s *Selection) chooseRef(r ref, step, reason string) {
 	}
 }
 
-// Step goes one step further from what the given steps chose: the ADRs a
-// chosen section links or names ("linked from design/system/x.md §
-// Heading") and the ADRs a chosen ADR refines ("refined by ADR-nnnn"). What
-// the step adds is not followed again.
-func (s *Selection) Step(from ...string) {
+// Step goes one step further from what is named and briefed, and briefs
+// the ADRs it reaches: those a named section, a design file's selected
+// section, or a briefed ADR links or names ("linked from
+// design/system/x.md § Heading"), those a named or briefed ADR refines
+// ("refined by ADR-nnnn"), and those that refine one ("refines
+// ADR-nnnn"). An ADR loaded whole is not briefed; the reason is listed on
+// it. What the step adds is not followed again.
+func (s *Selection) Step() {
 	type at struct {
 		doc  *Doc
 		secs []int
 	}
-	var chosen []at
+	var from []at
 	for _, d := range s.Docs {
 		var secs []int
+		b := s.briefOf[d]
 		for i, o := range s.owner[d] {
-			if o >= 0 && slices.Contains(from, s.choices[o].step) {
+			switch {
+			case o >= 0 && s.choices[o].step == StepNamed:
+				secs = append(secs, i)
+			case b != nil && (d.Kind == KindADR || b.secs[i]):
 				secs = append(secs, i)
 			}
 		}
 		if len(secs) > 0 {
-			chosen = append(chosen, at{d, secs})
+			from = append(from, at{d, secs})
 		}
 	}
-	for _, c := range chosen {
+	for _, c := range from {
 		if c.doc.Kind == KindADR {
 			for _, id := range c.doc.Refines {
 				if r := s.byID[id]; r != nil && r != c.doc {
-					s.chooseADR(r, StepLinked, "refined by "+c.doc.ID)
+					s.briefADR(r, "refined by "+c.doc.ID)
+				}
+			}
+			for _, r := range s.Docs {
+				if r.Kind == KindADR && r != c.doc && slices.Contains(r.Refines, c.doc.ID) {
+					s.briefADR(r, "refines "+c.doc.ID)
 				}
 			}
 		}
@@ -481,7 +505,7 @@ func (s *Selection) Step(from ...string) {
 				if l := c.doc.Label(i); l != "" {
 					from += " § " + l
 				}
-				s.chooseADR(r.doc, StepLinked, "linked from "+from)
+				s.briefADR(r.doc, "linked from "+from)
 			}
 		}
 	}

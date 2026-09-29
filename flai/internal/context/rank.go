@@ -2,16 +2,13 @@ package context
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/search"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 )
-
-// Ranked is how many ADRs and design sections the ranked step adds
-// (ADR-0047; the count is from the S-0125 replay).
-const Ranked = 5
 
 // Query is what a story is ranked against: its title, goal, and acceptance
 // criteria, or its whole body when it has neither section.
@@ -35,19 +32,22 @@ func Query(title, body string) string {
 	return b.String()
 }
 
-// Rank adds the adrs ADRs and the sections design sections that rank
-// highest by BM25 against query among those nothing has chosen, with the
-// reason "rank n". Sections are indexed one by one, each down to the next
-// heading of any level; an ADR ranks by its best section and loads whole.
-// Superseded ADRs, and sections with nothing below their heading, are left
-// out of the index.
-func (s *Selection) Rank(query string, adrs, sections int) {
-	type key struct {
-		doc *Doc
-		sec int
-	}
+// Candidate is what the ranked step may load: a design section, cut at its
+// own heading, or an ADR by its best section.
+type Candidate struct {
+	doc *Doc
+	sec int
+}
+
+// Candidates ranks by BM25 against query every section nothing has loaded,
+// best first. Sections are indexed one by one, each down to the next heading
+// of any level; an ADR appears once, at its best section. ADRs loaded in
+// any part, superseded ADRs, and sections with nothing below their heading
+// are left out. A briefed document's sections are in: a brief is not its
+// body.
+func (s *Selection) Candidates(query string) []Candidate {
 	var (
-		keys []key
+		keys []Candidate
 		docs []search.Doc
 	)
 	for _, d := range s.Docs {
@@ -66,28 +66,49 @@ func (s *Selection) Rank(query string, adrs, sections int) {
 				continue
 			}
 			docs = append(docs, search.Doc{Path: strconv.Itoa(len(keys)), Kind: "doc", Title: d.Title, Headings: d.Label(i), Body: body, Scope: "design"})
-			keys = append(keys, key{d, i})
+			keys = append(keys, Candidate{d, i})
 		}
 	}
 	ix := search.Build(docs)
-	nADR, nSec := 0, 0
+	var out []Candidate
+	seen := map[*Doc]bool{}
 	for _, h := range ix.Search(strings.Join(Terms(query), " "), true, ix.Size()) {
-		if nADR >= adrs && nSec >= sections {
-			break
-		}
 		n, _ := strconv.Atoi(h.Path)
-		k := keys[n]
-		switch {
-		case k.doc.Kind == KindADR:
-			if nADR < adrs && !s.Loaded(k.doc) {
-				nADR++
-				s.choose(k.doc, k.doc.all(), StepRanked, fmt.Sprintf("rank %d", nADR))
+		c := keys[n]
+		if c.doc.Kind == KindADR {
+			if seen[c.doc] {
+				continue
 			}
-		case nSec < sections:
-			nSec++
-			s.choose(k.doc, []int{k.sec}, StepRanked, fmt.Sprintf("rank %d", nSec))
+			seen[c.doc] = true
 		}
+		out = append(out, c)
 	}
+	return out
+}
+
+// Rank loads a candidate with the reason "rank n": an ADR whole, or its
+// best section when whole is false; a design section alone. It returns the
+// undo that puts the selection back as it was.
+func (s *Selection) Rank(c Candidate, n int, whole bool) (undo func()) {
+	own, count := slices.Clone(s.owner[c.doc]), len(s.choices)
+	secs := []int{c.sec}
+	if whole && c.doc.Kind == KindADR {
+		secs = c.doc.all()
+	}
+	s.choose(c.doc, secs, StepRanked, fmt.Sprintf("rank %d", n))
+	return func() {
+		s.owner[c.doc] = own
+		s.choices = s.choices[:count]
+	}
+}
+
+// RankSize is how much a candidate adds to the pack at least: the text it
+// loads.
+func (c Candidate) RankSize(whole bool) int {
+	if whole && c.doc.Kind == KindADR {
+		return len(c.doc.Raw)
+	}
+	return len(c.doc.Sections[c.sec].Text)
 }
 
 // stopwords are the words too common to rank by: with terms combined by OR,

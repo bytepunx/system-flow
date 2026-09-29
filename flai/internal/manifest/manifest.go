@@ -37,6 +37,16 @@ type Manifest struct {
 	// Agent is the project's default agent, copied into every story created
 	// while it is set (S-0103). flai agent sets it.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Prime is how flai prime --story builds this project's context packs
+	// (ADR-0049).
+	Prime Prime `yaml:"prime,omitempty" json:"prime,omitzero"`
+}
+
+// Prime is the project's say about its context packs.
+type Prime struct {
+	// Budget is the size a story's context pack fits, such as 80KB or
+	// 81920 (bytes); empty means flai's default.
+	Budget string `yaml:"budget,omitempty" json:"budget,omitempty"`
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

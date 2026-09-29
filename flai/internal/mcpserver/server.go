@@ -530,10 +530,11 @@ func (s *server) docGet(_ context.Context, _ *mcp.CallToolRequest, in DocIn) (*m
 type PrimeIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
 	Story   string `json:"story" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today"`
+	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB"`
 }
 
 func (s *server) prime(_ context.Context, _ *mcp.CallToolRequest, in PrimeIn) (*mcp.CallToolResult, *ctxpack.Pack, error) {
-	pack, err := ctxpack.ForStory(s.repo, in.Story)
+	pack, err := ctxpack.ForStory(s.repo, in.Story, in.Budget)
 	return nil, pack, err
 }
 

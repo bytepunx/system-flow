@@ -76,38 +76,74 @@ func TestLoadDocsReadsSystemTechAndADRsWithoutIndexesOrTheTemplate(t *testing.T)
 	}
 }
 
-func TestByTopicsChoosesMatchingSectionsAndWholeADRs(t *testing.T) {
+// briefed maps each brief to its reason, with " (also ...)" when later
+// reasons found it too, and " [sections]" naming the sections of a design
+// file its topics selected when they are not all of it.
+func briefed(s *Selection) map[string]string {
+	out := map[string]string{}
+	for _, b := range s.briefs {
+		v := b.reason
+		if len(b.also) > 0 {
+			v += " (also " + strings.Join(b.also, "; ") + ")"
+		}
+		if partial(b) {
+			var secs []string
+			for i := range b.doc.Sections {
+				if b.secs[i] {
+					secs = append(secs, b.doc.Label(i))
+				}
+			}
+			v += " [" + strings.Join(secs, ", ") + "]"
+		}
+		out[b.doc.Path] = v
+	}
+	return out
+}
+
+func partial(b *brief) bool {
+	for i, sec := range b.doc.Sections {
+		if sec.Level > 0 && !b.secs[i] {
+			return len(b.secs) > 0
+		}
+	}
+	return false
+}
+
+func TestByTopicsBriefsDesignFilesAndADRs(t *testing.T) {
 	s := fixture(t)
 	s.ByTopics([]string{"cli", "go", "code", "all"})
 	want := map[string]string{
-		"design/system/cli.md § The CLI": "topics: cli",
-		"design/system/cli.md § Rules":   "topics: cli",
-		"design/system/cli.md § Prime":   "topics: cli",
-		"design/tech/go.md":              "topics: go",
+		"design/system/cli.md": "topics: cli [The CLI, Rules, Prime]",
+		"design/tech/go.md":    "topics: go",
 	}
-	if got := chosen(s); !reflect.DeepEqual(got, want) {
+	if got := briefed(s); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v", got)
+	}
+	if got := chosen(s); len(got) != 0 {
+		t.Errorf("topics loaded %v", got)
 	}
 
 	s = fixture(t)
 	s.ByTopics([]string{"dashboard", "all"})
 	want = map[string]string{
-		"design/system/cli.md § Rules › Board view":     "topics: dashboard",
-		"design/system/dashboard.md § The dashboard":    "topics: dashboard",
-		"design/system/dashboard.md § Charts":           "topics: dashboard",
-		"design/system/dashboard.md § Charts › Colours": "topics: dashboard",
-		"design/adrs/0005-fifth.md":                     "topics: dashboard",
+		"design/system/cli.md":       "topics: dashboard [Rules › Board view]",
+		"design/system/dashboard.md": "topics: dashboard [The dashboard, Charts, Charts › Colours]",
+		"design/adrs/0005-fifth.md":  "topics: dashboard",
 	}
-	if got := chosen(s); !reflect.DeepEqual(got, want) {
+	if got := briefed(s); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v", got)
 	}
 }
 
-func TestByTopicsLoadsADocumentWholeWhenNoHeadingNarrowsIt(t *testing.T) {
+func TestByTopicsDoesNotBriefWhatIsNamedWhole(t *testing.T) {
 	s := fixture(t)
-	s.ByTopics([]string{"go"})
-	if !s.Whole(s.byPath["design/tech/go.md"]) || s.Loaded(s.byPath["design/tech/node.md"]) {
-		t.Errorf("got %v", chosen(s))
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "design/tech/go.md and ADR-0005"}})
+	s.ByTopics([]string{"go", "dashboard"})
+	if got := chosen(s); got["design/tech/go.md"] != "linked from S-0001 (also topics: go)" || got["design/adrs/0005-fifth.md"] != "linked from S-0001 (also topics: dashboard)" {
+		t.Errorf("chosen %v", got)
+	}
+	if s.Briefed(s.byPath["design/tech/go.md"]) || s.Briefed(s.byID["ADR-0005"]) {
+		t.Errorf("briefed %v", briefed(s))
 	}
 }
 
@@ -148,11 +184,11 @@ func TestASupersededADRGivesWayToWhatSupersedesIt(t *testing.T) {
 	}
 }
 
-func TestStepFollowsSectionLinksAndRefinesOnce(t *testing.T) {
+func TestStepBriefsTheADRsOneStepFromWhatIsNamedOrBriefed(t *testing.T) {
 	s := fixture(t)
 	s.ByTopics([]string{"cli"})
-	s.Step(StepTopics, StepLinked)
-	got := chosen(s)
+	s.Step()
+	got := briefed(s)
 	if got["design/adrs/0002-second.md"] != "linked from design/system/cli.md § Rules" {
 		t.Errorf("section link: %v", got)
 	}
@@ -162,34 +198,57 @@ func TestStepFollowsSectionLinksAndRefinesOnce(t *testing.T) {
 
 	s = fixture(t)
 	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0002"}})
-	s.Step(StepTopics, StepLinked)
-	if got := chosen(s)["design/adrs/0004-fourth.md"]; got != "refined by ADR-0002 (also linked from design/adrs/0002-second.md § Decision)" {
+	s.Step()
+	if got := briefed(s)["design/adrs/0004-fourth.md"]; got != "refined by ADR-0002 (also linked from design/adrs/0002-second.md § Decision)" {
 		t.Errorf("refines: %q", got)
+	}
+	if !s.Whole(s.byID["ADR-0002"]) || s.Loaded(s.byID["ADR-0004"]) {
+		t.Errorf("chosen %v", chosen(s))
+	}
+
+	s = fixture(t)
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0004"}})
+	s.Step()
+	if got := briefed(s); !reflect.DeepEqual(got, map[string]string{"design/adrs/0002-second.md": "refines ADR-0004"}) {
+		t.Errorf("refined by: %v", got)
 	}
 }
 
-func TestStepFollowsOnlyTheStepsItIsGiven(t *testing.T) {
+func TestStepFollowsOnlyTheSectionsTopicsSelected(t *testing.T) {
 	s := fixture(t)
+	s.ByTopics([]string{"dashboard"})
+	s.Step()
+	if s.Briefed(s.byID["ADR-0002"]) {
+		t.Errorf("followed a section the topics did not select: %v", briefed(s))
+	}
+}
+
+func TestStepListsItsReasonOnAnADRLoadedWhole(t *testing.T) {
+	s := fixture(t)
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0002"}})
 	s.ByTopics([]string{"cli"})
-	s.Step(StepLinked)
-	if s.Loaded(s.byID["ADR-0002"]) {
-		t.Errorf("followed a topic's links: %v", chosen(s))
+	s.Step()
+	if got := chosen(s)["design/adrs/0002-second.md"]; got != "linked from S-0001 (also linked from design/system/cli.md § Rules)" {
+		t.Errorf("got %q", got)
+	}
+	if s.Briefed(s.byID["ADR-0002"]) {
+		t.Error("briefed an ADR loaded whole")
 	}
 }
 
 func TestNothingIsChosenTwiceAndLaterReasonsAreListed(t *testing.T) {
 	s := fixture(t)
-	s.ByTopics([]string{"go"})
 	s.Linked([]Source{
 		{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "[go](../../../design/tech/go.md) and `design/tech/go.md`"},
 		{ID: "T-0001", Path: "wip/kanban/tasks/T-0001-x.md", Body: "design/tech/go.md"},
 	})
-	want := map[string]string{"design/tech/go.md": "topics: go (also linked from S-0001; linked from T-0001)"}
+	s.ByTopics([]string{"go"})
+	want := map[string]string{"design/tech/go.md": "linked from S-0001 (also linked from T-0001; topics: go)"}
 	if got := chosen(s); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v", got)
 	}
-	if len(s.choices) != 1 {
-		t.Errorf("%d choices", len(s.choices))
+	if len(s.choices) != 1 || len(s.briefs) != 0 {
+		t.Errorf("%d choices, %d briefs", len(s.choices), len(s.briefs))
 	}
 }
 
@@ -201,39 +260,66 @@ func TestSlug(t *testing.T) {
 	}
 }
 
-func TestRankAddsTheBestADRsAndSectionsNothingChose(t *testing.T) {
+func TestCandidatesRankSectionsNothingLoadedAndEachADROnce(t *testing.T) {
 	s := fixture(t)
 	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0007"}})
-	s.Rank("herons on the estuary at the turn of the tide", 5, 1)
-	got := chosen(s)
-	if got["design/adrs/0007-seventh.md"] != "linked from S-0001" {
-		t.Errorf("a chosen ADR was ranked again: %v", got)
-	}
-	var ranked []string
-	for k, v := range got {
-		if strings.HasPrefix(v, "rank ") {
-			ranked = append(ranked, k+" = "+v)
+	s.ByTopics([]string{"cli"})
+	cands := s.Candidates("herons on the estuary at the turn of the tide")
+	var got []string
+	seen := map[string]bool{}
+	for _, c := range cands {
+		k := c.doc.Path + " § " + c.doc.Label(c.sec)
+		if seen[c.doc.Path] && c.doc.Kind == KindADR {
+			t.Errorf("an ADR twice: %s", k)
 		}
+		seen[c.doc.Path] = true
+		got = append(got, k)
 	}
-	slices.Sort(ranked)
-	if len(ranked) != 6 || got["design/system/plain.md § Heron migration"] != "rank 1" {
-		t.Errorf("ranked %v", ranked)
+	if len(got) == 0 || got[0] != "design/system/plain.md § Heron migration" {
+		t.Fatalf("candidates %v", got)
 	}
 	for _, id := range []string{"ADR-0006", "ADR-0008", "ADR-0009", "ADR-0010", "ADR-0011"} {
-		if !s.Whole(s.byID[id]) {
-			t.Errorf("%s not ranked: %v", id, ranked)
+		if !seen[s.byID[id].Path] {
+			t.Errorf("%s not a candidate: %v", id, got)
 		}
 	}
-	if s.Loaded(s.byID["ADR-0012"]) {
-		t.Errorf("an unrelated ADR ranked: %v", ranked)
+	if seen[s.byID["ADR-0007"].Path] || seen[s.byID["ADR-0012"].Path] {
+		t.Errorf("a loaded or unrelated ADR is a candidate: %v", got)
 	}
 }
 
-func TestRankLeavesOutSupersededADRs(t *testing.T) {
+func TestCandidatesLeaveOutSupersededADRs(t *testing.T) {
 	s := fixture(t)
-	s.Rank("the first way", 5, 0)
-	if s.Loaded(s.byID["ADR-0001"]) || s.byPath["design/adrs/0003-third.md"] == nil || !s.Loaded(s.byID["ADR-0003"]) {
-		t.Errorf("got %v", chosen(s))
+	for _, c := range s.Candidates("the first way") {
+		if c.doc.ID == "ADR-0001" {
+			t.Errorf("superseded ADR-0001 is a candidate")
+		}
+	}
+}
+
+func TestRankLoadsACandidateAndUndoes(t *testing.T) {
+	s := fixture(t)
+	var adr Candidate
+	for _, c := range s.Candidates("herons estuary") {
+		if c.doc.Kind == KindADR {
+			adr = c
+			break
+		}
+	}
+	undo := s.Rank(adr, 1, true)
+	if !s.Whole(adr.doc) || chosen(s)[adr.doc.Path] != "rank 1" {
+		t.Errorf("whole: %v", chosen(s))
+	}
+	undo()
+	if s.Loaded(adr.doc) || len(s.choices) != 0 {
+		t.Errorf("undo left %v", chosen(s))
+	}
+	s.Rank(adr, 2, false)
+	if s.Whole(adr.doc) || !s.Loaded(adr.doc) {
+		t.Errorf("section: %v", chosen(s))
+	}
+	if adr.RankSize(true) != len(adr.doc.Raw) || adr.RankSize(false) != len(adr.doc.Sections[adr.sec].Text) {
+		t.Error("RankSize")
 	}
 }
 
@@ -253,49 +339,88 @@ func TestQueryIsTitleGoalAndCriteria(t *testing.T) {
 	}
 }
 
-func TestItemsGroupRunsAndPrintWholeDocumentsRaw(t *testing.T) {
+func TestItemsAreNamedThenBriefsThenDecisionsThenRanked(t *testing.T) {
 	s := fixture(t)
-	s.ByTopics([]string{"cli", "go"})
-	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "design/tech/go.md"}})
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "design/tech/go.md and [charts](../../../design/system/dashboard.md#charts)"}})
+	s.ByTopics([]string{"cli", "go", "dashboard"})
+	s.Step()
+	for _, c := range s.Candidates("herons") {
+		if c.doc.Path == "design/system/plain.md" {
+			s.Rank(c, 1, false)
+			break
+		}
+	}
 	items := s.Items()
 	var got []string
 	for _, it := range items {
-		got = append(got, it.Path+" § "+it.Label+" = "+it.Reason+" "+strings.Join(it.Also, ";"))
+		got = append(got, it.Step+" "+it.Path+" § "+it.Label+" = "+it.Reason+" "+strings.Join(it.Also, ";"))
 		if it.Size != len(it.Text) {
 			t.Errorf("size %d of %d", it.Size, len(it.Text))
 		}
 	}
 	want := []string{
-		"design/system/cli.md § The CLI = topics: cli ",
-		"design/system/cli.md § Prime = topics: cli ",
-		"design/tech/go.md §  = topics: go linked from S-0001",
+		"named design/system/dashboard.md § Charts = linked from S-0001 ",
+		"named design/tech/go.md §  = linked from S-0001 topics: go",
+		"briefed design/system/cli.md §  = topics: cli, dashboard ",
+		"briefed design/system/dashboard.md §  = topics: dashboard ",
+		"briefed design/adrs/0005-fifth.md §  = topics: dashboard ",
+		"briefed design/adrs/0002-second.md §  = linked from design/system/cli.md § Rules ",
+		"ranked design/system/plain.md § Heron migration = rank 1 ",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("got %q", got)
 	}
-	if !strings.Contains(items[0].Text, "## Rules") || strings.Contains(items[0].Text, "Board view") || !reflect.DeepEqual(items[0].Heading, []string{"The CLI"}) {
-		t.Errorf("first run %+v", items[0])
+	if !strings.Contains(items[0].Text, "### Colours") || !reflect.DeepEqual(items[0].Heading, []string{"The dashboard", "Charts"}) {
+		t.Errorf("named section %+v", items[0])
 	}
-	if !strings.HasPrefix(items[2].Text, "---\ntitle: Go") || items[2].Heading != nil {
-		t.Errorf("whole document %+v", items[2])
+	if !strings.HasPrefix(items[1].Text, "---\ntitle: Go") || items[1].Heading != nil {
+		t.Errorf("whole document %+v", items[1])
+	}
+	if want := "What the command line does.\n\n- Rules\n  - Board view\n- Prime\n"; items[2].Text != want || items[2].Whole != len(s.byPath["design/system/cli.md"].Raw) {
+		t.Errorf("design brief %q", items[2].Text)
+	}
+	if want := "Cumulative flow and cycle time.\n\n- Charts (selected, loaded)\n  - Colours (selected, loaded)\n- Login\n"; items[3].Text != want {
+		t.Errorf("design brief marks %q", items[3].Text)
+	}
+	if items[5].Text != "Commands are verbs. This refines ADR-0004." || items[5].ID != "ADR-0002" {
+		t.Errorf("ADR brief %+v", items[5])
 	}
 }
 
-func TestCatalogListsWhatIsNotLoadedAndOutlinesWhatIsInPart(t *testing.T) {
+func TestPrintedBriefsNameTheirFirstReasonAndCountTheRest(t *testing.T) {
+	adr := Item{Path: "design/adrs/0002-second.md", ID: "ADR-0002", Title: "Second", Step: StepBriefed, Reason: "linked from design/system/cli.md § Rules", Also: []string{"refined by ADR-0003", "topics: cli"}, Text: "Commands are verbs.", Whole: 99}
+	if got := adr.Printed(); got != "- ADR-0002 Second (design/adrs/0002-second.md; linked from design/system/cli.md, and 2 more): Commands are verbs.\n" {
+		t.Errorf("ADR brief %q", got)
+	}
+	design := Item{Path: "design/system/cli.md", Title: "The CLI", Step: StepBriefed, Reason: "topics: cli", Text: "- Rules\n", Whole: 120}
+	if got := design.Printed(); got != "\ndesign/system/cli.md: The CLI (120 bytes; topics: cli)\n\n- Rules\n" {
+		t.Errorf("design brief %q", got)
+	}
+	named := Item{Path: "design/system/cli.md", Label: "Rules", Step: StepNamed, Reason: "linked from S-0001", Also: []string{"topics: cli"}, Text: "## Rules\n"}
+	if got := named.Printed(); got != "\ndesign/system/cli.md § Rules\n============================\nreason: linked from S-0001; also topics: cli\n\n## Rules\n" {
+		t.Errorf("named %q", got)
+	}
+}
+
+func TestCatalogListsWhatIsNeitherLoadedNorBriefedAndOutlinesWhatIsInPart(t *testing.T) {
 	s := fixture(t)
+	s.Linked([]Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "[charts](../../../design/system/dashboard.md#charts)"}})
 	s.ByTopics([]string{"cli"})
 	notLoaded, inPart := s.Catalog()
-	if len(inPart) != 1 || inPart[0].Path != "design/system/cli.md" {
+	if len(inPart) != 1 || inPart[0].Path != "design/system/dashboard.md" {
 		t.Fatalf("in part %+v", inPart)
 	}
-	want := []Outline{{1, "The CLI", true}, {2, "Rules", true}, {3, "Board view", false}, {2, "Prime", true}}
+	want := []Outline{{1, "The dashboard", false}, {2, "Charts", true}, {3, "Colours", true}, {2, "Login", false}}
 	if !reflect.DeepEqual(inPart[0].Outline, want) {
 		t.Errorf("outline %+v", inPart[0].Outline)
 	}
-	if len(notLoaded) != 16 {
+	if len(notLoaded) != 15 {
 		t.Errorf("%d not loaded: %+v", len(notLoaded), notLoaded)
 	}
 	for _, e := range notLoaded {
+		if e.Path == "design/system/cli.md" {
+			t.Errorf("a briefed document is in the catalog")
+		}
 		if e.Path == "design/adrs/0001-first.md" && (!reflect.DeepEqual(e.SupersededBy, []string{"ADR-0003"}) || e.Title != "First") {
 			t.Errorf("superseded entry %+v", e)
 		}

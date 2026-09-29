@@ -15,6 +15,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -635,6 +636,9 @@ func (c *checker) documentation() {
 				}
 				if f.Status == "" || f.Date == "" || f.Title == "" {
 					c.add(Warning, "adr.front-matter", path, 1, "ADRs need id, title, status, and date")
+				}
+				if _, ok := ctxpack.DecisionSentence(string(data)); !ok {
+					c.add(Warning, "adr.decision", path, headingLine(path, "## Decision"), "## Decision does not open with a sentence stating the decision; a context pack briefs the ADR by that sentence (ADR-0049)")
 				}
 				return nil
 			}

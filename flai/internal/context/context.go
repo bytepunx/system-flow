@@ -1,8 +1,10 @@
 // Package context builds the context pack an agent working a story is primed
-// with (ADR-0047). This part selects the conventions: each file in read order
-// with the sections whose topics miss the story's left out, and a list of
-// what was left out so the agent knows the rule exists. design.go, rank.go,
-// and items.go select the design, tech, and ADRs and catalog the rest.
+// with (ADR-0047), fitted to a size budget (ADR-0049). This part selects the
+// conventions: each file in read order with the sections whose topics miss
+// the story's left out, and a list of what was left out so the agent knows
+// the rule exists; and it fits the pack to its budget. design.go, brief.go,
+// rank.go, and items.go select, brief, and rank the design, tech, and ADRs
+// and catalog the rest.
 package context
 
 import (
@@ -39,21 +41,31 @@ type Convention struct {
 	Kept    []Piece  `json:"kept"`
 	LeftOut []Piece  `json:"left_out"`
 	Text    string   `json:"text"` // the file with what is left out taken out
+	Size    int      `json:"size"` // bytes of Text
 	title   string   // the level-1 heading, dropped from left-out labels
 }
 
-// Size is how much a pack prints.
+// Size is how much a pack prints, its header included.
 type Size struct {
 	Bytes int `json:"bytes"`
 	Lines int `json:"lines"`
 }
+
+// What a pack's Exceeded names: the part that alone does not fit the
+// budget.
+const (
+	ExceededConventions = "conventions"
+	ExceededNamed       = "named"
+)
 
 // Pack is the context pack for one story.
 type Pack struct {
 	Story       string              `json:"story"`
 	Title       string              `json:"title"`
 	Topics      []topics.StoryTopic `json:"topics"`
-	Size        Size                `json:"size"` // of Body
+	Budget      int                 `json:"budget"`             // bytes the pack is fitted to
+	Exceeded    string              `json:"exceeded,omitempty"` // conventions or named, when that alone is over the budget
+	Size        Size                `json:"size"`               // of Header and Body together
 	README      *Convention         `json:"readme,omitempty"`
 	Conventions []Convention        `json:"conventions"`
 	Issues      string              `json:"-"` // the open-issues table, empty when none is open
@@ -70,12 +82,13 @@ type Catalog struct {
 	InPart    []Entry `json:"in_part"`
 }
 
-// Build selects the conventions of set for a story with the given topics.
-// root is the repository root, to name files relative to it; issues is the
-// open-issues table printed after the conventions.
-func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conventions.Set, issues string) (*Pack, error) {
+// Build selects the conventions of set for a story with the given topics,
+// for a pack of budget bytes. root is the repository root, to name files
+// relative to it; issues is the open-issues table printed after the
+// conventions.
+func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conventions.Set, issues string, budget int) (*Pack, error) {
 	names := topics.Names(storyTopics)
-	p := &Pack{Story: story, Title: title, Topics: storyTopics, Issues: issues, Conventions: []Convention{}, Omitted: []string{}, Items: []Item{},
+	p := &Pack{Story: story, Title: title, Topics: storyTopics, Budget: budget, Issues: issues, Conventions: []Convention{}, Omitted: []string{}, Items: []Item{},
 		Catalog: Catalog{NotLoaded: []Entry{}, InPart: []Entry{}}}
 	if set.README != "" {
 		rel, err := filepath.Rel(root, filepath.Join(set.Dir, "README.md"))
@@ -86,7 +99,7 @@ func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conv
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", rel, err)
 		}
-		c.Order = 0
+		c.Order, c.Size = 0, len(c.Text)
 		p.README = c
 	}
 	for _, f := range set.Files {
@@ -94,7 +107,7 @@ func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conv
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", f.Path, err)
 		}
-		c.Title, c.Order = f.Title, f.Order
+		c.Title, c.Order, c.Size = f.Title, f.Order, len(c.Text)
 		p.Conventions = append(p.Conventions, *c)
 	}
 	if issues != "" {
@@ -107,25 +120,81 @@ func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conv
 	return p, nil
 }
 
+// size measures the pack as printed, header and body. The header states
+// the size, so it is measured until the number it prints is its own.
 func (p *Pack) size() {
 	body := p.Body()
-	p.Size = Size{Bytes: len(body), Lines: strings.Count(body, "\n")}
+	lines := strings.Count(body, "\n")
+	for range 4 {
+		h := p.Header()
+		next := Size{Bytes: len(h) + len(body), Lines: strings.Count(h, "\n") + lines}
+		if next == p.Size {
+			return
+		}
+		p.Size = next
+	}
 }
 
 // Design runs the steps that choose design, tech, and ADRs for a story, in
-// the order ADR-0047 gives: by topics, linked from the story, its epic, and
-// its tasks, one step further from both, then ranked against query.
-func Design(docs []*Doc, storyTopics []string, sources []Source, query string) *Selection {
+// the order ADR-0049 gives: what the story, its epic, and its tasks name, to
+// load whole; what its topics select, to brief; and the ADRs one step from
+// both, to brief. The ranked step runs in AddDesign, against the budget.
+func Design(docs []*Doc, storyTopics []string, sources []Source) *Selection {
 	s := NewSelection(docs)
-	s.ByTopics(storyTopics)
 	s.Linked(sources)
-	s.Step(StepTopics, StepLinked)
-	s.Rank(query, Ranked, Ranked)
+	s.ByTopics(storyTopics)
+	s.Step()
 	return s
 }
 
-// AddDesign puts what a selection chose, and its catalog, into the pack.
-func (p *Pack) AddDesign(s *Selection) {
+// AddDesign puts what a selection chose into the pack, fills what the
+// budget leaves with the sections that rank highest against query, and adds
+// the catalog. When the conventions alone exceed the budget the pack is
+// the conventions and a catalog of every document; when the conventions and
+// what the story names exceed it, everything named is still loaded and
+// nothing is ranked. Either is recorded in Exceeded.
+func (p *Pack) AddDesign(s *Selection, query string) {
+	p.size()
+	if p.Size.Bytes > p.Budget {
+		p.Exceeded = ExceededConventions
+		p.Catalog.NotLoaded, p.Catalog.InPart = NewSelection(s.Docs).Catalog()
+		p.size()
+		return
+	}
+	p.Items = s.loaded(StepNamed)
+	p.size()
+	if p.Size.Bytes > p.Budget {
+		p.Exceeded = ExceededNamed
+	}
+	p.take(s)
+	if p.Exceeded != "" {
+		return
+	}
+	n := 0
+	for _, c := range s.Candidates(query) {
+		wholes := []bool{false}
+		if c.doc.Kind == KindADR {
+			wholes = []bool{true, false}
+		}
+		for _, whole := range wholes {
+			if p.Size.Bytes+c.RankSize(whole) > p.Budget {
+				continue
+			}
+			items, catalog, size := p.Items, p.Catalog, p.Size
+			undo := s.Rank(c, n+1, whole)
+			p.take(s)
+			if p.Size.Bytes <= p.Budget {
+				n++
+				break
+			}
+			undo()
+			p.Items, p.Catalog, p.Size = items, catalog, size
+		}
+	}
+}
+
+// take puts everything a selection chose, and its catalog, into the pack.
+func (p *Pack) take(s *Selection) {
 	p.Items = s.Items()
 	p.Catalog.NotLoaded, p.Catalog.InPart = s.Catalog()
 	p.size()
@@ -257,9 +326,10 @@ func (c Convention) label(p Piece) string {
 
 // Body is the pack as flai prime --story prints it below its header: every
 // convention under the header flai prime --cat gives it, the open-issues
-// table, each design item headed with its path, heading path, and reason,
-// the catalog, then what was left out. With nothing left out and no design
-// documents it is flai prime --cat.
+// table, each named item headed with its path, heading path, and reason,
+// the brief of each design and tech file, the decisions of the ADRs
+// briefed, each ranked item, the catalog, then what was left out. With
+// nothing left out and no design documents it is flai prime --cat.
 func (p *Pack) Body() string {
 	var b strings.Builder
 	for i, c := range p.files() {
@@ -271,16 +341,13 @@ func (p *Pack) Body() string {
 	if p.Issues != "" {
 		fmt.Fprintf(&b, "\nopen issues\n===========\n\n%s", p.Issues)
 	}
+	var last string
 	for _, it := range p.Items {
-		head := it.Path
-		if it.Label != "" {
-			head += " § " + it.Label
+		if h := groupHead[group(it)]; group(it) != last && h != "" {
+			b.WriteString(h)
 		}
-		reason := it.Reason
-		if len(it.Also) > 0 {
-			reason += "; also " + strings.Join(it.Also, "; ")
-		}
-		fmt.Fprintf(&b, "\n%s\n%s\nreason: %s\n\n%s", head, strings.Repeat("=", utf8.RuneCountInString(head)), reason, it.Text)
+		last = group(it)
+		b.WriteString(it.Printed())
 	}
 	p.writeCatalog(&b)
 	if len(p.Omitted) > 0 {
@@ -290,6 +357,70 @@ func (p *Pack) Body() string {
 		}
 	}
 	return b.String()
+}
+
+// Groups of items that print under one heading: design briefs and ADR
+// briefs. Loaded items head themselves.
+const (
+	groupBriefs    = "briefs"
+	groupDecisions = "decisions"
+)
+
+var groupHead = map[string]string{
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story's topics select, each as its title, size, reason, first paragraph, and outline. Read a section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", before changing what it describes.\n",
+	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, each by its decision sentence. Read one whole with the MCP doc_get or flai doc show <path>.\n\n",
+}
+
+// group is the heading an item prints under, empty for one loaded.
+func group(it Item) string {
+	switch {
+	case it.Step != StepBriefed:
+		return ""
+	case it.ID != "":
+		return groupDecisions
+	}
+	return groupBriefs
+}
+
+// Printed is the item as the pack prints it: an ADR brief as one line, a
+// design brief as a line naming it followed by its text, both under their
+// group's heading; what is loaded headed with its path, heading path, and
+// reason. A brief names its first reason, without the heading it was found
+// under, and counts the rest; what is loaded names them all.
+func (it Item) Printed() string {
+	switch group(it) {
+	case groupDecisions:
+		return fmt.Sprintf("- %s %s (%s; %s): %s\n", it.ID, it.Title, it.Path, it.briefReason(), it.Text)
+	case groupBriefs:
+		head := fmt.Sprintf("\n%s: %s (%d bytes; %s)\n", it.Path, it.Title, it.Whole, it.briefReason())
+		if it.Text == "" {
+			return head
+		}
+		return head + "\n" + it.Text
+	}
+	head := it.Path
+	if it.Label != "" {
+		head += " § " + it.Label
+	}
+	reason := it.Reason
+	if len(it.Also) > 0 {
+		reason += "; also " + strings.Join(it.Also, "; ")
+	}
+	return fmt.Sprintf("\n%s\n%s\nreason: %s\n\n%s", head, strings.Repeat("=", utf8.RuneCountInString(head)), reason, it.Text)
+}
+
+// briefReason is a brief's first reason without the heading it was found
+// under, and how many more there are.
+func (it Item) briefReason() string {
+	r, _, _ := strings.Cut(it.Reason, " § ")
+	switch n := len(it.Also); n {
+	case 0:
+		return r
+	case 1:
+		return r + ", and one more"
+	default:
+		return fmt.Sprintf("%s, and %d more", r, n)
+	}
 }
 
 // writeCatalog lists the design documents not printed whole.
@@ -324,8 +455,9 @@ func (p *Pack) writeCatalog(b *strings.Builder) {
 	}
 }
 
-// Header names the story, its topics and where each came from, and the size
-// of the body that follows it.
+// Header names the story, its topics and where each came from, the size
+// of the pack against its budget, whether a part alone exceeds it, and the
+// size of each thing the pack prints.
 func (p *Pack) Header() string {
 	var b strings.Builder
 	head := p.Story + " context pack"
@@ -339,21 +471,55 @@ func (p *Pack) Header() string {
 	for _, t := range p.Topics {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, t.Topic, t.Summary())
 	}
-	if len(p.Items) > 0 {
-		steps := map[string]int{}
-		bytes := 0
-		for _, it := range p.Items {
-			steps[it.Step]++
-			bytes += it.Size
+	fmt.Fprintf(&b, "size: %d bytes, %d lines, this header included; budget %d bytes\n", p.Size.Bytes, p.Size.Lines, p.Budget)
+	switch p.Exceeded {
+	case ExceededConventions:
+		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
+	case ExceededNamed:
+		b.WriteString("over budget: the conventions and what the story, its epic, and its tasks name exceed it, so nothing is ranked; a story that names more than the budget holds is a story to split (ADR-0049)\n")
+	}
+	b.WriteString("contents, in bytes:\n")
+	row := func(n int, what, name string) { fmt.Fprintf(&b, "  %6d  %-10s  %s\n", n, what, name) }
+	for _, c := range p.files() {
+		row(c.Size, "convention", c.Path)
+	}
+	if p.Issues != "" {
+		row(len(p.Issues), "issues", fmt.Sprintf("%d open", p.OpenIssues))
+	}
+	decisions, adrs := len(groupHead[groupDecisions]), 0
+	for _, it := range p.Items {
+		if group(it) == groupDecisions {
+			decisions += len(it.Printed())
+			adrs++
 		}
-		fmt.Fprintf(&b, "design: %d items, %d bytes (by topics %d, linked %d, ranked %d)\n", len(p.Items), bytes, steps[StepTopics], steps[StepLinked], steps[StepRanked])
+	}
+	for _, it := range p.Items {
+		switch {
+		case group(it) != groupDecisions:
+			name := it.Path
+			if it.Label != "" {
+				name += " § " + it.Label
+			}
+			row(len(it.Printed()), it.Step, name)
+		case adrs == 1:
+			row(decisions, "briefed", "1 ADR by its decision sentence, on one line")
+		case adrs > 1:
+			row(decisions, "briefed", fmt.Sprintf("%d ADRs by their decision sentences, one line each", adrs))
+			adrs = 0
+		}
 	}
 	if n, m := len(p.Catalog.NotLoaded), len(p.Catalog.InPart); n+m > 0 {
-		fmt.Fprintf(&b, "catalog: %d documents not loaded, %d loaded in part\n", n, m)
+		var c strings.Builder
+		p.writeCatalog(&c)
+		row(c.Len(), "catalog", fmt.Sprintf("%d documents not loaded, %d loaded in part", n, m))
 	}
 	if len(p.Omitted) > 0 {
-		fmt.Fprintf(&b, "left out: %d sections, listed at the end\n", len(p.Omitted))
+		n := 0
+		for _, l := range p.Omitted {
+			n += len(l) + 3
+		}
+		row(n, "left out", fmt.Sprintf("%d convention sections, listed at the end", len(p.Omitted)))
 	}
-	fmt.Fprintf(&b, "size: %d bytes, %d lines below this header\n\n", p.Size.Bytes, p.Size.Lines)
+	b.WriteString("\n")
 	return b.String()
 }

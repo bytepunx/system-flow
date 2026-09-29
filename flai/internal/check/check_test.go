@@ -60,6 +60,7 @@ func TestBadFixtureFindings(t *testing.T) {
 		"doc.front-matter":    "nofm.md",
 		"doc.updated":         "docs/users/index.md",
 		"adr.id":              "0001-first.md",
+		"adr.decision":        "0001-first.md", // no ## Decision to brief it by (ADR-0049)
 	}
 	got := map[string][]string{}
 	for _, f := range res.Findings {
