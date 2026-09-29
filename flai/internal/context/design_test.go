@@ -429,9 +429,3 @@ func TestCatalogListsWhatIsNeitherLoadedNorBriefedAndOutlinesWhatIsInPart(t *tes
 		}
 	}
 }
-
-func TestTermsDropStopwordsAndRepeats(t *testing.T) {
-	if got := Terms("The heron and the Tide, a heron: x"); !slices.Equal(got, []string{"heron", "tide"}) {
-		t.Errorf("got %v", got)
-	}
-}

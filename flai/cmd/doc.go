@@ -3,10 +3,13 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/search"
 )
 
 // Exit codes an editor can tell apart from an ordinary failure (ADR-0023).
@@ -18,12 +21,66 @@ const (
 func newDocCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "doc",
-		Short: "Read and save one markdown document for an editor",
+		Short: "Search, read, and save markdown documents",
 		Long: `The save path for documents edited in the dashboard (ADR-0023). flai
 decides what may be edited, detects a concurrent change by a content hash,
-validates with the check, and commits the one path.`,
+validates with the check, and commits the one path. flai doc search and
+flai doc show --heading are how an agent reads design on demand (ADR-0049).`,
 	}
-	c.AddCommand(newDocShowCmd(a), newDocSaveCmd(a))
+	c.AddCommand(newDocSearchCmd(a), newDocShowCmd(a), newDocSaveCmd(a))
+	return c
+}
+
+func newDocSearchCmd(a *app) *cobra.Command {
+	var limit int
+	c := &cobra.Command{
+		Use:   "search <query>...",
+		Short: "Rank the sections of design and docs against a query",
+		Long: `Ranks every section of the design and docs folders, the conventions among
+them, by BM25 against the query, as the MCP doc_search tool does (ADR-0049).
+Sections are cut as flai prime --story cuts them, each down to the next
+heading of any level. Prints at most 20, best first: the path and heading
+path, the size, and the first lines. Read one with flai doc show <path>
+--heading "<heading>".`,
+		Example: `  flai doc search context pack budget
+  flai doc search --limit 5 --json worktree`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			query := strings.Join(args, " ")
+			hits, err := ctxpack.SearchSections(repo, query, limit)
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(map[string]any{"query": query, "hits": hits})
+			}
+			if len(hits) == 0 {
+				fmt.Fprintf(a.out, "no section matches %q\n", query)
+				return nil
+			}
+			for i, h := range hits {
+				if i > 0 {
+					fmt.Fprintln(a.out)
+				}
+				head := h.Path
+				if h.Heading != "" {
+					head += " § " + h.Heading
+				}
+				fmt.Fprintf(a.out, "%s (%d bytes, line %d)\n", head, h.Size, h.Line)
+				for _, line := range strings.Split(h.Lines, "\n") {
+					if line != "" {
+						fmt.Fprintf(a.out, "  %s\n", line)
+					}
+				}
+			}
+			return nil
+		},
+	}
+	c.Flags().IntVar(&limit, "limit", search.MaxSectionHits, "at most this many sections (20 at most)")
 	return c
 }
 

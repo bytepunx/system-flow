@@ -252,3 +252,33 @@ func TestDocSaveRefusedByTheCheckRestoresTheFile(t *testing.T) {
 		t.Errorf("nothing should be left behind: %q", st)
 	}
 }
+
+// S-0147: flai doc search ranks sections of design and docs.
+func TestDocSearchRanksSections(t *testing.T) {
+	root := docProject(t)
+	_ = os.WriteFile(filepath.Join(root, "docs/guide.md"), []byte("---\ntitle: Guide\n---\n\n# Guide\n\n## Install\n\nDownload the shape tool.\n\n## Other\n\nNothing.\n"), 0o644)
+	out, errOut, code := runIn(t, root, "doc", "search", "shape")
+	if code != 0 {
+		t.Fatal(errOut)
+	}
+	if !strings.Contains(out, "design/system/plan.md § Shape (") || !strings.Contains(out, "docs/guide.md § Install (") || !strings.Contains(out, "\n  Download the shape tool.\n") || strings.Contains(out, "Other") {
+		t.Errorf("search:\n%s", out)
+	}
+	out, errOut, code = runIn(t, root, "doc", "search", "--limit", "1", "--json", "shape")
+	if code != 0 {
+		t.Fatal(errOut)
+	}
+	var res struct {
+		Query string
+		Hits  []struct{ Path, Heading, Lines string }
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || res.Query != "shape" || len(res.Hits) != 1 {
+		t.Errorf("json: %s", out)
+	}
+	if out, _, code := runIn(t, root, "doc", "search", "heron"); code != 0 || !strings.Contains(out, `no section matches "heron"`) {
+		t.Errorf("no match: %d %s", code, out)
+	}
+	if _, errOut, code := runIn(t, root, "doc", "search", "the"); code == 0 || !strings.Contains(errOut, "no words to rank by") {
+		t.Errorf("stopwords: %d %s", code, errOut)
+	}
+}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/search"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -156,6 +157,16 @@ func (d *Doc) Label(sec int) string {
 		p = p[1:]
 	}
 	return strings.Join(p, " › ")
+}
+
+// Cuts is the document's sections as the section index holds them, one for
+// each of its sections, in order.
+func (d *Doc) Cuts() []search.Section {
+	out := make([]search.Section, len(d.Sections))
+	for i, sec := range d.Sections {
+		out[i] = search.Section{Path: d.Path, Title: d.Title, Heading: d.Label(i), Line: sec.Line, Level: sec.Level, Text: sec.Text}
+	}
+	return out
 }
 
 // under is the section and every section below it, down to the next

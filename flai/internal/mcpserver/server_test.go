@@ -108,9 +108,12 @@ func TestToolsAreAdvertised(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "board doc_get inbox item_edit item_get item_move item_new prime thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches"
+	want := "board doc_get doc_search inbox item_edit item_get item_move item_new prime thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches"
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
+	}
+	if in := f.cs.InitializeResult().Instructions; !strings.Contains(in, "doc_search") || !strings.Contains(in, "doc_get and its heading") {
+		t.Errorf("the instructions do not say how to read design on demand: %s", in)
 	}
 }
 
@@ -210,6 +213,17 @@ func TestDocumentsAndResources(t *testing.T) {
 		if _, failed := f.call(t, "doc_get", map[string]any{"path": bad}); failed == "" {
 			t.Errorf("%s must be refused", bad)
 		}
+	}
+	found, failed := f.call(t, "doc_search", map[string]any{"query": "the shape"})
+	hits, _ := found["hits"].([]any)
+	if failed != "" || found["query"] != "the shape" || len(hits) != 1 {
+		t.Fatalf("doc_search: %v %s", found, failed)
+	}
+	if h := hits[0].(map[string]any); h["path"] != "design/system/plan.md" || h["heading"] != "Shape" || h["lines"] != "text" || h["title"] != "Plan" {
+		t.Errorf("hit: %v", h)
+	}
+	if _, failed := f.call(t, "doc_search", map[string]any{"query": "the a"}); !strings.Contains(failed, "no words to rank by") {
+		t.Errorf("a query of stopwords: %q", failed)
 	}
 	res, err := f.cs.ReadResource(context.Background(), &mcp.ReadResourceParams{URI: "flai://design/system/plan.md"})
 	if err != nil || len(res.Contents) != 1 || !strings.Contains(res.Contents[0].Text, "# Plan") {

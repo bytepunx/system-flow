@@ -3,7 +3,6 @@ package context
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/search"
@@ -40,40 +39,31 @@ type Candidate struct {
 }
 
 // Candidates ranks by BM25 against query every section nothing has loaded,
-// best first. Sections are indexed one by one, each down to the next heading
-// of any level; an ADR appears once, at its best section. ADRs loaded in
-// any part, superseded ADRs, and sections with nothing below their heading
-// are left out. A briefed document's sections are in: a brief is not its
-// body.
+// best first, with the section index doc_search uses (ADR-0049). Sections
+// are indexed one by one, each down to the next heading of any level; an ADR
+// appears once, at its best section. ADRs loaded in any part, superseded
+// ADRs, and sections with nothing below their heading are left out. A
+// briefed document's sections are in: a brief is not its body.
 func (s *Selection) Candidates(query string) []Candidate {
 	var (
 		keys []Candidate
-		docs []search.Doc
+		secs []search.Section
 	)
 	for _, d := range s.Docs {
 		if d.Kind == KindADR && (s.Loaded(d) || s.Superseded(d)) {
 			continue
 		}
-		for i, sec := range d.Sections {
+		for i, sec := range d.Cuts() {
 			if s.owner[d][i] >= 0 {
 				continue
 			}
-			body := sec.Text
-			if sec.Level > 0 {
-				_, body, _ = strings.Cut(body, "\n")
-			}
-			if strings.TrimSpace(body) == "" {
-				continue
-			}
-			docs = append(docs, search.Doc{Path: strconv.Itoa(len(keys)), Kind: "doc", Title: d.Title, Headings: d.Label(i), Body: body, Scope: "design"})
+			secs = append(secs, sec)
 			keys = append(keys, Candidate{d, i})
 		}
 	}
-	ix := search.Build(docs)
 	var out []Candidate
 	seen := map[*Doc]bool{}
-	for _, h := range ix.Search(strings.Join(Terms(query), " "), true, ix.Size()) {
-		n, _ := strconv.Atoi(h.Path)
+	for _, n := range search.IndexSections(secs).Rank(query) {
 		c := keys[n]
 		if c.doc.Kind == KindADR {
 			if seen[c.doc] {
@@ -109,32 +99,4 @@ func (c Candidate) RankSize(whole bool) int {
 		return len(c.doc.Raw)
 	}
 	return len(c.doc.Sections[c.sec].Text)
-}
-
-// stopwords are the words too common to rank by: with terms combined by OR,
-// "the" and "a" would match every section.
-var stopwords = func() map[string]bool {
-	m := map[string]bool{}
-	for _, w := range strings.Fields(`a about above after again all also an and any are as at be because been
-		before being below between both but by can could did do does doing down each few for from further had has
-		have having here how if in into is it its itself just more most no nor not now of off on once only or other
-		our out over own same should so some such than that the their them then there these they this those through
-		to too under until up very was we were what when where which while who whom why will with would you your`) {
-		m[w] = true
-	}
-	return m
-}()
-
-// Terms is a query's words without stopwords and single characters, each
-// once, in the order they first appear.
-func Terms(query string) []string {
-	var out []string
-	seen := map[string]bool{}
-	for _, t := range search.Tokens(query) {
-		if len([]rune(t)) > 1 && !stopwords[t] && !seen[t] {
-			seen[t] = true
-			out = append(out, t)
-		}
-	}
-	return out
 }
