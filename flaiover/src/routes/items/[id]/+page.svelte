@@ -14,6 +14,7 @@
 	import { tick } from 'svelte';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
+	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
 	import type { Hold } from '$lib/activity';
 
 	type Transition = { to: string; at: string; by: string };
@@ -36,6 +37,7 @@
 		touches?: string[];
 		topics?: string[];
 		agent?: Agent;
+		usage?: Usage;
 		path: string;
 		archived: boolean;
 		body: string;
@@ -387,6 +389,15 @@
 					Tasks are the agent's to write. Their title and fields are not edited here; the body can
 					be opened as a document.
 				</p>
+			{/if}
+			{#if spent(item.usage)}
+				<section class="rounded border border-line bg-surface p-3 text-xs" data-testid="item-usage">
+					<div class="mb-1 font-medium">usage</div>
+					<div>{usageLine(item.usage)}</div>
+					{#each item.usage.models as m (m.model)}<div class="text-muted">
+							{modelLine(m)}
+						</div>{/each}
+				</section>
 			{/if}
 			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent}
 				<section class="rounded border border-line bg-surface p-3 text-xs">

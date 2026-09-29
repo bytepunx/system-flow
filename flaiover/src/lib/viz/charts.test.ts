@@ -4,6 +4,9 @@ import {
 	build,
 	burnUp,
 	cfd,
+	completionCost,
+	completionTime,
+	cost,
 	cycleTime,
 	estimates,
 	human,
@@ -12,9 +15,11 @@ import {
 	stateShare,
 	throughput,
 	timeInState,
+	tokenRate,
+	models,
 	type Report
 } from './charts';
-import { CATEGORICAL, theme } from './palette';
+import { CATEGORICAL, modelSlot, theme } from './palette';
 
 const report: Report = {
 	generated_at: '2026-09-01T12:00:00Z',
@@ -68,7 +73,18 @@ const report: Report = {
 			blocked_seconds: 21600,
 			time_in_state_seconds: { backlog: 3600, ready: 86400, 'in-progress': 86400, review: 7200 },
 			estimate_seconds: 72000,
-			estimate_error: 0.3
+			estimate_error: 0.3,
+			usage: {
+				source: 'log',
+				tokens: 3000000,
+				cost: 1.5,
+				seconds: 3600,
+				tokens_per_hour: 3000000,
+				models: [
+					{ model: 'claude-opus-5-5', tokens: 2000000, cost: 1.2, tokens_per_hour: 2000000 },
+					{ model: 'claude-haiku-4-5', tokens: 1000000, cost: 0.3, tokens_per_hour: 1000000 }
+				]
+			}
 		},
 		{
 			id: 'S-002',
@@ -83,7 +99,16 @@ const report: Report = {
 			lead_time_seconds: 174600,
 			cycle_time_seconds: 86400,
 			blocked_seconds: 0,
-			time_in_state_seconds: { backlog: 1800, ready: 86400, 'in-progress': 36000, review: 50400 }
+			time_in_state_seconds: { backlog: 1800, ready: 86400, 'in-progress': 36000, review: 50400 },
+			usage: {
+				source: 'sum',
+				tokens: 500000,
+				cost: 0.25,
+				seconds: 1800,
+				tokens_per_hour: 1000000,
+				estimated: true,
+				models: [{ model: 'claude-opus-5-5', tokens: 500000, cost: 0.25, tokens_per_hour: 1000000 }]
+			}
 		},
 		{
 			id: 'S-004',
@@ -128,7 +153,31 @@ const report: Report = {
 			parent: 'E-001',
 			age: '1d2h'
 		}
-	]
+	],
+	usage: {
+		items: 2,
+		tokens: 3500000,
+		cost: 1.75,
+		seconds: 5400,
+		estimated: true,
+		models: [
+			{ model: 'claude-haiku-4-5', tokens: 1000000, cost: 0.3, items: 1 },
+			{ model: 'claude-opus-5-5', tokens: 2500000, cost: 1.45, items: 2 }
+		],
+		done: [
+			{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 3000000, cost: 1.5 },
+			{ at: '2026-08-12T09:30:00Z', id: 'S-002', done: 2, tokens: 3500000, cost: 1.75 }
+		],
+		by_model: {
+			'claude-haiku-4-5': [
+				{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 1000000, cost: 0.3 }
+			],
+			'claude-opus-5-5': [
+				{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 2000000, cost: 1.2 },
+				{ at: '2026-08-12T09:30:00Z', id: 'S-002', done: 2, tokens: 2500000, cost: 1.45 }
+			]
+		}
+	}
 };
 
 const light = theme(false);
@@ -196,6 +245,49 @@ describe('chart builders', () => {
 		const es = estimates(report, light) as { series: { data: { value: number[] }[] }[] };
 		expect(es.series[0].data[0].value).toEqual([20, 26]);
 	});
+	it('usage charts colour each model in a fixed slot by name, whatever a filter leaves', () => {
+		expect(models(report)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
+		const tr = tokenRate(report, light) as {
+			series: { name: string; itemStyle: { color: string }; data: { value: [string, number] }[] }[];
+		};
+		expect(tr.series.map((s) => s.name)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
+		expect(tr.series[1].itemStyle.color).toBe(CATEGORICAL.light[0]);
+		expect(tr.series[0].itemStyle.color).toBe(CATEGORICAL.light[5]);
+		expect(tr.series[1].data.map((d) => d.value[1])).toEqual([2, 1]);
+		const c = cost(report, light) as {
+			xAxis: { data: string[] };
+			series: { name: string; stack: string; data: number[]; itemStyle: { color: string } }[];
+		};
+		expect(c.xAxis.data).toEqual(['S-001', 'S-002*']);
+		expect(c.series.map((s) => [s.name, s.data])).toEqual([
+			['claude-haiku-4-5', [0.3, 0]],
+			['claude-opus-5-5', [1.2, 0.25]]
+		]);
+		expect(new Set(c.series.map((s) => s.stack)).size).toBe(1);
+		// an epic with only opus left: opus keeps its colour
+		const one = cost({ ...report, items: [report.items[1]] }, light) as typeof c;
+		expect(one.series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
+		expect(one.series[0].itemStyle.color).toBe(CATEGORICAL.light[0]);
+		expect(modelSlot('claude-sonnet-5')).toBe(2);
+		expect([3, 4]).toContain(modelSlot('gpt-9'));
+	});
+	it("completion charts lay out each model's items done against time and against cost", () => {
+		const t = completionTime(report, light) as {
+			xAxis: { type: string };
+			series: { name: string; data: { value: [string | number, number] }[] }[];
+		};
+		expect(t.xAxis.type).toBe('time');
+		expect(t.series[1].data.map((d) => d.value)).toEqual([
+			['2026-08-03T12:00:00Z', 1],
+			['2026-08-12T09:30:00Z', 2]
+		]);
+		const c = completionCost(report, light) as typeof t;
+		expect(c.xAxis.type).toBe('value');
+		expect(c.series[1].data.map((d) => d.value)).toEqual([
+			[1.2, 1],
+			[1.45, 2]
+		]);
+	});
 	it('draws every chart from a report whose lists are null (older flai, empty selection)', () => {
 		const empty = {
 			...report,
@@ -203,7 +295,8 @@ describe('chart builders', () => {
 			throughput: null,
 			cfd: null,
 			aging: null,
-			burnup: null
+			burnup: null,
+			usage: undefined
 		} as unknown as Report;
 		for (const kind of KINDS) expect(() => build(kind, empty, light)).not.toThrow();
 		expect(normalise(empty).aging).toEqual([]);

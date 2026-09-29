@@ -1,6 +1,6 @@
 ---
 title: Charts
-updated: 2026-09-15
+updated: 2026-09-29
 status: active
 topics: [dashboard]
 ---
@@ -19,7 +19,7 @@ topics: [dashboard]
 
 ## Palette and rules
 
-Colours come from the validated reference palette in `flaiover/src/lib/viz/palette.ts` (eight categorical slots for light and for dark, both modes checked with the dataviz validator on 2026-09-17). Workflow states and natures have fixed slots so a state keeps its colour across charts. Rules applied in every builder (`src/lib/viz/charts.ts`): one y-axis per chart, thin marks (2px lines, bars capped at 24px, a surface-coloured seam between stacked segments), a legend whenever two or more series are shown, a tooltip on every mark, p50 and p85 as dashed reference lines, scatter colours at most three groups (the all-pairs rule) and folds the rest into "other", and every chart page offers a table view.
+Colours come from the validated reference palette in `flaiover/src/lib/viz/palette.ts` (eight categorical slots for light and for dark, both modes checked with the dataviz validator on 2026-09-17). Workflow states, natures, and model families (S-0143) have fixed slots so a state, a nature, or a model keeps its colour across charts. Rules applied in every builder (`src/lib/viz/charts.ts`): one y-axis per chart, thin marks (2px lines, bars capped at 24px, a surface-coloured seam between stacked segments), a legend whenever two or more series are shown, a tooltip on every mark, p50 and p85 as dashed reference lines, scatter colours at most three groups (the all-pairs rule) and folds the rest into "other", and every chart page offers a table view.
 
 ## Considered
 

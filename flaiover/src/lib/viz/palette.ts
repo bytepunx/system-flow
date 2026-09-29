@@ -27,6 +27,17 @@ export const NATURE_SLOT: Record<string, number> = {
 	experiment: 4
 };
 
+// Models get fixed slots by family, so a model keeps its colour on every chart and every
+// selection (S-0143). Another model takes slot 3 or 4, by its name, never 1 or 7, which the
+// charts keep for cancelled work and for work over the p85.
+export const MODEL_SLOT: Record<string, number> = { opus: 0, sonnet: 2, haiku: 5, fable: 6 };
+export function modelSlot(model: string): number {
+	for (const [family, slot] of Object.entries(MODEL_SLOT)) if (model.includes(family)) return slot;
+	let h = 0;
+	for (const ch of model) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+	return h % 2 === 0 ? 3 : 4;
+}
+
 export type Theme = {
 	dark: boolean;
 	surface: string;

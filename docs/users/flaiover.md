@@ -112,6 +112,12 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Throughput | Completions per week, by nature |
 | Aging work in progress | In-progress work against the p85 cycle time line |
 | Estimate versus actual | Estimated against actual hours |
+| Token rate | Tokens per hour of agent work, one point per item and model |
+| Cost | What each completed item cost, stacked by model; an asterisk marks an item whose cost is estimated in part |
+| Completion over time | Items done over time, per model |
+| Completion against cost | Items done against dollars spent, per model |
+
+The last four read what agents spent on each item: its tokens and cost, which flai records from the logs of the agents `flai serve` starts (see [Tokens and cost](flai.md#tokens-and-cost)). Each model keeps its colour on every chart. Until items carry usage, they say so and how to fill in stories worked before. An item's page shows its usage, per model, beside its other fields.
 
 ## Docs
 

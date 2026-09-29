@@ -1,7 +1,8 @@
 // Chart option builders: pure functions from a flai stats report to an
 // ECharts option, so they are unit-testable without a DOM. One y-axis per
 // chart, thin marks, legends for two or more series, tooltips everywhere.
-import { colorFor, NATURE_SLOT, STATE_SLOT, type Theme } from './palette';
+import { colorFor, modelSlot, NATURE_SLOT, STATE_SLOT, type Theme } from './palette';
+import { count, dollars } from '$lib/usage';
 
 export type Distribution = {
 	count: number;
@@ -41,6 +42,35 @@ export type ItemMetrics = {
 	estimate_seconds?: number;
 	estimate_error?: number;
 	age_seconds?: number;
+	usage?: ItemUsage;
+};
+/** What a model spent on an item, or on the items in a window (S-0143). */
+export type ModelSpend = {
+	model: string;
+	tokens: number;
+	cost: number;
+	tokens_per_hour?: number;
+	items?: number;
+};
+export type ItemUsage = {
+	source: string;
+	tokens: number;
+	cost: number;
+	seconds: number;
+	tokens_per_hour?: number;
+	estimated?: boolean;
+	models: ModelSpend[];
+};
+export type SpendPoint = { at: string; id: string; done: number; tokens: number; cost: number };
+export type UsageReport = {
+	items: number;
+	tokens: number;
+	cost: number;
+	seconds: number;
+	estimated?: boolean;
+	models: ModelSpend[];
+	done: SpendPoint[];
+	by_model: Record<string, SpendPoint[]>;
 };
 /**
  * Older flai builds emit null for empty lists; give every list the charts
@@ -54,7 +84,17 @@ export function normalise(r: Report): Report {
 		throughput: r.throughput ?? [],
 		cfd: r.cfd ?? [],
 		aging: r.aging ?? [],
-		burnup: r.burnup ?? {}
+		burnup: r.burnup ?? {},
+		usage: {
+			items: 0,
+			tokens: 0,
+			cost: 0,
+			seconds: 0,
+			...r.usage,
+			models: r.usage?.models ?? [],
+			done: r.usage?.done ?? [],
+			by_model: r.usage?.by_model ?? {}
+		}
 	};
 }
 
@@ -80,6 +120,8 @@ export type Report = {
 		parent?: string;
 		age: string;
 	}[];
+	/** Absent from a flai older than S-0143. */
+	usage?: UsageReport;
 };
 
 export const KINDS = [
@@ -89,7 +131,11 @@ export const KINDS = [
 	'time-in-state',
 	'throughput',
 	'aging',
-	'estimates'
+	'estimates',
+	'token-rate',
+	'cost',
+	'completion-time',
+	'completion-cost'
 ] as const;
 export type Kind = (typeof KINDS)[number];
 export const TITLES: Record<Kind, string> = {
@@ -99,10 +145,23 @@ export const TITLES: Record<Kind, string> = {
 	'time-in-state': 'Time in state',
 	throughput: 'Throughput',
 	aging: 'Aging work in progress',
-	estimates: 'Estimate versus actual'
+	estimates: 'Estimate versus actual',
+	'token-rate': 'Token rate',
+	cost: 'Cost',
+	'completion-time': 'Completion over time',
+	'completion-cost': 'Completion against cost'
 };
+/** The usage charts (S-0143): they need items that carry usage. */
+export const USAGE_KINDS: readonly Kind[] = [
+	'token-rate',
+	'cost',
+	'completion-time',
+	'completion-cost'
+];
 
 const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done'];
+/** An item type's plural: epics, stories, tasks. */
+export const plural = (type: string) => (type === 'story' ? 'stories' : `${type}s`);
 export const hours = (s: number) => Math.round((s / 3600) * 10) / 10;
 export const days = (s: number) => Math.round((s / 86400) * 100) / 100;
 
@@ -238,7 +297,7 @@ export function burnUp(r: Report, t: Theme, epic = 'all'): Opt {
 		xAxis: axisX(t, { type: 'time' }),
 		yAxis: axisY(t, {
 			type: 'value',
-			name: r.type + 's',
+			name: plural(r.type),
 			nameTextStyle: { color: t.textSecondary },
 			minInterval: 1
 		}),
@@ -436,6 +495,172 @@ export function estimates(r: Report, t: Theme): Opt {
 	});
 }
 
+/** Every model the report names, in order of name. */
+export function models(r: Report): string[] {
+	const names = new Set<string>();
+	for (const i of r.items) for (const m of i.usage?.models ?? []) names.add(m.model);
+	for (const m of r.usage?.models ?? []) names.add(m.model);
+	return [...names].sort();
+}
+/** A model's colour: its family's fixed slot, whichever models a report or a filter leaves. */
+function modelColor(t: Theme, model: string): string {
+	return t.series[modelSlot(model)];
+}
+const withUsage = (r: Report, epic?: string) =>
+	r.items.filter((i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic));
+
+/**
+ * Token rate: one point per item with usage and agent time, per model, x when it was completed
+ * (started, while open), y the model's tokens per agent hour. At most three models are coloured
+ * (the all-pairs rule); the rest fold into other.
+ */
+export function tokenRate(r: Report, t: Theme, epic?: string): Opt {
+	const all = models(r);
+	const pts = withUsage(r, epic).flatMap((i) =>
+		i
+			.usage!.models.filter((m) => m.tokens_per_hour !== undefined && (i.completed || i.started))
+			.map((m) => ({ i, m }))
+	);
+	const present = all.filter((name) => pts.some((p) => p.m.model === name));
+	const top = present.slice(0, 3);
+	const groups = [...top, ...(present.length > 3 ? ['other'] : [])];
+	const series = groups.map((g) => ({
+		name: g,
+		type: 'scatter',
+		symbolSize: 10,
+		itemStyle: {
+			color: g === 'other' ? t.textSecondary : modelColor(t, g),
+			borderColor: t.surface,
+			borderWidth: 2
+		},
+		data: pts
+			.filter((p) => (g === 'other' ? !top.includes(p.m.model) : p.m.model === g))
+			.map((p) => ({
+				value: [p.i.completed ?? p.i.started, p.m.tokens_per_hour! / 1e6],
+				id: p.i.id,
+				title: p.i.title,
+				model: p.m.model
+			}))
+	}));
+	return base(t, {
+		legend: legend(t, groups.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: {
+				data: { id: string; title: string; model: string; value: [string, number] };
+			}) =>
+				`${p.data.id} ${p.data.title}<br/>${p.data.model}: ${count(p.data.value[1] * 1e6)} tokens per agent hour`
+		}),
+		xAxis: axisX(t, { type: 'time' }),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'million tokens per agent hour',
+			nameTextStyle: { color: t.textSecondary }
+		}),
+		series
+	});
+}
+
+/**
+ * Cost: one bar per completed item with usage, in order of completion, stacked by model. An item
+ * whose cost is estimated in part carries an asterisk on its label and says so in the tooltip.
+ */
+export function cost(r: Report, t: Theme, epic?: string): Opt {
+	const all = models(r);
+	const done = withUsage(r, epic)
+		.filter((i) => i.completed)
+		.sort((a, b) => (a.completed! < b.completed! ? -1 : a.completed! > b.completed! ? 1 : 0));
+	const present = all.filter((name) =>
+		done.some((i) => i.usage!.models.some((m) => m.model === name))
+	);
+	const series = present.map((name) => ({
+		name,
+		type: 'bar',
+		stack: 'cost',
+		barMaxWidth: 24,
+		itemStyle: { color: modelColor(t, name), borderColor: t.surface, borderWidth: 1 },
+		data: done.map((i) => i.usage!.models.find((m) => m.model === name)?.cost ?? 0)
+	}));
+	return base(t, {
+		legend: legend(t, present.length > 1),
+		tooltip: tooltip(t, {
+			trigger: 'axis',
+			axisPointer: { type: 'shadow' },
+			formatter: (ps: { dataIndex: number; seriesName: string; value: number }[]) => {
+				const i = done[ps[0]?.dataIndex ?? 0];
+				if (!i) return '';
+				const lines = ps
+					.filter((p) => p.value > 0)
+					.map((p) => `${p.seriesName}: ${dollars(p.value)}`);
+				return `${i.id} ${i.title}<br/>${lines.join('<br/>')}<br/>total ${dollars(i.usage!.cost)}${i.usage!.estimated ? ' (estimated in part)' : ''}`;
+			}
+		}),
+		xAxis: axisX(t, {
+			type: 'category',
+			data: done.map((i) => (i.usage!.estimated ? `${i.id}*` : i.id)),
+			axisLabel: { color: t.textSecondary, rotate: done.length > 12 ? 45 : 0 }
+		}),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'US dollars',
+			nameTextStyle: { color: t.textSecondary }
+		}),
+		series
+	});
+}
+
+/** Items done cumulatively, per model, against time or against that model's cumulative cost. */
+function completion(r: Report, t: Theme, against: 'time' | 'cost'): Opt {
+	const all = models(r);
+	const byModel = r.usage?.by_model ?? {};
+	const present = all.filter((name) => (byModel[name] ?? []).length > 0);
+	const series = present.map((name) => ({
+		name,
+		type: 'line',
+		step: against === 'time' ? 'end' : undefined,
+		showSymbol: (byModel[name] ?? []).length < 40,
+		symbolSize: 8,
+		lineStyle: { width: 2, color: modelColor(t, name) },
+		itemStyle: { color: modelColor(t, name), borderColor: t.surface, borderWidth: 2 },
+		data: (byModel[name] ?? []).map((p) => ({
+			value: [against === 'time' ? p.at : p.cost, p.done],
+			id: p.id,
+			cost: p.cost,
+			at: p.at
+		}))
+	}));
+	return base(t, {
+		legend: legend(t, present.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: {
+				seriesName: string;
+				data: { id: string; cost: number; at: string; value: [unknown, number] };
+			}) =>
+				`${p.seriesName}: ${p.data.value[1]} done by ${p.data.id}<br/>${dollars(p.data.cost)} spent · ${p.data.at.slice(0, 10)}`
+		}),
+		xAxis: axisX(
+			t,
+			against === 'time'
+				? { type: 'time' }
+				: {
+						type: 'value',
+						name: 'US dollars spent',
+						nameLocation: 'middle',
+						nameGap: 28,
+						nameTextStyle: { color: t.textSecondary }
+					}
+		),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: `${plural(r.type)} done`,
+			nameTextStyle: { color: t.textSecondary },
+			minInterval: 1
+		}),
+		series
+	});
+}
+export const completionTime = (r: Report, t: Theme) => completion(r, t, 'time');
+export const completionCost = (r: Report, t: Theme) => completion(r, t, 'cost');
+
 export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt {
 	const r = normalise(report);
 	switch (kind) {
@@ -453,5 +678,13 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt 
 			return aging(r, t, epic);
 		case 'estimates':
 			return estimates(r, t);
+		case 'token-rate':
+			return tokenRate(r, t, epic);
+		case 'cost':
+			return cost(r, t, epic);
+		case 'completion-time':
+			return completionTime(r, t);
+		case 'completion-cost':
+			return completionCost(r, t);
 	}
 }

@@ -5,7 +5,17 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import Chart from '$lib/components/Chart.svelte';
-	import { build, human, KINDS, normalise, TITLES, type Kind, type Report } from '$lib/viz/charts';
+	import {
+		build,
+		human,
+		KINDS,
+		normalise,
+		TITLES,
+		USAGE_KINDS,
+		type Kind,
+		type Report
+	} from '$lib/viz/charts';
+	import { count, dollars } from '$lib/usage';
 	import { theme } from '$lib/viz/palette';
 	import KindChips from '$lib/components/KindChips.svelte';
 
@@ -26,6 +36,12 @@
 	const t = $derived(theme(dark));
 	const option = $derived(report ? build(kind, report, t, epic || undefined) : null);
 	const s = $derived(report?.summary);
+	const usageKind = $derived(USAGE_KINDS.includes(kind));
+	const spenders = $derived(
+		report?.items.filter(
+			(i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic)
+		) ?? []
+	);
 
 	async function load() {
 		error = null;
@@ -81,7 +97,7 @@
 			>{#each ['story', 'task', 'epic'] as ty (ty)}<option value={ty}>{ty}</option>{/each}</select
 		></label
 	>
-	{#if kind !== 'cfd' && kind !== 'throughput' && kind !== 'estimates'}
+	{#if kind !== 'cfd' && kind !== 'throughput' && kind !== 'estimates' && kind !== 'completion-time' && kind !== 'completion-cost'}
 		<label
 			>epic <select class="rounded border border-line-strong bg-surface px-2 py-1" bind:value={epic}
 				><option value="">all</option>{#each epics as e (e.id)}<option value={e.id}
@@ -90,7 +106,16 @@
 			></label
 		>
 	{/if}
-	{#if s}
+	{#if usageKind && report?.usage && report.usage.items > 0}
+		<span class="text-xs text-muted" data-testid="usage-summary"
+			>{report.usage.items} done · {count(report.usage.tokens)} tokens · {dollars(
+				report.usage.cost
+			)}{report.usage.estimated
+				? ' (estimated in part)'
+				: ''}{#each report.usage.models as m (m.model)}
+				· {m.model} {dollars(m.cost)}{/each}</span
+		>
+	{:else if s}
 		<span class="text-xs text-muted"
 			>completed {s.completed} · cancelled {s.cancelled} · WIP {s.wip} · throughput {s.throughput_per_week.toFixed(
 				1
@@ -104,6 +129,18 @@
 	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
 {:else if option}
 	<h1 class="mb-2 text-xl font-semibold">{TITLES[kind]}</h1>
+	{#if usageKind && report && !report.items.some((i) => i.usage)}
+		<p class="mb-2 text-sm text-muted" data-testid="usage-none">
+			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
+			starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
+		</p>
+	{/if}
+	{#if kind === 'cost'}
+		<p class="mb-2 text-xs text-muted">
+			* estimated in part: a task's share of its story's session, or a run that ended without its
+			totals.
+		</p>
+	{/if}
 	<Chart
 		{option}
 		theme={t}
@@ -132,6 +169,24 @@
 									class="pr-4">{a.age}{a.over_p85 ? ' (over p85)' : ''}</td
 								><td>{a.title}</td></tr
 							>{/each}</tbody
+					>
+				</table>
+			{:else if usageKind && report}
+				<table class="min-w-full" data-testid="usage-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">item</th><th class="pr-4">completed</th><th class="pr-4">model</th
+							><th class="pr-4">tokens</th><th class="pr-4">tokens/agent hour</th><th>cost</th></tr
+						></thead
+					><tbody
+						>{#each spenders as i (i.id)}{#each i.usage?.models ?? [] as m (m.model)}<tr
+									><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
+										>{i.completed?.slice(0, 10) ?? '-'}</td
+									><td class="pr-4">{m.model}</td><td class="pr-4">{count(m.tokens)}</td><td
+										class="pr-4"
+										>{m.tokens_per_hour !== undefined ? count(m.tokens_per_hour) : '-'}</td
+									><td>{dollars(m.cost)}{i.usage?.estimated ? '*' : ''}</td></tr
+								>{/each}{/each}</tbody
 					>
 				</table>
 			{:else if kind === 'throughput' && report}
