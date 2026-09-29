@@ -6,7 +6,7 @@ title: Usability Improvements
 status: backlog
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-29T05:31:24Z
+updated: 2026-09-29T05:45:39Z
 transitions: []
 tags: [dashboard]
 topics: [front-end]
@@ -20,5 +20,6 @@ There are a number of odd patterns that cause confusion in the dashboard UI/UX. 
 
 ## Stories
 - S-0150 Agent status and updates on board need to be collapsible
+- S-0151 Temporary banner notifications should be dismissible
 
 ## Notes
