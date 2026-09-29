@@ -41,7 +41,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
 | [show](#flai-show) | Print one work item with its children and history |
-| [stats](#flai-stats) | Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state |
+| [stats](#flai-stats) | Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost |
 | [story](#flai-story) | Create stories (flai show prints one, flai move transitions it) |
 | [stream](#flai-stream) | Open and append to agent narratives in wip/agents |
 | [task](#flai-task) | Create tasks (flai show prints one, flai move transitions it) |
@@ -100,7 +100,7 @@ Subcommands:
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
 - [show](#flai-show): Print one work item with its children and history
-- [stats](#flai-stats): Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state
+- [stats](#flai-stats): Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost
 - [story](#flai-story): Create stories (flai show prints one, flai move transitions it)
 - [stream](#flai-stream): Open and append to agent narratives in wip/agents
 - [task](#flai-task): Create tasks (flai show prints one, flai move transitions it)
@@ -2058,13 +2058,13 @@ flai show <id>
 
 ### flai stats
 
-Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state.
+Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost.
 
 ```text
 flai stats [flags]
 ```
 
-The reference implementation of design/system/metrics.md. Aggregates cover items completed in the window (default 30d); WIP and aging are as of now. --json includes per-item values, weekly throughput, burn-up and cumulative flow series, and aging items, for dashboards and scripts.
+The reference implementation of design/system/metrics.md. Aggregates cover items completed in the window (default 30d); WIP and aging are as of now. Items that carry usage add what agents spent on those done in the window: tokens, cost, and tokens per hour of agent work, in total and per model. --json includes per-item values, weekly throughput, burn-up and cumulative flow series, aging items, and usage with items done against time and cost, for dashboards and scripts.
 
 Examples:
 

@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -16,11 +17,14 @@ func newStatsCmd(a *app) *cobra.Command {
 	var since, typ, by string
 	c := &cobra.Command{
 		Use:   "stats",
-		Short: "Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state",
+		Short: "Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost",
 		Long: `The reference implementation of design/system/metrics.md. Aggregates cover
 items completed in the window (default 30d); WIP and aging are as of now.
+Items that carry usage add what agents spent on those done in the window:
+tokens, cost, and tokens per hour of agent work, in total and per model.
 --json includes per-item values, weekly throughput, burn-up and cumulative
-flow series, and aging items, for dashboards and scripts.`,
+flow series, aging items, and usage with items done against time and cost,
+for dashboards and scripts.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
   flai stats --type task --json`,
@@ -75,6 +79,7 @@ func parseWindow(s string) (time.Duration, error) {
 func printSummary(a *app, rep *metrics.Report) {
 	fmt.Fprintf(a.out, "%s completed in the last %gd (since %s)\n", workitem.Folder(rep.Type), rep.WindowDays, rep.WindowStart[:10])
 	printGroup(a, rep.Summary)
+	printUsage(a, rep.Usage)
 	for _, g := range rep.Groups {
 		fmt.Fprintf(a.out, "\n[%s]\n", g.Group)
 		printGroup(a, g)
@@ -128,6 +133,27 @@ func printGroup(a *app, s metrics.Summary) {
 			parts = append(parts, fmt.Sprintf("%s %.0f%%", st, s.InStateShare[st]*100))
 		}
 		fmt.Fprintf(a.out, "  time in state: %s\n", strings.Join(parts, " · "))
+	}
+}
+
+// printUsage prints what agents spent on the items done in the window, in
+// total and per model (S-0143).
+func printUsage(a *app, u metrics.UsageReport) {
+	if u.Items == 0 {
+		return
+	}
+	estimated := ""
+	if u.Estimated {
+		estimated = " (estimated in part)"
+	}
+	fmt.Fprintf(a.out, "  usage: %s tokens · $%.2f%s · %s of agent work, over %d done\n",
+		usage.Count(u.Tokens), u.Cost, estimated, (time.Duration(u.Seconds) * time.Second).String(), u.Items)
+	for _, m := range u.Models {
+		rate := ""
+		if m.TokensPerHour != nil {
+			rate = fmt.Sprintf(" · %s tokens/h", usage.Count(int64(*m.TokensPerHour)))
+		}
+		fmt.Fprintf(a.out, "    %s  %s tokens · $%.2f%s (%d)\n", m.Model, usage.Count(m.Tokens), m.Cost, rate, m.Items)
 	}
 }
 

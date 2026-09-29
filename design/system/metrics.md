@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-09-15
+updated: 2026-09-29
 status: active
 topics: [cli, dashboard]
 ---
@@ -44,6 +44,27 @@ Computed over a window (default 30 days, by `completed`) and groupable by `type`
 - **Cancellation rate**: cancelled over cancelled plus done.
 - **Time-in-state share**: total time per state as a share of total lead time, the chart that shows which part of the process to optimise.
 
+## Usage (S-0143)
+
+What agents spent on items, from each item's `usage` front matter ([work-hierarchy.md](work-hierarchy.md), [ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)). An item without `usage`, or with an empty one, has no usage values and is left out of every usage aggregate.
+
+| Value | Definition |
+|-------|------------|
+| Tokens | Sum over the item's models of `input + output + cache_read + cache_write` |
+| Cost | Sum over the item's models of `cost`, in US dollars |
+| Agent hours | `seconds / 3600` |
+| Token rate | Tokens over agent hours; absent when `seconds` is 0 |
+| Per model | The same for each model the item lists: its tokens, its cost, and its tokens over the item's agent hours |
+| Estimated | The item's `estimated` |
+
+Aggregates cover the items of the report's type that entered `done` in the window and carry usage; cancelled items are left out:
+
+- **Totals**: items, tokens, cost, agent seconds, and whether any is estimated.
+- **Per model**: for each model, the items it worked on, its tokens and cost over them, and its tokens over the agent hours of those items.
+- **Completion against time and cost**: the items in order of `completed` (then ID), each point carrying `completed`, the ID, and the cumulative count of items, tokens, and cost up to and including it. Per model, the same over the items that model worked on, counting that model's tokens and cost.
+
+`flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage` (`items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`).
+
 ## Charts
 
 | Chart | Data | Notes |
@@ -56,6 +77,10 @@ Computed over a window (default 30 days, by `completed`) and groupable by `type`
 | Throughput | Bar per week | With nature breakdown |
 | Aging WIP | Active items by age since started, against the 85th percentile | Flags items likely to be late |
 | Estimate vs actual | Scatter, only items with `estimate` | |
+| Token rate | One point per item with usage and agent time, per model: x completed date (started for an open item), y the model's tokens per agent hour | By type: epic, story, task |
+| Cost | Bar per item with usage, stacked by model | Estimated costs marked |
+| Completion against time | Per model, cumulative items done over time | The per model `done` series |
+| Completion against cost | Per model, cumulative items done over cumulative cost | The same series, x cost |
 
 ## Precision rules
 

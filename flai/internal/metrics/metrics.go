@@ -38,6 +38,8 @@ type ItemMetrics struct {
 	Estimate  *float64           `json:"estimate_seconds,omitempty"`
 	EstError  *float64           `json:"estimate_error,omitempty"`
 	Age       *float64           `json:"age_seconds,omitempty"` // active items: now - started
+	// Usage is what agents spent on it, when it carries any (S-0143).
+	Usage *ItemUsage `json:"usage,omitempty"`
 }
 
 // Distribution summarises a set of durations in seconds.
@@ -106,6 +108,8 @@ type Report struct {
 	Burnup      map[string][]DayPoint `json:"burnup"`
 	CFD         []DayPoint            `json:"cfd"`
 	Aging       []AgingItem           `json:"aging"`
+	// Usage is what agents spent on the items done in the window (S-0143).
+	Usage UsageReport `json:"usage"`
 }
 
 // Compute derives every metric from the items.
@@ -179,6 +183,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	}
 	rep.CFD = cfd(items, opt.Now)
 	rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85)
+	rep.Usage = spendReport(items, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
@@ -258,6 +263,7 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 	if !it.Closed() && !started.IsZero() {
 		m.Age = secs(now.Sub(started))
 	}
+	m.Usage = itemUsage(it.Usage)
 	return m
 }
 

@@ -623,10 +623,10 @@ Every finding is one line, `path:line: level: rule: message`, so editors and CI 
 flai stats                          # stories completed in the last 30 days
 flai stats --since 90d --by nature  # grouped
 flai stats --type task
-flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging
+flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging, usage
 ```
 
-The table shows completed and cancelled counts, throughput per week, current WIP, cycle, lead, and queue time distributions (p50, p85, max, mean), flow efficiency, time-in-state share, aging work against the cycle time p85, and throughput by week. Definitions are in [design/system/metrics.md](../../design/system/metrics.md); the dashboard uses the same numbers.
+The table shows completed and cancelled counts, throughput per week, current WIP, cycle, lead, and queue time distributions (p50, p85, max, mean), flow efficiency, time-in-state share, aging work against the cycle time p85, and throughput by week. When items done in the window carry `usage` ([Tokens and cost](#tokens-and-cost)), a `usage` line adds what agents spent on them: tokens, cost, and agent time, then per model its tokens, cost, tokens per hour of agent work, and how many items it worked on. `--json` has each item's usage under `items[].usage`, and under `usage` the totals, the models, and the items done in order with what had been done and spent by then (`done`, and per model `by_model`), which the dashboard charts against time and cost. Definitions are in [design/system/metrics.md](../../design/system/metrics.md); the dashboard uses the same numbers.
 
 ## Prime a session
 
