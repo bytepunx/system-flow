@@ -77,7 +77,7 @@ func TestFixtureNumbers(t *testing.T) {
 		t.Errorf("throughput buckets: %+v", rep.Throughput)
 	}
 	all := rep.Burnup["all"]
-	if len(all) == 0 || all[0].Date != "2026-07-01" || all[len(all)-1].Date != "2026-09-01" {
+	if len(all) == 0 || all[0].Date != "2026-08-02" || all[len(all)-1].Date != "2026-09-01" {
 		t.Fatalf("burnup range: %d points", len(all))
 	}
 	last := all[len(all)-1]
@@ -96,6 +96,45 @@ func TestFixtureNumbers(t *testing.T) {
 		if p.Date == "2026-08-02" && (p.Counts["in-progress"] != 1 || p.Counts["done"] != 1) {
 			t.Errorf("cfd 08-02: %v", p.Counts)
 		}
+	}
+}
+
+// S-0166: the series over time cover the window, not the whole history, and
+// throughput has a bucket for every week of it, done or not.
+func TestSeriesCoverTheWindow(t *testing.T) {
+	repo, err := workitem.Open("testdata/good")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	week := Compute(items, Options{Now: now, Since: 7 * 24 * time.Hour})
+	if all := week.Burnup["all"]; len(all) != 8 || all[0].Date != "2026-08-25" || all[0].Scope != 4 || all[0].Done != 3 {
+		t.Errorf("7d burnup: %+v", all)
+	}
+	if len(week.CFD) != 8 || week.CFD[0].Date != "2026-08-25" || week.CFD[7].Date != "2026-09-01" {
+		t.Errorf("7d cfd: %+v", week.CFD)
+	}
+	if len(week.Throughput) != 2 || week.Throughput[0].Week != "2026-W35" || week.Throughput[0].Start != "2026-08-24" ||
+		week.Throughput[0].Done != 0 || week.Throughput[1].Week != "2026-W36" || week.Throughput[1].Done != 0 {
+		t.Errorf("7d throughput: %+v", week.Throughput)
+	}
+	month := Compute(items, Options{Now: now})
+	var weeks []string
+	for _, w := range month.Throughput {
+		weeks = append(weeks, w.Week+":"+itoa(w.Done))
+	}
+	if got := strings.Join(weeks, " "); got != "2026-W31:0 2026-W32:1 2026-W33:1 2026-W34:0 2026-W35:0 2026-W36:0" {
+		t.Errorf("30d throughput: %s", got)
+	}
+	year := Compute(items, Options{Now: now, Since: 365 * 24 * time.Hour})
+	if all := year.Burnup["all"]; all[0].Date != "2026-07-01" || year.CFD[0].Date != "2026-07-01" {
+		t.Errorf("365d series start at the first item created: %s, %s", all[0].Date, year.CFD[0].Date)
+	}
+	if n := len(year.Throughput); n != 53 && n != 54 {
+		t.Errorf("365d throughput has %d weeks", n)
 	}
 }
 
@@ -129,10 +168,13 @@ func TestEmptyReportSerialisesListsNotNull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"items":[]`, `"throughput":[]`, `"cfd":[]`, `"aging":[]`} {
+	for _, want := range []string{`"items":[]`, `"cfd":[]`, `"aging":[]`} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("missing %s in %s", want, data)
 		}
+	}
+	if len(rep.Throughput) == 0 || rep.Throughput[0].Done != 0 {
+		t.Errorf("throughput has the window's weeks, done or not: %+v", rep.Throughput)
 	}
 	if strings.Contains(string(data), `"burnup":null`) {
 		t.Errorf("burnup must be an object: %s", data)

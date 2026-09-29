@@ -173,7 +173,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		}
 	}
 	rep.Throughput = throughput(items, start, opt.Now)
-	rep.Burnup["all"] = burnup(items, opt.Now)
+	rep.Burnup["all"] = burnup(items, start, opt.Now)
 	parents := map[string]bool{}
 	for _, it := range items {
 		if it.Parent != "" && !parents[it.Parent] {
@@ -184,10 +184,10 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 					sub = append(sub, x)
 				}
 			}
-			rep.Burnup[it.Parent] = burnup(sub, opt.Now)
+			rep.Burnup[it.Parent] = burnup(sub, start, opt.Now)
 		}
 	}
-	rep.CFD = cfd(items, opt.Now)
+	rep.CFD = cfd(items, start, opt.Now)
 	rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85)
 	rep.Usage = spendReport(items, start, opt.Now)
 	rep.Usage.Bucket = opt.Bucket
@@ -373,31 +373,34 @@ func groupKey(it *workitem.Item, by string) string {
 	return ""
 }
 
+// throughput has one bucket per ISO week from the one that holds the window's
+// start to the one that holds now, a week with nothing done among them (S-0166).
 func throughput(items []*workitem.Item, start, now time.Time) []WeekBucket {
-	buckets := map[string]*WeekBucket{}
+	var out []WeekBucket
+	at := map[string]int{}
+	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
+		y, w := m.ISOWeek()
+		at[weekKey(y, w)] = len(out)
+		out = append(out, WeekBucket{Week: weekKey(y, w), Start: m.Format("2006-01-02"), ByKey: map[string]int{}})
+	}
 	for _, it := range items {
 		done := it.FirstAt(workitem.Done)
 		if done.IsZero() || done.Before(start) || done.After(now) {
 			continue
 		}
 		y, w := done.ISOWeek()
-		key := weekKey(y, w)
-		b, ok := buckets[key]
-		if !ok {
-			// Monday of that ISO week
-			monday := done.AddDate(0, 0, -((int(done.Weekday()) + 6) % 7))
-			b = &WeekBucket{Week: key, Start: monday.Format("2006-01-02"), ByKey: map[string]int{}}
-			buckets[key] = b
-		}
+		b := &out[at[weekKey(y, w)]]
 		b.Done++
 		b.ByKey[it.Nature]++
 	}
-	var out []WeekBucket
-	for _, b := range buckets {
-		out = append(out, *b)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Week < out[j].Week })
 	return out
+}
+
+// monday is the start of the ISO week that holds t, at 00:00 UTC.
+func monday(t time.Time) time.Time {
+	t = t.UTC()
+	d := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+	return d.AddDate(0, 0, -((int(d.Weekday()) + 6) % 7))
 }
 
 func weekKey(y, w int) string {
@@ -411,7 +414,10 @@ func pad2(n int) string {
 	return string(rune('0'+n/10)) + string(rune('0'+n%10))
 }
 
-func dayRange(items []*workitem.Item, now time.Time) (time.Time, time.Time) {
+// dayRange is the days a series over time covers: from the one that holds the
+// window's start, or the first item's creation if that is later, to today
+// (S-0166).
+func dayRange(items []*workitem.Item, start, now time.Time) (time.Time, time.Time) {
 	var first time.Time
 	for _, it := range items {
 		c, _ := time.Parse(workitem.TimeFormat, it.Created)
@@ -421,6 +427,9 @@ func dayRange(items []*workitem.Item, now time.Time) (time.Time, time.Time) {
 	}
 	if first.IsZero() {
 		return time.Time{}, time.Time{}
+	}
+	if first.Before(start) {
+		first = start
 	}
 	first = time.Date(first.Year(), first.Month(), first.Day(), 0, 0, 0, 0, time.UTC)
 	last := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
@@ -444,8 +453,8 @@ func stateAt(it *workitem.Item, endOfDay time.Time) string {
 	return state
 }
 
-func burnup(items []*workitem.Item, now time.Time) []DayPoint {
-	first, last := dayRange(items, now)
+func burnup(items []*workitem.Item, start, now time.Time) []DayPoint {
+	first, last := dayRange(items, start, now)
 	if first.IsZero() {
 		return nil
 	}
@@ -468,8 +477,8 @@ func burnup(items []*workitem.Item, now time.Time) []DayPoint {
 	return out
 }
 
-func cfd(items []*workitem.Item, now time.Time) []DayPoint {
-	first, last := dayRange(items, now)
+func cfd(items []*workitem.Item, start, now time.Time) []DayPoint {
+	first, last := dayRange(items, start, now)
 	if first.IsZero() {
 		return nil
 	}
