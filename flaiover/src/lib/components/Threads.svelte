@@ -54,6 +54,13 @@
 			composing = true;
 		}
 	});
+	/** Left and Right page while an arrow of a pager has focus (S-0153). */
+	function keys(e: KeyboardEvent) {
+		const step = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+		if (!step) return;
+		e.preventDefault();
+		go(step);
+	}
 
 	async function load() {
 		const r = await api(`/api/threads?on=${encodeURIComponent(on)}${showResolved ? '&all=1' : ''}`);
@@ -107,9 +114,43 @@
 	};
 </script>
 
+<!-- One thread at a time (S-0133). The pager reads `← n of m →` and sits beside the heading,
+     with a second one under the thread for a reader who has scrolled to its end (S-0153). -->
+{#snippet pager(where: 'above' | 'below')}
+	{#if threads.length > 1}
+		<nav
+			class="flex items-center gap-1 text-xs {where === 'below' ? 'mt-3' : ''}"
+			aria-label="threads {where}"
+			data-pager={where}
+		>
+			<button
+				type="button"
+				class="rounded border border-line-strong px-2 py-1 hover:bg-raised disabled:opacity-40"
+				aria-label="previous thread"
+				onkeydown={keys}
+				disabled={index === 0}
+				onclick={() => go(-1)}>←</button
+			>
+			<span
+				class="min-w-[4.5em] text-center tabular-nums"
+				aria-live={where === 'above' ? 'polite' : 'off'}>{index + 1} of {threads.length}</span
+			>
+			<button
+				type="button"
+				class="rounded border border-line-strong px-2 py-1 hover:bg-raised disabled:opacity-40"
+				aria-label="next thread"
+				onkeydown={keys}
+				disabled={index === threads.length - 1}
+				onclick={() => go(1)}>→</button
+			>
+		</nav>
+	{/if}
+{/snippet}
+
 <section class="mt-6 text-sm" data-threads={on}>
-	<div class="flex items-center gap-3">
+	<div class="flex flex-wrap items-center gap-3">
 		<h2 class="font-medium">Threads</h2>
+		{@render pager('above')}
 		<label class="text-xs text-muted"
 			><input type="checkbox" bind:checked={showResolved} /> show resolved</label
 		>
@@ -157,34 +198,6 @@
 	{#if threads.length === 0}
 		<p class="mt-2 text-xs text-muted">No threads here.</p>
 	{/if}
-	{#snippet pager(where: 'above' | 'below')}
-		{#if threads.length > 1}
-			<nav
-				class="mt-3 flex items-center gap-2 text-xs"
-				aria-label="threads {where}"
-				data-pager={where}
-			>
-				<span class="text-muted" aria-live={where === 'above' ? 'polite' : 'off'}
-					>{index + 1} of {threads.length}</span
-				>
-				<button
-					type="button"
-					class="rounded border border-line-strong px-1.5 disabled:opacity-40"
-					aria-label="previous thread"
-					disabled={index === 0}
-					onclick={() => go(-1)}>←</button
-				>
-				<button
-					type="button"
-					class="rounded border border-line-strong px-1.5 disabled:opacity-40"
-					aria-label="next thread"
-					disabled={index === threads.length - 1}
-					onclick={() => go(1)}>→</button
-				>
-			</nav>
-		{/if}
-	{/snippet}
-	{@render pager('above')}
 	{#if shown}
 		{@const t = shown}
 		<article class="mt-3 rounded border border-line bg-surface p-3" data-thread={t.id}>

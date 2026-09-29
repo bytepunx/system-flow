@@ -105,6 +105,44 @@ describe('Threads', () => {
 		}
 	});
 
+	it('reads previous, the count, then next, with the upper pager beside the heading (S-0153)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		const [above, below] = pagers();
+		for (const p of [above, below])
+			expect([...p.children].map((e) => e.getAttribute('aria-label') ?? e.textContent)).toEqual([
+				'previous thread',
+				'1 of 3',
+				'next thread'
+			]);
+		expect(above.parentElement!.querySelector('h2')!.textContent).toBe('Threads');
+	});
+
+	it("pages with the left and right arrow keys on a pager's arrows, and stops at the ends (S-0153)", async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		const press = (p: HTMLElement, key: string) => {
+			const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+			(p.querySelector('button:not(:disabled)') as HTMLButtonElement).dispatchEvent(e);
+			flushSync();
+			return e;
+		};
+		const shownId = () => document.querySelector('article')!.dataset.thread;
+		expect(press(pagers()[0], 'ArrowRight').defaultPrevented).toBe(true);
+		expect(shownId()).toBe('TH-0002');
+		press(pagers()[1], 'ArrowRight');
+		press(pagers()[1], 'ArrowRight');
+		expect(shownId()).toBe('TH-0003');
+		press(pagers()[0], 'ArrowLeft');
+		expect(shownId()).toBe('TH-0002');
+		expect(press(pagers()[0], 'Enter').defaultPrevented).toBe(false);
+		expect(shownId()).toBe('TH-0002');
+	});
+
 	it('moves between threads with the arrows, above or below, and stops at the ends (S-0133)', async () => {
 		api.mockResolvedValue({ ok: true, json: async () => [1, 2, 3].map(numbered) });
 		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
