@@ -6,7 +6,7 @@ title: Usability Improvements
 status: in-progress
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-29T23:30:41Z
+updated: 2026-09-29T23:43:11Z
 transitions:
   - to: ready
     at: 2026-09-29T07:07:18Z
@@ -19,14 +19,15 @@ topics: [front-end]
 touches: [flaiover/src]
 usage:
   source: sum
-  seconds: 3593
+  seconds: 4306
+  estimated: true
   models:
     - model: claude-opus-5-5
-      input: 970
-      output: 241415
-      cache_read: 57151441
-      cache_write: 1024810
-      cost: 24.4611
+      input: 1160
+      output: 242648
+      cache_read: 70815780
+      cache_write: 1228464
+      cost: 29.9776
 ---
 # E-0013 Usability Improvements
 
@@ -43,5 +44,6 @@ There are a number of odd patterns that cause confusion in the dashboard UI/UX. 
 - S-0165 Tokens rate chart should express token use in minutes
 - S-0166 Charts ignore the window drop-down
 - S-0167 Right click menu for the board
+- S-0168 Several Charts Don't Use Window correctly
 
 ## Notes
