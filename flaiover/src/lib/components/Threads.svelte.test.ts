@@ -230,6 +230,54 @@ describe('Threads', () => {
 		expect(pagers()[0].querySelector('span')!.textContent).toBe('3 of 3');
 	});
 
+	const long = (n: number, entries: number) => ({
+		...numbered(n),
+		entries: Array.from({ length: entries }, (_, i) => ({
+			at: `2026-09-26T07:0${i}:00Z`,
+			author: i % 2 ? 'alex' : 'agent',
+			text: `Entry ${i + 1}.`
+		}))
+	});
+	const entryTexts = () =>
+		[...document.querySelectorAll('article > ol > li .prose')].map((e) => e.textContent!.trim());
+	const toggle = () => document.querySelector('article button[data-earlier]') as HTMLButtonElement;
+
+	it('shows a long thread by its last two entries, the earlier ones behind a toggle (S-0153)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [long(1, 5), long(2, 3)] });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		expect(entryTexts()).toEqual(['Entry 4.', 'Entry 5.']);
+		expect(toggle().textContent).toBe('show 3 earlier entries');
+		expect(toggle().getAttribute('aria-expanded')).toBe('false');
+		toggle().click();
+		flushSync();
+		expect(entryTexts()).toEqual(['Entry 1.', 'Entry 2.', 'Entry 3.', 'Entry 4.', 'Entry 5.']);
+		expect(toggle().textContent).toBe('hide earlier entries');
+		expect(toggle().getAttribute('aria-expanded')).toBe('true');
+
+		// Each thread keeps its own choice while paging.
+		arrow(pagers()[0], 'next').click();
+		flushSync();
+		expect(entryTexts()).toEqual(['Entry 2.', 'Entry 3.']);
+		expect(toggle().textContent).toBe('show 1 earlier entry');
+		arrow(pagers()[0], 'previous').click();
+		flushSync();
+		expect(entryTexts()).toHaveLength(5);
+		toggle().click();
+		flushSync();
+		expect(entryTexts()).toEqual(['Entry 4.', 'Entry 5.']);
+	});
+
+	it('shows every entry of a thread of two, with no toggle (S-0153)', async () => {
+		api.mockResolvedValue({ ok: true, json: async () => [long(1, 2)] });
+		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+		await settle();
+
+		expect(entryTexts()).toEqual(['Entry 1.', 'Entry 2.']);
+		expect(toggle()).toBeNull();
+	});
+
 	it('shows no pager for a single thread (S-0133)', async () => {
 		api.mockResolvedValue({ ok: true, json: async () => [numbered(1)] });
 		c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });

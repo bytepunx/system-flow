@@ -47,6 +47,10 @@
 		)
 	);
 	const shown = $derived(threads[index]);
+	// A thread longer than LATEST entries shows only its last ones until the reader asks for the
+	// earlier ones, per thread and kept while paging (S-0153, TH-0035).
+	const LATEST = 2;
+	let earlier = $state<Record<string, boolean>>({});
 
 	$effect(() => {
 		if (compose && writable) {
@@ -200,6 +204,7 @@
 	{/if}
 	{#if shown}
 		{@const t = shown}
+		{@const hidden = earlier[t.id] ? 0 : Math.max(0, t.entries.length - LATEST)}
 		<article class="mt-3 rounded border border-line bg-surface p-3" data-thread={t.id}>
 			<header class="flex flex-wrap items-center gap-2">
 				<span class="font-mono text-xs text-muted">{t.id}</span>
@@ -213,10 +218,23 @@
 					>
 				{/if}
 			</header>
+			<!-- A long thread shows its last entries, the earlier ones behind a toggle (S-0153). -->
+			{#if t.entries.length > LATEST}
+				<button
+					type="button"
+					class="mt-2 text-xs text-muted underline"
+					data-earlier={t.id}
+					aria-expanded={!hidden}
+					onclick={() => (earlier[t.id] = !earlier[t.id])}
+					>{hidden
+						? `show ${hidden} earlier ${hidden === 1 ? 'entry' : 'entries'}`
+						: 'hide earlier entries'}</button
+				>
+			{/if}
 			<!-- The operator's entries sit on the right in the primary tint, agents' on the left in
 			     the neutral one, so who said what reads at a glance (S-0127). -->
 			<ol class="mt-2 space-y-2">
-				{#each t.entries as e (e.at + e.author)}
+				{#each t.entries.slice(hidden) as e (e.at + e.author)}
 					<li
 						class="flex flex-col text-sm {e.operator ? 'items-end' : 'items-start'}"
 						data-from={e.operator ? 'operator' : 'agent'}
