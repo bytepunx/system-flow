@@ -82,4 +82,14 @@ What is not a cause: the file watchers. `flai serve` walks the three folders eve
 
 ## Stories
 
-Each cause has a backlog story under E-0012; they are listed at the end of the epic.
+Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`.
+
+| # | Story |
+|---|-------|
+| 1 | [S-0156](../../wip/kanban/stories/S-0156-flai-serve-and-flai-mcp-keep-parsed-work-items-between-requests-and-read-again-only-the-files-that-changed.md) flai serve and flai mcp keep parsed work items between requests and read again only the files that changed |
+| 2 | [S-0157](../../wip/kanban/stories/S-0157-pending-releases-are-worked-out-without-starting-a-git-process-per-accepted-item.md) Pending releases are worked out without starting a git process per accepted item |
+| 3 | [S-0158](../../wip/kanban/stories/S-0158-the-designer-s-inbox-finds-overlapping-touches-without-running-the-whole-check.md) The designer's inbox finds overlapping touches without running the whole check |
+| 4 | [S-0159](../../wip/kanban/stories/S-0159-the-dashboard-s-reads-are-answered-in-flai-serve-s-process-not-by-starting-flai.md) The dashboard's reads are answered in flai serve's process, not by starting flai |
+| 5 | [S-0160](../../wip/kanban/stories/S-0160-a-flai-process-starts-in-milliseconds-whatever-the-host-s-path.md) A flai process starts in milliseconds whatever the host's PATH |
+| 6 | [S-0161](../../wip/kanban/stories/S-0161-the-dashboard-forgets-only-the-answers-a-changed-file-affects-and-gathers-changes-that-arrive-together.md) The dashboard forgets only the answers a changed file affects, and gathers changes that arrive together |
+| 7 | [S-0162](../../wip/kanban/stories/S-0162-the-items-and-documents-pages-ask-for-what-they-show-not-the-whole-archive-and-every-file-s-front-matter.md) The items and documents pages ask for what they show, not the whole archive and every file's front matter |
