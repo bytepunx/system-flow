@@ -88,6 +88,7 @@ there does.`,
 			if repo, err := a.projectOrNone(); err == nil && repo == nil {
 				folder, _ = a.workingDir()
 			}
+			servePprof(ctx, a.logger())
 			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, ImportRoots: a.importRoots})
 		},
 	}

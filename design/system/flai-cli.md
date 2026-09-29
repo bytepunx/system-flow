@@ -132,6 +132,7 @@ flai/
 │   ├── atomicfile/      # replace a file in one step: a reader sees the old or the new, never half (S-0100)
 │   ├── execx/           # git and docker behind a Runner interface
 │   ├── logx/            # slog setup per the logging convention: levels incl. fatal, env and flag
+│   ├── perf/            # a request's phases, timed beneath its transport; one "request answered" event (S-0152)
 │   ├── narrative/       # wip/agents files
 │   ├── check/           # reference validator, rule names are stable identifiers
 │   ├── conventions/     # loads and validates design/conventions
@@ -150,6 +151,8 @@ flai/
 ```
 
 External processes: `git` and `docker` are invoked as subprocesses and must be on `PATH`. See ADR 0010.
+
+Every request `flai serve` answers over the channel, and every request `flai mcp` answers on stdio or HTTP, is timed inside flai from when it was read to when its answer is ready to write, and logged once as `request answered` with its method or tool, duration, size, and phases (S-0152). `perf.Track` marks a phase in the context the request carries; the host API's read methods mark opening the repository, listing items, loading the board, threads, narratives, the check, documents, and search, and `execx.Timed` and the write table mark each process flai starts. The dashboard's own duration for a request, less flai's, is the transport. `flai hostapi --timing` times one method with no transport at all, and `FLAI_PPROF_ADDR` offers Go's profiles on a loopback address. What the measurements found is in [server-performance.md](server-performance.md).
 
 Work items, `board.md`, narratives and their index, and threads (with the block mirrored into a narrative) are written with `atomicfile.WriteFile`, a temporary file beside the target renamed over it (S-0100). They are read while they change: by the MCP server's `inbox` and `wait_for_events`, by `flai serve`'s watcher, and by the dashboard through flai. `os.WriteFile` truncates first, and a reader in between saw an empty file ("no front matter", I-0036).
 

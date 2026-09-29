@@ -18,6 +18,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1567,7 +1568,9 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				execCtx, execCancel = context.WithTimeout(context.Background(), sp.detachTimeout)
 				defer execCancel()
 			}
+			done := perf.Track(ctx, perf.Exec("flai", args))
 			ran, err := run(execCtx, r)
+			done()
 			res, rerr := outcome(ran, err, sp.exits)
 			// A detached write's own ctx being cancelled is not news — it is
 			// the very connection this write's success can sever — so only

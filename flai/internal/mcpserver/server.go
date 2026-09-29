@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/search"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -192,8 +193,10 @@ type InboxOut struct {
 	Omitted     int                  `json:"changes_omitted" jsonschema:"how many older changes were left out of changes because of the cap; they are not reported later"`
 }
 
-func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
+func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
+	done := perf.Track(ctx, "threads.read")
 	all, err := threads.List(s.repo)
+	done()
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
@@ -214,7 +217,7 @@ func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*
 		}
 		out.Threads = append(out.Threads, sum)
 	}
-	view, err := s.boardView(false)
+	view, err := s.boardView(ctx, false)
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
@@ -222,29 +225,43 @@ func (s *server) inbox(_ context.Context, _ *mcp.CallToolRequest, in InboxIn) (*
 	if out.Ready == nil {
 		out.Ready = []workitem.BoardCard{}
 	}
-	if out.Changes, out.Omitted, err = s.catchUp(); err != nil {
+	done = perf.Track(ctx, "changes.read")
+	out.Changes, out.Omitted, err = s.catchUp()
+	done()
+	if err != nil {
 		return nil, InboxOut{}, err
 	}
 	return nil, out, nil
 }
 
-func (s *server) boardView(all bool) (workitem.BoardView, error) {
+func (s *server) boardView(ctx context.Context, all bool) (workitem.BoardView, error) {
 	// true: a done story stays visible until it is published (S-0087), which
 	// NewBoardView decides from PendingIDs, not from this flag.
+	done := perf.Track(ctx, "repo.list")
 	items, err := s.repo.List(true)
+	done()
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
+	done = perf.Track(ctx, "board.load")
 	board, err := s.repo.LoadBoard()
+	done()
 	if err != nil {
 		return workitem.BoardView{}, err
 	}
-	view := workitem.NewBoardView(items, board, s.now(), all, release.PendingIDs(s.runner, s.repo.Root, s.repo.Manifest, s.repo), s.repo.Manifest.Projects)
+	runner := execx.Timed(ctx, s.runner)
+	done = perf.Track(ctx, "release.pending")
+	ids := release.PendingIDs(runner, s.repo.Root, s.repo.Manifest, s.repo)
+	done()
+	view := workitem.NewBoardView(items, board, s.now(), all, ids, s.repo.Manifest.Projects)
 	root := s.repo.MainRoot
 	if root == "" {
 		root = s.repo.Root
 	}
-	if u := pending.Detect(s.runner, root); u.Pending() {
+	done = perf.Track(ctx, "pending.detect")
+	u := pending.Detect(runner, root)
+	done()
+	if u.Pending() {
 		view.Unpushed = u
 	}
 	return view, nil
@@ -256,8 +273,8 @@ type BoardIn struct {
 	All     bool   `json:"all,omitempty" jsonschema:"include epics and tasks"`
 }
 
-func (s *server) board(_ context.Context, _ *mcp.CallToolRequest, in BoardIn) (*mcp.CallToolResult, workitem.BoardView, error) {
-	view, err := s.boardView(in.All)
+func (s *server) board(ctx context.Context, _ *mcp.CallToolRequest, in BoardIn) (*mcp.CallToolResult, workitem.BoardView, error) {
+	view, err := s.boardView(ctx, in.All)
 	if view.Breaches == nil {
 		view.Breaches = []string{}
 	}

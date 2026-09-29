@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/search"
 )
 
@@ -136,7 +137,7 @@ type SearchResult struct {
 func searchMethods() map[string]channel.Method {
 	return map[string]channel.Method{
 		// search.query: full text over design and wip, docs on request.
-		"search.query": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"search.query": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Q     string `json:"q"`
 				Docs  bool   `json:"docs"`
@@ -151,10 +152,13 @@ func searchMethods() map[string]channel.Method {
 			if in.Limit < 0 || in.Limit > 100 {
 				return nil, bad("limit is between 1 and 100")
 			}
+			done := perf.Track(ctx, "search.index")
 			ix, err := searchIndex(p.Root)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
+			defer perf.Track(ctx, "search.query")()
 			q := strings.TrimSpace(in.Q)
 			return SearchResult{Query: q, Indexed: ix.Size(), Hits: ix.Search(q, in.Docs, in.Limit)}, nil
 		},

@@ -185,3 +185,28 @@ func (r *Recorder) Log(logger *slog.Logger, a Answered, slow time.Duration) {
 	}
 	logger.LogAttrs(ctx, level, "request answered", attrs...)
 }
+
+// Exec names the phase of running a program: "exec.git.log" for
+// git -C dir log --oneline, "exec.flai.stream.diff" for flai stream diff
+// S-0001 --json. Flags and the value of -C and -c are skipped, and at most
+// two words are kept, so that the name says what ran and not on what.
+func Exec(program string, args []string) string {
+	name := "exec." + program
+	words := 0
+	for i := 0; i < len(args) && words < 2; i++ {
+		a := args[i]
+		if a == "-C" || a == "-c" {
+			i++
+			continue
+		}
+		if strings.HasPrefix(a, "-") || strings.ContainsAny(a, "/=. ") || (words > 0 && strings.ToLower(a) != a) {
+			if words > 0 {
+				break
+			}
+			continue
+		}
+		name += "." + a
+		words++
+	}
+	return name
+}

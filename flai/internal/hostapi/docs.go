@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -205,7 +206,8 @@ var adrFile = regexp.MustCompile(`^\d{4}-.*\.md$`)
 func docMethods() map[string]channel.Method {
 	return map[string]channel.Method{
 		// docs.tree: the manifest's three folders, every Markdown file with its front matter.
-		"docs.tree": func(_ context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+		"docs.tree": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+			defer perf.Track(ctx, "docs.walk")()
 			dirs, err := layoutDirs(p.Root)
 			if err != nil {
 				return nil, failed(err)
@@ -218,7 +220,7 @@ func docMethods() map[string]channel.Method {
 		},
 
 		// doc.get: one Markdown file under those folders.
-		"doc.get": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"doc.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Path string `json:"path"`
 			}
@@ -229,7 +231,9 @@ func docMethods() map[string]channel.Method {
 			if e != nil {
 				return nil, e
 			}
+			done := perf.Track(ctx, "doc.read")
 			data, err := os.ReadFile(abs)
+			done()
 			if err != nil {
 				return nil, &channel.Error{Code: NotFound, Message: "not found: " + in.Path}
 			}
@@ -238,7 +242,8 @@ func docMethods() map[string]channel.Method {
 		},
 
 		// adrs.list: the decisions, from their front matter; the template (0000) is not one.
-		"adrs.list": func(_ context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+		"adrs.list": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+			defer perf.Track(ctx, "adrs.read")()
 			dirs, err := layoutDirs(p.Root)
 			if err != nil {
 				return nil, failed(err)

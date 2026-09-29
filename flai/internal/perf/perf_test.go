@@ -117,3 +117,23 @@ func TestSlowReadsItsVariable(t *testing.T) {
 		}
 	}
 }
+
+func TestExecNamesWhatRanNotOnWhat(t *testing.T) {
+	for _, tc := range []struct {
+		program string
+		args    []string
+		want    string
+	}{
+		{"git", []string{"-C", "/repo", "log", "--oneline", "main..story/S-0001"}, "exec.git.log"},
+		{"git", []string{"-c", "core.quotepath=off", "status", "--porcelain"}, "exec.git.status"},
+		{"git", []string{"rev-parse", "HEAD"}, "exec.git.rev-parse"},
+		{"flai", []string{"stream", "diff", "S-0001", "--json"}, "exec.flai.stream.diff"},
+		{"flai", []string{"show", "S-0001", "--json"}, "exec.flai.show"},
+		{"flai", []string{"--json", "stats"}, "exec.flai.stats"},
+		{"git", nil, "exec.git"},
+	} {
+		if got := Exec(tc.program, tc.args); got != tc.want {
+			t.Errorf("%s %v: %q, want %q", tc.program, tc.args, got, tc.want)
+		}
+	}
+}

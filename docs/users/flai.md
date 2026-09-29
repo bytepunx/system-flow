@@ -86,6 +86,21 @@ LOG_FORMAT=json flai check 2>events.jsonl
 
 A request that takes `FLAI_SLOW_REQUEST` or longer is logged at `INFO`; the rest at `DEBUG`. `wait_for_work` and `wait_for_events` wait by design and are logged at `DEBUG` however long they take.
 
+Phases are named for what the time went to: `repo.open`, `repo.list` (every work item, the archive included when the method asks for it), `repo.get`, `board.load`, `board.view`, `release.pending`, `pending.detect`, `threads.read`, `threads.view`, `narratives.read`, `check.run`, `docs.walk`, `doc.read`, `adrs.read`, `search.index`, `search.query`, `agent.state`, `agent.stream`, `manifest.load`, `changes.read`, `encode`; and `exec.<program>.<command>` for each process flai started to answer, such as `exec.git.log` or `exec.flai.stream.diff`.
+
+To time one method with no transport at all, ask it of `flai hostapi` with `--timing`; its event goes to stderr at `INFO` whatever it took:
+
+```bash
+flai hostapi --timing board.get '{"all":true}' >/dev/null
+```
+
+To see where `flai serve` spends its CPU, start it with `FLAI_PPROF_ADDR` set to a loopback address and read a profile with `go tool pprof`:
+
+```bash
+FLAI_PPROF_ADDR=127.0.0.1:6060 flai serve
+go tool pprof 'http://127.0.0.1:6060/debug/pprof/profile?seconds=30'
+```
+
 ## Configuration
 
 `flai` keeps its settings in one JSON file per user: `~/.flai/config.json`, or the path in `--config`, or else `FLAI_CONFIG`. The first command that needs it creates it with these defaults:

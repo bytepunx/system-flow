@@ -6,6 +6,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -43,8 +44,8 @@ type WorkOut struct {
 // keeps its place and is offered once clear, S-0128). A thread that was already
 // awaiting the agent before is not work here, so one the agent cannot answer
 // does not wake it again and again; inbox lists every thread awaiting it.
-func (s *server) work(since time.Time) (WorkOut, error) {
-	view, err := s.boardView(false)
+func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
+	view, err := s.boardView(ctx, false)
 	if err != nil {
 		return WorkOut{}, err
 	}
@@ -59,7 +60,9 @@ func (s *server) work(since time.Time) (WorkOut, error) {
 			return out, nil
 		}
 	}
+	done := perf.Track(ctx, "threads.read")
 	all, err := threads.List(s.repo)
+	done()
 	if err != nil {
 		return WorkOut{}, err
 	}
@@ -112,7 +115,7 @@ func (s *server) waitForWork(ctx context.Context, _ *mcp.CallToolRequest, in Wor
 		s.workMu.Unlock()
 		return out
 	}
-	out, err := s.work(since)
+	out, err := s.work(ctx, since)
 	if err != nil {
 		return nil, WorkOut{}, err
 	}
@@ -140,7 +143,7 @@ func (s *server) waitForWork(ctx context.Context, _ *mcp.CallToolRequest, in Wor
 				continue
 			}
 			before = now
-			if out, err = s.work(since); err != nil {
+			if out, err = s.work(ctx, since); err != nil {
 				return nil, WorkOut{}, err
 			}
 			if out.Reason != "" {

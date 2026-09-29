@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -139,7 +140,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 	if now == nil {
 		now = time.Now
 	}
-	open := func(p channel.Project) (*workitem.Repo, *channel.Error) {
+	open := func(ctx context.Context, p channel.Project) (*workitem.Repo, *channel.Error) {
+		defer perf.Track(ctx, "repo.open")()
 		repo, err := workitem.Open(p.Root)
 		if err != nil {
 			return nil, failed(err)
@@ -147,8 +149,10 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		return repo, nil
 	}
 	table := map[string]channel.Method{
-		"project.info": func(_ context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+		"project.info": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+			done := perf.Track(ctx, "manifest.load")
 			m, err := manifest.Load(filepath.Join(p.Root, manifest.File))
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -183,13 +187,15 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return out, nil
 		},
 
-		"agent.status": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"agent.status": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			if e := params(raw, &struct{}{}); e != nil {
 				return nil, e
 			}
 			out := map[string]any{"enabled": host.enabled(ActionAgent, p.Root)}
 			if host.Agent != nil {
+				done := perf.Track(ctx, "agent.state")
 				out["state"] = host.Agent(p.Root)
+				done()
 			}
 			return out, nil
 		},
@@ -197,7 +203,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// agent.stream: what the newest agent flai serve started for a story
 		// said and did, read from its log from the byte offset after, or its
 		// tail when after is absent (S-0142). Read-only, like agent.status.
-		"agent.stream": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"agent.stream": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Story string `json:"story"`
 				After *int64 `json:"after"`
@@ -218,7 +224,9 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if host.AgentStream == nil {
 				return nil, &channel.Error{Code: NotFound, Message: "flai serve starts no agents here, so there is no stream to read"}
 			}
+			done := perf.Track(ctx, "agent.stream")
 			out, err := host.AgentStream(p.Root, in.Story, after)
+			done()
 			if errors.Is(err, ErrNoAgent) {
 				return nil, &channel.Error{Code: NotFound, Message: err.Error()}
 			}
@@ -229,30 +237,38 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		},
 
 		// board.get: the board as flai board --json gives it. all adds epics and tasks.
-		"board.get": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"board.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				All bool `json:"all"`
 			}
 			if e := params(raw, &in); e != nil {
 				return nil, e
 			}
-			repo, e := open(p)
+			repo, e := open(ctx, p)
 			if e != nil {
 				return nil, e
 			}
+			done := perf.Track(ctx, "repo.list")
 			items, err := repo.List(true)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
+			done = perf.Track(ctx, "board.load")
 			board, err := repo.LoadBoard()
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
-			return workitem.NewBoardView(items, board, now(), in.All, release.PendingIDs(execx.System{}, repo.Root, repo.Manifest, repo), repo.Manifest.Projects), nil
+			done = perf.Track(ctx, "release.pending")
+			pending := release.PendingIDs(execx.Timed(ctx, execx.System{}), repo.Root, repo.Manifest, repo)
+			done()
+			defer perf.Track(ctx, "board.view")()
+			return workitem.NewBoardView(items, board, now(), in.All, pending, repo.Manifest.Projects), nil
 		},
 
 		// items.list: by type and state; the archive and the bodies on request.
-		"items.list": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"items.list": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Type     string `json:"type"`
 				Status   string `json:"status"`
@@ -268,11 +284,13 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if in.Status != "" && !isState(in.Status) {
 				return nil, bad("%q is not a state", in.Status)
 			}
-			repo, e := open(p)
+			repo, e := open(ctx, p)
 			if e != nil {
 				return nil, e
 			}
+			done := perf.Track(ctx, "repo.list")
 			items, err := repo.List(in.Archived)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -286,7 +304,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		},
 
 		// item.get: one item in any padding, with its children, archive included.
-		"item.get": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"item.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				ID string `json:"id"`
 			}
@@ -296,15 +314,19 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if !itemID.MatchString(in.ID) {
 				return nil, bad("%q is not a work item ID", in.ID)
 			}
-			repo, e := open(p)
+			repo, e := open(ctx, p)
 			if e != nil {
 				return nil, e
 			}
+			done := perf.Track(ctx, "repo.get")
 			it, err := repo.Get(in.ID)
+			done()
 			if err != nil {
 				return nil, &channel.Error{Code: NotFound, Message: err.Error()}
 			}
+			done = perf.Track(ctx, "repo.list")
 			all, err := repo.List(true)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -313,7 +335,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		},
 
 		// threads.list: as flai thread list --json; on is a path or an item, all adds the resolved.
-		"threads.list": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"threads.list": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				On  string `json:"on"`
 				All bool   `json:"all"`
@@ -321,20 +343,23 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if e := params(raw, &in); e != nil {
 				return nil, e
 			}
-			repo, e := open(p)
+			repo, e := open(ctx, p)
 			if e != nil {
 				return nil, e
 			}
 			var list []*threads.Thread
 			var err error
+			done := perf.Track(ctx, "threads.read")
 			if in.On != "" {
 				list, err = threads.For(repo, in.On)
 			} else {
 				list, err = threads.List(repo)
 			}
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
+			defer perf.Track(ctx, "threads.view")()
 			out := []map[string]any{}
 			for _, th := range list {
 				if in.All || th.Open() {

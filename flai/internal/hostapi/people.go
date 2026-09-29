@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -159,12 +160,16 @@ var leadingID = regexp.MustCompile(`^([EST]-\d+)`)
 func peopleMethods(now func() time.Time) map[string]channel.Method {
 	return map[string]channel.Method{
 		// activity.get: who is working on what, from the narratives.
-		"activity.get": func(_ context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+		"activity.get": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+			done := perf.Track(ctx, "repo.open")
 			repo, err := workitem.Open(p.Root)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
+			done = perf.Track(ctx, "repo.list")
 			items, err := repo.List(false)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -172,7 +177,9 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			for _, it := range items {
 				byID[it.ID] = it
 			}
+			done = perf.Track(ctx, "narratives.read")
 			dir, list := narratives(repo)
+			done()
 			streams := []StreamActivity{}
 			for _, n := range list {
 				if n.fm == nil {
@@ -215,8 +222,10 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 		},
 
 		// inbox.designer: what needs a human. Not the agent's MCP inbox.
-		"inbox.designer": func(_ context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+		"inbox.designer": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+			done := perf.Track(ctx, "repo.open")
 			repo, err := workitem.Open(p.Root)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -230,7 +239,9 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 				out.Counts[e.Kind]++
 			}
 
+			done = perf.Track(ctx, "threads.read")
 			all, err := threads.List(repo)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -251,7 +262,9 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 				add(InboxEntry{Key: "thread:" + th.ID, Kind: "thread", Title: th.Title, Detail: detail, Item: th.Anchor.Item, Path: th.Anchor.Path, At: last.At})
 			}
 
+			done = perf.Track(ctx, "repo.list")
 			items, err := repo.List(false)
+			done()
 			if err != nil {
 				return nil, failed(err)
 			}
@@ -265,7 +278,9 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			// once the story it belongs to is in review, done, or cancelled, or
 			// gone from this list (archived), it no longer needs the designer,
 			// so it is left out here whatever the narrative still says.
+			done = perf.Track(ctx, "narratives.read")
 			dir, list := narratives(repo)
+			done()
 			for _, n := range list {
 				stream := str(n.fm["stream"], strings.TrimSuffix(n.name, ".md"))
 				story := byID[stream]
@@ -292,7 +307,9 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			}
 
 			// Overlapping touches are the check's rule, which has one implementation.
+			done = perf.Track(ctx, "check.run")
 			res, err := check.Run(repo, now())
+			done()
 			if err != nil {
 				out.Notes = append(out.Notes, "Overlapping touches are not listed: "+err.Error())
 			} else {

@@ -262,12 +262,12 @@ type FolderWorkOut struct {
 }
 
 // decide is what an idle agent should do across every project, if anything.
-func (fw *folderWaits) decide(since time.Time) (FolderWorkOut, error) {
+func (fw *folderWaits) decide(ctx context.Context, since time.Time) (FolderWorkOut, error) {
 	out := FolderWorkOut{Threads: []ThreadSummary{}, Projects: []ProjectWork{}}
 	var pull *FolderWorkOut
 	anyReady, anyRoom := false, false
 	for _, s := range fw.f.all() {
-		one, err := s.work(since)
+		one, err := s.work(ctx, since)
 		if err != nil {
 			return FolderWorkOut{}, fmt.Errorf("%s: %w", s.key, err)
 		}
@@ -374,12 +374,12 @@ func (fw *folderWaits) work(ctx context.Context, _ *mcp.CallToolRequest, in Work
 		f.workMu.Unlock()
 		return out
 	}
-	out, err := fw.decide(since)
+	out, err := fw.decide(ctx, since)
 	if err != nil || out.Reason != "" {
 		return nil, answer(out), err
 	}
 	timedOut, err := fw.hold(ctx, fw.timeout(in.TimeoutSeconds, fw.maxWait), func([]string) (bool, error) {
-		next, err := fw.decide(since)
+		next, err := fw.decide(ctx, since)
 		out = next
 		return err == nil && next.Reason != "", err
 	})

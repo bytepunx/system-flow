@@ -1048,10 +1048,12 @@ flai host upgrade
 Answer one method of the dashboard's API for this project, as flai serve would.
 
 ```text
-flai hostapi [method] [params-json]
+flai hostapi [method] [params-json] [flags]
 ```
 
 Without arguments, list the methods flai serve offers a dashboard. With a method, and optionally its params as a JSON object, print the result as JSON. An error is printed as {"error": {"code", "message"}} with exit 2.
+
+With --timing, the request is timed as flai serve times it (S-0152), with no connection at all, and its "request answered" event, with the phases the time went to, is logged on stderr at info whatever it took.
 
 Examples:
 
@@ -1059,7 +1061,14 @@ Examples:
 flai hostapi
 flai hostapi board.get '{"all":true}'
 flai hostapi item.get '{"id":"S-0042"}'
+flai hostapi --timing inbox.designer 2>&1 >/dev/null
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--timing` | log the request's duration and phases on stderr, as flai serve times it |
 
 ### flai import
 

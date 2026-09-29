@@ -113,6 +113,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `fatal` ([Logging](../users/flai.md#logging)) |
 | `LOG_FORMAT` | text on a terminal, JSON otherwise | `text` or `json` |
 | `FLAI_SLOW_REQUEST` | `500ms` | How long a request to `flai serve` or `flai mcp` may take before its `request answered` event is logged at `info` rather than `debug` ([Request timing](../users/flai.md#request-timing-s-0152)) |
+| `FLAI_PPROF_ADDR` | none | A loopback address, such as `127.0.0.1:6060`, where `flai serve` offers Go's CPU, heap, and goroutine profiles at `/debug/pprof/`; an address beyond this machine is refused ([Request timing](../users/flai.md#request-timing-s-0152)) |
 | `FLAI_HOST_ADDR` | `127.0.0.1:4241` | Where `flai host` listens; set it for every flai you run when another program holds the port ([flai host](index.md#flai-host-the-process-that-runs-the-others-s-0106)) |
 | `FLAI_RELEASES_API` | `https://api.github.com` | Another source of releases for `flai self-upgrade`, `flai host check`, and `flai host upgrade` |
 | `FLAI_INSTALL_DIR` | `~/.flai/bin` | Where `flai self-upgrade`, run from a checkout's own build, installs a release |
@@ -266,6 +267,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--tag` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new), [flai template push](../users/flai-reference.md#flai-template-push) |
 | `--template` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template show](../users/flai-reference.md#flai-template-show), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
+| `--timing` | [flai hostapi](../users/flai-reference.md#flai-hostapi) |
 | `--title` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--top` | [flai order](../users/flai-reference.md#flai-order) |
 | `--topics` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new) |
