@@ -3,17 +3,20 @@ id: T-0535
 type: task
 nature: improvement
 title: Users' documentation and the prime help describe the rule, and the packs are measured again
-status: in-progress
+status: done
 parent: S-0149
 owner: alex
 created: 2026-09-29T05:25:26Z
-updated: 2026-09-29T05:30:28Z
+updated: 2026-09-29T05:33:07Z
 transitions:
   - to: ready
     at: 2026-09-29T05:25:48Z
     by: agent-S-0149
   - to: in-progress
     at: 2026-09-29T05:30:28Z
+    by: agent-S-0149
+  - to: done
+    at: 2026-09-29T05:33:07Z
     by: agent-S-0149
 stream: S-0149
 tags: []

@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0149-provide-briefs-in-cases-where-large-files-are-part-of-context.md
   item: S-0149
 status: answered
-participants: [agent-S-0146, alex, agent-S-0147]
+participants: [agent-S-0146, alex, agent-S-0147, agent-S-0149]
 created: 2026-09-29T03:27:13Z
-updated: 2026-09-29T05:14:47Z
+updated: 2026-09-29T05:41:35Z
 ---
 
 # TH-0032 S-0138's pack cannot fit 80 KB under ADR-0049's rules: which way?
@@ -74,3 +74,28 @@ write the updated ADR to refine 0049 and then the backlog story
 
 ### 2026-09-29T05:14:47Z agent-S-0147
 Moved from archived S-0146 to S-0149 on your answer in TH-0033 (option A). S-0149 carries the ADR that refines ADR-0049, so this request is still open. flai check --strict is clean again.
+
+### 2026-09-29T05:33:19Z agent-S-0149
+Done in S-0149, as you asked: first the ADR, then the change. [ADR-0050](design/adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md) refines ADR-0049. A document named only by its path written out is briefed when it is larger than an eighth of the budget, which is 10 KB at 80 KB. A link, an ADR ID, and a small file still load whole, and a `#fragment` link still loads its section. Each such brief carries a line telling the agent to decide from the brief whether it needs the body, and to read the file before relying on it or changing it.
+
+Packs before and after:
+
+| Story | Before | After |
+|-------|--------|-------|
+| S-0138 | 123 KB | 113 KB |
+| S-0141 | 156 KB | 87 KB |
+| S-0146 | 230 KB | 113 KB |
+| S-0147 | 188 KB | 102 KB |
+
+Every pack is still over 80 KB, because the conventions and open issues take 57 KB. S-0149 is going to review.
+
+### 2026-09-29T05:34:46Z alex
+how many kb are the open issues
+
+### 2026-09-29T05:35:41Z agent-S-0149
+The open-issues table takes 9.1 KB (9,097 bytes) of every pack, for 35 open issues, about 260 bytes a row. I measured this on S-0149's pack. The conventions take about 53 KB, now that S-0148 lengthened `session-start.md`. Together they are about 62 KB of the 80 KB budget, before anything a story names or briefs.
+
+One way to free that space would be for the pack to list only the issues whose topics or paths match the story, and link to `design/issues/summary.md` for the rest. That would be its own story if you want it. S-0149 does not wait on this.
+
+### 2026-09-29T05:41:35Z alex
+can we augment the existing conventions so that they have topics like "browser-client", "server-side", "git" where possible so that we can start tuning convention guidelines by scopes?
