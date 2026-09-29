@@ -3,12 +3,15 @@ id: S-0162
 type: story
 nature: improvement
 title: The items and documents pages ask for what they show, not the whole archive and every file's front matter
-status: backlog
+status: ready
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:31Z
-updated: 2026-09-29T07:00:31Z
-transitions: []
+updated: 2026-09-29T19:20:21Z
+transitions:
+  - to: ready
+    at: 2026-09-29T19:20:21Z
+    by: alex
 tags: [dashboard]
 topics: [server-side, back-end]
 touches: [flaiover/src, flai/internal/hostapi]

@@ -3,12 +3,18 @@ id: S-0161
 type: story
 nature: improvement
 title: The dashboard forgets only the answers a changed file affects, and gathers changes that arrive together
-status: backlog
+status: in-progress
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:30Z
-updated: 2026-09-29T07:00:30Z
-transitions: []
+updated: 2026-09-29T19:40:45Z
+transitions:
+  - to: ready
+    at: 2026-09-29T19:18:54Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T19:38:13Z
+    by: agent-S-0161
 tags: [dashboard]
 topics: [server-side, back-end]
 touches: [flaiover/src]
@@ -30,6 +36,8 @@ The dashboard forgets every answer it holds when any file of the project changes
 - [ ] The answers kept for other paths survive a change that does not affect them: behaviour tests in `flaiover/src/lib/server` cover which paths forget which answers.
 
 ## Tasks
+- T-0571 The dashboard's Repo forgets only the answers a changed path affects
+- T-0572 Pages gather changes that arrive together, and the board asks again only when a work item changed
 
 ## Notes
 

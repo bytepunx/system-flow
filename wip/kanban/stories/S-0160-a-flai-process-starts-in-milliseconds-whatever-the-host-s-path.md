@@ -3,20 +3,37 @@ id: S-0160
 type: story
 nature: remediation
 title: A flai process starts in milliseconds whatever the host's PATH
-status: backlog
+status: in-progress
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:30Z
-updated: 2026-09-29T07:00:30Z
-transitions: []
+updated: 2026-09-29T19:38:50Z
+transitions:
+  - to: ready
+    at: 2026-09-29T19:18:48Z
+    by: alex
+  - to: in-progress
+    at: 2026-09-29T19:33:57Z
+    by: agent-S-0160
 tags: [cli]
 topics: [server-side, back-end]
-touches: [flai/cmd, flai/go.mod, flai/go.sum, design/tech/go-libraries.md]
+touches: [flai/cmd, flai/internal/prompt, flai/go.mod, flai/go.sum, design/tech/go-libraries.md, design/tech/README.md, design/adrs, design/system/server-performance.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 392
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 613
+      cache_read: 4001253
+      cache_write: 107282
+      cost: 1.6334
 ---
 # S-0160 A flai process starts in milliseconds whatever the host's PATH
 
@@ -30,6 +47,8 @@ A flai process takes 145 ms to start on the operator's host before it does anyth
 - [ ] Prompts that need a terminal still work, and `design/tech/go-libraries.md` records the change of dependency.
 
 ## Tasks
+- T-0569 flai asks its prompts through a line-based prompt package and no longer depends on huh
+- T-0570 Measure flai version's start on this host and record it in the design
 
 ## Notes
 

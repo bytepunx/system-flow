@@ -3,12 +3,15 @@ id: S-0159
 type: story
 nature: improvement
 title: The dashboard's reads are answered in flai serve's process, not by starting flai
-status: backlog
+status: ready
 parent: E-0012
 owner: alex
 created: 2026-09-29T07:00:29Z
-updated: 2026-09-29T07:00:29Z
-transitions: []
+updated: 2026-09-29T19:18:32Z
+transitions:
+  - to: ready
+    at: 2026-09-29T19:18:32Z
+    by: alex
 tags: [cli]
 topics: [server-side, back-end]
 touches: [flai/internal/hostapi, flai/cmd]
