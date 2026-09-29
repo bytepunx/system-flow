@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-09-28
+updated: 2026-09-29
 status: active
 topics: [conventions, template]
 ---
@@ -103,7 +103,7 @@ A convention says which stories it is for, as design, tech files, and ADRs do ([
 - **ADRs.** `topics` is, with `superseded_by`, the one key an accepted ADR may gain: `flai adr topics ADR-nnnn <topics>` sets it on an ADR of any status, and `flai doc save` takes a save of an accepted ADR only when its `topics` are all it changes.
 - **Rollout.** Every convention, in the template and here, starts as `topics: [all]` for the designer to narrow. Every `design/system` and `design/tech` file here has topics.
 
-`flai/internal/topics` parses them: the file's topics and the body split into sections by heading, each with its heading path and effective topics. `flai prime --story` selects conventions by them since S-0136 ([Priming](#priming)); design, tech, and ADRs follow in S-0137.
+`flai/internal/topics` parses them: the file's topics and the body split into sections by heading, each with its heading path and effective topics. `flai prime --story` selects conventions by them since S-0136, and design, tech, and ADRs since S-0137 ([Priming](#priming)).
 
 `flai upgrade` takes everything above a convention's marker from the template, with one exception: a project's own `topics` on the file stay (TH-0028). `system-flow.lock.yaml` records the topics the template gave each marker file; on upgrade a project's topics that differ from that record are the project's and are kept, and topics that match it, or no topics, take the new template's. With nothing recorded (a lock written before S-0134, or no lock), a project's topics are kept. A heading comment above the marker is the template's; a project narrows a baseline heading in its additions.
 
@@ -122,7 +122,7 @@ A conflict between 1 and 2 or 3 is logged in the narrative's Decisions and, if i
 
 The template's `CLAUDE.md` opens with a priming section: read `design/conventions/README.md` and every file it lists in order, then `wip/agents/index.md`, then the board, before any change. It also states the precedence order and what to do when a convention conflicts with an instruction or seems wrong. Norms are not repeated in `CLAUDE.md`; it points at the convention files. `flai prime` (S-0025) prints the same set in read order, with `--cat` for full content, so a hook or a script can load it in one call.
 
-[ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) (S-0125) narrows priming to the story: conventions, design, tech files, and ADRs carry `topics`, on the file and on any heading as `<!-- topics: a, b -->`, with `[all]` for every story, and `flai prime --story S-nnnn` prints the conventions' matching sections, the design and ADRs the story's topics, links, and ranking select, and a catalog of the rest. Every convention starts as `[all]`. S-0134 made topics parseable, settable, and checked ([Topics](#topics)). Since S-0136 `flai prime --story S-nnnn` prints each convention with the sections whose topics include neither `all` nor one of the story's left out, keeping the front matter, the baseline marker, and the `## Project additions` heading, and ends with one line per section left out so the agent knows the rule exists ([flai-cli.md](flai-cli.md)). Until S-0138 switches the harness and `CLAUDE.md` to it, agents still prime with `flai prime --cat`. The survey behind it is [agent-context.md](agent-context.md).
+[ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md) (S-0125) narrows priming to the story: conventions, design, tech files, and ADRs carry `topics`, on the file and on any heading as `<!-- topics: a, b -->`, with `[all]` for every story, and `flai prime --story S-nnnn` prints the conventions' matching sections, the design and ADRs the story's topics, links, and ranking select, and a catalog of the rest. Every convention starts as `[all]`. S-0134 made topics parseable, settable, and checked ([Topics](#topics)). Since S-0136 `flai prime --story S-nnnn` prints each convention with the sections whose topics include neither `all` nor one of the story's left out, keeping the front matter, the baseline marker, and the `## Project additions` heading, and ends with one line per section left out so the agent knows the rule exists. Since S-0137 it prints after the conventions the design, tech, and ADRs the story's topics, links (one step further), and ranking select, each with its reason, and a catalog of the rest ([flai-cli.md](flai-cli.md)). Until S-0138 switches the harness and `CLAUDE.md` to it, agents still prime with `flai prime --cat`. The survey behind it is [agent-context.md](agent-context.md).
 
 ## Tooling
 

@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-09-26
+updated: 2026-09-29
 status: active
 topics: [cli, conventions]
 ---
@@ -141,3 +141,25 @@ The 2026 preprints are not peer reviewed and disagree on cost; only their direct
 A story's topics are its own and its epic's `topics`, plus the name, tags, and kind of the sub-projects its tags or claim reach, plus `code` when one of them is not the template.
 
 The stories under E-0010 that build it, in order: S-0134 (topics on documents, `flai adr topics`, the check, every convention at `[all]`), S-0135 (topics on stories and epics, and a story's derived topics), S-0136 (`flai prime --story` filters conventions), S-0137 (design, tech, ADRs by topic, links, ranking, and the catalog), S-0138 (the harness, `CLAUDE.md`, the template, and an MCP `prime` tool switch to it).
+
+## As built
+
+S-0136 and S-0137 built the pack in `flai/internal/context`, printed by `flai prime --story` ([flai-cli.md](flai-cli.md)). Choices ADR-0047 left open:
+
+- Sections are cut at every heading. A section chosen by topics or a `#fragment` link includes the sections below it. A ranked design section is one heading down to the next heading of any level. An ADR always loads whole.
+- Links are markdown links, a document's repository path written out, and `ADR-nnnn` IDs. A link that does not resolve from where the item is now is matched by its tail, so an archived item's links still work.
+- The one step is followed from every selected section, those chosen by topics included, because that is what reaches the decisions (below).
+- A superseded ADR is replaced wherever it is chosen, and superseded ADRs are not ranked. The catalog marks them.
+- Ranking indexes each unchosen section as one `flai/internal/search` document and drops common English words from the query. An ADR ranks by its best section.
+
+The replay on 2026-09-29 (S-0137 notes) re-ran the archive with today's documents. 56 archived stories named 93 ADRs that existed when each was created. The counts leave out the story's own links:
+
+| Selection | ADRs reached |
+|-----------|--------------|
+| Topics alone (no ADR carries topics yet) | 0 |
+| Topics, then one step from the selected sections | 91 |
+| The above, then ranking | 93 |
+| Topics and ranking, no step | 68 |
+| Ranking alone, top 5 | 47 |
+
+A cli story's pack was about 500 KB: 22 design and tech files by topics, about 30 ADRs by links, and 10 ranked items. `flai prime --cat` is 56 KB. The bulk is whole-file topics (`[all]` on seven `design/system` files, `cli` on `flai-cli.md`) and the ADRs `flai-cli.md § Commands` links. Heading topics on those files are the remedy ADR-0047 names. TH-0029 asks the designer about it before S-0138 switches agents to the pack.

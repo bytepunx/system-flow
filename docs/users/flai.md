@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-28
+updated: 2026-09-29
 status: active
 ---
 
@@ -567,7 +567,7 @@ Conventions, `design/system` and `design/tech` files, and ADRs say which stories
 ## Go <!-- topics: cli, go -->
 ```
 
-A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). `flai prime --story` selects conventions by them ([Prime a session](#prime-a-session)); design, tech files, and ADRs are not selected by topic yet.
+A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). `flai prime --story` selects conventions, design, tech files, and ADRs by them ([Prime a session](#prime-a-session)). A design, tech, or ADR file without topics is loaded only when something links it or it ranks.
 
 ## Edit a document through flai
 
@@ -606,13 +606,28 @@ The table shows completed and cancelled counts, throughput per week, current WIP
 flai prime          # paths of design/conventions in read order, README first
 flai prime --cat    # the same files' contents, each under a header
 flai prime --json
-flai prime --story S-0136         # the conventions S-0136's topics select, and what was left out
-flai prime --story S-0136 --json
+flai prime --story S-0137         # S-0137's context pack: conventions, design, tech, and ADRs, and a catalog
+flai prime --story S-0137 --json
 ```
 
 Agents read these before any change; a shell hook or a wrapper can pipe `flai prime --cat` into the session.
 
-`--story` prints what an agent working that story needs of the conventions. A header names the story, its topics and where each came from (as `flai show` gives them), and the size of what follows. Then comes each convention as `--cat` prints it, with every section whose topics include neither `all` nor one of the story's left out ([Topics on documents](#topics-on-documents)). The front matter, the baseline marker, and the `## Project additions` heading always stay, and so does the heading above a section that is kept. The open issues follow, then one line per section left out with its topics, such as `code-quality.md § Rules › Go (go)`, so you know the rule exists and where to read it. While every convention is `[all]` the text below the header is exactly `--cat`'s. `--json` returns the same as data: per convention, the sections kept and left out with their heading paths, lines, and topics. An ID that is unknown, archived, or not a story is refused with a message naming it. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once.
+`--story` prints what an agent working that story needs: its context pack ([ADR-0047](../../design/adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md)). A header names the story, its topics and where each came from (as `flai show` gives them), how many design items follow and their size, how many documents the catalog lists, and the size of everything below the header. Then comes each convention as `--cat` prints it, with every section whose topics include neither `all` nor one of the story's left out ([Topics on documents](#topics-on-documents)). The front matter, the baseline marker, and the `## Project additions` heading always stay, and so does the heading above a section that is kept. The open issues follow.
+
+Then come the `design/system`, `design/tech`, and ADR documents the story selects, whole or section by section. Each is headed with its path, its heading path when it is a section (`design/system/flai-cli.md § Commands`), and a `reason:` line:
+
+| Reason | Why it is there |
+|--------|-----------------|
+| `topics: cli` | Its topics, or its heading's, include `all` or one of the story's ([Topics on documents](#topics-on-documents)). A document no heading narrows comes whole. |
+| `linked from S-0137` | The story, its epic, or one of its tasks links it, writes its path, or names it by ID (`ADR-0046`). A link to `file.md#heading` brings that section and the ones below it. |
+| `linked from design/system/x.md § Heading` | A section chosen above links or names this ADR. Links are followed one step only. |
+| `refined by ADR-0047` | An ADR chosen above refines this one. |
+| `supersedes ADR-0042` | It replaces a superseded ADR that something above chose. The superseded one is not printed. |
+| `rank 3` | One of the five ADRs and five design sections that best match the story's title, goal, and acceptance criteria, among those nothing else chose. |
+
+Nothing is printed twice. The first reason wins, and any later ones are listed after it (`reason: topics: cli; also linked from S-0137`). A catalog follows: one line per design, tech, or ADR document not loaded, with its title (and `superseded by` when it is), then the heading outline of each document loaded in part, with the loaded headings marked. Read any of them with `flai doc show <path>`. Last comes one line per convention section left out, with its topics, such as `code-quality.md § Rules › Go (go)`, so you know the rule exists and where to read it.
+
+There is no size budget: the header's size is how you see a pack grow, and narrowing topics on headings is how you shrink it. `--json` returns the same as data: per convention, the sections kept and left out with their heading paths, lines, and topics; `items`, each with `path`, `title`, `heading`, `label`, `step` (`topics`, `linked`, or `ranked`), `reason`, `also`, `size`, and `text`; and `catalog` with `not_loaded` and `in_part` (each entry with its `outline`). An archived story gets the pack it would get today, which is how you replay one. An ID that is unknown or not a story is refused with a message naming it. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once.
 
 ## Record recurring friction
 

@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-09-28
+updated: 2026-09-29
 status: active
 ---
 
@@ -1408,7 +1408,7 @@ flai prime [flags]
 
 List design/conventions in read order (README first, then by order) so an agent, a hook, or a script can load them in one call. --cat prints the content of each file with a header instead of the paths.
 
---story S-nnnn prints the context pack for an agent working that story (ADR-0047): a header naming the story, its topics and where each came from, and the size of what follows; then every convention as --cat prints it, with the sections whose topics include neither all nor one of the story's left out (the front matter, the baseline marker, and the Project additions heading always stay); the open issues; and one line per section left out, with its topics. With every section at [all] the text below the header is --cat's.
+--story S-nnnn prints the context pack for an agent working that story (ADR-0047): a header naming the story, its topics and where each came from, and the size of what follows; then every convention as --cat prints it, with the sections whose topics include neither all nor one of the story's left out (the front matter, the baseline marker, and the Project additions heading always stay); the open issues; then the design/system, design/tech, and ADR sections the story selects, each headed with its path, heading path, and reason: those whose topics match; those the story, its epic, and its tasks link or name, and the ADRs those link or refine, a superseded ADR replaced by what supersedes it; and the five ADRs and five design sections ranked highest against the story's title, goal, and criteria. Then a catalog of every document not loaded, with the outline of those loaded in part, and one line per convention section left out, with its topics. Nothing prints twice: the first reason wins and the others are listed on it. An archived story gets the pack it would get today.
 
 Examples:
 
@@ -1425,7 +1425,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--cat` | print file contents instead of paths |
-| `--story` string | print the context pack for this story: the convention sections its topics select, and what was left out |
+| `--story` string | print the context pack for this story: the conventions, design, tech, and ADRs it selects, and a catalog of the rest |
 
 ### flai push
 
