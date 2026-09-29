@@ -3,11 +3,11 @@ id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
 status: open
-count: 8
+count: 9
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-29T21:21:56Z
-updated: 2026-09-29T21:21:56Z
+last_reported: 2026-09-29T22:51:11Z
+updated: 2026-09-29T22:51:11Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -40,5 +40,8 @@ S-0163's smoke tier: the markdown lint still fails on wip/threads/TH-0035 on mai
 
 ### 2026-09-29T21:21:56Z
 S-0164's smoke tier: the markdown lint still fails on wip/threads/TH-0035 on main (MD024), the fourth story in a day to meet it. The tier stops a step earlier, at flai check --strict, on five warnings that are the operator's to clear: E-0003, E-0010, E-0011, and E-0012 are done and not archived, and TH-0032 is answered on an archived story. Nothing of S-0164 is in either.
+
+### 2026-09-29T22:51:11Z
+S-0166: the story's title, written in the main checkout, ended in a period, so its heading failed MD026 in scripts/lint-md.sh; retitled without it. TH-0035 fails MD024 (two log headings alike), left to its owner.
 
 ## Remediation
