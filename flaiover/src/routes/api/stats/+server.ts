@@ -3,7 +3,7 @@ import { stats } from '$lib/server/stats';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
-/** GET /api/stats?since=30d&type=story&by=nature — flai stats --json */
+/** GET /api/stats?since=30d&type=story&by=nature&bucket=day — flai stats --json */
 export const GET: RequestHandler = ({ url }) =>
 	respond(async () => {
 		const r = repo();
@@ -11,7 +11,8 @@ export const GET: RequestHandler = ({ url }) =>
 		const q = {
 			since: url.searchParams.get('since') ?? undefined,
 			type: url.searchParams.get('type') ?? undefined,
-			by: url.searchParams.get('by') ?? undefined
+			by: url.searchParams.get('by') ?? undefined,
+			bucket: url.searchParams.get('bucket') ?? undefined
 		};
 		try {
 			return await stats(r, q);

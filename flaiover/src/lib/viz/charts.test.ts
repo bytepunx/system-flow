@@ -6,7 +6,10 @@ import {
 	cfd,
 	completionCost,
 	completionTime,
+	bucketLabel,
 	cost,
+	costPerItem,
+	costSpent,
 	cycleTime,
 	estimates,
 	human,
@@ -15,11 +18,123 @@ import {
 	stateShare,
 	throughput,
 	timeInState,
+	hasSpend,
+	titleOf,
 	tokenRate,
+	tokensPerDollar,
+	tokensPerItem,
+	tokensSpent,
 	models,
+	type Bucket,
 	type Report
 } from './charts';
-import { CATEGORICAL, modelSlot, theme } from './palette';
+import { CATEGORICAL, modelSlot, modelSymbol, theme, TYPE_SLOT } from './palette';
+
+// Spend over time as flai lays it out (S-0163): stories on 3 August (two models) and on
+// 5 August, the day between them empty, and tasks on 3 August.
+const storyDays: Bucket[] = [
+	{
+		at: '2026-08-03T00:00:00Z',
+		items: 2,
+		tokens: 3500000,
+		cost: 1.75,
+		seconds: 5400,
+		estimated: true,
+		tokens_per_item: 1750000,
+		cost_per_item: 0.875,
+		tokens_per_minute: 38888.9,
+		tokens_per_dollar: 2000000,
+		mean_tokens: 3500000,
+		mean_cost: 1.75,
+		models: [
+			{
+				model: 'claude-haiku-4-5',
+				items: 1,
+				tokens: 1000000,
+				cost: 0.25,
+				seconds: 3600,
+				tokens_per_item: 1000000,
+				cost_per_item: 0.25,
+				tokens_per_minute: 16666.7,
+				tokens_per_dollar: 4000000
+			},
+			{
+				model: 'claude-opus-5-5',
+				items: 2,
+				tokens: 2500000,
+				cost: 1.5,
+				seconds: 5400,
+				estimated: true,
+				tokens_per_item: 1250000,
+				cost_per_item: 0.75,
+				tokens_per_minute: 27777.8,
+				tokens_per_dollar: 1666666.7
+			}
+		]
+	},
+	{
+		at: '2026-08-04T00:00:00Z',
+		items: 0,
+		tokens: 0,
+		cost: 0,
+		seconds: 0,
+		mean_tokens: 1750000,
+		mean_cost: 0.875
+	},
+	{
+		at: '2026-08-05T00:00:00Z',
+		items: 1,
+		tokens: 1000000,
+		cost: 0.5,
+		seconds: 0,
+		tokens_per_item: 1000000,
+		cost_per_item: 0.5,
+		tokens_per_dollar: 2000000,
+		mean_tokens: 1500000,
+		mean_cost: 0.75,
+		models: [
+			{
+				model: 'claude-opus-5-5',
+				items: 1,
+				tokens: 1000000,
+				cost: 0.5,
+				seconds: 0,
+				tokens_per_item: 1000000,
+				cost_per_item: 0.5,
+				tokens_per_dollar: 2000000
+			}
+		]
+	}
+];
+const taskDays: Bucket[] = [
+	{
+		at: '2026-08-03T00:00:00Z',
+		items: 4,
+		tokens: 2000000,
+		cost: 1,
+		seconds: 1200,
+		tokens_per_item: 500000,
+		cost_per_item: 0.25,
+		tokens_per_minute: 100000,
+		tokens_per_dollar: 2000000,
+		mean_tokens: 2000000,
+		mean_cost: 1,
+		models: [
+			{
+				model: 'claude-opus-5-5',
+				items: 4,
+				tokens: 2000000,
+				cost: 1,
+				seconds: 1200,
+				tokens_per_item: 500000,
+				cost_per_item: 0.25,
+				tokens_per_minute: 100000,
+				tokens_per_dollar: 2000000
+			}
+		]
+	}
+];
+const none = { items: 0, tokens: 0, cost: 0, seconds: 0, models: [], buckets: [] };
 
 const report: Report = {
 	generated_at: '2026-09-01T12:00:00Z',
@@ -168,6 +283,19 @@ const report: Report = {
 			{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 3000000, cost: 1.5 },
 			{ at: '2026-08-12T09:30:00Z', id: 'S-002', done: 2, tokens: 3500000, cost: 1.75 }
 		],
+		bucket: 'day',
+		spend: {
+			epic: none,
+			story: {
+				items: 3,
+				tokens: 4500000,
+				cost: 2.25,
+				seconds: 5400,
+				models: [],
+				buckets: storyDays
+			},
+			task: { items: 4, tokens: 2000000, cost: 1, seconds: 1200, models: [], buckets: taskDays }
+		},
 		by_model: {
 			'claude-haiku-4-5': [
 				{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 1000000, cost: 0.3 }
@@ -247,13 +375,6 @@ describe('chart builders', () => {
 	});
 	it('usage charts colour each model in a fixed slot by name, whatever a filter leaves', () => {
 		expect(models(report)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
-		const tr = tokenRate(report, light) as {
-			series: { name: string; itemStyle: { color: string }; data: { value: [string, number] }[] }[];
-		};
-		expect(tr.series.map((s) => s.name)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
-		expect(tr.series[1].itemStyle.color).toBe(CATEGORICAL.light[0]);
-		expect(tr.series[0].itemStyle.color).toBe(CATEGORICAL.light[5]);
-		expect(tr.series[1].data.map((d) => d.value[1])).toEqual([2, 1]);
 		const c = cost(report, light) as {
 			xAxis: { data: string[] };
 			series: { name: string; stack: string; data: number[]; itemStyle: { color: string } }[];
@@ -270,6 +391,161 @@ describe('chart builders', () => {
 		expect(one.series[0].itemStyle.color).toBe(CATEGORICAL.light[0]);
 		expect(modelSlot('claude-sonnet-5')).toBe(2);
 		expect([3, 4]).toContain(modelSlot('gpt-9'));
+	});
+	type Line = {
+		name: string;
+		type: string;
+		symbol?: string;
+		stack?: string;
+		itemStyle: { color: string };
+		lineStyle?: { type: string; color: string };
+		data: { value: [string, number]; items: number; estimated?: boolean }[];
+	};
+	type Over = {
+		series: Line[];
+		legend: { show: boolean };
+		useUTC: boolean;
+		xAxis: { type: string; min?: number; max?: number; minInterval: number };
+		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
+		tooltip: { trigger: string; formatter: (p: unknown) => string };
+	};
+	const values = (l: Line) => l.data.map((d) => d.value);
+	it('token rate is tokens per agent minute over time, per model, with all of them dashed', () => {
+		const o = tokenRate(report, light) as Over;
+		expect(o.series.map((s) => s.name)).toEqual([
+			'claude-haiku-4-5',
+			'claude-opus-5-5',
+			'all models'
+		]);
+		expect(o.xAxis.type).toBe('time');
+		// buckets are UTC, and the axis runs a bucket either side of the one day drawn
+		expect(o.useUTC).toBe(true);
+		expect([o.xAxis.min, o.xAxis.max, o.xAxis.minInterval]).toEqual([
+			Date.parse('2026-08-02T00:00:00Z'),
+			Date.parse('2026-08-04T00:00:00Z'),
+			86400e3
+		]);
+		expect(o.yAxis.name).toBe('tokens per agent minute');
+		expect(o.yAxis.axisLabel.formatter(38888.9)).toBe('38.9K');
+		// the day with nothing done has no point, and neither has the one with no agent time
+		expect(values(o.series[1])).toEqual([['2026-08-03T00:00:00Z', 27777.8]]);
+		expect(values(o.series[2])).toEqual([['2026-08-03T00:00:00Z', 38888.9]]);
+		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[0]);
+		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[5]);
+		expect([o.series[0].symbol, o.series[1].symbol]).toEqual(['triangle', 'circle']);
+		expect(o.series[2].lineStyle?.type).toBe('dashed');
+		expect(o.legend.show).toBe(true);
+		expect(
+			o.tooltip.formatter([{ seriesName: 'claude-opus-5-5', data: o.series[1].data[0] }])
+		).toBe(
+			'2026-08-03<br/>claude-opus-5-5: 27.8K tokens per minute over 2 items (estimated in part)'
+		);
+		// one model: its line alone, and no legend
+		const tasks = tokenRate({ ...report, type: 'task' }, light) as Over;
+		expect(tasks.series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
+		expect(tasks.legend.show).toBe(false);
+	});
+	it('tokens and cost per bucket stack the models and carry the running mean', () => {
+		const o = tokensSpent(report, light) as Over;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['claude-haiku-4-5', 'bar'],
+			['claude-opus-5-5', 'bar'],
+			['mean per day', 'line']
+		]);
+		expect(new Set(o.series.slice(0, 2).map((s) => s.stack))).toEqual(new Set(['spent']));
+		// every model has a value in every bucket, so the stack lines up
+		expect(values(o.series[0]).map((v) => v[1])).toEqual([1000000, 0, 0]);
+		expect(values(o.series[1]).map((v) => v[1])).toEqual([2500000, 0, 1000000]);
+		expect(values(o.series[2]).map((v) => v[1])).toEqual([3500000, 1750000, 1500000]);
+		expect(o.legend.show).toBe(true);
+		const c = costSpent(report, dark) as Over;
+		expect(c.yAxis.name).toBe('US dollars');
+		expect(values(c.series[1]).map((v) => v[1])).toEqual([1.5, 0, 0.5]);
+		expect(values(c.series[2]).map((v) => v[1])).toEqual([1.75, 0.875, 0.75]);
+		expect(c.series[1].itemStyle.color).toBe(CATEGORICAL.dark[0]);
+		expect(
+			c.tooltip.formatter([{ seriesName: 'claude-opus-5-5', data: c.series[1].data[0] }])
+		).toBe('2026-08-03<br/>claude-opus-5-5: $1.50 (estimated in part)');
+		const week = { ...report, usage: { ...report.usage!, bucket: 'week' as const } };
+		expect((tokensSpent(week, light) as Over).series[2].name).toBe('mean per week');
+		expect(titleOf('tokens-spent', 'week')).toBe('Tokens per week');
+		expect(titleOf('cost-spent', 'hour')).toBe('Cost per hour');
+		expect(titleOf('cost-spent')).toBe('Cost per day');
+		expect(titleOf('token-rate', 'hour')).toBe('Token rate');
+	});
+	it('tokens and cost per item compare the types, or the models on the type of the report', () => {
+		const o = tokensPerItem(report, light) as Over;
+		// no epic carries usage: it has no line
+		expect(o.series.map((s) => s.name)).toEqual(['story', 'task']);
+		expect(values(o.series[0])).toEqual([
+			['2026-08-03T00:00:00Z', 1750000],
+			['2026-08-05T00:00:00Z', 1000000]
+		]);
+		expect(values(o.series[1])).toEqual([['2026-08-03T00:00:00Z', 500000]]);
+		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[TYPE_SLOT.story]);
+		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[TYPE_SLOT.task]);
+		expect(o.series[0].symbol).not.toBe(o.series[1].symbol);
+		expect(o.yAxis.name).toBe('tokens per item');
+		const c = costPerItem(report, light, 'model') as Over;
+		expect(c.series.map((s) => s.name)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
+		expect(values(c.series[1])).toEqual([
+			['2026-08-03T00:00:00Z', 0.75],
+			['2026-08-05T00:00:00Z', 0.5]
+		]);
+		expect(c.yAxis.name).toBe('US dollars per story');
+		expect(c.yAxis.axisLabel.formatter(0.75)).toBe('$0.750');
+		expect(
+			c.tooltip.formatter([{ seriesName: 'claude-haiku-4-5', data: c.series[0].data[0] }])
+		).toBe('2026-08-03<br/>claude-haiku-4-5: $0.250 each over 1 item');
+		expect((build('cost-per-item', report, light, undefined, 'model') as Over).series.length).toBe(
+			2
+		);
+		expect((build('cost-per-item', report, light) as Over).series.map((s) => s.name)).toEqual([
+			'story',
+			'task'
+		]);
+	});
+	it('tokens per dollar is what a dollar bought, per model', () => {
+		const o = tokensPerDollar(report, light) as Over;
+		expect(values(o.series[1])).toEqual([
+			['2026-08-03T00:00:00Z', 1666666.7],
+			['2026-08-05T00:00:00Z', 2000000]
+		]);
+		expect(values(o.series[2]).map((v) => v[1])).toEqual([2000000, 2000000]);
+		expect(o.yAxis.name).toBe('tokens per US dollar');
+	});
+	it('names a bucket as a reader does, and says when a flai sends no spend', () => {
+		expect(bucketLabel('2026-09-29T19:00:00Z', 'hour')).toBe('2026-09-29 19:00 UTC');
+		expect(bucketLabel('2026-09-28T00:00:00Z', 'week')).toBe('week of 2026-09-28');
+		expect(modelSymbol('claude-fable-5-1')).toBe('diamond');
+		expect(modelSymbol('gpt-9')).toBe('roundRect');
+		expect(hasSpend(normalise(report))).toBe(true);
+		const older = normalise({
+			...report,
+			usage: { ...report.usage!, bucket: undefined, spend: undefined }
+		});
+		expect(hasSpend(older)).toBe(false);
+		for (const kind of [
+			'token-rate',
+			'tokens-spent',
+			'tokens-per-item',
+			'tokens-per-dollar',
+			'cost-spent',
+			'cost-per-item'
+		] as const) {
+			const o = build(kind, older, light) as Over;
+			expect(o.series, kind).toEqual([]);
+			expect(o.legend.show, kind).toBe(false);
+		}
+		// a flai that sends a type with null lists
+		const nulls = normalise({
+			...report,
+			usage: {
+				...report.usage!,
+				spend: { story: { items: 0, tokens: 0, cost: 0, seconds: 0 } }
+			}
+		} as unknown as Report);
+		expect(nulls.usage?.spend?.story.buckets).toEqual([]);
 	});
 	it("completion charts lay out each model's items done against time and against cost", () => {
 		const t = completionTime(report, light) as {

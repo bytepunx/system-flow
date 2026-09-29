@@ -1,7 +1,16 @@
 // Chart option builders: pure functions from a flai stats report to an
 // ECharts option, so they are unit-testable without a DOM. One y-axis per
 // chart, thin marks, legends for two or more series, tooltips everywhere.
-import { colorFor, modelSlot, NATURE_SLOT, STATE_SLOT, type Theme } from './palette';
+import {
+	colorFor,
+	modelSlot,
+	modelSymbol,
+	NATURE_SLOT,
+	STATE_SLOT,
+	TYPE_SLOT,
+	TYPE_SYMBOL,
+	type Theme
+} from './palette';
 import { count, dollars } from '$lib/usage';
 
 export type Distribution = {
@@ -49,6 +58,8 @@ export type ModelSpend = {
 	model: string;
 	tokens: number;
 	cost: number;
+	/** Absent from a flai older than S-0163, which sends tokens_per_hour. */
+	tokens_per_minute?: number;
 	tokens_per_hour?: number;
 	items?: number;
 };
@@ -57,11 +68,41 @@ export type ItemUsage = {
 	tokens: number;
 	cost: number;
 	seconds: number;
+	tokens_per_minute?: number;
 	tokens_per_hour?: number;
 	estimated?: boolean;
 	models: ModelSpend[];
 };
 export type SpendPoint = { at: string; id: string; done: number; tokens: number; cost: number };
+/**
+ * What was spent on a set of items, and what that comes to per item, per minute of agent work,
+ * and per dollar; a value whose divisor is zero is absent (S-0163, ADR-0053).
+ */
+export type Spend = {
+	items: number;
+	tokens: number;
+	cost: number;
+	seconds: number;
+	estimated?: boolean;
+	tokens_per_item?: number;
+	cost_per_item?: number;
+	tokens_per_minute?: number;
+	tokens_per_dollar?: number;
+};
+export type ModelShare = Spend & { model: string };
+/** The items done in one bucket of time, which starts at `at`, with the running means so far. */
+export type Bucket = Spend & {
+	at: string;
+	mean_tokens: number;
+	mean_cost: number;
+	models?: ModelShare[];
+};
+export type TypeSpend = Spend & { models: ModelShare[]; buckets: Bucket[] };
+export const BUCKETS = ['hour', 'day', 'week'] as const;
+export type BucketSize = (typeof BUCKETS)[number];
+/** The longest window flai lays out by the hour, in days. */
+export const MAX_HOUR_WINDOW_DAYS = 31;
+export const TYPES = ['epic', 'story', 'task'] as const;
 export type UsageReport = {
 	items: number;
 	tokens: number;
@@ -71,6 +112,9 @@ export type UsageReport = {
 	models: ModelSpend[];
 	done: SpendPoint[];
 	by_model: Record<string, SpendPoint[]>;
+	/** Absent from a flai older than S-0163, with spend. */
+	bucket?: BucketSize;
+	spend?: Record<string, TypeSpend>;
 };
 /**
  * Older flai builds emit null for empty lists; give every list the charts
@@ -78,6 +122,14 @@ export type UsageReport = {
  * of throwing (S-0045).
  */
 export function normalise(r: Report): Report {
+	const spend = r.usage?.spend
+		? Object.fromEntries(
+				Object.entries(r.usage.spend).map(([type, s]) => [
+					type,
+					{ ...s, models: s?.models ?? [], buckets: s?.buckets ?? [] }
+				])
+			)
+		: undefined;
 	return {
 		...r,
 		items: r.items ?? [],
@@ -93,7 +145,8 @@ export function normalise(r: Report): Report {
 			...r.usage,
 			models: r.usage?.models ?? [],
 			done: r.usage?.done ?? [],
-			by_model: r.usage?.by_model ?? {}
+			by_model: r.usage?.by_model ?? {},
+			spend
 		}
 	};
 }
@@ -124,19 +177,29 @@ export type Report = {
 	usage?: UsageReport;
 };
 
-export const KINDS = [
+/** The charts of how work flows. */
+export const FLOW_KINDS = [
 	'cycle-time',
 	'burn-up',
 	'cfd',
 	'time-in-state',
 	'throughput',
 	'aging',
-	'estimates',
+	'estimates'
+] as const;
+/** The charts of what agents spent (S-0143, S-0163): they need items that carry usage. */
+export const USAGE_KINDS = [
 	'token-rate',
+	'tokens-spent',
+	'tokens-per-item',
+	'tokens-per-dollar',
+	'cost-spent',
+	'cost-per-item',
 	'cost',
 	'completion-time',
 	'completion-cost'
 ] as const;
+export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS] as const;
 export type Kind = (typeof KINDS)[number];
 export const TITLES: Record<Kind, string> = {
 	'cycle-time': 'Cycle time',
@@ -147,17 +210,33 @@ export const TITLES: Record<Kind, string> = {
 	aging: 'Aging work in progress',
 	estimates: 'Estimate versus actual',
 	'token-rate': 'Token rate',
-	cost: 'Cost',
+	'tokens-spent': 'Tokens per day',
+	'tokens-per-item': 'Tokens per item',
+	'tokens-per-dollar': 'Tokens per dollar',
+	'cost-spent': 'Cost per day',
+	'cost-per-item': 'Cost per item',
+	cost: 'Cost by item',
 	'completion-time': 'Completion over time',
 	'completion-cost': 'Completion against cost'
 };
-/** The usage charts (S-0143): they need items that carry usage. */
-export const USAGE_KINDS: readonly Kind[] = [
+/** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
+export const SPEND_KINDS: readonly Kind[] = [
 	'token-rate',
-	'cost',
-	'completion-time',
-	'completion-cost'
+	'tokens-spent',
+	'tokens-per-item',
+	'tokens-per-dollar',
+	'cost-spent',
+	'cost-per-item'
 ];
+/** The charts per item, which compare the item types, or the models on one type. */
+export const PER_ITEM_KINDS: readonly Kind[] = ['tokens-per-item', 'cost-per-item'];
+export type By = 'type' | 'model';
+/** A chart's title: the charts of what a bucket spent are named for the bucket. */
+export function titleOf(kind: Kind, bucket: BucketSize = 'day'): string {
+	if (kind === 'tokens-spent') return `Tokens per ${bucket}`;
+	if (kind === 'cost-spent') return `Cost per ${bucket}`;
+	return TITLES[kind];
+}
 
 const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done'];
 /** An item type's plural: epics, stories, tasks. */
@@ -222,6 +301,10 @@ function legend(t: Theme, show: boolean): Opt {
 		itemWidth: 10,
 		itemHeight: 10
 	};
+}
+/** A legend whose entries carry each series' own mark, where marks tell the series apart too. */
+function marks(t: Theme, show: boolean): Opt {
+	return { show, top: 0, textStyle: { color: t.textSecondary }, itemWidth: 14, itemHeight: 10 };
 }
 function refLine(t: Theme, data: Opt[], formatter: string): Opt {
 	return {
@@ -509,56 +592,255 @@ function modelColor(t: Theme, model: string): string {
 const withUsage = (r: Report, epic?: string) =>
 	r.items.filter((i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic));
 
+/** The series flai laid out for a type; none from a flai older than S-0163. */
+export function bucketsOf(r: Report, type: string = r.type): Bucket[] {
+	return r.usage?.spend?.[type]?.buckets ?? [];
+}
+/** Whether the report carries spend over time at all. */
+export const hasSpend = (r: Report) => r.usage?.spend !== undefined;
+const bucketSize = (r: Report): BucketSize => r.usage?.bucket ?? 'day';
+/** A bucket as a reader names it: the hour, the day, or the week from its Monday, in UTC. */
+export function bucketLabel(at: string, bucket: BucketSize): string {
+	const day = at.slice(0, 10);
+	if (bucket === 'hour') return `${day} ${at.slice(11, 16)} UTC`;
+	return bucket === 'week' ? `week of ${day}` : day;
+}
+const share = (b: Bucket, model: string) => (b.models ?? []).find((m) => m.model === model);
+/** The models that spent anything in the series, in order of name. */
+function modelsIn(buckets: Bucket[]): string[] {
+	const names = new Set<string>();
+	for (const b of buckets) for (const m of b.models ?? []) names.add(m.model);
+	return [...names].sort();
+}
+const ALL = 'all models';
+
+type Point = { value: [string, number]; items: number; estimated?: boolean };
+type Hover = { marker?: string; seriesName: string; data: Point };
+/** The tooltip of a chart over time: the bucket, then each series with its value and items. */
+function hover(bucket: BucketSize, say: (v: number) => string, per: string) {
+	return (ps: Hover | Hover[]) => {
+		const list = (Array.isArray(ps) ? ps : [ps]).filter((p) => p?.data);
+		if (list.length === 0) return '';
+		const lines = list.map((p) => {
+			const d = p.data;
+			const of = per && d.items > 0 ? ` over ${d.items} ${d.items === 1 ? 'item' : 'items'}` : '';
+			return `${p.marker ?? ''}${p.seriesName}: ${say(d.value[1])}${per}${of}${d.estimated ? ' (estimated in part)' : ''}`;
+		});
+		return `${bucketLabel(list[0].data.value[0], bucket)}<br/>${lines.join('<br/>')}`;
+	};
+}
+const BUCKET_MS: Record<BucketSize, number> = {
+	hour: 3600e3,
+	day: 86400e3,
+	week: 7 * 86400e3
+};
 /**
- * Token rate: one point per item with usage and agent time, per model, x when it was completed
- * (started, while open), y the model's tokens per agent hour. At most three models are coloured
- * (the all-pairs rule); the rest fold into other.
+ * What the charts over time share: buckets are UTC, so the axis is; it runs from a bucket before
+ * the first drawn to one after the last, so that a single bucket is not a mark alone on an axis
+ * of its own making, and its ticks are no finer than a bucket.
  */
-export function tokenRate(r: Report, t: Theme, epic?: string): Opt {
-	const all = models(r);
-	const pts = withUsage(r, epic).flatMap((i) =>
-		i
-			.usage!.models.filter((m) => m.tokens_per_hour !== undefined && (i.completed || i.started))
-			.map((m) => ({ i, m }))
-	);
-	const present = all.filter((name) => pts.some((p) => p.m.model === name));
-	const top = present.slice(0, 3);
-	const groups = [...top, ...(present.length > 3 ? ['other'] : [])];
-	const series = groups.map((g) => ({
-		name: g,
-		type: 'scatter',
-		symbolSize: 10,
-		itemStyle: {
-			color: g === 'other' ? t.textSecondary : modelColor(t, g),
-			borderColor: t.surface,
-			borderWidth: 2
-		},
-		data: pts
-			.filter((p) => (g === 'other' ? !top.includes(p.m.model) : p.m.model === g))
-			.map((p) => ({
-				value: [p.i.completed ?? p.i.started, p.m.tokens_per_hour! / 1e6],
-				id: p.i.id,
-				title: p.i.title,
-				model: p.m.model
-			}))
-	}));
-	return base(t, {
-		legend: legend(t, groups.length > 1),
+function overTime(
+	t: Theme,
+	r: Report,
+	series: { data: Point[] }[],
+	name: string,
+	say: (v: number) => string,
+	per: string
+) {
+	const size = BUCKET_MS[bucketSize(r)];
+	const at = series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0])));
+	const range = at.length > 0 ? { min: Math.min(...at) - size, max: Math.max(...at) + size } : {};
+	return {
+		useUTC: true,
+		// room for the legend above the axis name, which a legend of four would run into
+		grid: { left: 64, right: 24, top: 64, bottom: 48, containLabel: false },
+		legend: marks(t, series.length > 1),
 		tooltip: tooltip(t, {
-			formatter: (p: {
-				data: { id: string; title: string; model: string; value: [string, number] };
-			}) =>
-				`${p.data.id} ${p.data.title}<br/>${p.data.model}: ${count(p.data.value[1] * 1e6)} tokens per agent hour`
+			trigger: 'axis',
+			axisPointer: { type: 'line', lineStyle: { color: t.textSecondary, width: 1 } },
+			formatter: hover(bucketSize(r), say, per)
 		}),
-		xAxis: axisX(t, { type: 'time' }),
+		xAxis: axisX(t, { type: 'time', minInterval: size, ...range }),
 		yAxis: axisY(t, {
 			type: 'value',
-			name: 'million tokens per agent hour',
-			nameTextStyle: { color: t.textSecondary }
-		}),
+			name,
+			nameTextStyle: { color: t.textSecondary, align: 'left' },
+			axisLabel: { color: t.textSecondary, formatter: say }
+		})
+	};
+}
+function line(
+	t: Theme,
+	name: string,
+	color: string,
+	symbol: string,
+	data: Point[],
+	dashed = false
+) {
+	return {
+		name,
+		type: 'line',
+		showSymbol: data.length < 40,
+		symbol,
+		symbolSize: 9,
+		lineStyle: { width: 2, color, type: dashed ? 'dashed' : 'solid' },
+		itemStyle: { color, borderColor: t.surface, borderWidth: 2 },
+		data
+	};
+}
+
+/**
+ * One line per model over time, of a value each bucket has per model; with two models or more,
+ * a dashed line for all of them together.
+ */
+function perModel(
+	r: Report,
+	t: Theme,
+	pick: (s: Spend) => number | undefined,
+	name: string,
+	say: (v: number) => string,
+	per: string
+): Opt {
+	const buckets = bucketsOf(r);
+	const names = modelsIn(buckets);
+	const points = (of: (b: Bucket) => Spend | undefined): Point[] =>
+		buckets.flatMap((b) => {
+			const s = of(b);
+			const v = s && pick(s);
+			return s && v !== undefined
+				? [{ value: [b.at, v] as [string, number], items: s.items, estimated: s.estimated }]
+				: [];
+		});
+	const series = names.map((m) =>
+		line(
+			t,
+			m,
+			modelColor(t, m),
+			modelSymbol(m),
+			points((b) => share(b, m))
+		)
+	);
+	if (names.length > 1)
+		series.push(
+			line(
+				t,
+				ALL,
+				t.textSecondary,
+				'emptyCircle',
+				points((b) => b),
+				true
+			)
+		);
+	return base(t, { ...overTime(t, r, series, name, say, per), series });
+}
+
+/**
+ * Token rate: per model, the tokens per minute of agent work over the items done in each bucket
+ * (S-0163: an hour of agent work is longer than an item takes).
+ */
+export const tokenRate = (r: Report, t: Theme) =>
+	perModel(
+		r,
+		t,
+		(s) => s.tokens_per_minute,
+		'tokens per agent minute',
+		count,
+		' tokens per minute'
+	);
+
+/** Tokens per dollar: per model, the tokens a dollar bought over the items done in each bucket. */
+export const tokensPerDollar = (r: Report, t: Theme) =>
+	perModel(r, t, (s) => s.tokens_per_dollar, 'tokens per US dollar', count, ' tokens per dollar');
+
+/**
+ * What each bucket spent, stacked by model, with the running mean per bucket as a line: tokens
+ * per day, or cost per day.
+ */
+function spentOverTime(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
+	const buckets = bucketsOf(r);
+	const names = modelsIn(buckets);
+	const bucket = bucketSize(r);
+	const say = what === 'tokens' ? count : dollars;
+	const bars = names.map((m) => ({
+		name: m,
+		type: 'bar',
+		stack: 'spent',
+		barMaxWidth: 24,
+		itemStyle: { color: modelColor(t, m), borderColor: t.surface, borderWidth: 1 },
+		data: buckets.map((b): Point => {
+			const s = share(b, m);
+			return { value: [b.at, s?.[what] ?? 0], items: s?.items ?? 0, estimated: s?.estimated };
+		})
+	}));
+	const mean = line(
+		t,
+		`mean per ${bucket}`,
+		t.textSecondary,
+		'none',
+		buckets.map((b) => ({
+			value: [b.at, what === 'tokens' ? b.mean_tokens : b.mean_cost],
+			items: 0
+		})),
+		true
+	);
+	const series = buckets.length > 0 ? [...bars, { ...mean, showSymbol: false }] : [];
+	return base(t, {
+		...overTime(t, r, series, what === 'tokens' ? 'tokens' : 'US dollars', say, ''),
 		series
 	});
 }
+export const tokensSpent = (r: Report, t: Theme) => spentOverTime(r, t, 'tokens');
+export const costSpent = (r: Report, t: Theme) => spentOverTime(r, t, 'cost');
+
+/**
+ * What an item took on average in each bucket: one line per item type, or, by model, one line
+ * per model over the items of the report's type that it worked on.
+ */
+function perItem(r: Report, t: Theme, what: 'tokens' | 'cost', by: By): Opt {
+	const pick = (s: Spend) => (what === 'tokens' ? s.tokens_per_item : s.cost_per_item);
+	const points = (buckets: Bucket[], of: (b: Bucket) => Spend | undefined): Point[] =>
+		buckets.flatMap((b) => {
+			const s = of(b);
+			const v = s && pick(s);
+			return s && v !== undefined
+				? [{ value: [b.at, v] as [string, number], items: s.items, estimated: s.estimated }]
+				: [];
+		});
+	const series =
+		by === 'model'
+			? modelsIn(bucketsOf(r)).map((m) =>
+					line(
+						t,
+						m,
+						modelColor(t, m),
+						modelSymbol(m),
+						points(bucketsOf(r), (b) => share(b, m))
+					)
+				)
+			: TYPES.filter((type) => bucketsOf(r, type).some((b) => b.items > 0)).map((type) =>
+					line(
+						t,
+						type,
+						colorFor(t, TYPE_SLOT, type, 0),
+						TYPE_SYMBOL[type],
+						points(bucketsOf(r, type), (b) => b)
+					)
+				);
+	const unit = by === 'model' ? r.type : 'item';
+	return base(t, {
+		...overTime(
+			t,
+			r,
+			series,
+			what === 'tokens' ? `tokens per ${unit}` : `US dollars per ${unit}`,
+			what === 'tokens' ? count : dollars,
+			what === 'tokens' ? ' tokens each' : ' each'
+		),
+		series
+	});
+}
+export const tokensPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'tokens', by);
+export const costPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'cost', by);
 
 /**
  * Cost: one bar per completed item with usage, in order of completion, stacked by model. An item
@@ -661,7 +943,7 @@ function completion(r: Report, t: Theme, against: 'time' | 'cost'): Opt {
 export const completionTime = (r: Report, t: Theme) => completion(r, t, 'time');
 export const completionCost = (r: Report, t: Theme) => completion(r, t, 'cost');
 
-export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt {
+export function build(kind: Kind, report: Report, t: Theme, epic?: string, by: By = 'type'): Opt {
 	const r = normalise(report);
 	switch (kind) {
 		case 'cycle-time':
@@ -679,7 +961,17 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt 
 		case 'estimates':
 			return estimates(r, t);
 		case 'token-rate':
-			return tokenRate(r, t, epic);
+			return tokenRate(r, t);
+		case 'tokens-spent':
+			return tokensSpent(r, t);
+		case 'tokens-per-item':
+			return tokensPerItem(r, t, by);
+		case 'tokens-per-dollar':
+			return tokensPerDollar(r, t);
+		case 'cost-spent':
+			return costSpent(r, t);
+		case 'cost-per-item':
+			return costPerItem(r, t, by);
 		case 'cost':
 			return cost(r, t, epic);
 		case 'completion-time':

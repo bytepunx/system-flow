@@ -36,7 +36,7 @@
 	const t = $derived(theme(dark));
 	const option = $derived(report ? build(kind, report, t, epic || undefined) : null);
 	const s = $derived(report?.summary);
-	const usageKind = $derived(USAGE_KINDS.includes(kind));
+	const usageKind = $derived((USAGE_KINDS as readonly string[]).includes(kind));
 	const spenders = $derived(
 		report?.items.filter(
 			(i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic)

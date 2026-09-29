@@ -38,6 +38,30 @@ export function modelSlot(model: string): number {
 	return h % 2 === 0 ? 3 : 4;
 }
 
+// A model's mark on a line, by family, so that two models are told apart by more than colour:
+// opus and fable are close for a reader who sees little red or green (S-0163).
+export const MODEL_SYMBOL: Record<string, string> = {
+	opus: 'circle',
+	sonnet: 'rect',
+	haiku: 'triangle',
+	fable: 'diamond'
+};
+export function modelSymbol(model: string): string {
+	for (const [family, symbol] of Object.entries(MODEL_SYMBOL))
+		if (model.includes(family)) return symbol;
+	return 'roundRect';
+}
+
+// Item types on the charts that compare them (S-0163): the three slots that stay apart from
+// each other in both modes for every pair (dataviz validator, all pairs, 2026-09-29), with a
+// mark each.
+export const TYPE_SLOT: Record<string, number> = { epic: 6, story: 5, task: 4 };
+export const TYPE_SYMBOL: Record<string, string> = {
+	epic: 'diamond',
+	story: 'circle',
+	task: 'triangle'
+};
+
 export type Theme = {
 	dark: boolean;
 	surface: string;
