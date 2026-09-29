@@ -128,6 +128,21 @@ flai asks its questions through a prompt package of its own and no longer depend
 
 A change reaches the dashboard's server with the path's kind, read against the manifest's layout: a work item (`board.md` and the archive included), a narrative, a thread, an ADR, another document, the manifest, or anything else. The server forgets only the answers flai reads from that kind ([flaiover-dashboard.md](flaiover-dashboard.md#where-the-data-comes-from-s-0073)), so a narrative log line keeps `board.get`, the items, the statistics, and the ADRs, and forgets the inbox, the activity, and the documentation tree. Pages ask again only for the kinds they show, once for the changes that arrive within 500 ms of each other, and at least every 2 s during a burst that does not settle. The board asks for `board.get`, `/api/publish`, and `/api/unpushed` again only when a work item or the manifest changes, and for the agents when a work item or a thread changes or flai serve says an agent started or ended. Behaviour tests pin which paths forget which answers (`repo-forget.test.ts`) and what the board asks for each kind (`routes/board/board.svelte.test.ts`). The request rate was not measured again in the running dashboard: that needs an image built from this story in place of the operator's container.
 
+### Cause 7: the items and documents pages ask for what they show (S-0162)
+
+The dashboard asks `items.list` without bodies, which it never showed from the list: a body is asked for with `item.get` when its item is opened. It asks for the archive only where a page shows it, and the overview, which shows only how many items are archived, asks `items.count` instead. `docs.tree` answers each file's title and not its front matter, which the explorer reads with `doc.get` when a file is opened, and flai keeps each title by file while the file has the same identity, modification time, and size, as it keeps items (cause 1), so a warm answer lists the folders and reads no file ([flai-cli.md](flai-cli.md#commands), [flaiover-dashboard.md](flaiover-dashboard.md#api-s-0011)). `/_ready` asks for the manifest alone. Measured on 2026-09-29, on the same host and repository, now 1128 Markdown files under the three folders, load 0.3 to 3.5: each method called six times in one process through the table `flai serve` answers with, the first call cold, the size as encoded.
+
+| Request | Before (S-0152) | Cold | Warm | Answer |
+|---------|-----------------|------|------|--------|
+| `items.list`, archive and bodies, as the overview asked | 122 ms, 1.28 MB | | 7.1 to 11.6 ms | 1.36 MB |
+| `items.list`, active, no bodies, as the overview asks now | | 2.0 ms | 0.3 to 0.4 ms | 8.4 KB |
+| `items.count` | | 123 ms | 3.9 to 5.3 ms | 28 B |
+| `items.list`, epics with the archive, as the charts ask | | | 3.7 to 4.8 ms | 8.4 KB |
+| `docs.tree` | 135 ms, 772 KB | 129 to 131 ms | 6.1 to 8.2 ms, of which the walk 5.5 to 6.7 | 320 KB |
+| `project.info`, all `/_ready` asks now | | | 0.2 ms | 782 B |
+
+The overview's first answers from flai are 8.4 KB and 28 B, where they were 1.36 MB. `docs.tree` stays over 200 KB: with 1128 files, the names and paths alone are 229 KB. What is left of a warm answer is the walk that tells flai which files changed, one `lstat` per file. Neither was measured in the running dashboard, for the reason given under cause 6.
+
 ## Stories
 
 Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`.
