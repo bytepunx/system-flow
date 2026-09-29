@@ -1,6 +1,6 @@
 <script lang="ts">
 	// A standing notice while the clone holds an acceptance its remote has not got (S-0063).
-	// It asks on mount, whenever `refresh` changes (the board bumps it on every change event),
+	// It asks on mount, whenever `refresh` changes (the board bumps it when a work item changes),
 	// when the window regains focus, and every minute while it is showing, so it clears by
 	// itself after a push from this clone. Pushing is done on the host, by flai, as the operator.
 	// When they have enabled the push action there (flai serve enable push, S-0078) this offers

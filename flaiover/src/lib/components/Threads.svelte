@@ -5,7 +5,7 @@
 	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
-	import { debounced, listen } from '$lib/events';
+	import { follow } from '$lib/events';
 	import type { StoryActivity } from '$lib/activity';
 
 	type Entry = { at: string; author: string; text: string; operator?: boolean };
@@ -110,15 +110,9 @@
 		void showResolved;
 		void load();
 	});
-	// A reply, a new thread, or a resolution by anyone shows without a reload (S-0154).
-	onMount(() => {
-		const later = debounced(() => void load());
-		const stop = listen({ change: later });
-		return () => {
-			stop();
-			later.stop();
-		};
-	});
+	// A reply, a new thread, or a resolution by anyone shows without a reload (S-0154); a thread's
+	// story is read from the items, so their changes count too (S-0161).
+	onMount(() => follow(['thread', 'item'], () => void load()));
 
 	async function post(path: string, body: Record<string, unknown>) {
 		notice = null;

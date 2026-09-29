@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import { projectState } from '$lib/project.svelte';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
+	import { follow } from '$lib/events';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 
 	type Adr = {
@@ -30,9 +30,7 @@
 			.then((r) => (writable = r.ok))
 			.catch(() => (writable = false));
 		// the list follows the files: an ADR recorded here or from a shell appears without a reload
-		const es = new EventSource(projectState.tag('/api/events'));
-		es.addEventListener('change', () => void load());
-		return () => es.close();
+		return follow(['adr'], () => void load());
 	});
 
 	async function accept(a: Adr) {

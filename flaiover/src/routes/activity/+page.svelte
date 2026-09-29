@@ -1,10 +1,10 @@
 <script lang="ts">
 	// /activity: who is working on what (S-0042), and what each agent flai started is saying and
-	// doing (S-0142). What flai knows of agents is asked again on every change, and while one runs
+	// doing (S-0142). What flai knows of agents is asked again when a work item or a thread changes, and while one runs
 	// now and then, since an agent ends without changing a file.
 	import { api } from '$lib/api';
-	import { projectState } from '$lib/project.svelte';
 	import { onMount } from 'svelte';
+	import { debounced, follow, listen } from '$lib/events';
 	import ActivityView from '$lib/components/ActivityView.svelte';
 	import { anyRunning, type HostAgent } from '$lib/activity';
 
@@ -34,16 +34,18 @@
 	onMount(() => {
 		void load();
 		void loadAgents();
-		const es = new EventSource(projectState.tag('/api/events'));
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		es.addEventListener('change', () => {
-			clearTimeout(timer);
-			timer = setTimeout(() => {
-				void load();
-				void loadAgents();
-			}, 300);
-		});
-		return () => es.close();
+		// the streams are read from the narratives and the work items, the agents from the items and
+		// the threads; flai serve says when an agent starts or ends (S-0161)
+		const agents = debounced(() => void loadAgents());
+		const stops = [
+			follow(['item', 'narrative'], () => void load()),
+			follow(['item', 'thread'], () => void loadAgents()),
+			listen({ agent: () => agents() })
+		];
+		return () => {
+			for (const stop of stops) stop();
+			agents.stop();
+		};
 	});
 	$effect(() => {
 		if (!anyRunning(host)) return;

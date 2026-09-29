@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import { projectState } from '$lib/project.svelte';
 	import { resolve } from '$app/paths';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
@@ -24,6 +23,7 @@
 		type Placement
 	} from '$lib/reorder';
 	import { onMount, tick } from 'svelte';
+	import { debounced, follow, listen } from '$lib/events';
 
 	type Card = {
 		id: string;
@@ -49,7 +49,7 @@
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
 
-	// bumped on every load so the unpushed notice asks again when anything changes
+	// bumped on every load so the unpushed notice asks again when a work item changes (S-0161)
 	let loads = $state(0);
 	async function load() {
 		const r = await api('/api/board');
@@ -113,13 +113,23 @@
 		load();
 		void loadPublish();
 		void loadAgents();
-		const es = new EventSource(projectState.tag('/api/events'));
-		es.addEventListener('change', () => {
-			load();
-			void loadPublish();
-			void loadAgents();
-		});
-		return () => es.close();
+		// The board, the Publish banner, and the unpushed notice are read from the work items: a
+		// narrative, a thread, or a document changing asks for none of them, and changes that arrive
+		// together ask once (S-0161). The agents are read from the items and the threads, and flai
+		// serve says when one starts or ends.
+		const agents = debounced(() => void loadAgents());
+		const stops = [
+			follow(['item'], () => {
+				load();
+				void loadPublish();
+			}),
+			follow(['item', 'thread'], () => void loadAgents()),
+			listen({ agent: () => agents() })
+		];
+		return () => {
+			for (const stop of stops) stop();
+			agents.stop();
+		};
 	});
 
 	// The types ticked above the board (S-0141); WIP counts and reordering count stories regardless.

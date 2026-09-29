@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import { projectState } from '$lib/project.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
+	import { follow } from '$lib/events';
 	import Chart from '$lib/components/Chart.svelte';
 	import {
 		build,
@@ -54,17 +54,15 @@
 		report = normalise(await r.json());
 	}
 	onMount(() => {
-		const es = new EventSource(projectState.tag('/api/events'));
-		es.addEventListener('change', () => load());
+		// the statistics are read from the work items (S-0161)
+		const stop = follow(['item'], () => void load());
 		(async () => {
 			epics = (await (await api('/api/items?type=epic')).json()).map(
 				(e: { id: string; title: string }) => ({ id: e.id, title: e.title })
 			);
 			await load();
 		})();
-		return () => {
-			es.close();
-		};
+		return stop;
 	});
 </script>
 

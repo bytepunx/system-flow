@@ -13,7 +13,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
-	import { debounced, listen } from '$lib/events';
+	import { follow } from '$lib/events';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
 	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
@@ -167,15 +167,9 @@
 		void id;
 		load();
 	});
-	// The item, its history, its children, and its body follow the project as it changes (S-0154).
-	onMount(() => {
-		const later = debounced(() => void load(true));
-		const stop = listen({ change: later });
-		return () => {
-			stop();
-			later.stop();
-		};
-	});
+	// The item, its history, its children, and its body follow the work items as they change
+	// (S-0154, S-0161).
+	onMount(() => follow(['item'], () => void load(true)));
 
 	async function post(path: string, body: Record<string, unknown>) {
 		notice = null;

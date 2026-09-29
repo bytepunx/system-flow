@@ -11,7 +11,7 @@
 	// the page for its header (S-0129). Start agent and Retry override a hold, as on the host.
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import { listen } from '$lib/events';
+	import { follow, listen } from '$lib/events';
 	import { resolve } from '$app/paths';
 	import {
 		activityLine,
@@ -55,13 +55,18 @@
 	}
 	onMount(() => {
 		void ask();
-		// flai serve says when this story's agent starts or ends, which changes no file (S-0154)
-		return listen({
-			change: () => void ask(),
+		// flai serve says when this story's agent starts or ends, which changes no file (S-0154); what
+		// it is doing is read from the work items and the threads it asks in (S-0161)
+		const stopItems = follow(['item', 'thread'], () => void ask());
+		const stopAgent = listen({
 			agent: (s) => {
 				if (s === story) void ask();
 			}
 		});
+		return () => {
+			stopItems();
+			stopAgent();
+		};
 	});
 	$effect(() => {
 		if (!anyRunning(status)) return;

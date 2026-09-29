@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import StoryAgent from './StoryAgent.svelte';
+import { GATHER_MS } from '$lib/events';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -20,6 +21,11 @@ class FakeEventSource {
 	close() {}
 }
 
+/** A file of the project changing, as /api/events says it, once the page has gathered it (S-0161). */
+const changed = async (path = 'wip/threads/TH-0009-port.md', kind = 'thread') => {
+	FakeEventSource.opened[0].listeners.change({ data: JSON.stringify({ path, kind }) });
+	await new Promise((r) => setTimeout(r, GATHER_MS));
+};
 const settle = async () => {
 	for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 	flushSync();
@@ -92,7 +98,7 @@ describe('StoryAgent (S-0104)', () => {
 				}
 			})
 		);
-		FakeEventSource.opened[0].listeners.change();
+		await changed();
 		await settle();
 		expect(text()).toContain(
 			'agent waiting (claude-code, claude-haiku-4-5): waiting for an answer to TH-0009: Which port?'
@@ -228,7 +234,7 @@ describe('StoryAgent (S-0104)', () => {
 					state: { command: '', stories: { 'S-0104': { state: 'working', run } } }
 				})
 			);
-			FakeEventSource.opened[0].listeners.change();
+			await changed();
 			await settle();
 			expect(text()).toContain('agent working');
 			expect(button()).toBeNull();
@@ -247,7 +253,7 @@ describe('StoryAgent (S-0104)', () => {
 					}
 				})
 			);
-			FakeEventSource.opened[0].listeners.change();
+			await changed();
 			await settle();
 			expect(button()).not.toBeNull();
 		});
@@ -462,7 +468,7 @@ describe('StoryAgent (S-0104)', () => {
 			await settle();
 			expect(got).toEqual(hold);
 			api.mockResolvedValue(answer({ enabled: true, state: { command: '', stories: {} } }));
-			FakeEventSource.opened[0].listeners.change();
+			await changed('wip/kanban/stories/S-0104-x.md', 'item');
 			await settle();
 			expect(reason()).toBeNull();
 			expect(got).toBeUndefined();

@@ -23,7 +23,11 @@ vi.mock('$lib/events', () => ({
 		events.heard.push(l);
 		return () => events.heard.splice(events.heard.indexOf(l), 1);
 	},
-	debounced: (f: () => void) => Object.assign(() => f(), { stop: () => {} })
+	follow: (_kinds: string[], f: () => void) => {
+		const l = { change: () => f() };
+		events.heard.push(l);
+		return () => events.heard.splice(events.heard.indexOf(l), 1);
+	}
 }));
 const changed = (path: string) => events.heard.forEach((l) => l.change?.(path));
 
