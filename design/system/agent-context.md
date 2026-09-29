@@ -193,3 +193,14 @@ ADR-0049's estimate of 80 KB for S-0138 missed the 9 KB open-issues table and th
 ### Paths written out
 
 [ADR-0050](../adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md) (S-0149) refines ADR-0049's named step. A document the story, its epic, or its tasks name only by its repository path written out is briefed when the file is larger than an eighth of the budget (10 KB at 80 KB), and loads whole at or under it. A markdown link or an ADR ID to the same document still loads it whole, and a `#fragment` link still loads its section; the brief then outlines the rest with that section marked loaded. The brief's reason is `named in <ID>`, and the pack tells the agent that the story named the document, that it is briefed for its size, and that the agent reads it, or the sections it will change, before relying on it or changing it. A link is a reading instruction; a path is a pointer to where the work lands.
+
+Measured on 2026-09-29 on the S-0149 branch against the flai before it, same documents, same 80 KB budget:
+
+| Story | Pack before | Pack after | Named before | Named after | Briefed for size |
+|-------|-------------|------------|--------------|-------------|------------------|
+| S-0138 | 123 KB | 113 KB | 35 KB | 24 KB | `conventions.md` |
+| S-0141 | 156 KB | 87 KB | 70 KB | 0 KB | `flaiover-dashboard.md` |
+| S-0146 | 230 KB | 113 KB | 143 KB | 24 KB | `agent-context.md`, `conventions.md`, `flai-cli.md` |
+| S-0147 | 188 KB | 102 KB | 101 KB | 15 KB | `flai-cli.md` |
+
+What is left named is ADRs by ID (ADR-0047 9 KB, ADR-0049 15 KB), which ADR-0050 keeps whole. Every pack is still over the budget, now by the briefs or by those ADRs, because the conventions and open issues take 57 KB of the 80 KB; narrowing the conventions' topics is still the remedy.

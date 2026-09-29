@@ -35,9 +35,12 @@ with the sections whose topics include neither all nor one of the story's
 left out (the front matter, the baseline marker, and the Project additions
 heading always stay), never cut for the budget; the open issues; everything
 the story, its epic, and its tasks link or name, whole (a #fragment loads
-its section; a superseded ADR is replaced by what supersedes it); a brief of
-each design/system and design/tech file its topics select, as its first
-paragraph and heading outline; the decision sentence of each ADR its topics
+its section; a superseded ADR is replaced by what supersedes it), except a
+document named only by its path written out and larger than an eighth of
+the budget, which is briefed with the reason "named in <ID>" and a line
+telling the agent to read it before relying on it or changing it
+(ADR-0050); a brief of each design/system and design/tech file its topics
+select, as its first paragraph and heading outline; the decision sentence of each ADR its topics
 select or one link step reaches (linked from a named or briefed section,
 refined by, or refining one); then the sections ranked highest against the
 story's title, goal, and criteria, each cut at its own heading (an ADR whole
