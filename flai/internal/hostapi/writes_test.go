@@ -28,6 +28,7 @@ var good = map[string]struct {
 	"item.move":         {`{"id":"S-0001","to":"cancelled","reason":"  not\n needed ",` + rid + `}`, "move S-0001 cancelled --by=olive --reason=not needed --json", ""},
 	"item.order":        {`{"id":"S-0002","before":"S-0001",` + rid + `}`, "order S-0002 --before=S-0001 --json", ""},
 	"item.block":        {`{"id":"T-0001","reason":"tide",` + rid + `}`, "block T-0001 --reason=tide --json", ""},
+	"board.limit":       {`{"column":"in-progress","limit":3,` + rid + `}`, "board limit --json -- in-progress 3", ""},
 	"item.unblock":      {`{"id":"T-0001",` + rid + `}`, "unblock T-0001 --json", ""},
 	"item.new":          {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
 	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
@@ -82,6 +83,7 @@ var refused = map[string][]string{
 	"item.move":    {`{"id":"--help","to":"ready",` + rid + `}`, `{"id":"S-0001","to":"--yes",` + rid + `}`, `{"id":"S-0001; rm -rf /","to":"ready",` + rid + `}`, `{"id":"S-0001","to":"ready"}`, `{"id":"S-0001","to":"ready","request_id":"x"}`},
 	"item.order":   {`{"id":"S-0002","before":"--top",` + rid + `}`, `{"id":"S-0002","top":true,"bottom":true,` + rid + `}`, `{"id":"S-0002",` + rid + `}`},
 	"item.block":   {`{"id":"T-0001","reason":"  ",` + rid + `}`, `{"id":"T","reason":"x",` + rid + `}`},
+	"board.limit":  {`{"column":"backlog","limit":3,` + rid + `}`, `{"column":"--json","limit":3,` + rid + `}`, `{"column":"ready","limit":-1,` + rid + `}`, `{"column":"ready","limit":100,` + rid + `}`, `{"column":"ready",` + rid + `}`},
 	"item.unblock": {`{"id":"--json",` + rid + `}`},
 	"item.edit": {
 		`{"id":"S-0001","title":"no hash",` + rid + `}`,

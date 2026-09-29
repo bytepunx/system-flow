@@ -337,6 +337,27 @@ Flags:
 |------|---------|
 | `--all` | include epics and tasks |
 
+Subcommands:
+
+- [limit](#flai-board-limit): Set a column's WIP limit
+
+#### flai board limit
+
+Set a column's WIP limit.
+
+```text
+flai board limit <column> <n>
+```
+
+Set the WIP limit of ready, in-progress, or review in wip/kanban/board.md, the one place flai, flai serve, flai check, and the dashboard read it from. 0 removes the limit. Limits count stories; a move past one warns.
+
+Examples:
+
+```bash
+flai board limit in-progress 3
+flai board limit review 0
+```
+
 ### flai check
 
 Validate the repository against the system-flow standard.

@@ -348,7 +348,10 @@ Blocked items keep their column; the interval is recorded so blocked time shows 
 flai board          # stories by column with age, nature, blocked flag, WIP counts
 flai board --all    # epics and tasks too
 flai board --json
+flai board limit in-progress 3   # the column's WIP limit; 0 for none
 ```
+
+`flai board limit` sets the WIP limit of `ready`, `in-progress`, or `review` in `wip/kanban/board.md`, the one place flai, `flai serve`, `flai check`, and the dashboard read it from; the other columns have none. A move past a limit warns and is made. `flai serve` starts an agent for a ready story only while `in-progress` has room, so raising that limit lets it start the next one. The board's lane menu in the dashboard does the same.
 
 The `backlog` and `ready` columns are listed in pull order: the stories named in `order` in `wip/kanban/board.md`, in that order, then the rest by ID. Agents pull the first ready story, so this is how you say what comes next.
 

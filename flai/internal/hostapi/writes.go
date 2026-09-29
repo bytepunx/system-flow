@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -125,6 +126,9 @@ type journalled struct {
 }
 
 const journalKeeps = 10 * time.Minute
+
+// maxWIPLimit bounds a WIP limit set from the dashboard: past it a limit limits nothing.
+const maxWIPLimit = 99
 
 func (j *journal) get(key string) (journalled, bool) {
 	j.mu.Lock()
@@ -569,6 +573,24 @@ func itemSpecs() map[string]spec {
 				return []string{"order", in.ID, "--top"}, "", nil
 			}
 			return []string{"order", in.ID, "--bottom"}, "", nil
+		}),
+
+		// board.limit: a column's WIP limit, from the board's lane menu (S-0167).
+		"board.limit": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Column string `json:"column"`
+				Limit  *int   `json:"limit"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if !slices.Contains(workitem.LimitedColumns, in.Column) {
+				return nil, "", bad("%q has no WIP limit; only %s do", in.Column, strings.Join(workitem.LimitedColumns, ", "))
+			}
+			if in.Limit == nil || *in.Limit < 0 || *in.Limit > maxWIPLimit {
+				return nil, "", bad("limit is a whole number from 0, for none, to %d", maxWIPLimit)
+			}
+			return []string{"board", "limit", "--", in.Column, strconv.Itoa(*in.Limit)}, "", nil
 		}),
 
 		"item.block": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {

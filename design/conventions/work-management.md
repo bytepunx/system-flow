@@ -1,6 +1,6 @@
 ---
 title: Work management
-updated: 2026-09-26
+updated: 2026-09-29
 audience: agent
 order: 30
 status: active
@@ -42,7 +42,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- WIP limits are in `wip/kanban/board.md`: ready 5, in-progress 2, review 3.
+- WIP limits are in `wip/kanban/board.md` and nowhere else; read them with `flai board` and change them with `flai board limit` or the board's lane menu, not by restating them here.
 - The operator accepts stories; the agent runs `flai accept S-nnnn --by alex` on their word, which merges the story branch, moves to done, archives, commits, releases, and pushes in one step. Done means accepted: the operator moving a story to done, from the board or with `flai move`, runs the same flow and is sufficient on its own (S-0046). The agent moves stories to review and never to done.
 - E-0006 (designer's workbench) is pulled in its story order; S-0036 (authentication) before anything that writes from the dashboard.
 - Declare what a story or task changes with `--touches` or `flai touches`; check `flai board` for overlaps before editing a path another in-progress item touches.

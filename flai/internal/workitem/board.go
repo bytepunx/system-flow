@@ -67,7 +67,7 @@ func (b *Board) Save(today string) error {
 	fmt.Fprintf(&sb, "updated: %s\n", today)
 	fmt.Fprintf(&sb, "status: %s\n", orDefault(b.Status, "active"))
 	sb.WriteString("wip_limits:\n")
-	for _, k := range []string{Ready, InProgress, Review} {
+	for _, k := range LimitedColumns {
 		if v, ok := b.WIPLimits[k]; ok {
 			fmt.Fprintf(&sb, "  %s: %d\n", k, v)
 		}
@@ -86,6 +86,21 @@ func (b *Board) Save(today string) error {
 		return err
 	}
 	return atomicfile.WriteFile(b.Path, []byte(sb.String()), 0o644)
+}
+
+// LimitedColumns are the columns that carry a WIP limit (workflow.md).
+var LimitedColumns = []string{Ready, InProgress, Review}
+
+// SetLimit sets a column's WIP limit; 0 means none (S-0167).
+func (b *Board) SetLimit(column string, n int) error {
+	if !contains(LimitedColumns, column) {
+		return fmt.Errorf("%s has no WIP limit; only %s do", column, strings.Join(LimitedColumns, ", "))
+	}
+	if n < 0 {
+		return fmt.Errorf("a WIP limit is a whole number, 0 for none; got %d", n)
+	}
+	b.WIPLimits[column] = n
+	return nil
 }
 
 // RemoveFromOrder drops id from the pull order.

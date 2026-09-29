@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -79,7 +80,50 @@ func newBoardCmd(a *app) *cobra.Command {
 		},
 	}
 	c.Flags().BoolVar(&all, "all", false, "include epics and tasks")
+	c.AddCommand(newBoardLimitCmd(a))
 	return c
+}
+
+func newBoardLimitCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "limit <column> <n>",
+		Short: "Set a column's WIP limit",
+		Long: `Set the WIP limit of ready, in-progress, or review in wip/kanban/board.md,
+the one place flai, flai serve, flai check, and the dashboard read it from.
+0 removes the limit. Limits count stories; a move past one warns.`,
+		Example: `  flai board limit in-progress 3
+  flai board limit review 0`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			n, err := strconv.Atoi(args[1])
+			if err != nil {
+				return fmt.Errorf("a WIP limit is a whole number, 0 for none; got %q", args[1])
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			board, err := repo.LoadBoard()
+			if err != nil {
+				return err
+			}
+			if err := board.SetLimit(args[0], n); err != nil {
+				return err
+			}
+			if err := board.Save(a.now().Format("2006-01-02")); err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(map[string]any{"column": args[0], "limit": n, "wip_limits": board.WIPLimits})
+			}
+			if n == 0 {
+				fmt.Fprintf(a.out, "%s: no WIP limit\n", args[0])
+			} else {
+				fmt.Fprintf(a.out, "%s: WIP limit %d\n", args[0], n)
+			}
+			return nil
+		},
+	}
 }
 
 func truncate(s string, n int) string {
