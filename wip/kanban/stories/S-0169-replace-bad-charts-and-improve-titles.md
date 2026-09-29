@@ -2,11 +2,11 @@
 id: S-0169
 type: story
 nature: remediation
-title: Replace Bad Use Charts
+title: Replace Bad Charts and Improve Titles
 status: ready
 owner: alex
 created: 2026-09-29T23:50:42Z
-updated: 2026-09-29T23:50:44Z
+updated: 2026-09-29T23:52:21Z
 transitions:
   - to: ready
     at: 2026-09-29T23:50:44Z
@@ -20,7 +20,7 @@ agent:
   config:
     effort: high
 ---
-# S-0169 Replace Bad Use Charts
+# S-0169 Replace Bad Charts and Improve Titles
 
 ## Goal
 
