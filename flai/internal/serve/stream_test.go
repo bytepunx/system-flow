@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 )
 
 // A session as claude -p --output-format stream-json writes it, with the
@@ -215,8 +217,8 @@ func TestStreamCutsALongText(t *testing.T) {
 
 func TestStreamOfAStoryWithNoAgent(t *testing.T) {
 	st, _ := streamState(t, "", true)
-	if _, err := Stream(st, "S-0002", -1); !errors.Is(err, ErrNoRun) {
-		t.Errorf("err = %v, want ErrNoRun", err)
+	if _, err := Stream(st, "S-0002", -1); !errors.Is(err, hostapi.ErrNoAgent) {
+		t.Errorf("err = %v, want hostapi.ErrNoAgent", err)
 	}
 }
 

@@ -48,6 +48,9 @@ func (a *app) host() hostapi.Host {
 			}
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st)}
 		},
+		AgentStream: func(root, story string, after int64) (any, error) {
+			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
+		},
 		Settings: a.hostSettings,
 		Requests: a.serveDir().Requests,
 		Record: func(e hostapi.Entry) {
@@ -338,7 +341,7 @@ journal.`,
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
-	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a),
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStreamCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
 		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,
@@ -896,6 +899,104 @@ button in the dashboard's acceptance confirmation runs this.`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return a.agentNow(args[0], serve.Commit)
 		},
+	}
+}
+
+func newServeAgentStreamCmd(a *app) *cobra.Command {
+	var from int64
+	var follow bool
+	c := &cobra.Command{
+		Use:   "stream <story-id>",
+		Short: "Print what a story's agent said and did, from the log flai serve gave it",
+		Long: `Prints the stream of the newest agent flai serve started for a story:
+what it said, the tools it called and what they answered, the background
+tasks it ran, and how its session ended, one entry to a line, each cut to a
+few hundred characters. It is read from the log flai serve writes the
+agent's output to; Claude Code's stream-json is turned into entries, and any
+other output is printed as it is. The dashboard's activity page shows the
+same stream (S-0142).
+
+Without --from it starts at the last 256 KiB of the log. --follow goes on
+printing what the agent writes until it ends. --json prints each read as
+one JSON object on a line: the entries, whether the agent runs, and next,
+the offset to read from again with --from.`,
+		Example: `  flai serve agent stream S-0142
+  flai serve agent stream S-0142 --follow
+  flai serve agent stream S-0142 --from 0 --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return a.agentStream(workitem.CanonicalID(args[0]), from, follow)
+		},
+	}
+	c.Flags().Int64Var(&from, "from", -1, "the byte offset of the log to read from (default: its last 256 KiB)")
+	c.Flags().BoolVarP(&follow, "follow", "f", false, "go on printing until the agent ends")
+	return c
+}
+
+// agentStream prints a story's agent's stream, once or until it ends.
+func (a *app) agentStream(story string, from int64, follow bool) error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	root := mainRootOf(repo)
+	started := ""
+	for {
+		got, err := serve.Stream(a.serveDir().AgentStates()[root], story, from)
+		if errors.Is(err, hostapi.ErrNoAgent) {
+			return fmt.Errorf("rule: flai serve has started no agent for %s", story)
+		}
+		if err != nil {
+			return err
+		}
+		if started != "" && got.Started != started {
+			// another agent was started for the story: its log is new
+			from = 0
+			started = got.Started
+			continue
+		}
+		if a.jsonOut {
+			line, err := json.Marshal(got)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(a.out, string(line))
+		} else {
+			if started == "" {
+				state := "ended " + got.Ended
+				if got.Running {
+					state = "running"
+				}
+				fmt.Fprintf(a.out, "%s: %s, started %s, %s\n", story, got.Agent, got.Started, state)
+			}
+			printStream(a, got)
+		}
+		started, from = got.Started, got.Next
+		if !follow || (!got.Running && !got.More) {
+			return nil
+		}
+		if !got.More {
+			a.sleep(time.Second)
+		}
+	}
+}
+
+// printStream prints the entries of one read, one to a line, the lines of
+// an entry's text after its first indented under it.
+func printStream(a *app, got *serve.StreamRead) {
+	if got.Skipped > 0 {
+		fmt.Fprintf(a.out, "(%d earlier %s left out)\n", got.Skipped, oneOrMany(got.Skipped, "entry", "entries"))
+	}
+	for _, e := range got.Entries {
+		text := e.Text
+		if e.Tool != "" {
+			text = e.Tool + ": " + text
+		}
+		kind := e.Kind
+		if e.Error {
+			kind += "!"
+		}
+		fmt.Fprintf(a.out, "%-9s %s\n", kind, strings.ReplaceAll(text, "\n", "\n          "))
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -560,7 +561,7 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	// in review left uncommitted (S-0140), need the agent action.
 	starts := map[string]bool{"agent.restart": true, "agent.start": true, "agent.commit": true}
 	for name := range Methods("test", nil) {
-		if strings.HasPrefix(name, "agent.") && name != "agent.status" && !starts[name] {
+		if strings.HasPrefix(name, "agent.") && name != "agent.status" && name != "agent.stream" && !starts[name] {
 			t.Errorf("%s: nothing the dashboard can ask for stops or configures an agent", name)
 		}
 	}
@@ -568,6 +569,54 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 		if sp := specs()[name]; sp.action != ActionAgent {
 			t.Errorf("%s is gated by %q, not the agent action", name, sp.action)
 		}
+	}
+}
+
+// S-0142: agent.stream reads a story's agent's stream through the host, from
+// an offset or the tail, and refuses what is not a story or has no agent.
+func TestAgentStreamAsksTheHost(t *testing.T) {
+	p := withDocs(t)
+	type asked struct {
+		root, story string
+		after       int64
+	}
+	var got []asked
+	host := Host{AgentStream: func(root, story string, after int64) (any, error) {
+		got = append(got, asked{root, story, after})
+		if story == "S-0002" {
+			return nil, fmt.Errorf("%s: %w", story, ErrNoAgent)
+		}
+		if story == "S-0003" {
+			return nil, errors.New("disk on fire")
+		}
+		return map[string]any{"story": story, "next": 7}, nil
+	}}
+	m := MethodsFor("test", nil, host)["agent.stream"]
+	res, e := m(context.Background(), p, json.RawMessage(`{"story":"S-0001","after":5}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if b, _ := json.Marshal(res); string(b) != `{"next":7,"story":"S-0001"}` {
+		t.Errorf("answer: %s", b)
+	}
+	if _, e := m(context.Background(), p, json.RawMessage(`{"story":"S-0001"}`)); e != nil {
+		t.Fatal(e)
+	}
+	if want := []asked{{p.Root, "S-0001", 5}, {p.Root, "S-0001", -1}}; len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("asked %+v, want %+v", got, want)
+	}
+	for raw, code := range map[string]int{
+		`{"story":"T-0001"}`:            channel.CodeInvalidParams,
+		`{"story":"S-0001","after":-1}`: channel.CodeInvalidParams,
+		`{"story":"S-0002"}`:            NotFound,
+		`{"story":"S-0003"}`:            channel.CodeInternal,
+	} {
+		if _, e := m(context.Background(), p, json.RawMessage(raw)); e == nil || e.Code != code {
+			t.Errorf("%s: %+v, want code %d", raw, e, code)
+		}
+	}
+	if _, e := Methods("test", nil)["agent.stream"](context.Background(), p, json.RawMessage(`{"story":"S-0001"}`)); e == nil || e.Code != NotFound {
+		t.Errorf("on a host that starts no agents: %+v", e)
 	}
 }
 

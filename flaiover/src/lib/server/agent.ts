@@ -116,7 +116,9 @@ export const REQUIRED_METHODS = [
 	// S-0115: a ready story's agent now, gated by the agent host action
 	'agent.start',
 	// S-0140: an agent to commit what a story in review left uncommitted, gated by the agent host action
-	'agent.commit'
+	'agent.commit',
+	// S-0142: what a story's agent said and did, read from its log; read-only like agent.status
+	'agent.stream'
 ];
 
 export type AgentStatus = {

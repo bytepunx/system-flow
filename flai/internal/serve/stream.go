@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 )
 
 // An agent's stream (S-0142): what its session wrote to the log flai serve
@@ -79,17 +81,14 @@ type StreamRead struct {
 	Entries []StreamEntry `json:"entries"`
 }
 
-// ErrNoRun is returned for a story flai serve has started no agent for.
-var ErrNoRun = errors.New("flai serve has started no agent for this story")
-
 // Stream reads the stream of the newest agent flai serve started for story,
 // from byte offset after, or its last StreamTailBytes when after is negative
-// or past the end of the log. It returns whole lines only: a line still being
-// written is read next time.
+// or past the end of the log; hostapi.ErrNoAgent when it started none. It
+// returns whole lines only: a line still being written is read next time.
 func Stream(st AgentState, story string, after int64) (*StreamRead, error) {
 	run := st.Stories[story]
 	if run == nil {
-		return nil, fmt.Errorf("%s: %w", story, ErrNoRun)
+		return nil, fmt.Errorf("%s: %w", story, hostapi.ErrNoAgent)
 	}
 	out := &StreamRead{Story: story, Agent: run.Agent, Started: run.Started, Ended: run.Ended, Running: run.live(), Outcome: run.Outcome, Entries: []StreamEntry{}}
 	if run.Log == "" {

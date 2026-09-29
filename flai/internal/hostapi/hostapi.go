@@ -8,6 +8,7 @@ package hostapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -68,7 +69,12 @@ type ItemWithChildren struct {
 var (
 	itemID   = regexp.MustCompile(`(?i)^[EST]-?\d{1,6}$`)
 	itemType = map[string]bool{"": true, workitem.Epic: true, workitem.Story: true, workitem.Task: true}
+	storyID  = regexp.MustCompile(`^S-\d{3,}$`)
 )
+
+// ErrNoAgent is what Host.AgentStream returns for a story flai serve has
+// started no agent for.
+var ErrNoAgent = errors.New("flai serve has started no agent for this story")
 
 func bad(format string, a ...any) *channel.Error {
 	return &channel.Error{Code: channel.CodeInvalidParams, Message: fmt.Sprintf(format, a...)}
@@ -184,6 +190,40 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			out := map[string]any{"enabled": host.enabled(ActionAgent, p.Root)}
 			if host.Agent != nil {
 				out["state"] = host.Agent(p.Root)
+			}
+			return out, nil
+		},
+
+		// agent.stream: what the newest agent flai serve started for a story
+		// said and did, read from its log from the byte offset after, or its
+		// tail when after is absent (S-0142). Read-only, like agent.status.
+		"agent.stream": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			var in struct {
+				Story string `json:"story"`
+				After *int64 `json:"after"`
+			}
+			if e := params(raw, &in); e != nil {
+				return nil, e
+			}
+			if !storyID.MatchString(in.Story) {
+				return nil, bad("%q is not a story's ID", in.Story)
+			}
+			after := int64(-1)
+			if in.After != nil {
+				if *in.After < 0 {
+					return nil, bad("after must be an offset, 0 or more, not %d", *in.After)
+				}
+				after = *in.After
+			}
+			if host.AgentStream == nil {
+				return nil, &channel.Error{Code: NotFound, Message: "flai serve starts no agents here, so there is no stream to read"}
+			}
+			out, err := host.AgentStream(p.Root, in.Story, after)
+			if errors.Is(err, ErrNoAgent) {
+				return nil, &channel.Error{Code: NotFound, Message: err.Error()}
+			}
+			if err != nil {
+				return nil, failed(err)
 			}
 			return out, nil
 		},

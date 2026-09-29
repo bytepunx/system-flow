@@ -1634,6 +1634,7 @@ Subcommands:
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
+- [stream](#flai-serve-agent-stream): Print what a story's agent said and did, from the log flai serve gave it
 
 ##### flai serve agent clear
 
@@ -1740,6 +1741,33 @@ Examples:
 ```bash
 flai serve agent start S-0115
 ```
+
+##### flai serve agent stream
+
+Print what a story's agent said and did, from the log flai serve gave it.
+
+```text
+flai serve agent stream <story-id> [flags]
+```
+
+Prints the stream of the newest agent flai serve started for a story: what it said, the tools it called and what they answered, the background tasks it ran, and how its session ended, one entry to a line, each cut to a few hundred characters. It is read from the log flai serve writes the agent's output to; Claude Code's stream-json is turned into entries, and any other output is printed as it is. The dashboard's activity page shows the same stream (S-0142).
+
+Without --from it starts at the last 256 KiB of the log. --follow goes on printing what the agent writes until it ends. --json prints each read as one JSON object on a line: the entries, whether the agent runs, and next, the offset to read from again with --from.
+
+Examples:
+
+```bash
+flai serve agent stream S-0142
+flai serve agent stream S-0142 --follow
+flai serve agent stream S-0142 --from 0 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `-f`, `--follow` | go on printing until the agent ends |
+| `--from` int | the byte offset of the log to read from (default: its last 256 KiB) (default `-1`) |
 
 #### flai serve checks
 

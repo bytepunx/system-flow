@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -502,5 +504,66 @@ func TestServeAgentCommitStartsAnAgentForAnUncommittedWorktree(t *testing.T) {
 	}
 	if _, errOut, code := runIn(t, root, "serve", "agent", "commit", "S-1"); code == 0 || !strings.Contains(errOut, "rule: S-0001 has no worktree at .flai-cache/worktrees/S-0001") {
 		t.Errorf("no worktree: %d %s", code, errOut)
+	}
+}
+
+// S-0142: flai serve agent stream prints what a story's agent said and did,
+// from the log flai serve gave it, and the host answers agent.stream from it.
+func TestServeAgentStreamPrintsTheLog(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := filepath.Join(t.TempDir(), "sf-S-0001.log")
+	lines := `{"type":"system","subtype":"init","model":"m"}` + "\n" +
+		`{"type":"assistant","message":{"content":[{"type":"text","text":"Reading.\nThen writing."},{"type":"tool_use","name":"Bash","input":{"description":"List files"}}]}}` + "\n" +
+		`{"type":"user","message":{"content":[{"type":"tool_result","content":"nope","is_error":true}]}}` + "\n"
+	if err := os.WriteFile(log, []byte(lines), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dir := serve.DirFor(cfg)
+	_ = os.MkdirAll(string(dir), 0o700)
+	state := map[string]serve.AgentState{mainRootOf(repo): {Stories: map[string]*serve.AgentRun{
+		"S-0001": {Story: "S-0001", Agent: "agent-S-0001", Started: "2026-09-29T05:00:00Z", Ended: "2026-09-29T05:01:00Z", Log: log, Outcome: serve.OutcomeWorked},
+	}}}
+	data, _ := json.Marshal(state)
+	if err := os.WriteFile(filepath.Join(string(dir), "agents.json"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runIn(t, root, "serve", "agent", "stream", "S-1")
+	want := "S-0001: agent-S-0001, started 2026-09-29T05:00:00Z, ended 2026-09-29T05:01:00Z\n" +
+		"session   session started (m)\n" +
+		"text      Reading.\n          Then writing.\n" +
+		"tool      Bash: List files\n" +
+		"result!   nope\n"
+	if code != 0 || out != want {
+		t.Errorf("stream: %d %s\n%q\nwant\n%q", code, errOut, out, want)
+	}
+	// --follow ends with the agent, which has ended
+	if out, _, code := runIn(t, root, "serve", "agent", "stream", "S-0001", "--follow", "--from", "0"); code != 0 || out != want {
+		t.Errorf("follow an ended agent: %d %q", code, out)
+	}
+	first := strconv.Itoa(strings.Index(lines, "\n") + 1)
+	js, _, _ := runIn(t, root, "serve", "agent", "stream", "S-0001", "--json", "--from", first)
+	var got serve.StreamRead
+	if err := json.Unmarshal([]byte(js), &got); err != nil || strconv.FormatInt(got.From, 10) != first || got.Next != int64(len(lines)) || len(got.Entries) != 3 || got.Running {
+		t.Errorf("--json from %s: %v %s", first, err, js)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "stream", "S-0002"); code == 0 || !strings.Contains(errOut, "rule: flai serve has started no agent for S-0002") {
+		t.Errorf("no agent: %d %s", code, errOut)
+	}
+
+	// the host answers agent.stream from the same state
+	a := &app{}
+	res, e := hostapi.MethodsFor("test", nil, a.host())["agent.stream"](context.Background(), channel.Project{Key: "t", Root: mainRootOf(repo)}, json.RawMessage(`{"story":"S-0001","after":`+first+`}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if r := res.(*serve.StreamRead); strconv.FormatInt(r.From, 10) != first || len(r.Entries) != 3 {
+		t.Errorf("agent.stream: %+v", r)
 	}
 }

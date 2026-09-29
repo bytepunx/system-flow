@@ -211,9 +211,9 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--epic` | [flai story new](../users/flai-reference.md#flai-story-new) |
-| `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs) |
+| `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--force` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
-| `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail) |
+| `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
 | `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--hash` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |

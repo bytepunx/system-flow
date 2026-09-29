@@ -318,6 +318,11 @@ type Host struct {
 	// (S-0079): what runs, the last start or failure, and why a ready story
 	// waits. Nil when nothing starts agents here.
 	Agent func(root string) any
+	// AgentStream reads the stream of the newest agent flai serve started for
+	// a story (S-0142), from a byte offset, or its tail when after is
+	// negative; ErrNoAgent when it started none. Nil when nothing starts
+	// agents here.
+	AgentStream func(root, story string, after int64) (any, error)
 	// Settings reports the host's settings as they apply to a project
 	// (S-0105), for the dashboard's settings page. Nil when there are none.
 	Settings func(root string) any
