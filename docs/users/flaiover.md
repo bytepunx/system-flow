@@ -31,6 +31,10 @@ At the right of the header the dashboard says whether a flai on the host has it 
 
 Writes go the same way: a move, a new story, a saved document, an acceptance are asked of flai on the host, which does them with your own git identity and, for commits made for you, the dashboard's trailer. The dashboard's image holds no flai and no git. Throughout this guide, "when the dashboard can write" means while flai on the host has it connected. If the flai on the host is older than the dashboard, the banner says what it lacks and asks you to upgrade flai. If the connection is lost in the middle of an acceptance, the page says the acceptance may have completed on the host: reload the board before trying again.
 
+## Notices
+
+What an action did is said in a banner on the page: a move on the board, a ticked criterion or a save on an item's page, an accepted ADR, a saved document, a publish. The banner stays until your next action there, or until you dismiss it with the X at its right. Banners that say how things stand, such as flai not being connected, an acceptance not yet pushed, or what is ready to publish, have no X: they go when what they say stops being true.
+
 ## More than one project
 
 One dashboard, and one `flai serve` on the host, can serve several projects. The header always has a project switcher showing the project you are looking at, even when there is only one. It lists the projects, then, under "Not imported yet", the repositories on the host that can be imported (see below). Pick another project and every screen changes to it where you are, without reloading. The board you are on shows the other project's board and follows its changes from then on, and the inbox count and the host flai badge follow too. Your choice is remembered in this browser and shown in the page's address and in the header's links, so a bookmark or a copied link opens on the same project. Nobody sees your inbox, board, or documents mixed with another project's; picking one shows that one and nothing else.

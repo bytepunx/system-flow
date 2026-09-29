@@ -53,6 +53,8 @@ flowchart LR
 
 Every chart has the same filter bar: window, type, and epic where the chart supports it; a summary strip shows completed, cancelled, WIP, throughput, and cycle time percentiles; a table view sits under every chart.
 
+A banner an action leaves on the page until the next action is dismissible (S-0151): the board's notice after a move, an order change, or an acceptance; the item page's notice after a tick, a move, or a save; the notice on `/adrs` after an acceptance; the document editor's saved notice; and the result of **Publish** above the done column. Each is `DismissibleNotice.svelte`, which shows the text and a right-aligned X, labelled Dismiss, that clears the page's state for it, so the next action's notice shows again. Banners that show state are not dismissible, because they would be wrong the moment they were hidden: host flai not connected, `UnpushedNotice`, `HostAgentNotice` (collapsible instead, S-0150), and the pending publish plan with its refusal.
+
 ## API (S-0011)
 
 | Route | Returns |
