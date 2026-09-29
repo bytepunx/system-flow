@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-09-28
+updated: 2026-09-29
 status: active
 topics: [cli, template]
 ---
@@ -48,6 +48,8 @@ agent:                                       # optional (S-0103): the agent ever
   model: claude-opus-5-5
   config:                                    # optional: options for the harness, passed on as they are
     effort: high
+prime:                                       # optional (S-0146): how flai prime --story builds context packs
+  budget: 80KB                               # the size a story's pack fits; default 80KB
 ```
 
 Rules:
@@ -59,4 +61,5 @@ Rules:
 - `dashboard.notify_url`, when set, makes the dashboard's server POST `{ project, entry: { key, kind, title, href, at } }` to that URL for each inbox entry that appears after it started: one attempt, a short timeout, a warning in the log on failure. The token and file contents are never sent. Unset by default.
 - `dashboard.autocommit: false` leaves documents saved from the dashboard uncommitted; the default commits each save on the main checkout, one path per commit (ADR-0023).
 - `agent` is the project's default agent (S-0103, [ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)): a harness, a model, and `config`, a flat map of options for the harness. A story made while it is set gets a copy in its front matter, which the story may change. A change to the default reaches new stories only. `flai agent` shows it, `flai agent set --harness --model --config key=value --unset key` changes only what is given, and `flai agent clear` removes it. Each rewrites the `agent:` block alone. A harness is a lower-case name; a model may also hold `.`, `:`, `/`, and `@`; config keys are lower-case words and values are one line. `flai check` reports a default that is not (`manifest.agent`).
+- `prime.budget` is the size a story's context pack fits, `flai prime --story` and the MCP `prime` tool alike ([ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md), S-0146): bytes, or a number with `KB` or `MB` (1024-based). `--budget` overrides it for one run. It is the project's, not the host's, because a pack is the same for every agent that works the project. Unset, it is 80 KB.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent`) and preserves comments where the YAML library allows it.

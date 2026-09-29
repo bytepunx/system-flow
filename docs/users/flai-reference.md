@@ -1408,7 +1408,7 @@ flai prime [flags]
 
 List design/conventions in read order (README first, then by order) so an agent, a hook, or a script can load them in one call. --cat prints the content of each file with a header instead of the paths.
 
---story S-nnnn prints the context pack for an agent working that story (ADR-0047): a header naming the story, its topics and where each came from, and the size of what follows; then every convention as --cat prints it, with the sections whose topics include neither all nor one of the story's left out (the front matter, the baseline marker, and the Project additions heading always stay); the open issues; then the design/system, design/tech, and ADR sections the story selects, each headed with its path, heading path, and reason: those whose topics match; those the story, its epic, and its tasks link or name, and the ADRs those link or refine, a superseded ADR replaced by what supersedes it; and the five ADRs and five design sections ranked highest against the story's title, goal, and criteria. Then a catalog of every document not loaded, with the outline of those loaded in part, and one line per convention section left out, with its topics. Nothing prints twice: the first reason wins and the others are listed on it. An archived story gets the pack it would get today.
+--story S-nnnn prints the context pack for an agent working that story (ADR-0047), fitted to a size budget (ADR-0049): a header naming the story, its topics and where each came from, the pack's size against the budget, and the size of each thing it prints; then every convention as --cat prints it, with the sections whose topics include neither all nor one of the story's left out (the front matter, the baseline marker, and the Project additions heading always stay), never cut for the budget; the open issues; everything the story, its epic, and its tasks link or name, whole (a #fragment loads its section; a superseded ADR is replaced by what supersedes it); a brief of each design/system and design/tech file its topics select, as its first paragraph and heading outline; the decision sentence of each ADR its topics select or one link step reaches (linked from a named or briefed section, refined by, or refining one); then the sections ranked highest against the story's title, goal, and criteria, each cut at its own heading (an ADR whole when it fits), in rank order, while the budget has room. Then a catalog of every document neither loaded nor briefed, with the outline of those loaded in part, and one line per convention section left out, with its topics. Nothing prints twice: the first reason wins and the others are listed on it. When the conventions alone exceed the budget the pack is the conventions and a catalog; when the conventions and what is named exceed it, nothing is ranked; the header says which. --budget sets the size, such as 80KB or 81920 bytes; the project's default is prime.budget in system-flow.yaml, and flai's is 80KB. An archived story gets the pack it would get today.
 
 Examples:
 
@@ -1418,12 +1418,14 @@ flai prime --cat
 flai prime --json
 flai prime --story S-0136
 flai prime --story S-0136 --json
+flai prime --story S-0136 --budget 120KB
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--budget` string | the size the story's context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB) |
 | `--cat` | print file contents instead of paths |
 | `--story` string | print the context pack for this story: the conventions, design, tech, and ADRs it selects, and a catalog of the rest |
 
