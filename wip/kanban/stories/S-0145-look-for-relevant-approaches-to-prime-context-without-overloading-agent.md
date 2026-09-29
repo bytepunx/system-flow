@@ -3,12 +3,15 @@ id: S-0145
 type: story
 nature: research
 title: Look for relevant approaches to prime context without overloading agent
-status: backlog
+status: ready
 parent: E-0010
 owner: alex
 created: 2026-09-29T01:57:32Z
-updated: 2026-09-29T01:57:32Z
-transitions: []
+updated: 2026-09-29T01:57:54Z
+transitions:
+  - to: ready
+    at: 2026-09-29T01:57:54Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 agent:

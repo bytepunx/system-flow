@@ -3,17 +3,20 @@ id: S-0138
 type: story
 nature: feature
 title: Agents flai starts, and any agent with a story, prime with flai prime --story
-status: ready
+status: in-progress
 parent: E-0010
 owner: alex
 created: 2026-09-26T17:46:25Z
-updated: 2026-09-28T22:57:09Z
+updated: 2026-09-29T01:13:41Z
 transitions:
   - to: ready
     at: 2026-09-26T22:40:39Z
     by: alex
+  - to: in-progress
+    at: 2026-09-29T01:07:54Z
+    by: agent-S-0138
 tags: [cli, template]
-touches: [flai/internal/harness, flai/internal/mcpserver, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/root/design/conventions/session-start.md, design/conventions/session-start.md, docs/users]
+touches: [flai/internal/harness, flai/internal/mcpserver, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/root/design/conventions/session-start.md, design/conventions/session-start.md, docs/users, flai/cmd/prime.go, flai/internal/context/story.go, design/system/conventions.md, template/template.yaml, template/CHANGELOG.md, design/conventions/README.md, template/root/design/conventions/README.md, design/system/flai-cli.md]
 after: [S-0137]
 agent:
   harness: claude-code
@@ -34,6 +37,10 @@ Agents use the context pack as soon as it exists (TH-0021 5b), as [ADR-0047](../
 - [ ] `docs/users/flai.md` documents the MCP tool; all three test tiers, `make smoke` on a rendered template, and `flai check --strict` pass.
 
 ## Tasks
+- T-0510 The MCP prime tool returns a story's context pack
+- T-0511 The prompt flai serve gives an agent primes with flai prime --story
+- T-0512 CLAUDE.md and session-start.md prime with --story when there is a story
+- T-0513 Document the MCP prime tool and run every check
 
 ## Notes
 
