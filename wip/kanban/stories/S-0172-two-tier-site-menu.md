@@ -3,12 +3,15 @@ id: S-0172
 type: story
 nature: improvement
 title: Two-tier Site Menu
-status: backlog
+status: ready
 parent: E-0013
 owner: alex
 created: 2026-09-30T00:46:03Z
 updated: 2026-09-30T00:46:03Z
-transitions: []
+transitions:
+  - to: ready
+    at: 2026-09-30T00:46:03Z
+    by: alex
 tags: [dashboard]
 topics: [client-side]
 touches: [flaiover/src]
