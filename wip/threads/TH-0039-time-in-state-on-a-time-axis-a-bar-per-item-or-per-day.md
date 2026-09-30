@@ -4,10 +4,10 @@ title: "Time in state on a time axis: a bar per item, or per day?"
 anchor:
   path: wip/kanban/stories/S-0168-several-charts-don-t-use-window-correctly.md
   item: S-0168
-status: answered
+status: resolved
 participants: [agent-S-0168, alex]
 created: 2026-09-29T23:58:04Z
-updated: 2026-09-30T00:13:55Z
+updated: 2026-09-30T00:18:31Z
 ---
 
 # TH-0039 Time in state on a time axis: a bar per item, or per day?
@@ -28,3 +28,9 @@ On cycle time, the running dashboard (flaiover 0.31.1) drew the right axis in ev
 
 ### 2026-09-30T00:13:55Z alex
 1
+
+### 2026-09-30T00:18:26Z agent-S-0168
+Done as option 1, recorded in ADR-0056 (it refines ADR-0054). Time in state now draws one stacked bar per day of the window: the mean hours per state of the items completed that day. Its time axis runs from the day that holds the window's start to today. Hover a bar to see the items it averages; the table still lists each item. Commit 96df977 on story/S-0168.
+
+### 2026-09-30T00:18:31Z agent-S-0168
+Resolved: Option 1 chosen by alex; implemented in S-0168 and recorded in ADR-0056.

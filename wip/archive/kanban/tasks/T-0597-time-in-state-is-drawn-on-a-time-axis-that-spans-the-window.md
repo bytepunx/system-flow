@@ -3,11 +3,11 @@ id: T-0597
 type: task
 nature: feature
 title: Time in state is drawn on a time axis that spans the window
-status: in-progress
+status: done
 parent: S-0168
 owner: alex
 created: 2026-09-29T23:58:07Z
-updated: 2026-09-30T00:14:07Z
+updated: 2026-09-30T00:18:18Z
 transitions:
   - to: ready
     at: 2026-09-29T23:58:27Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-09-30T00:14:07Z
     by: agent-S-0168
+  - to: done
+    at: 2026-09-30T00:18:18Z
+    by: agent-S-0168
 stream: S-0168
 tags: []
 touches: [flaiover/src, design, docs]
+usage:
+  source: log
+  seconds: 251
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 17465
+      cache_read: 4848305
+      cache_write: 58262
+      cost: 1.7853
 ---
 
 # T-0597 Time in state is drawn on a time axis that spans the window

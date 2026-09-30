@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 10747
-      cache_read: 2661842
-      cache_write: 41966
-      cost: 1.0832
+      input: 38
+      output: 9624
+      cache_read: 2671709
+      cache_write: 32106
+      cost: 0.9838
 ---
 
 # T-0596 The charts page keeps the window chosen and loads it at once
