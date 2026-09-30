@@ -3,11 +3,15 @@ id: S-0171
 type: story
 nature: improvement
 title: "Add a \"New {item}\" button to the top of the item pages"
-status: backlog
+status: ready
+parent: E-0013
 owner: alex
 created: 2026-09-30T00:22:14Z
-updated: 2026-09-30T00:22:14Z
-transitions: []
+updated: 2026-09-30T00:23:01Z
+transitions:
+  - to: ready
+    at: 2026-09-30T00:22:24Z
+    by: alex
 tags: [dashboard]
 topics: [client-side]
 touches: [flaiover/src]
