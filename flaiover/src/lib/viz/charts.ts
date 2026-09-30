@@ -73,7 +73,6 @@ export type ItemUsage = {
 	estimated?: boolean;
 	models: ModelSpend[];
 };
-export type SpendPoint = { at: string; id: string; done: number; tokens: number; cost: number };
 /**
  * What was spent on a set of items, and what that comes to per item, per minute of agent work,
  * and per dollar; a value whose divisor is zero is absent (S-0163, ADR-0053).
@@ -86,9 +85,19 @@ export type Spend = {
 	estimated?: boolean;
 	tokens_per_item?: number;
 	cost_per_item?: number;
+	/** Absent from a flai older than S-0169; see minutesPerItem. */
+	minutes_per_item?: number;
 	tokens_per_minute?: number;
 	tokens_per_dollar?: number;
 };
+/**
+ * The mean agent minutes an item took (S-0169), worked out from the seconds when a flai older
+ * than S-0169 does not send it; none when no item took agent time.
+ */
+export function minutesPerItem(s: Spend): number | undefined {
+	if (s.minutes_per_item !== undefined) return s.minutes_per_item;
+	return s.seconds > 0 && s.items > 0 ? s.seconds / 60 / s.items : undefined;
+}
 export type ModelShare = Spend & { model: string };
 /** The items done in one bucket of time, which starts at `at`, with the running means so far. */
 export type Bucket = Spend & {
@@ -110,8 +119,6 @@ export type UsageReport = {
 	seconds: number;
 	estimated?: boolean;
 	models: ModelSpend[];
-	done: SpendPoint[];
-	by_model: Record<string, SpendPoint[]>;
 	/** Absent from a flai older than S-0163, with spend. */
 	bucket?: BucketSize;
 	spend?: Record<string, TypeSpend>;
@@ -143,8 +150,6 @@ export function normalise(r: Report): Report {
 			seconds: 0,
 			...r.usage,
 			models: r.usage?.models ?? [],
-			done: r.usage?.done ?? [],
-			by_model: r.usage?.by_model ?? {},
 			spend
 		}
 	};
@@ -176,7 +181,7 @@ export const USAGE_KINDS = [
 	'cost-spent',
 	'cost-per-item',
 	'cost',
-	'completion-time',
+	'time-per-model',
 	'cost-per-model'
 ] as const;
 export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS] as const;
@@ -194,7 +199,7 @@ export const TITLES: Record<Kind, string> = {
 	'cost-spent': '$ / Day',
 	'cost-per-item': '$ / Work Type',
 	cost: '$ / Item',
-	'completion-time': 'Completion over time',
+	'time-per-model': 'Avg. Time / Model',
 	'cost-per-model': 'Avg. Cost / Model'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
@@ -205,6 +210,7 @@ export const SPEND_KINDS: readonly Kind[] = [
 	'tokens-per-dollar',
 	'cost-spent',
 	'cost-per-item',
+	'time-per-model',
 	'cost-per-model'
 ];
 /** The charts per item, one line per item type: every type is drawn, so none is chosen. */
@@ -224,7 +230,7 @@ export function controls(kind: Kind) {
 	const spend = SPEND_KINDS.includes(kind);
 	return {
 		type: !PER_ITEM_KINDS.includes(kind),
-		epic: !spend && !['cfd', 'throughput', 'completion-time'].includes(kind),
+		epic: !spend && !['cfd', 'throughput'].includes(kind),
 		bucket: spend
 	};
 }
@@ -834,6 +840,12 @@ function perItem(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 export const tokensPerItem = (r: Report, t: Theme) => perItem(r, t, 'tokens');
 export const costPerItem = (r: Report, t: Theme) => perItem(r, t, 'cost');
 /**
+ * Avg. Time / Model (S-0169): per model, the mean agent time an item of the report's type took,
+ * over the items done in each bucket that the model worked on.
+ */
+export const timePerModel = (r: Report, t: Theme) =>
+	perModel(r, t, minutesPerItem, `agent minutes per ${r.type}`, (m) => human(m * 60), ' each');
+/**
  * Avg. Cost / Model (S-0169): per model, the mean dollars an item of the report's type took over
  * the items done in each bucket that the model worked on.
  */
@@ -921,46 +933,6 @@ export function cost(r: Report, t: Theme, epic?: string): Opt {
 	});
 }
 
-/** Items done cumulatively, per model, over time. */
-export function completionTime(r: Report, t: Theme): Opt {
-	const all = models(r);
-	const byModel = r.usage?.by_model ?? {};
-	const present = all.filter((name) => (byModel[name] ?? []).length > 0);
-	const series = present.map((name) => ({
-		name,
-		type: 'line',
-		step: 'end',
-		showSymbol: (byModel[name] ?? []).length < 40,
-		symbolSize: 8,
-		lineStyle: { width: 2, color: modelColor(t, name) },
-		itemStyle: { color: modelColor(t, name), borderColor: t.surface, borderWidth: 2 },
-		data: (byModel[name] ?? []).map((p) => ({
-			value: [p.at, p.done],
-			id: p.id,
-			cost: p.cost,
-			at: p.at
-		}))
-	}));
-	return base(t, {
-		legend: legend(t, present.length > 1),
-		tooltip: tooltip(t, {
-			formatter: (p: {
-				seriesName: string;
-				data: { id: string; cost: number; at: string; value: [unknown, number] };
-			}) =>
-				`${p.seriesName}: ${p.data.value[1]} done by ${p.data.id}<br/>${dollars(p.data.cost)} spent · ${p.data.at.slice(0, 10)}`
-		}),
-		xAxis: axisX(t, { type: 'time', ...span(r) }),
-		yAxis: axisY(t, {
-			type: 'value',
-			name: `${plural(r.type)} done`,
-			nameTextStyle: { color: t.textSecondary },
-			minInterval: 1
-		}),
-		series
-	});
-}
-
 export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt {
 	const r = normalise(report);
 	switch (kind) {
@@ -988,8 +960,8 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt 
 			return costPerItem(r, t);
 		case 'cost':
 			return cost(r, t, epic);
-		case 'completion-time':
-			return completionTime(r, t);
+		case 'time-per-model':
+			return timePerModel(r, t);
 		case 'cost-per-model':
 			return costPerModel(r, t);
 	}

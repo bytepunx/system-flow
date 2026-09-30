@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The table view of a chart of spend over time (S-0163): what each bucket spent, and what
 	// that comes to per item, per minute of agent work, and per dollar.
-	import { bucketLabel, type BucketSize, type SpendRow } from '$lib/viz/charts';
+	import { bucketLabel, minutesPerItem, type BucketSize, type SpendRow } from '$lib/viz/charts';
 	import { count, dollars } from '$lib/usage';
 
 	let { rows, bucket }: { rows: SpendRow[]; bucket: BucketSize } = $props();
@@ -16,9 +16,11 @@
 				class="pr-4">tokens</th
 			><th class="pr-4">cost</th><th class="pr-4">agent minutes</th><th class="pr-4"
 				>tokens per item</th
-			><th class="pr-4">cost per item</th><th class="pr-4">tokens per agent minute</th><th
-				class="pr-4">tokens per dollar</th
-			><th class="pr-4">mean tokens per {bucket}</th><th>mean cost per {bucket}</th></tr
+			><th class="pr-4">cost per item</th><th class="pr-4">agent minutes per item</th><th
+				class="pr-4">tokens per agent minute</th
+			><th class="pr-4">tokens per dollar</th><th class="pr-4">mean tokens per {bucket}</th><th
+				>mean cost per {bucket}</th
+			></tr
 		></thead
 	><tbody
 		>{#each rows as row (row.at + row.of)}<tr
@@ -29,10 +31,11 @@
 				><td class="pr-4">{minutes(row.seconds)}</td><td class="pr-4"
 					>{say(row.tokens_per_item, count)}</td
 				><td class="pr-4">{say(row.cost_per_item, dollars)}</td><td class="pr-4"
-					>{say(row.tokens_per_minute, count)}</td
-				><td class="pr-4">{say(row.tokens_per_dollar, count)}</td><td class="pr-4"
-					>{say(row.mean_tokens, count)}</td
-				><td>{say(row.mean_cost, dollars)}</td></tr
+					>{say(minutesPerItem(row), (m) => m.toFixed(1))}</td
+				><td class="pr-4">{say(row.tokens_per_minute, count)}</td><td class="pr-4"
+					>{say(row.tokens_per_dollar, count)}</td
+				><td class="pr-4">{say(row.mean_tokens, count)}</td><td>{say(row.mean_cost, dollars)}</td
+				></tr
 			>{/each}</tbody
 	>
 </table>

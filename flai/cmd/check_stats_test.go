@@ -51,7 +51,7 @@ func TestStatsCommand(t *testing.T) {
 	// what the two stories done in the window spent, per story, per minute
 	// of agent work, and per dollar, then per model (S-0163)
 	for _, want := range []string{"usage: 4.1M tokens · $2.02 (estimated in part) · 30m0s of agent work, over 2 done",
-		"per story 2.0M tokens, $1.01 · per agent minute 136.7K tokens · per dollar 2.0M tokens",
+		"per story 2.0M tokens, $1.01, 15m of agent work · per agent minute 136.7K tokens · per dollar 2.0M tokens",
 		"claude-haiku-4-5  100.0K tokens · $0.02 · 10.0K tokens/min (1)", "claude-opus-5-5  4.0M tokens · $2.00 · 133.3K tokens/min (2)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)

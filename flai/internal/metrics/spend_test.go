@@ -53,8 +53,8 @@ func TestSpendIsLaidOutPerBucketForEveryType(t *testing.T) {
 	if st.Items != 4 || st.Tokens != 7000 || !near(st.Cost, 7.1) || st.Seconds != 2100 {
 		t.Fatalf("stories over the window = %+v", st.Spend)
 	}
-	if !near(*st.TokensPerItem, 1750) || !near(*st.CostPerItem, 7.1/4) || !near(*st.TokensPerMinute, 200) || !near(*st.TokensPerDollar, 7000/7.1) {
-		t.Errorf("stories' averages = %v %v %v %v", *st.TokensPerItem, *st.CostPerItem, *st.TokensPerMinute, *st.TokensPerDollar)
+	if !near(*st.TokensPerItem, 1750) || !near(*st.CostPerItem, 7.1/4) || !near(*st.TokensPerMinute, 200) || !near(*st.TokensPerDollar, 7000/7.1) || !near(*st.MinutesPerItem, 35.0/4) {
+		t.Errorf("stories' averages = %v %v %v %v %v", *st.TokensPerItem, *st.CostPerItem, *st.TokensPerMinute, *st.TokensPerDollar, *st.MinutesPerItem)
 	}
 	if len(st.Models) != 2 || st.Models[0].Model != "claude-haiku-4-5" || st.Models[0].Items != 1 || st.Models[0].Seconds != 1200 ||
 		st.Models[1].Items != 4 || st.Models[1].Tokens != 6400 || !near(*st.Models[1].TokensPerItem, 1600) {
@@ -72,6 +72,10 @@ func TestSpendIsLaidOutPerBucketForEveryType(t *testing.T) {
 	if !near(b.MeanTokens, 6600.0/3) || !near(b.MeanCost, 7.1/3) {
 		t.Errorf("25 August's running means = %v %v", b.MeanTokens, b.MeanCost)
 	}
+	// a model's minutes per item are those of the items it worked on (S-0169)
+	if !near(*b.MinutesPerItem, 15) || !near(*b.Models[0].MinutesPerItem, 20) || !near(*b.Models[1].MinutesPerItem, 15) {
+		t.Errorf("25 August's minutes per item = %v, haiku %v, opus %v", *b.MinutesPerItem, *b.Models[0].MinutesPerItem, *b.Models[1].MinutesPerItem)
+	}
 	if len(b.Models) != 2 || b.Models[0].Tokens != 600 || !near(*b.Models[0].TokensPerMinute, 30) || b.Models[1].Tokens != 4000 || b.Models[1].Items != 2 || !near(*b.Models[1].CostPerItem, 1.5) {
 		t.Errorf("25 August's models = %+v", b.Models)
 	}
@@ -79,7 +83,7 @@ func TestSpendIsLaidOutPerBucketForEveryType(t *testing.T) {
 		t.Errorf("a day with nothing done = %+v", e)
 	}
 	// S-0003 took no agent time and cost nothing: no rate, no tokens per dollar
-	if z := st.Buckets[4]; z.Items != 1 || z.TokensPerMinute != nil || z.TokensPerDollar != nil || !near(*z.TokensPerItem, 400) {
+	if z := st.Buckets[4]; z.Items != 1 || z.TokensPerMinute != nil || z.TokensPerDollar != nil || z.MinutesPerItem != nil || !near(*z.TokensPerItem, 400) {
 		t.Errorf("27 August = %+v", z.Spend)
 	}
 	if l := st.Buckets[9]; !near(l.MeanTokens, 700) || !near(l.MeanCost, 0.71) {
@@ -96,7 +100,7 @@ func TestSpendIsLaidOutPerBucketForEveryType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{`"at":`, `"items":2`, `"tokens_per_item":`, `"cost_per_item":`, `"tokens_per_minute":`, `"tokens_per_dollar":`, `"mean_tokens":`, `"mean_cost":`, `"models":[{"model":"claude-haiku-4-5","items":1`} {
+	for _, key := range []string{`"at":`, `"items":2`, `"tokens_per_item":`, `"cost_per_item":`, `"minutes_per_item":`, `"tokens_per_minute":`, `"tokens_per_dollar":`, `"mean_tokens":`, `"mean_cost":`, `"models":[{"model":"claude-haiku-4-5","items":1`} {
 		if !strings.Contains(string(raw), key) {
 			t.Errorf("a bucket's JSON lacks %s: %s", key, raw)
 		}

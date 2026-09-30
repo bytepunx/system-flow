@@ -3,7 +3,6 @@ import {
 	build,
 	burnUp,
 	cfd,
-	completionTime,
 	completedIn,
 	bucketLabel,
 	bucketsFor,
@@ -11,6 +10,8 @@ import {
 	cost,
 	costPerItem,
 	costPerModel,
+	minutesPerItem,
+	timePerModel,
 	costSpent,
 	cycleTime,
 	human,
@@ -44,6 +45,7 @@ const storyDays: Bucket[] = [
 		estimated: true,
 		tokens_per_item: 1750000,
 		cost_per_item: 0.875,
+		minutes_per_item: 45,
 		tokens_per_minute: 38888.9,
 		tokens_per_dollar: 2000000,
 		mean_tokens: 3500000,
@@ -57,6 +59,7 @@ const storyDays: Bucket[] = [
 				seconds: 3600,
 				tokens_per_item: 1000000,
 				cost_per_item: 0.25,
+				minutes_per_item: 60,
 				tokens_per_minute: 16666.7,
 				tokens_per_dollar: 4000000
 			},
@@ -69,6 +72,7 @@ const storyDays: Bucket[] = [
 				estimated: true,
 				tokens_per_item: 1250000,
 				cost_per_item: 0.75,
+				minutes_per_item: 45,
 				tokens_per_minute: 27777.8,
 				tokens_per_dollar: 1666666.7
 			}
@@ -266,10 +270,6 @@ const report: Report = {
 			{ model: 'claude-haiku-4-5', tokens: 1000000, cost: 0.3, items: 1 },
 			{ model: 'claude-opus-5-5', tokens: 2500000, cost: 1.45, items: 2 }
 		],
-		done: [
-			{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 3000000, cost: 1.5 },
-			{ at: '2026-08-12T09:30:00Z', id: 'S-002', done: 2, tokens: 3500000, cost: 1.75 }
-		],
 		bucket: 'day',
 		spend: {
 			epic: none,
@@ -282,15 +282,6 @@ const report: Report = {
 				buckets: storyDays
 			},
 			task: { items: 4, tokens: 2000000, cost: 1, seconds: 1200, models: [], buckets: taskDays }
-		},
-		by_model: {
-			'claude-haiku-4-5': [
-				{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 1000000, cost: 0.3 }
-			],
-			'claude-opus-5-5': [
-				{ at: '2026-08-03T12:00:00Z', id: 'S-001', done: 1, tokens: 2000000, cost: 1.2 },
-				{ at: '2026-08-12T09:30:00Z', id: 'S-002', done: 2, tokens: 2500000, cost: 1.45 }
-			]
 		}
 	}
 };
@@ -315,7 +306,6 @@ describe('chart builders', () => {
 		// the report's own window, 2 August 12:00 to 1 September 12:00
 		const month = Date.parse('2026-08-02T12:00:00Z');
 		expect((cycleTime(report, light) as Axis).xAxis).toMatchObject({ min: month, max: end });
-		expect((completionTime(report, light) as Axis).xAxis).toMatchObject({ min: month, max: end });
 		// a series by the day starts on the day that holds the window's start
 		const day = Date.parse('2026-08-02T00:00:00Z');
 		expect((burnUp(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
@@ -619,16 +609,28 @@ describe('chart builders', () => {
 		} as unknown as Report);
 		expect(nulls.usage?.spend?.story.buckets).toEqual([]);
 	});
-	it("completion over time lays out each model's items done", () => {
-		const t = completionTime(report, light) as {
-			xAxis: { type: string };
-			series: { name: string; data: { value: [string | number, number] }[] }[];
-		};
-		expect(t.xAxis.type).toBe('time');
-		expect(t.series[1].data.map((d) => d.value)).toEqual([
-			['2026-08-03T12:00:00Z', 1],
-			['2026-08-12T09:30:00Z', 2]
+	it('avg. time per model is the mean agent minutes per item of the type of the report, one line per model', () => {
+		const o = timePerModel(report, light) as Over;
+		expect(o.series.map((s) => s.name)).toEqual([
+			'claude-haiku-4-5',
+			'claude-opus-5-5',
+			'all models'
 		]);
+		// 5 August took no agent time: no point
+		expect(values(o.series[0])).toEqual([['2026-08-03T00:00:00Z', 60]]);
+		expect(values(o.series[1])).toEqual([['2026-08-03T00:00:00Z', 45]]);
+		expect(values(o.series[2])).toEqual([['2026-08-03T00:00:00Z', 45]]);
+		expect(o.yAxis.name).toBe('agent minutes per story');
+		expect(o.yAxis.axisLabel.formatter(90)).toBe('1.5h');
+		expect(
+			o.tooltip.formatter([{ seriesName: 'claude-haiku-4-5', data: o.series[0].data[0] }])
+		).toBe('2026-08-03<br/>claude-haiku-4-5: 1h each over 1 item');
+		expect((build('time-per-model', report, light) as Over).series).toEqual(o.series);
+		expect(titleOf('time-per-model')).toBe('Avg. Time / Model');
+		expect(controls('time-per-model')).toEqual({ type: true, epic: false, bucket: true });
+		// a flai older than S-0169 sends the seconds only
+		expect(minutesPerItem({ items: 2, tokens: 0, cost: 0, seconds: 5400 })).toBe(45);
+		expect(minutesPerItem({ items: 1, tokens: 0, cost: 0, seconds: 0 })).toBeUndefined();
 	});
 	it('draws every chart from a report whose lists are null (older flai, empty selection)', () => {
 		const empty = {

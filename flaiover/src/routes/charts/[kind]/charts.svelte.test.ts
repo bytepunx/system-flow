@@ -91,8 +91,6 @@ const reportIn = (bucket: string) => ({
 		cost: 15,
 		seconds: 1800,
 		models: [{ model: 'claude-opus-5-5', tokens: 36000000, cost: 15, items: 3 }],
-		done: [],
-		by_model: {},
 		bucket,
 		spend: {
 			epic: typeOf([]),
@@ -175,7 +173,7 @@ describe('the charts page (S-0163)', () => {
 			'$ / Day',
 			'$ / Work Type',
 			'$ / Item',
-			'Completion over time',
+			'Avg. Time / Model',
 			'Avg. Cost / Model'
 		]);
 		expect(text('h1')).toBe('Tokens / Day');
@@ -196,6 +194,7 @@ describe('the charts page (S-0163)', () => {
 			'30.0',
 			'12.0M',
 			'$5.00',
+			'10.0',
 			'1.2M',
 			'2.4M',
 			'36.0M',
@@ -236,6 +235,21 @@ describe('the charts page (S-0163)', () => {
 			['story', '3'],
 			['task', '8']
 		]);
+	});
+
+	it('draws the mean agent time per item of the type chosen, one line per model (S-0169)', async () => {
+		await open('time-per-model');
+		expect(text('h1')).toBe('Avg. Time / Model');
+		expect(controls()).toEqual(['window', 'per', 'type']);
+		const drawn = setOption.mock.calls.at(-1)![0] as {
+			series: { name: string; data: { value: [string, number] }[] }[];
+			yAxis: { name: string };
+		};
+		// 3 stories over 30 agent minutes
+		expect(drawn.series.map((s) => [s.name, s.data.map((d) => d.value[1])])).toEqual([
+			['claude-opus-5-5', [10]]
+		]);
+		expect(drawn.yAxis.name).toBe('agent minutes per story');
 	});
 
 	it('draws the mean dollars per item of the type chosen, one line per model (S-0169)', async () => {

@@ -150,12 +150,17 @@ func printUsage(a *app, typ string, u metrics.UsageReport) {
 	}
 }
 
-// averages says what a spend comes to per item, then per minute of agent
-// work and per dollar, leaving out what has no divisor.
+// averages says what a spend comes to per item, with the agent time an item
+// took, then per minute of agent work and per dollar, leaving out what has
+// no divisor.
 func averages(s metrics.Spend) []string {
 	var parts []string
 	if s.TokensPerItem != nil && s.CostPerItem != nil {
-		parts = append(parts, fmt.Sprintf("%s tokens, $%.2f", usage.Count(int64(*s.TokensPerItem)), *s.CostPerItem))
+		per := fmt.Sprintf("%s tokens, $%.2f", usage.Count(int64(*s.TokensPerItem)), *s.CostPerItem)
+		if s.MinutesPerItem != nil {
+			per += fmt.Sprintf(", %s of agent work", metrics.Human(*s.MinutesPerItem*60))
+		}
+		parts = append(parts, per)
 	}
 	if s.TokensPerMinute != nil {
 		parts = append(parts, fmt.Sprintf("per agent minute %s tokens", usage.Count(int64(*s.TokensPerMinute))))

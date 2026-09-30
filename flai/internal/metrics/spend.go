@@ -42,7 +42,7 @@ func CheckBucket(bucket string, window time.Duration) error {
 
 // Spend is what was spent on a set of items, and what that comes to per
 // item, per minute of agent work, and per dollar. A value whose divisor is
-// zero is absent.
+// zero is absent, and so are minutes per item when no item took agent time.
 type Spend struct {
 	Items           int      `json:"items"`
 	Tokens          int64    `json:"tokens"`
@@ -51,6 +51,7 @@ type Spend struct {
 	Estimated       bool     `json:"estimated,omitempty"`
 	TokensPerItem   *float64 `json:"tokens_per_item,omitempty"`
 	CostPerItem     *float64 `json:"cost_per_item,omitempty"`
+	MinutesPerItem  *float64 `json:"minutes_per_item,omitempty"`
 	TokensPerMinute *float64 `json:"tokens_per_minute,omitempty"`
 	TokensPerDollar *float64 `json:"tokens_per_dollar,omitempty"`
 }
@@ -108,11 +109,21 @@ func over(n, d float64) *float64 {
 	return &r
 }
 
+// minutesPerItem is the mean agent time an item took, in minutes (S-0169);
+// none when no item took any.
+func (t *tally) minutesPerItem() *float64 {
+	if t.seconds <= 0 {
+		return nil
+	}
+	return over(float64(t.seconds)/60, float64(t.items))
+}
+
 func (t *tally) spend() Spend {
 	return Spend{
 		Items: t.items, Tokens: t.tokens, Cost: t.cost, Seconds: t.seconds, Estimated: t.estimated,
 		TokensPerItem:   over(float64(t.tokens), float64(t.items)),
 		CostPerItem:     over(t.cost, float64(t.items)),
+		MinutesPerItem:  t.minutesPerItem(),
 		TokensPerMinute: over(float64(t.tokens), float64(t.seconds)/60),
 		TokensPerDollar: over(float64(t.tokens), t.cost),
 	}

@@ -126,14 +126,16 @@ describe('SpendTable', () => {
 			'90.0',
 			'1.8M',
 			'$0.875',
+			'45.0',
 			'38.9K',
 			'2.0M',
 			'3.5M',
 			'$1.75'
 		]);
-		// a model's row has no running mean, and a bucket with no agent time no rate
+		// a model's row has no running mean, and a bucket with no agent time no rate nor minutes
 		expect(cells()[3].slice(-2)).toEqual(['-', '-']);
 		expect(cells()[0][8]).toBe('-');
+		expect(cells()[0][9]).toBe('-');
 	});
 
 	it('lists the item types side by side for a chart per item', () => {
