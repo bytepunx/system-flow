@@ -3,11 +3,14 @@ id: S-0173
 type: story
 nature: remediation
 title: Inbox Open Narratives Navigate To The Wrong Location
-status: backlog
+status: ready
 owner: alex
 created: 2026-09-30T01:13:29Z
 updated: 2026-09-30T01:13:29Z
-transitions: []
+transitions:
+  - to: ready
+    at: 2026-09-30T01:13:29Z
+    by: alex
 tags: [dashboard]
 topics: [client-side]
 touches: [flaiover/src]
