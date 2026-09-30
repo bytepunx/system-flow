@@ -18,11 +18,13 @@
 	let {
 		oncreated,
 		initialType = 'story',
-		initialLane = 'backlog'
+		initialLane = 'backlog',
+		initialParent = ''
 	}: {
 		oncreated: (id: string) => void;
 		initialType?: 'epic' | 'story';
 		initialLane?: StartLane;
+		initialParent?: string;
 	} = $props();
 
 	// The props say where the form starts; from there the choices are the designer's.
@@ -33,7 +35,8 @@
 	let created = $state<string | null>(null);
 	let title = $state('');
 	let nature = $state('feature');
-	let parent = $state('');
+	// A story made from another story's page starts under that story's epic (S-0171).
+	let parent = $state(untrack(() => initialParent));
 	let tags = $state('');
 	let topics = $state('');
 	let touches = $state('');
@@ -81,6 +84,8 @@
 			epics = ((await r.json()) as Epic[]).filter(
 				(e) => e.status !== 'done' && e.status !== 'cancelled'
 			);
+			// an epic it was started under that has since closed is not offered, so it is not chosen
+			if (parent && !epics.some((e) => e.id === parent)) parent = '';
 			if (!parent && epics.length === 1) parent = epics[0].id;
 		} catch {
 			epics = [];

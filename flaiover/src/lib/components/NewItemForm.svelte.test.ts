@@ -121,6 +121,48 @@ describe('NewItemForm', () => {
 		expect(oncreated).toHaveBeenCalledWith('S-0099');
 	});
 
+	it("starts as the item page's New link asks: its type, and a story under its epic (S-0171)", async () => {
+		let sent: Record<string, unknown> | undefined;
+		backend((body) => {
+			sent = body;
+			return ok({ item: { id: 'S-0099' } });
+		});
+		c = mount(NewItemForm, {
+			target: document.body,
+			props: { oncreated: vi.fn(), initialType: 'story', initialParent: 'E-0004' }
+		});
+		await settle();
+		expect(q<HTMLSelectElement>('parent').value).toBe('E-0004');
+		type(q<HTMLInputElement>('title'), 'Another under Documentation');
+		q<HTMLFormElement>('new-item').dispatchEvent(
+			new Event('submit', { bubbles: true, cancelable: true })
+		);
+		await settle();
+		expect(sent?.type).toBe('story');
+		expect(sent?.parent).toBe('E-0004');
+
+		unmount(c);
+		document.body.innerHTML = '';
+		c = mount(NewItemForm, {
+			target: document.body,
+			props: { oncreated: vi.fn(), initialType: 'epic' }
+		});
+		await settle();
+		expect(document.querySelector<HTMLInputElement>('input[value=epic]')!.checked).toBe(true);
+		expect(q<HTMLTextAreaElement>('body').value).toBe(EPIC_BODY);
+		expect(button().textContent).toContain('Create epic');
+	});
+
+	it('does not start under an epic that has closed since (S-0171)', async () => {
+		backend();
+		c = mount(NewItemForm, {
+			target: document.body,
+			props: { oncreated: vi.fn(), initialParent: 'E-0001' }
+		});
+		await settle();
+		expect(q<HTMLSelectElement>('parent').value).toBe('');
+	});
+
 	it('does not replace text the designer has written when the type changes', async () => {
 		backend();
 		c = mount(NewItemForm, { target: document.body, props: { oncreated: vi.fn() } });

@@ -8,6 +8,8 @@
 	const initialType = $derived(page.url.searchParams.get('type') === 'epic' ? 'epic' : 'story');
 	// The board's lane menu opens this page with the lane it was opened on (S-0167).
 	const initialLane = $derived(startLane(page.url.searchParams.get('status')));
+	// An item page's New link opens this page with the epic of the story it was on (S-0171).
+	const initialParent = $derived(page.url.searchParams.get('parent') ?? '');
 </script>
 
 <svelte:head><title>New · flaiover</title></svelte:head>
@@ -16,4 +18,9 @@
 	Write what it is for. The ID, the file, its front matter, the link in its epic, and the commit are
 	made for you. Tasks are written by the agent that pulls the story.
 </p>
-<NewItemForm {initialType} {initialLane} oncreated={(id) => goto(resolve('/items/[id]', { id }))} />
+<NewItemForm
+	{initialType}
+	{initialLane}
+	{initialParent}
+	oncreated={(id) => goto(resolve('/items/[id]', { id }))}
+/>

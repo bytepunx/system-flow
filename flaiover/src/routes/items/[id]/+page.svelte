@@ -70,6 +70,14 @@
 			: []
 	);
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
+	// The form for another item of this one's type (S-0171): the dashboard makes epics and stories,
+	// and a new story starts under this one's epic. Tasks are the agent's to write.
+	const newQuery = $derived(
+		writable && (item?.type === 'story' || item?.type === 'epic')
+			? `?type=${item.type}` +
+					(item.type === 'story' && item.parent ? `&parent=${encodeURIComponent(item.parent)}` : '')
+			: null
+	);
 	// Another story's claim holds it in ready (S-0129): StoryAgent reads it from flai and says why.
 	let hold = $state<Hold | undefined>();
 	// What the story's agent is doing, for its threads to say it is working on a reply (S-0154).
@@ -241,8 +249,23 @@
 {:else if item}
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
 		<div class="min-w-0">
-			<h1 class="text-2xl font-semibold"><span class="font-mono">{item.id}</span> {item.title}</h1>
-			<p class="mt-1 text-sm text-muted">
+			<div class="flex items-start justify-between gap-4">
+				<h1 class="text-2xl font-semibold">
+					<span class="font-mono">{item.id}</span>
+					{item.title}
+				</h1>
+				{#if newQuery}
+					<!-- Another of the same type, without going back to the board (S-0171). -->
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it -->
+					<a
+						class="shrink-0 rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
+						href={resolve('/new') + newQuery}
+						data-testid="new-same-type">New {item.type}</a
+					>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				{/if}
+			</div>
+			<p class="mt-1 text-sm text-muted" data-testid="item-line">
 				<KindChips type={item.type} nature={item.nature} /> ·
 				<span class="font-medium">{item.status}</span>
 				{#if blocked}<span class="ml-1 font-semibold text-danger">BLOCKED</span>{/if}

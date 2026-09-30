@@ -91,7 +91,7 @@ describe('the item page (S-0154)', () => {
 		serve(review, [{ ...story, id: 'T-0553', type: 'task', title: 'A task', status: 'done' }]);
 		changed('wip/kanban/stories/S-0154-story-pages-receive-live-updates.md');
 		await settle();
-		expect(document.querySelector('h1 + p')!.textContent).toContain('review');
+		expect(document.querySelector('[data-testid="item-line"]')!.textContent).toContain('review');
 		expect(history()).toContain('2026-09-29T08:00:00Z review by agent-S-0154');
 		expect(document.body.textContent).toContain('T-0553');
 		expect(document.body.textContent).toContain('Review this story');
@@ -168,6 +168,45 @@ describe('the item page (S-0154)', () => {
 		document.querySelector<HTMLButtonElement>('[data-testid="dismiss"]')!.click();
 		flushSync();
 		expect(notice()).toBeNull();
+	});
+
+	describe('the New link at the top (S-0171)', () => {
+		const show = async (item: Record<string, unknown>, writable = true) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url === '/api/board') return answer({ writable });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			return document.querySelector<HTMLAnchorElement>('[data-testid="new-same-type"]');
+		};
+
+		it("names a story and opens the form for a story under this one's epic", async () => {
+			const link = await show({ ...story, parent: 'E-0013' });
+			expect(link!.textContent).toBe('New story');
+			expect(link!.getAttribute('href')).toBe('/new?type=story&parent=E-0013');
+		});
+
+		it('names a story with no epic and opens the form for a story alone', async () => {
+			const link = await show(story);
+			expect(link!.getAttribute('href')).toBe('/new?type=story');
+		});
+
+		it('names an epic and opens the form for an epic', async () => {
+			const link = await show({ ...story, id: 'E-0013', type: 'epic', parent: undefined });
+			expect(link!.textContent).toBe('New epic');
+			expect(link!.getAttribute('href')).toBe('/new?type=epic');
+		});
+
+		it("is not offered on a task, which is the agent's to write, or when the dashboard cannot write", async () => {
+			expect(await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0171' })).toBeNull();
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+			expect(await show(story, false)).toBeNull();
+		});
 	});
 
 	it('stops following the project once it is left', async () => {
