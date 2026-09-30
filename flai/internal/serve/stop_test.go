@@ -138,7 +138,7 @@ func TestTheOperatorStopsAStorysAgent(t *testing.T) {
 			t.Errorf("journal: %+v", j)
 		}
 	})
-	t.Run("a session leader that started at another time is left alone", func(t *testing.T) {
+	t.Run("a session leader that is not the process started is left alone, and settled", func(t *testing.T) {
 		if runtime.GOOS != "linux" {
 			t.Skip("when a process started is read from /proc")
 		}
@@ -148,11 +148,35 @@ func TestTheOperatorStopsAStorysAgent(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = other.Process.Kill(); _ = other.Wait() })
-		if !Owns(other.Process.Pid, time.Now()) {
-			t.Errorf("pid %d, started now, is not taken for a process started now", other.Process.Pid)
+		pid, start := other.Process.Pid, Started(other.Process.Pid)
+		if start == 0 || !Owns(pid, start) || !Owns(pid, 0) {
+			t.Fatalf("pid %d is not taken for the process it is (start %d)", pid, start)
 		}
-		if Owns(other.Process.Pid, time.Now().Add(-time.Hour)) {
-			t.Errorf("pid %d, started now, is taken for a process started an hour ago", other.Process.Pid)
+		if Owns(pid, start+1) {
+			t.Errorf("pid %d is taken for a process that started at another time", pid)
+		}
+		// after a reboot: the run's PID leads another session, started at another time
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Rebooted")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		if r := lab.run(id); r.Start == 0 {
+			t.Errorf("the run does not record when its process started: %+v", r)
+		}
+		lab.release(id)
+		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			r := *s.Stories[id]
+			r.Ended, r.Exit, r.Outcome, r.Why, r.PID, r.Start = "", nil, "", "", pid, start+1
+			s.put(&r)
+		})
+		lab.l.look(ctx, false) // what flai serve does after the reboot
+		if r := lab.run(id); r.live() || r.Outcome != OutcomeFailed {
+			t.Errorf("a run whose PID another process has is not settled: %+v", r)
+		}
+		if !Alive(pid) {
+			t.Error("settling the run signalled the process that has its PID")
 		}
 	})
 	t.Run("an agent waiting for an answer is not started again", func(t *testing.T) {

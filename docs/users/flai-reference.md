@@ -1787,7 +1787,7 @@ flai serve agent stop <story-id>
 
 Stops the agent flai serve started for a story (S-0170). An agent that runs is sent SIGTERM with every process it started (its process group), and SIGKILL if it has not ended ten seconds later. An agent that ended waiting for an answer is not started again when the answer comes. The run is recorded as stopped by the operator: the story stays where it is, its worktree holds what the agent left, committed or not, and it gets no new agent until it is retried (flai serve agent restart) or moved back to ready.
 
-A process is signalled only while it is still the agent flai started: the leader of its own session that started when the run did. A PID the system has given to another process since, after a reboot, is left alone, and the run is only recorded as stopped.
+A process is signalled only while it is still the agent flai started: the leader of its own session, which on Linux started at the clock tick since boot recorded with the run. A PID the system has given to another process since, after a reboot, is left alone, and the run is only recorded as stopped; flai serve settles such a run by itself at its next look.
 
 It refuses, and says why, when flai serve has started no agent for the story and when its agent is neither running nor waiting for an answer. It works whether or not the agent action is on: the dashboard's Stop, on the activity page, asks for it only while it is.
 

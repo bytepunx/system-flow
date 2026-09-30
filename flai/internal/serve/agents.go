@@ -97,6 +97,10 @@ type AgentRun struct {
 	Command string `json:"command"` // the program's name, not its arguments
 	Agent   string `json:"agent"`
 	PID     int    `json:"pid,omitempty"`
+	// Start is when the process started as the system counts it (clock
+	// ticks since boot on Linux), which tells it from another given the same
+	// PID since (S-0170); 0 where it is not known, and on runs before it.
+	Start   int64  `json:"start,omitempty"`
 	Started string `json:"started"`
 	Ended   string `json:"ended,omitempty"`
 	Exit    *int   `json:"exit,omitempty"`
@@ -144,6 +148,10 @@ func agentChanged(run *AgentRun, now *manifest.Agent) bool {
 
 // live is a run that has not ended.
 func (r *AgentRun) live() bool { return r != nil && r.Ended == "" && r.Error == "" && r.PID > 0 }
+
+// running is a run that has not ended whose process is still the one
+// started for it.
+func (r *AgentRun) running() bool { return r.live() && Owns(r.PID, r.Start) }
 
 // AgentState is what is known of agents for one project.
 type AgentState struct {
@@ -492,11 +500,13 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 
 // settleOrphans ends the runs whose process is gone while no launcher waits
 // for it: flai serve was restarted while they ran, or a command started them
-// on the operator's word and handed them over (S-0115, S-0116).
+// on the operator's word and handed them over (S-0115, S-0116). A process
+// that has the run's PID and is not the one started for it, after a reboot,
+// is gone too (S-0170).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
-		if !run.live() || l.waiting[run.PID] || Alive(run.PID) {
+		if !run.live() || l.waiting[run.PID] || run.running() {
 			continue
 		}
 		ended := *run
@@ -605,6 +615,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	run.PID = cmd.Process.Pid
+	run.Start = Started(run.PID)
 	if !l.handOver {
 		l.waiting[run.PID] = true
 	}

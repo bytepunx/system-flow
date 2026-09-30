@@ -61,7 +61,7 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 		}
 	})
 	signalled, killed := false, false
-	if started, err := time.Parse(time.RFC3339, run.Started); err == nil && run.live() && Owns(run.PID, started) {
+	if run.running() {
 		signalled = true
 		_ = TerminateGroup(run.PID)
 		if !gone(run.PID, o.stopGrace()) {

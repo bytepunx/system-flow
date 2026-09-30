@@ -41,7 +41,7 @@ func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, e
 		return nil, refused("%s is in %s; only a story in review has its worktree committed this way, and one in progress commits its own", it.ID, it.Status)
 	}
 	switch run := o.Dir.AgentStates()[e.Root].Stories[it.ID]; {
-	case run.live() && Alive(run.PID):
+	case run.running():
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run != nil && run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)

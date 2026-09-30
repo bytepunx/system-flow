@@ -105,7 +105,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	switch {
 	case run == nil:
 		return nil, refused("flai serve has started no agent for %s, so there is none to restart", it.ID)
-	case run.live() && Alive(run.PID):
+	case run.running():
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)
