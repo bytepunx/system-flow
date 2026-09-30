@@ -235,11 +235,7 @@
 			totals.
 		</p>
 	{/if}
-	<Chart
-		{option}
-		theme={t}
-		height={kind === 'aging' ? Math.max(200, 32 * (report?.aging.length ?? 0) + 80) : 380}
-	/>
+	<Chart {option} theme={t} height={380} />
 	{#if kind === 'time-in-state' && report}
 		<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
 		{#await import('$lib/viz/charts') then m}
@@ -249,23 +245,7 @@
 	<details class="mt-4 text-xs">
 		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
-			{#if kind === 'aging' && report}
-				<table class="min-w-full">
-					<thead
-						><tr class="text-left text-muted"
-							><th class="pr-4">item</th><th class="pr-4">status</th><th class="pr-4">age</th><th
-								>title</th
-							></tr
-						></thead
-					><tbody
-						>{#each report.aging as a (a.id)}<tr
-								><td class="pr-4 font-mono">{a.id}</td><td class="pr-4">{a.status}</td><td
-									class="pr-4">{a.age}{a.over_p85 ? ' (over p85)' : ''}</td
-								><td>{a.title}</td></tr
-							>{/each}</tbody
-					>
-				</table>
-			{:else if spendKind && report}
+			{#if spendKind && report}
 				<SpendTable rows={spendRows(report, kind, by)} bucket={report.usage?.bucket ?? bucket} />
 			{:else if usageKind && report}
 				<table class="min-w-full" data-testid="usage-table">

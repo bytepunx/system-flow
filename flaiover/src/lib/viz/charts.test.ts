@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	aging,
 	build,
 	burnUp,
 	cfd,
@@ -14,7 +13,6 @@ import {
 	costPerItem,
 	costSpent,
 	cycleTime,
-	estimates,
 	human,
 	KINDS,
 	normalise,
@@ -191,8 +189,6 @@ const report: Report = {
 			queue_time_seconds: 86400,
 			blocked_seconds: 21600,
 			time_in_state_seconds: { backlog: 3600, ready: 86400, 'in-progress': 86400, review: 7200 },
-			estimate_seconds: 72000,
-			estimate_error: 0.3,
 			usage: {
 				source: 'log',
 				tokens: 3000000,
@@ -258,19 +254,6 @@ const report: Report = {
 		{
 			date: '2026-09-01',
 			counts: { backlog: 0, ready: 0, 'in-progress': 1, review: 0, done: 3, cancelled: 1 }
-		}
-	],
-	aging: [
-		{
-			id: 'S-004',
-			title: 'Four',
-			status: 'in-progress',
-			age_seconds: 93600,
-			over_p85: false,
-			blocked: false,
-			nature: 'feature',
-			parent: 'E-001',
-			age: '1d2h'
 		}
 	],
 	usage: {
@@ -366,8 +349,6 @@ describe('chart builders', () => {
 		expect(tis.xAxis.min).toBe(from - 12 * hour);
 		expect(tis.series[0].data.map((d) => d.ids)).toEqual([['S-002']]);
 		expect((cost(narrow, light) as Axis).xAxis.data).toEqual(['S-002*']);
-		const es = estimates(narrow, light) as { series: { data: unknown[] }[] };
-		expect(es.series[0].data).toEqual([]);
 		expect((tokenRate(narrow, light) as Axis).xAxis.min).toBe(from - 12 * hour);
 		expect(completedIn(narrow).map((i) => i.id)).toEqual(['S-002']);
 		expect(withUsage(narrow).map((i) => i.id)).toEqual(['S-002']);
@@ -430,18 +411,10 @@ describe('chart builders', () => {
 		const share = stateShare(report, light) as { series: { data: number[] }[] };
 		expect(share.series[1].data[0]).toBeCloseTo(0.48);
 	});
-	it('throughput, aging, and estimates shape their data', () => {
+	it('throughput shapes its data', () => {
 		const th = throughput(report, light) as { series: { name: string; data: number[] }[] };
 		expect(th.series.map((s) => s.name)).toEqual(['feature', 'improvement']);
 		expect(th.series[0].data).toEqual([1, 0]);
-		const ag = aging(report, dark) as {
-			yAxis: { data: string[] };
-			series: { data: { value: number }[] }[];
-		};
-		expect(ag.yAxis.data).toEqual(['S-004']);
-		expect(ag.series[0].data[0].value).toBe(1.08);
-		const es = estimates(report, light) as { series: { data: { value: number[] }[] }[] };
-		expect(es.series[0].data[0].value).toEqual([20, 26]);
 	});
 	it('usage charts colour each model in a fixed slot by name, whatever a filter leaves', () => {
 		expect(models(report)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
@@ -538,10 +511,11 @@ describe('chart builders', () => {
 		).toBe('2026-08-03<br/>claude-opus-5-5: $1.50 (estimated in part)');
 		const week = { ...report, usage: { ...report.usage!, bucket: 'week' as const } };
 		expect((tokensSpent(week, light) as Over).series[2].name).toBe('mean per week');
-		expect(titleOf('tokens-spent', 'week')).toBe('Tokens per week');
-		expect(titleOf('cost-spent', 'hour')).toBe('Cost per hour');
-		expect(titleOf('cost-spent')).toBe('Cost per day');
-		expect(titleOf('token-rate', 'hour')).toBe('Token rate');
+		expect(titleOf('tokens-spent', 'week')).toBe('Tokens / Week');
+		expect(titleOf('tokens-spent')).toBe('Tokens / Day');
+		expect(titleOf('cost-spent', 'hour')).toBe('$ / Hour');
+		expect(titleOf('cost-spent')).toBe('$ / Day');
+		expect(titleOf('token-rate', 'hour')).toBe('Tokens / Min');
 	});
 	it('tokens and cost per item compare the types, or the models on the type of the report', () => {
 		const o = tokensPerItem(report, light) as Over;
@@ -662,12 +636,11 @@ describe('chart builders', () => {
 			items: null,
 			throughput: null,
 			cfd: null,
-			aging: null,
 			burnup: null,
 			usage: undefined
 		} as unknown as Report;
 		for (const kind of KINDS) expect(() => build(kind, empty, light)).not.toThrow();
-		expect(normalise(empty).aging).toEqual([]);
+		expect(normalise(empty).cfd).toEqual([]);
 	});
 	it('dark theme swaps the palette and surface', () => {
 		expect(dark.series[0]).toBe(CATEGORICAL.dark[0]);

@@ -135,7 +135,6 @@ export function normalise(r: Report): Report {
 		items: r.items ?? [],
 		throughput: r.throughput ?? [],
 		cfd: r.cfd ?? [],
-		aging: r.aging ?? [],
 		burnup: r.burnup ?? {},
 		usage: {
 			items: 0,
@@ -162,31 +161,12 @@ export type Report = {
 	throughput: { week: string; start: string; done: number; by_nature: Record<string, number> }[];
 	burnup: Record<string, { date: string; scope?: number; done?: number }[]>;
 	cfd: { date: string; counts: Record<string, number> }[];
-	aging: {
-		id: string;
-		title: string;
-		status: string;
-		age_seconds: number;
-		over_p85: boolean;
-		blocked: boolean;
-		nature: string;
-		parent?: string;
-		age: string;
-	}[];
 	/** Absent from a flai older than S-0143. */
 	usage?: UsageReport;
 };
 
 /** The charts of how work flows. */
-export const FLOW_KINDS = [
-	'cycle-time',
-	'burn-up',
-	'cfd',
-	'time-in-state',
-	'throughput',
-	'aging',
-	'estimates'
-] as const;
+export const FLOW_KINDS = ['cycle-time', 'burn-up', 'cfd', 'time-in-state', 'throughput'] as const;
 /** The charts of what agents spent (S-0143, S-0163): they need items that carry usage. */
 export const USAGE_KINDS = [
 	'token-rate',
@@ -202,20 +182,18 @@ export const USAGE_KINDS = [
 export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS] as const;
 export type Kind = (typeof KINDS)[number];
 export const TITLES: Record<Kind, string> = {
-	'cycle-time': 'Cycle time',
+	'cycle-time': 'Cycle Time',
 	'burn-up': 'Burn-up',
-	cfd: 'Cumulative flow',
-	'time-in-state': 'Time in state',
+	cfd: 'Cumulative Flow',
+	'time-in-state': 'Time in State',
 	throughput: 'Throughput',
-	aging: 'Aging work in progress',
-	estimates: 'Estimate versus actual',
-	'token-rate': 'Token rate',
-	'tokens-spent': 'Tokens per day',
+	'token-rate': 'Tokens / Min',
+	'tokens-spent': 'Tokens / Day',
 	'tokens-per-item': 'Tokens per item',
-	'tokens-per-dollar': 'Tokens per dollar',
-	'cost-spent': 'Cost per day',
-	'cost-per-item': 'Cost per item',
-	cost: 'Cost by item',
+	'tokens-per-dollar': 'Tokens / $',
+	'cost-spent': '$ / Day',
+	'cost-per-item': '$ / Work Type',
+	cost: '$ / Item',
 	'completion-time': 'Completion over time',
 	'completion-cost': 'Completion against cost'
 };
@@ -247,17 +225,17 @@ export function controls(kind: Kind, by: By) {
 	const perItem = PER_ITEM_KINDS.includes(kind);
 	return {
 		type: !(perItem && by === 'type'),
-		epic:
-			!spend &&
-			!['cfd', 'throughput', 'estimates', 'completion-time', 'completion-cost'].includes(kind),
+		epic: !spend && !['cfd', 'throughput', 'completion-time', 'completion-cost'].includes(kind),
 		bucket: spend,
 		by: perItem
 	};
 }
-/** A chart's title: the charts of what a bucket spent are named for the bucket. */
+/** A bucket's name in a title: Hour, Day, Week. */
+const titled = (bucket: BucketSize) => bucket[0].toUpperCase() + bucket.slice(1);
+/** A chart's title: the charts of what a bucket spent are named for the bucket (S-0169). */
 export function titleOf(kind: Kind, bucket: BucketSize = 'day'): string {
-	if (kind === 'tokens-spent') return `Tokens per ${bucket}`;
-	if (kind === 'cost-spent') return `Cost per ${bucket}`;
+	if (kind === 'tokens-spent') return `Tokens / ${titled(bucket)}`;
+	if (kind === 'cost-spent') return `$ / ${titled(bucket)}`;
 	return TITLES[kind];
 }
 
@@ -591,90 +569,6 @@ export function throughput(r: Report, t: Theme): Opt {
 			nameTextStyle: { color: t.textSecondary }
 		}),
 		series
-	});
-}
-
-/** Aging WIP: horizontal bars of age since started against the p85 line; over-p85 items use the reserved red. */
-export function aging(r: Report, t: Theme, epic?: string): Opt {
-	const rows = r.aging.filter((a) => !epic || a.parent === epic);
-	const p85 = days(r.summary.cycle_time.p85_seconds);
-	return base(t, {
-		grid: { left: 72, right: 24, top: 24, bottom: 40 },
-		tooltip: tooltip(t, {
-			formatter: (p: { name: string; value: number; dataIndex: number }) =>
-				`${p.name} ${rows[p.dataIndex].title}<br/>${p.value} days${rows[p.dataIndex].blocked ? ' · blocked' : ''}`
-		}),
-		xAxis: axisX(t, {
-			type: 'value',
-			name: 'days since started',
-			nameTextStyle: { color: t.textSecondary }
-		}),
-		yAxis: axisY(t, {
-			type: 'category',
-			data: rows.map((a) => a.id),
-			inverse: true,
-			splitLine: { show: false }
-		}),
-		series: [
-			{
-				name: 'age',
-				type: 'bar',
-				barMaxWidth: 24,
-				itemStyle: { borderRadius: [0, 4, 4, 0] },
-				data: rows.map((a) => ({
-					value: days(a.age_seconds),
-					itemStyle: { color: a.over_p85 ? t.series[7] : colorFor(t, STATE_SLOT, a.status, 0) }
-				})),
-				markLine: p85 > 0 ? refLine(t, [{ xAxis: p85 }], 'p85') : undefined
-			}
-		]
-	});
-}
-
-/** Estimate versus actual: one point per estimated, completed item; the diagonal is the perfect estimate. */
-export function estimates(r: Report, t: Theme): Opt {
-	const pts = completedIn(r).filter(
-		(i) => i.estimate_seconds && i.cycle_time_seconds !== undefined
-	);
-	const max = Math.max(
-		1,
-		...pts.flatMap((i) => [hours(i.estimate_seconds!), hours(i.cycle_time_seconds!)])
-	);
-	return base(t, {
-		tooltip: tooltip(t, {
-			formatter: (p: { data: { id: string; value: [number, number] } }) =>
-				`${p.data.id}<br/>estimated ${p.data.value[0]}h · actual ${p.data.value[1]}h`
-		}),
-		xAxis: axisX(t, {
-			type: 'value',
-			name: 'estimated hours',
-			nameTextStyle: { color: t.textSecondary },
-			max
-		}),
-		yAxis: axisY(t, {
-			type: 'value',
-			name: 'actual hours',
-			nameTextStyle: { color: t.textSecondary },
-			max
-		}),
-		series: [
-			{
-				name: 'items',
-				type: 'scatter',
-				symbolSize: 10,
-				itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 2 },
-				data: pts.map((i) => ({
-					value: [hours(i.estimate_seconds!), hours(i.cycle_time_seconds!)],
-					id: i.id
-				})),
-				markLine: {
-					silent: true,
-					symbol: 'none',
-					lineStyle: { type: 'dashed', color: t.textSecondary, width: 1 },
-					data: [[{ coord: [0, 0] }, { coord: [max, max] }]]
-				}
-			}
-		]
 	});
 }
 
@@ -1107,10 +1001,6 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string, by: B
 			return timeInState(r, t, epic);
 		case 'throughput':
 			return throughput(r, t);
-		case 'aging':
-			return aging(r, t, epic);
-		case 'estimates':
-			return estimates(r, t);
 		case 'token-rate':
 			return tokenRate(r, t);
 		case 'tokens-spent':

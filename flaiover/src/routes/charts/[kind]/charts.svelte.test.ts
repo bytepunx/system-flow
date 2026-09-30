@@ -85,7 +85,6 @@ const reportIn = (bucket: string) => ({
 	throughput: [],
 	burnup: {},
 	cfd: [],
-	aging: [],
 	usage: {
 		items: 3,
 		tokens: 36000000,
@@ -163,21 +162,23 @@ describe('the charts page (S-0163)', () => {
 
 	it('lists the flow charts and the usage charts apart, and draws tokens per day with its table', async () => {
 		await open('tokens-spent');
-		expect(text('[data-testid="charts-flow"]')).toContain('Cumulative flow');
+		expect(
+			[...document.querySelectorAll('[data-testid="charts-flow"] a')].map((l) => l.textContent)
+		).toEqual(['Cycle Time', 'Burn-up', 'Cumulative Flow', 'Time in State', 'Throughput']);
 		expect(
 			[...document.querySelectorAll('[data-testid="charts-usage"] a')].map((l) => l.textContent)
 		).toEqual([
-			'Token rate',
-			'Tokens per day',
+			'Tokens / Min',
+			'Tokens / Day',
 			'Tokens per item',
-			'Tokens per dollar',
-			'Cost per day',
-			'Cost per item',
-			'Cost by item',
+			'Tokens / $',
+			'$ / Day',
+			'$ / Work Type',
+			'$ / Item',
 			'Completion over time',
 			'Completion against cost'
 		]);
-		expect(text('h1')).toBe('Tokens per day');
+		expect(text('h1')).toBe('Tokens / Day');
 		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
 		// no epic narrows what flai summed
 		expect(controls()).toEqual(['window', 'per', 'type']);
@@ -211,7 +212,7 @@ describe('the charts page (S-0163)', () => {
 		await open('cost-spent');
 		await choose('bucket', 'hour');
 		expect(asked().at(-1)).toBe('/api/stats?since=30d&type=story&bucket=hour');
-		expect(text('h1')).toBe('Cost per hour');
+		expect(text('h1')).toBe('$ / Hour');
 		expect(text('[data-testid="spend-table"] tbody td')).toBe('2026-09-29 19:00 UTC');
 		const since = document.querySelector<HTMLSelectElement>('label select')!;
 		since.value = '90d';
@@ -252,7 +253,7 @@ describe('the charts page (S-0163)', () => {
 
 	it('keeps the epic and the table per item on the charts of S-0143', async () => {
 		await open('cost');
-		expect(text('h1')).toBe('Cost by item');
+		expect(text('h1')).toBe('$ / Item');
 		expect(controls()).toEqual(['window', 'type', 'epic']);
 		expect(text('[data-testid="usage-table"] thead')).toContain('tokens/agent minute');
 	});
