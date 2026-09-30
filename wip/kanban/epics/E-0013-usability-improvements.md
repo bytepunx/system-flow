@@ -6,7 +6,7 @@ title: Usability Improvements
 status: in-progress
 owner: alex
 created: 2026-09-29T05:28:11Z
-updated: 2026-09-30T00:23:01Z
+updated: 2026-09-30T00:46:03Z
 transitions:
   - to: ready
     at: 2026-09-29T07:07:18Z
@@ -46,5 +46,6 @@ There are a number of odd patterns that cause confusion in the dashboard UI/UX. 
 - S-0168 Several Charts Don't Use Window correctly
 - S-0170 The Operator can stop agents
 - S-0171 Add a "New {item}" button to the top of the item pages
+- S-0172 Two-tier Site Menu
 
 ## Notes
