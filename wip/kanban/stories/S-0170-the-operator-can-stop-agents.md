@@ -3,12 +3,15 @@ id: S-0170
 type: story
 nature: improvement
 title: The Operator can stop agents
-status: backlog
+status: ready
 parent: E-0013
 owner: alex
 created: 2026-09-29T23:56:11Z
-updated: 2026-09-29T23:56:11Z
-transitions: []
+updated: 2026-09-30T00:14:24Z
+transitions:
+  - to: ready
+    at: 2026-09-30T00:14:24Z
+    by: alex
 tags: [dashboard, cli]
 topics: [server-side, client-side]
 touches: [flaiover/src, flai/cmd]
