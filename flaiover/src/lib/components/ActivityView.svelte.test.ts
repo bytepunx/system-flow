@@ -105,3 +105,115 @@ describe('ActivityView agent streams (S-0142)', () => {
 		expect(api).not.toHaveBeenCalled();
 	});
 });
+
+describe('ActivityView stopping an agent (S-0170)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		document.body.innerHTML = '';
+	});
+	const stopButton = (id: string) =>
+		card(id)?.querySelector<HTMLButtonElement>('[data-testid="agent-stop"]') ?? null;
+	const agents = (): Record<string, StoryActivity> => ({
+		'S-0001': { state: 'working', run: { ...run('S-0001'), pid: 4242 } },
+		'S-0002': { state: 'worked', run: { ...run('S-0002'), ended: 'e', outcome: 'worked' } },
+		'S-0003': {
+			state: 'waiting',
+			thread: 'TH-0007',
+			why: 'waiting for an answer to TH-0007',
+			run: { ...run('S-0003'), ended: 'e', outcome: 'asked', thread: 'TH-0007' }
+		}
+	});
+	// the streams answer with nothing; a stop answers as the route does
+	const answer = (stop: { ok: boolean; body: unknown }) =>
+		api.mockImplementation(async (path: string) =>
+			path.endsWith('/agent')
+				? { ok: stop.ok, status: stop.ok ? 200 : 400, json: async () => stop.body }
+				: {
+						ok: true,
+						status: 200,
+						json: async () => ({ running: true, from: 0, next: 0, size: 0, entries: [] })
+					}
+		);
+	const posts = () => api.mock.calls.filter(([p]) => String(p).endsWith('/agent'));
+
+	it('offers Stop only for an agent that runs or waits for an answer, and only while it may', async () => {
+		answer({ ok: true, body: {} });
+		const streams = [stream('S-0001'), stream('S-0002'), stream('S-0003')];
+		c = mount(ActivityView, { target: document.body, props: { streams, agents: agents() } });
+		await settle();
+		expect(document.querySelector('[data-testid="agent-stop"]')).toBeNull();
+		unmount(c);
+		c = mount(ActivityView, {
+			target: document.body,
+			props: { streams, agents: agents(), canStop: true }
+		});
+		await settle();
+		expect(stopButton('S-0001')).not.toBeNull();
+		expect(stopButton('S-0002')).toBeNull();
+		expect(stopButton('S-0003')).not.toBeNull();
+	});
+
+	it('warns what stopping does, and stops the agent only once the operator confirms', async () => {
+		answer({ ok: true, body: { story: 'S-0001' } });
+		const onstopped = vi.fn();
+		c = mount(ActivityView, {
+			target: document.body,
+			props: { streams: [stream('S-0001')], agents: agents(), canStop: true, onstopped }
+		});
+		await settle();
+		stopButton('S-0001')!.click();
+		flushSync();
+		const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+		expect(dialog.textContent).toContain("Stop S-0001's agent?");
+		const warning = dialog.querySelector('[data-warning]')!.textContent!.replace(/\s+/g, ' ');
+		expect(warning).toContain('every process it started, is ended now (pid 4242)');
+		expect(warning).toContain('stays as it left it, committed or not');
+		expect(warning).toContain('S-0001 stays in in-progress, with no agent');
+		expect(warning).toContain('Retry');
+		expect(posts()).toHaveLength(0);
+
+		// keeping it changes nothing
+		[...dialog.querySelectorAll('button')]
+			.find((b) => b.textContent === 'Keep it running')!
+			.click();
+		flushSync();
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(posts()).toHaveLength(0);
+
+		stopButton('S-0001')!.click();
+		flushSync();
+		document.querySelector<HTMLButtonElement>('[data-testid="agent-stop-confirm"]')!.click();
+		await settle();
+		expect(posts()).toEqual([
+			[
+				'/api/items/S-0001/agent',
+				expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'stop' }) })
+			]
+		]);
+		expect(onstopped).toHaveBeenCalledWith('S-0001');
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+	});
+
+	it("says an agent waiting for an answer is not started again, and flai's refusal", async () => {
+		answer({ ok: false, body: { error: "S-0003's agent is not running: it ended" } });
+		const onstopped = vi.fn();
+		c = mount(ActivityView, {
+			target: document.body,
+			props: { streams: [stream('S-0003')], agents: agents(), canStop: true, onstopped }
+		});
+		await settle();
+		stopButton('S-0003')!.click();
+		flushSync();
+		const warning = document.querySelector('[data-warning]')!.textContent!.replace(/\s+/g, ' ');
+		expect(warning).toContain('It ended waiting for an answer to TH-0007');
+		expect(warning).toContain('not started again when the answer comes');
+		document.querySelector<HTMLButtonElement>('[data-testid="agent-stop-confirm"]')!.click();
+		await settle();
+		expect(document.querySelector('[role="alert"]')!.textContent).toContain('is not running');
+		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		expect(onstopped).not.toHaveBeenCalled();
+	});
+});

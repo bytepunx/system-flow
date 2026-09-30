@@ -2,11 +2,14 @@
 	// Who is working on what (S-0042), from the narratives, and since S-0142 what each story's agent
 	// is saying and doing: a card whose story has had an agent flai serve started shows its stream,
 	// open while the agent runs, and an agent at work on a story with no narrative yet gets a card of
-	// its own.
+	// its own. Since S-0170 each agent that runs, or waits for an answer, has Stop, which says what
+	// stopping does and has flai stop it once the operator confirms.
 	import { resolve } from '$app/paths';
+	import { api } from '$lib/api';
 	import { age } from '$lib/age';
-	import { activityLine, type StoryActivity } from '$lib/activity';
+	import { activityLine, stoppable, type StoryActivity } from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
+	import AgentStopConfirm from './AgentStopConfirm.svelte';
 	import AgentStream from './AgentStream.svelte';
 
 	type Stream = {
@@ -22,8 +25,50 @@
 		last_log?: { at: string; text: string };
 		path: string;
 	};
-	let { streams, agents = {} }: { streams: Stream[]; agents?: Record<string, StoryActivity> } =
-		$props();
+	let {
+		streams,
+		agents = {},
+		canStop = false,
+		onstopped
+	}: {
+		streams: Stream[];
+		agents?: Record<string, StoryActivity>;
+		/** Whether the operator may stop an agent here: the agent host action is on. */
+		canStop?: boolean;
+		/** Told the story whose agent flai stopped. */
+		onstopped?: (story: string) => void;
+	} = $props();
+
+	// The story whose agent the operator asked to stop, while the confirmation is open.
+	let stopping = $state<string | null>(null);
+	let stopError = $state<string | null>(null);
+	const stopActivity = $derived(stopping ? agents[stopping] : undefined);
+
+	function askStop(id: string) {
+		stopping = id;
+		stopError = null;
+	}
+	async function stop() {
+		const id = stopping;
+		if (!id) return;
+		try {
+			const r = await api(`/api/items/${id}/agent`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'stop' })
+			});
+			if (!r.ok) {
+				const body = (await r.json().catch(() => ({}))) as { error?: string };
+				stopError = body.error ?? `the agent could not be stopped (${r.status})`;
+				return;
+			}
+		} catch (e) {
+			stopError = e instanceof Error ? e.message : String(e);
+			return;
+		}
+		stopping = null;
+		onstopped?.(id);
+	}
 
 	const live = (a: StoryActivity | undefined) => a?.state === 'working' || a?.state === 'waiting';
 	// An agent that has started, which a held story's stand-in run has not.
@@ -78,6 +123,7 @@
 				{@const a = agents[s.stream]}
 				<p class="mt-2 flex items-center gap-2 text-xs">
 					<AgentDot activity={a} /><span class="text-muted">{activityLine(a)}</span>
+					{#if canStop && stoppable(a)}{@render stopButton(s.stream)}{/if}
 				</p>
 				<AgentStream story={s.stream} started={a.run.started} open={live(a)} />
 			{/if}
@@ -91,8 +137,29 @@
 			</div>
 			<p class="mt-2 flex items-center gap-2 text-xs">
 				<AgentDot activity={a} /><span class="text-muted">{activityLine(a)} · {a.run.agent}</span>
+				{#if canStop && stoppable(a)}{@render stopButton(id)}{/if}
 			</p>
 			<AgentStream story={id} started={a.run.started} />
 		</li>
 	{/each}
 </ul>
+
+{#snippet stopButton(id: string)}
+	<button
+		type="button"
+		class="ml-auto rounded border border-danger px-2 py-0.5 text-xs text-danger"
+		onclick={() => askStop(id)}
+		data-testid="agent-stop">Stop</button
+	>
+{/snippet}
+
+{#if stopping && stopActivity}
+	<AgentStopConfirm
+		story={stopping}
+		activity={stopActivity}
+		status={streams.find((s) => s.stream === stopping)?.status}
+		error={stopError}
+		onconfirm={stop}
+		oncancel={() => (stopping = null)}
+	/>
+{/if}

@@ -6,6 +6,7 @@ import {
 	holdLine,
 	holdWaitsFor,
 	reasonParts,
+	stoppable,
 	storyActivity,
 	type StoryActivity
 } from './activity';
@@ -130,5 +131,51 @@ describe('a held story (S-0129)', () => {
 		);
 		expect(storyActivity(null)).toEqual({});
 		expect(storyActivity({ enabled: false })).toEqual({});
+	});
+});
+
+describe('stopping an agent (S-0170)', () => {
+	const run = { story: 'S-0170', command: 'claude', agent: 'agent-S-0170', started: 't', pid: 7 };
+	it('can stop an agent that runs, or that ended waiting for an answer', () => {
+		expect(stoppable({ state: 'working', run })).toBe(true);
+		expect(stoppable({ state: 'waiting', run, thread: 'TH-0001' })).toBe(true);
+		expect(
+			stoppable({
+				state: 'waiting',
+				run: { ...run, ended: 'e', outcome: 'asked', thread: 'TH-0001' },
+				thread: 'TH-0001'
+			})
+		).toBe(true);
+	});
+	it('cannot stop what has no process and no answer to wait for', () => {
+		expect(stoppable(undefined)).toBe(false);
+		expect(stoppable({ state: 'worked', run: { ...run, ended: 'e', outcome: 'worked' } })).toBe(
+			false
+		);
+		expect(stoppable({ state: 'failed', run: { ...run, ended: 'e', outcome: 'failed' } })).toBe(
+			false
+		);
+		// a retry queued for room
+		expect(
+			stoppable({ state: 'waiting', run: { ...run, ended: 'e', outcome: 'failed', queued: 'q' } })
+		).toBe(false);
+		// a held story's stand-in
+		expect(
+			stoppable({
+				state: 'waiting',
+				run: { ...run, started: '' },
+				hold: { code: 'overlap', reason: 'held' }
+			})
+		).toBe(false);
+		// already stopped
+		expect(stoppable({ state: 'working', run: { ...run, stopped: 's' } })).toBe(false);
+	});
+	it('says the operator stopped it', () => {
+		const stopped: StoryActivity = {
+			state: 'failed',
+			why: 'stopped by the operator at s',
+			run: { ...run, harness: 'claude-code', ended: 'e', outcome: 'stopped', stopped: 's' }
+		};
+		expect(activityLine(stopped)).toBe('agent stopped by the operator (claude-code)');
 	});
 });

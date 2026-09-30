@@ -59,7 +59,8 @@
 <h1 class="mb-1 text-2xl font-semibold">Activity</h1>
 <p class="mb-4 text-sm text-muted">
 	Read from the narratives in <code>wip/agents</code>. An agent that stops writing simply grows old
-	here. Each agent flai serve started shows its stream, read from the log flai gave it.
+	here. Each agent flai serve started shows its stream, read from the log flai gave it, and one that
+	runs can be stopped.
 </p>
 {#if error}
 	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
@@ -68,5 +69,10 @@
 {:else if streams === null}
 	<p class="text-sm text-muted">Loading…</p>
 {:else}
-	<ActivityView {streams} agents={host?.state?.stories ?? {}} />
+	<ActivityView
+		{streams}
+		agents={host?.state?.stories ?? {}}
+		canStop={!!host?.enabled}
+		onstopped={() => void loadAgents()}
+	/>
 {/if}

@@ -124,8 +124,39 @@ describe('agent route over the channel (S-0116)', () => {
 		expect((await no.json()).error).toContain('has nothing uncommitted');
 	});
 
+	// S-0170: the story's agent stopped
+	it('asks flai to stop the story agent and passes on its refusal', async () => {
+		script = {
+			'agent.stop': {
+				answer: {
+					data: {
+						story: 'S-0170',
+						agent: 'agent-S-0170',
+						pid: 45,
+						stopped: '2026-09-30T01:00:00Z'
+					},
+					warnings: []
+				}
+			}
+		};
+		const r = await doPost('S-0170', { action: 'stop' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ story: 'S-0170', pid: 45 });
+		const write = asked.find((a) => a.method === 'agent.stop');
+		expect(write?.params).toMatchObject({ id: 'S-0170' });
+		expect(typeof write?.params.request_id).toBe('string');
+		script = {
+			'agent.stop': {
+				error: new AgentError(400, "S-0170's agent is not running: it ended", -32011)
+			}
+		};
+		const no = await doPost('S-0170', { action: 'stop' });
+		expect(no.status).toBe(400);
+		expect((await no.json()).error).toContain('is not running');
+	});
+
 	it('refuses an action it does not know without asking flai', async () => {
-		const r = await doPost('S-0116', { action: 'stop' });
+		const r = await doPost('S-0116', { action: 'configure' });
 		expect(r.status).toBe(400);
 		expect(asked.some((a) => a.method.startsWith('agent.'))).toBe(false);
 	});

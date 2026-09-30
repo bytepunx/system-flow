@@ -2,7 +2,7 @@ import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
-const ACTIONS = ['start', 'restart', 'commit'] as const;
+const ACTIONS = ['start', 'restart', 'commit', 'stop'] as const;
 type Action = (typeof ACTIONS)[number];
 
 /**
@@ -11,7 +11,9 @@ type Action = (typeof ACTIONS)[number];
  * when; restart (agent.restart, S-0116) has a new agent, in a new session,
  * started for a story in ready or in progress whose agent dropped or failed;
  * commit (agent.commit, S-0140) has the story's agent started to commit what
- * a story in review left uncommitted in its worktree, and nothing else.
+ * a story in review left uncommitted in its worktree, and nothing else;
+ * stop (agent.stop, S-0170) has the story's agent ended, with everything it
+ * started, or, waiting for an answer, not started again when it comes.
  * flai judges whether it may and says why not, as a 400; it is 403 with what
  * enables it while the operator has not (flai serve enable agent).
  */

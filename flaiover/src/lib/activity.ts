@@ -15,10 +15,14 @@ export type AgentRun = {
 	exit?: number;
 	error?: string;
 	log?: string;
-	outcome?: 'worked' | 'failed';
+	outcome?: 'worked' | 'failed' | 'asked' | 'stopped';
 	why?: string;
 	/** When the operator queued another agent for its story, waiting for room (S-0118). */
 	queued?: string;
+	/** When the operator stopped it (S-0170). */
+	stopped?: string;
+	/** The question it ended waiting on, when it did. */
+	thread?: string;
 };
 
 export type ActivityState = 'working' | 'waiting' | 'failed' | 'worked';
@@ -143,10 +147,22 @@ export function activityLine(a: StoryActivity): string {
 		case 'waiting':
 			return `agent waiting (${who})${a.why ? `: ${a.why}` : ''}`;
 		case 'failed':
+			if (a.run.outcome === 'stopped') return `agent stopped by the operator (${who})`;
 			return `agent failed (${who})${a.why ? `: ${a.why}` : ''}`;
 		default:
 			return `agent finished (${who})`;
 	}
+}
+
+/**
+ * Whether the operator can stop a story's agent (S-0170): one flai started that runs, whether at
+ * work or waiting for the designer, or that ended waiting for an answer and would be started again
+ * by it. Not a held story's stand-in, nor a retry queued for room: neither has a process.
+ */
+export function stoppable(a: StoryActivity | undefined): a is StoryActivity {
+	if (!a?.run.started || a.hold || a.run.stopped) return false;
+	if (a.state === 'working') return true;
+	return a.state === 'waiting' && (!a.run.ended || a.run.outcome === 'asked');
 }
 
 /** Whether any agent is still running, so its state is worth asking for again. */
