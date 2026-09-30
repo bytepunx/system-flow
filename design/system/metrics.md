@@ -61,7 +61,7 @@ Aggregates cover the items of the report's type that entered `done` in the windo
 
 - **Totals**: items, tokens, cost, agent seconds, and whether any is estimated.
 - **Per model**: for each model, the items it worked on, its tokens and cost over them, and its tokens over the agent minutes of those items.
-- **Completion against time and cost**: the items in order of `completed` (then ID), each point carrying `completed`, the ID, and the cumulative count of items, tokens, and cost up to and including it. Per model, the same over the items that model worked on, counting that model's tokens and cost.
+- **Completion against time and cost**: the items in order of `completed` (then ID), each point carrying `completed`, the ID, and the cumulative count of items, tokens, and cost up to and including it. Per model, the same over the items that model worked on, counting that model's tokens and cost. Reported for scripts; no chart draws it since [ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md).
 
 ### Spend over time (S-0163)
 
@@ -81,13 +81,14 @@ A set of items, whether those of a bucket, of a type over the window, or of eith
 | Estimated | Whether any of them is |
 | Tokens per item | Tokens over items: the mean an item took |
 | Cost per item | Cost over items |
+| Minutes per item | Agent seconds over items, in minutes: the mean agent time an item took. Absent also when none of them took agent time ([ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md)) |
 | Tokens per minute | Tokens over agent minutes |
 | Tokens per dollar | Tokens over cost |
 | Mean tokens, mean cost | Of a bucket only: the running mean per bucket, the sum from the first bucket of the series to this one over the number of those buckets |
 
 A value is absent when its divisor is zero.
 
-`flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, and since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, and its `models`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
+`flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, and since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `minutes_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, and its `models`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
 
 ## Charts
 
@@ -96,22 +97,20 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Chart | Data | Notes |
 |-------|------|-------|
 | Kanban board | Current status of active items grouped by column, with age in column and blocked flag | Age in column is now minus last transition |
-| Cycle time scatter | One point per story completed in the window, x completed date, y cycle time, with 50th and 85th percentile lines | Filter by nature |
+| Cycle Time | One point per story completed in the window, x completed date, y cycle time, with 50th and 85th percentile lines | Filter by nature |
 | Burn-up | Per epic or whole repo, cumulative stories created versus done, per day of the window | Scope line and done line, forecast line from throughput |
-| Cumulative flow diagram | Stacked count of items per state per day of the window | Widening bands show where work piles up |
-| Time in state | Stacked bar per day of the window with stories completed: the mean hours per state of those stories ([ADR-0056](../adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md)), and the aggregate share | The process optimisation chart. The table lists each story |
+| Cumulative Flow | Stacked count of items per state per day of the window | Widening bands show where work piles up |
+| Time in State | Stacked bar per day of the window with stories completed: the mean hours per state of those stories ([ADR-0056](../adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md)), and the aggregate share | The process optimisation chart. The table lists each story |
 | Throughput | Bar per week of the window | With nature breakdown |
-| Aging WIP | Active items by age since started, against the 85th percentile | Flags items likely to be late |
-| Estimate vs actual | Scatter, only items completed in the window with `estimate` | |
-| Token rate | Per model, one point per bucket with agent time: the model's tokens per agent minute over the items done in the bucket | Of the report's type. Replaces the point per item in tokens per agent hour (S-0163) |
-| Tokens per bucket | Bar per bucket, the tokens of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Titled by the bucket: tokens per day |
-| Tokens per item | One point per bucket with items: tokens per item, one series per type | Or one series per model, for the report's type |
-| Tokens per dollar | Per model, one point per bucket with cost: tokens over cost | Of the report's type |
-| Cost per bucket | Bar per bucket, the cost of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Estimated costs marked |
-| Cost per item | One point per bucket with items: cost per item, one series per type | Or one series per model, for the report's type |
-| Cost by item | Bar per item completed in the window with usage, stacked by model | Estimated costs marked |
-| Completion against time | Per model, cumulative items done over time | The per model `done` series |
-| Completion against cost | Per model, cumulative items done over cumulative cost | The same series, x cost |
+| Tokens / Min | Per model, one point per bucket with agent time: the model's tokens per agent minute over the items done in the bucket | Of the report's type. Replaces the point per item in tokens per agent hour (S-0163) |
+| Tokens / bucket | Bar per bucket, the tokens of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Titled by the bucket: Tokens / Day |
+| Tokens per item | One point per bucket with items: tokens per item, one series per type | Every type at once ([ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md)) |
+| Tokens / $ | Per model, one point per bucket with cost: tokens over cost | Of the report's type |
+| $ / bucket | Bar per bucket, the cost of the items done in it, stacked by model, with the running mean per bucket as a line | Of the report's type. Titled by the bucket: $ / Day. Estimated costs marked |
+| $ / Work Type | One point per bucket with items: cost per item, one series per type | Every type at once ([ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md)) |
+| $ / Item | Bar per item completed in the window with usage, stacked by model | Estimated costs marked |
+| Avg. Time / Model | Per model, one point per bucket in which it worked on items that took agent time: their minutes per item | Of the report's type. With two models or more, a dashed line for all of them ([ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md)) |
+| Avg. Cost / Model | Per model, one point per bucket in which it worked on items: its cost per item | Of the report's type. With two models or more, a dashed line for all of them ([ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md)) |
 
 ## Precision rules
 
