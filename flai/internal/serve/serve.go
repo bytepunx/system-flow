@@ -177,6 +177,9 @@ type Options struct {
 	// Agent is the operator's say about starting an agent when a story
 	// becomes ready (S-0079); nil starts none.
 	Agent func(root string) AgentConfig
+	// StopGrace is how long Stop waits for an agent it asked to stop before
+	// it kills it (S-0170); ten seconds when zero.
+	StopGrace time.Duration
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
 	// MCP has each served project's HTTP MCP server kept by flai host

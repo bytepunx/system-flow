@@ -341,7 +341,7 @@ journal.`,
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
-	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
 		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,
@@ -900,6 +900,58 @@ button in the dashboard's acceptance confirmation runs this.`,
 			return a.agentNow(args[0], serve.Commit)
 		},
 	}
+}
+
+func newServeAgentStopCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "stop <story-id>",
+		Short: "Stop a story's agent: end its process and everything it started",
+		Long: `Stops the agent flai serve started for a story (S-0170). An agent that
+runs is sent SIGTERM with every process it started (its process group), and
+SIGKILL if it has not ended ten seconds later. An agent that ended waiting
+for an answer is not started again when the answer comes. The run is
+recorded as stopped by the operator: the story stays where it is, its
+worktree holds what the agent left, committed or not, and it gets no new
+agent until it is retried (flai serve agent restart) or moved back to ready.
+
+A process is signalled only while it is still the agent flai started: the
+leader of its own session that started when the run did. A PID the system
+has given to another process since, after a reboot, is left alone, and the
+run is only recorded as stopped.
+
+It refuses, and says why, when flai serve has started no agent for the story
+and when its agent is neither running nor waiting for an answer. It works
+whether or not the agent action is on: the dashboard's Stop, on the
+activity page, asks for it only while it is.`,
+		Example: `  flai serve agent stop S-0170`,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return a.agentStop(args[0])
+		},
+	}
+}
+
+// agentStop stops story's agent and prints the run as it ended.
+func (a *app) agentStop(story string) error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	o := serve.Options{Dir: a.serveDir(), Logger: a.logger(), Now: a.now, Agent: a.agentConfig, Host: a.host()}
+	e := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: mainRootOf(repo)}
+	run, err := serve.Stop(o, e, workitem.CanonicalID(story))
+	var no *serve.Refused
+	if errors.As(err, &no) {
+		return fmt.Errorf("rule: %s", no.Why)
+	}
+	if err != nil {
+		return err
+	}
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"story": run.Story, "agent": run.Agent, "pid": run.PID, "stopped": run.Stopped, "ended": run.Ended, "why": run.Why})
+	}
+	fmt.Fprintf(a.out, "stopped %s's agent %s (pid %d)\n", run.Story, run.Agent, run.PID)
+	return nil
 }
 
 func newServeAgentStreamCmd(a *app) *cobra.Command {

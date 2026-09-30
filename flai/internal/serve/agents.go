@@ -84,6 +84,9 @@ const (
 	OutcomeWorked = "worked" // it left its story in review or done
 	OutcomeAsked  = "asked"  // it ended waiting for an answer, and is started again when there is one
 	OutcomeFailed = "failed" // it could not be started, or left its story anywhere else
+	// OutcomeStopped is an agent the operator stopped (S-0170): its story is
+	// left where it was, and gets no agent until a retry or a move to ready.
+	OutcomeStopped = "stopped"
 )
 
 // AgentRun is one agent flai serve started, or failed to.
@@ -116,6 +119,21 @@ type AgentRun struct {
 	// ended, for its story in ready while the in-progress limit was full:
 	// flai serve starts it as soon as there is room (S-0118).
 	Queued string `json:"queued,omitempty"`
+	// Stopped is when the operator stopped it (S-0170): however its process
+	// ends from then, it ended stopped.
+	Stopped string `json:"stopped,omitempty"`
+}
+
+// same says whether r and o are one run: the same start of the same
+// process.
+func (r *AgentRun) same(o *AgentRun) bool {
+	return r != nil && o != nil && r.Story == o.Story && r.Started == o.Started && r.PID == o.PID
+}
+
+// stopped makes an ended run read as the operator's stop, when they stopped
+// it.
+func (r *AgentRun) stopped() {
+	r.Outcome, r.Why, r.Thread = OutcomeStopped, "stopped by the operator at "+r.Stopped, ""
 }
 
 // agentChanged says whether the story's agent says something else than it
@@ -218,6 +236,22 @@ type launcher struct {
 // told records a run in the host's state and tells changed its story.
 func (l *launcher) told(run *AgentRun) {
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
+	if l.changed != nil {
+		l.changed(run.Story)
+	}
+}
+
+// ended records a run as ended, as the operator's stop when they stopped it
+// (S-0170): Stop marks the run before it signals the process, so the end
+// the process makes is theirs, not a failure.
+func (l *launcher) ended(run *AgentRun) {
+	l.dir.updateAgent(l.entry.Root, func(s *AgentState) {
+		if cur := s.Stories[run.Story]; cur.same(run) && cur.Stopped != "" {
+			run.Stopped = cur.Stopped
+			run.stopped()
+		}
+		s.put(run)
+	})
 	if l.changed != nil {
 		l.changed(run.Story)
 	}
@@ -468,7 +502,7 @@ func (l *launcher) settleOrphans() {
 		ended := *run
 		ended.Ended = l.now().UTC().Format(time.RFC3339)
 		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, run.Story, run.Agent, nil)
-		l.told(&ended)
+		l.ended(&ended)
 		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 		l.measure(run.Story)
 	}
@@ -604,7 +638,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
 		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, story.ID, run.Agent, &code)
-		l.told(&ended)
+		l.ended(&ended)
 		l.mu.Lock()
 		delete(l.waiting, run.PID)
 		l.mu.Unlock()

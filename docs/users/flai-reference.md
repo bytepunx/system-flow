@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-09-29
+updated: 2026-09-30
 status: active
 ---
 
@@ -1667,6 +1667,7 @@ Subcommands:
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
+- [stop](#flai-serve-agent-stop): Stop a story's agent: end its process and everything it started
 - [stream](#flai-serve-agent-stream): Print what a story's agent said and did, from the log flai serve gave it
 - [usage](#flai-serve-agent-usage): Measure the tokens and cost a story's agents spent, from the logs flai serve kept
 
@@ -1774,6 +1775,26 @@ Examples:
 
 ```bash
 flai serve agent start S-0115
+```
+
+##### flai serve agent stop
+
+Stop a story's agent: end its process and everything it started.
+
+```text
+flai serve agent stop <story-id>
+```
+
+Stops the agent flai serve started for a story (S-0170). An agent that runs is sent SIGTERM with every process it started (its process group), and SIGKILL if it has not ended ten seconds later. An agent that ended waiting for an answer is not started again when the answer comes. The run is recorded as stopped by the operator: the story stays where it is, its worktree holds what the agent left, committed or not, and it gets no new agent until it is retried (flai serve agent restart) or moved back to ready.
+
+A process is signalled only while it is still the agent flai started: the leader of its own session that started when the run did. A PID the system has given to another process since, after a reboot, is left alone, and the run is only recorded as stopped.
+
+It refuses, and says why, when flai serve has started no agent for the story and when its agent is neither running nor waiting for an answer. It works whether or not the agent action is on: the dashboard's Stop, on the activity page, asks for it only while it is.
+
+Examples:
+
+```bash
+flai serve agent stop S-0170
 ```
 
 ##### flai serve agent stream

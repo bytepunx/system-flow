@@ -119,6 +119,8 @@ export const REQUIRED_METHODS = [
 	'agent.start',
 	// S-0140: an agent to commit what a story in review left uncommitted, gated by the agent host action
 	'agent.commit',
+	// S-0170: the story's agent stopped, with what it started, gated by the agent host action
+	'agent.stop',
 	// S-0142: what a story's agent said and did, read from its log; read-only like agent.status
 	'agent.stream'
 ];

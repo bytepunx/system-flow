@@ -63,6 +63,7 @@ var good = map[string]struct {
 	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
 	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
+	"agent.stop":    {`{"id":"S-0001",` + rid + `}`, "serve agent stop S-0001 --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}},` + rid + `}`,
@@ -133,6 +134,7 @@ var refused = map[string][]string{
 	"agent.restart": {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.start":   {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.stop":    {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -433,8 +435,8 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 			t.Errorf("%s runs flai config", name)
 		}
 		host := args[0] == "serve" || args[0] == "agent" || (len(args) > 1 && args[1] == "token" && (args[0] == "dashboard" || args[0] == "mcp"))
-		// S-0116, S-0115: starting a story's agent is the agent action's, and changes no setting
-		now := (name == "agent.restart" || name == "agent.start" || name == "agent.commit") && sp.action == ActionAgent && strings.Join(args[:3], " ") == "serve "+strings.Replace(name, ".", " ", 1)
+		// S-0116, S-0115: starting a story's agent is the agent action's, and changes no setting; so is stopping it (S-0170)
+		now := (name == "agent.restart" || name == "agent.start" || name == "agent.commit" || name == "agent.stop") && sp.action == ActionAgent && strings.Join(args[:3], " ") == "serve "+strings.Replace(name, ".", " ", 1)
 		if host && !now && sp.action != ActionSettings {
 			t.Errorf("%s runs flai %s without the settings action", name, strings.Join(args[:2], " "))
 		}
@@ -543,14 +545,15 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	if got, _ := json.Marshal(res); string(got) != `{"enabled":false}` {
 		t.Errorf("on a host nobody touched: %s", got)
 	}
-	// Nothing the dashboard asks for stops or configures an agent; the three
-	// that start one, a ready story's now (S-0115), a new one for a story
-	// whose agent dropped or failed (S-0116), and one to commit what a story
-	// in review left uncommitted (S-0140), need the agent action.
-	starts := map[string]bool{"agent.restart": true, "agent.start": true, "agent.commit": true}
+	// Nothing the dashboard asks for configures an agent; the three that
+	// start one, a ready story's now (S-0115), a new one for a story whose
+	// agent dropped or failed (S-0116), and one to commit what a story in
+	// review left uncommitted (S-0140), and the one that stops a story's
+	// agent (S-0170), need the agent action.
+	starts := map[string]bool{"agent.restart": true, "agent.start": true, "agent.commit": true, "agent.stop": true}
 	for name := range Methods("test", nil) {
 		if strings.HasPrefix(name, "agent.") && name != "agent.status" && name != "agent.stream" && !starts[name] {
-			t.Errorf("%s: nothing the dashboard can ask for stops or configures an agent", name)
+			t.Errorf("%s: nothing the dashboard can ask for configures an agent", name)
 		}
 	}
 	for name := range starts {

@@ -274,10 +274,11 @@ const ActionAutoPublish = "auto-publish"
 // ActionAgent is the host action that starts a story's agent when the story
 // becomes ready and the in-progress limit has room (S-0079, S-0104,
 // ADR-0043). flai serve performs that itself, from what it sees in the
-// project's files. Three methods ask for it: agent.restart, a new agent for
+// project's files. Four methods ask for it: agent.restart, a new agent for
 // a story whose agent dropped or failed (S-0116), agent.start, a ready
-// story's agent now (S-0115), and agent.commit, an agent to commit what a
-// story in review left uncommitted in its worktree (S-0140).
+// story's agent now (S-0115), agent.commit, an agent to commit what a
+// story in review left uncommitted in its worktree (S-0140), and agent.stop,
+// the story's agent ended (S-0170).
 const ActionAgent = "agent"
 
 // ActionDashboard is the host action that restarts, upgrades, or stops the
@@ -305,7 +306,7 @@ const ActionSettings = "settings"
 var Actions = map[string]string{
 	ActionPush:        "push accepted work, and publish everything merged and unreleased since each component's last tag when you press Publish, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
 	ActionAutoPublish: "tag a release of everything merged and unreleased since each component's last tag every time accepted work is pushed, from the board or by flai push --pending, so each push publishes; off, pushing releases nothing, and what is accepted waits to be published together from Publish or flai release --pending",
-	ActionAgent:       "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, start a ready story's agent on demand, start or queue a new one for a story whose agent dropped or failed, and start one to commit what a story in review left uncommitted in its worktree; whoever can move a story to ready or press Start agent, Retry, or Have an agent commit them, a holder of the dashboard token included, then starts it",
+	ActionAgent:       "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, start a ready story's agent on demand, start or queue a new one for a story whose agent dropped or failed, start one to commit what a story in review left uncommitted in its worktree, and stop a story's agent, ending its process and everything it started; whoever can move a story to ready or press Start agent, Retry, Have an agent commit them, or Stop, a holder of the dashboard token included, then starts or stops it",
 	ActionDashboard:   "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:      "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
 	ActionHost:        "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
@@ -1235,6 +1236,16 @@ func itemSpecs() map[string]spec {
 		// uncommitted in its worktree (S-0140); flai serve agent commit
 		// judges whether it may, and says why not.
 		"agent.commit": agentNow("commit", "started", " to commit what its worktree holds"),
+		// agent.stop: the story's agent ended, on the operator's word from
+		// the activity page (S-0170); flai serve agent stop judges whether
+		// there is one to stop, and says why not.
+		"agent.stop": {action: ActionAgent, describe: describeAgentStop, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			id, e := storyOf(raw)
+			if e != nil {
+				return nil, "", e
+			}
+			return []string{"serve", "agent", "stop", id}, "", nil
+		}},
 	}
 }
 
@@ -1242,20 +1253,46 @@ func itemSpecs() map[string]spec {
 // by the agent action, and journalled as what it did and why.
 func agentNow(verb, did, why string) spec {
 	return spec{action: ActionAgent, describe: describeAgentNow(did, why), build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-		in, e := decode[struct {
-			ID string `json:"id"`
-		}](raw)
+		id, e := storyOf(raw)
 		if e != nil {
 			return nil, "", e
 		}
-		if e := needID(in.ID); e != nil {
-			return nil, "", e
-		}
-		if !strings.HasPrefix(in.ID, "S-") {
-			return nil, "", bad("%s is not a story; only a story has an agent", in.ID)
-		}
-		return []string{"serve", "agent", verb, in.ID}, "", nil
+		return []string{"serve", "agent", verb, id}, "", nil
 	}}
+}
+
+// storyOf is the story an agent method names, refused when it names none or
+// an item that is not a story.
+func storyOf(raw json.RawMessage) (string, *channel.Error) {
+	in, e := decode[struct {
+		ID string `json:"id"`
+	}](raw)
+	if e != nil {
+		return "", e
+	}
+	if e := needID(in.ID); e != nil {
+		return "", e
+	}
+	if !strings.HasPrefix(in.ID, "S-") {
+		return "", bad("%s is not a story; only a story has an agent", in.ID)
+	}
+	return in.ID, nil
+}
+
+// describeAgentStop reads flai serve agent stop's --json shape for the
+// journal.
+func describeAgentStop(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Story string `json:"story"`
+		Agent string `json:"agent"`
+		PID   int    `json:"pid"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	return "done", fmt.Sprintf("stopped %s's agent %s (pid %d)", said.Story, said.Agent, said.PID)
 }
 
 // describeAgentNow reads flai serve agent start's, restart's, and commit's --json shape

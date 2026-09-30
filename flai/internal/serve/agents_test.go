@@ -97,7 +97,9 @@ func newAgentLab(t *testing.T) *agentLab {
 	// stands. It records its arguments, directory, and environment, then
 	// waits for a file named after its story to appear, if asked to.
 	lab.stub = filepath.Join(lab.outDir, "stub-agent")
+	// Asked to stop (S-0170), it marks its exit as it would have ended.
 	script := "#!/bin/sh\n" +
+		"trap 'touch \"" + lab.outDir + "/ended-$$\"; exit 143' TERM\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
 		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; } > \"$out\"\n" +
 		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +

@@ -7,11 +7,16 @@ import (
 	"os/exec"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 // Alive cannot probe with a signal on Windows; the fresh status
 // file is the evidence there.
 func Alive(pid int) bool { return pid > 0 }
+
+// Owns cannot tell a reused PID on Windows: a live PID is taken as the
+// process started then.
+func Owns(pid int, _ time.Time) bool { return Alive(pid) }
 
 // Detach starts cmd in its own process group, without a console.
 func Detach(cmd *exec.Cmd) {
