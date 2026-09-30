@@ -31,8 +31,10 @@
 	import { theme } from '$lib/viz/palette';
 	import KindChips from '$lib/components/KindChips.svelte';
 	import { themeState } from '$lib/theme.svelte';
+	import { chartWindow } from '$lib/chartwindow.svelte';
 
-	let since = $state('30d');
+	// the window chosen last in this browser, whichever chart it was chosen on (S-0168)
+	const since = $derived(chartWindow.since);
 	let type = $state('story');
 	let epic = $state('');
 	// what spend over time is laid out in, and what the charts per item compare (S-0163)
@@ -102,15 +104,20 @@
 		error = null;
 		report = normalise(body);
 	}
+	/** The epics the per-item charts can be narrowed to; none when they cannot be read. */
+	async function loadEpics() {
+		const r = await api('/api/items?type=epic');
+		const body = r.ok ? await r.json() : [];
+		epics = Array.isArray(body)
+			? body.map((e: { id: string; title: string }) => ({ id: e.id, title: e.title }))
+			: [];
+	}
 	onMount(() => {
 		// the statistics are read from the work items (S-0161)
 		const stop = follow(['item'], () => void load());
-		(async () => {
-			epics = (await (await api('/api/items?type=epic')).json()).map(
-				(e: { id: string; title: string }) => ({ id: e.id, title: e.title })
-			);
-			await load();
-		})();
+		// the charts do not wait for the epics, and are drawn without them (S-0168)
+		void load();
+		void loadEpics();
 		return stop;
 	});
 </script>
@@ -138,8 +145,11 @@
 	<label
 		>window <select
 			class="rounded border border-line-strong bg-surface px-2 py-1"
-			bind:value={since}
-			onchange={load}
+			value={since}
+			onchange={(e) => {
+				chartWindow.set(e.currentTarget.value);
+				void load();
+			}}
 			data-testid="window"
 			>{#each WINDOWS as w (w)}<option value={w}>{w}</option>{/each}</select
 		></label

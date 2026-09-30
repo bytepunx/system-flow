@@ -27,6 +27,7 @@ vi.mock('echarts/components', () => ({
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
 import ChartsPage from './+page.svelte';
+import { chartWindow } from '$lib/chartwindow.svelte';
 
 const opus = (items: number, tokens: number, cost: number, seconds: number) => ({
 	model: 'claude-opus-5-5',
@@ -149,6 +150,7 @@ describe('the charts page (S-0163)', () => {
 		api.mockReset();
 		setOption.mockClear();
 		document.body.innerHTML = '';
+		chartWindow.set('30d');
 	});
 	const open = async (kind: string) => {
 		at.params.kind = kind;
@@ -287,6 +289,7 @@ describe('the window (S-0166)', () => {
 	};
 	const pending: { since: string; release: () => void }[] = [];
 	let hold = false;
+	let epicsFail = false;
 	beforeEach(() => {
 		globalThis.ResizeObserver = class {
 			observe() {}
@@ -294,7 +297,10 @@ describe('the window (S-0166)', () => {
 			unobserve() {}
 		} as unknown as typeof ResizeObserver;
 		api.mockImplementation(async (url: string) => {
-			if (url.startsWith('/api/items')) return answer([]);
+			if (url.startsWith('/api/items'))
+				return epicsFail
+					? { ok: false, statusText: 'Service Unavailable', json: async () => ({ error: 'down' }) }
+					: answer([]);
 			const since = new URL(url, 'http://localhost').searchParams.get('since') ?? '30d';
 			if (hold) await new Promise<void>((release) => pending.push({ since, release }));
 			return answer(reportFor(since));
@@ -304,14 +310,18 @@ describe('the window (S-0166)', () => {
 		if (c) unmount(c);
 		c = undefined;
 		hold = false;
+		epicsFail = false;
 		pending.length = 0;
 		api.mockReset();
 		setOption.mockClear();
 		document.body.innerHTML = '';
+		chartWindow.set('30d');
 	});
 	type Drawn = { xAxis: { min: number; max: number }; series: { data: { id: string }[] }[] };
 	const drawn = () => setOption.mock.calls.at(-1)![0] as Drawn;
 	const ids = () => drawn().series.flatMap((s) => s.data.map((d) => d.id));
+	const asked = () =>
+		api.mock.calls.map(([u]) => u as string).filter((u) => u.startsWith('/api/stats'));
 
 	it('asks flai for the window chosen and redraws the axis and the points to it', async () => {
 		at.params.kind = 'cycle-time';
@@ -340,5 +350,35 @@ describe('the window (S-0166)', () => {
 		await settle();
 		expect(drawn().xAxis.min).toBe(Date.parse('2026-09-22T21:00:00Z'));
 		expect(ids()).toEqual(['S-0001']);
+	});
+
+	it('opens every chart at the window chosen before, after leaving the page (S-0168)', async () => {
+		at.params.kind = 'burn-up';
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+		await choose('window', '7d');
+		unmount(c);
+		document.body.innerHTML = '';
+		for (const kind of ['cycle-time', 'time-in-state']) {
+			api.mockClear();
+			at.params.kind = kind;
+			c = mount(ChartsPage, { target: document.body });
+			await settle();
+			expect(asked()).toEqual(['/api/stats?since=7d&type=story&bucket=day']);
+			expect(document.querySelector<HTMLSelectElement>('[data-testid="window"]')!.value).toBe('7d');
+			unmount(c);
+			document.body.innerHTML = '';
+		}
+		c = undefined;
+	});
+
+	it('draws the charts without waiting for the epics, and when they cannot be read (S-0168)', async () => {
+		epicsFail = true;
+		at.params.kind = 'cycle-time';
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
+		expect(ids().sort()).toEqual(['S-0001', 'S-0002']);
+		expect(document.querySelectorAll('label select')[2].querySelectorAll('option').length).toBe(1);
 	});
 });

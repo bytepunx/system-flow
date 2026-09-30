@@ -120,7 +120,7 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in two groups: flow, and usage. Pick a window, and the controls the chart offers: an item type, an epic, and on the usage charts over time what a bar or a point covers (an hour, a day, or a week) and what to compare. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. Aging work in progress is as of now whatever the window.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in two groups: flow, and usage. Pick a window, and the controls the chart offers: an item type, an epic, and on the usage charts over time what a bar or a point covers (an hour, a day, or a week) and what to compare. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. Aging work in progress is as of now whatever the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
 
 | Chart | Shows |
 |-------|-------|
