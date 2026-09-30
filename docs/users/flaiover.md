@@ -21,7 +21,15 @@ In a project, run `flai dashboard`. It starts the dashboard, and `flai serve` be
 The header is the same on every page.
 
 - **Project switcher**, at the left: the project you are looking at, and the others this dashboard serves. See [More than one project](#more-than-one-project).
-- **Navigation**: Overview, Board, Inbox (with the number of things that need you), Activity, Charts, Docs, ADRs, Search, Host, and Settings. Each is a section below.
+- **Site menu**: three groups, each with its pages in a row below the header. Each page is a section below.
+
+  | Group | Pages |
+  |-------|-------|
+  | Workflow | Overview, Board, Inbox (with the number of things that need you), Activity |
+  | Status | Charts, ADRs, Docs, Search |
+  | Host | Updates (the [Host](#host) page), Settings |
+
+  Point at a group, click it, or tap it to show its pages. Move the pointer off the menu, or press Escape, and the row shows the group of the page you are on again. The group and the page you are on are bold and coloured. A group shows the number its pages show, so the Inbox count also stands beside Workflow.
 - **Host flai badge**, at the right: whether a flai on the host has the dashboard connected. See [Host flai](#host-flai).
 - **Theme button**: see [Theme](#theme).
 
@@ -108,7 +116,7 @@ A story in review has a review page: open it from the card in the review column,
 
 ## Inbox
 
-Inbox is the list of things that need you, and the number beside its link in the navigation is how many there are. It holds five kinds of entry, each a link to where you deal with it: stories in review, which open their review page; threads where someone other than you wrote last, which open the story or item they are on at that thread, or the document they are on; open questions agents left in their narratives; blocked items, with the reason; and overlapping touches, where two stories in progress say they change the same files. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. A hand-written open question (one with no thread of its own) can be answered right there, in the inbox, when the dashboard can write: type the answer and submit it, and it moves to the narrative's Decisions and drops off the list. The list and the count refresh by themselves when files change.
+Inbox is the list of things that need you, and the number beside its link in the site menu, and beside Workflow, is how many there are. It holds five kinds of entry, each a link to where you deal with it: stories in review, which open their review page; threads where someone other than you wrote last, which open the story or item they are on at that thread, or the document they are on; open questions agents left in their narratives; blocked items, with the reason; and overlapping touches, where two stories in progress say they change the same files. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. A hand-written open question (one with no thread of its own) can be answered right there, in the inbox, when the dashboard can write: type the answer and submit it, and it moves to the narrative's Decisions and drops off the list. The list and the count refresh by themselves when files change.
 
 You can ask the browser to tell you when something new arrives: tick "Desktop notification" on the inbox page and allow it when the browser asks. It is off until you turn it on, it is remembered per browser, and it only fires for entries that appear while a dashboard tab is open, never for what was already there.
 
@@ -200,7 +208,7 @@ Search covers `design/` and `wip/` by default and `docs/` when you tick the box.
 
 ## Host
 
-The host flai badge in the header is a link to Host (also in the nav). It has two parts.
+The host flai badge in the header is a link to this page, which is Updates in the site menu's Host group. It has two parts.
 
 **Dashboard** shows what image and version the dashboard container is running, and, once the operator has enabled it (`flai serve enable dashboard`), Restart, Upgrade, and Stop. **Check for updates** always works and changes nothing. Restart and a successful upgrade stop the very container answering the page, so the page expects the connection to drop and shows "Reconnecting…" rather than an error, then says what came back once it does. An upgrade never touches the running container until the new image has proven itself healthy: if it does not, the page says so and nothing changed.
 
