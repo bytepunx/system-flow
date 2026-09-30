@@ -229,7 +229,7 @@
 				{report.usage?.bucket ?? bucket} so far, from the first with spend.{/if}
 		</p>
 	{/if}
-	{#if kind === 'cost' || kind === 'cost-spent' || kind === 'cost-per-item'}
+	{#if kind === 'cost' || kind === 'cost-spent' || kind === 'cost-per-item' || kind === 'cost-per-model'}
 		<p class="mb-2 text-xs text-muted">
 			* estimated in part: a task's share of its story's session, or a run that ended without its
 			totals.

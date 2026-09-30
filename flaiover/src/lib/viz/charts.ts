@@ -177,7 +177,7 @@ export const USAGE_KINDS = [
 	'cost-per-item',
 	'cost',
 	'completion-time',
-	'completion-cost'
+	'cost-per-model'
 ] as const;
 export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS] as const;
 export type Kind = (typeof KINDS)[number];
@@ -195,7 +195,7 @@ export const TITLES: Record<Kind, string> = {
 	'cost-per-item': '$ / Work Type',
 	cost: '$ / Item',
 	'completion-time': 'Completion over time',
-	'completion-cost': 'Completion against cost'
+	'cost-per-model': 'Avg. Cost / Model'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
 export const SPEND_KINDS: readonly Kind[] = [
@@ -204,7 +204,8 @@ export const SPEND_KINDS: readonly Kind[] = [
 	'tokens-per-item',
 	'tokens-per-dollar',
 	'cost-spent',
-	'cost-per-item'
+	'cost-per-item',
+	'cost-per-model'
 ];
 /** The charts per item, which compare the item types, or the models on one type. */
 export const PER_ITEM_KINDS: readonly Kind[] = ['tokens-per-item', 'cost-per-item'];
@@ -225,7 +226,7 @@ export function controls(kind: Kind, by: By) {
 	const perItem = PER_ITEM_KINDS.includes(kind);
 	return {
 		type: !(perItem && by === 'type'),
-		epic: !spend && !['cfd', 'throughput', 'completion-time', 'completion-cost'].includes(kind),
+		epic: !spend && !['cfd', 'throughput', 'completion-time'].includes(kind),
 		bucket: spend,
 		by: perItem
 	};
@@ -853,6 +854,8 @@ function perItem(r: Report, t: Theme, what: 'tokens' | 'cost', by: By): Opt {
 }
 export const tokensPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'tokens', by);
 export const costPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'cost', by);
+/** Avg. Cost / Model (S-0169): per model, the mean dollars an item of the report's type took. */
+export const costPerModel = (r: Report, t: Theme) => perItem(r, t, 'cost', 'model');
 
 /** One row of a spend chart's table: a bucket, and whose spend in it the row is. */
 export type SpendRow = Spend & { at: string; of: string; mean_tokens?: number; mean_cost?: number };
@@ -935,21 +938,21 @@ export function cost(r: Report, t: Theme, epic?: string): Opt {
 	});
 }
 
-/** Items done cumulatively, per model, against time or against that model's cumulative cost. */
-function completion(r: Report, t: Theme, against: 'time' | 'cost'): Opt {
+/** Items done cumulatively, per model, over time. */
+export function completionTime(r: Report, t: Theme): Opt {
 	const all = models(r);
 	const byModel = r.usage?.by_model ?? {};
 	const present = all.filter((name) => (byModel[name] ?? []).length > 0);
 	const series = present.map((name) => ({
 		name,
 		type: 'line',
-		step: against === 'time' ? 'end' : undefined,
+		step: 'end',
 		showSymbol: (byModel[name] ?? []).length < 40,
 		symbolSize: 8,
 		lineStyle: { width: 2, color: modelColor(t, name) },
 		itemStyle: { color: modelColor(t, name), borderColor: t.surface, borderWidth: 2 },
 		data: (byModel[name] ?? []).map((p) => ({
-			value: [against === 'time' ? p.at : p.cost, p.done],
+			value: [p.at, p.done],
 			id: p.id,
 			cost: p.cost,
 			at: p.at
@@ -964,18 +967,7 @@ function completion(r: Report, t: Theme, against: 'time' | 'cost'): Opt {
 			}) =>
 				`${p.seriesName}: ${p.data.value[1]} done by ${p.data.id}<br/>${dollars(p.data.cost)} spent · ${p.data.at.slice(0, 10)}`
 		}),
-		xAxis: axisX(
-			t,
-			against === 'time'
-				? { type: 'time', ...span(r) }
-				: {
-						type: 'value',
-						name: 'US dollars spent',
-						nameLocation: 'middle',
-						nameGap: 28,
-						nameTextStyle: { color: t.textSecondary }
-					}
-		),
+		xAxis: axisX(t, { type: 'time', ...span(r) }),
 		yAxis: axisY(t, {
 			type: 'value',
 			name: `${plural(r.type)} done`,
@@ -985,8 +977,6 @@ function completion(r: Report, t: Theme, against: 'time' | 'cost'): Opt {
 		series
 	});
 }
-export const completionTime = (r: Report, t: Theme) => completion(r, t, 'time');
-export const completionCost = (r: Report, t: Theme) => completion(r, t, 'cost');
 
 export function build(kind: Kind, report: Report, t: Theme, epic?: string, by: By = 'type'): Opt {
 	const r = normalise(report);
@@ -1017,7 +1007,7 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string, by: B
 			return cost(r, t, epic);
 		case 'completion-time':
 			return completionTime(r, t);
-		case 'completion-cost':
-			return completionCost(r, t);
+		case 'cost-per-model':
+			return costPerModel(r, t);
 	}
 }

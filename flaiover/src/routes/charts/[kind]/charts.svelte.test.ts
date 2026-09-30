@@ -176,7 +176,7 @@ describe('the charts page (S-0163)', () => {
 			'$ / Work Type',
 			'$ / Item',
 			'Completion over time',
-			'Completion against cost'
+			'Avg. Cost / Model'
 		]);
 		expect(text('h1')).toBe('Tokens / Day');
 		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
@@ -241,6 +241,20 @@ describe('the charts page (S-0163)', () => {
 		drawn = setOption.mock.calls.at(-1)![0] as { series: { name: string }[] };
 		expect(drawn.series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
 		expect(rows().map((r) => r[0])).toEqual(['story', 'claude-opus-5-5']);
+	});
+
+	it('draws the mean dollars per item of the type chosen, one line per model (S-0169)', async () => {
+		await open('cost-per-model');
+		expect(text('h1')).toBe('Avg. Cost / Model');
+		expect(controls()).toEqual(['window', 'per', 'type']);
+		const drawn = setOption.mock.calls.at(-1)![0] as { series: { name: string }[] };
+		expect(drawn.series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
+		expect(text('[data-testid="spend-note"]')).toContain('Each day holds the items');
+		expect(
+			[...document.querySelectorAll('[data-testid="spend-table"] tbody tr')].map(
+				(tr) => tr.querySelectorAll('td')[1].textContent
+			)
+		).toEqual(['story', 'claude-opus-5-5']);
 	});
 
 	it('says the flai on the host is older when it sends no spend over time', async () => {

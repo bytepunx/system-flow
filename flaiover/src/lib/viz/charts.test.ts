@@ -3,7 +3,6 @@ import {
 	build,
 	burnUp,
 	cfd,
-	completionCost,
 	completionTime,
 	completedIn,
 	bucketLabel,
@@ -11,6 +10,7 @@ import {
 	controls,
 	cost,
 	costPerItem,
+	costPerModel,
 	costSpent,
 	cycleTime,
 	human,
@@ -549,6 +549,23 @@ describe('chart builders', () => {
 			'task'
 		]);
 	});
+	it('avg. cost per model is the mean dollars per item of the type of the report, one line per model', () => {
+		const c = costPerModel(report, light) as Over;
+		expect(c.series.map((s) => s.name)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
+		expect(values(c.series[1])).toEqual([
+			['2026-08-03T00:00:00Z', 0.75],
+			['2026-08-05T00:00:00Z', 0.5]
+		]);
+		expect(c.yAxis.name).toBe('US dollars per story');
+		expect((build('cost-per-model', report, light) as Over).series).toEqual(c.series);
+		expect(titleOf('cost-per-model')).toBe('Avg. Cost / Model');
+		expect(controls('cost-per-model', 'type')).toEqual({
+			type: true,
+			epic: false,
+			bucket: true,
+			by: false
+		});
+	});
 	it('tokens per dollar is what a dollar bought, per model', () => {
 		const o = tokensPerDollar(report, light) as Over;
 		expect(values(o.series[1])).toEqual([
@@ -613,7 +630,7 @@ describe('chart builders', () => {
 		} as unknown as Report);
 		expect(nulls.usage?.spend?.story.buckets).toEqual([]);
 	});
-	it("completion charts lay out each model's items done against time and against cost", () => {
+	it("completion over time lays out each model's items done", () => {
 		const t = completionTime(report, light) as {
 			xAxis: { type: string };
 			series: { name: string; data: { value: [string | number, number] }[] }[];
@@ -622,12 +639,6 @@ describe('chart builders', () => {
 		expect(t.series[1].data.map((d) => d.value)).toEqual([
 			['2026-08-03T12:00:00Z', 1],
 			['2026-08-12T09:30:00Z', 2]
-		]);
-		const c = completionCost(report, light) as typeof t;
-		expect(c.xAxis.type).toBe('value');
-		expect(c.series[1].data.map((d) => d.value)).toEqual([
-			[1.2, 1],
-			[1.45, 2]
 		]);
 	});
 	it('draws every chart from a report whose lists are null (older flai, empty selection)', () => {
