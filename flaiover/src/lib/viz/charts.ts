@@ -207,9 +207,8 @@ export const SPEND_KINDS: readonly Kind[] = [
 	'cost-per-item',
 	'cost-per-model'
 ];
-/** The charts per item, which compare the item types, or the models on one type. */
+/** The charts per item, one line per item type: every type is drawn, so none is chosen. */
 export const PER_ITEM_KINDS: readonly Kind[] = ['tokens-per-item', 'cost-per-item'];
-export type By = 'type' | 'model';
 /** The windows the charts page offers. */
 export const WINDOWS = ['1d', '7d', '30d', '90d', '365d'] as const;
 /** The buckets a window can be laid out in: flai lays out by the hour over 31 days or less. */
@@ -219,16 +218,14 @@ export function bucketsFor(since: string): BucketSize[] {
 }
 /**
  * The controls a chart uses. Spend over time is summed by flai, so no epic narrows it; a chart
- * per item by type shows every type, so none is chosen.
+ * per item shows every type, so none is chosen.
  */
-export function controls(kind: Kind, by: By) {
+export function controls(kind: Kind) {
 	const spend = SPEND_KINDS.includes(kind);
-	const perItem = PER_ITEM_KINDS.includes(kind);
 	return {
-		type: !(perItem && by === 'type'),
+		type: !PER_ITEM_KINDS.includes(kind),
 		epic: !spend && !['cfd', 'throughput', 'completion-time'].includes(kind),
-		bucket: spend,
-		by: perItem
+		bucket: spend
 	};
 }
 /** A bucket's name in a title: Hour, Day, Week. */
@@ -805,66 +802,52 @@ function spentOverTime(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 export const tokensSpent = (r: Report, t: Theme) => spentOverTime(r, t, 'tokens');
 export const costSpent = (r: Report, t: Theme) => spentOverTime(r, t, 'cost');
 
-/**
- * What an item took on average in each bucket: one line per item type, or, by model, one line
- * per model over the items of the report's type that it worked on.
- */
-function perItem(r: Report, t: Theme, what: 'tokens' | 'cost', by: By): Opt {
+/** What an item took on average in each bucket: one line per item type. */
+function perItem(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 	const pick = (s: Spend) => (what === 'tokens' ? s.tokens_per_item : s.cost_per_item);
-	const points = (buckets: Bucket[], of: (b: Bucket) => Spend | undefined): Point[] =>
-		buckets.flatMap((b) => {
-			const s = of(b);
-			const v = s && pick(s);
-			return s && v !== undefined
-				? [{ value: [b.at, v] as [string, number], items: s.items, estimated: s.estimated }]
-				: [];
-		});
-	const series =
-		by === 'model'
-			? modelsIn(bucketsOf(r)).map((m) =>
-					line(
-						t,
-						m,
-						modelColor(t, m),
-						modelSymbol(m),
-						points(bucketsOf(r), (b) => share(b, m))
-					)
-				)
-			: TYPES.filter((type) => bucketsOf(r, type).some((b) => b.items > 0)).map((type) =>
-					line(
-						t,
-						type,
-						colorFor(t, TYPE_SLOT, type, 0),
-						TYPE_SYMBOL[type],
-						points(bucketsOf(r, type), (b) => b)
-					)
-				);
-	const unit = by === 'model' ? r.type : 'item';
+	const series = TYPES.filter((type) => bucketsOf(r, type).some((b) => b.items > 0)).map((type) =>
+		line(
+			t,
+			type,
+			colorFor(t, TYPE_SLOT, type, 0),
+			TYPE_SYMBOL[type],
+			bucketsOf(r, type).flatMap((b): Point[] => {
+				const v = pick(b);
+				return v !== undefined
+					? [{ value: [b.at, v], items: b.items, estimated: b.estimated }]
+					: [];
+			})
+		)
+	);
 	return base(t, {
 		...overTime(
 			t,
 			r,
 			series,
-			what === 'tokens' ? `tokens per ${unit}` : `US dollars per ${unit}`,
+			what === 'tokens' ? 'tokens per item' : 'US dollars per item',
 			what === 'tokens' ? count : dollars,
 			what === 'tokens' ? ' tokens each' : ' each'
 		),
 		series
 	});
 }
-export const tokensPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'tokens', by);
-export const costPerItem = (r: Report, t: Theme, by: By = 'type') => perItem(r, t, 'cost', by);
-/** Avg. Cost / Model (S-0169): per model, the mean dollars an item of the report's type took. */
-export const costPerModel = (r: Report, t: Theme) => perItem(r, t, 'cost', 'model');
+export const tokensPerItem = (r: Report, t: Theme) => perItem(r, t, 'tokens');
+export const costPerItem = (r: Report, t: Theme) => perItem(r, t, 'cost');
+/**
+ * Avg. Cost / Model (S-0169): per model, the mean dollars an item of the report's type took over
+ * the items done in each bucket that the model worked on.
+ */
+export const costPerModel = (r: Report, t: Theme) =>
+	perModel(r, t, (s) => s.cost_per_item, `US dollars per ${r.type}`, dollars, ' each');
 
 /** One row of a spend chart's table: a bucket, and whose spend in it the row is. */
 export type SpendRow = Spend & { at: string; of: string; mean_tokens?: number; mean_cost?: number };
 /**
- * What a chart over time plots, as rows: by type, each bucket of each item type in which items
+ * What a chart over time plots, as rows: per item, each bucket of each item type in which items
  * were done; otherwise each such bucket of the report's type, whole, with its running means,
  * and then per model. Newest first.
  */
-export function spendRows(r: Report, kind: Kind, by: By = 'type'): SpendRow[] {
+export function spendRows(r: Report, kind: Kind): SpendRow[] {
 	const rows: SpendRow[] = [];
 	const put = (b: Bucket, of: string, s: Spend, means: boolean) =>
 		rows.push({
@@ -874,7 +857,7 @@ export function spendRows(r: Report, kind: Kind, by: By = 'type'): SpendRow[] {
 			mean_tokens: means ? b.mean_tokens : undefined,
 			mean_cost: means ? b.mean_cost : undefined
 		});
-	if (PER_ITEM_KINDS.includes(kind) && by === 'type') {
+	if (PER_ITEM_KINDS.includes(kind)) {
 		for (const type of TYPES)
 			for (const b of bucketsOf(r, type)) if (b.items > 0) put(b, type, b, false);
 	} else {
@@ -978,7 +961,7 @@ export function completionTime(r: Report, t: Theme): Opt {
 	});
 }
 
-export function build(kind: Kind, report: Report, t: Theme, epic?: string, by: By = 'type'): Opt {
+export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt {
 	const r = normalise(report);
 	switch (kind) {
 		case 'cycle-time':
@@ -996,13 +979,13 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string, by: B
 		case 'tokens-spent':
 			return tokensSpent(r, t);
 		case 'tokens-per-item':
-			return tokensPerItem(r, t, by);
+			return tokensPerItem(r, t);
 		case 'tokens-per-dollar':
 			return tokensPerDollar(r, t);
 		case 'cost-spent':
 			return costSpent(r, t);
 		case 'cost-per-item':
-			return costPerItem(r, t, by);
+			return costPerItem(r, t);
 		case 'cost':
 			return cost(r, t, epic);
 		case 'completion-time':

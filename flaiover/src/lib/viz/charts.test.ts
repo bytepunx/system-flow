@@ -517,7 +517,7 @@ describe('chart builders', () => {
 		expect(titleOf('cost-spent')).toBe('$ / Day');
 		expect(titleOf('token-rate', 'hour')).toBe('Tokens / Min');
 	});
-	it('tokens and cost per item compare the types, or the models on the type of the report', () => {
+	it('tokens and cost per item draw one line per item type', () => {
 		const o = tokensPerItem(report, light) as Over;
 		// no epic carries usage: it has no line
 		expect(o.series.map((s) => s.name)).toEqual(['story', 'task']);
@@ -530,20 +530,12 @@ describe('chart builders', () => {
 		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[TYPE_SLOT.task]);
 		expect(o.series[0].symbol).not.toBe(o.series[1].symbol);
 		expect(o.yAxis.name).toBe('tokens per item');
-		const c = costPerItem(report, light, 'model') as Over;
-		expect(c.series.map((s) => s.name)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
-		expect(values(c.series[1])).toEqual([
-			['2026-08-03T00:00:00Z', 0.75],
+		const c = costPerItem(report, light) as Over;
+		expect(c.yAxis.name).toBe('US dollars per item');
+		expect(values(c.series[0])).toEqual([
+			['2026-08-03T00:00:00Z', 0.875],
 			['2026-08-05T00:00:00Z', 0.5]
 		]);
-		expect(c.yAxis.name).toBe('US dollars per story');
-		expect(c.yAxis.axisLabel.formatter(0.75)).toBe('$0.750');
-		expect(
-			c.tooltip.formatter([{ seriesName: 'claude-haiku-4-5', data: c.series[0].data[0] }])
-		).toBe('2026-08-03<br/>claude-haiku-4-5: $0.250 each over 1 item');
-		expect((build('cost-per-item', report, light, undefined, 'model') as Over).series.length).toBe(
-			2
-		);
 		expect((build('cost-per-item', report, light) as Over).series.map((s) => s.name)).toEqual([
 			'story',
 			'task'
@@ -551,20 +543,28 @@ describe('chart builders', () => {
 	});
 	it('avg. cost per model is the mean dollars per item of the type of the report, one line per model', () => {
 		const c = costPerModel(report, light) as Over;
-		expect(c.series.map((s) => s.name)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
+		// with two models, a dashed line for all of them: the type's own cost per item
+		expect(c.series.map((s) => s.name)).toEqual([
+			'claude-haiku-4-5',
+			'claude-opus-5-5',
+			'all models'
+		]);
 		expect(values(c.series[1])).toEqual([
 			['2026-08-03T00:00:00Z', 0.75],
 			['2026-08-05T00:00:00Z', 0.5]
 		]);
+		expect(values(c.series[2])).toEqual([
+			['2026-08-03T00:00:00Z', 0.875],
+			['2026-08-05T00:00:00Z', 0.5]
+		]);
 		expect(c.yAxis.name).toBe('US dollars per story');
+		expect(c.yAxis.axisLabel.formatter(0.75)).toBe('$0.750');
+		expect(
+			c.tooltip.formatter([{ seriesName: 'claude-haiku-4-5', data: c.series[0].data[0] }])
+		).toBe('2026-08-03<br/>claude-haiku-4-5: $0.250 each over 1 item');
 		expect((build('cost-per-model', report, light) as Over).series).toEqual(c.series);
 		expect(titleOf('cost-per-model')).toBe('Avg. Cost / Model');
-		expect(controls('cost-per-model', 'type')).toEqual({
-			type: true,
-			epic: false,
-			bucket: true,
-			by: false
-		});
+		expect(controls('cost-per-model')).toEqual({ type: true, epic: false, bucket: true });
 	});
 	it('tokens per dollar is what a dollar bought, per model', () => {
 		const o = tokensPerDollar(report, light) as Over;
@@ -580,22 +580,11 @@ describe('chart builders', () => {
 		expect(bucketsFor('30d')).toEqual(['hour', 'day', 'week']);
 		expect(bucketsFor('90d')).toEqual(['day', 'week']);
 		expect(bucketsFor('12w')).toEqual(['day', 'week']);
-		expect(controls('tokens-per-item', 'type')).toEqual({
-			type: false,
-			epic: false,
-			bucket: true,
-			by: true
-		});
-		expect(controls('tokens-per-item', 'model').type).toBe(true);
-		expect(controls('token-rate', 'type')).toEqual({
-			type: true,
-			epic: false,
-			bucket: true,
-			by: false
-		});
-		expect(controls('cost', 'type')).toEqual({ type: true, epic: true, bucket: false, by: false });
-		expect(controls('cfd', 'type').epic).toBe(false);
-		expect(controls('cycle-time', 'model').epic).toBe(true);
+		expect(controls('tokens-per-item')).toEqual({ type: false, epic: false, bucket: true });
+		expect(controls('token-rate')).toEqual({ type: true, epic: false, bucket: true });
+		expect(controls('cost')).toEqual({ type: true, epic: true, bucket: false });
+		expect(controls('cfd').epic).toBe(false);
+		expect(controls('cycle-time').epic).toBe(true);
 	});
 	it('names a bucket as a reader does, and says when a flai sends no spend', () => {
 		expect(bucketLabel('2026-09-29T19:00:00Z', 'hour')).toBe('2026-09-29 19:00 UTC');

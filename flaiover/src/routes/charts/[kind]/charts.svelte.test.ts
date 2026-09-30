@@ -223,24 +223,19 @@ describe('the charts page (S-0163)', () => {
 		expect(offered.map((o) => o.textContent)).toEqual(['day', 'week']);
 	});
 
-	it('compares the item types per item, or the models on one type', async () => {
+	it('draws one line per item type per item, with no type to choose (S-0169)', async () => {
 		await open('cost-per-item');
-		expect(controls()).toEqual(['window', 'per', 'compare']);
-		let drawn = setOption.mock.calls.at(-1)![0] as { series: { name: string }[] };
+		expect(text('h1')).toBe('$ / Work Type');
+		expect(controls()).toEqual(['window', 'per']);
+		const drawn = setOption.mock.calls.at(-1)![0] as { series: { name: string }[] };
 		expect(drawn.series.map((s) => s.name)).toEqual(['story', 'task']);
-		const rows = () =>
-			[...document.querySelectorAll('[data-testid="spend-table"] tbody tr')].map((tr) =>
-				[...tr.querySelectorAll('td')].slice(1, 3).map((td) => td.textContent?.trim())
-			);
-		expect(rows()).toEqual([
+		const rows = [...document.querySelectorAll('[data-testid="spend-table"] tbody tr')].map((tr) =>
+			[...tr.querySelectorAll('td')].slice(1, 3).map((td) => td.textContent?.trim())
+		);
+		expect(rows).toEqual([
 			['story', '3'],
 			['task', '8']
 		]);
-		await choose('by', 'model');
-		expect(controls()).toEqual(['window', 'per', 'compare', 'type']);
-		drawn = setOption.mock.calls.at(-1)![0] as { series: { name: string }[] };
-		expect(drawn.series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
-		expect(rows().map((r) => r[0])).toEqual(['story', 'claude-opus-5-5']);
 	});
 
 	it('draws the mean dollars per item of the type chosen, one line per model (S-0169)', async () => {

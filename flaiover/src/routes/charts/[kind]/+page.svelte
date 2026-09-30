@@ -23,7 +23,6 @@
 		WINDOWS,
 		withUsage,
 		type BucketSize,
-		type By,
 		type Kind,
 		type Report
 	} from '$lib/viz/charts';
@@ -37,9 +36,8 @@
 	const since = $derived(chartWindow.since);
 	let type = $state('story');
 	let epic = $state('');
-	// what spend over time is laid out in, and what the charts per item compare (S-0163)
+	// what spend over time is laid out in (S-0163)
 	let bucket = $state<BucketSize>('day');
-	let by = $state<By>('type');
 	let report = $state<Report | null>(null);
 	let error = $state<string | null>(null);
 	const dark = $derived(themeState.dark);
@@ -51,11 +49,11 @@
 			: 'cycle-time'
 	);
 	const t = $derived(theme(dark));
-	const option = $derived(report ? build(kind, report, t, epic || undefined, by) : null);
+	const option = $derived(report ? build(kind, report, t, epic || undefined) : null);
 	const s = $derived(report?.summary);
 	const usageKind = $derived((USAGE_KINDS as readonly string[]).includes(kind));
 	const spendKind = $derived(SPEND_KINDS.includes(kind));
-	const shown = $derived(controls(kind, by));
+	const shown = $derived(controls(kind));
 	const buckets = $derived(bucketsFor(since));
 	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket));
 	const spend = $derived(report?.usage?.spend?.[report.type]);
@@ -165,16 +163,6 @@
 			></label
 		>
 	{/if}
-	{#if shown.by}
-		<label
-			>compare <select
-				class="rounded border border-line-strong bg-surface px-2 py-1"
-				bind:value={by}
-				data-testid="by"
-				><option value="type">item types</option><option value="model">models</option></select
-			></label
-		>
-	{/if}
 	{#if shown.type}
 		<label
 			>type <select
@@ -246,7 +234,7 @@
 		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
 			{#if spendKind && report}
-				<SpendTable rows={spendRows(report, kind, by)} bucket={report.usage?.bucket ?? bucket} />
+				<SpendTable rows={spendRows(report, kind)} bucket={report.usage?.bucket ?? bucket} />
 			{:else if usageKind && report}
 				<table class="min-w-full" data-testid="usage-table">
 					<thead

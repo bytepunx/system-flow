@@ -137,15 +137,13 @@ describe('SpendTable', () => {
 	});
 
 	it('lists the item types side by side for a chart per item', () => {
-		const rows = spendRows(report, 'cost-per-item', 'type');
+		const rows = spendRows(report, 'cost-per-item');
 		expect(rows.map((r) => [r.at.slice(0, 10), r.of, r.cost_per_item])).toEqual([
 			['2026-08-05', 'story', 0.5],
 			['2026-08-03', 'story', 0.875],
 			['2026-08-03', 'task', 0.25]
 		]);
-		expect(spendRows(report, 'cost-per-item', 'model').map((r) => r.of)).toContain(
-			'claude-haiku-4-5'
-		);
+		expect(spendRows(report, 'cost-per-model').map((r) => r.of)).toContain('claude-haiku-4-5');
 		component = mount(SpendTable, { target: document.body, props: { rows, bucket: 'week' } });
 		flushSync();
 		expect(cells()[2].slice(0, 3)).toEqual(['week of 2026-08-03', 'task', '4']);
