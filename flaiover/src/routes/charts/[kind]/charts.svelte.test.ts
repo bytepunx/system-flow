@@ -319,6 +319,12 @@ describe('the window (S-0166)', () => {
 	});
 	type Drawn = { xAxis: { min: number; max: number }; series: { data: { id: string }[] }[] };
 	const drawn = () => setOption.mock.calls.at(-1)![0] as Drawn;
+	/** The chart on a time axis last drawn: time in state draws its share of lead time under it. */
+	const onTime = () =>
+		setOption.mock.calls
+			.map(([o]) => o as Drawn & { xAxis: { type: string } })
+			.filter((o) => o.xAxis.type === 'time')
+			.at(-1)!;
 	const ids = () => drawn().series.flatMap((s) => s.data.map((d) => d.id));
 	const asked = () =>
 		api.mock.calls.map(([u]) => u as string).filter((u) => u.startsWith('/api/stats'));
@@ -366,10 +372,31 @@ describe('the window (S-0166)', () => {
 			await settle();
 			expect(asked()).toEqual(['/api/stats?since=7d&type=story&bucket=day']);
 			expect(document.querySelector<HTMLSelectElement>('[data-testid="window"]')!.value).toBe('7d');
+			// cycle time from the window's start; time in state from half a day before the day that holds it
+			expect(onTime().xAxis.min).toBe(
+				kind === 'cycle-time'
+					? Date.parse('2026-09-22T21:00:00Z')
+					: Date.parse('2026-09-22T00:00:00Z') - 12 * 3600e3
+			);
 			unmount(c);
 			document.body.innerHTML = '';
 		}
 		c = undefined;
+	});
+
+	it('draws time in state by the day on an axis that follows the window (S-0168)', async () => {
+		at.params.kind = 'time-in-state';
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+		const half = 12 * 3600e3;
+		expect(onTime().xAxis.min).toBe(Date.parse('2026-08-30T00:00:00Z') - half);
+		expect(onTime().xAxis.max).toBe(Date.parse('2026-09-29T00:00:00Z') + half);
+		const days = () =>
+			(onTime().series[0].data as unknown as { ids: string[] }[]).map((d) => d.ids);
+		expect(days()).toEqual([['S-0002'], ['S-0001']]);
+		await choose('window', '7d');
+		expect(onTime().xAxis.min).toBe(Date.parse('2026-09-22T00:00:00Z') - half);
+		expect(days()).toEqual([['S-0001']]);
 	});
 
 	it('draws the charts without waiting for the epics, and when they cannot be read (S-0168)', async () => {

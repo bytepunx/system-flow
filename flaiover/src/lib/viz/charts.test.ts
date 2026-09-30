@@ -337,6 +337,13 @@ describe('chart builders', () => {
 		const day = Date.parse('2026-08-02T00:00:00Z');
 		expect((burnUp(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
 		expect((cfd(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
+		// time in state by the day (S-0168): from the day that holds the start to the one that holds
+		// now, half a day either side
+		expect((timeInState(report, light) as Axis).xAxis).toMatchObject({
+			type: 'time',
+			min: day - 12 * hour,
+			max: Date.parse('2026-09-01T00:00:00Z') + 12 * hour
+		});
 		// spend over time: from the bucket that holds the start to the one that holds now, half a
 		// bucket either side
 		expect((tokensSpent(report, light) as Axis).xAxis).toMatchObject({
@@ -355,7 +362,9 @@ describe('chart builders', () => {
 		const ct = cycleTime(narrow, light) as Axis & { series: { data: { id: string }[] }[] };
 		expect(ct.xAxis).toMatchObject({ min: from, max: end });
 		expect(ct.series.flatMap((s) => s.data.map((d) => d.id))).toEqual(['S-002']);
-		expect((timeInState(narrow, light) as Axis).xAxis.data).toEqual(['S-002']);
+		const tis = timeInState(narrow, light) as Axis & { series: { data: { ids: string[] }[] }[] };
+		expect(tis.xAxis.min).toBe(from - 12 * hour);
+		expect(tis.series[0].data.map((d) => d.ids)).toEqual([['S-002']]);
 		expect((cost(narrow, light) as Axis).xAxis.data).toEqual(['S-002*']);
 		const es = estimates(narrow, light) as { series: { data: unknown[] }[] };
 		expect(es.series[0].data).toEqual([]);
@@ -393,12 +402,31 @@ describe('chart builders', () => {
 		const c = cfd(report, light) as { series: { stack: string; lineStyle: { color: string } }[] };
 		expect(new Set(c.series.map((s) => s.stack)).size).toBe(1);
 		expect(c.series[0].lineStyle.color).toBe(light.surface);
-		const t = timeInState(report, light) as {
-			xAxis: { data: string[] };
-			series: { data: number[] }[];
+		type Bars = { series: { name: string; data: { value: [number, number]; ids: string[] }[] }[] };
+		const t = timeInState(report, light) as Bars;
+		// a bar per day with items completed, at the day's start in UTC
+		expect(t.series[2].name).toBe('in-progress');
+		expect(t.series[2].data).toEqual([
+			{ value: [Date.parse('2026-08-03T00:00:00Z'), 24], ids: ['S-001'] },
+			{ value: [Date.parse('2026-08-12T00:00:00Z'), 10], ids: ['S-002'] }
+		]);
+		// items completed the same day share a bar: the mean hours per state
+		const sameDay: Report = {
+			...report,
+			items: report.items.map((i) =>
+				i.id === 'S-002' ? { ...i, completed: '2026-08-03T20:00:00Z' } : i
+			)
 		};
-		expect(t.xAxis.data).toEqual(['S-001', 'S-002']);
-		expect(t.series[2].data).toEqual([24, 10]);
+		const m = timeInState(sameDay, light) as Bars;
+		expect(m.series.map((s) => s.data.map((d) => d.value[1]))).toEqual([
+			[0.8],
+			[24],
+			[17],
+			[8],
+			[0]
+		]);
+		expect(m.series[0].data[0].ids).toEqual(['S-001', 'S-002']);
+		expect((timeInState(report, light, 'E-999') as Bars).series[0].data).toEqual([]);
 		const share = stateShare(report, light) as { series: { data: number[] }[] };
 		expect(share.series[1].data[0]).toBeCloseTo(0.48);
 	});

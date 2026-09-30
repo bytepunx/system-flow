@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-09-29
+updated: 2026-09-30
 status: active
 ---
 
@@ -127,7 +127,7 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Cycle time | One point per item completed in the window, with the p50 and p85 lines |
 | Burn-up | Scope against done, each day of the window |
 | Cumulative flow | How many items sit in each state, each day of the window |
-| Time in state | Where each item completed in the window spent its time, and the share across all of them |
+| Time in state | A bar for each day of the window with items completed: how long, on average, those items spent in each state. Hover a bar for the items it averages; the table lists each item. Under it, the share of all their time per state |
 | Throughput | Completions per week of the window, by nature, weeks with none included |
 | Aging work in progress | In-progress work against the p85 cycle time line |
 | Estimate versus actual | Estimated against actual hours |

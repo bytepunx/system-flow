@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-09-29
+updated: 2026-09-30
 status: active
 topics: [cli, dashboard]
 ---
@@ -91,7 +91,7 @@ A value is absent when its divisor is zero.
 
 ## Charts
 
-Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
+Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
 
 | Chart | Data | Notes |
 |-------|------|-------|
@@ -99,7 +99,7 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Cycle time scatter | One point per story completed in the window, x completed date, y cycle time, with 50th and 85th percentile lines | Filter by nature |
 | Burn-up | Per epic or whole repo, cumulative stories created versus done, per day of the window | Scope line and done line, forecast line from throughput |
 | Cumulative flow diagram | Stacked count of items per state per day of the window | Widening bands show where work piles up |
-| Time in state | Stacked bar per story completed in the window, or aggregate share | The process optimisation chart |
+| Time in state | Stacked bar per day of the window with stories completed: the mean hours per state of those stories ([ADR-0056](../adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md)), and the aggregate share | The process optimisation chart. The table lists each story |
 | Throughput | Bar per week of the window | With nature breakdown |
 | Aging WIP | Active items by age since started, against the 85th percentile | Flags items likely to be late |
 | Estimate vs actual | Scatter, only items completed in the window with `estimate` | |

@@ -466,26 +466,68 @@ export function cfd(r: Report, t: Theme): Opt {
 	});
 }
 
-/** Time in state: one stacked bar per completed item, hours per state. */
+/** The items of a day in time in state: the moment the UTC day starts, and those completed in it. */
+type StateDay = { at: number; items: ItemMetrics[] };
+type StateBar = { value: [number, number]; ids: string[] };
+/** How many of a day's items the tooltip of time in state names before it counts the rest. */
+const NAMED = 10;
+/**
+ * Time in state (S-0168): one stacked bar per UTC day of the window in which items were completed,
+ * the mean hours per state of those items, on a time axis that spans the window.
+ */
 export function timeInState(r: Report, t: Theme, epic?: string): Opt {
-	const done = completedIn(r).filter((i) => !epic || i.parent === epic);
+	const byDay = new Map<number, ItemMetrics[]>();
+	for (const i of completedIn(r).filter((i) => !epic || i.parent === epic)) {
+		const at = floorTo(Date.parse(i.completed!), 'day');
+		byDay.set(at, [...(byDay.get(at) ?? []), i]);
+	}
+	const daysDone: StateDay[] = [...byDay]
+		.map(([at, items]) => ({ at, items }))
+		.sort((a, b) => a.at - b.at);
+	const mean = (items: ItemMetrics[], st: string) =>
+		hours(items.reduce((n, i) => n + (i.time_in_state_seconds[st] ?? 0), 0) / items.length);
 	const series = STATES.map((st) => ({
 		name: st,
 		type: 'bar',
 		stack: 'state',
 		barMaxWidth: 24,
 		itemStyle: { color: colorFor(t, STATE_SLOT, st, 0), borderColor: t.surface, borderWidth: 1 },
-		data: done.map((i) => hours(i.time_in_state_seconds[st] ?? 0))
+		data: daysDone.map((d): StateBar => ({
+			value: [d.at, mean(d.items, st)],
+			ids: d.items.map((i) => i.id)
+		}))
 	}));
 	return base(t, {
+		useUTC: true,
 		legend: legend(t, true),
-		tooltip: tooltip(t, { trigger: 'axis', axisPointer: { type: 'shadow' } }),
-		xAxis: axisX(t, {
-			type: 'category',
-			data: done.map((i) => i.id),
-			axisLabel: { color: t.textSecondary, rotate: done.length > 12 ? 45 : 0 }
+		tooltip: tooltip(t, {
+			trigger: 'axis',
+			axisPointer: { type: 'shadow' },
+			formatter: (ps: { marker?: string; seriesName: string; data: StateBar }[]) => {
+				const list = ps.filter((p) => p?.data);
+				if (list.length === 0) return '';
+				const ids = list[0].data.ids;
+				const named =
+					ids.slice(0, NAMED).join(', ') +
+					(ids.length > NAMED ? ` and ${ids.length - NAMED} more` : '');
+				const lines = list.map((p) => `${p.marker ?? ''}${p.seriesName}: ${p.data.value[1]} hours`);
+				return `${new Date(list[0].data.value[0]).toISOString().slice(0, 10)}, mean of ${ids.length} ${ids.length === 1 ? r.type : plural(r.type)}<br/>${named}<br/>${lines.join('<br/>')}`;
+			}
 		}),
-		yAxis: axisY(t, { type: 'value', name: 'hours', nameTextStyle: { color: t.textSecondary } }),
+		xAxis: axisX(t, {
+			type: 'time',
+			minInterval: DAY_MS,
+			...buckets(
+				r,
+				'day',
+				daysDone.map((d) => d.at)
+			)
+		}),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'mean hours',
+			nameTextStyle: { color: t.textSecondary }
+		}),
 		series
 	});
 }
@@ -696,10 +738,20 @@ const BUCKET_MS: Record<BucketSize, number> = {
 	week: 7 * DAY_MS
 };
 /**
- * What the charts over time share: buckets are UTC, so the axis is; it spans the report's window
- * (S-0166), from the bucket that holds its start to the one that holds its now, with half a bucket
- * either side so that the mark of each is whole, and its ticks are no finer than a bucket. A
- * report without a window runs from a bucket before the first drawn to one after the last.
+ * The ends of a time axis of buckets: the report's window (S-0166), from the bucket that holds its
+ * start to the one that holds its now, with half a bucket either side so that the mark of each is
+ * whole. A report without a window runs from a bucket before the first drawn to one after the last.
+ */
+function buckets(r: Report, bucket: BucketSize, at: number[]): Opt {
+	const size = BUCKET_MS[bucket];
+	const w = windowOf(r);
+	if (w)
+		return { min: floorTo(w.start, bucket) - size / 2, max: floorTo(w.end, bucket) + size / 2 };
+	return at.length > 0 ? { min: Math.min(...at) - size, max: Math.max(...at) + size } : {};
+}
+/**
+ * What the charts over time share: buckets are UTC, so the axis is; it spans the window as
+ * `buckets` has it, and its ticks are no finer than a bucket.
  */
 function overTime(
 	t: Theme,
@@ -711,13 +763,11 @@ function overTime(
 ) {
 	const bucket = bucketSize(r);
 	const size = BUCKET_MS[bucket];
-	const w = windowOf(r);
-	const at = series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0])));
-	const range = w
-		? { min: floorTo(w.start, bucket) - size / 2, max: floorTo(w.end, bucket) + size / 2 }
-		: at.length > 0
-			? { min: Math.min(...at) - size, max: Math.max(...at) + size }
-			: {};
+	const range = buckets(
+		r,
+		bucket,
+		series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0])))
+	);
 	return {
 		useUTC: true,
 		// room for the legend above the axis name, which a legend of four would run into
