@@ -44,7 +44,9 @@ echo "install-test: flai self-upgrade --dir"
 echo "install-test: flai self-upgrade with no --dir needs no sudo, once installed under a directory the user owns"
 # $DIR is inside this project, where self-upgrade never installs (S-0111), so
 # the binary's own path is checked on a copy outside any project.
-OUTSIDE=$(mktemp -d)
+# Resolved, as flai resolves its own path: macOS's temporary directory is
+# under /var, a link to /private/var (I-0045).
+OUTSIDE=$(cd "$(mktemp -d)" && pwd -P)
 trap 'rm -rf "$OUTSIDE"' EXIT
 cp "$DIR/flai" "$OUTSIDE/flai"
 "$OUTSIDE/flai" self-upgrade --check | grep -q 'installed at '"$OUTSIDE"'/flai' \

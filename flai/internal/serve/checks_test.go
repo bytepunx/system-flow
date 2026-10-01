@@ -53,7 +53,7 @@ func TestRunChecksSubstitutesStoryAndRootAndRunsInTheWorktree(t *testing.T) {
 	out := filepath.Join(worktree, "out.txt")
 	cfg := ChecksConfig{
 		Commands: []manifest.NamedCommand{
-			{Name: "one", Command: []string{"sh", "-c", "pwd > " + out + "; echo {story} >> " + out + "; echo {root} >> " + out}},
+			{Name: "one", Command: []string{"sh", "-c", "pwd -P > " + out + "; echo {story} >> " + out + "; echo {root} >> " + out}},
 		},
 		Timeout: time.Minute,
 	}
