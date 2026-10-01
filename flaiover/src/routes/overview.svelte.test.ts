@@ -86,6 +86,33 @@ describe('the root page (S-0080)', () => {
 		expect(text).toContain('not connected');
 	});
 
+	it('one load asks for the projects once: the layout and the page share the request (S-0186)', async () => {
+		const asked: string[] = [];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: string) => {
+				asked.push(url);
+				await new Promise((r) => setTimeout(r, 0)); // in flight while the page mounts
+				return answer({
+					projects: [
+						{ key: 'harbour', name: 'Harbour', connected: true, review: 3 },
+						{ key: 'quay', name: 'Quay', connected: true }
+					]
+				});
+			})
+		);
+		const { default: Overview } = await import('./+page.svelte');
+		const { projectState } = await import('$lib/project.svelte');
+		void projectState.refresh(); // what +layout.svelte asks once signed in, in the same flush
+		c = mount(Overview, { target: document.body });
+		await settle();
+		expect(asked.filter((u) => u.startsWith('/api/projects'))).toEqual(['/api/projects']);
+		// the glances come from that one answer
+		expect(document.querySelector('[data-testid="project-list"]')!.textContent).toContain(
+			'3 in review'
+		);
+	});
+
 	it('filters the project list by name or key', async () => {
 		vi.stubGlobal(
 			'fetch',

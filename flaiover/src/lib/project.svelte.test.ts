@@ -109,6 +109,51 @@ describe('projectState', () => {
 		expect(projectState.needsChoice).toBe(false);
 	});
 
+	it('refresh() asked while a request is in flight shares it, and asks again once it has settled (S-0186)', async () => {
+		let answer: (() => void) | undefined;
+		const fetchFn = vi.fn(
+			() =>
+				new Promise((resolve) => {
+					answer = () =>
+						resolve({
+							ok: true,
+							json: async () => ({
+								projects: [{ key: 'harbour', name: 'Harbour', connected: true, review: 2 }]
+							})
+						});
+				})
+		);
+		vi.stubGlobal('fetch', fetchFn);
+		const { projectState } = await load();
+		const first = projectState.refresh();
+		const second = projectState.refresh();
+		expect(fetchFn).toHaveBeenCalledTimes(1);
+		answer!();
+		await Promise.all([first, second]);
+		expect(projectState.list[0].review).toBe(2); // the glance is kept with the project
+		const third = projectState.refresh();
+		expect(fetchFn).toHaveBeenCalledTimes(2);
+		answer!();
+		await third;
+	});
+
+	it('a failed request is not shared with a later refresh()', async () => {
+		const fetchFn = vi
+			.fn()
+			.mockRejectedValueOnce(new Error('offline'))
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ projects: [{ key: 'harbour', name: 'Harbour', connected: true }] })
+			});
+		vi.stubGlobal('fetch', fetchFn);
+		const { projectState } = await load();
+		await projectState.refresh();
+		expect(projectState.loaded).toBe(false);
+		await projectState.refresh();
+		expect(fetchFn).toHaveBeenCalledTimes(2);
+		expect(projectState.loaded).toBe(true);
+	});
+
 	it('does not choose for the designer once there is more than one project', async () => {
 		vi.stubGlobal(
 			'fetch',

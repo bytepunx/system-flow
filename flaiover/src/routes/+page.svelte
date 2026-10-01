@@ -1,21 +1,17 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
-	import { projectState, type Project } from '$lib/project.svelte';
+	import { projectState } from '$lib/project.svelte';
 
 	type Manifest = { name: string; description?: string; template?: { version?: string } };
 	type Item = { id: string; type: string; status: string; title: string; archived: boolean };
-	type ProjectGlance = Project & {
-		review?: number;
-		threadsAwaiting?: number;
-		agentAttending?: boolean;
-	};
 
 	let manifest = $state<Manifest | null>(null);
 	let items = $state<Item[]>([]); // the active items: the archive is only counted (S-0162)
 	let archived = $state<number | null>(null);
 	let error = $state<string | null>(null);
-	let glances = $state<ProjectGlance[]>([]);
+	// the projects with their glances, from the one /api/projects request projectState makes (S-0186)
+	const glances = $derived(projectState.list);
 	let filter = $state('');
 	const filteredGlances = $derived(
 		filter.trim()
@@ -48,13 +44,10 @@
 			error = e instanceof Error ? e.message : String(e);
 		}
 	}
-	async function loadGlances() {
-		const r = await fetch('/api/projects');
-		if (r.ok) glances = ((await r.json()).projects ?? []) as ProjectGlance[];
-	}
 	onMount(() => {
-		void projectState.refresh(); // sets projectState.ready, which decides what this page shows
-		void loadGlances();
+		// sets projectState.ready, which decides what this page shows, and fresh glances; on a page
+		// load it shares the layout's request rather than making another (S-0186)
+		void projectState.refresh();
 	});
 	// Whether to show the list or the single-project summary is not known until the project list has
 	// been asked for at least once (S-0080): deciding at mount, before that answer arrives, would

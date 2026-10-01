@@ -17,6 +17,10 @@ export type Project = {
 	served?: boolean;
 	/** Why flai serve has it not connected, when it says. */
 	lastError?: string;
+	/** The glance at a connected project (S-0080): absent when its flai did not answer in time. */
+	review?: number;
+	threadsAwaiting?: number;
+	agentAttending?: boolean;
 };
 
 function stored(): string | null {
@@ -45,6 +49,8 @@ class ProjectState {
 	/** A repository being imported (S-0098): kept in the list, and so on the screen, after flai serve
 	 * stops offering it, until the operator has read what became of it and moved on. */
 	hold: Project | null = null;
+	/** The /api/projects request in flight, which every refresh() asked meanwhile shares (S-0186). */
+	inflight: Promise<void> | null = null;
 
 	constructor() {
 		if (typeof location !== 'undefined') {
@@ -68,7 +74,15 @@ class ProjectState {
 		return this.list.filter((p) => !p.candidate);
 	}
 
-	async refresh(): Promise<void> {
+	/** Ask for the projects and their glances again. A call made while a request is in flight shares
+	 * it rather than making another (S-0186): the layout and the root page both ask on one load, and
+	 * each answer gathers every project's glance, which a slow project holds up to its timeout. */
+	refresh(): Promise<void> {
+		this.inflight ??= this.load().finally(() => (this.inflight = null));
+		return this.inflight;
+	}
+
+	private async load(): Promise<void> {
 		try {
 			const r = await fetch('/api/projects');
 			if (!r.ok) return;
@@ -126,4 +140,5 @@ export function resetForTests(): void {
 	projectState.loaded = false;
 	projectState.hold = null;
 	projectState.pick(null, false);
+	projectState.inflight = null;
 }
