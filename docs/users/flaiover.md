@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-09-30
+updated: 2026-10-01
 status: active
 ---
 
@@ -25,7 +25,7 @@ The header is the same on every page.
 
   | Group | Pages |
   |-------|-------|
-  | Workflow | Overview, Board, Inbox (with the number of things that need you), Activity |
+  | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity |
   | Status | Charts, ADRs, Docs, Search |
   | Host | Updates (the [Host](#host) page), Settings |
 
@@ -94,7 +94,7 @@ When the dashboard can write, the board has a "+ new" action, which opens the ne
 
 ### The item page
 
-Click a card for the item page. The main column has the ID and title, the type and nature, the status, a BLOCKED flag, the parent, and the rendered body, with the threads on the item below it. Threads are shown one at a time, wherever they are shown: with more than one, a pager reading "← 2 of 5 →" beside the Threads heading, and again under the thread, says which you are reading, and its arrows go to the previous and next; with a pager's arrow focused, the Left and Right keys page too. A thread you open becomes the one shown, and a reply or a resolution keeps your place. A thread you reach from the inbox is the one shown, and the page scrolls to it. A thread of more than two entries shows its last two, with **show N earlier entries** above them to read the rest and **hide earlier entries** to fold them again; each thread keeps its own choice while you page. A thread's entries render as markdown, as the body does, wherever threads are shown. Your entries sit on the right on a blue ground and an agent's on the left on a neutral one, so who said what reads at a glance; you are the project's `owner` in `system-flow.yaml`. When the dashboard can write, buttons above the body make the moves the item's state allows, block it with a reason or unblock it, and open **edit…** for a story or an epic (see [Editing a story or an epic](#editing-a-story-or-an-epic)). On a story the acceptance criteria are live checkboxes: tick one where you read it. A story in review has a **Review this story** link; a done story that was accepted and not pushed says so. At the top right, beside the title, **New story** on a story's page opens the new item page for another story, already under the same epic, and **New epic** on an epic's page opens it for another epic; you can still change either choice there. A task's page has no such link, because tasks are written by the agent that pulls a story.
+Click a card for the item page. The main column has the ID and title, the type and nature, the status, a BLOCKED flag, the parent, and the rendered body; on a story, its narrative's open questions, each answerable there when the dashboard can write, with the one an inbox link names outlined and scrolled to; then the threads on the item. Threads are shown one at a time, wherever they are shown: with more than one, a pager reading "← 2 of 5 →" beside the Threads heading, and again under the thread, says which you are reading, and its arrows go to the previous and next; with a pager's arrow focused, the Left and Right keys page too. A thread you open becomes the one shown, and a reply or a resolution keeps your place. A thread you reach from the inbox is the one shown, and the page scrolls to it. A thread of more than two entries shows its last two, with **show N earlier entries** above them to read the rest and **hide earlier entries** to fold them again; each thread keeps its own choice while you page. A thread's entries render as markdown, as the body does, wherever threads are shown. Your entries sit on the right on a blue ground and an agent's on the left on a neutral one, so who said what reads at a glance; you are the project's `owner` in `system-flow.yaml`. When the dashboard can write, buttons above the body make the moves the item's state allows, block it with a reason or unblock it, and open **edit…** for a story or an epic (see [Editing a story or an epic](#editing-a-story-or-an-epic)). On a story the acceptance criteria are live checkboxes: tick one where you read it. A story in review has a **Review this story** link; a done story that was accepted and not pushed says so. At the top right, beside the title, **New story** on a story's page opens the new item page for another story, already under the same epic, and **New epic** on an epic's page opens it for another epic; you can still change either choice there. A task's page has no such link, because tasks are written by the agent that pulls a story.
 
 The page keeps itself current: when the story moves, gains a task, is edited, or its agent starts or ends, the page shows it without a reload, and a reply in its threads appears as it is written. After you answer the agent in a thread, three moving dots under your reply say the agent is working on it, until its next entry arrives or it stops.
 
@@ -116,9 +116,13 @@ A story in review has a review page: open it from the card in the review column,
 
 ## Inbox
 
-Inbox is the list of things that need you, and the number beside its link in the site menu, and beside Workflow, is how many there are. It holds five kinds of entry, each a link to where you deal with it: stories in review, which open their review page; threads where someone other than you wrote last, which open the story or item they are on at that thread, or the document they are on; open questions agents left in their narratives; blocked items, with the reason; and overlapping touches, where two stories in progress say they change the same files. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. A hand-written open question (one with no thread of its own) can be answered right there, in the inbox, when the dashboard can write: type the answer and submit it, and it moves to the narrative's Decisions and drops off the list. The list and the count refresh by themselves when files change.
+Inbox is the list of things that need you, and the number beside its link in the site menu, and beside Workflow, is how many there are. It holds five kinds of entry, each a link to where you deal with it, never to a document you could not answer it from: stories in review, which open their review page; threads where someone other than you wrote last, which open the story or item they are on (or whose file or narrative they are on) at that thread, and otherwise the [Threads](#threads) page at that thread; open questions agents left in their narratives, which open the story's page at that question; blocked items, with the reason, which open the item; and overlapping touches, where two stories in progress say they change the same files, which open the first story named. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. A hand-written open question (one with no thread of its own) can be answered right there, in the inbox, or on its story's page, when the dashboard can write: type the answer and submit it, and it moves to the narrative's Decisions and drops off the list. The list and the count refresh by themselves when files change.
 
 You can ask the browser to tell you when something new arrives: tick "Desktop notification" on the inbox page and allow it when the browser asks. It is off until you turn it on, it is remembered per browser, and it only fires for entries that appear while a dashboard tab is open, never for what was already there.
+
+## Threads
+
+Threads shows every open thread in the project, whatever it is on, one at a time with the same pager, **show resolved**, reply, and resolve as a story's page. Each thread links to the item or document it is on. A thread in the inbox that is on no item, such as one on a design issue, opens here at that thread. New threads are started on the item or document they are about, not here.
 
 ## Activity
 
