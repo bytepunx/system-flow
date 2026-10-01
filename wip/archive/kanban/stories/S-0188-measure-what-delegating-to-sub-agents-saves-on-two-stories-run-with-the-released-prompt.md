@@ -3,10 +3,10 @@ id: S-0188
 type: story
 nature: research
 title: Measure what delegating to sub-agents saves on two stories run with the released prompt
-status: review
+status: done
 owner: arobson
 created: 2026-10-01T08:13:37Z
-updated: 2026-10-01T09:25:23Z
+updated: 2026-10-01T09:56:28Z
 transitions:
   - to: ready
     at: 2026-10-01T08:13:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-01T09:25:23Z
     by: agent-S-0188
+  - to: done
+    at: 2026-10-01T09:56:28Z
+    by: alex
 tags: [flai]
 topics: [conventions]
 touches: [design/system/agent-context.md]
