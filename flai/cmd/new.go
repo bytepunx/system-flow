@@ -188,6 +188,9 @@ func (a *app) collectVars(m template.Manifest, o newOptions, dirName string) (ma
 	var missing []string
 	for _, v := range m.Variables {
 		if val, ok := given[v.Name]; ok {
+			if v.Required && val == "" {
+				missing = append(missing, v.Name)
+			}
 			vars[v.Name] = val
 			continue
 		}

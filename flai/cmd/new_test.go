@@ -101,6 +101,20 @@ func TestNewRequiresVarsWhenNotInteractive(t *testing.T) {
 	}
 }
 
+// An empty value given with --var for a required variable is refused before
+// anything is written, as an empty default is (I-0041).
+func TestNewRefusesAnEmptyRequiredVarBeforeWriting(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	dest := filepath.Join(t.TempDir(), "p")
+	_, errOut, code := runCLI(t, "new", dest, "--template", miniTemplate, "--defaults", "--no-git", "--var", "project_name=")
+	if code == 0 || !strings.Contains(errOut, "required variables not set: project_name") {
+		t.Fatalf("expected the required error, got %d %s", code, errOut)
+	}
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		t.Errorf("a refused flai new left %s behind: %v", dest, err)
+	}
+}
+
 func TestTemplateCommands(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
 	t.Setenv("FLAI_CONFIG", cfgPath)
