@@ -31,7 +31,7 @@ usage:
       output: 169
       cache_read: 1008948
       cache_write: 18480
-      cost: 0.4448
+      cost: 0.4769
 ---
 # T-0675 A verifier never makes the corrections it finds
 

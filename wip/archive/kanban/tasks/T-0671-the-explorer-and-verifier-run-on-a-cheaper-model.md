@@ -35,7 +35,7 @@ usage:
       output: 23789
       cache_read: 6283438
       cache_write: 116356
-      cost: 2.7807
+      cost: 2.8039
 ---
 # T-0671 The explorer and verifier run on a cheaper model
 

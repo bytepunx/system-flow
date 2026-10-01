@@ -31,7 +31,7 @@ usage:
       output: 152
       cache_read: 3407186
       cache_write: 17971
-      cost: 1.4828
+      cost: 1.5895
 ---
 # T-0674 claude-code runs each role's model, and the command harness is told the roles
 

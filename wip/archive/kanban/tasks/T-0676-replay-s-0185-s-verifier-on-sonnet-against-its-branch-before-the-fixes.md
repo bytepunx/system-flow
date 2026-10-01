@@ -31,13 +31,13 @@ usage:
       output: 910
       cache_read: 18571445
       cache_write: 106580
-      cost: 8.0859
+      cost: 8.668
     - model: claude-sonnet-5-5
       input: 26
       output: 108
       cache_read: 636592
       cache_write: 75307
-      cost: 0
+      cost: 0.4211
 ---
 # T-0676 Replay S-0185's verifier on sonnet against its branch before the fixes
 

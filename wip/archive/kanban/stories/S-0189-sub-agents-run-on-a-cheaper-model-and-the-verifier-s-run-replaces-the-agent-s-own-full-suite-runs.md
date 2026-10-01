@@ -31,21 +31,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2904
+  seconds: 3195
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 532
-      output: 31262
-      cache_read: 49443520
-      cache_write: 447430
-      cost: 21.6108
+      input: 564
+      output: 36737
+      cache_read: 50047111
+      cache_write: 482819
+      cost: 23.4656
     - model: claude-sonnet-5-5
-      input: 118
-      output: 1338
-      cache_read: 3150342
-      cache_write: 253105
-      cost: 0
+      input: 142
+      output: 8186
+      cache_read: 3654226
+      cache_write: 322682
+      cost: 2.3571
 ---
 # S-0189 Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs
 
