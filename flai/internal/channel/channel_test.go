@@ -207,6 +207,56 @@ func TestReconnectsAfterTheDashboardGoesAway(t *testing.T) {
 	}
 }
 
+// S-0184: a dashboard that refuses this flai because another holds the
+// project is not dialled again at once, and the state says why.
+func TestBacksOffWhenTheDashboardSaysTheProjectIsHeld(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test",
+		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: 600 * time.Millisecond}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { c.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+
+	first := waitProven(t, d)
+	refused := time.Now()
+	_ = first.Close(CloseHeld, "the project is held by a flai that answers")
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && !strings.Contains(c.State().LastError, "another flai") {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if st := c.State(); st.Connected || !strings.Contains(st.LastError, "another flai serves the project") || !strings.Contains(st.LastError, "trying again in 600ms") {
+		t.Errorf("state: %+v", st)
+	}
+	select {
+	case <-d.proven:
+		// jitter spreads the wait over [HeldBackoff/2, HeldBackoff)
+		if waited := time.Since(refused); waited < 250*time.Millisecond {
+			t.Errorf("dialled again after %v, not after the held back-off", waited)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("never dialled again")
+	}
+
+	// any other close is retried at once, as before
+	second := lastProven(t, d)
+	again := time.Now()
+	_ = second.Close(websocket.StatusGoingAway, "restart")
+	waitProven(t, d)
+	if waited := time.Since(again); waited > 250*time.Millisecond {
+		t.Errorf("an ordinary close waited %v", waited)
+	}
+}
+
+// lastProven is the connection the dashboard proved last: a select that
+// took it from d.proven left nothing there to wait for.
+func lastProven(t *testing.T, d *fakeDashboard) *websocket.Conn {
+	t.Helper()
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.conns[len(d.conns)-1]
+}
+
 func TestAnAnswerOverTheCapIsAnError(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
 	p := project(t)

@@ -172,7 +172,20 @@ type ConnInfo = {
 	candidate?: boolean;
 };
 
-export type AgentOptions = { pingMs?: number; handshakeMs?: number; maxUnproven?: number };
+export type AgentOptions = {
+	pingMs?: number;
+	handshakeMs?: number;
+	maxUnproven?: number;
+	/** How long the connection a project has is given to answer a ping when another flai connects
+	 * for it (S-0184): one that answers keeps the project, one that does not is replaced. */
+	probeMs?: number;
+};
+
+/** The close code a flai is refused with when the project it connected for is held by a flai that
+ * answers (S-0184). flai backs off on it instead of dialling again at once. 4000 is the code of one
+ * that is replaced because it stopped answering. */
+export const CLOSE_HELD = 4409;
+export const CLOSE_REPLACED = 4000;
 
 export function proof(key: string, role: string, first: string, second: string): string {
 	return createHmac('sha256', key).update(`${role}|${first}|${second}`).digest('hex');
@@ -199,6 +212,9 @@ export class AgentHub extends EventEmitter {
 	private pending = new Map<number, Pending>();
 	private nextId = 1;
 	private pingMs: number;
+	private probeMs: number;
+	/** Adoptions are settled one at a time, so two flai connecting together are judged in turn. */
+	private adopting: Promise<unknown> = Promise.resolve();
 	/** Whether the registry that made this hub was given a shared credential at all: false only when
 	 * the dashboard was started with none, which is true for every project alike, not a per-project fact. */
 	private configuredFlag: boolean;
@@ -211,6 +227,7 @@ export class AgentHub extends EventEmitter {
 	constructor(opt: AgentOptions & { configured?: boolean } = {}) {
 		super();
 		this.pingMs = opt.pingMs ?? 4000;
+		this.probeMs = opt.probeMs ?? 2000;
 		this.configuredFlag = opt.configured ?? true;
 	}
 
@@ -221,12 +238,68 @@ export class AgentHub extends EventEmitter {
 		return { configured: true, connected: true, ...rest, serves: project };
 	}
 
-	/** One connection per project: a newer proven connection replaces the older one. */
-	adopt(ws: WebSocket, info: ConnInfo): void {
-		if (this.conn) {
-			this.conn.close(4000, 'replaced by a newer connection');
-			this.drop(this.conn, 'replaced');
-		}
+	/**
+	 * One connection per project (S-0184): a newer proven connection is refused with CLOSE_HELD while
+	 * the one the project has answers a ping, and replaces it when it does not. Resolves true when the
+	 * newer one was adopted. What it sends while it is being judged is kept and handled once it is.
+	 */
+	adopt(ws: WebSocket, info: ConnInfo): Promise<boolean> {
+		const held: Buffer[] = [];
+		const hold = (data: Buffer) => held.push(data);
+		ws.on('message', hold);
+		const judged = this.adopting.then(async () => {
+			if (this.conn && (await this.answers(this.conn))) {
+				ws.off('message', hold);
+				log().warn(
+					{
+						component: 'agent',
+						flai: info.flai,
+						project: info.project.key,
+						holder: this.info?.flai
+					},
+					'host flai refused: the project is held by a flai that answers'
+				);
+				ws.close(CLOSE_HELD, 'the project is held by a flai that answers');
+				return false;
+			}
+			ws.off('message', hold);
+			if (ws.readyState !== ws.OPEN) return false;
+			if (this.conn) {
+				this.conn.close(CLOSE_REPLACED, 'replaced: it did not answer');
+				this.drop(this.conn, 'replaced');
+			}
+			this.install(ws, info);
+			for (const data of held) this.settle(data);
+			return true;
+		});
+		this.adopting = judged.catch(() => undefined);
+		return judged;
+	}
+
+	/** Whether ws answers a ping within probeMs. */
+	private answers(ws: WebSocket): Promise<boolean> {
+		if (ws.readyState !== ws.OPEN) return Promise.resolve(false);
+		return new Promise((resolve) => {
+			const done = (ok: boolean) => {
+				clearTimeout(timer);
+				ws.off('pong', onPong);
+				ws.off('close', onClose);
+				resolve(ok);
+			};
+			const onPong = () => done(true);
+			const onClose = () => done(false);
+			const timer = setTimeout(() => done(false), this.probeMs);
+			ws.on('pong', onPong);
+			ws.on('close', onClose);
+			try {
+				ws.ping();
+			} catch {
+				done(false);
+			}
+		});
+	}
+
+	private install(ws: WebSocket, info: ConnInfo): void {
 		this.conn = ws;
 		this.info = info;
 		this.candidate = info.candidate === true;
@@ -552,7 +625,7 @@ export class AgentRegistry extends EventEmitter {
 			// A repository offered for import answers only the import methods, by design: nothing
 			// of a project's is missing from it (S-0098).
 			const candidate = hello.kind === 'candidate';
-			this.hub(projectKey).adopt(ws, {
+			void this.hub(projectKey).adopt(ws, {
 				since: new Date().toISOString(),
 				flai: String(hello.flai ?? ''),
 				project: { key: projectKey, name: String(hello.project?.name ?? '') },

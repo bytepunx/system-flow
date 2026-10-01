@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
-import { AgentError, AgentRegistry, proof, REQUIRED_METHODS } from './agent';
+import { AgentError, AgentRegistry, CLOSE_HELD, proof, REQUIRED_METHODS } from './agent';
 
 const KEY = 'agent-credential-for-tests';
 
@@ -189,12 +189,41 @@ describe('AgentRegistry and AgentHub', () => {
 		});
 	});
 
-	it('lets a newer proven connection replace the older one, for the same project', async () => {
+	it('refuses a newer proven connection while the one the project has answers (S-0184)', async () => {
 		const { hub, url } = await setup();
 		const first = await connect(url, KEY, () => ({ from: 'first' }));
+		cleanup.push(() => first.ws.terminate());
 		const second = await connect(url, KEY, () => ({ from: 'second' }));
 		cleanup.push(() => second.ws.terminate());
-		expect(await first.closed).toBe(4000);
+		expect(await second.closed).toBe(CLOSE_HELD);
+		expect(first.ws.readyState).toBe(WebSocket.OPEN);
+		await expect(hub.ask('project.info')).resolves.toEqual({ from: 'first' });
+	});
+
+	it('replaces the one the project has when it does not answer (S-0184)', async () => {
+		const { hub, url } = await setup({ probeMs: 50 });
+		const first = await connect(url, KEY, () => ({ from: 'first' }));
+		cleanup.push(() => first.ws.terminate());
+		// A frozen process: the socket stays open and nothing answers, pongs included.
+		(
+			first.ws as unknown as { _receiver: { removeAllListeners: (e: string) => void } }
+		)._receiver.removeAllListeners('ping');
+		const second = await connect(url, KEY, () => ({ from: 'second' }));
+		cleanup.push(() => second.ws.terminate());
+		await new Promise((r) => setTimeout(r, 100));
+		expect(second.ws.readyState).toBe(WebSocket.OPEN);
+		await expect(hub.ask('project.info')).resolves.toEqual({ from: 'second' });
+		first.ws.terminate();
+		expect(await first.closed).not.toBe(CLOSE_HELD);
+	});
+
+	it('adopts a newer connection at once when the one the project had has closed', async () => {
+		const { hub, url } = await setup();
+		const first = await connect(url, KEY, () => ({ from: 'first' }));
+		first.ws.close();
+		await first.closed;
+		const second = await connect(url, KEY, () => ({ from: 'second' }));
+		cleanup.push(() => second.ws.terminate());
 		await expect(hub.ask('project.info')).resolves.toEqual({ from: 'second' });
 	});
 

@@ -31,6 +31,14 @@ import (
 // Protocol is the version both sides name in hello.
 const Protocol = 1
 
+// CloseHeld is the close code a dashboard refuses a flai with when the
+// project it connected for is held there by another flai that answers
+// (S-0184). A flai so refused waits HeldBackoff before it dials again.
+const CloseHeld websocket.StatusCode = 4409
+
+// ErrHeld is what a connection the dashboard closed with CloseHeld ends with.
+var ErrHeld = errors.New("the dashboard refused this flai: another flai serves the project there and answers")
+
 // MaxMessage caps one message in either direction, where the dashboard's
 // buffer for a flai command's output was (16 MiB).
 const MaxMessage = 16 << 20
@@ -119,7 +127,10 @@ type Client struct {
 	PingEvery  time.Duration
 	MinBackoff time.Duration
 	MaxBackoff time.Duration
-	Now        func() time.Time
+	// HeldBackoff is how long a flai the dashboard refused with CloseHeld
+	// waits before it dials again; a minute when zero.
+	HeldBackoff time.Duration
+	Now         func() time.Time
 	// Slow is how long a request may take before its "request answered"
 	// event is logged at info; perf.Slow() when zero (S-0152).
 	Slow time.Duration
@@ -155,6 +166,9 @@ func (c *Client) defaults() {
 	if c.MaxBackoff <= 0 {
 		c.MaxBackoff = 4 * time.Second
 	}
+	if c.HeldBackoff <= 0 {
+		c.HeldBackoff = time.Minute
+	}
 	if c.Now == nil {
 		c.Now = time.Now
 	}
@@ -180,7 +194,9 @@ func (c *Client) setState(f func(*State)) {
 }
 
 // Run connects and serves until ctx ends, reconnecting with backoff and
-// jitter. A connection that held for a while resets the backoff.
+// jitter. A connection that held for a while resets the backoff. One the
+// dashboard refused because another flai holds the project waits
+// HeldBackoff instead (S-0184).
 func (c *Client) Run(ctx context.Context) {
 	c.defaults()
 	c.setState(func(s *State) { s.URL = c.URL })
@@ -189,31 +205,46 @@ func (c *Client) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		started := c.Now()
 		err := c.serveOnce(ctx)
+		held := errors.Is(err, ErrHeld)
 		c.setState(func(s *State) {
 			s.Connected, s.Since, s.Attempts = false, "", s.Attempts+1
 			if err != nil {
 				s.LastError = err.Error()
 			}
+			if held {
+				s.LastError += "; trying again in " + c.HeldBackoff.String()
+			}
 		})
 		if ctx.Err() != nil {
 			return
 		}
-		if c.Now().Sub(started) > 2*c.MaxBackoff {
-			backoff = c.MinBackoff
-		}
-		// A dashboard that is down, or an image from before the channel, fails
-		// the same way every few seconds: say it once, not every time.
-		if msg := errText(err); msg != lastLogged {
-			lastLogged = msg
-			c.Logger.Info("dashboard connection ended; retrying until it answers", "component", "channel", "url", c.URL, "project", c.Project.Key, "err", msg)
+		wait := jitter(backoff)
+		switch {
+		case held:
+			wait = jitter(c.HeldBackoff)
+			if msg := errText(err); msg != lastLogged {
+				lastLogged = msg
+				c.Logger.Warn("dashboard refused this flai: another flai holds the project", "component", "channel", "url", c.URL, "project", c.Project.Key, "retry_after", c.HeldBackoff.String())
+			}
+		default:
+			if c.Now().Sub(started) > 2*c.MaxBackoff {
+				backoff = c.MinBackoff
+				wait = jitter(backoff)
+			}
+			// A dashboard that is down, or an image from before the channel, fails
+			// the same way every few seconds: say it once, not every time.
+			if msg := errText(err); msg != lastLogged {
+				lastLogged = msg
+				c.Logger.Info("dashboard connection ended; retrying until it answers", "component", "channel", "url", c.URL, "project", c.Project.Key, "err", msg)
+			}
+			if backoff *= 2; backoff > c.MaxBackoff {
+				backoff = c.MaxBackoff
+			}
 		}
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(jitter(backoff)):
-		}
-		if backoff *= 2; backoff > c.MaxBackoff {
-			backoff = c.MaxBackoff
+		case <-time.After(wait):
 		}
 	}
 }
@@ -403,6 +434,9 @@ func (c *Client) serveOnce(ctx context.Context) error {
 	var inflight sync.Map // request id -> cancel
 	for {
 		_, data, err := conn.Read(ctx)
+		if websocket.CloseStatus(err) == CloseHeld {
+			return ErrHeld
+		}
 		if err != nil {
 			return err
 		}
