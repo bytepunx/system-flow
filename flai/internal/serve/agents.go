@@ -288,17 +288,16 @@ type readyStory struct {
 	// Commit is the story's worktree, when the operator has its agent
 	// started to commit what the worktree holds (S-0140).
 	Commit string
-	item   *workitem.Item
+	// Asked is the run that ended asking, once its question is answered: the
+	// agent is started again in its session (S-0182).
+	Asked *AgentRun
+	item  *workitem.Item
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
 // stories they are held by, and how many more stories the in-progress limit
 // leaves room for, -1 when there is none.
-func readyStories(root string) (ready []readyStory, holds *workitem.Holds, free int, err error) {
-	repo, err := workitem.Open(root)
-	if err != nil {
-		return nil, nil, 0, err
-	}
+func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, err error) {
 	items, err := repo.List(false)
 	if err != nil {
 		return nil, nil, 0, err
@@ -369,7 +368,11 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if l.config == nil {
 		return
 	}
-	stories, holds, free, err := readyStories(l.entry.Root)
+	repo, err := workitem.Open(l.entry.Root)
+	if err != nil {
+		return
+	}
+	stories, holds, free, err := readyStories(repo)
 	if err != nil {
 		return
 	}
@@ -380,7 +383,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	l.measureDone(l.dir.AgentStates()[l.entry.Root])
 	cfg := l.config(l.entry.Root)
 	if cfg.Enabled {
-		l.resume(ctx, cfg)
+		l.resume(ctx, cfg, repo)
 	}
 	var sk skips
 	defer func() { l.say(sk) }()
@@ -401,6 +404,14 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
 			holds.Open(s.item, agentStarted)
+		case asked(run) && !answered(repo, run):
+			sk.add(s.ID+"'s agent is waiting for an answer to "+run.Thread, s)
+		case asked(run):
+			// answered while its story is in ready: started again in its
+			// session, but, unlike resume, only when nothing holds it and
+			// the limit has room (S-0182)
+			s.Asked = run
+			todo = append(todo, s)
 		case run != nil && run.Queued == "" && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
 		case (s.Agent == nil || s.Agent.Harness == "") && !commandSet:
@@ -421,7 +432,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			sk.add(s.ID+" "+h.Reason, s)
 		case free >= 0 && reserved >= free:
 			noRoom = append(noRoom, s)
-		case l.start(ctx, cfg, s):
+		case l.start(ctx, cfg, s, s.Asked):
 			reserved++
 			holds.Open(s.item, agentStarted)
 		}
@@ -521,24 +532,28 @@ func (l *launcher) settleOrphans() {
 }
 
 // resume starts again each agent that ended waiting for an answer, once the
-// answer is there, in the session it had. Its story is its own and already
-// in progress, so neither the limit nor anyone attending holds it back.
-func (l *launcher) resume(ctx context.Context, cfg AgentConfig) {
+// answer is there, in the session it had, when its story is open: in
+// progress or in review. Such a story is counted in the limit already, and
+// it holds others rather than being held (ADR-0046), so neither holds it
+// back. A story in ready is started again by the look, past its hold and
+// the limit like any other; one in backlog waits until it is ready (S-0182).
+func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
-	repo, err := workitem.Open(l.entry.Root)
-	if err != nil {
-		return
-	}
 	for id, run := range st.Stories {
-		if run.Outcome != OutcomeAsked || run.Thread == "" || !answered(repo, run) {
+		if !asked(run) || !answered(repo, run) {
 			continue
 		}
 		it, err := repo.Get(id)
-		if err != nil || it.Closed() {
+		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) {
 			continue
 		}
 		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent}, run)
 	}
+}
+
+// asked says whether run ended asking a question on a thread.
+func asked(run *AgentRun) bool {
+	return run != nil && run.Outcome == OutcomeAsked && run.Thread != ""
 }
 
 // agentEnv is flai serve's environment without the host's address and token
@@ -782,8 +797,8 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 
 // held are the stories in ready with no agent running that a claim holds,
 // counting the claim of each story in ready whose agent runs, as the
-// launcher does. One whose agent ended asking is left out: it is started
-// again when it is answered, held or not.
+// launcher does. One whose agent ended asking is left out until the question
+// is answered: it waits for the answer, and then for its hold (S-0182).
 func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 	items, err := repo.List(false)
 	if err != nil {
@@ -798,7 +813,7 @@ func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 		switch run := st.Stories[it.ID]; {
 		case run.live():
 			holds.Open(it, agentStarted)
-		case run == nil || run.Outcome != OutcomeAsked:
+		case !asked(run) || answered(repo, run):
 			ready = append(ready, it)
 		}
 	}

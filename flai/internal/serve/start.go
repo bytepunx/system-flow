@@ -54,7 +54,7 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
-	ok, hold, err := roomFor(e, st, it.ID)
+	ok, hold, err := roomFor(repo, st, it.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +73,8 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 // roomFor says whether the in-progress limit leaves room for the ready story
 // id, counting an agent running for another story still in ready as a story
 // in progress, as the launcher does, and whether a claim holds it.
-func roomFor(e Entry, st AgentState, id string) (bool, *workitem.Hold, error) {
-	stories, holds, free, err := readyStories(e.Root)
+func roomFor(repo *workitem.Repo, st AgentState, id string) (bool, *workitem.Hold, error) {
+	stories, holds, free, err := readyStories(repo)
 	if err != nil {
 		return false, nil, err
 	}

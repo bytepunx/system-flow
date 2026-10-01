@@ -117,7 +117,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	}
 	if it.Status == workitem.Ready {
 		// held, like no room, queues it: flai serve starts it once it is clear (S-0128)
-		if ok, hold, err := roomFor(e, st, it.ID); err != nil {
+		if ok, hold, err := roomFor(repo, st, it.ID); err != nil {
 			return nil, err
 		} else if !ok || hold != nil {
 			return queue(o, e, run), nil

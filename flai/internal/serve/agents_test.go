@@ -749,6 +749,96 @@ func TestAnAgentThatEndedAskingIsStartedAgainWhenAnswered(t *testing.T) {
 	}
 }
 
+// S-0182: an agent that ended asking is started again on the answer only
+// while its story is open. Sent back to ready meanwhile, the story waits for
+// the answer and then for its hold, as any ready story does, and its agent
+// is started again in its session once nothing holds it.
+func TestAnAnsweredAgentWhoseStoryIsBackInReadyWaitsForItsHold(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(3)
+	lab.hold()
+	id := lab.readyTouching("Asks and goes back", "flai/cmd")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: first.Agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends asking", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeAsked })
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+
+	// the designer sends it back to ready, and another story claims a file in its folder
+	st, _ := lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "not yet", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	other := lab.backlog("Other", nil, "flai/cmd/prime.go")
+	lab.toReady(other)
+	lab.move(other, workitem.InProgress)
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || !strings.Contains(lab.state().Waiting, id+"'s agent is waiting for an answer to "+th.ID) {
+		t.Fatalf("before the answer: %+v, waiting %q", r, lab.state().Waiting)
+	}
+
+	// answered while held: nothing starts, and the board says what holds it
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	why := "held (overlap): touches flai/cmd, which holds flai/cmd/prime.go that " + other + " (in progress) touches"
+	if r := lab.run(id); r.live() || !strings.Contains(lab.state().Waiting, id+" "+why) {
+		t.Fatalf("started past its hold: %+v, waiting %q", r, lab.state().Waiting)
+	}
+	if a := Activity(lab.root, lab.state())[id]; a.Hold == nil || !strings.HasPrefix(a.Why, why) {
+		t.Errorf("activity: %+v", a)
+	}
+
+	// the other story is cancelled: started again, in its session, for the answer
+	o, _ := lab.repo.Get(other)
+	if _, err := lab.repo.Transition(o, workitem.Cancelled, "alex", "not now", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { return lab.run(id).live() })
+	if again := lab.run(id); again.Agent != first.Agent || again.Session != first.Session || again.Answered != th.ID {
+		t.Errorf("the same agent, in its session, for the answer: %+v, first %+v", again, first)
+	}
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+}
+
+// S-0182: an answered agent whose story went back to backlog is not started.
+func TestAnAnsweredAgentWhoseStoryIsInBacklogIsNotStarted(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	id := lab.ready("Asks and is shelved")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: first.Agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends asking", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeAsked })
+	st, _ := lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.Backlog, "alex", "later", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || r.Answered != "" {
+		t.Fatalf("started for a story in backlog: %+v", r)
+	}
+}
+
 // S-0116, ADR-0043: the operator restarts the agent of a story in ready or in
 // progress whose agent dropped or failed, and is told why when it cannot be.
 func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
