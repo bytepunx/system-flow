@@ -1,10 +1,11 @@
 ---
 title: Git
-updated: 2026-09-15
+updated: 2026-10-01
 audience: agent
 order: 70
 status: active
 topics: [all]
+roles: [verify]
 ---
 
 # Git

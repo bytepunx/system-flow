@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-09-29
+updated: 2026-10-01
 topics: [all]
 ---
 
@@ -22,6 +22,7 @@ How agents work in this repository. Read every file below, in this order, at the
 | 100 | [continuous-improvement.md](continuous-improvement.md) | Recording recurring friction, defects, and blockers in `design/issues`, and reviewing them at delivery |
 | 110 | [logging.md](logging.md) | What is logged, at which level, in what shape, and what never appears in a log |
 | 120 | [telemetry.md](telemetry.md) | Metrics, traces, and health signals every service emits, and how they are named |
+| 130 | [delegation.md](delegation.md) | When to hand work to a sub-agent, what to give it, and what a sub-agent may do |
 
 ## How these files work
 

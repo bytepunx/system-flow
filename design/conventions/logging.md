@@ -1,10 +1,11 @@
 ---
 title: Logging
-updated: 2026-09-16
+updated: 2026-10-01
 audience: agent
 order: 110
 status: active
 topics: [all]
+roles: [verify]
 ---
 
 # Logging

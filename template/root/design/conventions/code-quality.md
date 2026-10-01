@@ -1,10 +1,11 @@
 ---
 title: Code quality
-updated: 2026-09-15
+updated: 2026-10-01
 audience: agent
 order: 60
 status: active
 topics: [all]
+roles: [verify]
 ---
 
 # Code quality
