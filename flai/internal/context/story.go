@@ -3,6 +3,8 @@ package context
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
@@ -24,6 +26,72 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
+	st, err := loadStory(repo, id)
+	if err != nil {
+		return nil, err
+	}
+	list, _ := issues.List(repo)
+	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.set, issues.SummaryTable(list), size)
+	if err != nil {
+		return nil, err
+	}
+	pack.AddDesign(Design(st.docs, topics.Names(st.topics), st.sources, BriefOver(size)), Query(st.item.Title, st.item.Body))
+	return pack, nil
+}
+
+// ForRole builds the pack for a sub-agent of a story's agent (ADR-0059):
+// the conventions whose roles include role, with the sections the story's
+// topics leave out taken out; the story's goal and acceptance criteria; and
+// briefs, never bodies, of what the story, its epic, and its tasks name,
+// what their topics select, and the ADRs one step reaches, in the order
+// Items gives them, each while the budget has room. budget is a size as
+// ParseSize reads it; empty means half the story's agent's.
+func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
+	if !slices.Contains(conventions.Roles, role) {
+		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s", role, strings.Join(conventions.Roles, " or "))
+	}
+	size, err := Budget(budget, repo.Manifest.Prime.Budget)
+	if err != nil {
+		return nil, err
+	}
+	if budget == "" {
+		size /= 2
+	}
+	st, err := loadStory(repo, id)
+	if err != nil {
+		return nil, err
+	}
+	sub := &conventions.Set{Dir: st.set.Dir}
+	for _, f := range st.set.Files {
+		if slices.Contains(f.Roles, role) {
+			sub.Files = append(sub.Files, f)
+		}
+	}
+	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, sub, "", size)
+	if err != nil {
+		return nil, err
+	}
+	pack.Role, pack.Goal = role, Goal(st.item.Body)
+	s := NewSelection(st.docs)
+	s.BriefNamed = true
+	s.Linked(st.sources)
+	s.ByTopics(topics.Names(st.topics))
+	s.Step()
+	pack.AddBriefs(s)
+	return pack, nil
+}
+
+// story is what a pack is built from: the story, the conventions, its
+// topics, the design documents, and what links them.
+type story struct {
+	item    *workitem.Item
+	set     *conventions.Set
+	topics  []topics.StoryTopic
+	docs    []*Doc
+	sources []Source
+}
+
+func loadStory(repo *workitem.Repo, id string) (*story, error) {
 	it, err := repo.Get(id)
 	if err != nil {
 		return nil, fmt.Errorf("flai prime --story %s: %w; give the ID of a story", id, err)
@@ -38,12 +106,7 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 	if set.Missing {
 		return nil, fmt.Errorf("no conventions folder at %s; render it from the template or run flai upgrade", rel(repo.Root, set.Dir))
 	}
-	list, _ := issues.List(repo)
 	storyTopics, err := topics.ForStory(repo, it.ID)
-	if err != nil {
-		return nil, err
-	}
-	pack, err := Build(repo.Root, it.ID, it.Title, storyTopics, set, issues.SummaryTable(list), size)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +118,7 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	pack.AddDesign(Design(docs, topics.Names(storyTopics), sources, BriefOver(size)), Query(it.Title, it.Body))
-	return pack, nil
+	return &story{item: it, set: set, topics: storyTopics, docs: docs, sources: sources}, nil
 }
 
 // storySources is the story, its epic, and its tasks, archived or not, for

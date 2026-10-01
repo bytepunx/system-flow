@@ -19,6 +19,7 @@ func newPrimeCmd(a *app) *cobra.Command {
 		cat    bool
 		story  string
 		budget string
+		role   string
 	)
 	c := &cobra.Command{
 		Use:   "prime",
@@ -52,13 +53,23 @@ When the conventions alone exceed the budget the pack is the conventions and
 a catalog; when the conventions and what is named exceed it, nothing is
 ranked; the header says which. --budget sets the size, such as 80KB or 81920
 bytes; the project's default is prime.budget in system-flow.yaml, and
-flai's is 80KB. An archived story gets the pack it would get today.`,
+flai's is 80KB. An archived story gets the pack it would get today.
+
+--role explore or --role verify, with --story, prints the smaller pack for
+a sub-agent the story's agent hands work to (ADR-0059): the conventions
+whose front matter lists the role in roles, with the sections the story's
+topics leave out taken out; the story's goal and acceptance criteria; and
+briefs, never bodies, of what the story names, what its topics select, and
+the ADRs one step reaches, each while the budget has room, with a count of
+those left out. No open issues, nothing ranked, no catalog. Its budget is
+half the story's agent's unless --budget is given.`,
 		Example: `  flai prime
   flai prime --cat
   flai prime --json
   flai prime --story S-0136
   flai prime --story S-0136 --json
-  flai prime --story S-0136 --budget 120KB`,
+  flai prime --story S-0136 --budget 120KB
+  flai prime --story S-0136 --role verify`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -86,8 +97,11 @@ flai's is 80KB. An archived story gets the pack it would get today.`,
 			if budget != "" && story == "" {
 				return fmt.Errorf("--budget sizes a story's context pack; give --story too")
 			}
+			if role != "" && story == "" {
+				return fmt.Errorf("--role primes a sub-agent working a story; give --story too")
+			}
 			if story != "" {
-				return a.primeStory(repo, story, budget)
+				return a.primeStory(repo, story, role, budget)
 			}
 			list, _ := issues.List(repo)
 			table := issues.SummaryTable(list)
@@ -123,14 +137,22 @@ flai's is 80KB. An archived story gets the pack it would get today.`,
 	}
 	c.Flags().BoolVar(&cat, "cat", false, "print file contents instead of paths")
 	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions, design, tech, and ADRs it selects, and a catalog of the rest")
-	c.Flags().StringVar(&budget, "budget", "", "the size the story's context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB)")
+	c.Flags().StringVar(&budget, "budget", "", "the size the story's context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role)")
+	c.Flags().StringVar(&role, "role", "", "print the pack for a sub-agent of the story's agent in this role: explore or verify (ADR-0059)")
 	return c
 }
 
 // primeStory prints the context pack for a story (ADR-0047, ADR-0049), as
-// ctxpack.ForStory builds it.
-func (a *app) primeStory(repo *workitem.Repo, id, budget string) error {
-	pack, err := ctxpack.ForStory(repo, id, budget)
+// ctxpack.ForStory builds it, or for a sub-agent in a role (ADR-0059), as
+// ctxpack.ForRole does.
+func (a *app) primeStory(repo *workitem.Repo, id, role, budget string) error {
+	var pack *ctxpack.Pack
+	var err error
+	if role != "" {
+		pack, err = ctxpack.ForRole(repo, id, role, budget)
+	} else {
+		pack, err = ctxpack.ForStory(repo, id, budget)
+	}
 	if err != nil {
 		return err
 	}

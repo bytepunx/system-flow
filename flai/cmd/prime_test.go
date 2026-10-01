@@ -271,3 +271,128 @@ func TestPrimeStoryDesign(t *testing.T) {
 		}
 	}
 }
+
+// S-0175, ADR-0059: --role primes a sub-agent with the conventions its role
+// reads, the story's goal and criteria, and briefs, in half the budget.
+func TestPrimeStoryRole(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conv := func(name, title string, order int, roles string) {
+		fm := fmt.Sprintf("---\ntitle: %s\nupdated: 2026-10-01\naudience: agent\norder: %d\nstatus: active\ntopics: [all]\n%s---\n\n# %s\n\n## Rules\n\n- %s rule.\n\n### Svelte <!-- topics: svelte -->\n\n- %s svelte rule.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n", title, order, roles, title, title, title)
+		write("design/conventions/"+name, fm)
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [session-start.md](session-start.md)\n- [code-quality.md](code-quality.md)\n- [safety.md](safety.md)\n")
+	conv("session-start.md", "Session start", 10, "")
+	conv("code-quality.md", "Code quality", 60, "roles: [verify]\n")
+	conv("safety.md", "Safety", 80, "roles: [explore, verify]\n")
+	write("design/system/cli.md", "---\ntitle: CLI\nupdated: 2026-09-28\nstatus: active\ntopics: [go]\n---\n\n# CLI\n\nThe command line.\n\n## Commands\n\nAs ADR-0002 decides.\n")
+	write("design/system/named.md", "---\ntitle: Named\nupdated: 2026-09-28\nstatus: active\n---\n\n# Named\n\nWhat the story links.\n\n## Part\n\nThe body of the part.\n")
+	for n, title := range map[string]string{"0001-named": "Named decision", "0002-linked": "Linked decision"} {
+		write("design/adrs/"+n+".md", "---\nid: ADR-"+n[:4]+"\ntitle: "+title+"\nstatus: accepted\ndate: 2026-09-01\n---\n\n# ADR-"+n[:4]+" "+title+"\n\n## Decision\n\n"+title+" is made.\n")
+	}
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Slice", "--epic", "E-0001", "--topics", "go"); code != 0 {
+		t.Fatal(errOut)
+	}
+	story, err := filepath.Glob(filepath.Join(root, "wip", "kanban", "stories", "S-0001-*.md"))
+	if err != nil || len(story) != 1 {
+		t.Fatal(story, err)
+	}
+	data, err := os.ReadFile(story[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := strings.Replace(string(data), "## Goal\n", "## Goal\n\nKeep to ADR-0001 and [named](../../../design/system/named.md).\n", 1)
+	body = strings.Replace(body, "## Notes\n", "## Notes\n\nA note the role pack leaves out.\n", 1)
+	if err := os.WriteFile(story[0], []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runIn(t, root, "prime", "--story", "S-0001", "--role", "explore")
+	if code != 0 {
+		t.Fatalf("prime --role explore: %s", errOut)
+	}
+	for _, want := range []string{
+		"S-0001 context pack for the explore role\n",
+		"role: explore, a sub-agent of the story's agent (ADR-0059)",
+		"; budget 40960 bytes\n",
+		"design/conventions/safety.md\n",
+		"- Safety rule.",
+		"\nstory\n=====\n\n## Goal\n\nKeep to ADR-0001",
+		"## Acceptance criteria\n",
+		"\ndesign/system/named.md: Named (",
+		"bytes; linked from S-0001)\n\nWhat the story links.\n\n- Part\n",
+		"\ndesign/system/cli.md: CLI (",
+		"- ADR-0001 Named decision (design/adrs/0001-named.md; linked from S-0001): Named decision is made.\n",
+		"- ADR-0002 Linked decision (design/adrs/0002-linked.md; linked from design/system/cli.md",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("explore: missing %q:\n%s", want, out)
+		}
+	}
+	for _, gone := range []string{"Session start rule", "Code quality rule", "Safety svelte rule", "The body of the part", "A note the role pack", "open issues", "\ncatalog\n", "reason:"} {
+		if strings.Contains(out, gone) {
+			t.Errorf("explore: printed %q:\n%s", gone, out)
+		}
+	}
+	if !strings.Contains(out, fmt.Sprintf("size: %d bytes, %d lines, this header included", len(out), strings.Count(out, "\n"))) {
+		t.Errorf("size is not the pack's (%d bytes):\n%s", len(out), out)
+	}
+
+	out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--role", "verify", "--json")
+	var v struct {
+		Role        string `json:"role"`
+		Goal        string `json:"goal"`
+		Budget      int    `json:"budget"`
+		Conventions []struct {
+			Path string `json:"path"`
+		} `json:"conventions"`
+		Items []struct {
+			Path string `json:"path"`
+			Step string `json:"step"`
+		} `json:"items"`
+		LeftOut int `json:"briefs_left_out"`
+	}
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatalf("json: %v %s", err, out)
+	}
+	if v.Role != "verify" || !strings.HasPrefix(v.Goal, "## Goal\n") || v.Budget != 40960 || len(v.Conventions) != 2 ||
+		v.Conventions[0].Path != "design/conventions/code-quality.md" || v.Conventions[1].Path != "design/conventions/safety.md" || len(v.Items) != 4 || v.LeftOut != 0 {
+		t.Errorf("verify json: %+v", v)
+	}
+	for _, it := range v.Items {
+		if it.Step != "briefed" {
+			t.Errorf("a role pack loaded %s (%s)", it.Path, it.Step)
+		}
+	}
+
+	out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--role", "explore", "--budget", "2KB")
+	if !strings.Contains(out, "; budget 2048 bytes\n") || !strings.Contains(out, "briefs with no room in the budget, not printed\n") || strings.Contains(out, "over budget") {
+		t.Errorf("--budget 2KB:\n%s", out)
+	}
+	if out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--role", "verify", "--budget", "1"); !strings.Contains(out, "over budget: the role's conventions and the story's goal alone exceed it") || strings.Contains(out, "\nbriefs\n") {
+		t.Errorf("--budget 1:\n%s", out)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"prime", "--story", "S-0001", "--role", "write"}, "no such role; a sub-agent's role is explore or verify"},
+		{[]string{"prime", "--role", "explore"}, "give --story too"},
+	} {
+		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: code %d, %s", c.args, code, errOut)
+		}
+	}
+}

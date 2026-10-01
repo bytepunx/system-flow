@@ -31,6 +31,30 @@ func Query(title, body string) string {
 	return b.String()
 }
 
+// Goal is a story's "## Goal" and "## Acceptance criteria" sections as they
+// stand, the headings under them included, or its whole body when it has
+// neither.
+func Goal(body string) string {
+	doc, err := topics.Parse(body, nil)
+	if err != nil {
+		return body
+	}
+	var b strings.Builder
+	in := false
+	for _, s := range doc.Sections {
+		if s.Level > 0 && s.Level <= 2 {
+			in = s.Level == 2 && (s.Heading == "Goal" || s.Heading == "Acceptance criteria")
+		}
+		if in {
+			b.WriteString(s.Text)
+		}
+	}
+	if b.Len() == 0 {
+		return body
+	}
+	return b.String()
+}
+
 // Candidate is what the ranked step may load: a design section, cut at its
 // own heading, or an ADR by its best section.
 type Candidate struct {

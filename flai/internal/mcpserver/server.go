@@ -602,10 +602,15 @@ func (s *server) docSearch(_ context.Context, _ *mcp.CallToolRequest, in DocSear
 type PrimeIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
 	Story   string `json:"story" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today"`
-	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB"`
+	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB, and half that with role"`
+	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); empty for the story's agent's own pack"`
 }
 
 func (s *server) prime(_ context.Context, _ *mcp.CallToolRequest, in PrimeIn) (*mcp.CallToolResult, *ctxpack.Pack, error) {
+	if in.Role != "" {
+		pack, err := ctxpack.ForRole(s.repo, in.Story, in.Role, in.Budget)
+		return nil, pack, err
+	}
 	pack, err := ctxpack.ForStory(s.repo, in.Story, in.Budget)
 	return nil, pack, err
 }

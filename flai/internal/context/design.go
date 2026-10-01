@@ -216,6 +216,9 @@ type Selection struct {
 	// written out is briefed instead of loaded whole (ADR-0050); zero loads
 	// every named document whole.
 	BriefOver int
+	// BriefNamed briefs every document named, as a sub-agent's pack does
+	// (ADR-0059), instead of loading it.
+	BriefNamed bool
 }
 
 // NewSelection starts a selection over docs with nothing chosen.
@@ -454,7 +457,8 @@ func Slug(heading string) string {
 // way to what supersedes it. A document named only by its path written out
 // and larger than BriefOver is briefed instead, with the reason "named in
 // <ID>", once every link and ID has been chosen, so that a link or an ID
-// anywhere still loads it (ADR-0050).
+// anywhere still loads it (ADR-0050). With BriefNamed every document named
+// is briefed, with the same reasons.
 func (s *Selection) Linked(sources []Source) {
 	type later struct {
 		doc *Doc
@@ -463,6 +467,10 @@ func (s *Selection) Linked(sources []Source) {
 	var written []later
 	for _, src := range sources {
 		for _, r := range s.refs(src.Body, src.Path) {
+			if s.BriefNamed {
+				s.briefRef(r, src.ID)
+				continue
+			}
 			if r.written && s.BriefOver > 0 && len(r.doc.Raw) > s.BriefOver {
 				written = append(written, later{r.doc, src.ID})
 				continue
@@ -481,6 +489,26 @@ func (s *Selection) Linked(sources []Source) {
 			s.addBrief(w.doc, reason, nil)
 		}
 	}
+}
+
+// briefRef briefs what a ref names, with the reason "linked from <ID>", or
+// "named in <ID>" when it is a path written out. A design file's brief
+// counts every section it names as selected, so that the one step reaches
+// from them as it does from a document loaded.
+func (s *Selection) briefRef(r ref, id string) {
+	reason := "linked from " + id
+	if r.written {
+		reason = NamedIn + id
+	}
+	if r.doc.Kind == KindADR {
+		s.briefADR(r.doc, reason)
+		return
+	}
+	secs := r.secs
+	if secs == nil {
+		secs = r.doc.all()
+	}
+	s.addBrief(r.doc, reason, secs)
 }
 
 // NamedIn starts the reason of a brief of a document the story, its epic,

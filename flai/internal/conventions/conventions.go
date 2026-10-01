@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -24,6 +25,16 @@ const Marker = "<!-- system-flow:end-of-baseline -->"
 // MaxLines is the length limit from conventions.md.
 const MaxLines = 120
 
+// The roles of the sub-agents a story's agent hands work to (ADR-0059): a
+// convention's roles say which of them read it.
+const (
+	RoleExplore = "explore"
+	RoleVerify  = "verify"
+)
+
+// Roles are the roles a convention may list, as flai prime --role takes them.
+var Roles = []string{RoleExplore, RoleVerify}
+
 // File is one convention file.
 type File struct {
 	Path     string `json:"path"` // relative to the repo root
@@ -33,11 +44,14 @@ type File struct {
 	Audience string `json:"audience"`
 	Order    int    `json:"order"`
 	Status   string `json:"status"`
-	Lines    int    `json:"lines"`
-	Markers  int    `json:"-"`
-	HasAdds  bool   `json:"-"` // "## Project additions" after the marker
-	Body     string `json:"-"`
-	Raw      string `json:"-"`
+	// Roles are the sub-agents that read the file as well as the story's
+	// agent (ADR-0059); none means the story's agent alone.
+	Roles   []string `json:"roles,omitempty"`
+	Lines   int      `json:"lines"`
+	Markers int      `json:"-"`
+	HasAdds bool     `json:"-"` // "## Project additions" after the marker
+	Body    string   `json:"-"`
+	Raw     string   `json:"-"`
 }
 
 // Set is the loaded folder.
@@ -49,11 +63,12 @@ type Set struct {
 }
 
 type front struct {
-	Title    string `yaml:"title"`
-	Updated  string `yaml:"updated"`
-	Audience string `yaml:"audience"`
-	Order    *int   `yaml:"order"`
-	Status   string `yaml:"status"`
+	Title    string   `yaml:"title"`
+	Updated  string   `yaml:"updated"`
+	Audience string   `yaml:"audience"`
+	Order    *int     `yaml:"order"`
+	Status   string   `yaml:"status"`
+	Roles    []string `yaml:"roles"`
 }
 
 // Dir returns <layout.design>/conventions for the repo.
@@ -99,7 +114,7 @@ func Load(r *workitem.Repo) (*Set, map[string]error, error) {
 			if err := yaml.Unmarshal([]byte(fm), &fr); err != nil {
 				errs[rel] = err
 			} else {
-				f.Title, f.Updated, f.Audience, f.Status = fr.Title, fr.Updated, fr.Audience, fr.Status
+				f.Title, f.Updated, f.Audience, f.Status, f.Roles = fr.Title, fr.Updated, fr.Audience, fr.Status, fr.Roles
 				if fr.Order != nil {
 					f.Order = *fr.Order
 				} else {
@@ -182,6 +197,11 @@ func (s *Set) Validate(errs map[string]error) []Finding {
 			}
 		default:
 			add("error", "conventions.marker", f.Path, "marker appears %d times; exactly one", f.Markers)
+		}
+		for _, r := range f.Roles {
+			if !slices.Contains(Roles, r) {
+				add("warning", "conventions.roles", f.Path, "role %q is not one flai primes; roles are %s", r, strings.Join(Roles, ", "))
+			}
 		}
 		if f.Lines > MaxLines {
 			add("warning", "conventions.length", f.Path, "%d lines; conventions stay under %d so they are read at every session start", f.Lines, MaxLines)

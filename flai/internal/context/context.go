@@ -63,6 +63,8 @@ const (
 type Pack struct {
 	Story       string              `json:"story"`
 	Title       string              `json:"title"`
+	Role        string              `json:"role,omitempty"` // the sub-agent's role, for a role pack (ADR-0059)
+	Goal        string              `json:"goal,omitempty"` // a role pack's story goal and acceptance criteria`
 	Topics      []topics.StoryTopic `json:"topics"`
 	Budget      int                 `json:"budget"`             // bytes the pack is fitted to
 	Exceeded    string              `json:"exceeded,omitempty"` // conventions, named, or briefs: the part that takes the pack over the budget
@@ -74,6 +76,8 @@ type Pack struct {
 	Omitted     []string            `json:"left_out"` // one line per outermost section left out
 	Items       []Item              `json:"items"`    // the design, tech, and ADRs chosen, in the order chosen
 	Catalog     Catalog             `json:"catalog"`
+	// BriefsLeftOut counts the briefs a role pack had no room for.
+	BriefsLeftOut int `json:"briefs_left_out,omitempty"`
 }
 
 // Catalog is every design, tech, and ADR document the pack does not print
@@ -199,6 +203,36 @@ func (p *Pack) AddDesign(s *Selection, query string) {
 			p.Items, p.Catalog, p.Size = items, catalog, size
 		}
 	}
+}
+
+// AddBriefs puts a role pack's briefs into it (ADR-0059): each brief the
+// selection made, in the order Items gives them, that fits what the budget
+// leaves, and a count of those that do not. Nothing is ranked and there is
+// no catalog: a sub-agent finds the rest with doc_search. When the
+// conventions and the story's goal alone exceed the budget, no brief is
+// added and Exceeded says conventions.
+func (p *Pack) AddBriefs(s *Selection) {
+	p.size()
+	over := p.Size.Bytes > p.Budget
+	if over {
+		p.Exceeded = ExceededConventions
+	}
+	for _, it := range s.Items() {
+		if it.Step != StepBriefed {
+			continue
+		}
+		if over {
+			p.BriefsLeftOut++
+			continue
+		}
+		p.Items = append(p.Items, it)
+		p.size()
+		if p.Size.Bytes > p.Budget {
+			p.Items = p.Items[:len(p.Items)-1]
+			p.BriefsLeftOut++
+		}
+	}
+	p.size()
 }
 
 // take puts everything a selection chose, and its catalog, into the pack.
@@ -349,13 +383,16 @@ func (p *Pack) Body() string {
 	if p.Issues != "" {
 		fmt.Fprintf(&b, "\nopen issues\n===========\n\n%s", p.Issues)
 	}
+	if p.Goal != "" {
+		fmt.Fprintf(&b, "\nstory\n=====\n\n%s", p.Goal)
+	}
 	var last string
 	for _, it := range p.Items {
-		if h := groupHead[group(it)]; group(it) != last && h != "" {
+		if h := p.groupHead()[group(it)]; group(it) != last && h != "" {
 			b.WriteString(h)
 		}
 		last = group(it)
-		b.WriteString(it.Printed())
+		b.WriteString(p.printed(it))
 	}
 	p.writeCatalog(&b)
 	if len(p.Omitted) > 0 {
@@ -379,6 +416,30 @@ var groupHead = map[string]string{
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, and those named by a path written out and too large to load whole, each by its decision sentence. When one bears on the story, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
 }
 
+// roleHead is groupHead for a sub-agent's pack, which briefs everything.
+var roleHead = map[string]string{
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name, then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A sub-agent's pack holds no bodies: when one bears on your question, read the section that does with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\". doc_search, or flai doc search, finds sections by their words.\n",
+	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the story names and those the pack reached, each by its decision sentence. When one bears on your question, read it with the MCP doc_get.\n\n",
+}
+
+// groupHead is the heading each group prints under in this pack.
+func (p *Pack) groupHead() map[string]string {
+	if p.Role != "" {
+		return roleHead
+	}
+	return groupHead
+}
+
+// printed is an item as this pack prints it: as Printed, save that a role
+// pack does not say a document it names is briefed for its size, because
+// it briefs everything.
+func (p *Pack) printed(it Item) string {
+	if p.Role != "" {
+		return it.print(false)
+	}
+	return it.Printed()
+}
+
 // namedBrief follows the line naming a brief of a document the story named
 // by its path written out (ADR-0050).
 const namedBrief = "The story names this file; it is briefed for its size. Decide from the brief whether the work needs its body, and read the file, or the sections you will change, before relying on it or changing it.\n"
@@ -399,13 +460,17 @@ func group(it Item) string {
 // group's heading; what is loaded headed with its path, heading path, and
 // reason. A brief names its first reason, without the heading it was found
 // under, and counts the rest; what is loaded names them all.
-func (it Item) Printed() string {
+func (it Item) Printed() string { return it.print(true) }
+
+// print is Printed, with the line that says a named document is briefed for
+// its size when sized is true.
+func (it Item) print(sized bool) string {
 	switch group(it) {
 	case groupDecisions:
 		return fmt.Sprintf("- %s %s (%s; %s): %s\n", it.ID, it.Title, it.Path, it.briefReason(), it.Text)
 	case groupBriefs:
 		head := fmt.Sprintf("\n%s: %s (%d bytes; %s)\n", it.Path, it.Title, it.Whole, it.briefReason())
-		if strings.HasPrefix(it.Reason, NamedIn) {
+		if sized && strings.HasPrefix(it.Reason, NamedIn) {
 			head += namedBrief
 		}
 		if it.Text == "" {
@@ -476,8 +541,14 @@ func (p *Pack) writeCatalog(b *strings.Builder) {
 func (p *Pack) Header() string {
 	var b strings.Builder
 	head := p.Story + " context pack"
+	if p.Role != "" {
+		head += " for the " + p.Role + " role"
+	}
 	fmt.Fprintf(&b, "%s\n%s\n\n", head, strings.Repeat("=", len(head)))
 	fmt.Fprintf(&b, "story: %s %s\n", p.Story, p.Title)
+	if p.Role != "" {
+		fmt.Fprintf(&b, "role: %s, a sub-agent of the story's agent (ADR-0059): the conventions the role reads, the story's goal and criteria, and briefs while the budget has room; doc_search and doc_get find the rest. Report back to the agent that started you; never move, edit, or create an item, and never write to a thread.\n", p.Role)
+	}
 	b.WriteString("topics:\n")
 	width := 0
 	for _, t := range p.Topics {
@@ -487,12 +558,14 @@ func (p *Pack) Header() string {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, t.Topic, t.Summary())
 	}
 	fmt.Fprintf(&b, "size: %d bytes, %d lines, this header included; budget %d bytes\n", p.Size.Bytes, p.Size.Lines, p.Budget)
-	switch p.Exceeded {
-	case ExceededConventions:
+	switch {
+	case p.Role != "" && p.Exceeded == ExceededConventions:
+		b.WriteString("over budget: the role's conventions and the story's goal alone exceed it, so no brief is printed; narrowing the conventions' roles or topics makes room (ADR-0059)\n")
+	case p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
-	case ExceededNamed:
+	case p.Exceeded == ExceededNamed:
 		b.WriteString("over budget: the conventions and what the story, its epic, and its tasks name exceed it, so nothing is ranked; a story that names more than the budget holds is a story to split (ADR-0049)\n")
-	case ExceededBriefs:
+	case p.Exceeded == ExceededBriefs:
 		b.WriteString("over budget: the conventions, what is named, and the briefs exceed it, so nothing is ranked; every brief is kept, and narrowing the conventions' topics makes room (ADR-0049, TH-0032)\n")
 	}
 	b.WriteString("contents, in bytes:\n")
@@ -503,10 +576,13 @@ func (p *Pack) Header() string {
 	if p.Issues != "" {
 		row(len(p.Issues), "issues", fmt.Sprintf("%d open", p.OpenIssues))
 	}
-	decisions, adrs := len(groupHead[groupDecisions]), 0
+	if p.Goal != "" {
+		row(len(p.Goal), "story", "goal and acceptance criteria")
+	}
+	decisions, adrs := len(p.groupHead()[groupDecisions]), 0
 	for _, it := range p.Items {
 		if group(it) == groupDecisions {
-			decisions += len(it.Printed())
+			decisions += len(p.printed(it))
 			adrs++
 		}
 	}
@@ -517,7 +593,7 @@ func (p *Pack) Header() string {
 			if it.Label != "" {
 				name += " § " + it.Label
 			}
-			row(len(it.Printed()), it.Step, name)
+			row(len(p.printed(it)), it.Step, name)
 		case adrs == 1:
 			row(decisions, "briefed", "1 ADR by its decision sentence, on one line")
 		case adrs > 1:
@@ -529,6 +605,9 @@ func (p *Pack) Header() string {
 		var c strings.Builder
 		p.writeCatalog(&c)
 		row(c.Len(), "catalog", fmt.Sprintf("%d documents not loaded, %d loaded in part", n, m))
+	}
+	if p.BriefsLeftOut > 0 {
+		fmt.Fprintf(&b, "  %6s  %-10s  %d briefs with no room in the budget, not printed\n", "", "left out", p.BriefsLeftOut)
 	}
 	if len(p.Omitted) > 0 {
 		n := 0
