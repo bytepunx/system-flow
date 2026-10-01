@@ -106,6 +106,8 @@ type Publishing struct {
 	// already published; or a remote that could not be asked, when Plans is
 	// what this clone's tags alone say.
 	Remote *release.RemoteTags `json:"remote,omitempty"`
+	// Unplanned are the accepted items no plan covers, with why (I-0024).
+	Unplanned []release.Unplanned `json:"unplanned,omitempty"`
 }
 
 // Publish is what flai release --pending would release, without changing
@@ -118,9 +120,9 @@ func Publish(r execx.Runner, repo *workitem.Repo) (*Publishing, error) {
 	if remote.Lagging() {
 		return &Publishing{DryRun: true, Remote: remote}, nil
 	}
-	plans, err := release.Pending(r, repo.Root, repo.Manifest, repo)
+	b, err := release.PendingBatch(r, repo.Root, repo.Manifest, repo)
 	if err != nil {
 		return nil, err
 	}
-	return &Publishing{Plans: plans, DryRun: true, Remote: remote}, nil
+	return &Publishing{Plans: b.Plans, DryRun: true, Remote: remote, Unplanned: b.Unplanned}, nil
 }

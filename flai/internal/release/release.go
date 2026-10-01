@@ -484,16 +484,45 @@ func higher(a, b string) string {
 
 var acceptedSubject = regexp.MustCompile(`^chore: \[([EST]-\d+)\] accept and archive`)
 
-// Pending computes the batch: one PendingPlan per component with something
-// accepted and unreleased for it, from every item a "chore: [ID] accept and
-// archive" commit names since that component's last publish (S-0087). An
+// Unplanned is an item accepted since a component's last publish whose own
+// plan could not be computed (I-0024): removed, with no release rule, or
+// touching two components with no tag saying which it delivers to. It is in
+// no PendingPlan, and its work misses its bump if published as it is.
+type Unplanned struct {
+	ID     string `json:"id"`
+	Title  string `json:"title,omitempty"`
+	Reason string `json:"reason"`
+}
+
+// Batch is everything Pending finds: the plans, and the accepted items it
+// could not plan.
+type Batch struct {
+	Plans     []*PendingPlan `json:"plans"`
+	Unplanned []Unplanned    `json:"unplanned,omitempty"`
+}
+
+// Pending computes the batch's plans: one PendingPlan per component with
+// something accepted and unreleased for it, from every item a "chore: [ID]
+// accept and archive" commit names since that component's last publish
+// (S-0087). An item that cannot be planned is left out; PendingBatch names
+// it.
+func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) ([]*PendingPlan, error) {
+	b, err := PendingBatch(r, root, m, repo)
+	if err != nil {
+		return nil, err
+	}
+	return b.Plans, nil
+}
+
+// PendingBatch is Pending with the items it could not plan, each once. An
 // item is looked up once and its Compute()-equivalent reused for every
 // component it touches or delivers to. What it needs of git comes from the
 // repository's kept history (S-0157): one git process while HEAD and the
 // tags are unchanged.
-func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) ([]*PendingPlan, error) {
+func PendingBatch(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) (*Batch, error) {
+	batch := &Batch{}
 	if len(m.Projects) == 0 {
-		return nil, nil // no component, nothing to release, and no git asked
+		return batch, nil // no component, nothing to release, and no git asked
 	}
 	kept.Lock()
 	defer kept.Unlock()
@@ -530,32 +559,41 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 	}
 
 	plans := map[string]*Plan{} // item ID -> its own plan, computed once
+	unplanned := map[string]bool{}
 	itemPlan := func(id string) (*Plan, error) {
 		if p, ok := plans[id]; ok {
 			return p, nil
 		}
-		it, err := repo.Get(id)
-		if err != nil {
+		title := ""
+		fail := func(err error) (*Plan, error) {
+			if !unplanned[id] {
+				unplanned[id] = true
+				batch.Unplanned = append(batch.Unplanned, Unplanned{ID: id, Title: title, Reason: err.Error()})
+			}
 			return nil, err
 		}
+		it, err := repo.Get(id)
+		if err != nil {
+			return fail(err)
+		}
+		title = it.Title
 		var parent *workitem.Item
 		if it.Parent != "" {
 			parent, _ = repo.Get(it.Parent)
 		}
 		level, err := LevelFor(it)
 		if err != nil {
-			return nil, err
+			return fail(err)
 		}
 		commits := h.itemCommits(id)
 		p, err := computePlan(m, it, parent, "", level, commits, h.files(commits), func(p manifest.Project) (Version, error) { return h.currentVersion(root, p) })
 		if err != nil {
-			return nil, err
+			return fail(err)
 		}
 		plans[id] = p
 		return p, nil
 	}
 
-	var out []*PendingPlan
 	for i, proj := range m.Projects {
 		cur, ids := ranges[i].cur, ranges[i].ids
 		pp := &PendingPlan{Component: proj, From: cur}
@@ -563,7 +601,7 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 		for _, id := range ids {
 			ip, err := itemPlan(id)
 			if err != nil {
-				continue // an item that cannot be recomputed (removed, malformed) is skipped, not fatal to the batch
+				continue // not fatal to the batch: named in Unplanned
 			}
 			for _, st := range ip.Steps {
 				if st.Component.Name != proj.Name {
@@ -589,9 +627,9 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 		} else {
 			pp.Tag = proj.Name + "/v" + pp.To.String()
 		}
-		out = append(out, pp)
+		batch.Plans = append(batch.Plans, pp)
 	}
-	return out, nil
+	return batch, nil
 }
 
 // PendingIDs is every story and epic ID Pending finds still unpublished, for
@@ -602,15 +640,20 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 // handle: whether to show it is a lesser concern than whether to show the
 // board at all.
 func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) map[string]bool {
-	plans, err := Pending(r, root, m, repo)
+	b, err := PendingBatch(r, root, m, repo)
 	if err != nil {
 		return nil
 	}
 	ids := map[string]bool{}
-	for _, p := range plans {
+	for _, p := range b.Plans {
 		for _, it := range p.Items {
 			ids[it.ID] = true
 		}
+	}
+	// an item that could not be planned is unpublished too, and stays in
+	// view until it is put right (I-0024)
+	for _, u := range b.Unplanned {
+		ids[u.ID] = true
 	}
 	return ids
 }

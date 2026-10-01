@@ -163,10 +163,14 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 	if err := a.remoteTagsInStep(root, repo); err != nil {
 		return nil, nil, err
 	}
-	plans, err := release.Pending(a.runner, root, repo.Manifest, repo)
+	b, err := release.PendingBatch(a.runner, root, repo.Manifest, repo)
 	if err != nil {
 		return nil, nil, err
 	}
+	for _, u := range b.Unplanned {
+		a.logger().Warn("accepted item left out of the release", "component", "release", "item", u.ID, "detail", fmt.Sprintf("%s is left out of the release: %s", u.ID, u.Reason))
+	}
+	plans := b.Plans
 	for _, p := range plans {
 		if err := release.ApplyPending(p, root, a.now()); err != nil {
 			return nil, nil, err
@@ -231,6 +235,9 @@ func (a *app) publishPending(dryRun bool) error {
 		}
 		if pub.Remote != nil {
 			fmt.Fprintf(a.out, "warning: %s\n", pub.Remote.Message)
+		}
+		for _, u := range pub.Unplanned {
+			fmt.Fprintf(a.out, "left out: %s %s: %s\n", u.ID, u.Title, u.Reason)
 		}
 		if len(pub.Plans) == 0 {
 			fmt.Fprintln(a.out, "nothing pending")

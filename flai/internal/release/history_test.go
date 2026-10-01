@@ -212,7 +212,8 @@ func TestPendingFromTheKeptHistoryAnswersAsTheProcessesDid(t *testing.T) {
 
 	// Story commits before the acceptance, one naming two items, one empty.
 	// An item touching two components with no tag to say which it delivers
-	// to cannot be planned, and is left out by both.
+	// to cannot be planned, and is left out of both's plans; PendingIDs still
+	// names it, as unpublished (I-0024).
 	commitFiles("feat: [S-101] a command", map[string]string{"cli/a.go": "package main\n"})
 	commitFiles("fix: [S-102] [S-101] both", map[string]string{"cli/b.go": "package main\n"})
 	commitFiles("chore: [S-102] nothing", nil)
@@ -220,12 +221,12 @@ func TestPendingFromTheKeptHistoryAnswersAsTheProcessesDid(t *testing.T) {
 	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "feature", "A command", nil)
 	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "remediation", "Both", nil)
 	writeAcceptedItem(t, root, r, "S-100", workitem.Story, "feature", "Two components", nil)
-	same("two items, one left out", "S-101", "S-102")
+	same("two items, one left out", "S-100", "S-101", "S-102")
 
 	writeAcceptedItem(t, root, r, "S-103", workitem.Story, "improvement", "Template text", map[string]string{"tpl/root/y.md": "y\n"})
 	writeAcceptedItem(t, root, r, "S-104", workitem.Story, "research", "A finding", map[string]string{"cli/r.go": "package main\n"})
 	writeAcceptedItem(t, root, r, "E-010", workitem.Epic, "feature", "The epic", map[string]string{"web/e.js": "// e\n"})
-	same("three components, research, an epic", "S-101", "S-102", "S-103", "E-010")
+	same("three components, research, an epic", "S-100", "S-101", "S-102", "S-103", "E-010")
 
 	// Publish as flai release --pending does: bump the template's version
 	// file, commit, and tag the code components.
@@ -258,8 +259,9 @@ func TestPendingFromTheKeptHistoryAnswersAsTheProcessesDid(t *testing.T) {
 	same("HEAD moved back to the release")
 	git("reset", "-q", "--hard", ahead)
 	same("HEAD forward again to commits known but not reachable last time", "S-105", "S-108")
+	// an acceptance naming no item there is named too, so nothing is lost
 	git("commit", "-q", "--amend", "-m", "chore: [S-109] accept and archive")
-	same("the last commit amended", "S-105")
+	same("the last commit amended", "S-105", "S-109")
 
 	// A web tag on a commit HEAD never reaches: git decides what follows it.
 	git("checkout", "-q", "-b", "side")
@@ -267,7 +269,7 @@ func TestPendingFromTheKeptHistoryAnswersAsTheProcessesDid(t *testing.T) {
 	git("tag", "web/v9.0.0")
 	git("checkout", "-q", "main")
 	writeAcceptedItem(t, root, r, "S-107", workitem.Story, "remediation", "Web again", map[string]string{"web/f.js": "// f\n"})
-	same("a tag off HEAD's history", "S-105", "S-107")
+	same("a tag off HEAD's history", "S-105", "S-107", "S-109")
 }
 
 // S-0157: while HEAD and the tags are unchanged, Pending starts one git

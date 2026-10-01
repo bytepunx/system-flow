@@ -215,3 +215,39 @@ func TestReleasePendingWithAnUnreachableRemote(t *testing.T) {
 		t.Errorf("a refused publish commits nothing: %s, was %s", now, head)
 	}
 }
+
+// I-0024: a story touching two components with no tag saying which it
+// delivers to is named with the reason in the dry run and warned of when
+// publishing, instead of vanishing from the batch.
+func TestReleasePendingNamesWhatItCannotPlan(t *testing.T) {
+	root, _ := pendingProject(t)
+	manifest := filepath.Join(root, "system-flow.yaml")
+	s, _ := os.ReadFile(manifest)
+	_ = os.WriteFile(manifest, append(s, []byte("  - name: web\n    path: web\n    kind: sveltekit\n")...), 0o644)
+	_ = os.MkdirAll(filepath.Join(root, "web"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "web", ".gitkeep"), nil, 0o644)
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "chore: a second component")
+	if _, errOut, code := runIn(t, root, "stream", "sync", "S-0002"); code != 0 {
+		t.Fatalf("sync: %s", errOut)
+	}
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0002")
+	_ = os.MkdirAll(filepath.Join(wt, "web"), 0o755)
+	_ = os.WriteFile(filepath.Join(wt, "web", "both.js"), []byte("// both\n"), 0o644)
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-q", "-m", "fix: [S-0002] the other side")
+	for _, id := range []string{"S-0001", "S-0002"} {
+		if _, errOut, code := runIn(t, root, "accept", id); code != 0 {
+			t.Fatalf("accept %s: %s", id, errOut)
+		}
+	}
+
+	dry, _, code := runIn(t, root, "release", "--pending", "--dry-run")
+	if code != 0 || !strings.Contains(dry, "left out: S-0002 Another fix: S-0002 touches cli, web but no tag says which it delivers to") || !strings.Contains(dry, "S-0001") {
+		t.Fatalf("dry run names what it cannot plan and plans the rest: %d %s", code, dry)
+	}
+	_, errOut, code := runIn(t, root, "release", "--pending")
+	if code != 0 || !strings.Contains(errOut, "S-0002 is left out of the release") {
+		t.Errorf("publishing warns of what it leaves out: %d %s", code, errOut)
+	}
+}

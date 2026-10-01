@@ -465,3 +465,30 @@ func TestDeliveryGoesToATouchedComponent(t *testing.T) {
 		t.Errorf("a tagged docs-only story releases nothing: %+v %v", plan, err)
 	}
 }
+
+// I-0024: an accepted item whose own plan cannot be computed, such as a
+// story touching two components with no tag saying which it delivers to, is
+// named once with the reason, beside the rest of the batch, not dropped.
+func TestPendingNamesWhatItCannotPlan(t *testing.T) {
+	root, r := gitRepo(t)
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, root, r, "S-102", workitem.Story, "feature", "Both sides", map[string]string{"cli/b.go": "package main\n", "web/b.js": "// b\n"})
+
+	b, err := PendingBatch(r, root, m, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Unplanned) != 1 || b.Unplanned[0].ID != "S-102" || b.Unplanned[0].Title != "Both sides" || !strings.Contains(b.Unplanned[0].Reason, "no tag says which it delivers to") {
+		t.Errorf("the ambiguous item is named once, with why: %+v", b.Unplanned)
+	}
+	if len(b.Plans) != 1 || b.Plans[0].Component.Name != "cli" || len(b.Plans[0].Items) != 1 || b.Plans[0].Items[0].ID != "S-101" {
+		t.Errorf("the rest of the batch is still planned: %+v", b.Plans)
+	}
+	if ids := PendingIDs(r, root, m, repo); !ids["S-101"] || !ids["S-102"] {
+		t.Errorf("an item left out is still unpublished: %v", ids)
+	}
+	if plans, err := Pending(r, root, m, repo); err != nil || len(plans) != 1 {
+		t.Errorf("Pending is the batch's plans: %+v %v", plans, err)
+	}
+}
