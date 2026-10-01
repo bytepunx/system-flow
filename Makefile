@@ -1,4 +1,4 @@
-.PHONY: check flai flai-reference test integration smoke install-test flai-test flai-snapshot template-test install-tools lint-md board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
+.PHONY: check flai flai-reference test integration smoke install-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -23,6 +23,9 @@ install-test: ## Install the latest flai release with install.sh and flai self-u
 
 lint-md: ## Lint all markdown with the CI globs and config
 	scripts/lint-md.sh
+
+mdlint-fixtures: ## Regenerate what markdownlint-cli2 reports on flai's markdown lint fixtures
+	scripts/mdlint-fixtures.sh
 
 flai-test: ## Lint plus all three test tiers in order
 	scripts/flai-test.sh
