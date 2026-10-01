@@ -1063,8 +1063,13 @@ func printStream(a *app, got *serve.StreamRead) {
 // mcpAgents starts or restarts a story's agent for flai mcp's tools
 // agent_start and agent_restart (S-0177, ADR-0064), as flai serve agent
 // start and restart do, under the same agent host action, and journals who
-// asked and what came of it.
+// asked and what came of it. They are for the operator's own agent: one that
+// flai serve started, whose flai mcp has FLAI_STARTED_BY, is refused, since
+// a start goes past holds and the in-progress limit on the operator's word.
 func (a *app) mcpAgents(ctx context.Context, verb, root, story, by string) (mcpserver.AgentStarted, error) {
+	if os.Getenv("FLAI_STARTED_BY") == "flai-serve" {
+		return mcpserver.AgentStarted{}, fmt.Errorf("an agent flai serve started does not start agents: %s's agent is the operator's to %s, from the story's page or with flai serve agent %s %s on the host", story, verb, verb, story)
+	}
 	how := serve.Start
 	if verb == "restart" {
 		how = serve.Restart

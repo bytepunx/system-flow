@@ -575,6 +575,7 @@ func TestServeAgentStreamPrintsTheLog(t *testing.T) {
 // the agent that asked.
 func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_STARTED_BY", "") // the operator's own agent, whoever runs the tests
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
@@ -597,6 +598,11 @@ func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
 	got, err := a.mcpAgents(ctx, "restart", root, "S-0001", "agent-ops")
 	if err != nil || got.Story != "S-0001" || got.PID == 0 || got.Command != "true" {
 		t.Fatalf("a story in progress with no agent here: %+v %v", got, err)
+	}
+	// an agent flai serve started does not start others
+	t.Setenv("FLAI_STARTED_BY", "flai-serve")
+	if _, err := a.mcpAgents(ctx, "start", root, "S-0001", "agent-S-0002"); err == nil || !strings.Contains(err.Error(), "an agent flai serve started does not start agents") {
+		t.Errorf("an agent flai serve started: %v", err)
 	}
 	js, _, _ := runIn(t, root, "serve", "journal", "--json")
 	for _, want := range []string{`"method": "mcp.agent_restart"`, `"by": "agent-ops"`, `"outcome": "disabled"`, "agent-ops asked to restart S-0001's agent: started true"} {

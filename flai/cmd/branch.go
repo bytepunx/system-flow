@@ -58,6 +58,13 @@ func (a *app) openStoryBranch(repo *workitem.Repo, id string, fromRemote bool) (
 		return "", "", "", err
 	}
 	from = branchLocal
+	if fromRemote {
+		// a worktree removed without git leaves its registration, which
+		// refuses the branch a new one
+		if _, err := a.runner.Run(repo.MainRoot, "git", "worktree", "prune"); err != nil {
+			return "", "", "", err
+		}
+	}
 	if !a.branchExists(repo.MainRoot, branch) && fromRemote {
 		if remote := storygit.Remote(a.runner, repo.MainRoot); remote != "" {
 			fetched, err := storygit.FetchBranch(a.runner, repo.MainRoot, remote, branch)
