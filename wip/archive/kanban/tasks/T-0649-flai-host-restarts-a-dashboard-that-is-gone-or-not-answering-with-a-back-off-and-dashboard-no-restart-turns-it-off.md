@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 237
-      cache_read: 3135822
-      cache_write: 36360
-      cost: 1.2548
+      input: 41
+      output: 13875
+      cache_read: 3129875
+      cache_write: 55981
+      cost: 1.2869
 ---
 
 # T-0649 flai host restarts a dashboard that is gone or not answering, with a back-off, and dashboard.no_restart turns it off

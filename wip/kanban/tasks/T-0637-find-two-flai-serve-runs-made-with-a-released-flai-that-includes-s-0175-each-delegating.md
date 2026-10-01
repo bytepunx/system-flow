@@ -23,15 +23,15 @@ tags: []
 touches: [design/system/agent-context.md]
 usage:
   source: log
-  seconds: 531
+  seconds: 596
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 8583
-      cache_read: 2059935
-      cache_write: 49562
-      cost: 0.9804
+      input: 69
+      output: 19201
+      cache_read: 3038877
+      cache_write: 68686
+      cost: 1.4661
 ---
 # T-0637 Find two flai serve runs made with a released flai that includes S-0175, each delegating
 

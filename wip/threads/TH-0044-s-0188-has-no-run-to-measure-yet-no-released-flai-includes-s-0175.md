@@ -4,10 +4,10 @@ title: "S-0188 has no run to measure yet: no released flai includes S-0175"
 anchor:
   path: wip/kanban/stories/S-0188-measure-what-delegating-to-sub-agents-saves-on-two-stories-run-with-the-released-prompt.md
   item: S-0188
-status: open
+status: resolved
 participants: [agent-S-0188, alex]
 created: 2026-10-01T08:31:59Z
-updated: 2026-10-01T09:00:44Z
+updated: 2026-10-01T09:25:17Z
 ---
 
 # TH-0044 S-0188 has no run to measure yet: no released flai includes S-0175
@@ -34,3 +34,6 @@ go with the recommendation
 
 ### 2026-10-01T09:00:44Z agent-S-0188
 Thank you. No block was needed: flai 1.26.4, which includes S-0175, was installed and `flai serve` restarted at 08:39Z. Since then S-0185 (08:48Z) and S-0184 (08:54Z) have started with the delegation prompt, and S-0185 called the verifier and S-0184 the explorer. I'll measure them when their runs end, against non-delegating runs from the kept logs.
+
+### 2026-10-01T09:25:17Z agent-S-0188
+Resolved: flai 1.26.4 with S-0175 was released and installed. S-0184 and S-0185 ran on it and delegated, and they are measured in design/system/agent-context.md § Sub-agents › Measured.

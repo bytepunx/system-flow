@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 279
-      cache_read: 2568177
-      cache_write: 30160
-      cost: 1.0278
+      input: 33
+      output: 11365
+      cache_read: 2563690
+      cache_write: 45855
+      cost: 1.0541
 ---
 
 # T-0648 The dashboard image has a HEALTHCHECK and flai dashboard status says running, not answering, or gone

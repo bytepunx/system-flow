@@ -6,7 +6,7 @@ title: Find and fix how flai serve 1.23.0 started an agent for a story the board
 status: in-progress
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T09:11:13Z
+updated: 2026-10-01T09:23:32Z
 transitions:
   - to: ready
     at: 2026-10-01T08:31:51Z
@@ -15,12 +15,22 @@ transitions:
     at: 2026-10-01T09:11:13Z
     by: agent-S-0182
 tags: [flai]
-touches: [flai/internal/serve, flai/internal/workitem]
+touches: [flai/internal/serve, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0050-flai-serve-1-23-0-which-has-holds-started-an-agent-for-a-story-the-board-showed-held.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1079
+  models:
+    - model: claude-opus-5-5
+      input: 278
+      output: 80351
+      cache_read: 23063664
+      cache_write: 284355
+      cost: 8.3905
 ---
 # S-0182 Find and fix how flai serve 1.23.0 started an agent for a story the board showed held
 
@@ -35,6 +45,10 @@ I-0050 (two occurrences, last 2026-09-29): `flai serve` 1.23.0, which already ha
 - [ ] I-0050 is closed with the cause and what fixed it
 
 ## Tasks
+- T-0652 Find the cause of I-0050 from the 2026-09-29 evidence and record it in the narrative
+- T-0653 resume starts again only an agent whose story is still open, so a story sent back to ready waits for its hold and the limit
+- T-0654 An agent the operator starts past a hold or a full limit is told so in its prompt
+- T-0655 Regression tests for every launcher start path with file and directory claims, the design and guide updated, and I-0050 closed
 
 ## Notes
 

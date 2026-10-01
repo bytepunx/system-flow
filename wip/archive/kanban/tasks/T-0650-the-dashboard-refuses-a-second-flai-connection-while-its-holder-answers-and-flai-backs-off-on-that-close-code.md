@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 204
-      cache_read: 4596116
-      cache_write: 42160
-      cost: 1.8346
+      input: 59
+      output: 20288
+      cache_read: 4576406
+      cache_write: 81854
+      cost: 1.8817
 ---
 
 # T-0650 The dashboard refuses a second flai connection while its holder answers, and flai backs off on that close code
