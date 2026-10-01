@@ -214,7 +214,9 @@ An agent `flai serve` starts with `claude-code` worked its whole story in one co
 | `explore` | Searches and reads code, design, and logs; returns what it found, with paths and lines | `Read`, `Grep`, `Glob`; flai's `prime`, `doc_get`, `doc_search`, `item_get`, `thread_get`, `board`, `who_touches` | `prime --role explore` |
 | `verify` | Reads the diff, runs the tests, lint, and `flai check`; returns what fails against the criteria and the conventions | The explorer's, and `Bash` to run them | `prime --role verify` |
 
-The template ships them as `.claude/agents/explorer.md` and `verifier.md`. Their `tools` is an allowlist, so neither has `item_move`, `item_edit`, `item_new`, `inbox`, `wait_for_work`, `wait_for_events`, `thread_open`, `thread_reply`, or `thread_resolve`, nor `Edit` or `Write`.
+The template ships them as `.claude/agents/explorer.md` and `verifier.md`. Their `tools` is an allowlist, so neither has `item_move`, `item_edit`, `item_new`, `inbox`, `wait_for_work`, `wait_for_events`, `thread_open`, `thread_reply`, or `thread_resolve`, nor `Edit` or `Write`. They name no `model`, so they run on the story's agent's; a project that wants a cheaper one sets it in the definition.
+
+The verifier's `Bash` could still run `flai move` or `git commit`, and the built-in sub-agents have every flai tool. [ADR-0060](../adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md) closes that: the template's `.claude/settings.json` runs `flai guard` as a `PreToolUse` hook before `Bash` and every flai MCP tool, and it refuses any sub-agent's flai MCP write or inbox call, flai command that writes, and git command that changes the worktree, the index, branches, or history, with exit 2 and the reason. The story's agent's calls carry no `agent_type` and pass. This repository runs it as `scripts/flai.sh guard`.
 
 ### What the harness does, measured
 
@@ -224,6 +226,8 @@ A probe on 2026-10-01 with Claude Code 2.1.286, started as `flai serve` starts i
 - A definition's `tools` restricts MCP tools too: a sub-agent given `mcp__flai__item_get` and `mcp__flai__doc_search` had those and none of flai's others.
 - A definition's own `mcpServers` did not connect under `--strict-mcp-config`, so a sub-agent cannot have a flai server, and a name, of its own.
 - Sub-agents run in the background by default, and every event of theirs in the stream-json log carries `parent_tool_use_id`.
+- A Bash pattern in a sub-agent's `disallowedTools` (`Bash(touch:*)`) removes `Bash` from it whole; a `hooks` block in a sub-agent's definition did not fire.
+- A `PreToolUse` hook in the project's `.claude/settings.json` fires for a sub-agent's calls with `agent_type` and `agent_id` in its input, and for the session's agent without them. With `flai guard` as that hook, a `general-purpose` sub-agent's `item_move`, `git commit`, and `flai move` were refused and its `item_get` and `echo` ran.
 
 ### Questions
 
@@ -247,4 +251,4 @@ A sub-agent's flai calls arrive on its parent's MCP connection under its parent'
 2. The story's `## Goal` and `## Acceptance criteria`.
 3. Briefs, never bodies: what the story, its epic, and its tasks name, then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
 
-The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. The baseline gives `explore` to `communication`, `safety`, `tooling`, and `delegation`, and `verify` to those and `documentation`, `code-quality`, and `git`.
+The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. The baseline gives `explore` to `communication`, `safety`, `tooling`, and `delegation`, and `verify` to those and `documentation`, `code-quality`, `git`, and `logging`.
