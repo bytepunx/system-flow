@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 )
 
 // pendingProject is a git project like researchProject's, with a second
@@ -82,15 +86,20 @@ func TestReleasePendingEndToEnd(t *testing.T) {
 
 // A publish that fails after tagging but before (or during) the push is
 // resumable: running it again does not recreate the tag, and finishes the
-// push (S-0087).
+// push (S-0087). The push fails here because the remote moved; one that
+// cannot be reached refuses before tagging (S-0174).
 func TestReleasePendingResumesAfterAFailedPush(t *testing.T) {
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}
-	// break the remote so the push half of publish fails
-	broken := gitIn(t, root, "remote", "get-url", "origin")
-	gitIn(t, root, "remote", "set-url", "origin", filepath.Join(t.TempDir(), "missing.git"))
+	// someone else pushed, so the push half of publish is refused
+	other := filepath.Join(t.TempDir(), "other")
+	gitIn(t, filepath.Dir(other), "clone", "-q", remote, other)
+	gitIn(t, other, "config", "user.email", "o@o")
+	gitIn(t, other, "config", "user.name", "o")
+	gitIn(t, other, "commit", "-q", "--allow-empty", "-m", "elsewhere")
+	gitIn(t, other, "push", "-q", "origin", "main")
 
 	_, errOut, code := runIn(t, root, "release", "--pending")
 	if code == 0 || !strings.Contains(errOut, "the push failed") {
@@ -107,7 +116,8 @@ func TestReleasePendingResumesAfterAFailedPush(t *testing.T) {
 		t.Errorf("nothing new is pending; what remains is a push: %s", dry)
 	}
 
-	gitIn(t, root, "remote", "set-url", "origin", broken)
+	gitIn(t, root, "fetch", "-q", "origin")
+	gitIn(t, root, "merge", "-q", "--no-edit", "origin/main")
 	out, errOut, code := runIn(t, root, "release", "--pending")
 	if code != 0 || !strings.Contains(out, "pushed to origin") {
 		t.Fatalf("resumed publish should finish the push: %d %s %s", code, out, errOut)
@@ -128,5 +138,80 @@ func TestReleasePendingNothingPending(t *testing.T) {
 	out, _, code := runIn(t, root, "release", "--pending")
 	if code != 0 || !strings.Contains(out, "nothing pending") {
 		t.Errorf("nothing accepted, nothing pending: %d %s", code, out)
+	}
+}
+
+// S-0174: a clone whose tags lag the remote's, as after publishing from
+// another clone, offers no plan built on its stale tag and refuses to
+// publish, changing nothing, until the tags are fetched.
+func TestReleasePendingFromACloneMissingTheRemotesTags(t *testing.T) {
+	root, remote := pendingProject(t)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	gitIn(t, remote, "tag", "cli/v1.4.0", "main") // published from another clone
+	head := gitIn(t, root, "rev-parse", "HEAD")
+
+	dry, _, code := runIn(t, root, "release", "--pending", "--dry-run")
+	if code != 0 || !strings.Contains(dry, "nothing can publish") || !strings.Contains(dry, "cli/v1.4.0 (here cli/v1.0.0)") || !strings.Contains(dry, "git fetch --tags origin") || strings.Contains(dry, "S-0001") {
+		t.Fatalf("dry run from a lagging clone: %d %s", code, dry)
+	}
+	js, _, _ := runIn(t, root, "release", "--pending", "--dry-run", "--json")
+	var pub preview.Publishing
+	if err := json.Unmarshal([]byte(js), &pub); err != nil || len(pub.Plans) != 0 || !pub.Remote.Lagging() ||
+		pub.Remote.Behind[0] != (release.Lag{Component: "cli", Local: "cli/v1.0.0", Remote: "cli/v1.4.0"}) {
+		t.Errorf("dry run --json from a lagging clone: %v %s", err, js)
+	}
+
+	_, errOut, code := runIn(t, root, "release", "--pending")
+	if code != exitPushDiverged || !strings.Contains(errOut, "refusing to publish") || !strings.Contains(errOut, "git fetch --tags origin") {
+		t.Fatalf("publish from a lagging clone: %d %s", code, errOut)
+	}
+	if tags := gitIn(t, root, "tag", "--list", "cli/*"); strings.Contains(tags, "cli/v1.0.1") {
+		t.Errorf("a refused publish tags nothing: %s", tags)
+	}
+	if now := gitIn(t, root, "rev-parse", "HEAD"); now != head {
+		t.Errorf("a refused publish commits nothing: %s, was %s", now, head)
+	}
+	if status := gitIn(t, root, "status", "--porcelain"); strings.TrimSpace(status) != "" {
+		t.Errorf("a refused publish leaves the checkout as it was: %s", status)
+	}
+
+	gitIn(t, root, "fetch", "-q", "--tags", "origin")
+	dry, _, _ = runIn(t, root, "release", "--pending", "--dry-run")
+	if !strings.Contains(dry, "1.4.0 -> 1.4.1") || !strings.Contains(dry, "S-0001") {
+		t.Errorf("with the tags fetched, the plan builds on the remote's: %s", dry)
+	}
+	out, errOut, code := runIn(t, root, "release", "--pending")
+	if code != 0 || !strings.Contains(out, "cli 1.4.1") {
+		t.Errorf("publish once in step: %d %s %s", code, out, errOut)
+	}
+}
+
+// S-0174: a remote that cannot be asked still shows the plan, with a
+// warning, and refuses the publish before anything changes: the push would
+// need that remote anyway.
+func TestReleasePendingWithAnUnreachableRemote(t *testing.T) {
+	root, _ := pendingProject(t)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	gitIn(t, root, "remote", "set-url", "origin", filepath.Join(t.TempDir(), "missing.git"))
+	head := gitIn(t, root, "rev-parse", "HEAD")
+
+	dry, _, code := runIn(t, root, "release", "--pending", "--dry-run")
+	if code != 0 || !strings.Contains(dry, "warning: could not ask origin") || !strings.Contains(dry, "S-0001") || !strings.Contains(dry, "1.0.0 -> 1.0.1") {
+		t.Fatalf("dry run with the remote unreachable shows the plan and warns: %d %s", code, dry)
+	}
+
+	_, errOut, code := runIn(t, root, "release", "--pending")
+	if code != exitPushDiverged || !strings.Contains(errOut, "could not ask origin") || !strings.Contains(errOut, "refusing to publish") {
+		t.Fatalf("publish with the remote unreachable: %d %s", code, errOut)
+	}
+	if tags := gitIn(t, root, "tag", "--list", "cli/*"); strings.Contains(tags, "cli/v1.0.1") {
+		t.Errorf("a refused publish tags nothing: %s", tags)
+	}
+	if now := gitIn(t, root, "rev-parse", "HEAD"); now != head {
+		t.Errorf("a refused publish commits nothing: %s, was %s", now, head)
 	}
 }

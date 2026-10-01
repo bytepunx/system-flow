@@ -104,6 +104,15 @@ func tracking(r execx.Runner, root string) *Unpushed {
 	return &Unpushed{Branch: branch, Upstream: upstream, Remote: remote, Acceptances: []string{}, Tags: []string{}, Command: "flai push --pending"}
 }
 
+// Remote is the remote the checked-out branch tracks, or origin when origin
+// has a branch of the same name; "" for no git, a detached HEAD, or neither.
+func Remote(r execx.Runner, root string) string {
+	if u := tracking(r, root); u != nil {
+		return u.Remote
+	}
+	return ""
+}
+
 // TagsOnly is a push of tags just made on commits the remote already has
 // (S-0144): a release published after its acceptance was pushed tags a
 // commit that is not ahead, so Detect, which finds tags through the commits

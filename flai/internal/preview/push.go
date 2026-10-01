@@ -71,10 +71,15 @@ func Push(r execx.Runner, root string, plans []*release.PendingPlan, tags []stri
 
 // PushDryRun is what flai push --pending --dry-run says: with auto-publish
 // on, the release it would tag first, and what it would push. Nothing is
-// applied, tagged, or pushed.
+// applied, tagged, or pushed. With auto-publish on, a clone whose release
+// tags lag the remote's, or that cannot ask it, is refused as the push
+// itself would be (S-0174).
 func PushDryRun(r execx.Runner, root string, repo *workitem.Repo, autoPublish bool) (*Pushing, error) {
 	var plans []*release.PendingPlan
 	if autoPublish {
+		if refusal := release.CheckRemote(r, root, repo.Manifest).Refusal(); refusal != "" {
+			return nil, &Diverged{Message: refusal}
+		}
 		var err error
 		if plans, err = release.Pending(r, root, repo.Manifest, repo); err != nil {
 			return nil, err
@@ -95,6 +100,12 @@ func PushDryRun(r execx.Runner, root string, repo *workitem.Repo, autoPublish bo
 type Publishing struct {
 	Plans  []*release.PendingPlan `json:"plans"`
 	DryRun bool                   `json:"dry_run"`
+	// Remote is set when the remote's release tags have something to say
+	// (S-0174): a component whose tags here lag the remote's, when Plans is
+	// empty, since a plan built on the stale tag would publish what is
+	// already published; or a remote that could not be asked, when Plans is
+	// what this clone's tags alone say.
+	Remote *release.RemoteTags `json:"remote,omitempty"`
 }
 
 // Publish is what flai release --pending would release, without changing
@@ -103,9 +114,13 @@ func Publish(r execx.Runner, repo *workitem.Repo) (*Publishing, error) {
 	if err := execx.Require(r, "git", "Releases are git tags; install git."); err != nil {
 		return nil, err
 	}
+	remote := release.CheckRemote(r, repo.Root, repo.Manifest)
+	if remote.Lagging() {
+		return &Publishing{DryRun: true, Remote: remote}, nil
+	}
 	plans, err := release.Pending(r, repo.Root, repo.Manifest, repo)
 	if err != nil {
 		return nil, err
 	}
-	return &Publishing{Plans: plans, DryRun: true}, nil
+	return &Publishing{Plans: plans, DryRun: true, Remote: remote}, nil
 }

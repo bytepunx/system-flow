@@ -156,7 +156,13 @@ where what has accumulated is released, when you choose.`,
 // archives, and commits), and flai push does only with the auto-publish host
 // action enabled (S-0144). TagPending is idempotent, so a
 // partial failure here and a rerun does not retag what already tagged.
+// Nothing is applied while the remote has a newer release tag than this
+// clone, or cannot be asked whether it has (S-0174): exit 3, as for a remote
+// that moved.
 func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*release.PendingPlan, []string, error) {
+	if err := a.remoteTagsInStep(root, repo); err != nil {
+		return nil, nil, err
+	}
 	plans, err := release.Pending(a.runner, root, repo.Manifest, repo)
 	if err != nil {
 		return nil, nil, err
@@ -189,6 +195,17 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 	return plans, tags, nil
 }
 
+// remoteTagsInStep refuses a publish from a clone missing release tags its
+// remote has, which would tag versions already published, and from one that
+// cannot ask its remote, whose push would fail after tagging (S-0174). A
+// clone with no remote publishes locally as before.
+func (a *app) remoteTagsInStep(root string, repo *workitem.Repo) error {
+	if refusal := release.CheckRemote(a.runner, root, repo.Manifest).Refusal(); refusal != "" {
+		return &exitError{code: exitPushDiverged, msg: refusal}
+	}
+	return nil
+}
+
 // publishPending is flai release --pending (S-0087): everything
 // computeApplyAndTagPending finds, applied and tagged, pushed together,
 // resumable on partial failure.
@@ -207,6 +224,13 @@ func (a *app) publishPending(dryRun bool) error {
 		}
 		if a.jsonOut {
 			return a.printJSON(pub)
+		}
+		if pub.Remote.Lagging() {
+			fmt.Fprintf(a.out, "nothing can publish: %s\n", pub.Remote.Message)
+			return nil
+		}
+		if pub.Remote != nil {
+			fmt.Fprintf(a.out, "warning: %s\n", pub.Remote.Message)
 		}
 		if len(pub.Plans) == 0 {
 			fmt.Fprintln(a.out, "nothing pending")

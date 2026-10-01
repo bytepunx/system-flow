@@ -156,6 +156,33 @@ func TestPushPendingTagsWhatAcceptLeftUnreleased(t *testing.T) {
 	}
 }
 
+// S-0174: with auto-publish on, a clone whose release tags lag the remote's
+// pushes nothing and tags nothing, dry run or not: the release it would tag
+// first is built on a stale tag.
+func TestPushPendingAutoPublishRefusesALaggingClone(t *testing.T) {
+	root, remote := researchProject(t, "feature", true)
+	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-publish"); code != 0 {
+		t.Fatalf("enable auto-publish: %s", errOut)
+	}
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	gitIn(t, remote, "tag", "cli/v1.3.0", "main") // published from another clone
+	remoteHead := gitIn(t, remote, "rev-parse", "main")
+	for _, args := range [][]string{{"push", "--pending", "--dry-run"}, {"push", "--pending"}} {
+		_, errOut, code := runIn(t, root, args...)
+		if code != exitPushDiverged || !strings.Contains(errOut, "cli/v1.3.0") || !strings.Contains(errOut, "git fetch --tags origin") {
+			t.Errorf("flai %v from a lagging clone: %d %s", args, code, errOut)
+		}
+	}
+	if tags := gitIn(t, root, "tag", "--list", "cli/*"); strings.Contains(tags, "cli/v1.1.0") {
+		t.Errorf("nothing tagged: %s", tags)
+	}
+	if now := gitIn(t, remote, "rev-parse", "main"); now != remoteHead {
+		t.Errorf("nothing pushed: %s, was %s", now, remoteHead)
+	}
+}
+
 func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 	root, remote := researchProject(t, "feature", false)
 	gitIn(t, root, "add", "-A")

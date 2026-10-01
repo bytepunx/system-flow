@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 )
 
 // sameAnswer runs the command a read of the dashboard's used to start, with
@@ -158,5 +159,16 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	gitIn(t, root, "fetch", "-q", "origin")
 	if rerr := same("push.pending", `{}`, "push", "--pending", "--dry-run"); rerr == nil || rerr.Code != hostapi.Conflict || !strings.Contains(rerr.Message, "have diverged") {
 		t.Errorf("push.pending after the remote moved: %+v, want a conflict", rerr)
+	}
+
+	// published from another clone: this one lacks the tag (S-0174), which
+	// a remote's answer kept from the reads above would not show yet
+	defer func(d time.Duration) { release.RemoteTTL = d }(release.RemoteTTL)
+	release.RemoteTTL = 0
+	gitIn(t, remote, "tag", "cli/v1.2.0", "main")
+	publish = answered("publish.preview", `{}`, "release", "--pending", "--dry-run")
+	says("publish.preview from a clone missing the remote's tags", publish, `"plans":null`, `"remote":"cli/v1.2.0"`, `"fix":"git fetch --tags origin"`)
+	if rerr := same("push.pending", `{}`, "push", "--pending", "--dry-run"); rerr == nil || rerr.Code != hostapi.Conflict || !strings.Contains(rerr.Message, "cli/v1.2.0") {
+		t.Errorf("push.pending with auto-publish from a lagging clone: %+v, want a conflict", rerr)
 	}
 }
