@@ -3,11 +3,14 @@ id: S-0178
 type: story
 nature: remediation
 title: The activity stream page should not scroll to the top of the page when viewing an active agent stream
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T07:38:11Z
-updated: 2026-10-01T07:38:11Z
-transitions: []
+updated: 2026-10-01T07:39:43Z
+transitions:
+  - to: ready
+    at: 2026-10-01T07:39:43Z
+    by: alex
 tags: [dashboard]
 topics: [client-side-activity]
 agent:

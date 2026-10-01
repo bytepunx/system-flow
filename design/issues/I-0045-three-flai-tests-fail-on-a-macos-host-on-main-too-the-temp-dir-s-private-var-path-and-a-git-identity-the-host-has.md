@@ -3,11 +3,11 @@ id: I-0045
 title: "Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has"
 class: defect
 status: open
-count: 3
+count: 4
 cost: 4m
 first_reported: 2026-09-26T03:11:49Z
-last_reported: 2026-09-26T03:33:18Z
-updated: 2026-09-26T03:33:18Z
+last_reported: 2026-10-01T07:46:11Z
+updated: 2026-10-01T07:46:11Z
 ---
 
 # I-0045 Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has
@@ -25,5 +25,8 @@ S-0119, 2026-09-26: go test -short ./... fails the same two Go tests on this mac
 
 ### 2026-09-26T03:33:18Z
 S-0117, 2026-09-26: make test fails TestRunChecksSubstitutesStoryAndRootAndRunsInTheWorktree (/var vs /private/var) and make smoke stops at install-test's self-upgrade path check, the same way. The story changes flaiover/src and design/ only; flaiover's tests, the template render, flai check --strict, and the markdown lint were run and pass.
+
+### 2026-10-01T07:46:11Z
+S-0173, 2026-10-01: make flai-test in the story worktree failed the same three tests (internal/serve TestRunChecksSubstitutesStoryAndRootAndRunsInTheWorktree, TestTheOperatorStopsAStorysAgent; cmd TestAcceptRefusesBeforeChangingAnythingWithoutIdentity), and each fails on main unchanged. The worktree's bin/ also had no golangci-lint v2, so ~/go/bin's v1 refused the config until main's bin/golangci-lint was copied in.
 
 ## Remediation

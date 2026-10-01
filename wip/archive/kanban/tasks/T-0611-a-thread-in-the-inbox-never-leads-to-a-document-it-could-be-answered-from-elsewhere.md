@@ -3,18 +3,28 @@ id: T-0611
 type: task
 nature: feature
 title: A thread in the inbox never leads to a document it could be answered from elsewhere
-status: ready
+status: done
 parent: S-0173
 owner: alex
 created: 2026-09-30T01:26:59Z
-updated: 2026-09-30T01:27:10Z
+updated: 2026-10-01T07:40:58Z
 transitions:
   - to: ready
     at: 2026-09-30T01:27:10Z
     by: agent-S-0173
+  - to: in-progress
+    at: 2026-10-01T07:40:58Z
+    by: agent-S-0173
+  - to: done
+    at: 2026-10-01T07:40:58Z
+    by: agent-S-0173
 stream: S-0173
 tags: []
 touches: [flaiover/src]
+usage:
+  source: log
+  seconds: 0
+  models: []
 ---
 
 # T-0611 A thread in the inbox never leads to a document it could be answered from elsewhere
