@@ -18,6 +18,19 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
+// trapped waits until the story's stub runs and has set its trap for TERM,
+// which it says by writing its output file. A process that is only running
+// may not have read its trap yet, and dies of the signal instead of handling
+// it: on macOS, whose /bin/sh is bash, the gap is wide enough that the test
+// stopped every stub before it had (I-0045).
+func (lab *agentLab) trapped(t *testing.T, id string) {
+	t.Helper()
+	waitFor(t, "it runs and has set its trap", func() bool {
+		_, err := os.Stat(filepath.Join(lab.outDir, id+".txt"))
+		return lab.run(id).live() && err == nil
+	})
+}
+
 // S-0170: the operator stops a story's agent. What runs is ended with what it
 // started, a process that is no longer the agent is left alone, an agent
 // waiting for an answer is not started again, and the run ends stopped
@@ -38,7 +51,7 @@ func TestTheOperatorStopsAStorysAgent(t *testing.T) {
 		lab.hold()
 		id := lab.ready("Runs")
 		lab.l.look(ctx, false)
-		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		lab.trapped(t, id)
 		started := lab.run(id)
 		lab.move(id, workitem.InProgress) // the agent pulled it
 		run, err := stop(lab, id)
@@ -81,14 +94,14 @@ func TestTheOperatorStopsAStorysAgent(t *testing.T) {
 	t.Run("an agent that does not end when asked is killed", func(t *testing.T) {
 		lab := newAgentLab(t)
 		stubborn := filepath.Join(lab.outDir, "stubborn")
-		if err := os.WriteFile(stubborn, []byte("#!/bin/sh\ntrap '' TERM\nwhile :; do sleep 0.05; done\n"), 0o755); err != nil {
+		if err := os.WriteFile(stubborn, []byte("#!/bin/sh\ntrap '' TERM\ntouch \""+lab.outDir+"/$FLAI_STORY.txt\"\nwhile :; do sleep 0.05; done\n"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		lab.cfg.Command = []string{stubborn}
 		lab.o.StopGrace = 200 * time.Millisecond
 		id := lab.ready("Stubborn")
 		lab.l.look(ctx, false)
-		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		lab.trapped(t, id)
 		pid := lab.run(id).PID
 		// what lab.settle waits for, since a killed process marks nothing
 		t.Cleanup(func() { _ = os.WriteFile(filepath.Join(lab.outDir, "ended-"+strconv.Itoa(pid)), nil, 0o644) })
