@@ -51,7 +51,8 @@ When and how the agent working a story hands work to a sub-agent and what it may
 
 - When a layer of the plan (`work-management.md`) holds more than one task, run them at once, one task sub-agent each, and wait for all of them before you act on any. Work a layer of one task yourself.
 - Use a fork, which inherits your conversation, where the harness offers one. Otherwise give the sub-agent the task's ID, the worktree's path, the paths the task touches, and the conventions to read.
-- A layer's tasks share the story's worktree. Their `touches` have no path in common, so their edits do not meet, but one's build or tests can see another's edit half done.
+- A layer's tasks share the story's worktree when their `touches` have no path in common. Give each task its own worktree from the story's branch (`git worktree add -b task/T-nnnn <path> <story branch>`), and merge it back yourself, when one builds or tests what another changes, so that a half-done edit cannot fail a sibling's tests.
+- A task's `touches` are a guess made before its code is read. Before you commit a task's work, compare the files it changed with its `touches`. When it changed a path another task of the layer touches, review both together, and redo the later one where their edits met.
 - Review each one's work as your own before you accept it: read its diff against the task's `## Done when`, run the tests for what it changed, and fix or finish what falls short yourself. Then commit it and move the task.
 - Only you commit, sync the stream, move items, keep the narrative, and talk to the designer. Record in the narrative what each task sub-agent did, and the interference it reported.
 

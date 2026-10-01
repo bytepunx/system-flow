@@ -314,3 +314,29 @@ Before the template's verifier moved to `sonnet`, S-0189 checked that a cheaper 
 | Replay | sonnet | 78,415 | 18 | 165 |
 
 Sonnet found four of the six things Opus found, and the regression Opus found only on its last run. It missed two migration edge cases and the commit split. It read about as much and took about as long. Its tokens are billed at Sonnet's rate rather than Opus's. This is one replay of one prompt. It shows that a cheaper verifier still catches the defects that matter most, not that it catches as many.
+
+## Tasks in parallel
+
+S-0176 is an experiment: the story's agent plans its tasks into layers as it writes them, by each task's `touches` and `after` (a task's `after` names tasks of the same story, [work-hierarchy.md](work-hierarchy.md)), and works each layer's tasks at once, one task sub-agent each. It reviews, commits, and moves each task itself, and alone talks to the designer (`work-management.md`, `delegation.md`). `flai show`, the board, and the story's page show each task's state and the plan's layers. S-0176 was worked this way itself: layer 1 was T-0677 and T-0678, layer 2 T-0679 and T-0680, then T-0681 and T-0682 one at a time.
+
+### Forks are not offered headless
+
+The story asked that a task's sub-agent be a fork, which inherits the parent's conversation and prompt cache and so starts primed. In the `claude -p` session `flai serve` starts, the Agent tool refused `subagent_type: fork` ("Agent type 'fork' not found"); the types offered were `claude`, `Explore`, `explorer`, `general-purpose`, `Plan`, `statusline-setup`, and `verifier`. Each task therefore ran as a `general-purpose` sub-agent with a self-contained prompt: the task's and the story's files, the narrative's plan, the conventions to read, the paths it may touch, the sibling working beside it, and that it must not commit or write through flai. Starting fresh, a task sub-agent reads the code again for itself. In S-0176 the four read 18.0M cache tokens between them, against the story's agent's 13.0M by the end of layer 2.
+
+| Task | Layer | Worktree | Minutes | Model calls | Cache reads | Interference reported |
+|------|-------|----------|---------|-------------|-------------|-----------------------|
+| T-0677, task `after` in flai | 1 | the story's, shared | 9.3 | 85 | 8.81M | none |
+| T-0678, conventions and prompt | 1 | the story's, shared | 3.0 | 29 | 1.49M | none |
+| T-0679, the plan in flai | 2 | its own | 6.7 | 53 | 4.57M | none possible |
+| T-0680, the plan in flaiover | 2 | its own | 5.0 | 40 | 3.14M | none possible |
+
+Minutes are the sub-agent's own, as the Agent tool reported them; calls and cache reads are its events in the log, deduplicated by message ID. A layer took as long as its slowest task: 9.3 minutes for layer 1, where the four tasks worked one after another would have taken 24.
+
+### One worktree, or one per task
+
+The fifth criterion asked whether parallel sub-agents need a worktree each, merged back by the story's agent, or whether tasks whose `touches` do not overlap can share the story's. S-0176 ran one layer each way.
+
+- **Layer 1 shared the story's worktree.** T-0677 and T-0678 edited it at once, both in the flai Go module: T-0678 changed `internal/harness`, which `cmd` imports, while T-0677 ran `go test ./cmd/...`. Neither saw a build or a test fail from the other's edit; T-0678's harness change was one function and was finished within its first minutes. The story's agent committed T-0678's files by path while T-0677 was still editing, and T-0677's when it ended. T-0677 changed three files outside the `touches` it was given (`flai/cmd/items.go`, where `flai task new` lives; `flai/internal/itemedit`; `flai/internal/mcpserver/folder.go`) and named them in its report. None was T-0678's, but nothing would have stopped it: in one worktree, two tasks that reach the same file overwrite each other's edits silently.
+- **Layer 2 gave each task its own worktree**, made by the story's agent from the story's branch (`git worktree add -b task/T-nnnn`), not by the Agent tool's worktree isolation, which makes a worktree of the checkout the session started in rather than the story's branch. Nothing could interfere. Each worktree cost setup the shared one had already paid: T-0680 ran `npm ci` for `flaiover`, and its server tests failed without a `bin/flai` until pointed at one. The merges had no conflict: T-0679 fast-forwarded, and T-0680 merged with one commit, which `flai stream sync` later rebased into a line.
+
+What this shows, from one story: when the tasks of a layer do not overlap in `touches`, one worktree is enough, and it is cheaper. A task's declared `touches` are a guess made before its code is read, though, and T-0677's were wrong by three files. A worktree per task turns a wrong guess into a merge conflict the story's agent sees, instead of an overwrite nobody sees. The conventions S-0176 writes ask for the shared worktree, and for a review of each task's changed files against its `touches` before it is committed; a task that touched another's paths is redone after it. A worktree per task is for a layer whose tasks build or test what another changes, where a half-done edit can fail a sibling's tests.
