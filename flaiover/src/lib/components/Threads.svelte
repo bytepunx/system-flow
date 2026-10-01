@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Threads anchored to a document or item (ADR-0020): read from
-	// wip/threads, written through flai. `on` is a repository path or item ID.
+	// wip/threads, written through flai. `on` is a repository path or item ID;
+	// without it, every thread of the project, each linking to its anchor, and no
+	// new thread, which needs an anchor (the threads page, S-0173).
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
@@ -27,7 +29,7 @@
 		select,
 		agent
 	}: {
-		on: string;
+		on?: string;
 		headings?: string[];
 		writable?: boolean;
 		/** A heading to start a new thread on: opens the composer with it selected (the editor's "open a thread on this heading", S-0040). */
@@ -85,7 +87,8 @@
 	}
 
 	async function load() {
-		const r = await api(`/api/threads?on=${encodeURIComponent(on)}${showResolved ? '&all=1' : ''}`);
+		const query = [on && `on=${encodeURIComponent(on)}`, showResolved && 'all=1'].filter(Boolean);
+		const r = await api(`/api/threads${query.length ? '?' + query.join('&') : ''}`);
 		if (!r.ok) return;
 		const was = index;
 		threads = await r.json();
@@ -128,7 +131,7 @@
 	}
 
 	async function open() {
-		if (!title.trim() || !text.trim()) return;
+		if (!on || !title.trim() || !text.trim()) return;
 		const opened = await post('/api/threads', { on, heading: heading || undefined, title, text });
 		if (opened) {
 			if (typeof opened.id === 'string') current = opened.id;
@@ -181,14 +184,14 @@
 	{/if}
 {/snippet}
 
-<section bind:this={section} class="mt-6 text-sm" data-threads={on}>
+<section bind:this={section} class="mt-6 text-sm" data-threads={on ?? 'all'}>
 	<div class="flex flex-wrap items-center gap-3">
 		<h2 class="font-medium">Threads</h2>
 		{@render pager('above')}
 		<label class="text-xs text-muted"
 			><input type="checkbox" bind:checked={showResolved} /> show resolved</label
 		>
-		{#if writable}
+		{#if writable && on}
 			<button
 				type="button"
 				class="ml-auto rounded border border-line-strong px-2 py-1 text-xs"
@@ -245,6 +248,12 @@
 				{#if t.anchor.item && t.anchor.item !== on}
 					<a class="text-xs underline" href={resolve('/items/[id]', { id: t.anchor.item })}
 						>{t.anchor.item}</a
+					>
+				{:else if !t.anchor.item && t.anchor.path !== on}
+					<a
+						class="text-xs underline"
+						href={resolve('/docs/[...path]', { path: t.anchor.path })}
+						data-anchor={t.anchor.path}>{t.anchor.path}</a
 					>
 				{/if}
 			</header>

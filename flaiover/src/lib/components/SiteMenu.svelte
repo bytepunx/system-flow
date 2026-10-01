@@ -17,6 +17,7 @@
 		overview: resolve('/'),
 		board: resolve('/board'),
 		inbox: resolve('/inbox'),
+		threads: resolve('/threads'),
 		activity: resolve('/activity'),
 		charts: resolve('/charts/[kind]', { kind: 'cycle-time' }),
 		adrs: resolve('/adrs'),

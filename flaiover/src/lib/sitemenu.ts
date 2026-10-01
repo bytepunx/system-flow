@@ -22,6 +22,7 @@ export type PageKey =
 	| 'overview'
 	| 'board'
 	| 'inbox'
+	| 'threads'
 	| 'activity'
 	| 'charts'
 	| 'adrs'
@@ -38,6 +39,8 @@ export const SITE_MENU: MenuGroup[] = [
 			{ key: 'overview', label: 'Overview', path: '/' },
 			{ key: 'board', label: 'Board', path: '/board' },
 			{ key: 'inbox', label: 'Inbox', path: '/inbox', badge: 'inbox' },
+			// Every open thread, where a thread on no item is answered (S-0173, TH-0041).
+			{ key: 'threads', label: 'Threads', path: '/threads' },
 			{ key: 'activity', label: 'Activity', path: '/activity' }
 		],
 		also: ['/items', '/review', '/new']

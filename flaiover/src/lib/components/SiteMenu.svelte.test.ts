@@ -52,7 +52,7 @@ describe('the site menu (S-0172)', () => {
 			'Status',
 			'Host'
 		]);
-		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Activity']);
+		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity']);
 	});
 
 	it('marks the page shown and its group active', () => {
@@ -85,7 +85,7 @@ describe('the site menu (S-0172)', () => {
 		expect(group('status').dataset.active).toBe('true');
 		expect(group('workflow').dataset.active).toBe('false');
 		pointer(document.querySelector('nav')!, 'pointerleave');
-		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Activity']);
+		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity']);
 		expect(group('workflow').dataset.active).toBe('true');
 	});
 
@@ -110,7 +110,7 @@ describe('the site menu (S-0172)', () => {
 			.querySelector('nav')!
 			.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		flushSync();
-		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Activity']);
+		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity']);
 	});
 
 	it('opens the group of a page only its group claims, with no page current', () => {

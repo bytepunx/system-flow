@@ -5,7 +5,8 @@ import Threads from './Threads.svelte';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id ?? '')
+	resolve: (route: string, params: Record<string, string>) =>
+		route.replace(/\[(\.\.\.)?(\w+)\]/, (_, __, k) => params[k] ?? '')
 }));
 
 // The page's live events, as listen() would deliver them, with no wait for changes to settle.
@@ -420,5 +421,35 @@ describe('Threads', () => {
 
 		expect(document.querySelectorAll('article')).toHaveLength(1);
 		expect(pagers()).toHaveLength(0);
+	});
+
+	// S-0173: the threads page shows every thread, each linking to what it is anchored on.
+	it('without an anchor, lists every thread, links each to its anchor, and starts none', async () => {
+		api.mockResolvedValue({
+			ok: true,
+			json: async () => [
+				thread('on a story'),
+				{
+					...numbered(2),
+					anchor: { path: 'design/issues/I-0027-a.md', heading: 'Instances' }
+				}
+			]
+		});
+		c = mount(Threads, { target: document.body, props: { writable: true } });
+		await settle();
+
+		expect(api).toHaveBeenCalledWith('/api/threads');
+		expect(document.querySelector('section')!.dataset.threads).toBe('all');
+		expect([...document.querySelectorAll('button')].map((b) => b.textContent)).not.toContain(
+			'new thread'
+		);
+		expect(document.querySelector('article header a')!.getAttribute('href')).toBe('/items/S-0001');
+		arrow(pagers()[0], 'next').click();
+		flushSync();
+		expect(document.querySelector('article header a')!.getAttribute('href')).toBe(
+			'/docs/design/issues/I-0027-a.md'
+		);
+		// still answerable here
+		expect(document.querySelector('article form input')).not.toBeNull();
 	});
 });
