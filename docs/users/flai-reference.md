@@ -1622,7 +1622,7 @@ flai serve
 
 One flai serve per user serves every project registered with it. For each it opens a WebSocket to that project's dashboard and keeps it open; the dashboard asks, flai answers (ADR-0029). The dashboard never connects to the host, and can ask only for the methods flai offers.
 
-flai host runs it (S-0106): flai dashboard registers the project and starts flai host when it is not running, and the host starts flai serve and starts it again if it ends. flai serve tells the host which projects it serves, and the host keeps each one's MCP server; flai serve starts no process of MCP itself, and run by hand, outside a host, keeps none. This command is for watching it work in a terminal, and for start, stop, and status, which go through the host. Its registry, state, and log live in a folder named serve beside flai's config file.
+flai host runs it (S-0106): flai dashboard registers the project and starts flai host when it is not running, and the host starts flai serve and starts it again if it ends. flai serve tells the host which projects it serves, and the host keeps each one's MCP server; flai serve starts no process of MCP itself, and run by hand, outside a host, keeps none; nor does it under a host that does not run from its config, and it says so. This command is for watching it work in a terminal, and for start, stop, and status, which go through the host. Its registry, state, and log live in a folder named serve beside flai's config file.
 
 Started in a folder that is not a project, ~/git say, it also serves every system-flow project below the folder, for as long as it runs, and offers the folder's other git repositories for import on the board, as flai dashboard there does.
 

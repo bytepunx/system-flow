@@ -64,7 +64,8 @@ flai host runs it (S-0106): flai dashboard registers the project and starts
 flai host when it is not running, and the host starts flai serve and starts
 it again if it ends. flai serve tells the host which projects it serves, and
 the host keeps each one's MCP server; flai serve starts no process of MCP
-itself, and run by hand, outside a host, keeps none. This command is for
+itself, and run by hand, outside a host, keeps none; nor does it under a
+host that does not run from its config, and it says so. This command is for
 watching it work in a terminal, and for start, stop, and status, which go
 through the host. Its registry, state, and log live in a folder named serve
 beside flai's config file.
