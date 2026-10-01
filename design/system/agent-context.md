@@ -255,29 +255,38 @@ The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. Th
 
 ### Measured
 
-Read on 2026-10-01 from the eight logs `flai serve` kept, with ADR-0051's reading: assistant events deduplicated by message ID, a run's `result` for its cost and turns, and for a run with no `result` yet the cost estimated at the blended rate of every `result` in the logs, 0.41 US dollars per million tokens for claude-opus-5-5. A sub-agent's calls are those whose events carry `parent_tool_use_id`. Two runs failed at once with an API error and are left out.
+Read on 2026-10-01 at 09:18Z (S-0188) from the logs `flai serve` kept, with ADR-0051's reading: assistant events deduplicated by message ID, and each run's final `result` for its cost and turns. A sub-agent's calls are those whose events carry `parent_tool_use_id`. `result.usage` counts the story's agent only, while `modelUsage` and `total_cost_usd` include the sub-agents, so a sub-agent's share of the cost is estimated from its share of the run's input and cache tokens, as ADR-0051 apportions a task. Every run is claude-opus-5-5 on the same host, and every sub-agent ran on the same model. Size is the story's commits outside `wip/` and lockfiles: files, lines added and removed.
 
-| Run | Delegated | Model calls, agent / sub-agents | Cache reads, agent / sub-agents | Cost | Turns | Minutes |
-|-----|-----------|---------------------------------|---------------------------------|------|-------|---------|
-| S-0175, this story | 3: one Explore, two general-purpose (tests and lint, finding doc sections) | 137 / 37 | 27.85M / 1.09M | 12.00 est. | (running) | 25.5 |
-| S-0118 | 1: one Explore, on its own | 80 / 17 | 9.63M / 0.82M | 5.18 | 90 | 15.7 |
-| S-0174 | none | 143 / 0 | 25.25M / 0 | 9.19 | 158 | 22.7 |
-| S-0173 | none | 103 / 0 | 13.06M / 0 | 5.19 | 145 | 14.0 |
-| S-0119 | none | 60 / 0 | 5.15M / 0 | 2.55 | 69 | 7.6 |
-| S-0117 | none | 38 / 0 | 2.74M / 0 | 1.56 | 42 | 4.8 |
+| Run | Nature | Size | Delegated | Model calls, agent / sub-agents | Cache reads, agent / sub-agents | Cost (sub-agents, est.) | Turns | Minutes |
+|-----|--------|------|-----------|---------------------------------|---------------------------------|-------------------------|-------|---------|
+| S-0184 | improvement | 39, +1092 −85 | released prompt: explorer, verifier | 124 / 46 | 23.30M / 2.91M | 10.82 (1.25) | 149 | 23.1 |
+| S-0185 | remediation | 27, +433 −82 | released prompt: verifier ×3 | 105 / 38 | 15.48M / 1.66M | 7.83 (0.82) | 114 | 23.0 |
+| S-0183 | remediation | 24, +204 −59 | convention only (1.26.3 prompt): verifier | 103 / 30 | 12.52M / 1.39M | 5.89 (0.61) | 115 | 16.0 |
+| S-0175 | improvement | 75, +1560 −176 | by hand: Explore, general-purpose ×3 | 181 / 65 | 43.20M / 2.85M | 17.12 (1.13) | 201 | 40.8 |
+| S-0118 | improvement | 25, +457 −83 | unprompted: Explore | 80 / 17 | 9.63M / 0.82M | 5.18 (0.43) | 90 | 15.7 |
+| S-0179 | remediation | 47, +3114 −27 | none | 144 / 0 | 31.58M / 0 | 12.68 | 151 | 35.5 |
+| S-0174 | remediation | 30, +1038 −51 | none | 143 / 0 | 25.25M / 0 | 9.19 | 158 | 22.7 |
+| S-0173 | remediation | 30, +746 −134 | none | 103 / 0 | 13.06M / 0 | 5.19 | 145 | 13.9 |
+| S-0180 | remediation | 12, +140 −28 | none | 83 / 0 | 8.27M / 0 | 3.56 | 93 | 11.5 |
+| S-0119 | feature | 10, +171 −28 | none | 60 / 0 | 5.15M / 0 | 2.55 | 69 | 7.5 |
+| S-0117 | remediation | 7, +89 −10 | none | 38 / 0 | 2.74M / 0 | 1.56 | 42 | 4.8 |
 
-S-0175 was measured at 08:13Z, before its last tasks; it ran beside S-0174, which started the same second. Cache reads per model call of the story's agent:
+S-0184 and S-0185 are the two runs with the released prompt: flai 1.26.4, the first release with S-0175, which `flai serve` ran from 08:39Z. S-0183 started at 08:32Z under 1.26.3, after the definitions and `delegation.md` reached main, so the convention alone made it delegate. S-0175's row is its finished run. An earlier reading at 08:13Z, before its last tasks, gave 12.00 US dollars estimated over 25.5 minutes.
 
-| Run | Per call |
-|-----|----------|
-| S-0175 | 203k |
-| S-0174 | 177k |
-| S-0173 | 127k |
-| S-0118 | 120k |
+Each delegating run is set against the non-delegating runs most like it in nature, size, and components:
 
-What the two delegating runs show:
+| Delegating | Comparable | Why comparable | Cost | Minutes | Agent's cache reads per call |
+|------------|------------|----------------|------|---------|------------------------------|
+| S-0184 | S-0174 | Both change flai and flaiover, with about 1,100 lines in 30 to 39 files | 10.82 against 9.19 | 23.1 against 22.7 | 188k against 177k |
+| S-0185 | S-0173, S-0180 | All three are remediations in flai's commands, and S-0185's size falls between the other two | 7.83 against 5.19 and 3.56 | 23.0 against 13.9 and 11.5 | 147k against 127k and 100k |
+| S-0183 | S-0180 | Both are remediations to flai, scripts, and design, small in lines | 5.89 against 3.56 | 16.0 against 11.5 | 122k against 100k |
 
-- Sub-agents read little: 4% of S-0175's cache reads and 8% of S-0118's were a sub-agent's. Those reads ended with the sub-agent; what they would have cost the story's agent, carried on every later call, is not measured, because no run did the same work both ways.
-- Delegation did not keep the story's agent's context small. S-0175's agent still read most files itself, and its context per call is the largest of the six. Cost follows the story's agent's calls and context, which follow the size of the story: S-0175 built a command, a hook, a pack, template files, and docs; S-0117 and S-0119 were small remediations.
-- So these runs do not show a saving, and do not show a loss. S-0175 delegated by hand, three times, before the prompt told it to; S-0118 once, unprompted. S-0188 measures two stories that run with the released prompt (TH-0042).
-- Reading the logs: in runs without sub-agents the deduplicated cache reads equal the `result`'s exactly; S-0118's stream is 81,606 short, its sub-agent's cache-creation total, so a sub-agent call can be missing from the stream and S-0175's sub-agent numbers may be low. `num_turns` is not model calls (S-0173: 145 turns, 103 calls), and the stream's output tokens are about 2% of the `result`'s.
+What the runs show:
+
+- **Delegation costs about a tenth more and saves nothing measurable.** Sub-agents took 10 to 12% of the tokens in S-0183, S-0184, and S-0185: 0.61 to 1.25 US dollars a run. In no pair did the delegating run cost less, finish sooner, or carry a smaller context per call. Story size still explains most of the spread, and two or three runs per side are too few to separate a cost of a tenth from it.
+- **Sub-agents were added to the story's agent's work, not taken from it.** S-0184's agent ran the whole Go suite three times and 11 other test or lint runs itself, and made 25 `Read` and 86 `Bash` calls, before its verifier ran the suite again. S-0185's agent ran the suite twice and 11 other test or lint runs around three verifiers: one for tests and lint, then two for the diff. The agents already cut their own test output to the tail or the failures, so a sub-agent had little noise to take away.
+- **What delegation bought was review before review.** S-0184's verifier found two convention gaps and S-0185's found five points. Both agents fixed them before moving to review, and S-0185's last verifier confirmed the five points were addressed. S-0184's explorer answered a question about lost work (a removed worktree) without the agent reading the history itself.
+- **The convention alone is enough to make an agent delegate.** S-0183 did it without the prompt. The prompt raised the count from one sub-agent to two or three.
+- Reading the logs: the stream's deduplicated cache reads fall short of `modelUsage` by under 0.5% in delegating runs (S-0184 by 112,679, S-0185 by 72,830, S-0175 by 56,989), and match it exactly in S-0183 and in every run without sub-agents. `num_turns` is not the number of model calls, and the stream's output tokens are about 2% of the `result`'s.
+
+What to change follows from this: keep the verifier before review, which found defects, and make its run replace the agent's own full-suite runs rather than repeat them. Run both sub-agents on a cheaper model, since they read and run checks and decide nothing. S-0189 tries both and measures them as this section does.
