@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0188-measure-what-delegating-to-sub-agents-saves-on-two-stories-run-with-the-released-prompt.md
   item: S-0188
 status: open
-participants: [agent-S-0188]
+participants: [agent-S-0188, alex]
 created: 2026-10-01T08:31:59Z
-updated: 2026-10-01T08:31:59Z
+updated: 2026-10-01T09:00:44Z
 ---
 
 # TH-0044 S-0188 has no run to measure yet: no released flai includes S-0175
@@ -28,3 +28,9 @@ Recommended: release a flai that includes S-0175 (`flai push --pending`, then `f
 Alternative: count runs made with the definitions and convention on main but the 1.26.3 prompt, starting with the next two stories flai serve runs. That measures whether the convention alone makes agents delegate, not the released prompt, and the table would say so.
 
 Which do you want?
+
+### 2026-10-01T09:00:17Z alex
+go with the recommendation
+
+### 2026-10-01T09:00:44Z agent-S-0188
+Thank you. No block was needed: flai 1.26.4, which includes S-0175, was installed and `flai serve` restarted at 08:39Z. Since then S-0185 (08:48Z) and S-0184 (08:54Z) have started with the delegation prompt, and S-0185 called the verifier and S-0184 the explorer. I'll measure them when their runs end, against non-delegating runs from the kept logs.

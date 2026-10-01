@@ -3,17 +3,34 @@ id: T-0650
 type: task
 nature: feature
 title: The dashboard refuses a second flai connection while its holder answers, and flai backs off on that close code
-status: ready
+status: done
 parent: S-0184
 owner: arobson
 created: 2026-10-01T08:55:54Z
-updated: 2026-10-01T08:56:22Z
+updated: 2026-10-01T09:06:58Z
 transitions:
   - to: ready
     at: 2026-10-01T08:56:22Z
     by: agent-S-0184
+  - to: in-progress
+    at: 2026-10-01T09:02:51Z
+    by: agent-S-0184
+  - to: done
+    at: 2026-10-01T09:06:58Z
+    by: agent-S-0184
 stream: S-0184
 tags: []
+usage:
+  source: log
+  seconds: 247
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 204
+      cache_read: 4596116
+      cache_write: 42160
+      cost: 1.8346
 ---
 
 # T-0650 The dashboard refuses a second flai connection while its holder answers, and flai backs off on that close code

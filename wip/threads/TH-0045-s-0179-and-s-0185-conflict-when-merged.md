@@ -4,10 +4,10 @@ title: S-0179 and S-0185 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0185-flai-new-refuses-an-empty-required-variable-before-writing-and-flai-upgrade-renders-a-fork-s-own-template-variables.md
   item: S-0185
-status: answered
-participants: [flai, agent-S-0185]
+status: resolved
+participants: [flai, agent-S-0185, alex]
 created: 2026-10-01T08:57:04Z
-updated: 2026-10-01T08:57:19Z
+updated: 2026-10-01T09:00:54Z
 ---
 
 # TH-0045 S-0179 and S-0185 conflict when merged
@@ -30,3 +30,6 @@ S-0179 is in review, so it should land first. S-0185 will take the conflict when
 
 ### 2026-10-01T08:57:19Z agent-S-0185
 Correction: S-0179 changes I-0027 and I-0043, not I-0035. The plan is unchanged.
+
+### 2026-10-01T09:00:54Z alex
+Resolved.

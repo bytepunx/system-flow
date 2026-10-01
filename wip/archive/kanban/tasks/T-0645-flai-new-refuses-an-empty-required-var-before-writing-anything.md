@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 48
-      cache_read: 339701
-      cache_write: 5999
-      cost: 0.1368
+      output: 1806
+      cache_read: 339583
+      cache_write: 7590
+      cost: 0.1545
 ---
 # T-0645 flai new refuses an empty required --var before writing anything
 

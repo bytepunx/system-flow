@@ -3,11 +3,11 @@ id: T-0649
 type: task
 nature: feature
 title: flai host restarts a dashboard that is gone or not answering, with a back-off, and dashboard.no_restart turns it off
-status: in-progress
+status: done
 parent: S-0184
 owner: arobson
 created: 2026-10-01T08:55:54Z
-updated: 2026-10-01T08:58:25Z
+updated: 2026-10-01T09:02:50Z
 transitions:
   - to: ready
     at: 2026-10-01T08:56:22Z
@@ -15,19 +15,22 @@ transitions:
   - to: in-progress
     at: 2026-10-01T08:58:25Z
     by: agent-S-0184
+  - to: done
+    at: 2026-10-01T09:02:50Z
+    by: agent-S-0184
 stream: S-0184
 tags: []
 usage:
   source: log
-  seconds: 0
+  seconds: 265
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 16
-      cache_read: 157002
-      cache_write: 949
-      cost: 0.0625
+      input: 36
+      output: 237
+      cache_read: 3135822
+      cache_write: 36360
+      cost: 1.2548
 ---
 
 # T-0649 flai host restarts a dashboard that is gone or not answering, with a back-off, and dashboard.no_restart turns it off

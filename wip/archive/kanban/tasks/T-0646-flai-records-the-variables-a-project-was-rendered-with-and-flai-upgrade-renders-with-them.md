@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 740
-      cache_read: 6531355
-      cache_write: 88194
-      cost: 2.6185
+      input: 109
+      output: 34590
+      cache_read: 6502405
+      cache_write: 145326
+      cost: 2.9576
 ---
 # T-0646 flai records the variables a project was rendered with, and flai upgrade renders with them
 

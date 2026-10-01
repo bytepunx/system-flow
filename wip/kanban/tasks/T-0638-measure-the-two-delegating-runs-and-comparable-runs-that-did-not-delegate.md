@@ -3,14 +3,17 @@ id: T-0638
 type: task
 nature: research
 title: Measure the two delegating runs and comparable runs that did not delegate
-status: ready
+status: in-progress
 parent: S-0188
 owner: arobson
 created: 2026-10-01T08:31:38Z
-updated: 2026-10-01T08:31:52Z
+updated: 2026-10-01T09:01:26Z
 transitions:
   - to: ready
     at: 2026-10-01T08:31:52Z
+    by: agent-S-0188
+  - to: in-progress
+    at: 2026-10-01T09:01:26Z
     by: agent-S-0188
 stream: S-0188
 tags: []

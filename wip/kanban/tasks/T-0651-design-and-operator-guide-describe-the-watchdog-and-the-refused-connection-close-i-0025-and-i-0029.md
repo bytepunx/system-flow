@@ -3,14 +3,17 @@ id: T-0651
 type: task
 nature: feature
 title: "Design and operator guide describe the watchdog and the refused connection; close I-0025 and I-0029"
-status: ready
+status: in-progress
 parent: S-0184
 owner: arobson
 created: 2026-10-01T08:55:54Z
-updated: 2026-10-01T08:56:22Z
+updated: 2026-10-01T09:06:58Z
 transitions:
   - to: ready
     at: 2026-10-01T08:56:22Z
+    by: agent-S-0184
+  - to: in-progress
+    at: 2026-10-01T09:06:58Z
     by: agent-S-0184
 stream: S-0184
 tags: []

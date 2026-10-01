@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 74
-      cache_read: 1013937
-      cache_write: 8267
-      cost: 0.4043
+      input: 17
+      output: 5341
+      cache_read: 1004110
+      cache_write: 22441
+      cost: 0.4567
 ---
 # T-0647 The design and guides describe recorded variables, and I-0040 and I-0041 are closed
 

@@ -6,7 +6,7 @@ title: The dashboard recovers from a stray stop and is not taken over by a secon
 status: in-progress
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:58:30Z
+updated: 2026-10-01T09:08:59Z
 transitions:
   - to: ready
     at: 2026-10-01T08:32:11Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-10-01T08:54:33Z
     by: agent-S-0184
 tags: [flai, dashboard]
-touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_watch.go, flai/cmd/host.go, flai/internal/host, flai/internal/channel, flai/internal/config, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/Dockerfile, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, docs/operators, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0025, design/issues/I-0029, design/issues/summary.md, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_token.go, flai/cmd/host_test.go]
+touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_watch.go, flai/cmd/host.go, flai/internal/host, flai/internal/channel, flai/internal/config, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/Dockerfile, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/flai-cli.md, design/adrs/0062-flai-host-restarts-the-dashboard-container-flai-dashboard-recorded-when-it-is.md, design/adrs/0063-the-dashboard-refuses-a-second-flai-for-a-project-with-close-code-4409-while.md, design/adrs/README.md, docs/operators, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0025, design/issues/I-0029, design/issues/summary.md, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,15 +23,15 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 255
+  seconds: 768
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 856
-      cache_read: 5669980
-      cache_write: 216985
-      cost: 2.3288
+      input: 208
+      output: 1297
+      cache_read: 13438278
+      cache_write: 295579
+      cost: 5.4326
 ---
 # S-0184 The dashboard recovers from a stray stop and is not taken over by a second flai serve
 
