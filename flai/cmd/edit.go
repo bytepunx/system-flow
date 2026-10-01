@@ -16,6 +16,7 @@ import (
 func newEditCmd(a *app) *cobra.Command {
 	var title, nature, parent, hash, message, byFlag, harness, model string
 	var agentConfig []string
+	var rf roleFlags
 	var tags, touches, topics, after, trailers []string
 	var clearTags, clearTouches, clearTopics, clearAfter, clearAgent, bodyStdin, autocommit, show bool
 	c := &cobra.Command{
@@ -130,8 +131,8 @@ the item changed.`,
 			case f.Changed("after"):
 				ch.After = &after
 			}
-			if clearAgent || f.Changed("harness") || f.Changed("model") || f.Changed("agent-config") {
-				next, err := editedAgent(repo, args[0], clearAgent, harness, model, agentConfig)
+			if clearAgent || f.Changed("harness") || f.Changed("model") || f.Changed("agent-config") || rf.given() {
+				next, err := editedAgent(repo, args[0], clearAgent, harness, model, agentConfig, rf)
 				if err != nil {
 					return err
 				}
@@ -150,7 +151,7 @@ the item changed.`,
 				ch.Body = &body
 			}
 			if ch == (itemedit.Change{}) {
-				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, --clear-agent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
+				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
 			by, _ := agentIdentity()
 			if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
@@ -222,6 +223,7 @@ the item changed.`,
 	f.StringVar(&model, "model", "", "a story's agent: the model it runs")
 	f.StringArrayVar(&agentConfig, "agent-config", nil, "a story's agent: an option, key=value, and key= to remove one (repeatable)")
 	f.BoolVar(&clearAgent, "clear-agent", false, "remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those")
+	rf.register(c, true)
 	f.BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input")
 	f.StringVar(&hash, "hash", "", "the hash flai edit --show printed; a change made meanwhile is then a conflict")
 	f.StringVar(&byFlag, "by", "", "who edits, as agents are told (default: FLAI_AGENT, then the config author)")

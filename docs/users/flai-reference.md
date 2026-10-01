@@ -244,7 +244,9 @@ flai agent
 
 Who works a story is an agent: a harness (the command line or API that runs it, such as claude-code), a model (such as claude-opus-5-5), and options for that harness (config, key=value). The project's default is kept in system-flow.yaml; every story created while it is set gets a copy in its front matter, which flai story new --harness/--model/--agent-config and flai edit override for that story. Stories created before, or with no default set, carry none.
 
-flai agent shows the default, set changes it (only what you give; --config adds or replaces keys), and clear removes it.
+An agent may also name roles: the agents for the work a story's agent hands to sub-agents, explore and verify (S-0189), each with a harness, model, and config of its own (--role-harness, --role-model, --role-config). flai serve starts claude-code with each role's model over the project's sub-agent definition for it.
+
+flai agent shows the default, set changes it (only what you give; --config adds or replaces keys, --role-config role.key= removes one, --unset-role removes a role), and clear removes it.
 
 Examples:
 
@@ -252,6 +254,7 @@ Examples:
 flai agent
 flai agent set --harness claude-code --model claude-opus-5-5 --config effort=high
 flai agent set --model claude-sonnet-5
+flai agent set --role-model explore=haiku --role-model verify=sonnet
 flai agent clear
 ```
 
@@ -292,8 +295,12 @@ Flags:
 | `--harness` string | the harness that runs the agent, such as claude-code |
 | `--model` string | the model it runs, such as claude-opus-5-5 |
 | `--replace` | start from nothing: the default becomes exactly what is given |
+| `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
+| `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
+| `--role-model` stringArray | the model a sub-agent role runs, role=model, such as verify=sonnet (repeatable) |
 | `--trailer` stringArray | a trailer line for the commit (repeatable) |
 | `--unset` stringArray | remove an option by key (repeatable) |
+| `--unset-role` stringArray | remove a sub-agent role (repeatable) |
 
 ### flai archive
 
@@ -944,12 +951,16 @@ Flags:
 | `--model` string | a story's agent: the model it runs |
 | `--nature` string | one of feature, improvement, remediation, research, experiment |
 | `--parent` string | the new parent: an epic for a story, a story for a task |
+| `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
+| `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
+| `--role-model` stringArray | the model a sub-agent role runs, role=model, such as verify=sonnet (repeatable) |
 | `--show` | print the fields, the body, the hash, and whether the item may be edited |
 | `--tag` strings | the tags, replacing the ones there (repeatable or comma separated) |
 | `--title` string | the new title |
 | `--topics` strings | what a story or epic is about, such as logging or release, replacing the ones there |
 | `--touches` strings | the paths or components the work changes, replacing the ones there |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
+| `--unset-role` stringArray | remove a sub-agent role (repeatable) |
 
 ### flai epic
 
@@ -2202,6 +2213,9 @@ Flags:
 | `--nature` string | one of feature, improvement, remediation, research, experiment (default `feature`) |
 | `--owner` string | owner (default: config author) |
 | `--print-body` | print the body the template gives this type and create nothing |
+| `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
+| `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
+| `--role-model` stringArray | the model a sub-agent role runs, role=model, such as verify=sonnet (repeatable) |
 | `--tag` strings | tag (repeatable or comma separated) |
 | `--topics` strings | topics the story is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |

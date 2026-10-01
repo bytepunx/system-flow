@@ -111,7 +111,10 @@
 		if (view.type === 'story') {
 			const parsed = parseConfig(agentConfig);
 			// a config line that is not key=value is said at save; nothing is sent until it is
-			const next = 'error' in parsed ? view.agent : agentFrom(harness, model, parsed.config);
+			const next =
+				'error' in parsed
+					? view.agent
+					: agentFrom(harness, model, parsed.config, view.agent?.roles);
 			if (!sameAgent(next, view.agent)) out.agent = next ?? null;
 		}
 		if (body.trim() !== view.body.trim()) out.body = body;

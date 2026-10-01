@@ -1,7 +1,6 @@
 package workitem
 
 import (
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -140,11 +139,7 @@ func (it *Item) clone() *Item {
 	c.Topics = slices.Clone(it.Topics)
 	c.After = slices.Clone(it.After)
 	c.Unknown = slices.Clone(it.Unknown)
-	if it.Agent != nil {
-		a := *it.Agent
-		a.Config = maps.Clone(it.Agent.Config)
-		c.Agent = &a
-	}
+	c.Agent = it.Agent.Clone()
 	if it.Usage != nil {
 		u := *it.Usage
 		u.Models = slices.Clone(it.Usage.Models)

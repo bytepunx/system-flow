@@ -142,7 +142,8 @@ func settingsSpecs() map[string]spec {
 				}
 				args = append(args, "--config="+k+"="+in.Agent.Config[k])
 			}
-			return args, "", nil
+			roles, e := roleArgs(in.Agent)
+			return append(args, roles...), "", e
 		}),
 
 		// settings.agent: the agent's name and command, kept for every

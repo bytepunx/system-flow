@@ -109,7 +109,7 @@
 			return;
 		}
 		void change('default', 'default_agent', {
-			agent: agentFrom(dHarness, dModel, parsed.config) ?? null
+			agent: agentFrom(dHarness, dModel, parsed.config, view?.host?.default_agent?.roles) ?? null
 		});
 	}
 	function saveAgent() {

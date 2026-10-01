@@ -143,7 +143,7 @@ tags: [cli]
 ---
 ```
 
-Optional keys: `blocked` (the intervals), `estimate` (a Go duration such as `4h`), `touches` (the paths a story or task expects to change, so overlapping work is visible), `stream` (on a task, the story whose narrative it reports to), and `agent` (on a story, the harness and model that work it). Timestamps are UTC, `YYYY-MM-DDTHH:MM:SSZ`, and real. A title with a colon followed by a space is double-quoted.
+Optional keys: `blocked` (the intervals), `estimate` (a Go duration such as `4h`), `touches` (the paths a story or task expects to change, so overlapping work is visible), `stream` (on a task, the story whose narrative it reports to), and `agent` (on a story, the harness and model that work it, and `roles`, the models its sub-agents run). Timestamps are UTC, `YYYY-MM-DDTHH:MM:SSZ`, and real. A title with a colon followed by a space is double-quoted.
 
 The body has fixed headings, so agents and the dashboard can find things:
 

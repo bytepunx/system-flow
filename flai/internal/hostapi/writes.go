@@ -1700,5 +1700,28 @@ func agentArgs(a *manifest.Agent) ([]string, *channel.Error) {
 		}
 		args = append(args, "--agent-config="+k+"="+a.Config[k])
 	}
+	roles, e := roleArgs(a)
+	return append(args, roles...), e
+}
+
+// roleArgs are the flags that give an agent's roles (S-0189), which flai
+// agent set, flai story new, and flai edit take alike.
+func roleArgs(a *manifest.Agent) ([]string, *channel.Error) {
+	var args []string
+	for _, n := range a.RoleNames() {
+		r := a.Roles[n]
+		if r.Harness != "" {
+			args = append(args, "--role-harness="+n+"="+r.Harness)
+		}
+		if r.Model != "" {
+			args = append(args, "--role-model="+n+"="+r.Model)
+		}
+		for _, k := range r.ConfigKeys() {
+			if strings.TrimSpace(r.Config[k]) == "" {
+				return nil, bad("agent role %s config %s has no value", n, k)
+			}
+			args = append(args, "--role-config="+n+"."+k+"="+r.Config[k])
+		}
+	}
 	return args, nil
 }

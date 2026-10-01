@@ -22,4 +22,20 @@ describe('agent helpers (S-0103)', () => {
 		).toBe('claude-code, claude-opus-5-5, effort=high');
 		expect(agentLine(undefined)).toBe('none');
 	});
+	it('keeps the roles it had, compares them, and shows them (S-0189)', () => {
+		const roles = { verify: { model: 'sonnet' }, explore: { model: 'haiku' } };
+		const a = agentFrom('claude-code', 'claude-opus-5-5', {}, roles);
+		expect(a).toEqual({ harness: 'claude-code', model: 'claude-opus-5-5', roles });
+		expect(agentFrom('', '', {}, roles)).toEqual({ roles });
+		expect(sameAgent(a, { harness: 'claude-code', model: 'claude-opus-5-5' })).toBe(false);
+		expect(sameAgent(a, { ...a, roles: { ...roles, verify: { model: 'opus' } } })).toBe(false);
+		expect(
+			sameAgent(a, {
+				...a,
+				roles: { explore: { model: 'haiku' }, verify: { model: 'sonnet', config: {} } }
+			})
+		).toBe(true);
+		expect(agentLine(a)).toBe('claude-code, claude-opus-5-5; explore: haiku; verify: sonnet');
+		expect(agentLine({ roles: { verify: { model: 'sonnet' } } })).toBe('default; verify: sonnet');
+	});
 });

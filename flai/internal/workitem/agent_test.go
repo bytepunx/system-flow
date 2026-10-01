@@ -60,3 +60,27 @@ func TestAStoryGetsTheProjectsAgent(t *testing.T) {
 		t.Errorf("validate an epic with an agent: %v", err)
 	}
 }
+
+// S-0189: a story gets the default's roles, merged with its own role by role,
+// and writes and reads them back as they were.
+func TestAStoryGetsTheProjectsRoles(t *testing.T) {
+	r := newProject(t)
+	r.Manifest.Agent = &manifest.Agent{Harness: "claude-code", Model: "claude-opus-5-5", Roles: map[string]manifest.Role{"explore": {Model: "haiku"}, "verify": {Model: "sonnet"}}}
+	s, err := r.Create(NewOptions{Type: Story, Title: "With roles", Owner: "alex", Now: t0, Agent: &manifest.Agent{Roles: map[string]manifest.Role{"verify": {Model: "opus", Config: map[string]string{"effort": "high"}}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := &manifest.Agent{Harness: "claude-code", Model: "claude-opus-5-5", Roles: map[string]manifest.Role{"explore": {Model: "haiku"}, "verify": {Model: "opus", Config: map[string]string{"effort": "high"}}}}
+	back, err := r.Get(s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !back.Agent.Same(want) {
+		data, _ := os.ReadFile(s.Path)
+		t.Errorf("read back %s from:\n%s", back.Agent, data)
+	}
+	data, _ := os.ReadFile(s.Path)
+	if !strings.Contains(string(data), "agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  roles:\n    explore:\n      model: haiku\n    verify:\n      model: opus\n      config:\n        effort: high\n") {
+		t.Errorf("written:\n%s", data)
+	}
+}

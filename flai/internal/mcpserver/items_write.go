@@ -24,7 +24,7 @@ type ItemNewIn struct {
 	Tags    []string        `json:"tags,omitempty"`
 	Touches []string        `json:"touches,omitempty" jsonschema:"paths or components the work changes"`
 	Topics  []string        `json:"topics,omitempty" jsonschema:"a story's or epic's: what it is about beyond the components its tags and touches reach, such as logging or release"`
-	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, and config, over the project's default, which fills in what is not given"`
+	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, config, and roles (explore, verify: each a harness, model, and config for that sub-agent), over the project's default, which fills in what is not given, role by role"`
 	Body    string          `json:"body,omitempty" jsonschema:"the goal, criteria, and notes below the heading; the template's empty sections when not given"`
 }
 
@@ -61,7 +61,7 @@ type ItemEditIn struct {
 	After   *[]string `json:"after,omitempty" jsonschema:"a story's: replaces the stories it waits for until they are done (it is held in ready meanwhile); an empty list removes them"`
 	Parent  *string   `json:"parent,omitempty"`
 	// Agent replaces a story's agent; ClearAgent removes it.
-	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, and config"`
+	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, config, and roles; roles left out are removed"`
 	ClearAgent bool            `json:"clear_agent,omitempty" jsonschema:"removes the story's agent"`
 	Body       *string         `json:"body,omitempty" jsonschema:"replaces everything below the heading"`
 }

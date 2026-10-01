@@ -66,8 +66,8 @@ var good = map[string]struct {
 	"agent.stop":    {`{"id":"S-0001",` + rid + `}`, "serve agent stop S-0001 --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
-	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}},` + rid + `}`,
-		"agent set --replace --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --harness=claude-code --model=claude-opus-5-5 --config=effort=high --json", ""},
+	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
+		"agent set --replace --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --harness=claude-code --model=claude-opus-5-5 --config=effort=high --role-model=verify=sonnet --json", ""},
 	"settings.agent":           {`{"name":"builder","attended_minutes":10,"command":["claude","-p","work on {story}; echo $HOME"],` + rid + `}`, "serve agent set --name=builder --json -- claude -p work on {story}; echo $HOME", ""},
 	"settings.harness":         {`{"name":"claude-code","program":"/opt/claude","args":["--permission-mode","acceptEdits"],` + rid + `}`, "serve agent harness claude-code --program=/opt/claude --json -- --permission-mode acceptEdits", ""},
 	"settings.check":           {`{"name":"flai","command":["scripts/flai-test.sh","--short"],` + rid + `}`, "serve checks set --name=flai --json -- scripts/flai-test.sh --short", ""},
@@ -874,6 +874,17 @@ func TestTheAgentReachesFlaiAsFlags(t *testing.T) {
 	args, _ = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000006","title":"New"}`)
 	if strings.Contains(strings.Join(args, " "), "agent") {
 		t.Errorf("an edit without agent touched it: %v", args)
+	}
+	// S-0189: roles reach flai as role flags, so a save from the dashboard
+	// keeps them
+	args, e = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000007","agent":{"model":"m","roles":{"verify":{"model":"sonnet","config":{"effort":"medium"}},"explore":{"harness":"claude-code"}}}}`)
+	if e != nil || !strings.Contains(strings.Join(args, " "), "--clear-agent --model=m --role-harness=explore=claude-code --role-model=verify=sonnet --role-config=verify.effort=medium") {
+		t.Errorf("item.edit with roles: %v %v", e, args)
+	}
+	for _, bad := range []string{`{"verify":{}}`, `{"Verify":{"model":"m"}}`, `{"verify":{"config":{"k":" "}}}`} {
+		if _, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000009","agent":{"roles":`+bad+`}}`); e == nil {
+			t.Errorf("an invalid role reached a command line: %s", bad)
+		}
 	}
 }
 

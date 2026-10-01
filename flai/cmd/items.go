@@ -25,6 +25,7 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 func newItemNewCmd(a *app, typ string) *cobra.Command {
 	var nature, owner, parent, harness, model string
 	var tags, touches, topics, trailers, agentConfig []string
+	var rf roleFlags
 	var bodyStdin, autocommit, printBody bool
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
@@ -63,7 +64,7 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 				fmt.Fprint(a.out, body)
 				return nil
 			}
-			agent, err := agentFlags(harness, model, agentConfig)
+			agent, err := agentFlags(harness, model, agentConfig, rf)
 			if err != nil {
 				return err
 			}
@@ -136,6 +137,7 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 		c.Flags().StringVar(&harness, "harness", "", "the harness that runs the agent for this story, over the project's default")
 		c.Flags().StringVar(&model, "model", "", "the model it runs, over the project's default")
 		c.Flags().StringArrayVar(&agentConfig, "agent-config", nil, "an option for the harness, key=value, over the project's default (repeatable)")
+		rf.register(c, false)
 	}
 	if parentFlag != "" {
 		help := "parent " + parentFlag + " ID"

@@ -280,6 +280,8 @@ flai agent set --model claude-sonnet-5 --unset effort        # change only what 
 flai story new "Invoice PDF export" --model claude-haiku-4-5 --agent-config max_turns=20
 flai edit S-0007 --model claude-opus-5-5 --agent-config max_turns=   # key= removes a key
 flai edit S-0007 --clear-agent                               # the story has none
+flai agent set --role-model explore=haiku --role-model verify=sonnet   # what its sub-agents run
+flai edit S-0007 --role-model verify=claude-opus-5-5 --role-config verify.x= --unset-role explore
 flai agent clear
 ```
 

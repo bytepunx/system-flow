@@ -42,6 +42,81 @@ func TestAgentValidate(t *testing.T) {
 	}
 }
 
+// S-0189: an agent's roles merge role by role and key by key, compare, check,
+// print, and read back as they were written.
+func TestAgentRoles(t *testing.T) {
+	def := &Agent{Harness: "claude-code", Model: "claude-opus-5-5", Roles: map[string]Role{
+		"explore": {Model: "haiku"},
+		"verify":  {Model: "sonnet", Config: map[string]string{"effort": "medium"}},
+	}}
+	got := def.With(&Agent{Roles: map[string]Role{"verify": {Config: map[string]string{"effort": "high"}}, "plan": {Model: "opus"}}})
+	if got.Roles["explore"].Model != "haiku" || got.Roles["verify"].Model != "sonnet" || got.Roles["verify"].Config["effort"] != "high" || got.Roles["plan"].Model != "opus" {
+		t.Errorf("merged: %+v", got.Roles)
+	}
+	if def.Roles["verify"].Config["effort"] != "medium" {
+		t.Error("the default's role was changed by a merge")
+	}
+	if def.Same(got) || !got.Same(def.With(got)) {
+		t.Error("Same does not compare roles")
+	}
+	if (&Agent{Roles: map[string]Role{"verify": {Model: "sonnet"}}}).IsZero() {
+		t.Error("an agent with only roles is not empty")
+	}
+	if s := got.String(); s != "claude-code, claude-opus-5-5; explore: haiku; plan: opus; verify: sonnet, effort=high" {
+		t.Errorf("String: %s", s)
+	}
+	for _, bad := range []*Agent{
+		{Roles: map[string]Role{"Verify": {Model: "sonnet"}}},
+		{Roles: map[string]Role{"verify": {}}},
+		{Roles: map[string]Role{"verify": {Model: "has space"}}},
+		{Roles: map[string]Role{"verify": {Config: map[string]string{"Bad": "x"}}}},
+	} {
+		if err := bad.Validate(); err == nil {
+			t.Errorf("accepted %+v", bad.Roles)
+		}
+	}
+	path := filepath.Join(t.TempDir(), File)
+	if err := os.WriteFile(path, []byte("version: 1\nname: Harbour\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteAgent(path, got); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Agent.Same(got) {
+		data, _ := os.ReadFile(path)
+		t.Errorf("read back %+v from:\n%s", m.Agent, data)
+	}
+}
+
+func TestParseRoles(t *testing.T) {
+	got, err := ParseRoles([]string{"verify=claude-code"}, []string{"explore=haiku", "verify = sonnet"}, []string{"verify.effort=medium"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["explore"].Model != "haiku" || got["verify"].Harness != "claude-code" || got["verify"].Model != "sonnet" || got["verify"].Config["effort"] != "medium" {
+		t.Errorf("parsed: %+v", got)
+	}
+	if got, err := ParseRoles(nil, nil, nil); got != nil || err != nil {
+		t.Errorf("nothing: %v %v", got, err)
+	}
+	for _, bad := range [][]string{{"", "verify", ""}, {"", "", "verify=x"}, {"", "", ".effort=x"}} {
+		if _, err := ParseRoles(split(bad[0]), split(bad[1]), split(bad[2])); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+}
+
+func split(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return []string{s}
+}
+
 // flai owns the agent block of system-flow.yaml and nothing else of it.
 func TestWriteAgentKeepsEverythingElse(t *testing.T) {
 	path := filepath.Join(t.TempDir(), File)

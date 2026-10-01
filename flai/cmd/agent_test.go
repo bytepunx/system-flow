@@ -106,6 +106,49 @@ func TestAStorysAgentIsSetAndEdited(t *testing.T) {
 	}
 }
 
+// S-0189: roles are set on the default with flai agent set, given and
+// merged role by role by flai story new, and edited, a role key given with
+// no value and a role --unset-role names removed.
+func TestAgentRolesAreSetAndEdited(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	if out, errOut, code := runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-opus-5-5", "--role-model", "explore=haiku", "--role-model", "verify=sonnet"); code != 0 || !strings.Contains(out, "default agent: claude-code, claude-opus-5-5; explore: haiku; verify: sonnet") {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	runIn(t, root, "epic", "new", "E")
+	if _, errOut, code := runIn(t, root, "story", "new", "S", "--epic", "E-0001", "--role-config", "verify.effort=medium"); code != 0 {
+		t.Fatal(errOut)
+	}
+	agentLine := func() string {
+		out, _, _ := runIn(t, root, "show", "S-0001")
+		for _, l := range strings.Split(out, "\n") {
+			if strings.HasPrefix(strings.TrimSpace(l), "agent:") {
+				return strings.TrimSpace(l)
+			}
+		}
+		return ""
+	}
+	if got := agentLine(); got != "agent: claude-code, claude-opus-5-5; explore: haiku; verify: sonnet, effort=medium" {
+		t.Errorf("created: %q", got)
+	}
+	edit := func(args ...string) {
+		t.Helper()
+		if _, errOut, code := runIn(t, root, append([]string{"edit", "S-0001"}, args...)...); code != 0 {
+			t.Fatalf("edit %v: %s", args, errOut)
+		}
+	}
+	edit("--role-config", "verify.effort=", "--role-model", "verify=claude-sonnet-5-5", "--unset-role", "explore")
+	if got := agentLine(); got != "agent: claude-code, claude-opus-5-5; verify: claude-sonnet-5-5" {
+		t.Errorf("edited: %q", got)
+	}
+	if _, errOut, code := runIn(t, root, "agent", "set", "--role-model", "verify"); code == 0 || !strings.Contains(errOut, "is not role=value") {
+		t.Errorf("a role flag with no value: %d %s", code, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "agent", "set", "--unset-role", "explore", "--unset-role", "verify"); code != 0 || !strings.Contains(out, "default agent: claude-code, claude-opus-5-5\n") {
+		t.Errorf("roles unset: %d %s %s", code, out, errOut)
+	}
+}
+
 // S-0105: the dashboard replaces the default whole and commits it, as its
 // other writes are committed.
 func TestTheDefaultAgentIsReplacedAndCommitted(t *testing.T) {
