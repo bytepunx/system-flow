@@ -99,7 +99,9 @@ Every variable defined in the manifest is available in every rendered file, as `
 3. The value `system-flow.lock.yaml` recorded.
 4. The default, for a variable added since the project last rendered.
 
-A `required` variable still empty is named, and the upgrade stops before it changes anything: run it again with `--var`. The lock then records the values the upgrade rendered with, so a value given once is kept. A project assembled by hand or made with `flai import` has no recorded values until its first `flai upgrade` or `flai upgrade --relock`; until then a variable you added takes its default or `--var`.
+A required variable recorded empty takes its default when the new version gives it one. Upgrade names each variable that took its default. A `required` variable still empty is named, and the upgrade stops before it changes anything: run it again with `--var`. `--var` on a project already at the template's version re-applies that version with the new value. The lock then records the values the upgrade rendered with, so a value given once is kept.
+
+A project made before flai recorded variables (S-0185), assembled by hand, or made with `flai import` has no recorded values until its first `flai upgrade` or `flai upgrade --relock`. Until then a variable you added takes its default, which upgrade names, or `--var`. Give the value the project was made with, as `--var`, when the default is not it.
 
 So a variable you add to a fork works in projects made before it: give it a default they can live with, or say in the changelog entry which `--var` to pass. A new `required` variable with no default, or an optional one made `required`, stops the upgrade of every project that has no value for it until it passes `--var`: treat it as a breaking change.
 

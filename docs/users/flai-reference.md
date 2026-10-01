@@ -2529,7 +2529,7 @@ flai upgrade [flags]
 
 Fetch the template (config, or --template and --ref), compare its version with system-flow.yaml, and apply the difference per ADR-0015: add new files, merge marker files (CLAUDE.md, conventions) above the marker, replace files the project has not changed since they were applied, and report the rest as conflicts. In a terminal each conflict offers keep, replace, or a diff; otherwise --keep-all or --replace-all is required and nothing changes without one. The manifest and lock are updated only when no conflict is left unresolved. A dirty git tree is refused unless --force.
 
-Each template variable is rendered with, in order: --var; the manifest's own field for project\_name, project\_key, description, owner, and repo\_url; the value system-flow.lock.yaml recorded; the template's default. A required variable with none of these is named and nothing is changed.
+Each template variable is rendered with, in order: --var; the manifest's own field for project\_name, project\_key, description, owner, and repo\_url; the value system-flow.lock.yaml recorded; the template's default, named in the output when taken. A required variable with none of these is named and nothing is changed. --var re-applies the version the project is at.
 
 Examples:
 

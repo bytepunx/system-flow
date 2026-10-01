@@ -155,6 +155,16 @@ func (a *app) runImport(dir string, o importOptions) error {
 		}
 	}
 
+	// the variables, so that one refused stops the import before anything moves (I-0041)
+	origin := ""
+	if an.Git {
+		origin = a.originURL(an.Root)
+	}
+	vars, err := a.collectVars(m, newOptions{vars: o.vars, defaults: !interactive, origin: origin}, filepath.Base(an.Root))
+	if err != nil {
+		return err
+	}
+
 	// 1. folder moves (whole candidate folders such as adr/ -> design/adrs)
 	var moved, kept []importer.Move
 	for _, mv := range plan.FolderMoves {
@@ -176,14 +186,6 @@ func (a *app) runImport(dir string, o importOptions) error {
 	}
 
 	// 2. render the template without overwriting anything
-	origin := ""
-	if an.Git {
-		origin = a.originURL(an.Root)
-	}
-	vars, err := a.collectVars(m, newOptions{vars: o.vars, defaults: !interactive, origin: origin}, filepath.Base(an.Root))
-	if err != nil {
-		return err
-	}
 	res, err := template.Render(m, src.Dir, an.Root, template.Options{Vars: vars, Layout: layout, Source: src, Force: false})
 	if err != nil {
 		return err

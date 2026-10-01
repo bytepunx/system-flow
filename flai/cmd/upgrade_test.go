@@ -10,6 +10,8 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/lock"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
 func TestUpgradeCommand(t *testing.T) {
@@ -165,8 +167,12 @@ func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 
 	// 2.0.0 adds region with a default: the recorded team and the default render.
 	forkVersion(t, tpl, "2.0.0", "  - name: region\n    default: \"{{ .team }}-eu\"\n", "team={{ .team }} region={{ .region }}\n")
-	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl); code != 0 {
+	out, errOut, code := runIn(t, dest, "upgrade", "--template", tpl)
+	if code != 0 {
 		t.Fatalf("upgrade with the recorded value and a default: %s", errOut)
+	}
+	if !strings.Contains(out, `region has no recorded value: rendering with its default "core-eu"`) {
+		t.Errorf("the upgrade does not name the variable that took its default:\n%s", out)
 	}
 	if got := readTeam(); got != "team=core region=core-eu\n" {
 		t.Errorf("team.txt after 2.0.0 = %q", got)
@@ -187,23 +193,37 @@ func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 		t.Errorf("--var not recorded: %v", lk.Vars)
 	}
 
+	// At the version the project is at, --var re-applies it without --force.
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--var", "team=ops"); code != 0 {
+		t.Fatalf("--var at the same version: %s", errOut)
+	}
+	if got := readTeam(); got != "team=ops region=core-eu v3\n" {
+		t.Errorf("team.txt after --var at the same version = %q", got)
+	}
+
 	// --var for an unknown variable or one the manifest holds is refused.
-	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--force", "--var", "bogus=1"); code == 0 || !strings.Contains(errOut, "unknown variable") {
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--var", "bogus=1"); code == 0 || !strings.Contains(errOut, "unknown variable") {
 		t.Errorf("unknown --var: %d %s", code, errOut)
 	}
-	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--force", "--var", "project_name=x"); code == 0 || !strings.Contains(errOut, "project_name is read from name in system-flow.yaml") {
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--var", "project_name=x"); code == 0 || !strings.Contains(errOut, "project_name is read from name in system-flow.yaml") {
 		t.Errorf("--var for a manifest value: %d %s", code, errOut)
 	}
 
 	// 4.0.0 adds a required variable with no default: refused, nothing written.
 	forkVersion(t, tpl, "4.0.0", "  - name: cost_centre\n    required: true\n", "{{ .cost_centre }}\n")
 	before := readTeam()
-	_, errOut, code := runIn(t, dest, "upgrade", "--template", tpl)
-	if code == 0 || !strings.Contains(errOut, "required variables have no value: cost_centre") {
-		t.Fatalf("a required variable with no value: %d %s", code, errOut)
+	lockBefore, _ := os.ReadFile(filepath.Join(dest, "system-flow.lock.yaml"))
+	for _, args := range [][]string{{"upgrade", "--template", tpl}, {"upgrade", "--template", tpl, "--dry-run"}} {
+		_, errOut, code = runIn(t, dest, args...)
+		if code == 0 || !strings.Contains(errOut, "required variables have no value: cost_centre") {
+			t.Fatalf("%v with a required variable with no value: %d %s", args, code, errOut)
+		}
 	}
 	if readTeam() != before {
 		t.Error("a refused upgrade changed team.txt")
+	}
+	if b, _ := os.ReadFile(filepath.Join(dest, "system-flow.lock.yaml")); string(b) != string(lockBefore) {
+		t.Error("a refused upgrade changed the lock")
 	}
 	if mf, _ := os.ReadFile(filepath.Join(dest, "system-flow.yaml")); !strings.Contains(string(mf), `version: "3.0.0"`) {
 		t.Errorf("a refused upgrade changed the manifest:\n%s", mf)
@@ -213,5 +233,44 @@ func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 	}
 	if got := readTeam(); got != "42\n" {
 		t.Errorf("team.txt after 4.0.0 = %q", got)
+	}
+
+	// --relock with no lock records the values it rendered with.
+	_ = os.Remove(filepath.Join(dest, "system-flow.lock.yaml"))
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--relock", "--var", "team=ops", "--var", "cost_centre=7"); code != 0 {
+		t.Fatalf("relock: %s", errOut)
+	}
+	if lk, _ := lock.Load(dest); lk == nil || lk.Vars["team"] != "ops" || lk.Vars["cost_centre"] != "7" || lk.Vars["region"] != "ops-eu" {
+		t.Errorf("relock must record the variables: %+v", lk)
+	}
+}
+
+// A required variable recorded empty takes the default a newer template
+// gives it, and the values the lock records survive any characters.
+func TestUpgradeVarsAndTheLockRoundTrip(t *testing.T) {
+	m := template.Manifest{Variables: []template.Variable{
+		{Name: "project_name", Required: true},
+		{Name: "zone", Required: true, Default: "z1"},
+		{Name: "note"},
+	}}
+	odd := "a \"quoted\": value\\ with\nnewline # and - more"
+	lk := &lock.Lock{Vars: map[string]string{"zone": "", "note": odd, "gone": "x"}}
+	vars, defaulted, err := upgradeVars(m, manifest.Manifest{Name: "p"}, lk, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["zone"] != "z1" || vars["note"] != odd || vars["project_name"] != "p" || strings.Join(defaulted, ",") != "zone" {
+		t.Errorf("vars %v defaulted %v", vars, defaulted)
+	}
+	if _, ok := vars["gone"]; ok {
+		t.Error("a variable the template no longer defines is rendered with")
+	}
+	dir := t.TempDir()
+	if err := lock.Save(dir, &lock.Lock{Vars: lockVars(vars)}); err != nil {
+		t.Fatal(err)
+	}
+	back, err := lock.Load(dir)
+	if err != nil || back.Vars["note"] != odd || back.Vars["zone"] != "z1" {
+		t.Errorf("lock round trip: %+v %v", back, err)
 	}
 }

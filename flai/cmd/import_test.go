@@ -101,3 +101,20 @@ func TestImportDryRunAndApply(t *testing.T) {
 		t.Errorf("json dry run: %s", out)
 	}
 }
+
+// An empty required --var stops flai import before it moves a folder or
+// writes a file (I-0041).
+func TestImportRefusesAnEmptyRequiredVarBeforeMovingAnything(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := legacyRepo(t)
+	_, errOut, code := runIn(t, ".", "import", root, "--template", miniTemplate, "--yes", "--var", "project_name=")
+	if code == 0 || !strings.Contains(errOut, "required variables not set: project_name") {
+		t.Fatalf("expected the required error, got %d %s", code, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(root, "adr", "0001-first.md")); err != nil {
+		t.Errorf("a refused import moved adr/: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err == nil {
+		t.Error("a refused import wrote the manifest")
+	}
+}

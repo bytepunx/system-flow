@@ -34,8 +34,9 @@ unresolved. A dirty git tree is refused unless --force.
 
 Each template variable is rendered with, in order: --var; the manifest's own
 field for project_name, project_key, description, owner, and repo_url; the
-value system-flow.lock.yaml recorded; the template's default. A required
-variable with none of these is named and nothing is changed.`,
+value system-flow.lock.yaml recorded; the template's default, named in the
+output when taken. A required variable with none of these is named and
+nothing is changed. --var re-applies the version the project is at.`,
 		Example: `  flai upgrade --dry-run
   flai upgrade
   flai upgrade --keep-all           # scripts and CI: never overwrite edits
@@ -65,11 +66,22 @@ variable with none of these is named and nothing is changed.`,
 			if err != nil {
 				return err
 			}
-			opt := template.Options{Layout: mf.Layout, Source: src}
-			if relock {
-				if opt.Vars, err = upgradeVars(m, mf, lk, given); err != nil {
-					return err
+			// --var re-applies the version the project is at, to change a value.
+			if !relock && m.Version == mf.Template.Version && !force && len(given) == 0 {
+				fmt.Fprintf(a.out, "already at template %s (use --force to re-apply)\n", m.Version)
+				return nil
+			}
+			vals, defaulted, err := upgradeVars(m, mf, lk, given)
+			if err != nil {
+				return err
+			}
+			if !a.jsonOut {
+				for _, name := range defaulted {
+					fmt.Fprintf(a.out, "%s has no recorded value: rendering with its default %q (flai upgrade --var %s=value sets it)\n", name, vals[name], name)
 				}
+			}
+			opt := template.Options{Vars: vals, Layout: mf.Layout, Source: src}
+			if relock {
 				l, err := upgrade.Relock(repo.Root, m, src, opt, a.now())
 				if err != nil {
 					return err
@@ -84,17 +96,10 @@ variable with none of these is named and nothing is changed.`,
 				fmt.Fprintf(a.out, "relocked %d files at template %s\n", len(l.Files), m.Version)
 				return nil
 			}
-			if m.Version == mf.Template.Version && !force {
-				fmt.Fprintf(a.out, "already at template %s (use --force to re-apply)\n", m.Version)
-				return nil
-			}
 			if !force && !dryRun {
 				if st, err := a.runner.Run(repo.Root, "git", "status", "--porcelain"); err == nil && strings.TrimSpace(st) != "" {
 					return fmt.Errorf("working tree has uncommitted changes; commit or stash them so the upgrade is one reviewable diff, or pass --force")
 				}
-			}
-			if opt.Vars, err = upgradeVars(m, mf, lk, given); err != nil {
-				return err
 			}
 			plan, err := upgrade.Compute(repo.Root, m, src, opt, lk, mf.Template.Version)
 			if err != nil {
@@ -226,10 +231,11 @@ func manifestVars(mf manifest.Manifest) map[string]heldVar {
 
 // upgradeVars resolves every template variable for a re-render, in order:
 // --var, the manifest's own field, the value the lock recorded, the
-// template's default. A required variable left empty, an unknown --var, and
-// a --var for a value the manifest holds are refused before anything is
-// rendered (I-0040).
-func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given map[string]string) (map[string]any, error) {
+// template's default; a required variable recorded empty takes its default.
+// defaulted names the variables that took their default. A required variable
+// left empty, an unknown --var, and a --var for a value the manifest holds
+// are refused before anything is rendered (I-0040).
+func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given map[string]string) (vars map[string]any, defaulted []string, err error) {
 	held := manifestVars(mf)
 	known := map[string]bool{}
 	for _, v := range m.Variables {
@@ -237,13 +243,13 @@ func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given
 	}
 	for k := range given {
 		if !known[k] {
-			return nil, fmt.Errorf("unknown variable %q; template defines %s", k, strings.Join(varNames(m), ", "))
+			return nil, nil, fmt.Errorf("unknown variable %q; template defines %s", k, strings.Join(varNames(m), ", "))
 		}
 		if h, ok := held[k]; ok {
-			return nil, fmt.Errorf("%s is read from %s in %s; change it there, not with --var", k, h.key, manifest.File)
+			return nil, nil, fmt.Errorf("%s is read from %s in %s; change it there, not with --var", k, h.key, manifest.File)
 		}
 	}
-	vars := map[string]any{}
+	vars = map[string]any{}
 	var missing []string
 	for _, v := range m.Variables {
 		val, ok := given[v.Name]
@@ -252,13 +258,15 @@ func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given
 		}
 		if !ok && lk != nil {
 			val, ok = lk.Vars[v.Name]
+			ok = ok && (val != "" || !v.Required)
 		}
 		if !ok {
 			def, err := template.EvalDefault(v, template.Data(m, template.Options{Vars: vars}))
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			val = def
+			defaulted = append(defaulted, v.Name)
 		}
 		if v.Required && val == "" {
 			if h, isHeld := held[v.Name]; isHeld {
@@ -270,9 +278,9 @@ func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given
 		vars[v.Name] = val
 	}
 	if len(missing) > 0 {
-		return nil, fmt.Errorf("required variables have no value: %s; give each with --var name=value, or in %s where it says, and run flai upgrade again: nothing was changed", strings.Join(missing, ", "), manifest.File)
+		return nil, nil, fmt.Errorf("required variables have no value: %s; give each with --var name=value, or in %s where it says, and run flai upgrade again: nothing was changed", strings.Join(missing, ", "), manifest.File)
 	}
-	return vars, nil
+	return vars, defaulted, nil
 }
 
 // writeTemplateFields updates template.version and applied in the manifest
