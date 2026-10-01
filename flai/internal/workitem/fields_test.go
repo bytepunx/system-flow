@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -30,6 +31,10 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		"item: " + strings.Join(workitem.KnownFields(workitem.Item{}), " "),
 		"thread: " + strings.Join(workitem.KnownFields(threads.Thread{}), " "),
 		"issue: " + strings.Join(workitem.KnownFields(issues.Issue{}), " "),
+		// a story's agent block (S-0189): an older flai would drop a key of it
+		// that it does not know when it rewrote the story
+		"item.agent: " + strings.Join(workitem.KnownFields(manifest.Agent{}), " "),
+		"item.agent.roles: " + strings.Join(workitem.KnownFields(manifest.Role{}), " "),
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("%s is not the code's fields; write these lines:\n%s", release.FieldsFile, strings.Join(want, "\n"))

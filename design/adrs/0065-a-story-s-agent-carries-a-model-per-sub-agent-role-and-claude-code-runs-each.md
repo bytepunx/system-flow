@@ -28,6 +28,6 @@ A story's and the project's `agent` carry an optional `roles` map from a sub-age
 ## Consequences
 
 - A project can run its sub-agents cheaper, or a story can run its verifier on a stronger model, without editing the definitions every story shares. The template's definitions name `haiku` and `sonnet` (S-0189), so most stories need no roles.
-- A flai older than this one refuses a story whose front matter has `agent.roles`, as it refuses any key it does not know (I-0049, S-0181), and its `flai agent set` would drop the default's roles. Set roles once the project's hosts run this flai.
+- A flai older than this one does not know `agent.roles`. One from before S-0181 refuses the story; one from S-0181 on reads past it and would drop it when it rewrote the story, and its `flai agent set` would drop the default's roles. `front-matter-fields.txt` therefore lists the agent block's keys and a role's, so the release that carries this raises `flai.minimum` (S-0181) and an older flai stops before it reads the project.
 - The adapter now reads two files in the project to start an agent. A malformed definition stops a story that names its role, not one that does not.
 - Corrections stay the story's agent's whatever a role's model (ADR-0059, ADR-0060).

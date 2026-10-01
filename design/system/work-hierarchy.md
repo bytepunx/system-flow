@@ -165,7 +165,7 @@ The flai installed on the host serves MCP and starts agents, and it lags the tre
 - A write gives those keys back unchanged: `Marshal` appends them, as written, after the fields it knows. No write drops a field it did not understand.
 - `flai check` stays strict: each unknown key is an error, `item.unknown-field`, `threads.unknown-field`, or `issues.unknown-field`, on the key's line.
 - Reading past a field is not acting on it: a flai that does not know `after` does not hold the story. What keeps the host's flai current is the version check and the minimum: `flai serve`, the MCP `inbox`, and the dashboard say when the host's flai is older than the newest flai release in the project's history, and `flai.minimum` in `system-flow.yaml` stops an older flai before it reads any item ([project-manifest.md](project-manifest.md), [flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)).
-- The fields flai reads are listed in `flai/internal/workitem/front-matter-fields.txt`, which a test keeps equal to the code. A story that adds or removes a front-matter field changes it, and publishing the flai release that carries the change raises `flai.minimum` to that release.
+- The fields flai reads are listed in `flai/internal/workitem/front-matter-fields.txt`, which a test keeps equal to the code, with the keys of a story's `agent` block and of each of its roles too (S-0189): the lenient read ignores a key it does not know inside `agent`, and a write would drop it. A story that adds or removes a front-matter field changes it, and publishing the flai release that carries the change raises `flai.minimum` to that release.
 
 ## Body structure
 
