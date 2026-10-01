@@ -1,12 +1,14 @@
 package threads
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -157,5 +159,70 @@ func TestSameSecondEntriesShareAHeading(t *testing.T) {
 	}
 	if got.Body != th.Body {
 		t.Error("saved body differs from the returned one")
+	}
+}
+
+// S-0179: a thread's title loses the punctuation its heading cannot end
+// with, and an entry the project's lint rejects is refused, leaving the
+// thread as it was.
+func TestThreadWritesTheLintRejectsAreRefused(t *testing.T) {
+	r := project(t)
+	_ = os.WriteFile(filepath.Join(r.Root, ".markdownlint.yaml"), []byte("default: true\nMD013: false\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD032: false\nMD041: false\n"), 0o644)
+	th, err := New(r, NewOptions{Title: "Settled.", On: "design/system/plan.md", Author: "alex", Text: "Is it?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if th.Title != "Settled" || !strings.Contains(th.Body, "# TH-0001 Settled\n") {
+		t.Errorf("title: %q\n%s", th.Title, th.Body)
+	}
+	if _, err := New(r, NewOptions{Title: "Bad", On: "design/system/plan.md", Author: "alex", Text: "**Bold as a heading**", Now: t0}); err == nil || !strings.Contains(err.Error(), "MD036") {
+		t.Errorf("a first entry the lint rejects is refused: %v", err)
+	}
+	if m, _ := filepath.Glob(filepath.Join(Dir(r), "TH-0002-*")); len(m) != 0 {
+		t.Errorf("nothing is written: %v", m)
+	}
+	was, _ := os.ReadFile(th.Path)
+	_, err = Reply(r, th.ID, "claude", "Yes.\n\n\n\nIt is.", t0.Add(time.Minute))
+	var le *mdlint.Error
+	if !errors.As(err, &le) || le.Findings[0].Rule != "MD012" {
+		t.Fatalf("a reply the lint rejects is refused with the rule: %v", err)
+	}
+	if got, _ := os.ReadFile(th.Path); string(got) != string(was) {
+		t.Error("a refused reply leaves the thread as it was")
+	}
+	if _, err := Resolve(r, th.ID, "claude", "settled", t0.Add(time.Minute)); err != nil {
+		t.Errorf("a clean resolution is kept: %v", err)
+	}
+}
+
+// The mirror block, removed when its last thread resolves, leaves one blank
+// line where it stood, even when a blank line was put above it by hand
+// (MD012 on S-0175's and S-0180's narratives).
+func TestMirrorRemovalLeavesOneBlankLine(t *testing.T) {
+	r := project(t)
+	story, _ := r.Create(workitem.NewOptions{Type: workitem.Story, Title: "S", Owner: "a", Now: t0})
+	if _, err := r.OpenStream(story, workitem.StreamOptions{Agent: "claude", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	th, err := New(r, NewOptions{Title: "Q", On: story.ID, Author: "claude", Text: "?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = MirrorNarrative(r, story.ID)
+	path := r.NarrativePath(story.ID)
+	n, _ := os.ReadFile(path)
+	// the agent rewrites the section with a blank line under the heading
+	edited := strings.Replace(string(n), "## Open questions\n<!-- threads:start -->", "## Open questions\n\n<!-- threads:start -->", 1)
+	if edited == string(n) {
+		t.Fatalf("fixture:\n%s", n)
+	}
+	_ = os.WriteFile(path, []byte(edited), 0o644)
+	if _, err := Resolve(r, th.ID, "alex", "", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	_ = MirrorNarrative(r, story.ID)
+	n, _ = os.ReadFile(path)
+	if strings.Contains(string(n), "\n\n\n") || !strings.Contains(string(n), "## Open questions\n\n## Log") {
+		t.Errorf("one blank line between the sections:\n%s", n)
 	}
 }

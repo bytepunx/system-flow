@@ -350,7 +350,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	var changed []string
 	oldTitle, oldPath := it.Title, it.Path
 	if ch.Title != nil {
-		t := strings.Join(strings.Fields(*ch.Title), " ")
+		t := workitem.CleanTitle(*ch.Title)
 		if t == "" {
 			return nil, invalid("a title is required")
 		}

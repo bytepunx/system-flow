@@ -267,7 +267,7 @@ type NewOptions struct {
 // New opens a thread. The anchor is validated: an item must exist, a path
 // must exist under the repository, and a heading must be present in the file.
 func New(r *workitem.Repo, opt NewOptions) (*Thread, error) {
-	if strings.TrimSpace(opt.Title) == "" {
+	if opt.Title = workitem.CleanTitle(opt.Title); opt.Title == "" {
 		return nil, fmt.Errorf("a title is required")
 	}
 	if strings.TrimSpace(opt.Author) == "" {
@@ -279,7 +279,7 @@ func New(r *workitem.Repo, opt NewOptions) (*Thread, error) {
 	}
 	now := opt.Now.UTC().Format(workitem.TimeFormat)
 	th := &Thread{
-		ID: NextID(r), Title: strings.TrimSpace(opt.Title), Anchor: anchor, Status: "open",
+		ID: NextID(r), Title: opt.Title, Anchor: anchor, Status: "open",
 		Participants: []string{opt.Author}, Created: now, Updated: now,
 	}
 	th.Path = filepath.Join(Dir(r), th.ID+"-"+orSlug(th.Title)+".md")
@@ -288,6 +288,9 @@ func New(r *workitem.Repo, opt NewOptions) (*Thread, error) {
 		where += " § " + anchor.Heading
 	}
 	th.Body = fmt.Sprintf("\n# %s %s\n\nOn %s.\n\n## Entries\n\n### %s %s\n%s\n", th.ID, th.Title, where, now, opt.Author, strings.TrimSpace(opt.Text))
+	if err := r.LintGuard(th.Path, "", th.Marshal()); err != nil {
+		return nil, err
+	}
 	if err := th.Save(); err != nil {
 		return nil, err
 	}
@@ -370,6 +373,7 @@ func Reply(r *workitem.Repo, id, author, text string, now time.Time) (*Thread, e
 	if err != nil {
 		return nil, err
 	}
+	was := th.Marshal()
 	stamp := now.UTC().Format(workitem.TimeFormat)
 	th.Body = appendEntry(th.Body, stamp, author, text)
 	if author == th.Opener() {
@@ -381,7 +385,16 @@ func Reply(r *workitem.Repo, id, author, text string, now time.Time) (*Thread, e
 		th.Participants = append(th.Participants, author)
 	}
 	th.Updated = stamp
-	return th, th.Save()
+	return th, save(r, th, was)
+}
+
+// save writes the thread unless the change brings markdown the project's
+// lint rejects (S-0179).
+func save(r *workitem.Repo, th *Thread, was string) error {
+	if err := r.LintGuard(th.Path, was, th.Marshal()); err != nil {
+		return err
+	}
+	return th.Save()
 }
 
 // Resolve closes a thread, recording who did it and why.
@@ -390,6 +403,7 @@ func Resolve(r *workitem.Repo, id, author, reason string, now time.Time) (*Threa
 	if err != nil {
 		return nil, err
 	}
+	was := th.Marshal()
 	stamp := now.UTC().Format(workitem.TimeFormat)
 	note := "Resolved."
 	if strings.TrimSpace(reason) != "" {
@@ -401,7 +415,7 @@ func Resolve(r *workitem.Repo, id, author, reason string, now time.Time) (*Threa
 		th.Participants = append(th.Participants, author)
 	}
 	th.Updated = stamp
-	return th, th.Save()
+	return th, save(r, th, was)
 }
 
 // appendEntry adds a dated entry to the body. Entries are headed by their
@@ -474,7 +488,12 @@ func MirrorNarrative(r *workitem.Repo, storyID string) error {
 		if j < i {
 			return fmt.Errorf("%s: malformed threads block", path)
 		}
-		doc = doc[:i] + block + strings.TrimPrefix(doc[j+len(mirrorEnd):], "\n")
+		before, after := doc[:i], strings.TrimPrefix(doc[j+len(mirrorEnd):], "\n")
+		if block == "" && strings.HasSuffix(before, "\n\n") {
+			// the block went with a blank line above it: keep one, not two (MD012)
+			after = strings.TrimLeft(after, "\n")
+		}
+		doc = before + block + after
 	} else if block != "" {
 		h := "## Open questions"
 		i := strings.Index(doc, "\n"+h)

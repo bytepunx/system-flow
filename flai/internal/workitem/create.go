@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
@@ -43,7 +44,7 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	if !contains(Types, opt.Type) {
 		return nil, fmt.Errorf("unknown type %q", opt.Type)
 	}
-	if strings.TrimSpace(opt.Title) == "" {
+	if opt.Title = CleanTitle(opt.Title); opt.Title == "" {
 		return nil, fmt.Errorf("a title is required")
 	}
 	if opt.Nature == "" {
@@ -125,6 +126,10 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	if err := it.Validate(); err != nil {
 		return nil, fmt.Errorf("item template for %s produced an invalid item: %w", opt.Type, err)
 	}
+	it.Path = filepath.Join(r.ItemDir(it.Type, it.Archived), FileName(it.ID, it.Title))
+	if err := r.LintGuard(it.Path, "", it.Marshal()); err != nil {
+		return nil, err
+	}
 	if err := r.Save(it); err != nil {
 		return nil, err
 	}
@@ -136,6 +141,33 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		}
 	}
 	return it, nil
+}
+
+// headingPunctuation is what markdownlint rejects at the end of a heading
+// by default (MD026).
+const headingPunctuation = ".,;:!。，；：！"
+
+// CleanTitle is a title as flai writes it: one line, single spaces, and no
+// trailing punctuation, which the lint rejects in the item's heading (MD026,
+// S-0179). A question mark stays.
+func CleanTitle(s string) string {
+	return strings.TrimRight(strings.Join(strings.Fields(s), " "), headingPunctuation+" ")
+}
+
+// LintGuard refuses a write to path, a file in the project, whose markdown
+// the project's lint rejects where before did not (S-0179): what flai writes
+// in the main checkout reaches main without the lint a story runs. The error
+// is an *mdlint.Error naming each finding's rule and line.
+func (r *Repo) LintGuard(path, before, after string) error {
+	root := r.MainRoot
+	if root == "" {
+		root = r.Root
+	}
+	rel := path
+	if x, err := filepath.Rel(root, path); err == nil && !strings.HasPrefix(x, "..") {
+		rel = filepath.ToSlash(x)
+	}
+	return mdlint.Guard(root, rel, before, after)
 }
 
 // CleanTopics trims a topics list, drops empty entries and repeats, and

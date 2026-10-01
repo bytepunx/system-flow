@@ -130,6 +130,7 @@ func (r *Repo) LogStream(storyID, entry string, opt StreamOptions) (*Narrative, 
 	if err != nil {
 		return nil, err
 	}
+	was := n.Marshal()
 	now := opt.Now.UTC().Format(TimeFormat)
 	if !strings.Contains(n.Body, "\n## Log") && !strings.HasPrefix(n.Body, "## Log") {
 		n.Body = strings.TrimRight(n.Body, "\n") + "\n\n## Log\n"
@@ -149,6 +150,9 @@ func (r *Repo) LogStream(storyID, entry string, opt StreamOptions) (*Narrative, 
 	}
 	if opt.Session != "" {
 		n.Session = opt.Session
+	}
+	if err := r.LintGuard(n.Path, was, n.Marshal()); err != nil {
+		return nil, err
 	}
 	if err := n.Save(); err != nil {
 		return nil, err

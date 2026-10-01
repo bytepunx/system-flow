@@ -7,6 +7,7 @@
 package itemnew
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -60,6 +62,10 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		}
 	}
 	it, err := repo.Create(opt.New)
+	var lint *mdlint.Error
+	if errors.As(err, &lint) {
+		return nil, &docedit.RefusedError{Path: lint.Path, Reason: "the project's markdown lint rejects it; nothing was created", Findings: check.LintFindings(lint)}
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -947,6 +947,16 @@ func (c *checker) issues() {
 	}
 }
 
+// LintFindings are a refused write's markdown lint findings as flai check
+// reports them, for the commands that refuse with check findings.
+func LintFindings(e *mdlint.Error) []Finding {
+	out := make([]Finding, len(e.Findings))
+	for i, f := range e.Findings {
+		out[i] = Finding{Level: Warning, Rule: "markdown." + f.Rule, Path: e.Path, Line: f.Line, Message: f.String()}
+	}
+	return out
+}
+
 // markdown lints every markdown file under the wip folder with the project's
 // markdownlint configuration (S-0179). flai writes them in the main
 // checkout, where no story's lint runs (ADR-0019), so they reach main unlinted
