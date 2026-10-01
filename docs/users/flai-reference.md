@@ -2529,6 +2529,8 @@ flai upgrade [flags]
 
 Fetch the template (config, or --template and --ref), compare its version with system-flow.yaml, and apply the difference per ADR-0015: add new files, merge marker files (CLAUDE.md, conventions) above the marker, replace files the project has not changed since they were applied, and report the rest as conflicts. In a terminal each conflict offers keep, replace, or a diff; otherwise --keep-all or --replace-all is required and nothing changes without one. The manifest and lock are updated only when no conflict is left unresolved. A dirty git tree is refused unless --force.
 
+Each template variable is rendered with, in order: --var; the manifest's own field for project\_name, project\_key, description, owner, and repo\_url; the value system-flow.lock.yaml recorded; the template's default. A required variable with none of these is named and nothing is changed.
+
 Examples:
 
 ```bash
@@ -2537,6 +2539,7 @@ flai upgrade
 flai upgrade --keep-all           # scripts and CI: never overwrite edits
 flai upgrade --template ./template --force
 flai upgrade --relock             # hand-assembled project: record the current files at this version
+flai upgrade --var team=billing   # a variable the template added, or a new value for one
 ```
 
 Flags:
@@ -2550,6 +2553,7 @@ Flags:
 | `--relock` | record the current files at the template's version without changing them |
 | `--replace-all` | replace every conflicting project file with the template's |
 | `--template` string | template git URL or local directory (default: the manifest's template.repo) |
+| `--var` stringArray | set a template variable the manifest does not hold, name=value (repeatable); recorded in the lock |
 
 ### flai version
 

@@ -211,7 +211,7 @@ flai new my-project --defaults --var "description=Billing platform" --var owner=
 |------|--------|
 | `--template <url or dir>` | Use this template instead of the configured one. A local directory works. |
 | `--ref <branch, tag, or commit>` | Template version to use. |
-| `--var name=value` | Set a variable. Repeatable. |
+| `--var name=value` | Set a variable. Repeatable. A required variable given empty is refused before anything is written. |
 | `--layout key=name` | Rename a documentation folder, for example `--layout design=architecture`. |
 | `--defaults` | Never prompt. Use defaults for anything not given with `--var`. |
 | `--force` | Overwrite files that already exist. Otherwise they are kept and reported. |
@@ -789,9 +789,12 @@ flai upgrade --dry-run      # what would change
 flai upgrade                # interactive: keep, replace, or diff each conflict
 flai upgrade --keep-all     # scripts and CI: never overwrite a project edit
 flai upgrade --relock       # a project assembled by hand: record the current files at this version
+flai upgrade --var team=billing   # a variable the template added, or a new value for one
 ```
 
 `flai new` writes `system-flow.lock.yaml`, a hash of every file the template rendered. On upgrade each template path is classified: **add** when the project lacks it, **merge** for files with the baseline marker such as `CLAUDE.md` and the conventions (template text above the marker, yours below; `topics` you set on a convention's front matter stay yours, and a convention whose topics you left as the template gave them takes the new template's), **replace** when your copy still matches the lock, **unchanged** when identical, otherwise a **conflict** that you decide. Without a lock every difference is a conflict, which is what `--relock` fixes. A dirty git tree is refused unless `--force`, so an upgrade is one reviewable diff, and the manifest's template version is updated only when no conflict is left undecided. Kept conflicts stay divergent and come back next time; replace them or add your rule below a marker instead.
+
+The lock also records the value of every template variable, and upgrade renders with them, so a variable your template's fork added keeps its value. The project's name, key, description, owner, and repository URL come from `system-flow.yaml`; edit them there. A variable the new template version adds takes its default, or the value you give with `--var`; `--var` also changes a recorded value. A required variable with no value is named and nothing changes: run the upgrade again with `--var name=value`.
 
 ## Publish a template
 

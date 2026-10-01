@@ -1,6 +1,6 @@
 ---
 title: Template repository
-updated: 2026-09-28
+updated: 2026-10-01
 status: active
 topics: [template]
 ---
@@ -77,6 +77,10 @@ publish:                   # the template's git home, used by flai template push
 
 The manifest is parsed strictly; an unknown key is an error. `version` is required. `min_flai` is printed by `flai template show` and not enforced. A `dashboard` section is accepted and ignored: a project's dashboard settings come from `root/system-flow.yaml.tmpl`.
 
+## Variables
+
+`flai new` and `flai import` take each variable, in manifest order, from `--var`, else its default (an empty `project_name` defaults to the target directory's name), else a prompt in a terminal. A required variable left empty, whichever way it was set, stops the command before anything is written (S-0185, I-0041). `flai new` records every value in `system-flow.lock.yaml` under `vars`; `flai upgrade` renders with them, as [Upgrading a project](#upgrading-a-project) says, so a variable a fork adds survives upgrades. `flai import` writes no lock, so an imported project records its values at its first `flai upgrade` or `flai upgrade --relock`.
+
 ## Built-in variables
 
 Available in every rendered file in addition to the manifest variables.
@@ -116,7 +120,7 @@ Semantic versions in `template.yaml`. `flai` records the applied version in `sys
 
 ## Upgrading a project
 
-`flai upgrade` brings a conforming repo to the template version at the project's source (`template.repo` and `template.ref` in `system-flow.yaml`, or `--template` and `--ref`, which it then records) ([ADR-0015](../adrs/0015-template-lock-file.md)). `system-flow.lock.yaml`, written by `flai new` and `flai upgrade`, records a sha256 per rendered path, and the `topics` the template gave each marker file. On upgrade each template path is classified: added when absent, merged when both sides carry the baseline marker (template above, project below, except that a project's own `topics` on the file stay: [conventions.md](conventions.md#topics)), replaced when the project file still matches the lock, skipped when identical, otherwise a conflict. In a terminal each conflict offers keep, replace, or a diff; non-interactive runs need `--keep-all` or `--replace-all` and otherwise change nothing. The manifest's `template.version` and `template.applied` and the lock are updated only when no conflict is unresolved. A dirty git tree is refused unless `--force`, so the upgrade is reviewable as one diff. Upgrade renders with the five standard variables read back from `system-flow.yaml` (`name`, `key`, `description`, `owner`, `repo`) and never prompts, so a template file that uses any other variable renders on `flai new` and fails on upgrade. `system-flow.yaml` itself is never re-rendered; only its `template` fields are updated. A file removed from the template stays in projects. `--relock` writes the lock at the current version for projects assembled by hand.
+`flai upgrade` brings a conforming repo to the template version at the project's source (`template.repo` and `template.ref` in `system-flow.yaml`, or `--template` and `--ref`, which it then records) ([ADR-0015](../adrs/0015-template-lock-file.md)). `system-flow.lock.yaml`, written by `flai new` and `flai upgrade`, records a sha256 per rendered path, the `topics` the template gave each marker file, and under `vars` the value of every template variable the project was last rendered with. On upgrade each template path is classified: added when absent, merged when both sides carry the baseline marker (template above, project below, except that a project's own `topics` on the file stay: [conventions.md](conventions.md#topics)), replaced when the project file still matches the lock, skipped when identical, otherwise a conflict. In a terminal each conflict offers keep, replace, or a diff; non-interactive runs need `--keep-all` or `--replace-all` and otherwise change nothing. The manifest's `template.version` and `template.applied` and the lock are updated only when no conflict is unresolved. A dirty git tree is refused unless `--force`, so the upgrade is reviewable as one diff. Upgrade never prompts. It renders with each variable the template defines, taken from `--var`, then, for the five standard variables, from `system-flow.yaml` (`name`, `key`, `description`, `owner`, `repo`; `--var` refuses these), then from the values the lock recorded, then from the variable's default; a required variable left empty is named and nothing is changed (S-0185, I-0040). See [Variables](#variables). `system-flow.yaml` itself is never re-rendered; only its `template` fields are updated. A file removed from the template stays in projects. `--relock` writes the lock at the current version for projects assembled by hand.
 
 ## Publishing a template
 

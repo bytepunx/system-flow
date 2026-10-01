@@ -1,6 +1,6 @@
 ---
 title: Template guide
-updated: 2026-09-28
+updated: 2026-10-01
 status: active
 ---
 
@@ -88,11 +88,20 @@ variables:
 1. A `--var name=value` wins. A name the manifest does not define is an error.
 2. Otherwise the default. A default containing `{{` is itself a template and can use any variable listed before it and the [functions](#functions). An empty `project_name` defaults to the target directory's name.
 3. In a terminal, without `--defaults`, flai prompts with `prompt` and the default filled in. Anywhere else the default is taken without asking.
-4. A `required` variable still empty after its default and the prompt stops the command before anything is written, and names it. An empty value given with `--var` is not caught this way ([I-0041](../../design/issues/I-0041-an-explicitly-empty-var-for-a-required-template-variable-passes-the-required-check-and-flai-new-writes-the-files-before-failing.md)).
+4. A `required` variable that is empty, whether given with `--var`, defaulted, or prompted, stops the command before anything is written, and names it.
 
 Every variable defined in the manifest is available in every rendered file, as `{{ .name }}`, even when its value is empty.
 
-Keep the five variables the template ships with: `project_name`, `project_key`, `description`, `owner`, `repo_url`. `flai upgrade` does not prompt. It renders with those five only, read back from the project's `system-flow.yaml` (`name`, `key`, `description`, `owner`, `repo`), so a file that uses a variable you added renders on `flai new` and fails on `flai upgrade` with `map has no entry for key`. Until upgrade learns more variables ([I-0040](../../design/issues/I-0040-flai-upgrade-renders-with-the-five-standard-variables-only-so-a-template-variable-a-fork-adds-fails-every-upgrade.md)), derive anything else from those five in the template itself, as in `#{{ .project_key }}-dev`.
+`flai new` records the value of every variable in the project's `system-flow.lock.yaml`, under `vars`. `flai upgrade` never prompts. It renders with each variable the new template version defines, choosing, in order:
+
+1. A `--var name=value` given to `flai upgrade`. A name the manifest does not define is an error.
+2. For the five variables the template ships with, the project's `system-flow.yaml`: `project_name` from `name`, `project_key` from `key`, `description`, `owner`, and `repo_url` from `repo`. Change these there; `--var` refuses them.
+3. The value `system-flow.lock.yaml` recorded.
+4. The default, for a variable added since the project last rendered.
+
+A `required` variable still empty is named, and the upgrade stops before it changes anything: run it again with `--var`. The lock then records the values the upgrade rendered with, so a value given once is kept. A project assembled by hand or made with `flai import` has no recorded values until its first `flai upgrade` or `flai upgrade --relock`; until then a variable you added takes its default or `--var`.
+
+So a variable you add to a fork works in projects made before it: give it a default they can live with, or say in the changelog entry which `--var` to pass. A new `required` variable with no default, or an optional one made `required`, stops the upgrade of every project that has no value for it until it passes `--var`: treat it as a breaking change.
 
 ### Built-in data
 
