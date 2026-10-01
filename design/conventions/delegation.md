@@ -41,4 +41,4 @@ When the agent working a story hands work to a sub-agent, what it hands over, an
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- `.claude/settings.json` runs the guard from this tree, `scripts/flai.sh guard`, so it is the guard on this branch; a project made from the template runs the installed `flai guard` (ADR-0060). The agent definitions in `.claude/agents/` are copies of the template's; change them in `template/root/.claude/agents/` first.
+- `.claude/settings.json` runs the guard from this tree, `scripts/flai.sh guard`, passing on only its refusals as the template's does, so it is the guard on this branch; a project made from the template runs the installed `flai guard` (ADR-0060). The agent definitions in `.claude/agents/` are copies of the template's; change them in `template/root/.claude/agents/` first.

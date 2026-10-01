@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "flai guard"
+            "command": "out=$(flai guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
           }
         ]
       }

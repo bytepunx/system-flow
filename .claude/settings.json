@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/flai.sh guard"
+            "command": "out=$(\"$CLAUDE_PROJECT_DIR\"/scripts/flai.sh guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
           }
         ]
       }
