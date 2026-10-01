@@ -3,21 +3,35 @@ id: S-0184
 type: story
 nature: improvement
 title: The dashboard recovers from a stray stop and is not taken over by a second flai serve
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:32:11Z
+updated: 2026-10-01T08:58:30Z
 transitions:
   - to: ready
     at: 2026-10-01T08:32:11Z
     by: alex
+  - to: in-progress
+    at: 2026-10-01T08:54:33Z
+    by: agent-S-0184
 tags: [flai, dashboard]
-touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/internal/host, flai/internal/channel, flaiover/src/lib/server/agent.ts, flaiover/Dockerfile]
+touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_watch.go, flai/cmd/host.go, flai/internal/host, flai/internal/channel, flai/internal/config, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/Dockerfile, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, docs/operators, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0025, design/issues/I-0029, design/issues/summary.md, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_token.go, flai/cmd/host_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 255
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 856
+      cache_read: 5669980
+      cache_write: 216985
+      cost: 2.3288
 ---
 # S-0184 The dashboard recovers from a stray stop and is not taken over by a second flai serve
 
@@ -37,6 +51,10 @@ Two issues leave the operator with a dashboard that is down or misdirected until
 - [ ] I-0025 and I-0029 are closed with what fixed them
 
 ## Tasks
+- T-0648 The dashboard image has a HEALTHCHECK and flai dashboard status says running, not answering, or gone
+- T-0649 flai host restarts a dashboard that is gone or not answering, with a back-off, and dashboard.no_restart turns it off
+- T-0650 The dashboard refuses a second flai connection while its holder answers, and flai backs off on that close code
+- T-0651 Design and operator guide describe the watchdog and the refused connection; close I-0025 and I-0029
 
 ## Notes
 

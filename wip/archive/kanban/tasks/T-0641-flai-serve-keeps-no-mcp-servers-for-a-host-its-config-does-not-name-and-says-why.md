@@ -3,18 +3,35 @@ id: T-0641
 type: task
 nature: remediation
 title: flai serve keeps no MCP servers for a host its config does not name, and says why
-status: ready
+status: done
 parent: S-0183
 owner: arobson
 created: 2026-10-01T08:34:18Z
-updated: 2026-10-01T08:34:25Z
+updated: 2026-10-01T08:36:58Z
 transitions:
   - to: ready
     at: 2026-10-01T08:34:25Z
     by: agent-S-0183
+  - to: in-progress
+    at: 2026-10-01T08:35:31Z
+    by: agent-S-0183
+  - to: done
+    at: 2026-10-01T08:36:58Z
+    by: agent-S-0183
 stream: S-0183
 tags: []
 touches: [flai/cmd/serve.go, flai/internal/host]
+usage:
+  source: log
+  seconds: 87
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 8263
+      cache_read: 1724077
+      cache_write: 30696
+      cost: 0.7305
 ---
 # T-0641 flai serve keeps no MCP servers for a host its config does not name, and says why
 

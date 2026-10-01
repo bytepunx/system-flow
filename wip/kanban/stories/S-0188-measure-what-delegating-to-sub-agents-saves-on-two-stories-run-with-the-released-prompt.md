@@ -22,6 +22,16 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 611
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 11995
+      cache_read: 2878705
+      cache_write: 69261
+      cost: 1.3701
 ---
 # S-0188 Measure what delegating to sub-agents saves on two stories run with the released prompt
 

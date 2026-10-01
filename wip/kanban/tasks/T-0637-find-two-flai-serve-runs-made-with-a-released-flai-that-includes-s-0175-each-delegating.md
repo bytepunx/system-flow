@@ -18,6 +18,17 @@ transitions:
 stream: S-0188
 tags: []
 touches: [design/system/agent-context.md]
+usage:
+  source: log
+  seconds: 531
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 8583
+      cache_read: 2059935
+      cache_write: 49562
+      cost: 0.9804
 ---
 # T-0637 Find two flai serve runs made with a released flai that includes S-0175, each delegating
 

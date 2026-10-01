@@ -3,18 +3,35 @@ id: T-0634
 type: task
 nature: remediation
 title: flai check reports markdown lint findings in wip as warnings
-status: ready
+status: done
 parent: S-0179
 owner: arobson
 created: 2026-10-01T08:23:14Z
-updated: 2026-10-01T08:23:32Z
+updated: 2026-10-01T08:43:02Z
 transitions:
   - to: ready
     at: 2026-10-01T08:23:32Z
     by: claude-opus-5-5
+  - to: in-progress
+    at: 2026-10-01T08:40:19Z
+    by: claude-opus-5-5
+  - to: done
+    at: 2026-10-01T08:43:02Z
+    by: claude-opus-5-5
 stream: S-0179
 tags: []
 touches: [flai/internal/check]
+usage:
+  source: log
+  seconds: 163
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 20771
+      cache_read: 3626311
+      cache_write: 39368
+      cost: 1.4558
 ---
 # T-0634 flai check reports markdown lint findings in wip as warnings
 
@@ -24,9 +41,9 @@ touches: [flai/internal/check]
 
 ## Done when
 
-- [ ] A wip file with a finding gives a warning naming the rule and line; a project without a markdownlint configuration gives none
-- [ ] An edit whose body breaks a rule is refused with the rule and line
-- [ ] `make test` passes
+- [x] A wip file with a finding gives a warning naming the rule and line; a project without a markdownlint configuration gives none
+- [x] An edit whose body breaks a rule is refused with the rule and line
+- [x] `make test` passes
 
 ## Notes
 

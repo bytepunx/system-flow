@@ -3,18 +3,35 @@ id: T-0643
 type: task
 nature: remediation
 title: The flaiover dev server and compose take the dashboard token from where flai writes it
-status: ready
+status: done
 parent: S-0183
 owner: arobson
 created: 2026-10-01T08:34:18Z
-updated: 2026-10-01T08:34:25Z
+updated: 2026-10-01T08:38:42Z
 transitions:
   - to: ready
     at: 2026-10-01T08:34:25Z
     by: agent-S-0183
+  - to: in-progress
+    at: 2026-10-01T08:37:44Z
+    by: agent-S-0183
+  - to: done
+    at: 2026-10-01T08:38:42Z
+    by: agent-S-0183
 stream: S-0183
 tags: []
 touches: [scripts/flaiover-dev.sh, flaiover/compose.yaml]
+usage:
+  source: log
+  seconds: 58
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 5994
+      cache_read: 1250516
+      cache_write: 22265
+      cost: 0.5299
 ---
 # T-0643 The flaiover dev server and compose take the dashboard token from where flai writes it
 

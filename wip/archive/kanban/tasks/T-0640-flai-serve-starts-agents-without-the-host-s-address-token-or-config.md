@@ -3,11 +3,11 @@ id: T-0640
 type: task
 nature: remediation
 title: flai serve starts agents without the host's address, token, or config
-status: in-progress
+status: done
 parent: S-0183
 owner: arobson
 created: 2026-10-01T08:34:17Z
-updated: 2026-10-01T08:34:25Z
+updated: 2026-10-01T08:35:31Z
 transitions:
   - to: ready
     at: 2026-10-01T08:34:25Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-01T08:34:25Z
     by: agent-S-0183
+  - to: done
+    at: 2026-10-01T08:35:31Z
+    by: agent-S-0183
 stream: S-0183
 tags: []
 touches: [flai/internal/serve/agents.go]
+usage:
+  source: log
+  seconds: 66
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 5349
+      cache_read: 1116082
+      cache_write: 19871
+      cost: 0.4729
 ---
 # T-0640 flai serve starts agents without the host's address, token, or config
 

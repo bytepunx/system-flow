@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 118
-      cache_read: 699755
-      cache_write: 6596
-      cost: 0.2887
+      input: 6
+      output: 4003
+      cache_read: 698771
+      cache_write: 7586
+      cost: 0.2805
 ---
 # T-0632 A thread's entries in one second by one author share a heading
 
@@ -41,8 +41,8 @@ usage:
 
 ## Done when
 
-- [ ] A reply then a resolution in one second by one author leave one entry heading, and `Entries` returns the merged text
-- [ ] `make test` passes
+- [x] A reply then a resolution in one second by one author leave one entry heading, and `Entries` returns the merged text
+- [x] `make test` passes
 
 ## Notes
 
