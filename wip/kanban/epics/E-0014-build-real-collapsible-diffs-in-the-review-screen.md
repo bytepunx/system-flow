@@ -3,16 +3,22 @@ id: E-0014
 type: epic
 nature: feature
 title: Build real, collapsible diffs in the review screen
-status: in-progress
+status: done
 owner: alex
 created: 2026-09-29T19:57:06Z
-updated: 2026-09-29T21:10:42Z
+updated: 2026-10-01T11:02:09Z
 transitions:
   - to: ready
     at: 2026-09-29T21:02:58Z
     by: alex
   - to: in-progress
     at: 2026-09-29T21:05:12Z
+    by: alex
+  - to: review
+    at: 2026-10-01T11:02:05Z
+    by: alex
+  - to: done
+    at: 2026-10-01T11:02:09Z
     by: alex
 tags: [dashboard, cli]
 topics: [client-side, server-side]

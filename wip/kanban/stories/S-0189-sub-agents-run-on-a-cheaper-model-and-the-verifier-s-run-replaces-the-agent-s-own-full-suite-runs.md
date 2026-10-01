@@ -3,22 +3,43 @@ id: S-0189
 type: story
 nature: improvement
 title: Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs
-status: ready
+status: in-progress
 owner: arobson
 created: 2026-10-01T09:19:43Z
-updated: 2026-10-01T10:11:55Z
+updated: 2026-10-01T11:05:31Z
 transitions:
   - to: ready
     at: 2026-10-01T10:11:55Z
     by: alex
+  - to: in-progress
+    at: 2026-10-01T10:42:36Z
+    by: agent-S-0189
 tags: [template, cli]
 topics: [conventions]
-touches: [template/root/.claude/agents/, ".claude/agents/", flai/internal/harness, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/agent-context.md]
+touches: [template/root/.claude/agents, ".claude/agents", flai/internal/harness, flai/internal/guard, flai/internal/manifest, flai/internal/workitem, flai/cmd, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/serve, flaiover/src, design/adrs, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/agent-context.md, design/system/conventions.md, design/system/flai-cli.md, design/system/work-hierarchy.md, design/system/project-manifest.md, template/CHANGELOG.md, template/template.yaml, docs/users/flai.md, docs/users/flai-reference.md, docs/users/conventions.md, docs/operators/settings.md]
+after: [S-0181]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1242
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 396
+      output: 30184
+      cache_read: 27800801
+      cache_write: 370113
+      cost: 12.208
+    - model: claude-sonnet-5-5
+      input: 26
+      output: 108
+      cache_read: 636592
+      cache_write: 75307
+      cost: 0
 ---
 # S-0189 Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs
 
@@ -32,11 +53,18 @@ Add the backing data structure fields to support agent/model configuration based
 - [ ] The template's `explorer` and `verifier` definitions, and this repository's copies, name a model cheaper than the story's agent's, and `agent-context.md § Sub-agents` says which and why
 - [ ] `delegation.md` and the `claude-code` prompt (`harness.delegation`) tell the story's agent to run only the tests for what it changed, and to leave the whole suite, lint, and `flai check` to one verifier before review, plus one more after fixing what that verifier found
 - [ ] When the agent and/or model configured for the verifier step differs from the one configured for the story, do not allow the verifier agent to perform any necessary corrections found by the verifier.
-- [ ] Two stories run with a flai that includes this change are measured as S-0188 measured S-0184 and S-0185, against the same comparables, and the table in `agent-context.md` shows whether the cost of delegation fell below the cost of not delegating
+- [ ] A story's and the project's `agent` carry an optional `roles` map (`explore`, `verify`, open to more), each with its own harness, model, and config, and `claude-code` starts the story's session with each role's model over its definition's (TH-0057)
 
 ## Tasks
+- T-0671 The explorer and verifier run on a cheaper model
+- T-0672 Delegation and the prompt leave the whole suite to the verifier
+- T-0673 A story's and the project's agent carry per-role config
+- T-0674 claude-code runs each role's model, and the command harness is told the roles
+- T-0675 A verifier never makes the corrections it finds
+- T-0676 Replay S-0185's verifier on sonnet against its branch before the fixes
 
 ## Notes
 
 - Follow-up of S-0188. The tables and the reading are in `design/system/agent-context.md § Sub-agents › Measured`.
 - The defects S-0184's and S-0185's verifiers found are the benefit to keep. Check that a cheaper verifier still finds them, for instance by replaying its prompt on S-0185's branch before the fixes.
+- The criterion to measure two stories run with a flai that includes this change moved to S-0190, which is `after` S-0189. It can be measured only after S-0189 is accepted and released (TH-0057, the designer's word). The roles criterion states the goal's second paragraph in the shape TH-0057 settled.

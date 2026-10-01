@@ -3,12 +3,15 @@ id: S-0193
 type: story
 nature: research
 title: Explore ways to sign and verify components
-status: backlog
+status: ready
 parent: E-0015
 owner: alex
 created: 2026-10-01T11:18:38Z
 updated: 2026-10-01T11:18:38Z
-transitions: []
+transitions:
+  - to: ready
+    at: 2026-10-01T11:18:38Z
+    by: alex
 tags: []
 topics: [release, security]
 touches: [flaiover/src, flai/cmd]
