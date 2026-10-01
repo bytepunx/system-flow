@@ -3,13 +3,17 @@
 // with the call on standard input, and says which sub-agent makes it. A
 // sub-agent reads; it does not change a work item, a thread, or the
 // repository's history, because the story's agent alone acts for the story
-// (ADR-0059). The story's agent's own calls carry no agent type and are
-// never refused.
+// (ADR-0059). The story's agent's own calls carry no agent ID and are never
+// refused. The guard is not a shell: it finds the programs a command line
+// runs well enough to stop a sub-agent that follows its instructions
+// carelessly, not one that sets out to hide a command (a backslash inside a
+// name, a command held in a variable).
 package guard
 
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -21,8 +25,10 @@ type Event struct {
 	ToolInput struct {
 		Command string `json:"command"`
 	} `json:"tool_input"`
-	// AgentType names the sub-agent making the call; empty for the session's
-	// own agent.
+	// AgentID is set only when a sub-agent makes the call; AgentType names
+	// the sub-agent's definition. A session started with --agent may carry
+	// an agent type of its own, so the ID is what marks a sub-agent.
+	AgentID   string `json:"agent_id"`
 	AgentType string `json:"agent_type"`
 }
 
@@ -54,82 +60,99 @@ var cliReads = map[string][]string{
 // gitReads are the git commands a sub-agent may run.
 var gitReads = []string{"blame", "cat-file", "describe", "diff", "grep", "log", "ls-files", "ls-tree", "merge-base", "rev-list", "rev-parse", "shortlog", "show", "status"}
 
+// Guard decides on the calls of one flai: Commands are the names of its
+// commands, so that a word flai on a command line counts as running flai
+// only when a command of its follows.
+type Guard struct {
+	Commands []string
+}
+
 // Check says why a call is refused, or "" when it is not.
-func Check(e Event) string {
-	if e.AgentType == "" {
+func (g Guard) Check(e Event) string {
+	if e.AgentID == "" {
 		return ""
+	}
+	who := e.AgentType
+	if who == "" {
+		who = "unnamed"
 	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
 		if slices.Contains(MCPReads, tool) {
 			return ""
 		}
-		return fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items and threads or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", e.AgentType, tool)
+		return fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items and threads or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, tool)
 	}
 	if e.ToolName != "Bash" {
 		return ""
 	}
 	for _, words := range commands(e.ToolInput.Command) {
-		if why := refuse(words); why != "" {
-			return fmt.Sprintf("a sub-agent (%s) cannot run %q: %s (ADR-0060). Put what you need done in your final message; the story's agent does it.", e.AgentType, strings.Join(words, " "), why)
+		if why := g.refuse(words); why != "" {
+			return fmt.Sprintf("a sub-agent (%s) cannot run %q: %s (ADR-0060). Put what you need done in your final message; the story's agent does it.", who, strings.Join(words, " "), why)
 		}
 	}
 	return ""
 }
 
-// refuse says why one simple command is refused, or "" when it is not.
-func refuse(words []string) string {
-	words = program(words)
-	if len(words) == 0 {
-		return ""
-	}
-	switch name := path.Base(words[0]); name {
-	case "sh", "bash", "zsh", "eval":
-		for i, w := range words[1:] {
-			if name == "eval" || w == "-c" {
-				rest := strings.Join(words[i+1:], " ")
-				if w == "-c" && i+2 < len(words) {
-					rest = words[i+2]
-				}
-				for _, c := range commands(rest) {
-					if why := refuse(c); why != "" {
+var (
+	assignment = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`)
+	subcommand = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	shellFlags = regexp.MustCompile(`^-[a-zA-Z]*c[a-zA-Z]*$`)
+)
+
+// refuse says why one simple command is refused, or "" when it is not. It
+// does not trust the first word to be the program: wrappers such as env,
+// sudo, timeout, xargs, and find -exec put it further along, so every word
+// is looked at. A word is git run with a subcommand when a plain word
+// follows it after git's own flags, and flai run with one when one of its
+// commands follows; a shell given -c, or eval, has its script checked too.
+func (g Guard) refuse(words []string) string {
+	for i, w := range words {
+		if assignment.MatchString(w) {
+			continue
+		}
+		rest := words[i+1:]
+		switch path.Base(w) {
+		case "sh", "bash", "zsh", "dash", "ksh":
+			for j, f := range rest {
+				if shellFlags.MatchString(f) && j+1 < len(rest) {
+					if why := g.script(rest[j+1]); why != "" {
 						return why
 					}
+					break
 				}
-				return ""
 			}
+		case "eval":
+			if why := g.script(strings.Join(rest, " ")); why != "" {
+				return why
+			}
+		case "flai", "flai.sh":
+			cmd, sub := subcommands(rest, map[string]bool{"--config": true})
+			if !slices.Contains(g.Commands, cmd) || slices.Contains(rest, "--help") || slices.Contains(rest, "-h") {
+				continue
+			}
+			if subs, ok := cliReads[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
+				continue
+			}
+			return "flai commands that change work items, threads, narratives, or releases are the story's agent's"
+		case "git":
+			cmd, _ := subcommands(rest, map[string]bool{"-C": true, "-c": true, "--git-dir": true, "--work-tree": true, "--namespace": true})
+			if !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) {
+				continue
+			}
+			return "git commands that change the worktree, the index, branches, or history are the story's agent's"
 		}
-		return ""
-	case "flai", "flai.sh":
-		cmd, sub := subcommands(words[1:], map[string]bool{"--config": true})
-		subs, ok := cliReads[cmd]
-		if ok && (subs == nil || slices.Contains(subs, sub)) {
-			return ""
-		}
-		return "flai commands that change work items, threads, narratives, or releases are the story's agent's"
-	case "git":
-		cmd, _ := subcommands(words[1:], map[string]bool{"-C": true, "-c": true, "--git-dir": true, "--work-tree": true})
-		if cmd == "" || slices.Contains(gitReads, cmd) {
-			return ""
-		}
-		return "git commands that change the worktree, the index, branches, or history are the story's agent's"
 	}
 	return ""
 }
 
-// program drops what runs a command rather than being it: leading
-// environment assignments and env, command, exec, nohup, time, and sudo.
-func program(words []string) []string {
-	for len(words) > 0 {
-		w := words[0]
-		switch {
-		case strings.Contains(w, "=") && !strings.HasPrefix(w, "-") && !strings.Contains(w, "/"):
-		case slices.Contains([]string{"env", "command", "exec", "nohup", "time", "sudo"}, w):
-		default:
-			return words
+// script checks each simple command of a script a shell is given.
+func (g Guard) script(text string) string {
+	for _, c := range commands(text) {
+		if why := g.refuse(c); why != "" {
+			return why
 		}
-		words = words[1:]
 	}
-	return words
+	return ""
 }
 
 // subcommands is the first two words after a program's own flags; a flag in

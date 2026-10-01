@@ -32,8 +32,8 @@ func Query(title, body string) string {
 }
 
 // Goal is a story's "## Goal" and "## Acceptance criteria" sections as they
-// stand, the headings under them included, or its whole body when it has
-// neither.
+// stand, in any case, the headings under them included, or its whole body
+// when it has neither.
 func Goal(body string) string {
 	doc, err := topics.Parse(body, nil)
 	if err != nil {
@@ -43,7 +43,7 @@ func Goal(body string) string {
 	in := false
 	for _, s := range doc.Sections {
 		if s.Level > 0 && s.Level <= 2 {
-			in = s.Level == 2 && (s.Heading == "Goal" || s.Heading == "Acceptance criteria")
+			in = s.Level == 2 && (strings.EqualFold(s.Heading, "Goal") || strings.EqualFold(s.Heading, "Acceptance criteria"))
 		}
 		if in {
 			b.WriteString(s.Text)

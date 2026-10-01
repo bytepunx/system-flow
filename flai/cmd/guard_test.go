@@ -16,9 +16,10 @@ func TestGuard(t *testing.T) {
 		err  string
 	}{
 		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"},"agent_type":"verifier","agent_id":"a1"}`, 2, "a sub-agent (verifier) cannot call item_move"},
-		{`{"tool_name":"Bash","tool_input":{"command":"flai move S-1 review"},"agent_type":"Explore"}`, 2, "a sub-agent (Explore) cannot run \"flai move S-1 review\""},
-		{`{"tool_name":"Bash","tool_input":{"command":"make test"},"agent_type":"verifier"}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai move S-1 review"},"agent_type":"Explore","agent_id":"a2"}`, 2, "a sub-agent (Explore) cannot run \"flai move S-1 review\""},
+		{`{"tool_name":"Bash","tool_input":{"command":"make test"},"agent_type":"verifier","agent_id":"a3"}`, 0, ""},
 		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"timeout 9 flai accept S-1"},"agent_type":"verifier","agent_id":"a4"}`, 2, "cannot run \"timeout 9 flai accept S-1\""},
 		{`not json`, 0, "hook input is not a tool call"},
 	} {
 		_, errOut, code := runStdin(t, dir, c.in, "guard")

@@ -214,3 +214,15 @@ func TestAPackSaysABriefOfWhatTheStoryNamesIsForItsSize(t *testing.T) {
 		t.Errorf("a document under an eighth of the budget is not loaded whole: %+v", p.Items)
 	}
 }
+
+// S-0175: a role pack carries the story's goal and criteria, whatever case
+// their headings are in, with the headings under them, and nothing else.
+func TestGoalTakesTheGoalAndCriteria(t *testing.T) {
+	body := "# S-1 Title\n\n## Goal\n\nDo it.\n\n### Why\n\nBecause.\n\n## Acceptance Criteria\n- [ ] done\n\n## Tasks\n\n## Notes\n\nA note.\n"
+	if got, want := Goal(body), "## Goal\n\nDo it.\n\n### Why\n\nBecause.\n\n## Acceptance Criteria\n- [ ] done\n\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got := Goal("No sections.\n"); got != "No sections.\n" {
+		t.Errorf("no sections: %q", got)
+	}
+}

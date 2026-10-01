@@ -717,10 +717,10 @@ An agent `flai serve` starts with `claude-code` is told to keep its own context 
 | `.claude/agents/verifier.md` | The explorer's tools and `Bash`, to run the project's tests, lint, and checks. Told not to edit. |
 | `.claude/settings.json` | Runs `flai guard` before every shell command and flai tool call. |
 
-A sub-agent may read and run checks. It may not move, create, or edit a work item, write to a thread, read the inbox, or wait for events or work: neither definition has those tools, and `flai guard` refuses them, and the flai and git commands that write, to any sub-agent, the built-in ones included ([ADR-0060](../../design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). The story's agent's own calls pass. A refused call tells the sub-agent to say what it needs in its final message instead.
+A sub-agent may read and run checks. It may not move, create, or edit a work item, write to a thread, read the inbox, or wait for events or work: neither definition has those tools, and `flai guard` refuses them, and the flai and git commands that write, to any sub-agent, the built-in ones included ([ADR-0060](../../design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). The story's agent's own calls pass. A refused call tells the sub-agent to say what it needs in its final message instead. The guard looks at every word of a command line, so `env`, `sudo`, `timeout`, `xargs`, `find -exec`, and `bash -c` do not hide a command from it; it is not a shell, and a command hidden on purpose, in a variable or with a backslash in its name, gets past it.
 
 ```bash
-echo '{"tool_name":"Bash","tool_input":{"command":"flai move S-0001 review"},"agent_type":"verifier"}' | flai guard
+echo '{"tool_name":"Bash","tool_input":{"command":"flai move S-0001 review"},"agent_type":"verifier","agent_id":"a1"}' | flai guard
 # a sub-agent (verifier) cannot run "flai move S-0001 review": ... ; exit status 2
 ```
 
