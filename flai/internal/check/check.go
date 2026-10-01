@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -71,6 +73,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.workItems()
 	c.narratives()
 	c.overlap()
+	c.componentTag()
 	c.after()
 	c.unaccepted()
 	c.board()
@@ -400,6 +403,55 @@ func (c *checker) overlap() {
 				c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, a.path, b.it.ID, b.path)
 			}
 		}
+	}
+}
+
+// componentTag warns on an open story that a release could not plan: its
+// touches, and its open tasks', reach two or more components, and no tag of
+// its own or its epic's names one of them, so nothing says which it delivers
+// to (I-0024). Research cuts no release and an experiment is never accepted,
+// so neither is warned.
+func (c *checker) componentTag() {
+	projects := c.repo.Manifest.Projects
+	if len(projects) < 2 {
+		return
+	}
+	holds := workitem.NewHolds(c.items, projects)
+	for _, it := range c.items {
+		if it.Archived || it.Type != workitem.Story || it.Closed() || it.Nature == "research" || it.Nature == "experiment" {
+			continue
+		}
+		claim := holds.Claim(it)
+		var reached []manifest.Project
+		for _, p := range projects {
+			for _, path := range claim {
+				if workitem.PathsOverlap(path, p.Path) {
+					reached = append(reached, p)
+					break
+				}
+			}
+		}
+		if len(reached) < 2 {
+			continue
+		}
+		tags := append([]string{}, it.Tags...)
+		if parent := c.byID[it.Parent]; parent != nil {
+			tags = append(tags, parent.Tags...)
+		}
+		named := false
+		var names []string
+		for _, p := range reached {
+			names = append(names, p.Name)
+			for _, t := range tags {
+				named = named || t == p.Name || slices.Contains(p.Tags, t)
+			}
+		}
+		if named {
+			continue
+		}
+		// --tag replaces the tags, so the suggestion keeps the ones there
+		suggest := append([]string{"<" + strings.Join(names, "|") + ">"}, it.Tags...)
+		c.add(Warning, "story.component-tag", it.Path, keyLine(it.Path, "touches"), "%s touches %s, and no tag of its own or its epic's names one of them, so its release cannot tell which it delivers to; tag it with the one it delivers to: flai edit %s --tag %s", it.ID, strings.Join(names, " and "), it.ID, strings.Join(suggest, ","))
 	}
 }
 
