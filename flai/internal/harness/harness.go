@@ -247,8 +247,9 @@ func answeredSince(b *Begun) string {
 // delegation tells the agent when to hand work to the explorer and verifier
 // sub-agents the template defines, what to give them, and what comes back
 // (ADR-0059, design/conventions/delegation.md), and to plan its tasks in
-// layers and work each layer's tasks at once with task sub-agents whose work
-// it reviews and commits itself (S-0176, design/conventions/work-management.md).
+// layers and hand each task to a task sub-agent, a layer at once when its
+// tasks are long, whose work it reviews and commits itself (S-0176,
+// design/conventions/work-management.md).
 func delegation(r Request) string {
 	return fmt.Sprintf(`Keep your own context for decisions and edits, and hand noisy work to sub-agents with the Agent tool: code and document search across many files to the explorer, and test, lint, and flai check runs and long logs to the verifier. A sub-agent starts with nothing but your prompt: give it the worktree's path, %[1]s and the task's ID, the question, what you already know, and the shape of the answer you want, and ask for a summary with paths and lines, not raw output. Do it yourself when that is quicker: one file you know, one short command. A sub-agent cannot change work items or threads; a question it returns for the designer is yours to ask with thread_open.
 

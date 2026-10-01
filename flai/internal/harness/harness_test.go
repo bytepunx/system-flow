@@ -319,9 +319,9 @@ func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
 }
 
 // S-0176: the story's agent plans its tasks in layers as it writes them,
-// records why in Decisions, and works each layer's tasks at once with task
-// sub-agents whose work it reviews and commits itself; an answered or commit
-// run is not told again.
+// records why in Decisions, and hands each task to a task sub-agent, a layer
+// at once when its tasks are long, whose work it reviews and commits itself;
+// an answered or commit run is not told again.
 func TestThePromptAsksForThePlan(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
