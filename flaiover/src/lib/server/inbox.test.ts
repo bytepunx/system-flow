@@ -14,18 +14,61 @@ const bin = process.env.FLAI_BIN ?? resolve('../bin/flai');
 // How narratives are parsed is flai's now, and tested there (internal/hostapi); the dashboard adds
 // the link each entry leads to.
 describe('where an inbox entry leads', () => {
-	it('sends a story in review to its review page, an item to its page, a document to the docs', () => {
+	it('sends a story in review to its review page, and an item to its page', () => {
 		expect(hrefFor({ kind: 'review', item: 'S-0004' })).toBe('/review/S-0004');
 		expect(hrefFor({ kind: 'blocked', item: 'T-0001' })).toBe('/items/T-0001');
+		expect(hrefFor({ kind: 'overlap', item: 'S-0002' })).toBe('/items/S-0002');
+	});
+
+	// S-0173: nothing in the inbox leads to a document, where it could not be answered.
+	it('sends an open question to its story page, opened on the question', () => {
 		expect(
-			hrefFor({ kind: 'thread', item: 'S-0001', path: 'wip/kanban/stories/S-0001-a.md' })
-		).toBe('/items/S-0001');
-		expect(hrefFor({ kind: 'thread', path: 'design/system/overview.md' })).toBe(
-			'/docs/design/system/overview.md'
-		);
+			hrefFor({
+				kind: 'question',
+				key: 'question:S-0001:abc',
+				item: 'S-0001',
+				path: 'wip/agents/S-0001.md'
+			})
+		).toBe('/items/S-0001?question=question%3AS-0001%3Aabc');
+		// a narrative's path names its story when the item is missing
 		expect(
-			hrefFor({ kind: 'thread', key: 'thread:TH-0007', path: 'design/system/overview.md' })
-		).toBe('/docs/design/system/overview.md');
+			hrefFor({ kind: 'question', key: 'question:S-0001:abc', path: 'wip/agents/S-0001.md' })
+		).toBe('/items/S-0001?question=question%3AS-0001%3Aabc');
+	});
+
+	it("sends a thread on an item's file or narrative to the item's page, opened on it", () => {
+		for (const [path, item] of [
+			['wip/kanban/stories/S-0001-a.md', 'S-0001'],
+			['wip/kanban/tasks/T-0012-b.md', 'T-0012'],
+			['wip/kanban/epics/E-0003-c.md', 'E-0003'],
+			['wip/agents/S-0001.md', 'S-0001'],
+			['wip/archive/agents/S-0009.md', 'S-0009'],
+			['wip/archive/kanban/stories/S-0009-d.md', 'S-0009']
+		])
+			expect(hrefFor({ kind: 'thread', key: 'thread:TH-0007', path })).toBe(
+				`/items/${item}?thread=TH-0007`
+			);
+	});
+
+	it('sends a thread on any other document to the threads page, opened on it (TH-0041)', () => {
+		for (const path of [
+			'design/issues/I-0027-a.md',
+			'design/system/overview.md',
+			'wip/agents/index.md',
+			'wip/kanban/board.md'
+		])
+			expect(hrefFor({ kind: 'thread', key: 'thread:TH-0017', path })).toBe(
+				'/threads?thread=TH-0017'
+			);
+	});
+
+	it('never leads to a document, whatever the entry', () => {
+		const kinds = ['thread', 'question', 'review', 'blocked', 'overlap'] as const;
+		const paths = [undefined, 'design/system/overview.md', 'wip/agents/S-0001.md'];
+		for (const kind of kinds)
+			for (const path of paths)
+				for (const item of [undefined, 'S-0001'])
+					expect(hrefFor({ kind, key: `${kind}:x`, item, path })).not.toMatch(/^\/docs\//);
 	});
 
 	it('sends a thread on a story to the story page, opened on that thread (S-0155)', () => {
@@ -37,9 +80,6 @@ describe('where an inbox entry leads', () => {
 				path: 'wip/kanban/stories/S-0149-a.md'
 			})
 		).toBe('/items/S-0149?thread=TH-0032');
-		expect(hrefFor({ kind: 'question', path: 'wip/agents/S-0001.md' })).toBe(
-			'/docs/wip/agents/S-0001.md'
-		);
 		expect(hrefFor({ kind: 'overlap' })).toBe('/board');
 	});
 });
@@ -112,7 +152,10 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		const box = await inbox(repo);
 		const byKind = (k: string) => box.entries.filter((e) => e.kind === k);
 		expect(byKind('question')).toMatchObject([
-			{ title: 'Which port should it use?', href: '/docs/wip/agents/S-004.md' }
+			{
+				title: 'Which port should it use?',
+				href: expect.stringMatching(/^\/items\/S-004\?question=question%3AS-004%3A/)
+			}
 		]);
 		expect(byKind('blocked')).toMatchObject([
 			{

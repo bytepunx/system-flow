@@ -86,7 +86,7 @@ describe('inbox webhook', () => {
 		expect(body.entry).toMatchObject({
 			kind: 'question',
 			title: 'Which port should it use?',
-			href: '/docs/wip/agents/S-004.md'
+			href: expect.stringMatching(/^\/items\/S-004\?question=/)
 		});
 		expect(Object.keys(body).sort()).toEqual(['entry', 'project']);
 		expect(Object.keys(body.entry).sort()).toEqual(['at', 'href', 'key', 'kind', 'title']);

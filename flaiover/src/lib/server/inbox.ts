@@ -24,19 +24,38 @@ export type Inbox = {
 
 type FlaiEntry = Omit<InboxEntry, 'href'> & { path?: string };
 
-/** Where an entry leads: the review page for a story in review, a question's own narrative document (even once it also carries an item id, to answer it in place), a thread on an item to that item's page opened on the thread (S-0155), else its item, else its document. */
+// A work item's file or a narrative, live or archived, names its item: wip/kanban/stories/S-0001-a.md, wip/agents/S-0001.md.
+const itemPath =
+	/^wip\/(?:archive\/)?(?:kanban\/(?:epics|stories|tasks)\/([A-Z]+-\d+)-[^/]*|agents\/([A-Z]+-\d+))\.md$/;
+
+/** The item a repository path is the file or narrative of, if it is one. */
+export function itemOf(path: string | undefined): string | undefined {
+	const m = path ? itemPath.exec(path) : null;
+	return m ? (m[1] ?? m[2]) : undefined;
+}
+
+/**
+ * Where an entry leads, never to a document, where it could not be answered (S-0173): the review
+ * page for a story in review; a question to its story's page, opened on it; a thread on an item, or
+ * on an item's file or narrative, to that item's page opened on the thread (S-0155); any other
+ * thread to the threads page opened on it (TH-0041); anything else to its item, else the board.
+ */
 export function hrefFor(e: {
 	kind: InboxKind;
 	key?: string;
 	item?: string;
 	path?: string;
 }): string {
-	if (e.kind === 'review' && e.item) return `/review/${e.item}`;
-	if (e.kind === 'question' && e.path) return `/docs/${e.path}`;
+	const item = e.item || itemOf(e.path);
+	if (e.kind === 'review' && item) return `/review/${item}`;
+	if (e.kind === 'question' && item && e.key)
+		return `/items/${item}?question=${encodeURIComponent(e.key)}`;
 	const thread = e.kind === 'thread' ? e.key?.replace(/^thread:/, '') : undefined;
-	if (e.item && thread) return `/items/${e.item}?thread=${encodeURIComponent(thread)}`;
-	if (e.item) return `/items/${e.item}`;
-	if (e.path) return `/docs/${e.path}`;
+	if (thread)
+		return item
+			? `/items/${item}?thread=${encodeURIComponent(thread)}`
+			: `/threads?thread=${encodeURIComponent(thread)}`;
+	if (item) return `/items/${item}`;
 	return '/board';
 }
 
