@@ -23,15 +23,15 @@ tags: []
 touches: [design/system/agent-context.md]
 usage:
   source: log
-  seconds: 515
+  seconds: 672
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 694
-      cache_read: 13359063
-      cache_write: 82386
-      cost: 5.819
+      input: 146
+      output: 910
+      cache_read: 18571445
+      cache_write: 106580
+      cost: 8.0859
     - model: claude-sonnet-5-5
       input: 26
       output: 108

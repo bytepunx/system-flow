@@ -3,10 +3,10 @@ id: S-0189
 type: story
 nature: improvement
 title: Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs
-status: in-progress
+status: done
 owner: arobson
 created: 2026-10-01T09:19:43Z
-updated: 2026-10-01T11:05:31Z
+updated: 2026-10-01T11:36:28Z
 transitions:
   - to: ready
     at: 2026-10-01T10:11:55Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-01T10:42:36Z
     by: agent-S-0189
+  - to: review
+    at: 2026-10-01T11:36:06Z
+    by: agent-S-0189
+  - to: done
+    at: 2026-10-01T11:36:28Z
+    by: alex
 tags: [template, cli]
 topics: [conventions]
-touches: [template/root/.claude/agents, ".claude/agents", flai/internal/harness, flai/internal/guard, flai/internal/manifest, flai/internal/workitem, flai/cmd, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/serve, flaiover/src, design/adrs, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/agent-context.md, design/system/conventions.md, design/system/flai-cli.md, design/system/work-hierarchy.md, design/system/project-manifest.md, template/CHANGELOG.md, template/template.yaml, docs/users/flai.md, docs/users/flai-reference.md, docs/users/conventions.md, docs/operators/settings.md]
+touches: [template/root/.claude/agents, ".claude/agents", flai/internal/harness, flai/internal/guard, flai/internal/manifest, flai/internal/workitem, flai/cmd, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/serve, flaiover/src, design/adrs, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/agent-context.md, design/system/conventions.md, design/system/flai-cli.md, design/system/work-hierarchy.md, design/system/project-manifest.md, template/CHANGELOG.md, template/template.yaml, docs/users/flai.md, docs/users/flai-reference.md, docs/users/conventions.md, docs/operators/settings.md, design/issues]
 after: [S-0181]
 agent:
   harness: claude-code
@@ -25,20 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1242
+  seconds: 2904
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 396
-      output: 30184
-      cache_read: 27800801
-      cache_write: 370113
-      cost: 12.208
+      input: 532
+      output: 31262
+      cache_read: 49443520
+      cache_write: 447430
+      cost: 21.6108
     - model: claude-sonnet-5-5
-      input: 26
-      output: 108
-      cache_read: 636592
-      cache_write: 75307
+      input: 118
+      output: 1338
+      cache_read: 3150342
+      cache_write: 253105
       cost: 0
 ---
 # S-0189 Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs
@@ -50,10 +56,10 @@ S-0188 measured two stories run with the released delegation prompt (S-0184, S-0
 Add the backing data structure fields to support agent/model configuration based on its role: "story" (what exists now), "explore", and "verify" (with future additions possible).
 
 ## Acceptance criteria
-- [ ] The template's `explorer` and `verifier` definitions, and this repository's copies, name a model cheaper than the story's agent's, and `agent-context.md § Sub-agents` says which and why
-- [ ] `delegation.md` and the `claude-code` prompt (`harness.delegation`) tell the story's agent to run only the tests for what it changed, and to leave the whole suite, lint, and `flai check` to one verifier before review, plus one more after fixing what that verifier found
-- [ ] When the agent and/or model configured for the verifier step differs from the one configured for the story, do not allow the verifier agent to perform any necessary corrections found by the verifier.
-- [ ] A story's and the project's `agent` carry an optional `roles` map (`explore`, `verify`, open to more), each with its own harness, model, and config, and `claude-code` starts the story's session with each role's model over its definition's (TH-0057)
+- [x] The template's `explorer` and `verifier` definitions, and this repository's copies, name a model cheaper than the story's agent's, and `agent-context.md § Sub-agents` says which and why
+- [x] `delegation.md` and the `claude-code` prompt (`harness.delegation`) tell the story's agent to run only the tests for what it changed, and to leave the whole suite, lint, and `flai check` to one verifier before review, plus one more after fixing what that verifier found
+- [x] When the agent and/or model configured for the verifier step differs from the one configured for the story, do not allow the verifier agent to perform any necessary corrections found by the verifier.
+- [x] A story's and the project's `agent` carry an optional `roles` map (`explore`, `verify`, open to more), each with its own harness, model, and config, and `claude-code` starts the story's session with each role's model over its definition's (TH-0057)
 
 ## Tasks
 - T-0671 The explorer and verifier run on a cheaper model

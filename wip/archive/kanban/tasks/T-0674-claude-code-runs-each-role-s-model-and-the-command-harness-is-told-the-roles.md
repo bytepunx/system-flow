@@ -23,15 +23,15 @@ tags: []
 touches: [flai/internal/harness]
 usage:
   source: log
-  seconds: 0
+  seconds: 118
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 16
-      cache_read: 276261
-      cache_write: 1340
-      cost: 0.1202
+      input: 24
+      output: 152
+      cache_read: 3407186
+      cache_write: 17971
+      cost: 1.4828
 ---
 # T-0674 claude-code runs each role's model, and the command harness is told the roles
 
