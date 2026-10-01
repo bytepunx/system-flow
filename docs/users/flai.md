@@ -374,6 +374,8 @@ flai stream open S-0037 --no-branch
 
 Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, stashing uncommitted work around it; conflicts stop inside the worktree and are listed, resolve them, `git rebase --continue`, and sync again. `flai accept` rebases, fast-forwards the branch into main, removes the worktree and branch, then tags and pushes.
 
+A story begun on another host reaches your clone with its narrative and tasks, but not its branch or worktree. `flai stream open` on it keeps the narrative and records your host, agent, and session in it. It then checks out `story/<id>`: your clone's branch if you have one, otherwise the remote's, fetched from `origin`, otherwise a new branch from main. It says which (`reopened wip/agents/S-0037.md`, `branch story/S-0037 (fetched from origin) checked out at …`). Only what the other host pushed comes with it. A story that already has its worktree here is refused, as before.
+
 After a clean rebase, sync checks the branch against the other stories in progress or in review, so that two stories that change the same lines find out while both are still open, not when the second is accepted:
 
 ```text

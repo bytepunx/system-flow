@@ -2268,7 +2268,9 @@ Create the narrative for a story and check out its branch in a worktree.
 flai stream open <story-id> [flags]
 ```
 
-Creates wip/agents/&lt;story-id&gt;.md from the template and, in a git repository, the branch story/&lt;story-id&gt; from the main branch, checked out in a worktree under .flai-cache/worktrees/&lt;story-id&gt; (ADR-0019). Work there; wip/ stays in the main checkout. Run flai stream sync at every task transition.
+Creates wip/agents/&lt;story-id&gt;.md from the template and, in a git repository, the branch story/&lt;story-id&gt; from the main branch, checked out in a worktree under .flai-cache/worktrees/&lt;story-id&gt; (ADR-0019). Work there; wip/ stays in the main checkout. Run flai stream sync at every task transition. The narrative records the host that opened it.
+
+A story whose narrative exists and whose worktree does not, such as one begun on another host (ADR-0064), is reopened: the narrative is kept, with this host, agent, and session recorded, and story/&lt;story-id&gt; is checked out from this clone's branch, else fetched from the remote (origin) when it has one, else created from the main branch. It is refused when the worktree exists too.
 
 Flags:
 

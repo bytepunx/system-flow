@@ -30,22 +30,44 @@ func (a *app) branchExists(root, branch string) bool {
 	return storygit.BranchExists(a.runner, root, branch)
 }
 
-// openStoryBranch creates story/<id> from the main branch and checks it out
-// in a worktree. Returns the branch and path, or "" when git is not in use.
-func (a *app) openStoryBranch(repo *workitem.Repo, id string) (branch, path string, created bool, err error) {
+// Where openStoryBranch found a story's branch, besides a remote's name.
+const (
+	branchLocal = "local"
+	branchMain  = "main"
+)
+
+// openStoryBranch checks story/<id> out in a worktree: this clone's branch
+// when it has one, else, when fromRemote, the remote's, fetched (ADR-0064),
+// else a new one from the main branch. It returns the branch, the path, and
+// where the branch came from (branchLocal, a remote's name, or branchMain;
+// "" when the worktree was there already), or "" for all when git is not in
+// use.
+func (a *app) openStoryBranch(repo *workitem.Repo, id string, fromRemote bool) (branch, path, from string, err error) {
 	if !a.inGitWorkTree(repo.MainRoot) {
-		return "", "", false, nil
+		return "", "", "", nil
 	}
 	branch, path = storyBranch(id), repo.WorktreePath(id)
 	if _, err := os.Stat(path); err == nil {
-		return branch, path, false, nil
+		return branch, path, "", nil
 	}
 	base, err := a.mainBranch(repo.MainRoot)
 	if err != nil {
-		return "", "", false, err
+		return "", "", "", err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return "", "", false, err
+		return "", "", "", err
+	}
+	from = branchLocal
+	if !a.branchExists(repo.MainRoot, branch) && fromRemote {
+		if remote := storygit.Remote(a.runner, repo.MainRoot); remote != "" {
+			fetched, err := storygit.FetchBranch(a.runner, repo.MainRoot, remote, branch)
+			if err != nil {
+				return "", "", "", fmt.Errorf("%w; run flai stream open %s again when %s answers, or create the branch from %s with git branch %s %s first", err, id, remote, base, branch, base)
+			}
+			if fetched {
+				from = remote
+			}
+		}
 	}
 	args := []string{"worktree", "add", "--quiet"}
 	if a.relativeWorktrees() {
@@ -54,14 +76,15 @@ func (a *app) openStoryBranch(repo *workitem.Repo, id string) (branch, path stri
 	if a.branchExists(repo.MainRoot, branch) {
 		args = append(args, path, branch)
 	} else {
+		from = branchMain
 		args = append(args, "-b", branch, path, base)
 	}
 	_, err = a.runner.Run(repo.MainRoot, "git", args...)
 	if err != nil {
-		return "", "", false, err
+		return "", "", "", err
 	}
-	a.logger().Info("story branch opened", "component", "git", "branch", branch, "worktree", relPath(repo.MainRoot, path), "base", base)
-	return branch, path, true, nil
+	a.logger().Info("story branch opened", "component", "git", "branch", branch, "worktree", relPath(repo.MainRoot, path), "base", base, "from", from)
+	return branch, path, from, nil
 }
 
 // relativeWorktrees reports whether to link a new worktree with relative

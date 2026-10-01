@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +29,15 @@ func newStreamOpenCmd(a *app) *cobra.Command {
 		Long: `Creates wip/agents/<story-id>.md from the template and, in a git repository,
 the branch story/<story-id> from the main branch, checked out in a worktree
 under .flai-cache/worktrees/<story-id> (ADR-0019). Work there; wip/ stays in
-the main checkout. Run flai stream sync at every task transition.`,
+the main checkout. Run flai stream sync at every task transition. The
+narrative records the host that opened it.
+
+A story whose narrative exists and whose worktree does not, such as one begun
+on another host (ADR-0064), is reopened: the narrative is kept, with this
+host, agent, and session recorded, and story/<story-id> is checked out from
+this clone's branch, else fetched from the remote (origin) when it has one,
+else created from the main branch. It is refused when the worktree exists
+too.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -39,32 +49,72 @@ the main checkout. Run flai stream sync at every task transition.`,
 				return err
 			}
 			agent, session := agentIdentity()
-			n, err := repo.OpenStream(story, workitem.StreamOptions{Agent: agent, Session: session, Now: a.now()})
+			opt := workitem.StreamOptions{Agent: agent, Session: session, Host: workitem.ThisHost(), Now: a.now()}
+			n, err := repo.OpenStream(story, opt)
+			var exists *workitem.StreamExistsError
+			reopen := errors.As(err, &exists)
+			if reopen {
+				if !a.canReopen(repo, story.ID, noBranch) {
+					return err
+				}
+				opt.Agent = os.Getenv("FLAI_AGENT")
+				n, err = repo.ReopenStream(story, opt)
+			}
 			if err != nil {
 				return err
 			}
 			if err := a.refreshIndex(repo); err != nil {
 				return err
 			}
-			branch, wt := "", ""
+			branch, wt, from := "", "", ""
 			if !noBranch {
-				branch, wt, _, err = a.openStoryBranch(repo, story.ID)
+				branch, wt, from, err = a.openStoryBranch(repo, story.ID, reopen)
 				if err != nil {
 					return fmt.Errorf("narrative opened but the branch was not: %w", err)
 				}
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]string{"stream": n.Stream, "path": n.Path, "branch": branch, "worktree": wt})
+				return a.printJSON(map[string]any{"stream": n.Stream, "path": n.Path, "branch": branch, "worktree": wt, "reopened": reopen, "from": from})
 			}
-			fmt.Fprintf(a.out, "opened %s\n", relPath(repo.Root, n.Path))
+			if reopen {
+				fmt.Fprintf(a.out, "reopened %s\n", relPath(repo.Root, n.Path))
+			} else {
+				fmt.Fprintf(a.out, "opened %s\n", relPath(repo.Root, n.Path))
+			}
 			if branch != "" {
-				fmt.Fprintf(a.out, "branch %s checked out at %s; work there and run flai stream sync %s at each task transition\n", branch, relPath(repo.MainRoot, wt), story.ID)
+				said := ""
+				if reopen {
+					said = fromSays(from)
+				}
+				fmt.Fprintf(a.out, "branch %s%s checked out at %s; work there and run flai stream sync %s at each task transition\n", branch, said, relPath(repo.MainRoot, wt), story.ID)
 			}
 			return nil
 		},
 	}
 	c.Flags().BoolVar(&noBranch, "no-branch", false, "narrative only; no branch or worktree")
 	return c
+}
+
+// canReopen reports whether stream open may take up story's existing
+// narrative: only to check out a worktree it does not have (ADR-0064).
+func (a *app) canReopen(repo *workitem.Repo, story string, noBranch bool) bool {
+	if noBranch || !a.inGitWorkTree(repo.MainRoot) {
+		return false
+	}
+	_, err := os.Stat(repo.WorktreePath(story))
+	return os.IsNotExist(err)
+}
+
+// fromSays says where a reopened story's branch came from, when it did not
+// come from this clone.
+func fromSays(from string) string {
+	switch from {
+	case "", branchLocal:
+		return ""
+	case branchMain:
+		return " (new, from the main branch)"
+	}
+	return " (fetched from " + from + ")"
 }
 
 func newStreamSyncCmd(a *app) *cobra.Command {

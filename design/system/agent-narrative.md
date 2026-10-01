@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-09-26
+updated: 2026-10-01
 status: active
 topics: [all]
 ---
@@ -31,6 +31,7 @@ title: CLI scaffold and config
 updated: 2026-09-15T17:02:00Z
 agent: claude-fable-5-1          # last agent to write, free text
 session: 5da6af50                # opaque, helps correlate with tool logs
+host: build-box                  # the host whose flai stream open last opened it
 ---
 
 # S-0004 CLI scaffold and config

@@ -7,6 +7,7 @@ package storygit
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -44,6 +45,41 @@ func MainBranch(r execx.Runner, mainRoot string) (string, error) {
 func BranchExists(r execx.Runner, root, branch string) bool {
 	_, err := r.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
 	return err == nil
+}
+
+// Remote is the remote a story's branch is fetched from: origin when the
+// clone has it, else its only remote, else "".
+func Remote(r execx.Runner, root string) string {
+	out, err := r.Run(root, "git", "remote")
+	if err != nil {
+		return ""
+	}
+	remotes := strings.Fields(out)
+	switch {
+	case slices.Contains(remotes, "origin"):
+		return "origin"
+	case len(remotes) == 1:
+		return remotes[0]
+	}
+	return ""
+}
+
+// FetchBranch fetches branch from remote into this clone's branch of the
+// same name, which must not exist. It reports false when the remote has no
+// such branch, and an error when the remote could not be asked.
+func FetchBranch(r execx.Runner, root, remote, branch string) (bool, error) {
+	ref := "refs/heads/" + branch
+	out, err := r.Run(root, "git", "ls-remote", "--heads", remote, ref)
+	if err != nil {
+		return false, fmt.Errorf("could not ask %s whether it has %s: %w", remote, branch, err)
+	}
+	if strings.TrimSpace(out) == "" {
+		return false, nil
+	}
+	if _, err := r.Run(root, "git", "fetch", "--quiet", remote, ref+":"+ref); err != nil {
+		return false, fmt.Errorf("could not fetch %s from %s: %w", branch, remote, err)
+	}
+	return true, nil
 }
 
 // DirtyOutsideWip lists uncommitted paths that are not under the wip

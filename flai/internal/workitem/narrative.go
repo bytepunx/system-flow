@@ -21,6 +21,9 @@ type Narrative struct {
 	Updated string `yaml:"updated" json:"updated"`
 	Agent   string `yaml:"agent" json:"agent"`
 	Session string `yaml:"session" json:"session"`
+	// Host names the host whose flai stream open last opened the stream
+	// (ADR-0064); empty in a narrative opened before it was recorded.
+	Host string `yaml:"host,omitempty" json:"host,omitempty"`
 
 	Path string `yaml:"-" json:"path"`
 	Body string `yaml:"-" json:"body"`
@@ -58,6 +61,9 @@ func (n *Narrative) Marshal() string {
 	fmt.Fprintf(&b, "updated: %s\n", n.Updated)
 	fmt.Fprintf(&b, "agent: %s\n", Scalar(n.Agent))
 	fmt.Fprintf(&b, "session: %s\n", Scalar(n.Session))
+	if n.Host != "" {
+		fmt.Fprintf(&b, "host: %s\n", Scalar(n.Host))
+	}
 	b.WriteString("---\n")
 	b.WriteString(n.Body)
 	return b.String()
@@ -75,18 +81,39 @@ func (n *Narrative) Save() error {
 type StreamOptions struct {
 	Agent   string
 	Session string
-	Now     time.Time
+	// Host is the name of the host opening the stream, recorded by
+	// OpenStream and ReopenStream.
+	Host string
+	Now  time.Time
+}
+
+// ThisHost is the name this host goes by, as a narrative records it, or ""
+// when the system does not say.
+func ThisHost() string {
+	h, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+	return h
+}
+
+// StreamExistsError is OpenStream's refusal of a story whose narrative
+// exists already.
+type StreamExistsError struct{ ID, Path string }
+
+func (e *StreamExistsError) Error() string {
+	return fmt.Sprintf("stream %s already exists at %s", e.ID, e.Path)
 }
 
 // OpenStream creates the narrative for a story from the template. It fails
-// if one already exists.
+// with a *StreamExistsError if one already exists.
 func (r *Repo) OpenStream(story *Item, opt StreamOptions) (*Narrative, error) {
 	if story.Type != Story {
 		return nil, fmt.Errorf("%s is a %s; streams belong to stories", story.ID, story.Type)
 	}
 	path := r.NarrativePath(story.ID)
 	if _, err := os.Stat(path); err == nil {
-		return nil, fmt.Errorf("stream %s already exists at %s", story.ID, path)
+		return nil, &StreamExistsError{ID: story.ID, Path: path}
 	}
 	now := opt.Now.UTC().Format(TimeFormat)
 	doc, err := r.renderItemTemplate("narrative", map[string]any{
@@ -104,11 +131,43 @@ func (r *Repo) OpenStream(story *Item, opt StreamOptions) (*Narrative, error) {
 	if err := yaml.Unmarshal([]byte(fm), &n); err != nil {
 		return nil, fmt.Errorf("narrative template: %w", err)
 	}
-	n.Path, n.Body = path, body
+	n.Path, n.Body, n.Host = path, body, opt.Host
 	if err := n.Save(); err != nil {
 		return nil, err
 	}
 	return &n, nil
+}
+
+// ReopenStream takes up a story's narrative that exists already, as on a
+// host other than the one that opened it (ADR-0064): it keeps the body, and
+// records the agent, session, and host opening it now where they are given
+// and differ. It saves only what changed.
+func (r *Repo) ReopenStream(story *Item, opt StreamOptions) (*Narrative, error) {
+	n, err := ReadNarrative(r.NarrativePath(story.ID))
+	if err != nil {
+		return nil, err
+	}
+	was := n.Marshal()
+	if opt.Agent != "" {
+		n.Agent = opt.Agent
+	}
+	if opt.Session != "" {
+		n.Session = opt.Session
+	}
+	if opt.Host != "" {
+		n.Host = opt.Host
+	}
+	if n.Marshal() == was {
+		return n, nil
+	}
+	n.Updated = opt.Now.UTC().Format(TimeFormat)
+	if err := r.LintGuard(n.Path, was, n.Marshal()); err != nil {
+		return nil, err
+	}
+	if err := n.Save(); err != nil {
+		return nil, err
+	}
+	return n, nil
 }
 
 // LogStream appends a timestamped entry to the narrative's Log section.
