@@ -3,6 +3,7 @@
 ## 1.0.32 - 2026-10-02
 
 - S-0194 An experiment story is accepted with its results document under design/experiments (patch).
+- S-0176 The story's agent plans which tasks can run in parallel and works them with sub-agents (patch): `work-management.md` says the agent plans a story's tasks as it writes them, giving each its `touches` and the tasks of the story it waits for (`after`), so that tasks with no `after` between them and no path in common form layers that run together; it records the plan's reasoning in the narrative's `## Decisions` and works the plan layer by layer. `delegation.md` adds the task sub-agent: the story's agent runs a layer's tasks at once, one each (a fork where the harness offers one), sharing the story's worktree, waits for all, reviews each one's work, and commits and moves each task itself; a task sub-agent edits only what its task touches, runs only its own tests, never commits or writes through flai, and returns its question for the designer in its final message.
 
 ## 1.0.31 - 2026-10-01
 

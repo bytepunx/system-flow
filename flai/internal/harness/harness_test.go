@@ -318,6 +318,40 @@ func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
 	}
 }
 
+// S-0176: the story's agent plans its tasks in layers as it writes them,
+// records why in Decisions, and works each layer's tasks at once with task
+// sub-agents whose work it reviews and commits itself; an answered or commit
+// run is not told again.
+func TestThePromptAsksForThePlan(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		for _, w := range []string{
+			"Plan S-0104's tasks as you write them",
+			"the paths it touches (--touches)",
+			"the tasks of S-0104 it must wait for (--after)",
+			"tasks with no after between them and no path in common form layers that can run together",
+			"record the layers and why each task waits in the narrative's Decisions",
+			"Work the plan layer by layer: run a layer's tasks at once, one task sub-agent each",
+			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits or writes through flai",
+			"Review each one's work yourself, fix what falls short, commit it, and move the task",
+			"only you commit, sync the stream, move items, and talk to the designer",
+		} {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, "layer") {
+			t.Errorf("told the plan again:\n%s", p)
+		}
+	}
+}
+
 // S-0189: a story whose agent gives its roles a model starts claude-code
 // with --agents: the project's definition of each role's sub-agent, with the
 // role's model over the definition's; what claude-code cannot run is

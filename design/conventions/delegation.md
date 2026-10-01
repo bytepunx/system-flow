@@ -26,7 +26,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - diff checks
 - Use the explorer to find and read code, designs, and logs
 - Use the verifier to run tests, lint, `flai check`, and checking diffs.
-- Never hand a sub-agent an edit, a transition, or a question for the designer.
+- Never hand the explorer or the verifier an edit, and never hand any sub-agent a commit, a transition, or a question for the designer.
 - While working:
   - run only the tests for what you changed
   - leave the whole suite tests, linting, and `flai check` to the verifier
@@ -37,7 +37,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - a verifier's passing run is the story's run before review; do not repeat it.
 - Fix what a verifier finds yourself; never delegate a fix to a sub-agent.
 - Sub-agents:
-  - start with nothing but your prompt
+  - start with nothing but your prompt, unless a fork, which holds your conversation
   - are given the worktree's path, the story and task IDs, the question, what you already know, and the shape of the answer you want.
   - ask for summary vs. raw output: the finding, with paths and line numbers, and failing output quoted only as far as it matters.
   - their answer is evidence, not verdict.
@@ -47,7 +47,15 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - do not act on what an answer will cover until it arrives.
   - a sub-agent question for the designer is yours to ask, on the story or the task.
 
-## As a sub-agent
+## Tasks worked by sub-agents
+
+- When a layer of the plan (`work-management.md`) holds more than one task, run them at once, one task sub-agent each, and wait for all of them before you act on any. Work a layer of one task yourself.
+- Use a fork, which inherits your conversation, where the harness offers one. Otherwise give the sub-agent the task's ID, the worktree's path, the paths the task touches, and the conventions to read.
+- A layer's tasks share the story's worktree. Their `touches` have no path in common, so their edits do not meet, but one's build or tests can see another's edit half done.
+- Review each one's work as your own before you accept it: read its diff against the task's `## Done when`, run the tests for what it changed, and fix or finish what falls short yourself. Then commit it and move the task.
+- Only you commit, sync the stream, move items, keep the narrative, and talk to the designer. Record in the narrative what each task sub-agent did, and the interference it reported.
+
+## As an explorer or a verifier
 
 - You work for the agent that started you, not for the designer or the board. When your prompt names a story, prime with `prime` and your role (`flai prime --story <id> --role explore` or `--role verify`), reading only the sections you need.
 - Use the worktree specified.
@@ -57,10 +65,20 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
 - Your final message is all the agent that started you sees. Lead with the answer, then the evidence, then what you could not check.
 
+## As a task sub-agent
+
+- You work one task for the story's agent, in the worktree your prompt names. A fork already holds the conventions; otherwise prime with `prime` and the story, and read the conventions your prompt names.
+- Edit only the paths your task touches. When the task needs a change outside them, stop and say so in your final message rather than make it.
+- Run only the tests for what you changed; leave the whole suite, the lint, and `flai check` to the story's agent.
+- When a build or test fails in a path your task does not touch, another task's edit may be half done: do not fix it. Wait a minute and run it again, and say in your final message what failed, when, and for how long.
+- Do not commit, stage, or otherwise write to git. Do not move, create, or edit work items, write to threads, read the inbox, wait for events or work, or sync the stream; the guard refuses them, and you do not work around it.
+- When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
+- Your final message is all the story's agent sees. Lead with done or not done, then the files you changed, the tests you ran and their results, the decisions a reader could have made differently, and what is left.
+
 ## When in doubt
 
 - If you need only the conclusion of a long piece of work, delegate it.
-- If the work changes anything, it is the story's agent's, not a sub-agent's.
+- If the work changes anything and is not a task you handed over, it is the story's agent's, not a sub-agent's.
 
 <!-- system-flow:end-of-baseline -->
 
