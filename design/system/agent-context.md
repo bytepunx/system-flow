@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-09-29
+updated: 2026-10-01
 status: active
 topics: [cli, conventions]
 ---
@@ -204,3 +204,47 @@ Measured on 2026-09-29 on the S-0149 branch against the flai before it, same doc
 | S-0147 | 188 KB | 102 KB | 101 KB | 15 KB | `flai-cli.md` |
 
 What is left named is ADRs by ID (ADR-0047 9 KB, ADR-0049 15 KB), which ADR-0050 keeps whole. Every pack is still over the budget, now by the briefs or by those ADRs, because the conventions and open issues take 57 KB of the 80 KB; narrowing the conventions' topics is still the remedy.
+
+## Sub-agents
+
+An agent `flai serve` starts with `claude-code` worked its whole story in one context: every search, test log, and file it read stayed there and was read again from the cache on every later turn. S-0118's run cost 5.18 US dollars with 10.5M cache-read tokens for one Explore sub-agent it spawned on its own. [ADR-0059](../adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md) (S-0175) makes sub-agents deliberate: the story's agent hands noisy work and pre-review verification to an explorer and a verifier that can only read, primed for their role, and keeps decisions, edits, and the designer to itself. ADR-0049 rejected a scout that reads more than the agent; these read less.
+
+| Role | Does | Tools | Primes with |
+|------|------|-------|-------------|
+| `explore` | Searches and reads code, design, and logs; returns what it found, with paths and lines | `Read`, `Grep`, `Glob`; flai's `prime`, `doc_get`, `doc_search`, `item_get`, `thread_get`, `board`, `who_touches` | `prime --role explore` |
+| `verify` | Reads the diff, runs the tests, lint, and `flai check`; returns what fails against the criteria and the conventions | The explorer's, and `Bash` to run them | `prime --role verify` |
+
+The template ships them as `.claude/agents/explorer.md` and `verifier.md`. Their `tools` is an allowlist, so neither has `item_move`, `item_edit`, `item_new`, `inbox`, `wait_for_work`, `wait_for_events`, `thread_open`, `thread_reply`, or `thread_resolve`, nor `Edit` or `Write`.
+
+### What the harness does, measured
+
+A probe on 2026-10-01 with Claude Code 2.1.286, started as `flai serve` starts it (`claude -p`, flai's `--mcp-config`, `--strict-mcp-config`, `acceptEdits`, `--allowedTools Bash,mcp__flai`):
+
+- The project's `.claude/agents/` load in a headless session started in the project: the init event lists them with the built-in `Explore`, `general-purpose`, and `Plan`. The adapter needs no flag.
+- A definition's `tools` restricts MCP tools too: a sub-agent given `mcp__flai__item_get` and `mcp__flai__doc_search` had those and none of flai's others.
+- A definition's own `mcpServers` did not connect under `--strict-mcp-config`, so a sub-agent cannot have a flai server, and a name, of its own.
+- Sub-agents run in the background by default, and every event of theirs in the stream-json log carries `parent_tool_use_id`.
+
+### Questions
+
+A sub-agent that needs the designer says so in its final message, with the question and its recommended answer, and the story's agent asks it with `thread_open` on the story or the task. Of the three ways S-0175 offered:
+
+- **(a) Returned in the final message: chosen.** One voice per story, nothing to build in flai, and it works the same for any harness with sub-agents.
+- (b) The sub-agent calls `thread_open`, attributed to the parent: the server reports to an agent only what others changed, so the parent's `wait_for_events` would never see a thread opened under its own name. It is also the write the definitions leave out.
+- (c) The harness's messaging between agents (`SendMessage`, agent teams): Claude Code only, and a sub-agent that asked could not wait for the answer; the parent can.
+
+No ADR changes who may open threads: the story's agent still does.
+
+### Attribution
+
+A sub-agent's flai calls arrive on its parent's MCP connection under its parent's name; the server cannot tell them apart and is not changed to. They need not be told apart there: every flai tool a sub-agent has reads and uses no agent identity, so nothing is attributed to anyone. They are told apart in the log `flai serve` keeps for the agent, where each event of a sub-agent carries `parent_tool_use_id`, the `Agent` call that started it, whose input names the role.
+
+### The role pack
+
+`flai prime --story S-nnnn --role explore|verify`, and `role` on the MCP `prime` tool, return a pack sized for a sub-agent:
+
+1. The conventions whose front matter `roles` lists the role, with the sections the story's topics leave out taken out. No README and no open issues.
+2. The story's `## Goal` and `## Acceptance criteria`.
+3. Briefs, never bodies: what the story, its epic, and its tasks name, then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
+
+The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. The baseline gives `explore` to `communication`, `safety`, `tooling`, and `delegation`, and `verify` to those and `documentation`, `code-quality`, and `git`.
