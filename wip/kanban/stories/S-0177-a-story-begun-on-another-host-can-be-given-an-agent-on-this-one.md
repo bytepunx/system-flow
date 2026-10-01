@@ -3,21 +3,35 @@ id: S-0177
 type: story
 nature: remediation
 title: A story begun on another host can be given an agent on this one
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-01T07:30:22Z
-updated: 2026-10-01T07:39:53Z
+updated: 2026-10-01T10:08:19Z
 transitions:
   - to: ready
     at: 2026-10-01T07:39:53Z
     by: alex
+  - to: in-progress
+    at: 2026-10-01T10:00:28Z
+    by: agent-S-0177
 tags: [flai, dashboard]
-touches: [flai/internal/serve, flai/internal/hostapi, flai/cmd/serve_actions.go, flai/internal/mcpserver, flai/internal/harness, flaiover/src]
+touches: [flai/internal/serve, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, flai/internal/harness, flai/internal/storygit, flai/internal/workitem, flaiover/src, design/adrs/0064-a-story-in-ready-or-in-progress-with-no-agent-run-on-this-host-is-started-here.md, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 678
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 208
+      output: 1156
+      cache_read: 9555876
+      cache_write: 381313
+      cost: 3.9678
 ---
 # S-0177 A story begun on another host can be given an agent on this one
 
@@ -41,6 +55,11 @@ A story in progress or in review with no agent run on this host should be starta
 - [ ] The design (`design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`) and the user guide describe picking up a story on another host
 
 ## Tasks
+- T-0662 An ADR records how a story begun on another host gets an agent on this one
+- T-0663 flai stream open reopens a stream whose worktree is gone, from the local or remote story branch, and the narrative records its host
+- T-0664 flai serve agent restart starts a story with no run on this host, and its agent is told the story was begun elsewhere
+- T-0665 agent.status names a story in progress with no agent here, and the story page and board card show it with Start agent
+- T-0666 The MCP server starts or restarts a story's agent, gated by the agent host action
 
 ## Notes
 

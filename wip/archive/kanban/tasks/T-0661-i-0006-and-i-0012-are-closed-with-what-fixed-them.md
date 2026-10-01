@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 5958
-      cache_read: 824148
-      cache_write: 20243
-      cost: 0.425
+      input: 17
+      output: 4591
+      cache_read: 829154
+      cache_write: 15241
+      cost: 0.3668
 ---
 
 # T-0661 I-0006 and I-0012 are closed with what fixed them

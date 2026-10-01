@@ -3,11 +3,14 @@ id: S-0189
 type: story
 nature: improvement
 title: Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-01T09:19:43Z
-updated: 2026-10-01T10:11:43Z
-transitions: []
+updated: 2026-10-01T10:11:55Z
+transitions:
+  - to: ready
+    at: 2026-10-01T10:11:55Z
+    by: alex
 tags: [template, cli]
 topics: [conventions]
 touches: [template/root/.claude/agents/, ".claude/agents/", flai/internal/harness, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/agent-context.md]

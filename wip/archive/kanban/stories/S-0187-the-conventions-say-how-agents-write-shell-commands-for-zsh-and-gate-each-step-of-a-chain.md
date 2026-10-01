@@ -3,10 +3,10 @@ id: S-0187
 type: story
 nature: improvement
 title: The conventions say how agents write shell commands for zsh and gate each step of a chain
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T09:59:38Z
+updated: 2026-10-01T10:12:30Z
 transitions:
   - to: ready
     at: 2026-10-01T08:32:19Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-01T09:25:36Z
     by: agent-S-0187
+  - to: review
+    at: 2026-10-01T10:01:48Z
+    by: agent-S-0187
+  - to: done
+    at: 2026-10-01T10:12:30Z
+    by: alex
 tags: [template]
 topics: [conventions]
 touches: [design/conventions, template, scripts, design/system/conventions.md, design/system/repository-layout.md, Makefile, design/issues/I-0006-shell-is-zsh.md, design/issues/I-0012-close-out-chain-was-not-gated-on-the-narrative-rewrite-s-exit-code-so-a-commit-went-out-with-an-empty-narrative.md, design/issues/summary.md]
@@ -25,14 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1290
+  seconds: 1455
   models:
     - model: claude-opus-5-5
-      input: 188
-      output: 54209
-      cache_read: 7498521
-      cache_write: 184179
-      cost: 3.8667
+      input: 250
+      output: 68278
+      cache_read: 12332494
+      cache_write: 226683
+      cost: 5.4551
 ---
 # S-0187 The conventions say how agents write shell commands for zsh and gate each step of a chain
 

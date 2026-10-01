@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 13273
-      cache_read: 1835994
-      cache_write: 45096
-      cost: 0.9467
+      input: 37
+      output: 10227
+      cache_read: 1847146
+      cache_write: 33952
+      cost: 0.8171
 ---
 
 # T-0660 A close-out script runs the checks before review and stops at the first failure, and work-management points to it

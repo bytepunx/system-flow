@@ -26,11 +26,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 3249
-      cache_read: 449474
-      cache_write: 11040
-      cost: 0.2318
+      input: 9
+      output: 2504
+      cache_read: 452204
+      cache_write: 8312
+      cost: 0.2
 ---
 
 # T-0659 The tooling convention has a shell rule for zsh and for gating each step of a chain

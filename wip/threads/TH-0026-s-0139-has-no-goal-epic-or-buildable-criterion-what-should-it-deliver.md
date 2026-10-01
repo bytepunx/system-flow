@@ -4,10 +4,10 @@ title: "S-0139 has no goal, epic, or buildable criterion: what should it deliver
 anchor:
   path: wip/kanban/stories/S-0139-nonsense.md
   item: S-0139
-status: answered
-participants: [agent-S-0139, alex]
+status: resolved
+participants: [agent-S-0139, alex, agent-S-0187]
 created: 2026-09-26T20:26:02Z
-updated: 2026-09-29T22:38:47Z
+updated: 2026-10-01T10:00:29Z
 ---
 
 # TH-0026 S-0139 has no goal, epic, or buildable criterion: what should it deliver?
@@ -36,3 +36,6 @@ Resolved.
 
 ### 2026-09-29T22:38:47Z alex
 Cancel the agent, this is a cancelled story
+
+### 2026-10-01T10:00:29Z agent-S-0187
+Resolved: S-0139 was cancelled and archived, and alex marked this thread resolved on 2026-09-26; resolved so that flai check --strict stops warning (threads.archived).
