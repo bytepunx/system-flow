@@ -84,7 +84,9 @@ class ProjectState {
 
 	private async load(): Promise<void> {
 		try {
-			const r = await fetch('/api/projects');
+			// Past the browser's HTTP cache (S-0186): Chromium sends a GET of a URL already in flight
+			// only once the first has answered, so another tab's list would wait out this one's glances.
+			const r = await fetch('/api/projects', { cache: 'no-store' });
 			if (!r.ok) return;
 			const body = (await r.json()) as { projects?: Project[] };
 			this.list = body.projects ?? [];

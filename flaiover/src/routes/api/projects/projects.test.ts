@@ -22,7 +22,7 @@ beforeAll(() => {
 // needs from there.
 function connect(
 	url: string,
-	answer: (method: string) => unknown,
+	answer: (method: string) => unknown | Promise<unknown>,
 	project: { key: string; name: string }
 ): Promise<WebSocket> {
 	return new Promise((resolve, reject) => {
@@ -52,9 +52,10 @@ function connect(
 				);
 				return setTimeout(() => resolve(ws), 30);
 			}
-			const result = answer(m.method);
-			if (result !== undefined) ws.send(JSON.stringify({ jsonrpc: '2.0', id: m.id, result }));
-			// undefined means: never answer, to test a stall.
+			void Promise.resolve(answer(m.method)).then((result) => {
+				if (result !== undefined) ws.send(JSON.stringify({ jsonrpc: '2.0', id: m.id, result }));
+				// undefined means: never answer, to test a stall.
+			});
 		});
 		ws.on('error', reject);
 	});
@@ -149,6 +150,40 @@ describe('/api/projects (S-0080)', () => {
 			server.close();
 		}
 	}, 15000);
+
+	it('serves calls made at once side by side, not one after another (S-0186)', async () => {
+		const server = http.createServer();
+		server.on('upgrade', (req, socket, head) =>
+			(registry() as unknown as AgentRegistry).handleUpgrade(req, socket, head)
+		);
+		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+		const port = (server.address() as AddressInfo).port;
+		const SLOW_MS = 300;
+		let asking = 0;
+		let mostAtOnce = 0;
+		// a flai that takes SLOW_MS over every answer, counting the asks it holds at once
+		const slow = async (method: string) => {
+			mostAtOnce = Math.max(mostAtOnce, ++asking);
+			await new Promise((r) => setTimeout(r, SLOW_MS));
+			asking--;
+			return method === 'board.get' ? { columns: {} } : {};
+		};
+		const flai = await connect(`ws://127.0.0.1:${port}/agent`, slow, {
+			key: 'harbour',
+			name: 'Harbour'
+		});
+		try {
+			const started = Date.now();
+			await Promise.all([1, 2, 3].map(() => GET({} as never)));
+			const elapsed = Date.now() - started;
+			// one after another would take three times SLOW_MS; side by side, about SLOW_MS
+			expect(elapsed).toBeLessThan(2 * SLOW_MS);
+			expect(mostAtOnce).toBeGreaterThanOrEqual(3 * 3); // three glance asks per call, all at once
+		} finally {
+			flai.terminate();
+			server.close();
+		}
+	});
 
 	it('adds what flai serve serves: a served project not connected carries why, and one never connected here is listed (S-0122)', async () => {
 		const server = http.createServer();

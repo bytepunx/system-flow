@@ -128,6 +128,8 @@ describe('projectState', () => {
 		const first = projectState.refresh();
 		const second = projectState.refresh();
 		expect(fetchFn).toHaveBeenCalledTimes(1);
+		// past the HTTP cache, whose lock would hold a second tab's request behind this one
+		expect(fetchFn).toHaveBeenCalledWith('/api/projects', { cache: 'no-store' });
 		answer!();
 		await Promise.all([first, second]);
 		expect(projectState.list[0].review).toBe(2); // the glance is kept with the project
