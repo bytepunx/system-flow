@@ -3,11 +3,14 @@ id: S-0187
 type: story
 nature: improvement
 title: The conventions say how agents write shell commands for zsh and gate each step of a chain
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:00:32Z
-transitions: []
+updated: 2026-10-01T08:32:19Z
+transitions:
+  - to: ready
+    at: 2026-10-01T08:32:19Z
+    by: alex
 tags: [template]
 topics: [conventions]
 touches: [design/conventions/, template/, scripts/]

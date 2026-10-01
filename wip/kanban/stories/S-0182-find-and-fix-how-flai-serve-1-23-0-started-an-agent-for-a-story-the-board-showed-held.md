@@ -3,11 +3,14 @@ id: S-0182
 type: story
 nature: remediation
 title: Find and fix how flai serve 1.23.0 started an agent for a story the board showed held
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:00:32Z
-transitions: []
+updated: 2026-10-01T08:31:51Z
+transitions:
+  - to: ready
+    at: 2026-10-01T08:31:51Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/serve, flai/internal/workitem]
 agent:

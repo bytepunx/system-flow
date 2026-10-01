@@ -3,11 +3,14 @@ id: S-0186
 type: story
 nature: improvement
 title: The root page asks for the projects once per load
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:00:32Z
-transitions: []
+updated: 2026-10-01T08:32:17Z
+transitions:
+  - to: ready
+    at: 2026-10-01T08:32:17Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/+page.svelte, flaiover/src/routes/+layout.svelte, flaiover/src/lib/project.svelte.ts, flaiover/src/routes/api/projects]
 agent:

@@ -3,11 +3,14 @@ id: S-0184
 type: story
 nature: improvement
 title: The dashboard recovers from a stray stop and is not taken over by a second flai serve
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:00:32Z
-transitions: []
+updated: 2026-10-01T08:32:11Z
+transitions:
+  - to: ready
+    at: 2026-10-01T08:32:11Z
+    by: alex
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/internal/host, flai/internal/channel, flaiover/src/lib/server/agent.ts, flaiover/Dockerfile]
 agent:

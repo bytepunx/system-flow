@@ -3,11 +3,14 @@ id: S-0181
 type: story
 nature: improvement
 title: The host's flai says when it is older than the tree it serves, and an older flai reads newer work items
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:00:32Z
-transitions: []
+updated: 2026-10-01T08:31:46Z
+transitions:
+  - to: ready
+    at: 2026-10-01T08:31:46Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/workitem, flai/internal/threads, flai/internal/issues, flai/internal/manifest, flai/internal/serve, flai/internal/mcpserver, flai/internal/check, flaiover/src]
 agent:

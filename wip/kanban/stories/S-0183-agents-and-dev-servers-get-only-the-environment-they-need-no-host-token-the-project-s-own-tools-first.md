@@ -3,11 +3,17 @@ id: S-0183
 type: story
 nature: remediation
 title: "Agents and dev servers get only the environment they need: no host token, the project's own tools first"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:00:32Z
-transitions: []
+updated: 2026-10-01T08:34:18Z
+transitions:
+  - to: ready
+    at: 2026-10-01T08:32:09Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-01T08:32:36Z
+    by: agent-S-0183
 tags: [flai, dashboard]
 touches: [flai/internal/serve/agents.go, flai/cmd/serve.go, scripts/env.sh, scripts/flaiover-dev.sh, flaiover/compose.yaml]
 agent:
@@ -35,5 +41,10 @@ Three issues share a cause: the environment flai and the scripts hand on is wide
 - [ ] I-0001, I-0039, and I-0044 are closed with what fixed them
 
 ## Tasks
+- T-0640 flai serve starts agents without the host's address, token, or config
+- T-0641 flai serve keeps no MCP servers for a host its config does not name, and says why
+- T-0642 Scripts put the main checkout's tools on PATH and flai-test checks golangci-lint's version
+- T-0643 The flaiover dev server and compose take the dashboard token from where flai writes it
+- T-0644 Design and contributor guide say what an agent's environment holds; close I-0001, I-0039, I-0044
 
 ## Notes

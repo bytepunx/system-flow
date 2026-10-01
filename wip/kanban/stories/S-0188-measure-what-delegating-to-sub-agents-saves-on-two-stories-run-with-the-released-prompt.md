@@ -3,14 +3,17 @@ id: S-0188
 type: story
 nature: research
 title: Measure what delegating to sub-agents saves on two stories run with the released prompt
-status: ready
+status: in-progress
 owner: arobson
 created: 2026-10-01T08:13:37Z
-updated: 2026-10-01T08:13:53Z
+updated: 2026-10-01T08:31:38Z
 transitions:
   - to: ready
     at: 2026-10-01T08:13:53Z
     by: alex
+  - to: in-progress
+    at: 2026-10-01T08:31:20Z
+    by: agent-S-0188
 tags: [flai]
 topics: [conventions]
 touches: [design/system/agent-context.md]
@@ -32,6 +35,9 @@ S-0175 told the agents `flai serve` starts with `claude-code` to hand search, te
 - [ ] The table and what it shows are in `agent-context.md`; if delegation costs more than it saves, a story or an open question says what to change (a cheaper sub-agent model, fewer delegations, or none)
 
 ## Tasks
+- T-0637 Find two flai serve runs made with a released flai that includes S-0175, each delegating
+- T-0638 Measure the two delegating runs and comparable runs that did not delegate
+- T-0639 Record the table and what it shows in agent-context.md
 
 ## Notes
 
