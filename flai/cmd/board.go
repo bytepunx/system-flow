@@ -65,6 +65,10 @@ func newBoardCmd(a *app) *cobra.Command {
 					if cd.Held != nil {
 						fmt.Fprintf(a.out, "         %s\n", cd.Held.Reason)
 					}
+					// an open story's plan; a closed one's is history (S-0176)
+					if t := cd.Tasks; t != nil && st != workitem.Done && st != workitem.Cancelled {
+						fmt.Fprintf(a.out, "         tasks %d ready, %d waiting, %d in progress, %d done; %s\n", t.Ready, t.Waiting, t.InProgress, t.Done, plural(t.Layers, "layer"))
+					}
 				}
 			}
 			if len(board.Order) > 0 {

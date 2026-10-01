@@ -2153,6 +2153,10 @@ Print one work item with its children and history.
 flai show <id>
 ```
 
+Print one work item with its children and history.
+
+A story with tasks also gets its task plan (S-0176): each task's state, ready to start, waiting with the tasks of its after it waits for, in progress, done, or cancelled; and the layers, the open and done tasks grouped by the longest chain of after steps before each, so that the tasks of a layer can run at once when those of the layers before it are done. A task on a cycle of after, or waiting on one, is in no layer. --json gives the plan as plan, beside item and children.
+
 ### flai stats
 
 Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost.

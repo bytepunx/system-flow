@@ -116,6 +116,7 @@ func TestBoardGet(t *testing.T) {
 			ParentTitle              string `json:"parent_title"`
 			EnteredAt                string `json:"entered_at"`
 			AgeSecs                  int64  `json:"age_in_column_seconds"`
+			Tasks                    *workitem.TaskSummary
 		}
 		WIPLimits map[string]int `json:"wip_limits"`
 		Order     []string
@@ -125,7 +126,8 @@ func TestBoardGet(t *testing.T) {
 	}
 	ready := v.Columns["ready"]
 	if len(ready) != 1 || ready[0].ID != "S-0001" || ready[0].Status != "ready" || ready[0].ParentTitle != "Quay" ||
-		ready[0].EnteredAt != "2026-09-20T08:01:00Z" || ready[0].AgeSecs != 59*60 {
+		ready[0].EnteredAt != "2026-09-20T08:01:00Z" || ready[0].AgeSecs != 59*60 ||
+		ready[0].Tasks == nil || *ready[0].Tasks != (workitem.TaskSummary{Ready: 1, Layers: 1}) {
 		t.Errorf("ready: %+v", ready)
 	}
 	if len(v.Order) != 1 || v.Order[0] != "S-0001" || v.WIPLimits["ready"] == 0 {
@@ -204,6 +206,14 @@ func TestItemsListAndGet(t *testing.T) {
 		if err := call(t, p, "item.get", `{"id":"`+id+`"}`, &got); err != nil || got.Item.ID != "S-0001" || len(got.Children) != 1 || got.Children[0].ID != "T-0001" || got.Item.Body == "" {
 			t.Errorf("item.get %s: %+v %+v", id, err, got)
 		}
+	}
+	// S-0176: a story with tasks has its task plan; anything else has none
+	if got.Plan == nil || len(got.Plan.Tasks) != 1 || got.Plan.Tasks[0].State != workitem.PlanReady || len(got.Plan.Layers) != 1 {
+		t.Errorf("item.get's plan: %+v", got.Plan)
+	}
+	got = ItemWithChildren{}
+	if err := call(t, p, "item.get", `{"id":"T-0001"}`, &got); err != nil || got.Plan != nil {
+		t.Errorf("a task has no plan: %+v %+v", err, got.Plan)
 	}
 	if err := call(t, p, "item.get", `{"id":"S-0003"}`, &got); err != nil || !got.Item.Archived || len(got.Children) != 1 {
 		t.Errorf("an archived item and its task: %+v %+v", err, got)

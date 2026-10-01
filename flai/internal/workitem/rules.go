@@ -113,6 +113,14 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 			warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, h.Reason))
 		}
 	}
+	// A task's after: is the story's agent's plan, so it warns too (S-0176).
+	if to == InProgress && it.Type == Task {
+		if p := PlanOf(opt.Items, it.Parent); p != nil {
+			if why := p.Waits(it.ID); why != "" {
+				warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, why))
+			}
+		}
+	}
 	if it.Type == Story && opt.Board != nil {
 		if limit, ok := opt.Board.WIPLimits[to]; ok && limit > 0 {
 			count := 1

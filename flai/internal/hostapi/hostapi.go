@@ -64,10 +64,12 @@ type ProjectDashboard struct {
 	Autocommit bool   `json:"autocommit"`
 }
 
-// ItemWithChildren is what item.get answers.
+// ItemWithChildren is what item.get answers: a story with tasks has its
+// task plan too (S-0176).
 type ItemWithChildren struct {
 	Item     *workitem.Item   `json:"item"`
 	Children []*workitem.Item `json:"children"`
+	Plan     *workitem.Plan   `json:"plan,omitempty"`
 }
 
 // ItemCount is what items.count answers.
@@ -367,7 +369,12 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				return nil, failed(err)
 			}
 			one := relative(repo.MainRoot, []*workitem.Item{it}, true)[0]
-			return ItemWithChildren{Item: one, Children: relative(repo.MainRoot, workitem.Children(all, it.ID), true)}, nil
+			children := workitem.Children(all, it.ID)
+			out := ItemWithChildren{Item: one, Children: relative(repo.MainRoot, children, true)}
+			if it.Type == workitem.Story {
+				out.Plan = workitem.PlanOf(children, it.ID)
+			}
+			return out, nil
 		},
 
 		// threads.list: as flai thread list --json; on is a path or an item, all adds the resolved.

@@ -127,8 +127,17 @@ func TestItemNewAndEditSetATasksAfter(t *testing.T) {
 	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "after": []string{second}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "after" {
 		t.Errorf("set: %v %s", ed, failed)
 	}
-	if got, _ := f.call(t, "item_get", map[string]any{"id": f.task.ID}); strings.Join(toStrings(got["after"]), ",") != second {
-		t.Errorf("item_get: %v", got["after"])
+	if got, _ := f.call(t, "item_get", map[string]any{"id": f.task.ID}); strings.Join(toStrings(got["after"]), ",") != second || got["plan"] != nil {
+		t.Errorf("item_get: %v %v", got["after"], got["plan"])
+	}
+	// the story's plan: the first task waits for the second, which waits for none
+	got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID})
+	plan, _ := got["plan"].(map[string]any)
+	if tasks, _ := plan["tasks"].([]any); len(tasks) != 2 || tasks[0].(map[string]any)["state"] != "waiting" || strings.Join(toStrings(tasks[0].(map[string]any)["waiting_for"]), ",") != second {
+		t.Errorf("item_get's plan: %v", plan)
+	}
+	if layers, _ := plan["layers"].([]any); len(layers) != 2 || strings.Join(toStrings(layers[0]), ",") != second || strings.Join(toStrings(layers[1]), ",") != f.task.ID {
+		t.Errorf("item_get's layers: %v", plan["layers"])
 	}
 
 	out, failed = f.call(t, "item_new", map[string]any{"type": "story", "title": "Later", "after": []string{other.ID}})

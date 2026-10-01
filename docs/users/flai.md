@@ -294,7 +294,7 @@ A project with no default and no story with an agent has no `agent` keys at all,
 ```bash
 flai move S-0001 ready          # needs acceptance criteria; tasks are not required
 flai move S-0001 in-progress    # warns if the WIP limit is exceeded
-flai move T-0001 in-progress
+flai move T-0001 in-progress    # warns while a task of its after is open
 flai move T-0001 done           # tasks may skip review
 flai move S-0001 review         # needs at least one task and nothing uncommitted in the story's worktree
 flai move S-0001 done --by alex # needs every task closed and every criterion checked
@@ -459,7 +459,36 @@ flai edit T-0679 --after T-0677,T-0678                                 # replace
 flai edit T-0679 --clear-after
 ```
 
-A task's `after` names the tasks of the same story it waits for: the plan the story's agent writes with the tasks. Tasks that wait for nothing undone, and whose `touches` do not overlap, can be worked at the same time. flai does not hold a task the way it holds a story; the story's agent reads the plan.
+A task's `after` names the tasks of the same story it waits for: the plan the story's agent writes with the tasks. Tasks that wait for nothing undone, and whose `touches` do not overlap, can be worked at the same time.
+
+`flai show` prints a story's plan below its children: each task's state, and the layers of tasks that can run at once.
+
+```text
+  plan:
+    T-0677  done
+    T-0678  done
+    T-0679  in-progress  after T-0677
+    T-0680  ready        after T-0677
+    T-0681  waiting      for T-0679, T-0680
+  layers:
+    1  T-0677, T-0678
+    2  T-0679, T-0680
+    3  T-0681
+```
+
+A task is `ready` to start when it has not started and every task of its `after` is done or cancelled, `waiting` while one of them is open (`for` names those), `in-progress` while it is in progress or in review, then `done` or `cancelled`. A layer is the tasks with the same longest chain of `after` steps before them: layer 1 waits for none, and each layer can run at once when the ones before it are done. A cancelled task is in no layer and holds no one up; neither is a task on a cycle, or one that waits on a cycle, which `flai check` reports. An `after` entry that names no task of the story is left out, for `flai check` to report. `flai show --json`, the MCP `item_get` tool, and the dashboard's `item.get` give the same as `plan` beside `item` and `children`, for a story with tasks: `tasks`, each with `id`, `state`, and, when they are not empty, `after` and `waiting_for`; and `layers`, lists of task IDs in ID order, the first waiting for none.
+
+`flai board` counts a story's tasks under its card, while the story is open, and `--json` gives every story with tasks `tasks`: `ready`, `waiting`, `in_progress`, `done`, and `layers`, the number of layers.
+
+```text
+         tasks 1 ready, 1 waiting, 1 in progress, 2 done; 3 layers
+```
+
+flai does not hold a task the way it holds a story. `flai move T-0681 in-progress` while a task of its `after` is open warns, and moves it:
+
+```text
+T-0681 is waiting (after): waits for T-0679 (in progress) and T-0680 (ready); ready to start when T-0679 and T-0680 are done or cancelled
+```
 
 `flai task new --after` and `flai edit --after` run `flai check` with the change in place, and a finding refuses the change and leaves nothing written (exit 4). `flai check` reports (`task.after`) an entry that names no task, a task of another story, the task itself, or a story, and every cycle among a story's tasks (`T-0677` waits for `T-0678`, which waits for `T-0677`), once. The MCP `item_new` and `item_edit` tools set it too.
 
@@ -547,9 +576,9 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | Tool | What it does |
 |------|--------------|
 | `inbox` | (Since S-0181 `flai_outdated`, on every call while it is true: the flai serving the agent is older than the newest flai release in the project's history, with `running`, `newest`, and the `upgrade` command.) (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what. Since S-0132 it reports `overlapped`: a story was accepted, `cause`, that changed paths this story claims, `to`.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull` from the in-progress limit and `held` with why on a story an open story's claim holds, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once `unpushed`, on every call while it is true: an acceptance made in this clone and not pushed (items, commits ahead, tags), which the agent pushes from the host with `git fetch` and `flai push --pending` |
-| `board` | The board as `flai board --json` prints it, a held ready story with `held` and why; `all` adds epics and tasks |
+| `board` | The board as `flai board --json` prints it, a held ready story with `held` and why, a story with tasks with their counts in `tasks`; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
-| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, and the hash of its file; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
+| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
 | `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it is checked, as `flai task new --after` is), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |

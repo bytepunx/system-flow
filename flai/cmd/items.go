@@ -169,7 +169,16 @@ func newShowCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <id>",
 		Short: "Print one work item with its children and history",
-		Args:  cobra.ExactArgs(1),
+		Long: `Print one work item with its children and history.
+
+A story with tasks also gets its task plan (S-0176): each task's state,
+ready to start, waiting with the tasks of its after it waits for, in
+progress, done, or cancelled; and the layers, the open and done tasks
+grouped by the longest chain of after steps before each, so that the tasks
+of a layer can run at once when those of the layers before it are done. A
+task on a cycle of after, or waiting on one, is in no layer. --json gives
+the plan as plan, beside item and children.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
@@ -191,10 +200,18 @@ func newShowCmd(a *app) *cobra.Command {
 					return err
 				}
 			}
+			// a story's task plan (S-0176)
+			var plan *workitem.Plan
+			if it.Type == workitem.Story {
+				plan = workitem.PlanOf(children, it.ID)
+			}
 			if a.jsonOut {
 				out := map[string]any{"item": it, "children": children}
 				if storyTopics != nil {
 					out["topics"] = storyTopics
+				}
+				if plan != nil {
+					out["plan"] = plan
 				}
 				return a.printJSON(out)
 			}
@@ -213,6 +230,9 @@ func newShowCmd(a *app) *cobra.Command {
 			fmt.Fprintf(a.out, "  owner: %s · created %s · updated %s\n", it.Owner, it.Created, it.Updated)
 			if len(it.Tags) > 0 {
 				fmt.Fprintf(a.out, "  tags: %s\n", strings.Join(it.Tags, ", "))
+			}
+			if len(it.After) > 0 {
+				fmt.Fprintf(a.out, "  after: %s\n", strings.Join(it.After, ", "))
 			}
 			switch {
 			case storyTopics != nil:
@@ -253,8 +273,44 @@ func newShowCmd(a *app) *cobra.Command {
 					fmt.Fprintf(a.out, "    %s  %-12s %s\n", c.ID, c.Status, c.Title)
 				}
 			}
+			if plan != nil {
+				a.printTaskPlan(plan)
+			}
 			return nil
 		},
+	}
+}
+
+// printTaskPlan prints a story's task plan as flai show gives it: each task's
+// state and what it waits for, then the layers, numbered from 1.
+func (a *app) printTaskPlan(p *workitem.Plan) {
+	fmt.Fprintln(a.out, "  plan:")
+	inLayer := map[string]bool{}
+	for _, l := range p.Layers {
+		for _, id := range l {
+			inLayer[id] = true
+		}
+	}
+	var outside []string
+	for _, t := range p.Tasks {
+		note := ""
+		switch {
+		case len(t.WaitingFor) > 0:
+			note = "  for " + strings.Join(t.WaitingFor, ", ")
+		case len(t.After) > 0:
+			note = "  after " + strings.Join(t.After, ", ")
+		}
+		fmt.Fprintln(a.out, strings.TrimRight(fmt.Sprintf("    %s  %-11s%s", t.ID, t.State, note), " "))
+		if t.State != workitem.PlanCancelled && !inLayer[t.ID] {
+			outside = append(outside, t.ID)
+		}
+	}
+	fmt.Fprintln(a.out, "  layers:")
+	for i, l := range p.Layers {
+		fmt.Fprintf(a.out, "    %d  %s\n", i+1, strings.Join(l, ", "))
+	}
+	if len(outside) > 0 {
+		fmt.Fprintf(a.out, "    none  %s: after forms a cycle, which flai check names\n", strings.Join(outside, ", "))
 	}
 }
 

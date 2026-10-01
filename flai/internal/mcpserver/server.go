@@ -401,7 +401,7 @@ type ItemOut struct {
 	Owner       string                `json:"owner,omitempty"`
 	Tags        []string              `json:"tags"`
 	Topics      []string              `json:"topics,omitempty" jsonschema:"a story's or epic's own: what it is about beyond the components it reaches"`
-	After       []string              `json:"after,omitempty" jsonschema:"a story's: the stories it waits for until they are done"`
+	After       []string              `json:"after,omitempty" jsonschema:"what it waits for until they are done: a story's, stories; a task's, tasks of its story"`
 	Created     string                `json:"created"`
 	Updated     string                `json:"updated"`
 	Archived    bool                  `json:"archived"`
@@ -410,6 +410,8 @@ type ItemOut struct {
 	Path        string                `json:"path"`
 	Body        string                `json:"body"`
 	Children    []ItemBrief           `json:"children"`
+	// Plan is a story's task plan, when it has tasks (S-0176).
+	Plan *workitem.Plan `json:"plan,omitempty" jsonschema:"a story's tasks, when it has any: each task's state (ready, waiting, in-progress, done, cancelled), its after, and the tasks it waits for; and layers, the task IDs that can run at once, in the order they can run"`
 	// Agent is a story's agent, and DefaultAgent the project's (S-0103).
 	Agent        *manifest.Agent `json:"agent,omitempty"`
 	DefaultAgent *manifest.Agent `json:"default_agent,omitempty"`
@@ -442,8 +444,12 @@ func (s *server) itemOut(ctx context.Context, it *workitem.Item) (ItemOut, error
 	if out.Transitions == nil {
 		out.Transitions = []workitem.Transition{}
 	}
-	for _, c := range workitem.Children(items, it.ID) {
+	children := workitem.Children(items, it.ID)
+	for _, c := range children {
 		out.Children = append(out.Children, brief(c))
+	}
+	if it.Type == workitem.Story {
+		out.Plan = workitem.PlanOf(children, it.ID)
 	}
 	return out, nil
 }

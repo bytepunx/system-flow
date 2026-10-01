@@ -33,6 +33,8 @@ type BoardCard struct {
 	Archived bool `json:"archived,omitempty"`
 	// Held is why a ready story is not started or offered (S-0128).
 	Held *Hold `json:"held,omitempty"`
+	// Tasks is a story's task plan in counts, when it has tasks (S-0176).
+	Tasks *TaskSummary `json:"tasks,omitempty"`
 }
 
 // BoardView is the board with its cards: one reading of the repository for
@@ -52,6 +54,7 @@ type BoardView struct {
 // NewBoardView lays the active items out by column. Stories only unless all.
 // A ready story whose claim overlaps an open story's is marked held (S-0128);
 // projects are the manifest's sub-projects, whose names a claim reads as paths.
+// A story with tasks carries its task plan in counts (S-0176).
 // Acceptance archives a story the moment it merges (S-0087); pendingPublish
 // names the stories a release has not yet covered, so a done, archived story
 // still on the done column until it is published, instead of vanishing the
@@ -61,8 +64,12 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 	holds := NewHolds(items, projects)
 	// A parent is looked up among every item given, archived ones included.
 	titles := map[string]string{}
+	tasks := map[string][]*Item{} // by story, for its plan
 	for _, it := range items {
 		titles[it.ID] = it.Title
+		if it.Type == Task {
+			tasks[it.Parent] = append(tasks[it.Parent], it)
+		}
 	}
 	for _, it := range items {
 		archivedButPending := it.Archived && it.Status == Done && pendingPublish[it.ID]
@@ -78,6 +85,11 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 		}
 		if it.Type == Story && it.Status == Ready && !it.Archived {
 			card.Held = holds.Of(it)
+		}
+		if it.Type == Story {
+			if p := PlanOf(tasks[it.ID], it.ID); p != nil {
+				card.Tasks = p.Summary()
+			}
 		}
 		v.Columns[it.Status] = append(v.Columns[it.Status], card)
 		if it.Type == Story {
