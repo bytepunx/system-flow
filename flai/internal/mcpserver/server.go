@@ -57,6 +57,10 @@ type Options struct {
 	// otherwise (S-0152); nil logs nothing.
 	Logger *slog.Logger
 	Slow   time.Duration
+	// Agents starts or restarts a story's agent on the host for the tools
+	// agent_start and agent_restart (S-0177); without it they say how to on
+	// the host.
+	Agents AgentStart
 }
 
 type server struct {
@@ -68,6 +72,7 @@ type server struct {
 	maxWait time.Duration
 	runner  execx.Runner
 	closing <-chan struct{}
+	agents  AgentStart
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -76,7 +81,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}

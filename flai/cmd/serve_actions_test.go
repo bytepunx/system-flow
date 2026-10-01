@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -565,5 +567,41 @@ func TestServeAgentStreamPrintsTheLog(t *testing.T) {
 	}
 	if r := res.(*serve.StreamRead); strconv.FormatInt(r.From, 10) != first || len(r.Entries) != 3 {
 		t.Errorf("agent.stream: %+v", r)
+	}
+}
+
+// S-0177, ADR-0064: flai mcp's agent tools start a story's agent as flai
+// serve agent restart does, under the same agent host action, and journal
+// the agent that asked.
+func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	runIn(t, root, "epic", "new", "Epic")
+	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-slice.md")
+	s, _ := os.ReadFile(file)
+	_ = os.WriteFile(file, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
+	for _, to := range []string{"ready", "in-progress"} {
+		if _, errOut, code := runIn(t, root, "move", "S-0001", to); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	var out, errOut bytes.Buffer
+	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC) }}
+	ctx := context.Background()
+	if _, err := a.mcpAgents(ctx, "restart", root, "S-0001", "agent-ops"); err == nil || !strings.Contains(err.Error(), "the agent host action is off") {
+		t.Errorf("action off: %v", err)
+	}
+	runIn(t, root, "serve", "enable", "agent")
+	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	got, err := a.mcpAgents(ctx, "restart", root, "S-0001", "agent-ops")
+	if err != nil || got.Story != "S-0001" || got.PID == 0 || got.Command != "true" {
+		t.Fatalf("a story in progress with no agent here: %+v %v", got, err)
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	for _, want := range []string{`"method": "mcp.agent_restart"`, `"by": "agent-ops"`, `"outcome": "disabled"`, "agent-ops asked to restart S-0001's agent: started true"} {
+		if !strings.Contains(js, want) {
+			t.Errorf("journal lacks %q: %s", want, js)
+		}
 	}
 }

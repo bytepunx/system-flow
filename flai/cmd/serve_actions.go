@@ -20,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -1057,6 +1058,42 @@ func printStream(a *app, got *serve.StreamRead) {
 		}
 		fmt.Fprintf(a.out, "%-9s %s\n", kind, strings.ReplaceAll(text, "\n", "\n          "))
 	}
+}
+
+// mcpAgents starts or restarts a story's agent for flai mcp's tools
+// agent_start and agent_restart (S-0177, ADR-0064), as flai serve agent
+// start and restart do, under the same agent host action, and journals who
+// asked and what came of it.
+func (a *app) mcpAgents(ctx context.Context, verb, root, story, by string) (mcpserver.AgentStarted, error) {
+	how := serve.Start
+	if verb == "restart" {
+		how = serve.Restart
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return mcpserver.AgentStarted{}, err
+	}
+	host := a.host()
+	o := serve.Options{Dir: a.serveDir(), Logger: a.logger(), Now: a.now, Agent: a.agentConfig, Host: host}
+	e := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: root}
+	run, err := how(ctx, o, e, story)
+	entry := hostapi.Entry{At: a.now().UTC().Format(time.RFC3339), Action: hostapi.ActionAgent, Method: "mcp.agent_" + verb, Project: e.Key, Root: root, By: by, Outcome: "done"}
+	var no *serve.Refused
+	switch {
+	case errors.As(err, &no) && !o.Agent(root).Enabled:
+		entry.Outcome, entry.Detail = "disabled", fmt.Sprintf("%s asked to %s %s's agent: %s", by, verb, story, no.Why)
+	case err != nil:
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("%s asked to %s %s's agent: %s", by, verb, story, err)
+	case run.Queued != "":
+		entry.Detail = fmt.Sprintf("%s asked to %s %s's agent: queued, and flai serve starts it when it can", by, verb, story)
+	default:
+		entry.Detail = fmt.Sprintf("%s asked to %s %s's agent: started %s as %s (pid %d)", by, verb, story, run.Command, run.Agent, run.PID)
+	}
+	host.Record(entry)
+	if err != nil {
+		return mcpserver.AgentStarted{}, err
+	}
+	return mcpserver.AgentStarted{Story: run.Story, Agent: run.Agent, Harness: run.Harness, Command: run.Command, PID: run.PID, Log: run.Log, Started: run.Started, Queued: run.Queued}, nil
 }
 
 // agentNow starts story's agent on the operator's word, with start or

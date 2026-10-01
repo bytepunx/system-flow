@@ -30,6 +30,12 @@ type fixture struct {
 
 func setup(t *testing.T) *fixture {
 	t.Helper()
+	return setupWith(t, nil)
+}
+
+// setupWith is setup with the server's options changed by with.
+func setupWith(t *testing.T, with func(*Options)) *fixture {
+	t.Helper()
 	root := t.TempDir()
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
 	for _, d := range []string{"design/system", "docs/users", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
@@ -58,7 +64,11 @@ func setup(t *testing.T) *fixture {
 	}
 
 	clock := t0.Add(time.Minute)
-	srv := New(Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second})
+	opt := Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second}
+	if with != nil {
+		with(&opt)
+	}
+	srv := New(opt)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	ct, st := mcp.NewInMemoryTransports()
@@ -108,7 +118,7 @@ func TestToolsAreAdvertised(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "board doc_get doc_search inbox item_edit item_get item_move item_new prime thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches"
+	want := "agent_restart agent_start board doc_get doc_search inbox item_edit item_get item_move item_new prime thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches"
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
 	}
