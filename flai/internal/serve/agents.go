@@ -16,7 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -539,6 +541,17 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig) {
 	}
 }
 
+// agentEnv is flai serve's environment without the host's address and token
+// and the config it was started with (S-0183, I-0044): a flai the agent runs
+// finds its own config, and a flai serve it runs does not reach the
+// operator's host.
+func agentEnv(env []string) []string {
+	return slices.DeleteFunc(slices.Clone(env), func(kv string) bool {
+		name, _, _ := strings.Cut(kv, "=")
+		return name == host.URLEnv || name == host.TokenEnv || name == config.EnvVar
+	})
+}
+
 // start starts an agent for story, or starts again the one that ended asking
 // in after, and says whether it did.
 func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory, after ...*AgentRun) bool {
@@ -603,7 +616,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), argv[0], argv[1:]...)
 	cmd.Dir = l.entry.Root
 	cmd.Stdout, cmd.Stderr = out, out
-	cmd.Env = append(os.Environ(), "FLAI_AGENT="+run.Agent, "FLAI_STORY="+story.ID, "FLAI_SESSION="+now.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
+	cmd.Env = append(agentEnv(os.Environ()), "FLAI_AGENT="+run.Agent, "FLAI_STORY="+story.ID, "FLAI_SESSION="+now.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
 	cmd.Env = append(cmd.Env, spec.Env...)
 	Detach(cmd)
 	if err := cmd.Start(); err != nil {

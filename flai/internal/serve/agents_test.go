@@ -17,7 +17,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -101,7 +103,7 @@ func newAgentLab(t *testing.T) *agentLab {
 	script := "#!/bin/sh\n" +
 		"trap 'touch \"" + lab.outDir + "/ended-$$\"; exit 143' TERM\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; } > \"$out\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; } > \"$out\"\n" +
 		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
 		"touch \"" + lab.outDir + "/ended-$$\"\n"
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
@@ -311,6 +313,25 @@ func TestAStoryEnteringReadyStartsTheOperatorsCommand(t *testing.T) {
 	}
 	if n := lab.said(id); n != 1 {
 		t.Errorf("logged %d times why %s waits", n, id)
+	}
+}
+
+// S-0183: an agent gets no way to the operator's host and no config of flai
+// serve's (I-0044), and keeps the rest of its environment.
+func TestAnAgentIsStartedWithoutTheHostsAddressTokenOrConfig(t *testing.T) {
+	t.Setenv(host.URLEnv, "http://127.0.0.1:4241")
+	t.Setenv(host.TokenEnv, "host-secret")
+	t.Setenv(config.EnvVar, filepath.Join(t.TempDir(), "config.json"))
+	lab := newAgentLab(t)
+	id := lab.ready("Clean")
+	lab.l.look(context.Background(), false)
+	out := filepath.Join(lab.outDir, id+".txt")
+	waitFor(t, "the stub ended", func() bool { r := lab.run(id); return r != nil && r.Ended != "" })
+	got, _ := os.ReadFile(out)
+	for _, want := range []string{"host: unset unset\n", "config: unset\n", "story: " + id + "\n"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the stub was given\n%s\nwithout %q", got, want)
+		}
 	}
 }
 
