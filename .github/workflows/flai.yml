@@ -26,7 +26,13 @@ jobs:
           working-directory: flai
 
   test:
-    runs-on: ubuntu-latest
+    # macOS too, where the temp dir is a symlink, /bin/sh is bash, and git
+    # works out an identity from the hostname (I-0045)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7

@@ -3,11 +3,11 @@ id: I-0001
 title: golangci-lint on the host is v1 but the config is v2
 class: efficiency
 status: open
-count: 5
+count: 6
 cost: 4m
 first_reported: 2026-09-15T16:31:32Z
-last_reported: 2026-09-26T03:21:40Z
-updated: 2026-09-26T03:21:40Z
+last_reported: 2026-10-01T08:26:05Z
+updated: 2026-10-01T08:26:05Z
 ---
 
 # I-0001 golangci-lint on the host is v1 but the config is v2
@@ -31,6 +31,9 @@ S-0118, 2026-09-26: the host's golangci-lint is still v1. I installed v2.5.0 int
 
 ### 2026-09-26T03:21:40Z
 S-0119, 2026-09-26: golangci-lint was not on PATH at all; installed v2.5.0 into bin/ as scripts/install-tools.sh does.
+
+### 2026-10-01T08:26:05Z
+S-0180, 2026-10-01: a story worktree's bin/ has no golangci-lint v2, so scripts/flai-test.sh found ~/go/bin's v1 and refused the config until main's bin/golangci-lint was copied in.
 
 ## Remediation
 `scripts/install-tools.sh` installs v2 into `bin/` (git-ignored) so it persists across sessions; the operator can run it once. Close when the host has v2 or the script is in routine use.

@@ -2,12 +2,12 @@
 id: I-0045
 title: "Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has"
 class: defect
-status: open
+status: closed
 count: 4
 cost: 4m
 first_reported: 2026-09-26T03:11:49Z
 last_reported: 2026-10-01T07:46:11Z
-updated: 2026-10-01T07:46:11Z
+updated: 2026-10-01T08:26:05Z
 ---
 
 # I-0045 Three flai tests fail on a macOS host, on main too: the temp dir's /private/var path and a git identity the host has
@@ -30,3 +30,4 @@ S-0117, 2026-09-26: make test fails TestRunChecksSubstitutesStoryAndRootAndRunsI
 S-0173, 2026-10-01: make flai-test in the story worktree failed the same three tests (internal/serve TestRunChecksSubstitutesStoryAndRootAndRunsInTheWorktree, TestTheOperatorStopsAStorysAgent; cmd TestAcceptRefusesBeforeChangingAnythingWithoutIdentity), and each fails on main unchanged. The worktree's bin/ also had no golangci-lint v2, so ~/go/bin's v1 refused the config until main's bin/golangci-lint was copied in.
 
 ## Remediation
+Closed 2026-10-01T08:26:05Z: S-0180: checks_test reads pwd -P and install-test.sh resolves its mktemp path, so both sides of each path comparison are resolved; the identity test isolates git with internal/gittest and sets user.useConfigOnly, so git no longer works out an identity from the hostname; the stop test waits until the stub has set its TERM trap, which macOS's slower-starting bash had not when the signal came; flai.yml now runs the tests on macos-latest too.

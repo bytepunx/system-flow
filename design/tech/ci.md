@@ -1,6 +1,6 @@
 ---
 title: CI and repository automation
-updated: 2026-09-15
+updated: 2026-10-01
 status: active
 topics: [code]
 ---
@@ -23,7 +23,7 @@ Workflows in this monorepo:
 | Workflow | Trigger | Does |
 |----------|---------|------|
 | `system-flow-check.yml` | pull request, push to main | markdownlint, build flai, `flai check --strict`, render `./template` and check the result, install the latest release with `install.sh` and `flai self-upgrade` |
-| `flai.yml` | changes under `flai/` | lint, test with race detector, build |
+| `flai.yml` | changes under `flai/` | lint, test with race detector on Linux and macOS (S-0180: macOS's temp dir is a symlink, its `/bin/sh` is bash, and its git works out an identity from the hostname, which broke tests only a Mac ran), build |
 | `flaiover.yml` | changes under `flaiover/` | lint, unit tests, build, e2e |
 | `release-flai.yml` | tag `flai/v*` | GoReleaser |
 | `release-flaiover.yml` | tag `flaiover/v*`, push to main touching flaiover or flai | buildx build of `flaiover/Dockerfile` from the repo root, push to GHCR with latest, semver, major, and sha tags, flai version from the latest `flai/v*` tag |
