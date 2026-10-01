@@ -27,6 +27,10 @@ type BoardCard struct {
 	Age         string   `json:"age_in_column"`
 	AgeSecs     int64    `json:"age_in_column_seconds"`
 	Touches     []string `json:"touches,omitempty"`
+	// Archived marks a done card shown only because its release is pending
+	// (S-0087): the dashboard leaves it out while the clone's release tags
+	// lag the remote's, when pending cannot be told from published (S-0174).
+	Archived bool `json:"archived,omitempty"`
 	// Held is why a ready story is not started or offered (S-0128).
 	Held *Hold `json:"held,omitempty"`
 }
@@ -70,7 +74,7 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			ID: it.ID, Type: it.Type, Title: it.Title, Nature: it.Nature, Parent: it.Parent,
 			ParentTitle: titles[it.Parent], Status: it.Status, EnteredAt: it.EnteredAt().UTC().Format(TimeFormat),
 			Blocked: it.IsBlocked(), Age: HumanDuration(age), AgeSecs: int64(age.Seconds()),
-			Touches: it.Touches,
+			Touches: it.Touches, Archived: it.Archived,
 		}
 		if it.Type == Story && it.Status == Ready && !it.Archived {
 			card.Held = holds.Of(it)

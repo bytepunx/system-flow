@@ -94,4 +94,66 @@ describe('PublishBanner', () => {
 		expect(refused).toContain('have diverged');
 		expect(pending()).not.toBeNull();
 	});
+	// S-0174: a clone missing release tags its remote has is told so, with no plan and no button.
+	it('says which release tags the clone is missing and how to fetch them, offering nothing', () => {
+		const remote = {
+			remote: 'origin',
+			behind: [
+				{ component: 'flai', local: 'flai/v1.18.0', remote: 'flai/v1.26.3' },
+				{ component: 'flaiover', remote: 'flaiover/v0.32.1' }
+			],
+			fix: 'git fetch --tags origin',
+			message: 'missing'
+		};
+		c = mount(PublishBanner, {
+			target: document.body,
+			props: { plans: [], enabled: true, remote }
+		});
+		flushSync();
+		const text = document
+			.querySelector('[data-testid="publish-missing-tags"]')!
+			.textContent!.replace(/\s+/g, ' ');
+		expect(text).toContain('missing release tags origin has');
+		expect(text).toContain('flai/v1.26.3 (here flai/v1.18.0)');
+		expect(text).toContain('flaiover/v0.32.1 (here none)');
+		expect(text).toContain('git fetch --tags origin');
+		expect(pending()).toBeNull();
+		expect(document.querySelectorAll('button')).toHaveLength(0);
+	});
+
+	// S-0174: a remote that could not be asked leaves the plan in view, warned, with no button.
+	it('warns over the plan when the remote could not be asked, and offers no Publish', () => {
+		const remote = {
+			remote: 'origin',
+			unchecked: 'unable to access the remote',
+			fix: 'git fetch --tags origin',
+			message: 'could not ask'
+		};
+		c = mount(PublishBanner, { target: document.body, props: { plans, enabled: true, remote } });
+		flushSync();
+		expect(pending()!.textContent).toContain('S-0101, S-0102');
+		const warn = document.querySelector('[data-testid="publish-unchecked"]')!.textContent!;
+		expect(warn).toContain('Not checked against origin');
+		expect(warn).toContain('unable to access the remote');
+		expect(document.querySelector('[data-testid="publish-now"]')).toBeNull();
+		expect(document.querySelector('[data-testid="publish-missing-tags"]')).toBeNull();
+	});
+
+	// I-0024: what no plan covers is named with why, beside the plan.
+	it('names the accepted items no plan covers, with why', () => {
+		const unplanned = [
+			{
+				id: 'S-0103',
+				title: 'Both sides',
+				reason: 'S-0103 touches cli, web but no tag says which it delivers to'
+			}
+		];
+		c = mount(PublishBanner, { target: document.body, props: { plans, enabled: true, unplanned } });
+		flushSync();
+		const text = document.querySelector('[data-testid="publish-unplanned"]')!.textContent!;
+		expect(text).toContain('S-0103');
+		expect(text).toContain('Both sides');
+		expect(text).toContain('no tag says which it delivers to');
+		expect(pending()).not.toBeNull();
+	});
 });

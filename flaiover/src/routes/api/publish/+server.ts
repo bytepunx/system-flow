@@ -1,5 +1,6 @@
 import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
+import type { RemoteTags, Unplanned } from '$lib/publish';
 import type { RequestHandler } from './$types';
 
 /**
@@ -20,16 +21,28 @@ export type PendingPlan = {
 /**
  * GET: what publishing now would release (flai's release.pending, `flai release --pending
  * --dry-run`), and whether the operator has enabled the push host action, which also gates
- * publishing (ADR-0031, S-0078). No flai connected reads as nothing pending, not an error: the
- * host flai banner already says why.
+ * publishing (ADR-0031, S-0078). `remote` is how the clone's release tags stand against its
+ * remote's when that has something to say (S-0174), and `unplanned` the accepted items no plan
+ * covers (I-0024). No flai connected reads as nothing pending, not an error: the host flai banner
+ * already says why.
  */
 export const GET: RequestHandler = () =>
 	respond(async () => {
 		try {
-			const { data } = await repo().run<{ plans?: PendingPlan[] }>('publish.preview');
-			return { plans: data?.plans ?? [], push_enabled: await pushEnabled() };
+			const { data } = await repo().run<{
+				plans?: PendingPlan[];
+				remote?: RemoteTags;
+				unplanned?: Unplanned[];
+			}>('publish.preview');
+			return {
+				plans: data?.plans ?? [],
+				remote: data?.remote ?? null,
+				unplanned: data?.unplanned ?? [],
+				push_enabled: await pushEnabled()
+			};
 		} catch (e) {
-			if (e instanceof RepoError && e.status === 503) return { plans: [], push_enabled: false };
+			if (e instanceof RepoError && e.status === 503)
+				return { plans: [], remote: null, unplanned: [], push_enabled: false };
 			throw e;
 		}
 	});

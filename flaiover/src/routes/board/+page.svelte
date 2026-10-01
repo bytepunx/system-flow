@@ -16,6 +16,7 @@
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import { anyRunning, storyActivity, type HostAgent } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
+	import { doneLane, type RemoteTags, type Unplanned } from '$lib/publish';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 	import CardReorder from '$lib/components/CardReorder.svelte';
 	import {
@@ -40,6 +41,7 @@
 		status: string;
 		blocked: boolean;
 		age_seconds: number;
+		archived?: boolean;
 	};
 	type Board = {
 		wip_limits: Record<string, number>;
@@ -82,6 +84,10 @@
 	};
 	let publishPlans = $state<PendingPlan[]>([]);
 	let publishEnabled = $state(false);
+	// how the clone's release tags stand against the remote's (S-0174), and what no plan covers
+	// (I-0024)
+	let publishRemote = $state<RemoteTags | null>(null);
+	let publishUnplanned = $state<Unplanned[]>([]);
 	async function loadPublish() {
 		try {
 			const r = await api('/api/publish');
@@ -89,6 +95,8 @@
 			const body = await r.json();
 			publishPlans = body.plans ?? [];
 			publishEnabled = body.push_enabled === true;
+			publishRemote = body.remote ?? null;
+			publishUnplanned = body.unplanned ?? [];
 		} catch {
 			// keep what we had: a failed question is not news
 		}
@@ -112,7 +120,12 @@
 		return () => clearInterval(t);
 	});
 
-	const waitingIds = $derived(new Set(publishPlans.flatMap((p) => p.items.map((it) => it.id))));
+	const waitingIds = $derived(
+		new Set([
+			...publishPlans.flatMap((p) => p.items.map((it) => it.id)),
+			...publishUnplanned.map((u) => u.id)
+		])
+	);
 
 	onMount(() => {
 		load();
@@ -138,8 +151,14 @@
 	});
 
 	// The types ticked above the board (S-0141); WIP counts and reordering count stories regardless.
-	const cards = (state: string) =>
-		(board?.columns[state] ?? []).filter((c) => boardTypes.shown[c.type as ItemType]);
+	// While the clone lags its remote's release tags, the done lane leaves out the archived cards it
+	// holds only because they look unpublished (S-0174).
+	const cards = (state: string) => {
+		const column = board?.columns[state] ?? [];
+		return (state === 'done' ? doneLane(column, publishRemote) : column).filter(
+			(c) => boardTypes.shown[c.type as ItemType]
+		);
+	};
 	const count = (state: string) =>
 		(board?.columns[state] ?? []).filter((c) => c.type === 'story').length;
 
@@ -483,6 +502,8 @@
 					<PublishBanner
 						plans={publishPlans}
 						enabled={publishEnabled}
+						remote={publishRemote}
+						unplanned={publishUnplanned}
 						onpublished={() => {
 							void loadPublish();
 							load();

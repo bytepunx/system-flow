@@ -27,6 +27,9 @@ func TestArchivedDoneStoryStaysUntilPublished(t *testing.T) {
 	if len(got) != 1 || got[0] != "S-0001" {
 		t.Errorf("done column: %v", got)
 	}
+	if !v.Columns[Done][0].Archived {
+		t.Error("the card says it is archived, so the dashboard can tell it is there only while pending (S-0174)")
+	}
 	if len(v.Columns[Cancelled]) != 0 {
 		t.Error("pendingPublish names a cancelled item too, but only a done one may stay")
 	}

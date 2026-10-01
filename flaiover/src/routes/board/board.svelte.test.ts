@@ -117,3 +117,79 @@ describe('the board follows the work items (S-0161)', () => {
 		expect(counts()).toEqual({ board: 0, publish: 0, unpushed: 0, agents: 1 });
 	});
 });
+
+// S-0174: while the clone lags its remote's release tags, the done lane leaves out the archived
+// stories it shows only because they look unpublished, and the banner says why.
+describe('the done lane of a clone missing published tags (S-0174)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, archived: boolean) => ({
+		id,
+		type: 'story',
+		title: id,
+		nature: 'feature',
+		status: 'done',
+		blocked: false,
+		age_seconds: 0,
+		archived
+	});
+	const withDone = {
+		...board,
+		columns: { done: [card('S-0001', true), card('S-0002', false)] }
+	};
+	const remote = {
+		remote: 'origin',
+		behind: [{ component: 'cli', local: 'cli/v1.0.0', remote: 'cli/v1.4.0' }],
+		fix: 'git fetch --tags origin',
+		message: 'missing'
+	};
+	const open = async (publish: unknown) => {
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board') return answer(withDone);
+			if (url === '/api/publish') return answer(publish);
+			if (url === '/api/unpushed') return answer({ unpushed: null });
+			return answer({ enabled: false });
+		});
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+	};
+	const shown = () =>
+		[...document.querySelectorAll('[data-card]')].map((e) => e.getAttribute('data-card'));
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('EventSource', FakeEventSource);
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	it('leaves out the archived cards and says how to fetch the tags', async () => {
+		await open({ plans: [], remote, unplanned: [], push_enabled: true });
+		expect(shown()).toEqual(['S-0002']);
+		const banner = document.querySelector('[data-testid="publish-missing-tags"]')!.textContent!;
+		expect(banner).toContain('cli/v1.4.0');
+		expect(banner).toContain('git fetch --tags origin');
+	});
+
+	it('shows them while the clone is in step', async () => {
+		await open({
+			plans: [
+				{
+					component: { name: 'cli' },
+					level: 'minor',
+					from: '1.0.0',
+					to: '1.1.0',
+					items: [{ id: 'S-0001', title: 'S-0001', level: 'minor' }]
+				}
+			],
+			remote: null,
+			unplanned: [],
+			push_enabled: true
+		});
+		expect(shown()).toEqual(['S-0001', 'S-0002']);
+		expect(document.querySelector('[data-testid="publish-missing-tags"]')).toBeNull();
+	});
+});

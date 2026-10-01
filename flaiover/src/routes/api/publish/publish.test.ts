@@ -57,11 +57,25 @@ describe('/api/publish (S-0087)', () => {
 		expect(asked[0]).toEqual({ method: 'publish.preview', params: {} });
 	});
 
+	it("passes on a clone missing the remote's release tags and the items no plan covers (S-0174)", async () => {
+		const remote = {
+			remote: 'origin',
+			behind: [{ component: 'cli', local: 'cli/v1.0.0', remote: 'cli/v1.4.0' }],
+			fix: 'git fetch --tags origin',
+			message: 'this clone is missing release tags origin has'
+		};
+		const unplanned = [{ id: 'S-0102', title: 'Both', reason: 'no tag says which it delivers to' }];
+		script['publish.preview'] = { data: { plans: null, remote, unplanned } };
+		script['project.info'] = { data: { host_actions: { push: true } } };
+		const body = await (await GET({} as never)).json();
+		expect(body).toMatchObject({ plans: [], remote, unplanned, push_enabled: true });
+	});
+
 	it('answers an empty plan as an empty list, not an error', async () => {
 		script['publish.preview'] = { data: { plans: [] } };
 		script['project.info'] = { data: { host_actions: { push: false } } };
 		const body = await (await GET({} as never)).json();
-		expect(body).toMatchObject({ plans: [], push_enabled: false });
+		expect(body).toMatchObject({ plans: [], remote: null, unplanned: [], push_enabled: false });
 	});
 
 	it('treats no flai connected as nothing pending, not an error', async () => {
