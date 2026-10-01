@@ -291,4 +291,26 @@ What the runs show:
 - **Agents delegate without the prompt, and more with it.** S-0183 delegated once under the convention alone, and S-0118 once before either existed. The two runs with the prompt delegated two and three times.
 - Reading the logs: the stream's deduplicated cache reads fall short of `modelUsage` by under 1% in four of the five delegating runs (S-0118 by 81,606, S-0184 by 112,679, S-0185 by 72,830, S-0175 by 56,989), and match it exactly in S-0183 and in every run without sub-agents. `num_turns` is not the number of model calls, and the stream's output tokens are about 2% of the `result`'s.
 
-What to change follows from this. Keep the verifier before review, which found defects. Make its run replace the agent's own full-suite runs rather than repeat them. Run both sub-agents on a cheaper model, since they read and run checks and decide nothing. S-0189 tries both and measures them as this section does.
+What to change follows from this. Keep the verifier before review, which found defects. Make its run replace the agent's own full-suite runs rather than repeat them. Run both sub-agents on a cheaper model, since they read and run checks and decide nothing. S-0189 makes both changes, and S-0190 measures them as this section does once two stories have run with them.
+
+### A cheaper verifier, replayed
+
+Before the template's verifier moved to `sonnet`, S-0189 checked that a cheaper verifier still finds what S-0185's found. On 2026-10-01, S-0185's second verifier call was replayed word for word, its prompt taken from `flai serve`'s log. That call was the first to check the diff, and it ran on `claude-opus-5-5`. The replay ran on `sonnet` against a detached checkout of `fa6aaa3`, the last S-0185 commit before its review fixes. The prompt's paths and diff base were changed to that checkout and S-0185's base, and nothing else.
+
+| Finding | Opus, first diff check | Sonnet, replay |
+|---------|------------------------|----------------|
+| Docs say `flai import` refuses an empty required variable before writing, but it moves folders first | Found | Found |
+| `flai upgrade --var` is ignored when the project is already at the template's version | Found | Found |
+| `--relock` now fails on an unreadable lock, because the lock is read before the relock branch | Not found; S-0185's final verifier found it after the fixes | Found |
+| Missing tests (`internal/lock`, `--relock` recording vars, a refused dry-run, the lock unchanged on refusal) | Found | Found |
+| A project made by an older `flai new` silently takes a fork variable's default | Found | Not found |
+| A recorded empty value is refused as missing before a newer default is tried | Found (low) | Not found |
+| The behaviour commit leaves the docs stale until the next commit | Found | Not found |
+| The five manifest-held variables are copied into the lock's `vars`, where they have no effect; a fork variable holding a secret would be committed in the lock | Not found | Found (minor) |
+
+| Run | Model | Tokens | Tool calls | Seconds |
+|-----|-------|--------|------------|---------|
+| S-0185, first diff check | claude-opus-5-5 | 78,082 | 20 | 181 |
+| Replay | sonnet | 78,415 | 18 | 165 |
+
+Sonnet found four of the six things Opus found, and the regression Opus found only on its last run. It missed two migration edge cases and the commit split. It read about as much and took about as long. Its tokens are billed at Sonnet's rate rather than Opus's. This is one replay of one prompt. It shows that a cheaper verifier still catches the defects that matter most, not that it catches as many.
