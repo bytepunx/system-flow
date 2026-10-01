@@ -378,6 +378,9 @@ func TestPrimeStoryRole(t *testing.T) {
 	}
 
 	out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--role", "explore", "--budget", "2KB")
+	if len(out) > 2048 {
+		t.Errorf("--budget 2KB printed %d bytes", len(out))
+	}
 	if !strings.Contains(out, "; budget 2048 bytes\n") || !strings.Contains(out, "briefs with no room in the budget, not printed\n") || strings.Contains(out, "over budget") {
 		t.Errorf("--budget 2KB:\n%s", out)
 	}

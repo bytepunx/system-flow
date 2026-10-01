@@ -233,6 +233,13 @@ func (p *Pack) AddBriefs(s *Selection) {
 		}
 	}
 	p.size()
+	// The header's line counting what was left out can itself take the pack
+	// over; then the last brief makes room for it.
+	for !over && p.Size.Bytes > p.Budget && len(p.Items) > 0 {
+		p.Items = p.Items[:len(p.Items)-1]
+		p.BriefsLeftOut++
+		p.size()
+	}
 }
 
 // take puts everything a selection chose, and its catalog, into the pack.
