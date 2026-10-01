@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 75
-      cache_read: 1140538
-      cache_write: 10065
-      cost: 0.5161
+      input: 12
+      output: 4770
+      cache_read: 1137593
+      cache_write: 14449
+      cost: 0.4225
 ---
 # T-0619 Decide how sub-agents are defined, primed, attributed, and ask questions
 

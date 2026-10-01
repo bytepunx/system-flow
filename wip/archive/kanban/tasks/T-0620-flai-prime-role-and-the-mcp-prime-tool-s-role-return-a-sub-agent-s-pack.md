@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 463
-      cache_read: 8447770
-      cache_write: 110215
-      cost: 3.8384
+      input: 91
+      output: 35480
+      cache_read: 8461208
+      cache_write: 107468
+      cost: 3.1424
 ---
 # T-0620 flai prime --role and the MCP prime tool's role return a sub-agent's pack
 

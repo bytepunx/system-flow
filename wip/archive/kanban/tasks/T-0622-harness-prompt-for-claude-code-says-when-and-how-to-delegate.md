@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 106
-      cache_read: 1775990
-      cache_write: 8814
-      cost: 0.8005
+      input: 19
+      output: 7400
+      cache_read: 1764614
+      cache_write: 22413
+      cost: 0.6554
 ---
 # T-0622 harness.Prompt for claude-code says when and how to delegate
 

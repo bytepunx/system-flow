@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 97
-      cache_read: 2863575
-      cache_write: 14723
-      cost: 1.2909
+      input: 30
+      output: 11933
+      cache_read: 2845740
+      cache_write: 36145
+      cost: 1.0569
 ---
 # T-0627 flai guard refuses a sub-agent's writes as a Claude Code hook
 

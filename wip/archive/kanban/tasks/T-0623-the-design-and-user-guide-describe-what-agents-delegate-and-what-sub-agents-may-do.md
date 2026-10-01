@@ -23,9 +23,15 @@ tags: []
 touches: [design/system/flai-cli.md, docs/users]
 usage:
   source: log
-  seconds: 1
+  seconds: 231
   estimated: true
-  models: []
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 24601
+      cache_read: 5866823
+      cache_write: 74516
+      cost: 2.1789
 ---
 # T-0623 The design and user guide describe what agents delegate and what sub-agents may do
 

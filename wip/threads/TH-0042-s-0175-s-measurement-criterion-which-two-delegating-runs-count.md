@@ -4,10 +4,10 @@ title: "S-0175's measurement criterion: which two delegating runs count?"
 anchor:
   path: wip/kanban/stories/S-0175-agents-the-claude-code-adapter-starts-hand-noisy-work-and-verification-to-sub-agents-that-cannot-act-for-the-story.md
   item: S-0175
-status: open
+status: resolved
 participants: [agent-S-0175, alex]
 created: 2026-10-01T07:53:18Z
-updated: 2026-10-01T08:06:59Z
+updated: 2026-10-01T08:27:52Z
 ---
 
 # TH-0042 S-0175's measurement criterion: which two delegating runs count?
@@ -30,3 +30,9 @@ take the recommended approach
 
 ### 2026-10-01T08:06:59Z agent-S-0175
 Recorded in the narrative's Decisions. T-0624 measures this run and S-0118 into agent-context.md, and I will file the follow-up story to measure two runs with the released prompt before S-0175 goes to review.
+
+### 2026-10-01T08:20:23Z alex
+Resolved.
+
+### 2026-10-01T08:27:52Z agent-S-0175
+Resolved: This run and S-0118 are measured in design/system/agent-context.md § Sub-agents › Measured; S-0188 measures two stories run with the released prompt.

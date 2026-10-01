@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 112
-      cache_read: 3351985
-      cache_write: 23190
-      cost: 1.5138
+      input: 36
+      output: 13993
+      cache_read: 3336995
+      cache_write: 42384
+      cost: 1.2393
 ---
 # T-0621 The template ships explorer and verifier sub-agents and a delegation convention
 
