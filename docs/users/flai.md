@@ -720,13 +720,15 @@ Nothing is printed twice. The first reason wins; a loaded item lists the later o
 
 ## Sub-agents
 
-An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, test, lint, and `flai check` runs and long logs to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
+An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, test, lint, and `flai check` runs and long logs to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). While it works it runs only the tests for what it changed. The whole suite, the lint, and `flai check` are the verifier's: one run before review, and one more after the agent fixes what that one found. The agent makes the fixes itself, never a sub-agent. The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
 
 | File | What it is |
 |------|------------|
-| `.claude/agents/explorer.md` | Finds and reads: `Read`, `Grep`, `Glob`, and flai's read tools. No shell. |
-| `.claude/agents/verifier.md` | The explorer's tools and `Bash`, to run the project's tests, lint, and checks. Told not to edit. |
+| `.claude/agents/explorer.md` | Finds and reads: `Read`, `Grep`, `Glob`, and flai's read tools. No shell. Runs `haiku`. |
+| `.claude/agents/verifier.md` | The explorer's tools and `Bash`, to run the project's tests, lint, and checks. Told not to edit. Runs `sonnet`. |
 | `.claude/settings.json` | Runs `flai guard` before every shell command and flai tool call. |
+
+Both sub-agents run a model cheaper than the story's agent's, since they read and run checks and decide nothing. Set `model` in a definition to change it, or to `inherit` to run it on the story's agent's model.
 
 A sub-agent may read and run checks. It may not move, create, or edit a work item, write to a thread, read the inbox, or wait for events or work: neither definition has those tools, and `flai guard` refuses them, and the flai and git commands that write, to any sub-agent, the built-in ones included ([ADR-0060](../../design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). The story's agent's own calls pass. A refused call tells the sub-agent to say what it needs in its final message instead. The guard looks at every word of a command line, so `env`, `sudo`, `timeout`, `xargs`, `find -exec`, and `bash -c` do not hide a command from it; it is not a shell, and a command hidden on purpose, in a variable or with a backslash in its name, gets past it.
 
