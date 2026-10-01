@@ -202,3 +202,38 @@ func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 		t.Errorf("env: %v", st.Env)
 	}
 }
+
+// S-0175, ADR-0059: the claude-code prompt says when to delegate, what to
+// give a sub-agent, and to verify before review; the operator's command gets
+// no prompt, and an answered or commit run is not told again.
+func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
+	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, have a fresh verifier check the worktree's diff against the acceptance criteria and the conventions"}
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	for _, p := range []string{st.Argv[2], Prompt(restarted)} {
+		for _, w := range want {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, "sub-agents") {
+			t.Errorf("told again:\n%s", p)
+		}
+	}
+	cmd, err := (command{}).Start(r, Host{Program: "run-agent", Args: []string{"{story}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all := strings.Join(append(cmd.Argv, cmd.Env...), "\n"); strings.Contains(all, "sub-agent") || strings.Contains(all, "explorer") {
+		t.Errorf("the operator's command is told about sub-agents: %s", all)
+	}
+}

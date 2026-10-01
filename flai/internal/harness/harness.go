@@ -147,9 +147,12 @@ func options(harness string, config map[string]string, takes map[string]option) 
 }
 
 // Prompt is what the agent is asked to do: work its story, and nothing
-// else, the way the project's conventions say, asking the designer through
-// flai when it needs them. A resumed agent is told its question was answered;
-// one started to commit a worktree is told to do only that (S-0140).
+// else, the way the project's conventions say, handing noisy work and the
+// check before review to sub-agents (ADR-0059), and asking the designer
+// through flai when it needs them. A resumed agent is told its question was
+// answered and goes on in the session that already holds the rest; one
+// started to commit a worktree is told to do only that (S-0140). Only the
+// claude-code adapter sends a prompt.
 func Prompt(r Request) string {
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
@@ -171,7 +174,16 @@ If a change cannot be committed without the designer deciding something, ask wit
 
 Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md: prime your session with flai prime --story %[2]s (or the flai MCP tool prime), which prints the conventions that apply and what the story names whole, and briefs the design and ADRs its topics and links select, within a size budget. A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Open the story with flai stream open %[2]s, write its tasks if it has none, and work them in the worktree that prints. Commit each task, keep the narrative's Current state and Next steps true, run flai stream sync %[2]s at every task transition, and call the flai MCP tool inbox there too.
 
-%[4]s`, r.Name, r.Story, r.Root, rules(r), why)
+%[6]s
+
+%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r))
+}
+
+// delegation tells the agent when to hand work to the explorer and verifier
+// sub-agents the template defines, what to give them, and what comes back
+// (ADR-0059, design/conventions/delegation.md).
+func delegation(r Request) string {
+	return fmt.Sprintf(`Keep your own context for decisions and edits, and hand noisy work to sub-agents with the Agent tool: code and document search across many files to the explorer, and test, lint, and flai check runs and long logs to the verifier. A sub-agent starts with nothing but your prompt: give it the worktree's path, %[1]s and the task's ID, the question, what you already know, and the shape of the answer you want, and ask for a summary with paths and lines, not raw output. Do it yourself when that is quicker: one file you know, one short command. A sub-agent cannot change work items or threads; a question it returns for the designer is yours to ask with thread_open. Before you move %[1]s to review, have a fresh verifier check the worktree's diff against the acceptance criteria and the conventions, and act on what it finds.`, r.Story)
 }
 
 func rules(r Request) string {
