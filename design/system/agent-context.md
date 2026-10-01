@@ -252,3 +252,32 @@ A sub-agent's flai calls arrive on its parent's MCP connection under its parent'
 3. Briefs, never bodies: what the story, its epic, and its tasks name, then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
 
 The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. The baseline gives `explore` to `communication`, `safety`, `tooling`, and `delegation`, and `verify` to those and `documentation`, `code-quality`, `git`, and `logging`.
+
+### Measured
+
+Read on 2026-10-01 from the eight logs `flai serve` kept, with ADR-0051's reading: assistant events deduplicated by message ID, a run's `result` for its cost and turns, and for a run with no `result` yet the cost estimated at the blended rate of every `result` in the logs, 0.41 US dollars per million tokens for claude-opus-5-5. A sub-agent's calls are those whose events carry `parent_tool_use_id`. Two runs failed at once with an API error and are left out.
+
+| Run | Delegated | Model calls, agent / sub-agents | Cache reads, agent / sub-agents | Cost | Turns | Minutes |
+|-----|-----------|---------------------------------|---------------------------------|------|-------|---------|
+| S-0175, this story | 3: one Explore, two general-purpose (tests and lint, finding doc sections) | 137 / 37 | 27.85M / 1.09M | 12.00 est. | (running) | 25.5 |
+| S-0118 | 1: one Explore, on its own | 80 / 17 | 9.63M / 0.82M | 5.18 | 90 | 15.7 |
+| S-0174 | none | 143 / 0 | 25.25M / 0 | 9.19 | 158 | 22.7 |
+| S-0173 | none | 103 / 0 | 13.06M / 0 | 5.19 | 145 | 14.0 |
+| S-0119 | none | 60 / 0 | 5.15M / 0 | 2.55 | 69 | 7.6 |
+| S-0117 | none | 38 / 0 | 2.74M / 0 | 1.56 | 42 | 4.8 |
+
+S-0175 was measured at 08:13Z, before its last tasks; it ran beside S-0174, which started the same second. Cache reads per model call of the story's agent:
+
+| Run | Per call |
+|-----|----------|
+| S-0175 | 203k |
+| S-0174 | 177k |
+| S-0173 | 127k |
+| S-0118 | 120k |
+
+What the two delegating runs show:
+
+- Sub-agents read little: 4% of S-0175's cache reads and 8% of S-0118's were a sub-agent's. Those reads ended with the sub-agent; what they would have cost the story's agent, carried on every later call, is not measured, because no run did the same work both ways.
+- Delegation did not keep the story's agent's context small. S-0175's agent still read most files itself, and its context per call is the largest of the six. Cost follows the story's agent's calls and context, which follow the size of the story: S-0175 built a command, a hook, a pack, template files, and docs; S-0117 and S-0119 were small remediations.
+- So these runs do not show a saving, and do not show a loss. S-0175 delegated by hand, three times, before the prompt told it to; S-0118 once, unprompted. S-0188 measures two stories that run with the released prompt (TH-0042).
+- Reading the logs: in runs without sub-agents the deduplicated cache reads equal the `result`'s exactly; S-0118's stream is 81,606 short, its sub-agent's cache-creation total, so a sub-agent call can be missing from the stream and S-0175's sub-agent numbers may be low. `num_turns` is not model calls (S-0173: 145 turns, 103 calls), and the stream's output tokens are about 2% of the `result`'s.
