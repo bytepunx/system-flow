@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/gittest"
 )
 
 // A story that is done but was never accepted (an older flai, a hand edit,
@@ -92,12 +94,7 @@ func TestAcceptRefusesBeforeChangingAnythingWithoutIdentity(t *testing.T) {
 		t.Skip("git not installed")
 	}
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL"} {
-		t.Setenv(k, "x") // registers the restore; an empty value would still override git config
-		_ = os.Unsetenv(k)
-	}
+	gittest.NoIdentity(t)
 	root := tempProject(t)
 	gitIn(t, root, "init", "-q", "-b", "main")
 	gitIn(t, root, "add", "-A")

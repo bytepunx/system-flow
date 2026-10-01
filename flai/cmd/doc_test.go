@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/gittest"
 )
 
 // runStdin is runIn with content on standard input and the exit code kept.
@@ -44,10 +46,7 @@ func docProject(t *testing.T) string {
 		t.Skip("git not installed")
 	}
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("GIT_AUTHOR_NAME", "Dana Designer")
-	t.Setenv("GIT_AUTHOR_EMAIL", "dana@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "Dana Designer")
-	t.Setenv("GIT_COMMITTER_EMAIL", "dana@example.com")
+	gittest.Identity(t, "Dana Designer", "dana@example.com")
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design/system", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
