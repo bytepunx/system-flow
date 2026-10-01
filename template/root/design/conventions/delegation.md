@@ -16,7 +16,9 @@ When the agent working a story hands work to a sub-agent, what it hands over, an
 
 - Keep your own context for decisions and edits. Hand a sub-agent the work whose output you need only the conclusion of: search across many files, test and lint runs, long logs, and a check of your diff.
 - Use the explorer to find and read code, design, and logs. Use the verifier to run the tests, lint, and `flai check`, and to check a diff. Never hand a sub-agent an edit, a transition, or a question for the designer.
-- Before moving a story to `review`, have a fresh verifier check the diff in the worktree against the story's acceptance criteria and these conventions, and act on what it finds.
+- While you work, run only the tests for what you changed: the package, file, or test your edit touches, as the project runs one. Leave the whole suite, the lint, and `flai check` to the verifier; do not run them yourself as well.
+- Before moving a story to `review`, commit what is outstanding and have one fresh verifier run the whole suite, the lint, and `flai check` in the worktree, through the project's close-out script where it has one, and check the diff against the story's acceptance criteria and these conventions. When it finds something, fix it, commit, and have one more fresh verifier run the same and confirm the fixes. A verifier's passing run is the story's run before review; do not repeat it.
+- Fix what a verifier finds yourself. A sub-agent never makes a correction, whatever model it runs.
 - A sub-agent starts with nothing but your prompt. Give it the worktree's path, the story and task IDs, the question, what you already know, and the shape of the answer you want.
 - Ask for a summary, not raw output: the finding, with paths and line numbers, and failing output quoted only as far as it matters.
 - A sub-agent's answer is evidence, not a verdict. Check what you act on, and say in the narrative what a sub-agent found when it decided something.

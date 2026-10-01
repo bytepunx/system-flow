@@ -267,7 +267,7 @@ func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 // give a sub-agent, and to verify before review; the operator's command gets
 // no prompt, and an answered or commit run is not told again.
 func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
-	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, have a fresh verifier check the worktree's diff against the acceptance criteria and the conventions"}
+	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, then have one fresh verifier", "check the diff against the acceptance criteria and the conventions"}
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	st, err := (claudeCode{}).Start(r, Host{})
 	if err != nil {
@@ -295,5 +295,23 @@ func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
 	}
 	if all := strings.Join(append(cmd.Argv, cmd.Env...), "\n"); strings.Contains(all, "sub-agent") || strings.Contains(all, "explorer") {
 		t.Errorf("the operator's command is told about sub-agents: %s", all)
+	}
+}
+
+// S-0189: the story's agent runs only the tests for what it changed, leaves
+// the whole suite, lint, and check to one verifier before review and one
+// more after its fixes, and fixes what a verifier finds itself.
+func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
+	p := Prompt(req(&manifest.Agent{Harness: ClaudeCode}))
+	for _, w := range []string{
+		"run only the tests for what you changed",
+		"leave the whole suite, the lint, and flai check to the verifier rather than running them yourself as well",
+		"have one fresh verifier run the whole suite, the lint, and flai check in the worktree, through the project's close-out script where it has one",
+		"Fix what it finds yourself, never through a sub-agent, commit, and have one more fresh verifier run the same and confirm the fixes",
+		"A verifier's passing run is the story's run before review: do not repeat it",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
 	}
 }
