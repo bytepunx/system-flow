@@ -35,6 +35,9 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		// that it does not know when it rewrote the story
 		"item.agent: " + strings.Join(workitem.KnownFields(manifest.Agent{}), " "),
 		"item.agent.roles: " + strings.Join(workitem.KnownFields(manifest.Role{}), " "),
+		// the types each type-restricted field is valid on (S-0176): an older
+		// flai refuses an item that carries one on a type it does not allow
+		"item.types: " + workitem.FieldTypes(),
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("%s is not the code's fields; write these lines:\n%s", release.FieldsFile, strings.Join(want, "\n"))

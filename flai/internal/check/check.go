@@ -463,8 +463,10 @@ func (c *checker) componentTag() {
 
 // after reports an after: entry that names no story, the story itself, or
 // a story that waits, through after:, for this one: each would hold the
-// story until someone edits it (S-0130, ADR-0046). The archive is not edited
-// and is not reported.
+// story until someone edits it (S-0130, ADR-0046). A task's after: names
+// tasks of its own story, and is reported the same way under task.after,
+// with an entry that names a task of another story (S-0176). The archive is
+// not edited and is not reported.
 func (c *checker) after() {
 	named := func(e string) *workitem.Item {
 		if it, ok := c.byID[workitem.CanonicalID(e)]; ok {
@@ -473,42 +475,53 @@ func (c *checker) after() {
 		return c.byID[e]
 	}
 	for _, it := range c.items {
-		if it.Archived || it.Type != workitem.Story {
+		if it.Archived || (it.Type != workitem.Story && it.Type != workitem.Task) {
 			continue
 		}
-		p := it.Path
+		p, rule := it.Path, it.Type+".after"
 		for _, e := range it.After {
 			switch other := named(e); {
 			case other == nil:
-				c.add(Error, "story.after", p, keyLine(p, "after"), "after names %s, which does not exist; fix it or clear it (flai edit %s --clear-after)", e, it.ID)
+				c.add(Error, rule, p, keyLine(p, "after"), "after names %s, which does not exist; fix it or clear it (flai edit %s --clear-after)", e, it.ID)
 			case other.ID == it.ID:
-				c.add(Error, "story.after", p, keyLine(p, "after"), "after names %s itself; a story cannot wait for itself", it.ID)
-			case other.Type != workitem.Story:
-				c.add(Error, "story.after", p, keyLine(p, "after"), "after names %s, a %s; after names stories", e, other.Type)
+				c.add(Error, rule, p, keyLine(p, "after"), "after names %s itself; a %s cannot wait for itself", it.ID, it.Type)
+			case other.Type != it.Type:
+				c.add(Error, rule, p, keyLine(p, "after"), "after names %s, a %s; a %s's after names %s", e, other.Type, it.Type, plural(it.Type))
+			case it.Type == workitem.Task && other.Parent != it.Parent:
+				c.add(Error, rule, p, keyLine(p, "after"), "after names %s, a task of %s; a task waits only for tasks of its own story, %s", other.ID, other.Parent, it.Parent)
 			}
 		}
 		if cycle := c.afterCycle(it, named); cycle != nil {
-			c.add(Error, "story.after", p, keyLine(p, "after"), "after forms a cycle, %s, so none of them would start; drop one of the entries", strings.Join(cycle, " waits for "))
+			c.add(Error, rule, p, keyLine(p, "after"), "after forms a cycle, %s, so none of them would start; drop one of the entries", strings.Join(cycle, " waits for "))
 		}
 	}
 }
 
-// afterCycle is the path from story back to itself through after:, when
-// there is one and story has the lowest ID on it, so that a cycle is
-// reported once.
-func (c *checker) afterCycle(story *workitem.Item, named func(string) *workitem.Item) []string {
+// plural is an item type's plural: stories, tasks.
+func plural(typ string) string {
+	if typ == workitem.Story {
+		return "stories"
+	}
+	return typ + "s"
+}
+
+// afterCycle is the path from item back to itself through after:, when
+// there is one and item has the lowest ID on it, so that a cycle is
+// reported once. It follows only entries that after: may name: stories from
+// a story, tasks of the same story from a task.
+func (c *checker) afterCycle(item *workitem.Item, named func(string) *workitem.Item) []string {
 	seen := map[string]bool{}
 	var walk func(it *workitem.Item, path []string) []string
 	walk = func(it *workitem.Item, path []string) []string {
 		for _, e := range it.After {
 			next := named(e)
-			if next == nil || next.Type != workitem.Story || next.ID == it.ID {
+			if next == nil || next.Type != item.Type || (item.Type == workitem.Task && next.Parent != item.Parent) || next.ID == it.ID {
 				continue
 			}
-			if next.ID == story.ID {
+			if next.ID == item.ID {
 				return append(path, next.ID)
 			}
-			if seen[next.ID] || next.ID < story.ID {
+			if seen[next.ID] || next.ID < item.ID {
 				continue
 			}
 			seen[next.ID] = true
@@ -518,7 +531,7 @@ func (c *checker) afterCycle(story *workitem.Item, named func(string) *workitem.
 		}
 		return nil
 	}
-	return walk(story, []string{story.ID})
+	return walk(item, []string{item.ID})
 }
 
 func (c *checker) narratives() {

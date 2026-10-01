@@ -212,3 +212,73 @@ func TestEditRefusals(t *testing.T) {
 		t.Errorf("a closed item: %d %s", code, errOut)
 	}
 }
+
+// S-0176: flai task new --after and flai edit --after set the tasks of the
+// same story a task waits for; the creation and the edit are checked, so an
+// entry that names no task, a task of another story, or a cycle is refused
+// and nothing is written; --clear-after removes them. flai story new --after
+// sets a story's.
+func TestTaskAfterIsSetByTaskNewAndEdit(t *testing.T) {
+	root := heldProject(t)
+	for _, args := range [][]string{
+		{"task", "new", "First", "--story", "S-0001"},
+		{"task", "new", "Second", "--story", "S-0001", "--after", "t-1"},
+		{"task", "new", "Elsewhere", "--story", "S-0002"},
+	} {
+		if out, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %d %s %s", args, code, out, errOut)
+		}
+	}
+	second := filepath.Join(root, "wip/kanban/tasks/T-0002-second.md")
+	if item := read(t, second); !strings.Contains(item, "\nafter: [T-0001]\n") {
+		t.Errorf("the task:\n%s", item)
+	}
+	if out, _, _ := runIn(t, root, "edit", "T-0002", "--show"); !strings.Contains(out, "  after: T-0001\n") {
+		t.Errorf("show:\n%s", out)
+	}
+
+	for _, c := range []struct {
+		args []string
+		code int
+		says string
+	}{
+		{[]string{"task", "new", "Bad", "--story", "S-0001", "--after", "T-0009"}, exitDocRefused, "task.after: after names T-0009, which does not exist"},
+		{[]string{"task", "new", "Bad", "--story", "S-0001", "--after", "T-0003"}, exitDocRefused, "after names T-0003, a task of S-0002; a task waits only for tasks of its own story, S-0001"},
+		{[]string{"task", "new", "Bad", "--story", "S-0001", "--after", "S-0002"}, 1, "name tasks of the same story, such as T-0001"},
+		{[]string{"edit", "T-0001", "--after", "T-0002"}, exitDocRefused, "after forms a cycle, T-0001 waits for T-0002 waits for T-0001"},
+		{[]string{"edit", "T-0001", "--after", "T-0003"}, exitDocRefused, "a task of S-0002"},
+		{[]string{"edit", "T-0001", "--after", "T-1"}, 1, "a task cannot wait for itself"},
+		{[]string{"edit", "E-0001", "--after", "S-0001"}, 1, "only a story or a task waits for others in after, not an epic"},
+	} {
+		out, errOut, code := runIn(t, root, c.args...)
+		if code != c.code || !strings.Contains(out+errOut, c.says) {
+			t.Errorf("%v: %d\n%s%s", c.args, code, out, errOut)
+		}
+	}
+	if matches, _ := filepath.Glob(filepath.Join(root, "wip/kanban/tasks", "T-0004-*.md")); len(matches) != 0 {
+		t.Errorf("a refused creation leaves nothing behind: %v", matches)
+	}
+	if story := read(t, filepath.Join(root, "wip/kanban/stories/S-0001-open.md")); strings.Contains(story, "Bad") {
+		t.Errorf("nor a line in the story's list:\n%s", story)
+	}
+
+	if out, errOut, code := runIn(t, root, "edit", "T-0001", "--after", "T-0002", "--clear-after"); code == 0 || !strings.Contains(errOut, "contradict") {
+		t.Errorf("both: %d %s %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "edit", "T-0002", "--clear-after"); code != 0 || !strings.Contains(out, "T-0002: changed after") {
+		t.Fatalf("clear: %d %s %s", code, out, errOut)
+	}
+	if item := read(t, second); strings.Contains(item, "after:") {
+		t.Errorf("after: stays:\n%s", item)
+	}
+	if out, errOut, code := runIn(t, root, "edit", "T-0001", "--after", "T-0002"); code != 0 || !strings.Contains(out, "T-0001: changed after") {
+		t.Errorf("set: %d %s %s", code, out, errOut)
+	}
+
+	if out, errOut, code := runIn(t, root, "story", "new", "Later", "--epic", "E-0001", "--after", "S-1"); code != 0 {
+		t.Fatalf("story new --after: %d %s %s", code, out, errOut)
+	}
+	if matches, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", "S-0003-*.md")); len(matches) != 1 || !strings.Contains(read(t, matches[0]), "\nafter: [S-0001]\n") {
+		t.Errorf("a story's after at creation: %v", matches)
+	}
+}

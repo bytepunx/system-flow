@@ -1,6 +1,6 @@
 // Package itemedit changes a work item after it was created (S-0085): its
 // title, nature, tags, touches, a story's or epic's topics (S-0135), a
-// story's after: (S-0130), parent, and the
+// story's or a task's after: (S-0130, S-0176), parent, and the
 // body below its heading, in one step that is checked and committed the way
 // a document save is (ADR-0023). What is the item's state stays flai's and
 // is not reachable from here: ID, type, status, transitions, blocked
@@ -37,7 +37,8 @@ type Change struct {
 	// Topics replaces what a story or epic is about (S-0135); an empty list
 	// removes them.
 	Topics *[]string
-	// After replaces the stories a story waits for (S-0130); an empty list
+	// After replaces what a story or a task waits for: a story's stories
+	// (S-0130), a task's tasks of its own story (S-0176). An empty list
 	// removes them.
 	After  *[]string
 	Parent *string
@@ -67,7 +68,7 @@ type View struct {
 	Tags    []string `json:"tags"`
 	Touches []string `json:"touches"`
 	Topics  []string `json:"topics"` // what a story or epic is about (S-0135)
-	After   []string `json:"after"`  // stories this story waits for (S-0130)
+	After   []string `json:"after"`  // what a story or task waits for (S-0130, S-0176)
 	Parent  string   `json:"parent,omitempty"`
 	// Agent is the story's agent, and DefaultAgent the project's, which a
 	// story created now would get (S-0103).
@@ -208,36 +209,6 @@ func cleanList(what string, in []string) ([]string, error) {
 		}
 		seen[v] = true
 		out = append(out, v)
-	}
-	return out, nil
-}
-
-var storyID = regexp.MustCompile(`^S-\d{3,}$`)
-
-// storyIDs is an after: list in canonical IDs, without repeats: stories
-// only, and not it. That each exists and no cycle forms is the check's.
-func storyIDs(it *workitem.Item, in []string) ([]string, error) {
-	if it.Type != workitem.Story && len(in) > 0 {
-		return nil, invalid("%s is a %s; only a story waits for others in after", it.ID, it.Type)
-	}
-	out := []string{}
-	seen := map[string]bool{}
-	for _, v := range in {
-		v = strings.TrimSpace(v)
-		if v == "" {
-			continue
-		}
-		id := workitem.CanonicalID(v)
-		if !storyID.MatchString(id) {
-			return nil, invalid("after %q: name stories, such as S-0001", v)
-		}
-		if id == it.ID {
-			return nil, invalid("after %s: a story cannot wait for itself", id)
-		}
-		if !seen[id] {
-			seen[id] = true
-			out = append(out, id)
-		}
 	}
 	return out, nil
 }
@@ -413,9 +384,9 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		}
 	}
 	if ch.After != nil {
-		after, err := storyIDs(it, *ch.After)
+		after, err := workitem.CleanAfter(it.Type, it.ID, *ch.After)
 		if err != nil {
-			return nil, err
+			return nil, invalid("%s: %v", it.ID, err)
 		}
 		if !same(after, orEmpty(it.After)) {
 			it.After = after

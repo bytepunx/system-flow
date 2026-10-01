@@ -27,6 +27,10 @@ type NewOptions struct {
 	Touches []string
 	// Topics are what a story or epic is about (S-0135, ADR-0047).
 	Topics []string
+	// After names what must be done before the item starts: stories for a
+	// story (ADR-0046), tasks of the same story for a task (S-0176). That
+	// each exists and no cycle forms is flai check's.
+	After []string
 	// Agent is who works a story, over the project's default (S-0103): what
 	// it sets wins, and the project's default fills in the rest.
 	Agent *manifest.Agent
@@ -112,6 +116,9 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		return nil, fmt.Errorf("only stories and epics carry topics, not a task")
 	}
 	it.Topics = append(it.Topics, topics...)
+	if it.After, err = CleanAfter(opt.Type, id, opt.After); err != nil {
+		return nil, err
+	}
 	if opt.Type == Story {
 		it.Agent = r.Manifest.Agent.With(opt.Agent)
 	} else if !opt.Agent.IsZero() {
@@ -185,6 +192,41 @@ func CleanTopics(in []string) ([]string, error) {
 		}
 		seen[t] = true
 		out = append(out, t)
+	}
+	return out, nil
+}
+
+// CleanAfter is an after list as flai writes it, for the item self of type
+// typ: canonical IDs, without empty entries or repeats. It refuses an epic's,
+// an entry that is not an ID of the item's own type, and the item itself.
+// That each exists, a task's is of the same story, and no cycle forms is
+// flai check's. Nothing given is nil.
+func CleanAfter(typ, self string, in []string) ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	for _, v := range in {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		if !Carries(typ, "after") {
+			return nil, fmt.Errorf("only a story or a task waits for others in after, not %s", articled(typ))
+		}
+		id := CanonicalID(v)
+		if !idPattern.MatchString(id) || !strings.HasPrefix(id, strings.ToUpper(typ[:1])+"-") {
+			what := "stories, such as S-0001"
+			if typ == Task {
+				what = "tasks of the same story, such as T-0001"
+			}
+			return nil, fmt.Errorf("after %q: name %s", v, what)
+		}
+		if id == self {
+			return nil, fmt.Errorf("after %s: %s cannot wait for itself", id, articled(typ))
+		}
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
 	}
 	return out, nil
 }

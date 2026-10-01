@@ -120,3 +120,35 @@ func KnownFields(v any) []string {
 	sort.Strings(out)
 	return out
 }
+
+// fieldTypes names, for each item field that only some types of item carry,
+// the types that do. Validate refuses the field on any other type, so a flai
+// that carries one on a new type must raise flai.minimum: an older flai
+// refuses the item. front-matter-fields.txt lists it for that reason
+// (TestFieldsFileIsTheCode, release.RaiseMinimum).
+var fieldTypes = map[string][]string{
+	"after":  {Story, Task}, // a task's since S-0176
+	"agent":  {Story},
+	"topics": {Epic, Story},
+}
+
+// Carries reports whether an item of type typ may carry the field: true for
+// every field that is not restricted to some types.
+func Carries(typ, field string) bool {
+	types, ok := fieldTypes[field]
+	return !ok || contains(types, typ)
+}
+
+// FieldTypes renders fieldTypes as one line, field=type,type, sorted by
+// field: what front-matter-fields.txt lists after "item.types:".
+func FieldTypes() string {
+	fields := make([]string, 0, len(fieldTypes))
+	for f := range fieldTypes {
+		fields = append(fields, f)
+	}
+	sort.Strings(fields)
+	for i, f := range fields {
+		fields[i] = f + "=" + strings.Join(fieldTypes[f], ",")
+	}
+	return strings.Join(fields, " ")
+}

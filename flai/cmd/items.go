@@ -24,7 +24,7 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
 	var nature, owner, parent, harness, model string
-	var tags, touches, topics, trailers, agentConfig []string
+	var tags, touches, topics, after, trailers, agentConfig []string
 	var rf roleFlags
 	var bodyStdin, autocommit, printBody bool
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
@@ -41,7 +41,7 @@ it reports anything the item introduces, the item is removed, its parent is
 restored, and the findings are printed (exit 4). --autocommit commits the new
 item and its parent on their own, unless the project sets
 dashboard.autocommit: false. Nothing is pushed. --print-body prints the body
-the template gives, for a form or a script to start from, and creates nothing.`, withArticle(typ)),
+the template gives, for a form or a script to start from, and creates nothing.%s`, withArticle(typ), afterHelp(typ)),
 		Args: func(cmd *cobra.Command, args []string) error {
 			if printBody {
 				return cobra.NoArgs(cmd, args)
@@ -70,9 +70,11 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 			}
 			opt := workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
-				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Topics: topics, Agent: agent, Now: a.now(),
+				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Topics: topics, After: after, Agent: agent, Now: a.now(),
 			}
-			if bodyStdin || autocommit {
+			// an after: entry that names nothing, or forms a cycle, is the
+			// check's to find, so a creation that sets one is checked
+			if bodyStdin || autocommit || len(after) > 0 {
 				if bodyStdin {
 					data, err := io.ReadAll(cmd.InOrStdin())
 					if err != nil {
@@ -127,6 +129,12 @@ the template gives, for a form or a script to start from, and creates nothing.`,
 	if typ != workitem.Task {
 		// what it is about beyond its components (S-0135, ADR-0047)
 		c.Flags().StringSliceVar(&topics, "topics", nil, "topics the "+typ+" is about beyond the components it reaches, such as logging or release (repeatable or comma separated)")
+	}
+	switch typ {
+	case workitem.Story:
+		c.Flags().StringSliceVar(&after, "after", nil, "the stories this story waits for until they are done (comma separated); checked before it is kept")
+	case workitem.Task:
+		c.Flags().StringSliceVar(&after, "after", nil, "the tasks of the same story this task waits for until they are done (comma separated); checked before it is kept")
 	}
 	c.Flags().BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input; checked before it is kept")
 	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the new item and its parent on their own, unless dashboard.autocommit is false")
@@ -248,6 +256,26 @@ func newShowCmd(a *app) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+// afterHelp is what flai story new and flai task new say of --after.
+func afterHelp(typ string) string {
+	switch typ {
+	case workitem.Story:
+		return `
+
+--after names the stories this story waits for: while any of them is not
+done, it is held in ready (ADR-0046). It is checked as --body-stdin is: a
+story that does not exist, or a cycle, refuses the creation.`
+	case workitem.Task:
+		return `
+
+--after names the tasks of the same story this task waits for: the story's
+agent starts it when they are done, and runs together the tasks that wait
+for nothing undone (S-0176). It is checked as --body-stdin is: a task that
+does not exist, a task of another story, or a cycle refuses the creation.`
+	}
+	return ""
 }
 
 // pluralType is an item type's plural: epics, stories, tasks.

@@ -188,7 +188,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | Flag | Taken by |
 |------|----------|
 | `--addr` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
-| `--after` | [flai edit](../users/flai-reference.md#flai-edit), [flai order](../users/flai-reference.md#flai-order) |
+| `--after` | [flai edit](../users/flai-reference.md#flai-edit), [flai order](../users/flai-reference.md#flai-order), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--agent` | [flai mcp](../users/flai-reference.md#flai-mcp) |
 | `--agent-config` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--all` | [flai board](../users/flai-reference.md#flai-board), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage), [flai thread list](../users/flai-reference.md#flai-thread-list) |

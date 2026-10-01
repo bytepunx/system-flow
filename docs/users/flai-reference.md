@@ -913,7 +913,7 @@ A retitle keeps everything that carries the title in step: the front matter, the
 
 --topics names what a story or epic is about beyond the components its tags and touches reach, such as logging or release (ADR-0047); flai show prints a story's topics with where each came from.
 
---after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). flai check refuses a story that does not exist and a cycle.
+--after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). On a task it names the tasks of the same story the task waits for (S-0176). flai check refuses an entry that does not exist, a task of another story, and a cycle.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the title, and flai writes it. With --hash, the hash flai edit --show printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. flai check runs with the change in place: if it reports anything the change introduces, every file is put back and the findings are printed (exit 4). --autocommit commits every file the edit touched in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
@@ -927,6 +927,7 @@ flai edit S-0085 --title "Items are editable from the dashboard" --autocommit
 flai edit S-0085 --tag dashboard --tag cli --touches flaiover/src
 flai edit S-0085 --parent E-0004
 flai edit S-0130 --after S-0128,S-0129
+flai edit T-0042 --after T-0040,T-0041
 flai edit S-0135 --topics logging,release
 flai edit S-0085 --body-stdin --hash 3f0c... < body.md
 ```
@@ -935,12 +936,12 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--after` strings | the stories a story waits for until they are done, replacing the ones there |
+| `--after` strings | what it waits for until they are done, replacing the ones there: a story's stories, a task's tasks of the same story |
 | `--agent-config` stringArray | a story's agent: an option, key=value, and key= to remove one (repeatable) |
 | `--autocommit` | commit every file the edit touched, unless dashboard.autocommit is false |
 | `--body-stdin` | read the body below the heading from standard input |
 | `--by` string | who edits, as agents are told (default: FLAI\_AGENT, then the config author) |
-| `--clear-after` | remove the stories a story waits for |
+| `--clear-after` | remove what a story or a task waits for |
 | `--clear-agent` | remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those |
 | `--clear-tags` | remove every tag |
 | `--clear-topics` | remove a story's or epic's topics |
@@ -2200,10 +2201,13 @@ Create a story from the project's item template with the next free ID, linked in
 
 With --body-stdin the body below the item's heading is read from standard input instead of the template's empty sections, and the creation is one step that happens or does not: flai check runs with the new item in place, and if it reports anything the item introduces, the item is removed, its parent is restored, and the findings are printed (exit 4). --autocommit commits the new item and its parent on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the body the template gives, for a form or a script to start from, and creates nothing.
 
+--after names the stories this story waits for: while any of them is not done, it is held in ready (ADR-0046). It is checked as --body-stdin is: a story that does not exist, or a cycle, refuses the creation.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--after` strings | the stories this story waits for until they are done (comma separated); checked before it is kept |
 | `--agent-config` stringArray | an option for the harness, key=value, over the project's default (repeatable) |
 | `--autocommit` | commit the new item and its parent on their own, unless dashboard.autocommit is false |
 | `--body-stdin` | read the body below the heading from standard input; checked before it is kept |
@@ -2326,10 +2330,13 @@ Create a task from the project's item template with the next free ID, linked int
 
 With --body-stdin the body below the item's heading is read from standard input instead of the template's empty sections, and the creation is one step that happens or does not: flai check runs with the new item in place, and if it reports anything the item introduces, the item is removed, its parent is restored, and the findings are printed (exit 4). --autocommit commits the new item and its parent on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the body the template gives, for a form or a script to start from, and creates nothing.
 
+--after names the tasks of the same story this task waits for: the story's agent starts it when they are done, and runs together the tasks that wait for nothing undone (S-0176). It is checked as --body-stdin is: a task that does not exist, a task of another story, or a cycle refuses the creation.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--after` strings | the tasks of the same story this task waits for until they are done (comma separated); checked before it is kept |
 | `--autocommit` | commit the new item and its parent on their own, unless dashboard.autocommit is false |
 | `--body-stdin` | read the body below the heading from standard input; checked before it is kept |
 | `--nature` string | one of feature, improvement, remediation, research, experiment (default `feature`) |

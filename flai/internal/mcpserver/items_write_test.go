@@ -88,6 +88,55 @@ func TestItemEditSetsAndClearsAfter(t *testing.T) {
 	}
 }
 
+// S-0176: item_new and item_edit set a task's after, the tasks of its own
+// story it waits for. A creation or an edit whose entry names no task, a task
+// of another story, or forms a cycle is refused with the check's finding, and
+// a refused creation leaves nothing; item_new sets a story's after too.
+func TestItemNewAndEditSetATasksAfter(t *testing.T) {
+	f := setup(t)
+	out, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Second", "parent": f.story.ID, "after": []string{"t-1"}})
+	if failed != "" || strings.Join(toStrings(out["after"]), ",") != f.task.ID {
+		t.Fatalf("new task: %v %s", out, failed)
+	}
+	second := out["id"].(string)
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Bad", "parent": f.story.ID, "after": []string{"T-0009"}}); !strings.Contains(failed, "task.after: after names T-0009, which does not exist") {
+		t.Errorf("a task that does not exist: %q", failed)
+	}
+	if _, err := f.repo.Get("T-0003"); err == nil {
+		t.Error("a refused creation leaves nothing behind")
+	}
+	other := f.readyStory(t, "Other", t0)
+	out, failed = f.call(t, "item_new", map[string]any{"type": "task", "title": "Elsewhere", "parent": other.ID})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	elsewhere := out["id"].(string)
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Bad", "parent": f.story.ID, "after": []string{elsewhere}}); !strings.Contains(failed, "a task of "+other.ID) {
+		t.Errorf("a task of another story: %q", failed)
+	}
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Bad", "parent": f.story.ID, "after": []string{other.ID}}); !strings.Contains(failed, "name tasks of the same story") {
+		t.Errorf("a story in a task's after: %q", failed)
+	}
+
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "after": []string{second}}); !strings.Contains(failed, "after forms a cycle, "+f.task.ID+" waits for "+second+" waits for "+f.task.ID) {
+		t.Errorf("a cycle: %q", failed)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": second, "after": []string{}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "after" {
+		t.Errorf("clear: %v %s", ed, failed)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "after": []string{second}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "after" {
+		t.Errorf("set: %v %s", ed, failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": f.task.ID}); strings.Join(toStrings(got["after"]), ",") != second {
+		t.Errorf("item_get: %v", got["after"])
+	}
+
+	out, failed = f.call(t, "item_new", map[string]any{"type": "story", "title": "Later", "after": []string{other.ID}})
+	if failed != "" || strings.Join(toStrings(out["after"]), ",") != other.ID {
+		t.Errorf("new story: %v %s", out, failed)
+	}
+}
+
 // S-0135: item_new and item_edit set a story's or epic's topics, item_get
 // shows them, a task is refused them, and an empty list removes them.
 func TestItemNewAndEditCarryTopics(t *testing.T) {

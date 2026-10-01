@@ -448,7 +448,22 @@ Some stories depend on another for a reason that is not about files: they build 
 
 A story named that is cancelled keeps the hold, and the reason says so: drop it from `after` if the story no longer needs it. `flai check` refuses an `after` that names a story that does not exist, the story itself, or a cycle (`S-0131` waits for `S-0132`, which waits for `S-0131`). The dashboard's story editor and the MCP `item_edit` tool set it too.
 
-A flai older than the one that brought `after` refuses to read a story that carries it, so upgrade the flai on your host (`flai self-upgrade`) before you use it.
+A flai older than the one that brought `after` refuses to read a story that carries it, so upgrade the flai on your host (`flai self-upgrade`) before you use it. `flai story new --after` and the MCP `item_new` tool set it when the story is made.
+
+### Planning a story's tasks
+
+```bash
+flai task new "Store the plan" --story S-0176
+flai task new "Show the plan" --story S-0176 --after T-0677          # starts once T-0677 is done
+flai edit T-0679 --after T-0677,T-0678                                 # replaces them
+flai edit T-0679 --clear-after
+```
+
+A task's `after` names the tasks of the same story it waits for: the plan the story's agent writes with the tasks. Tasks that wait for nothing undone, and whose `touches` do not overlap, can be worked at the same time. flai does not hold a task the way it holds a story; the story's agent reads the plan.
+
+`flai task new --after` and `flai edit --after` run `flai check` with the change in place, and a finding refuses the change and leaves nothing written (exit 4). `flai check` reports (`task.after`) an entry that names no task, a task of another story, the task itself, or a story, and every cycle among a story's tasks (`T-0677` waits for `T-0678`, which waits for `T-0677`), once. The MCP `item_new` and `item_edit` tools set it too.
+
+A flai older than the one that brought a task's `after` reports every task that carries one as an error, so upgrade the flai on your host first. A release with it raises `flai.minimum`, so an older flai stops before it reads any item.
 
 ### A story's topics
 
@@ -499,11 +514,12 @@ flai edit S-0085 --parent E-0004                # an open epic for a story, an o
 flai edit S-0085 --body-stdin --hash <hash> < body.md
 flai edit S-0085 --clear-tags --clear-touches
 flai edit S-0085 --after S-0084                 # hold it until S-0084 is done; --clear-after lets it go
+flai edit T-0679 --after T-0677                 # a task's plan: the tasks of its story it waits for
 flai edit S-0085 --topics logging               # what it is about; --clear-topics removes them
 flai edit S-0085 --harness claude-code --model claude-sonnet-5 --agent-config effort=high
 ```
 
-`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's or epic's `topics`, a story's `after` and agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
+`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's or epic's `topics`, a story's or a task's `after`, a story's agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
 
 A title lives in several places, and a retitle keeps them in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name under design, docs, and wip (from a story's worktree only under wip, because design and docs there are another branch's). With `--hash`, the one `--show` printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. `flai check` runs with the change in place: what the change introduces refuses it, every file is put back, and the findings are printed (exit 4). What is simply not allowed, a nature there is not, an epic as a task's parent, is said as a `rule:`. `--autocommit` commits every file the edit touched in one commit; nothing is pushed.
 
@@ -534,7 +550,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, and the hash of its file; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
-| `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` replaces the stories a story waits for and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
+| `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it is checked, as `flai task new --after` is), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |
 | `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed; with `role` (`explore` or `verify`), the smaller pack for a sub-agent ([Sub-agents](#sub-agents)) ([Prime a session](#prime-a-session)) |
@@ -722,7 +738,7 @@ Nothing is printed twice. The first reason wins; a loaded item lists the later o
 
 ## Sub-agents
 
-An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, test, lint, and `flai check` runs and long logs to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). While it works it runs only the tests for what it changed. The whole suite, the lint, and `flai check` are the verifier's: one run before review, and one more after the agent fixes what that one found. The agent makes the fixes itself, never a sub-agent. The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
+An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, test, lint, and `flai check` runs and long logs to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). While it works it runs only the tests for what it changed. The whole suite, the lint, and `flai check` are the verifier's: one run before review, and one more after the agent fixes what that one found. The agent makes the fixes itself, never a sub-agent. Since S-0176 it is also told to plan its story's tasks as it writes them, giving each its `touches` and the tasks it waits for (`--after`), and to work each layer of tasks that wait for nothing undone and share no path at once, one task sub-agent each; it reviews, commits, and moves each task itself, and a task sub-agent edits only what its task touches. The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
 
 | File | What it is |
 |------|------------|

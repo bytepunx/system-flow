@@ -38,7 +38,9 @@ story's topics with where each came from.
 
 --after names the stories a story waits for: while any of them is not done,
 the story is held in ready, and flai serve and wait_for_work pass it over
-(ADR-0046). flai check refuses a story that does not exist and a cycle.
+(ADR-0046). On a task it names the tasks of the same story the task waits for
+(S-0176). flai check refuses an entry that does not exist, a task of another
+story, and a cycle.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the
 title, and flai writes it. With --hash, the hash flai edit --show printed, a
@@ -55,6 +57,7 @@ the item changed.`,
   flai edit S-0085 --tag dashboard --tag cli --touches flaiover/src
   flai edit S-0085 --parent E-0004
   flai edit S-0130 --after S-0128,S-0129
+  flai edit T-0042 --after T-0040,T-0041
   flai edit S-0135 --topics logging,release
   flai edit S-0085 --body-stdin --hash 3f0c... < body.md`,
 		Args: cobra.ExactArgs(1),
@@ -78,8 +81,11 @@ the item changed.`,
 				if v.Type != "epic" {
 					fmt.Fprintf(a.out, "  touches: %s\n  parent: %s\n", strings.Join(v.Touches, ", "), v.Parent)
 				}
+				if v.Type != "epic" {
+					fmt.Fprintf(a.out, "  after: %s\n", strings.Join(v.After, ", "))
+				}
 				if v.Type == "story" {
-					fmt.Fprintf(a.out, "  after: %s\n  agent: %s (project default: %s)\n", strings.Join(v.After, ", "), v.Agent, v.DefaultAgent)
+					fmt.Fprintf(a.out, "  agent: %s (project default: %s)\n", v.Agent, v.DefaultAgent)
 				}
 				fmt.Fprintf(a.out, "  file: %s\n  hash: %s\n", v.Path, v.Hash)
 				if !v.Editable {
@@ -216,8 +222,8 @@ the item changed.`,
 	f.BoolVar(&clearTouches, "clear-touches", false, "remove the list")
 	f.StringSliceVar(&topics, "topics", nil, "what a story or epic is about, such as logging or release, replacing the ones there")
 	f.BoolVar(&clearTopics, "clear-topics", false, "remove a story's or epic's topics")
-	f.StringSliceVar(&after, "after", nil, "the stories a story waits for until they are done, replacing the ones there")
-	f.BoolVar(&clearAfter, "clear-after", false, "remove the stories a story waits for")
+	f.StringSliceVar(&after, "after", nil, "what it waits for until they are done, replacing the ones there: a story's stories, a task's tasks of the same story")
+	f.BoolVar(&clearAfter, "clear-after", false, "remove what a story or a task waits for")
 	f.StringVar(&parent, "parent", "", "the new parent: an epic for a story, a story for a task")
 	f.StringVar(&harness, "harness", "", "a story's agent: the harness that runs it")
 	f.StringVar(&model, "model", "", "a story's agent: the model it runs")

@@ -501,3 +501,58 @@ func TestArchive(t *testing.T) {
 		t.Error("open epic should not archive")
 	}
 }
+
+// S-0176: a task carries after:, the tasks it waits for, written as
+// canonical IDs; a story's names stories, a task's tasks, and an epic has
+// none.
+func TestCreateWithAfter(t *testing.T) {
+	r := newProject(t)
+	s, err := r.Create(NewOptions{Type: Story, Title: "S", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Create(NewOptions{Type: Task, Title: "First", Parent: s.ID, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	second, err := r.Create(NewOptions{Type: Task, Title: "Second", Parent: s.ID, After: []string{" t-1", "T-0001", ""}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(second.Path)
+	if !strings.Contains(string(data), "\nafter: [T-0001]\n") {
+		t.Errorf("a task's after in the front matter:\n%s", data)
+	}
+	back, err := ReadItem(second.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := back.Validate(); err != nil || back.Marshal() != string(data) {
+		t.Errorf("a task with after does not round-trip: %v\n%s", err, back.Marshal())
+	}
+	for _, c := range []struct {
+		opt  NewOptions
+		want string
+	}{
+		{NewOptions{Type: Task, Title: "T", Parent: s.ID, After: []string{"S-0001"}}, `after "S-0001": name tasks of the same story, such as T-0001`},
+		{NewOptions{Type: Story, Title: "S2", After: []string{"T-0001"}}, `after "T-0001": name stories, such as S-0001`},
+		{NewOptions{Type: Epic, Title: "E", After: []string{"E-0001"}}, "only a story or a task waits for others in after, not an epic"},
+	} {
+		c.opt.Now = t0
+		if _, err := r.Create(c.opt); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s with after %v: %v, want %q", c.opt.Type, c.opt.After, err, c.want)
+		}
+	}
+	if _, err := CleanAfter(Task, "T-0003", []string{"T-3"}); err == nil || !strings.Contains(err.Error(), "a task cannot wait for itself") {
+		t.Errorf("a task waiting for itself: %v", err)
+	}
+
+	it := *back
+	it.After = []string{"S-0001"}
+	if err := it.Validate(); err == nil || !strings.Contains(err.Error(), `after[0] "S-0001" is not a task ID like T-0001`) {
+		t.Errorf("a story in a task's after: %v", err)
+	}
+	it.Type, it.ID, it.Parent, it.After = Epic, "E-0001", "", []string{"S-0001"}
+	if err := it.Validate(); err == nil || !strings.Contains(err.Error(), "after is for stories and tasks, and this is an epic") {
+		t.Errorf("an epic's after: %v", err)
+	}
+}

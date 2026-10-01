@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/itemnew"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -24,6 +25,7 @@ type ItemNewIn struct {
 	Tags    []string        `json:"tags,omitempty"`
 	Touches []string        `json:"touches,omitempty" jsonschema:"paths or components the work changes"`
 	Topics  []string        `json:"topics,omitempty" jsonschema:"a story's or epic's: what it is about beyond the components its tags and touches reach, such as logging or release"`
+	After   []string        `json:"after,omitempty" jsonschema:"what it waits for until they are done: a story's stories (it is held in ready meanwhile), a task's tasks of the same story; flai check runs with it, and an entry that does not exist, a task of another story, or a cycle refuses the creation"`
 	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, config, and roles (explore, verify: each a harness, model, and config for that sub-agent), over the project's default, which fills in what is not given, role by role"`
 	Body    string          `json:"body,omitempty" jsonschema:"the goal, criteria, and notes below the heading; the template's empty sections when not given"`
 }
@@ -39,10 +41,23 @@ func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNew
 	if owner == "" {
 		owner = s.agent
 	}
-	it, err := s.repo.Create(workitem.NewOptions{Type: in.Type, Title: strings.TrimSpace(in.Title), Nature: nature, Parent: in.Parent, Owner: owner,
-		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, Agent: in.Agent, Body: in.Body, Now: s.now()})
+	opt := workitem.NewOptions{Type: in.Type, Title: strings.TrimSpace(in.Title), Nature: nature, Parent: in.Parent, Owner: owner,
+		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, After: in.After, Agent: in.Agent, Body: in.Body, Now: s.now()}
+	var it *workitem.Item
+	var err error
+	if len(in.After) > 0 {
+		// an after: entry that names nothing, or forms a cycle, is the check's
+		// to find, so a creation that sets one is checked, as the CLI's --after
+		// is (S-0176)
+		var res *itemnew.Result
+		if res, err = itemnew.Create(s.repo, s.runner, itemnew.Options{New: opt}); err == nil {
+			it = res.Item
+		}
+	} else {
+		it, err = s.repo.Create(opt)
+	}
 	if err != nil {
-		return nil, ItemOut{}, err
+		return nil, ItemOut{}, refusal(err)
 	}
 	out, err := s.itemOut(ctx, it)
 	return nil, out, err
@@ -58,7 +73,7 @@ type ItemEditIn struct {
 	Tags    *[]string `json:"tags,omitempty" jsonschema:"replaces the tags; an empty list removes them"`
 	Touches *[]string `json:"touches,omitempty" jsonschema:"replaces the touches; an empty list removes them"`
 	Topics  *[]string `json:"topics,omitempty" jsonschema:"a story's or epic's: replaces what it is about, such as logging or release; an empty list removes them"`
-	After   *[]string `json:"after,omitempty" jsonschema:"a story's: replaces the stories it waits for until they are done (it is held in ready meanwhile); an empty list removes them"`
+	After   *[]string `json:"after,omitempty" jsonschema:"a story's or a task's: replaces what it waits for until they are done, a story's stories (it is held in ready meanwhile), a task's tasks of the same story; an empty list removes them"`
 	Parent  *string   `json:"parent,omitempty"`
 	// Agent replaces a story's agent; ClearAgent removes it.
 	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, config, and roles; roles left out are removed"`
@@ -82,20 +97,26 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, topics, touches, after, parent, agent, clear_agent, or body")
 	}
 	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, NoCommit: true, Now: s.now()})
-	if r, ok := docedit.IsRefused(err); ok {
-		// the findings are what the agent fixes, not only how many there are
-		msgs := make([]string, len(r.Findings))
-		for i, f := range r.Findings {
-			msgs[i] = fmt.Sprintf("%s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
-		}
-		return nil, ItemEditOut{}, fmt.Errorf("%w: %s", err, strings.Join(msgs, "; "))
-	}
 	if err != nil {
-		return nil, ItemEditOut{}, err
+		return nil, ItemEditOut{}, refusal(err)
 	}
 	changed := res.Changed
 	if changed == nil {
 		changed = []string{}
 	}
 	return nil, ItemEditOut{ID: res.ID, Changed: changed, Unchanged: res.Unchanged, Hash: res.Hash}, nil
+}
+
+// refusal is err with, when flai check refused the change, the findings in
+// it: they are what the agent fixes, not only how many there are.
+func refusal(err error) error {
+	r, ok := docedit.IsRefused(err)
+	if !ok {
+		return err
+	}
+	msgs := make([]string, len(r.Findings))
+	for i, f := range r.Findings {
+		msgs[i] = fmt.Sprintf("%s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
+	}
+	return fmt.Errorf("%w: %s", err, strings.Join(msgs, "; "))
 }

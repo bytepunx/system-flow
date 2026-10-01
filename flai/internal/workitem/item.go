@@ -80,8 +80,9 @@ type Item struct {
 	// reaches, such as logging or release (S-0135, ADR-0047). Stories and
 	// epics only.
 	Topics []string `yaml:"topics" json:"topics,omitempty"`
-	// After names the stories that must be done before this story starts
-	// (S-0130, ADR-0046). Stories only.
+	// After names the items that must be done before this one starts: a
+	// story's, stories (S-0130, ADR-0046); a task's, tasks of its own story
+	// (S-0176).
 	After []string `yaml:"after" json:"after,omitempty"`
 	// Agent is who works the story: harness, model, and options (S-0103).
 	// Stories only; absent unless the project has defaults or one was given.
@@ -181,15 +182,17 @@ func (it *Item) Validate() error {
 	if it.Type == Task && it.Parent != "" && !strings.HasPrefix(it.Parent, "S-") {
 		errs = append(errs, "a task's parent must be a story")
 	}
-	if len(it.After) > 0 && it.Type != Story {
-		errs = append(errs, "after is for stories, and this is a "+it.Type)
+	if len(it.After) > 0 && !Carries(it.Type, "after") {
+		errs = append(errs, "after is for stories and tasks, and this is "+articled(it.Type))
 	}
-	for i, id := range it.After {
-		if !idPattern.MatchString(id) || !strings.HasPrefix(id, "S-") {
-			errs = append(errs, fmt.Sprintf("after[%d] %q is not a story ID like S-0001", i, id))
+	if Carries(it.Type, "after") {
+		for i, id := range it.After {
+			if !idPattern.MatchString(id) || !strings.HasPrefix(id, strings.ToUpper(it.Type[:1])+"-") {
+				errs = append(errs, fmt.Sprintf("after[%d] %q is not %s ID like %s", i, id, articled(it.Type), firstID(it.Type)))
+			}
 		}
 	}
-	if len(it.Topics) > 0 && it.Type == Task {
+	if len(it.Topics) > 0 && !Carries(it.Type, "topics") {
 		errs = append(errs, "topics are for stories and epics, and this is a task")
 	}
 	for i, t := range it.Topics {
@@ -243,7 +246,7 @@ func (it *Item) Validate() error {
 		}
 	}
 	if !it.Agent.IsZero() {
-		if it.Type != Story {
+		if !Carries(it.Type, "agent") {
 			errs = append(errs, "only a story carries an agent")
 		}
 		if err := it.Agent.Validate(); err != nil {
@@ -412,6 +415,19 @@ func FlowList(items []string) string {
 func looksNumeric(s string) bool {
 	_, err := strconv.ParseFloat(s, 64)
 	return err == nil
+}
+
+// articled is an item type with its article: an epic, a story, a task.
+func articled(typ string) string {
+	if typ == Epic {
+		return "an " + typ
+	}
+	return "a " + typ
+}
+
+// firstID is the first ID of an item type, as an example: S-0001, T-0001.
+func firstID(typ string) string {
+	return strings.ToUpper(typ[:1]) + "-0001"
 }
 
 func contains(list []string, s string) bool {
