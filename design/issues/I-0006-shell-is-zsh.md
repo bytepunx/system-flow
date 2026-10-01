@@ -2,12 +2,12 @@
 id: I-0006
 title: The agent shell is zsh and bash idioms fail silently
 class: efficiency
-status: open
-count: 7
+status: closed
+count: 8
 cost: 2m
 first_reported: 2026-09-15T18:00:57Z
-last_reported: 2026-09-20T07:12:35Z
-updated: 2026-09-20T07:12:35Z
+last_reported: 2026-10-01T09:30:00Z
+updated: 2026-10-01T09:30:00Z
 ---
 
 # I-0006 The agent shell is zsh and bash idioms fail silently
@@ -38,5 +38,9 @@ S-0064: rm -f keys/* with no matches made zsh abort the whole && chain (no match
 ### 2026-09-20T07:12:35Z
 S-0071 trials: an unquoted URL with ?via=ws was globbed by zsh and aborted the chain after the container had started
 
+### 2026-10-01T09:30:00Z
+S-0187: an unquoted --include=*.yml in a grep made zsh abort with no matches found, and the command that ran before it in the same call still printed
+
 ## Remediation
 Scripts use `#!/usr/bin/env sh` with POSIX constructs only; loops in ad hoc commands use literal lists. Close when scripts cover the routine flows.
+Closed 2026-10-01T09:30:00Z: S-0187: the baseline tooling.md says the host shell may be zsh, so quote every glob, URL, and variable, compare with [ a = b ], write a loop's list out, and put a sequence of more than a few commands in a POSIX sh script under scripts/ (set -eu); scripts/close-out.sh is the routine close-out flow as such a script
