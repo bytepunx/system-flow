@@ -1,6 +1,6 @@
 ---
 title: "Runbook: back up"
-updated: 2026-09-26
+updated: 2026-10-01
 status: active
 ---
 
@@ -19,6 +19,7 @@ What there is to keep, and how. A project's work is in git; flai keeps a little 
 | `~/.flai/serve/dashboard.token`, `dashboard.agent-key` | The dashboard's login token and the credential `flai serve` proves itself with; secrets, mode 0600 | Yes, to keep logins working; otherwise they are made again |
 | `~/.flai/serve/journal.jsonl` | Every host action asked for, and what became of it | Yes, as a record |
 | `~/.flai/serve/agents.json`, `agents/`, `checks/` | Each story's newest agent run, agents' logs, check results and logs | Yes, on the same machine; see [restore](restore.md) |
+| `~/.flai/serve/dashboard-container.json` | The dashboard container `flai dashboard` last started (name, image, published address), which flai host restarts it from ([the dashboard's watch](../index.md#the-dashboards-watch)) | On the same machine only; without it nothing is restarted until the next `flai dashboard` |
 | `~/.flai/serve/projects.json`, `removed.json`, `dashboards.json` | Which projects `flai serve` serves, which it does not serve from below a folder because you removed them, and where their dashboards are, by absolute path | On the same machine only |
 | `~/.flai/serve/state.json`, `requests.json`, `serve.log`, `~/.flai/host/` | What runs now, recent requests, logs, and the host's token, remade at every start | No |
 | `~/.flai/cache`, `~/.flai/bin` | Template clones and the binary | No: fetched again |

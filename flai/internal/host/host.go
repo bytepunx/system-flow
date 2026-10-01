@@ -316,8 +316,11 @@ func Run(ctx context.Context, o Options) error {
 	h.mu.Lock()
 	h.serve = h.newChild(Serve, "", o.Serve, false)
 	h.mu.Unlock()
+	watched := make(chan struct{})
 	if o.Dashboard != nil {
-		go h.watchDashboard(cctx)
+		go func() { defer close(watched); h.watchDashboard(cctx) }()
+	} else {
+		close(watched)
 	}
 	h.writeStatus()
 
@@ -343,6 +346,7 @@ loop:
 	_ = srv.Shutdown(shutdown)
 	cancel()
 	stopChildren()
+	<-watched // a restart of the dashboard in flight ends before the host does
 	h.stopAll()
 	_ = os.Remove(o.Dir.state())
 	_ = os.Remove(o.Dir.TokenFile())

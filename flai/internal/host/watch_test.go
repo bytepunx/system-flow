@@ -58,18 +58,27 @@ func TestWatcherBacksOffBetweenRestarts(t *testing.T) {
 			t.Fatalf("restarts at %v, want %v", restarts, want)
 		}
 	}
-	// it answers for a minute: the back-off is back to the first
+	// one answer a minute after a restart is not a minute of answers
 	at := start.Add(600 * time.Second)
 	w.look(at.Add(15*time.Second), DashboardRunning)
+	w.look(at.Add(30*time.Second), DashboardGone)
+	w.look(at.Add(45*time.Second), DashboardRunning)
+	if w.backoff != 2*time.Minute {
+		t.Errorf("back-off %v after answers broken by a miss, want it kept at 2m", w.backoff)
+	}
+	// it answers at every look for a minute: the back-off is back to the first
+	w.look(at.Add(60*time.Second), DashboardRunning)
 	w.look(at.Add(75*time.Second), DashboardRunning)
-	w.look(at.Add(90*time.Second), DashboardGone)
-	if !w.look(at.Add(105*time.Second), DashboardGone) {
+	w.look(at.Add(90*time.Second), DashboardRunning)
+	w.look(at.Add(105*time.Second), DashboardRunning)
+	w.look(at.Add(120*time.Second), DashboardGone)
+	if !w.look(at.Add(135*time.Second), DashboardGone) {
 		t.Fatal("the next restart comes at the second miss")
 	}
-	if w.look(at.Add(120*time.Second), DashboardGone) {
+	if w.look(at.Add(150*time.Second), DashboardGone) {
 		t.Error("one miss after a restart is not enough")
 	}
-	if !w.look(at.Add(135*time.Second), DashboardGone) {
+	if !w.look(at.Add(165*time.Second), DashboardGone) {
 		t.Error("30s after the restart is the first back-off again, not the two minutes it had grown to")
 	}
 }

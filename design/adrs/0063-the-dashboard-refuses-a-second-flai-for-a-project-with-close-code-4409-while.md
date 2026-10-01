@@ -6,6 +6,7 @@ date: 2026-10-01
 supersedes: []
 superseded_by: []
 refines: [ADR-0029]
+topics: [cli, dashboard, server-side]
 ---
 
 # ADR-0063 The dashboard refuses a second flai for a project with close code 4409 while the one it has answers, and flai waits a minute before it dials again

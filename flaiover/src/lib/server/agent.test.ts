@@ -201,20 +201,45 @@ describe('AgentRegistry and AgentHub', () => {
 	});
 
 	it('replaces the one the project has when it does not answer (S-0184)', async () => {
-		const { hub, url } = await setup({ probeMs: 50 });
+		const { hub, url } = await setup({ probeMs: 120 });
 		const first = await connect(url, KEY, () => ({ from: 'first' }));
 		cleanup.push(() => first.ws.terminate());
 		// A frozen process: the socket stays open and nothing answers, pongs included.
 		(
 			first.ws as unknown as { _receiver: { removeAllListeners: (e: string) => void } }
 		)._receiver.removeAllListeners('ping');
+		const changed: string[] = [];
+		hub.on('change', (path: string) => changed.push(path));
 		const second = await connect(url, KEY, () => ({ from: 'second' }));
 		cleanup.push(() => second.ws.terminate());
-		await new Promise((r) => setTimeout(r, 100));
+		// sent while it is still being judged: kept, and handled once it is adopted
+		second.ws.send(
+			JSON.stringify({ jsonrpc: '2.0', method: 'change', params: { path: 'wip/kanban/board.md' } })
+		);
+		expect(changed).toEqual([]);
+		await new Promise((r) => setTimeout(r, 200));
 		expect(second.ws.readyState).toBe(WebSocket.OPEN);
+		expect(changed).toEqual(['wip/kanban/board.md']);
 		await expect(hub.ask('project.info')).resolves.toEqual({ from: 'second' });
 		first.ws.terminate();
 		expect(await first.closed).not.toBe(CLOSE_HELD);
+	});
+
+	it('judges two newer connections in turn, and refuses both while the holder answers', async () => {
+		const { hub, url } = await setup();
+		const first = await connect(url, KEY, () => ({ from: 'first' }));
+		cleanup.push(() => first.ws.terminate());
+		const [second, third] = await Promise.all([
+			connect(url, KEY, () => ({ from: 'second' })),
+			connect(url, KEY, () => ({ from: 'third' }))
+		]);
+		cleanup.push(
+			() => second.ws.terminate(),
+			() => third.ws.terminate()
+		);
+		expect(await second.closed).toBe(CLOSE_HELD);
+		expect(await third.closed).toBe(CLOSE_HELD);
+		await expect(hub.ask('project.info')).resolves.toEqual({ from: 'first' });
 	});
 
 	it('adopts a newer connection at once when the one the project had has closed', async () => {

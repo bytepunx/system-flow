@@ -38,12 +38,13 @@ type DashboardWatch struct {
 // watcher decides, one look at a time, when the dashboard is restarted: after
 // WatchMisses looks in a row that did not find it running, and no sooner than
 // a back-off after the last restart, which doubles from first to max and is
-// reset once the dashboard has answered for a minute after a restart.
+// reset once the dashboard has answered at every look for a minute.
 type watcher struct {
 	first, max time.Duration
 	backoff    time.Duration
 	misses     int
 	restarted  time.Time // when the last restart was made
+	answering  time.Time // since when it has answered at every look, zero after a miss
 	next       time.Time // no restart before this
 }
 
@@ -59,11 +60,15 @@ func (w *watcher) look(now time.Time, state string) bool {
 		return false
 	case DashboardRunning:
 		w.misses = 0
-		if !w.restarted.IsZero() && now.Sub(w.restarted) >= time.Minute {
+		if w.answering.IsZero() {
+			w.answering = now
+		}
+		if !w.restarted.IsZero() && now.Sub(w.answering) >= time.Minute {
 			w.backoff = w.first
 		}
 		return false
 	}
+	w.answering = time.Time{}
 	w.misses++
 	if w.misses < WatchMisses || now.Before(w.next) {
 		return false

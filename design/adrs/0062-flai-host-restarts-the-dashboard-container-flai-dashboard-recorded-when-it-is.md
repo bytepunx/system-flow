@@ -6,6 +6,7 @@ date: 2026-10-01
 supersedes: []
 superseded_by: []
 refines: [ADR-0040]
+topics: [cli, dashboard, server-side]
 ---
 
 # ADR-0062 flai host restarts the dashboard container flai dashboard recorded when it is gone or not answering, unless dashboard.no_restart is set
