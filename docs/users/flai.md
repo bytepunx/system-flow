@@ -425,7 +425,9 @@ ready
          held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0128 (in progress) touches; starts when S-0128 is accepted, cancelled, or sent back
 ```
 
-You can still start it yourself: `flai move S-0130 in-progress` and `flai serve agent start S-0130` warn and go ahead.
+You can still start it yourself: `flai move S-0130 in-progress` and `flai serve agent start S-0130` (**Start agent** on its page) warn and go ahead. An agent you start this way is told that you started it and what it went past, the hold or a full in-progress limit, and the journal says the same.
+
+An agent that ended asking you a question is started again when you answer, in its own session, while its story is in progress or in review. If you send the story back to ready before answering, it waits for its hold and the limit like any other ready story once you answer.
 
 ### Waiting for another story
 

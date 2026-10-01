@@ -166,3 +166,61 @@ func TestAStoryWaitsForTheStoryItNamesInAfter(t *testing.T) {
 	lab.release(then)
 	waitFor(t, "it ends", func() bool { return !lab.run(then).live() })
 }
+
+// S-0182, I-0050: whatever state the holder is in, the launcher starts no
+// ready story whose claim is a folder holding a file an open story claims,
+// nor one whose claim is a file in a folder an open story claims, and starts
+// it once the holder is gone.
+func TestTheLauncherHoldsAFileAndItsFolderBothWays(t *testing.T) {
+	for _, c := range []struct {
+		name, holder, held, state, label string
+	}{
+		{"a folder, while a file in it is in progress", "flai/cmd/prime.go", "flai/cmd", workitem.InProgress, "in progress"},
+		{"a file, while its folder is in progress", "flai/cmd", "flai/cmd/prime.go", workitem.InProgress, "in progress"},
+		{"a folder, while a file in it is in review", "flai/cmd/prime.go", "flai/cmd", workitem.Review, "in review"},
+		{"a folder, while a file in it has its agent started in ready", "flai/cmd/prime.go", "flai/cmd", workitem.Ready, agentStarted},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			ctx := context.Background()
+			lab.limit(3)
+			lab.hold()
+			holder := lab.readyTouching("Holder", c.holder)
+			switch c.state {
+			case workitem.Ready:
+				lab.l.look(ctx, false)
+				waitFor(t, "the holder's agent runs", func() bool { return lab.run(holder).live() })
+			case workitem.Review:
+				lab.move(holder, workitem.InProgress)
+				lab.move(holder, workitem.Review)
+			default:
+				lab.move(holder, c.state)
+			}
+			held := lab.readyTouching("Held", c.held)
+			lab.l.look(ctx, false)
+			if r := lab.run(held); r != nil {
+				t.Fatalf("started a held story: %+v", r)
+			}
+			if w := lab.state().Waiting; !strings.Contains(w, held+" held (overlap): touches "+c.held) || !strings.Contains(w, holder+" ("+c.label+")") {
+				t.Errorf("waiting: %q", w)
+			}
+			if a := Activity(lab.root, lab.state())[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap {
+				t.Errorf("activity: %+v", a)
+			}
+			// the holder is accepted, or cancelled: the held story is started
+			st, _ := lab.repo.Get(holder)
+			if c.state == workitem.Review {
+				st.Status = workitem.Done // as acceptance leaves it
+				if err := lab.repo.Save(st); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := lab.repo.Transition(st, workitem.Cancelled, "alex", "not now", lab.now); err != nil {
+				t.Fatal(err)
+			}
+			lab.l.look(ctx, false)
+			waitFor(t, "the held story's agent runs", func() bool { return lab.run(held).live() })
+			lab.release(holder)
+			lab.release(held)
+		})
+	}
+}

@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-09-29
+updated: 2026-10-01
 status: active
 topics: [all]
 ---
@@ -97,7 +97,8 @@ Each story is worked on `story/S-nnnn` in a worktree under `.flai-cache/worktree
 - **After.** `after: [S-nnnn, …]` names stories that must be done first, whatever they touch ([work-hierarchy.md](work-hierarchy.md#identifiers)). The reason names each with its state and says what clears it: `held (after): waits for S-0129 (in progress); starts when S-0129 is done`. A cancelled story named keeps the hold, and the reason says to drop it from `after:` if the story no longer needs it; a story that does not exist keeps it too, and `flai check` reports it. A story held both ways is held `after`, and its reason goes on `; also held (overlap): …`. Named stories are looked up in the archive too, so an accepted story clears the hold. A story can wait only for a story named in its own `after:`, and `flai check` refuses a cycle, so the pull order does not deadlock.
 - **Skip-ahead.** flai serve does not start a held story's agent, and `wait_for_work` does not offer it. Both take the next ready story in pull order that is not held, within the in-progress limit. The held story keeps its place and is taken first once it is clear.
 - **The reason.** It names the path, the open story and its state, and what clears it: `held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0128 (in progress) touches; starts when S-0128 is accepted, cancelled, or sent back`. Every open story that holds it is named. `flai board` prints it under the card (`HELD`), and `flai board --json`, `board.get`, and the MCP `board`, `inbox`, and `wait_for_work` answers carry it as `held: {code, reason}` on the ready card. `wait_for_work` times out with `waiting_for: held` when every ready story with room is held. `agent.status` reports a held story as `waiting` with the reason and `hold`, whether or not it has had an agent.
-- **The operator's word.** `flai move <story> in-progress` and `item_move` warn and move it. `flai serve agent start` warns and starts it. `flai serve agent restart` of a held story in ready queues it.
+- **The operator's word.** `flai move <story> in-progress` and `item_move` warn and move it. `flai serve agent start` warns and starts it, and tells the agent in its prompt, and the journal, that the operator started it and the hold it went past, so the agent does not take it for flai serve's own start or narrow its touches only to clear the hold (S-0182, I-0050). `flai serve agent restart` of a held story in ready queues it.
+- **An answered agent.** flai serve starts an agent that ended asking again once its question is answered, in its session, at once while its story is in progress or in review: an open story holds others and is not held. A story sent back to ready meanwhile waits for its hold and the limit like any other, and one in backlog is not started (S-0182).
 
 S-0129 built the dashboard's yellow card: a held story's card and page say why it waits and link the story it waits for ([flaiover-dashboard.md](flaiover-dashboard.md)). Still to come under E-0009, in this order: `after:`, and the trial merge and drift check at `flai stream sync`.
 
