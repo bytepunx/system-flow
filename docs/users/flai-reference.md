@@ -603,6 +603,7 @@ Keys:
   dashboard.tag
   dashboard.port
   dashboard.bind
+  dashboard.no_restart
   dashboard.push_key
   dashboard.push_known_hosts
   cache_dir
@@ -697,7 +698,7 @@ Subcommands:
 - [check](#flai-dashboard-check): Report whether a newer dashboard image is available, without changing anything
 - [logs](#flai-dashboard-logs): Print the dashboard container's logs
 - [restart](#flai-dashboard-restart): Stop and start the dashboard container again, with whatever image it is already running
-- [status](#flai-dashboard-status): Show whether the dashboard container is running
+- [status](#flai-dashboard-status): Show whether the dashboard container runs and answers: running, not answering, or gone
 - [stop](#flai-dashboard-stop): Stop this project's dashboard; the shared container stops only when it was the last project served
 - [token](#flai-dashboard-token): Print the dashboard token and login link; --rotate replaces it
 - [upgrade](#flai-dashboard-upgrade): Pull a newer dashboard image and swap to it, only once it answers healthy
@@ -754,11 +755,13 @@ Flags:
 
 #### flai dashboard status
 
-Show whether the dashboard container is running.
+Show whether the dashboard container runs and answers: running, not answering, or gone.
 
 ```text
 flai dashboard status
 ```
+
+Asks docker whether the shared dashboard container runs, and its published port whether /\_health answers (S-0184): running when it does, not answering when the container runs and it does not, gone when no container runs. Docker's own verdict from the image's HEALTHCHECK is shown beside it. flai host restarts a dashboard that is gone or not answering unless dashboard.no\_restart is set.
 
 #### flai dashboard stop
 

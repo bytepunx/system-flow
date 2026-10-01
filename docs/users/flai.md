@@ -814,7 +814,7 @@ flai dashboard --port 8080 --pull
 flai dashboard --attach        # follow the logs; Ctrl-C leaves the container running
 flai dashboard --build         # build flaiover:local from this monorepo and run that
 flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
-flai dashboard status
+flai dashboard status          # running, not answering, or gone, from a probe of /_health
 flai dashboard logs [-f]
 flai dashboard stop
 flai dashboard token           # print the token and login link
@@ -824,7 +824,7 @@ flai dashboard --no-serve      # do not register with flai serve, or start flai 
 
 ### flai host: the process that runs flai serve and the MCP servers
 
-`flai dashboard` also starts `flai host`, one process of yours per machine. It runs `flai serve` and each served project's MCP server over HTTP as its children. It starts them again if they end, and stops them all when it stops ([ADR-0040](../../design/adrs/0040-one-flai-host-per-machine-runs-flai-serve-and-each-project-s-mcp-server-as-its.md)). Its state, token, and log are in a folder named `host` beside flai's config file.
+`flai dashboard` also starts `flai host`, one process of yours per machine. It runs `flai serve` and each served project's MCP server over HTTP as its children. It starts them again if they end, and stops them all when it stops ([ADR-0040](../../design/adrs/0040-one-flai-host-per-machine-runs-flai-serve-and-each-project-s-mcp-server-as-its.md)). It also restarts the dashboard container when it is gone or stops answering, from the image it was running, with a back-off. `flai config set dashboard.no_restart true` turns that off ([The dashboard's watch](../operators/index.md#the-dashboards-watch)). Its state, token, and log are in a folder named `host` beside flai's config file.
 
 ```bash
 flai host status            # the host and each process it runs: state, PID, version, restarts
