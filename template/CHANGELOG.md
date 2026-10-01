@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.29 - 2026-10-01
+
+- S-0187 The conventions say how agents write shell commands for zsh and gate each step of a chain (patch): `tooling.md` says the host shell may be zsh, so quote globs, URLs, and variables, use `[ a = b ]`, and put long sequences in a script, and that each step of a chain that must succeed is joined with `&&` or runs under `set -e`, never `;` or a pipe that hides its exit code.
+
 ## 1.0.28 - 2026-10-01
 
 - S-0179 flai lints the markdown it writes in the main checkout, and a thread's entries in one second share a heading (patch).

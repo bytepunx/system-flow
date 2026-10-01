@@ -27,6 +27,8 @@ Use the project's tools for the project's data. The tools keep the standard true
 - When a tool is missing or the wrong version, say so and use a scratch install; do not silently fall back to hand edits or skip the step. Add or extend a script under `scripts/` so the operator can install it properly.
 - If a command is missing for something you do repeatedly, propose it as a story instead of scripting around it.
 - Put common tasks in `scripts/` as purpose-named shell scripts, so complex commands and command sequences have one name.
+- Write shell commands for zsh as well as bash: the host shell may be zsh. Quote every glob, URL, and variable (`"$id"`, `'https://host/?a=b'`), compare with `[ "$a" = "$b" ]`, not `==`, and write a loop's list out rather than splitting an unquoted variable. Put a sequence of more than a few commands in a script under `scripts/`, POSIX `sh` under `set -eu`, instead of a long chain.
+- Gate each step of a chain that must succeed on its own exit code: join the steps with `&&`, or run them in a script under `set -e`, never with `;` or through a pipe that hides a failure (`flai check --strict | tail -1` exits as `tail` does). Check what a commit records, such as a narrative or a generated file, before the commit, not after.
 - The `Makefile` is the entry point for building, linting, quality checks, dependency updates, tests, and environment management. Make targets call the scripts in `scripts/` rather than inlining commands. The test targets are `test` (behavior), `integration`, and `smoke`, in that order of cost.
 - Scripts and Make targets work the same locally and in CI.
 - Local testing, previews, and validation run in Docker and Docker Compose; when a cluster is needed, use k3d via `bytepunx/kluster`.
