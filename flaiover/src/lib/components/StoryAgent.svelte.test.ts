@@ -474,4 +474,65 @@ describe('StoryAgent (S-0104)', () => {
 			expect(got).toBeUndefined();
 		});
 	});
+
+	// S-0177, ADR-0064: a story in progress that this host has had no agent for
+	describe('a story begun elsewhere', () => {
+		const button = () =>
+			document.querySelector<HTMLButtonElement>('[data-testid="story-agent-start"]');
+		const begun = {
+			'S-0104': {
+				state: 'waiting',
+				why: 'begun by agent-S-0104 on another host at 2026-10-01T07:40:00Z; no agent here',
+				run: { story: 'S-0104', command: '', agent: 'agent-S-0104', started: '' },
+				elsewhere: { by: 'agent-S-0104', at: '2026-10-01T07:40:00Z', agent: 'agent-S-0104' }
+			}
+		};
+
+		it('says who began it, where, and when, and offers Start agent to a writer', async () => {
+			for (const [enabled, props, offered] of [
+				[true, { status: 'in-progress', writable: true }, true],
+				[true, { status: 'in-progress', writable: false }, false],
+				[false, { status: 'in-progress', writable: true }, false]
+			] as const) {
+				await show(begun, enabled, props);
+				expect(text()).toContain(
+					'begun by agent-S-0104 on another host at 2026-10-01T07:40:00Z; no agent here'
+				);
+				expect(text()).not.toContain('started');
+				expect(button() !== null, JSON.stringify([enabled, props])).toBe(offered);
+				expect(document.querySelector('[data-testid="story-agent-retry"]')).toBeNull();
+				unmount(c!);
+				c = undefined;
+			}
+		});
+
+		it('has flai restart it here, and says why when flai refuses', async () => {
+			await show(begun, true, { status: 'in-progress', writable: true });
+			api.mockImplementation(async (path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? { ok: false, json: async () => ({ error: "S-0104's agent is running (pid 7)" }) }
+					: answer({ enabled: true, state: { command: '', stories: begun } })
+			);
+			button()!.click();
+			await settle();
+			const post = api.mock.calls.find((call) => (call[1] as RequestInit)?.method === 'POST')!;
+			expect(post[0]).toBe('/api/items/S-0104/agent');
+			expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ action: 'restart' });
+			expect(
+				document.querySelector('[data-testid="story-agent-retry-error"]')!.textContent
+			).toContain("S-0104's agent is running");
+			api.mockImplementation(async (path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? { ok: true, json: async () => ({ story: 'S-0104' }) }
+					: answer({
+							enabled: true,
+							state: { command: '', stories: { 'S-0104': { state: 'working', run } } }
+						})
+			);
+			button()!.click();
+			await settle();
+			expect(text()).toContain('agent working');
+			expect(button()).toBeNull();
+		});
+	});
 });

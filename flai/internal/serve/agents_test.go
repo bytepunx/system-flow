@@ -988,14 +988,31 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 			t.Errorf("where it was begun, and the thread answered since: %+v", b)
 		}
 
+		// the dashboard is told it was begun elsewhere, and has no agent here
+		a := Activity(lab.root, lab.state())[id]
+		if a.State != ActivityWaiting || a.Elsewhere == nil || a.Elsewhere.Host != "far-away" || a.Elsewhere.Here || a.Run == nil || a.Run.Started != "" ||
+			a.Why != "begun by builder-"+id+" on far-away at "+b.At+"; no agent here" {
+			t.Errorf("a story begun elsewhere: %+v %+v", a, a.Elsewhere)
+		}
+		there.Host = workitem.ThisHost()
+		_ = there.Save()
+		if a := Activity(lab.root, lab.state())[id]; a.Elsewhere == nil || !a.Elsewhere.Here || !strings.Contains(a.Why, "on this host, outside flai serve") {
+			t.Errorf("a story begun on this host outside flai serve: %+v", a)
+		}
+
 		run, err := restart(lab, id)
 		if err != nil {
 			t.Fatal(err)
 		}
+		// with an agent here it is this host's; the question its namesake asked
+		// there is its own
+		if a := Activity(lab.root, lab.state())[id]; a.Elsewhere != nil || a.State != ActivityWaiting || a.Thread == "" {
+			t.Errorf("with an agent here it is this host's: %+v", a)
+		}
 		if run.PID == 0 || run.Agent != "builder-"+id || run.Queued != "" {
 			t.Errorf("started at once: %+v", run)
 		}
-		if j := lab.entries(); len(j) != 1 || !strings.Contains(j[0].Detail, "begun by builder-"+id) || !strings.Contains(j[0].Detail, "on the host far-away") {
+		if j := lab.entries(); len(j) != 1 || !strings.Contains(j[0].Detail, "begun by builder-"+id) || !strings.Contains(j[0].Detail, "on the host "+workitem.ThisHost()) {
 			t.Errorf("journal: %+v", j)
 		}
 		waitFor(t, "it runs", func() bool { return lab.run(id).running() })

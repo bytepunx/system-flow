@@ -142,15 +142,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 // its narrative names, and the threads on it or its tasks with an entry by
 // someone other than those two since then.
 func begun(repo *workitem.Repo, it *workitem.Item) *harness.Begun {
-	b := &harness.Begun{}
-	for _, t := range it.Transitions {
-		if t.To == workitem.InProgress {
-			b.By, b.At = t.By, t.At
-		}
-	}
-	if n, err := workitem.ReadNarrative(repo.NarrativePath(it.ID)); err == nil {
-		b.Agent, b.Host = n.Agent, n.Host
-	}
+	b := begunBy(repo, it)
 	since, _ := time.Parse(time.RFC3339, b.At)
 	all, err := threads.List(repo)
 	if err != nil {
@@ -167,6 +159,21 @@ func begun(repo *workitem.Repo, it *workitem.Item) *harness.Begun {
 				break
 			}
 		}
+	}
+	return b
+}
+
+// begunBy is begun without the threads: who last moved it to in-progress
+// and when, and the agent and host its narrative names.
+func begunBy(repo *workitem.Repo, it *workitem.Item) *harness.Begun {
+	b := &harness.Begun{}
+	for _, t := range it.Transitions {
+		if t.To == workitem.InProgress {
+			b.By, b.At = t.By, t.At
+		}
+	}
+	if n, err := workitem.ReadNarrative(repo.NarrativePath(it.ID)); err == nil {
+		b.Agent, b.Host = n.Agent, n.Host
 	}
 	return b
 }

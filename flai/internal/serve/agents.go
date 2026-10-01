@@ -731,6 +731,45 @@ type StoryActivity struct {
 	// Hold is why a story in ready waits for another's claim (S-0128); Why
 	// says the same.
 	Hold *workitem.Hold `json:"hold,omitempty"`
+	// Elsewhere is where a story in progress that this host has had no agent
+	// for was begun (S-0177, ADR-0064); Why says the same.
+	Elsewhere *Elsewhere `json:"elsewhere,omitempty"`
+}
+
+// Elsewhere is who began a story, when, and on which host, as its files say.
+type Elsewhere struct {
+	By    string `json:"by"`              // who last moved it to in-progress
+	At    string `json:"at"`              // when
+	Agent string `json:"agent,omitempty"` // the agent its narrative names
+	Host  string `json:"host,omitempty"`  // the host its narrative was opened on
+	Here  bool   `json:"here,omitempty"`  // that host is this one: begun outside flai serve
+}
+
+// Said is the line the dashboard shows for it.
+func (e *Elsewhere) Said() string {
+	who := e.Agent
+	if who == "" {
+		who = orSomeone(e.By)
+	}
+	where := "on another host"
+	switch {
+	case e.Here:
+		where = "on this host, outside flai serve"
+	case e.Host != "":
+		where = "on " + e.Host
+	}
+	when := ""
+	if e.At != "" {
+		when = " at " + e.At
+	}
+	return "begun by " + who + " " + where + when + "; no agent here"
+}
+
+func orSomeone(who string) string {
+	if who == "" {
+		return "someone"
+	}
+	return who
 }
 
 // Activity is what each story's newest agent is doing. One that runs is
@@ -740,7 +779,9 @@ type StoryActivity struct {
 // another for its story in ready (S-0118). A story in ready that a claim
 // holds is waiting with the hold's reason, whether or not it has had an
 // agent (S-0128): one that never had one is given a run that names only the
-// story and the harness and model it asks for.
+// story and the harness and model it asks for. A story in progress that
+// this host has had no agent for is waiting, with where it was begun
+// (S-0177), and the same kind of run.
 func Activity(root string, st AgentState) map[string]StoryActivity {
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -748,14 +789,46 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 	}
 	out := runActivity(repo, st)
 	for id, h := range held(repo, st) {
-		run := st.Stories[id]
-		if run == nil {
-			run = &AgentRun{Story: id}
-			if it, err := repo.Get(id); err == nil && it.Agent != nil {
-				run.Harness, run.Model = it.Agent.Harness, it.Agent.Model
-			}
+		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: standIn(repo, st, id, ""), Hold: h}
+	}
+	for id, e := range elsewhere(repo, st) {
+		out[id] = StoryActivity{State: ActivityWaiting, Why: e.Said(), Run: standIn(repo, st, id, e.Agent), Elsewhere: e}
+	}
+	return out
+}
+
+// standIn is story's newest run, or, when it has none, one that names only
+// the story, the agent given, and the harness and model the story asks for.
+func standIn(repo *workitem.Repo, st AgentState, story, agent string) *AgentRun {
+	if run := st.Stories[story]; run != nil {
+		return run
+	}
+	run := &AgentRun{Story: story, Agent: agent}
+	if it, err := repo.Get(story); err == nil && it.Agent != nil {
+		run.Harness, run.Model = it.Agent.Harness, it.Agent.Model
+	}
+	return run
+}
+
+// elsewhere are the stories in progress that this host has had no agent
+// for, none started or only one queued (ADR-0064), with where each was
+// begun.
+func elsewhere(repo *workitem.Repo, st AgentState) map[string]*Elsewhere {
+	items, err := repo.List(false)
+	if err != nil {
+		return nil
+	}
+	here := workitem.ThisHost()
+	out := map[string]*Elsewhere{}
+	for _, it := range items {
+		if it.Type != workitem.Story || it.Status != workitem.InProgress {
+			continue
 		}
-		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: run, Hold: h}
+		if run := st.Stories[it.ID]; run != nil && run.Started != "" {
+			continue
+		}
+		b := begunBy(repo, it)
+		out[it.ID] = &Elsewhere{By: b.By, At: b.At, Agent: b.Agent, Host: b.Host, Here: b.Host != "" && b.Host == here}
 	}
 	return out
 }

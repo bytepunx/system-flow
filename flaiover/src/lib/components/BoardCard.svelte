@@ -7,7 +7,7 @@
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
 	import { stripeFor, tintFor } from '$lib/cardcolour';
-	import { holdLine, type StoryActivity } from '$lib/activity';
+	import { elsewhereLine, holdLine, type StoryActivity } from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 
 	type Card = {
@@ -88,6 +88,9 @@
 		{#if card.blocked}<span class="font-semibold text-danger">BLOCKED</span>{/if}
 		{#if activity?.hold}<span class="font-semibold text-warn" data-testid="held"
 				>{holdLine(activity.hold)}</span
+			>{/if}
+		{#if activity?.elsewhere}<span class="font-semibold text-warn" data-testid="elsewhere"
+				>{elsewhereLine(activity.elsewhere)}</span
 			>{/if}
 		{#if waiting}<span class="font-semibold text-warn" data-testid="waiting-to-publish"
 				>waiting to publish</span

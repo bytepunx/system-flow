@@ -262,4 +262,27 @@ describe('BoardCard', () => {
 		component = render(base, { activity: { ...activity, hold: undefined } });
 		expect(held()).toBeNull();
 	});
+
+	// S-0177: a story in progress that this host has had no agent for says who began it, and where
+	it('shows a story begun on another host, with no agent here', () => {
+		const activity = {
+			state: 'waiting' as const,
+			why: 'begun by agent-S-0048 on another host at 2026-10-01T07:40:00Z; no agent here',
+			run: { story: 'S-0048', command: '', agent: 'agent-S-0048', started: '' },
+			elsewhere: { by: 'agent-S-0048', at: '2026-10-01T07:40:00Z', agent: 'agent-S-0048' }
+		};
+		const line = () => document.querySelector<HTMLElement>('[data-testid="elsewhere"]');
+		component = render(base, { activity });
+		expect(line()!.textContent).toBe('begun by agent-S-0048 on another host; no agent here');
+		const dot = document.querySelector<HTMLElement>('[data-testid="agent-dot"]')!;
+		expect(dot.getAttribute('aria-label')).toBe(activity.why);
+		unmount(component);
+		component = render(base, {
+			activity: { ...activity, elsewhere: { ...activity.elsewhere, host: 'far-away' } }
+		});
+		expect(line()!.textContent).toBe('begun by agent-S-0048 on far-away; no agent here');
+		unmount(component);
+		component = render(base, { activity: { ...activity, elsewhere: undefined } });
+		expect(line()).toBeNull();
+	});
 });

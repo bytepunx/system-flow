@@ -3,6 +3,7 @@ import {
 	activityLine,
 	anyRunning,
 	dotClass,
+	elsewhereLine,
 	holdLine,
 	holdWaitsFor,
 	reasonParts,
@@ -131,6 +132,36 @@ describe('a held story (S-0129)', () => {
 		);
 		expect(storyActivity(null)).toEqual({});
 		expect(storyActivity({ enabled: false })).toEqual({});
+	});
+});
+
+// S-0177, ADR-0064: a story in progress that this host has had no agent for
+describe('a story begun elsewhere', () => {
+	const elsewhere = { by: 'alex', at: '2026-10-01T07:40:00Z', agent: 'agent-S-0173' };
+	const begun: StoryActivity = {
+		state: 'waiting',
+		why: 'begun by agent-S-0173 on another host at 2026-10-01T07:40:00Z; no agent here',
+		run: { story: 'S-0173', command: '', agent: 'agent-S-0173', started: '' },
+		elsewhere
+	};
+	it('says by whom and where, flai’s why with when', () => {
+		expect(elsewhereLine(elsewhere)).toBe('begun by agent-S-0173 on another host; no agent here');
+		expect(elsewhereLine({ ...elsewhere, host: 'far-away' })).toBe(
+			'begun by agent-S-0173 on far-away; no agent here'
+		);
+		expect(elsewhereLine({ ...elsewhere, host: 'here', here: true })).toBe(
+			'begun by agent-S-0173 on this host, outside flai serve; no agent here'
+		);
+		expect(elsewhereLine({ by: 'alex', at: '' })).toBe(
+			'begun by alex on another host; no agent here'
+		);
+		expect(activityLine(begun)).toBe(begun.why);
+	});
+	it('is shown while the agent action is off, and is no agent to ask about again', () => {
+		const h = { enabled: false, state: { command: '', stories: { 'S-0173': begun } } };
+		expect(Object.keys(storyActivity(h))).toEqual(['S-0173']);
+		expect(anyRunning(h)).toBe(false);
+		expect(stoppable(begun)).toBe(false);
 	});
 });
 

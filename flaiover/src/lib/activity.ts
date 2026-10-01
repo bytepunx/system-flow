@@ -1,7 +1,8 @@
 // What a story's agent is doing (S-0104), as flai on the host reports it in agent.status: working
 // (green), waiting for the designer or, queued by a retry, for room (yellow), failed (red), or
 // worked, which shows no dot. A story in ready that another's claim holds is waiting too, with the
-// hold (S-0129).
+// hold (S-0129), and so is a story in progress that this host has had no agent for, with where it was
+// begun (S-0177).
 
 export type AgentRun = {
 	story: string;
@@ -67,6 +68,13 @@ export type AgentStreamRead = {
  */
 export type Hold = { code: string; reason: string };
 
+/**
+ * Where a story in progress that this host has had no agent for was begun (S-0177, ADR-0064): who
+ * last moved it to in-progress and when, the agent and host its narrative names, and `here` when that
+ * host is this one, outside flai serve.
+ */
+export type Elsewhere = { by: string; at: string; agent?: string; host?: string; here?: boolean };
+
 export type StoryActivity = {
 	state: ActivityState;
 	why?: string;
@@ -74,6 +82,8 @@ export type StoryActivity = {
 	thread?: string;
 	/** Set for a held story in ready, whether or not it has had an agent (S-0129). */
 	hold?: Hold;
+	/** Set for a story in progress begun with no agent of this host's (S-0177). */
+	elsewhere?: Elsewhere;
 };
 
 export type HostAgent = {
@@ -103,12 +113,24 @@ export function dotClass(state: ActivityState): string | null {
 
 /**
  * What each story's agent is doing, for the dots: every story while the `agent` action is on, and
- * otherwise only the held ones, since flai reports a hold whether or not it starts agents (S-0129).
+ * otherwise only the held ones and those begun elsewhere, since flai reports both whether or not it
+ * starts agents (S-0129, S-0177).
  */
 export function storyActivity(h: HostAgent | null): Record<string, StoryActivity> {
 	const stories = h?.state?.stories ?? {};
 	if (h?.enabled) return stories;
-	return Object.fromEntries(Object.entries(stories).filter(([, a]) => a.hold));
+	return Object.fromEntries(Object.entries(stories).filter(([, a]) => a.hold || a.elsewhere));
+}
+
+/** The card's short line for a story begun elsewhere: by whom and where, not when. */
+export function elsewhereLine(e: Elsewhere): string {
+	const who = e.agent || e.by || 'someone';
+	const where = e.here
+		? 'on this host, outside flai serve'
+		: e.host
+			? `on ${e.host}`
+			: 'on another host';
+	return `begun by ${who} ${where}; no agent here`;
 }
 
 const storyID = /\bS-\d+\b/g;
@@ -140,6 +162,7 @@ export function reasonParts(reason: string): { text: string; id?: string }[] {
 /** One line for a tooltip or a screen reader: what the agent is doing and why. */
 export function activityLine(a: StoryActivity): string {
 	if (a.hold) return a.hold.reason;
+	if (a.elsewhere) return a.why ?? elsewhereLine(a.elsewhere);
 	const who = [a.run.harness, a.run.model].filter(Boolean).join(', ') || a.run.command;
 	switch (a.state) {
 		case 'working':
@@ -165,9 +188,12 @@ export function stoppable(a: StoryActivity | undefined): a is StoryActivity {
 	return a.state === 'waiting' && (!a.run.ended || a.run.outcome === 'asked');
 }
 
-/** Whether any agent is still running, so its state is worth asking for again. */
+/**
+ * Whether any agent is still running, so its state is worth asking for again. A story begun elsewhere
+ * has none here, and changes only when its files do.
+ */
 export function anyRunning(h: HostAgent | null): boolean {
 	return Object.values(h?.state?.stories ?? {}).some(
-		(a) => a.state === 'working' || a.state === 'waiting'
+		(a) => (a.state === 'working' || a.state === 'waiting') && !a.elsewhere
 	);
 }

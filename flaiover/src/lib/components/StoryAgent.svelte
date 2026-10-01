@@ -8,7 +8,9 @@
 	// in ready that has had no agent, Start agent has flai start it now, and the panel says why flai
 	// serve has not (S-0115). For a story in ready that another's claim holds, it gives flai's reason
 	// with each story it names linked, whether or not the agent action is on, and hands the hold to
-	// the page for its header (S-0129). Start agent and Retry override a hold, as on the host.
+	// the page for its header (S-0129). Start agent and Retry override a hold, as on the host. For a
+	// story in progress that this host has had no agent for, begun on another host or outside flai
+	// serve, it says by whom, where, and when, and Start agent has flai restart it here (S-0177).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
@@ -97,6 +99,10 @@
 			storyStatus === 'ready' &&
 			(!activity || (!!activity.hold && !started))
 	);
+	// A story in progress begun with no agent of this host's: flai serve agent restart starts one.
+	const canStartHere = $derived(
+		writable && !!status?.enabled && storyStatus === 'in-progress' && !!activity?.elsewhere
+	);
 	// Why flai serve has not started it, from the reasons it gives for each story that waits.
 	const waitingWhy = $derived(
 		status?.state?.waiting?.split('; ').find((w) => new RegExp(`\\b${story}\\b`).test(w))
@@ -173,6 +179,14 @@
 			<p class="mt-1 text-xs text-warn" data-testid="story-agent-retry-error">
 				{actError.message}
 			</p>
+		{/if}
+		{#if canStartHere}
+			<button
+				class="mt-2 rounded border border-line px-2 py-1 text-xs disabled:opacity-60"
+				onclick={() => act('restart')}
+				disabled={acting !== null}
+				data-testid="story-agent-start">{acting === 'restart' ? 'Starting…' : 'Start agent'}</button
+			>
 		{/if}
 		{#if canStart}
 			<button
