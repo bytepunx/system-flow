@@ -39,6 +39,10 @@ type Issue struct {
 	LastReported  string `yaml:"last_reported" json:"last_reported"`
 	Updated       string `yaml:"updated" json:"updated"`
 
+	// Unknown is the front matter this flai does not know, kept for writing
+	// back (S-0181).
+	Unknown []workitem.Field `yaml:"-" json:"-"`
+
 	Path string `yaml:"-" json:"path"`
 	Body string `yaml:"-" json:"-"`
 }
@@ -50,16 +54,18 @@ func Dir(r *workitem.Repo) string {
 
 var idPattern = regexp.MustCompile(`^I-\d{3,}$`)
 
-// Parse decodes an issue document.
+// Parse decodes an issue document, keeping front-matter fields this flai
+// does not know in Unknown (S-0181).
 func Parse(doc string) (*Issue, error) {
 	fm, body, err := workitem.SplitFrontMatter(doc)
 	if err != nil {
 		return nil, err
 	}
 	var is Issue
-	if err := yaml.UnmarshalWithOptions([]byte(fm), &is, yaml.Strict()); err != nil {
+	if err := yaml.Unmarshal([]byte(fm), &is); err != nil {
 		return nil, err
 	}
+	is.Unknown = workitem.UnknownFields(fm, is)
 	is.Body = body
 	return &is, nil
 }
@@ -128,6 +134,7 @@ func (is *Issue) Marshal() string {
 	fmt.Fprintf(&b, "first_reported: %s\n", is.FirstReported)
 	fmt.Fprintf(&b, "last_reported: %s\n", is.LastReported)
 	fmt.Fprintf(&b, "updated: %s\n", is.Updated)
+	workitem.WriteFields(&b, is.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(is.Body)
 	return b.String()
@@ -153,6 +160,7 @@ func List(r *workitem.Repo) ([]*Issue, error) {
 		if err != nil {
 			return nil, err
 		}
+		workitem.WarnUnknown(m, is.Unknown)
 		out = append(out, is)
 	}
 	sort.Slice(out, func(i, j int) bool { return num(out[i].ID) < num(out[j].ID) })

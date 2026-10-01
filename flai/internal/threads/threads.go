@@ -46,6 +46,10 @@ type Thread struct {
 	Created      string   `yaml:"created" json:"created"`
 	Updated      string   `yaml:"updated" json:"updated"`
 
+	// Unknown is the front matter this flai does not know, kept for writing
+	// back (S-0181).
+	Unknown []workitem.Field `yaml:"-" json:"-"`
+
 	Path string `yaml:"-" json:"path"`
 	Body string `yaml:"-" json:"-"`
 }
@@ -75,16 +79,18 @@ func CanonicalID(id string) string {
 	return fmt.Sprintf("TH-%0*s", workitem.IDWidth, m[1])
 }
 
-// Parse decodes a thread document.
+// Parse decodes a thread document, keeping front-matter fields this flai
+// does not know in Unknown (S-0181).
 func Parse(doc string) (*Thread, error) {
 	fm, body, err := workitem.SplitFrontMatter(doc)
 	if err != nil {
 		return nil, err
 	}
 	var th Thread
-	if err := yaml.UnmarshalWithOptions([]byte(fm), &th, yaml.Strict()); err != nil {
+	if err := yaml.Unmarshal([]byte(fm), &th); err != nil {
 		return nil, err
 	}
+	th.Unknown = workitem.UnknownFields(fm, th)
 	th.Body = body
 	return &th, nil
 }
@@ -151,6 +157,7 @@ func (th *Thread) Marshal() string {
 	fmt.Fprintf(&b, "participants: %s\n", workitem.FlowList(th.Participants))
 	fmt.Fprintf(&b, "created: %s\n", th.Created)
 	fmt.Fprintf(&b, "updated: %s\n", th.Updated)
+	workitem.WriteFields(&b, th.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(th.Body)
 	return b.String()
@@ -205,6 +212,7 @@ func List(r *workitem.Repo) ([]*Thread, error) {
 		if err != nil {
 			return nil, err
 		}
+		workitem.WarnUnknown(m, th.Unknown)
 		out = append(out, th)
 	}
 	sort.Slice(out, func(i, j int) bool { return num(out[i].ID) < num(out[j].ID) })

@@ -89,6 +89,9 @@ type Item struct {
 	// Usage is the tokens and cost agents spent on the item, measured from
 	// their logs or summed from its children (S-0143).
 	Usage *usage.Usage `yaml:"usage" json:"usage,omitempty"`
+	// Unknown is the front matter this flai does not know, kept for writing
+	// back (S-0181).
+	Unknown []Field `yaml:"-" json:"-"`
 
 	Path     string `yaml:"-" json:"path"`     // file on disk
 	Archived bool   `yaml:"-" json:"archived"` // lives under wip/archive
@@ -114,16 +117,19 @@ func SplitFrontMatter(doc string) (fm, body string, err error) {
 	return rest[:idx+1], rest[idx+5:], nil
 }
 
-// ParseItem decodes a work item document.
+// ParseItem decodes a work item document. Front-matter fields this flai does
+// not know are kept in Unknown rather than refused, so that an older flai
+// reads items a newer one wrote (S-0181); flai check reports them.
 func ParseItem(doc string) (*Item, error) {
 	fm, body, err := SplitFrontMatter(doc)
 	if err != nil {
 		return nil, err
 	}
 	var it Item
-	if err := yaml.UnmarshalWithOptions([]byte(fm), &it, yaml.Strict()); err != nil {
+	if err := yaml.Unmarshal([]byte(fm), &it); err != nil {
 		return nil, err
 	}
+	it.Unknown = UnknownFields(fm, it)
 	it.Body = body
 	return &it, nil
 }
@@ -361,6 +367,7 @@ func (it *Item) Marshal() string {
 	if it.Usage != nil {
 		b.WriteString(usageBlock(it.Usage))
 	}
+	WriteFields(&b, it.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(it.Body)
 	return b.String()

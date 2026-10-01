@@ -80,6 +80,9 @@ func (a *app) initLogger() {
 		opt.IsTerminal = term.IsTerminal(int(f.Fd()))
 	}
 	a.log = logx.New(a.errOut, opt)
+	// Packages with no logger of their own warn through the default, such as
+	// a listing that reads past fields this flai does not know (S-0181).
+	slog.SetDefault(a.log)
 }
 
 var apps = map[*cobra.Command]*app{}

@@ -253,6 +253,7 @@ func (c *checker) oneItem(it *workitem.Item) {
 			c.add(Error, "item.front-matter", p, keyLine(p, key), "%s", msg)
 		}
 	}
+	c.unknownFields("item.unknown-field", p, it.Unknown)
 	base := filepath.Base(p)
 	if !strings.HasPrefix(base, it.ID+"-") && base != it.ID+".md" {
 		c.add(Error, "item.filename", p, 1, "file name should start with %s-", it.ID)
@@ -842,6 +843,14 @@ func (c *checker) conventions() {
 
 // threads validates wip/threads (ADR-0020): schema, file names, anchors
 // that exist, headings that are present, and open threads on archived items.
+// unknownFields reports each front-matter field this flai does not know: the
+// listing paths read past them (S-0181), and check stays strict.
+func (c *checker) unknownFields(rule, path string, fields []workitem.Field) {
+	for i, msg := range workitem.UnknownFieldErrors(fields) {
+		c.add(Error, rule, path, keyLine(path, fields[i].Name), "%s", msg)
+	}
+}
+
 func (c *checker) threads() {
 	dir := threads.Dir(c.repo)
 	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
@@ -866,6 +875,7 @@ func (c *checker) threads() {
 			c.add(Error, "threads.duplicate-id", th.Path, keyLine(th.Path, "id"), "%s is also defined in %s", th.ID, prev)
 		}
 		seen[th.ID] = th.Path
+		c.unknownFields("threads.unknown-field", th.Path, th.Unknown)
 		if base := filepath.Base(th.Path); !strings.HasPrefix(base, th.ID+"-") {
 			c.add(Error, "threads.filename", th.Path, 1, "file name should start with %s-", th.ID)
 		}
@@ -923,6 +933,7 @@ func (c *checker) issues() {
 			c.add(Error, "issues.duplicate-id", is.Path, keyLine(is.Path, "id"), "%s is also defined in %s", is.ID, prev)
 		}
 		seen[is.ID] = is.Path
+		c.unknownFields("issues.unknown-field", is.Path, is.Unknown)
 		if base := filepath.Base(is.Path); !strings.HasPrefix(base, is.ID+"-") {
 			c.add(Error, "issues.filename", is.Path, 1, "file name should start with %s-", is.ID)
 		}

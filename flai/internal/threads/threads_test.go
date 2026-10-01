@@ -226,3 +226,29 @@ func TestMirrorRemovalLeavesOneBlankLine(t *testing.T) {
 		t.Errorf("one blank line between the sections:\n%s", n)
 	}
 }
+
+// S-0181: a thread a newer flai wrote is listed, and a reply keeps the
+// field this flai does not know.
+func TestAThreadWithAnUnknownFieldIsListedAndKept(t *testing.T) {
+	r := project(t)
+	th, err := New(r, NewOptions{Title: "Shape?", On: "design/system/plan.md", Author: "alex", Text: "I wonder.", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(th.Path)
+	doc := strings.Replace(string(data), "\n---\n", "\npriority: high\n---\n", 1)
+	if err := os.WriteFile(th.Path, []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	list, err := List(r)
+	if err != nil || len(list) != 1 || len(list[0].Unknown) != 1 || list[0].Unknown[0].Name != "priority" {
+		t.Fatalf("listing: %v %+v", err, list)
+	}
+	if _, err := Reply(r, th.ID, "claude", "Yes.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := os.ReadFile(th.Path)
+	if !strings.Contains(string(after), "priority: high\n---\n") || !strings.Contains(string(after), "Yes.") {
+		t.Errorf("a reply dropped the unknown field:\n%s", after)
+	}
+}

@@ -300,8 +300,9 @@ func TestCloneSharesNothing(t *testing.T) {
 	it := &Item{
 		ID: "S-0001", Transitions: []Transition{{To: Ready}}, Blocked: []Block{{Reason: "r"}},
 		Tags: []string{"t"}, Touches: []string{"p"}, Topics: []string{"x"}, After: []string{"S-0002"},
-		Agent: &manifest.Agent{Model: "m", Config: map[string]string{"k": "v"}},
-		Usage: &usage.Usage{Models: []usage.Model{{Model: "m"}}},
+		Agent:   &manifest.Agent{Model: "m", Config: map[string]string{"k": "v"}},
+		Usage:   &usage.Usage{Models: []usage.Model{{Model: "m"}}},
+		Unknown: []Field{{Name: "hold", Raw: "hold: x\n"}},
 	}
 	c := it.clone()
 	if !reflect.DeepEqual(it, c) {

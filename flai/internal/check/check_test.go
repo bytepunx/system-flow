@@ -450,3 +450,44 @@ func TestMarkdownRules(t *testing.T) {
 		t.Errorf("an unreadable configuration is reported once: %v", got)
 	}
 }
+
+// S-0181: the listing paths read past front-matter fields this flai does not
+// know, and check still reports each, on its line.
+func TestUnknownFieldsAreReported(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "design/issues", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	_ = os.WriteFile(filepath.Join(root, "docs/guide.md"), []byte("---\ntitle: Guide\n---\n\n# Guide\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "wip/kanban/epics/E-0001-e.md"), []byte("---\nid: E-0001\ntype: epic\nnature: feature\ntitle: E\nstatus: backlog\nowner: a\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\ntransitions: []\ntags: []\nholds: [S-0002]\n---\n\n# E-0001 E\n\n## Outcome\nx\n\n## Stories\n\n## Notes\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "wip/threads/TH-0001-t.md"), []byte("---\nid: TH-0001\ntitle: T\nanchor:\n  path: docs/guide.md\nstatus: open\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\npriority: high\n---\n\n# TH-0001 T\n\n## Entries\n\n### 2026-09-01T12:00:00Z alex\nhi\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "design/issues/I-0001-i.md"), []byte("---\nid: I-0001\ntitle: I\nclass: defect\nstatus: open\ncount: 1\nfirst_reported: 2026-09-01T12:00:00Z\nlast_reported: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\nseverity: 2\n---\n\n# I-0001 I\n"), 0o644)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatalf("check refused the tree instead of reporting: %v", err)
+	}
+	want := map[string]string{
+		"item.unknown-field":    `E-0001-e.md:12 field "holds"`,
+		"threads.unknown-field": `TH-0001-t.md:10 field "priority"`,
+		"issues.unknown-field":  `I-0001-i.md:10 field "severity"`,
+	}
+	for _, f := range res.Findings {
+		w, ok := want[f.Rule]
+		if !ok {
+			continue
+		}
+		got := fmt.Sprintf("%s:%d %s", filepath.Base(f.Path), f.Line, f.Message)
+		if f.Level != Error || !strings.HasPrefix(got, w) {
+			t.Errorf("%s: got %s %q, want an error starting %q", f.Rule, f.Level, got, w)
+		}
+		delete(want, f.Rule)
+	}
+	for rule := range want {
+		t.Errorf("%s not reported", rule)
+	}
+}

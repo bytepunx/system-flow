@@ -107,3 +107,29 @@ func TestValidate(t *testing.T) {
 		t.Error("normalise")
 	}
 }
+
+// S-0181: an issue a newer flai wrote is listed, and a bump keeps the field
+// this flai does not know.
+func TestAnIssueWithAnUnknownFieldIsListedAndKept(t *testing.T) {
+	r := repo(t)
+	is, err := New(r, NewOptions{Title: "One", Class: "defect", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(is.Path)
+	doc := strings.Replace(string(data), "\n---\n", "\nowner: sam\n---\n", 1)
+	if err := os.WriteFile(is.Path, []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	list, err := List(r)
+	if err != nil || len(list) != 1 || len(list[0].Unknown) != 1 || list[0].Unknown[0].Name != "owner" {
+		t.Fatalf("listing: %v %+v", err, list)
+	}
+	if err := Bump(list[0], "", "again", t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := os.ReadFile(is.Path)
+	if !strings.Contains(string(after), "count: 2\n") || !strings.Contains(string(after), "owner: sam\n---\n") {
+		t.Errorf("a bump dropped the unknown field:\n%s", after)
+	}
+}

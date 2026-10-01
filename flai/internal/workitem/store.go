@@ -124,6 +124,7 @@ func (f *folder) read(dir, name string) (*Item, error) {
 		return nil, err
 	}
 	f.parses++
+	WarnUnknown(path, it.Unknown)
 	f.files[name] = &kept{info: info, item: it, trusted: info.ModTime().Before(readAt.Add(-racyWindow))}
 	return it.clone(), nil
 }
@@ -138,6 +139,7 @@ func (it *Item) clone() *Item {
 	c.Touches = slices.Clone(it.Touches)
 	c.Topics = slices.Clone(it.Topics)
 	c.After = slices.Clone(it.After)
+	c.Unknown = slices.Clone(it.Unknown)
 	if it.Agent != nil {
 		a := *it.Agent
 		a.Config = maps.Clone(it.Agent.Config)
