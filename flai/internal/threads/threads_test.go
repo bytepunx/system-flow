@@ -117,3 +117,45 @@ func TestItemAnchorsAndNarrativeMirror(t *testing.T) {
 		t.Error("heading must survive")
 	}
 }
+
+// I-0043: a reply and a resolution in one second by one author share the
+// entry's heading; another author in that second gets a heading of its own.
+func TestSameSecondEntriesShareAHeading(t *testing.T) {
+	r := project(t)
+	if _, err := New(r, NewOptions{Title: "Which way", On: "design/system/plan.md", Author: "alex", Text: "Left or right?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	at := t0.Add(time.Minute)
+	if _, err := Reply(r, "TH-0001", "claude", "Left.", at); err != nil {
+		t.Fatal(err)
+	}
+	th, err := Resolve(r, "TH-0001", "claude", "answered", at.Add(500*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	heading := "### 2026-09-17T21:01:00Z claude"
+	if n := strings.Count(th.Body, heading); n != 1 {
+		t.Fatalf("want one %q heading, got %d:\n%s", heading, n, th.Body)
+	}
+	e := th.Entries()
+	if len(e) != 2 || e[1].Author != "claude" || e[1].Text != "Left.\n\nResolved: answered" {
+		t.Fatalf("entries: %+v", e)
+	}
+	if th.Status != "resolved" {
+		t.Errorf("status %s", th.Status)
+	}
+	th, err = Reply(r, "TH-0001", "alex", "Thanks.", at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := th.Entries(); len(e) != 3 || e[2].Author != "alex" || e[2].At != "2026-09-17T21:01:00Z" {
+		t.Fatalf("another author in the same second has its own entry: %+v", e)
+	}
+	got, err := Read(th.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Body != th.Body {
+		t.Error("saved body differs from the returned one")
+	}
+}

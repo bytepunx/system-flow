@@ -371,7 +371,7 @@ func Reply(r *workitem.Repo, id, author, text string, now time.Time) (*Thread, e
 		return nil, err
 	}
 	stamp := now.UTC().Format(workitem.TimeFormat)
-	th.Body = strings.TrimRight(th.Body, "\n") + fmt.Sprintf("\n\n### %s %s\n%s\n", stamp, author, strings.TrimSpace(text))
+	th.Body = appendEntry(th.Body, stamp, author, text)
 	if author == th.Opener() {
 		th.Status = "open"
 	} else {
@@ -395,13 +395,29 @@ func Resolve(r *workitem.Repo, id, author, reason string, now time.Time) (*Threa
 	if strings.TrimSpace(reason) != "" {
 		note = "Resolved: " + strings.TrimSpace(reason)
 	}
-	th.Body = strings.TrimRight(th.Body, "\n") + fmt.Sprintf("\n\n### %s %s\n%s\n", stamp, orDefault(author, "unknown"), note)
+	th.Body = appendEntry(th.Body, stamp, orDefault(author, "unknown"), note)
 	th.Status = "resolved"
 	if author != "" && !contains(th.Participants, author) {
 		th.Participants = append(th.Participants, author)
 	}
 	th.Updated = stamp
 	return th, th.Save()
+}
+
+// appendEntry adds a dated entry to the body. Entries are headed by their
+// second and author; one by the same author in the same second as the last
+// joins that entry, as narrative log entries and issue instances do (I-0043):
+// a second identical heading fails the duplicate-heading rule (MD024).
+func appendEntry(body, stamp, author, text string) string {
+	body = strings.TrimRight(body, "\n")
+	heading := fmt.Sprintf("### %s %s", stamp, author)
+	if locs := entryHeading.FindAllStringIndex(body, -1); len(locs) > 0 {
+		last := locs[len(locs)-1]
+		if body[last[0]:last[1]] == heading {
+			return body + "\n\n" + strings.TrimSpace(text) + "\n"
+		}
+	}
+	return body + "\n\n" + heading + "\n" + strings.TrimSpace(text) + "\n"
 }
 
 // StoryOf returns the story a thread belongs to for the narrative mirror:
