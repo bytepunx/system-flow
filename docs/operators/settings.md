@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-09-29
+updated: 2026-10-01
 status: active
 ---
 
@@ -12,7 +12,7 @@ Every setting of flai and of the flaiover dashboard, by where it is set. Each ro
 |------|------------------|--------------|
 | [flai configuration](#flai-configuration) | `~/.flai/config.json`, one per user and host, or the file `--config` or `FLAI_CONFIG` names | `flai config set` for the first table; the `flai serve` commands for the second |
 | [Project manifest](#project-manifest) | `system-flow.yaml` at the project's root, committed | By hand for `name`, `description`, `dashboard`; flai for the rest |
-| [Other project files](#other-project-files) | The board's front matter, `.mcp.json` | The board, `flai order`, by hand |
+| [Other project files](#other-project-files) | The board's front matter, `.mcp.json`, `.claude/settings.json` | The board, `flai order`, by hand |
 | [Environment variables](#environment-variables) | The shell flai runs in, or what flai hands a process it starts | Your shell profile or the command line |
 | [flaiover container](#flaiover-container) | The dashboard container's environment and mounts | `flai dashboard`, which starts it; by hand only for a container you run yourself |
 | [Flags](#flags) | The command line | Each command's flags |
@@ -99,6 +99,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `wip_limits` | the front matter of `wip/kanban/board.md` | as the template sets them | The WIP limit of each column; flai serve starts agents only while `in-progress` has room ([design/system/workflow.md](../../design/system/workflow.md)) |
 | `order` | the front matter of `wip/kanban/board.md` | empty | The pull order of `ready` and `backlog` stories; drag cards on the board or run `flai order` |
 | `mcpServers.flai` | `.mcp.json` | `flai mcp` on stdio | How an agent on the host reaches flai's MCP server ([MCP over HTTP](index.md#mcp-over-http)) |
+| `hooks.PreToolUse` | `.claude/settings.json` | `flai guard` before `Bash` and `mcp__flai__.*` | Refuses a Claude Code sub-agent's writes to work items, threads, and history ([Sub-agents](../users/flai.md#sub-agents)) |
 
 ## Environment variables
 
@@ -259,6 +260,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--replace-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--repo` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
+| `--role` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--rotate` | [flai dashboard token](../users/flai-reference.md#flai-dashboard-token), [flai mcp token](../users/flai-reference.md#flai-mcp-token) |
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--since` | [flai stats](../users/flai-reference.md#flai-stats) |

@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-09-26
+updated: 2026-10-01
 status: active
 ---
 
@@ -206,7 +206,7 @@ A resuming agent reads `index.md`, then each active narrative's current state an
 |--------|-------|-------|------|
 | Decisions | `design/adrs/NNNN-slug.md`, indexed in `design/adrs/README.md` | Front matter `id`, `title`, `status`, `date`; sections Context, Decision, Consequences, Alternatives considered | One decision per file. Never edited once accepted, except to name the ADR that supersedes it. `flai adr new` numbers, names, and indexes it |
 | The living design | `design/system/`, `design/tech/` | Ordinary documents | Edited in place whenever the design or a dependency changes, with a link to the ADR that changed it |
-| Conventions | `design/conventions/`, indexed in its `README.md` | One file per topic, front matter `title`, `updated`, `audience: agent`, `order`, `status`, and a baseline marker | Everything above the marker is the template's; project rules go under `## Project additions` below it. Read in `order` at the start of every session |
+| Conventions | `design/conventions/`, indexed in its `README.md` | One file per topic, front matter `title`, `updated`, `audience: agent`, `order`, `status`, optionally `topics` (the stories it is for) and `roles` (the sub-agents that read it too: `explore`, `verify`), and a baseline marker | Everything above the marker is the template's; project rules go under `## Project additions` below it. Read in `order` at the start of every session |
 | Issues | `design/issues/I-nnnn-slug.md`, tabulated in `summary.md` | A class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, first and last reported | Record each occurrence as it happens with `flai issue`; remediate the most expensive first |
 | Threads | `wip/threads/` | A conversation anchored to a document, a heading, or a work item | Opened and answered with `flai thread` or from the dashboard |
 
@@ -252,7 +252,7 @@ The dates and times in the files below are examples. Write the real time, in UTC
    done
    ```
 
-4. Write the conventions. The template's baseline set is twelve files, from `session-start.md` to `telemetry.md`, in `root/design/conventions/` of the template repository; copy them to have the full set. Or start with one of your own. Each file follows this shape, and `README.md` links every file in read order:
+4. Write the conventions. The template's baseline set is thirteen files, from `session-start.md` to `delegation.md`, in `root/design/conventions/` of the template repository; copy them to have the full set. Or start with one of your own. Each file follows this shape, and `README.md` links every file in read order:
 
    `design/conventions/README.md`:
 

@@ -531,7 +531,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` replaces the stories a story waits for and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |
-| `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed ([Prime a session](#prime-a-session)) |
+| `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed; with `role` (`explore` or `verify`), the smaller pack for a sub-agent ([Sub-agents](#sub-agents)) ([Prime a session](#prime-a-session)) |
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
 | `wait_for_work` | What to do when you have nothing to work on. Answers at once with `resume` and your own story if one is still in progress, `thread` and the threads awaiting you that were written to since it last answered, or `pull` and the first ready story that is not held when the in-progress limit leaves room. Otherwise it waits until one of those is true, up to the timeout, and then says whether it was waiting for room, for a held story to be clear (`held`: each ready story says why), or for a story to be ready: call it again. Hold it whenever you are idle, and you pull the next story as soon as there is one |
 | `wait_for_events` | Returns at once when something changed since this agent last looked, otherwise blocks until a thread, item, or narrative changes, or the timeout passes. Returns `events` in the same shape as `changes`, and the changed paths |
@@ -619,7 +619,7 @@ Conventions, `design/system` and `design/tech` files, and ADRs say which stories
 ## Go <!-- topics: cli, go -->
 ```
 
-A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). `flai prime --story` selects conventions, design, tech files, and ADRs by them ([Prime a session](#prime-a-session)). A design, tech, or ADR file without topics comes into a pack only when something names or links it, or it ranks.
+A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. A convention's `roles` (`explore`, `verify`) say which sub-agents read it as well ([Sub-agents](#sub-agents)); `flai check` warns with `conventions.roles` on any other role. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). `flai prime --story` selects conventions, design, tech files, and ADRs by them ([Prime a session](#prime-a-session)). A design, tech, or ADR file without topics comes into a pack only when something names or links it, or it ranks.
 
 ## Read design on demand
 
@@ -677,9 +677,10 @@ flai prime --json
 flai prime --story S-0137         # S-0137's context pack, fitted to 80 KB
 flai prime --story S-0137 --budget 120KB
 flai prime --story S-0137 --json
+flai prime --story S-0137 --role verify   # the pack for a verifier sub-agent
 ```
 
-Agents read these before any change. An agent with a story primes with `flai prime --story <id>`, or the MCP tool `prime`, which returns the same pack as `--story --json` and takes `budget` too: the prompt `flai serve` gives the agents it starts says so, as do the MCP server's instructions, `CLAUDE.md`, and `session-start.md`. They also tell the agent that a brief is not the document, and to read the section that bears on the story with `doc_get` and its `heading` before relying on it or changing what it describes. Without a story an agent primes with `flai prime --cat`; a shell hook or a wrapper can pipe either into the session.
+Agents read these before any change. An agent with a story primes with `flai prime --story <id>`, or the MCP tool `prime`, which returns the same pack as `--story --json` and takes `budget` too: the prompt `flai serve` gives the agents it starts says so, as do the MCP server's instructions, `CLAUDE.md`, and `session-start.md`. They also tell the agent that a brief is not the document, and to read the section that bears on the story with `doc_get` and its `heading` before relying on it or changing what it describes. Without a story an agent primes with `flai prime --cat`; a shell hook or a wrapper can pipe either into the session. A sub-agent the story's agent starts primes with `--role` ([Sub-agents](#sub-agents)).
 
 `--story` prints what an agent working that story needs: its context pack, fitted to a size budget ([ADR-0047](../../design/adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md), [ADR-0049](../../design/adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md)). The budget is `--budget`, else `prime.budget` in `system-flow.yaml`, else 80 KB: bytes, or a number with `KB` or `MB`. It counts everything printed, the header included.
 
@@ -705,6 +706,27 @@ The pack, in order:
 | `rank 3` | Third among the ranked sections that loaded. |
 
 Nothing is printed twice. The first reason wins; a loaded item lists the later ones after it (`reason: linked from S-0137; also topics: cli`), and a brief counts them (`topics: cli, and 2 more`). `--json` returns the same as data: `budget`, `exceeded` (`conventions`, `named`, or `briefs`: the part that takes the pack over), and `size`; per convention, the sections kept and left out with their heading paths, lines, and topics, and its `size`; `items`, each with `path`, `id`, `title`, `heading`, `label`, `step` (`named`, `briefed`, or `ranked`), `reason`, `also`, `size`, `whole` (a brief's document size), and `text` (what is loaded, or the brief); and `catalog` with `not_loaded` and `in_part` (each entry with its `outline`). An archived story gets the pack it would get today, which is how you replay one. An ID that is unknown or not a story is refused with a message naming it. `flai check` validates the folder: every file needs `title`, `updated`, `audience: agent`, a unique `order`, and `status`; exactly one baseline marker followed by a `## Project additions` section; under 120 lines; and the README must list each file exactly once. It also warns with `adr.decision` about an ADR whose `## Decision` does not open with a sentence, because that sentence is the ADR's brief.
+
+## Sub-agents
+
+An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, test, lint, and `flai check` runs and long logs to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
+
+| File | What it is |
+|------|------------|
+| `.claude/agents/explorer.md` | Finds and reads: `Read`, `Grep`, `Glob`, and flai's read tools. No shell. |
+| `.claude/agents/verifier.md` | The explorer's tools and `Bash`, to run the project's tests, lint, and checks. Told not to edit. |
+| `.claude/settings.json` | Runs `flai guard` before every shell command and flai tool call. |
+
+A sub-agent may read and run checks. It may not move, create, or edit a work item, write to a thread, read the inbox, or wait for events or work: neither definition has those tools, and `flai guard` refuses them, and the flai and git commands that write, to any sub-agent, the built-in ones included ([ADR-0060](../../design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). The story's agent's own calls pass. A refused call tells the sub-agent to say what it needs in its final message instead.
+
+```bash
+echo '{"tool_name":"Bash","tool_input":{"command":"flai move S-0001 review"},"agent_type":"verifier"}' | flai guard
+# a sub-agent (verifier) cannot run "flai move S-0001 review": ... ; exit status 2
+```
+
+A sub-agent primes with `flai prime --story <id> --role explore` or `--role verify`, or the MCP tool `prime` with `role`. Its pack is the conventions whose `roles` list the role, the story's goal and acceptance criteria, and briefs, never bodies, of what the story names and what its topics and links select, as many as fit half the budget; the header counts those left out, and `doc_search` finds them.
+
+A sub-agent that needs the designer puts the question in its final message, and the story's agent asks it with `thread_open`. A sub-agent's calls reach flai under the story's agent's name; in the agent's log under `flai serve`, each of its events carries `parent_tool_use_id`.
 
 ## Record recurring friction
 
