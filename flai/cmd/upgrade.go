@@ -62,14 +62,19 @@ nothing is changed. --var re-applies the version the project is at.`,
 			if err != nil {
 				return err
 			}
-			lk, err := lock.Load(repo.Root)
-			if err != nil {
-				return err
-			}
 			// --var re-applies the version the project is at, to change a value.
 			if !relock && m.Version == mf.Template.Version && !force && len(given) == 0 {
 				fmt.Fprintf(a.out, "already at template %s (use --force to re-apply)\n", m.Version)
 				return nil
+			}
+			lk, err := lock.Load(repo.Root)
+			if err != nil && !relock {
+				return err
+			}
+			if err != nil {
+				// --relock rewrites a lock it cannot read, without its values.
+				a.logger().Warn("lock unreadable, relocking without its recorded variables", "component", "cmd", "err", err)
+				lk = nil
 			}
 			vals, defaulted, err := upgradeVars(m, mf, lk, given)
 			if err != nil {

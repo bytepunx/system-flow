@@ -235,8 +235,13 @@ func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 		t.Errorf("team.txt after 4.0.0 = %q", got)
 	}
 
-	// --relock with no lock records the values it rendered with.
-	_ = os.Remove(filepath.Join(dest, "system-flow.lock.yaml"))
+	// --relock with an unreadable lock, or none, records the values it rendered with.
+	if err := os.WriteFile(filepath.Join(dest, "system-flow.lock.yaml"), []byte("<<<<<<< HEAD\nfiles: [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := runIn(t, dest, "upgrade", "--template", tpl); code != 0 || !strings.Contains(out, "already at template 4.0.0") {
+		t.Errorf("an unreadable lock must not stop a project already at the version: %d %s %s", code, out, errOut)
+	}
 	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--relock", "--var", "team=ops", "--var", "cost_centre=7"); code != 0 {
 		t.Fatalf("relock: %s", errOut)
 	}
