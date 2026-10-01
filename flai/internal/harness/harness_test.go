@@ -412,4 +412,13 @@ func TestTheTemplatesDefinitionsRead(t *testing.T) {
 			t.Errorf("%s: %v", def, got)
 		}
 	}
+	// a definition with no prompt, ending at its front matter's last line
+	if got, err := definition([]byte("---\ndescription: d\n---")); err != nil || got["prompt"] != "" {
+		t.Errorf("no prompt and no last newline: %v %v", got, err)
+	}
+	for _, bad := range []string{"description: d\n", "---\ndescription: d\n", "---\nname: x\n---\nbody\n"} {
+		if _, err := definition([]byte(bad)); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
 }

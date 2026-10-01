@@ -157,6 +157,9 @@ func roleNames() []string {
 // tools lists as arrays, and the body as prompt.
 func definition(data []byte) (map[string]any, error) {
 	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
 	rest, ok := strings.CutPrefix(text, "---\n")
 	if !ok {
 		return nil, fmt.Errorf("no front matter")
