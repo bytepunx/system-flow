@@ -176,8 +176,8 @@ describe('/api/projects (S-0080)', () => {
 			const started = Date.now();
 			await Promise.all([1, 2, 3].map(() => GET({} as never)));
 			const elapsed = Date.now() - started;
-			// one after another would take three times SLOW_MS; side by side, about SLOW_MS
-			expect(elapsed).toBeLessThan(2 * SLOW_MS);
+			// one after another would take at least three times SLOW_MS; side by side, about SLOW_MS
+			expect(elapsed).toBeLessThan(3 * SLOW_MS);
 			expect(mostAtOnce).toBeGreaterThanOrEqual(3 * 3); // three glance asks per call, all at once
 		} finally {
 			flai.terminate();

@@ -5,6 +5,8 @@
 // only one keeps working exactly as it always has.
 const STORAGE_KEY = 'flaiover-project';
 const URL_PARAM = 'project';
+/** Well past /api/projects' own 3 s glance timeout: only a request that will never answer waits it out. */
+const REFRESH_TIMEOUT_MS = 15000;
 
 export type Project = {
 	key: string;
@@ -78,15 +80,23 @@ class ProjectState {
 	 * it rather than making another (S-0186): the layout and the root page both ask on one load, and
 	 * each answer gathers every project's glance, which a slow project holds up to its timeout. */
 	refresh(): Promise<void> {
-		this.inflight ??= this.load().finally(() => (this.inflight = null));
-		return this.inflight;
+		if (this.inflight) return this.inflight;
+		const p = this.load().finally(() => {
+			if (this.inflight === p) this.inflight = null;
+		});
+		this.inflight = p;
+		return p;
 	}
 
 	private async load(): Promise<void> {
 		try {
 			// Past the browser's HTTP cache (S-0186): Chromium sends a GET of a URL already in flight
 			// only once the first has answered, so another tab's list would wait out this one's glances.
-			const r = await fetch('/api/projects', { cache: 'no-store' });
+			// Given up on after a while, since every refresh() meanwhile waits on this one request.
+			const r = await fetch('/api/projects', {
+				cache: 'no-store',
+				signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS)
+			});
 			if (!r.ok) return;
 			const body = (await r.json()) as { projects?: Project[] };
 			this.list = body.projects ?? [];
