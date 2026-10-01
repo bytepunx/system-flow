@@ -47,6 +47,10 @@ ENV NODE_ENV=production \
     FLAIOVER_COMMIT=${FLAI_COMMIT} \
     FLAIOVER_VERSION=${FLAIOVER_VERSION}
 EXPOSE 3000
+# Docker marks the container unhealthy when /_health stops answering (S-0184); flai host restarts a
+# dashboard that does not answer, and flai dashboard status reports it. busybox wget is in the base image.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/_health" || exit 1
 # Unprivileged by default; any --user works because nothing here needs a home.
 USER 65532:65532
 ENTRYPOINT ["/sbin/tini", "--"]

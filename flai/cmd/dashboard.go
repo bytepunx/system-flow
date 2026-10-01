@@ -524,8 +524,14 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 func newDashboardStatusCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "Show whether the dashboard container is running",
-		Args:  cobra.NoArgs,
+		Short: "Show whether the dashboard container runs and answers: running, not answering, or gone",
+		Long: `Asks docker whether the shared dashboard container runs, and its published
+port whether /_health answers (S-0184): running when it does, not answering
+when the container runs and it does not, gone when no container runs. Docker's
+own verdict from the image's HEALTHCHECK is shown beside it. flai host
+restarts a dashboard that is gone or not answering unless dashboard.no_restart
+is set.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.projectOrNone()
 			if err != nil {
@@ -538,10 +544,11 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			running, err := a.containerRunning(s.Name)
+			state, health, err := a.dashboardState(s.Name)
 			if err != nil {
 				return err
 			}
+			running := state != dashboardGone
 			image, url := s.ref(), s.url()
 			if running {
 				if i, u := a.containerInfo(s.Name); i != "" {
@@ -561,7 +568,10 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 				names[i] = p.Key
 			}
 			if a.jsonOut {
-				out := map[string]any{"container": s.Name, "running": running, "url": url, "image": image, "serves": names}
+				out := map[string]any{"container": s.Name, "running": running, "state": state, "url": url, "image": image, "serves": names}
+				if health != "" {
+					out["health"] = health
+				}
 				if len(stale) > 0 {
 					out["stale_mounts"] = stale
 				}
@@ -569,7 +579,15 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 				return a.printJSON(out)
 			}
 			if running {
-				fmt.Fprintf(a.out, "%s running at %s (%s)\n", s.Name, url, image)
+				dockerSays := ""
+				if health != "" {
+					dockerSays = "; docker: " + health
+				}
+				if state == dashboardRunning {
+					fmt.Fprintf(a.out, "%s running at %s (%s%s)\n", s.Name, url, image, dockerSays)
+				} else {
+					fmt.Fprintf(a.out, "%s not answering at %s (%s%s): the container runs and /_health does not answer; flai host restarts it unless dashboard.no_restart is set, or run flai dashboard restart\n", s.Name, url, image, dockerSays)
+				}
 				if len(names) > 0 {
 					fmt.Fprintf(a.out, "  serves: %s\n", strings.Join(names, ", "))
 				}
@@ -593,7 +611,7 @@ func newDashboardStatusCmd(a *app) *cobra.Command {
 					fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
 				}
 			} else {
-				fmt.Fprintf(a.out, "%s not running; start with flai dashboard\n", s.Name)
+				fmt.Fprintf(a.out, "%s gone: no container runs; start it with flai dashboard\n", s.Name)
 			}
 			return nil
 		},

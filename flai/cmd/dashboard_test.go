@@ -31,6 +31,7 @@ type fakeRunner struct {
 	containerRef   map[string]string // container name -> the ref it was last started with
 	containerImage map[string]string // container name -> the image ID it was started from (a snapshot, not re-derived, so a later change to imageIDs is a real difference a check can find)
 	probeAddr      string            // host:port `docker port` reports for the upgrade probe container; default 127.0.0.1:19999
+	health         map[string]string // container name -> docker's HEALTHCHECK verdict; default none
 
 	daemonPlatform string            // what `docker version` reports the server runs; default linux/amd64
 	imagePlatforms map[string]string // ref -> the os/arch of the local image; default the daemon's
@@ -163,6 +164,9 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		if strings.Contains(strings.Join(args, " "), ".Mounts") {
 			return f.mounts, nil
 		}
+		if strings.Contains(strings.Join(args, " "), ".State.Health") {
+			return f.health[args[len(args)-1]], nil
+		}
 		if ref, ok := f.containerRef[args[len(args)-1]]; ok {
 			return ref + " 5555", nil
 		}
@@ -206,6 +210,9 @@ func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 	}
 	if a.sleep == nil {
 		a.sleep = func(time.Duration) {} // tests never wait for a real interval
+	}
+	if a.healthProbe == nil {
+		a.healthProbe = func(string) bool { return true } // tests never reach the network; a running container answers
 	}
 	root := newRootCmdWith(a)
 	root.SetArgs(args)

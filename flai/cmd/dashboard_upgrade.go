@@ -325,8 +325,8 @@ func (a *app) waitHealthy(name string) (bool, error) {
 	return false, nil
 }
 
-// probeAddress is the host:port docker published the temporary container's
-// containerPort on.
+// probeAddress is the host:port docker published a container's containerPort
+// on: the first, when it is published on more than one address.
 func (a *app) probeAddress(name string) (string, error) {
 	out, err := a.runner.Run("", "docker", "port", name, fmt.Sprintf("%d/tcp", containerPort))
 	if err != nil {
