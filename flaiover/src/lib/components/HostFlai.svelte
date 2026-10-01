@@ -7,6 +7,8 @@
 	import { projectState } from '$lib/project.svelte';
 
 	const status = $derived(hostFlai.status);
+	// The flai answers, and is older than the newest flai release in the project's history (S-0181).
+	const behind = $derived(status?.info?.flai_outdated);
 	// Nothing to say about "the" host flai until a project is chosen among several (S-0095).
 	// Nor for a repository offered for import, whose own page says what there is to say (S-0098).
 	const choosing = $derived(
@@ -15,7 +17,15 @@
 </script>
 
 {#if status?.configured && !choosing}
-	{#if hostFlai.usable}
+	{#if hostFlai.usable && behind}
+		<a
+			href={resolve('/host')}
+			class="rounded border border-warn bg-warn-soft px-2 py-1 text-xs no-underline"
+			data-host-flai="behind"
+			title={`flai ${behind.running} on the host is older than flai ${behind.newest} in this project's history, so it may lack rules the project relies on. Upgrade it with: ${behind.upgrade}`}
+			>host flai: upgrade to {behind.newest}</a
+		>
+	{:else if hostFlai.usable}
 		<a
 			href={resolve('/host')}
 			class="rounded border border-line px-2 py-1 text-xs text-muted no-underline hover:text-accent"

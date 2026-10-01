@@ -38,6 +38,9 @@ type ProjectInfo struct {
 	Projects    []manifest.Project `json:"projects"`
 	Dashboard   ProjectDashboard   `json:"dashboard"`
 	Flai        string             `json:"flai"`
+	// FlaiOutdated is set while that flai is older than the newest flai
+	// release in the project's history (S-0181): the host badge says so.
+	FlaiOutdated *release.Outdated `json:"flai_outdated,omitempty"`
 	// HostActions are the host actions there are, and whether the operator
 	// enabled each for this project (S-0078). Read-only to the dashboard.
 	HostActions map[string]bool `json:"host_actions"`
@@ -169,7 +172,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return ProjectInfo{Version: m.Version, Name: m.Name, Key: m.Key, Description: m.Description, Owner: m.Owner, Repo: m.Repo,
 				Template: ProjectTemplate{Ref: m.Template.Ref, Version: m.Template.Version, Applied: m.Template.Applied},
 				Layout:   m.Layout, Projects: projects, Dashboard: ProjectDashboard{NotifyURL: m.Dashboard.NotifyURL, Autocommit: m.Autocommit()}, Flai: version,
-				HostActions: enabledActions(host, p.Root), Agent: m.Agent}, nil
+				HostActions: enabledActions(host, p.Root), Agent: m.Agent,
+				FlaiOutdated: release.FlaiOutdated(execx.Timed(ctx, execx.System{}), p.Root, version)}, nil
 		},
 
 		// agent.status: whether flai serve starts an agent when a story becomes

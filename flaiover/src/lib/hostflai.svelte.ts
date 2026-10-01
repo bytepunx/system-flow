@@ -3,12 +3,22 @@
 // so without it there is nothing to show, and the page should say so and how to fix it.
 import { api } from '$lib/api';
 
+/** Set by flai while it is older than the newest flai release in the project's history (S-0181). */
+export type FlaiOutdated = {
+	running: string;
+	newest: string;
+	upgrade: string;
+	message: string;
+};
+
 export type HostFlaiStatus = {
 	configured: boolean;
 	connected: boolean;
 	since?: string;
 	flai?: string;
 	error?: string;
+	/** project.info, when the connected flai answered it. */
+	info?: { flai_outdated?: FlaiOutdated };
 };
 
 class HostFlaiState {

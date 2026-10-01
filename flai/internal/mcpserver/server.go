@@ -73,6 +73,7 @@ type server struct {
 	runner  execx.Runner
 	closing <-chan struct{}
 	agents  AgentStart
+	version string // the running flai's, compared with the project's newest flai tag (S-0181)
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -81,7 +82,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, version: opt.Version}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -121,7 +122,7 @@ func New(opt Options) *mcp.Server {
 	s := newServer(opt, opt.Repo)
 	one := single{s}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names (item_move it to in-progress, then flai stream open on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready and the in-progress limit leaves room, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names (item_move it to in-progress, then flai stream open on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready and the in-progress limit leaves room, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. When inbox reports unpushed, an acceptance was made where nothing could push it: on the host run git fetch, then flai push --pending, before anything else; it never forces, and if it refuses because the remote moved, merge and run it again. When inbox reports flai_outdated, the flai serving you is older than the newest flai release in the project's history and may lack rules the project relies on: tell the designer, who upgrades the host with the command it names, and go on.",
 	})
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
@@ -188,14 +189,17 @@ type InboxIn struct {
 
 // InboxOut is the agent's inbox.
 type InboxOut struct {
-	Agent       string               `json:"agent"`
-	Unpushed    *pending.Unpushed    `json:"unpushed,omitempty" jsonschema:"an acceptance made in this clone and not pushed, listed on every call while it is true: push it from the host with git fetch and then flai push --pending, which never forces"`
-	AwaitingYou int                  `json:"awaiting_you"`
-	Threads     []ThreadSummary      `json:"threads"`
-	Ready       []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
-	CanPull     bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room to pull one"`
-	Changes     []Event              `json:"changes" jsonschema:"what others changed since this agent last looked, newest kept, at most 50; reported once. A first look under a new name covers the last 24 hours of stories and epics only"`
-	Omitted     int                  `json:"changes_omitted" jsonschema:"how many older changes were left out of changes because of the cap; they are not reported later"`
+	Agent    string            `json:"agent"`
+	Unpushed *pending.Unpushed `json:"unpushed,omitempty" jsonschema:"an acceptance made in this clone and not pushed, listed on every call while it is true: push it from the host with git fetch and then flai push --pending, which never forces"`
+	// FlaiOutdated is set while this flai is older than the newest flai
+	// release in the project's history (S-0181).
+	FlaiOutdated *release.Outdated    `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
+	AwaitingYou  int                  `json:"awaiting_you"`
+	Threads      []ThreadSummary      `json:"threads"`
+	Ready        []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
+	CanPull      bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room to pull one"`
+	Changes      []Event              `json:"changes" jsonschema:"what others changed since this agent last looked, newest kept, at most 50; reported once. A first look under a new name covers the last 24 hours of stories and epics only"`
+	Omitted      int                  `json:"changes_omitted" jsonschema:"how many older changes were left out of changes because of the cap; they are not reported later"`
 }
 
 func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
@@ -232,6 +236,7 @@ func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) 
 		return nil, InboxOut{}, err
 	}
 	out.Ready, out.CanPull, out.Unpushed = view.ReadyInPullOrder(), view.CanPull(), view.Unpushed
+	out.FlaiOutdated = release.FlaiOutdated(s.runner, s.repo.Root, s.version)
 	if out.Ready == nil {
 		out.Ready = []workitem.BoardCard{}
 	}

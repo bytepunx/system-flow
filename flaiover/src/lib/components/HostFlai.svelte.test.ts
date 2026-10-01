@@ -56,4 +56,29 @@ describe('HostFlai', () => {
 		expect(badge()?.getAttribute('title')).toContain('1.7.0');
 		unmount(c);
 	});
+
+	it('says when a connected flai is older than the newest flai release in the project, and how to upgrade it', () => {
+		const c = mount(HostFlai, { target: document.body });
+		hostFlai.status = {
+			configured: true,
+			connected: true,
+			flai: '1.26.4',
+			info: {
+				flai_outdated: {
+					running: '1.26.4',
+					newest: '1.27.0',
+					upgrade: 'flai host upgrade (flai self-upgrade where no flai host runs)',
+					message: 'this flai is 1.26.4, older than flai 1.27.0'
+				}
+			}
+		};
+		flushSync();
+		expect(badge()?.getAttribute('data-host-flai')).toBe('behind');
+		expect(badge()?.textContent).toContain('1.27.0');
+		expect(badge()?.getAttribute('title')).toContain(
+			'flai 1.26.4 on the host is older than flai 1.27.0'
+		);
+		expect(badge()?.getAttribute('title')).toContain('flai host upgrade');
+		unmount(c);
+	});
 });

@@ -23,6 +23,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/watch"
 )
 
@@ -216,6 +217,14 @@ func (r *running) halt() {
 	<-r.done
 }
 
+// gitOf is the runner that asks git, the system's when the options name none.
+func gitOf(o Options) execx.Runner {
+	if o.Git == nil {
+		return execx.System{}
+	}
+	return o.Git
+}
+
 // Run serves every registered project until ctx ends. The registry is read
 // again every tick, so a project registered while it runs is picked up and
 // one that was removed or changed is dropped.
@@ -337,6 +346,10 @@ func Run(ctx context.Context, o Options) error {
 				close(r.done)
 			}()
 			o.Logger.Info("project served", "component", "serve", "root", root, "key", e.Key, "dashboard", e.URL)
+			if out := release.FlaiOutdated(gitOf(o), root, o.Version); out != nil {
+				o.Logger.Warn("flai is older than the project it serves", "component", "serve", "root", root,
+					"running", out.Running, "newest", out.Newest, "detail", out.Message)
+			}
 		}
 		offered.reconcile(ctx, entries)
 	}
