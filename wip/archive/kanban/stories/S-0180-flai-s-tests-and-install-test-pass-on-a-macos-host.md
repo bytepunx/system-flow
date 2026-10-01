@@ -3,10 +3,10 @@ id: S-0180
 type: story
 nature: remediation
 title: flai's tests and install test pass on a macOS host
-status: review
+status: done
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T08:30:12Z
+updated: 2026-10-01T08:30:33Z
 transitions:
   - to: ready
     at: 2026-10-01T08:12:26Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-01T08:30:12Z
     by: agent-S-0180
+  - to: done
+    at: 2026-10-01T08:30:33Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/serve/checks_test.go, flai/internal/serve/stop_test.go, flai/cmd/accept_resume_test.go, flai/cmd/doc_test.go, flai/internal/gittest, flai/internal/preview, scripts/install-test.sh, ".github/workflows/flai.yml", design/tech/ci.md, design/issues]
 agent:
