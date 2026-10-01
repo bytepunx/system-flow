@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -666,10 +667,12 @@ const FieldsFile = "internal/workitem/front-matter-fields.txt"
 
 // RaiseMinimum raises the manifest's flai.minimum to the plan's version when
 // the plan releases a component whose FieldsFile changed since its last
-// release: an older flai does not know the fields this one writes. It
-// reports whether it raised it; the caller commits.
+// release: an older flai does not know the fields this one writes. A first
+// release, and a fields file that the last release did not have, raise
+// nothing: no older flai was released knowing a different list. It reports
+// whether it raised it; the caller commits.
 func RaiseMinimum(r execx.Runner, root string, plan *PendingPlan) (bool, error) {
-	if plan.Tag == "" {
+	if plan.Tag == "" || plan.From == (Version{}) {
 		return false, nil
 	}
 	fields := filepath.ToSlash(filepath.Join(plan.Component.Path, FieldsFile))
@@ -680,11 +683,21 @@ func RaiseMinimum(r execx.Runner, root string, plan *PendingPlan) (bool, error) 
 	case err != nil:
 		return false, fmt.Errorf("read %s to decide whether flai.minimum rises: %w", fields, err)
 	}
-	if plan.From != (Version{}) {
-		from := strings.TrimSuffix(plan.Tag, plan.To.String()) + plan.From.String()
-		if _, err := r.Run(root, "git", "diff", "--quiet", from, "HEAD", "--", fields); err == nil {
-			return false, nil
-		}
+	from := strings.TrimSuffix(plan.Tag, plan.To.String()) + plan.From.String()
+	had, err := r.Run(root, "git", "ls-tree", "--name-only", from, "--", fields)
+	if err != nil {
+		return false, fmt.Errorf("ask git whether %s had %s: %w", from, fields, err)
+	}
+	if strings.TrimSpace(had) == "" {
+		return false, nil
+	}
+	_, err = r.Run(root, "git", "diff", "--quiet", from, "HEAD", "--", fields)
+	var exit *exec.ExitError
+	switch {
+	case err == nil:
+		return false, nil
+	case !errors.As(err, &exit) || exit.ExitCode() != 1:
+		return false, fmt.Errorf("compare %s with %s: %w", fields, from, err)
 	}
 	return true, manifest.SetMinimum(filepath.Join(root, manifest.File), plan.To.String())
 }

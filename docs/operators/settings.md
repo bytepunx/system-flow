@@ -89,8 +89,8 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `agent.harness` | none | The harness every new story gets, such as `claude-code` ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.model` | none | The model every new story gets |
 | `prime.budget` | `80KB` | The size a story's context pack fits, for `flai prime --story` and the MCP `prime` tool; bytes, or a number with `KB` or `MB`; `--budget` overrides it for one run ([Prime a session](../users/flai.md#prime-a-session)) |
-| `flai.minimum` | unset | The oldest flai release that may read the project, `X.Y.Z`; an older one stops before reading any item and names the version needed. Publishing a flai release that changes the front-matter fields flai reads raises it ([Keeping the host's flai current](index.md#keeping-the-hosts-flai-current)) |
 | `agent.config.<name>` | none | Options for the harness; `claude-code` takes `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `max_budget_usd`, and `fallback_model` |
+| `flai.minimum` | unset | The oldest flai release that may read the project, `X.Y.Z`; an older one stops before reading any item and names the version needed. Publishing a flai release that changes the front-matter fields flai reads raises it ([Keeping the host's flai current](index.md#keeping-the-hosts-flai-current)) |
 
 `dashboard.image`, `tag`, `port`, and `bind` matter only when they decide what the one shared container is started with, which is the first `flai dashboard` on the host. A story's own `agent:` front matter, copied from `agent` when the story is made, is the story's, not a setting; `flai edit` and the story's page change it.
 

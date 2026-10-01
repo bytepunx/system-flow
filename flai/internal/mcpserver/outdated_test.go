@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -72,5 +75,45 @@ func TestInboxSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
 		if o := inbox(v)["flai_outdated"]; o != nil {
 			t.Errorf("flai %s: %v", v, o)
 		}
+	}
+}
+
+// S-0181: in a folder, a project whose minimum flai is above this one is
+// left out, and the log says why once, not at every look.
+func TestAFolderLeavesOutAProjectThatNeedsANewerFlai(t *testing.T) {
+	root := t.TempDir()
+	makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	makeProject(t, filepath.Join(root, "beta"), "beta")
+	man := filepath.Join(root, "beta", "system-flow.yaml")
+	m, _ := os.ReadFile(man)
+	_ = os.WriteFile(man, append(m, []byte("flai:\n  minimum: 9.0.0\n")...), 0o644)
+	was := buildinfo.Version
+	t.Cleanup(func() { buildinfo.Version = was })
+	buildinfo.Version = "1.26.4"
+
+	var logs bytes.Buffer
+	srv := New(Options{Folder: root, Agent: "claude", Version: "1.26.4", Now: func() time.Time { return t0 }, Rescan: time.Nanosecond,
+		Logger: slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn}))})
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ct, st := mcp.NewInMemoryTransports()
+	if _, err := srv.Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, nil).Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	f := &folderFixture{root: root, cs: cs}
+	for range 2 {
+		out, failed := f.call(t, "inbox", map[string]any{})
+		if failed != "" || strings.Join(projectKeys(out), " ") != "alpha" {
+			t.Fatalf("inbox: %v %s", out, failed)
+		}
+	}
+	got := logs.String()
+	if strings.Count(got, "project not served") != 1 || !strings.Contains(got, "needs flai 9.0.0 or newer, and this is flai 1.26.4") {
+		t.Errorf("log:\n%s", got)
 	}
 }

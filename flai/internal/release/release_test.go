@@ -495,42 +495,63 @@ func TestPendingNamesWhatItCannotPlan(t *testing.T) {
 
 // S-0181: publishing a release whose front-matter fields changed since the
 // component's last release raises the manifest's flai.minimum to it; one
-// that left them alone, or a component with no fields file, does not.
+// that left them alone, a fields file the last release did not have, a
+// first release, or a component with no fields file, does not.
 func TestRaiseMinimum(t *testing.T) {
 	root, r := gitRepo(t)
 	man := filepath.Join(root, manifest.File)
-	base := "version: 1\nname: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
-	_ = os.WriteFile(man, []byte(base), 0o644)
+	_ = os.WriteFile(man, []byte("version: 1\nname: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
 	cli := manifest.Project{Name: "cli", Path: "cli", Kind: "go"}
 	plan := func(from, to Version) *PendingPlan {
 		return &PendingPlan{Component: cli, From: from, To: to, Tag: "cli/v" + to.String()}
 	}
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 10, 0}, Version{0, 11, 0})); err != nil || raised {
-		t.Fatalf("no fields file: %v %v", raised, err)
-	}
-
-	fields := filepath.Join(root, "cli", FieldsFile)
-	_ = os.MkdirAll(filepath.Dir(fields), 0o755)
-	_ = os.WriteFile(fields, []byte("item: id\n"), 0o644)
-	for _, args := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "feat: [S-005] a field"}} {
+	git := func(args ...string) {
+		t.Helper()
 		if out, err := r.Run(root, "git", args...); err != nil {
 			t.Fatalf("git %v: %v %s", args, err, out)
 		}
 	}
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 10, 0}, Version{0, 11, 0})); err != nil || !raised {
-		t.Fatalf("fields changed since cli/v0.10.0: %v %v", raised, err)
+	fields := filepath.Join(root, "cli", FieldsFile)
+	writeFields := func(body, msg string) {
+		_ = os.MkdirAll(filepath.Dir(fields), 0o755)
+		_ = os.WriteFile(fields, []byte(body), 0o644)
+		git("add", "-A")
+		git("commit", "-q", "-m", msg)
 	}
-	if got, _ := manifest.Load(man); got.Flai.Minimum != "0.11.0" {
-		t.Errorf("minimum: %+v", got.Flai)
+	minimum := func() string {
+		got, err := manifest.Load(man)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got.Flai.Minimum
 	}
+	if raised, err := RaiseMinimum(r, root, plan(Version{0, 10, 0}, Version{0, 11, 0})); err != nil || raised {
+		t.Fatalf("no fields file: %v %v", raised, err)
+	}
+	writeFields("item: id\n", "feat: [S-005] the fields file")
+	if raised, err := RaiseMinimum(r, root, plan(Version{0, 10, 0}, Version{0, 11, 0})); err != nil || raised {
+		t.Fatalf("a fields file cli/v0.10.0 did not have: %v %v", raised, err)
+	}
+	if raised, err := RaiseMinimum(r, root, plan(Version{}, Version{0, 1, 0})); err != nil || raised {
+		t.Fatalf("a first release: %v %v", raised, err)
+	}
+	git("tag", "-a", "cli/v0.11.0", "-m", "cli 0.11.0")
 
-	if out, err := r.Run(root, "git", "tag", "-a", "cli/v0.11.0", "-m", "cli 0.11.0"); err != nil {
-		t.Fatal(out)
+	writeFields("item: hold id\n", "feat: [S-006] a field")
+	if raised, err := RaiseMinimum(r, root, plan(Version{0, 11, 0}, Version{0, 12, 0})); err != nil || !raised {
+		t.Fatalf("fields changed since cli/v0.11.0: %v %v", raised, err)
 	}
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 11, 0}, Version{0, 11, 1})); err != nil || raised {
-		t.Errorf("fields unchanged since cli/v0.11.0: %v %v", raised, err)
+	if got := minimum(); got != "0.12.0" {
+		t.Errorf("minimum: %q", got)
 	}
-	if got, _ := manifest.Load(man); got.Flai.Minimum != "0.11.0" {
-		t.Errorf("minimum moved: %+v", got.Flai)
+	git("tag", "-a", "cli/v0.12.0", "-m", "cli 0.12.0")
+	if raised, err := RaiseMinimum(r, root, plan(Version{0, 12, 0}, Version{0, 12, 1})); err != nil || raised {
+		t.Errorf("fields unchanged since cli/v0.12.0: %v %v", raised, err)
+	}
+	if _, err := RaiseMinimum(r, root, plan(Version{0, 13, 0}, Version{0, 13, 1})); err == nil {
+		t.Error("a last release with no tag is an error, not a change")
+	}
+	if got := minimum(); got != "0.12.0" {
+		t.Errorf("minimum moved: %q", got)
 	}
 }

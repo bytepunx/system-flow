@@ -189,7 +189,7 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 			return nil, nil, err
 		}
 		if raised {
-			a.logger().Info("flai.minimum raised: this release changes the front-matter fields flai reads", "component", "release", "minimum", p.To.String())
+			a.logger().Warn("flai.minimum raised: this release changes the front-matter fields flai reads, so a flai below it stops on this project; upgrade the host's flai once the release's binaries are built", "component", "release", "minimum", p.To.String())
 		}
 	}
 	if len(plans) > 0 {

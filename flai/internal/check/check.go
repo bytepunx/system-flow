@@ -841,8 +841,6 @@ func (c *checker) conventions() {
 	}
 }
 
-// threads validates wip/threads (ADR-0020): schema, file names, anchors
-// that exist, headings that are present, and open threads on archived items.
 // unknownFields reports each front-matter field this flai does not know: the
 // listing paths read past them (S-0181), and check stays strict.
 func (c *checker) unknownFields(rule, path string, fields []workitem.Field) {
@@ -851,6 +849,8 @@ func (c *checker) unknownFields(rule, path string, fields []workitem.Field) {
 	}
 }
 
+// threads validates wip/threads (ADR-0020): schema, file names, anchors
+// that exist, headings that are present, and open threads on archived items.
 func (c *checker) threads() {
 	dir := threads.Dir(c.repo)
 	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
