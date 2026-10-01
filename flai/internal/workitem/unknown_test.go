@@ -2,10 +2,15 @@ package workitem
 
 import (
 	"bytes"
+	"errors"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // captureWarnings sends the default logger to a buffer for the test.
@@ -81,5 +86,31 @@ func TestAnItemWithAnUnknownFieldIsListedWarnedAndKept(t *testing.T) {
 	after, _ := os.ReadFile(s.Path)
 	if !strings.Contains(string(after), "owner: sam\n") || !strings.Contains(string(after), extra+"---\n") {
 		t.Errorf("a write dropped or changed the unknown fields:\n%s", after)
+	}
+}
+
+// S-0181: a flai below the manifest's minimum stops at Open, before any item
+// is read, naming the version needed, rather than reading past fields it
+// does not know.
+func TestOpenRefusesAFlaiBelowTheMinimum(t *testing.T) {
+	logs := captureWarnings(t)
+	r := newProject(t)
+	e := mustCreate(t, r, Epic, "E", "")
+	data, _ := os.ReadFile(e.Path)
+	_ = os.WriteFile(e.Path, []byte(strings.Replace(string(data), "\n---\n", "\nhold: x\n---\n", 1)), 0o644)
+	man := filepath.Join(r.Root, manifest.File)
+	m, _ := os.ReadFile(man)
+	_ = os.WriteFile(man, append(m, []byte("flai:\n  minimum: 1.27.0\n")...), 0o644)
+	was := buildinfo.Version
+	t.Cleanup(func() { buildinfo.Version = was })
+	buildinfo.Version = "1.26.4"
+
+	_, err := Open(r.Root)
+	var old *manifest.TooOldError
+	if !errors.As(err, &old) || !strings.Contains(err.Error(), "needs flai 1.27.0 or newer") {
+		t.Fatalf("Open: %v", err)
+	}
+	if logs.Len() != 0 {
+		t.Errorf("items were read before the refusal:\n%s", logs)
 	}
 }

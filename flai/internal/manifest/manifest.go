@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
 
 // File is the manifest file name at a project root.
@@ -40,6 +43,28 @@ type Manifest struct {
 	// Prime is how flai prime --story builds this project's context packs
 	// (ADR-0049).
 	Prime Prime `yaml:"prime,omitempty" json:"prime,omitzero"`
+	// Flai is what the project asks of the flai that reads it (S-0181).
+	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
+}
+
+// Requirement is the oldest flai that may read the project.
+type Requirement struct {
+	// Minimum is a flai release, X.Y.Z: one that knows every front-matter
+	// field the project's items carry. Publishing a flai release whose
+	// front-matter fields changed raises it (release.RaiseMinimum).
+	Minimum string `yaml:"minimum,omitempty" json:"minimum,omitempty"`
+}
+
+// TooOldError is a manifest whose minimum flai is newer than the running one.
+type TooOldError struct {
+	Path    string
+	Minimum string
+	Running string
+}
+
+func (e *TooOldError) Error() string {
+	return fmt.Sprintf("%s needs flai %s or newer, and this is flai %s, which may not know the fields its items carry: upgrade it with %s, then run this again",
+		e.Path, e.Minimum, e.Running, buildinfo.UpgradeCommand)
 }
 
 // Prime is the project's say about its context packs.
@@ -114,7 +139,51 @@ func Load(path string) (Manifest, error) {
 			return Manifest{}, fmt.Errorf("%s: layout.%s is required", path, k)
 		}
 	}
+	if min := m.Flai.Minimum; min != "" {
+		if _, ok := buildinfo.Semver(min); !ok {
+			return Manifest{}, fmt.Errorf("%s: flai.minimum %q is not a release version like 1.27.0", path, min)
+		}
+		if buildinfo.Below(buildinfo.Version, min) {
+			return Manifest{}, &TooOldError{Path: path, Minimum: min, Running: buildinfo.Version}
+		}
+	}
 	return m, nil
+}
+
+// SetMinimum writes flai.minimum into the manifest at path, keeping the rest
+// of the file as written: the minimum line under a flai: block is replaced
+// or added, and a manifest with no flai: block gets one at its end.
+func SetMinimum(path, version string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	line := "  minimum: " + version
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+	block := -1
+	for i, l := range lines {
+		if strings.TrimRight(l, " ") == "flai:" {
+			block = i
+			break
+		}
+	}
+	if block < 0 {
+		lines = append(lines, "flai:", line)
+	} else {
+		at := -1
+		for i := block + 1; i < len(lines) && (strings.HasPrefix(lines[i], " ") || lines[i] == ""); i++ {
+			if strings.HasPrefix(strings.TrimSpace(lines[i]), "minimum:") {
+				at = i
+				break
+			}
+		}
+		if at >= 0 {
+			lines[at] = line
+		} else {
+			lines = append(lines[:block+1], append([]string{line}, lines[block+1:]...)...)
+		}
+	}
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644)
 }
 
 // Find walks up from start looking for the manifest and returns its path.

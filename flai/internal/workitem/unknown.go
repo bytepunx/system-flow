@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -107,4 +108,15 @@ func yamlKeys(t reflect.Type) map[string]bool {
 		keys[name] = true
 	}
 	return keys
+}
+
+// KnownFields lists the front-matter keys v's struct reads, sorted.
+func KnownFields(v any) []string {
+	keys := yamlKeys(reflect.TypeOf(v))
+	out := make([]string, 0, len(keys))
+	for k := range keys {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

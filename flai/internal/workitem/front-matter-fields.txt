@@ -1,0 +1,7 @@
+# The front-matter fields this flai reads, by kind of file, sorted (S-0181).
+# TestFieldsFileIsTheCode keeps it equal to the code: change it with any
+# field added or removed. Publishing a flai release that changed it raises
+# system-flow.yaml's flai.minimum to that release (release.RaiseMinimum).
+item: after agent blocked created estimate id nature owner parent status stream tags title topics touches transitions type updated usage
+thread: anchor created id participants status title updated
+issue: class cost count first_reported id last_reported status title updated

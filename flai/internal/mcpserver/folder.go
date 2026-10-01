@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -87,6 +88,7 @@ type folder struct {
 	byRoot  map[string]*server
 	list    []*server
 	scanned time.Time
+	refused map[string]string // why a project was left out, as last logged
 
 	// when wait_for_work last answered, across every project
 	workMu    sync.Mutex
@@ -107,6 +109,7 @@ func (f *folder) all() []*server {
 		if s == nil {
 			repo, err := workitem.Open(root)
 			if err != nil {
+				f.leaveOut(root, err)
 				continue
 			}
 			s = newServer(f.opt, repo)
@@ -117,6 +120,23 @@ func (f *folder) all() []*server {
 	sort.SliceStable(list, func(i, j int) bool { return list[i].key < list[j].key })
 	f.byRoot, f.list = byRoot, list
 	return list
+}
+
+// leaveOut logs once why a project under the folder is not served, such as
+// a minimum flai above this one (S-0181). The caller holds f.mu.
+func (f *folder) leaveOut(root string, err error) {
+	if f.refused == nil {
+		f.refused = map[string]string{}
+	}
+	if f.refused[root] == err.Error() {
+		return
+	}
+	f.refused[root] = err.Error()
+	log := f.opt.Logger
+	if log == nil {
+		log = slog.Default()
+	}
+	log.Warn("project not served", "component", "mcp", "root", root, "err", err.Error())
 }
 
 func (f *folder) pick(name string) (*server, error) {

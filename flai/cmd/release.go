@@ -184,6 +184,13 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 		if err := release.ApplyPending(p, root, a.now()); err != nil {
 			return nil, nil, err
 		}
+		raised, err := release.RaiseMinimum(a.runner, root, p)
+		if err != nil {
+			return nil, nil, err
+		}
+		if raised {
+			a.logger().Info("flai.minimum raised: this release changes the front-matter fields flai reads", "component", "release", "minimum", p.To.String())
+		}
 	}
 	if len(plans) > 0 {
 		if status, _ := a.runner.Run(root, "git", "status", "--porcelain"); strings.TrimSpace(status) != "" {

@@ -657,3 +657,28 @@ func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem
 	}
 	return ids
 }
+
+// FieldsFile, under a component's path, lists the front-matter fields that
+// component's flai reads. Only flai has one (S-0181).
+const FieldsFile = "internal/workitem/front-matter-fields.txt"
+
+// RaiseMinimum raises the manifest's flai.minimum to the plan's version when
+// the plan releases a component whose FieldsFile changed since its last
+// release: an older flai does not know the fields this one writes. It
+// reports whether it raised it; the caller commits.
+func RaiseMinimum(r execx.Runner, root string, plan *PendingPlan) (bool, error) {
+	if plan.Tag == "" {
+		return false, nil
+	}
+	fields := filepath.ToSlash(filepath.Join(plan.Component.Path, FieldsFile))
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(fields))); err != nil {
+		return false, nil
+	}
+	if plan.From != (Version{}) {
+		from := strings.TrimSuffix(plan.Tag, plan.To.String()) + plan.From.String()
+		if _, err := r.Run(root, "git", "diff", "--quiet", from, "HEAD", "--", fields); err == nil {
+			return false, nil
+		}
+	}
+	return true, manifest.SetMinimum(filepath.Join(root, manifest.File), plan.To.String())
+}
