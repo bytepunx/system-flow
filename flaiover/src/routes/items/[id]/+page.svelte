@@ -10,6 +10,7 @@
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import ItemEditor from '$lib/components/ItemEditor.svelte';
 	import StoryAgent from '$lib/components/StoryAgent.svelte';
+	import TaskPlan from '$lib/components/TaskPlan.svelte';
 	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -19,6 +20,7 @@
 	import { agentLine, type Agent } from '$lib/agent';
 	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
 	import type { Hold, StoryActivity } from '$lib/activity';
+	import type { TaskPlan as Plan } from '$lib/taskplan';
 
 	type Transition = { to: string; at: string; by: string };
 	type Block = { from: string; until?: string; reason: string };
@@ -48,6 +50,8 @@
 
 	let item = $state<Item | null>(null);
 	let children = $state<Item[]>([]);
+	// A story's task plan (S-0176): flai sends it for a story with tasks.
+	let plan = $state<Plan | undefined>();
 	let html = $state('');
 	let error = $state<string | null>(null);
 	let notice = $state<string | null>(null);
@@ -107,6 +111,7 @@
 		error = null;
 		item = data.item;
 		children = data.children;
+		plan = data.plan;
 		if (writableFor !== item!.id) {
 			writable = (await (await api('/api/board')).json()).writable;
 			writableFor = item!.id;
@@ -411,6 +416,9 @@
 						{/each}
 					</ul>
 				</section>
+			{/if}
+			{#if item.type === 'story' && plan}
+				<TaskPlan {plan} titles={Object.fromEntries(children.map((c) => [c.id, c.title]))} />
 			{/if}
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">Files</h2>

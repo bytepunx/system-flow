@@ -94,6 +94,42 @@ describe('Repo over the channel', () => {
 		expect(item.blocked?.map((b) => b.until)).toEqual([undefined, '2026-09-19T09:00:00Z']);
 	});
 
+	it('carries a story’s task plan from item.get, and none when flai sent none (S-0176)', async () => {
+		const flaiItem = {
+			id: 'S-0001',
+			type: 'story',
+			nature: 'feature',
+			title: 'Berths',
+			status: 'in-progress',
+			created: '2026-09-20T08:00:00Z',
+			updated: '2026-09-20T08:01:00Z',
+			transitions: null,
+			blocked: null,
+			tags: null,
+			path: 'wip/kanban/stories/S-0001-berths.md',
+			archived: false,
+			body: '# S-0001\n'
+		};
+		const plan = {
+			tasks: [
+				{ id: 'T-0001', state: 'waiting', after: ['T-0002'], waiting_for: ['T-0002'] },
+				{ id: 'T-0002', state: 'in-progress' },
+				{ id: 'T-0003', state: 'ready' }
+			],
+			layers: [['T-0002', 'T-0003'], ['T-0001']]
+		};
+		const got = await new Repo(
+			'/nowhere',
+			fake({ 'item.get': { item: flaiItem, children: null, plan } }).ask
+		).itemById('S-0001');
+		expect(got.plan).toEqual(plan);
+		const none = await new Repo(
+			'/nowhere',
+			fake({ 'item.get': { item: flaiItem, children: null } }).ask
+		).itemById('S-0001');
+		expect(none).not.toHaveProperty('plan');
+	});
+
 	it('answers with the status the route should give: no flai, not found, a bad argument', async () => {
 		const cases: [Error, number][] = [
 			[new AgentError(503, 'no host flai is connected; run flai dashboard'), 503],
@@ -144,7 +180,8 @@ describe('Repo over the channel', () => {
 							entered_at: '2026-09-20T08:00:00Z',
 							blocked: false,
 							age_in_column: '1h',
-							age_in_column_seconds: 3600
+							age_in_column_seconds: 3600,
+							tasks: { ready: 1, waiting: 2, in_progress: 1, done: 3, layers: 3 }
 						},
 						{
 							id: 'S-0001',
@@ -182,6 +219,15 @@ describe('Repo over the channel', () => {
 		]);
 		expect(b.columns.review).toEqual([]);
 		expect(b.order).toEqual(['S-0002', 'S-0001']);
+		// a story's tasks by state and its plan's layers (S-0176); none for a story without tasks
+		expect(b.columns.ready[0].tasks).toEqual({
+			ready: 1,
+			waiting: 2,
+			in_progress: 1,
+			done: 3,
+			layers: 3
+		});
+		expect(b.columns.ready[1]).not.toHaveProperty('tasks');
 	});
 
 	it('repeats a write once, with the same request ID, when flai was lost and came back', async () => {

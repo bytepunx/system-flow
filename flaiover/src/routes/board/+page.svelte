@@ -30,6 +30,7 @@
 	} from '$lib/reorder';
 	import { onMount, tick } from 'svelte';
 	import { debounced, follow, listen } from '$lib/events';
+	import type { TaskSummary } from '$lib/taskplan';
 
 	type Card = {
 		id: string;
@@ -42,6 +43,7 @@
 		blocked: boolean;
 		age_seconds: number;
 		archived?: boolean;
+		tasks?: TaskSummary;
 	};
 	type Board = {
 		wip_limits: Record<string, number>;

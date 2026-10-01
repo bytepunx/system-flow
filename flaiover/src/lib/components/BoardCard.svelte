@@ -3,11 +3,13 @@
 	// the board is writable. The bottom row carries nature, type, and the
 	// blocked flag on the left and the parent's ID on the right (S-0048). The background
 	// is tinted by nature and the left edge striped by type (S-0055); the text stays. A held story
-	// says why it waits after BLOCKED: the hold's code and the stories it waits for (S-0129).
+	// says why it waits after BLOCKED: the hold's code and the stories it waits for (S-0129). A story
+	// with tasks counts them by state, with its plan's layers (S-0176).
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
 	import { stripeFor, tintFor } from '$lib/cardcolour';
 	import { elsewhereLine, holdLine, type StoryActivity } from '$lib/activity';
+	import { tasksLine, tasksTitle, type TaskSummary } from '$lib/taskplan';
 	import AgentDot from './AgentDot.svelte';
 
 	type Card = {
@@ -20,6 +22,7 @@
 		status?: string;
 		blocked: boolean;
 		age_seconds: number;
+		tasks?: TaskSummary;
 	};
 
 	let {
@@ -91,6 +94,11 @@
 			>{/if}
 		{#if activity?.elsewhere}<span class="font-semibold text-warn" data-testid="elsewhere"
 				>{elsewhereLine(activity.elsewhere)}</span
+			>{/if}
+		{#if card.type === 'story' && card.tasks}<span
+				data-testid="tasks"
+				title={tasksTitle(card.tasks)}
+				aria-label={tasksTitle(card.tasks)}>{tasksLine(card.tasks)}</span
 			>{/if}
 		{#if waiting}<span class="font-semibold text-warn" data-testid="waiting-to-publish"
 				>waiting to publish</span

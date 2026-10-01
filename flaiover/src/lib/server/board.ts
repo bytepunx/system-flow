@@ -1,5 +1,6 @@
 // The board, as flai on the host lays it out (S-0073).
 import type { Item, Repo } from './repo';
+import type { TaskSummary } from '$lib/taskplan';
 
 export const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
 
@@ -15,6 +16,8 @@ export type Card = {
 	blocked: boolean;
 	entered_at: string;
 	age_seconds: number;
+	/** A story's tasks by state and its plan's layers (S-0176); absent when it has no tasks. */
+	tasks?: TaskSummary;
 };
 
 export type Board = {
@@ -25,7 +28,10 @@ export type Board = {
 };
 
 /** A card as flai's board.get gives it (internal/workitem BoardCard). */
-type FlaiCard = Omit<Card, 'age_seconds'> & { age_in_column_seconds: number };
+type FlaiCard = Omit<Card, 'age_seconds' | 'tasks'> & {
+	age_in_column_seconds: number;
+	tasks?: TaskSummary | null;
+};
 type FlaiBoard = {
 	columns: Record<string, FlaiCard[] | null>;
 	wip_limits: Record<string, number>;
@@ -53,7 +59,8 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 			status: c.status,
 			blocked: c.blocked,
 			entered_at: c.entered_at,
-			age_seconds: Math.max(0, Math.round((now.getTime() - Date.parse(c.entered_at)) / 1000))
+			age_seconds: Math.max(0, Math.round((now.getTime() - Date.parse(c.entered_at)) / 1000)),
+			...(c.tasks ? { tasks: c.tasks } : {})
 		}));
 	}
 	return {

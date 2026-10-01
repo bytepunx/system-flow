@@ -240,6 +240,63 @@ describe('the item page (S-0154)', () => {
 		inboxState.data = null;
 	});
 
+	// S-0176: a story's page shows its task plan, and follows it as tasks move
+	it("shows a story's task plan when flai sends one, and follows it as the tasks move", async () => {
+		const plan = {
+			tasks: [
+				{ id: 'T-0001', state: 'waiting', after: ['T-0002'], waiting_for: ['T-0002'] },
+				{ id: 'T-0002', state: 'in-progress' },
+				{ id: 'T-0003', state: 'ready' }
+			],
+			layers: [['T-0002', 'T-0003'], ['T-0001']]
+		};
+		const children = [{ ...story, id: 'T-0002', type: 'task', title: 'The flai side' }];
+		const show = (p?: unknown) =>
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item: story, children, plan: p });
+				if (url === '/api/board') return answer({ writable: false });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+		const shown = () => document.querySelector('[data-testid="task-plan"]');
+		const tasks = () =>
+			[...document.querySelectorAll('[data-testid="plan-task"]')].map((t) =>
+				t.textContent!.replace(/\s+/g, ' ').trim()
+			);
+		show(plan);
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		expect(shown()!.closest('aside')).not.toBeNull();
+		expect(tasks()).toEqual([
+			'T-0001 waiting for T-0002',
+			'T-0002 in progress',
+			'T-0003 ready to start'
+		]);
+		expect(document.querySelectorAll('[data-testid="plan-layer"]')).toHaveLength(2);
+		expect(shown()!.querySelector('a[href="/items/T-0002"]')!.getAttribute('title')).toBe(
+			'The flai side'
+		);
+
+		// T-0002 is done: T-0001 can start
+		show({
+			...plan,
+			tasks: [
+				{ id: 'T-0001', state: 'ready', after: ['T-0002'] },
+				{ id: 'T-0002', state: 'done' },
+				{ id: 'T-0003', state: 'ready' }
+			]
+		});
+		changed('wip/kanban/tasks/T-0002-the-flai-side.md');
+		await settle();
+		expect(tasks()).toEqual(['T-0001 ready to start', 'T-0002 done', 'T-0003 ready to start']);
+
+		// a story without tasks has no plan, and shows none
+		show(undefined);
+		changed('wip/kanban/tasks/T-0002-the-flai-side.md');
+		await settle();
+		expect(shown()).toBeNull();
+	});
+
 	it('stops following the project once it is left', async () => {
 		serve(story);
 		c = mount(ItemPage, { target: document.body });

@@ -263,6 +263,30 @@ describe('BoardCard', () => {
 		expect(held()).toBeNull();
 	});
 
+	// S-0176: a story with tasks counts them by state, with its plan's layers
+	it('shows a story’s tasks by state and its plan’s layers, in the details row', () => {
+		const tasks = { ready: 1, waiting: 2, in_progress: 1, done: 3, layers: 3 };
+		const line = () => document.querySelector<HTMLElement>('[data-testid="tasks"]');
+		component = render({ ...base, parent: 'E-0006', tasks });
+		expect(line()!.textContent).toBe('tasks 1 in progress · 1 ready · 2 waiting · 3 layers');
+		expect(line()!.getAttribute('aria-label')).toBe(
+			'tasks: 1 in progress, 1 ready to start, 2 waiting, 3 done; the plan has 3 layers'
+		);
+		expect(line()!.getAttribute('title')).toBe(line()!.getAttribute('aria-label'));
+		// in the row, before the parent, in the row's own size
+		expect(line()!.parentElement).toBe(details());
+		expect(details()!.lastElementChild).toBe(parent());
+		expect(line()!.className).not.toMatch(sizeClass);
+		// still one link
+		expect(document.querySelectorAll('a')).toHaveLength(1);
+		unmount(component);
+		component = render(base);
+		expect(line()).toBeNull();
+		unmount(component);
+		component = render({ ...base, id: 'T-0160', type: 'task', tasks });
+		expect(line()).toBeNull();
+	});
+
 	// S-0177: a story in progress that this host has had no agent for says who began it, and where
 	it('shows a story begun on another host, with no agent here', () => {
 		const activity = {

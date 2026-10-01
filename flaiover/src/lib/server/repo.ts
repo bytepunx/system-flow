@@ -3,6 +3,7 @@
 // shapes mirror design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
 import type { Agent } from '$lib/agent';
+import { planFrom, type FlaiPlan, type TaskPlan } from '$lib/taskplan';
 import { posix, resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
@@ -310,14 +311,22 @@ export class Repo extends EventEmitter {
 		return this.remember<ItemCount>('items:count', 'items.count');
 	}
 
-	/** Find an item by ID in any padding (S-32, S-032, S-0032 name the same item). */
-	async itemById(id: string): Promise<{ item: Item; children: Item[] }> {
-		const got = await this.remember<{ item: FlaiItem; children: FlaiItem[] | null }>(
-			`item:${id.trim()}`,
-			'item.get',
-			{ id: id.trim() }
-		);
-		return { item: fromFlai(got.item), children: (got.children ?? []).map(fromFlai) };
+	/**
+	 * Find an item by ID in any padding (S-32, S-032, S-0032 name the same item), with its children,
+	 * and for a story with tasks its task plan (S-0176).
+	 */
+	async itemById(id: string): Promise<{ item: Item; children: Item[]; plan?: TaskPlan }> {
+		const got = await this.remember<{
+			item: FlaiItem;
+			children: FlaiItem[] | null;
+			plan?: FlaiPlan;
+		}>(`item:${id.trim()}`, 'item.get', { id: id.trim() });
+		const plan = planFrom(got.plan);
+		return {
+			item: fromFlai(got.item),
+			children: (got.children ?? []).map(fromFlai),
+			...(plan ? { plan } : {})
+		};
 	}
 
 	/** Documentation trees: design (all types), docs, and wip, each Markdown file with its title. */
