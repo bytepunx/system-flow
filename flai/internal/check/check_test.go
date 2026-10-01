@@ -403,3 +403,50 @@ func TestVocabularyHasTheItemsTopics(t *testing.T) {
 		t.Errorf("nope is no one's topic")
 	}
 }
+
+// S-0179: markdown in wip is linted with the project's markdownlint
+// configuration, as warnings; without one, nothing is linted.
+func TestMarkdownRules(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	thread := "---\nid: TH-0001\ntitle: T\nanchor:\n  path: docs/guide.md\nstatus: open\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\n---\n\n# TH-0001 T\n\n## Entries\n\n### 2026-09-01T12:00:00Z alex\nhi\n\n### 2026-09-01T12:00:00Z alex\nagain\n"
+	_ = os.WriteFile(filepath.Join(root, "docs/guide.md"), []byte("---\ntitle: Guide\n---\n\n# Guide\n\n# Guide\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "wip/threads/TH-0001-t.md"), []byte(thread), 0o644)
+	run := func() []Finding {
+		t.Helper()
+		repo, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []Finding
+		for _, f := range res.Findings {
+			if strings.HasPrefix(f.Rule, "markdown.") {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
+	if got := run(); len(got) != 0 {
+		t.Fatalf("no markdownlint configuration, no lint: %v", got)
+	}
+	_ = os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\n"), 0o644)
+	got := run()
+	if len(got) != 1 {
+		t.Fatalf("want the thread's duplicate heading only (docs are not wip): %v", got)
+	}
+	f := got[0]
+	if f.Level != Warning || f.Rule != "markdown.MD024" || f.Line != 19 || filepath.Base(f.Path) != "TH-0001-t.md" || !strings.Contains(f.Message, "MD024/no-duplicate-heading Multiple headings with the same content") {
+		t.Errorf("finding: %+v", f)
+	}
+	_ = os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: [oops\n"), 0o644)
+	if got := run(); len(got) != 1 || got[0].Rule != "markdown.config" {
+		t.Errorf("an unreadable configuration is reported once: %v", got)
+	}
+}

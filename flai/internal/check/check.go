@@ -6,6 +6,7 @@ package check
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -20,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -82,6 +84,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.conventions()
 	c.issues()
 	c.threads()
+	c.markdown()
 	sortFindings(c.res.Findings)
 	return c.res, nil
 }
@@ -942,4 +945,38 @@ func (c *checker) issues() {
 			c.add(Warning, "issues.summary", summaryPath, 1, "closed issue %s is still in summary.md; run flai issue summary", is.ID)
 		}
 	}
+}
+
+// markdown lints every markdown file under the wip folder with the project's
+// markdownlint configuration (S-0179). flai writes them in the main
+// checkout, where no story's lint runs (ADR-0019), so they reach main unlinted
+// unless flai check says so first. Findings are warnings: --strict fails on
+// them, and the commands that write refuse a change that brings one. A
+// project without a markdownlint configuration is not linted.
+func (c *checker) markdown() {
+	root := c.repo.MainRoot
+	if root == "" {
+		root = c.repo.Root
+	}
+	cfg, err := mdlint.Load(root)
+	if err != nil {
+		c.add(Warning, "markdown.config", root, 1, "the markdownlint configuration cannot be read, so wip is not linted: %v", err)
+		return
+	}
+	if cfg == nil {
+		return
+	}
+	_ = filepath.WalkDir(c.repo.WipDir(), func(path string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil //nolint:nilerr // an unreadable entry is skipped, as the other rules skip what they cannot read
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil //nolint:nilerr // as above
+		}
+		for _, f := range cfg.Lint(string(data)) {
+			c.add(Warning, "markdown."+f.Rule, path, f.Line, "%s", f)
+		}
+		return nil
+	})
 }

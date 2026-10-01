@@ -86,7 +86,7 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 		// the findings are what the agent fixes, not only how many there are
 		msgs := make([]string, len(r.Findings))
 		for i, f := range r.Findings {
-			msgs[i] = f.Rule + ": " + f.Message
+			msgs[i] = fmt.Sprintf("%s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
 		}
 		return nil, ItemEditOut{}, fmt.Errorf("%w: %s", err, strings.Join(msgs, "; "))
 	}
