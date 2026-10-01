@@ -6,7 +6,7 @@ title: The conventions say how agents write shell commands for zsh and gate each
 status: in-progress
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T09:30:50Z
+updated: 2026-10-01T09:59:38Z
 transitions:
   - to: ready
     at: 2026-10-01T08:32:19Z
@@ -17,7 +17,7 @@ transitions:
 tags: [template]
 topics: [conventions]
 touches: [design/conventions, template, scripts, design/system/conventions.md, design/system/repository-layout.md, Makefile, design/issues/I-0006-shell-is-zsh.md, design/issues/I-0012-close-out-chain-was-not-gated-on-the-narrative-rewrite-s-exit-code-so-a-commit-went-out-with-an-empty-narrative.md, design/issues/summary.md]
-after: [S-0184, S-0186]
+after: [S-0184, S-0186, S-0182]
 agent:
   harness: claude-code
   model: claude-opus-5-5

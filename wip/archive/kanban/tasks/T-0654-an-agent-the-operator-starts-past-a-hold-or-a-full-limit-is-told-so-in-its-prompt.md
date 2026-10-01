@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 42
-      output: 12063
-      cache_read: 3462422
-      cache_write: 42689
-      cost: 1.2596
+      output: 11702
+      cache_read: 3469104
+      cache_write: 44243
+      cost: 1.2455
 ---
 # T-0654 An agent the operator starts past a hold or a full limit is told so in its prompt
 

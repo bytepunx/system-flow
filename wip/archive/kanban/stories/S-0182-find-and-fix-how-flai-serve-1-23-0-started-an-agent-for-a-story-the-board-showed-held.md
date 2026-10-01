@@ -3,10 +3,10 @@ id: S-0182
 type: story
 nature: remediation
 title: Find and fix how flai serve 1.23.0 started an agent for a story the board showed held
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T09:23:32Z
+updated: 2026-10-01T10:00:10Z
 transitions:
   - to: ready
     at: 2026-10-01T08:31:51Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-01T09:11:13Z
     by: agent-S-0182
+  - to: review
+    at: 2026-10-01T09:58:31Z
+    by: agent-S-0182
+  - to: done
+    at: 2026-10-01T10:00:10Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/serve, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0050-flai-serve-1-23-0-which-has-holds-started-an-agent-for-a-story-the-board-showed-held.md, design/issues/summary.md]
 agent:
@@ -23,14 +29,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1079
+  seconds: 1418
   models:
     - model: claude-opus-5-5
-      input: 278
-      output: 80351
-      cache_read: 23063664
-      cache_write: 284355
-      cost: 8.3905
+      input: 372
+      output: 104523
+      cache_read: 30987256
+      cache_write: 395196
+      cost: 11.125
 ---
 # S-0182 Find and fix how flai serve 1.23.0 started an agent for a story the board showed held
 

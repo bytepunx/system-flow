@@ -27,10 +27,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 1069
-      cache_read: 306899
-      cache_write: 3784
-      cost: 0.1116
+      output: 1037
+      cache_read: 307492
+      cache_write: 3922
+      cost: 0.1104
 ---
 # T-0652 Find the cause of I-0050 from the 2026-09-29 evidence and record it in the narrative
 

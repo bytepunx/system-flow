@@ -23,15 +23,15 @@ tags: []
 touches: [flai/internal/serve/hold_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0050-flai-serve-1-23-0-which-has-holds-started-an-agent-for-a-story-the-board-showed-held.md, design/issues/summary.md]
 usage:
   source: log
-  seconds: 430
+  seconds: 491
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 144
-      output: 41706
-      cache_read: 11971193
-      cache_write: 147594
-      cost: 4.3551
+      input: 176
+      output: 49552
+      cache_read: 14690331
+      cache_write: 187353
+      cost: 5.2741
 ---
 # T-0655 Regression tests for every launcher start path with file and directory claims, the design and guide updated, and I-0050 closed
 

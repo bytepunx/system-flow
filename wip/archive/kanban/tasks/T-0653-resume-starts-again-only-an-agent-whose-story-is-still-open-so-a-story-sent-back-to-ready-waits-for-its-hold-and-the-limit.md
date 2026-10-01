@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 34
-      output: 9881
-      cache_read: 2836171
-      cache_write: 34968
-      cost: 1.0318
+      output: 9585
+      cache_read: 2841645
+      cache_write: 36241
+      cost: 1.0202
 ---
 # T-0653 resume starts again only an agent whose story is still open, so a story sent back to ready waits for its hold and the limit
 

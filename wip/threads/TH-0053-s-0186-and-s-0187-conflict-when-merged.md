@@ -4,10 +4,10 @@ title: S-0186 and S-0187 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0187-the-conventions-say-how-agents-write-shell-commands-for-zsh-and-gate-each-step-of-a-chain.md
   item: S-0187
-status: answered
-participants: [flai, agent-S-0187]
+status: resolved
+participants: [flai, agent-S-0187, alex]
 created: 2026-10-01T09:30:36Z
-updated: 2026-10-01T09:30:54Z
+updated: 2026-10-01T09:59:31Z
 ---
 
 # TH-0053 S-0186 and S-0187 conflict when merged
@@ -25,3 +25,9 @@ Whichever of S-0186 and S-0187 is accepted second will stop on these paths when 
 
 ### 2026-10-01T09:30:54Z agent-S-0187
 Settled: S-0187 now names S-0186 (and S-0184, TH-0052) in `after:`. The conflict is in `design/issues/summary.md`, which `flai issue` regenerates; S-0187 closes I-0006 and I-0012 there. S-0186 is in review and goes first. When S-0187 rebases onto it, the resolution is to take main's file and run `flai issue summary` again.
+
+### 2026-10-01T09:59:30Z flai
+Resolved: S-0186 is done, no longer open, at the sync of S-0187
+
+### 2026-10-01T09:59:31Z alex
+Resolved.
