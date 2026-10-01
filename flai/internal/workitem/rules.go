@@ -48,8 +48,7 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	if from == to {
 		return nil, fmt.Errorf("%s is already %s", it.ID, to)
 	}
-	ok := contains(allowed[from], to) || (it.Type == Task && from == InProgress && to == Done) ||
-		(opt.Cascade && to == Cancelled && from == Review)
+	ok := Follows(it.Type, from, to) || (opt.Cascade && to == Cancelled && from == Review)
 	if !ok {
 		return nil, fmt.Errorf("rule: %s cannot go from %s to %s (allowed: %s)", it.ID, from, to, strings.Join(allowedFor(it, from), ", "))
 	}
@@ -143,6 +142,12 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 		}
 	}
 	return warnings, nil
+}
+
+// Follows reports whether an item of type typ may move from one state to the
+// other, as Move allows it before its other rules.
+func Follows(typ, from, to string) bool {
+	return contains(allowed[from], to) || (typ == Task && from == InProgress && to == Done)
 }
 
 func allowedFor(it *Item, from string) []string {

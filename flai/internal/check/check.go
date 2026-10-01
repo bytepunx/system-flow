@@ -223,13 +223,6 @@ var requiredHeadings = map[string][]string{
 	workitem.Task:  {"## Work", "## Done when", "## Notes"},
 }
 
-var allowedNext = map[string][]string{
-	workitem.Backlog:    {workitem.Ready, workitem.Cancelled},
-	workitem.Ready:      {workitem.InProgress, workitem.Cancelled},
-	workitem.InProgress: {workitem.Review, workitem.Cancelled, workitem.Done},
-	workitem.Review:     {workitem.Done, workitem.InProgress},
-}
-
 func (c *checker) workItems() {
 	seen := map[string]string{}
 	for _, it := range c.items {
@@ -332,10 +325,11 @@ func (c *checker) history(it *workitem.Item) {
 		prevAt = at
 		// A parent's cancellation takes an item out of review; nothing else does (ADR-0028).
 		cascaded := tr.To == workitem.Cancelled && prevState == workitem.Review && workitem.CancelledWith(c.byID, it, tr.At) != ""
-		if !contains(allowedNext[prevState], tr.To) && !cascaded {
-			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: %s cannot follow %s", i, tr.To, prevState)
-		} else if tr.To == workitem.Done && prevState == workitem.InProgress && it.Type != workitem.Task {
+		// The transitions flai move allows, back moves included (ADR-0055), from the one table.
+		if tr.To == workitem.Done && prevState == workitem.InProgress && it.Type != workitem.Task {
 			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: a %s must go through review before done", i, it.Type)
+		} else if !workitem.Follows(it.Type, prevState, tr.To) && !cascaded {
+			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: %s cannot follow %s", i, tr.To, prevState)
 		}
 		prevState = tr.To
 	}
@@ -758,15 +752,6 @@ func criteriaSection(body string) string {
 
 func hasCriteria(body string) bool  { return checkbox.MatchString(criteriaSection(body)) }
 func hasUnchecked(body string) bool { return unchecked.MatchString(criteriaSection(body)) }
-
-func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
 
 func (c *checker) conventions() {
 	set, errs, err := conventions.Load(c.repo)
