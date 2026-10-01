@@ -18,6 +18,7 @@ import (
 
 func newUpgradeCmd(a *app) *cobra.Command {
 	var tplRepo, ref string
+	var vars []string
 	var dryRun, force, keepAll, replaceAll, relock bool
 	c := &cobra.Command{
 		Use:   "upgrade",
@@ -29,12 +30,18 @@ the project has not changed since they were applied, and report the rest as
 conflicts. In a terminal each conflict offers keep, replace, or a diff;
 otherwise --keep-all or --replace-all is required and nothing changes without
 one. The manifest and lock are updated only when no conflict is left
-unresolved. A dirty git tree is refused unless --force.`,
+unresolved. A dirty git tree is refused unless --force.
+
+Each template variable is rendered with, in order: --var; the manifest's own
+field for project_name, project_key, description, owner, and repo_url; the
+value system-flow.lock.yaml recorded; the template's default. A required
+variable with none of these is named and nothing is changed.`,
 		Example: `  flai upgrade --dry-run
   flai upgrade
   flai upgrade --keep-all           # scripts and CI: never overwrite edits
   flai upgrade --template ./template --force
-  flai upgrade --relock             # hand-assembled project: record the current files at this version`,
+  flai upgrade --relock             # hand-assembled project: record the current files at this version
+  flai upgrade --var team=billing   # a variable the template added, or a new value for one`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -50,12 +57,24 @@ unresolved. A dirty git tree is refused unless --force.`,
 			if err != nil {
 				return err
 			}
-			opt := template.Options{Vars: manifestVars(mf), Layout: mf.Layout, Source: src}
+			given, err := givenVars(vars)
+			if err != nil {
+				return err
+			}
+			lk, err := lock.Load(repo.Root)
+			if err != nil {
+				return err
+			}
+			opt := template.Options{Layout: mf.Layout, Source: src}
 			if relock {
+				if opt.Vars, err = upgradeVars(m, mf, lk, given); err != nil {
+					return err
+				}
 				l, err := upgrade.Relock(repo.Root, m, src, opt, a.now())
 				if err != nil {
 					return err
 				}
+				l.Vars = lockVars(opt.Vars)
 				if err := lock.Save(repo.Root, l); err != nil {
 					return err
 				}
@@ -74,8 +93,7 @@ unresolved. A dirty git tree is refused unless --force.`,
 					return fmt.Errorf("working tree has uncommitted changes; commit or stash them so the upgrade is one reviewable diff, or pass --force")
 				}
 			}
-			lk, err := lock.Load(repo.Root)
-			if err != nil {
+			if opt.Vars, err = upgradeVars(m, mf, lk, given); err != nil {
 				return err
 			}
 			plan, err := upgrade.Compute(repo.Root, m, src, opt, lk, mf.Template.Version)
@@ -126,7 +144,9 @@ unresolved. A dirty git tree is refused unless --force.`,
 			if err != nil {
 				return err
 			}
-			if err := lock.Save(repo.Root, upgrade.NewLock(plan, src, m.Version, a.now())); err != nil {
+			nl := upgrade.NewLock(plan, src, m.Version, a.now())
+			nl.Vars = lockVars(opt.Vars)
+			if err := lock.Save(repo.Root, nl); err != nil {
 				return err
 			}
 			if err := writeTemplateFields(filepath.Join(repo.Root, manifest.File), src, sourceChanged, m.Version, a.now()); err != nil {
@@ -156,6 +176,7 @@ unresolved. A dirty git tree is refused unless --force.`,
 	f.BoolVar(&keepAll, "keep-all", false, "keep every conflicting project file")
 	f.BoolVar(&replaceAll, "replace-all", false, "replace every conflicting project file with the template's")
 	f.BoolVar(&relock, "relock", false, "record the current files at the template's version without changing them")
+	f.StringArrayVar(&vars, "var", nil, "set a template variable the manifest does not hold, name=value (repeatable); recorded in the lock")
 	return c
 }
 
@@ -191,13 +212,67 @@ func (a *app) askConflict(root, tplDir string, m template.Manifest, opt template
 	}
 }
 
-// manifestVars rebuilds template variables from the manifest so a re-render
-// produces the same text the project was created with.
-func manifestVars(mf manifest.Manifest) map[string]any {
-	return map[string]any{
-		"project_name": mf.Name, "project_key": mf.Key, "description": mf.Description,
-		"owner": mf.Owner, "repo_url": mf.Repo,
+// heldVar is a template variable system-flow.yaml holds: the manifest key
+// it is read from, and its value there.
+type heldVar struct{ key, value string }
+
+// manifestVars are the template variables the manifest holds, by variable.
+func manifestVars(mf manifest.Manifest) map[string]heldVar {
+	return map[string]heldVar{
+		"project_name": {"name", mf.Name}, "project_key": {"key", mf.Key}, "description": {"description", mf.Description},
+		"owner": {"owner", mf.Owner}, repoURLVar: {"repo", mf.Repo},
 	}
+}
+
+// upgradeVars resolves every template variable for a re-render, in order:
+// --var, the manifest's own field, the value the lock recorded, the
+// template's default. A required variable left empty, an unknown --var, and
+// a --var for a value the manifest holds are refused before anything is
+// rendered (I-0040).
+func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given map[string]string) (map[string]any, error) {
+	held := manifestVars(mf)
+	known := map[string]bool{}
+	for _, v := range m.Variables {
+		known[v.Name] = true
+	}
+	for k := range given {
+		if !known[k] {
+			return nil, fmt.Errorf("unknown variable %q; template defines %s", k, strings.Join(varNames(m), ", "))
+		}
+		if h, ok := held[k]; ok {
+			return nil, fmt.Errorf("%s is read from %s in %s; change it there, not with --var", k, h.key, manifest.File)
+		}
+	}
+	vars := map[string]any{}
+	var missing []string
+	for _, v := range m.Variables {
+		val, ok := given[v.Name]
+		if h, isHeld := held[v.Name]; !ok && isHeld {
+			val, ok = h.value, true
+		}
+		if !ok && lk != nil {
+			val, ok = lk.Vars[v.Name]
+		}
+		if !ok {
+			def, err := template.EvalDefault(v, template.Data(m, template.Options{Vars: vars}))
+			if err != nil {
+				return nil, err
+			}
+			val = def
+		}
+		if v.Required && val == "" {
+			if h, isHeld := held[v.Name]; isHeld {
+				missing = append(missing, fmt.Sprintf("%s (%s in %s)", v.Name, h.key, manifest.File))
+			} else {
+				missing = append(missing, v.Name)
+			}
+		}
+		vars[v.Name] = val
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("required variables have no value: %s; give each with --var name=value, or in %s where it says, and run flai upgrade again: nothing was changed", strings.Join(missing, ", "), manifest.File)
+	}
+	return vars, nil
 }
 
 // writeTemplateFields updates template.version and applied in the manifest

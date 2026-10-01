@@ -4,10 +4,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/lock"
 )
 
 func TestUpgradeCommand(t *testing.T) {
@@ -96,5 +98,120 @@ func TestUpgradeCommand(t *testing.T) {
 	out, _, code = runIn(t, dest, "upgrade", "--template", nt, "--relock", "--force")
 	if code != 0 || !strings.Contains(out, "relocked") {
 		t.Errorf("relock: %d %s", code, out)
+	}
+}
+
+// copyTemplate copies a template directory to a temporary one a test may change.
+func copyTemplate(t *testing.T, from string) string {
+	t.Helper()
+	to := t.TempDir()
+	err := filepath.WalkDir(from, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(from, path)
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(to, rel), 0o755)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(to, rel), b, 0o644)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return to
+}
+
+// forkVersion rewrites a fork's version and appends variables to its
+// manifest, and writes team.txt.tmpl with the given body.
+func forkVersion(t *testing.T, tpl, version, addVars, body string) {
+	t.Helper()
+	y, err := os.ReadFile(filepath.Join(tpl, "template.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := regexp.MustCompile(`(?m)^version: .*$`).ReplaceAllString(string(y), "version: "+version)
+	s = strings.Replace(s, "layout:\n", addVars+"layout:\n", 1)
+	if err := os.WriteFile(filepath.Join(tpl, "template.yaml"), []byte(s), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tpl, "root", "team.txt.tmpl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A fork's own variable is recorded by flai new and rendered with by flai
+// upgrade; a variable added since gets its default, --var changes one, and a
+// required one with no value is refused before anything changes (I-0040).
+func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	tpl := copyTemplate(t, miniTemplate)
+	forkVersion(t, tpl, "1.0.0", "  - name: team\n    required: true\n", "team={{ .team }}\n")
+	dest := filepath.Join(t.TempDir(), "proj")
+	if _, errOut, code := runIn(t, ".", "new", dest, "--template", tpl, "--defaults", "--no-git", "--var", "team=core"); code != 0 {
+		t.Fatalf("new: %s", errOut)
+	}
+	lk, err := lock.Load(dest)
+	if err != nil || lk == nil || lk.Vars["team"] != "core" || lk.Vars["project_name"] != "proj" {
+		t.Fatalf("flai new must record the variables in the lock: %+v %v", lk, err)
+	}
+	readTeam := func() string {
+		b, _ := os.ReadFile(filepath.Join(dest, "team.txt"))
+		return string(b)
+	}
+
+	// 2.0.0 adds region with a default: the recorded team and the default render.
+	forkVersion(t, tpl, "2.0.0", "  - name: region\n    default: \"{{ .team }}-eu\"\n", "team={{ .team }} region={{ .region }}\n")
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl); code != 0 {
+		t.Fatalf("upgrade with the recorded value and a default: %s", errOut)
+	}
+	if got := readTeam(); got != "team=core region=core-eu\n" {
+		t.Errorf("team.txt after 2.0.0 = %q", got)
+	}
+	if lk, _ := lock.Load(dest); lk.Vars["region"] != "core-eu" || lk.Vars["team"] != "core" {
+		t.Errorf("upgrade must record what it rendered with: %v", lk.Vars)
+	}
+
+	// --var changes a recorded value, and the lock keeps the new one.
+	forkVersion(t, tpl, "3.0.0", "", "team={{ .team }} region={{ .region }} v3\n")
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--var", "team=billing"); code != 0 {
+		t.Fatalf("upgrade with --var: %s", errOut)
+	}
+	if got := readTeam(); got != "team=billing region=core-eu v3\n" {
+		t.Errorf("team.txt after --var = %q", got)
+	}
+	if lk, _ := lock.Load(dest); lk.Vars["team"] != "billing" {
+		t.Errorf("--var not recorded: %v", lk.Vars)
+	}
+
+	// --var for an unknown variable or one the manifest holds is refused.
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--force", "--var", "bogus=1"); code == 0 || !strings.Contains(errOut, "unknown variable") {
+		t.Errorf("unknown --var: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--force", "--var", "project_name=x"); code == 0 || !strings.Contains(errOut, "project_name is read from name in system-flow.yaml") {
+		t.Errorf("--var for a manifest value: %d %s", code, errOut)
+	}
+
+	// 4.0.0 adds a required variable with no default: refused, nothing written.
+	forkVersion(t, tpl, "4.0.0", "  - name: cost_centre\n    required: true\n", "{{ .cost_centre }}\n")
+	before := readTeam()
+	_, errOut, code := runIn(t, dest, "upgrade", "--template", tpl)
+	if code == 0 || !strings.Contains(errOut, "required variables have no value: cost_centre") {
+		t.Fatalf("a required variable with no value: %d %s", code, errOut)
+	}
+	if readTeam() != before {
+		t.Error("a refused upgrade changed team.txt")
+	}
+	if mf, _ := os.ReadFile(filepath.Join(dest, "system-flow.yaml")); !strings.Contains(string(mf), `version: "3.0.0"`) {
+		t.Errorf("a refused upgrade changed the manifest:\n%s", mf)
+	}
+	if _, errOut, code := runIn(t, dest, "upgrade", "--template", tpl, "--var", "cost_centre=42"); code != 0 {
+		t.Fatalf("upgrade with the required --var: %s", errOut)
+	}
+	if got := readTeam(); got != "42\n" {
+		t.Errorf("team.txt after 4.0.0 = %q", got)
 	}
 }

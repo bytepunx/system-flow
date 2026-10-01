@@ -100,7 +100,7 @@ func (a *app) runNew(dir string, o newOptions) error {
 	if _, err := manifest.Load(filepath.Join(dest, manifest.File)); err != nil {
 		return fmt.Errorf("rendered project has an invalid manifest: %w", err)
 	}
-	if err := lock.Save(dest, &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: a.now().UTC().Format("2006-01-02T15:04:05Z")}, Files: res.Hashes, Topics: upgrade.TopicsOf(dest, res.Written)}); err != nil {
+	if err := lock.Save(dest, &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: a.now().UTC().Format("2006-01-02T15:04:05Z")}, Files: res.Hashes, Topics: upgrade.TopicsOf(dest, res.Written), Vars: lockVars(vars)}); err != nil {
 		return err
 	}
 
@@ -285,6 +285,15 @@ func parsePairs(items []string, flag string) (map[string]string, error) {
 		out[k] = v
 	}
 	return out, nil
+}
+
+// lockVars are the values a render used, as the lock records them.
+func lockVars(vars map[string]any) map[string]string {
+	out := make(map[string]string, len(vars))
+	for k, v := range vars {
+		out[k] = fmt.Sprint(v)
+	}
+	return out
 }
 
 func varNames(m template.Manifest) []string {

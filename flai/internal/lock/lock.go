@@ -24,6 +24,9 @@ type Lock struct {
 	// Topics is the template's topics on each marker file it rendered, so
 	// upgrade can tell a project's own topics from the template's (S-0134).
 	Topics map[string][]string `yaml:"topics,omitempty"`
+	// Vars are the template variables' values the project was last rendered
+	// with, so upgrade renders with them again (I-0040).
+	Vars map[string]string `yaml:"vars,omitempty"`
 }
 
 // Template is the source that was applied.
@@ -71,7 +74,7 @@ func Load(root string) (*Lock, error) {
 // Save writes the lock deterministically (sorted paths).
 func Save(root string, l *Lock) error {
 	var b strings.Builder
-	b.WriteString("# Written by flai. Hashes of what the template rendered, used by flai upgrade (ADR-0015).\n")
+	b.WriteString("# Written by flai. What the template rendered, and with which variables, used by flai upgrade (ADR-0015).\n")
 	fmt.Fprintf(&b, "template:\n  repo: %q\n  ref: %q\n  version: %q\n  applied: %s\n", l.Template.Repo, l.Template.Ref, l.Template.Version, l.Template.Applied)
 	if len(l.Files) == 0 {
 		b.WriteString("files: {}\n")
@@ -95,6 +98,17 @@ func Save(root string, l *Lock) error {
 		sort.Strings(paths)
 		for _, p := range paths {
 			fmt.Fprintf(&b, "  %q: [%s]\n", p, strings.Join(l.Topics[p], ", "))
+		}
+	}
+	if len(l.Vars) > 0 {
+		b.WriteString("vars:\n")
+		names := make([]string, 0, len(l.Vars))
+		for n := range l.Vars {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		for _, n := range names {
+			fmt.Fprintf(&b, "  %q: %q\n", n, l.Vars[n])
 		}
 	}
 	return os.WriteFile(filepath.Join(root, File), []byte(b.String()), 0o644)
