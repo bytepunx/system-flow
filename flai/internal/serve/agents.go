@@ -540,8 +540,9 @@ func (l *launcher) settleOrphans() {
 // answer is there, in the session it had, when its story is open: in
 // progress or in review. Such a story is counted in the limit already, and
 // it holds others rather than being held (ADR-0046), so neither holds it
-// back. A story in ready is started again by the look, past its hold and
-// the limit like any other; one in backlog waits until it is ready (S-0182).
+// back. A story in ready is started again by the look, once nothing holds
+// it and the limit has room, like any other; one in backlog waits until it
+// is ready (S-0182).
 func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for id, run := range st.Stories {
