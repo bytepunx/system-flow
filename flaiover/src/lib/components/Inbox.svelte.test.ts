@@ -81,7 +81,7 @@ describe('inbox and activity views', () => {
 				kind: 'question',
 				title: 'Which port should it use?',
 				detail: 'asked in the narrative of S-0001',
-				href: '/docs/wip/agents/S-0001.md',
+				href: '/items/S-0001?question=question%3AS-0001%3Aabc',
 				item: 'S-0001'
 			}
 		]

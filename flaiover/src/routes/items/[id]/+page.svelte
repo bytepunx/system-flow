@@ -5,6 +5,7 @@
 	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
+	import OpenQuestions from '$lib/components/OpenQuestions.svelte';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import ItemEditor from '$lib/components/ItemEditor.svelte';
@@ -351,6 +352,14 @@
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown of the project, asked of flai on the host, rendered client side -->
 					{@html html}
 				</article>
+			{/if}
+			{#if item.type === 'story'}
+				<!-- Its narrative's open questions, answered here: the inbox leads to them (S-0173). -->
+				<OpenQuestions
+					story={item.id}
+					writable={writable && !item.archived}
+					select={page.url.searchParams.get('question') ?? undefined}
+				/>
 			{/if}
 			<Threads
 				on={item.id}

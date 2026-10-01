@@ -32,6 +32,7 @@ vi.mock('$lib/events', () => ({
 const changed = (path: string) => events.heard.forEach((l) => l.change?.(path));
 
 import ItemPage from './+page.svelte';
+import { inboxState } from '$lib/inbox.svelte';
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
 const settle = async () => {
@@ -207,6 +208,36 @@ describe('the item page (S-0154)', () => {
 			document.body.innerHTML = '';
 			expect(await show(story, false)).toBeNull();
 		});
+	});
+
+	// S-0173: the inbox leads an open question here, so the story's page shows its open questions.
+	it("shows the story's open questions from the inbox, and a task's page none", async () => {
+		inboxState.data = {
+			total: 1,
+			counts: { thread: 0, question: 1, review: 0, blocked: 0, overlap: 0 },
+			notes: [],
+			entries: [
+				{
+					key: 'question:S-0154:abc',
+					kind: 'question',
+					title: 'Which port should it use?',
+					href: '/items/S-0154?question=question%3AS-0154%3Aabc',
+					item: 'S-0154'
+				}
+			]
+		};
+		serve(story);
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		expect(document.querySelector('[data-testid="open-questions"]')?.textContent).toContain(
+			'Which port should it use?'
+		);
+		unmount(c);
+		serve({ ...story, type: 'task' });
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		expect(document.querySelector('[data-testid="open-questions"]')).toBeNull();
+		inboxState.data = null;
 	});
 
 	it('stops following the project once it is left', async () => {
