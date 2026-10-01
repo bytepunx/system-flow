@@ -5,7 +5,9 @@ package release
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -658,7 +660,7 @@ func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem
 	return ids
 }
 
-// FieldsFile, under a component's path, lists the front-matter fields that
+// FieldsFile lists, under a component's path, the front-matter fields that
 // component's flai reads. Only flai has one (S-0181).
 const FieldsFile = "internal/workitem/front-matter-fields.txt"
 
@@ -671,8 +673,12 @@ func RaiseMinimum(r execx.Runner, root string, plan *PendingPlan) (bool, error) 
 		return false, nil
 	}
 	fields := filepath.ToSlash(filepath.Join(plan.Component.Path, FieldsFile))
-	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(fields))); err != nil {
+	_, err := os.Stat(filepath.Join(root, filepath.FromSlash(fields)))
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
 		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("read %s to decide whether flai.minimum rises: %w", fields, err)
 	}
 	if plan.From != (Version{}) {
 		from := strings.TrimSuffix(plan.Tag, plan.To.String()) + plan.From.String()
