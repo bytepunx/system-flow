@@ -1,6 +1,6 @@
 ---
 title: Coordinating stories that run in parallel
-updated: 2026-09-26
+updated: 2026-10-01
 status: active
 topics: [cli, dashboard]
 ---
@@ -112,3 +112,7 @@ The September 2026 preprints are not peer reviewed; only their central ideas are
 - `flai stream sync` trial-merges open branches and reports paths changed outside the claim. Acceptance tells overlapping open stories what changed.
 
 The stories that build it are under E-0009. Until they are accepted, flai behaves as described in "What flai does today".
+
+## Within a story
+
+Everything above coordinates stories, each worked by one agent. Since S-0176 a story's tasks may carry `after` too, naming tasks of the same story ([work-hierarchy.md](work-hierarchy.md)). The story's agent plans them into layers that run together and may hand each task of a layer to a sub-agent. Tasks are not held as stories are: `flai move` warns when a task starts before what it waits for is done. A layer's tasks share the story's worktree and branch unless one builds what another changes, and only the story's agent commits. What S-0176 measured, and why it recommends the plan without the parallel layers, is in [agent-context.md](agent-context.md#tasks-in-parallel).
