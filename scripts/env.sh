@@ -12,7 +12,11 @@ if [ -f "$ROOT/.git" ]; then
   esac
 fi
 export CACHE_ROOT
-export PATH="$ROOT/bin:$CACHE_ROOT/.flai-cache/pnpm/node_modules/.bin:/usr/local/go/bin:$HOME/go/bin:$PATH"
+# This tree's bin/ first, then the main checkout's, where install-tools.sh puts
+# the pinned tools, so a story worktree lints with them too (I-0001).
+TOOLS_PATH="$ROOT/bin"
+[ "$CACHE_ROOT" = "$ROOT" ] || TOOLS_PATH="$TOOLS_PATH:$CACHE_ROOT/bin"
+export PATH="$TOOLS_PATH:$CACHE_ROOT/.flai-cache/pnpm/node_modules/.bin:$HOME/go/bin:$PATH"
 # Node toolchain caches stay inside the repository (safety convention).
 export npm_config_cache="$CACHE_ROOT/.flai-cache/npm"
 export PNPM_HOME="$CACHE_ROOT/.flai-cache/pnpm-home"
