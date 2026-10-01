@@ -16,10 +16,11 @@ story="$1"
 shift
 
 base="${CLOSE_OUT_BASE:-main}"
-committed="$(git diff --name-only "$base...HEAD")"
-status="$(git status --porcelain --untracked-files=all)"
-pending="$(printf '%s\n' "$status" | sed 's/^...//')"
-touched() { printf '%s\n%s\n' "$committed" "$pending" | grep -q "^$1/"; }
+# Both sides of a rename, and paths unquoted, so a prefix match sees them all.
+committed="$(git -c core.quotePath=false diff --no-renames --name-only "$base...HEAD")"
+pending="$(git -c core.quotePath=false diff --no-renames --name-only HEAD)"
+untracked="$(git -c core.quotePath=false ls-files --others --exclude-standard)"
+touched() { printf '%s\n%s\n%s\n' "$committed" "$pending" "$untracked" | grep -q "^$1/"; }
 
 if touched flai; then
   echo "close-out: flai lint and every test tier"
