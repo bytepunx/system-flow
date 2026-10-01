@@ -3,11 +3,11 @@ id: T-0664
 type: task
 nature: feature
 title: flai serve agent restart starts a story with no run on this host, and its agent is told the story was begun elsewhere
-status: in-progress
+status: done
 parent: S-0177
 owner: alex
 created: 2026-10-01T10:06:57Z
-updated: 2026-10-01T10:11:31Z
+updated: 2026-10-01T10:15:12Z
 transitions:
   - to: ready
     at: 2026-10-01T10:07:15Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-01T10:11:31Z
     by: agent-S-0177
+  - to: done
+    at: 2026-10-01T10:15:12Z
+    by: agent-S-0177
 stream: S-0177
 tags: []
 touches: [flai/internal/serve, flai/internal/harness, flai/cmd/serve_actions.go]
+usage:
+  source: log
+  seconds: 221
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 15703
+      cache_read: 3245281
+      cache_write: 68062
+      cost: 1.3938
 ---
 # T-0664 flai serve agent restart starts a story with no run on this host, and its agent is told the story was begun elsewhere
 
@@ -31,3 +45,5 @@ touches: [flai/internal/serve, flai/internal/harness, flai/cmd/serve_actions.go]
 ## Done when
 
 The tests pass and the change is committed.
+
+## Notes

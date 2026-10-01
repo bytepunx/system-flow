@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 150
-      cache_read: 2568074
-      cache_write: 38507
-      cost: 1.0407
+      input: 35
+      output: 12353
+      cache_read: 2553038
+      cache_write: 53544
+      cost: 1.0965
 ---
 # T-0663 flai stream open reopens a stream whose worktree is gone, from the local or remote story branch, and the narrative records its host
 
@@ -45,3 +45,5 @@ usage:
 ## Done when
 
 The tests pass, the docs say what the command does, and the change is committed on `story/S-0177`.
+
+## Notes

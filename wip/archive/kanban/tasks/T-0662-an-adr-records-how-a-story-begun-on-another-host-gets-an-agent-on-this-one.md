@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 96
-      cache_read: 923804
-      cache_write: 12879
-      cost: 0.374
+      input: 13
+      output: 4439
+      cache_read: 917445
+      cache_write: 19241
+      cost: 0.394
 ---
 # T-0662 An ADR records how a story begun on another host gets an agent on this one
 
@@ -42,3 +42,5 @@ Write an ADR, refining ADR-0043, that decides: restart starts a story in ready o
 ## Done when
 
 The ADR is accepted in `design/adrs/` with its index row, and the narrative's Decisions name it.
+
+## Notes
