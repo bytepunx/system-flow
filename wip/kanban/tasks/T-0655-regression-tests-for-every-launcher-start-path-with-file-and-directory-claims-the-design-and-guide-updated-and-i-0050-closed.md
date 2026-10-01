@@ -3,17 +3,20 @@ id: T-0655
 type: task
 nature: remediation
 title: Regression tests for every launcher start path with file and directory claims, the design and guide updated, and I-0050 closed
-status: in-progress
+status: done
 parent: S-0182
 owner: arobson
 created: 2026-10-01T09:16:25Z
-updated: 2026-10-01T09:27:15Z
+updated: 2026-10-01T09:54:05Z
 transitions:
   - to: ready
     at: 2026-10-01T09:16:34Z
     by: agent-S-0182
   - to: in-progress
     at: 2026-10-01T09:21:42Z
+    by: agent-S-0182
+  - to: done
+    at: 2026-10-01T09:54:05Z
     by: agent-S-0182
 stream: S-0182
 tags: []

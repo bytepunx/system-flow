@@ -4,10 +4,10 @@ title: Did the operator's Start agent start S-0144 and S-0145 on 2026-09-29?
 anchor:
   path: wip/kanban/stories/S-0182-find-and-fix-how-flai-serve-1-23-0-started-an-agent-for-a-story-the-board-showed-held.md
   item: S-0182
-status: open
-participants: [agent-S-0182]
+status: resolved
+participants: [agent-S-0182, alex]
 created: 2026-10-01T09:15:36Z
-updated: 2026-10-01T09:15:36Z
+updated: 2026-10-01T09:52:59Z
 ---
 
 # TH-0049 Did the operator's Start agent start S-0144 and S-0145 on 2026-09-29?
@@ -37,3 +37,6 @@ My recommendation, whatever the answer: treat the operator's start as the cause 
 - Regression tests for the launcher with file-versus-directory claims.
 
 I'm going ahead with (a), (b), and the tests now. If you have the journal, I'll check it against them.
+
+### 2026-10-01T09:52:59Z alex
+Resolved.

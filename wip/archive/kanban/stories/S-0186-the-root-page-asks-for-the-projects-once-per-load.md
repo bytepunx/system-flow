@@ -3,10 +3,10 @@ id: S-0186
 type: story
 nature: improvement
 title: The root page asks for the projects once per load
-status: review
+status: done
 owner: alex
 created: 2026-10-01T08:00:32Z
-updated: 2026-10-01T09:28:44Z
+updated: 2026-10-01T09:56:22Z
 transitions:
   - to: ready
     at: 2026-10-01T08:32:17Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-01T09:28:44Z
     by: agent-S-0186
+  - to: done
+    at: 2026-10-01T09:56:22Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/+page.svelte, flaiover/src/routes/+layout.svelte, flaiover/src/lib/project.svelte.ts, flaiover/src/routes/api/projects, flaiover/src/lib/project.svelte.test.ts, flaiover/src/routes/overview.svelte.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0033-the-root-page-asks-api-projects-twice-on-one-load-and-the-dashboard-serves-the-two-calls-serially.md, design/issues/summary.md]
 agent:

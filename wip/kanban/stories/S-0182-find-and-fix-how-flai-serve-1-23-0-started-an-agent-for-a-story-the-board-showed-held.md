@@ -39,10 +39,10 @@ usage:
 I-0050 (two occurrences, last 2026-09-29): `flai serve` 1.23.0, which already had holds (S-0128, ADR-0046), started an agent for a story the board showed as held. The launcher skips any story `holds.Of` returns a hold for (`flai/internal/serve/agents.go` ~417), and the board and `wait_for_work` use the same `Repo.Holds`, so the cause is not known. Two paths bypass holds and are suspects, though neither obviously fits a fresh start: `resume()` (`agents.go` ~524-538), which restarts an agent whose question was answered, and the operator's start (`serve/start.go` ~19, ~57-68), which ignores holds by design with a warning.
 
 ## Acceptance criteria
-- [ ] The cause is found from the 2026-09-29 instances (the issue's instances, `~/.flai/serve/journal.jsonl`, `serve.log`, and `agents.json` where they survive, and the stories' transitions) and recorded in the story's narrative
-- [ ] A regression test reproduces it, including an in-progress story whose claim is a file and a ready story whose claim is that file's directory, and passes after the fix
-- [ ] No launcher path starts a held story except the operator's explicit start, and `resume()` either respects a hold or the design says why it need not
-- [ ] I-0050 is closed with the cause and what fixed it
+- [x] The cause is found from the 2026-09-29 instances (the issue's instances, `~/.flai/serve/journal.jsonl`, `serve.log`, and `agents.json` where they survive, and the stories' transitions) and recorded in the story's narrative
+- [x] A regression test reproduces it, including an in-progress story whose claim is a file and a ready story whose claim is that file's directory, and passes after the fix
+- [x] No launcher path starts a held story except the operator's explicit start, and `resume()` either respects a hold or the design says why it need not
+- [x] I-0050 is closed with the cause and what fixed it
 
 ## Tasks
 - T-0652 Find the cause of I-0050 from the 2026-09-29 evidence and record it in the narrative
