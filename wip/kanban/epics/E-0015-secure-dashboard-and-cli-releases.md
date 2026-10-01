@@ -3,11 +3,14 @@ id: E-0015
 type: epic
 nature: feature
 title: Secure Dashboard and CLI Releases
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-01T11:06:14Z
-updated: 2026-10-01T11:12:56Z
-transitions: []
+updated: 2026-10-01T11:18:38Z
+transitions:
+  - to: ready
+    at: 2026-10-01T11:15:15Z
+    by: alex
 tags: [dashboard, cli]
 topics: [releases]
 ---
@@ -21,5 +24,6 @@ Determine how each component can use this same mechanism to ensure they are only
 
 ## Stories
 - S-0192 Add a way to create a sibling story
+- S-0193 Explore ways to sign and verify components
 
 ## Notes
