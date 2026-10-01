@@ -1,6 +1,6 @@
 ---
 title: Work management
-updated: 2026-09-26
+updated: 2026-10-01
 audience: agent
 order: 30
 status: active
@@ -26,6 +26,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 - When you pull a story, in this order: move it to `in-progress`, open the narrative, read the goal, criteria, and notes, then write its tasks with `flai task new` if it has none, each with `## Work` and `## Done when`. Then work them in order. A story cannot go to `review` without at least one task.
 - If the story does not say enough to write the tasks, do not invent scope. Record it with `flai block --reason`, open a thread on the story saying what is missing (`thread_open`, or `flai thread new`), and pull the next story.
 - Definition of done, story: every criterion checked, at least one task and every task done or cancelled, decisions recorded, docs updated, `flai check --strict` clean, narrative closed, and everything committed on the story branch, so that `git status` in its worktree is clean. Move the story to `review`; only the operator moves it to `done`. The move is refused while the worktree has uncommitted changes, because acceptance merges the branch as it is committed.
+- Close a story out with `scripts/close-out.sh S-nnnn` in its worktree, followed by the commit message as `git commit` options (`-m`, or `-F` with a file outside the worktree): it runs the lint, the tests, and `flai check --strict`, checks that the narrative's `## Current state` and `## Next steps` are written, and commits what is outstanding, stopping at the first step that fails. Move the story to `review` only when it ends clean; when it stops, fix what it names and run it again rather than finishing the steps by hand.
 - Cancelling an epic cancels every open story under it and their open tasks, and cancelling a story cancels its open tasks; `flai move <id> cancelled --dry-run` lists what would go. When `inbox` or `wait_for_events` says your story, or a task of it, was cancelled, alone or with a parent, stop work on it at once: write what state the work is in to the narrative's `## Current state` and log, do not commit further to the story branch, and leave the branch and worktree alone; they are the operator's to keep or remove. Then call `inbox` and pull the next ready story.
 - When `inbox` or `wait_for_events` reports a change of kind `overlapped` on your story, another story was accepted (`cause`) and changed paths your story claims (`to`). Before you go on, run `flai stream sync` on your story, resolve any conflict it stops on, and run the tests again: a change that merges cleanly can still break yours. Log what you found in the narrative.
 - Transition items as you go with `flai move`, at the moment the state changes, so timestamps are true. Never backfill a history.

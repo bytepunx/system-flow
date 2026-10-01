@@ -69,6 +69,8 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 
 Purpose-named shell scripts for common tasks. The `Makefile` is the entry point and its targets call these scripts, so local runs and CI execute the same code. See [conventions/tooling.md](../conventions/tooling.md).
 
+Scripts are POSIX `sh` under `set -eu`, because the host shell may be zsh, and a sequence of more than a few commands is a script rather than a chain typed at the prompt (I-0006). The template ships `check.sh`, `lint-md.sh`, the three test tiers, and `close-out.sh` (S-0187): run in a story's worktree before review, it runs the lint, the tests, and `flai check --strict`, checks that the narrative's `## Current state` and `## Next steps` are written, and commits with the `git commit` options it is given, stopping at the first step that fails, so a failed step can no longer carry a chain on into a commit (I-0012). A project adds its own checks to it as steps of their own. This repository's copy picks the tests by what the branch changes: `flai-test.sh` for `flai/`, `template-test.sh` for `template/`, `flaiover-test.sh` for `flaiover/`. See [conventions/work-management.md](../conventions/work-management.md).
+
 ### Code sub-projects
 
 Sub-projects sit at the repo root, one folder each, named by the project (`flai/`, `flaiover/`). They own their build files and code. Their design lives in `design/system/<project>.md` and their technology in `design/tech/`, not inside the sub-project folder. Each sub-project has a short `README.md` pointing at those documents. Sub-projects are listed in `system-flow.yaml` so tooling can enumerate them.

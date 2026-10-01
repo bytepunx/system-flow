@@ -49,7 +49,7 @@ The folder lives under `layout.design` in `system-flow.yaml`; tooling resolves i
 |------|--------|
 | `session-start.md` | Priming: what to read and in what order before any change. Recovery after a crash. How to end a session so the next one can resume. |
 | `communication.md` | How to report to the operator: lead with the outcome, one idea per sentence, decisions versus questions, when to ask and when to proceed under a stated assumption, how to raise a concern. |
-| `work-management.md` | Pull, never push. WIP limits. Sizing stories and tasks. Narrative obligations. Definitions of ready and done. Blocking instead of waiting. |
+| `work-management.md` | Pull, never push. WIP limits. Sizing stories and tasks. Narrative obligations. Definitions of ready and done, with `scripts/close-out.sh` running the close-out steps before review and stopping at the first failure (S-0187). Blocking instead of waiting. |
 | `decisions.md` | What counts as a decision. When an ADR, when a living-document edit, when a story note. Never reverse an accepted decision silently. |
 | `documentation.md` | Where a document belongs. Front matter. Markdown and Mermaid rules. Writing style. Keep docs in sync with behaviour in the same change. |
 | `code-quality.md` | Tests accompany changes. Lint clean. Small, reviewable changes. Dependency policy: fewest, pinned, recorded in `design/tech`. No dead code, no speculative abstractions. |

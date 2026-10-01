@@ -13,7 +13,7 @@ smoke: ## Smoke tests, after integration passes
 	scripts/smoke.sh
 
 lint-md: ## Lint markdown
-	npx --yes markdownlint-cli2 "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**"
+	scripts/lint-md.sh
 
 board: ## Print the kanban board
 	flai board

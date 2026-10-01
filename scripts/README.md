@@ -14,6 +14,7 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `flai-test.sh` | gofmt, vet, golangci-lint v2, then all three tiers in order |
 | `flai-snapshot.sh` | GoReleaser snapshot build into `flai/dist` |
 | `check.sh` | `flai check --strict` on this repository |
+| `close-out.sh` | Before a story goes to review, in its worktree: the tests its branch calls for, the markdown lint, `flai check --strict`, the narrative's `## Current state` and `## Next steps`, then the commit with the `git commit` options given; stops at the first step that fails |
 | `lint-md.sh` | markdownlint-cli2 over every markdown file, with the CI globs and `.markdownlint.yaml` |
 | `mdlint-fixtures.sh` | Regenerates `flai/internal/mdlint/testdata/cases/expected.txt` with markdownlint-cli2, the reference flai's own markdown lint is tested against |
 | `template-test.sh` | Renders `template/` into a temp dir and checks the result |
