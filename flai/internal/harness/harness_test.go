@@ -333,7 +333,7 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"the tasks of S-0104 it must wait for (--after)",
 			"tasks with no after between them and no path in common form layers that can run together",
 			"record the layers and why each task waits in the narrative's Decisions",
-			"Work the plan layer by layer: run a layer's tasks at once, one task sub-agent each",
+			"Work the plan layer by layer, handing each task to a task sub-agent",
 			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits or writes through flai",
 			"Review each one's work yourself, fix what falls short, commit it, and move the task",
 			"only you commit, sync the stream, move items, and talk to the designer",
