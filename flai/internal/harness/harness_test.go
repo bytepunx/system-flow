@@ -156,6 +156,40 @@ func TestARestartedAgentIsToldHowTheLastOneEnded(t *testing.T) {
 	}
 }
 
+// S-0177, ADR-0064: an agent started for a story begun on another host is
+// told where, when, and by whom, to reconcile rather than start over, and
+// which threads to read.
+func TestAnAgentForAStoryBegunElsewhereIsToldWhereItWasBegun(t *testing.T) {
+	r := req(nil)
+	r.Begun = &Begun{By: "agent-S-0104", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104", Host: "far-away", Threads: []string{"TH-0041"}}
+	p := Prompt(r)
+	for _, want := range []string{
+		"because the operator started it here, and this host has had no agent for it: it was begun by agent-S-0104, who moved it to in-progress at 2026-10-01T07:40:00Z, on the host far-away.",
+		"run flai stream open S-0104",
+		"from this clone, else from the remote, else new from the main branch",
+		"go on from what is committed rather than starting over",
+		"TH-0041, on the story, has an entry by someone else since it was begun: read it with the flai MCP tool thread_get",
+		"flai move S-0104 review",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "entered ready") {
+		t.Errorf("a story begun elsewhere did not just enter ready:\n%s", p)
+	}
+	r.Begun = &Begun{By: "alex", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104", Threads: []string{"TH-0041", "TH-0042"}}
+	p = Prompt(r)
+	for _, want := range []string{"begun by alex, who moved it to in-progress at 2026-10-01T07:40:00Z; its narrative names agent-S-0104, on another host.", "Its threads TH-0041, TH-0042 have entries"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if p := Prompt(req(nil)); strings.Contains(p, "begun") {
+		t.Errorf("a story that entered ready is not told it was begun elsewhere:\n%s", p)
+	}
+}
+
 // S-0182, I-0050: an agent the operator started is told so, and what the
 // start went past, so that it does not take the start for flai serve's own.
 func TestAnAgentTheOperatorStartedIsToldWhatItWentPast(t *testing.T) {

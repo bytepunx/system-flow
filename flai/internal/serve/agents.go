@@ -296,7 +296,10 @@ type readyStory struct {
 	// in-progress limit, or nothing (S-0182).
 	Started bool
 	Past    []string
-	item    *workitem.Item
+	// Begun says where a story in progress that this host has had no agent
+	// for was begun, when the operator has one started here (S-0177).
+	Begun *harness.Begun
+	item  *workitem.Item
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
@@ -617,7 +620,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, Restart: story.Restart, Commit: story.Commit, Started: story.Started, Past: story.Past}, cfg.host(name))
+		Session: run.Session, Answered: run.Answered, Restart: story.Restart, Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}
@@ -663,6 +666,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	}
 	if story.Started && len(story.Past) > 0 {
 		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, past %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, strings.Join(story.Past, "; "), run.PID, run.Log)
+	}
+	if story.Begun != nil {
+		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, begun %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.Begun.Said(), run.PID, run.Log)
 	}
 	if l.record != nil {
 		l.record(entry)

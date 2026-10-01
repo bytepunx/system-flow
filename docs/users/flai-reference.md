@@ -1692,7 +1692,7 @@ Subcommands:
 - [clear](#flai-serve-agent-clear): Remove the command; a story with a harness is still started with it
 - [commit](#flai-serve-agent-commit): Start an agent to commit what a story in review left uncommitted in its worktree
 - [harness](#flai-serve-agent-harness): Set the program a harness is and the arguments that say what its agent may do
-- [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed
+- [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
@@ -1754,7 +1754,7 @@ Flags:
 
 ##### flai serve agent restart
 
-Start a new agent for a story in ready or in progress whose agent dropped or failed.
+Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here.
 
 ```text
 flai serve agent restart <story-id>
@@ -1762,9 +1762,11 @@ flai serve agent restart <story-id>
 
 Starts a new agent, in a new session, for a story in ready or in-progress whose last agent flai serve started has ended or dropped, the way flai serve starts one when a story enters ready: the story's harness, model, and options, or the host's command. The agent is told how its last one ended and to go on from the story's narrative. The run is recorded where the serving flai tracks it: the dot on the card, the outcome, the restart on an answer (S-0116, ADR-0043).
 
-For a story in ready while the in-progress limit is full it queues the new agent instead: flai serve starts it as soon as the limit has room, as it starts a story that enters ready, and until then the story's agent reads as waiting, queued (S-0118).
+A story that this host's flai serve has started no agent for gets one too (S-0177, ADR-0064). One in progress, begun on another host, gets an agent told who began it, when, and on which host, which threads have been written to since, and to reconcile with what is committed rather than start over.
 
-It refuses, and says why, while the agent action is off for the project, when the story is in another state, when flai serve has started no agent for it, while its agent runs or waits for an answer, when one is already queued, and when nothing can start it. The story page's Retry button runs this.
+For a story in ready while the in-progress limit is full, or a claim holds it, it queues the new agent instead: flai serve starts it as soon as the story can start, as it starts a story that enters ready, and until then the story's agent reads as waiting, queued (S-0118).
+
+It refuses, and says why, while the agent action is off for the project, when the story is in another state, while its agent runs or waits for an answer, when one is already queued, and when nothing can start it. The story page's Retry button runs this, and its Start agent button for a story in progress that has no agent here.
 
 ##### flai serve agent set
 
@@ -1798,7 +1800,7 @@ flai serve agent start <story-id>
 
 Starts the agent of a story in ready now, the way flai serve starts one when a story enters ready: the story's harness, model, and options, or the host's command. It starts whether or not the story was ready before flai serve began, whether or not it has had an agent since it entered ready, and whoever is attending the project. The run is recorded where the serving flai tracks it: the dot on the card, the outcome when it ends, the start again on an answer (S-0115).
 
-It refuses, and says why, while the agent action is off for the project, when the story is not in ready, while its agent runs or waits for an answer, and when nothing can start it (no harness and no command). A full in-progress limit does not stop it: it starts past the limit, with a warning, as a move does. A story in progress whose agent dropped or failed gets a new one from flai serve agent restart. The story page's Start agent button runs this.
+It refuses, and says why, while the agent action is off for the project, when the story is not in ready, while its agent runs or waits for an answer, and when nothing can start it (no harness and no command). A full in-progress limit does not stop it: it starts past the limit, with a warning, as a move does. A story in progress whose agent dropped or failed, or that has had no agent here, gets one from flai serve agent restart. The story page's Start agent button runs this.
 
 Examples:
 

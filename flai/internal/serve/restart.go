@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -70,14 +71,16 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 }
 
 // Restart starts a new agent, in a new session, for a story in ready or in
-// progress whose last agent flai serve started has ended or dropped. For a
-// story in ready while the in-progress limit is full or a claim holds it
+// progress whose last agent flai serve started has ended or dropped, or that
+// this host has had no agent for (S-0177, ADR-0064): a story in progress
+// that was begun elsewhere gets an agent told where, when, and by whom. For
+// a story in ready while the in-progress limit is full or a claim holds it
 // (S-0128), it queues one instead
 // and returns the run with Queued set: flai serve starts it when there is
 // room, as it starts a story that enters ready (S-0118). It is refused while
 // the agent action is off for the project, when the story is in another
-// state, when no agent was started for it, while its agent runs or waits for
-// an answer, when one is already queued, and when nothing can start it.
+// state, while its agent runs or waits for an answer, when one is already
+// queued, and when nothing can start it.
 func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -104,7 +107,6 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	run := st.Stories[it.ID]
 	switch {
 	case run == nil:
-		return nil, refused("flai serve has started no agent for %s, so there is none to restart", it.ID)
 	case run.running():
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run.Outcome == OutcomeAsked:
@@ -120,15 +122,62 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		if ok, hold, err := roomFor(repo, st, it.ID); err != nil {
 			return nil, err
 		} else if !ok || hold != nil {
+			if run == nil {
+				run = &AgentRun{Story: it.ID} // nothing ran here: a stand-in to queue
+			}
 			return queue(o, e, run), nil
 		}
 	}
-	return StartNow(ctx, o, e, it.ID, restartWhy(run))
+	switch {
+	case run != nil && run.Started != "":
+		return StartNow(ctx, o, e, it.ID, restartWhy(run))
+	case it.Status == workitem.InProgress:
+		return startNow(ctx, o, e, readyStory{ID: it.ID, Begun: begun(repo, it)})
+	}
+	return startNow(ctx, o, e, readyStory{ID: it.ID, Started: true})
 }
 
-// restartWhy says how run ended, for the prompt of the agent started after it.
+// begun says where a story that this host has had no agent for was begun
+// (ADR-0064): who last moved it to in-progress and when, the agent and host
+// its narrative names, and the threads on it or its tasks with an entry by
+// someone other than those two since then.
+func begun(repo *workitem.Repo, it *workitem.Item) *harness.Begun {
+	b := &harness.Begun{}
+	for _, t := range it.Transitions {
+		if t.To == workitem.InProgress {
+			b.By, b.At = t.By, t.At
+		}
+	}
+	if n, err := workitem.ReadNarrative(repo.NarrativePath(it.ID)); err == nil {
+		b.Agent, b.Host = n.Agent, n.Host
+	}
+	since, _ := time.Parse(time.RFC3339, b.At)
+	all, err := threads.List(repo)
+	if err != nil {
+		return b
+	}
+	for _, th := range all {
+		if threads.StoryOf(repo, th) != it.ID {
+			continue
+		}
+		for _, en := range th.Entries() {
+			at, err := time.Parse(time.RFC3339, en.At)
+			if err == nil && !at.Before(since) && en.Author != b.By && en.Author != b.Agent {
+				b.Threads = append(b.Threads, th.ID)
+				break
+			}
+		}
+	}
+	return b
+}
+
+// restartWhy says how run ended, for the prompt of the agent started after
+// it; empty for a stand-in that never ran, queued for a story in ready that
+// had no agent here.
 func restartWhy(run *AgentRun) string {
 	switch {
+	case run.Started == "":
+		return ""
 	case run.Why != "":
 		return run.Why
 	case run.live():

@@ -823,7 +823,7 @@ func (a *app) servedView() map[string]any {
 func newServeAgentRestartCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "restart <story-id>",
-		Short: "Start a new agent for a story in ready or in progress whose agent dropped or failed",
+		Short: "Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here",
 		Long: `Starts a new agent, in a new session, for a story in ready or
 in-progress whose last agent flai serve started has ended or dropped, the
 way flai serve starts one when a story enters ready: the story's harness,
@@ -832,15 +832,21 @@ one ended and to go on from the story's narrative. The run is recorded
 where the serving flai tracks it: the dot on the card, the outcome, the
 restart on an answer (S-0116, ADR-0043).
 
-For a story in ready while the in-progress limit is full it queues the new
-agent instead: flai serve starts it as soon as the limit has room, as it
-starts a story that enters ready, and until then the story's agent reads as
-waiting, queued (S-0118).
+A story that this host's flai serve has started no agent for gets one too
+(S-0177, ADR-0064). One in progress, begun on another host, gets an agent
+told who began it, when, and on which host, which threads have been written
+to since, and to reconcile with what is committed rather than start over.
+
+For a story in ready while the in-progress limit is full, or a claim holds
+it, it queues the new agent instead: flai serve starts it as soon as the
+story can start, as it starts a story that enters ready, and until then the
+story's agent reads as waiting, queued (S-0118).
 
 It refuses, and says why, while the agent action is off for the project,
-when the story is in another state, when flai serve has started no agent for
-it, while its agent runs or waits for an answer, when one is already queued,
-and when nothing can start it. The story page's Retry button runs this.`,
+when the story is in another state, while its agent runs or waits for an
+answer, when one is already queued, and when nothing can start it. The story
+page's Retry button runs this, and its Start agent button for a story in
+progress that has no agent here.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return a.agentNow(args[0], serve.Restart)
@@ -864,8 +870,8 @@ It refuses, and says why, while the agent action is off for the project,
 when the story is not in ready, while its agent runs or waits for an
 answer, and when nothing can start it (no harness and no command). A full
 in-progress limit does not stop it: it starts past the limit, with a
-warning, as a move does. A story in progress whose agent dropped or failed
-gets a new one from flai serve agent restart. The story page's Start agent
+warning, as a move does. A story in progress whose agent dropped or failed,
+or that has had no agent here, gets one from flai serve agent restart. The story page's Start agent
 button runs this.`,
 		Example: `  flai serve agent start S-0115`,
 		Args:    cobra.ExactArgs(1),

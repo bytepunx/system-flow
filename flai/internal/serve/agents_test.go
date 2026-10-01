@@ -960,6 +960,48 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 			t.Errorf("started: %+v", run)
 		}
 	})
+	// S-0177, ADR-0064: a story begun on another host, which this host has
+	// had no agent for, gets one told where, when, and by whom
+	t.Run("a story in progress begun on another host", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Elsewhere")
+		lab.move(id, workitem.InProgress) // by its agent, on the other host
+		there := &workitem.Narrative{Stream: id, Title: "Elsewhere", Updated: lab.now.UTC().Format(workitem.TimeFormat),
+			Agent: "builder-" + id, Session: "there", Host: "far-away", Path: lab.repo.NarrativePath(id), Body: "\n# " + id + " Elsewhere\n"}
+		if err := there.Save(); err != nil {
+			t.Fatal(err)
+		}
+		asked, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: "builder-" + id, Text: "Eight or nine?", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := threads.Reply(lab.repo, asked.ID, "alex", "Nine.", time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := threads.New(lab.repo, threads.NewOptions{Title: "Unanswered", On: id, Author: "builder-" + id, Text: "And then?", Now: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+		it, _ := lab.repo.Get(id)
+		b := begun(lab.repo, it)
+		if b.By != "builder-"+id || b.At == "" || b.Agent != "builder-"+id || b.Host != "far-away" || len(b.Threads) != 1 || b.Threads[0] != asked.ID {
+			t.Errorf("where it was begun, and the thread answered since: %+v", b)
+		}
+
+		run, err := restart(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if run.PID == 0 || run.Agent != "builder-"+id || run.Queued != "" {
+			t.Errorf("started at once: %+v", run)
+		}
+		if j := lab.entries(); len(j) != 1 || !strings.Contains(j[0].Detail, "begun by builder-"+id) || !strings.Contains(j[0].Detail, "on the host far-away") {
+			t.Errorf("journal: %+v", j)
+		}
+		waitFor(t, "it runs", func() bool { return lab.run(id).running() })
+		// this host's agent now runs for it, and is not started twice
+		refusedFor(t, lab, id, "agent is running")
+	})
 	t.Run("refusals", func(t *testing.T) {
 		lab := newAgentLab(t)
 		lab.hold()
@@ -969,7 +1011,11 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		lab.limit(1)
 		busy := lab.ready("Busy")
 		lab.move(busy, workitem.InProgress)
-		refusedFor(t, lab, none, "flai serve has started no agent for "+none)
+		// one that never had an agent here is queued, as a retry is (S-0177)
+		if run, err := restart(lab, none); err != nil || run.Queued == "" || run.Started != "" {
+			t.Errorf("a story in ready with no agent here and no room is queued: %+v %v", run, err)
+		}
+		refusedFor(t, lab, none, "already queued")
 		// running
 		lab.limit(5)
 		running := lab.ready("Running")

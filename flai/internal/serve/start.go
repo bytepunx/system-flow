@@ -41,7 +41,7 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if it.Status != workitem.Ready {
 		why := "only a story in ready is started"
 		if it.Status == workitem.InProgress {
-			why += "; flai serve agent restart starts a new agent for one in progress whose agent dropped or failed"
+			why += "; flai serve agent restart starts a new agent for one in progress whose agent dropped or failed, or that this host has had no agent for"
 		}
 		return nil, refused("%s is in %s; %s", it.ID, it.Status, why)
 	}

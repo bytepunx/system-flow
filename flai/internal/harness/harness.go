@@ -51,6 +51,44 @@ type Request struct {
 	// (S-0182).
 	Started bool
 	Past    []string
+	// Begun says where a story in progress was begun, when this host has
+	// had no agent for it and the operator has one started here (S-0177,
+	// ADR-0064); nil otherwise.
+	Begun *Begun
+}
+
+// Begun is where, when, and by whom a story was begun on another host, or
+// outside flai serve on this one, as its files say.
+type Begun struct {
+	By    string // who last moved it to in-progress
+	At    string // when
+	Agent string // the agent its narrative names, when it has one
+	Host  string // the host its narrative was opened on, when it says
+	// Threads are the story's threads with an entry by someone other than
+	// By or Agent since At.
+	Threads []string
+}
+
+// Said is where the story was begun, as a clause: by whom, when, and where.
+func (b *Begun) Said() string {
+	said := "by " + orSomeone(b.By)
+	if b.At != "" {
+		said += ", who moved it to in-progress at " + b.At
+	}
+	if b.Agent != "" && b.Agent != b.By {
+		said += "; its narrative names " + b.Agent
+	}
+	if b.Host != "" {
+		return said + ", on the host " + b.Host
+	}
+	return said + ", on another host"
+}
+
+func orSomeone(who string) string {
+	if who == "" {
+		return "someone"
+	}
+	return who
 }
 
 // Host is the operator's say about one harness, from the host's configuration.
@@ -176,6 +214,8 @@ If a change cannot be committed without the designer deciding something, ask wit
 	}
 	why := "because it entered ready."
 	switch {
+	case r.Begun != nil:
+		why = fmt.Sprintf("because the operator started it here, and this host has had no agent for it: it was begun %[1]s. Its branch and worktree may not be on this host, and what was not committed and pushed there is not here. Reconcile before you do anything else: run flai stream open %[2]s, which keeps the narrative and checks out story/%[2]s from this clone, else from the remote, else new from the main branch, and says which; read the narrative's Current state, Next steps, and log, and the story's tasks; compare them with what is committed on the branch; and go on from what is committed rather than starting over, doing again what the narrative says was done and is not there. Log what you found with flai stream log %[2]s.%[3]s", r.Begun.Said(), r.Story, answeredSince(r.Begun))
 	case r.Restart != "":
 		why = fmt.Sprintf("because the operator restarted it: its last agent %s. The story may already be in progress, with a narrative, a branch, and a worktree: if so, read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart)
 	case r.Started && len(r.Past) > 0:
@@ -190,6 +230,18 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 %[6]s
 
 %[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r))
+}
+
+// answeredSince asks the agent to read the threads written to since its
+// story was begun, when there are any.
+func answeredSince(b *Begun) string {
+	switch len(b.Threads) {
+	case 0:
+		return ""
+	case 1:
+		return fmt.Sprintf(" %s, on the story, has an entry by someone else since it was begun: read it with the flai MCP tool thread_get before you go on.", b.Threads[0])
+	}
+	return fmt.Sprintf(" Its threads %s have entries by someone else since it was begun: read them with the flai MCP tool thread_get before you go on.", strings.Join(b.Threads, ", "))
 }
 
 // delegation tells the agent when to hand work to the explorer and verifier
