@@ -2,12 +2,12 @@
 id: I-0037
 title: Agents flai serve starts for two stories share one agent name, so a thread one opens for the other never reads as awaiting it
 class: defect
-status: open
+status: closed
 count: 3
 cost: 7m
 first_reported: 2026-09-24T01:44:46Z
 last_reported: 2026-09-24T08:39:10Z
-updated: 2026-09-24T08:39:10Z
+updated: 2026-10-01T08:00:48Z
 ---
 
 # I-0037 Agents flai serve starts for two stories share one agent name, so a thread one opens for the other never reads as awaiting it
@@ -28,3 +28,4 @@ The launcher's own signs: every agent flai serve started connected to MCP as sys
 
 ## Remediation
 Pass the agent's name to the MCP server as an argument, not through the environment: since S-0114 the claude-code adapter's `--mcp-config` runs `flai mcp --agent <name>`, which wins over any `FLAI_AGENT` the harness's settings put into the server's environment. Shell commands the agent runs still see the settings' `FLAI_AGENT`; an operator who sets one in `.claude/settings.local.json` should remove it, since flai serve sets the name itself.
+Closed 2026-10-01T08:00:48Z: Fixed by S-0114 (0eac71b): the claude-code adapter passes the agent's name to flai mcp as --agent, over any FLAI_AGENT in the harness's settings.

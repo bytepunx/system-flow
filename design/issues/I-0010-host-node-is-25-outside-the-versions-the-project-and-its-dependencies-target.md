@@ -2,12 +2,12 @@
 id: I-0010
 title: Host Node is 25, outside the versions the project and its dependencies target
 class: efficiency
-status: open
+status: closed
 count: 15
 cost: 3m
 first_reported: 2026-09-17T06:01:24Z
 last_reported: 2026-09-24T01:40:34Z
-updated: 2026-09-24T01:40:34Z
+updated: 2026-10-01T08:00:48Z
 ---
 
 # I-0010 Host Node is 25, outside the versions the project and its dependencies target
@@ -63,3 +63,4 @@ S-0063: make flaiover-install refused under Node 25 in the new worktree; npm_con
 S-0107: make flaiover-install refused under Node 25 in the new worktree. Putting nvm's Node 24 (~/.nvm/versions/node/v24.21.0/bin) first on PATH for the install and the flaiover scripts works without relaxing engine-strict, and matches CI and the image.
 
 ## Remediation
+Closed 2026-10-01T08:00:48Z: No longer applies: the agent shell's node is v24 (nvm), matching flaiover/.nvmrc; no instance since S-0107 (2026-09-24).

@@ -2,12 +2,12 @@
 id: I-0004
 title: Hand-edited work items drifted from the schema
 class: defect
-status: open
+status: closed
 count: 3
 cost: 10m
 first_reported: 2026-09-15T18:00:57Z
 last_reported: 2026-09-15T18:11:49Z
-updated: 2026-09-15T22:40:33Z
+updated: 2026-10-01T08:00:48Z
 ---
 
 # I-0004 Hand-edited work items drifted from the schema
@@ -26,3 +26,4 @@ S-0008: same run flagged backlog stories in the board order; the rule was relaxe
 
 ## Remediation
 flai now creates and moves items and `flai check --strict` runs before every hand-over (tooling.md). Close when no new instance appears for an epic.
+Closed 2026-10-01T08:00:48Z: Fixed: flai creates and moves items and flai check --strict gates them; no instance since 2026-09-15. Version skew on front matter is I-0051 (S-0181).

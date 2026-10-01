@@ -2,12 +2,12 @@
 id: I-0042
 title: A flaiover test that runs about twenty flai processes hit vitest's 5 s timeout on a loaded host
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-09-24T09:14:39Z
 last_reported: 2026-09-24T09:14:39Z
-updated: 2026-09-24T09:14:39Z
+updated: 2026-10-01T08:00:48Z
 ---
 
 # I-0042 A flaiover test that runs about twenty flai processes hit vitest's 5 s timeout on a loaded host
@@ -21,3 +21,4 @@ A flaiover test that runs about twenty flai processes hit vitest's 5 s timeout o
 S-0116, 2026-09-24: writes.test.ts 'changes nothing until the shell turns settings on' took 4.6 to 5.1 s with a flai built from main and from story/S-0116 alike, load average 5.5 while another flai-started agent ran its own tests. It failed at the 5 s default on every run. Given 30 s in S-0116.
 
 ## Remediation
+Closed 2026-10-01T08:00:48Z: Fixed by S-0116 (7510387): the test has a 30 s timeout.

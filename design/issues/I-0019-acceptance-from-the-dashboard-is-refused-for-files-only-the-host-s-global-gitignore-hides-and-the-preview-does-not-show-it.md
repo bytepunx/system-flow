@@ -2,12 +2,12 @@
 id: I-0019
 title: Acceptance from the dashboard is refused for files only the host's global gitignore hides, and the preview does not show it
 class: defect
-status: open
+status: closed
 count: 1
 cost: 8m
 first_reported: 2026-09-18T20:54:17Z
 last_reported: 2026-09-18T20:54:17Z
-updated: 2026-09-18T20:54:17Z
+updated: 2026-10-01T08:00:48Z
 ---
 
 # I-0019 Acceptance from the dashboard is refused for files only the host's global gitignore hides, and the preview does not show it
@@ -22,3 +22,4 @@ S-0048: the operator dropped the card on done and the move was refused: 'working
 
 ## Remediation
 Queued as S-0051: the preview reports uncommitted paths outside wip and the confirmation lets the designer include them or cancel; the container sees the ignore rules the host does; the template's `.gitignore` covers agent-local files such as `.claude/settings.local.json`.
+Closed 2026-10-01T08:00:48Z: Fixed by S-0051 (2e85a74): the acceptance preview lists uncommitted paths outside wip, the designer can include them, and the container gets the host's global excludes.

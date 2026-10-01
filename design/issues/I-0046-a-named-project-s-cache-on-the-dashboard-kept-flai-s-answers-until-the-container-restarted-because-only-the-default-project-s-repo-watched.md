@@ -2,11 +2,11 @@
 id: I-0046
 title: A named project's cache on the dashboard kept flai's answers until the container restarted, because only the default project's Repo watched
 class: defect
-status: open
+status: closed
 count: 1
 first_reported: 2026-09-26T03:31:44Z
 last_reported: 2026-09-26T03:31:44Z
-updated: 2026-09-26T03:31:44Z
+updated: 2026-10-01T08:00:48Z
 ---
 
 # I-0046 A named project's cache on the dashboard kept flai's answers until the container restarted, because only the default project's Repo watched
@@ -23,3 +23,4 @@ flaiover keeps one cache of flai's answers per project, a `Repo` made by `repo()
 ## Remediation
 
 S-0117: `repo()` calls `watch()` on every `Repo` it makes, so a `Repo` listens from the moment it exists, whichever route made it. `project-events.test.ts` pins it with a real connection: a named project's board is asked, its flai reports a removed story file, and the board is asked of flai again.
+Closed 2026-10-01T08:00:48Z: Fixed by S-0117: repo() watches every Repo it makes; project-events.test.ts pins it.
