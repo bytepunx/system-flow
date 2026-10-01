@@ -3,15 +3,16 @@ title: Board
 updated: 2026-10-01
 status: active
 wip_limits:
-  ready: 5
-  in-progress: 2
-  review: 3
+  ready: 10
+  in-progress: 3
+  review: 5
 order:
-  - S-0175
   - S-0176
+  - S-0188
   - S-0178
-  - S-0174
   - S-0177
+  - S-0179
+  - S-0180
 ---
 
 # Board

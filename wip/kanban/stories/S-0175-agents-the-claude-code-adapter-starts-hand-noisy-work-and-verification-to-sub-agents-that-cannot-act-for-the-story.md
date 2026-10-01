@@ -3,22 +3,36 @@ id: S-0175
 type: story
 nature: improvement
 title: Agents the claude-code adapter starts hand noisy work and verification to sub-agents that cannot act for the story
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-01T07:17:20Z
-updated: 2026-10-01T07:38:46Z
+updated: 2026-10-01T08:13:01Z
 transitions:
   - to: ready
     at: 2026-10-01T07:38:46Z
     by: alex
+  - to: in-progress
+    at: 2026-10-01T07:48:30Z
+    by: agent-S-0175
 tags: [flai, template]
 topics: [conventions]
-touches: [flai/internal/harness, flai/internal/context, flai/cmd/prime.go, flai/internal/mcpserver, template/, design/conventions/, design/system/agent-context.md, design/system/flai-cli.md]
+touches: [flai/internal/harness, flai/internal/context, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/root.go, flai/internal/guard, flai/internal/mcpserver, flai/internal/conventions, template, design/conventions, design/system/agent-context.md, design/system/flai-cli.md, design/system/conventions.md, design/adrs, ".claude", docs/users, docs/operators/index.md, docs/operators/settings.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1260
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 246
+      output: 1222
+      cache_read: 21410959
+      cache_write: 317798
+      cost: 9.7457
 ---
 # S-0175 Agents the claude-code adapter starts hand noisy work and verification to sub-agents that cannot act for the story
 
@@ -44,9 +58,19 @@ Sub-agents start from a fresh context (only the prompt the parent writes), see n
 - [ ] The design (`design/system/flai-cli.md`, `agent-context.md`) and the user guide describe what agents delegate and what sub-agents may do
 
 ## Tasks
+- T-0619 Decide how sub-agents are defined, primed, attributed, and ask questions
+- T-0620 flai prime --role and the MCP prime tool's role return a sub-agent's pack
+- T-0621 The template ships explorer and verifier sub-agents and a delegation convention
+- T-0622 harness.Prompt for claude-code says when and how to delegate
+- T-0623 The design and user guide describe what agents delegate and what sub-agents may do
+- T-0624 Measure delegation on two stories against runs without it
+- T-0627 flai guard refuses a sub-agent's writes as a Claude Code hook
 
 ## Notes
 
 - Forked sub-agents inherit the parent's conversation and prompt cache, so they start primed; check whether the `claude` that `flai serve` runs headless exposes them, and whether they inherit the parent's tool restrictions. They are the basis for the task fan-out experiment that follows this story, not for this one.
 - ADR-0049 rejected a scout sub-agent that reads the whole pack on the parent's behalf. This story does the reverse: sub-agents get less than the parent, not more.
 - The `command` harness is out of scope: flai cannot know what its program does with sub-agents.
+- Decided in the story (ADR-0059): questions come back in a sub-agent's final message and the story's agent opens the thread (option (a)); a sub-agent's calls are told apart in the agent's log by `parent_tool_use_id`, and the MCP server is unchanged.
+- Added in the story (ADR-0060, T-0627): the verifier needs `Bash`, and a Bash pattern in a definition's `disallowedTools` removes Bash whole, so `flai guard`, a project `PreToolUse` hook, refuses any sub-agent's flai and git writes by the `agent_type` Claude Code passes it.
+- Measurement (TH-0042): this run and S-0118 are measured here; S-0188 measures two stories run with the released prompt.

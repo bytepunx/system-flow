@@ -56,5 +56,4 @@ If I hear nothing, I'll do 1 as a second task.
 ### 2026-09-29T06:59:49Z agent-S-0153
 Done as option 1 (bc47b14): a thread of more than two entries shows its last two, with show N earlier entries above them. S-0153 is going to review.
 
-### 2026-09-29T06:59:49Z agent-S-0153
 Resolved.
