@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -73,5 +75,38 @@ func TestServeStatusNamesEachProjectsMCPServer(t *testing.T) {
 	var st serveStatus
 	if err := json.Unmarshal([]byte(js), &st); err != nil || st.MCP[root].URL != "http://127.0.0.1:4244/mcp" {
 		t.Errorf("json: %v %+v", err, st.MCP)
+	}
+}
+
+// S-0183: flai serve has its MCP servers kept by the host in its environment
+// only when that host runs from the config flai serve was given: one run with
+// another --config, by an agent of the operator's, keeps none and says why.
+func TestServeKeepsMCPServersOnlyWithTheHostItsConfigNames(t *testing.T) {
+	home := t.TempDir()
+	hostCfg, otherCfg := filepath.Join(home, "host", "config.json"), filepath.Join(home, "scratch", "config.json")
+	dir := host.DirFor(hostCfg)
+	if err := os.MkdirAll(string(dir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dir.TokenFile(), []byte("host-token"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	serveWith := func(cfg string) (serve.MCP, string) {
+		var errOut bytes.Buffer
+		a := &app{configPath: cfg, errOut: &errOut}
+		return a.serveMCP(), errOut.String()
+	}
+	t.Setenv(host.URLEnv, "http://127.0.0.1:4241")
+	t.Setenv(host.TokenEnv, "host-token")
+	if mcp, said := serveWith(hostCfg); mcp == nil {
+		t.Errorf("the serve the host started keeps no MCP server: %s", said)
+	}
+	mcp, said := serveWith(otherCfg)
+	if mcp != nil || !strings.Contains(said, "not the one this config names") || !strings.Contains(said, otherCfg) {
+		t.Errorf("a serve with another config took the host: %v, said %q", mcp, said)
+	}
+	t.Setenv(host.TokenEnv, "")
+	if mcp, said := serveWith(hostCfg); mcp != nil || !strings.Contains(said, "not under flai host") {
+		t.Errorf("outside a host: %v, said %q", mcp, said)
 	}
 }

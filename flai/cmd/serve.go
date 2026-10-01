@@ -31,6 +31,25 @@ func (a *app) serveDir() serve.Dir {
 	return serve.DirFor(path)
 }
 
+// serveMCP is how flai serve has its projects' MCP servers kept: by the host
+// that started it (S-0106), and by no host when it runs outside one, or when
+// the host in its environment is not the one its config names (S-0183): a
+// flai serve run with another --config, by an agent of the operator's, does
+// not take over the operator's MCP servers.
+func (a *app) serveMCP() serve.MCP {
+	c, ok := host.FromEnv()
+	if !ok {
+		a.logger().Info("not under flai host: no mcp server is kept", "component", "serve")
+		return nil
+	}
+	if dir := a.hostDir(); !dir.Holds(c) {
+		a.logger().Warn("the flai host in the environment is not the one this config names: no mcp server is kept",
+			"component", "serve", "host", c.URL, "config", config.ResolvePath(a.configPath), "host_dir", string(dir))
+		return nil
+	}
+	return hostMCP{c: c}
+}
+
 func newServeCmd(a *app) *cobra.Command {
 	var exitWith int
 	c := &cobra.Command{
@@ -67,14 +86,7 @@ there does.`,
 			if exitWith > 0 {
 				ctx = exitWithProcess(ctx, exitWith)
 			}
-			// under a host, the host keeps the MCP servers flai serve asks for;
-			// outside one, none is kept (S-0106)
-			var mcp serve.MCP
-			if c, ok := host.FromEnv(); ok {
-				mcp = hostMCP{c: c}
-			} else {
-				a.logger().Info("not under flai host: no mcp server is kept", "component", "serve")
-			}
+			mcp := a.serveMCP()
 			// Started in a folder that is not a project (S-0102), it serves the
 			// projects below it and offers the folder's other repositories for
 			// import, as flai dashboard there does (ADR-0036).

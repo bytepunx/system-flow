@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -142,6 +143,13 @@ func (d Dir) Client(now time.Time) (*Client, Status, error) {
 		return nil, st, fmt.Errorf("flai host runs (pid %d) but its token is unreadable: %w", st.PID, err)
 	}
 	return &Client{URL: "http://" + st.Addr, Token: string(token)}, st, nil
+}
+
+// Holds says whether this folder holds c's token: whether c is the host
+// that runs from this folder's config, not another's (S-0183).
+func (d Dir) Holds(c *Client) bool {
+	token, err := os.ReadFile(d.TokenFile())
+	return err == nil && c != nil && strings.TrimSpace(c.Token) != "" && strings.TrimSpace(string(token)) == strings.TrimSpace(c.Token)
 }
 
 // Spec is how to start one child. External, when not zero, is the PID of a

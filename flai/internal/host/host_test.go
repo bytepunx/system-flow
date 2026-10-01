@@ -175,6 +175,25 @@ func TestServeRunsWithTheWayBackAndGoesWithTheHost(t *testing.T) {
 	}
 }
 
+// S-0183: a host's folder holds its token and no other host's, so a flai
+// serve tells which host its own config names.
+func TestAHostsFolderHoldsItsOwnTokenOnly(t *testing.T) {
+	r := start(t, Options{Serve: spec("run")})
+	if !r.o.Dir.Holds(r.client) {
+		t.Error("the host's own folder does not hold its token")
+	}
+	other := Dir(t.TempDir())
+	if other.Holds(r.client) {
+		t.Error("a folder with no token holds the host's")
+	}
+	if err := other.write(other.TokenFile(), []byte("another host's")); err != nil {
+		t.Fatal(err)
+	}
+	if other.Holds(r.client) || other.Holds(nil) || other.Holds(&Client{URL: r.client.URL}) {
+		t.Error("a folder holds a token that is not its own")
+	}
+}
+
 func TestAChildThatEndsIsStartedAgain(t *testing.T) {
 	r := start(t, Options{Serve: spec("crash")})
 	st := r.until("serve restarted twice", func(st Status) bool { return childOf(st, Serve, "").Restarts >= 2 })
