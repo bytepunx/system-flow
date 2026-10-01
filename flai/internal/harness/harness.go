@@ -44,6 +44,13 @@ type Request struct {
 	// started to commit what it holds and nothing else (S-0140); empty
 	// otherwise.
 	Commit string
+	// Started is set when the operator has had the agent started now, from
+	// the story's page or with flai serve agent start (S-0115), rather than
+	// flai serve when the story entered ready. Past says what that start
+	// went past: a hold's reason, a full in-progress limit, or nothing
+	// (S-0182).
+	Started bool
+	Past    []string
 }
 
 // Host is the operator's say about one harness, from the host's configuration.
@@ -151,8 +158,9 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // check before review to sub-agents (ADR-0059), and asking the designer
 // through flai when it needs them. A resumed agent is told its question was
 // answered and goes on in the session that already holds the rest; one
-// started to commit a worktree is told to do only that (S-0140). Only the
-// claude-code adapter sends a prompt.
+// started to commit a worktree is told to do only that (S-0140); one the
+// operator started past a hold or a full limit is told what it went past
+// (S-0182). Only the claude-code adapter sends a prompt.
 func Prompt(r Request) string {
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
@@ -167,8 +175,13 @@ If a change cannot be committed without the designer deciding something, ask wit
 %[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
 	why := "because it entered ready."
-	if r.Restart != "" {
+	switch {
+	case r.Restart != "":
 		why = fmt.Sprintf("because the operator restarted it: its last agent %s. The story may already be in progress, with a narrative, a branch, and a worktree: if so, read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart)
+	case r.Started && len(r.Past) > 0:
+		why = fmt.Sprintf("because the operator started it now, from the story's page or with flai serve agent start, past what kept flai serve from starting it: %s. That was the operator's decision: pull %[2]s as they asked, though flai warns that it is held or that the limit is full. Keep its touches to what it changes; do not narrow them only to clear the hold. Where its claim overlaps another open story's, say in the narrative which paths the two share.", strings.Join(r.Past, "; "), r.Story)
+	case r.Started:
+		why = "because the operator started it now, from the story's page or with flai serve agent start."
 	}
 	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s
 

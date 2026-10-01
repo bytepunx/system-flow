@@ -17,7 +17,8 @@ import (
 // story is not in ready, while its agent runs or waits for an answer, and
 // when nothing can start it. A full in-progress limit does not refuse it,
 // and nor does a hold (S-0128): the operator's word goes past both, as a
-// move does, with a warning.
+// move does, with a warning, and the agent and the journal are told what it
+// went past, so that neither takes it for flai serve's own start (S-0182).
 func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -58,7 +59,14 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if err != nil {
 		return nil, err
 	}
-	run, err := StartNow(ctx, o, e, it.ID, "")
+	var past []string
+	if hold != nil {
+		past = append(past, hold.Reason)
+	}
+	if !ok {
+		past = append(past, "the in-progress limit was full")
+	}
+	run, err := startNow(ctx, o, e, readyStory{ID: it.ID, Started: true, Past: past})
 	if err == nil && !ok && o.Logger != nil {
 		o.Logger.Warn("agent started past the in-progress limit", "component", "serve", "story", it.ID,
 			"detail", fmt.Sprintf("the in-progress limit was full; %s's agent was started on the operator's word", it.ID))

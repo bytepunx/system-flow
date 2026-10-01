@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -92,6 +94,43 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 		if !strings.Contains(logged, `level=WARN msg="agent started past the in-progress limit"`) || !strings.Contains(logged, "story="+id) {
 			t.Errorf("no warning: %s", logged)
 		}
+		if j := lab.entries(); len(j) == 0 || !strings.Contains(j[len(j)-1].Detail, "for "+id+" as builder-"+id+" on the operator's word, past the in-progress limit was full (pid ") {
+			t.Errorf("journal: %+v", j)
+		}
+		lab.release(id)
+	})
+	// S-0182, I-0050: an agent started past a hold is told so, and so is the
+	// journal, so that neither takes it for flai serve's own start.
+	t.Run("past a hold, the agent and the journal say so", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+		open := lab.readyTouching("Open", "flai/cmd/prime.go")
+		lab.l.look(ctx, false)
+		waitFor(t, "the open story's agent runs", func() bool { return lab.run(open).live() })
+		lab.move(open, workitem.InProgress)
+		id := lab.backlog("Held", &manifest.Agent{Harness: harness.ClaudeCode, Model: "claude-opus-5-5"}, "flai/cmd")
+		lab.toReady(id)
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r != nil {
+			t.Fatalf("the launcher started a held story: %+v", r)
+		}
+		if _, err := start(lab, id); err != nil {
+			t.Fatal(err)
+		}
+		hold := "held (overlap): touches flai/cmd, which holds flai/cmd/prime.go that " + open + " (in progress) touches; starts when " + open + " is accepted, cancelled, or sent back"
+		waitFor(t, "it ran", func() bool {
+			data, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+			return strings.Contains(string(data), "agent: builder-"+id)
+		})
+		data, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+		if !strings.Contains(string(data), "because the operator started it now, from the story's page or with flai serve agent start, past what kept flai serve from starting it: "+hold+".") || strings.Contains(string(data), "because it entered ready") {
+			t.Errorf("the prompt does not say what the start went past:\n%s", data)
+		}
+		if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "for "+id+" as builder-"+id+" on the operator's word, past "+hold+" (pid ") {
+			t.Errorf("journal: %+v", j)
+		}
+		lab.release(open)
 		lab.release(id)
 	})
 	t.Run("the serving flai settles it and starts it again on an answer", func(t *testing.T) {

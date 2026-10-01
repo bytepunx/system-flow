@@ -291,7 +291,12 @@ type readyStory struct {
 	// Asked is the run that ended asking, once its question is answered: the
 	// agent is started again in its session (S-0182).
 	Asked *AgentRun
-	item  *workitem.Item
+	// Started is set when the operator has its agent started now (S-0115),
+	// and Past says what that start went past: a hold's reason, a full
+	// in-progress limit, or nothing (S-0182).
+	Started bool
+	Past    []string
+	item    *workitem.Item
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
@@ -611,7 +616,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, Restart: story.Restart, Commit: story.Commit}, cfg.host(name))
+		Session: run.Session, Answered: run.Answered, Restart: story.Restart, Commit: story.Commit, Started: story.Started, Past: story.Past}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}
@@ -654,6 +659,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	}
 	if story.Commit != "" {
 		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s to commit what its worktree holds (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
+	}
+	if story.Started && len(story.Past) > 0 {
+		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, past %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, strings.Join(story.Past, "; "), run.PID, run.Log)
 	}
 	if l.record != nil {
 		l.record(entry)

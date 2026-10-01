@@ -156,6 +156,32 @@ func TestARestartedAgentIsToldHowTheLastOneEnded(t *testing.T) {
 	}
 }
 
+// S-0182, I-0050: an agent the operator started is told so, and what the
+// start went past, so that it does not take the start for flai serve's own.
+func TestAnAgentTheOperatorStartedIsToldWhatItWentPast(t *testing.T) {
+	r := req(nil)
+	r.Started = true
+	if p := Prompt(r); !strings.Contains(p, "because the operator started it now, from the story's page or with flai serve agent start.") || strings.Contains(p, "entered ready") || strings.Contains(p, "past what") {
+		t.Errorf("a start past nothing: %s", p)
+	}
+	hold := "held (overlap): touches flai/cmd, which holds flai/cmd/prime.go that S-0138 (in progress) touches; starts when S-0138 is accepted, cancelled, or sent back"
+	r.Past = []string{hold, "the in-progress limit was full"}
+	p := Prompt(r)
+	for _, want := range []string{
+		"because the operator started it now, from the story's page or with flai serve agent start, past what kept flai serve from starting it: " + hold + "; the in-progress limit was full.",
+		"pull S-0104 as they asked",
+		"do not narrow them only to clear the hold",
+		"flai stream open S-0104",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "entered ready") {
+		t.Errorf("an operator's start is not one for entering ready:\n%s", p)
+	}
+}
+
 // S-0104: an agent that ended waiting for an answer is started again in the
 // session it had, told what was answered.
 func TestAnAnsweredAgentGoesOnInItsSession(t *testing.T) {
