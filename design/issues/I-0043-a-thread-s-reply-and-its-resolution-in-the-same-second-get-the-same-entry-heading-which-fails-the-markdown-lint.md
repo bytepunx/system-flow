@@ -2,12 +2,12 @@
 id: I-0043
 title: A thread's reply and its resolution in the same second get the same entry heading, which fails the markdown lint
 class: defect
-status: open
+status: closed
 count: 3
 cost: 3m
 first_reported: 2026-09-24T09:19:30Z
 last_reported: 2026-10-01T07:46:11Z
-updated: 2026-10-01T07:46:11Z
+updated: 2026-10-01T08:48:12Z
 ---
 
 # I-0043 A thread's reply and its resolution in the same second get the same entry heading, which fails the markdown lint
@@ -27,3 +27,4 @@ S-0134, 2026-09-28: thread_reply then thread_resolve on TH-0028 at 22:04:56Z wro
 S-0173, 2026-10-01: make lint-md on main fails MD024 at wip/threads/TH-0035-...md:59, two same-second agent-S-0153 headings; left as found, not this story's file.
 
 ## Remediation
+Closed 2026-10-01T08:48:12Z: S-0179: threads.Reply and threads.Resolve join an entry by the same author in the same second to the last one under its heading, as narratives and issues do.

@@ -656,6 +656,10 @@ flai check ../other-repo --json
 
 Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, and front matter on `design/` and `docs/` files including ADR numbering. `README.md` files are exempt from front matter.
 
+When the project has a markdownlint configuration at its root (`.markdownlint.yaml`, `.yml`, `.json`, or `.jsonc`, or a `.markdownlint-cli2` file's `config`), `flai check` also lints every markdown file under the wip folder with it and warns on each finding, `markdown.MD024` and the like, with markdownlint's own message: work items, threads, and narratives are written in the main checkout, where a story's own lint never runs, and would otherwise reach CI unlinted. flai checks the markdownlint rules what it writes can break (headings, blank lines, trailing spaces, lists, emphasis, fences, bare URLs); your CI's markdownlint still checks the rest. Without a configuration nothing is linted.
+
+The same lint guards what flai writes there. `flai story new`, `flai task new`, `flai epic new`, `flai edit`, `flai thread new`, `reply`, and `resolve`, `flai stream log`, and the MCP tools that do the same refuse a body or entry that would bring a finding, name the rule and the line, and write nothing. A title loses a trailing `.`, `,`, `;`, `:`, or `!`, which a heading may not end with. A reply and a resolution by one author in the same second share one entry heading.
+
 ## Flow metrics
 
 ```bash

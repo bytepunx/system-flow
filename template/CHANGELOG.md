@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.27 - 2026-10-01
+
+- S-0179 flai lints the markdown it writes in the main checkout, and a thread's entries in one second share a heading (patch): `tooling.md` says flai lints what it writes in `wip/` with the project's markdownlint configuration, warning in `flai check` and refusing a write that would bring a finding (ADR-0061).
+
 ## 1.0.26 - 2026-10-01
 
 - S-0175 Agents the claude-code adapter starts hand noisy work and verification to sub-agents that cannot act for the story (patch).

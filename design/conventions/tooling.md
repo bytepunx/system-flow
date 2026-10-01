@@ -18,6 +18,7 @@ Use the project's tools for the project's data. The tools keep the standard true
 - Open and log narratives with `flai stream open` and `flai stream log`. The summary sections (`## Context`, `## Current state`, `## Next steps`, `## Decisions`, `## Open questions`) are edited by hand; the `## Log` is appended by the command.
 - Hand-edit item bodies (goals, criteria, notes) freely. Hand-edit item front matter only for fields no command sets, and run `flai check` afterwards.
 - Run `flai check --strict` before reporting a story as done and before any commit. Fix what it finds; do not explain it away.
+- flai lints the markdown it writes in `wip/` with the project's markdownlint configuration, because that folder is written in the main checkout, where a story's own lint never runs: `flai check` warns on each finding there (`markdown.MDnnn`), and making an item, a thread entry, or a log entry is refused, with the rule and the line, when it would bring one. Fix what it names; do not work around it. The project's own markdown lint stays the authority for what flai does not check.
 - Use `flai board`, `flai show`, and `flai stats` to answer questions about work state instead of grepping files.
 - Set `FLAI_AGENT` and `FLAI_SESSION` at session start so narrative entries record who wrote them.
 - Archive with `flai archive`, never by moving files.

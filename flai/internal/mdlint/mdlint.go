@@ -1,6 +1,6 @@
 // Package mdlint checks markdown against the rules of the project's
-// markdownlint configuration that what flai writes can break (S-0179).
-// flai writes work items, threads, and narratives in the main
+// markdownlint configuration that what flai writes can break (S-0179,
+// ADR-0061). flai writes work items, threads, and narratives in the main
 // checkout, where no story's lint runs (ADR-0019), so it lints them itself:
 // flai check reports what it finds, and the commands that write refuse what
 // would bring a finding.

@@ -2,12 +2,12 @@
 id: I-0027
 title: Work items written in the main checkout reach CI without a markdown lint
 class: defect
-status: open
-count: 10
+status: closed
+count: 11
 cost: 6m
 first_reported: 2026-09-20T13:03:19Z
-last_reported: 2026-09-29T23:48:59Z
-updated: 2026-09-29T23:48:59Z
+last_reported: 2026-10-01T08:48:12Z
+updated: 2026-10-01T08:48:12Z
 ---
 
 # I-0027 Work items written in the main checkout reach CI without a markdown lint
@@ -47,4 +47,8 @@ S-0166: the story's title, written in the main checkout, ended in a period, so i
 ### 2026-09-29T23:48:59Z
 S-0167's smoke tier: markdown lint fails on wip/threads/TH-0035 (MD024, two log headings alike), a thread written in the main checkout and committed to main unlinted.
 
+### 2026-10-01T08:48:12Z
+S-0179, 2026-10-01: S-0175's and S-0180's archived narratives reached main with MD012 (two blank lines under Open questions): the threads mirror block, removed by flai after a blank line, left one too many. Found by flai's own lint (S-0179) on its first run over the main checkout; fixed on the story branch.
+
 ## Remediation
+Closed 2026-10-01T08:48:12Z: S-0179 (ADR-0061): flai check lints wip markdown with the project's markdownlint configuration and warns on each finding, item creation, thread entries, and narrative log entries refuse what would bring one, titles lose MD026 punctuation, and the mirror block's removal leaves one blank line.
