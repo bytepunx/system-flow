@@ -105,6 +105,23 @@ func TestASubAgentRunsChecksButNotWrites(t *testing.T) {
 	}
 }
 
+// S-0189: a verifier runs a cheaper model than the story's agent, so the
+// corrections it finds are the story's agent's to make. Whatever sub-agent
+// it is, the guard refuses it the commands that would make or record one.
+func TestASubAgentCannotMakeTheCorrectionsItFinds(t *testing.T) {
+	for _, who := range []string{"verifier", "explorer", "general-purpose"} {
+		for _, c := range []string{"git add -A", "git apply fix.patch", "git restore flai/x.go", "git checkout -- flai/x.go", "git commit -m fix", "flai move T-1 done"} {
+			if why := g.Check(bash(who, c)); !strings.Contains(why, "a sub-agent ("+who+") cannot run") {
+				t.Errorf("%s %q: %q", who, c, why)
+			}
+		}
+		e := Event{ToolName: MCPPrefix + "item_edit", AgentID: "a1", AgentType: who}
+		if why := g.Check(e); !strings.Contains(why, "cannot call item_edit") {
+			t.Errorf("%s item_edit: %q", who, why)
+		}
+	}
+}
+
 func TestCommands(t *testing.T) {
 	got := commands(`a "b c" 'd'; e|f && g $(h i) ` + "`j`")
 	want := [][]string{{"a", "b c", "d"}, {"e"}, {"f"}, {"g"}, {"h", "i"}, {"j"}}
