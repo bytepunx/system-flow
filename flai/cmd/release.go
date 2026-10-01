@@ -86,7 +86,16 @@ pushed is not redone. Tags on commits the remote already has, such as an
 acceptance pushed before it was released, are pushed on their own. flai push
 --pending does the same computing, applying, and tagging before it pushes
 only with the auto-publish host action enabled (S-0144); otherwise this is
-where what has accumulated is released, when you choose.`,
+where what has accumulated is released, when you choose.
+
+What is pending is worked out from this clone's tags, and flai never
+fetches. Before planning, --pending asks the remote the branch tracks (else
+origin) for its release tags (S-0174): when it has a newer <name>/vX.Y.Z
+than this clone, nothing is planned and publishing is refused (exit 3) until
+git fetch --tags brings them; when it cannot be reached, --dry-run warns and
+shows the plan, and publishing is refused. An accepted item no plan can
+cover, such as one touching two components with no tag saying which it
+delivers to, is named with the reason (I-0024).`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run

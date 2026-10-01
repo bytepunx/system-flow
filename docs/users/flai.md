@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-09-30
+updated: 2026-10-01
 status: active
 ---
 
@@ -742,9 +742,19 @@ flai push --pending --publish   # also publish the template when those commits m
 
 It only acts when the commits ahead of the remote include an acceptance or a release tag, or, with `auto-publish` on, there is a release to tag from one already pushed; ordinary commits are yours to push with git. It never forces: when the remote has commits this clone lacks it refuses and tells you to fetch and merge first. It answers from what this clone knows, so a push made from another clone is not seen until you fetch. `flai release --pending` is how what has accumulated is published when you choose, so that several acceptances release together: it computes, applies, tags, and pushes, sending the tags on their own when the acceptances were pushed already. The acceptance commit is pushed either way, released or not.
 
+What is pending is worked out from this clone's release tags, and flai never fetches. So before it plans, `flai release --pending` asks the remote for its tags. When the remote has a newer `<name>/vX.Y.Z` than this clone, as after publishing from another clone and pulling without tags, it plans nothing, says which tags are missing, and refuses to publish until you fetch them:
+
+```bash
+git fetch --tags origin
+```
+
+When the remote cannot be reached, `--dry-run` still shows the plan with a warning that it was not checked, and publishing waits until the remote can be reached, since it pushes there anyway. `flai push --pending` with `auto-publish` on does the same. A clone with no remote publishes locally as before.
+
+An accepted item that no plan can cover is named with the reason (`left out:`) instead of being skipped silently: one touching two components with no tag saying which it delivers to, for example. Tag it, or its epic, and it is planned next time.
+
 A story that is `done` but was never accepted (an older flai, a hand edit) is flagged by `flai check` as `story.unaccepted`, and `flai accept` completes it.
 
-The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to gets the delivery-type bump: epic major, feature story minor, remediation or improvement patch. It is found from the item's tags (a project name or one of its `tags` aliases), then its epic's tags, and only among the components the item's commits touched: when the tags name several, the one with the most touched files delivers, the earlier tag breaking a tie, and a tag naming a component no commit touched never delivers, so that component gets no release at all. `--deliver` overrides all of that. With no tag deciding, the only touched component delivers, and several ask you for a tag or `--deliver`. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. A research story releases nothing either, whatever it touched: its findings are merged and pushed like any acceptance, and if its commits changed a component's files the plan says that component lands on main without a release. The acceptance commit is pushed whether or not a release was cut.
+The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to gets the delivery-type bump: epic major, feature story minor, remediation or improvement patch. It is found from the item's tags (a project name or one of its `tags` aliases), then its epic's tags, and only among the components the item's commits touched: when the tags name several, the one with the most touched files delivers, the earlier tag breaking a tie, and a tag naming a component no commit touched never delivers, so that component gets no release at all. `--deliver` overrides all of that. With no tag deciding, the only touched component delivers, and several ask you for a tag or `--deliver`. `flai check` warns about that earlier (`story.component-tag`): an open story whose touches reach two or more components while no tag of its own or its epic's names one of them, with the `flai edit --tag` that fixes it. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. A research story releases nothing either, whatever it touched: its findings are merged and pushed like any acceptance, and if its commits changed a component's files the plan says that component lands on main without a release. The acceptance commit is pushed whether or not a release was cut.
 
 ## Upgrade to a newer template
 
