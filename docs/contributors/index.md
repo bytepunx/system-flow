@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-09-24
+updated: 2026-10-01
 status: draft
 ---
 
@@ -21,6 +21,20 @@ This monorepo builds itself with its own conventions. Start with the root `CLAUD
 2. Open its narrative under `wip/agents/`.
 3. Keep the narrative's current state and next steps true as you go.
 4. Meet the definition of done in [workflow.md](../../design/system/workflow.md), move the story to `review`, open a pull request that names the story.
+
+## Tools and environment
+
+Every script in `scripts/` sources `scripts/env.sh`, which sets this environment:
+
+| What | Value |
+|------|-------|
+| `PATH` | The tree's own `bin/`, then the main checkout's `bin/` (from a story worktree under `.flai-cache/worktrees/`), then the main checkout's pnpm, then `~/go/bin` |
+| `FLAI_CONFIG` | `.flai-cache/config.json` in the main checkout, unless already set |
+| `FLAI_CACHE_DIR`, npm and pnpm caches | Under the main checkout's `.flai-cache/` |
+
+Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2 and GoReleaser into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2.
+
+An agent `flai serve` starts gets flai serve's environment without `FLAI_HOST_URL`, `FLAI_HOST_TOKEN`, and `FLAI_CONFIG`, plus `FLAI_AGENT`, `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY`. A `flai serve` it runs to try a change, with a `--config` of its own, does not reach the operator's host. `scripts/flaiover-dev.sh` gives the dev server the dashboard token file that `flai dashboard token --json` names.
 
 ## Changing a decision
 

@@ -107,7 +107,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 
 | Variable | Default | For |
 |----------|---------|-----|
-| `FLAI_CONFIG` | `~/.flai/config.json` | The configuration file when `--config` is not given; `flai host` and `flai serve` keep their state in `host` and `serve` beside it |
+| `FLAI_CONFIG` | `~/.flai/config.json` | The configuration file when `--config` is not given; `flai host` and `flai serve` keep their state in `host` and `serve` beside it. Not passed on to an agent `flai serve` starts |
 | `FLAI_CACHE_DIR` | `~/.flai/cache` | The `cache_dir` written when the configuration file is created |
 | `FLAI_AGENT` | none | Who narrative entries, thread entries, and transitions are recorded as; the MCP server's agent unless `flai mcp --agent` names one |
 | `FLAI_SESSION` | none | Which session a narrative entry belongs to |
@@ -128,7 +128,7 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 
 | Variable | Set by | Holds |
 |----------|--------|-------|
-| `FLAI_HOST_URL`, `FLAI_HOST_TOKEN` | `flai host`, for `flai serve` and the MCP servers | The host's address and the token its API takes |
+| `FLAI_HOST_URL`, `FLAI_HOST_TOKEN` | `flai host`, for `flai serve` and the MCP servers; never passed on to an agent `flai serve` starts | The host's address and the token its API takes; `flai serve` uses them only when the host's token is the one beside its own config |
 | `FLAI_STORY` | `flai serve`, for an agent it starts | The story the agent is to work |
 | `FLAI_STARTED_BY` | `flai serve` | `flai-serve` |
 | `FLAI_AGENT`, `FLAI_SESSION` | `flai serve` | The agent's own name, `<agent.name>-<story>`, and a session made from the start time |

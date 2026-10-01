@@ -2,12 +2,12 @@
 id: I-0044
 title: Agents flai serve starts inherit the host's address and token, so a flai serve an agent runs by hand takes over the operator's MCP servers
 class: defect
-status: open
-count: 3
-cost: 6m
+status: closed
+count: 4
+cost: 5m
 first_reported: 2026-09-24T09:26:17Z
-last_reported: 2026-09-28T23:07:11Z
-updated: 2026-09-28T23:07:11Z
+last_reported: 2026-10-01T08:39:53Z
+updated: 2026-10-01T08:39:53Z
 ---
 
 # I-0044 Agents flai serve starts inherit the host's address and token, so a flai serve an agent runs by hand takes over the operator's MCP servers
@@ -26,4 +26,8 @@ Agents flai serve starts inherit the host's address and token, so a flai serve a
 ### 2026-09-28T23:07:11Z
 2026-09-28, S-0141: agent-S-0141, started by the operator's flai serve, again had FLAI_HOST_URL, FLAI_HOST_TOKEN, and FLAI_CONFIG=~/.flai/config.json in its environment, and FLAI_AGENT=system-flow, so its first scripts/flai.sh calls (move, stream open, task new, stream log) ran against the operator's config. No harm. Later calls and the tiers ran with the three unset. The browser check started no flai host or serve: the dev server ran with FLAIOVER_AUTH=off and /api/board stubbed in the browser.
 
+### 2026-10-01T08:39:53Z
+2026-10-01, S-0183: agent-S-0183, started by the operator's flai serve, again had FLAI_HOST_URL, FLAI_HOST_TOKEN, and FLAI_CONFIG=~/.flai/config.json in its environment, so its first scripts/flai.sh calls (move, stream open) ran against the operator's config. Later calls ran with the three unset.
+
 ## Remediation
+Closed 2026-10-01T08:39:53Z: S-0183: flai serve starts agents without FLAI_HOST_URL, FLAI_HOST_TOKEN, and FLAI_CONFIG (serve.agentEnv, tested), and a flai serve whose config's host/token is not FLAI_HOST_TOKEN keeps no MCP servers and warns why (cmd serveMCP, host.Dir.Holds, tested).

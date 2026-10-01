@@ -2,12 +2,12 @@
 id: I-0001
 title: golangci-lint on the host is v1 but the config is v2
 class: efficiency
-status: open
+status: closed
 count: 6
 cost: 4m
 first_reported: 2026-09-15T16:31:32Z
 last_reported: 2026-10-01T08:26:05Z
-updated: 2026-10-01T08:26:05Z
+updated: 2026-10-01T08:39:53Z
 ---
 
 # I-0001 golangci-lint on the host is v1 but the config is v2
@@ -37,3 +37,4 @@ S-0180, 2026-10-01: a story worktree's bin/ has no golangci-lint v2, so scripts/
 
 ## Remediation
 `scripts/install-tools.sh` installs v2 into `bin/` (git-ignored) so it persists across sessions; the operator can run it once. Close when the host has v2 or the script is in routine use.
+Closed 2026-10-01T08:39:53Z: S-0183: scripts/env.sh puts the main checkout's bin/ on PATH after the worktree's own, scripts/install-tools.sh installs the pinned golangci-lint v2 there from any tree, and scripts/flai-test.sh names the golangci-lint it runs and stops on anything but v2.

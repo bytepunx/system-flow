@@ -1,6 +1,6 @@
 ---
 title: Developer experience and operations
-updated: 2026-09-15
+updated: 2026-10-01
 status: active
 topics: [code, template]
 ---
@@ -26,7 +26,10 @@ What the template ships so a conforming repo is pleasant to work in from the fir
 
 | Concern | Choice | Detail |
 |---------|--------|--------|
-| Go build and lint | `go build`, `golangci-lint` | Config in `flai/.golangci.yaml` |
+| Go build and lint | `go build`, `golangci-lint` | Config in `flai/.golangci.yaml`; `scripts/flai-test.sh` names the golangci-lint it runs and refuses one that is not v2 |
+| Tools and environment | `scripts/env.sh`, sourced by every script | `PATH` holds the tree's `bin/`, then the main checkout's `bin/`, where `scripts/install-tools.sh` installs the pinned golangci-lint and GoReleaser from any tree, so a story worktree uses them (S-0183); caches and `FLAI_CONFIG` default to the main checkout's `.flai-cache/` |
+| Agent environment | `flai serve` | An agent gets flai serve's environment without `FLAI_HOST_URL`, `FLAI_HOST_TOKEN`, and `FLAI_CONFIG`, plus its story's variables ([flai-cli.md](flai-cli.md#commands)): it reaches neither the operator's host nor the config flai serve was given |
+| Dashboard development | `scripts/flaiover-dev.sh`, `flaiover/compose.yaml` | Both take the login token from the file flai writes beside flai serve's state (`flai dashboard token --json`, `file`); compose mounts that file alone, never the repository (ADR-0031) |
 | Test tiers | `make test`, `make integration`, `make smoke` | Behavior tests beside the code (`-short`), integration tests need real git or the monorepo, smoke renders the template and checks the repo. See `design/conventions/code-quality.md`. |
 | Go release | GoReleaser | `flai/.goreleaser.yaml`, tags `flai/v*` produce GitHub release binaries for linux, darwin, windows |
 | Node package manager | pnpm | Lockfile committed, `corepack` pins the version |
