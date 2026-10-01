@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -391,8 +392,16 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		return fmt.Errorf("agent credential: %w", err)
 	}
 	var id string
-	if !already {
-		id, err = a.startContainer(dir, s.Name, fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort), s.ref())
+	if already {
+		// a container an older flai started has no record: keep it as it runs,
+		// so that flai host watches it too (S-0184)
+		if _, ok := readDashboardRecord(dir); !ok {
+			if ref, _ := a.containerInfo(s.Name); ref != "" {
+				a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Publish: fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)})
+			}
+		}
+	} else {
+		id, err = a.startDashboard(dir, s, s.ref())
 		if err != nil {
 			return err
 		}
@@ -490,6 +499,10 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if len(remaining) == 0 {
+				// no project is left for it: flai host stops watching it (S-0184)
+				forgetDashboard(string(a.serveDir()))
+			}
 			if running, _ := a.containerRunning(s.Name); !running {
 				if a.jsonOut {
 					return a.printJSON(map[string]any{"container": s.Name, "state": "not-running"})
@@ -548,7 +561,7 @@ is set.`,
 			if err != nil {
 				return err
 			}
-			running := state != dashboardGone
+			running := state != host.DashboardGone
 			image, url := s.ref(), s.url()
 			if running {
 				if i, u := a.containerInfo(s.Name); i != "" {
@@ -583,7 +596,7 @@ is set.`,
 				if health != "" {
 					dockerSays = "; docker: " + health
 				}
-				if state == dashboardRunning {
+				if state == host.DashboardRunning {
 					fmt.Fprintf(a.out, "%s running at %s (%s%s)\n", s.Name, url, image, dockerSays)
 				} else {
 					fmt.Fprintf(a.out, "%s not answering at %s (%s%s): the container runs and /_health does not answer; flai host restarts it unless dashboard.no_restart is set, or run flai dashboard restart\n", s.Name, url, image, dockerSays)

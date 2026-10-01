@@ -162,6 +162,9 @@ type Dashboard struct {
 	Tag   string `json:"tag"`
 	Port  int    `json:"port"`
 	Bind  string `json:"bind"` // host address the port is published on; 0.0.0.0 for every interface
+	// NoRestart stops flai host from restarting a dashboard that is gone or
+	// not answering (S-0184). Off by default: the host restarts it.
+	NoRestart bool `json:"no_restart"`
 	// PushKey is an SSH private key on this host that the container may push
 	// acceptances with (ADR-0026). Empty, the default, gives it nothing. It is
 	// a fact about one machine, so it lives here and never in the manifest.
@@ -274,7 +277,7 @@ func Save(path string, cfg Config) error {
 func Keys() []string {
 	return []string{
 		"template.repo", "template.ref",
-		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.push_key", "dashboard.push_known_hosts",
+		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.no_restart", "dashboard.push_key", "dashboard.push_known_hosts",
 		"cache_dir", "author",
 		"worktrees.relative_paths",
 	}

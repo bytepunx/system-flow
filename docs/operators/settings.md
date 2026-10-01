@@ -33,6 +33,7 @@ Keys `flai config set` reaches:
 | `dashboard.tag` | `latest` | The image's tag |
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
 | `dashboard.bind` | `0.0.0.0` | The host address it is published on; `127.0.0.1` keeps it to this machine ([Security posture](index.md#security-posture)) |
+| `dashboard.no_restart` | `false` | `true` stops flai host restarting a dashboard that is gone or not answering ([The dashboard's watch](index.md#the-dashboards-watch)) |
 | `dashboard.push_key` | empty | Retired and ignored; `flai dashboard` names it while it is set ([Upgrading from a release that mounted the repository](index.md#upgrading-from-a-release-that-mounted-the-repository)) |
 | `dashboard.push_known_hosts` | empty | Retired and ignored, as `dashboard.push_key` |
 | `cache_dir` | `~/.flai/cache`, or `FLAI_CACHE_DIR` when the file is created | Where git templates are cloned |

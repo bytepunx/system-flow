@@ -100,7 +100,7 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 			return fmt.Errorf("stop %s: %w", s.Name, err)
 		}
 	}
-	id, err := a.startContainer(dir, s.Name, fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort), ref)
+	id, err := a.startDashboard(dir, s, ref)
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 		return err
 	}
 	if !running {
-		id, err := a.startContainer(dir, s.Name, fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort), s.ref())
+		id, err := a.startDashboard(dir, s, s.ref())
 		if err != nil {
 			return err
 		}
@@ -284,7 +284,7 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 	if _, err := a.runner.Run("", "docker", "stop", s.Name); err != nil {
 		return fmt.Errorf("stop %s: %w", s.Name, err)
 	}
-	id, err := a.startContainer(dir, s.Name, fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort), s.ref())
+	id, err := a.startDashboard(dir, s, s.ref())
 	if err != nil {
 		return fmt.Errorf("the previous image stopped but the new one failed to start: %w (run flai dashboard to recover)", err)
 	}

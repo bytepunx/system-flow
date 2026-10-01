@@ -276,6 +276,22 @@ func (a *app) describeHost(st host.Status) {
 			fmt.Fprintf(a.out, "    last exit: %s\n", c.LastExit)
 		}
 	}
+	if d := st.Dashboard; d != nil {
+		line := d.State
+		switch d.State {
+		case host.DashboardOff:
+			line = "not watched (none started, stopped with flai dashboard stop, or dashboard.no_restart set)"
+		case host.DashboardNotAnswering:
+			line = "not answering"
+		}
+		if d.Restarts > 0 {
+			line += fmt.Sprintf(", %d restart(s), the last at %s because it was %s", d.Restarts, d.LastRestart, d.LastReason)
+		}
+		fmt.Fprintf(a.out, "  dashboard: %s\n", line)
+		if d.LastError != "" {
+			fmt.Fprintf(a.out, "    last error: %s\n", d.LastError)
+		}
+	}
 }
 
 // ensureHost starts flai host detached unless one runs for this config. A
@@ -377,6 +393,7 @@ func (a *app) runHost(ctx context.Context) error {
 	err = host.Run(ctx, host.Options{
 		Dir: a.hostDir(), Addr: host.Addr(), Version: buildinfo.Version, Config: path, Logger: a.logger(),
 		Serve: l.serve, MCP: l.mcp, Check: l.check, Upgrade: l.upgrade, Grace: hostGrace,
+		Dashboard: a.dashboardWatch(),
 	})
 	if errors.Is(err, host.ErrRestart) {
 		// the upgrade may have installed elsewhere than this binary: a flai

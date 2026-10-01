@@ -93,6 +93,9 @@ type Status struct {
 	Addr     string  `json:"addr"`
 	Config   string  `json:"config,omitempty"`
 	Children []Child `json:"children"`
+	// Dashboard is how the host's watch of the dashboard stands, when it
+	// watches one (S-0184).
+	Dashboard *DashboardWatch `json:"dashboard,omitempty"`
 }
 
 // Child is one process the host keeps, as it stands.
@@ -185,6 +188,11 @@ type Options struct {
 	// given to stop before it is killed; Look how often an external process
 	// is looked at again.
 	Every, Backoff, MaxBackoff, Grace, Look time.Duration
+	// Dashboard, when set, is the dashboard the host watches and restarts
+	// (S-0184): it looks every WatchEvery, and waits WatchBackoff after a
+	// restart before the next, doubled up to WatchMaxBackoff.
+	Dashboard                                 *Watch
+	WatchEvery, WatchBackoff, WatchMaxBackoff time.Duration
 }
 
 func (o *Options) defaults() {
@@ -211,6 +219,15 @@ func (o *Options) defaults() {
 	}
 	if o.Look <= 0 {
 		o.Look = 15 * time.Second
+	}
+	if o.WatchEvery <= 0 {
+		o.WatchEvery = 15 * time.Second
+	}
+	if o.WatchBackoff <= 0 {
+		o.WatchBackoff = 30 * time.Second
+	}
+	if o.WatchMaxBackoff <= 0 {
+		o.WatchMaxBackoff = 5 * time.Minute
 	}
 }
 
@@ -263,6 +280,7 @@ type host struct {
 	serveOff bool              // the operator stopped serve
 	mcpOff   bool              // the operator stopped the MCP servers
 	restart  chan struct{}     // an upgrade installed a new flai
+	watch    *DashboardWatch   // the dashboard's watch, once it has looked
 }
 
 // Run is the host: it binds its address, starts flai serve, answers the
@@ -298,6 +316,9 @@ func Run(ctx context.Context, o Options) error {
 	h.mu.Lock()
 	h.serve = h.newChild(Serve, "", o.Serve, false)
 	h.mu.Unlock()
+	if o.Dashboard != nil {
+		go h.watchDashboard(cctx)
+	}
 	h.writeStatus()
 
 	tick := time.NewTicker(o.Every)
@@ -371,6 +392,10 @@ func (h *host) status() Status {
 	h.mu.Lock()
 	if h.serveOff && h.serve == nil {
 		st.Children = append([]Child{{Name: Serve, State: "stopped"}}, st.Children...)
+	}
+	if h.watch != nil {
+		w := *h.watch
+		st.Dashboard = &w
 	}
 	h.mu.Unlock()
 	return st
