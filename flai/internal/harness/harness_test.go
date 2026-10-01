@@ -2,6 +2,8 @@ package harness
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -312,6 +314,102 @@ func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
+	}
+}
+
+// S-0189: a story whose agent gives its roles a model starts claude-code
+// with --agents: the project's definition of each role's sub-agent, with the
+// role's model over the definition's; what claude-code cannot run is
+// refused; the operator's command is told the roles.
+func TestClaudeCodeRunsEachRolesModel(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	verifier := "---\nname: verifier\ndescription: Runs the checks.\ntools: Read, Bash, mcp__flai__prime\nmodel: sonnet\n---\n\nYou are the verifier.\n"
+	if err := os.WriteFile(filepath.Join(dir, "verifier.md"), []byte(verifier), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := req(&manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5", Roles: map[string]manifest.Role{
+		"verify":  {Model: "claude-haiku-4-5"},
+		"explore": {Harness: ClaudeCode},
+	}})
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	v := agents["verifier"]
+	if v["model"] != "claude-haiku-4-5" || v["description"] != "Runs the checks." || v["prompt"] != "You are the verifier." || v["name"] != nil {
+		t.Errorf("verifier: %v", v)
+	}
+	if tools, _ := v["tools"].([]any); len(tools) != 3 || tools[2] != "mcp__flai__prime" {
+		t.Errorf("tools: %v", v["tools"])
+	}
+	if _, ok := agents["explorer"]; ok {
+		t.Errorf("a role with no model of its own was passed: %v", agents)
+	}
+	if i, j := slices.Index(st.Argv, "--agents"), slices.Index(st.Argv, "--permission-mode"); i < 0 || j < i {
+		t.Errorf("--agents comes before the operator's arguments: %v", st.Argv)
+	}
+
+	// no roles, no flag
+	plain := req(&manifest.Agent{Harness: ClaudeCode})
+	plain.Root = root
+	if st, _ := (claudeCode{}).Start(plain, Host{}); slices.Contains(st.Argv, "--agents") {
+		t.Errorf("--agents with no roles: %v", st.Argv)
+	}
+
+	for _, c := range []struct {
+		role manifest.Role
+		want string
+	}{
+		{manifest.Role{Harness: "codex", Model: "m"}, "cannot run role verify on harness"},
+		{manifest.Role{Model: "m", Config: map[string]string{"effort": "x"}}, "takes no config for role verify"},
+	} {
+		role, want := c.role, c.want
+		bad := req(&manifest.Agent{Harness: ClaudeCode, Roles: map[string]manifest.Role{"verify": role}})
+		bad.Root = root
+		if _, err := (claudeCode{}).Start(bad, Host{}); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%+v: %v", role, err)
+		}
+	}
+	for name, want := range map[string]string{"plan": `no sub-agent for role "plan"`, "explore": "explorer, and its definition could not be read"} {
+		bad := req(&manifest.Agent{Harness: ClaudeCode, Roles: map[string]manifest.Role{name: {Model: "m"}}})
+		bad.Root = root
+		if _, err := (claudeCode{}).Start(bad, Host{}); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+
+	cmd, err := (command{}).Start(r, Host{Program: "run-agent"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(cmd.Env, `FLAI_AGENT_ROLES={"explore":{"harness":"claude-code"},"verify":{"model":"claude-haiku-4-5"}}`) {
+		t.Errorf("command env: %v", cmd.Env)
+	}
+}
+
+// The template's own definitions read as --agents takes them.
+func TestTheTemplatesDefinitionsRead(t *testing.T) {
+	for _, def := range []string{"explorer", "verifier"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", ".claude", "agents", def+".md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := definition(data)
+		if err != nil {
+			t.Fatalf("%s: %v", def, err)
+		}
+		if got["model"] == nil || got["prompt"] == "" || len(got["tools"].([]string)) == 0 {
+			t.Errorf("%s: %v", def, got)
 		}
 	}
 }
