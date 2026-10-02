@@ -1,7 +1,7 @@
-# system-flow Shield License 1.0
+# Bytepunx Shield License 1.0
 
 Required Notice: Copyright 2026 Bytepunx LLC, <alex@robsonandmilligan.com>
-(<https://github.com/bytepunx/system-flow>)
+(<https://github.com/bytepunx>)
 
 This license is an adaptation of the PolyForm Shield License 1.0.0
 (<https://polyformproject.org/licenses/shield/1.0.0>). It is not a PolyForm
@@ -25,19 +25,19 @@ never do anything listed in [Prohibited Uses](#prohibited-uses).
 ## Distribution License
 
 The licensor grants you an additional copyright license to distribute copies of
-the software, in source form, in compiled form, and in any packaged form such as
-a container image, for any permitted purpose. Your license to distribute covers
-distributing the software with changes and new works permitted by
+the software, in source form, in compiled form, and in any packaged form such
+as a container image, for any permitted purpose. Your license to distribute
+covers distributing the software with changes and new works permitted by
 [Changes and New Works License](#changes-and-new-works-license).
 
 ## Notices
 
 You must ensure that anyone who gets a copy of any part of the software from
-you, in whatever form, also gets a copy of these terms, as well as copies of any
-plain-text lines beginning with `Required Notice:` that the licensor provided
-with the software. A link to these terms is not enough: the full text must
-travel with every copy, including every compiled binary and every container
-image.
+you, in whatever form, also gets a copy of these terms, as well as copies of
+any plain-text lines beginning with `Required Notice:` that the licensor
+provided with the software. A link to these terms is not enough: the full tex
+must travel with every copy, including every compiled binary and every
+container image.
 
 ## Changes and New Works License
 
@@ -46,7 +46,7 @@ works based on the software for any permitted purpose.
 
 ## Patent License
 
-The licensor grants you a patent license for the software that covers patent
+The licensor grants you a patent license for the software that covers paten
 claims the licensor can license, or becomes able to license, that you would
 infringe by using the software for any permitted purpose.
 
@@ -67,19 +67,22 @@ limits set for it, and in every case subject to [Prohibited Uses](#prohibited-us
    find, understand, demonstrate, report, or fix security vulnerabilities in it,
    and publication of that analysis.
 
-4. **Start-up use.** Use by a company whose gross revenue, together with that
+4. **Start-up use.** Use by a company whose gross revenue, together with tha
    of its affiliates, was under one million United States dollars
-   (USD 1,000,000) in its most recent fiscal year, and whose cumulative funding
-   raised from investors, together with that of its affiliates, is under fifteen
-   million United States dollars (USD 15,000,000). A company that passes either
-   threshold stops qualifying at the end of the fiscal year in which it does so.
+   (USD 1,000,000) in its most recent fiscal year, and whose cumulative
+   funding raised from investors, together with that of its affiliates, is
+   under fifteen million United States dollars (USD 15,000,000). A company
+   that passes either threshold stops qualifying at the end of the calendar
+   month in which it does so.
 
 5. **Individual use.** Use by an individual on their own account, including for
    commercial work, when the individual's gross revenue from all work in which
-   the software is used was under one million United States dollars
-   (USD 1,000,000) in their most recent tax year. Use on behalf of your company
-   is covered by your company's permitted purpose, if it has one, not by this
-   one.
+   the software is used remains under one million United States dollars
+   (USD 1,000,000) for the most recent tax year and the current year.
+   Individual earnings that pass this revenue threshold in either their
+   previous tax year or the current tax year stops qualifying at the end of the
+   calendar month in which it does so. Use on behalf of your company is covered
+   by your company's permitted purpose, if it has one, not by this one.
 
 Any other use is not a permitted purpose. In particular, use of the software by
 or for a company that does not meet the start-up limits, by an individual over
@@ -103,12 +106,12 @@ any changes or new works based on it:
    whether or not for a fee.
 
 3. **Competition.** Provide any product or service that competes with the
-   software or with any product or service the licensor or any of its affiliates
-   provides using the software.
+   software or with any product or service the licensor or any of its
+   affiliates provides using the software.
 
 These restrictions bind everyone, including those using the software for a
-permitted purpose. Only a separate written agreement with the licensor can lift
-them.
+permitted purpose. Only a separate written agreement with the licensor can
+lift them.
 
 ## Fair Use
 
@@ -125,7 +128,7 @@ These terms do not imply any other licenses.
 
 If you make any written claim that the software infringes or contributes to
 infringement of any patent, your patent license for the software granted under
-these terms ends immediately. If your company makes such a claim, your patent
+these terms ends immediately. If your company makes such a claim, your paten
 license ends immediately for work on behalf of your company.
 
 ## Violations
@@ -158,9 +161,10 @@ A **third party** is anyone other than you and your company.
 **Your company** is any legal entity, sole proprietorship, or other kind of
 organization that you work for, plus all organizations that have control over,
 are under the control of, or are under common control with that organization.
-**Control** means ownership of substantially all the assets of an entity, or the
-power to direct its management and policies by vote, contract, or otherwise.
-Control can be direct or indirect.
+
+**Control** means ownership of substantially all the assets of an entity, or
+the power to direct its management and policies by vote, contract, or
+otherwise. Control can be direct or indirect.
 
 Your **affiliates** are the organizations that have control over, are under the
 control of, or are under common control with you or your company.

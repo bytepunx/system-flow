@@ -31,7 +31,7 @@ describe('GET /api/license', () => {
 		const res = GET();
 		expect(res.status).toBe(200);
 		const body = await res.json();
-		expect(body.name).toBe('system-flow Shield License 1.0');
+		expect(body.name).toBe('Bytepunx Shield License 1.0');
 		expect(body.text).toContain('## Permitted Purposes');
 	});
 });

@@ -17,7 +17,7 @@ func TestLicensePrintsTheEmbeddedLicense(t *testing.T) {
 	if out != license.Text() {
 		t.Fatalf("output is not the license text:\n%s", out)
 	}
-	if !strings.HasPrefix(out, "# system-flow Shield License 1.0\n") || !strings.Contains(out, "## Prohibited Uses") {
+	if !strings.HasPrefix(out, "# Bytepunx Shield License 1.0\n") || !strings.Contains(out, "## Prohibited Uses") {
 		t.Fatalf("output lacks the license's heading or its prohibited uses:\n%s", out)
 	}
 
@@ -29,7 +29,7 @@ func TestLicensePrintsTheEmbeddedLicense(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &v); err != nil {
 		t.Fatalf("not json: %v\n%s", err, out)
 	}
-	if v["name"] != "system-flow Shield License 1.0" || v["text"] != license.Text() {
+	if v["name"] != "Bytepunx Shield License 1.0" || v["text"] != license.Text() {
 		t.Fatalf("json name=%q, text matches=%v", v["name"], v["text"] == license.Text())
 	}
 }

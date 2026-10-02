@@ -32,7 +32,7 @@ describe('the shipped license (S-0231)', () => {
 	it('finds the repository root LICENSE.md from a checkout of flaiover', () => {
 		const license = readLicense();
 		expect(license?.path).toBe(resolve('..', 'LICENSE.md'));
-		expect(license?.name).toBe('system-flow Shield License 1.0');
+		expect(license?.name).toBe('Bytepunx Shield License 1.0');
 		expect(license?.text).toContain('## Prohibited Uses');
 	});
 

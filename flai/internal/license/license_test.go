@@ -21,7 +21,7 @@ func TestEmbeddedLicenseMatchesRepository(t *testing.T) {
 }
 
 func TestNameIsTheFirstHeading(t *testing.T) {
-	if Name() != "system-flow Shield License 1.0" {
+	if Name() != "Bytepunx Shield License 1.0" {
 		t.Fatalf("name %q", Name())
 	}
 	if !strings.HasPrefix(Text(), "# "+Name()+"\n") {
