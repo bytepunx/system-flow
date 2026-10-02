@@ -28,7 +28,7 @@ const (
 	Minor = "minor"
 	Patch = "patch"
 	// None is the level of an item that is accepted but cuts no release:
-	// a research story (ADR-0025).
+	// a research story (ADR-0025) or an experiment (ADR-0066).
 	None = "none"
 )
 
@@ -115,8 +115,8 @@ type Unreleased struct {
 }
 
 // LevelFor maps an item's type and nature to a bump level. A research story
-// is accepted without a release (None); an experiment stays on its branch and
-// is refused (ADR-0025).
+// and an experiment are accepted without a release (None; ADR-0025,
+// ADR-0066).
 func LevelFor(it *workitem.Item) (string, error) {
 	if it.Type == workitem.Epic {
 		return Major, nil
@@ -126,10 +126,8 @@ func LevelFor(it *workitem.Item) (string, error) {
 		return Minor, nil
 	case "remediation", "improvement":
 		return Patch, nil
-	case "research":
+	case "research", "experiment":
 		return None, nil
-	case "experiment":
-		return "", fmt.Errorf("%s is an experiment; an experiment stays on its branch and is not accepted onto main (ADR-0025)", it.ID)
 	}
 	return "", fmt.Errorf("%s has nature %q, no release rule", it.ID, it.Nature)
 }
@@ -240,6 +238,15 @@ func Compute(r execx.Runner, root string, m manifest.Manifest, it *workitem.Item
 	return computePlan(m, it, parent, deliver, level, commits, files, func(p manifest.Project) (Version, error) { return CurrentVersion(r, root, p) })
 }
 
+// noReleaseReason says why a research story or an experiment plans no
+// release.
+func noReleaseReason(it *workitem.Item) string {
+	if it.Nature == "experiment" {
+		return fmt.Sprintf("%s is an experiment: its results land on main, and an experiment cuts no release whatever it touched (ADR-0066)", it.ID)
+	}
+	return fmt.Sprintf("%s is research: its findings land on main and are pushed, and research cuts no release whatever it touched (ADR-0025)", it.ID)
+}
+
 // computePlan is Compute once the item's commits, the files they touched, and a way
 // to find a component's current version are known.
 func computePlan(m manifest.Manifest, it, parent *workitem.Item, deliver, level string, commits, files []string, current func(manifest.Project) (Version, error)) (*Plan, error) {
@@ -259,7 +266,7 @@ func computePlan(m manifest.Manifest, it, parent *workitem.Item, deliver, level 
 		}
 	}
 	if level == None {
-		plan.Skipped = fmt.Sprintf("%s is research: its findings land on main and are pushed, and research cuts no release whatever it touched (ADR-0025)", it.ID)
+		plan.Skipped = noReleaseReason(it)
 		for _, p := range m.Projects {
 			if files, was := touched[p.Name]; was {
 				plan.Unreleased = append(plan.Unreleased, Unreleased{Component: p.Name, Files: files})

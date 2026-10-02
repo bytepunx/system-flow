@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -88,10 +90,15 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 			}
 		}
 	}
-	// A nature that is not accepted onto main (an experiment, ADR-0025) is
-	// refused here, before the merge.
+	// A nature with no release rule is refused here, before the merge.
 	if _, err := release.LevelFor(it); err != nil {
 		res.Blockers = append(res.Blockers, err.Error())
+	}
+	// An experiment is accepted only with its results document (ADR-0066).
+	if experiment.Needs(it) {
+		if b := resultsBlocker(r, repo, it, useGit); b != "" {
+			res.Blockers = append(res.Blockers, b)
+		}
 	}
 	// A story worktree git cannot open from here (I-0017): its links are
 	// absolute host paths, and this process sees the repository somewhere
@@ -111,6 +118,36 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 		res.Branch = storygit.Branch(it.ID)
 	}
 	return res, nil
+}
+
+// resultsBlocker is why an experiment story cannot be accepted for want of
+// its results document, or "" when it has one: on its branch, which is what
+// acceptance merges, or in the main checkout when there is no branch.
+func resultsBlocker(r execx.Runner, repo *workitem.Repo, it *workitem.Item, useGit bool) string {
+	dir := experiment.Dir(repo.Manifest)
+	if branch := storygit.Branch(it.ID); useGit && storygit.BranchExists(r, repo.MainRoot, branch) {
+		out, err := r.Run(repo.MainRoot, "git", "ls-tree", "--name-only", branch, dir+"/")
+		if err != nil {
+			return fmt.Sprintf("cannot list %s on %s: %v", dir, branch, err)
+		}
+		var names []string
+		for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
+			names = append(names, path.Base(l))
+		}
+		if _, ok := experiment.Find(names, it.ID); !ok {
+			return experiment.Missing(repo.Manifest, it, "its branch "+branch)
+		}
+		return ""
+	}
+	entries, _ := os.ReadDir(filepath.Join(repo.MainRoot, filepath.FromSlash(dir)))
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	if _, ok := experiment.Find(names, it.ID); !ok {
+		return experiment.Missing(repo.Manifest, it, "main")
+	}
+	return ""
 }
 
 // StepsToDone is the walk from a state to done, one transition at a time.

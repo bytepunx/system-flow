@@ -142,11 +142,13 @@ func TestMoveResearchToDoneNamesCodeLandingUnreleased(t *testing.T) {
 	assertAccepted(t, root, remote)
 }
 
-// An experiment stays on its branch: refused before anything is merged, in
-// the preview as a blocker and in the real run as an error.
-func TestAcceptRefusesAnExperimentBeforeMerging(t *testing.T) {
+// ADR-0066: an experiment without its results document is refused before
+// anything is merged, in the preview as a blocker naming the document and in
+// the real run as an error.
+func TestAcceptRefusesAnExperimentWithoutItsResults(t *testing.T) {
 	root, remote := researchProject(t, "experiment", false)
 	before := strings.TrimSpace(gitIn(t, root, "rev-parse", "HEAD"))
+	want := "design/experiments/S-0001-what-we-found.md"
 
 	out, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
 	if code != 0 {
@@ -156,13 +158,15 @@ func TestAcceptRefusesAnExperimentBeforeMerging(t *testing.T) {
 		Blockers []string `json:"blockers"`
 	}
 	_ = json.Unmarshal([]byte(out), &pre)
-	if len(pre.Blockers) != 1 || !strings.Contains(pre.Blockers[0], "S-0001 is an experiment") {
+	if len(pre.Blockers) != 1 || !strings.Contains(pre.Blockers[0], "S-0001 is an experiment") || !strings.Contains(pre.Blockers[0], want) {
 		t.Errorf("blockers: %q", pre.Blockers)
 	}
 
-	_, errOut, code = runIn(t, root, "accept", "S-0001")
-	if code == 0 || !strings.Contains(errOut, "stays on its branch") {
-		t.Errorf("accept must refuse: %d %s", code, errOut)
+	for _, args := range [][]string{{"accept", "S-0001"}, {"move", "S-0001", "done"}} {
+		_, errOut, code = runIn(t, root, args...)
+		if code == 0 || !strings.Contains(errOut, want) {
+			t.Errorf("flai %v must refuse, naming the document: %d %s", args, code, errOut)
+		}
 	}
 	if after := strings.TrimSpace(gitIn(t, root, "rev-parse", "HEAD")); after != before {
 		t.Errorf("nothing is merged: HEAD moved from %s to %s", before, after)
@@ -176,6 +180,41 @@ func TestAcceptRefusesAnExperimentBeforeMerging(t *testing.T) {
 	if got := strings.TrimSpace(gitIn(t, remote, "rev-parse", "main")); got != before {
 		t.Errorf("nothing is pushed: remote main %s", got)
 	}
+}
+
+// ADR-0066: an experiment with its results document committed on its branch
+// is accepted like any other story, its code landing on main unreleased.
+func TestAcceptAnExperimentWithItsResults(t *testing.T) {
+	root, remote := researchProject(t, "experiment", true)
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	results := filepath.Join(wt, "design", "experiments", "S-0001-what-we-found.md")
+	_ = os.MkdirAll(filepath.Dir(results), 0o755)
+	_ = os.WriteFile(results, []byte("# Results\n"), 0o644)
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] the results")
+
+	out, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
+	if code != 0 {
+		t.Fatalf("the preview accepts the experiment: %d %s", code, errOut)
+	}
+	var pre struct {
+		Blockers []string `json:"blockers"`
+	}
+	_ = json.Unmarshal([]byte(out), &pre)
+	if len(pre.Blockers) != 0 {
+		t.Errorf("preview blockers: %+v", pre.Blockers)
+	}
+
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "done"); code != 0 {
+		t.Fatalf("move to done: %d %s", code, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(root, "design", "experiments", "S-0001-what-we-found.md")); err != nil {
+		t.Errorf("the results document is on main: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "cli", "probe.go")); err != nil {
+		t.Errorf("the component change is on main: %v", err)
+	}
+	assertAccepted(t, root, remote)
 }
 
 // A feature story that touched no component: acceptance still merges,

@@ -413,8 +413,8 @@ func (c *checker) overlap() {
 // componentTag warns on an open story that a release could not plan: its
 // touches, and its open tasks', reach two or more components, and no tag of
 // its own or its epic's names one of them, so nothing says which it delivers
-// to (I-0024). Research cuts no release and an experiment is never accepted,
-// so neither is warned.
+// to (I-0024). Research and experiments cut no release (ADR-0025,
+// ADR-0066), so neither is warned.
 func (c *checker) componentTag() {
 	projects := c.repo.Manifest.Projects
 	if len(projects) < 2 {

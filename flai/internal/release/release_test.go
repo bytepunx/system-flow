@@ -51,13 +51,11 @@ func TestVersionsAndLevels(t *testing.T) {
 			t.Errorf("%s/%s: %s %v", it.Type, it.Nature, got, err)
 		}
 	}
-	// ADR-0025: research is accepted without a release; experiment is refused.
-	if got, err := LevelFor(&workitem.Item{ID: "S-9", Type: workitem.Story, Nature: "research"}); err != nil || got != None {
-		t.Errorf("research is accepted with no release: %q %v", got, err)
-	}
-	_, err := LevelFor(&workitem.Item{ID: "S-9", Type: workitem.Story, Nature: "experiment"})
-	if err == nil || !strings.Contains(err.Error(), "S-9 is an experiment") || strings.Contains(err.Error(), "research") {
-		t.Errorf("experiment stays on its branch, and the message names only experiment: %v", err)
+	// ADR-0025, ADR-0066: research and experiments are accepted without a release.
+	for _, nature := range []string{"research", "experiment"} {
+		if got, err := LevelFor(&workitem.Item{ID: "S-9", Type: workitem.Story, Nature: nature}); err != nil || got != None {
+			t.Errorf("%s is accepted with no release: %q %v", nature, got, err)
+		}
 	}
 }
 
@@ -108,9 +106,22 @@ func TestComputeResearch(t *testing.T) {
 	if strings.TrimSpace(out) != "" {
 		t.Errorf("no version file or changelog changed: %q", out)
 	}
-	// experiment is refused by Compute too
-	if _, err := Compute(r, root, m, &workitem.Item{ID: "S-003", Type: workitem.Story, Nature: "experiment"}, nil, ""); err == nil {
-		t.Error("experiment must be refused")
+}
+
+// ADR-0066: an experiment plans no release whatever it touched, as research
+// does, and its plan names the nature and the components landing unreleased.
+func TestComputeExperiment(t *testing.T) {
+	root, r := gitRepo(t)
+	trial := &workitem.Item{ID: "S-002", Type: workitem.Story, Nature: "experiment", Title: "Trial", Tags: []string{"command"}}
+	plan, err := Compute(r, root, m, trial, nil, "web")
+	if err != nil {
+		t.Fatalf("an experiment that touched components is not refused: %v", err)
+	}
+	if plan.Level != None || len(plan.Steps) != 0 || !strings.Contains(plan.Skipped, "S-002 is an experiment") || !strings.Contains(plan.Skipped, "ADR-0066") || strings.Contains(plan.Skipped, "research") {
+		t.Errorf("an experiment releases nothing, and says so as an experiment: %+v", plan)
+	}
+	if len(plan.Unreleased) != 2 || plan.Unreleased[0].Component != "cli" || plan.Unreleased[1].Component != "web" {
+		t.Errorf("components landing unreleased: %+v", plan.Unreleased)
 	}
 }
 
@@ -304,6 +315,20 @@ func TestPendingResearchContributesNothing(t *testing.T) {
 	}
 	if len(plans) != 1 || plans[0].Level != Patch || len(plans[0].Items) != 1 {
 		t.Errorf("research alongside a patch: only the patch counts: %+v", plans)
+	}
+}
+
+// An experiment in the batch contributes nothing either (ADR-0066).
+func TestPendingExperimentContributesNothing(t *testing.T) {
+	root, r := gitRepo(t)
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "experiment", "A trial", map[string]string{"cli/a.go": "package main\n"})
+	plans, err := Pending(r, root, m, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 0 {
+		t.Errorf("an experiment releases nothing, even having touched cli: %+v", plans)
 	}
 }
 
