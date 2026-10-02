@@ -2,6 +2,8 @@
 *
 !flai/**
 !flaiover/**
+# The license travels with the image (S-0231): the runtime stage copies it to /app.
+!LICENSE.md
 flai/dist/
 flai/bin/
 flaiover/node_modules/

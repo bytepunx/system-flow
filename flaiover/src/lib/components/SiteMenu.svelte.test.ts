@@ -75,7 +75,7 @@ describe('the site menu (S-0172)', () => {
 		pointer(group('host'), 'pointerenter');
 		expect(
 			[...document.querySelectorAll('[data-menu-pages] a')].map((a) => a.getAttribute('href'))
-		).toEqual(['/host', '/settings']);
+		).toEqual(['/host', '/settings', '/license']);
 	});
 
 	it('opens a group on hover and goes back to the page shown when the pointer leaves', () => {
@@ -93,9 +93,9 @@ describe('the site menu (S-0172)', () => {
 		show('/board');
 		group('host').click();
 		flushSync();
-		expect(shownPages()).toEqual(['Updates', 'Settings']);
+		expect(shownPages()).toEqual(['Updates', 'Settings', 'License']);
 		pointer(group('status'), 'pointerenter', 'touch');
-		expect(shownPages()).toEqual(['Updates', 'Settings']);
+		expect(shownPages()).toEqual(['Updates', 'Settings', 'License']);
 		group('status').click();
 		flushSync();
 		pointer(document.querySelector('nav')!, 'pointerleave', 'touch');

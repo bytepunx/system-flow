@@ -24,7 +24,8 @@
 		docs: resolve('/docs/[...path]', { path: '' }),
 		search: resolve('/search'),
 		updates: resolve('/host'),
-		settings: resolve('/settings')
+		settings: resolve('/settings'),
+		license: resolve('/license')
 	};
 	const BADGE = { inbox: InboxBadge };
 
