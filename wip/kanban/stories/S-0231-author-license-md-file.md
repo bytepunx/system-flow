@@ -3,11 +3,14 @@ id: S-0231
 type: story
 nature: feature
 title: Author LICENSE.md file
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-02T12:24:10Z
 updated: 2026-10-02T12:24:10Z
-transitions: []
+transitions:
+  - to: ready
+    at: 2026-10-02T12:24:10Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -20,10 +23,10 @@ agent:
 ## Goal
 
 Write an adaptation of polycore shield that grants free usage to:
- - 501(c)(3)s
- - Educators and students at State-funded educational institutions
- - Security researchers analyzing the system
- - Start-ups earning under $1M USD in annual revenue and having less than $15M in cumulative funding
+- 501(c)(3)s
+- Educators and students at State-funded educational institutions
+- Security researchers analyzing the system
+- Start-ups earning under $1M USD in annual revenue and having less than $15M in cumulative funding
 
 That also prohibits any class of persons (whether granted free use or not) from using this software as a basis for hosted products or services. The intent being to shield system-flow or a custom fork of it from being offered as SaaS or licensed software by another entity.
 
