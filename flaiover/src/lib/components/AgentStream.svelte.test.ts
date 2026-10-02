@@ -144,6 +144,108 @@ describe('AgentStream (S-0142)', () => {
 		expect(api).toHaveBeenCalledTimes(1);
 	});
 
+	it('keeps what it shows when the page passes the same story and run again (S-0178)', async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		// the page passes them from objects it makes anew on every reload
+		const page = $state({ given: { story: 'S-0142', started: '2026-09-29T05:42:53Z' } });
+		c = mount(AgentStream, {
+			target: document.body,
+			props: {
+				get story() {
+					return page.given.story;
+				},
+				get started() {
+					return page.given.started;
+				}
+			}
+		});
+		api.mockResolvedValueOnce(answer(read({ entries: [{ kind: 'text', text: 'one' }] })));
+		await settle();
+		expect(lines()).toEqual(['one']);
+
+		page.given = { ...page.given };
+		await settle();
+		expect(api).toHaveBeenCalledTimes(1);
+		expect(lines()).toEqual(['one']);
+
+		// another run starts over from the tail
+		api.mockResolvedValueOnce(
+			answer(read({ started: '2026-09-29T06:00:00Z', entries: [{ kind: 'text', text: 'again' }] }))
+		);
+		page.given = { ...page.given, started: '2026-09-29T06:00:00Z' };
+		await settle();
+		expect(api).toHaveBeenCalledTimes(2);
+		expect(api).toHaveBeenLastCalledWith('/api/agent-stream/S-0142');
+		expect(lines()).toEqual(['again']);
+	});
+
+	it('follows an append at the end of the box and stays where the reader scrolled away (S-0178)', async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		api.mockResolvedValueOnce(answer(read({ entries: [{ kind: 'text', text: 'one' }] })));
+		await show();
+		// jsdom lays nothing out: each line is 100 high in a box 50 high, scrolled to its end
+		const ol = box().querySelector('ol')!;
+		Object.defineProperty(ol, 'scrollHeight', {
+			configurable: true,
+			get: () => 100 * ol.querySelectorAll('li').length
+		});
+		Object.defineProperty(ol, 'clientHeight', { configurable: true, value: 50 });
+		Object.defineProperty(ol, 'scrollTop', { configurable: true, writable: true, value: 50 });
+
+		api.mockResolvedValueOnce(
+			answer(read({ from: 100, next: 200, entries: [{ kind: 'text', text: 'two' }] }))
+		);
+		await vi.advanceTimersByTimeAsync(2000);
+		await settle();
+		expect(lines()).toEqual(['one', 'two']);
+		expect(ol.scrollTop).toBe(200);
+
+		// the reader scrolls up: the next append leaves the box where it is
+		ol.scrollTop = 0;
+		api.mockResolvedValueOnce(
+			answer(read({ from: 200, next: 300, entries: [{ kind: 'text', text: 'three' }] }))
+		);
+		await vi.advanceTimersByTimeAsync(2000);
+		await settle();
+		expect(lines()).toEqual(['one', 'two', 'three']);
+		expect(ol.scrollTop).toBe(0);
+	});
+
+	it('opens when told and leaves closing to the reader (S-0178)', async () => {
+		const page = $state({ given: { open: false } });
+		c = mount(AgentStream, {
+			target: document.body,
+			props: {
+				story: 'S-0142',
+				started: '2026-09-29T05:42:53Z',
+				get open() {
+					return page.given.open;
+				}
+			}
+		});
+		api.mockResolvedValue(answer(read({ running: false })));
+		await settle();
+		expect(box().open).toBe(false);
+
+		page.given.open = true;
+		flushSync();
+		expect(box().open).toBe(true);
+
+		// the reader closes it, and the page passing the same again does not reopen it
+		box().open = false;
+		box().dispatchEvent(new Event('toggle'));
+		page.given = { open: true };
+		flushSync();
+		expect(box().open).toBe(false);
+
+		// the reader opens it and the agent ends: it stays open under the reader
+		box().open = true;
+		box().dispatchEvent(new Event('toggle'));
+		page.given.open = false;
+		flushSync();
+		expect(box().open).toBe(true);
+	});
+
 	it('says what flai answered when it cannot read, and tries again unless there is no agent', async () => {
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 		api.mockResolvedValueOnce(refusal(500, 'method not found: agent.stream'));

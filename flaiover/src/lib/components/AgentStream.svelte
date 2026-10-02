@@ -2,9 +2,11 @@
 	// What a story's agent is saying and doing (S-0142), as flai on the host reads it from the log it
 	// gave the agent: the newest entries, kept scrolled to the end unless the reader scrolled up, and
 	// read again every two seconds from where the last read stopped while the agent runs. A new run
-	// for the story (another `started`) starts it over from the tail. When flai cannot answer, it says
-	// why and tries again now and then, except for a story flai started no agent for.
-	import { tick } from 'svelte';
+	// for the story (another `started`) starts it over from the tail; the same story and run passed
+	// again change nothing (S-0178). When flai cannot answer, it says why and tries again now and
+	// then, except for a story flai started no agent for. It opens when told to and closes only when
+	// the reader closes it, so an agent that ends does not shorten the page under the reader (S-0178).
+	import { tick, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import type { AgentStreamEntry, AgentStreamRead } from '$lib/activity';
 
@@ -12,7 +14,18 @@
 		story,
 		started,
 		open = true
-	}: { story: string; started: string; open?: boolean } = $props();
+	}: {
+		story: string;
+		started: string;
+		/** Opens the stream when it is or becomes true; becoming false leaves it as the reader has it. */
+		open?: boolean;
+	} = $props();
+
+	// The page passes these from objects it makes anew on every reload. Derived, they change only
+	// when the values do, so a reload does not empty the stream and move the page (S-0178).
+	const following = $derived(story);
+	const since = $derived(started);
+	const opened = $derived(open);
 
 	/** Entries kept on the page; older ones are in the log on the host. */
 	const KEEP = 500;
@@ -24,13 +37,19 @@
 	let earlier = $state(false);
 	let error = $state<string | null>(null);
 	let box = $state<HTMLElement | null>(null);
+	let shown = $state(false);
+
+	// Opens when told to; closing is the reader's, even when the agent ends (S-0178).
+	$effect.pre(() => {
+		if (opened) shown = true;
+	});
 
 	/** A read flai refused or could not answer, with the dashboard's status for it. */
 	type ReadError = Error & { status: number };
 
 	async function read(after?: number): Promise<AgentStreamRead> {
 		const r = await api(
-			`/api/agent-stream/${encodeURIComponent(story)}${after === undefined ? '' : `?after=${after}`}`
+			`/api/agent-stream/${encodeURIComponent(following)}${after === undefined ? '' : `?after=${after}`}`
 		);
 		if (!r.ok) {
 			const message = (await r.json().catch(() => ({}))).error ?? r.statusText;
@@ -53,7 +72,13 @@
 	}
 
 	$effect(() => {
-		void started;
+		void following;
+		void since;
+		// nothing else read here starts the stream over
+		return untrack(follow);
+	});
+
+	function follow() {
 		let stopped = false;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		let next: number | undefined;
@@ -96,7 +121,7 @@
 			stopped = true;
 			clearTimeout(timer);
 		};
-	});
+	}
 
 	function tone(e: AgentStreamEntry): string {
 		if (e.error) return 'text-danger';
@@ -129,7 +154,7 @@
 	}
 </script>
 
-<details class="mt-2" {open} data-testid="agent-stream" data-running={running}>
+<details class="mt-2" bind:open={shown} data-testid="agent-stream" data-running={running}>
 	<summary class="cursor-pointer text-xs text-muted select-none">
 		stream{#if running}<span class="text-good">&nbsp;· live</span>{/if}
 	</summary>
