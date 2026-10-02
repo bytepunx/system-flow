@@ -189,3 +189,14 @@ Do all three levels, in this order of worth: verify every artifact before it is 
 ## Decision
 
 The designer took the recommendation on every question in TH-0065 on 2026-10-02, recorded as [ADR-0070](../adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md): one cosign key pair signs flai's `checksums.txt` and flaiover's digest list; flai, `install.sh`, and `flai dashboard` verify before they install or run, with the standard library, `openssl`, and Docker's digest; flai measures the container's image before it dials; both sides exchange a signed release stamp in `hello` and close with `4403` when it fails; and unsigned is allowed only by `dashboard.allow_unsigned` on the host, passed to the container by `flai dashboard`, and shown wherever the connection is. The stories under E-0015 that deliver it follow.
+
+| Story | Delivers | After |
+|-------|----------|-------|
+| S-0232 | The key pair, the two secrets, `checksums.txt` signed through GoReleaser `signs`, the public key in both sources, the attestation on flai's workflow | |
+| S-0233 | `flai self-upgrade`, `flai host upgrade`, and `install.sh` verify the signature before installing | S-0232 |
+| S-0234 | The image's digest list signed and published on a `flaiover vX.Y.Z` release, `cosign sign` and the attestation on the image | S-0232 |
+| S-0235 | The signed release stamp built into flai and into the image | S-0232 |
+| S-0236 | `flai dashboard`, `check`, and `upgrade` resolve the image from the signed list and run it by digest | S-0233, S-0234 |
+| S-0237 | The stamps exchanged in `hello`, `4403` on failure, shown on both sides | S-0235 |
+| S-0238 | flai measures the container's image through Docker before it dials | S-0236 |
+| S-0239 | `dashboard.allow_unsigned`, passed to the container, shown on every page and in every status | S-0237, S-0238 |
