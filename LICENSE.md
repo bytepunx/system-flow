@@ -1,6 +1,6 @@
 # system-flow Shield License 1.0
 
-Required Notice: Copyright 2026 Bytepunx LLC, alex@robsonandmilligan.com
+Required Notice: Copyright 2026 Bytepunx LLC, <alex@robsonandmilligan.com>
 (<https://github.com/bytepunx/system-flow>)
 
 This license is an adaptation of the PolyForm Shield License 1.0.0
@@ -85,7 +85,7 @@ Any other use is not a permitted purpose. In particular, use of the software by
 or for a company that does not meet the start-up limits, by an individual over
 the individual-use limit, and any other commercial use not listed above,
 requires a separate paid license from the licensor. To obtain one, contact the
-licensor at alex@robsonandmilligan.com.
+licensor at <alex@robsonandmilligan.com>.
 
 ## Prohibited Uses
 
