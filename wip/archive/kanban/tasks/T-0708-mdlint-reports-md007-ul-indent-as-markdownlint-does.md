@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 391
-      cache_read: 2500941
-      cache_write: 97845
-      cost: 1.0479
+      input: 67
+      output: 20579
+      cache_read: 2529133
+      cache_write: 69658
+      cost: 1.3602
 ---
 # T-0708 mdlint reports MD007 ul-indent as markdownlint does
 

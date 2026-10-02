@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 214
-      cache_read: 1090266
-      cache_write: 39765
-      cost: 0.4557
+      input: 29
+      output: 8949
+      cache_read: 1099742
+      cache_write: 30289
+      cost: 0.5915
 ---
 # T-0710 The design names MD007 among the rules flai lints and I-0055 is closed
 

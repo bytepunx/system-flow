@@ -3,10 +3,10 @@ id: S-0240
 type: story
 nature: remediation
 title: A story made from the dashboard is refused when its body fails the markdown lint, as flai task new refuses it
-status: in-progress
+status: done
 owner: arobson
 created: 2026-10-02T12:42:51Z
-updated: 2026-10-02T16:50:12Z
+updated: 2026-10-02T17:10:35Z
 transitions:
   - to: ready
     at: 2026-10-02T16:24:25Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-02T16:48:17Z
     by: agent-S-0240
+  - to: review
+    at: 2026-10-02T17:09:15Z
+    by: agent-S-0240
+  - to: done
+    at: 2026-10-02T17:10:35Z
+    by: alex
 tags: [dashboard, cli]
 topics: [dashboard, markdown]
-touches: [flai/internal/mdlint, flai/internal/itemnew, flai/internal/hostapi, flaiover/src/lib/server, design/issues, design/system/flai-cli.md]
+touches: [flai/internal/mdlint, flai/internal/itemnew, flai/internal/hostapi, flaiover/src/lib/server, flaiover/src/lib/components, design/issues, design/system/flai-cli.md, docs/users/flaiover.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,15 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 580
-  estimated: true
+  seconds: 1286
   models:
     - model: claude-opus-5-5
-      input: 164
-      output: 1098
-      cache_read: 5614426
-      cache_write: 214563
-      cost: 2.3504
+      input: 284
+      output: 87151
+      cache_read: 10710533
+      cache_write: 294993
+      cost: 5.7602
+    - model: claude-sonnet-5-5
+      input: 26
+      output: 5930
+      cache_read: 511476
+      cache_write: 56035
+      cost: 0.3017
 ---
 # S-0240 A story made from the dashboard is refused when its body fails the markdown lint, as flai task new refuses it
 
@@ -41,10 +52,10 @@ usage:
 [I-0055](../../../design/issues/I-0055-a-story-made-from-the-dashboard-reached-main-with-a-markdown-lint-error-flai-task-new-would-have-refused.md): S-0231, made from the dashboard on 2026-10-02, reached `main` with its criteria list indented one space (MD007), which stopped S-0193's close-out at the markdown lint. `flai task new` and `flai story new` refuse such a body with the rule and the line (ADR-0061), so the dashboard's path for a new item, or the edit that follows it, writes a body without that check. Find where, and close the gap.
 
 ## Acceptance criteria
-- [ ] The path the dashboard's new-item form takes to write a story's or epic's body is traced, and the step that writes without the wip markdown lint is named in the story's notes.
-- [ ] Making or editing an item from the dashboard with a body the lint rejects is refused, and the form shows the rule and the line as the CLI does.
-- [ ] A test on the side that was missing the check reproduces S-0231's body and fails without the fix.
-- [ ] I-0055 is closed with `flai issue close`.
+- [x] The path the dashboard's new-item form takes to write a story's or epic's body is traced, and the step that writes without the wip markdown lint is named in the story's notes.
+- [x] Making or editing an item from the dashboard with a body the lint rejects is refused, and the form shows the rule and the line as the CLI does.
+- [x] A test on the side that was missing the check reproduces S-0231's body and fails without the fix.
+- [x] I-0055 is closed with `flai issue close`.
 
 ## Tasks
 - T-0708 mdlint reports MD007 ul-indent as markdownlint does
