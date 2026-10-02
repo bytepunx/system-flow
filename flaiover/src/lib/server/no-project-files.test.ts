@@ -8,6 +8,8 @@ import { join, relative } from 'node:path';
 const ALLOWED: Record<string, string> = {
 	'src/lib/server/auth.ts': 'the login token, a secret handed to the container',
 	'src/lib/server/agent.ts': 'the agent credential, a secret handed to the container',
+	'src/lib/server/license.ts':
+		"the image's own LICENSE.md, the dashboard's license, not the project's (S-0231)",
 	'src/lib/server/testing.ts': 'test support, never imported by the application'
 };
 

@@ -31,7 +31,7 @@ ARG FLAI_VERSION=dev
 LABEL dev.system-flow.flai="${FLAI_VERSION}" \
       org.opencontainers.image.source="https://github.com/bytepunx/system-flow" \
       org.opencontainers.image.description="flaiover: the system-flow dashboard; it reaches a project through flai serve on the host" \
-      org.opencontainers.image.licenses="UNLICENSED"
+      org.opencontainers.image.licenses="LicenseRef-system-flow-Shield-1.0"
 RUN apk add --no-cache tini
 WORKDIR /app
 COPY --from=build /src/flaiover/build ./build
@@ -39,6 +39,9 @@ COPY --from=build /src/flaiover/node_modules ./node_modules
 COPY --from=build /src/flaiover/package.json ./package.json
 COPY --from=build /src/flaiover/server.js ./server.js
 COPY --from=build /src/flaiover/scheme.js ./scheme.js
+# The license travels with every copy of the software (S-0231): the Host › License page reads
+# this file (FLAIOVER_LICENSE names another), and it is the same text flai license prints.
+COPY LICENSE.md ./LICENSE.md
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \

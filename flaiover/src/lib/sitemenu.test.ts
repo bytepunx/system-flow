@@ -7,7 +7,7 @@ describe('the site menu (S-0172)', () => {
 		expect(SITE_MENU.map((g) => [g.label, g.pages.map((p) => p.label)])).toEqual([
 			['Workflow', ['Overview', 'Board', 'Inbox', 'Threads', 'Activity']],
 			['Status', ['Charts', 'ADRs', 'Docs', 'Search']],
-			['Host', ['Updates', 'Settings']]
+			['Host', ['Updates', 'Settings', 'License']]
 		]);
 	});
 
@@ -19,6 +19,7 @@ describe('the site menu (S-0172)', () => {
 		expect(locate('/docs/design/system/overview.md')).toEqual({ group: 'status', page: 'docs' });
 		expect(locate('/host')).toEqual({ group: 'host', page: 'updates' });
 		expect(locate('/settings')).toEqual({ group: 'host', page: 'settings' });
+		expect(locate('/license')).toEqual({ group: 'host', page: 'license' });
 	});
 
 	it('places a path only its group claims in the group, with no page', () => {

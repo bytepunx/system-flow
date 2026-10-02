@@ -29,7 +29,8 @@ export type PageKey =
 	| 'docs'
 	| 'search'
 	| 'updates'
-	| 'settings';
+	| 'settings'
+	| 'license';
 
 export const SITE_MENU: MenuGroup[] = [
 	{
@@ -62,7 +63,9 @@ export const SITE_MENU: MenuGroup[] = [
 		pages: [
 			// The host page is where the dashboard and flai are upgraded (S-0081, S-0107).
 			{ key: 'updates', label: 'Updates', path: '/host' },
-			{ key: 'settings', label: 'Settings', path: '/settings' }
+			{ key: 'settings', label: 'Settings', path: '/settings' },
+			// The license the image carries, the same text flai license prints (S-0231).
+			{ key: 'license', label: 'License', path: '/license' }
 		]
 	}
 ];
