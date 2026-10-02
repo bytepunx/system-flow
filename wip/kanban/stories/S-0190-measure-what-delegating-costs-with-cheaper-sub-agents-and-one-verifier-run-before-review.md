@@ -34,14 +34,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1246
+  seconds: 1366
   models:
     - model: claude-opus-5-5
-      input: 126
-      output: 31159
-      cache_read: 6055654
-      cache_write: 121598
-      cost: 2.8076
+      input: 156
+      output: 36202
+      cache_read: 8135324
+      cache_write: 134181
+      cost: 3.4252
 ---
 # S-0190 Measure what delegating costs with cheaper sub-agents and one verifier run before review
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 192
-      output: 27
-      cache_read: 758446
-      cache_write: 17462
-      cost: 0
+      input: 188
+      output: 7234
+      cache_read: 757703
+      cache_write: 18210
+      cost: 0.9172
 ---
 # T-0692 Set out the options for signing releases and verifying them at upgrade and image run
 

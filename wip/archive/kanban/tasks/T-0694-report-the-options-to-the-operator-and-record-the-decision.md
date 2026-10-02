@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 512
-      output: 208
-      cache_read: 2496090
-      cache_write: 17985
-      cost: 0
+      input: 608
+      output: 23438
+      cache_read: 2454980
+      cache_write: 59000
+      cost: 2.9717
 ---
 # T-0694 Report the options to the operator and record the decision
 

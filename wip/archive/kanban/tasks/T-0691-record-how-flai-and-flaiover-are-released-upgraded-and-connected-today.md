@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 256
-      output: 103
-      cache_read: 892184
-      cache_write: 24522
-      cost: 0
+      input: 222
+      output: 8547
+      cache_read: 895226
+      cache_write: 21515
+      cost: 1.0836
 ---
 # T-0691 Record how flai and flaiover are released, upgraded, and connected today
 

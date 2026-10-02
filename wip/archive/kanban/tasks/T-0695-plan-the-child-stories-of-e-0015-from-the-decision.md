@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 128
-      output: 26
-      cache_read: 687776
-      cache_write: 15372
-      cost: 0
+      input: 170
+      output: 6555
+      cache_read: 686605
+      cache_write: 16501
+      cost: 0.8311
 ---
 # T-0695 Plan the child stories of E-0015 from the decision
 

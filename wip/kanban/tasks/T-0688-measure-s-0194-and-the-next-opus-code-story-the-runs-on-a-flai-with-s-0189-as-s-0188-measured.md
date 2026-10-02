@@ -20,15 +20,15 @@ tags: [cli]
 touches: [design/system/agent-context.md]
 usage:
   source: log
-  seconds: 1133
+  seconds: 1253
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 97
-      output: 24061
-      cache_read: 4676267
-      cache_write: 93900
-      cost: 2.1681
+      input: 129
+      output: 30042
+      cache_read: 6751068
+      cache_write: 111350
+      cost: 2.8424
 ---
 # T-0688 Measure S-0194 and the next Opus code story, the runs on a flai with S-0189, as S-0188 measured
 

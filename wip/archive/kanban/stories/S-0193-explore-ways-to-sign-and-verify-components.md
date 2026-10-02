@@ -3,11 +3,11 @@ id: S-0193
 type: story
 nature: research
 title: Explore ways to sign and verify components
-status: in-progress
+status: done
 parent: E-0015
 owner: alex
 created: 2026-10-01T11:18:38Z
-updated: 2026-10-02T12:19:13Z
+updated: 2026-10-02T12:45:10Z
 transitions:
   - to: ready
     at: 2026-10-01T11:18:38Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-02T12:10:05Z
     by: claude-fable-5-1
+  - to: review
+    at: 2026-10-02T12:43:26Z
+    by: claude-fable-5-1
+  - to: done
+    at: 2026-10-02T12:45:10Z
+    by: alex
 tags: []
 topics: [release, security]
-touches: [flaiover/src, flai/cmd, design/system/release-signing.md, design/system/README.md, design/adrs]
+touches: [flaiover/src, flai/cmd, design/system/release-signing.md, design/system/README.md, design/adrs, design/issues/I-0055-a-story-made-from-the-dashboard-reached-main-with-a-markdown-lint-error-flai-task-new-would-have-refused.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-fable-5-1
@@ -25,21 +31,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1731
-  estimated: true
+  seconds: 2081
   models:
     - model: claude-fable-5-1
-      input: 1762
-      output: 642
-      cache_read: 6432611
-      cache_write: 171401
-      cost: 0
+      input: 2082
+      output: 80320
+      cache_read: 8413158
+      cache_write: 202190
+      cost: 10.1839
     - model: claude-haiku-4-5-20251001
-      input: 258
-      output: 49
-      cache_read: 1488173
-      cache_write: 76525
-      cost: 0.2923
+      input: 266
+      output: 9362
+      cache_read: 1564698
+      cache_write: 78430
+      cost: 0.3016
+    - model: claude-sonnet-5-5
+      input: 38
+      output: 11499
+      cache_read: 451332
+      cache_write: 87642
+      cost: 0.4244
 ---
 # S-0193 Explore ways to sign and verify components
 

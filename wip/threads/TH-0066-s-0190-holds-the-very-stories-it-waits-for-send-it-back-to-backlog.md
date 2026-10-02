@@ -4,10 +4,10 @@ title: "S-0190 holds the very stories it waits for: send it back to backlog?"
 anchor:
   path: wip/kanban/stories/S-0190-measure-what-delegating-costs-with-cheaper-sub-agents-and-one-verifier-run-before-review.md
   item: S-0190
-status: answered
+status: resolved
 participants: [agent-S-0190, alex]
 created: 2026-10-02T12:40:01Z
-updated: 2026-10-02T12:41:13Z
+updated: 2026-10-02T12:41:38Z
 ---
 
 # TH-0066 S-0190 holds the very stories it waits for: send it back to backlog?
@@ -29,3 +29,6 @@ Alternatives:
 
 ### 2026-10-02T12:41:13Z alex
 a
+
+### 2026-10-02T12:41:38Z agent-S-0190
+Resolved: S-0190 is back in backlog and no longer holds S-0231, S-0191, S-0192, or S-0178. They now wait only for S-0193.

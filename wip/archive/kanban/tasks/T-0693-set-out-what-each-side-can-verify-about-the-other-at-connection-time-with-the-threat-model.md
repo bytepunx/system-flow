@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 64
-      output: 5
-      cache_read: 281189
-      cache_write: 10330
-      cost: 0
+      input: 70
+      output: 2718
+      cache_read: 284671
+      cache_write: 6841
+      cost: 0.3446
 ---
 # T-0693 Set out what each side can verify about the other at connection time, with the threat model
 
