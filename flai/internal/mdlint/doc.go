@@ -70,12 +70,15 @@ type listItem struct {
 	marker        byte // -, *, + or the ordered delimiter . )
 	value         int
 	contentIndent int
+	at            int // byte offset of the marker in the line
+	list          *list
 }
 
 type list struct {
 	ordered bool
 	marker  byte
 	items   []*listItem
+	parent  *listItem // the item the list is nested in; nil at the top level
 }
 
 type doc struct {
@@ -105,8 +108,12 @@ var (
 
 // columns returns the indentation of s in columns, tabs to the next stop of
 // four, and the byte offset where it ends.
-func columns(s string) (int, int) {
-	col := 0
+func columns(s string) (int, int) { return columnsFrom(s, 0) }
+
+// columnsFrom is columns for s starting at column from, where tab stops
+// fall as they do on the whole line.
+func columnsFrom(s string, from int) (int, int) {
+	col := from
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
 		case ' ':
@@ -114,10 +121,10 @@ func columns(s string) (int, int) {
 		case '\t':
 			col += 4 - col%4
 		default:
-			return col, i
+			return col - from, i
 		}
 	}
-	return col, len(s)
+	return col - from, len(s)
 }
 
 // skipColumns returns the byte offset after n columns of indentation.
@@ -386,7 +393,7 @@ func (p *parser) block(i, off, depth, ind int) {
 func (p *parser) item(i, off, depth, ind int) bool {
 	d := p.d
 	c := d.lines[i].raw[off:]
-	it := &listItem{line: i}
+	it := &listItem{line: i, at: off}
 	var mlen int
 	if m := bulletRe.FindStringSubmatch(c); m != nil {
 		it.marker, mlen = m[1][0], len(m[1])
@@ -400,15 +407,20 @@ func (p *parser) item(i, off, depth, ind int) bool {
 	if p.para != nil && p.para.depth == depth && (isBlank(rest) || (it.ordered && it.value != 1)) {
 		return false // cannot interrupt a paragraph
 	}
-	sp, _ := columns(rest)
+	sp, ws := columnsFrom(rest, ind+mlen)
 	if sp >= 5 || isBlank(rest) {
-		sp = 1
+		sp, ws = 1, skipColumns(rest, 1)
 	}
 	it.contentIndent = ind + mlen + sp
 	if len(p.lists) > depth && p.lists[depth] != nil && p.lists[depth].ordered == it.ordered && p.lists[depth].marker == it.marker {
-		p.lists[depth].items = append(p.lists[depth].items, it)
+		it.list = p.lists[depth]
+		it.list.items = append(it.list.items, it)
 	} else {
 		l := &list{ordered: it.ordered, marker: it.marker, items: []*listItem{it}}
+		if depth > 0 && depth <= len(p.stack) {
+			l.parent = p.stack[depth-1]
+		}
+		it.list = l
 		d.lists = append(d.lists, l)
 		p.endLists(depth)
 		for len(p.lists) <= depth {
@@ -424,16 +436,15 @@ func (p *parser) item(i, off, depth, ind int) bool {
 		d.lines[i].start = len(d.lines[i].raw)
 		return true
 	}
-	at := off + mlen + skipColumns(rest, sp)
+	at := off + mlen + ws
 	inner := d.lines[i].raw[at:]
-	innerInd, _ := columns(d.lines[i].raw[:at])
 	switch {
 	case bulletRe.MatchString(inner) || orderedRe.MatchString(inner):
-		if !p.item(i, at, depth+1, innerInd) {
+		if !p.item(i, at, depth+1, it.contentIndent) {
 			p.text(i, at)
 		}
 	case fenceRe.MatchString(inner) || atxRe.MatchString(inner) || hrRe.MatchString(inner):
-		p.block(i, at, depth+1, innerInd)
+		p.block(i, at, depth+1, it.contentIndent)
 	default:
 		p.text(i, at)
 	}

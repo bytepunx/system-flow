@@ -143,6 +143,42 @@ func md004(c *Config, d *doc, _ *inlineOut, add adder) {
 	}
 }
 
+func md007(c *Config, d *doc, _ *inlineOut, add adder) {
+	indent := c.intOpt("MD007", "indent", 0)
+	if indent == 0 {
+		indent = 2
+	}
+	start := 0
+	if c.boolOpt("MD007", "start_indented", false) {
+		if start = c.intOpt("MD007", "start_indent", 0); start == 0 {
+			start = indent
+		}
+	}
+	// The actual indent is in characters, a tab counting one, as markdownlint
+	// counts it. Lists in blockquotes and footnotes are not parsed, so are
+	// not judged.
+	for _, l := range d.lists {
+		if l.ordered {
+			continue
+		}
+		nesting := 0
+		for p := l.parent; p != nil && nesting >= 0; p = p.list.parent {
+			nesting++
+			if p.ordered {
+				nesting = -1 // markdownlint skips lists under an ordered list
+			}
+		}
+		if nesting < 0 {
+			continue
+		}
+		for _, it := range l.items {
+			if want := start + nesting*indent; it.at != want {
+				add(it.line, fmt.Sprintf("Expected: %d; Actual: %d", want, it.at), "")
+			}
+		}
+	}
+}
+
 func md009(c *Config, d *doc, _ *inlineOut, add adder) {
 	if c.boolOpt("MD009", "strict", false) {
 		return // strict depends on paragraph ends this package does not judge

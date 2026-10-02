@@ -207,3 +207,57 @@ func TestIntroducedAndGuard(t *testing.T) {
 		t.Errorf("a clean change passes: %v", err)
 	}
 }
+
+// S-0231's body as written indents a top-level list by one space, which
+// markdownlint reports as MD007 on each item.
+func TestUnorderedListIndentOfS0231(t *testing.T) {
+	c, err := Load(filepath.Join("testdata", "cases"))
+	if err != nil || c == nil {
+		t.Fatalf("config: %v %v", c, err)
+	}
+	content, err := os.ReadFile(filepath.Join("testdata", "cases", "license-story.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range c.Lint(string(content)) {
+		got = append(got, fmt.Sprintf("%d %s", f.Line, f))
+	}
+	want := []string{
+		"23 MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 1]",
+		"24 MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 1]",
+		"25 MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 1]",
+		"26 MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 1]",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("findings:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// markdownlint's MD007 options, with what markdownlint-cli2 0.20.0 reports
+// for each.
+func TestUnorderedListIndentOptions(t *testing.T) {
+	doc := "# T\n\n- top\n  - two\n    - four\n\n  - two again\n"
+	for _, tc := range []struct{ config, want string }{
+		{"default: true\n", ""},
+		{"MD007:\n  indent: 4\n", "4 Expected: 4; Actual: 2|5 Expected: 8; Actual: 4|7 Expected: 4; Actual: 2"},
+		{"MD007:\n  start_indented: true\n", "3 Expected: 2; Actual: 0|4 Expected: 4; Actual: 2|5 Expected: 6; Actual: 4|7 Expected: 4; Actual: 2"},
+		{"MD007:\n  start_indented: true\n  start_indent: 1\n  indent: 1\n", "3 Expected: 1; Actual: 0|5 Expected: 3; Actual: 4"},
+		{"MD007:\n  start_indent: 3\n", ""}, // start_indent counts only with start_indented
+		{"ul-indent: false\n", ""},
+	} {
+		c, err := Parse([]byte(tc.config), false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, f := range c.Lint(doc) {
+			if f.Rule == "MD007" {
+				got = append(got, fmt.Sprintf("%d %s", f.Line, f.Detail))
+			}
+		}
+		if strings.Join(got, "|") != tc.want {
+			t.Errorf("%q:\n got  %s\n want %s", tc.config, strings.Join(got, "|"), tc.want)
+		}
+	}
+}

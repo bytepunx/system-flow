@@ -57,6 +57,7 @@ func init() {
 	rules = []rule{
 		{"MD001", "Heading levels should only increment by one level at a time", []string{"heading-increment"}, []string{"headings"}, md001},
 		{"MD004", "Unordered list style", []string{"ul-style"}, []string{"bullet", "ul"}, md004},
+		{"MD007", "Unordered list indentation", []string{"ul-indent"}, []string{"bullet", "ul", "indentation"}, md007},
 		{"MD009", "Trailing spaces", []string{"no-trailing-spaces"}, []string{"whitespace"}, md009},
 		{"MD010", "Hard tabs", []string{"no-hard-tabs"}, []string{"whitespace", "hard_tab"}, md010},
 		{"MD012", "Multiple consecutive blank lines", []string{"no-multiple-blanks"}, []string{"whitespace", "blank_lines"}, md012},
