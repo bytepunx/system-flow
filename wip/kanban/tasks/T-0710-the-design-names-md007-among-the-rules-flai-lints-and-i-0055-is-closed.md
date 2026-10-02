@@ -3,16 +3,36 @@ id: T-0710
 type: task
 nature: remediation
 title: The design names MD007 among the rules flai lints and I-0055 is closed
-status: backlog
+status: done
 parent: S-0240
 owner: arobson
 created: 2026-10-02T16:50:12Z
-updated: 2026-10-02T16:50:12Z
-transitions: []
+updated: 2026-10-02T16:57:38Z
+transitions:
+  - to: ready
+    at: 2026-10-02T16:56:55Z
+    by: agent-S-0240
+  - to: in-progress
+    at: 2026-10-02T16:56:55Z
+    by: agent-S-0240
+  - to: done
+    at: 2026-10-02T16:57:38Z
+    by: agent-S-0240
 stream: S-0240
 tags: []
 touches: [design/system/flai-cli.md, design/issues]
 after: [T-0708]
+usage:
+  source: log
+  seconds: 43
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 214
+      cache_read: 1090266
+      cache_write: 39765
+      cost: 0.4557
 ---
 # T-0710 The design names MD007 among the rules flai lints and I-0055 is closed
 

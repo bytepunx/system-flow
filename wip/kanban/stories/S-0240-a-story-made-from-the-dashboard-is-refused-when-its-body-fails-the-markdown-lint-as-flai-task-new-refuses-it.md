@@ -22,6 +22,17 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 580
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 164
+      output: 1098
+      cache_read: 5614426
+      cache_write: 214563
+      cost: 2.3504
 ---
 # S-0240 A story made from the dashboard is refused when its body fails the markdown lint, as flai task new refuses it
 
@@ -41,3 +52,7 @@ agent:
 - T-0710 The design names MD007 among the rules flai lints and I-0055 is closed
 
 ## Notes
+
+The trace (T-0708, 2026-10-02). The new-item form posts to `flaiover/src/routes/api/items/+server.ts`, which runs the host action `item.new` (`flai/internal/hostapi/writes.go`), which runs `flai story new --body-stdin`: `itemnew.Create` → `workitem.Repo.Create` → `LintGuard` → `mdlint.Guard`, the same step `flai task new` takes. An edit that follows goes through `doc.save` → `docedit.Save`, which refuses what `flai check`, and so the wip lint, finds new. No step on the dashboard's side writes without the lint.
+
+The step that let S-0231 through is the lint itself: `flai/internal/mdlint` did not implement MD007, unordered list indentation, which is not among the rules ADR-0061 names. Linted with this repository's configuration, S-0231's original body (`git show 4a2ccf0^:wip/kanban/stories/S-0231-author-license-md-file.md`) gave no finding, so `flai story new` and `flai task new` would have taken it too: the goal's premise that they refuse it did not hold. The gap is closed by adding MD007 to mdlint (T-0708), which now reports S-0231's four lines as markdownlint-cli2 does.

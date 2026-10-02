@@ -3,11 +3,11 @@ id: T-0708
 type: task
 nature: remediation
 title: mdlint reports MD007 ul-indent as markdownlint does
-status: in-progress
+status: done
 parent: S-0240
 owner: arobson
 created: 2026-10-02T16:50:06Z
-updated: 2026-10-02T16:50:32Z
+updated: 2026-10-02T16:56:51Z
 transitions:
   - to: ready
     at: 2026-10-02T16:50:32Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-02T16:50:32Z
     by: agent-S-0240
+  - to: done
+    at: 2026-10-02T16:56:51Z
+    by: agent-S-0240
 stream: S-0240
 tags: []
 touches: [flai/internal/mdlint]
+usage:
+  source: log
+  seconds: 379
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 391
+      cache_read: 2500941
+      cache_write: 97845
+      cost: 1.0479
 ---
 # T-0708 mdlint reports MD007 ul-indent as markdownlint does
 

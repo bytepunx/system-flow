@@ -3,19 +3,36 @@ id: T-0690
 type: task
 nature: research
 title: "Say what to change next in § Measured"
-status: ready
+status: done
 parent: S-0190
 owner: arobson
 created: 2026-10-02T12:11:00Z
-updated: 2026-10-02T12:11:06Z
+updated: 2026-10-02T16:57:41Z
 transitions:
   - to: ready
     at: 2026-10-02T12:11:06Z
+    by: agent-S-0190
+  - to: in-progress
+    at: 2026-10-02T16:57:11Z
+    by: agent-S-0190
+  - to: done
+    at: 2026-10-02T16:57:41Z
     by: agent-S-0190
 stream: S-0190
 tags: [cli]
 touches: [design/system/agent-context.md]
 after: [T-0689]
+usage:
+  source: log
+  seconds: 30
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 4241
+      cache_read: 374861
+      cache_write: 13012
+      cost: 0.2639
 ---
 # T-0690 Say what to change next in § Measured
 

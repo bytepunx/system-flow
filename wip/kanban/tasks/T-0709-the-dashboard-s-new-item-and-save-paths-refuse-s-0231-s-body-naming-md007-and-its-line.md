@@ -3,16 +3,33 @@ id: T-0709
 type: task
 nature: remediation
 title: The dashboard's new-item and save paths refuse S-0231's body naming MD007 and its line
-status: backlog
+status: in-progress
 parent: S-0240
 owner: arobson
 created: 2026-10-02T16:50:06Z
-updated: 2026-10-02T16:50:06Z
-transitions: []
+updated: 2026-10-02T16:56:55Z
+transitions:
+  - to: ready
+    at: 2026-10-02T16:56:55Z
+    by: agent-S-0240
+  - to: in-progress
+    at: 2026-10-02T16:56:55Z
+    by: agent-S-0240
 stream: S-0240
 tags: []
 touches: [flai/internal/itemnew, flai/internal/hostapi, flaiover/src/lib/server]
 after: [T-0708]
+usage:
+  source: log
+  seconds: 43
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 214
+      cache_read: 1090266
+      cache_write: 39765
+      cost: 0.4557
 ---
 # T-0709 The dashboard's new-item and save paths refuse S-0231's body naming MD007 and its line
 
