@@ -13,10 +13,11 @@ import (
 // What agents spent (S-0143, ADR-0051). flai serve keeps the log of every
 // agent it starts, named for the project's key, the story, and the time it
 // started. From those logs it measures a story whole, and each of the
-// story's tasks over the intervals it was in progress, and writes their
-// usage into the front matter: when an agent it started ends, and when a
-// task of a story whose agent runs enters done without having been
-// measured. flai serve agent usage does the same on the operator's word.
+// story's tasks from the calls of the sub-agents started for it and its
+// share of the rest over the intervals it was in progress (S-0230), and
+// writes their usage into the front matter: when an agent it started ends,
+// and when a task of a story whose agent runs enters done without having
+// been measured. flai serve agent usage does the same on the operator's word.
 
 // AgentLogs are the logs flai serve keeps of the agents it started for
 // story in the project named key, oldest first.
@@ -76,10 +77,11 @@ type Measured struct {
 
 // Measure measures story in the project at root, named key, from the logs
 // of the agents flai serve started for it: the story from all of them, each
-// task that has been in progress over the intervals it was. With write, it
-// records what differs from what the items say, and sums the story's epic
-// again. A task that has been done without anything in its intervals is
-// written as having spent nothing, so that it is not measured at every look.
+// task from its sub-agents' calls and its share of the rest over the
+// intervals it was in progress. With write, it records what differs from
+// what the items say, and sums the story's epic again. A task that has been
+// done without anything measured for it is written as having spent nothing,
+// so that it is not measured at every look.
 func Measure(d Dir, root, key, story string, write bool) (*Measured, error) {
 	logs, err := d.AgentLogs(key, story)
 	if err != nil {
@@ -112,13 +114,15 @@ func Measure(d Dir, root, key, story string, write bool) (*Measured, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, t := range workitem.Children(items, story) {
-		spans := inProgress(t)
-		if len(spans) == 0 {
-			continue
-		}
-		u := rec.Windows(spans, rates)
-		if u == nil && t.Status == workitem.Done {
+	tasks := workitem.Children(items, story)
+	spans := map[string][]usage.Span{}
+	for _, t := range tasks {
+		spans[t.ID] = inProgress(t)
+	}
+	measured := rec.Tasks(spans, rates)
+	for _, t := range tasks {
+		u := measured[t.ID]
+		if u == nil && t.Status == workitem.Done && len(spans[t.ID]) > 0 {
 			u = &usage.Usage{Source: usage.SourceLog, Models: []usage.Model{}}
 		}
 		if u != nil {

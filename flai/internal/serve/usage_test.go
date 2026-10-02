@@ -117,6 +117,56 @@ func TestMeasureWritesAStoryItsTasksAndItsEpic(t *testing.T) {
 	}
 }
 
+// subAgentCall is a call of opus in session s at at by the sub-agent the
+// tool_use parent started, or by the story's agent when parent is empty,
+// with content blocks.
+func subAgentCall(id, parent string, at time.Time, read int, blocks string) string {
+	p := "null"
+	if parent != "" {
+		p = fmt.Sprintf("%q", parent)
+	}
+	return fmt.Sprintf(`{"type":"assistant","timestamp":%q,"session_id":"s","parent_tool_use_id":%s,"message":{"id":%q,"model":"claude-opus-5-5","content":[%s],"usage":{"input_tokens":0,"output_tokens":0,"cache_read_input_tokens":%d,"cache_creation_input_tokens":0}}}`,
+		at.UTC().Format(time.RFC3339Nano), p, id, blocks, read)
+}
+
+// Two tasks in progress at once, each worked by its own sub-agent, are each
+// measured by their sub-agent's calls and half the story's agent's calls in
+// their overlap, and together come to no more than the story.
+func TestMeasureGivesEachTaskItsSubAgentAndAShareOfTheStorysAgent(t *testing.T) {
+	lab := newAgentLab(t)
+	story := lab.backlog("Planned", nil)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	first := lab.taskWorked(story, "first", t0.Add(time.Minute), t0.Add(10*time.Minute))
+	second := lab.taskWorked(story, "second", t0.Add(time.Minute), t0.Add(20*time.Minute))
+	start := func(id, task string) string {
+		return fmt.Sprintf(`{"type":"tool_use","id":%q,"name":"Agent","input":{"description":"Task sub-agent: %s","prompt":"Work %s of %s."}}`, id, task, task, story)
+	}
+	logs := filepath.Join(string(lab.o.Dir), "agents")
+	_ = os.MkdirAll(logs, 0o700)
+	log := strings.Join([]string{
+		subAgentCall("a1", "", t0.Add(time.Minute), 1000, start("toolu_A", first)+","+start("toolu_B", second)),
+		subAgentCall("b1", "toolu_A", t0.Add(2*time.Minute), 2000, ""),
+		subAgentCall("c1", "toolu_B", t0.Add(3*time.Minute), 3000, ""),
+		subAgentCall("a2", "", t0.Add(4*time.Minute), 4000, ""),
+		streamResult("s", 10000, 10.0),
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(log), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Measure(lab.o.Dir, lab.root, "t", story, true); err != nil {
+		t.Fatal(err)
+	}
+	// of 10000: the first half of a1, b1, and half of a2; the second half
+	// of a1, c1, and half of a2
+	f, s := lab.usageOf(first), lab.usageOf(second)
+	if f == nil || diff(f.Cost(), 4.5) > 1e-3 || s == nil || diff(s.Cost(), 5.5) > 1e-3 {
+		t.Fatalf("tasks = %+v and %+v, want 4.5 and 5.5", f, s)
+	}
+	if story := lab.usageOf(story); f.Cost()+s.Cost() > story.Cost()+1e-9 {
+		t.Errorf("the tasks cost %v, more than the story's %v", f.Cost()+s.Cost(), story.Cost())
+	}
+}
+
 func diff(a, b float64) float64 {
 	if a > b {
 		return a - b

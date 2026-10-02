@@ -3,6 +3,7 @@ package usage
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -145,15 +146,20 @@ func TestARunWithNoResultIsEstimated(t *testing.T) {
 	}
 }
 
-// A window is given each session's reported totals in the share of its
-// calls' input and cache tokens that fall in it.
+// window is what a task alone, in progress from from until to, is given.
+func window(rec *Record, from, to time.Time) *Usage {
+	return rec.Tasks(map[string][]Span{"T-0001": {{from, to}}}, nil)["T-0001"]
+}
+
+// A task worked alone is given each session's reported totals in the share
+// of its calls' input and cache tokens that fall in its window.
 func TestAWindowIsApportioned(t *testing.T) {
 	rec, err := Read(writeLog(t, "a.log", run1...))
 	if err != nil {
 		t.Fatal(err)
 	}
 	at := func(s string) time.Time { v, _ := time.Parse(time.RFC3339, s); return v }
-	u := rec.Window(at("2026-09-29T10:05:00Z"), time.Time{}, nil)
+	u := window(rec, at("2026-09-29T10:05:00Z"), time.Time{})
 	if u == nil || !u.Estimated {
 		t.Fatalf("window = %+v, want apportioned and estimated", u)
 	}
@@ -164,11 +170,11 @@ func TestAWindowIsApportioned(t *testing.T) {
 	if u.Seconds != 300 {
 		t.Errorf("seconds = %d, want the 300 s of the run in the window", u.Seconds)
 	}
-	first := rec.Window(at("2026-09-29T10:00:00Z"), at("2026-09-29T10:05:00Z"), nil)
+	first := window(rec, at("2026-09-29T10:00:00Z"), at("2026-09-29T10:05:00Z"))
 	if diff(first.Cost()+u.Cost(), 1.5) > 1e-3 {
 		t.Errorf("two windows that cover the run cost %v and %v, want 1.5 between them", first.Cost(), u.Cost())
 	}
-	if none := rec.Window(at("2026-09-30T00:00:00Z"), time.Time{}, nil); none != nil {
+	if none := window(rec, at("2026-09-30T00:00:00Z"), time.Time{}); none != nil {
 		t.Errorf("a window after the run = %+v, want nothing", none)
 	}
 }
@@ -219,7 +225,7 @@ func TestWindowsAddUpAndRatesComeFromResultsAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	at := func(s string) time.Time { v, _ := time.Parse(time.RFC3339, s); return v }
-	both := rec.Windows([]Span{{at("2026-09-29T10:00:00Z"), at("2026-09-29T10:05:00Z")}, {From: at("2026-09-29T10:05:00Z")}}, nil)
+	both := rec.Tasks(map[string][]Span{"T-0001": {{at("2026-09-29T10:00:00Z"), at("2026-09-29T10:05:00Z")}, {From: at("2026-09-29T10:05:00Z")}}}, nil)["T-0001"]
 	if both.Source != SourceLog || diff(both.Cost(), 1.5) > 1e-3 || both.Seconds != 600 {
 		t.Errorf("windows = %+v", both)
 	}
@@ -229,5 +235,119 @@ func TestWindowsAddUpAndRatesComeFromResultsAlone(t *testing.T) {
 	}
 	if diff(rates[opus], 1.2/4912) > 1e-12 || diff(rates[haiku], 0.3/355) > 1e-12 {
 		t.Errorf("rates = %v", rates)
+	}
+}
+
+// opusCall is one call of opus in session s at at, that reads read tokens of
+// cache: the story's agent's when parent is empty, else that of the
+// sub-agent parent started, which carries described as its description.
+// blocks are its content.
+func opusCall(id, at string, read int, parent, described, blocks string) string {
+	p := `null`
+	if parent != "" {
+		p = `"` + parent + `"`
+	}
+	return `{"type":"assistant","timestamp":"` + at + `","session_id":"s","parent_tool_use_id":` + p + `,"task_description":"` + described +
+		`","message":{"id":"` + id + `","model":"` + opus + `","content":[` + blocks + `],"usage":{"input_tokens":0,"output_tokens":0,` +
+		`"cache_read_input_tokens":` + itoa(read) + `,"cache_creation_input_tokens":0}}}`
+}
+
+// agentCall is an Agent tool_use block that starts sub-agent id.
+func agentCall(id, description, prompt string) string {
+	return `{"type":"tool_use","id":"` + id + `","name":"Agent","input":{"description":"` + description + `","subagent_type":"general-purpose","prompt":"` + prompt + `"}}`
+}
+
+// result reports session s's opus totals: read tokens of cache, a tenth of
+// them of output, at a dollar per thousand read.
+func result(read int) string {
+	return `{"type":"result","subtype":"success","session_id":"s","modelUsage":{"claude-opus-5-5":{"inputTokens":0,"outputTokens":` + itoa(read/10) +
+		`,"cacheReadInputTokens":` + itoa(read) + `,"cacheCreationInputTokens":0,"costUSD":` + strconv.FormatFloat(float64(read)/1000, 'f', -1, 64) + `}}}`
+}
+
+func span(from, to string) Span {
+	at := func(s string) time.Time { v, _ := time.Parse(time.RFC3339, s); return v }
+	return Span{at(from), at(to)}
+}
+
+// Two tasks in progress at once, each worked by its own sub-agent, are each
+// given their sub-agent's calls, wherever they fall, and half of the story's
+// agent's calls while both were in progress; together no more than the story.
+func TestTasksInProgressAtOnceShareTheStorysAgentAndKeepTheirSubAgents(t *testing.T) {
+	rec, err := Read(writeLog(t, "a.log",
+		opusCall("a0", "2026-09-29T10:00:00Z", 1000, "", "", ""),
+		// one message starts both, a block a line; T-2 is the second task
+		// unpadded, and the description wins over a prompt naming another
+		opusCall("a1", "2026-09-29T10:01:00Z", 1000, "", "", agentCall("toolu_A", "Task sub-agent: T-0001 build", "Work T-0001.")),
+		opusCall("a1", "2026-09-29T10:01:00Z", 1000, "", "", agentCall("toolu_B", "Task sub-agent: T-2 docs", "Sibling T-0001 is not yours.")),
+		user("s", "2026-09-29T10:01:30Z"),
+		opusCall("b1", "2026-09-29T10:02:00Z", 2000, "toolu_A", "Task sub-agent: T-0001 build", ""),
+		opusCall("c1", "2026-09-29T10:03:00Z", 3000, "toolu_B", "Task sub-agent: T-2 docs", ""),
+		opusCall("a2", "2026-09-29T10:04:00Z", 4000, "", "", ""),
+		opusCall("a3", "2026-09-29T10:15:00Z", 600, "", "", ""),
+		opusCall("b2", "2026-09-29T10:30:00Z", 500, "toolu_A", "Task sub-agent: T-0001 build", ""),
+		result(12100)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := rec.Tasks(map[string][]Span{
+		"T-0001": {span("2026-09-29T10:01:00Z", "2026-09-29T10:10:00Z")},
+		"T-0002": {span("2026-09-29T10:01:00Z", "2026-09-29T10:20:00Z")},
+		"T-0003": {span("2026-09-29T11:00:00Z", "2026-09-29T11:10:00Z")},
+	}, nil)
+	// of 12100: T-0001 half of a1, b1, half of a2, and b2 after its window;
+	// T-0002 half of a1, c1, half of a2, and a3; a0 is no task's
+	for id, want := range map[string]float64{"T-0001": 500 + 2000 + 2000 + 500, "T-0002": 500 + 3000 + 2000 + 600} {
+		u := got[id]
+		if u == nil || !u.Estimated || u.Source != SourceLog || len(u.Models) != 1 {
+			t.Fatalf("%s = %+v, want measured and estimated", id, u)
+		}
+		if m := u.Models[0]; m.CacheRead != int64(want) || m.Output != int64(want/10) || diff(m.Cost, want/1000) > 1e-4 {
+			t.Errorf("%s = %+v, want %v read", id, m, want)
+		}
+	}
+	if u, ok := got["T-0003"]; ok {
+		t.Errorf("a task in progress after the run = %+v, want absent", u)
+	}
+	if sum, story := got["T-0001"].Cost()+got["T-0002"].Cost(), rec.Total(nil).Cost(); sum > story {
+		t.Errorf("the tasks cost %v, more than the story's %v", sum, story)
+	}
+	if got["T-0001"].Seconds != 540 || got["T-0002"].Seconds != 1140 {
+		t.Errorf("seconds = %d and %d, want each window's time while the run went on", got["T-0001"].Seconds, got["T-0002"].Seconds)
+	}
+}
+
+// A sub-agent whose description names no task is the task's its prompt names
+// first; one neither names a task of is shared as the story's agent's calls
+// are; and one whose start was not seen is named by the description its
+// calls carry. A call no result covers is estimated for its sub-agent's task.
+func TestASubAgentIsNamedByItsPromptOrForNoTask(t *testing.T) {
+	first := writeLog(t, "a.log",
+		opusCall("a1", "2026-09-29T10:01:00Z", 100, "", "", agentCall("toolu_P", "Implement the parser", "You work T-0004 of S-0001; sibling T-0003 waits.")+","+
+			agentCall("toolu_N", "Explore the code", "Read S-0001 and T-0099.")),
+		opusCall("p1", "2026-09-29T10:02:00Z", 1000, "toolu_P", "Implement the parser", ""),
+		opusCall("n1", "2026-09-29T10:05:00Z", 2000, "toolu_N", "Explore the code", ""),
+		opusCall("d1", "2026-09-29T10:06:00Z", 400, "toolu_D", "Task sub-agent: T-0003 docs", ""),
+		result(3500))
+	second := writeLog(t, "b.log", opusCall("p2", "2026-09-29T10:08:00Z", 700, "toolu_P", "Implement the parser", ""))
+	rec, err := Read(first, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	both := []Span{span("2026-09-29T10:00:00Z", "2026-09-29T10:10:00Z")}
+	got := rec.Tasks(map[string][]Span{"T-0003": both, "T-0004": both}, nil)
+	rate := 3.5 / 3850
+	// of 3500: T-0003 d1, half of n1 and of a1; T-0004 p1, half of n1 and
+	// of a1, and p2 estimated at the rate the result reports
+	for id, want := range map[string]struct {
+		read int64
+		cost float64
+	}{"T-0003": {400 + 1000 + 50, 1.45}, "T-0004": {1000 + 1000 + 50 + 700, 2.05 + 700*rate}} {
+		u := got[id]
+		if u == nil || len(u.Models) != 1 || !u.Estimated {
+			t.Fatalf("%s = %+v", id, u)
+		}
+		if m := u.Models[0]; m.CacheRead != want.read || diff(m.Cost, want.cost) > 1e-4 {
+			t.Errorf("%s = %+v, want %d read for %.4f", id, m, want.read, want.cost)
+		}
 	}
 }
