@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 ---
 
@@ -175,6 +175,7 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | the OpenTelemetry SDK's | Sampling |
 | `FLAIOVER_VERSION`, `FLAIOVER_COMMIT` | baked into the image | The release and commit `flaiover_build_info` reports; not for changing |
 | `PROJECT_DIR` | the working directory | The project the development server and tests ask flai about; names nothing in the container |
+| `FLAIOVER_LICENSE` | unset: `LICENSE.md` beside the server (`/app/LICENSE.md` in the image), else one directory up | The license file the Host › License page and `GET /api/license` show (S-0231); for a build that keeps it elsewhere |
 | `--publish` | `<dashboard.bind>:<dashboard.port>:3000` | Where the host reaches the container |
 | `--user` | your user and group | So that the two secret files, readable only by you, can be read |
 

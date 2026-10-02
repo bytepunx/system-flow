@@ -212,7 +212,7 @@ Search covers `design/` and `wip/` by default and `docs/` when you tick the box.
 
 ## Host
 
-The host flai badge in the header is a link to this page, which is Updates in the site menu's Host group. It has two parts.
+The host flai badge in the header is a link to this page, which is Updates in the site menu's Host group, beside [Settings](#settings) and [License](#license). It has two parts.
 
 **Dashboard** shows what image and version the dashboard container is running, and, once the operator has enabled it (`flai serve enable dashboard`), Restart, Upgrade, and Stop. **Check for updates** always works and changes nothing. Restart and a successful upgrade stop the very container answering the page, so the page expects the connection to drop and shows "Reconnecting…" rather than an error, then says what came back once it does. An upgrade never touches the running container until the new image has proven itself healthy: if it does not, the page says so and nothing changed.
 
@@ -235,6 +235,10 @@ It changes nothing until the operator runs `flai serve enable settings` on the h
 Projects lists every project `flai serve` serves, with its key, name, and folder, and whether it is connected and since when, the last error, or why it cannot be served. A project below an import folder is served as soon as `flai serve` next looks, and joins the switcher without a reload. One it does not serve is listed under "Below the import folders or the folder flai serve was started in, not served" with why: you removed it, its `system-flow.yaml` has no key, or its key is served already for another folder. **Remove** asks first, then stops serving the project, as `flai serve project remove` does, and the switcher drops it without a reload; none of its files is touched. A registered project is unregistered, and the page says how to serve it again on the host. A project served because it is below an import folder, or below the folder `flai serve` was started in, says which folder serves it; removing it puts it on `flai serve`'s list of removed projects, and it moves to the not-served list as removed (S-0123). **Serve** on a removed project takes it off that list, as `flai serve project add` does, and the switcher gains it without a reload. On any other project not served, Serve asks `flai serve` to register it and shows the answer; for no key or a key served already that is a refusal saying what to fix. Removing the folder under Import folders stops every project below it at once. Serve and Remove need `flai serve enable settings` for the project served or removed, and each says so, with the command, where it is off.
 
 Commands are written one argument a line, and are run exactly as written, with no shell in between. Each section says whether the change was saved, or why flai refused it. Rotating the dashboard token keeps you logged in and shows the new login link once. Everyone else is logged out.
+
+## License
+
+License, the last page of the Host group, shows the system-flow Shield License: the terms the dashboard, flai, and the system-flow repository are distributed under. The text is the `LICENSE.md` the dashboard's image carries beside its server, so it is the license of the very dashboard you are looking at, and the same text `flai license` prints and the repository keeps at its root. It is the one page that asks flai on the host for nothing: the file is the dashboard's own, not the project's. An image built without the file says so instead.
 
 ## Theme
 

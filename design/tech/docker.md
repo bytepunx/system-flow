@@ -1,6 +1,6 @@
 ---
 title: Docker
-updated: 2026-09-18
+updated: 2026-10-02
 status: active
 topics: [dashboard]
 ---
@@ -10,7 +10,7 @@ topics: [dashboard]
 | | |
 |-|-|
 | Host requirement | Docker Engine 24 or newer on `PATH` (dev host has 29) |
-| Image | `ghcr.io/bytepunx/flaiover`, three-stage build from the repo root (`flaiover/Dockerfile`): `golang:1.26-alpine` builds flai, `node:24-alpine` builds flaiover and prunes to production deps, `node:24-alpine` runtime with `tini`, `git`, the OpenSSH client (about 0.7 MB, for pushing an acceptance with a key the operator gives the container, [ADR 0026](../adrs/0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md), S-0062), the flai binary, `USER 65532` by default and any `--user` supported; about 670 MB (S-0015) |
+| Image | `ghcr.io/bytepunx/flaiover`, three-stage build from the repo root (`flaiover/Dockerfile`): `golang:1.26-alpine` builds flai, `node:24-alpine` builds flaiover and prunes to production deps, `node:24-alpine` runtime with `tini`, `git`, the OpenSSH client (about 0.7 MB, for pushing an acceptance with a key the operator gives the container, [ADR 0026](../adrs/0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md), S-0062), the flai binary, `USER 65532` by default and any `--user` supported; about 670 MB (S-0015). The repository's `LICENSE.md` is copied to `/app/LICENSE.md`, where the Host › License page reads it, and `org.opencontainers.image.licenses` is `LicenseRef-system-flow-Shield-1.0` (S-0231) |
 | Tags | `latest` on main, `<semver>` and `<major>` from `flaiover/v*` tags, `sha-<short>`; built by `release-flaiover.yml` with buildx and GHA cache |
 | Run | `flai dashboard` runs `docker run --detach --rm --name flaiover-<project> --publish <bind>:<port>:3000`, two read-only bind mounts under `/run/secrets` (the login token and the agent credential) with the variables that name them, `--user <uid>:<gid>`, and `ghcr.io/bytepunx/flaiover:<tag>`. No volume: nothing of the project is in the container ([ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)) |
 
