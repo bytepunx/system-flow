@@ -1,6 +1,6 @@
 ---
 title: Work management
-updated: 2026-10-01
+updated: 2026-10-02
 audience: agent
 order: 30
 status: active
@@ -15,7 +15,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 
 - Work is pulled, never pushed. Take the top `ready` story from the board's `order`; do not pick by preference.
 - With the `flai` MCP server connected, `inbox` is how you learn what changed: it lists threads awaiting you, the stories ready to pull in pull order, and what others did to work items since you last looked. Call it at the start of every turn or session, at every task transition, and before moving a story to review. Pulling is yours to do without being told: whenever you have no story of your own in progress, hold `wait_for_work` and do what it answers. It names the story to pull as soon as one is ready and the in-progress limit leaves room (move it to `in-progress` and open its stream; if the move says another agent already pulled it, wait again), a thread awaiting you that was written to, or your own story still in progress to go back to. With nothing to do it waits, and says on a timeout whether it is waiting for room or for a story to be ready: call it again. If you end your turn instead, `inbox` at your next start reports everything in between. The server is `flai mcp`, on the host: `.mcp.json` starts it over stdio, and an agent that cannot start a process there connects over HTTP to the one `flai mcp start` runs, with the token `flai mcp token` prints as a bearer and its name in the `X-Flai-Agent` header. It is never reached through the dashboard.
-- An acceptance that was made and not pushed is yours to push. When `inbox` or `flai board` reports one (`unpushed`), do it before anything else: `git fetch`, then `flai push --pending`, which pushes the branch and the release tags of those acceptances with the host's credentials and never forces. If it refuses because the remote has moved, merge the remote branch (never rebase what was accepted) and run it again. Pushing what an acceptance produced is part of the workflow and needs no separate confirmation; ordinary unpushed commits are not flai's to push.
+- Accepted work reaches the remote when it is published, never on its own. When the operator asks you to publish: `git fetch`, then `flai release --pending`, which tags what was accepted since each component's last release and pushes the branch and the tags with the host's credentials, never forcing. If it refuses because the remote has moved, merge the remote branch (never rebase what was accepted) and run it again. Pushing what an acceptance produced is part of the workflow and needs no separate confirmation; ordinary unpushed commits are not flai's to push.
 - Respect WIP limits. If pulling would exceed the limit, finish or hand off something first. A limit breach that cannot be avoided is logged in the narrative.
 - One story in progress per agent at a time. Tasks within it are worked in order.
 - Every change belongs to a story. If there is no story for what you are about to do, create one under the right epic and refine it before starting; if it is a five-minute fix, make it a task on the current story.
