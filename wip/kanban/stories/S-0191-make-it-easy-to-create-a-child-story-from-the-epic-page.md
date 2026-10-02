@@ -3,14 +3,17 @@ id: S-0191
 type: story
 nature: feature
 title: Make it easy to create a child story from the epic page
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-01T11:10:50Z
-updated: 2026-10-02T12:45:58Z
+updated: 2026-10-02T16:07:23Z
 transitions:
   - to: ready
     at: 2026-10-01T11:10:50Z
     by: alex
+  - to: in-progress
+    at: 2026-10-02T16:07:23Z
+    by: agent-S-0191
 tags: [dashboard]
 topics: [client-side-epic-page]
 touches: [flaiover/src]

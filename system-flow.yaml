@@ -35,3 +35,5 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+flai:
+  minimum: 1.28.0
