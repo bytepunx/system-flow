@@ -1,6 +1,6 @@
 ---
 title: Users guide
-updated: 2026-09-24
+updated: 2026-10-02
 status: draft
 ---
 
@@ -10,7 +10,7 @@ system-flow is a way of running a software project from inside its own repositor
 
 | Folder | Holds | Who reads it |
 |--------|-------|--------------|
-| `design/` | Decisions (`adrs/`), the current design (`system/`), technology choices (`tech/`), how agents work here (`conventions/`), recurring friction (`issues/`) | The people and agents building the system |
+| `design/` | Decisions (`adrs/`), the current design (`system/`), technology choices (`tech/`), how agents work here (`conventions/`), recurring friction (`issues/`), what experiments found (`experiments/`) | The people and agents building the system |
 | `docs/` | Documentation per audience | Everyone else |
 | `wip/` | Work items on a kanban board, and the agents' running narrative | Anyone who wants to know what is happening right now |
 

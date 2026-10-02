@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 ---
 
@@ -23,7 +23,8 @@ my-project/
 │   ├── system/             # the living design, always current
 │   ├── tech/               # every technology in use, with its version
 │   ├── conventions/        # how agents work here, read every session
-│   └── issues/             # recurring friction, with counts and cost
+│   ├── issues/             # recurring friction, with counts and cost
+│   └── experiments/        # what each experiment story found
 ├── docs/                   # outward-facing: one folder per audience
 │   ├── users/
 │   ├── operators/
@@ -84,7 +85,7 @@ Every item has a nature, which says what kind of deliverable it is. The dashboar
 | `improvement` | An existing capability made better, faster, or clearer |
 | `remediation` | Something wrong made right: a defect or technical debt |
 | `research` | Knowledge, with a written finding as the deliverable |
-| `experiment` | A hypothesis tested against a success measure; may be thrown away |
+| `experiment` | A hypothesis tested against a success measure; may be thrown away. Accepted with its results document in `design/experiments/` |
 
 ### States
 
@@ -208,6 +209,7 @@ A resuming agent reads `index.md`, then each active narrative's current state an
 | The living design | `design/system/`, `design/tech/` | Ordinary documents | Edited in place whenever the design or a dependency changes, with a link to the ADR that changed it |
 | Conventions | `design/conventions/`, indexed in its `README.md` | One file per topic, front matter `title`, `updated`, `audience: agent`, `order`, `status`, optionally `topics` (the stories it is for) and `roles` (the sub-agents that read it too: `explore`, `verify`), and a baseline marker | Everything above the marker is the template's; project rules go under `## Project additions` below it. Read in `order` at the start of every session |
 | Issues | `design/issues/I-nnnn-slug.md`, tabulated in `summary.md` | A class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, first and last reported | Record each occurrence as it happens with `flai issue`; remediate the most expensive first |
+| Experiment results | `design/experiments/S-nnnn-slug.md`, named for the experiment story; the folder's `template.md` is the shape | Front matter `title`, `updated`, `status`, `story`; sections Hypothesis, Success measure, What was done, Results, Recommendation (adopt, adapt, or drop) | Written by the experiment story before review; acceptance refuses an experiment without it, and `flai check` validates it |
 | Threads | `wip/threads/` | A conversation anchored to a document, a heading, or a work item | Opened and answered with `flai thread` or from the dashboard |
 
 Every document under `design/` and `docs/` starts with front matter carrying at least `title`, `updated`, and `status` (`active`, `draft`, or `deprecated`); `README.md` files are indexes and are exempt. Files are lowercase kebab-case, links are relative, diagrams are Mermaid, and dates are ISO 8601 UTC. Every folder a reader might land in has a `README.md` saying what it is for. Full rules: [documentation-standard.md](../../design/system/documentation-standard.md), [conventions.md](../../design/system/conventions.md), [continuous-improvement.md](../../design/system/continuous-improvement.md).

@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 topics: [all]
 ---
@@ -33,6 +33,8 @@ Every item, at every level, has a **nature** that says what kind of deliverable 
 | `remediation` | Fixing something that is wrong, including defects and tech debt |
 | `research` | Producing knowledge, a spike or investigation, with a written finding as the deliverable |
 | `experiment` | Testing a hypothesis with a defined success measure, may be thrown away |
+
+How a nature is accepted and released is in [workflow.md](workflow.md#natures-that-do-not-release-adr-0025-adr-0066): `research` and `experiment` are accepted like any other nature and give no component a bump, and an `experiment` story is accepted only with its results document, `design/experiments/<S-nnnn>-<slug>.md`, whose code and findings may still be dropped ([ADR-0066](../adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md)).
 
 Natures are a closed list. Adding one requires an ADR because the dashboard groups metrics by nature.
 

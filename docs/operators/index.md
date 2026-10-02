@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 ---
 
@@ -72,6 +72,8 @@ The dashboard has one login token, shared by every project it serves, and so one
 ### Accepting and pushing release nothing; publishing does (S-0087, S-0144)
 
 A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Pushing it releases nothing either, unless you choose otherwise (below). A release is cut when you publish, and covers everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three.
+
+Research and experiment stories are accepted the same way and never count towards a release, whatever they touched: their code reaches the main branch unreleased, and the next story that delivers to the component releases it. An experiment story is accepted only once its results document, `design/experiments/<S-nnnn>-<slug>.md`, is committed on its branch; until then acceptance, from the board or the host, refuses it and names the document ([ADR-0066](../../design/adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md)). A flai older than this rule refuses every experiment story, so upgrade the host's flai (`flai self-upgrade`) before accepting one.
 
 **Pushing.** `flai push --pending`, on the host, pushes the branch, and any tag already made and not yet pushed, with your own credentials. `--dry-run` shows what it would push and changes nothing. It never forces, and refuses when the remote has moved until you fetch and merge; run it again after it fails partway and it does not redo what already succeeded. `--publish` also publishes the template when its version moved. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying "accepted, not pushed" until it is pushed; an agent session that is running does this itself when `inbox` reports it. From the board, once you enable the push action (below), the standing notice's **Push now** button does the same thing.
 

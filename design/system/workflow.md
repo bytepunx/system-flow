@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 topics: [all]
 ---
@@ -63,9 +63,11 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 
 `flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. A move to `cancelled` takes everything open under the item with it, in one operation: an epic's stories that are not done or cancelled and their open tasks, a story's open tasks. Each gets its own `cancelled` transition with the same actor and time and a note naming the item whose cancellation caused it; done, cancelled, and archived items are left alone; every move is validated before any file is written. `flai move` lists the items first, asks on a terminal unless `--yes`, and changes nothing under `--dry-run`; the board shows the same list in its confirmation. Branches, worktrees, and narratives are never removed by a cancellation; the command names what it left. `flai check` reports an open item under a cancelled parent as `item.parent-cancelled`. A story moved from `review` to `done` is accepted rather than merely transitioned; a story found `done` but unarchived was never accepted, `flai check` flags it as `story.unaccepted`, and `flai accept` completes it. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined.
 
-### Natures that do not release ([ADR-0025](../adrs/0025-research-is-accepted-without-a-release.md))
+### Natures that do not release ([ADR-0025](../adrs/0025-research-is-accepted-without-a-release.md), [ADR-0066](../adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md))
 
-Acceptance of a `research` story is the same act as any other (merge, done, archive, commit) since S-0087: no acceptance tags or pushes any more, so there is nothing left to say a research story does differently at that point. What is still true: publishing (`flai release --pending`, [ADR-0032](../adrs/0032-accepting-a-story-merges-it-publishing-is-a-deliberate-batched-step-over.md)) never gives a component a bump on a research story's account, whatever it touched. An `experiment` story is refused by acceptance, before anything is merged, and stays on its branch.
+Acceptance of a `research` or `experiment` story is the same act as any other (merge, done, archive, commit) since S-0087: no acceptance tags or pushes any more. What is still true: publishing (`flai release --pending`, [ADR-0032](../adrs/0032-accepting-a-story-merges-it-publishing-is-a-deliberate-batched-step-over.md)) never gives a component a bump on a research story's or an experiment's account, whatever it touched; the plan for one (`flai release <id>`) says it releases nothing and names each component whose files it touched as landing on main unreleased, and the next story that delivers to the component releases them.
+
+An `experiment` story records its results in a document of its own, `design/experiments/<S-nnnn>-<slug>.md`, named as the story's file is, with the hypothesis, the success measure, what was done, the results, and a recommendation to adopt, adapt, or drop ([repository-layout.md](repository-layout.md#design)). Acceptance, from `flai accept`, `flai move <story> done`, or the board, refuses an experiment whose branch has no such document before anything is merged, and names the document it expects; without a branch it looks in the main checkout. The document is found by the story's ID, so any `<S-nnnn>-*.md` in the folder counts. `flai check` validates it (`experiments.*`).
 
 ### The pull order (S-0057)
 
