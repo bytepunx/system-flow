@@ -1,6 +1,7 @@
 # system-flow Shield License 1.0
 
-Required Notice: Copyright 2026 Bytepunx (<https://github.com/bytepunx/system-flow>)
+Required Notice: Copyright 2026 Bytepunx LLC, alex@robsonandmilligan.com
+(<https://github.com/bytepunx/system-flow>)
 
 This license is an adaptation of the PolyForm Shield License 1.0.0
 (<https://polyformproject.org/licenses/shield/1.0.0>). It is not a PolyForm
@@ -73,11 +74,18 @@ limits set for it, and in every case subject to [Prohibited Uses](#prohibited-us
    million United States dollars (USD 15,000,000). A company that passes either
    threshold stops qualifying at the end of the fiscal year in which it does so.
 
+5. **Individual use.** Use by an individual on their own account, including for
+   commercial work, when the individual's gross revenue from all work in which
+   the software is used was under one million United States dollars
+   (USD 1,000,000) in their most recent tax year. Use on behalf of your company
+   is covered by your company's permitted purpose, if it has one, not by this
+   one.
+
 Any other use is not a permitted purpose. In particular, use of the software by
-or for a company that does not meet the start-up limits, and any other
-commercial use not listed above, requires a separate paid license from the
-licensor. To obtain one, contact the licensor at the address in the
-`Required Notice:` line above.
+or for a company that does not meet the start-up limits, by an individual over
+the individual-use limit, and any other commercial use not listed above,
+requires a separate paid license from the licensor. To obtain one, contact the
+licensor at alex@robsonandmilligan.com.
 
 ## Prohibited Uses
 

@@ -204,7 +204,7 @@ flai license --json
 
 Prints the system-flow Shield License, the terms flai, flaiover, and the system-flow repository are distributed under. The text is built into the binary, so what prints is the license of the very flai that prints it, and a copy travels with every copy of flai, as the license requires. It is the same text as `LICENSE.md` at the root of the repository and the dashboard's Host › License page. `--json` prints `{"name", "text"}`.
 
-In short: use is free for 501(c)(3) nonprofits, for educators and students at state-funded educational institutions, for security research on the software, and for start-ups under the revenue and funding limits the license states; any other commercial use needs a paid license from the licensor; and nobody, paid or free, may offer system-flow or a fork of it as a hosted service or license it to others. The license text is what binds; this paragraph only points at it.
+In short: use is free for 501(c)(3) nonprofits, for educators and students at state-funded educational institutions, for security research on the software, for start-ups under the revenue and funding limits the license states, and for individuals whose work with it grosses under one million US dollars a year; any other commercial use needs a paid license from the licensor (alex@robsonandmilligan.com); and nobody, paid or free, may offer system-flow or a fork of it as a hosted service or license it to others. The license text is what binds; this paragraph only points at it.
 
 ## Create a project
 
