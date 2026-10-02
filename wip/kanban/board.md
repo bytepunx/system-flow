@@ -7,11 +7,10 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0190
+  - S-0231
   - S-0191
   - S-0192
   - S-0178
-  - S-0193
 ---
 
 # Board
