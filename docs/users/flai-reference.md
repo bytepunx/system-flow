@@ -1263,7 +1263,7 @@ Print the license flai is distributed under.
 flai license
 ```
 
-Print the system-flow Shield License: the terms flai, flaiover, and the system-flow repository are distributed under. The text is built into the binary, so it is the license of the very flai that prints it. It is LICENSE.md at the root of the repository, and the dashboard shows the same text under Host.
+Print the Bytepunx Shield License: the terms flai, flaiover, and the system-flow repository are distributed under. The text is built into the binary, so it is the license of the very flai that prints it. It is LICENSE.md at the root of the repository, and the dashboard shows the same text under Host.
 
 Examples:
 

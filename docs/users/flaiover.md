@@ -238,7 +238,7 @@ Commands are written one argument a line, and are run exactly as written, with n
 
 ## License
 
-License, the last page of the Host group, shows the system-flow Shield License: the terms the dashboard, flai, and the system-flow repository are distributed under. The text is the `LICENSE.md` the dashboard's image carries beside its server, so it is the license of the very dashboard you are looking at, and the same text `flai license` prints and the repository keeps at its root. It is the one page that asks flai on the host for nothing: the file is the dashboard's own, not the project's. An image built without the file says so instead.
+License, the last page of the Host group, shows the Bytepunx Shield License: the terms the dashboard, flai, and the system-flow repository are distributed under. The text is the `LICENSE.md` the dashboard's image carries beside its server, so it is the license of the very dashboard you are looking at, and the same text `flai license` prints and the repository keeps at its root. It is the one page that asks flai on the host for nothing: the file is the dashboard's own, not the project's. An image built without the file says so instead.
 
 ## Theme
 
