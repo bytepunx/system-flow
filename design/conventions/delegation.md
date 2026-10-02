@@ -5,7 +5,7 @@ audience: agent
 order: 130
 status: active
 topics: [all]
-roles: [explore, verify]
+roles: [story, explore, verify]
 ---
 
 # Delegation

@@ -5,7 +5,7 @@ audience: agent
 order: 70
 status: active
 topics: [all]
-roles: [verify]
+roles: [story]
 ---
 
 # Git

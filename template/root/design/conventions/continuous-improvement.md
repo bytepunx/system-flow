@@ -1,10 +1,11 @@
 ---
 title: Continuous improvement
-updated: 2026-09-15
+updated: 2026-10-02
 audience: agent
 order: 100
 status: active
 topics: [all]
+roles: [story]
 ---
 
 # Continuous improvement

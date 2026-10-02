@@ -5,6 +5,7 @@ audience: agent
 order: 30
 status: active
 topics: [all]
+roles: [story]
 ---
 
 # Work management

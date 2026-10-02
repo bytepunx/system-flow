@@ -1,10 +1,11 @@
 ---
 title: Decisions
-updated: 2026-09-15
+updated: 2026-10-02
 audience: agent
 order: 40
 status: active
 topics: [all]
+roles: [story]
 ---
 
 # Decisions

@@ -5,7 +5,6 @@ audience: agent
 order: 80
 status: active
 topics: [all]
-roles: [explore, verify]
 ---
 
 # Safety

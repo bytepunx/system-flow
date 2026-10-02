@@ -1,10 +1,11 @@
 ---
 title: Session start
-updated: 2026-09-29
+updated: 2026-10-02
 audience: agent
 order: 10
 status: active
 topics: [all]
+roles: [story]
 ---
 
 # Session start

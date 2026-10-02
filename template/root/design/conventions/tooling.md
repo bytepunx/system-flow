@@ -1,11 +1,10 @@
 ---
 title: Tooling
-updated: 2026-10-01
+updated: 2026-10-02
 audience: agent
 order: 90
 status: active
 topics: [all]
-roles: [explore, verify]
 ---
 
 # Tooling

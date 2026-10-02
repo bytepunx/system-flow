@@ -5,7 +5,6 @@ audience: agent
 order: 20
 status: active
 topics: [all]
-roles: [explore, verify]
 ---
 
 # Communication

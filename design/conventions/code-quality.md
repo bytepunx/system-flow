@@ -5,7 +5,7 @@ audience: agent
 order: 60
 status: active
 topics: [all]
-roles: [verify]
+roles: [story, verify]
 ---
 
 # Code quality
