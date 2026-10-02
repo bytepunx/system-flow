@@ -1,6 +1,6 @@
 ---
 title: Repository layout
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 topics: [all]
 ---
@@ -21,7 +21,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   ├── system/             # living design, always current
 │   ├── tech/               # active technology choices with versions
 │   ├── conventions/        # how agents work here, one file per topic, primed every session
-│   └── issues/             # recurring friction with counts and cost, see continuous-improvement.md
+│   ├── issues/             # recurring friction with counts and cost, see continuous-improvement.md
+│   └── experiments/        # what each experiment story found, one results document per story
 ├── docs/                   # outward-facing documentation, one subfolder per audience
 │   ├── README.md
 │   ├── users/
@@ -47,7 +48,7 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 
 ### `design/`
 
-Internal. Written for the people and agents building the system. Five subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
+Internal. Written for the people and agents building the system. Six subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
 
 `design/conventions/` is agent-facing: one short file per topic area stating how work is done in this repository, plus a `README.md` index in read order. The template ships the baseline; a project adds its own rules below the marker line in each file. Every agent session reads this folder first. See [conventions.md](conventions.md) and [ADR-0013](../adrs/0013-conventions-folder.md).
 
@@ -64,6 +65,8 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 - `archive/` mirrors `kanban/` and `agents/`. `flai archive` moves done and cancelled items here so the board stays small while history stays available for metrics.
 
 `design/issues/` records recurring friction, defects, blockers, and inefficiencies with a count and cost per issue. See [continuous-improvement.md](continuous-improvement.md) and [ADR-0014](../adrs/0014-design-issues.md).
+
+`design/experiments/` records what experiments found: one results document per `experiment` story, `<S-nnnn>-<slug>.md`, named as the story's file is, with front matter `title`, `updated`, `status`, and `story`, and the sections Hypothesis, Success measure, What was done, Results, and Recommendation, which says adopt, adapt, or drop. The template ships the folder's `README.md` and `template.md` to start one from. An experiment story is accepted only with its results document committed on its branch, and `flai check` validates every document in the folder. It is kept apart from `design/system/`, which says how the system is, because an experiment that is dropped does not describe it. See [workflow.md](workflow.md) and [ADR-0066](../adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md).
 
 ### `scripts/`
 

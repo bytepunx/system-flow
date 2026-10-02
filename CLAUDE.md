@@ -23,6 +23,7 @@ Precedence when rules conflict: an explicit instruction from the operator in thi
 | `design/system/` | The living design, always current | Edit whenever a conversation resolves a new detail, direction, standard, or decision. |
 | `design/tech/` | Every technology in use, its version, where, and why | Edit whenever a dependency is added, upgraded, or removed. |
 | `design/issues/` | Recurring friction, defects, blockers, with counts and cost | Record occurrences; keep `summary.md` current. |
+| `design/experiments/` | What each experiment found, one results document per `experiment` story | Write your experiment story's results document from `template.md` before review. |
 | `docs/<audience>/` | Outward-facing documentation per audience | Edit whenever user-facing behaviour changes. |
 | `wip/kanban/` | Work items: `epics/`, `stories/`, `tasks/`, `board.md` | Create and transition items with `flai`. |
 | `wip/agents/` | Your narrative, one file per story | Keep `## Current state` and `## Next steps` true. |

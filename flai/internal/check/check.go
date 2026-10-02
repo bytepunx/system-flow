@@ -19,6 +19,7 @@ import (
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
@@ -83,6 +84,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.adrIndex()
 	c.conventions()
 	c.issues()
+	c.experiments()
 	c.threads()
 	c.markdown()
 	sortFindings(c.res.Findings)
@@ -666,7 +668,7 @@ func (c *checker) documentation() {
 				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
 			}
 			if d.IsDir() {
-				if (d.Name() == conventions.Folder || d.Name() == issues.Folder) && filepath.Dir(path) == root {
+				if (d.Name() == conventions.Folder || d.Name() == issues.Folder || (key == "design" && d.Name() == experiment.Folder)) && filepath.Dir(path) == root {
 					return filepath.SkipDir // validated by their own rules
 				}
 				return nil
@@ -954,6 +956,54 @@ func (c *checker) issues() {
 			c.add(Warning, "issues.summary", summaryPath, 1, "open issue %s is not in summary.md; run flai issue summary", is.ID)
 		case is.Status != "open" && linked:
 			c.add(Warning, "issues.summary", summaryPath, 1, "closed issue %s is still in summary.md; run flai issue summary", is.ID)
+		}
+	}
+}
+
+// experiments validates design/experiments (ADR-0066): each results document's
+// front matter, its file name, its sections, and that it names an experiment
+// story that exists.
+func (c *checker) experiments() {
+	dir := filepath.Join(c.repo.Root, filepath.FromSlash(experiment.Dir(c.repo.Manifest)))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return // optional until the first experiment records its results
+	}
+	seen := map[string]string{}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".md") || experiment.Skipped(name) {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			c.add(Error, "experiments.front-matter", path, 1, "%v", err)
+			continue
+		}
+		f, problems := experiment.Validate(name, string(data))
+		for _, p := range problems {
+			line := 1
+			switch {
+			case p.Field != "":
+				line = keyLine(path, p.Field)
+			case p.Heading != "":
+				line = headingLine(path, p.Heading)
+			}
+			c.add(Error, "experiments.document", path, line, "%s", p.Message)
+		}
+		if f.Story == "" {
+			continue
+		}
+		if prev, dup := seen[f.Story]; dup {
+			c.add(Error, "experiments.duplicate", path, keyLine(path, "story"), "%s already has its results in %s", f.Story, prev)
+		}
+		seen[f.Story] = path
+		switch it := c.byID[workitem.CanonicalID(f.Story)]; {
+		case it == nil:
+			c.add(Error, "experiments.story", path, keyLine(path, "story"), "story %s does not exist", f.Story)
+		case it.Type != workitem.Story || it.Nature != experiment.Nature:
+			c.add(Warning, "experiments.story", path, keyLine(path, "story"), "%s is a %s %s, not an experiment story; results of anything else belong elsewhere", f.Story, it.Nature, it.Type)
 		}
 	}
 }
