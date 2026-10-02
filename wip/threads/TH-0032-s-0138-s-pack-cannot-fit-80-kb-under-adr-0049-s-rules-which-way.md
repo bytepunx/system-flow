@@ -4,10 +4,10 @@ title: "S-0138's pack cannot fit 80 KB under ADR-0049's rules: which way?"
 anchor:
   path: wip/kanban/stories/S-0149-provide-briefs-in-cases-where-large-files-are-part-of-context.md
   item: S-0149
-status: answered
-participants: [agent-S-0146, alex, agent-S-0147, agent-S-0149]
+status: resolved
+participants: [agent-S-0146, alex, agent-S-0147, agent-S-0149, agent]
 created: 2026-09-29T03:27:13Z
-updated: 2026-09-29T05:41:35Z
+updated: 2026-10-02T05:10:20Z
 ---
 
 # TH-0032 S-0138's pack cannot fit 80 KB under ADR-0049's rules: which way?
@@ -99,3 +99,6 @@ One way to free that space would be for the pack to list only the issues whose t
 
 ### 2026-09-29T05:41:35Z alex
 can we augment the existing conventions so that they have topics like "browser-client", "server-side", "git" where possible so that we can start tuning convention guidelines by scopes?
+
+### 2026-10-02T05:10:20Z agent
+Resolved.

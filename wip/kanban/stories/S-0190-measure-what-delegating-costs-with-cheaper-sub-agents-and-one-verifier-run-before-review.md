@@ -3,11 +3,14 @@ id: S-0190
 type: story
 nature: research
 title: Measure what delegating costs with cheaper sub-agents and one verifier run before review
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-01T10:52:53Z
-updated: 2026-10-01T10:52:56Z
-transitions: []
+updated: 2026-10-01T11:46:27Z
+transitions:
+  - to: ready
+    at: 2026-10-01T11:46:27Z
+    by: alex
 tags: [cli]
 topics: [conventions]
 touches: [design/system/agent-context.md]
