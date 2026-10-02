@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 topics: [cli, conventions]
 ---
@@ -259,8 +259,12 @@ The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. Th
 
 Read on 2026-10-01 at 09:18Z (S-0188) from the logs `flai serve` kept, with ADR-0051's reading: assistant events deduplicated by message ID, and each run's final `result` for its cost and turns. A sub-agent's calls are those whose events carry `parent_tool_use_id`. `result.usage` counts the story's agent only, while `modelUsage` and `total_cost_usd` include the sub-agents, so a sub-agent's share of the cost is estimated from its share of the run's input and cache tokens, as ADR-0051 apportions a task. Minutes run from a log's first event to its last. Every run is claude-opus-5-5 on the same host, and every sub-agent ran on the same model. Size is the story's commits outside `wip/` and lockfiles: distinct files, and lines added and removed summed over the commits. Two logs, S-0117's and S-0173's first, failed at their first call with an API error and are left out.
 
+S-0194 and S-0191 were read the same way on 2026-10-02 at 16:55Z (S-0190). Their sub-agents ran on their own models, so a sub-agent's cost is not estimated but read from `modelUsage`, and only the story's agent ran `claude-opus-5-5`: their cache reads on Opus equal the agent's deduplicated reads exactly.
+
 | Run | Nature | Size | Delegated | Model calls, agent / sub-agents | Cache reads, agent / sub-agents | Cost (sub-agents, est.) | Turns | Minutes |
 |-----|--------|------|-----------|---------------------------------|---------------------------------|-------------------------|-------|---------|
+| S-0194 | feature | 28, +672 −54 | S-0189's prompt: explorer (`haiku`), verifier ×2 (`sonnet`) | 130 / 44 | 18.06M / 1.95M | 7.32 (0.79: `haiku` 0.29, `sonnet` 0.50) | 145 | 25.3 |
+| S-0191 | feature | 7, +126 −14 | S-0189's prompt: verifier ×3 (`sonnet`) | 73 / 13 | 6.37M / 0.28M | 3.30 (0.42: `sonnet` 0.42) | 87 | 8.4 |
 | S-0184 | improvement | 29, +1092 −85 | released prompt: explorer, verifier | 124 / 46 | 23.30M / 2.91M | 10.82 (1.25) | 149 | 23.1 |
 | S-0185 | remediation | 18, +433 −82 | released prompt: verifier ×3 | 105 / 38 | 15.48M / 1.66M | 7.83 (0.82) | 114 | 23.0 |
 | S-0183 | remediation | 22, +204 −59 | convention only (1.26.3 prompt): verifier | 103 / 30 | 12.52M / 1.39M | 5.89 (0.61) | 115 | 16.0 |
@@ -275,6 +279,8 @@ Read on 2026-10-01 at 09:18Z (S-0188) from the logs `flai serve` kept, with ADR-
 
 S-0184 and S-0185 are the two runs with the released prompt: flai 1.26.4, the first release with S-0175, which `flai serve` ran from 08:39Z. S-0183 started at 08:32Z under 1.26.3, after the definitions and `delegation.md` reached main, and delegated with the convention but not the prompt. S-0175's row is its finished run. An earlier reading at 08:13Z, before its last tasks, gave 12.00 US dollars estimated over 25.5 minutes.
 
+S-0194 and S-0191 are the two runs with S-0189's prompt. S-0194 started at 10:07Z on 2026-10-02 under flai 1.26.6, the first release with S-0189, and S-0191 at 16:07Z under 1.27.0. Four other runs are reported apart below: S-0192 and S-0178 started under 1.28.0, whose prompt also hands each task to a sub-agent; S-0176 started under 1.26.5 and was itself the experiment with task sub-agents; and S-0193 ran on `claude-fable-5-1`.
+
 Each delegating run is set against the non-delegating runs most like it in nature, size, and components. No improvement in the logs ran without delegating, so S-0184's comparable is a remediation.
 
 | Delegating | Comparable | Why comparable | Cost | Minutes | Agent's cache reads per call |
@@ -282,6 +288,8 @@ Each delegating run is set against the non-delegating runs most like it in natur
 | S-0184 | S-0174 | Both change flai and flaiover, about 1,100 lines in 26 to 29 files | 10.82 against 9.19 | 23.1 against 22.7 | 188k against 177k |
 | S-0185 | S-0174, S-0180 | All three are remediations centred on flai, and S-0185's size falls between the other two | 7.83 against 9.19 and 3.56 | 23.0 against 22.7 and 11.5 | 147k against 177k and 100k |
 | S-0183 | S-0180 | Both are small remediations to flai, scripts, and design | 5.89 against 3.56 | 16.0 against 11.5 | 122k against 100k |
+| S-0194 | S-0173, S-0174 | All three change flai and flaiover in 26 to 28 files, and S-0194's 726 lines fall just under S-0173's 880 | 7.32 against 5.19 and 9.19 | 25.3 against 13.9 and 22.7 | 139k against 127k and 177k |
+| S-0191 | S-0119, S-0117 | Small changes in under a dozen files with design and issues, and S-0191's 140 lines fall between the other two | 3.30 against 2.55 and 1.56 | 8.4 against 7.5 and 4.8 | 87k against 86k and 72k |
 
 What the runs show:
 
@@ -291,7 +299,26 @@ What the runs show:
 - **Agents delegate without the prompt, and more with it.** S-0183 delegated once under the convention alone, and S-0118 once before either existed. The two runs with the prompt delegated two and three times.
 - Reading the logs: the stream's deduplicated cache reads fall short of `modelUsage` by under 1% in four of the five delegating runs (S-0118 by 81,606, S-0184 by 112,679, S-0185 by 72,830, S-0175 by 56,989), and match it exactly in S-0183 and in every run without sub-agents. `num_turns` is not the number of model calls, and the stream's output tokens are about 2% of the `result`'s.
 
-What to change follows from this. Keep the verifier before review, which found defects. Make its run replace the agent's own full-suite runs rather than repeat them. Run both sub-agents on a cheaper model, since they read and run checks and decide nothing. S-0189 makes both changes, and S-0190 measures them as this section does once two stories have run with them.
+What to change follows from this. Keep the verifier before review, which found defects. Make its run replace the agent's own full-suite runs rather than repeat them. Run both sub-agents on a cheaper model, since they read and run checks and decide nothing. S-0189 made both changes, and S-0190 measured them in S-0194 and S-0191.
+
+What the runs with S-0189's prompt show:
+
+- **Delegating still did not cost less than not delegating.** The sub-agents took 10.8% of S-0194's cost and 12.7% of S-0191's: 0.79 and 0.42 US dollars. S-0194 cost 41% more than S-0173, with fewer lines, and took 1.8 times as long. It cost less than S-0174, which was larger. S-0191 cost 29% more than S-0119, with fewer lines. Its agent also fixed main's markdown lint and recorded two issues, all outside its story. In both runs the story's agent alone cost more than its nearest comparable did in all: 6.53 against 5.19, and 2.87 against 2.55. Size and the work around the story explain more of the spread than delegation. With two runs on each side, a difference of a tenth cannot be seen.
+- **The cheaper models did not make the sub-agents' share smaller, because a sub-agent pays to write its context.** A fresh sub-agent writes its context to the cache, which costs 12.5 times as much as reading it. The story's agent mostly reads a cache it has already written. Cache writes were 27% of S-0191's sub-agent input against 2% of its agent's, and 8% of S-0194's against 1%. In S-0191 the verifiers' cache writes cost 0.26 of their 0.42. The token shares were 5.5% in S-0191 and 10.4% in S-0194, below or near the dollar shares. The logs price `sonnet` at 2 and `haiku` at 1 US dollar per million input tokens. Opus came to 2.7 to 3.9 per million in these runs, so the cheaper rate only partly offsets the writes.
+- **The verifier's runs replaced the agent's own whole-suite runs.** Neither agent ran the whole suite or the lint over the tree itself. Each ran only the tests for what it changed: two Go packages, one `-run`, and one vitest file in S-0194; one vitest file, and prettier and eslint on two files, in S-0191. The verifier's close-out runs were the only whole-suite runs. S-0184's and S-0185's agents had each run the suite three times besides their verifiers.
+- **The verifier on `sonnet` still found what needed fixing before review.** S-0194's first verifier found a flaiover test failing on main's ADR index and a gap in the guides' wording, and the agent fixed both. S-0191's first verifier found main's markdown lint failing on TH-0067, outside the story (I-0056). Its second stopped at `flai check --strict` on the same thread (I-0057). Those two findings outside the story made S-0191's three verifier runs where the prompt asks for two. S-0194's confirming run cost 0.05.
+- **The explorer on `haiku` read widely for little.** S-0194's explorer mapped where flai, flaiover, and the template handle an experiment story. It made 25 calls and read 1.34M tokens from the cache, for 0.29 US dollars. S-0191 did not use the explorer.
+
+Four runs are reported apart, because their prompt or model differs:
+
+| Run | Nature | Size | Delegated | Cost (sub-agents) | Minutes |
+|-----|--------|------|-----------|-------------------|---------|
+| S-0192 | feature | 4, +118 −12 | 1.28.0's prompt: a task sub-agent (`general-purpose`, Opus), verifier (`sonnet`) | 2.22 (0.66: Opus 0.51, `sonnet` 0.15) | 7.8 |
+| S-0178 | remediation | 8, +335 −16 | 1.28.0's prompt: four `general-purpose` sub-agents on Opus (one reproduced the defect, three took a task each), verifier (`sonnet`) | 5.24 (1.48: Opus 1.31, `sonnet` 0.16) | 17.0 |
+| S-0176 | experiment | 55, +1932 −173 | by hand under 1.26.5: explorer ×3 (`haiku`), task sub-agents and forks (Opus), verifier ×5 (`sonnet`) | 23.44 (9.07: Opus 6.91, `haiku` 0.72, `sonnet` 1.44) | 106.0 |
+| S-0193 | research | 6, +281 −5 | S-0189's prompt on `claude-fable-5-1`: explorer (`haiku`), verifier ×3 (`sonnet`) | 10.91 (0.72: `haiku` 0.30, `sonnet` 0.42) | 34.7 |
+
+`general-purpose` sub-agents run on the story's agent's model. With tasks handed to them, the sub-agents took 28 to 39% of a run's cost instead of a tenth. Most of that was Opus. S-0192 cost less than S-0119 with fewer lines. S-0178 cost more than S-0180 with more lines. This is too little to read a saving or a cost from.
 
 ### A cheaper verifier, replayed
 
