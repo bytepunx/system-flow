@@ -198,6 +198,33 @@ describe('projectState', () => {
 		expect(projectState.current).toBeNull();
 	});
 
+	it('keeps the choice when the list comes back empty, as it does while flai serve is away (S-0178)', async () => {
+		const both = [
+			{ key: 'harbour', name: 'Harbour', connected: true },
+			{ key: 'quay', name: 'Quay', connected: true }
+		];
+		const fetchFn = vi
+			.fn()
+			.mockResolvedValueOnce({ ok: true, json: async () => ({ projects: both }) })
+			.mockResolvedValueOnce({ ok: true, json: async () => ({ projects: [] }) })
+			.mockResolvedValueOnce({ ok: true, json: async () => ({ projects: both }) });
+		vi.stubGlobal('fetch', fetchFn);
+		const { projectState } = await load();
+		await projectState.refresh();
+		projectState.pick('quay');
+		vi.mocked(history.replaceState).mockClear();
+
+		await projectState.refresh();
+		expect(projectState.list).toEqual([]);
+		expect(projectState.current).toBe('quay');
+		expect(localStorage.getItem(STORAGE_KEY)).toBe('quay');
+		expect(history.replaceState).not.toHaveBeenCalled();
+
+		// and when the list returns, the same project is still the one shown
+		await projectState.refresh();
+		expect(projectState.current).toBe('quay');
+	});
+
 	it('keeps a valid remembered choice once the list confirms it', async () => {
 		localStorage.setItem(STORAGE_KEY, 'quay');
 		vi.stubGlobal(

@@ -105,8 +105,16 @@ class ProjectState {
 			this.loaded = true;
 			// A remembered or url-given key that no longer exists is not silently kept: with exactly
 			// one project connected there is a right answer regardless of what was remembered before.
+			// An empty list says only that nothing is connected just now, as while flai serve is away,
+			// so the choice is kept as it is when the request fails (S-0178): dropping it would remount
+			// the page under the layout's {#key} and send the window to the top, and again on return.
 			if (this.list.length === 1) this.pick(this.list[0].key, false);
-			else if (this.current && !this.list.some((p) => p.key === this.current)) this.pick(null);
+			else if (
+				this.list.length > 1 &&
+				this.current &&
+				!this.list.some((p) => p.key === this.current)
+			)
+				this.pick(null);
 			// one project and repositories offered for import: the project is still the one to show
 			// until the operator picks something else (S-0098)
 			if (!this.current && this.projects.length === 1) this.pick(this.projects[0].key, false);
