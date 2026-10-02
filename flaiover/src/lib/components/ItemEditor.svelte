@@ -326,7 +326,7 @@
 				{#if findings.length}
 					<ul class="mt-1 list-disc pl-5 text-xs">
 						{#each findings as f (f.rule + f.path + f.line + f.message)}
-							<li><span class="font-mono">{f.rule}</span>: {f.message}</li>
+							<li class="font-mono">{f.path}:{f.line}: {f.level}: {f.rule}: {f.message}</li>
 						{/each}
 					</ul>
 					<p class="mt-1 text-xs">Nothing was changed; your text is still here.</p>

@@ -427,6 +427,81 @@ describe.skipIf(!haveFlai)('editing an item through flai', () => {
 	});
 });
 
+// S-0240: S-0231 was made from the dashboard with its goal's list indented one space, which
+// markdownlint reports as MD007. With the project's markdownlint configuration in place, a new
+// item and a saved document carrying that list are refused, naming the rule and each line.
+describe.skipIf(!haveFlai)('the markdown lint through flai', () => {
+	let dir: string;
+	let r: Repo;
+	type Refusal = { status: number; data: { findings: unknown[] } };
+	// S-0231's file as it was made, kept beside the MD007 tests that agree with markdownlint-cli2
+	const s0231 = resolve('../flai/internal/mdlint/testdata/cases/license-story.md');
+	const refusal = (p: Promise<unknown>) =>
+		p.then(
+			() => expect.fail('want a refusal'),
+			(e: Refusal) => e
+		);
+	// the 1-based lines of content that start with prefix
+	const linesStarting = (content: string, prefix: string) =>
+		content.split('\n').flatMap((l, i) => (l.startsWith(prefix) ? [i + 1] : []));
+	const md007 = (path: string, lines: number[]) =>
+		lines.map((line) => ({
+			level: 'warning',
+			rule: 'markdown.MD007',
+			path,
+			line,
+			message: expect.stringContaining('[Expected: 0; Actual: 1]')
+		}));
+	beforeAll(async () => {
+		dir = await mkdtemp(join(tmpdir(), 'flaiover-lint-'));
+		await cp(fixture, dir, { recursive: true });
+		await cp(resolve('../.markdownlint.yaml'), join(dir, '.markdownlint.yaml'));
+		r = new Repo(dir, flaiAsk(dir));
+	});
+	afterAll(async () => {
+		await rm(dir, { recursive: true, force: true });
+	});
+
+	it("refuses a new story with S-0231's body, naming MD007 on each line of the list", async () => {
+		const file = await readFile(s0231, 'utf8');
+		const body = file.slice(file.indexOf('## Goal'));
+		const make = (b: string) =>
+			r.write<{ path: string }>('item.new', {
+				type: 'story',
+				title: 'Author LICENSE.md file',
+				nature: 'feature',
+				parent: 'E-001',
+				body: b
+			});
+		const before = await readdir(join(dir, 'wip/kanban/stories'));
+		const e = await refusal(make(body));
+		expect(e.status).toBe(422);
+		expect(await readdir(join(dir, 'wip/kanban/stories'))).toEqual(before);
+
+		// the same story with its list unindented is kept, its items on the lines the refusal named
+		const { data } = await make(body.replaceAll('\n - ', '\n- '));
+		const kept = await readFile(join(dir, data.path), 'utf8');
+		const lines = linesStarting(kept, '- ').filter(
+			(n) => !kept.split('\n')[n - 1].startsWith('- [')
+		);
+		expect(lines).toHaveLength(4);
+		expect(e.data.findings).toEqual(md007(data.path, lines));
+	});
+
+	it("refuses a saved story whose goal is edited to S-0231's list, and leaves it as it was", async () => {
+		const path = 'wip/kanban/stories/S-004-four.md';
+		const file = await readFile(s0231, 'utf8');
+		const goal = file.slice(file.indexOf('## Goal'), file.indexOf('## Acceptance criteria'));
+		const { data: doc } = await r.run<{ content: string; hash: string }>('doc.show', { path });
+		const content = doc.content.replace('## Goal\ng\n\n', goal);
+		expect(content).not.toBe(doc.content);
+		const e = await refusal(r.write('doc.save', { path, content, hash: doc.hash }));
+		expect(e.status).toBe(422);
+		expect(e.data.findings).toEqual(md007(path, linesStarting(content, ' - ')));
+		expect(await readFile(join(dir, path), 'utf8')).toBe(doc.content);
+	});
+});
+
 // S-0105: the host's settings, changed through the flai built from this tree, as flai serve runs
 // it for the dashboard, against a configuration of the test's own.
 describe.skipIf(!haveFlai)('host settings through flai', () => {

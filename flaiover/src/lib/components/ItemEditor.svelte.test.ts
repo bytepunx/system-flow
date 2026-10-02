@@ -117,7 +117,9 @@ describe('ItemEditor (S-0085)', () => {
 		type('[data-testid="edit-body"]', '## Goal\nNo criteria.\n');
 		await submit();
 		const err = document.querySelector('[data-testid="edit-error"]')!.textContent!;
-		expect(err).toContain('story.criteria');
+		expect(err).toContain(
+			`${view.path}:1: error: story.criteria: a ready story needs acceptance criteria`
+		);
 		expect(err).toContain('your text is still here');
 		expect(
 			document.querySelector<HTMLTextAreaElement>('[data-testid="edit-body"]')!.value

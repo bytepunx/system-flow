@@ -132,7 +132,9 @@ describe('NewAdrForm', () => {
 		type(q<HTMLTextAreaElement>('body'), '## Context\nmine\n');
 		await submit();
 		expect(q('refusal').textContent).toContain('nothing was created');
-		expect(q('refusal').textContent).toContain('adr.index');
+		expect(q('refusal').textContent).toContain(
+			'design/adrs/README.md:9: warning: adr.index: the row links to a file that is not there'
+		);
 		expect(q<HTMLTextAreaElement>('body').value).toBe('## Context\nmine\n');
 		expect(oncreated).not.toHaveBeenCalled();
 	});

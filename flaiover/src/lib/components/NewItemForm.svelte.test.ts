@@ -222,6 +222,13 @@ describe('NewItemForm', () => {
 						path: 'wip/x.md',
 						line: 1,
 						message: 'body is missing the "## Notes" section'
+					},
+					{
+						level: 'warning',
+						rule: 'markdown.MD007',
+						path: 'wip/x.md',
+						line: 23,
+						message: 'MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 1]'
 					}
 				]
 			})
@@ -240,6 +247,10 @@ describe('NewItemForm', () => {
 		expect(refusal).toContain('nothing was created');
 		expect(refusal).toContain('item.heading');
 		expect(refusal).toContain('missing the "## Notes" section');
+		// each finding as the CLI prints it, so a lint finding names its line (S-0240)
+		expect(refusal).toContain(
+			'wip/x.md:23: warning: markdown.MD007: MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 1]'
+		);
 		expect(q<HTMLTextAreaElement>('body').value).toBe('## Goal\nNo notes.\n');
 		expect(q<HTMLInputElement>('title').value).toBe('Refused');
 		expect(oncreated).not.toHaveBeenCalled();

@@ -158,7 +158,7 @@
 			{#if findings.length}
 				<ul class="mt-1 list-disc pl-5">
 					{#each findings as f (f.rule + f.path + f.line + f.message)}
-						<li><span class="font-mono text-xs">{f.rule}</span> {f.message}</li>
+						<li class="font-mono text-xs">{f.path}:{f.line}: {f.level}: {f.rule}: {f.message}</li>
 					{/each}
 				</ul>
 			{/if}
