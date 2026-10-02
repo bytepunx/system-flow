@@ -1,6 +1,6 @@
 ---
 title: Continuous improvement
-updated: 2026-09-15
+updated: 2026-10-02
 status: active
 topics: [cli, conventions]
 ---
@@ -60,8 +60,8 @@ Proposed fix, or the story ID once one exists. Closed issues say what closed the
 ## Cadence
 
 - Record an occurrence when it happens, not at the end of the story.
-- When a story moves to review, the report includes the summary table if it changed during the story.
-- When an epic completes, the summary is presented and the operator decides whether to spend time on remediation. Remediation is a story with nature `remediation` or `improvement` that closes the issue.
+- When a story moves to review, every issue it recorded or bumped has a story that remediates it: the agent checks the backlog and the stories in progress, and where none remediates the issue, creates a story with nature `remediation` or `improvement` in the backlog. The story links the issue's document, recommends a solution, and has as its last criterion that the issue is closed with what fixed it. The operator decides when, and whether, such a story is pulled, by moving it to ready or cancelling it (decided 2026-10-02, replacing the summary presented at an epic's end).
+- Remediation is a story with nature `remediation` or `improvement` that closes the issue.
 
 ## Metrics
 
