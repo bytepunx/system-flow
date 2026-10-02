@@ -19,13 +19,16 @@ func newServeAgentUsageCmd(a *app) *cobra.Command {
 		Short: "Measure the tokens and cost a story's agents spent, from the logs flai serve kept",
 		Long: `Measures what the agents flai serve started for a story spent, from the
 logs it keeps of them in the serve folder beside flai's config file: the
-story whole, and each of its tasks over the intervals it was in progress
-(S-0143, ADR-0051). Only Claude Code's stream-json is read. Each session's
-last result gives its tokens and cost per model; what came after it, a run
-still going or one that died, is counted from its calls and priced at the
-rate the logs report for the model, and marked estimated. A task gets its
-story's totals in the share of the input and cache tokens of the calls
-made while it was in progress, and is marked estimated.
+story whole, and each of its tasks (S-0143, ADR-0051). Only Claude Code's
+stream-json is read. Each session's last result gives its tokens and cost
+per model; what came after it, a run still going or one that died, is
+counted from its calls and priced at the rate the logs report for the
+model, and marked estimated. A task gets its story's totals in the share
+of the input and cache tokens of its own calls: those of the sub-agents
+started for it, known by the task ID their Agent call's description, or
+else its prompt, names, and an even share, among the tasks in progress at
+the time, of every other call made while it was in progress (ADR-0071). It
+is marked estimated.
 
 It prints what it finds. --write records it in the items' usage, as flai
 serve does when an agent ends, and sums the story's epic again. --all
