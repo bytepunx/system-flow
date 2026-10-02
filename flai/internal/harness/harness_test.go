@@ -335,6 +335,7 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"record the layers and why each task waits in the narrative's Decisions",
 			"Work the plan layer by layer, handing each task to a task sub-agent",
 			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits or writes through flai",
+			"Name the task's ID in each task sub-agent's description, so that flai measures the task by its calls",
 			"Review each one's work yourself, fix what falls short, commit it, and move the task",
 			"only you commit, sync the stream, move items, and talk to the designer",
 		} {
