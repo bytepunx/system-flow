@@ -13,7 +13,8 @@ import (
 )
 
 // ForStory builds the context pack for a story (ADR-0047), fitted to a
-// budget (ADR-0049): the conventions its topics select (S-0136), the open
+// budget (ADR-0049): the conventions the story's agent reads (ADR-0068)
+// with the sections its topics leave out taken out (S-0136), the open
 // issues, then what the story, its epic, and its tasks name, briefs of the
 // design, tech, and ADRs its topics and one link step select, the sections
 // that rank highest to fill the budget, and a catalog of the rest (S-0137,
@@ -31,7 +32,7 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 		return nil, err
 	}
 	list, _ := issues.List(repo)
-	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.set, issues.SummaryTable(list), size)
+	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.readBy(conventions.RoleStory, true), issues.SummaryTable(list), size)
 	if err != nil {
 		return nil, err
 	}
@@ -40,15 +41,15 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 }
 
 // ForRole builds the pack for a sub-agent of a story's agent (ADR-0059):
-// the conventions whose roles include role, with the sections the story's
+// the conventions it reads (ADR-0068), with the sections the story's
 // topics leave out taken out; the story's goal and acceptance criteria; and
 // briefs, never bodies, of what the story, its epic, and its tasks name,
 // what their topics select, and the ADRs one step reaches, in the order
 // Items gives them, each while the budget has room. budget is a size as
 // ParseSize reads it; empty means half the story's agent's.
 func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
-	if !slices.Contains(conventions.Roles, role) {
-		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s", role, strings.Join(conventions.Roles, " or "))
+	if !slices.Contains(conventions.SubAgentRoles, role) {
+		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s", role, strings.Join(conventions.SubAgentRoles, " or "))
 	}
 	size, err := Budget(budget, repo.Manifest.Prime.Budget)
 	if err != nil {
@@ -61,13 +62,7 @@ func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	sub := &conventions.Set{Dir: st.set.Dir}
-	for _, f := range st.set.Files {
-		if slices.Contains(f.Roles, role) {
-			sub.Files = append(sub.Files, f)
-		}
-	}
-	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, sub, "", size)
+	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.readBy(role, false), "", size)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +84,21 @@ type story struct {
 	topics  []topics.StoryTopic
 	docs    []*Doc
 	sources []Source
+}
+
+// readBy is the conventions the agent in role reads (ADR-0068): those whose
+// roles are empty or list it, with the README when readme is set.
+func (st *story) readBy(role string, readme bool) *conventions.Set {
+	sub := &conventions.Set{Dir: st.set.Dir}
+	if readme {
+		sub.README = st.set.README
+	}
+	for _, f := range st.set.Files {
+		if f.ReadBy(role) {
+			sub.Files = append(sub.Files, f)
+		}
+	}
+	return sub
 }
 
 func loadStory(repo *workitem.Repo, id string) (*story, error) {

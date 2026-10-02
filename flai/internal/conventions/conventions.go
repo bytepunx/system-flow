@@ -25,15 +25,25 @@ const Marker = "<!-- system-flow:end-of-baseline -->"
 // MaxLines is the length limit from conventions.md.
 const MaxLines = 120
 
-// The roles of the sub-agents a story's agent hands work to (ADR-0059): a
-// convention's roles say which of them read it.
+// The roles of the agents that read conventions (ADR-0068, refining
+// ADR-0059): the agent working a story, the sub-agents it hands work to,
+// and the strategic agents, the orchestrator, the planner, and the analyzer.
 const (
-	RoleExplore = "explore"
-	RoleVerify  = "verify"
+	RoleStory        = "story"
+	RoleExplore      = "explore"
+	RoleVerify       = "verify"
+	RoleOrchestrator = "orchestrator"
+	RolePlanner      = "planner"
+	RoleAnalyzer     = "analyzer"
 )
 
-// Roles are the roles a convention may list, as flai prime --role takes them.
-var Roles = []string{RoleExplore, RoleVerify}
+// Roles are the roles a convention may list; flai check warns about any
+// other (ADR-0068).
+var Roles = []string{RoleStory, RoleExplore, RoleVerify, RoleOrchestrator, RolePlanner, RoleAnalyzer}
+
+// SubAgentRoles are the roles flai prime --role takes: the sub-agents a
+// story's agent hands work to (ADR-0059).
+var SubAgentRoles = []string{RoleExplore, RoleVerify}
 
 // File is one convention file.
 type File struct {
@@ -44,14 +54,20 @@ type File struct {
 	Audience string `json:"audience"`
 	Order    int    `json:"order"`
 	Status   string `json:"status"`
-	// Roles are the sub-agents that read the file as well as the story's
-	// agent (ADR-0059); none means the story's agent alone.
+	// Roles are every agent that reads the file, the story's agent
+	// included (ADR-0068); none means every agent reads it.
 	Roles   []string `json:"roles,omitempty"`
 	Lines   int      `json:"lines"`
 	Markers int      `json:"-"`
 	HasAdds bool     `json:"-"` // "## Project additions" after the marker
 	Body    string   `json:"-"`
 	Raw     string   `json:"-"`
+}
+
+// ReadBy reports whether the agent in role reads the file: its roles are
+// empty or list role (ADR-0068).
+func (f File) ReadBy(role string) bool {
+	return len(f.Roles) == 0 || slices.Contains(f.Roles, role)
 }
 
 // Set is the loaded folder.
@@ -200,7 +216,7 @@ func (s *Set) Validate(errs map[string]error) []Finding {
 		}
 		for _, r := range f.Roles {
 			if !slices.Contains(Roles, r) {
-				add("warning", "conventions.roles", f.Path, "role %q is not one flai primes; roles are %s", r, strings.Join(Roles, ", "))
+				add("warning", "conventions.roles", f.Path, "role %q is not one flai knows; roles are %s", r, strings.Join(Roles, ", "))
 			}
 		}
 		if f.Lines > MaxLines {

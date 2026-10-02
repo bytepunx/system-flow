@@ -26,16 +26,18 @@ func newPrimeCmd(a *app) *cobra.Command {
 		Short: "Print the conventions an agent reads at session start, in order",
 		Long: `List design/conventions in read order (README first, then by order) so an
 agent, a hook, or a script can load them in one call. --cat prints the
-content of each file with a header instead of the paths.
+content of each file with a header instead of the paths. Both give every
+convention, whatever its roles.
 
 --story S-nnnn prints the context pack for an agent working that story
 (ADR-0047), fitted to a size budget (ADR-0049): a header naming the story,
 its topics and where each came from, the pack's size against the budget, and
-the size of each thing it prints; then every convention as --cat prints it,
-with the sections whose topics include neither all nor one of the story's
-left out (the front matter, the baseline marker, and the Project additions
-heading always stay), never cut for the budget; the open issues; everything
-the story, its epic, and its tasks link or name, whole (a #fragment loads
+the size of each thing it prints; then each convention the story's agent
+reads, those whose front matter roles are empty or list story (ADR-0068),
+as --cat prints it, with the sections whose topics include neither all nor
+one of the story's left out (the front matter, the baseline marker, and the
+Project additions heading always stay), never cut for the budget; the open
+issues; everything the story, its epic, and its tasks link or name, whole (a #fragment loads
 its section; a superseded ADR is replaced by what supersedes it), except a
 document named only by its path written out and larger than an eighth of
 the budget, which is briefed with the reason "named in <ID>" and a line
@@ -57,12 +59,13 @@ flai's is 80KB. An archived story gets the pack it would get today.
 
 --role explore or --role verify, with --story, prints the smaller pack for
 a sub-agent the story's agent hands work to (ADR-0059): the conventions
-whose front matter lists the role in roles, with the sections the story's
-topics leave out taken out; the story's goal and acceptance criteria; and
-briefs, never bodies, of what the story names, what its topics select, and
-the ADRs one step reaches, each while the budget has room, with a count of
-those left out. No open issues, nothing ranked, no catalog. Its budget is
-half the story's agent's unless --budget is given.`,
+whose front matter roles are empty or list the role (ADR-0068), with the
+sections the story's topics leave out taken out; the story's goal and
+acceptance criteria; and briefs, never bodies, of what the story names,
+what its topics select, and the ADRs one step reaches, each while the
+budget has room, with a count of those left out. No open issues, nothing
+ranked, no catalog. Its budget is half the story's agent's unless --budget
+is given.`,
 		Example: `  flai prime
   flai prime --cat
   flai prime --json
@@ -136,7 +139,7 @@ half the story's agent's unless --budget is given.`,
 		},
 	}
 	c.Flags().BoolVar(&cat, "cat", false, "print file contents instead of paths")
-	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions, design, tech, and ADRs it selects, and a catalog of the rest")
+	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest")
 	c.Flags().StringVar(&budget, "budget", "", "the size the story's context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role)")
 	c.Flags().StringVar(&role, "role", "", "print the pack for a sub-agent of the story's agent in this role: explore or verify (ADR-0059)")
 	return c

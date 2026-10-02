@@ -272,8 +272,10 @@ func TestPrimeStoryDesign(t *testing.T) {
 	}
 }
 
-// S-0175, ADR-0059: --role primes a sub-agent with the conventions its role
-// reads, the story's goal and criteria, and briefs, in half the budget.
+// S-0175, ADR-0059, ADR-0068: --role primes a sub-agent with the conventions
+// its role reads, the story's goal and criteria, and briefs, in half the
+// budget; the story's own pack has the conventions the story's agent reads,
+// and --cat every convention.
 func TestPrimeStoryRole(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
@@ -290,8 +292,9 @@ func TestPrimeStoryRole(t *testing.T) {
 		fm := fmt.Sprintf("---\ntitle: %s\nupdated: 2026-10-01\naudience: agent\norder: %d\nstatus: active\ntopics: [all]\n%s---\n\n# %s\n\n## Rules\n\n- %s rule.\n\n### Svelte <!-- topics: svelte -->\n\n- %s svelte rule.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n", title, order, roles, title, title, title)
 		write("design/conventions/"+name, fm)
 	}
-	write("design/conventions/README.md", "# Conventions\n\n- [session-start.md](session-start.md)\n- [code-quality.md](code-quality.md)\n- [safety.md](safety.md)\n")
+	write("design/conventions/README.md", "# Conventions\n\n- [session-start.md](session-start.md)\n- [stream.md](stream.md)\n- [code-quality.md](code-quality.md)\n- [safety.md](safety.md)\n")
 	conv("session-start.md", "Session start", 10, "")
+	conv("stream.md", "Stream", 20, "roles: [story]\n")
 	conv("code-quality.md", "Code quality", 60, "roles: [verify]\n")
 	conv("safety.md", "Safety", 80, "roles: [explore, verify]\n")
 	write("design/system/cli.md", "---\ntitle: CLI\nupdated: 2026-09-28\nstatus: active\ntopics: [go]\n---\n\n# CLI\n\nThe command line.\n\n## Commands\n\nAs ADR-0002 decides.\n")
@@ -319,7 +322,28 @@ func TestPrimeStoryRole(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, errOut, code := runIn(t, root, "prime", "--story", "S-0001", "--role", "explore")
+	out, errOut, code := runIn(t, root, "prime", "--story", "S-0001")
+	if code != 0 {
+		t.Fatalf("prime --story: %s", errOut)
+	}
+	for _, want := range []string{"design/conventions/README.md\n", "- Session start rule.", "- Stream rule."} {
+		if !strings.Contains(out, want) {
+			t.Errorf("story: missing %q:\n%s", want, out)
+		}
+	}
+	for _, gone := range []string{"Code quality rule", "Safety rule"} {
+		if strings.Contains(out, gone) {
+			t.Errorf("story: printed %q:\n%s", gone, out)
+		}
+	}
+	out, _, _ = runIn(t, root, "prime", "--cat")
+	for _, want := range []string{"- Session start rule.", "- Stream rule.", "- Code quality rule.", "- Safety rule."} {
+		if !strings.Contains(out, want) {
+			t.Errorf("--cat: missing %q:\n%s", want, out)
+		}
+	}
+
+	out, errOut, code = runIn(t, root, "prime", "--story", "S-0001", "--role", "explore")
 	if code != 0 {
 		t.Fatalf("prime --role explore: %s", errOut)
 	}
@@ -327,6 +351,8 @@ func TestPrimeStoryRole(t *testing.T) {
 		"S-0001 context pack for the explore role\n",
 		"role: explore, a sub-agent of the story's agent (ADR-0059)",
 		"; budget 40960 bytes\n",
+		"design/conventions/session-start.md\n",
+		"- Session start rule.",
 		"design/conventions/safety.md\n",
 		"- Safety rule.",
 		"\nstory\n=====\n\n## Goal\n\nKeep to ADR-0001",
@@ -341,7 +367,7 @@ func TestPrimeStoryRole(t *testing.T) {
 			t.Errorf("explore: missing %q:\n%s", want, out)
 		}
 	}
-	for _, gone := range []string{"Session start rule", "Code quality rule", "Safety svelte rule", "The body of the part", "A note the role pack", "open issues", "\ncatalog\n", "reason:"} {
+	for _, gone := range []string{"Stream rule", "Code quality rule", "Safety svelte rule", "The body of the part", "A note the role pack", "open issues", "\ncatalog\n", "reason:"} {
 		if strings.Contains(out, gone) {
 			t.Errorf("explore: printed %q:\n%s", gone, out)
 		}
@@ -367,8 +393,8 @@ func TestPrimeStoryRole(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &v); err != nil {
 		t.Fatalf("json: %v %s", err, out)
 	}
-	if v.Role != "verify" || !strings.HasPrefix(v.Goal, "## Goal\n") || v.Budget != 40960 || len(v.Conventions) != 2 ||
-		v.Conventions[0].Path != "design/conventions/code-quality.md" || v.Conventions[1].Path != "design/conventions/safety.md" || len(v.Items) != 4 || v.LeftOut != 0 {
+	if v.Role != "verify" || !strings.HasPrefix(v.Goal, "## Goal\n") || v.Budget != 40960 || len(v.Conventions) != 3 || v.Conventions[0].Path != "design/conventions/session-start.md" ||
+		v.Conventions[1].Path != "design/conventions/code-quality.md" || v.Conventions[2].Path != "design/conventions/safety.md" || len(v.Items) != 4 || v.LeftOut != 0 {
 		t.Errorf("verify json: %+v", v)
 	}
 	for _, it := range v.Items {
