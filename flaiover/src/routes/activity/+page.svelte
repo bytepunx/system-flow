@@ -15,7 +15,12 @@
 	async function loadAgents() {
 		try {
 			const r = await api('/api/host-agent');
-			if (r.ok) host = await r.json();
+			if (!r.ok) return;
+			const next: HostAgent = await r.json();
+			// with no flai connected the answer has no state: keep the agents last known, so their
+			// windows stay put rather than vanish and come back from the log's tail when flai does
+			// (S-0178); whether one can be stopped follows what flai says now
+			host = next.state || !host?.state ? next : { ...next, state: host.state };
 		} catch {
 			// keep what we had: the streams are the page
 		}
@@ -62,12 +67,15 @@
 	here. Each agent flai serve started shows its stream, read from the log flai gave it, and one that
 	runs can be stopped.
 </p>
+<!-- a reload that fails says so above the streams last shown rather than in their place, so the
+	page keeps its length and the operator their place in it (S-0178) -->
 {#if error}
-	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
+	<p class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
 		{error}
 	</p>
-{:else if streams === null}
-	<p class="text-sm text-muted">Loading…</p>
+{/if}
+{#if streams === null}
+	{#if !error}<p class="text-sm text-muted">Loading…</p>{/if}
 {:else}
 	<ActivityView
 		{streams}
