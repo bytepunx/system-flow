@@ -15,7 +15,7 @@ tags: [dashboard, cli]
 topics: [releases]
 usage:
   source: sum
-  seconds: 2081
+  seconds: 2546
   models:
     - model: claude-fable-5-1
       input: 2082
@@ -29,12 +29,18 @@ usage:
       cache_read: 1564698
       cache_write: 78430
       cost: 0.3016
+    - model: claude-opus-5-5
+      input: 104
+      output: 24433
+      cache_read: 3039680
+      cache_write: 142182
+      cost: 2.07
     - model: claude-sonnet-5-5
-      input: 38
-      output: 11499
-      cache_read: 451332
-      cache_write: 87642
-      cost: 0.4244
+      input: 48
+      output: 14014
+      cache_read: 566139
+      cache_write: 128752
+      cost: 0.5753
 ---
 # E-0015 Secure Dashboard and CLI Releases
 
