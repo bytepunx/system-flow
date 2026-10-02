@@ -3,11 +3,14 @@ id: S-0230
 type: story
 nature: improvement
 title: Tasks carry after, the plan shows on the board, and a story's agent hands tasks to sub-agents without parallel layers
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-02T12:03:34Z
-updated: 2026-10-02T12:03:34Z
-transitions: []
+updated: 2026-10-02T16:27:00Z
+transitions:
+  - to: ready
+    at: 2026-10-02T16:27:00Z
+    by: alex
 tags: [flai, dashboard, template]
 touches: [flai/internal/workitem, flai/internal/harness, flai/internal/usage, design/conventions/, template/, flaiover/src]
 agent:

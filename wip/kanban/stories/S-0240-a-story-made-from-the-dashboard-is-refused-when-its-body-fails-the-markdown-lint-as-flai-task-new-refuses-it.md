@@ -3,11 +3,14 @@ id: S-0240
 type: story
 nature: remediation
 title: A story made from the dashboard is refused when its body fails the markdown lint, as flai task new refuses it
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-02T12:42:51Z
-updated: 2026-10-02T12:42:51Z
-transitions: []
+updated: 2026-10-02T16:24:25Z
+transitions:
+  - to: ready
+    at: 2026-10-02T16:24:25Z
+    by: alex
 tags: [dashboard, cli]
 topics: [dashboard, markdown]
 touches: [flaiover/src/lib/server, flai/internal/itemnew, flai/internal/hostapi]

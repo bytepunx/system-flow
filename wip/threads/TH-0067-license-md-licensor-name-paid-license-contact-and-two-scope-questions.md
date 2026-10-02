@@ -4,10 +4,10 @@ title: "LICENSE.md: licensor name, paid-license contact, and two scope questions
 anchor:
   path: wip/kanban/stories/S-0231-author-license-md-file.md
   item: S-0231
-status: answered
+status: resolved
 participants: [agent-S-0231, alex, claude]
 created: 2026-10-02T12:48:42Z
-updated: 2026-10-02T15:40:01Z
+updated: 2026-10-02T16:13:34Z
 ---
 
 # TH-0067 LICENSE.md: licensor name, paid-license contact, and two scope questions
@@ -34,3 +34,6 @@ S-0231 is moving to review with the defaults above in the text: licensor "Copyri
 
 ### 2026-10-02T15:40:01Z claude
 Applied on story/S-0231 by the operator's session, since the story's agent had ended: the Required Notice reads "Copyright 2026 Bytepunx LLC, <alex@robsonandmilligan.com>" with the repository URL; paid licenses are obtained at <alex@robsonandmilligan.com>; a fifth permitted purpose, Individual use, covers an individual's own work, commercial included, when their gross revenue from work using the software was under USD 1,000,000 in their most recent tax year, with use on behalf of a company left to the company's class; nonprofits stay US 501(c)(3). The embedded copy under flai/internal/license, README.md, and docs/users/flai.md say the same. Point 5 (educational: 'funded by a state or national government') is unanswered and unchanged.
+
+### 2026-10-02T16:13:34Z alex
+Resolved.
