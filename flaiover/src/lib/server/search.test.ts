@@ -41,7 +41,10 @@ describe('adrs on the monorepo', () => {
 		expect(list.find((a) => a.id === 'ADR-0002')?.supersededBy).toEqual([]);
 		expect(list.find((a) => a.id === 'ADR-0018')?.refines).toEqual(['ADR-0016']);
 		expect(list.find((a) => a.id === 'ADR-0002')?.refines).toEqual([]);
-		expect(list.every((a) => a.status === 'accepted')).toBe(true);
+		// a real repository holds proposed and superseded ADRs as well as accepted ones
+		expect(list.find((a) => a.id === 'ADR-0001')?.status).toBe('accepted');
+		const statuses = ['proposed', 'accepted', 'superseded', 'deprecated'];
+		expect(list.filter((a) => !statuses.includes(a.status))).toEqual([]);
 		expect(list.every((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.date))).toBe(true);
 	});
 	it('finds a body phrase across wip and design', async () => {
