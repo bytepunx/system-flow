@@ -125,6 +125,69 @@ describe('AcceptConfirm', () => {
 		unmount(c);
 	});
 
+	// ADR-0066: an experiment is accepted like research once its results document is on its
+	// branch, and flai's blocker names the document while it is missing.
+	it('accepts an experiment with its results document, releasing nothing', async () => {
+		api.mockResolvedValue(
+			json({
+				id: 'S-0176',
+				branch: 'story/S-0176',
+				blockers: [],
+				plan: {
+					level: 'none',
+					commits: ['a'],
+					steps: [],
+					skipped:
+						'S-0176 is an experiment: its results land on main, and an experiment cuts no release whatever it touched (ADR-0066)',
+					unreleased: [{ component: 'flai', files: ['flai/cmd/x.go'] }]
+				}
+			})
+		);
+		const onconfirm = vi.fn();
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0176', onconfirm, oncancel: vi.fn() }
+		});
+		await settle();
+		const text = (document.body.textContent ?? '').replace(/\s+/g, ' ');
+		expect(text).toContain('No release: S-0176 is an experiment');
+		expect(text).toContain('flai lands on main without a release (1 file)');
+		expect(document.querySelector('[role=alert]')).toBeNull();
+		const accept = [...document.querySelectorAll('button')].at(-1)!;
+		expect(accept.disabled).toBe(false);
+		accept.click();
+		await settle();
+		expect(onconfirm).toHaveBeenCalledOnce();
+		unmount(c);
+	});
+
+	it('refuses an experiment without its results document, naming the document', async () => {
+		api.mockResolvedValue(
+			json({
+				id: 'S-0176',
+				branch: 'story/S-0176',
+				blockers: [
+					'S-0176 is an experiment and has no results document on its branch story/S-0176: write design/experiments/S-0176-trial.md with its hypothesis, success measure, what was done, results, and recommendation (adopt, adapt, or drop), commit it, and accept again (ADR-0066)'
+				],
+				plan: null
+			})
+		);
+		const onconfirm = vi.fn();
+		const c = mount(AcceptConfirm, {
+			target: document.body,
+			props: { id: 'S-0176', onconfirm, oncancel: vi.fn() }
+		});
+		await settle();
+		expect(document.querySelector('[role=alert]')?.textContent).toContain(
+			'design/experiments/S-0176-trial.md'
+		);
+		const accept = [...document.querySelectorAll('button')][1] as HTMLButtonElement;
+		expect(accept.disabled).toBe(true);
+		accept.click();
+		expect(onconfirm).not.toHaveBeenCalled();
+		unmount(c);
+	});
+
 	it('lists blockers from the preview and keeps accept disabled', async () => {
 		api.mockResolvedValue(
 			json({ id: 'S-0046', blockers: ['git has no committer identity here'], plan: null })
