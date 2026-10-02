@@ -320,6 +320,12 @@ Four runs are reported apart, because their prompt or model differs:
 
 `general-purpose` sub-agents run on the story's agent's model. With tasks handed to them, the sub-agents took 28 to 39% of a run's cost instead of a tenth. Most of that was Opus. S-0192 cost less than S-0119 with fewer lines. S-0178 cost more than S-0180 with more lines. This is too little to read a saving or a cost from.
 
+What to change next:
+
+- **Keep the explorer on `haiku`, the verifier on `sonnet`, and one verifier run in place of the agent's whole-suite runs.** The verifier found defects before review in both runs, and the agents stopped repeating its runs. The prompt needs no change for these two roles.
+- **Stop a close-out from stopping on findings outside the story.** S-0191's third verifier run was spent on findings outside its story. TH-0056's answer makes such a finding a note that flai records as an issue, or counts on the issue that has it, without stopping the close-out. I-0057 counts it; a story should make `flai check` and `scripts/close-out.sh` do it.
+- **Measure task sub-agents next, not the explorer and verifier again.** Since S-0189, every story run delegates, so no new runs without delegation come to compare against, and two runs a side cannot show a tenth. `general-purpose` task sub-agents now take about 30% of a run's cost on Opus, and S-0230 makes handing tasks to them the rule. Once S-0230 has run, measure them by a replay, as § A cheaper verifier, replayed did: one story's task run again from the same commit in a task sub-agent on Opus and on `sonnet`, its cost and its diff compared. Decide from that whether a task sub-agent gets a role and a model of its own.
+
 ### A cheaper verifier, replayed
 
 Before the template's verifier moved to `sonnet`, S-0189 checked that a cheaper verifier still finds what S-0185's found. On 2026-10-01, S-0185's second verifier call was replayed word for word, its prompt taken from `flai serve`'s log. That call was the first to check the diff, and it ran on `claude-opus-5-5`. The replay ran on `sonnet` against a detached checkout of `fa6aaa3`, the last S-0185 commit before its review fixes. The prompt's paths and diff base were changed to that checkout and S-0185's base, and nothing else.
