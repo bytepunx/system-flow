@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.32 - 2026-10-02
+
+- S-0194 An experiment story is accepted with its results document under design/experiments (patch).
+
 ## 1.0.31 - 2026-10-01
 
 - S-0189 Sub-agents run on a cheaper model, and the verifier's run replaces the agent's own full-suite runs (patch).
