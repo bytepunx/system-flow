@@ -210,6 +210,50 @@ describe('the item page (S-0154)', () => {
 		});
 	});
 
+	describe('the Create story link on an epic (S-0191)', () => {
+		const epic = { ...story, id: 'E-0013', type: 'epic', parent: undefined, status: 'in-progress' };
+		const show = async (item: Record<string, unknown>, writable = true) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url === '/api/board') return answer({ writable });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			return document.querySelector<HTMLAnchorElement>('[data-testid="new-child-story"]');
+		};
+		const again = () => {
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+		};
+
+		it('comes after New epic and opens the form for a story under the epic', async () => {
+			const link = await show(epic);
+			expect(link!.textContent).toBe('Create story');
+			expect(link!.getAttribute('href')).toBe('/new?type=story&parent=E-0013');
+			const links = [...link!.parentElement!.querySelectorAll('a')].map((a) => a.textContent);
+			expect(links).toEqual(['New epic', 'Create story']);
+		});
+
+		it('is not offered on a closed or archived epic, whose stories the form would not take', async () => {
+			expect(await show({ ...epic, status: 'done' })).toBeNull();
+			again();
+			expect(await show({ ...epic, status: 'cancelled' })).toBeNull();
+			again();
+			expect(await show({ ...epic, archived: true })).toBeNull();
+		});
+
+		it('is not offered on a story or a task, or when the dashboard cannot write', async () => {
+			expect(await show({ ...story, parent: 'E-0013' })).toBeNull();
+			again();
+			expect(await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0171' })).toBeNull();
+			again();
+			expect(await show(epic, false)).toBeNull();
+		});
+	});
+
 	// S-0173: the inbox leads an open question here, so the story's page shows its open questions.
 	it("shows the story's open questions from the inbox, and a task's page none", async () => {
 		inboxState.data = {

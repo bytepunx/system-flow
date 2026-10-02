@@ -83,6 +83,16 @@
 					(item.type === 'story' && item.parent ? `&parent=${encodeURIComponent(item.parent)}` : '')
 			: null
 	);
+	// A story under this epic (S-0191): only an open epic, since the form offers no other as a parent.
+	const childQuery = $derived(
+		writable &&
+			item?.type === 'epic' &&
+			!item.archived &&
+			item.status !== 'done' &&
+			item.status !== 'cancelled'
+			? `?type=story&parent=${encodeURIComponent(item.id)}`
+			: null
+	);
 	// Another story's claim holds it in ready (S-0129): StoryAgent reads it from flai and says why.
 	let hold = $state<Hold | undefined>();
 	// What the story's agent is doing, for its threads to say it is working on a reply (S-0154).
@@ -261,14 +271,24 @@
 					{item.title}
 				</h1>
 				{#if newQuery}
-					<!-- Another of the same type, without going back to the board (S-0171). -->
-					<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it -->
-					<a
-						class="shrink-0 rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
-						href={resolve('/new') + newQuery}
-						data-testid="new-same-type">New {item.type}</a
-					>
-					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+					<div class="flex shrink-0 gap-2">
+						<!-- Another of the same type, without going back to the board (S-0171), and on an
+						     open epic a story under it (S-0191). -->
+						<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it -->
+						<a
+							class="rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
+							href={resolve('/new') + newQuery}
+							data-testid="new-same-type">New {item.type}</a
+						>
+						{#if childQuery}
+							<a
+								class="rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
+								href={resolve('/new') + childQuery}
+								data-testid="new-child-story">Create story</a
+							>
+						{/if}
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
+					</div>
 				{/if}
 			</div>
 			<p class="mt-1 text-sm text-muted" data-testid="item-line">
