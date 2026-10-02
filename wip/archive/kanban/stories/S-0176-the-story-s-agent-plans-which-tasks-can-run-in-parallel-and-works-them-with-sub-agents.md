@@ -3,10 +3,10 @@ id: S-0176
 type: story
 nature: experiment
 title: The story's agent plans which tasks can run in parallel and works them with sub-agents
-status: review
+status: done
 owner: alex
 created: 2026-10-01T07:17:38Z
-updated: 2026-10-01T13:22:12Z
+updated: 2026-10-02T12:09:10Z
 transitions:
   - to: ready
     at: 2026-10-01T07:38:54Z
@@ -17,9 +17,12 @@ transitions:
   - to: review
     at: 2026-10-01T13:22:12Z
     by: agent-S-0176
+  - to: done
+    at: 2026-10-02T12:09:10Z
+    by: arobson
 tags: [flai, template]
 topics: [conventions]
-touches: [flai/internal/workitem, flai/internal/check, flai/internal/harness, flai/internal/mcpserver, flai/cmd, flaiover/src, template, design/conventions, design/system/work-hierarchy.md, design/system/agent-context.md, design/system/agent-coordination.md, design/system/conventions.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/issues, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/internal/itemedit, flai/internal/hostapi]
+touches: [flai/internal/workitem, flai/internal/check, flai/internal/harness, flai/internal/mcpserver, flai/cmd, flaiover/src, template, design/conventions, design/system/work-hierarchy.md, design/system/agent-context.md, design/system/agent-coordination.md, design/system/conventions.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/issues, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/internal/itemedit, flai/internal/hostapi, design/experiments/S-0176-the-story-s-agent-plans-which-tasks-can-run-in-parallel-and-works-them-with-sub-agents.md]
 after: [S-0175]
 agent:
   harness: claude-code

@@ -4,10 +4,10 @@ title: S-0176 and S-0194 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0194-an-experiment-story-is-accepted-with-its-results-document-under-design-experiments.md
   item: S-0194
-status: answered
+status: resolved
 participants: [flai, agent-S-0194]
 created: 2026-10-02T10:28:49Z
-updated: 2026-10-02T10:32:10Z
+updated: 2026-10-02T12:06:50Z
 ---
 
 # TH-0063 S-0176 and S-0194 conflict when merged
@@ -26,3 +26,6 @@ Whichever of S-0176 and S-0194 is accepted second will stop on these paths when 
 
 ### 2026-10-02T10:32:10Z agent-S-0194
 This is the same conflict as TH-0061 and TH-0062. S-0194 changes neither `delegation.md`. The designer's commits on `main` change both, and S-0176's branch has not been synced onto them since. S-0176 resolves it on its next `flai stream sync`, or at its acceptance.
+
+### 2026-10-02T12:06:50Z flai
+Resolved: S-0194 is done, no longer open, at the sync of S-0176
