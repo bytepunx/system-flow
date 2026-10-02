@@ -9,7 +9,7 @@ topics: [cli, dashboard, release, security]
 
 The finding of S-0193, for E-0015. The operator asked that the dashboard and the CLI be signed in CI with a private key, that the CLI verify a release with the public key before it installs it, and that each component use the same mechanism to refuse the other when it is not a signed release: flai closes its connection to an unsigned flaiover, and flaiover closes the connection from an unsigned flai. This document says how the two are released, upgraded, and connected today, what can be signed and how it can be verified, what a running process can and cannot prove about itself to a peer, and ends with one recommendation. Nothing here is built. The decision and the stories that follow are at the end.
 
-Documentation was read on 2026-10-02. Nothing was tried on this host; every statement about tools comes from their documentation and every statement about this repository from its files.
+Every statement about this repository comes from its files, read on 2026-10-02. Nothing was tried on this host, and no page was fetched in this session: what this document says about GoReleaser, cosign, minisign, GPG, Sigstore, and GitHub's attestations is from their documentation as the author knew it, and the story that adopts a tool checks it against the tool's current documentation first. Where a claim matters to the choice and could be wrong, it is marked **to check**.
 
 ## Today
 
@@ -48,3 +48,93 @@ The template is a git repository, `bytepunx/system-flow-template`, versioned by 
 - Both sides hold one agent credential, a random secret `flai dashboard` generates once per user and keeps beside `flai serve`'s state, and gives the container as a file under `/run/secrets`, mode 0600, read-only ([ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md), [ADR-0033](../adrs/0033-one-login-token-and-one-agent-credential-per-user-serve-every-project.md)). The credential never crosses the connection. The handshake is `hello`, in which flai sends the protocol number, a nonce, its version (`flai`), the project, the methods it serves, and its kind; the dashboard answers with its own nonce, its version (`dashboard`), and an HMAC-SHA256 over its role and both nonces keyed with the credential; flai checks it and sends `hello.prove`, the same construction for its role, which the dashboard checks. A wrong proof is closed with `4401`, a malformed hello with `4400`, a slow one with `4408`; a second flai for a project a connected one still answers for is closed with `4409` and backs off ([ADR-0063](../adrs/0063-the-dashboard-refuses-a-second-flai-for-a-project-with-close-code-4409-while.md)).
 - The dashboard compares the methods flai named with `REQUIRED_METHODS` and tells the designer which a project's flai lacks (S-0098). Nothing else is made of either version: the two numbers are shown, not checked.
 - So the channel today authenticates the *installation*: the connection is between the flai and the flaiover the same `flai dashboard` set up, because only those two hold the credential. It says nothing about whether either of them is a build anyone released. A flai built from a branch, or a `flaiover:local` image, proves itself exactly as a release does.
+
+## Signing releases
+
+What the epic asks of a release is two things: a signature made in CI with a private key only CI holds, and a check with the public key wherever the release is consumed, before it is installed or run. The consumers are `flai self-upgrade` and `flai host upgrade` (Go, inside flai), `install.sh` (a shell with `curl` and whatever else a fresh machine has), and `flai dashboard` with its `check` and `upgrade` (Go, with `docker`). The dashboard's own code never consumes a release; it is the thing released.
+
+Two properties decide most of the choice. First, **what the consumer needs to verify**: a public key in the binary and the standard library, or a library, or a tool on the path, or the network. flai is a single static binary installed by a shell script on machines that have nothing else; a verification that needs cosign installed, or the Sigstore trust root fetched, is a weaker promise than one that needs nothing. Second, **where the private key lives**, because the key, not the format, is what a compromise is about.
+
+### What is signed
+
+For flai, the right thing to sign is `checksums.txt`, not each archive: it already names every archive with its SHA-256, GoReleaser already publishes it, and `self-upgrade` and `install.sh` already download it and check the archive against it. One signature over that file turns the check they make today from "the archive matches a file published beside it" into "the archive matches a file the release key signed". GoReleaser's `signs` section does exactly this with `artifacts: checksum`, running any command with the checksum file as its input and uploading what it writes as a release asset. The archives themselves are then covered through their hashes and need no signature of their own.
+
+For flaiover, the artifact is an image in GHCR and the thing that identifies it is its digest, `sha256:…`, which Docker checks on pull against the content it receives. Signing the digest signs the image. There are two ways to publish that signature, under [How the image's signature is published](#how-the-images-signature-is-published).
+
+### The ways to sign
+
+#### Ed25519 in the minisign format
+
+[minisign](https://jedisct1.github.io/minisign/) is a small signing tool with a fixed format: Ed25519 keys, a public key that is one base64 line carrying a key ID, and a signature file of four lines, an untrusted comment, the base64 signature, a trusted comment, and a global signature over both. The private key is a file protected by a password. GoReleaser runs it through `signs` with `cmd: minisign`.
+
+- **Verifying in flai**: `crypto/ed25519` in the standard library, after decoding the signature line and checking the key ID. No dependency; `aead.dev/minisign` is a small pure-Go library if the format's edge cases are not worth owning. **To check**: whether the default signature is over the file or its BLAKE2b-512 prehash (minisign signs the prehash with `-H`, and newer versions by default), because a prehashed signature needs `golang.org/x/crypto/blake2b`, a dependency, though a well-known one.
+- **Verifying in `install.sh`**: needs `minisign` on the path, which almost no machine has, or OpenSSL 3 with `pkeyutl -rawin` for Ed25519, which macOS does not ship (its `openssl` is LibreSSL; **to check** whether its version verifies Ed25519). So the script would most likely have to say "verified only where minisign is installed", which is the current state with a different wording.
+- **Verifying in flaiover** (for *Verifying the peer* below): Node's `crypto.verify` with an Ed25519 key, standard library.
+- **Key**: a password-protected file. In CI it is a GitHub Actions secret written to disk for the step, with the password in another secret.
+
+#### cosign with a key pair
+
+[cosign](https://docs.sigstore.dev/cosign/) is Sigstore's signing tool. With `cosign generate-key-pair` it makes an ECDSA P-256 key pair, the private key encrypted with a password (`cosign.key`), the public key as PEM (`cosign.pub`). `cosign sign-blob --key cosign.key --output-signature checksums.txt.sig checksums.txt` writes the signature, which is the base64 of a DER-encoded ECDSA signature over the SHA-256 of the file. By default it also records the signature in Rekor, Sigstore's public transparency log; `--tlog-upload=false` turns that off. The key can be given as `--key env://COSIGN_PRIVATE_KEY` with the password in `COSIGN_PASSWORD`, which is how CI uses it; `cosign generate-key-pair github://owner/repo` stores a fresh pair straight into the repository's Actions secrets. GoReleaser's documented `signs` example is cosign, with `artifacts: checksum`, and it also signs images with `docker_signs`.
+
+- **Verifying in flai**: `encoding/pem`, `crypto/x509.ParsePKIXPublicKey`, `crypto/sha256`, and `crypto/ecdsa.VerifyASN1`, all standard library, with the public key as a PEM string in the source. No dependency, no network beyond the download itself. The Rekor entry, when one is made, is not needed to verify and is not consulted.
+- **Verifying in `install.sh`**: `openssl dgst -sha256 -verify cosign.pub -signature <(base64 -d checksums.txt.sig) checksums.txt`, which every OpenSSL and LibreSSL does. That is the one line that makes the script's check real on a fresh machine, and the reason this option beats minisign for this repository. Anyone with cosign can also run `cosign verify-blob --key cosign.pub --signature … checksums.txt`.
+- **Verifying in flaiover**: Node's `crypto.verify('sha256', data, pem, der)`, standard library.
+- **Key**: an encrypted PEM and its password, two GitHub Actions secrets. Rotation means a new pair and a release of flai that carries both public keys; see [Keys](#keys).
+
+#### cosign keyless
+
+The same tool, with no key of ours: the workflow authenticates to Sigstore's Fulcio with its GitHub Actions OIDC token and receives a short-lived certificate that names the workflow (`https://github.com/bytepunx/system-flow/.github/workflows/release-flai.yml@refs/tags/flai/v1.2.3`) and the issuer (`https://token.actions.githubusercontent.com`); the signature and the certificate are recorded in Rekor; verification checks the certificate chain to Sigstore's root, the identity and issuer against what the verifier expects, and the Rekor entry's inclusion. GoReleaser's cosign example covers this form too.
+
+- **What it buys**: no private key to keep, rotate, or lose. The signer is the workflow, and a compromise of the repository that could run the workflow is the only way to sign.
+- **What it costs the consumer**: the verifier needs Sigstore's trust root, fetched over TUF and refreshed, and the Rekor entry; in Go that is `sigstore-go`, a large dependency tree for a CLI that is otherwise standard library, and verification needs the network, which the download needs anyway, but to a second party, Sigstore's public instance, whose availability becomes flai's. `install.sh` would need cosign installed. This is heavy for what flai is.
+- **Where it fits**: as a second signature anyone can check with public tooling, beside a key the binaries verify themselves. Not as the only one.
+
+#### GitHub artifact attestations
+
+`actions/attest-build-provenance` signs a SLSA provenance statement for an artifact with the workflow's identity, in Sigstore's bundle format, and stores it with the repository, where `gh attestation verify <file> --owner bytepunx` checks it. It is keyless signing with GitHub as the trust root (public repositories use Sigstore's public instance, private ones GitHub's own, **to check** on which plans). It describes *how the artifact was built*, not only that the key holder approved it, which is the stronger supply-chain statement.
+
+- **Consumer**: `gh` or `sigstore-go`, and the network to GitHub's attestation API. The same objection as keyless cosign for flai and for `install.sh`, with GitHub as the only external party. It can attest the image too, by its digest, and the image's attestation can be verified from the image alone with `gh attestation verify oci://…`.
+- **Where it fits**: a cheap addition to both release workflows for anyone with `gh`, and the right thing to offer auditors; not the mechanism flai verifies with.
+
+#### GPG
+
+GoReleaser's default `signs` command is `gpg --detach-sign`. The format is OpenPGP; the key lives in a keyring.
+
+- **Consumer**: in Go, `golang.org/x/crypto/openpgp` is frozen and deprecated and the maintained fork is ProtonMail's, both large for one signature; in a shell, `gpg` is widely installed but needs the public key imported into a keyring first, and users are used to being told to trust a key ID. The format and tooling were made for people and email, not for a binary checking itself. Not recommended.
+
+### Comparison
+
+| | Ed25519, minisign | cosign, key pair | cosign, keyless | GitHub attestations | GPG |
+|--|--|--|--|--|--|
+| Signs in CI with | `minisign`, secret key file | `cosign`, secret key in env | `cosign`, OIDC identity | `actions/attest-build-provenance` | `gpg`, secret key in keyring |
+| Private key | ours, a file | ours, a file | none, Sigstore issues per run | none, GitHub issues per run | ours, a keyring |
+| flai verifies with | stdlib (`crypto/ed25519`), maybe blake2b | stdlib (`crypto/ecdsa`) | `sigstore-go`, TUF root, Rekor | `sigstore-go` or `gh`, GitHub API | OpenPGP library |
+| `install.sh` verifies with | `minisign`, rarely present | `openssl dgst -verify`, present | `cosign`, rarely present | `gh`, often present | `gpg`, often present, needs import |
+| Network to verify | none | none | Sigstore | GitHub | none |
+| Rotation | new key, release carries both | new key, release carries both | nothing to rotate | nothing to rotate | new key, release carries both |
+| Compromise means | whoever holds the file and password signs | same | whoever can run the workflow signs | same | same as a file |
+| Also signs the image | no, digest list only | `cosign sign` in GHCR, or digest list | `cosign sign` in GHCR | yes, by digest | no |
+
+### How the image's signature is published
+
+**A signed digest list as a release asset.** `release-flaiover.yml` already knows the digest it pushed (`docker/build-push-action` outputs it). On a `flaiover/v*` tag the workflow writes one file, `flaiover_<version>.digests`, with the digest for each platform and the tag it was pushed under, signs it with the same key and tool as `checksums.txt`, and uploads both to a GitHub release `flaiover vX.Y.Z`, which does not exist today and would be created by the workflow. `flai dashboard` then resolves the version it is to run through the same release client `self-upgrade` already has, downloads the list and its signature, verifies with the key in the binary, and pulls and runs `ghcr.io/bytepunx/flaiover@sha256:…` by digest, so that Docker's own content check completes the chain. One mechanism, one key, one client, no new dependency; the dashboard's version becomes something flai chooses from a signed list rather than a tag it trusts.
+
+**cosign on the image.** `cosign sign --key cosign.key ghcr.io/bytepunx/flaiover@sha256:…` stores the signature in GHCR as an OCI artifact under a tag derived from the digest, and anyone verifies with `cosign verify --key cosign.pub ghcr.io/bytepunx/flaiover:1.2.3`. For flai to verify it without cosign, it would speak the registry's HTTP API (a token exchange with GHCR, a manifest fetch, a blob fetch) and check the ECDSA signature over the payload in the manifest's annotation: a few hundred lines of standard library against a layout cosign owns, or `go-containerregistry` plus `sigstore` as dependencies. It is the right thing to publish for the ecosystem and the wrong thing for flai to depend on.
+
+**Notary (Docker Content Trust) and notation** sign tags in a registry-side trust server; GHCR does not run one. Not an option here.
+
+A consequence either way: today `latest` is pushed on every merge to `main`, and `sha-*` tags with it. Those builds are not releases and would carry no signature. Once `flai dashboard` runs only what a signed list names, `dashboard.tag: latest` has to mean "the newest flaiover release", resolved from the releases, not the registry's `latest` tag; and an unreleased `main` build is run only as a development image, the way *Verifying the peer* below describes.
+
+### Keys
+
+- **One key for both components**, held as two GitHub Actions secrets (the encrypted private key and its password) in the `bytepunx/system-flow` repository, used only by `release-flai.yml` and `release-flaiover.yml`. An Actions *environment* with required reviewers is the one setting that stops a workflow run from a branch using it: both release workflows run on tags, and a tag can be pushed by anyone with write access. **To check**: environment secrets and their reviewer rule on the repository's plan.
+- **The public key is in both sources**, as a PEM constant in `flai/internal/buildinfo` (or a sibling package) and in `flaiover/src/lib/server`, with the key's SHA-256 fingerprint in `docs/operators` so an operator can compare, and published as a release asset too. It is not fetched from anywhere at verification time: a key fetched over the same channel as the artifact proves nothing.
+- **Rotation**: generate the new pair, release a flai that carries both public keys, then switch the workflows to the new key; a flai older than that release cannot verify a newer release and `self-upgrade` tells the operator to install the bridging release first, by its version. A signature file is tried against every key the binary knows; nothing in the format needs a key ID.
+- **Compromise**: rotate as above, and the release that carries the new key is signed with the old one, which an attacker also holds. So a compromise is announced in `CHANGELOG.md` and the release notes with the fingerprint of the new key, and `install.sh` and the documentation tell the operator to compare it. There is no stronger recovery without a second, offline root key; that is deliberate for a project of this size, and said here so that nobody expects otherwise.
+- **Snapshot and local builds** (`scripts/flai.sh`, `goreleaser --snapshot`, `flai dashboard --build`) are not signed. They are development builds and are treated as such by the peer check.
+
+### Recommendation
+
+Sign `checksums.txt` and the image digest list with **cosign and a key pair** (ECDSA P-256), through GoReleaser's `signs` for flai and a step in `release-flaiover.yml` for the image, with `--tlog-upload=false` at first so that nothing depends on Rekor, and verify in flai with the standard library and in `install.sh` with `openssl`. Publish the image's digest list as a release asset of a `flaiover vX.Y.Z` release and make `flai dashboard` run by digest from it. Add `actions/attest-build-provenance` to both workflows as a second, keyless statement for anyone with `gh`, costing one step each and nothing in flai. Keep the template out: it is a clone.
+
+The reasons, in order: the consumer verifies with nothing but what it already has (stdlib, `openssl`, `docker`), on every platform flai is built for, without a second service; the private key is the operator's, which is what the epic asked; cosign is the mainstream tool for exactly this and is GoReleaser's documented example, so the CI side is a few lines; the same key, format, and client cover both components, which is what lets *Verifying the peer* below be one mechanism; and the keyless statement is kept for what it is good at, provenance for auditors, without making flai depend on it. minisign is the runner-up and would be chosen over cosign only if `install.sh` were allowed to skip verification where `minisign` is absent, which it should not be.
