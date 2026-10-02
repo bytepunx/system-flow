@@ -1,0 +1,35 @@
+---
+id: S-0222
+type: story
+nature: feature
+title: "The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold"
+status: backlog
+parent: E-0016
+owner: arobson
+created: 2026-10-02T11:54:17Z
+updated: 2026-10-02T11:54:43Z
+transitions: []
+tags: [flai]
+touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md]
+after: [S-0218, S-0174]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+---
+# S-0222 The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold
+
+## Goal
+
+With `publish` on, the orchestrator cuts releases when the project's release policy says so: a cost of delay or count threshold, a theme (an epic or tag whose stories are all accepted), or its own judgement when the policy is `judgement`.
+
+## Acceptance criteria
+- [ ] After each acceptance it runs `flai release --evaluate`; when the policy is met it publishes through `publish.run` (which requires the `push` host action too) and logs the release with the figures and the items bundled
+- [ ] Under `judgement`, it publishes when it judges the unreleased work coherent and complete, and logs the reasoning; it never publishes a batch with a story whose epic is not in review or done when `orchestration.release.whole_epics` is set
+- [ ] When publishing is refused (S-0174's tag check, a moved remote) it logs the refusal and opens a thread to the operator
+- [ ] Tests cover each policy met and not met, and the refusal
+
+## Tasks
+
+## Notes
