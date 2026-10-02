@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 topics: [conventions, template]
 ---
@@ -71,7 +71,6 @@ audience: agent
 order: 20
 status: active
 topics: [all]
-roles: [explore, verify]
 ---
 
 # Communication
@@ -114,13 +113,14 @@ A convention says which stories it is for, as design, tech files, and ADRs do ([
 
 ## Roles
 
-A convention also says which sub-agents read it ([ADR-0059](../adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md), S-0175). `roles: [...]` in the front matter lists them: `explore` for the explorer, which finds and reads, and `verify` for the verifier, which also runs the project's checks. A file without `roles` is read by the story's agent alone. `flai prime --story S-nnnn --role explore|verify` prints the files whose roles list the role, with the story's topics applied as for the story's agent; `flai check` warns (`conventions.roles`) about a role flai does not prime.
+A convention also says which agents read it ([ADR-0059](../adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md), S-0175, refined by [ADR-0068](../adrs/0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md), S-0196). `roles: [...]` in the front matter lists every agent that reads it, the story's agent included. `story` is the agent working a story. `explore` is the explorer, which finds and reads. `verify` is the verifier, which also runs the project's checks. A file without `roles` is read by every agent. `flai prime --story S-nnnn` prints the files whose roles are empty or list `story`. `flai prime --story S-nnnn --role explore|verify` prints the files whose roles are empty or list the role. Both apply the story's topics as before, and `flai prime --cat` prints every file whatever its roles. `flai check` accepts `story`, `explore`, `verify`, and the strategic agents' `orchestrator`, `planner`, and `analyzer`, and warns (`conventions.roles`) about any other value. A convention only the story's agent needs says `[story]` and stays out of the sub-agents' packs. One every agent needs carries no roles.
 
 | File | `roles` |
 |------|---------|
-| `communication.md`, `safety.md`, `tooling.md`, `delegation.md` | `[explore, verify]` |
-| `documentation.md`, `code-quality.md`, `git.md`, `logging.md` | `[verify]` |
-| `session-start.md`, `work-management.md`, `decisions.md`, `continuous-improvement.md`, `telemetry.md` | none |
+| `session-start.md`, `work-management.md`, `decisions.md`, `git.md`, `continuous-improvement.md` | `[story]` |
+| `code-quality.md`, `logging.md` | `[story, verify]` |
+| `delegation.md` | `[story, explore, verify]` |
+| `communication.md`, `documentation.md`, `safety.md`, `tooling.md`, `telemetry.md`, `README.md` | none |
 
 Unlike `topics`, `roles` is the template's: `flai upgrade` replaces it with the rest of the baseline front matter.
 

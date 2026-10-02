@@ -249,11 +249,11 @@ A sub-agent's flai calls arrive on its parent's MCP connection under its parent'
 
 `flai prime --story S-nnnn --role explore|verify`, and `role` on the MCP `prime` tool, return a pack sized for a sub-agent:
 
-1. The conventions whose front matter `roles` lists the role, with the sections the story's topics leave out taken out. No README and no open issues.
+1. The conventions whose front matter `roles` are empty or list the role ([ADR-0068](../adrs/0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md)), with the sections the story's topics leave out taken out. No README and no open issues.
 2. The story's `## Goal` and `## Acceptance criteria`.
 3. Briefs, never bodies: what the story, its epic, and its tasks name, then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
 
-The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. The baseline gives `explore` to `communication`, `safety`, `tooling`, and `delegation`, and `verify` to those and `documentation`, `code-quality`, `git`, and `logging`.
+The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. In the baseline the explorer reads `delegation` and the conventions without roles: `communication`, `documentation`, `safety`, `tooling`, and `telemetry`. The verifier reads those, `code-quality`, and `logging`. The story's agent reads every baseline convention, since each lists `story` or carries no roles ([conventions.md](conventions.md#roles)).
 
 ### Measured
 
