@@ -159,3 +159,95 @@ func TestCheckRemoteKeepsTheAnswerAWhile(t *testing.T) {
 		t.Errorf("asked %d times after the TTL, want 2", asked)
 	}
 }
+
+// pushFromElsewhere commits on main in another clone of remote and pushes
+// it, tagging that commit with tags first, and returns the commit.
+func pushFromElsewhere(t *testing.T, remote string, git func(dir string, args ...string), tags ...string) string {
+	t.Helper()
+	other := filepath.Join(t.TempDir(), "other")
+	git(filepath.Dir(other), "clone", "-q", "-b", "main", remote, other)
+	git(other, "config", "user.email", "o@o")
+	git(other, "config", "user.name", "o")
+	git(other, "commit", "-q", "--allow-empty", "-m", "docs: from elsewhere")
+	for _, tag := range tags {
+		git(other, "tag", tag)
+	}
+	git(other, "push", "-q", "origin", "main", "--tags")
+	head, err := execx.System{}.Run(other, "git", "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(head)
+}
+
+// ADR-0067: a clone whose remote branch has commits it lacks is told to
+// fetch and merge or rebase before it publishes, whether or not it has
+// fetched them, and is in step once it has merged them.
+func TestCheckRemoteFindsBranchCommitsThisCloneLacks(t *testing.T) {
+	root, remote, git := withRemote(t)
+	head := pushFromElsewhere(t, remote, git)
+
+	got := CheckRemote(execx.System{}, root, m)
+	if !got.Lagging() || len(got.Behind) != 0 || got.Unchecked != "" || got.Fix != "git fetch origin && git merge origin/main" {
+		t.Fatalf("remote branch moved: %+v", got)
+	}
+	if *got.Branch != (BranchLag{Upstream: "origin/main", Head: head, Fetched: false}) {
+		t.Errorf("branch: %+v", *got.Branch)
+	}
+	for _, s := range []string{"origin/main has commits this clone lacks", head[:12], "not fetched here", "git fetch origin && git merge origin/main", "rebase onto origin/main", "flai release --pending again"} {
+		if !strings.Contains(got.Message, s) {
+			t.Errorf("message %q lacks %q", got.Message, s)
+		}
+	}
+	if !strings.Contains(got.Refusal(), "refusing to publish") {
+		t.Errorf("refusal: %q", got.Refusal())
+	}
+
+	// fetched, not merged: only the merge is left to run
+	git(root, "fetch", "-q", "origin")
+	forgetRemotes(t)
+	got = CheckRemote(execx.System{}, root, m)
+	if !got.Lagging() || got.Branch == nil || !got.Branch.Fetched || got.Fix != "git merge origin/main" || !strings.Contains(got.Message, "fetched here but not merged") {
+		t.Fatalf("fetched, not merged: %+v", got)
+	}
+
+	// merged: in step, even with the remote's answer kept from before
+	git(root, "merge", "-q", "--no-edit", "origin/main")
+	if got := CheckRemote(execx.System{}, root, m); got != nil {
+		t.Errorf("after merging: %+v, want nil", got)
+	}
+
+	// ahead of the remote: nothing to say
+	git(root, "commit", "-q", "--allow-empty", "-m", "chore: not pushed yet")
+	if got := CheckRemote(execx.System{}, root, m); got != nil {
+		t.Errorf("ahead of the remote: %+v, want nil", got)
+	}
+}
+
+// Tags and branch both behind: the message says both, and Fix is one
+// command that fetches the tags and merges.
+func TestCheckRemoteTagsAndBranchBehind(t *testing.T) {
+	root, remote, git := withRemote(t)
+	pushFromElsewhere(t, remote, git, "cli/v0.12.0")
+	got := CheckRemote(execx.System{}, root, m)
+	if !got.Lagging() || len(got.Behind) != 1 || got.Branch == nil || got.Fix != "git fetch --tags origin && git merge origin/main" {
+		t.Fatalf("tags and branch behind: %+v", got)
+	}
+	for _, s := range []string{"cli/v0.12.0 (here cli/v0.10.0)", "origin/main has commits this clone lacks", "git fetch --tags origin && git merge origin/main"} {
+		if !strings.Contains(got.Message, s) {
+			t.Errorf("message %q lacks %q", got.Message, s)
+		}
+	}
+}
+
+// A branch the remote does not have is not behind it.
+func TestCheckRemoteWithoutTheBranch(t *testing.T) {
+	root, remote, git := withRemote(t)
+	pushFromElsewhere(t, remote, git) // main moved, but this clone is not on main
+	git(root, "checkout", "-q", "-b", "work")
+	git(root, "commit", "-q", "--allow-empty", "-m", "chore: local work")
+	forgetRemotes(t)
+	if got := CheckRemote(execx.System{}, root, m); got != nil {
+		t.Errorf("a branch the remote lacks: %+v, want nil", got)
+	}
+}

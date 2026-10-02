@@ -167,7 +167,7 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	release.RemoteTTL = 0
 	gitIn(t, remote, "tag", "cli/v1.2.0", "main")
 	publish = answered("publish.preview", `{}`, "release", "--pending", "--dry-run")
-	says("publish.preview from a clone missing the remote's tags", publish, `"plans":null`, `"remote":"cli/v1.2.0"`, `"fix":"git fetch --tags origin"`)
+	says("publish.preview from a clone missing the remote's tags", publish, `"plans":null`, `"remote":"cli/v1.2.0"`, `"branch":{"upstream":"origin/main"`, `"fix":"git fetch --tags origin \u0026\u0026 git merge origin/main"`)
 	if rerr := same("push.pending", `{}`, "push", "--pending", "--dry-run"); rerr == nil || rerr.Code != hostapi.Conflict || !strings.Contains(rerr.Message, "cli/v1.2.0") {
 		t.Errorf("push.pending with auto-publish from a lagging clone: %+v, want a conflict", rerr)
 	}

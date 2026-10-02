@@ -100,11 +100,12 @@ func PushDryRun(r execx.Runner, root string, repo *workitem.Repo, autoPublish bo
 type Publishing struct {
 	Plans  []*release.PendingPlan `json:"plans"`
 	DryRun bool                   `json:"dry_run"`
-	// Remote is set when the remote's release tags have something to say
-	// (S-0174): a component whose tags here lag the remote's, when Plans is
-	// empty, since a plan built on the stale tag would publish what is
-	// already published; or a remote that could not be asked, when Plans is
-	// what this clone's tags alone say.
+	// Remote is set when the remote has something to say: a component whose
+	// tags here lag the remote's (S-0174), or a remote branch with commits
+	// this clone lacks (ADR-0067), when Plans is empty, since a plan built on
+	// the stale tag would publish what is already published, and one built
+	// on the stale branch could not be pushed; or a remote that could not be
+	// asked, when Plans is what this clone's tags alone say.
 	Remote *release.RemoteTags `json:"remote,omitempty"`
 	// Unplanned are the accepted items no plan covers, with why (I-0024).
 	Unplanned []release.Unplanned `json:"unplanned,omitempty"`

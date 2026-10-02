@@ -83,17 +83,22 @@ delivery level among everything accepted and unreleased for it since its last
 tag, bumps and commits, tags, and pushes the branch and every tag together,
 three tags to a push (I-0026). Run again after a partial failure: what already tagged or
 pushed is not redone. Tags on commits the remote already has, such as an
-acceptance pushed before it was released, are pushed on their own. flai push
---pending does the same computing, applying, and tagging before it pushes
-only with the auto-publish host action enabled (S-0144); otherwise this is
-where what has accumulated is released, when you choose.
+acceptance pushed before it was released, are pushed on their own. This is
+the one way accepted work reaches the remote, when you choose (ADR-0067);
+flai push --pending, and its auto-publish host action (S-0144), are an
+operator's tools outside the workflow.
 
-What is pending is worked out from this clone's tags, and flai never
-fetches. Before planning, --pending asks the remote the branch tracks (else
-origin) for its release tags (S-0174): when it has a newer <name>/vX.Y.Z
-than this clone, nothing is planned and publishing is refused (exit 3) until
-git fetch --tags brings them; when it cannot be reached, --dry-run warns and
-shows the plan, and publishing is refused. An accepted item no plan can
+What is pending is worked out from this clone's tags and branch, and flai
+never fetches: publishing is git fetch, then flai release --pending. Before
+planning, --pending asks the remote the branch tracks (else origin) for its
+release tags (S-0174) and its head of that branch (ADR-0067). When it has a
+newer <name>/vX.Y.Z than this clone, or commits on the branch this clone
+lacks, nothing is planned, applied, committed, or tagged, and publishing is
+refused (exit 3), naming what to run: git fetch --tags for the tags; for the
+branch, git fetch, then git merge <remote>/<branch> or git rebase onto it,
+then flai release --pending again. When the remote cannot be reached,
+--dry-run warns and shows the plan, and publishing is refused. A clone with
+no remote publishes locally. An accepted item no plan can
 cover, such as one touching two components with no tag saying which it
 delivers to, is named with the reason (I-0024).`,
 		Example: `  flai release S-031 --dry-run
@@ -166,8 +171,8 @@ delivers to, is named with the reason (I-0024).`,
 // action enabled (S-0144). TagPending is idempotent, so a
 // partial failure here and a rerun does not retag what already tagged.
 // Nothing is applied while the remote has a newer release tag than this
-// clone, or cannot be asked whether it has (S-0174): exit 3, as for a remote
-// that moved.
+// clone (S-0174) or commits on its branch this clone lacks (ADR-0067), or
+// cannot be asked whether it has: exit 3, as for a remote that moved.
 func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*release.PendingPlan, []string, error) {
 	if err := a.remoteTagsInStep(root, repo); err != nil {
 		return nil, nil, err
@@ -216,9 +221,10 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 }
 
 // remoteTagsInStep refuses a publish from a clone missing release tags its
-// remote has, which would tag versions already published, and from one that
-// cannot ask its remote, whose push would fail after tagging (S-0174). A
-// clone with no remote publishes locally as before.
+// remote has, which would tag versions already published (S-0174), from one
+// missing commits on its remote branch, whose push would fail after tagging
+// (ADR-0067), and from one that cannot ask its remote. A clone with no
+// remote publishes locally as before.
 func (a *app) remoteTagsInStep(root string, repo *workitem.Repo) error {
 	if refusal := release.CheckRemote(a.runner, root, repo.Manifest).Refusal(); refusal != "" {
 		return &exitError{code: exitPushDiverged, msg: refusal}

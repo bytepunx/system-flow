@@ -93,13 +93,13 @@ func TestReleasePendingResumesAfterAFailedPush(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
 	}
-	// someone else pushed, so the push half of publish is refused
-	other := filepath.Join(t.TempDir(), "other")
-	gitIn(t, filepath.Dir(other), "clone", "-q", remote, other)
-	gitIn(t, other, "config", "user.email", "o@o")
-	gitIn(t, other, "config", "user.name", "o")
-	gitIn(t, other, "commit", "-q", "--allow-empty", "-m", "elsewhere")
-	gitIn(t, other, "push", "-q", "origin", "main")
+	// the remote refuses the push half of publish; a remote that moved is
+	// refused before anything is tagged (S-0195), so a hook stands in for a
+	// push that fails after tagging
+	hook := filepath.Join(remote, "hooks", "pre-receive")
+	if err := os.WriteFile(hook, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	_, errOut, code := runIn(t, root, "release", "--pending")
 	if code == 0 || !strings.Contains(errOut, "the push failed") {
@@ -116,8 +116,9 @@ func TestReleasePendingResumesAfterAFailedPush(t *testing.T) {
 		t.Errorf("nothing new is pending; what remains is a push: %s", dry)
 	}
 
-	gitIn(t, root, "fetch", "-q", "origin")
-	gitIn(t, root, "merge", "-q", "--no-edit", "origin/main")
+	if err := os.Remove(hook); err != nil {
+		t.Fatal(err)
+	}
 	out, errOut, code := runIn(t, root, "release", "--pending")
 	if code != 0 || !strings.Contains(out, "pushed to origin") {
 		t.Fatalf("resumed publish should finish the push: %d %s %s", code, out, errOut)
