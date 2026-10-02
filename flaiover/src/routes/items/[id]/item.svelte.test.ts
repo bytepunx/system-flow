@@ -184,10 +184,10 @@ describe('the item page (S-0154)', () => {
 			return document.querySelector<HTMLAnchorElement>('[data-testid="new-same-type"]');
 		};
 
-		it("names a story and opens the form for a story under this one's epic", async () => {
+		it('names a story and opens the form for a story on its own, even under an epic (S-0192)', async () => {
 			const link = await show({ ...story, parent: 'E-0013' });
 			expect(link!.textContent).toBe('New story');
-			expect(link!.getAttribute('href')).toBe('/new?type=story&parent=E-0013');
+			expect(link!.getAttribute('href')).toBe('/new?type=story');
 		});
 
 		it('names a story with no epic and opens the form for a story alone', async () => {
@@ -251,6 +251,79 @@ describe('the item page (S-0154)', () => {
 			expect(await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0171' })).toBeNull();
 			again();
 			expect(await show(epic, false)).toBeNull();
+		});
+	});
+
+	describe('the New sibling link on a story (S-0192)', () => {
+		const sibling = { ...story, parent: 'E-0013' };
+		const epic = { ...story, id: 'E-0013', type: 'epic', parent: undefined, status: 'in-progress' };
+		const show = async (
+			item: Record<string, unknown>,
+			{ writable = true, parent = (): unknown => answer({ item: epic, children: [] }) } = {}
+		) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url === '/api/items/E-0013') return parent();
+				if (url === '/api/board') return answer({ writable });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			return document.querySelector<HTMLAnchorElement>('[data-testid="new-sibling-story"]');
+		};
+		const again = () => {
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+		};
+		const withEpic = (e: Record<string, unknown>) => ({
+			parent: () => answer({ item: { ...epic, ...e }, children: [] })
+		});
+
+		it('comes after New story and opens the form for a story under the same epic', async () => {
+			const link = await show(sibling);
+			expect(link!.textContent).toBe('New sibling');
+			expect(link!.getAttribute('href')).toBe('/new?type=story&parent=E-0013');
+			const links = [...link!.parentElement!.querySelectorAll('a')].map((a) => a.textContent);
+			expect(links).toEqual(['New story', 'New sibling']);
+		});
+
+		it('asks after the epic once, not at every change in the project', async () => {
+			await show(sibling);
+			changed(story.path);
+			await settle();
+			expect(api.mock.calls.filter(([u]) => u === '/api/items/E-0013').length).toBe(1);
+			expect(document.querySelector('[data-testid="new-sibling-story"]')).not.toBeNull();
+		});
+
+		it('is not offered on a story with no epic', async () => {
+			expect(await show(story)).toBeNull();
+			expect(api.mock.calls.some(([u]) => u === '/api/items/E-0013')).toBe(false);
+		});
+
+		it('is not offered under a closed or archived epic, which the form would not take', async () => {
+			expect(await show(sibling, withEpic({ status: 'done' }))).toBeNull();
+			again();
+			expect(await show(sibling, withEpic({ status: 'cancelled' }))).toBeNull();
+			again();
+			expect(await show(sibling, withEpic({ archived: true }))).toBeNull();
+		});
+
+		it('is not offered when the epic cannot be read', async () => {
+			const failed = () => ({ ok: false, json: async () => ({ error: 'no such item' }) });
+			expect(await show(sibling, { parent: failed })).toBeNull();
+			again();
+			const offline = () => {
+				throw new Error('offline');
+			};
+			expect(await show(sibling, { parent: offline })).toBeNull();
+		});
+
+		it('is not offered when the dashboard cannot write, or on an epic', async () => {
+			expect(await show(sibling, { writable: false })).toBeNull();
+			again();
+			expect(await show(epic)).toBeNull();
 		});
 	});
 

@@ -76,11 +76,16 @@
 	);
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
 	// The form for another item of this one's type (S-0171): the dashboard makes epics and stories,
-	// and a new story starts under this one's epic. Tasks are the agent's to write.
+	// and a new story starts on its own (S-0192). Tasks are the agent's to write.
 	const newQuery = $derived(
-		writable && (item?.type === 'story' || item?.type === 'epic')
-			? `?type=${item.type}` +
-					(item.type === 'story' && item.parent ? `&parent=${encodeURIComponent(item.parent)}` : '')
+		writable && (item?.type === 'story' || item?.type === 'epic') ? `?type=${item.type}` : null
+	);
+	// A story's epic when it is open (S-0192): the form offers only an open, unarchived epic as a
+	// parent, so New sibling waits until the epic is known to be one.
+	let openParent = $state<string | null>(null);
+	const siblingQuery = $derived(
+		writable && item?.type === 'story' && item.parent && item.parent === openParent
+			? `?type=story&parent=${encodeURIComponent(item.parent)}`
 			: null
 	);
 	// A story under this epic (S-0191): only an open epic, since the form offers no other as a parent.
@@ -111,6 +116,25 @@
 	let rendered = '';
 	// Whether the dashboard may write is asked once per item, not at every change.
 	let writableFor = '';
+	// So is whether a story's epic is open (S-0192), once per item and parent; an epic that cannot
+	// be read is taken as not open, and the page does not wait for the answer.
+	let parentFor = '';
+	async function askParent(of: Item) {
+		const key = `${of.id}>${of.parent ?? ''}`;
+		if (parentFor === key) return;
+		parentFor = key;
+		openParent = null;
+		if (!writable || of.type !== 'story' || !of.parent) return;
+		const epic = await api(`/api/items/${encodeURIComponent(of.parent)}`)
+			.then((r) => (r.ok ? r.json() : null))
+			.catch(() => null);
+		const open =
+			!!epic?.item &&
+			!epic.item.archived &&
+			epic.item.status !== 'done' &&
+			epic.item.status !== 'cancelled';
+		if (open && parentFor === key) openParent = of.parent;
+	}
 	async function load(keep = false) {
 		const r = await api(`/api/items/${id}`);
 		if (!r.ok) {
@@ -126,6 +150,7 @@
 			writable = (await (await api('/api/board')).json()).writable;
 			writableFor = item!.id;
 		}
+		void askParent(item!);
 		const next = render(item!.body, item!.path);
 		if (keep && next + canEdit === rendered) return;
 		// cleared first, so that the same body is drawn again rather than left as it was
@@ -272,14 +297,22 @@
 				</h1>
 				{#if newQuery}
 					<div class="flex shrink-0 gap-2">
-						<!-- Another of the same type, without going back to the board (S-0171), and on an
-						     open epic a story under it (S-0191). -->
+						<!-- Another of the same type, without going back to the board (S-0171), on a story
+						     whose epic is open another under it (S-0192), and on an open epic a story under
+						     it (S-0191). -->
 						<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it -->
 						<a
 							class="rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
 							href={resolve('/new') + newQuery}
 							data-testid="new-same-type">New {item.type}</a
 						>
+						{#if siblingQuery}
+							<a
+								class="rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
+								href={resolve('/new') + siblingQuery}
+								data-testid="new-sibling-story">New sibling</a
+							>
+						{/if}
 						{#if childQuery}
 							<a
 								class="rounded border border-line-strong bg-surface px-2 py-1 text-sm whitespace-nowrap hover:bg-raised"
