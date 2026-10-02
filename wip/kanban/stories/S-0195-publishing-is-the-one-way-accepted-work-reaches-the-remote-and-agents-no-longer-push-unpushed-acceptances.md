@@ -3,19 +3,42 @@ id: S-0195
 type: story
 nature: improvement
 title: Publishing is the one way accepted work reaches the remote, and agents no longer push unpushed acceptances
-status: backlog
+status: in-progress
 owner: arobson
 created: 2026-10-02T09:46:13Z
-updated: 2026-10-02T16:17:53Z
-transitions: []
+updated: 2026-10-02T23:46:39Z
+transitions:
+  - to: ready
+    at: 2026-10-02T23:24:51Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-02T23:25:20Z
+    by: agent-S-0195
 tags: [flai, dashboard]
 topics: [release]
-touches: [flai/internal/mcpserver, flai/cmd/push.go, flai/cmd/release.go, flai/internal/harness, flai/internal/hostapi, flaiover/src]
+touches: [flai/internal/mcpserver, flai/cmd/push.go, flai/cmd/release.go, flai/internal/harness, flai/internal/hostapi, flaiover/src, flai/internal/workitem/boardview.go, flai/cmd/board.go, flai/internal/release/remote.go, flai/internal/preview, flai/cmd/serve_actions.go, flai/cmd/dashboard.go, design/system, docs, design/conventions/git.md, flai/cmd/board_test.go, flai/cmd/push_test.go, flai/internal/workitem/boardview_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1300
+  estimated: true
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 202
+      output: 32
+      cache_read: 1456053
+      cache_write: 89560
+      cost: 0.2967
+    - model: claude-opus-5-5
+      input: 234
+      output: 2074
+      cache_read: 11285772
+      cache_write: 257496
+      cost: 4.7362
 ---
 # S-0195 Publishing is the one way accepted work reaches the remote, and agents no longer push unpushed acceptances
 
@@ -33,6 +56,12 @@ agent:
 - [ ] Tests cover the instructions and inbox without the push duty, and publishing after a fetch
 
 ## Tasks
+- T-0717 ADR-0067 is accepted, or the designer's changes are a new ADR
+- T-0718 Inbox, flai board, the MCP instructions, and the harness prompt no longer tell an agent to push
+- T-0719 flai release --pending and Publish refuse a clone behind its remote, naming the fetch and merge to run
+- T-0720 The host API no longer offers the dashboard pushing or auto-publish
+- T-0721 The dashboard has no push banner, and Publish shows a clone behind its remote
+- T-0722 The design and the guides describe publishing as the one way to the remote
 
 ## Notes
 

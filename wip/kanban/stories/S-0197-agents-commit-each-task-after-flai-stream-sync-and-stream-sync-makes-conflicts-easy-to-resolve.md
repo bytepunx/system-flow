@@ -3,11 +3,14 @@ id: S-0197
 type: story
 nature: improvement
 title: Agents commit each task after flai stream sync, and stream sync makes conflicts easy to resolve
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-02T09:46:13Z
-updated: 2026-10-02T09:46:13Z
-transitions: []
+updated: 2026-10-02T23:25:04Z
+transitions:
+  - to: ready
+    at: 2026-10-02T23:25:04Z
+    by: alex
 tags: [flai, template]
 touches: [flai/internal/storygit, flai/cmd/stream.go, flai/internal/harness, scripts/close-out.sh, template/]
 agent:
