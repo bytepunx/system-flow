@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-01
+updated: 2026-10-02
 status: active
 ---
 
@@ -31,6 +31,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
 | [issue](#flai-issue) | Record recurring friction in design/issues with counts and cost |
+| [license](#flai-license) | Print the license flai is distributed under |
 | [mcp](#flai-mcp) | Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start |
 | [migrate](#flai-migrate) | One-off migrations of a repository to the current standard |
 | [move](#flai-move) | Transition a work item, enforcing the workflow rules |
@@ -91,6 +92,7 @@ Subcommands:
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
 - [issue](#flai-issue): Record recurring friction in design/issues with counts and cost
+- [license](#flai-license): Print the license flai is distributed under
 - [mcp](#flai-mcp): Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start
 - [migrate](#flai-migrate): One-off migrations of a repository to the current standard
 - [move](#flai-move): Transition a work item, enforcing the workflow rules
@@ -1251,6 +1253,23 @@ Regenerate summary.md and print the open issues table.
 
 ```text
 flai issue summary
+```
+
+### flai license
+
+Print the license flai is distributed under.
+
+```text
+flai license
+```
+
+Print the system-flow Shield License: the terms flai, flaiover, and the system-flow repository are distributed under. The text is built into the binary, so it is the license of the very flai that prints it. It is LICENSE.md at the root of the repository, and the dashboard shows the same text under Host.
+
+Examples:
+
+```bash
+flai license
+flai license --json
 ```
 
 ### flai mcp

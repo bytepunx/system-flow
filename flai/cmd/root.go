@@ -143,6 +143,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(newHostAPICmd(a))
 	root.AddCommand(newGuardCmd(a))
 	root.AddCommand(newReferenceCmd(a))
+	root.AddCommand(newLicenseCmd(a))
 	return root
 }
 

@@ -39,6 +39,10 @@ archives:
         formats: [zip]
     files:
       - README.md
+      # The license travels with every copy (S-0231): the binary embeds this
+      # same file, a copy of LICENSE.md at the repository root.
+      - src: internal/license/LICENSE.md
+        dst: LICENSE.md
 
 checksum:
   name_template: checksums.txt
