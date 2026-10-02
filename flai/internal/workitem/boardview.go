@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
-	"github.com/bytepunx/system-flow/flai/internal/pending"
 )
 
 // BoardCard is one item on the board as flai board --json and the MCP board
@@ -44,9 +43,10 @@ type BoardView struct {
 	WIPLimits map[string]int         `json:"wip_limits"`
 	Order     []string               `json:"order"`
 	Breaches  []string               `json:"breaches"`
-	// Unpushed is set by callers that can ask git: an acceptance in the main
-	// checkout that its remote-tracking branch does not have yet (S-0063).
-	Unpushed *pending.Unpushed `json:"unpushed,omitempty"`
+	// Unpublished names the accepted items no release has covered yet, by ID:
+	// what publishing would send to the remote, which is the operator's to
+	// do or to ask for (ADR-0067).
+	Unpublished []string `json:"unpublished,omitempty"`
 	// Counts are stories per column, which is what the limits apply to.
 	Counts map[string]int `json:"-"`
 }
@@ -58,10 +58,17 @@ type BoardView struct {
 // Acceptance archives a story the moment it merges (S-0087); pendingPublish
 // names the stories a release has not yet covered, so a done, archived story
 // still on the done column until it is published, instead of vanishing the
-// instant it is accepted, before anyone has had the chance to see it there.
+// instant it is accepted, before anyone has had the chance to see it there;
+// the view lists them as unpublished too.
 func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool, projects []manifest.Project) BoardView {
 	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}}
 	holds := NewHolds(items, projects)
+	for id, ok := range pendingPublish {
+		if ok {
+			v.Unpublished = append(v.Unpublished, id)
+		}
+	}
+	sort.Strings(v.Unpublished)
 	// A parent is looked up among every item given, archived ones included.
 	titles := map[string]string{}
 	tasks := map[string][]*Item{} // by story, for its plan

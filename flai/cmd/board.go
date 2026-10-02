@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -32,9 +31,6 @@ func newBoardCmd(a *app) *cobra.Command {
 				return err
 			}
 			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo), repo.Manifest.Projects)
-			if u := pending.Detect(a.runner, mainRootOf(repo)); u.Pending() {
-				view.Unpushed = u
-			}
 			columns, counts, breaches := view.Columns, view.Counts, view.Breaches
 			if a.jsonOut {
 				return a.printJSON(view)
@@ -74,8 +70,9 @@ func newBoardCmd(a *app) *cobra.Command {
 			if len(board.Order) > 0 {
 				fmt.Fprintf(a.out, "\npull order: %v\n", board.Order)
 			}
-			if u := view.Unpushed; u != nil {
-				fmt.Fprintf(a.out, "\naccepted, not pushed: %s (%d commit(s) ahead of %s%s); run: %s\n", strings.Join(u.Acceptances, ", "), u.Commits, u.Upstream, tagsNote(u.Tags), u.Command)
+			// information, not a duty: publishing is the operator's (ADR-0067)
+			if len(view.Unpublished) > 0 {
+				fmt.Fprintf(a.out, "\naccepted, not yet published: %s (publishing is the operator's: git fetch, then flai release --pending)\n", strings.Join(view.Unpublished, ", "))
 			}
 			for _, b := range breaches {
 				a.logger().Warn("wip limit exceeded", "component", "workitem", "detail", b)

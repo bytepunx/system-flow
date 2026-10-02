@@ -300,6 +300,26 @@ func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
 	}
 }
 
+// S-0195, ADR-0067: publishing is the operator's, so no prompt, however the
+// agent was started, tells it to push accepted work.
+func TestThePromptNeverTellsTheAgentToPush(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted, answered, commit, begun, started := r, r, r, r, r
+	restarted.Restart = "ended (exit 1)"
+	answered.Answered = "TH-0001"
+	commit.Commit = "/w"
+	begun.Begun = &Begun{By: "alex", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104", Threads: []string{"TH-0041"}}
+	started.Started, started.Past = true, []string{"the in-progress limit was full"}
+	for _, x := range []Request{r, restarted, answered, commit, begun, started} {
+		p := Prompt(x)
+		for _, never := range []string{"flai push", "git push", "unpushed", "push --pending", "publish"} {
+			if strings.Contains(p, never) {
+				t.Errorf("prompt says %q:\n%s", never, p)
+			}
+		}
+	}
+}
+
 // S-0189: the story's agent runs only the tests for what it changed, leaves
 // the whole suite, lint, and check to one verifier before review and one
 // more after its fixes, and fixes what a verifier finds itself.

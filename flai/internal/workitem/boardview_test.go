@@ -35,8 +35,19 @@ func TestArchivedDoneStoryStaysUntilPublished(t *testing.T) {
 	}
 
 	// nothing named as pending: the old behaviour, nothing archived shows
-	if v := NewBoardView(items, board, now, false, nil, nil); len(v.Columns[Done]) != 0 {
-		t.Errorf("no pending map: %v", ids(v.Columns[Done]))
+	if v := NewBoardView(items, board, now, false, nil, nil); len(v.Columns[Done]) != 0 || v.Unpublished != nil {
+		t.Errorf("no pending map: %v, unpublished %v", ids(v.Columns[Done]), v.Unpublished)
+	}
+}
+
+// S-0195, ADR-0067: the view lists what is accepted and not yet published,
+// every ID pendingPublish names, in order, for whoever publishes.
+func TestBoardViewListsWhatIsUnpublished(t *testing.T) {
+	items := []*Item{{ID: "S-0002", Type: Story, Title: "Accepted", Status: Done, Archived: true}}
+	pending := map[string]bool{"S-0009": true, "S-0002": true, "S-0005": false}
+	v := NewBoardView(items, &Board{}, time.Now(), false, pending, nil)
+	if got := v.Unpublished; len(got) != 2 || got[0] != "S-0002" || got[1] != "S-0009" {
+		t.Errorf("unpublished: %v", got)
 	}
 }
 

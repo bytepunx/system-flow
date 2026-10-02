@@ -9,7 +9,8 @@ import (
 )
 
 // S-0063: an acceptance made with no credential at hand is pushed later, from
-// the host, by flai push --pending; flai board says when there is one.
+// the host, by flai push --pending, an operator's tool outside the workflow
+// since ADR-0067; flai board no longer says when there is one.
 func TestPushPending(t *testing.T) {
 	root, remote := researchProject(t, "feature", true)
 	// accept as the dashboard container does when it holds nothing; S-0087:
@@ -21,23 +22,6 @@ func TestPushPending(t *testing.T) {
 	}
 	remoteHead := func() string { return strings.TrimSpace(gitIn(t, remote, "rev-parse", "main")) }
 	before := remoteHead()
-
-	board, _, _ := runIn(t, root, "board")
-	if !strings.Contains(board, "accepted, not pushed: S-0001") || !strings.Contains(board, "flai push --pending") {
-		t.Errorf("flai board says what is pending and what to run:\n%s", board)
-	}
-	var view struct {
-		Unpushed *struct {
-			Commits     int      `json:"commits"`
-			Acceptances []string `json:"acceptances"`
-			Tags        []string `json:"tags"`
-			Upstream    string   `json:"upstream"`
-		} `json:"unpushed"`
-	}
-	js, _, _ := runIn(t, root, "board", "--json")
-	if err := json.Unmarshal([]byte(js), &view); err != nil || view.Unpushed == nil || view.Unpushed.Upstream != "origin/main" || len(view.Unpushed.Acceptances) != 1 || view.Unpushed.Acceptances[0] != "S-0001" || len(view.Unpushed.Tags) != 0 {
-		t.Errorf("board --json: %v %+v", err, view.Unpushed)
-	}
 
 	if _, errOut, code := runIn(t, root, "push"); code == 0 || !strings.Contains(errOut, "--pending") {
 		t.Errorf("flai push alone does nothing and says why: %d %s", code, errOut)
@@ -56,10 +40,6 @@ func TestPushPending(t *testing.T) {
 	again, _, _ := runIn(t, root, "push", "--pending")
 	if !strings.Contains(again, "nothing pending") {
 		t.Errorf("a second run: %s", again)
-	}
-	board, _, _ = runIn(t, root, "board", "--json")
-	if strings.Contains(board, "unpushed") {
-		t.Errorf("the board stops saying so at once:\n%s", board)
 	}
 }
 
