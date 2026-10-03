@@ -190,6 +190,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.issues", mf, keyLine(mf, "issues"), "%v", err)
 	}
+	for _, msg := range m.Planning.Errors() {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.planning", mf, keyLine(mf, "planning"), "%s", msg)
+	}
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
 			c.add(Warning, "layout.lock", filepath.Join(c.repo.Root, "system-flow.yaml"), keyLine(filepath.Join(c.repo.Root, "system-flow.yaml"), "template"), "template %s is recorded but there is no system-flow.lock.yaml; run flai upgrade --relock", m.Template.Version)
@@ -267,7 +271,8 @@ func (c *checker) oneItem(it *workitem.Item) {
 	if err := it.Validate(); err != nil {
 		for _, msg := range strings.Split(err.Error(), "; ") {
 			key := strings.Fields(msg)[0]
-			key = strings.SplitN(key, "[", 2)[0]
+			// transitions[0].at and cost_of_delay.value are on their block's key
+			key = strings.SplitN(strings.SplitN(key, "[", 2)[0], ".", 2)[0]
 			c.add(Error, "item.front-matter", p, keyLine(p, key), "%s", msg)
 		}
 	}
@@ -312,6 +317,12 @@ func (c *checker) oneItem(it *workitem.Item) {
 	}
 	if it.Type == workitem.Story && it.Status != workitem.Backlog && it.Status != workitem.Cancelled && !hasCriteria(it.Body) {
 		c.add(Error, "story.criteria", p, headingLine(p, "## Acceptance criteria"), "a %s story needs acceptance criteria with at least one checkbox", it.Status)
+	}
+	// A draft is finalized before it is ready (S-0199); one past backlog was
+	// moved by an older flai or edited by hand. The archive is not edited and
+	// is not reported.
+	if it.Type == workitem.Story && it.Draft && !it.Archived && it.Status != workitem.Backlog && it.Status != workitem.Cancelled {
+		c.add(Warning, "story.draft", p, keyLine(p, "draft"), "%s is a draft in %s; finalize it (flai edit %s --no-draft) or move it back to backlog", it.ID, it.Status, it.ID)
 	}
 	if it.Status == workitem.Done {
 		for _, ch := range children {

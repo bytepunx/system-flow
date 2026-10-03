@@ -154,7 +154,7 @@ func planningErrors(it *Item) []string {
 			errs = append(errs, "cost_of_delay is for stories and epics, and this is "+articled(it.Type))
 		}
 		if c.Inputs.IsZero() && c.Value == nil {
-			errs = append(errs, "cost_of_delay has neither inputs nor a value; give one or both")
+			errs = append(errs, "cost_of_delay has neither inputs nor a value: give one or both")
 		}
 		if in := c.Inputs; in != nil {
 			errs = append(errs, amountErrors("cost_of_delay.inputs.revenue_per_week", in.RevenuePerWeek)...)
@@ -169,7 +169,7 @@ func planningErrors(it *Item) []string {
 			errs = append(errs, "forecast is for stories, and this is "+articled(it.Type))
 		}
 		if f.Duration == "" && f.Delivery == "" {
-			errs = append(errs, "forecast has neither a duration nor a delivery; give one or both")
+			errs = append(errs, "forecast has neither a duration nor a delivery: give one or both")
 		}
 		errs = append(errs, durationErrors("forecast.duration", f.Duration)...)
 		if f.Delivery != "" {
@@ -178,7 +178,7 @@ func planningErrors(it *Item) []string {
 			}
 		}
 		if strings.ContainsAny(f.Basis, "\r\n") {
-			errs = append(errs, "forecast.basis is more than one line; write it as one sentence")
+			errs = append(errs, "forecast.basis is more than one line: write it as one sentence")
 		}
 		errs = append(errs, setByErrors("forecast", f.By, f.At)...)
 	}
@@ -191,9 +191,9 @@ func amountErrors(key string, v *float64) []string {
 	case v == nil:
 		return nil
 	case math.IsNaN(*v) || math.IsInf(*v, 0):
-		return []string{fmt.Sprintf("%s is not a finite amount; write a number of zero or more in the project's currency", key)}
+		return []string{fmt.Sprintf("%s is not a finite amount: write a number of zero or more in the project's currency", key)}
 	case *v < 0:
-		return []string{fmt.Sprintf("%s %s is negative; write a number of zero or more in the project's currency", key, strconv.FormatFloat(*v, 'f', -1, 64))}
+		return []string{fmt.Sprintf("%s %s is negative: write a number of zero or more in the project's currency", key, strconv.FormatFloat(*v, 'f', -1, 64))}
 	}
 	return nil
 }
