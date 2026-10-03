@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0205
-  - S-0206
   - S-0208
   - S-0209
 ---

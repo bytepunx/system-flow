@@ -3,22 +3,42 @@ id: S-0206
 type: story
 nature: feature
 title: Planner, orchestrator, and analyzer runs are logged in an activity document, with cost, seconds, and work completed in its front matter
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-03T05:34:34Z
+updated: 2026-10-03T19:12:18Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:34Z
     by: alex
+  - to: in-progress
+    at: 2026-10-03T18:34:00Z
+    by: agent-S-0206
 tags: [flai, dashboard]
-touches: [flai/internal/serve, flai/internal/usage, flai/internal/workitem, flai/internal/check, design/system/agent-narrative.md]
+touches: [flai/internal/serve, flai/internal/usage, flai/internal/workitem, flai/internal/check, design/system/agent-narrative.md, design/adrs, template/root/wip/agents/README.md, wip/agents/README.md, flai/internal/metrics, flai/cmd/stats.go, design/system/metrics.md, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0067-flai-touches-with-paths-replaces-an-item-s-touches-and-its-help-does-not-say-so.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md, flai/cmd/check_stats_test.go, flai/cmd/hostapi_reads_test.go, flai/internal/hostapi/reads.go, design/conventions/strategic-agents.md, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2338
+  estimated: true
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 98
+      output: 19
+      cache_read: 430141
+      cache_write: 60012
+      cost: 0.1518
+    - model: claude-opus-5-5
+      input: 490
+      output: 4559
+      cache_read: 26368161
+      cache_write: 672379
+      cost: 10.9816
 ---
 # S-0206 Planner, orchestrator, and analyzer runs are logged in an activity document, with cost, seconds, and work completed in its front matter
 
@@ -27,12 +47,20 @@ agent:
 Story agents have narratives; the planner, orchestrator, and analyzer have no story and so no record. Each needs a log document of what it did, how long it took, and what it cost, and totals in front matter the metrics can read. Decided by the designer on 2026-10-02.
 
 ## Acceptance criteria
-- [ ] Each agent kind has one activity document per project, `wip/agents/planner.md`, `orchestrator.md`, `analyzer.md`, with front matter `kind`, `accrued_cost`, `accrued_seconds`, `tasks_completed`, `last_run`, and `## Log` entries flai writes per activity: the timestamp, a one-line summary the agent gives, the items touched, the wall-clock duration, and the estimated cost of that activity (from the run's usage so far, apportioned as task usage is, ADR-0051)
-- [ ] `flai serve` writes the entry when an activity ends, measured from the run's stream-json log as story runs are, and updates the front matter totals; a run that spans activities (the orchestrator) reports each through an MCP tool `activity_log` that the agent calls with its summary
-- [ ] The documents are listed in `wip/agents/index.md` under a heading of their own and lint clean; `flai check` validates their front matter
-- [ ] `flai stats` reads the front matter and log for the strategic-agent metrics
-- [ ] `design/system/agent-narrative.md` and the user guide describe them; tests cover an entry written, totals accrued, and a resumed run
+- [x] Each agent kind has one activity document per project, `wip/agents/planner.md`, `orchestrator.md`, `analyzer.md`, with front matter `kind`, `accrued_cost`, `accrued_seconds`, `tasks_completed`, `last_run`, and `## Log` entries flai writes per activity: the timestamp, a one-line summary the agent gives, the items touched, the wall-clock duration, and the estimated cost of that activity (from the run's usage so far, apportioned as task usage is, ADR-0051)
+- [x] `flai serve` writes the entry when an activity ends, measured from the run's stream-json log as story runs are, and updates the front matter totals; a run that spans activities (the orchestrator) reports each through an MCP tool `activity_log` that the agent calls with its summary
+- [x] The documents are listed in `wip/agents/index.md` under a heading of their own and lint clean; `flai check` validates their front matter
+- [x] `flai stats` reads the front matter and log for the strategic-agent metrics
+- [x] `design/system/agent-narrative.md` and the user guide describe them; tests cover an entry written, totals accrued, and a resumed run
 
 ## Tasks
+- T-0772 Activity documents for the planner, orchestrator, and analyzer: read, append an entry with accrued totals, and list in the agents index
+- T-0773 flai serve measures an activity from its run's stream-json log and writes its entry, at an activity's end and at a strategic run's end
+- T-0774 flai check validates the activity documents' front matter and stops calling them orphan narratives
+- T-0775 flai stats reports each strategic agent's accrued cost, seconds, activities, and log from its activity document
+- T-0776 The MCP tool activity_log reports a strategic agent's activity with its summary and items, and the user guide describes the documents
 
 ## Notes
+
+- Nothing starts a strategic run yet. `serve.LogRunEnd` is the hook S-0208 (planner) and S-0218 (orchestrator) call when a run they start ends, and their logs are named `<key>-<kind>-<start>.log` for `serve.ActivityLogs`. Tests on fixture logs cover an activity's end through `activity_log` and a run's end (`flai/internal/serve/activity_test.go`, `flai/cmd/activity_test.go`).
+- `flai stats --json` and the dashboard's `stats.get` report `strategic`: each document's totals and its entries in the window (ADR-0079, `metrics.md`). The per-day series and the comparison with delivery are S-0205's.

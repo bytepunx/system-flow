@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-03T18:31:22Z
+updated: 2026-10-03T18:44:43Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:24Z
@@ -16,13 +16,36 @@ transitions:
     at: 2026-10-03T18:31:22Z
     by: agent-S-0204
 tags: [dashboard, flai]
-touches: [flaiover/src/routes/new, flaiover/src/routes/edit, flaiover/src/routes/items, flai/internal/hostapi]
+touches: [flaiover/src/routes/new, flaiover/src/routes/edit, flaiover/src/routes/items, flaiover/src/routes/api/items/+server.ts, flaiover/src/lib/components/CostOfDelayPanel.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/costofdelay.ts, flaiover/src/lib/planning.ts, flaiover/src/lib/planning.test.ts, flai/internal/hostapi, flai/cmd, flai/internal/workitem, flai/internal/itemedit, design/adrs, design/system/work-hierarchy.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, "flaiover/src/routes/api/items/[id]/edit", flaiover/src/lib/costofdelay.test.ts, flaiover/src/lib/components/CostOfDelayPanel.svelte.test.ts, flaiover/src/lib/components/NewItemForm.svelte.test.ts, flaiover/src/lib/components/ItemEditor.svelte.test.ts, design/issues/I-0066-an-acceptance-merge-committed-conflict-markers-to-a-design-document-on-main-and-nothing-caught-it.md, design/issues/summary.md, docs/operators/settings.md]
 after: [S-0199]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 985
+  estimated: true
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 170
+      output: 27
+      cache_read: 1222239
+      cache_write: 99386
+      cost: 0.4091
+    - model: claude-opus-5-5
+      input: 294
+      output: 2848
+      cache_read: 12326455
+      cache_write: 331913
+      cost: 5.1301
+    - model: claude-sonnet-5
+      input: 32
+      output: 76
+      cache_read: 396281
+      cache_write: 42557
+      cost: 0.1742
 ---
 # S-0204 The new-item and edit forms take cost of delay inputs in a collapsed panel
 
@@ -37,5 +60,10 @@ The operator supplies what delay costs when creating or editing an epic or story
 - [ ] `design/system/flaiover-dashboard.md` and the user guide describe the panel; tests cover saving, clearing, and the stale note
 
 ## Tasks
+- T-0767 flai story new and flai epic new take cost of delay inputs, and hostapi item.new passes them
+- T-0768 The new-item and edit forms have a collapsed Cost of delay panel
+- T-0769 Cost of delay inputs carry their own by and at, apart from the value's
+- T-0770 The item page shows the inputs, the planner's value with who set it and when, and a stale note
+- T-0771 The dashboard design and the user guide describe the Cost of delay panel and the item page
 
 ## Notes

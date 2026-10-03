@@ -18,26 +18,27 @@ tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
 usage:
   source: sum
-  seconds: 16296
+  seconds: 20816
+  estimated: true
   models:
     - model: claude-haiku-4-5-20251001
-      input: 1178
-      output: 44557
-      cache_read: 7539387
-      cache_write: 407983
-      cost: 1.4879
+      input: 1446
+      output: 44603
+      cache_read: 9191767
+      cache_write: 567381
+      cost: 2.0488
     - model: claude-opus-5-5
-      input: 2538
-      output: 834861
-      cache_read: 154877726
-      cache_write: 3829258
-      cost: 71.9027
+      input: 3550
+      output: 926302
+      cache_read: 206749982
+      cache_write: 5171241
+      cost: 94.6026
     - model: claude-sonnet-5
-      input: 502
-      output: 131712
-      cache_read: 16972890
-      cache_write: 985139
-      cost: 7.1756
+      input: 580
+      output: 144642
+      cache_read: 18717789
+      cache_write: 1110251
+      cost: 7.9545
 ---
 # E-0016 Introduce Orchestration, Planning, and Analysis agents
 

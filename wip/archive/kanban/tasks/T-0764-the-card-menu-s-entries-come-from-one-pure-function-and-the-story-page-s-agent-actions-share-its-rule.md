@@ -3,11 +3,11 @@ id: T-0764
 type: task
 nature: feature
 title: The card menu's entries come from one pure function, and the story page's agent actions share its rule
-status: in-progress
+status: done
 parent: S-0202
 owner: alex
 created: 2026-10-03T18:32:18Z
-updated: 2026-10-03T18:32:55Z
+updated: 2026-10-03T18:35:39Z
 transitions:
   - to: ready
     at: 2026-10-03T18:32:54Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-03T18:32:55Z
     by: agent-S-0202
+  - to: done
+    at: 2026-10-03T18:35:39Z
+    by: agent-S-0202
 stream: S-0202
 tags: []
 touches: [flaiover/src/lib/cardmenu.ts, flaiover/src/lib/cardmenu.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/StoryAgent.svelte]
+usage:
+  source: log
+  seconds: 164
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 11654
+      cache_read: 1827516
+      cache_write: 46832
+      cost: 0.9137
 ---
 
 # T-0764 The card menu's entries come from one pure function, and the story page's agent actions share its rule
