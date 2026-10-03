@@ -16,16 +16,16 @@ func TestInstancesInTheSameSecondShareOneHeading(t *testing.T) {
 		t.Fatal(err)
 	}
 	// new and bump in the same second, then two bumps at one later instant
-	if err := Bump(is, "", "second, the same second as the first", t0); err != nil {
+	if err := Bump(is, "", "", "second, the same second as the first", t0); err != nil {
 		t.Fatal(err)
 	}
 	later := t0.Add(time.Hour)
 	for _, note := range []string{"third", "fourth, the same second as the third"} {
-		if err := Bump(is, "", note, later); err != nil {
+		if err := Bump(is, "", "", note, later); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := Bump(is, "", "fifth, a second later", later.Add(time.Second)); err != nil {
+	if err := Bump(is, "", "", "fifth, a second later", later.Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
 	raw, _ := os.ReadFile(is.Path)

@@ -44,7 +44,7 @@ func TestLifecycle(t *testing.T) {
 	if err != nil || back.Marshal() != string(raw) {
 		t.Fatalf("round trip: %v", err)
 	}
-	if err := Bump(back, "15m", "again", t0.Add(time.Hour)); err != nil {
+	if err := Bump(back, "", "15m", "again", t0.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	if back.Count != 2 || back.Cost != "10m" || back.LastReported != "2026-09-16T11:00:00Z" || back.FirstReported != "2026-09-16T10:00:00Z" {
@@ -53,7 +53,7 @@ func TestLifecycle(t *testing.T) {
 	if !strings.Contains(back.Body, "### 2026-09-16T11:00:00Z\nagain\n\n## Remediation") {
 		t.Errorf("instance not inserted before remediation:\n%s", back.Body)
 	}
-	if err := Bump(back, "", "no cost this time", t0.Add(2*time.Hour)); err != nil || back.Count != 3 || back.Cost != "10m" {
+	if err := Bump(back, "", "", "no cost this time", t0.Add(2*time.Hour)); err != nil || back.Count != 3 || back.Cost != "10m" {
 		t.Errorf("bump without cost: %v %+v", err, back)
 	}
 	second, _ := New(r, NewOptions{Title: "Two", Class: "defect", Now: t0})
@@ -75,7 +75,7 @@ func TestLifecycle(t *testing.T) {
 	if err := Close(back, "fixed by S-010", t0.Add(3*time.Hour)); err != nil || back.Status != "closed" || !strings.Contains(back.Body, "Closed 2026-09-16T13:00:00Z: fixed by S-010") {
 		t.Errorf("close: %v %+v", err, back)
 	}
-	if err := Bump(back, "", "", t0); err == nil {
+	if err := Bump(back, "", "", "", t0); err == nil {
 		t.Error("bump on closed should fail")
 	}
 	list, _ = WriteSummary(r, t0)
@@ -125,7 +125,7 @@ func TestAnIssueWithAnUnknownFieldIsListedAndKept(t *testing.T) {
 	if err != nil || len(list) != 1 || len(list[0].Unknown) != 1 || list[0].Unknown[0].Name != "owner" {
 		t.Fatalf("listing: %v %+v", err, list)
 	}
-	if err := Bump(list[0], "", "again", t0.Add(time.Hour)); err != nil {
+	if err := Bump(list[0], "", "", "again", t0.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	after, _ := os.ReadFile(is.Path)

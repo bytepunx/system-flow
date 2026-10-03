@@ -79,7 +79,7 @@ func newIssueBumpCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := issues.Bump(is, cost, note, a.now()); err != nil {
+			if err := issues.Bump(is, "", cost, note, a.now()); err != nil {
 				return err
 			}
 			if _, err := issues.WriteSummary(repo, a.now()); err != nil {

@@ -191,10 +191,11 @@ func NextID(r *workitem.Repo) string {
 	return fmt.Sprintf("I-%0*d", workitem.IDWidth, max+1)
 }
 
-// NewOptions describe an issue to record.
+// NewOptions describe an issue to record. Story is the story the first
+// instance belongs to, or empty for none.
 type NewOptions struct {
-	Title, Class, Cost, Note string
-	Now                      time.Time
+	Title, Class, Cost, Note, Story string
+	Now                             time.Time
 }
 
 // New creates an issue file with count 1.
@@ -210,6 +211,10 @@ func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 			return nil, fmt.Errorf("--cost must be a duration like 20m: %w", err)
 		}
 	}
+	story, err := storyID(opt.Story)
+	if err != nil {
+		return nil, err
+	}
 	now := opt.Now.UTC().Format(workitem.TimeFormat)
 	id := NextID(r)
 	note := strings.TrimSpace(opt.Note)
@@ -219,7 +224,7 @@ func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 	is := &Issue{ID: id, Title: opt.Title, Class: opt.Class, Status: "open", Count: 1, Cost: normalise(opt.Cost),
 		FirstReported: now, LastReported: now, Updated: now,
 		Path: filepath.Join(Dir(r), id+"-"+template.Slug(opt.Title)+".md"),
-		Body: fmt.Sprintf("\n# %s %s\n\n## Description\n%s\n\n## Instances\n\n### %s\n%s\n\n## Remediation\n", id, opt.Title, opt.Title, now, note)}
+		Body: fmt.Sprintf("\n# %s %s\n\n## Description\n%s\n\n## Instances\n\n### %s\n%s%s\n\n## Remediation\n", id, opt.Title, opt.Title, now, storyLine(story), note)}
 	if err := is.Validate(); err != nil {
 		return nil, err
 	}
@@ -227,10 +232,14 @@ func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 }
 
 // Bump records another occurrence: count, last_reported, averaged cost, and
-// a new instance in the body.
-func Bump(is *Issue, cost, note string, now time.Time) error {
+// a new instance in the body naming the story it belongs to, if any.
+func Bump(is *Issue, story, cost, note string, now time.Time) error {
 	if is.Status != "open" {
 		return fmt.Errorf("%s is closed; reopen it by editing status, or record a new issue", is.ID)
+	}
+	story, err := storyID(story)
+	if err != nil {
+		return err
 	}
 	ts := now.UTC().Format(workitem.TimeFormat)
 	if cost != "" {
@@ -251,7 +260,7 @@ func Bump(is *Issue, cost, note string, now time.Time) error {
 	if strings.TrimSpace(note) == "" {
 		note = "Occurred again."
 	}
-	is.Body = insertInstance(is.Body, ts, strings.TrimSpace(note))
+	is.Body = insertInstance(is.Body, ts, story, strings.TrimSpace(note))
 	return is.Save()
 }
 
@@ -269,20 +278,25 @@ func Close(is *Issue, reason string, now time.Time) error {
 	return is.Save()
 }
 
-// insertInstance adds an occurrence at the end of the Instances section.
-// Instances are headed by their timestamp, to the second. Two recorded in the
-// same second share the heading, as narrative log entries do (I-0011): a
-// second identical heading fails the duplicate-heading rule.
-func insertInstance(body, ts, note string) string {
+// insertInstance adds an occurrence at the end of the Instances section,
+// its story line first. Instances are headed by their timestamp, to the
+// second. Two recorded in the same second share the heading, as narrative log
+// entries do (I-0011): a second identical heading fails the duplicate-heading
+// rule. The joined note names its story unless that instance already does.
+func insertInstance(body, ts, story, note string) string {
 	head, tail := strings.TrimRight(body, "\n"), ""
 	if idx := strings.Index(body, "\n## Remediation"); idx >= 0 {
 		head, tail = strings.TrimRight(body[:idx], "\n"), body[idx+1:]
 	}
-	entry := fmt.Sprintf("### %s\n%s\n\n", ts, note)
+	entry := fmt.Sprintf("### %s\n%s%s\n\n", ts, storyLine(story), note)
 	if last := strings.LastIndex(head, "\n### "); last >= 0 {
-		heading, _, _ := strings.Cut(head[last+1:], "\n")
+		heading, instance, _ := strings.Cut(head[last+1:], "\n")
 		if strings.TrimSpace(heading) == "### "+ts {
-			entry = note + "\n\n"
+			line := storyLine(story)
+			if line != "" && contains(strings.Split(instance, "\n"), strings.TrimSuffix(line, "\n")) {
+				line = ""
+			}
+			entry = line + note + "\n\n"
 		}
 	}
 	return head + "\n\n" + entry + tail
