@@ -2,7 +2,8 @@
 	// Edit a story's or an epic's own words where it is read (S-0085): title, nature, tags, its topics
 	// (S-0135), what it touches, the stories a story waits for (S-0130), its parent, and the body below its heading. flai on the host makes every change and
 	// decides what is allowed; this form only collects it. What is the item's state, its ID, type,
-	// status, owner, and dates, is shown and is not a field.
+	// status, owner, and dates, is shown and is not a field. A draft story says it cannot go to ready
+	// until it is finalized, and is finalized here (S-0201).
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
 	import { agentFrom, configText, parseConfig, sameAgent, type Agent } from '$lib/agent';
@@ -23,6 +24,8 @@
 		parent?: string;
 		agent?: Agent;
 		default_agent?: Agent;
+		/** a story an agent wrote that the operator has not finalized (S-0199) */
+		draft?: boolean;
 		body: string;
 		path: string;
 		hash: string;
@@ -54,6 +57,7 @@
 	let body = $state('');
 	let preview = $state(false);
 	let saving = $state(false);
+	let finalizing = $state(false);
 	let error = $state<string | null>(null);
 	let findings = $state<Finding[]>([]);
 	let conflict = $state<{ hash: string } | null>(null);
@@ -163,6 +167,50 @@
 			saving = false;
 		}
 	}
+
+	// The item's own words as loaded, to tell whether anything but its draft flag changed.
+	const WORDS = [
+		'title',
+		'nature',
+		'tags',
+		'topics',
+		'touches',
+		'after',
+		'parent',
+		'agent',
+		'body'
+	] as const;
+	const words = (v: Partial<View>) => JSON.stringify(WORDS.map((k) => v[k] ?? null));
+
+	/** Finalize the draft story (S-0201) without leaving the form or losing what is typed in it. */
+	async function finalize() {
+		if (!view || finalizing) return;
+		finalizing = true;
+		error = null;
+		findings = [];
+		try {
+			const r = await api(`/api/items/${id}/finalize`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({})
+			});
+			const data = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				error = data.error ?? r.statusText;
+				return;
+			}
+			// Finalizing rewrites the file, so a save needs its new hash. It is taken only when the
+			// words are still those loaded; otherwise the old one stays and the save reports the conflict.
+			const fresh = await api(`/api/items/${id}/edit`);
+			const next = (await fresh.json().catch(() => ({}))) as Partial<View>;
+			const hash = fresh.ok && next.hash && words(next) === words(view) ? next.hash : view.hash;
+			view = { ...view, draft: false, hash };
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			finalizing = false;
+		}
+	}
 </script>
 
 {#if !view}
@@ -192,6 +240,24 @@
 			<span class="font-mono">{view.path}</span>. These are flai's: the status changes by moving the
 			card, the rest does not change.
 		</p>
+		{#if view.type === 'story' && view.draft}
+			<div
+				class="flex flex-wrap items-center justify-between gap-2 rounded border border-warn bg-warn-soft p-3 text-sm text-warn"
+				role="status"
+				data-testid="editor-draft"
+			>
+				<p>
+					{view.id} is a draft an agent wrote: it cannot be moved to ready until you finalize it.
+				</p>
+				<button
+					type="button"
+					class="rounded border border-warn px-2 py-1 disabled:opacity-50"
+					disabled={finalizing}
+					onclick={finalize}
+					data-testid="editor-finalize">{finalizing ? 'Finalizing…' : 'Finalize'}</button
+				>
+			</div>
+		{/if}
 		<label class="block text-sm">
 			<span class="mb-1 block font-medium">Title</span>
 			<input

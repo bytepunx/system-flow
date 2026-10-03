@@ -265,4 +265,96 @@ describe('ItemEditor (S-0085)', () => {
 		await submit();
 		expect(sent()).toEqual({ agent: null, hash: view.hash });
 	});
+
+	// S-0201: a draft story says it cannot go to ready and is finalized from the form
+	describe('a draft story', () => {
+		const draft = { ...view, status: 'backlog', draft: true };
+		const finalized = { ...view, status: 'backlog', draft: false, hash: 'c'.repeat(64) };
+		const box = () => document.querySelector('[data-testid="editor-draft"]');
+		const finalizeIt = async () => {
+			document.querySelector<HTMLButtonElement>('[data-testid="editor-finalize"]')!.click();
+			await settle();
+		};
+
+		it('is warned about with a Finalize button, and no other item is', async () => {
+			api.mockResolvedValue(answer(200, draft));
+			await mountIt();
+			expect(box()!.textContent).toContain('cannot be moved to ready until you finalize it');
+			expect(document.querySelector('[data-testid="editor-finalize"]')).not.toBeNull();
+			unmount(c!);
+			api.mockResolvedValue(answer(200, { ...view, draft: false }));
+			await mountIt();
+			expect(box()).toBeNull();
+			unmount(c!);
+			api.mockResolvedValue(answer(200, view));
+			await mountIt();
+			expect(box()).toBeNull();
+			unmount(c!);
+			api.mockResolvedValue(answer(200, { ...draft, type: 'epic', parent: undefined }));
+			await mountIt();
+			expect(box()).toBeNull();
+			expect(document.querySelector('[data-testid="editor-finalize"]')).toBeNull();
+		});
+
+		it('is finalized in place, keeping what is typed, and a save carries the new hash', async () => {
+			let shown = draft;
+			api.mockImplementation((_url: string, init?: { method?: string }) => {
+				if (init?.method === 'POST') {
+					shown = finalized;
+					return Promise.resolve(answer(200, { id: 'S-0007' }));
+				}
+				if (init?.method === 'PUT') return Promise.resolve(answer(200, { changed: ['title'] }));
+				return Promise.resolve(answer(200, shown));
+			});
+			await mountIt();
+			type('[data-testid="edit-title"]', 'Typed before finalizing');
+			await finalizeIt();
+			expect(api).toHaveBeenCalledWith(
+				'/api/items/S-0007/finalize',
+				expect.objectContaining({ method: 'POST' })
+			);
+			expect(box()).toBeNull();
+			expect(document.querySelector('[data-testid="edit-error"]')).toBeNull();
+			expect(document.querySelector<HTMLInputElement>('[data-testid="edit-title"]')!.value).toBe(
+				'Typed before finalizing'
+			);
+			expect(saved).not.toHaveBeenCalled();
+			await submit();
+			expect(sent()).toEqual({ title: 'Typed before finalizing', hash: finalized.hash });
+		});
+
+		it('keeps the old hash when its words changed meanwhile, so the save reports the conflict', async () => {
+			let shown = draft;
+			api.mockImplementation((_url: string, init?: { method?: string }) => {
+				if (init?.method === 'POST') {
+					shown = { ...finalized, title: 'Renamed by an agent' };
+					return Promise.resolve(answer(200, { id: 'S-0007' }));
+				}
+				if (init?.method === 'PUT') return Promise.resolve(answer(200, { changed: ['body'] }));
+				return Promise.resolve(answer(200, shown));
+			});
+			await mountIt();
+			await finalizeIt();
+			expect(box()).toBeNull();
+			type('[data-testid="edit-body"]', '## Goal\ny\n');
+			await submit();
+			expect(sent().hash).toBe(view.hash);
+		});
+
+		it('shows a refusal as an error and stays a draft', async () => {
+			api.mockImplementation((_url: string, init?: { method?: string }) =>
+				Promise.resolve(
+					init?.method === 'POST'
+						? answer(400, { error: 'S-0007 is not a draft' })
+						: answer(200, draft)
+				)
+			);
+			await mountIt();
+			await finalizeIt();
+			expect(document.querySelector('[data-testid="edit-error"]')!.textContent).toContain(
+				'S-0007 is not a draft'
+			);
+			expect(box()).not.toBeNull();
+		});
+	});
 });
