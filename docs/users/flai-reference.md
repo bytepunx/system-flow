@@ -1004,6 +1004,8 @@ Create an epic from the project's item template with the next free ID, linked in
 
 With --body-stdin the body below the item's heading is read from standard input instead of the template's empty sections, and the creation is one step that happens or does not: flai check runs with the new item in place, and if it reports anything the item introduces, the item is removed, its parent is restored, and the findings are printed (exit 4). --autocommit commits the new item and its parent on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the body the template gives, for a form or a script to start from, and creates nothing.
 
+--revenue-per-week and --penalty-per-week, amounts in planning.currency, and --time-lost-per-cycle, a Go duration, are the inputs of the epic's cost of delay (S-0204), recorded with its owner and the time it is made, for the planner to turn into a value. Without them the epic has no cost of delay; flai edit sets and changes them later.
+
 Flags:
 
 | Flag | Meaning |
@@ -1012,8 +1014,11 @@ Flags:
 | `--body-stdin` | read the body below the heading from standard input; checked before it is kept |
 | `--nature` string | one of feature, improvement, remediation, research, experiment (default `feature`) |
 | `--owner` string | owner (default: config author) |
+| `--penalty-per-week` string | cost of delay input: what each week it is not done costs beyond revenue, in planning.currency |
 | `--print-body` | print the body the template gives this type and create nothing |
+| `--revenue-per-week` string | cost of delay input: revenue each week it is done brings, in planning.currency |
 | `--tag` strings | tag (repeatable or comma separated) |
+| `--time-lost-per-cycle` string | cost of delay input: work lost each cycle it is not done, a Go duration |
 | `--topics` strings | topics the epic is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
@@ -2291,6 +2296,8 @@ With --body-stdin the body below the item's heading is read from standard input 
 
 --draft makes the story a draft, as the stories an agent writes are (S-0199): moving it to ready is refused until it is finalized, by flai edit with --no-draft, or by flai move to ready with --yes.
 
+--revenue-per-week and --penalty-per-week, amounts in planning.currency, and --time-lost-per-cycle, a Go duration, are the inputs of the story's cost of delay (S-0204), recorded with its owner and the time it is made, for the planner to turn into a value. Without them the story has no cost of delay; flai edit sets and changes them later.
+
 Flags:
 
 | Flag | Meaning |
@@ -2305,11 +2312,14 @@ Flags:
 | `--model` string | the model it runs, over the project's default |
 | `--nature` string | one of feature, improvement, remediation, research, experiment (default `feature`) |
 | `--owner` string | owner (default: config author) |
+| `--penalty-per-week` string | cost of delay input: what each week it is not done costs beyond revenue, in planning.currency |
 | `--print-body` | print the body the template gives this type and create nothing |
+| `--revenue-per-week` string | cost of delay input: revenue each week it is done brings, in planning.currency |
 | `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
 | `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
 | `--role-model` stringArray | the model a sub-agent role runs, role=model, such as verify=sonnet (repeatable) |
 | `--tag` strings | tag (repeatable or comma separated) |
+| `--time-lost-per-cycle` string | cost of delay input: work lost each cycle it is not done, a Go duration |
 | `--topics` strings | topics the story is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |

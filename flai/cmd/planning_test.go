@@ -173,6 +173,46 @@ func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
 	}
 }
 
+// S-0204: flai story new and flai epic new take the cost of delay inputs,
+// set by the owner when the item is made; none given is no block, a bad
+// amount or duration is refused with nothing made, and a task has no flags.
+func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
+	root, story := planningProject(t, "--revenue-per-week", "1200", "--penalty-per-week", " 50.5 ", "--time-lost-per-cycle", "4h")
+	if item := read(t, story); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 50.5\n    time_lost_per_cycle: 4h\n  by: olive\n  at: 2026-09-15T21:00:00Z\n") {
+		t.Errorf("the story's inputs, by its owner:\n%s", item)
+	}
+	if _, errOut, code := runIn(t, root, "epic", "new", "Costly", "--penalty-per-week", "300", "--owner", "alex"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if item := read(t, filepath.Join(root, "wip/kanban/epics/E-0002-costly.md")); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    penalty_per_week: 300\n  by: alex\n  at: 2026-09-15T21:00:00Z\n") {
+		t.Errorf("the epic's input, by --owner:\n%s", item)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Free", "--epic", "E-0001", "--revenue-per-week", " "); code != 0 {
+		t.Fatal(errOut)
+	}
+	if item := read(t, filepath.Join(root, "wip/kanban/stories/S-0002-free.md")); strings.Contains(item, "cost_of_delay") {
+		t.Errorf("no inputs, no block:\n%s", item)
+	}
+	for _, c := range []struct {
+		args []string
+		says string
+	}{
+		{[]string{"--revenue-per-week", "lots"}, "is not a number: write an amount in USD such as 1200"},
+		{[]string{"--penalty-per-week", "-1"}, "is negative"},
+		{[]string{"--time-lost-per-cycle", "a day"}, "is not a Go duration"},
+	} {
+		if _, errOut, code := runIn(t, root, append([]string{"story", "new", "Refused", "--epic", "E-0001"}, c.args...)...); code == 0 || !strings.Contains(errOut, c.says) {
+			t.Errorf("%v: %d %s", c.args, code, errOut)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "wip/kanban/stories/S-0003-refused.md")); err == nil {
+		t.Error("a refused story was made")
+	}
+	if _, errOut, code := runIn(t, root, "task", "new", "T", "--story", "S-0001", "--revenue-per-week", "1"); code == 0 || !strings.Contains(errOut, "unknown flag: --revenue-per-week") {
+		t.Errorf("a task's cost of delay: %d %s", code, errOut)
+	}
+}
+
 // S-0199: flai show prints the cost of delay in the project's currency and
 // the forecast, with who set each.
 func TestShowPrintsPlanning(t *testing.T) {

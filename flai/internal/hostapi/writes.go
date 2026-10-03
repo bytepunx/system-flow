@@ -672,6 +672,14 @@ func itemSpecs() map[string]spec {
 				Agent   *manifest.Agent `json:"agent"`
 				Body    string          `json:"body"`
 				Draft   bool            `json:"draft"` // a story not yet finalized (S-0199)
+				// the cost of delay inputs (S-0204): an absent or empty key is
+				// left out; the value is the planner's, not the form's
+				CostOfDelay *struct {
+					RevenuePerWeek   *string `json:"revenue_per_week"`
+					PenaltyPerWeek   *string `json:"penalty_per_week"`
+					TimeLostPerCycle *string `json:"time_lost_per_cycle"`
+					Value            *string `json:"value"`
+				} `json:"cost_of_delay"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -746,6 +754,20 @@ func itemSpecs() map[string]spec {
 					return nil, "", bad("only a story is a draft")
 				}
 				args = append(args, "--draft")
+			}
+			if c := in.CostOfDelay; c != nil {
+				if c.Value != nil {
+					return nil, "", bad("a new item's cost of delay takes its inputs only: the value is the planner's")
+				}
+				// flai refuses an amount that is not a number, and checks the duration
+				for _, k := range []struct {
+					flag  string
+					value *string
+				}{{"revenue-per-week", c.RevenuePerWeek}, {"penalty-per-week", c.PenaltyPerWeek}, {"time-lost-per-cycle", c.TimeLostPerCycle}} {
+					if k.value != nil && text(*k.value) != "" {
+						args = append(args, "--"+k.flag+"="+text(*k.value))
+					}
+				}
 			}
 			return append(args, "--body-stdin", "--autocommit", "--trailer="+Trailer, "--", title), in.Body, nil
 		}},

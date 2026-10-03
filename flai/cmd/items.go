@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -23,7 +25,7 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 }
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
-	var nature, owner, parent, harness, model string
+	var nature, owner, parent, harness, model, revenue, penalty, timeLost string
 	var tags, touches, topics, after, trailers, agentConfig []string
 	var rf roleFlags
 	var bodyStdin, autocommit, printBody, draft bool
@@ -41,7 +43,7 @@ it reports anything the item introduces, the item is removed, its parent is
 restored, and the findings are printed (exit 4). --autocommit commits the new
 item and its parent on their own, unless the project sets
 dashboard.autocommit: false. Nothing is pushed. --print-body prints the body
-the template gives, for a form or a script to start from, and creates nothing.%s%s`, withArticle(typ), afterHelp(typ), draftHelp(typ)),
+the template gives, for a form or a script to start from, and creates nothing.%s%s%s`, withArticle(typ), afterHelp(typ), draftHelp(typ), costHelp(typ)),
 		Args: func(cmd *cobra.Command, args []string) error {
 			if printBody {
 				return cobra.NoArgs(cmd, args)
@@ -71,6 +73,10 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 			opt := workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
 				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Topics: topics, After: after, Agent: agent, Draft: draft, Now: a.now(),
+			}
+			// the inputs are set by the owner, whom the dashboard names as the operator
+			if opt.CostOfDelay, err = newCostOfDelay(revenue, penalty, timeLost, repo.Manifest.Planning.CurrencyCode(), opt.Owner, opt.Now); err != nil {
+				return err
 			}
 			// an after: entry that names nothing, or forms a cycle, is the
 			// check's to find, so a creation that sets one is checked
@@ -129,6 +135,10 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 	if typ != workitem.Task {
 		// what it is about beyond its components (S-0135, ADR-0047)
 		c.Flags().StringSliceVar(&topics, "topics", nil, "topics the "+typ+" is about beyond the components it reaches, such as logging or release (repeatable or comma separated)")
+		// what waiting for it costs (S-0204), the inputs the edit command also sets
+		c.Flags().StringVar(&revenue, "revenue-per-week", "", "cost of delay input: revenue each week it is done brings, in planning.currency")
+		c.Flags().StringVar(&penalty, "penalty-per-week", "", "cost of delay input: what each week it is not done costs beyond revenue, in planning.currency")
+		c.Flags().StringVar(&timeLost, "time-lost-per-cycle", "", "cost of delay input: work lost each cycle it is not done, a Go duration")
 	}
 	switch typ {
 	case workitem.Story:
@@ -348,6 +358,50 @@ func draftHelp(typ string) string {
 --draft makes the story a draft, as the stories an agent writes are (S-0199):
 moving it to ready is refused until it is finalized, by flai edit with
 --no-draft, or by flai move to ready with --yes.`
+}
+
+// costHelp is what flai story new and flai epic new say of the cost of
+// delay inputs.
+func costHelp(typ string) string {
+	if typ == workitem.Task {
+		return ""
+	}
+	return `
+
+--revenue-per-week and --penalty-per-week, amounts in planning.currency, and
+--time-lost-per-cycle, a Go duration, are the inputs of the ` + typ + `'s cost
+of delay (S-0204), recorded with its owner and the time it is made, for the
+planner to turn into a value. Without them the ` + typ + ` has no cost of
+delay; flai edit sets and changes them later.`
+}
+
+// newCostOfDelay is a new item's cost of delay from its input flags, set by
+// by at now, or nil when none is given (S-0204). An amount that is not a
+// number is refused as flai edit refuses it; Create checks the rest.
+func newCostOfDelay(revenue, penalty, timeLost, currency, by string, now time.Time) (*workitem.CostOfDelay, error) {
+	var in workitem.CostInputs
+	for _, a := range []struct {
+		key, value string
+		to         **float64
+	}{
+		{"cost_of_delay.inputs.revenue_per_week", revenue, &in.RevenuePerWeek},
+		{"cost_of_delay.inputs.penalty_per_week", penalty, &in.PenaltyPerWeek},
+	} {
+		v := strings.TrimSpace(a.value)
+		if v == "" {
+			continue
+		}
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s %q is not a number: write an amount in %s such as 1200 or 99.5, or leave it out", a.key, a.value, currency)
+		}
+		*a.to = &f
+	}
+	in.TimeLostPerCycle = strings.TrimSpace(timeLost)
+	if in.IsZero() {
+		return nil, nil
+	}
+	return &workitem.CostOfDelay{Inputs: &in, By: by, At: now.UTC().Format(workitem.TimeFormat)}, nil
 }
 
 // pluralType is an item type's plural: epics, stories, tasks.

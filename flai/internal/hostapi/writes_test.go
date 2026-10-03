@@ -1030,6 +1030,40 @@ func TestPlanningDataReachesFlaiAsFlags(t *testing.T) {
 	}
 }
 
+// S-0204: item.new passes the cost of delay inputs as flags, trimmed, with
+// an absent or empty key left out, beside the owner the inputs are set by;
+// the value is the planner's and is refused.
+func TestItemNewPassesCostOfDelayInputs(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+	m := writeMethods(rec.run, time.Now, Host{})
+	n := 0
+	run := func(params string) (string, *channel.Error) {
+		n++
+		before := len(rec.runs)
+		_, e := m["item.new"](context.Background(), p, json.RawMessage(strings.Replace(params, "{", fmt.Sprintf(`{"request_id":"req-%08d",`, n), 1)))
+		if len(rec.runs) == before {
+			return "", e
+		}
+		return strings.Join(rec.runs[len(rec.runs)-1].Args, " "), e
+	}
+	for params, want := range map[string]string{
+		`{"type":"story","title":"T","body":"b","cost_of_delay":{"revenue_per_week":" 1200.5 ","penalty_per_week":"300","time_lost_per_cycle":"4h"}}`: "story new --nature=feature --owner=designer --revenue-per-week=1200.5 --penalty-per-week=300 --time-lost-per-cycle=4h --body-stdin",
+		`{"type":"epic","title":"T","body":"b","cost_of_delay":{"revenue_per_week":"","penalty_per_week":"  ","time_lost_per_cycle":"2h"}}`:           "epic new --nature=feature --owner=designer --time-lost-per-cycle=2h --body-stdin",
+		`{"type":"story","title":"T","body":"b","cost_of_delay":{}}`:                                                                                  "story new --nature=feature --owner=designer --body-stdin",
+	} {
+		if args, e := run(params); e != nil || !strings.HasPrefix(args, want) {
+			t.Errorf("%s: %v %s", params, e, args)
+		}
+	}
+	if args, e := run(`{"type":"story","title":"T","body":"b","cost_of_delay":{"revenue_per_week":"1","value":"9"}}`); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "the value is the planner's") || args != "" {
+		t.Errorf("a value on create: %+v %s", e, args)
+	}
+	if args, e := run(`{"type":"task","title":"T","body":"b","cost_of_delay":{"revenue_per_week":"1"}}`); e == nil || args != "" {
+		t.Errorf("a task: %+v %s", e, args)
+	}
+}
+
 // S-0201: item.finalize runs flai edit --no-draft as the owner, committed
 // as the dashboard's other edits are. What the edit leaves unchanged was not
 // a draft, and is refused as a rule in so many words.

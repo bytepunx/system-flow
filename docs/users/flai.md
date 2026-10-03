@@ -354,6 +354,15 @@ flai edit S-0005 --cost-of-delay-value 400
 flai edit S-0005 --clear-cost-of-delay                 # remove it all
 ```
 
+You can give the inputs when you make a story or an epic, with the same flags. They are recorded as set by its owner (`--owner`, else your config author) at the time it is made. Without them the item has no cost of delay. The dashboard's new-item form passes its cost of delay panel this way, as you:
+
+```bash
+flai story new "Export to CSV" --epic E-0001 --revenue-per-week 1200 --time-lost-per-cycle 2h
+flai epic new "Billing v2" --penalty-per-week 300
+```
+
+An amount that is not a number, or a duration that is not a Go duration, is refused and nothing is made. The value is not given at creation: it is the planner's, or yours with `flai edit`.
+
 A story made from an issue is a draft and carries the cost of delay inputs the issue gives, set by flai ([Record recurring friction](#record-recurring-friction)).
 
 A forecast says how long a story is expected to take in agent time, when it is expected done, and what that rests on. It sits beside `estimate`, which stays yours:
