@@ -198,7 +198,9 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // answered and goes on in the session that already holds the rest; one
 // started to commit a worktree is told to do only that (S-0140); one the
 // operator started past a hold or a full limit is told what it went past
-// (S-0182). Only the claude-code adapter sends a prompt.
+// (S-0182). Every agent working a story is told how its issues are recorded
+// and that the operator chooses at acceptance which become stories (S-0198).
+// Only the claude-code adapter sends a prompt.
 func Prompt(r Request) string {
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
@@ -261,5 +263,7 @@ While you work, run only the tests for what you changed, and leave the whole sui
 }
 
 func rules(r Request) string {
-	return fmt.Sprintf(`When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on. If you end while the question is open, flai starts you again when it is answered. When every acceptance criterion is met, commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync %[1]s again and resolve what it lists, then move %[1]s to review with flai move %[1]s review and end: the move is refused while anything is uncommitted. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
+	return fmt.Sprintf(`Record friction, defects, and blockers you hit with flai issue new, or flai issue bump when the issue exists: each instance names %[1]s. Make no story for them yourself: %[1]s's review page lists them, checked, so the operator chooses at acceptance which become backlog stories. Make one with flai issue story or the flai MCP tool issue_story only when the operator asks, or when flai check warns issues.no-story.
+
+When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on. If you end while the question is open, flai starts you again when it is answered. When every acceptance criterion is met, commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync %[1]s again and resolve what it lists, then move %[1]s to review with flai move %[1]s review and end: the move is refused while anything is uncommitted. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
 }

@@ -1,6 +1,6 @@
 ---
 title: Continuous improvement
-updated: 2026-10-02
+updated: 2026-10-03
 audience: agent
 order: 100
 status: active
@@ -30,10 +30,12 @@ How to record recurring friction, defects, blockers, and inefficiencies so they 
   - a table of open issues with count, average cost, total cost, and last occurrence
   - order by issue cost
   - update it with every occurrence
-- When a story moves to review, for each issue it recorded or bumped:
-  - check whether a story in the backlog or in progress already remediates it
-  - if none does, create a `remediation` or `improvement` story in the backlog (MCP `item_new`, or `flai story new`)
-  - the story links the issue document and recommends a solution, and its last criterion closes the issue
+- Record an occurrence with `flai issue new`, or `flai issue bump` when the issue exists: each instance names the story you work
+- Make no story for an issue yourself; the operator chooses, at acceptance, which issues become stories:
+  - a story's review page lists the open issues it recorded or bumped, checked, and every other open issue no open story links, unchecked
+  - accepting it makes a `remediation` or `improvement` backlog story for each checked issue
+  - such a story links the issue document, recommends a solution, and its last criterion closes the issue
+- Make that story with `flai issue story` (MCP `issue_story`) only when the operator asks, or when `flai check` warns `issues.no-story` about an issue open too long with no story
 
 ## When in doubt
 

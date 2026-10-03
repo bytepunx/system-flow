@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-10-02
+updated: 2026-10-03
 status: active
 ---
 
@@ -208,7 +208,7 @@ A resuming agent reads `index.md`, then each active narrative's current state an
 | Decisions | `design/adrs/NNNN-slug.md`, indexed in `design/adrs/README.md` | Front matter `id`, `title`, `status`, `date`; sections Context, Decision, Consequences, Alternatives considered | One decision per file. Never edited once accepted, except to name the ADR that supersedes it. `flai adr new` numbers, names, and indexes it |
 | The living design | `design/system/`, `design/tech/` | Ordinary documents | Edited in place whenever the design or a dependency changes, with a link to the ADR that changed it |
 | Conventions | `design/conventions/`, indexed in its `README.md` | One file per topic, front matter `title`, `updated`, `audience: agent`, `order`, `status`, optionally `topics` (the stories it is for) and `roles` (every agent that reads it: `story`, `explore`, `verify`; without it, every agent reads it), and a baseline marker | Everything above the marker is the template's; project rules go under `## Project additions` below it. Read in `order` at the start of every session |
-| Issues | `design/issues/I-nnnn-slug.md`, tabulated in `summary.md` | A class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, first and last reported | Record each occurrence as it happens with `flai issue`; remediate the most expensive first |
+| Issues | `design/issues/I-nnnn-slug.md`, tabulated in `summary.md` | A class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, first and last reported | Record each occurrence as it happens with `flai issue`, which names the story; at a story's acceptance, the operator chooses which issues become backlog stories; remediate the most expensive first |
 | Experiment results | `design/experiments/S-nnnn-slug.md`, named for the experiment story; the folder's `template.md` is the shape | Front matter `title`, `updated`, `status`, `story`; sections Hypothesis, Success measure, What was done, Results, Recommendation (adopt, adapt, or drop) | Written by the experiment story before review; acceptance refuses an experiment without it, and `flai check` validates it |
 | Threads | `wip/threads/` | A conversation anchored to a document, a heading, or a work item | Opened and answered with `flai thread` or from the dashboard |
 

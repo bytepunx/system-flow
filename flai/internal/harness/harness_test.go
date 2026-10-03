@@ -320,6 +320,31 @@ func TestThePromptNeverTellsTheAgentToPush(t *testing.T) {
 	}
 }
 
+// S-0198: an agent working its story, fresh or answered, records issues for
+// it and leaves to the operator, at acceptance, which become stories; one
+// started only to commit is not told.
+func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	answered, commit := r, r
+	answered.Answered = "TH-0001"
+	commit.Commit = "/w"
+	for _, x := range []Request{r, answered} {
+		p := Prompt(x)
+		for _, w := range []string{
+			"flai issue new, or flai issue bump when the issue exists: each instance names " + r.Story,
+			"Make no story for them yourself: " + r.Story + "'s review page lists them, checked, so the operator chooses at acceptance which become backlog stories",
+			"flai issue story or the flai MCP tool issue_story only when the operator asks, or when flai check warns issues.no-story",
+		} {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+	}
+	if strings.Contains(Prompt(commit), "flai issue") {
+		t.Errorf("the commit prompt mentions issues:\n%s", Prompt(commit))
+	}
+}
+
 // S-0189: the story's agent runs only the tests for what it changed, leaves
 // the whole suite, lint, and check to one verifier before review and one
 // more after its fixes, and fixes what a verifier finds itself.

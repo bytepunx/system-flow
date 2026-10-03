@@ -1,6 +1,6 @@
 ---
 title: Continuous improvement
-updated: 2026-10-02
+updated: 2026-10-03
 status: active
 topics: [cli, conventions]
 ---
@@ -40,10 +40,11 @@ What goes wrong, for whom, and what it costs.
 
 ## Instances
 ### 2026-09-15T17:00:00Z
+Story: S-0008.
 Where it happened and what was done about it.
 
 ## Remediation
-Proposed fix, or the story ID once one exists. Closed issues say what closed them.
+Proposed fix. Closed issues say what closed them.
 ```
 
 | Class | Meaning |
@@ -60,7 +61,11 @@ Proposed fix, or the story ID once one exists. Closed issues say what closed the
 ## Cadence
 
 - Record an occurrence when it happens, not at the end of the story.
-- When a story moves to review, every issue it recorded or bumped has a story that remediates it: the agent checks the backlog and the stories in progress, and where none remediates the issue, creates a story with nature `remediation` or `improvement` in the backlog. The story links the issue's document, recommends a solution, and has as its last criterion that the issue is closed with what fixed it. The operator decides when, and whether, such a story is pulled, by moving it to ready or cancelling it (decided 2026-10-02, replacing the summary presented at an epic's end).
+- Each instance names the story it was recorded for, in a `Story: S-nnnn.` line under its heading (S-0198). `flai issue new` and `bump` take it from `--story`, else `FLAI_STORY`, else `FLAI_AGENT` of the form `agent-S-nnnn`, else the `story/S-nnnn` branch checked out; outside a story the instance names none. `flai issue list --story S-nnnn` lists a story's issues. Issues live under the checkout's `design/`, so a story's own issues are committed on its branch and are in its worktree, not the main checkout, until it is accepted; `--story` reads them there.
+- A story links an issue when its body names the issue's ID. That link is the only record of an issue's story: the issue file is not changed, so making a story from the dashboard leaves nothing uncommitted outside `wip/`. `flai issue list --json` gives each issue's `stories` and `story`, the open story that links it.
+- The story's agent makes no story for an issue. The operator chooses at acceptance (decided 2026-10-02, replacing the summary presented at an epic's end; refined on TH-0074): a story's review page lists the open issues it recorded or bumped, checked, then every other open issue no open story links, unchecked. With any checked, Accept reads `Accept and Create Stories`; once the acceptance succeeds, a backlog story is made, and committed, for each checked issue, and none when it fails. The page names each story made and each issue refused.
+- `flai issue story I-nnnn [--epic] [--story]`, or the MCP tool `issue_story`, makes that story: the issue's title; nature `remediation` for a `defect` or `blocker`, `improvement` for `efficiency` or `impression`; a goal that links the issue's document and carries its `## Remediation` text as the recommended solution, or asks for one; and a last criterion closing the issue with `flai issue close`. A closed issue, or one an open story links, is refused. An agent runs it when the operator asks, or for an issue `flai check` warns about.
+- `flai check` warns with `issues.no-story` about an open issue first reported longer ago than `issues.story_after` in `system-flow.yaml` (a Go duration, `168h` when unset, `0` turns it off) that no open story links. Age, rather than the recording story, finds the issues from before instances named their story.
 - Remediation is a story with nature `remediation` or `improvement` that closes the issue.
 
 ## Metrics
