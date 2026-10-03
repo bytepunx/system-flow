@@ -105,6 +105,9 @@ func settingsSpecs() map[string]spec {
 			if in.Action == ActionSettings {
 				return nil, "", bad("the settings action is turned on and off in a shell on the host, and nowhere else")
 			}
+			if shellOnly[in.Action] {
+				return nil, "", bad("the %s action is the operator's shell tool, outside the workflow (ADR-0067), and no dashboard turns it on or off: run %s or flai serve disable %s in a shell on the host", in.Action, EnableCommand(in.Action), in.Action)
+			}
 			if in.On == nil {
 				return nil, "", bad("say on: true or on: false")
 			}

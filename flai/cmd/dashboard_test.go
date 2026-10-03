@@ -465,7 +465,7 @@ func TestDashboardPushKeyIsRetired(t *testing.T) {
 	img := map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}
 	f := &fakeRunner{images: img, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "--push-key", "/home/me/.ssh/deploy")
-	if code != 0 || !strings.Contains(out, "--push-key: retired and ignored") || !strings.Contains(out, "flai push --pending") || !strings.Contains(out, "ADR-0031") {
+	if code != 0 || !strings.Contains(out, "--push-key: retired and ignored") || !strings.Contains(out, "flai release --pending") || strings.Contains(out, "flai push") || !strings.Contains(out, "ADR-0031") {
 		t.Fatalf("flag: %d %s %s", code, out, errOut)
 	}
 	if j := strings.Join(f.calls, "\n"); strings.Contains(j, "deploy") || strings.Contains(j, "ssh-keygen") {

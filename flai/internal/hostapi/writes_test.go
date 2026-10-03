@@ -44,7 +44,6 @@ var good = map[string]struct {
 	"adr.new":           {`{"title":"Decide it","status":"accepted","refines":["ADR-0016"],"supersedes":["7"],"body":"## Context\nx\n",` + rid + `}`, "adr new --status=accepted --supersedes=7 --refines=16 --body-stdin --autocommit --trailer=" + Trailer + " --json -- Decide it", "## Context\nx\n"},
 	"adr.template":      {`{}`, "adr new --print-body --json", ""},
 	"adr.accept":        {`{"id":"ADR-0028",` + rid + `}`, "adr accept 28 --autocommit --trailer=" + Trailer + " --json", ""},
-	"push.run":          {`{` + rid + `}`, "push --pending --publish --json", ""},
 	"publish.run":       {`{` + rid + `}`, "release --pending --json", ""},
 	"dashboard.status":  {`{}`, "dashboard status --json", ""},
 	"dashboard.check":   {`{}`, "dashboard check --json", ""},
@@ -115,7 +114,6 @@ var refused = map[string][]string{
 	"adr.new":           {`{"title":"t","body":"b","status":"final",` + rid + `}`, `{"title":"t","body":"b","refines":["--autocommit"],` + rid + `}`, `{"title":"t","body":"b","supersedes":["0"],` + rid + `}`},
 	"adr.template":      {`[]`},
 	"adr.accept":        {`{"id":"--trailer=x",` + rid + `}`},
-	"push.run":          {`"--force"`, `{}`},
 	"publish.run":       {`"--force"`, `{}`},
 	"dashboard.status":  {`"--force"`},
 	"dashboard.check":   {`"--force"`},
@@ -366,7 +364,7 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 	}
 
 	// off: an acceptance never pushes or tags either way (S-0087); the push
-	// action governs push.run, not accept.run
+	// action governs publish.run, not accept.run
 	ran, e := call("accept.run", Ran{Stdout: []byte(`{"id":"S-0001"}`)})
 	if e != nil || len(ran) != 1 {
 		t.Fatalf("an acceptance with the action off: %v %+v", ran, e)
@@ -374,7 +372,7 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 	if len(journal) != 0 {
 		t.Errorf("acceptance is no host action: %+v", journal)
 	}
-	ran, e = call("push.run", Ran{})
+	ran, e = call("publish.run", Ran{})
 	if e == nil || e.Code != Disabled || len(ran) != 0 || !strings.Contains(e.Message, "flai serve enable push") || e.Data.(map[string]any)["enable"] != "flai serve enable push" {
 		t.Fatalf("a disabled action runs nothing and says what to run: %v %+v", ran, e)
 	}
@@ -388,21 +386,23 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 	if e != nil || len(ran) != 1 {
 		t.Fatalf("an acceptance with the action on: %v %+v", ran, e)
 	}
-	ran, e = call("push.run", Ran{Stdout: []byte(`{"pushed":true,"unpushed":{"acceptances":["S-0001"],"tags":["cli/v1.1.0"]}}`)})
-	if e != nil || len(ran) != 1 || ran[0] != "push --pending --publish --json" {
-		t.Fatalf("push.run: %v %+v", ran, e)
+	ran, e = call("publish.run", Ran{Stdout: []byte(`{"pushed":true,"tags":["cli/v1.1.0"],"published":["origin v1.1.0 (abc1234)"]}`)})
+	if e != nil || len(ran) != 1 || ran[0] != "release --pending --json" {
+		t.Fatalf("publish.run: %v %+v", ran, e)
 	}
-	_, _ = call("push.run", Ran{Stdout: []byte(`{"pushed":false,"reason":"nothing pending"}`)})
-	_, e = call("push.run", Ran{Exit: 3, Events: []map[string]any{{"level": "FATAL", "err": "conflict: main and origin/main have diverged"}}})
+	_, _ = call("publish.run", Ran{Stdout: []byte(`{"pushed":false,"reason":"nothing pending"}`)})
+	_, _ = call("publish.run", Ran{Stdout: []byte(`{"pushed":false,"tags":["cli/v1.1.0"],"push_error":"rejected"}`)})
+	_, e = call("publish.run", Ran{Exit: 3, Events: []map[string]any{{"level": "FATAL", "err": "conflict: main and origin/main have diverged"}}})
 	if e == nil || e.Code != Conflict || e.Message != "main and origin/main have diverged" {
 		t.Errorf("a remote that moved is a conflict with its reason: %+v", e)
 	}
 	// accept.run is never journalled as a host action (S-0087): it never
 	// pushes, so it never uses the push action.
 	want := []struct{ method, outcome, detail string }{
-		{"push.run", "done", "pushed with tags cli/v1.1.0"},
-		{"push.run", "done", "nothing pushed: nothing pending"},
-		{"push.run", "failed", "main and origin/main have diverged"},
+		{"publish.run", "done", "pushed with tags cli/v1.1.0; published origin v1.1.0 (abc1234)"},
+		{"publish.run", "done", "nothing pushed: nothing pending"},
+		{"publish.run", "failed", "not pushed: rejected"},
+		{"publish.run", "failed", "main and origin/main have diverged"},
 	}
 	if len(journal) != len(want) {
 		t.Fatalf("journal: %+v", journal)
@@ -444,8 +444,46 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 			t.Errorf("%s is not gated by the settings action", name)
 		}
 	}
-	if info := enabledActions(Host{}, "/x"); len(info) != len(Actions) || info[ActionPush] {
-		t.Errorf("project.info names every action and says none is on: %+v", info)
+	if info := enabledActions(Host{}, "/x"); len(info) != len(Actions)-len(shellOnly) || info[ActionPush] {
+		t.Errorf("project.info names every action a dashboard sees and says none is on: %+v", info)
+	}
+}
+
+// ADR-0067: publishing is the one way accepted work reaches the remote. No
+// method pushes accepted work or says what a push would send; publish.run
+// stays under the push action; and auto-publish, the operator's shell tool,
+// is neither shown to a dashboard nor turned on or off by one.
+func TestTheDashboardPublishesAndNeverPushes(t *testing.T) {
+	p := withDocs(t)
+	host := Host{Enabled: func(string, string) bool { return true }}
+	table := MethodsFor("test", nil, host)
+	for _, name := range []string{"push.run", "push.pending"} {
+		if _, ok := table[name]; ok {
+			t.Errorf("%s is still a method: the dashboard publishes, it does not push", name)
+		}
+	}
+	if _, ok := table["publish.run"]; !ok || specs()["publish.run"].action != ActionPush {
+		t.Errorf("publish.run is a method under the push action: %+v", specs()["publish.run"])
+	}
+	if info := enabledActions(host, p.Root); !info[ActionPush] {
+		t.Errorf("project.info says the push action is on: %+v", info)
+	} else if _, ok := info[ActionAutoPublish]; ok {
+		t.Errorf("project.info names auto-publish: %+v", info)
+	}
+	if DashboardSees(ActionAutoPublish) || !DashboardSees(ActionPush) || DashboardSees("pull") {
+		t.Error("a dashboard sees push, and neither auto-publish nor what is no host action")
+	}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	for i, on := range []string{"true", "false"} {
+		params := fmt.Sprintf(`{"action":"auto-publish","on":%s,"request_id":"req-0000000%d"}`, on, i+2)
+		_, e := m["settings.action"](context.Background(), p, json.RawMessage(params))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "flai serve enable auto-publish") || !strings.Contains(e.Message, "flai serve disable auto-publish") || !strings.Contains(e.Message, "ADR-0067") {
+			t.Errorf("settings.action %s: %+v, want a refusal naming what to run in a shell", params, e)
+		}
+	}
+	if len(rec.runs) != 0 {
+		t.Errorf("a refused setting ran %+v", rec.runs)
 	}
 }
 

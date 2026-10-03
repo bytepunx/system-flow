@@ -305,7 +305,7 @@ func (a *app) retiredPushKey(keyFlag, hostsFlag string) string {
 	if len(set) == 0 {
 		return ""
 	}
-	return "  " + strings.Join(set, ", ") + ": retired and ignored. The container holds no git, no ssh, and no file of the project, so it has nothing to push with (ADR-0031). An acceptance from the board is pushed from this host with your own credentials: flai push --pending. Clear the setting with: flai config set dashboard.push_key \"\"\n"
+	return "  " + strings.Join(set, ", ") + ": retired and ignored. The container holds no git, no ssh, and no file of the project, so it has nothing to push with (ADR-0031). Publishing from the board (Publish) runs on this host with your own credentials, as flai release --pending does in a shell (ADR-0067). Clear the setting with: flai config set dashboard.push_key \"\"\n"
 }
 
 // secretMountPrefix is where the container's two secrets are mounted; a

@@ -18,7 +18,6 @@ var readPhase = map[string]struct{ params, phase string }{
 	"accept.preview":    {`{"id":"S-0001"}`, "accept.preview"},
 	"stream.diff":       {`{"id":"S-0001"}`, "stream.diff"},
 	"stats.get":         {`{"since":"12w","type":"story","by":"nature","bucket":"week"}`, "stats.compute"},
-	"push.pending":      {`{}`, "push.preview"},
 	"publish.preview":   {`{}`, "release.pending"},
 }
 
@@ -29,12 +28,11 @@ var readRefused = map[string][]string{
 	"accept.preview":    {`{"id":"--no-push"}`},
 	"stream.diff":       {`{"id":"../../etc"}`},
 	"stats.get":         {`{"since":"30d; ls"}`, `{"type":"folder"}`, `{"by":"owner"}`, `{"bucket":"minute"}`, `{"bucket":"--json"}`},
-	"push.pending":      {`"--force"`},
 	"publish.preview":   {`"--force"`},
 }
 
 func TestEveryReadIsCovered(t *testing.T) {
-	reads := readMethods(time.Now, Host{})
+	reads := readMethods(time.Now)
 	for name := range reads {
 		if _, ok := readPhase[name]; !ok {
 			t.Errorf("%s has no call in readPhase", name)
@@ -54,7 +52,7 @@ func TestEveryReadIsCovered(t *testing.T) {
 func TestAReadRefusesWhatIsNotDataBeforeReadingAnything(t *testing.T) {
 	// a root that does not exist: anything past validation fails otherwise
 	p := channel.Project{Key: "nowhere", Root: "/nonexistent/flai-test"}
-	reads := readMethods(time.Now, Host{})
+	reads := readMethods(time.Now)
 	for name, all := range readRefused {
 		for _, params := range all {
 			_, rerr := reads[name](context.Background(), p, json.RawMessage(params))
@@ -117,10 +115,5 @@ func TestAReadAnswersAsFlaiDid(t *testing.T) {
 	}
 	if rerr != nil || json.Unmarshal(w.Data, &cancel) != nil || !cancel.DryRun || len(cancel.Cancelled) == 0 {
 		t.Errorf("item.move.preview: %s %+v", w.Data, rerr)
-	}
-
-	w, rerr = call("push.pending", `{}`)
-	if rerr != nil || string(w.Data) != `{"pushed":false,"reason":"nothing pending"}` {
-		t.Errorf("push.pending outside git: %s %+v", w.Data, rerr)
 	}
 }

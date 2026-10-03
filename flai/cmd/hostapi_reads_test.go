@@ -79,10 +79,11 @@ func sameAnswer(t *testing.T, root string, host hostapi.Host, method, params str
 	return string(w.Data), nil
 }
 
-// TestTheReadsAnswerWhatTheCommandsPrint holds the seven reads flai serve
-// answers in its own process to the commands the dashboard used to run
-// for them, through a project's life: stories in review, accepted and not
-// pushed, a remote that moved on.
+// TestTheReadsAnswerWhatTheCommandsPrint holds the reads flai serve answers
+// in its own process to the commands the dashboard used to run for them,
+// through a project's life: stories in review, accepted and not published,
+// a remote that moved on. The dashboard publishes and never pushes
+// (ADR-0067): it has no read of what flai push --pending would send.
 func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	root, remote := pendingProject(t)
 	t.Setenv("LOG_FORMAT", "json")
@@ -109,17 +110,17 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 			}
 		}
 	}
-	all := func() (push, publish string) {
+	all := func() (publish string) {
 		t.Helper()
 		says("item.show", answered("item.show", `{"id":"S-0002"}`, "edit", "S-0002", "--show"), `"hash"`)
 		says("item.move.preview", answered("item.move.preview", `{"id":"E-0001"}`, "move", "E-0001", "cancelled", "--by=designer", "--reason=preview", "--dry-run"), `"dry_run":true`)
 		answered("stats.get", `{}`, "stats")
 		answered("stats.get", `{"since":"12w","type":"task","by":"parent"}`, "stats", "--since=12w", "--type=task", "--by=parent")
 		says("stats.get by the hour", answered("stats.get", `{"since":"7d","bucket":"hour"}`, "stats", "--since=7d", "--bucket=hour"), `"bucket":"hour"`, `"spend":{"epic":`)
-		return answered("push.pending", `{}`, "push", "--pending", "--dry-run"), answered("publish.preview", `{}`, "release", "--pending", "--dry-run")
+		return answered("publish.preview", `{}`, "release", "--pending", "--dry-run")
 	}
 
-	_, publish := all()
+	publish := all()
 	says("publish.preview before any acceptance", publish, `"plans":null`)
 	says("stream.diff", answered("stream.diff", `{"id":"S-0002"}`, "stream", "diff", "S-0002"), `"cli/another.go"`)
 	says("accept.preview", answered("accept.preview", `{"id":"S-0002"}`, "accept", "S-0002", "--dry-run"), `"branch":"story/S-0002"`)
@@ -141,13 +142,21 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 			t.Fatalf("accept %s: %s", id, errOut)
 		}
 	}
-	push, publish := all()
-	says("push.pending once accepted", push, `"acceptances":["S-0002","S-0001"]`, `"dry_run":true`)
+	publish = all()
 	says("publish.preview once accepted", publish, `"cli"`, `"S-0002"`)
+	// with auto-publish on in a shell, still no read or write says what a
+	// push would send, or sends it: asked for, each is a method there is not
 	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-publish"); code != 0 {
 		t.Fatal(errOut)
 	}
-	says("push.pending with auto-publish", answered("push.pending", `{}`, "push", "--pending", "--dry-run"), `"release":[`)
+	for _, method := range []string{"push.pending", "push.run"} {
+		if _, ok := hostapi.MethodsFor("test", nil, host)[method]; ok {
+			t.Errorf("%s is a method the dashboard can call", method)
+		}
+		if out, errOut, code := runIn(t, root, "hostapi", method, `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a30"}`); code == 0 || !strings.Contains(out+errOut, "flai offers no method "+method) {
+			t.Errorf("%s answered as a method: %d %s %s", method, code, out, errOut)
+		}
+	}
 
 	// someone else pushed: the remote has a commit this clone lacks
 	other := filepath.Join(t.TempDir(), "other")
@@ -157,9 +166,6 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	gitIn(t, other, "commit", "-q", "--allow-empty", "-m", "elsewhere")
 	gitIn(t, other, "push", "-q", "origin", "main")
 	gitIn(t, root, "fetch", "-q", "origin")
-	if rerr := same("push.pending", `{}`, "push", "--pending", "--dry-run"); rerr == nil || rerr.Code != hostapi.Conflict || !strings.Contains(rerr.Message, "have diverged") {
-		t.Errorf("push.pending after the remote moved: %+v, want a conflict", rerr)
-	}
 
 	// published from another clone: this one lacks the tag (S-0174), which
 	// a remote's answer kept from the reads above would not show yet
@@ -168,7 +174,4 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	gitIn(t, remote, "tag", "cli/v1.2.0", "main")
 	publish = answered("publish.preview", `{}`, "release", "--pending", "--dry-run")
 	says("publish.preview from a clone missing the remote's tags", publish, `"plans":null`, `"remote":"cli/v1.2.0"`, `"branch":{"upstream":"origin/main"`, `"fix":"git fetch --tags origin \u0026\u0026 git merge origin/main"`)
-	if rerr := same("push.pending", `{}`, "push", "--pending", "--dry-run"); rerr == nil || rerr.Code != hostapi.Conflict || !strings.Contains(rerr.Message, "cli/v1.2.0") {
-		t.Errorf("push.pending with auto-publish from a lagging clone: %+v, want a conflict", rerr)
-	}
 }

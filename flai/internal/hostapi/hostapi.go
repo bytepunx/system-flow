@@ -41,8 +41,9 @@ type ProjectInfo struct {
 	// FlaiOutdated is set while that flai is older than the newest flai
 	// release in the project's history (S-0181): the host badge says so.
 	FlaiOutdated *release.Outdated `json:"flai_outdated,omitempty"`
-	// HostActions are the host actions there are, and whether the operator
-	// enabled each for this project (S-0078). Read-only to the dashboard.
+	// HostActions are the host actions a dashboard sees, and whether the
+	// operator enabled each for this project (S-0078). Read-only to the
+	// dashboard.
 	HostActions map[string]bool `json:"host_actions"`
 	// Agent is the project's default agent, which a story created now gets (S-0103).
 	Agent *manifest.Agent `json:"agent,omitempty"`
@@ -130,13 +131,15 @@ func relative(root string, items []*workitem.Item, bodies bool) []*workitem.Item
 	return out
 }
 
-// enabledActions says which host actions the operator enabled for a project.
-// It is told to the dashboard so that it can say what will happen; nothing
-// the dashboard can ask for changes it.
+// enabledActions says which host actions the operator enabled for a project,
+// of those a dashboard sees. It is told to the dashboard so that it can say
+// what will happen; nothing the dashboard can ask for changes it.
 func enabledActions(host Host, root string) map[string]bool {
 	out := map[string]bool{}
 	for name := range Actions {
-		out[name] = host.enabled(name, root)
+		if DashboardSees(name) {
+			out[name] = host.enabled(name, root)
+		}
 	}
 	return out
 }
@@ -412,7 +415,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return out, nil
 		},
 	}
-	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), readMethods(now, host), writeMethods(Commands, now, host)} {
+	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), readMethods(now), writeMethods(Commands, now, host)} {
 		for name, m := range more {
 			table[name] = m
 		}

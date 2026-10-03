@@ -259,16 +259,19 @@ func isNature(v string) bool {
 
 var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 
-// ActionPush is the host action that pushes an acceptance and publishes the
-// template with the operator's own credentials (S-0078).
+// ActionPush is the host action that lets a dashboard publish (S-0078,
+// ADR-0067): publish.run tags what was accepted since each component's last
+// release and pushes the branch and the tags with the operator's own
+// credentials. Publishing is the one way accepted work reaches the remote.
 const ActionPush = "push"
 
-// ActionAutoPublish is the host action that has every push of accepted work,
-// flai push --pending wherever it runs, first tag a release of everything
-// accumulated (S-0094). Off, which is the default, a push tags nothing and
-// releasing waits for flai release --pending or the board's Publish, so
-// acceptances batch into one release (S-0144, ADR-0032). No method asks for
-// it: flai push reads it.
+// ActionAutoPublish is the host action that has every flai push --pending,
+// wherever it runs, first tag a release of everything accumulated (S-0094).
+// Off, which is the default, a push tags nothing. Since ADR-0067 it and flai
+// push --pending are the operator's shell tools, outside the workflow: no
+// method asks for it, the dashboard neither sees nor changes it
+// (DashboardActions leaves it out, settings.action refuses it), and flai
+// push reads it.
 const ActionAutoPublish = "auto-publish"
 
 // ActionAgent is the host action that starts a story's agent when the story
@@ -302,15 +305,26 @@ const ActionHost = "host"
 // in a shell on the host alone: no method changes it.
 const ActionSettings = "settings"
 
-// Actions are the host actions there are, with what each lets a dashboard do.
+// Actions are the host actions there are, with what each lets a dashboard
+// do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
-	ActionPush:        "push accepted work, and publish everything merged and unreleased since each component's last tag when you press Publish, with your git credentials; a holder of the dashboard token can then publish any story that is in review and any release accumulated since",
-	ActionAutoPublish: "tag a release of everything merged and unreleased since each component's last tag every time accepted work is pushed, from the board or by flai push --pending, so each push publishes; off, pushing releases nothing, and what is accepted waits to be published together from Publish or flai release --pending",
+	ActionPush:        "publish when you press Publish: tag what was accepted since each component's last release and push the branch and the tags, with your git credentials, never forced; a holder of the dashboard token can then publish everything accepted and unreleased",
+	ActionAutoPublish: "has flai push --pending, run in a shell, first tag a release of everything merged and unreleased since each component's last tag; off, pushing releases nothing and what is accepted waits for Publish or flai release --pending. It is the operator's shell tool, outside the workflow (ADR-0067): no dashboard sees or changes it",
 	ActionAgent:       "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready and the in-progress limit has room, start a ready story's agent on demand, start or queue a new one for a story whose agent dropped or failed, start one to commit what a story in review left uncommitted in its worktree, and stop a story's agent, ending its process and everything it started; whoever can move a story to ready or press Start agent, Retry, Have an agent commit them, or Stop, a holder of the dashboard token included, then starts or stops it",
 	ActionDashboard:   "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:      "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
 	ActionHost:        "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
+}
+
+// shellOnly are the host actions kept to the operator's shell (ADR-0067):
+// no dashboard sees them or turns them on and off.
+var shellOnly = map[string]bool{ActionAutoPublish: true}
+
+// DashboardSees reports whether a dashboard is told of the host action name.
+func DashboardSees(name string) bool {
+	_, ok := Actions[name]
+	return ok && !shellOnly[name]
 }
 
 // Host is what the host decides and records about host actions (ADR-0029).
@@ -387,7 +401,7 @@ type spec struct {
 	// reads marks a command that changes nothing: no request ID is asked for.
 	reads bool
 	// describe says in a line what a successful call did, for the journal.
-	// Nil means the push/publish shape (describe, below); a host action with
+	// Nil means the publish shape (describe, below); a host action with
 	// a different answer shape (dashboard.restart, dashboard.upgrade,
 	// dashboard.stop) sets its own. A failed call is always "failed",
 	// err.Message, whichever this is.
@@ -1044,22 +1058,11 @@ func itemSpecs() map[string]spec {
 			return []string{"adr", "accept", n, "--autocommit", "--trailer=" + Trailer}, "", nil
 		}},
 
-		// push.run: the host action. flai push --pending --publish as the
-		// operator: the branch and the release tags of accepted work (a new
-		// release only with ActionAutoPublish on, S-0144), then the template where
-		// its publish remote is behind. Never forced; when the remote has moved
-		// it refuses (exit 3) and says to fetch and merge.
-		"push.run": {action: ActionPush, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			if _, e := decode[struct{}](raw); e != nil {
-				return nil, "", e
-			}
-			return []string{"push", "--pending", "--publish"}, "", nil
-		}},
-
-		// publish.run: the host action, the same one push.run uses (ADR-0031,
-		// S-0078): flai release --pending as the operator, applying, tagging,
-		// and pushing everything accepted and unreleased. Never forced; when
-		// the remote has moved it refuses (exit 3) and says to fetch and merge.
+		// publish.run: the push host action (ADR-0031, S-0078), and the one way
+		// the dashboard sends accepted work to the remote (ADR-0067): flai
+		// release --pending as the operator, applying, tagging, and pushing
+		// everything accepted and unreleased. Never forced; when the remote has
+		// moved it refuses (exit 3) and says to fetch and merge.
 		"publish.run": {action: ActionPush, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
@@ -1319,7 +1322,7 @@ func describeAgentNow(did, why string) func(res any, err *channel.Error) (outcom
 }
 
 // describeChecksRun reads flai checks run/cancel's own --json shape
-// (ChecksRun) for the journal, rather than describe's push/publish shape.
+// (ChecksRun) for the journal, rather than describe's publish shape.
 func describeChecksRun(res any, err *channel.Error) (outcome, detail string) {
 	if err != nil {
 		return "failed", err.Message
@@ -1363,7 +1366,7 @@ func describeHost(res any, err *channel.Error) (outcome, detail string) {
 
 // describeDashboardRestart, describeDashboardUpgrade, and describeDashboardStop
 // read cmd/dashboard.go and cmd/dashboard_upgrade.go's own --json shapes for
-// the journal, rather than describe's push/publish shape above. A failed
+// the journal, rather than describe's publish shape above. A failed
 // call is described the same way regardless: "failed", err.Message.
 
 func describeDashboardRestart(res any, err *channel.Error) (outcome, detail string) {
@@ -1573,7 +1576,7 @@ func (h Host) record(e Entry) {
 }
 
 // describe says in a line what became of a host action, for the journal:
-// what was pushed and published, or why not.
+// what flai release --pending pushed and published, or why not.
 func describe(res any, err *channel.Error) (outcome, detail string) {
 	if err != nil {
 		return "failed", err.Message
@@ -1585,15 +1588,8 @@ func describe(res any, err *channel.Error) (outcome, detail string) {
 		Reason    string   `json:"reason"`
 		Tags      []string `json:"tags"`
 		Published []string `json:"published"`
-		Unpushed  *struct {
-			Acceptances []string `json:"acceptances"`
-			Tags        []string `json:"tags"`
-		} `json:"unpushed"`
 	}
 	_ = json.Unmarshal(w.Data, &said)
-	if said.Unpushed != nil && len(said.Tags) == 0 {
-		said.Tags = said.Unpushed.Tags
-	}
 	switch {
 	case said.PushError != "":
 		return "failed", "not pushed: " + said.PushError

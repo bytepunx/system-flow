@@ -37,11 +37,13 @@ func inProcess(t *testing.T) {
 	}
 }
 
-const pushRequest = `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a10"}`
+const publishRequest = `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a10"}`
 
 // S-0078: a host action is off until the operator enables it by name on the
 // host; asked for meanwhile it is refused and says what enables it; enabled,
-// it runs; and every request is in the journal, refused ones too.
+// it runs; and every request is in the journal, refused ones too. The push
+// action gates Publish, the one way accepted work reaches the remote
+// (ADR-0067).
 func TestHostActionPush(t *testing.T) {
 	root, remote := researchProject(t, "feature", true)
 	inProcess(t)
@@ -49,15 +51,14 @@ func TestHostActionPush(t *testing.T) {
 	before := head(remote)
 	// S-0087: acceptance itself never pushes or tags, whatever the push
 	// action is set to; it only merges, archives, and commits locally.
-	// S-0144: nor does pushing, unless publish is enabled too; releasing
-	// waits for Publish, so acceptances batch into one release.
+	// Releasing waits for Publish, so acceptances batch into one release.
 	out, _, code := runIn(t, root, "hostapi", "accept.run", `{"id":"S-0001","include_uncommitted":true,"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a09"}`)
 	if code != 0 || head(remote) != before || head(root) == before {
 		t.Fatalf("an acceptance with the action off: accepted here, nothing pushed: %d %s", code, out)
 	}
 
 	out, _, _ = runIn(t, root, "serve", "actions")
-	if !strings.Contains(out, "push: off everywhere") || !strings.Contains(out, "off for this project; flai serve enable push") || !strings.Contains(out, "publish any story") {
+	if !strings.Contains(out, "push: off everywhere") || !strings.Contains(out, "off for this project; flai serve enable push") || !strings.Contains(out, "publish everything accepted") {
 		t.Errorf("actions, before: %s", out)
 	}
 	if j, _, _ := runIn(t, root, "serve", "journal"); !strings.Contains(j, "no host action has been asked for") {
@@ -69,7 +70,7 @@ func TestHostActionPush(t *testing.T) {
 	}
 
 	// off: refused, nothing pushed
-	out, _, code = runIn(t, root, "hostapi", "push.run", pushRequest)
+	out, _, code = runIn(t, root, "hostapi", "publish.run", publishRequest)
 	if code == 0 || !strings.Contains(out, "is not enabled for this project") || !strings.Contains(out, "flai serve enable push") || head(remote) != before {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
@@ -91,15 +92,15 @@ func TestHostActionPush(t *testing.T) {
 		t.Errorf("per project: %s", info)
 	}
 
-	// on: pushed, and with publish off nothing tagged (S-0144)
-	out, _, code = runIn(t, root, "hostapi", "push.run", pushRequest)
-	if code != 0 || !strings.Contains(out, `"pushed":true`) || strings.Contains(out, "cli/v1.1.0") || head(remote) != head(root) {
+	// on: published, the acceptance tagged and pushed with its tag
+	out, _, code = runIn(t, root, "hostapi", "publish.run", publishRequest)
+	if code != 0 || !strings.Contains(out, `"pushed":true`) || !strings.Contains(out, "cli/v1.1.0") || head(remote) != head(root) {
 		t.Fatalf("enabled: %d %s", code, out)
 	}
-	if tags := gitIn(t, root, "tag", "--list"); strings.Contains(tags, "cli/v1.1.0") {
-		t.Errorf("pushing released nothing: %s", tags)
+	if tags := gitIn(t, remote, "tag", "--list"); !strings.Contains(tags, "cli/v1.1.0") {
+		t.Errorf("the release tag reached the remote: %s", tags)
 	}
-	out, _, _ = runIn(t, root, "hostapi", "push.run", `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a11"}`)
+	out, _, _ = runIn(t, root, "hostapi", "publish.run", `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a11"}`)
 	if !strings.Contains(out, "nothing pending") {
 		t.Errorf("nothing left: %s", out)
 	}
@@ -110,9 +111,9 @@ func TestHostActionPush(t *testing.T) {
 	if err := json.Unmarshal([]byte(js), &entries); err != nil || len(entries) != 3 {
 		t.Fatalf("journal: %v %s", err, js)
 	}
-	for i, want := range []struct{ outcome, detail string }{{"disabled", ""}, {"done", "pushed"}, {"done", "nothing pushed: nothing pending"}} {
+	for i, want := range []struct{ outcome, detail string }{{"disabled", ""}, {"done", "pushed with tags cli/v1.1.0"}, {"done", "nothing pushed: nothing pending"}} {
 		e := entries[i]
-		if e.Outcome != want.outcome || e.Detail != want.detail || e.Action != "push" || e.Method != "push.run" || e.Root != root || e.By == "" || e.At == "" {
+		if e.Outcome != want.outcome || e.Detail != want.detail || e.Action != "push" || e.Method != "publish.run" || e.Root != root || e.By == "" || e.At == "" {
 			t.Errorf("entry %d: %+v", i, e)
 		}
 	}
@@ -128,7 +129,7 @@ func TestHostActionPush(t *testing.T) {
 	if out, _, _ := runIn(t, root, "serve", "disable", "push"); !strings.Contains(out, "push disabled for t") {
 		t.Errorf("disable: %s", out)
 	}
-	if out, _, code := runIn(t, root, "hostapi", "push.run", `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a12"}`); code == 0 || !strings.Contains(out, "not enabled") {
+	if out, _, code := runIn(t, root, "hostapi", "publish.run", `{"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a12"}`); code == 0 || !strings.Contains(out, "not enabled") {
 		t.Errorf("disabled again: %d %s", code, out)
 	}
 	// every project, and one project's disable under it says so
@@ -373,7 +374,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
-	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"push accepted work`, `"name":"builder"`,
+	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"publish when you press Publish`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"program":"claude","set":false}`,
 		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`,
 		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":"`, `"unserved":[]}`} {
@@ -383,6 +384,42 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	}
 	if strings.Contains(string(got), `"token"`) || strings.Contains(string(got), "4242") || strings.Contains(string(got), "/p/harbour/k") {
 		t.Errorf("no token in the settings: %s", got)
+	}
+}
+
+// ADR-0067: auto-publish is the operator's shell tool, outside the workflow.
+// The serve actions listing names it and serve enable turns it on, saying
+// what it has flai push do; the dashboard is neither told of it nor can turn
+// it on or off.
+func TestAutoPublishIsTheShellsAlone(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, _, _ := runIn(t, root, "serve", "actions")
+	if !strings.Contains(out, "auto-publish: off everywhere\n  has flai push --pending, run in a shell") || !strings.Contains(out, "push: off everywhere\n  lets a dashboard publish when you press Publish") {
+		t.Errorf("actions lists auto-publish for the operator: %s", out)
+	}
+	out, errOut, code := runIn(t, root, "serve", "enable", "auto-publish")
+	if code != 0 || !strings.Contains(out, "auto-publish enabled for t\n  it has flai push --pending") || strings.Contains(out, "journal") || !strings.Contains(out, "flai serve disable auto-publish") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if info, _, _ := runIn(t, root, "hostapi", "project.info"); strings.Contains(info, "auto-publish") || !strings.Contains(info, `"push":false`) {
+		t.Errorf("project.info names auto-publish: %s", info)
+	}
+	runIn(t, root, "serve", "enable", "settings")
+	out, _, code = runIn(t, root, "hostapi", "settings.action", `{"action":"auto-publish","on":false,"request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a20"}`)
+	if code == 0 || !strings.Contains(out, "flai serve disable auto-publish") || !strings.Contains(out, "in a shell on the host") {
+		t.Errorf("settings.action refuses auto-publish, naming what to run: %d %s", code, out)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg, _, _ := (&app{}).loadConfig(); !cfg.ActionEnabled("auto-publish", mainRootOf(repo)) {
+		t.Error("the refusal left auto-publish as the shell set it")
+	}
+	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	if strings.Contains(string(got), "auto-publish") || !strings.Contains(string(got), `"name":"push"`) {
+		t.Errorf("the settings page is told of auto-publish: %s", got)
 	}
 }
 

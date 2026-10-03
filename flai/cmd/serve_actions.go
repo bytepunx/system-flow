@@ -93,6 +93,15 @@ func knownAction(name string) error {
 	return fmt.Errorf("there is no host action %q; there %s: %s", name, oneOrMany(len(names), "is", "are"), strings.Join(names, ", "))
 }
 
+// actionMeans says what the host action n does once enabled: what it lets a
+// dashboard do, or, for one no dashboard sees, what it has flai do.
+func actionMeans(n string) string {
+	if hostapi.DashboardSees(n) {
+		return "lets a dashboard " + hostapi.Actions[n]
+	}
+	return hostapi.Actions[n]
+}
+
 func oneOrMany(n int, one, many string) string {
 	if n == 1 {
 		return one
@@ -147,7 +156,11 @@ to the project in the working directory, or to every project with
 			}
 			switch {
 			case on:
-				fmt.Fprintf(a.out, "%s enabled for %s\n  it lets a dashboard %s\n  every use is journalled: flai serve journal\n  turn it off with: flai serve disable %s\n", action, where, hostapi.Actions[action], action)
+				fmt.Fprintf(a.out, "%s enabled for %s\n  it %s\n", action, where, actionMeans(action))
+				if hostapi.DashboardSees(action) {
+					fmt.Fprintln(a.out, "  every use is journalled: flai serve journal")
+				}
+				fmt.Fprintf(a.out, "  turn it off with: flai serve disable %s\n", action)
 			case still:
 				fmt.Fprintf(a.out, "%s is still enabled for %s, because it is enabled for every project; flai serve disable %s --all-projects turns it off everywhere\n", action, where, action)
 			default:
@@ -195,7 +208,7 @@ func newServeActionsCmd(a *app) *cobra.Command {
 				if roots := cfg.HostActions[n]; len(roots) > 0 {
 					state = "on for " + strings.ReplaceAll(strings.Join(roots, ", "), config.AllProjects, "every project")
 				}
-				fmt.Fprintf(a.out, "%s: %s\n  lets a dashboard %s\n", n, state, hostapi.Actions[n])
+				fmt.Fprintf(a.out, "%s: %s\n  %s\n", n, state, actionMeans(n))
 				if here != "" {
 					if cfg.ActionEnabled(n, here) {
 						fmt.Fprintf(a.out, "  on for this project; flai serve disable %s turns it off\n", n)
@@ -725,7 +738,9 @@ func (a *app) hostSettings(root string) any {
 	}
 	names := make([]string, 0, len(hostapi.Actions))
 	for n := range hostapi.Actions {
-		names = append(names, n)
+		if hostapi.DashboardSees(n) {
+			names = append(names, n)
+		}
 	}
 	sort.Strings(names)
 	actions := make([]map[string]any, 0, len(names))

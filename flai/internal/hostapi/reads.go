@@ -31,7 +31,7 @@ type work func(r execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, erro
 
 // answer runs a read under the phase named for it and returns what the
 // command would have answered.
-func answer(ctx context.Context, p channel.Project, phase string, exits map[int]int, w work) (any, *channel.Error) {
+func answer(ctx context.Context, p channel.Project, phase string, w work) (any, *channel.Error) {
 	done := perf.Track(ctx, "repo.open")
 	repo, err := workitem.Open(p.Root)
 	done()
@@ -46,20 +46,15 @@ func answer(ctx context.Context, p channel.Project, phase string, exits map[int]
 	v, err := w(r, repo, log)
 	done()
 	ran := Ran{Events: logged(&events)}
-	switch {
-	case preview.IsDiverged(err):
-		ran.Exit = 3
-	case err != nil:
-		ran.Exit = 1
-	}
 	if err != nil {
+		ran.Exit = 1
 		ran.Events = append(ran.Events, map[string]any{"level": "FATAL", "msg": "command failed", "err": err.Error()})
-		return outcome(ran, nil, exits)
+		return outcome(ran, nil, nil)
 	}
 	if ran.Stdout, err = json.Marshal(v); err != nil {
 		return nil, failed(err)
 	}
-	return outcome(ran, nil, exits)
+	return outcome(ran, nil, nil)
 }
 
 // logged reads back the events a read logged, as ExecRunner reads a flai's.
@@ -87,7 +82,7 @@ func idOnly(raw json.RawMessage) (string, *channel.Error) {
 	return in.ID, needID(in.ID)
 }
 
-func readMethods(now func() time.Time, host Host) map[string]channel.Method {
+func readMethods(now func() time.Time) map[string]channel.Method {
 	return map[string]channel.Method{
 		// item.show: what flai edit --show prints, an item's own words and
 		// the hash an edit gives back (S-0085).
@@ -96,7 +91,7 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			if e != nil {
 				return nil, e
 			}
-			return answer(ctx, p, "item.show", nil, func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+			return answer(ctx, p, "item.show", func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
 				return itemedit.Show(repo, id)
 			})
 		},
@@ -109,7 +104,7 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 				return nil, e
 			}
 			by := owner(p)
-			return answer(ctx, p, "cancel.preview", nil, func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+			return answer(ctx, p, "cancel.preview", func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
 				it, err := repo.Get(id)
 				if err != nil {
 					return nil, err
@@ -128,7 +123,7 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 				return nil, e
 			}
 			by := owner(p)
-			return answer(ctx, p, "accept.preview", nil, func(r execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, error) {
+			return answer(ctx, p, "accept.preview", func(r execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, error) {
 				it, err := repo.Get(id)
 				if err != nil {
 					return nil, err
@@ -144,7 +139,7 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			if e != nil {
 				return nil, e
 			}
-			return answer(ctx, p, "stream.diff", nil, func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+			return answer(ctx, p, "stream.diff", func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
 				it, err := repo.Get(id)
 				if err != nil {
 					return nil, err
@@ -176,7 +171,7 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			if in.Bucket != "" && in.Bucket != metrics.BucketHour && in.Bucket != metrics.BucketDay && in.Bucket != metrics.BucketWeek {
 				return nil, bad("bucket must be hour, day, or week")
 			}
-			return answer(ctx, p, "stats.compute", nil, func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+			return answer(ctx, p, "stats.compute", func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
 				since := in.Since
 				if since == "" {
 					since = metrics.DefaultWindow
@@ -196,26 +191,6 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			})
 		},
 
-		// push.pending: what flai push --pending --dry-run says it would
-		// push. A remote that has moved is a conflict, with its reason
-		// (S-0078).
-		"push.pending": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
-			if _, e := decode[struct{}](raw); e != nil {
-				return nil, e
-			}
-			return answer(ctx, p, "push.preview", map[int]int{3: Conflict}, func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
-				root := repo.MainRoot
-				if root == "" {
-					root = repo.Root
-				}
-				pushing, err := preview.PushDryRun(r, root, repo, host.enabled(ActionAutoPublish, root))
-				if err != nil {
-					return nil, err
-				}
-				return pushing.Result, nil
-			})
-		},
-
 		// publish.preview: everything release.Pending would release, without
 		// changing anything, so the board can show it before the operator
 		// asks for it (S-0087).
@@ -223,7 +198,7 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, e
 			}
-			return answer(ctx, p, "release.pending", nil, func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+			return answer(ctx, p, "release.pending", func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
 				return preview.Publish(r, repo)
 			})
 		},
