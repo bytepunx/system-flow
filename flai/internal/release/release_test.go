@@ -41,7 +41,7 @@ func TestVersionsAndLevels(t *testing.T) {
 		t.Error("partial version accepted")
 	}
 	cases := map[*workitem.Item]string{
-		{Type: workitem.Epic, Nature: "feature"}:      None, // ADR-0077
+		{Type: workitem.Epic, Nature: "feature"}:      None, // ADR-0078
 		{Type: workitem.Story, Nature: "feature"}:     Minor,
 		{Type: workitem.Story, Nature: "remediation"}: Patch,
 		{Type: workitem.Story, Nature: "improvement"}: Patch,
@@ -266,7 +266,7 @@ func TestPendingLeavesOutWhatALaterTagAlreadyCovered(t *testing.T) {
 }
 
 // A feature story outranks a remediation, and an epic accepted in the batch
-// adds no bump of its own (ADR-0077): its stories carry theirs.
+// adds no bump of its own (ADR-0078): its stories carry theirs.
 func TestPendingAnEpicInTheBatchAddsNothing(t *testing.T) {
 	root, r := gitRepo(t)
 	repo := &workitem.Repo{Root: root, Manifest: m}
@@ -380,7 +380,7 @@ func TestComputeAndApply(t *testing.T) {
 	if !strings.Contains(string(ty), "version: 1.0.1") || !strings.HasPrefix(string(cl), "# Changelog\n\n## 1.0.1 - 2026-09-17\n\n- S-004 Template tweak (patch).\n\n## 1.0.0") {
 		t.Errorf("apply:\n%s\n%s", ty, cl)
 	}
-	// epic: no bump of its own, whatever its commits touched (ADR-0077)
+	// epic: no bump of its own, whatever its commits touched (ADR-0078)
 	epic := &workitem.Item{ID: "S-002", Type: workitem.Epic, Nature: "feature", Title: "Epic", Tags: []string{"cli"}}
 	plan, _ = Compute(r, root, m, epic, nil, "")
 	if len(plan.Steps) != 0 || !strings.Contains(plan.Skipped, "is an epic") || len(plan.Unreleased) == 0 {

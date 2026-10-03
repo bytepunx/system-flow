@@ -1655,7 +1655,7 @@ Compute a release for one item, or publish everything accepted since the last re
 flai release <id> | --pending [flags]
 ```
 
-Per design/conventions/git.md: the component the item delivers to gets the delivery-type bump (feature story minor, remediation or improvement patch; an epic none of its own, its stories carry theirs, ADR-0077); every other component its commits touched gets a patch. Components come from system-flow.yaml projects; the delivered one from the item's tags (a project name or one of its tags), the parent's tags, or --deliver. Code components get an annotated tag &lt;name&gt;/vX.Y.Z on HEAD; the template component gets its version file and changelog bumped (commit them).
+Per design/conventions/git.md: the component the item delivers to gets the delivery-type bump (feature story minor, remediation or improvement patch; an epic none of its own, its stories carry theirs, ADR-0078); every other component its commits touched gets a patch. Components come from system-flow.yaml projects; the delivered one from the item's tags (a project name or one of its tags), the parent's tags, or --deliver. Code components get an annotated tag &lt;name&gt;/vX.Y.Z on HEAD; the template component gets its version file and changelog bumped (commit them).
 
 flai accept never does this (S-0087): it only merges, archives, and commits.
 

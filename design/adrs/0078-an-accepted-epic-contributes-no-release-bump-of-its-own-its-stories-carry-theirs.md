@@ -1,5 +1,5 @@
 ---
-id: ADR-0077
+id: ADR-0078
 title: "An accepted epic contributes no release bump of its own: its stories carry theirs"
 status: accepted
 date: 2026-10-03
@@ -8,7 +8,7 @@ superseded_by: []
 refines: [ADR-0076]
 ---
 
-# ADR-0077 An accepted epic contributes no release bump of its own: its stories carry theirs
+# ADR-0078 An accepted epic contributes no release bump of its own: its stories carry theirs
 
 ## Context
 
