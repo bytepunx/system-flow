@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func TestCheckCommand(t *testing.T) {
@@ -30,6 +33,32 @@ func TestCheckCommand(t *testing.T) {
 	}
 	if err := json.Unmarshal([]byte(out), &res); err != nil || res.Errors == 0 || len(res.Findings) == 0 {
 		t.Fatalf("json: %v %s", err, out)
+	}
+}
+
+// S-0243: the summary says how many warnings --strict passes over, and only
+// when there are some.
+func TestCheckSummaryNamesTheAdvisoryWarnings(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range 4 {
+		s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: fmt.Sprintf("Story %d", i+1), Owner: "t", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.Status = workitem.Review
+		if err := repo.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out, _, _ := runIn(t, root, "check")
+	if !strings.Contains(out, "warning: board.wip-limit: 4 stories in review, limit 3") ||
+		!strings.Contains(out, " warnings (1 that --strict passes over: review over its limit waits on acceptance)\n") {
+		t.Errorf("summary should name the advisory warning:\n%s", out)
 	}
 }
 

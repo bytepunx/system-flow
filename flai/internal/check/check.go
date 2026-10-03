@@ -48,12 +48,17 @@ type Result struct {
 	Findings []Finding `json:"findings"`
 	Errors   int       `json:"errors"`
 	Warnings int       `json:"warnings"`
-	Items    int       `json:"items"`
+	// Advisory counts the warnings --strict passes over, which Warnings
+	// includes: the review column over its limit, which only acceptance
+	// clears (S-0243).
+	Advisory int `json:"advisory"`
+	Items    int `json:"items"`
 }
 
-// OK reports whether the run passed: no errors, and no warnings when strict.
+// OK reports whether the run passed: no errors, and when strict no warnings
+// but the advisory ones.
 func (r *Result) OK(strict bool) bool {
-	return r.Errors == 0 && (!strict || r.Warnings == 0)
+	return r.Errors == 0 && (!strict || r.Warnings == r.Advisory)
 }
 
 type checker struct {
@@ -121,6 +126,13 @@ func (c *checker) add(level, rule, path string, line int, format string, args ..
 	} else {
 		c.res.Warnings++
 	}
+}
+
+// advise adds a warning that --strict passes over: one no story's agent can
+// clear, which would otherwise stop every close-out (S-0243).
+func (c *checker) advise(rule, path string, line int, format string, args ...any) {
+	c.add(Warning, rule, path, line, format, args...)
+	c.res.Advisory++
 }
 
 // keyLine returns the 1-based line of a top-level front matter key.
@@ -609,8 +621,17 @@ func (c *checker) board() {
 		}
 	}
 	for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
-		if limit := b.WIPLimits[st]; limit > 0 && counts[st] > limit {
-			c.add(Warning, "board.wip-limit", b.Path, keyLine(b.Path, "wip_limits"), "%d stories in %s, limit %d", counts[st], st, limit)
+		limit := b.WIPLimits[st]
+		if limit <= 0 || counts[st] <= limit {
+			continue
+		}
+		line := keyLine(b.Path, "wip_limits")
+		if st == workitem.Review {
+			// Review over its limit waits on the operator's acceptance, so it
+			// warns without failing --strict; ready and in-progress do (S-0243).
+			c.advise("board.wip-limit", b.Path, line, "%d stories in %s, limit %d", counts[st], st, limit)
+		} else {
+			c.add(Warning, "board.wip-limit", b.Path, line, "%d stories in %s, limit %d", counts[st], st, limit)
 		}
 	}
 	for _, id := range b.Order {

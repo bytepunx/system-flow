@@ -19,7 +19,8 @@ func newCheckCmd(a *app) *cobra.Command {
 narratives and their index, the board, and documentation front matter.
 
 Findings print as path:line: level: rule: message. Errors exit 1; with
---strict warnings do too.`,
+--strict warnings do too, except the review column over its limit, which
+only acceptance clears.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var repo *workitem.Repo
@@ -49,7 +50,12 @@ Findings print as path:line: level: rule: message. Errors exit 1; with
 				for _, f := range res.Findings {
 					fmt.Fprintf(a.out, "%s:%d: %s: %s: %s\n", f.Path, f.Line, f.Level, f.Rule, f.Message)
 				}
-				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings\n", res.Items, res.Errors, res.Warnings)
+				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings", res.Items, res.Errors, res.Warnings)
+				if res.Advisory > 0 {
+					// S-0243: say which warnings --strict does not fail on.
+					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit waits on acceptance)", res.Advisory)
+				}
+				fmt.Fprintln(a.out)
 			}
 			if !res.OK(strict) {
 				return &exitError{code: 1}
@@ -57,7 +63,7 @@ Findings print as path:line: level: rule: message. Errors exit 1; with
 			return nil
 		},
 	}
-	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures")
+	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures, except the review column over its limit")
 	return c
 }
 

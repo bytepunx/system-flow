@@ -575,3 +575,79 @@ func TestUnknownFieldsAreReported(t *testing.T) {
 		t.Errorf("%s not reported", rule)
 	}
 }
+
+// S-0243, I-0007: the review column over its limit still warns, but --strict
+// passes over it, since only the operator's acceptance clears it; ready and
+// in-progress over their limits still fail --strict.
+func TestReviewOverItsLimitDoesNotFailStrict(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	_ = os.WriteFile(filepath.Join(root, "wip/kanban/board.md"), []byte("---\ntitle: Board\nupdated: 2026-09-01\nstatus: active\nwip_limits:\n  ready: 1\n  in-progress: 1\n  review: 3\norder: []\n---\n\n# Board\n"), 0o644)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stories []*workitem.Item
+	for i := range 4 {
+		stories = append(stories, mustItem(t, repo, workitem.Story, fmt.Sprintf("Story %d", i+1), ""))
+	}
+	set := func(status ...string) {
+		for i, s := range stories {
+			s.Status = status[i]
+			if err := repo.Save(s); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// board runs the board rules alone, so the stories' other findings
+	// (no tasks, no narrative) do not decide OK.
+	board := func() *Result {
+		items, err := repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := &checker{repo: repo, now: now, items: items, byID: map[string]*workitem.Item{}, res: &Result{}}
+		c.board()
+		return c.res
+	}
+
+	set(workitem.Review, workitem.Review, workitem.Review, workitem.Review)
+	res := board()
+	if len(res.Findings) != 1 || res.Findings[0].Level != Warning || res.Findings[0].Rule != "board.wip-limit" || res.Findings[0].Message != "4 stories in review, limit 3" {
+		t.Fatalf("review over its limit should warn: %+v", res.Findings)
+	}
+	if res.Warnings != 1 || res.Advisory != 1 {
+		t.Errorf("warnings %d advisory %d, want 1 and 1", res.Warnings, res.Advisory)
+	}
+	if !res.OK(true) || !res.OK(false) {
+		t.Errorf("review over its limit must not fail --strict: %+v", res)
+	}
+	full, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if full.Advisory != 1 {
+		t.Errorf("Run: advisory %d, want 1", full.Advisory)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		status []string
+		msg    string
+	}{
+		{"ready", []string{workitem.Ready, workitem.Ready, workitem.Backlog, workitem.Backlog}, "2 stories in ready, limit 1"},
+		{"in-progress", []string{workitem.InProgress, workitem.InProgress, workitem.Backlog, workitem.Backlog}, "2 stories in in-progress, limit 1"},
+	} {
+		set(tc.status...)
+		res := board()
+		if len(res.Findings) != 1 || res.Findings[0].Rule != "board.wip-limit" || res.Findings[0].Message != tc.msg {
+			t.Fatalf("%s over its limit should warn: %+v", tc.name, res.Findings)
+		}
+		if res.Advisory != 0 || res.OK(true) || !res.OK(false) {
+			t.Errorf("%s over its limit must still fail --strict only: %+v", tc.name, res)
+		}
+	}
+}
