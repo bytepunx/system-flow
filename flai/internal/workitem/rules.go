@@ -33,6 +33,9 @@ type MoveOptions struct {
 	// cancel an item in review (ADR-0028): cancelling the parent must close
 	// everything under it, and the item's branch is left as it is.
 	Cascade bool
+	// Finalize lets a draft story go to ready, and makes it no longer a
+	// draft (S-0199).
+	Finalize bool
 }
 
 // Move validates and applies a state transition. Warnings are non-fatal
@@ -71,6 +74,9 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 		// writes them once it is in progress (ADR-0021).
 		if it.Type == Story && !hasCriteria(it.Body) {
 			return nil, fmt.Errorf("rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
+		}
+		if it.Type == Story && it.Draft && !opt.Finalize {
+			return nil, fmt.Errorf("rule: %s is a draft: finalize it first (flai edit %s --no-draft, or flai move %s ready --yes)", it.ID, it.ID, it.ID)
 		}
 	case Review:
 		if it.Type == Story && len(children) == 0 {
@@ -139,6 +145,9 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	it.Transitions = append(it.Transitions, Transition{To: to, At: now, By: orDefault(opt.By, "agent")})
 	it.Status = to
 	it.Updated = now
+	if to == Ready && opt.Finalize {
+		it.Draft = false
+	}
 	if opt.Reason != "" {
 		it.Body = appendNote(it.Body, fmt.Sprintf("- %s: moved to %s: %s", now, to, opt.Reason))
 	}

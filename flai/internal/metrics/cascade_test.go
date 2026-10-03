@@ -37,7 +37,7 @@ func TestCascadedItemsCountAsCancelledAtTheCascade(t *testing.T) {
 	}
 	cascade := t0.Add(48 * time.Hour)
 	epic, _ = repo.Get(epic.ID)
-	if _, err := repo.TransitionAll(epic, workitem.Cancelled, "alex", "a different route", cascade); err != nil {
+	if _, err := repo.TransitionAll(epic, workitem.Cancelled, "alex", "a different route", cascade, false); err != nil {
 		t.Fatal(err)
 	}
 	items, _ := repo.List(false)

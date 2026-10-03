@@ -69,7 +69,7 @@ func TestCancellingAnEpicCancelsEverythingOpenUnderIt(t *testing.T) {
 	r := cascadeProject(t)
 	before := statuses(t, r)
 	e, _ := r.Get("E-0001")
-	res, err := r.TransitionAll(e, Cancelled, "alex", "a different route", t0)
+	res, err := r.TransitionAll(e, Cancelled, "alex", "a different route", t0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestCancellingAnEpicCancelsEverythingOpenUnderIt(t *testing.T) {
 func TestCancellingAStoryCancelsItsOpenTasks(t *testing.T) {
 	r := cascadeProject(t)
 	s, _ := r.Get("S-0003")
-	res, err := r.TransitionAll(s, Cancelled, "alex", "not needed", t0)
+	res, err := r.TransitionAll(s, Cancelled, "alex", "not needed", t0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestCancellingAStoryCancelsItsOpenTasks(t *testing.T) {
 func TestReviewIsCancelledOnlyThroughAParent(t *testing.T) {
 	r := cascadeProject(t)
 	s, _ := r.Get("S-0004")
-	if _, err := r.TransitionAll(s, Cancelled, "alex", "directly", t0); err == nil || !strings.Contains(err.Error(), "cannot go from review to cancelled") {
+	if _, err := r.TransitionAll(s, Cancelled, "alex", "directly", t0, false); err == nil || !strings.Contains(err.Error(), "cannot go from review to cancelled") {
 		t.Errorf("a story in review cancelled directly: %v", err)
 	}
 }
@@ -153,7 +153,7 @@ func TestARefusedCancellationChangesNothing(t *testing.T) {
 	}
 	before := read()
 	e, _ := r.Get("E-0001")
-	if _, err := r.TransitionAll(e, Cancelled, "alex", "  ", t0); err == nil {
+	if _, err := r.TransitionAll(e, Cancelled, "alex", "  ", t0, false); err == nil {
 		t.Fatal("cancelling without a reason must be refused")
 	}
 	for id, body := range read() {
@@ -167,7 +167,7 @@ func TestNothingOpenMeansNothingExtra(t *testing.T) {
 	r := newProject(t)
 	mustCreate(t, r, Epic, "E", "")
 	e, _ := r.Get("E-0001")
-	res, err := r.TransitionAll(e, Cancelled, "alex", "empty", t0)
+	res, err := r.TransitionAll(e, Cancelled, "alex", "empty", t0, false)
 	if err != nil || len(res.Cancelled) != 0 || res.Cancelled == nil {
 		t.Errorf("res %+v err %v", res, err)
 	}

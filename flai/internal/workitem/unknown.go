@@ -127,9 +127,12 @@ func KnownFields(v any) []string {
 // refuses the item. front-matter-fields.txt lists it for that reason
 // (TestFieldsFileIsTheCode, release.RaiseMinimum).
 var fieldTypes = map[string][]string{
-	"after":  {Story, Task}, // a task's since S-0176
-	"agent":  {Story},
-	"topics": {Epic, Story},
+	"after":         {Story, Task}, // a task's since S-0176
+	"agent":         {Story},
+	"cost_of_delay": {Epic, Story},
+	"draft":         {Story},
+	"forecast":      {Story},
+	"topics":        {Epic, Story},
 }
 
 // Carries reports whether an item of type typ may carry the field: true for

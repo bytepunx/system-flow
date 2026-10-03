@@ -91,6 +91,9 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `prime.budget` | `80KB` | The size a story's context pack fits, for `flai prime --story` and the MCP `prime` tool; bytes, or a number with `KB` or `MB`; `--budget` overrides it for one run ([Prime a session](../users/flai.md#prime-a-session)) |
 | `agent.config.<name>` | none | Options for the harness; `claude-code` takes `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `max_budget_usd`, and `fallback_model` |
 | `issues.story_after` | `168h` | How long an issue may stay open with no open story linking it before `flai check` warns (`issues.no-story`); a Go duration such as `24h`, or `0` to turn the warning off ([Record recurring friction](../users/flai.md#record-recurring-friction)) |
+| `planning.currency` | `USD` | The ISO 4217 code, three capital letters such as `EUR`, of every amount in an item's `cost_of_delay` and of `planning.hour_rate` |
+| `planning.hour_rate` | unset | What an hour of work costs, in `planning.currency`; a number of zero or more. Unset means unknown, not free |
+| `planning.cycle` | `168h` | The period a cost of delay's `time_lost_per_cycle` is counted over; a Go duration longer than zero |
 | `flai.minimum` | unset | The oldest flai release that may read the project, `X.Y.Z`; an older one stops before reading any item and names the version needed. Publishing a flai release that changes the front-matter fields flai reads raises it ([Keeping the host's flai current](index.md#keeping-the-hosts-flai-current)) |
 | `agent.roles.<name>.harness` | none | The harness of a sub-agent role (`explore`, `verify`); for `claude-code`, only `claude-code`, since a sub-agent runs in the story's session |
 | `agent.roles.<name>.model` | none | The model a sub-agent role runs, over the one its definition in `.claude/agents/` names, such as `haiku` or `claude-sonnet-5-5` |

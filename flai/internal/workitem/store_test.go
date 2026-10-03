@@ -303,6 +303,11 @@ func TestCloneSharesNothing(t *testing.T) {
 		Agent:   &manifest.Agent{Model: "m", Config: map[string]string{"k": "v"}, Roles: map[string]manifest.Role{"verify": {Model: "s", Config: map[string]string{"k": "v"}}}},
 		Usage:   &usage.Usage{Models: []usage.Model{{Model: "m"}}},
 		Unknown: []Field{{Name: "hold", Raw: "hold: x\n"}},
+		CostOfDelay: &CostOfDelay{
+			Inputs: &CostInputs{RevenuePerWeek: new(float64), PenaltyPerWeek: new(float64)},
+			Value:  new(float64),
+		},
+		Forecast: &Forecast{Duration: "4h"},
 	}
 	c := it.clone()
 	if !reflect.DeepEqual(it, c) {

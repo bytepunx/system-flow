@@ -145,5 +145,7 @@ func (it *Item) clone() *Item {
 		u.Models = slices.Clone(it.Usage.Models)
 		c.Usage = &u
 	}
+	c.CostOfDelay = it.CostOfDelay.clone()
+	c.Forecast = it.Forecast.clone()
 	return &c
 }

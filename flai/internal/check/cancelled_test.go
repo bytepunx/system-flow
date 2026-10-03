@@ -84,7 +84,7 @@ func TestAnOpenItemUnderACancelledParentIsReported(t *testing.T) {
 func TestACascadeOutOfReviewIsAValidHistory(t *testing.T) {
 	repo := cancelledProject(t)
 	epic, _ := repo.Get("E-0001")
-	if _, err := repo.TransitionAll(epic, workitem.Cancelled, "alex", "a different route", now); err != nil {
+	if _, err := repo.TransitionAll(epic, workitem.Cancelled, "alex", "a different route", now, false); err != nil {
 		t.Fatal(err)
 	}
 	if got := rules(t, repo, "item.sequence"); len(got) != 0 {

@@ -5,8 +5,10 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -46,6 +48,8 @@ type Manifest struct {
 	Prime Prime `yaml:"prime,omitempty" json:"prime,omitzero"`
 	// Issues is how flai check treats the project's open issues (S-0198).
 	Issues Issues `yaml:"issues,omitempty" json:"issues,omitzero"`
+	// Planning is the units the planner's numbers are in (S-0199).
+	Planning Planning `yaml:"planning,omitempty" json:"planning,omitzero"`
 	// Flai is what the project asks of the flai that reads it (S-0181).
 	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
 }
@@ -104,6 +108,66 @@ func (i Issues) StoryAfterDuration() (time.Duration, error) {
 		return 0, fmt.Errorf("issues.story_after %q is negative; write a duration such as 168h or 24h, or 0 to turn the warning off", i.StoryAfter)
 	}
 	return d, nil
+}
+
+// Planning is the project's say about the units of its planning data.
+type Planning struct {
+	// Currency is the ISO 4217 code of every amount items carry, such as
+	// EUR; empty means DefaultCurrency.
+	Currency string `yaml:"currency,omitempty" json:"currency,omitempty"`
+	// HourRate is what an hour of work costs, in Currency; unset means
+	// unknown, not free.
+	HourRate *float64 `yaml:"hour_rate,omitempty" json:"hour_rate,omitempty"`
+	// Cycle is the period a cost of delay's time lost is counted over, a Go
+	// duration such as 168h; empty means DefaultCycle.
+	Cycle string `yaml:"cycle,omitempty" json:"cycle,omitempty"`
+}
+
+// DefaultCurrency is the currency of amounts when planning.currency is not
+// set.
+const DefaultCurrency = "USD"
+
+// DefaultCycle is the planning cycle when planning.cycle is not set: a week.
+const DefaultCycle = 168 * time.Hour
+
+var currencyCode = regexp.MustCompile(`^[A-Z]{3}$`)
+
+// CurrencyCode is planning.currency, or DefaultCurrency when it is empty.
+func (p Planning) CurrencyCode() string {
+	if p.Currency != "" {
+		return p.Currency
+	}
+	return DefaultCurrency
+}
+
+// CycleDuration is planning.cycle as a duration: DefaultCycle when it is
+// empty.
+func (p Planning) CycleDuration() (time.Duration, error) {
+	s := strings.TrimSpace(p.Cycle)
+	if s == "" {
+		return DefaultCycle, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d <= 0 {
+		return 0, fmt.Errorf("planning.cycle %q is not a duration longer than zero; write one such as 168h or 336h, or remove it for a week", p.Cycle)
+	}
+	return d, nil
+}
+
+// Errors are what is wrong with the planning settings, one sentence each;
+// none when they are valid.
+func (p Planning) Errors() []string {
+	var errs []string
+	if p.Currency != "" && !currencyCode.MatchString(p.Currency) {
+		errs = append(errs, fmt.Sprintf("planning.currency %q is not an ISO 4217 code; write three capital letters such as USD or EUR, or remove it for USD", p.Currency))
+	}
+	if r := p.HourRate; r != nil && (math.IsNaN(*r) || math.IsInf(*r, 0) || *r < 0) {
+		errs = append(errs, fmt.Sprintf("planning.hour_rate %v is not an amount of zero or more; write what an hour of work costs in the project's currency, or remove it", *r))
+	}
+	if _, err := p.CycleDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	return errs
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

@@ -35,6 +35,10 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		// that it does not know when it rewrote the story
 		"item.agent: " + strings.Join(workitem.KnownFields(manifest.Agent{}), " "),
 		"item.agent.roles: " + strings.Join(workitem.KnownFields(manifest.Role{}), " "),
+		// the planning blocks (S-0199), likewise
+		"item.cost_of_delay: " + strings.Join(workitem.KnownFields(workitem.CostOfDelay{}), " "),
+		"item.cost_of_delay.inputs: " + strings.Join(workitem.KnownFields(workitem.CostInputs{}), " "),
+		"item.forecast: " + strings.Join(workitem.KnownFields(workitem.Forecast{}), " "),
 		// the types each type-restricted field is valid on (S-0176): an older
 		// flai refuses an item that carries one on a type it does not allow
 		"item.types: " + workitem.FieldTypes(),

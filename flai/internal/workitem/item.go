@@ -90,6 +90,15 @@ type Item struct {
 	// Usage is the tokens and cost agents spent on the item, measured from
 	// their logs or summed from its children (S-0143).
 	Usage *usage.Usage `yaml:"usage" json:"usage,omitempty"`
+	// Draft marks a story not yet finalized: it cannot be ready (S-0199).
+	// Stories only.
+	Draft bool `yaml:"draft" json:"draft,omitempty"`
+	// CostOfDelay is what waiting for the item costs (S-0199). Epics and
+	// stories only.
+	CostOfDelay *CostOfDelay `yaml:"cost_of_delay" json:"cost_of_delay,omitempty"`
+	// Forecast is when the story is expected to be delivered (S-0199).
+	// Stories only.
+	Forecast *Forecast `yaml:"forecast" json:"forecast,omitempty"`
 	// Unknown is the front matter this flai does not know, kept for writing
 	// back (S-0181).
 	Unknown []Field `yaml:"-" json:"-"`
@@ -253,6 +262,7 @@ func (it *Item) Validate() error {
 			errs = append(errs, err.Error())
 		}
 	}
+	errs = append(errs, planningErrors(it)...)
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
@@ -370,6 +380,7 @@ func (it *Item) Marshal() string {
 	if it.Usage != nil {
 		b.WriteString(usageBlock(it.Usage))
 	}
+	b.WriteString(planningBlock(it))
 	WriteFields(&b, it.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(it.Body)

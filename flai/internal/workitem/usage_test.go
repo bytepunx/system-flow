@@ -63,7 +63,7 @@ func itemPath(t *testing.T, r *Repo, id string) string {
 
 func TestATaskEnteringDoneSumsItsStoryAndEpic(t *testing.T) {
 	r, s, t2 := usageProject(t)
-	res, err := r.TransitionAll(t2, Done, "test", "", t0)
+	res, err := r.TransitionAll(t2, Done, "test", "", t0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestAStoryMeasuredFromItsLogIsNotSummed(t *testing.T) {
 	if err := r.Save(s); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.TransitionAll(t2, Done, "test", "", t0); err != nil {
+	if _, err := r.TransitionAll(t2, Done, "test", "", t0, false); err != nil {
 		t.Fatal(err)
 	}
 	story, _ := r.Get(s.ID)
@@ -113,7 +113,7 @@ func TestAStoryMeasuredFromItsLogIsNotSummed(t *testing.T) {
 
 func TestARefusedMoveSumsNothing(t *testing.T) {
 	r, s, _ := usageProject(t)
-	if _, err := r.TransitionAll(s, Done, "test", "", t0); err == nil {
+	if _, err := r.TransitionAll(s, Done, "test", "", t0, false); err == nil {
 		t.Fatal("a story went from in-progress to done")
 	}
 	epic, _ := r.Get("E-0001")

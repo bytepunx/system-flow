@@ -46,9 +46,10 @@ func CancelPlan(items []*Item, id string) []*Item {
 
 // Transition is the shared implementation behind flai move and the MCP
 // item_move tool: load the context, apply the rules, save the item and the
-// board, and rewrite the stream index.
+// board, and rewrite the stream index. It does not finalize a draft story;
+// TransitionAll does when asked.
 func (r *Repo) Transition(it *Item, to, by, reason string, now time.Time) (warnings []string, err error) {
-	res, err := r.TransitionAll(it, to, by, reason, now)
+	res, err := r.TransitionAll(it, to, by, reason, now, false)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +59,9 @@ func (r *Repo) Transition(it *Item, to, by, reason string, now time.Time) (warni
 // TransitionAll is Transition that also reports what went with the item. A
 // move to cancelled cancels everything open under the item with the same
 // actor and time, and a note naming the item that caused it. Every move is
-// validated before any file is written, so a refusal changes nothing.
-func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time) (*MoveResult, error) {
+// validated before any file is written, so a refusal changes nothing. With
+// finalize, a draft story moved to ready is finalized with the move (S-0199).
+func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, finalize bool) (*MoveResult, error) {
 	items, err := r.List(false)
 	if err != nil {
 		return nil, err
@@ -69,7 +71,7 @@ func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time) (*M
 		return nil, err
 	}
 	res := &MoveResult{Cancelled: []Cascaded{}}
-	res.Warnings, err = r.Move(it, to, MoveOptions{By: by, Reason: reason, Now: now, Items: items, Board: board})
+	res.Warnings, err = r.Move(it, to, MoveOptions{By: by, Reason: reason, Now: now, Items: items, Board: board, Finalize: finalize})
 	if err != nil {
 		return nil, err
 	}

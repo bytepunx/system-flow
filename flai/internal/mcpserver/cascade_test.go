@@ -14,7 +14,7 @@ func TestACascadedCancellationNamesItsCause(t *testing.T) {
 		t.Fatal(failed)
 	}
 	epic, _ := f.repo.Get("E-0001")
-	if _, err := f.repo.TransitionAll(epic, "cancelled", "alex", "a different route", t0.Add(5*time.Minute)); err != nil {
+	if _, err := f.repo.TransitionAll(epic, "cancelled", "alex", "a different route", t0.Add(5*time.Minute), false); err != nil {
 		t.Fatal(err)
 	}
 	*f.clock = t0.Add(10 * time.Minute)

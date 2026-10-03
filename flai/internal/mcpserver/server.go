@@ -481,7 +481,7 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	if in.To == workitem.Done && it.Type != workitem.Task {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is %s: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready", it.ID, articled(it.Type))
 	}
-	res, err := s.repo.TransitionAll(it, in.To, s.agent, in.Reason, s.now())
+	res, err := s.repo.TransitionAll(it, in.To, s.agent, in.Reason, s.now(), false)
 	if err != nil {
 		return nil, ItemMoveOut{}, err
 	}

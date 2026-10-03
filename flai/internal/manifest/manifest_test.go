@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,6 +99,55 @@ func TestIssuesStoryAfter(t *testing.T) {
 		_, err := (Issues{StoryAfter: bad}).StoryAfterDuration()
 		if err == nil || !strings.Contains(err.Error(), "issues.story_after") || !strings.Contains(err.Error(), "168h") || !strings.Contains(err.Error(), bad) {
 			t.Errorf("%q: %v", bad, err)
+		}
+	}
+}
+
+// S-0199: planning reads from the manifest; unset, the currency is USD, the
+// hour rate unknown, and the cycle a week, and each bad value is an error
+// naming the key and what to write.
+func TestPlanning(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nplanning:\n  currency: EUR\n  hour_rate: 85.5\n  cycle: 336h\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d, err := m.Planning.CycleDuration(); m.Planning.CurrencyCode() != "EUR" || m.Planning.HourRate == nil || *m.Planning.HourRate != 85.5 || err != nil || d != 336*time.Hour {
+		t.Errorf("read %+v, cycle %v, %v", m.Planning, d, err)
+	}
+	if errs := m.Planning.Errors(); len(errs) != 0 {
+		t.Errorf("valid planning: %v", errs)
+	}
+	var unset Planning
+	if d, err := unset.CycleDuration(); unset.CurrencyCode() != "USD" || unset.HourRate != nil || err != nil || d != 168*time.Hour {
+		t.Errorf("defaults: %s, %v, %v", unset.CurrencyCode(), d, err)
+	}
+	if errs := unset.Errors(); len(errs) != 0 {
+		t.Errorf("unset planning: %v", errs)
+	}
+	zero := 0.0
+	if errs := (Planning{HourRate: &zero}).Errors(); len(errs) != 0 {
+		t.Errorf("a rate of zero: %v", errs)
+	}
+	neg, inf := -1.0, math.Inf(1)
+	for _, c := range []struct {
+		p    Planning
+		want string
+	}{
+		{Planning{Currency: "usd"}, `planning.currency "usd" is not an ISO 4217 code`},
+		{Planning{Currency: "EURO"}, `planning.currency "EURO" is not an ISO 4217 code`},
+		{Planning{HourRate: &neg}, "planning.hour_rate -1 is not an amount of zero or more"},
+		{Planning{HourRate: &inf}, "planning.hour_rate +Inf is not an amount of zero or more"},
+		{Planning{Cycle: "1w"}, `planning.cycle "1w" is not a duration longer than zero; write one such as 168h`},
+		{Planning{Cycle: "0s"}, `planning.cycle "0s" is not a duration longer than zero`},
+		{Planning{Cycle: "-24h"}, `planning.cycle "-24h" is not a duration longer than zero`},
+	} {
+		if got := strings.Join(c.p.Errors(), "; "); !strings.Contains(got, c.want) {
+			t.Errorf("%+v: got %q, want %q", c.p, got, c.want)
 		}
 	}
 }

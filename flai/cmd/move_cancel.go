@@ -55,7 +55,7 @@ func (a *app) cancelItem(repo *workitem.Repo, it *workitem.Item, by, reason stri
 			return fmt.Errorf("nothing was cancelled")
 		}
 	}
-	done, err := repo.TransitionAll(it, workitem.Cancelled, by, reason, a.now())
+	done, err := repo.TransitionAll(it, workitem.Cancelled, by, reason, a.now(), false)
 	if err != nil {
 		return err
 	}
