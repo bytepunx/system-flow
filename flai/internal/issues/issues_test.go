@@ -103,8 +103,10 @@ func TestValidate(t *testing.T) {
 			t.Errorf("expected %s in %v", want, err)
 		}
 	}
-	if normalise("1h0m0s") != "1h" || normalise("30m0s") != "30m" || normalise("2h30m0s") != "2h30m" {
-		t.Error("normalise")
+	for in, want := range map[string]string{"1h0m0s": "1h", "30m0s": "30m", "2h30m0s": "2h30m", "10s": "10s", "30s": "30s", "1m30s": "1m30s", "0s": "0s", "": ""} {
+		if got := normalise(in); got != want {
+			t.Errorf("normalise(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 

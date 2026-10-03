@@ -90,20 +90,38 @@ func TestRecordedByListsTheIssuesAStoryRecorded(t *testing.T) {
 	}
 }
 
-func TestForStory(t *testing.T) {
+// storyLint is the markdown lint a story's or an issue's file must pass.
+func storyLint(t *testing.T) *mdlint.Config {
+	t.Helper()
 	lint, err := mdlint.Parse([]byte("default: true\nMD013: false\nMD022:\n  lines_below: 0\nMD032: false\nMD041: false\n"), false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return lint
+}
+
+// lintStory fails the test when the drafted story's file is not lint-clean.
+func lintStory(t *testing.T, lint *mdlint.Config, d StoryDraft) {
+	t.Helper()
+	doc := "---\nid: S-0301\n---\n\n# S-0301 " + d.Title + "\n\n" + d.Body
+	if f := lint.Lint(doc); len(f) > 0 {
+		t.Errorf("lint: %v\n%s", f, doc)
+	}
+}
+
+var cycle = 168 * time.Hour
+
+func TestForStory(t *testing.T) {
+	lint := storyLint(t)
 	for _, c := range []struct{ class, nature string }{
 		{"defect", "remediation"}, {"blocker", "remediation"}, {"efficiency", "improvement"}, {"impression", "improvement"},
 	} {
 		for _, fix := range []string{"", "Pin the linter in the Makefile.\n\n- and say so in design/tech"} {
 			is := &Issue{ID: "I-0056", Title: "Lint: version mismatch", Class: c.class, Path: "/x/design/issues/I-0056-lint-version-mismatch.md",
 				Body: "\n# I-0056 Lint: version mismatch\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nfirst\n\n## Remediation\n" + fix + "\n"}
-			d := ForStory(is)
-			if d.Title != is.Title || d.Nature != c.nature {
-				t.Errorf("%s: %+v", c.class, d)
+			d := ForStory(is, t0, cycle)
+			if d.Title != is.Title || d.Nature != c.nature || !d.Draft || d.CostOfDelay != nil {
+				t.Errorf("%s: a draft with no cost of delay: %+v", c.class, d)
 			}
 			if !strings.HasPrefix(d.Body, "## Goal\n\nThis story remediates [I-0056](../../../design/issues/I-0056-lint-version-mismatch.md), \"Lint: version mismatch\".") {
 				t.Errorf("goal links the issue:\n%s", d.Body)
@@ -120,12 +138,205 @@ func TestForStory(t *testing.T) {
 				t.Errorf("criteria, closing the issue last:\n%s", criteria)
 			}
 			if !strings.HasSuffix(d.Body, "\n\n## Tasks\n\n## Notes\n") {
-				t.Errorf("tasks and notes:\n%s", d.Body)
+				t.Errorf("tasks and empty notes:\n%s", d.Body)
 			}
-			doc := "---\nid: S-0301\n---\n\n# S-0301 " + d.Title + "\n\n" + d.Body
-			if f := lint.Lint(doc); len(f) > 0 {
-				t.Errorf("lint: %v\n%s", f, doc)
-			}
+			lintStory(t, lint, d)
+		}
+	}
+}
+
+// costIssue is I-0007 with a cost, a count, a first report that long before
+// t0, and an Impact section when impact is not empty.
+func costIssue(cost string, count int, before time.Duration, impact string) *Issue {
+	body := "\n# I-0007 Slow builds\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nfirst\n\n"
+	if impact != "" {
+		body += "## Impact\n\n" + impact + "\n"
+	}
+	return &Issue{ID: "I-0007", Title: "Slow builds", Class: "efficiency", Count: count, Cost: cost,
+		FirstReported: t0.Add(-before).Format(workitem.TimeFormat), Path: "/x/design/issues/I-0007-slow-builds.md",
+		Body: body + "## Remediation\n"}
+}
+
+// notes is the text of a drafted story's Notes section.
+func notes(d StoryDraft) string {
+	_, after, _ := strings.Cut(d.Body, "\n## Notes\n")
+	return strings.TrimSpace(after)
+}
+
+// S-0203: a story made from an issue is a draft, and its time lost per cycle
+// is the issue's cost × count ÷ the cycles since it was first reported, at
+// least one, by flai at the time the story was made.
+func TestForStoryDerivesTheTimeLostPerCycle(t *testing.T) {
+	lint := storyLint(t)
+	day := 24 * time.Hour
+	for _, c := range []struct {
+		cost   string
+		count  int
+		before time.Duration
+		want   string
+	}{
+		{"7m", 5, 26*time.Hour + 24*time.Minute, "35m"},
+		{"7m", 5, 0, "35m"},
+		{"10m", 6, 21 * day, "20m"},
+		{"7m", 5, 17*day + 12*time.Hour, "14m"},
+		{"1h10m", 2, 7 * day, "2h20m"},
+		{"10s", 1, 21 * day, "3s"},
+		{"1s", 1, 70 * day, "1s"},
+		{"25s", 3, 0, "1m"},
+		{"20s", 2, 0, "40s"},
+		{"40s", 3, 0, "2m"},
+	} {
+		is := costIssue(c.cost, c.count, c.before, "")
+		d := ForStory(is, t0, cycle)
+		if !d.Draft {
+			t.Errorf("%s × %d: not a draft", c.cost, c.count)
+		}
+		cod := d.CostOfDelay
+		if cod == nil || cod.Inputs == nil {
+			t.Fatalf("%s × %d: no cost of delay", c.cost, c.count)
+		}
+		if cod.Inputs.TimeLostPerCycle != c.want || cod.Inputs.RevenuePerWeek != nil || cod.Inputs.PenaltyPerWeek != nil || cod.Value != nil {
+			t.Errorf("%s × %d over %v: inputs %+v, want time lost %s", c.cost, c.count, c.before, *cod.Inputs, c.want)
+		}
+		if lost, err := time.ParseDuration(cod.Inputs.TimeLostPerCycle); err != nil || lost <= 0 {
+			t.Errorf("time lost %q is not a duration longer than zero: %v", cod.Inputs.TimeLostPerCycle, err)
+		}
+		if cod.By != "flai" || cod.At != "2026-09-16T10:00:00Z" {
+			t.Errorf("set by flai at t0: %+v", cod)
+		}
+		lintStory(t, lint, d)
+	}
+	within := ForStory(costIssue("7m", 5, 26*time.Hour+24*time.Minute, ""), t0, cycle)
+	want := "Cost of delay inputs set by flai from I-0007. time_lost_per_cycle 35m: 7m per occurrence × 5 occurrences ÷ 1 cycle of 168h (first reported 2026-09-15T07:36:00Z, 1.1 days before this story; under one cycle counts as one)."
+	if got := notes(within); got != want {
+		t.Errorf("notes within one cycle:\n got %s\nwant %s", got, want)
+	}
+	several := ForStory(costIssue("10m", 6, 21*day, ""), t0, cycle)
+	want = "Cost of delay inputs set by flai from I-0007. time_lost_per_cycle 20m: 10m per occurrence × 6 occurrences ÷ 3 cycles of 168h (first reported 2026-08-26T10:00:00Z, 21 days before this story)."
+	if got := notes(several); got != want {
+		t.Errorf("notes over several cycles:\n got %s\nwant %s", got, want)
+	}
+	half := ForStory(costIssue("7m", 1, 17*day+12*time.Hour, ""), t0, cycle)
+	if got := notes(half); !strings.Contains(got, "7m per occurrence × 1 occurrence ÷ 2.5 cycles of 168h") {
+		t.Errorf("one occurrence, two and a half cycles: %s", got)
+	}
+	unknown := costIssue("7m", 5, 0, "")
+	unknown.FirstReported = "yesterday"
+	d := ForStory(unknown, t0, cycle)
+	if d.CostOfDelay == nil || d.CostOfDelay.Inputs.TimeLostPerCycle != "35m" || !strings.Contains(notes(d), `(first reported "yesterday" is not a timestamp, so it counts as one cycle).`) {
+		t.Errorf("an unparsable first report counts as one cycle: %+v\n%s", d.CostOfDelay, notes(d))
+	}
+}
+
+// S-0203: an issue with no cost and no Impact inputs gives no cost of delay,
+// and the story's Notes stay empty.
+func TestForStoryWithNoCostGivesNoCostOfDelay(t *testing.T) {
+	for _, is := range []*Issue{
+		costIssue("", 5, 0, ""),
+		costIssue("", 5, 0, "Builds wait on the cache every morning.\n"),
+	} {
+		d := ForStory(is, t0, cycle)
+		if !d.Draft || d.CostOfDelay != nil || !strings.HasSuffix(d.Body, "\n\n## Tasks\n\n## Notes\n") {
+			t.Errorf("a draft with no cost of delay and empty notes: %+v", d)
+		}
+	}
+}
+
+// S-0203: the amounts and time lost an issue's Impact section gives are
+// carried over, and its time lost wins over the one derived from cost and
+// count.
+func TestForStoryCarriesTheImpactOver(t *testing.T) {
+	impact := "Three stories waited on it.\n\n- revenue_per_week: 1200\n* penalty_per_week: 300.5\ntime_lost_per_cycle: 4h0m\n- revenue_per_week: 9999\n"
+	d := ForStory(costIssue("7m", 5, 0, impact), t0, cycle)
+	cod := d.CostOfDelay
+	if cod == nil || cod.Inputs == nil {
+		t.Fatalf("no cost of delay:\n%s", d.Body)
+	}
+	in := cod.Inputs
+	if in.RevenuePerWeek == nil || *in.RevenuePerWeek != 1200 || in.PenaltyPerWeek == nil || *in.PenaltyPerWeek != 300.5 || in.TimeLostPerCycle != "4h" {
+		t.Errorf("inputs carried over, the first of each: %+v", *in)
+	}
+	if cod.By != "flai" || cod.At != "2026-09-16T10:00:00Z" {
+		t.Errorf("set by flai at t0: %+v", cod)
+	}
+	want := "Cost of delay inputs set by flai from I-0007. revenue_per_week 1200, penalty_per_week 300.5 and time_lost_per_cycle 4h carried over from I-0007's Impact section. Its Impact time_lost_per_cycle was taken rather than the 35m derived from its cost and count."
+	if got := notes(d); got != want {
+		t.Errorf("notes:\n got %s\nwant %s", got, want)
+	}
+	lintStory(t, storyLint(t), d)
+
+	amounts := ForStory(costIssue("7m", 5, 0, "- penalty_per_week: 0\n"), t0, cycle)
+	if in := amounts.CostOfDelay.Inputs; in.PenaltyPerWeek == nil || *in.PenaltyPerWeek != 0 || in.TimeLostPerCycle != "35m" {
+		t.Errorf("an amount of zero carried over beside the derived time lost: %+v", *in)
+	}
+	if got := notes(amounts); !strings.Contains(got, "time_lost_per_cycle 35m: 7m per occurrence") || !strings.HasSuffix(got, " penalty_per_week 0 carried over from I-0007's Impact section.") {
+		t.Errorf("derivation, then the amount carried over: %s", got)
+	}
+}
+
+// S-0203: an Impact value that does not parse is left out, and the story's
+// Notes say so.
+func TestForStoryLeavesABadImpactValueOut(t *testing.T) {
+	impact := "- revenue_per_week: lots\n- penalty_per_week: -5\n- time_lost_per_cycle: 0s\n- penalty_per_week: 300\n"
+	d := ForStory(costIssue("", 1, 0, impact), t0, cycle)
+	if d.CostOfDelay == nil {
+		t.Fatalf("the good penalty is set:\n%s", d.Body)
+	}
+	if in := d.CostOfDelay.Inputs; in.RevenuePerWeek != nil || in.PenaltyPerWeek == nil || *in.PenaltyPerWeek != 300 || in.TimeLostPerCycle != "" {
+		t.Errorf("bad values left out, the first good one used: %+v", *in)
+	}
+	want := `Cost of delay inputs set by flai from I-0007. penalty_per_week 300 carried over from I-0007's Impact section. ` +
+		`I-0007's Impact gives revenue_per_week "lots", which is not an amount of zero or more, so it was left out. ` +
+		`I-0007's Impact gives penalty_per_week "-5", which is not an amount of zero or more, so it was left out. ` +
+		`I-0007's Impact gives time_lost_per_cycle "0s", which is not a duration longer than zero, so it was left out.`
+	if got := notes(d); got != want {
+		t.Errorf("notes:\n got %s\nwant %s", got, want)
+	}
+	lintStory(t, storyLint(t), d)
+
+	none := ForStory(costIssue("", 1, 0, "- revenue_per_week: NaN\n"), t0, cycle)
+	if none.CostOfDelay != nil || notes(none) != `I-0007's Impact gives revenue_per_week "NaN", which is not an amount of zero or more, so it was left out.` {
+		t.Errorf("nothing set, the value left out said so: %+v\n%s", none.CostOfDelay, none.Body)
+	}
+}
+
+// S-0203: the issue's Remediation section names the story made from it, as
+// its last paragraph, and the file reads back with it.
+func TestLinkStoryNamesTheStoryUnderRemediation(t *testing.T) {
+	lint := storyLint(t)
+	head := "\n# I-0007 Slow builds\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nfirst\n"
+	line := "Story S-0301 remediates this issue, created from it at 2026-09-16T11:00:00Z.\n"
+	for _, c := range []struct{ name, body, want string }{
+		{"with a solution", head + "\n## Remediation\nCache the modules.\n\n- in CI too\n\n", head + "\n## Remediation\n\nCache the modules.\n\n- in CI too\n\n" + line},
+		{"empty", head + "\n## Remediation\n", head + "\n## Remediation\n\n" + line},
+		{"missing", head, head + "\n## Remediation\n\n" + line},
+		{"missing, no final newline", strings.TrimSuffix(head, "\n"), head + "\n## Remediation\n\n" + line},
+		{"followed by a section", head + "\n## Remediation\nCache the modules.\n\n## Related\nI-0003\n", head + "\n## Remediation\n\nCache the modules.\n\n" + line + "\n## Related\nI-0003\n"},
+	} {
+		is := &Issue{ID: "I-0007", Title: "Slow builds", Class: "efficiency", Status: "open", Count: 1,
+			FirstReported: "2026-09-16T10:00:00Z", LastReported: "2026-09-16T10:00:00Z", Updated: "2026-09-16T10:00:00Z",
+			Path: filepath.Join(t.TempDir(), "I-0007-slow-builds.md"), Body: c.body}
+		if err := LinkStory(is, "s-301", t0.Add(time.Hour)); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		back, err := Read(is.Path)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if back.Body != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, back.Body, c.want)
+		}
+		if back.Updated != "2026-09-16T11:00:00Z" {
+			t.Errorf("%s: updated %s", c.name, back.Updated)
+		}
+		if f := lint.Lint("---\nid: I-0007\n---\n" + back.Body); len(f) > 0 {
+			t.Errorf("%s: lint: %v\n%s", c.name, f, back.Body)
+		}
+	}
+	is := &Issue{ID: "I-0007", Path: filepath.Join(t.TempDir(), "I-0007-slow-builds.md"), Body: head}
+	for _, story := range []string{"T-0001", " "} {
+		if err := LinkStory(is, story, t0); err == nil || is.Body != head {
+			t.Errorf("story %q is refused before anything changes: %v", story, err)
 		}
 	}
 }

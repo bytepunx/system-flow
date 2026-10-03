@@ -2,10 +2,13 @@ package issues
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -80,14 +83,20 @@ func RecordedBy(list []*Issue, story string) []*Issue {
 	return out
 }
 
-// StoryDraft is a story made from an issue: what flai story new needs, and
-// the body that goes below the story's "# S-nnnn Title" heading.
+// StoryDraft is a story made from an issue: what flai story new needs, the
+// body that goes below the story's "# S-nnnn Title" heading, and its planning
+// data. Draft is always true: such a story is an agent's draft until the
+// operator finalizes it (S-0203). CostOfDelay is nil when the issue gives no
+// inputs.
 type StoryDraft struct {
 	Title, Nature, Body string
+	Draft               bool
+	CostOfDelay         *workitem.CostOfDelay
 }
 
-// ForStory drafts the story that remediates the issue.
-func ForStory(is *Issue) StoryDraft {
+// ForStory drafts the story that remediates the issue, made at now in a
+// project whose planning cycle, longer than zero, is cycle.
+func ForStory(is *Issue, now time.Time, cycle time.Duration) StoryDraft {
 	nature := "improvement"
 	if is.Class == "defect" || is.Class == "blocker" {
 		nature = "remediation"
@@ -103,7 +112,183 @@ func ForStory(is *Issue) StoryDraft {
 	fmt.Fprintf(&b, "\n## Acceptance criteria\n- [ ] The cause %s describes no longer occurs, with a test that reproduces it where one fits\n", is.ID)
 	fmt.Fprintf(&b, "- [ ] %s is closed with `flai issue close %s --reason` saying what fixed it\n", is.ID, is.ID)
 	b.WriteString("\n## Tasks\n\n## Notes\n")
-	return StoryDraft{Title: is.Title, Nature: nature, Body: b.String()}
+	cod, notes := costOfDelay(is, now, cycle)
+	if notes != "" {
+		fmt.Fprintf(&b, "\n%s\n", notes)
+	}
+	return StoryDraft{Title: is.Title, Nature: nature, Body: b.String(), Draft: true, CostOfDelay: cod}
+}
+
+// costOfDelay is the cost of delay inputs the issue gives, set by flai at now,
+// or nil when it gives none, and the sentences that say how each was set and
+// which values were left out.
+func costOfDelay(is *Issue, now time.Time, cycle time.Duration) (*workitem.CostOfDelay, string) {
+	in, carried, skipped := impact(is)
+	lost, how, derived := derive(is, now, cycle)
+	fromImpact := in.TimeLostPerCycle != ""
+	var set []string
+	if derived && !fromImpact {
+		in.TimeLostPerCycle = lost
+		set = append(set, how)
+	}
+	if len(carried) > 0 {
+		set = append(set, fmt.Sprintf("%s carried over from %s's Impact section.", joinAnd(carried), is.ID))
+	}
+	switch {
+	case derived && fromImpact:
+		set = append(set, fmt.Sprintf("Its Impact time_lost_per_cycle was taken rather than the %s derived from its cost and count.", lost))
+	case !derived && how != "":
+		skipped = append(skipped, how)
+	}
+	if in.IsZero() {
+		return nil, strings.Join(skipped, " ")
+	}
+	set = append([]string{fmt.Sprintf("Cost of delay inputs set by flai from %s.", is.ID)}, set...)
+	cod := &workitem.CostOfDelay{Inputs: &in, By: "flai", At: now.UTC().Format(workitem.TimeFormat)}
+	return cod, strings.Join(append(set, skipped...), " ")
+}
+
+var impactLineRe = regexp.MustCompile(`^(?:[-*]\s*)?(revenue_per_week|penalty_per_week|time_lost_per_cycle):(.*)$`)
+
+// impact reads the inputs the issue's Impact section gives, one per line such
+// as "- revenue_per_week: 1200"; other lines are evidence. The first value of
+// a key that parses is used. It returns the inputs, each one carried over as
+// "key value", and a sentence for each value left out.
+func impact(is *Issue) (in workitem.CostInputs, carried, skipped []string) {
+	start, end, ok := section(is.Body, "## Impact")
+	if !ok {
+		return in, nil, nil
+	}
+	for _, line := range strings.Split(is.Body[start:end], "\n") {
+		m := impactLineRe.FindStringSubmatch(strings.TrimSpace(line))
+		if m == nil {
+			continue
+		}
+		key, value := m[1], strings.TrimSpace(m[2])
+		if key == "time_lost_per_cycle" {
+			if in.TimeLostPerCycle != "" {
+				continue
+			}
+			d, err := time.ParseDuration(value)
+			if err != nil || d <= 0 {
+				skipped = append(skipped, fmt.Sprintf("%s's Impact gives %s %q, which is not a duration longer than zero, so it was left out.", is.ID, key, value))
+				continue
+			}
+			in.TimeLostPerCycle = normalise(d.String())
+			carried = append(carried, key+" "+in.TimeLostPerCycle)
+			continue
+		}
+		amount := &in.RevenuePerWeek
+		if key == "penalty_per_week" {
+			amount = &in.PenaltyPerWeek
+		}
+		if *amount != nil {
+			continue
+		}
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+			skipped = append(skipped, fmt.Sprintf("%s's Impact gives %s %q, which is not an amount of zero or more, so it was left out.", is.ID, key, value))
+			continue
+		}
+		*amount = &v
+		carried = append(carried, key+" "+strconv.FormatFloat(v, 'f', -1, 64))
+	}
+	return in, carried, skipped
+}
+
+// derive works out the time lost per cycle from the issue's cost and count:
+// cost × count ÷ the cycles since it was first reported, at least one. It
+// returns the duration, the sentence saying how it was worked out, and true;
+// or false with no duration, and a sentence when the cost is not a duration
+// longer than zero.
+func derive(is *Issue, now time.Time, cycle time.Duration) (lost, how string, ok bool) {
+	if is.Cost == "" || is.Count < 1 {
+		return "", "", false
+	}
+	cost, err := time.ParseDuration(is.Cost)
+	if err != nil || cost <= 0 {
+		return "", fmt.Sprintf("%s's cost %q is not a duration longer than zero, so no time_lost_per_cycle was derived from it.", is.ID, is.Cost), false
+	}
+	cycles, since := 1.0, ""
+	if first, err := time.Parse(workitem.TimeFormat, is.FirstReported); err != nil {
+		since = fmt.Sprintf("first reported %q is not a timestamp, so it counts as one cycle", is.FirstReported)
+	} else {
+		elapsed := now.Sub(first)
+		days := tenths(elapsed.Hours() / 24)
+		since = fmt.Sprintf("first reported %s, %s %s before this story", is.FirstReported, decimal(days), plural(days, "day"))
+		if elapsed < cycle {
+			since += "; under one cycle counts as one"
+		} else {
+			cycles = tenths(float64(elapsed) / float64(cycle))
+		}
+	}
+	per := time.Duration(float64(cost) * float64(is.Count) / cycles)
+	if per >= time.Minute {
+		per = per.Round(time.Minute)
+	} else {
+		per = per.Round(time.Second)
+	}
+	per = max(per, time.Second)
+	lost = normalise(per.String())
+	how = fmt.Sprintf("time_lost_per_cycle %s: %s per occurrence × %d %s ÷ %s %s of %s (%s).",
+		lost, normalise(cost.String()), is.Count, plural(float64(is.Count), "occurrence"), decimal(cycles), plural(cycles, "cycle"), normalise(cycle.String()), since)
+	return lost, how, true
+}
+
+// tenths rounds x to one decimal place.
+func tenths(x float64) float64 {
+	return math.Round(x*10) / 10
+}
+
+// decimal writes x with as few digits as it needs: 3, 2.5.
+func decimal(x float64) string {
+	return strconv.FormatFloat(x, 'f', -1, 64)
+}
+
+// plural is word for one of it, else word with an s.
+func plural(n float64, word string) string {
+	if n == 1 {
+		return word
+	}
+	return word + "s"
+}
+
+// joinAnd lists the parts as prose: "a", "a and b", "a, b and c".
+func joinAnd(parts []string) string {
+	if len(parts) < 2 {
+		return strings.Join(parts, "")
+	}
+	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
+}
+
+// LinkStory names the story that remediates the issue as the last paragraph
+// of its Remediation section, adding the section when it has none, and saves
+// the issue. The story is named by ID only: its file moves on acceptance.
+func LinkStory(is *Issue, story string, now time.Time) error {
+	id, err := storyID(story)
+	if err != nil {
+		return err
+	}
+	if id == "" {
+		return fmt.Errorf("no story given to link from %s: give the ID of the story that remediates it, like S-0001", is.ID)
+	}
+	ts := now.UTC().Format(workitem.TimeFormat)
+	line := fmt.Sprintf("Story %s remediates this issue, created from it at %s.\n", id, ts)
+	body := strings.TrimRight(is.Body, "\n") + "\n"
+	if start, end, ok := section(body, "## Remediation"); ok {
+		text, rest := strings.TrimSpace(body[start:end]), body[end:]
+		if text != "" {
+			text += "\n\n"
+		}
+		if rest != "" {
+			rest = "\n" + rest
+		}
+		body = body[:start] + "\n" + text + line + rest
+	} else {
+		body += "\n## Remediation\n\n" + line
+	}
+	is.Body, is.Updated = body, ts
+	return is.Save()
 }
 
 // remediation is the text of the issue's Remediation section.

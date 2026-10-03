@@ -364,17 +364,14 @@ func SummaryTable(list []*Issue) string {
 	return s[i:]
 }
 
-// normalise trims zero components: 1h0m0s to 1h, 30m0s to 30m.
+// normalise trims zero components: 1h0m0s to 1h, 30m0s to 30m. Seconds that
+// are not zero stay: 30s is 30s, not 3.
 func normalise(d string) string {
-	if d == "" {
-		return ""
+	if strings.HasSuffix(d, "m0s") {
+		d = strings.TrimSuffix(d, "0s")
 	}
-	d = strings.TrimSuffix(d, "0s")
 	if strings.HasSuffix(d, "h0m") {
 		d = strings.TrimSuffix(d, "0m")
-	}
-	if d == "" {
-		return "0s"
 	}
 	return d
 }
