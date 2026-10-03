@@ -62,6 +62,9 @@ type Run struct {
 	Path  string    `json:"path"`
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
+	// Result is the final text of the run's newest result event; empty when
+	// it has none or that event carries no text.
+	Result string `json:"result,omitempty"`
 }
 
 // Record is what a story's agent logs say, read in the order of their runs.
@@ -98,6 +101,8 @@ type line struct {
 	Type      string `json:"type"`
 	Subtype   string `json:"subtype"`
 	Timestamp string `json:"timestamp"`
+	// Result is a result event's final text.
+	Result    string `json:"result"`
 	SessionID string `json:"session_id"`
 	Model     string `json:"model"`
 	// ParentToolUseID is the tool_use that started the sub-agent the event
@@ -176,6 +181,7 @@ func (rec *Record) read(path string, byID map[string]int) error {
 					rec.addStarts(e)
 					rec.addCall(e, byID)
 				case e.Type == "result":
+					run.Result = e.Result
 					rec.addResult(e, model)
 				}
 			}

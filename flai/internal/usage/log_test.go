@@ -186,6 +186,33 @@ func TestAMissingLogIsSkipped(t *testing.T) {
 	}
 }
 
+// Each run keeps the final text of its newest result; a run with none, or
+// whose newest result carries no text, keeps nothing.
+func TestARunKeepsItsNewestResultsText(t *testing.T) {
+	answered := writeLog(t, "a.log",
+		assistant("s", "m1", opus, "2026-09-29T10:00:00Z", 1, 1, 10, 0),
+		`{"type":"result","subtype":"success","session_id":"s","result":"first answer","total_cost_usd":0.1}`,
+		assistant("s", "m2", opus, "2026-09-29T10:01:00Z", 1, 1, 10, 0),
+		`{"type":"result","subtype":"success","session_id":"s","result":"Planned S-0001.\nThen more.","total_cost_usd":0.2}`)
+	silent := writeLog(t, "b.log",
+		assistant("s", "m3", opus, "2026-09-29T11:00:00Z", 1, 1, 10, 0),
+		`{"type":"result","subtype":"success","session_id":"s","result":"an answer"}`,
+		`{"type":"result","subtype":"error_max_turns","session_id":"s"}`)
+	going := writeLog(t, "c.log", assistant("s", "m4", opus, "2026-09-29T12:00:00Z", 1, 1, 10, 0))
+	rec, err := Read(answered, silent, going)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.Runs) != 3 {
+		t.Fatalf("runs = %+v, want three", rec.Runs)
+	}
+	for i, want := range []string{"Planned S-0001.\nThen more.", "", ""} {
+		if rec.Runs[i].Result != want {
+			t.Errorf("run %d result = %q, want %q", i, rec.Runs[i].Result, want)
+		}
+	}
+}
+
 func TestSumAddsModelByModel(t *testing.T) {
 	a := &Usage{Source: SourceLog, Seconds: 10, Models: []Model{{Model: opus, Input: 1, Cost: 0.5}}}
 	b := &Usage{Source: SourceLog, Seconds: 5, Estimated: true, Models: []Model{{Model: haiku, Output: 3, Cost: 0.25}, {Model: opus, Input: 2, Cost: 0.25}}}
