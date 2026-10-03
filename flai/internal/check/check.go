@@ -84,6 +84,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.componentTag()
 	c.after()
 	c.unaccepted()
+	c.epicLags()
 	c.board()
 	c.documentation()
 	c.adrIndex()
@@ -395,6 +396,38 @@ func (c *checker) unaccepted() {
 		case storyBranchExists(c.repo.MainRoot, it.ID):
 			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is done but its branch story/%s was never merged; merge or delete it", it.ID, it.ID)
 		}
+	}
+}
+
+// boardRank orders the states along the board; cancelled has no place in it.
+var boardRank = map[string]int{workitem.Backlog: 0, workitem.Ready: 1, workitem.InProgress: 2, workitem.Review: 3, workitem.Done: 4}
+
+// epicLags warns about each open epic that its stories put further along the
+// board than its status (S-0200), naming the moves that catch it up. It is
+// advisory: the epic is the operator's to move, not a story's agent's, so it
+// must not stop every close-out. An epic ahead of its stories is not warned.
+func (c *checker) epicLags() {
+	for _, it := range c.items {
+		if it.Type != workitem.Epic || it.Archived || it.Closed() {
+			continue
+		}
+		target, ok := workitem.EpicFollows(c.items, it.ID)
+		if !ok || boardRank[target] <= boardRank[it.Status] {
+			continue
+		}
+		why := "an epic follows its stories since S-0200, and this one was moved before that, or by hand"
+		if target == workitem.Done {
+			c.advise("epic.lags-stories", it.Path, keyLine(it.Path, "status"), "%s is %s but its stories are all done; accept it with flai accept %s, which moves it to done and archives it (%s)", it.ID, it.Status, it.ID, why)
+			continue
+		}
+		var moves []string
+		for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
+			if boardRank[st] > boardRank[it.Status] && boardRank[st] <= boardRank[target] {
+				moves = append(moves, st)
+			}
+		}
+		moves[0] = "flai move " + it.ID + " " + moves[0]
+		c.advise("epic.lags-stories", it.Path, keyLine(it.Path, "status"), "%s is %s but its stories put it in %s; catch it up with %s (%s)", it.ID, it.Status, target, strings.Join(moves, ", then "), why)
 	}
 }
 

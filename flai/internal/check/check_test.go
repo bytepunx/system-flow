@@ -22,10 +22,14 @@ func TestGoodFixtureIsClean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Its epic is in backlog with a story in progress, from before an epic
+	// followed its stories (S-0200): the one finding, advisory.
 	for _, f := range res.Findings {
-		t.Errorf("unexpected finding: %+v", f)
+		if f.Rule != "epic.lags-stories" || f.Path != "wip/kanban/epics/E-001-epic.md" {
+			t.Errorf("unexpected finding: %+v", f)
+		}
 	}
-	if !res.OK(true) || res.Items != 10 {
+	if len(res.Findings) != 1 || res.Advisory != 1 || !res.OK(true) || res.Items != 10 {
 		t.Fatalf("result: %+v", res)
 	}
 }

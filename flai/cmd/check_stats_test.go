@@ -14,7 +14,7 @@ import (
 func TestCheckCommand(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	out, errOut, code := runIn(t, "../internal/metrics/testdata/good", "check", "--strict")
-	if code != 0 || !strings.Contains(out, "10 items checked, 0 errors, 0 warnings") {
+	if code != 0 || !strings.Contains(out, "10 items checked, 0 errors, 1 warnings (1 that --strict passes over") || !strings.Contains(out, "epic.lags-stories") {
 		t.Fatalf("good: %d %s %s", code, out, errOut)
 	}
 	out, _, code = runIn(t, ".", "check", "../internal/check/testdata/bad")
@@ -57,7 +57,7 @@ func TestCheckSummaryNamesTheAdvisoryWarnings(t *testing.T) {
 	}
 	out, _, _ := runIn(t, root, "check")
 	if !strings.Contains(out, "warning: board.wip-limit: 4 stories in review, limit 3") ||
-		!strings.Contains(out, " warnings (1 that --strict passes over: review over its limit waits on acceptance)\n") {
+		!strings.Contains(out, " warnings (1 that --strict passes over: only the operator clears them, by accepting or by moving an epic)\n") {
 		t.Errorf("summary should name the advisory warning:\n%s", out)
 	}
 }

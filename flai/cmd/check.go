@@ -53,7 +53,7 @@ only acceptance clears.`,
 				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings", res.Items, res.Errors, res.Warnings)
 				if res.Advisory > 0 {
 					// S-0243: say which warnings --strict does not fail on.
-					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit waits on acceptance)", res.Advisory)
+					fmt.Fprintf(a.out, " (%d that --strict passes over: only the operator clears them, by accepting or by moving an epic)", res.Advisory)
 				}
 				fmt.Fprintln(a.out)
 			}
@@ -63,7 +63,7 @@ only acceptance clears.`,
 			return nil
 		},
 	}
-	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures, except the review column over its limit")
+	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures, except the review column over its limit and an epic behind its stories")
 	return c
 }
 
