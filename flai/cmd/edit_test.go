@@ -116,6 +116,10 @@ func TestEditFieldsParentAndBody(t *testing.T) {
 	if was := read(t, filepath.Join(root, "wip/kanban/epics/E-0001-first-epic.md")); strings.Contains(was, "- S-0001 ") {
 		t.Errorf("it left the old parent's list:\n%s", was)
 	}
+	// S-0001 is in progress: E-0002, in backlog, follows it there (S-0200)
+	if now := read(t, filepath.Join(root, "wip/kanban/epics/E-0002-second-epic.md")); !strings.Contains(now, "status: in-progress\n") || !strings.Contains(now, "follows S-0001, which joined it from E-0001") {
+		t.Errorf("the epic it joined follows it:\n%s", now)
+	}
 	if now := read(t, filepath.Join(root, "wip/kanban/epics/E-0002-second-epic.md")); !strings.Contains(now, "- S-0001 A plain story") {
 		t.Errorf("and joined the new one's:\n%s", now)
 	}

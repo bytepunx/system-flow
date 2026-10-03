@@ -228,6 +228,9 @@ the item changed.`,
 				return nil
 			}
 			fmt.Fprintf(a.out, "%s: changed %s\n  %s\n", res.ID, strings.Join(res.Changed, ", "), res.Path)
+			for _, f := range res.Followed {
+				fmt.Fprintf(a.out, "  %s → %s, following %s\n", f.ID, f.To, f.Story)
+			}
 			if res.Renamed != "" {
 				fmt.Fprintf(a.out, "  renamed from %s\n", res.Renamed)
 			}

@@ -347,3 +347,46 @@ func TestChangesNameTheStoryAnEpicFollowed(t *testing.T) {
 		t.Errorf("a move by hand follows %q", got)
 	}
 }
+
+func TestAStoryGivenAnotherEpicMovesBoth(t *testing.T) {
+	r := followProject(t, InProgress, InProgress, Review)
+	other := mustCreate(t, r, Epic, "Other", "")
+	all, err := r.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := r.Get("S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	story.Parent = other.ID
+	epics, walks, err := r.FollowParent(all, story, "E-0001", "alex", t1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(walks) != 2 {
+		t.Fatalf("walks %+v", walks)
+	}
+	// E-0001 keeps only S-0002, in review: it follows it there
+	if w := walks[0]; w.ID != "E-0001" || w.From != InProgress || w.To != Review || w.Story != "S-0001" || epics[0].Status != Review {
+		t.Errorf("the epic it left: %+v", w)
+	}
+	// E-0002 gains S-0001, in progress, from backlog
+	if w := walks[1]; w.ID != other.ID || w.From != Backlog || w.To != InProgress || epics[1].Status != InProgress {
+		t.Errorf("the epic it joined: %+v", w)
+	}
+	if !strings.Contains(epics[1].Body, "follows S-0001, which joined it from E-0001") {
+		t.Errorf("the note names the story:\n%s", epics[1].Body)
+	}
+}
+
+func TestAStoryInBacklogGivenAnotherEpicMovesNeither(t *testing.T) {
+	r := followProject(t, Ready, Backlog, Ready)
+	other := mustCreate(t, r, Epic, "Other", "")
+	all, _ := r.List(true)
+	story, _ := r.Get("S-0001")
+	story.Parent = other.ID
+	if _, walks, err := r.FollowParent(all, story, "E-0001", "alex", t1); err != nil || len(walks) != 0 {
+		t.Errorf("walks %+v err %v", walks, err)
+	}
+}

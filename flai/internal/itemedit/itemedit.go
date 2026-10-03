@@ -134,6 +134,9 @@ type Result struct {
 	Commit      string          `json:"commit,omitempty"`
 	CommitError string          `json:"commit_error,omitempty"`
 	Warnings    []check.Finding `json:"warnings"`
+	// Followed are the walks of the epics a story left and joined with a new
+	// parent (S-0200).
+	Followed []*workitem.Followed `json:"followed,omitempty"`
 }
 
 // InvalidError is a change that is not allowed, whatever the repository
@@ -457,6 +460,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	}
 	changed = append(changed, planned...)
 	var newParent, formerParent *workitem.Item
+	var followed []*workitem.Followed
 	if ch.Parent != nil && workitem.CanonicalID(*ch.Parent) != workitem.CanonicalID(it.Parent) {
 		want := parentType(it.Type)
 		if want == "" {
@@ -478,8 +482,14 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 				formerParent = fp
 			}
 		}
+		former := it.Parent
 		it.Parent = p.ID
 		changed = append(changed, "parent")
+		if it.Type == workitem.Story {
+			if followed, err = followParent(repo, it, former, newParent, formerParent, opt); err != nil {
+				return nil, err
+			}
+		}
 	}
 	body := below(it.Body)
 	if ch.Body != nil {
@@ -495,7 +505,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			body = nb + "\n"
 		}
 	}
-	res := &Result{ID: it.ID, Path: rel(repo, it.Path), Hash: docedit.Hash(string(oldData)), Changed: []string{}, Files: []string{}, Warnings: []check.Finding{}}
+	res := &Result{ID: it.ID, Path: rel(repo, it.Path), Hash: docedit.Hash(string(oldData)), Changed: []string{}, Files: []string{}, Warnings: []check.Finding{}, Followed: followed}
 	if len(changed) == 0 {
 		res.Unchanged = true
 		return res, nil
@@ -632,6 +642,26 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		res.Committed, res.Commit = true, sha
 	}
 	return res, nil
+}
+
+// followParent moves in memory the epics story left and joined, the very
+// items the edit saves with their lists of stories, so that each follows its
+// stories (S-0200).
+func followParent(repo *workitem.Repo, story *workitem.Item, former string, joined, left *workitem.Item, opt Options) ([]*workitem.Followed, error) {
+	all, err := repo.List(true)
+	if err != nil {
+		return nil, err
+	}
+	for i, x := range all {
+		switch {
+		case x.ID == joined.ID:
+			all[i] = joined
+		case left != nil && x.ID == left.ID:
+			all[i] = left
+		}
+	}
+	_, walks, err := repo.FollowParent(all, story, former, opt.By, opt.Now)
+	return walks, err
 }
 
 // applyPlanning makes the change's draft flag, cost of delay, and forecast
