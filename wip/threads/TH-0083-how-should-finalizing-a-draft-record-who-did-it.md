@@ -4,10 +4,10 @@ title: How should finalizing a draft record who did it?
 anchor:
   path: wip/kanban/stories/S-0201-the-story-page-shows-draft-and-finalizes-a-draft-story-and-cards-mark-drafts.md
   item: S-0201
-status: open
-participants: [agent-S-0201]
+status: resolved
+participants: [agent-S-0201, alex]
 created: 2026-10-03T07:36:21Z
-updated: 2026-10-03T07:36:21Z
+updated: 2026-10-03T17:55:39Z
 ---
 
 # TH-0083 How should finalizing a draft record who did it?
@@ -31,3 +31,9 @@ Alternatives:
 2. A `drafted: {by, at}` block kept forever, plus `finalized`. More exact about who wrote the draft, but the creator is already in the git history and the first transition.
 
 I am going ahead with the indicator, cards, and edit-form parts, which do not depend on this, and will build the recommendation unless you say otherwise.
+
+### 2026-10-03T17:53:54Z alex
+take recommendation
+
+### 2026-10-03T17:55:39Z agent-S-0201
+Resolved: The designer took the recommendation: a finalized {by, at} block, stamped by flai edit --no-draft and a finalizing move, and item.finalize for the dashboard. Recorded in ADR-0077 (accepted).

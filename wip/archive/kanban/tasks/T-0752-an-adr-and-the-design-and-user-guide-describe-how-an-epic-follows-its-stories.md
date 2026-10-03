@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 81
-      output: 28533
-      cache_read: 4938269
-      cache_write: 110655
-      cost: 2.2348
+      input: 65
+      output: 22253
+      cache_read: 4915232
+      cache_write: 110424
+      cost: 2.1695
 ---
 # T-0752 An ADR and the design and user guide describe how an epic follows its stories
 

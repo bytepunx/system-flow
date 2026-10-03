@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 104
-      output: 29228
-      cache_read: 5400535
-      cache_write: 135745
-      cost: 2.4613
+      input: 90
+      output: 24491
+      cache_read: 5396201
+      cache_write: 140092
+      cost: 2.4684
 ---
 # T-0758 The design and the user guide describe the draft marker, Finalize, and who finalized
 

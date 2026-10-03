@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 7754
-      cache_read: 1432758
-      cache_write: 36013
-      cost: 0.653
+      input: 24
+      output: 6497
+      cache_read: 1431608
+      cache_write: 37166
+      cost: 0.6549
 ---
 # T-0753 Board cards and search hits carry a story's draft flag
 

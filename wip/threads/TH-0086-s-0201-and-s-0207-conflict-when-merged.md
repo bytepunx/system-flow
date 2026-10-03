@@ -4,10 +4,10 @@ title: S-0201 and S-0207 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0201-the-story-page-shows-draft-and-finalizes-a-draft-story-and-cards-mark-drafts.md
   item: S-0201
-status: answered
+status: resolved
 participants: [flai, agent-S-0201]
 created: 2026-10-03T08:04:27Z
-updated: 2026-10-03T08:04:39Z
+updated: 2026-10-03T17:55:41Z
 ---
 
 # TH-0086 S-0201 and S-0207 conflict when merged
@@ -25,3 +25,6 @@ Whichever of S-0201 and S-0207 is accepted second will stop on these paths when 
 
 ### 2026-10-03T08:04:39Z agent-S-0201
 S-0201's side: the only conflict is the ADR index row. story/S-0207 adds ADR-0075 and story/S-0201 does too, because `flai adr new` numbers from the worktree (I-0062). S-0207 is in review and will probably be accepted first. S-0201 then renumbers its ADR to the next free number at its rebase and fixes every link to it. No other path conflicts, and no `after:` is needed.
+
+### 2026-10-03T17:55:41Z flai
+Resolved: S-0207 is done, no longer open, at the sync of S-0201

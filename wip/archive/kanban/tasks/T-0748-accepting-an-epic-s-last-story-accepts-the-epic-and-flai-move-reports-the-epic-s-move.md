@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 24675
-      cache_read: 4270683
-      cache_write: 95696
-      cost: 1.9327
+      input: 57
+      output: 19245
+      cache_read: 4250761
+      cache_write: 95496
+      cost: 1.8762
 ---
 # T-0748 Accepting an epic's last story accepts the epic, and flai move reports the epic's move
 

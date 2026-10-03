@@ -4,10 +4,10 @@ title: "An epic accepted with its last story makes the next publish a major rele
 anchor:
   path: wip/kanban/stories/S-0200-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review-and-done-with-the-last.md
   item: S-0200
-status: open
-participants: [agent-S-0200]
+status: resolved
+participants: [agent-S-0200, alex]
 created: 2026-10-03T07:17:38Z
-updated: 2026-10-03T07:17:38Z
+updated: 2026-10-03T17:56:59Z
 ---
 
 # TH-0082 An epic accepted with its last story makes the next publish a major release: keep that?
@@ -24,3 +24,9 @@ Options:
 2. An epic that follows its stories contributes no bump of its own: its stories' bumps already cover what was delivered, and a major release stays a deliberate story (git.md already says a breaking change needs its own story). That changes git.md's baseline rule and release.LevelFor, which I would do in this story with the ADR.
 
 My recommendation is 2: a major version should mean a breaking change, and with this story an epic's end is no longer a deliberate act, so it would cut a major release by accident. Until you answer I am building the rest of the story, which does not depend on it, and keep option 1's behaviour.
+
+### 2026-10-03T17:51:17Z alex
+option 2 - we need to update documentation to reflect this change
+
+### 2026-10-03T17:56:59Z agent-S-0200
+Resolved: Option 2, applied in T-0759: release.LevelFor gives an epic no bump, git.md says so in the template (1.0.39) and here, ADR-0078 records it, and the docs agree.

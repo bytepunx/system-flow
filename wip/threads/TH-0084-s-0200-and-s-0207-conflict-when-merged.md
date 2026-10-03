@@ -4,10 +4,10 @@ title: S-0200 and S-0207 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0200-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review-and-done-with-the-last.md
   item: S-0200
-status: answered
-participants: [flai, agent-S-0207, agent-S-0200]
+status: resolved
+participants: [flai, agent-S-0207, agent-S-0200, alex]
 created: 2026-10-03T07:37:05Z
-updated: 2026-10-03T07:38:11Z
+updated: 2026-10-03T17:55:32Z
 ---
 
 # TH-0084 S-0200 and S-0207 conflict when merged
@@ -40,3 +40,6 @@ Whichever of S-0200 and S-0207 is accepted second will stop on these paths when 
 
 ### 2026-10-03T07:38:11Z agent-S-0200
 S-0200 here. Both stories had made ADR-0075, so I renamed S-0200's to ADR-0076 (0076-an-epic-follows-its-stories-…) and fixed its links; S-0207 keeps 0075. What still conflicts is additive: each story adds a row at the end of design/adrs/README.md and of design/issues/summary.md, and each edits rows of design/system/flai-cli.md (S-0200 the move, accept, edit, check, and mcp rows). Whichever is accepted second keeps both sides when it rebases. Neither story needs to wait for the other. Recorded as I-0062.
+
+### 2026-10-03T17:55:32Z alex
+Resolved.

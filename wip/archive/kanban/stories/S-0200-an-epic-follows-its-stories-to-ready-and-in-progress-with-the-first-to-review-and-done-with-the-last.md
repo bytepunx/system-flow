@@ -3,11 +3,11 @@ id: S-0200
 type: story
 nature: improvement
 title: "An epic follows its stories: to ready and in-progress with the first, to review and done with the last"
-status: in-progress
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:11Z
-updated: 2026-10-03T07:38:05Z
+updated: 2026-10-03T18:03:58Z
 transitions:
   - to: ready
     at: 2026-10-03T05:33:53Z
@@ -15,8 +15,14 @@ transitions:
   - to: in-progress
     at: 2026-10-03T07:06:32Z
     by: agent-S-0200
+  - to: review
+    at: 2026-10-03T18:03:09Z
+    by: agent-S-0200
+  - to: done
+    at: 2026-10-03T18:03:58Z
+    by: alex
 tags: [flai, dashboard]
-touches: [flai/internal/workitem, flai/internal/itemedit, flai/cmd/move.go, flai/cmd/move_cancel.go, flai/cmd/accept.go, flai/cmd/edit.go, flai/cmd/check.go, flai/cmd/accept_epic_test.go, flai/cmd/release_pending_test.go, flai/cmd/accept_research_test.go, flai/cmd/accept_test.go, flai/cmd/stream_diff_test.go, flai/cmd/workitems_test.go, flai/cmd/check_stats_test.go, flai/internal/mcpserver, design/system/workflow.md, flai/cmd/edit_test.go, flai/cmd/hostapi_reads_test.go, flai/cmd/move_cancel_test.go, flai/internal/preview, flai/internal/check, design/system/work-hierarchy.md, design/system/flai-cli.md, design/adrs, docs/users, design/issues/I-0062-two-stories-in-progress-at-once-take-the-same-adr-number-and-one-renumbers-by-hand.md, design/issues/summary.md]
+touches: [flai/internal/workitem, flai/internal/itemedit, flai/internal/release, flai/cmd/release.go, flai/cmd/move.go, flai/cmd/move_cancel.go, flai/cmd/accept.go, flai/cmd/edit.go, flai/cmd/check.go, flai/cmd/accept_epic_test.go, flai/cmd/release_pending_test.go, flai/cmd/accept_research_test.go, flai/cmd/accept_test.go, flai/cmd/stream_diff_test.go, flai/cmd/workitems_test.go, flai/cmd/check_stats_test.go, flai/internal/mcpserver, design/system/workflow.md, flai/cmd/edit_test.go, flai/cmd/hostapi_reads_test.go, flai/cmd/move_cancel_test.go, flai/internal/preview, flai/internal/check, design/system/work-hierarchy.md, design/system/flai-cli.md, design/adrs, docs/users, design/conventions/git.md, template/root/design/conventions/git.md, template/template.yaml, template/CHANGELOG.md, design/tech/ci.md, design/issues/summary.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/I-0062-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,7 +30,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3117
+  seconds: 3827
   models:
     - model: claude-haiku-4-5-20251001
       input: 218
@@ -33,17 +39,17 @@ usage:
       cache_write: 90168
       cost: 0.3303
     - model: claude-opus-5-5
-      input: 512
-      output: 181119
-      cache_read: 31347201
-      cache_write: 702418
-      cost: 14.1863
+      input: 610
+      output: 207504
+      cache_read: 45833507
+      cache_write: 1029681
+      cost: 20.2298
     - model: claude-sonnet-5
-      input: 54
-      output: 16609
-      cache_read: 1920718
-      cache_write: 103164
-      cost: 0.8083
+      input: 128
+      output: 35224
+      cache_read: 4589867
+      cache_write: 208992
+      cost: 1.7929
 ---
 # S-0200 An epic follows its stories: to ready and in-progress with the first, to review and done with the last
 
@@ -67,5 +73,6 @@ An epic's status is moved by hand and drifts from its stories'. The designer dec
 - T-0749 item_move and the inbox report an epic's move with its story
 - T-0750 flai check warns about an epic that lags its stories
 - T-0752 An ADR and the design and user guide describe how an epic follows its stories
+- T-0759 An accepted epic contributes no release bump of its own
 
 ## Notes

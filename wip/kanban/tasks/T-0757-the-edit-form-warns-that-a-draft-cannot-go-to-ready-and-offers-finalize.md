@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 17
-      output: 4814
-      cache_read: 889539
-      cache_write: 22359
-      cost: 0.4054
+      input: 15
+      output: 4034
+      cache_read: 888825
+      cache_write: 23075
+      cost: 0.4066
 ---
 # T-0757 The edit form warns that a draft cannot go to ready and offers Finalize
 

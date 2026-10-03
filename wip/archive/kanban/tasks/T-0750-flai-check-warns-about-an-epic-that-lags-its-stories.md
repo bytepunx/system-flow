@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 16022
-      cache_read: 2772981
-      cache_write: 62136
-      cost: 1.2549
+      input: 37
+      output: 12496
+      cache_read: 2760046
+      cache_write: 62006
+      cost: 1.2182
 ---
 # T-0750 flai check warns about an epic that lags its stories
 

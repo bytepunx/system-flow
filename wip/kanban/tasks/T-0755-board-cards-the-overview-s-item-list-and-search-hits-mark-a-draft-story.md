@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 6642
-      cache_read: 1227302
-      cache_write: 30849
-      cost: 0.5593
+      input: 21
+      output: 5566
+      cache_read: 1226317
+      cache_write: 31837
+      cost: 0.561
 ---
 # T-0755 Board cards, the overview's item list, and search hits mark a draft story
 

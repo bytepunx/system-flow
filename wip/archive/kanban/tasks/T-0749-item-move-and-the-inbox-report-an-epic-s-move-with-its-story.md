@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 16703
-      cache_read: 2890830
-      cache_write: 64777
-      cost: 1.3083
+      input: 38
+      output: 13027
+      cache_read: 2877345
+      cache_write: 64642
+      cost: 1.27
 ---
 # T-0749 item_move and the inbox report an epic's move with its story
 

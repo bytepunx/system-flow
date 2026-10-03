@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 13141
-      cache_read: 2428118
-      cache_write: 61032
-      cost: 1.1066
+      input: 41
+      output: 11011
+      cache_read: 2426169
+      cache_write: 62987
+      cost: 1.1098
 ---
 # T-0754 The story page shows [Draft] beside the title and a Finalize button that clears it
 

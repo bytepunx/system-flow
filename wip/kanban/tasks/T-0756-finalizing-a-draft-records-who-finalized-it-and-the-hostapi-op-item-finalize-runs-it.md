@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 199
-      output: 55815
-      cache_read: 10313295
-      cache_write: 259230
-      cost: 4.7003
+      input: 173
+      output: 46770
+      cache_read: 10305019
+      cache_write: 267532
+      cost: 4.7139
 ---
 # T-0756 Finalizing a draft records who finalized it, and the hostapi op item.finalize runs it
 

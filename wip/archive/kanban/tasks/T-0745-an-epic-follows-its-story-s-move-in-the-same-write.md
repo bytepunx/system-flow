@@ -27,17 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 18137
-      cache_read: 3139020
-      cache_write: 70338
-      cost: 1.4206
+      input: 42
+      output: 14145
+      cache_read: 3124377
+      cache_write: 70191
+      cost: 1.379
     - model: claude-sonnet-5
-      input: 54
-      output: 16609
-      cache_read: 1920718
-      cache_write: 103164
-      cost: 0.8083
+      input: 128
+      output: 35224
+      cache_read: 4589867
+      cache_write: 208992
+      cost: 1.7929
 ---
 # T-0745 An epic follows its story's move in the same write
 
