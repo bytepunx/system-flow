@@ -1,5 +1,5 @@
 ---
-id: I-0060
+id: I-0061
 title: "flai check splits an item's front-matter errors on \"; \", so a message that holds one becomes two findings, the second on line 1"
 class: defect
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-10-03T06:01:53Z
 updated: 2026-10-03T06:01:53Z
 ---
 
-# I-0060 flai check splits an item's front-matter errors on "; ", so a message that holds one becomes two findings, the second on line 1
+# I-0061 flai check splits an item's front-matter errors on "; ", so a message that holds one becomes two findings, the second on line 1
 
 ## Description
 flai check splits an item's front-matter errors on "; ", so a message that holds one becomes two findings, the second on line 1
