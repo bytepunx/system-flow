@@ -3,11 +3,14 @@ id: S-0242
 type: story
 nature: improvement
 title: A publish refused because the remote moved drops its tags, takes the remote by rebase or merge, and works conflicts through tasks and threads
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-02T23:48:34Z
-updated: 2026-10-02T23:48:34Z
-transitions: []
+updated: 2026-10-02T23:55:31Z
+transitions:
+  - to: ready
+    at: 2026-10-02T23:55:31Z
+    by: alex
 tags: [flai, template]
 touches: [template/root/design/conventions/work-management.md, design/conventions/work-management.md, flai/cmd/release.go]
 agent:

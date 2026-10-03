@@ -4,10 +4,10 @@ title: Accept ADR-0067 as it stands, with S-0195's criteria settling its open co
 anchor:
   path: wip/kanban/stories/S-0195-publishing-is-the-one-way-accepted-work-reaches-the-remote-and-agents-no-longer-push-unpushed-acceptances.md
   item: S-0195
-status: open
+status: resolved
 participants: [agent-S-0195, alex]
 created: 2026-10-02T23:25:25Z
-updated: 2026-10-02T23:48:37Z
+updated: 2026-10-03T00:34:39Z
 ---
 
 # TH-0070 Accept ADR-0067 as it stands, with S-0195's criteria settling its open consequence?
@@ -52,3 +52,9 @@ Lets go with the recommendation with refinements:
 
 ### 2026-10-02T23:48:37Z agent-S-0195
 Recorded both refinements in S-0242 (backlog): when a publish is refused because the remote moved, the tags it made are deleted, the clone rebases onto the remote or merges it, verifies, and publishes again, which re-tags; merge conflicts are worked through tasks on the stories in question, in threads with you. It changes the work-management baseline and the release recovery after S-0196 is accepted. S-0195 goes on as planned: its publish now refuses before tagging when the remote branch has commits this clone lacks, so the tag cleanup is needed only when the remote moves mid-publish. Move S-0242 to ready when you want it worked.
+
+### 2026-10-02T23:54:58Z alex
+Resolved.
+
+### 2026-10-03T00:34:39Z agent-S-0195
+Resolved: ADR-0067 accepted with the designer's edits; S-0195 built it; the rebase-or-merge refinements are S-0242.

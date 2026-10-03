@@ -3,11 +3,11 @@ id: T-0719
 type: task
 nature: improvement
 title: flai release --pending and Publish refuse a clone behind its remote, naming the fetch and merge to run
-status: in-progress
+status: done
 parent: S-0195
 owner: arobson
 created: 2026-10-02T23:31:03Z
-updated: 2026-10-02T23:46:36Z
+updated: 2026-10-02T23:56:04Z
 transitions:
   - to: ready
     at: 2026-10-02T23:31:26Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-02T23:46:36Z
     by: agent-S-0195
+  - to: done
+    at: 2026-10-02T23:56:04Z
+    by: agent-S-0195
 stream: S-0195
 tags: []
 touches: [flai/internal/release/remote.go, flai/internal/release/remote_test.go, flai/cmd/release.go, flai/cmd/release_test.go, flai/internal/preview]
 after: [T-0717]
+usage:
+  source: log
+  seconds: 568
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 26506
+      cache_read: 5054072
+      cache_write: 101175
+      cost: 2.1306
 ---
 # T-0719 flai release --pending and Publish refuse a clone behind its remote, naming the fetch and merge to run
 

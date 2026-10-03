@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 126
-      output: 984
-      cache_read: 5994912
-      cache_write: 135434
-      cost: 2.5152
+      input: 114
+      output: 31520
+      cache_read: 6010046
+      cache_write: 120312
+      cost: 2.5336
 ---
 # T-0718 Inbox, flai board, the MCP instructions, and the harness prompt no longer tell an agent to push
 

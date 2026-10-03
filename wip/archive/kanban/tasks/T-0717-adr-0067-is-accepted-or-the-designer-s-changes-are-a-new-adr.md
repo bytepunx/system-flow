@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 495
-      cache_read: 2444874
-      cache_write: 13338
-      cost: 1.0086
+      input: 46
+      output: 12639
+      cache_read: 2409963
+      cache_write: 48244
+      cost: 1.0159
 ---
 # T-0717 ADR-0067 is accepted, or the designer's changes are a new ADR
 

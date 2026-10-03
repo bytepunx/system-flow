@@ -3,19 +3,36 @@ id: T-0722
 type: task
 nature: improvement
 title: The design and the guides describe publishing as the one way to the remote
-status: ready
+status: done
 parent: S-0195
 owner: arobson
 created: 2026-10-02T23:31:09Z
-updated: 2026-10-02T23:31:26Z
+updated: 2026-10-03T00:29:03Z
 transitions:
   - to: ready
     at: 2026-10-02T23:31:26Z
+    by: agent-S-0195
+  - to: in-progress
+    at: 2026-10-03T00:18:11Z
+    by: agent-S-0195
+  - to: done
+    at: 2026-10-03T00:29:03Z
     by: agent-S-0195
 stream: S-0195
 tags: []
 touches: [design/system, docs, design/conventions/git.md]
 after: [T-0718, T-0719, T-0720, T-0721]
+usage:
+  source: log
+  seconds: 652
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 179
+      output: 49404
+      cache_read: 9420186
+      cache_write: 188577
+      cost: 3.9711
 ---
 # T-0722 The design and the guides describe publishing as the one way to the remote
 
