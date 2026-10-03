@@ -269,7 +269,7 @@ func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 // give a sub-agent, and to verify before review; the operator's command gets
 // no prompt, and an answered or commit run is not told again.
 func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
-	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, then have one fresh verifier", "check the diff against the acceptance criteria and the conventions"}
+	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then have one fresh verifier", "check the diff against the acceptance criteria and the conventions"}
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	st, err := (claudeCode{}).Start(r, Host{})
 	if err != nil {
@@ -354,9 +354,9 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"tasks with no after between them and no path in common form layers that can run together",
 			"record the layers and why each task waits in the narrative's Decisions",
 			"Work the plan layer by layer, handing each task to a task sub-agent",
-			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits or writes through flai",
+			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits, syncs, or writes through flai",
 			"Name the task's ID in each task sub-agent's description, so that flai measures the task by its calls",
-			"Review each one's work yourself, fix what falls short, commit it, and move the task",
+			"Review each one's work yourself, fix what falls short, commit it, sync and test as above, and move the task",
 			"only you commit, sync the stream, move items, and talk to the designer",
 		} {
 			if !strings.Contains(p, w) {
@@ -370,6 +370,47 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 		if strings.Contains(p, "layer") {
 			t.Errorf("told the plan again:\n%s", p)
 		}
+	}
+}
+
+// S-0197, ADR-0069: at each task the story's agent commits the task, syncs
+// with flai stream sync and resolves what it lists, then runs the task's
+// tests, in that order, never rebasing or merging by hand; and before review
+// it commits everything and syncs again before the close-out run.
+func TestThePromptSaysThePerTaskCycle(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		cycle := []string{
+			"When a task is done, commit its changes, with its docs and work-item updates, on story/S-0104",
+			"then run flai stream sync S-0104, and resolve each conflict it lists in the worktree, git add it, and git rebase --continue",
+			"then run the tests for what the task changed and commit any fix they need",
+			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then have one fresh verifier",
+			"through the project's close-out script where it has one (it refuses a branch that does not contain the main branch)",
+		}
+		at := 0
+		for _, w := range cycle {
+			i := strings.Index(p[at:], w)
+			if i < 0 {
+				t.Errorf("prompt lacks %q after what comes before it:\n%s", w, p)
+				continue
+			}
+			at += i + len(w)
+		}
+		for _, w := range []string{
+			"refuses while anything is uncommitted: never start a rebase or merge by hand",
+			"call the flai MCP tool inbox at every task transition",
+		} {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+	}
+	answered := r
+	answered.Answered = "TH-0001"
+	if p := Prompt(answered); !strings.Contains(p, "commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync S-0104 again and resolve what it lists, then move S-0104 to review") {
+		t.Errorf("an answered agent is not told to sync before review:\n%s", p)
 	}
 }
 
