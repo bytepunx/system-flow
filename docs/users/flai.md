@@ -867,7 +867,7 @@ flai check --strict                         # and your tests: verify what you no
 flai release --pending                      # tags again and pushes
 ```
 
-When the rebase or merge conflicts, the conflicts are worked through tasks: a `remediation` story for the publish's conflicts, with one task for each accepted story whose changes conflict, each discussed with you on a thread on its task before it is resolved. A push that fails for any other reason (credentials, a hook, an unreachable remote) keeps its tags, and running `flai release --pending` again finishes the push.
+When the rebase or merge conflicts, the conflicts are worked through threads: one with you on each accepted story whose changes conflict, naming the paths, resolved as the thread settles. A push that fails for any other reason (credentials, a hook, an unreachable remote) keeps its tags, and running `flai release --pending` again finishes the push.
 
 When the remote cannot be reached, `--dry-run` still shows the plan with a warning that it was not checked, and publishing waits until the remote can be reached, since it pushes there anyway. A clone with no remote publishes locally as before.
 
