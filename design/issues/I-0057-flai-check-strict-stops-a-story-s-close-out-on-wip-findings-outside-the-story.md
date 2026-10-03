@@ -24,6 +24,10 @@ flai check --strict stops a story's close-out on wip/ findings outside the story
 Story: S-0199.
 S-0199's close-out stopped at flai check --strict on one warning that is not its own: story.unaccepted on the archived S-0173, whose branch story/S-0173 still exists unmerged. S-0199 changed nothing there; the branch is the operator's to merge or delete. Gone to review with the finding noted.
 
+### 2026-10-03T07:38:13Z
+Story: S-0207.
+scripts/close-out.sh S-0207 stopped at flai check --strict on 10 warnings, none from S-0207's changes: 9 wip.overlap between S-0207 and S-0200 and its task T-0752, which are in progress side by side and are settling the overlap on TH-0084, and story.unaccepted on S-0173's unmerged branch. The lint, the whole suite, and the template smoke had passed.
+
 ### 2026-10-03T08:15:16Z
 Story: S-0201.
 S-0201's close-out stopped at flai check --strict on story.unaccepted for S-0173's unmerged branch and wip.overlap with S-0200, none in S-0201's diff; main fails the same. The verifier ran the remaining steps (flaiover tests, markdown lint) by hand.
