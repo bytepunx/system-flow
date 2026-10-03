@@ -298,6 +298,59 @@ describe('NewItemForm', () => {
 		expect(q('refusal').textContent).toContain('agent config: "nonsense" is not key=value');
 	});
 
+	// S-0204: a closed cost of delay panel in the manifest's currency; only the inputs given are sent
+	describe('the cost of delay panel', () => {
+		const withCurrency = (sent: { body?: Record<string, unknown> }, currency?: string) => {
+			backend((body) => {
+				sent.body = body;
+				return ok({ item: { id: 'S-0099' } });
+			});
+			const inner = api.getMockImplementation()!;
+			api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) =>
+				url === '/api/manifest' ? ok(currency ? { planning: { currency } } : {}) : inner(url, init)
+			);
+		};
+		const create = async () => {
+			type(q<HTMLInputElement>('title'), 'With a cost of delay');
+			q<HTMLFormElement>('new-item').dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true })
+			);
+			await settle();
+		};
+
+		it('is closed, in the manifest’s currency, and sends the inputs given', async () => {
+			const sent: { body?: Record<string, unknown> } = {};
+			withCurrency(sent, 'EUR');
+			c = mount(NewItemForm, { target: document.body, props: { oncreated: vi.fn() } });
+			await settle();
+			expect(q<HTMLDetailsElement>('cod-panel').open).toBe(false);
+			expect(q('cod-panel').textContent).toContain('revenue per week, EUR');
+			type(q<HTMLInputElement>('cod-revenue'), '1200');
+			type(q<HTMLInputElement>('cod-time-lost'), '6h');
+			expect(q('cod-summary').textContent).toBe('revenue 1,200 EUR/week · 6h lost per cycle');
+			await create();
+			expect(sent.body?.cost_of_delay).toEqual({
+				revenue_per_week: '1200',
+				time_lost_per_cycle: '6h'
+			});
+		});
+
+		it('is on an epic too, in USD when the manifest names no currency, and sends nothing unset', async () => {
+			const sent: { body?: Record<string, unknown> } = {};
+			withCurrency(sent);
+			c = mount(NewItemForm, {
+				target: document.body,
+				props: { oncreated: vi.fn(), initialType: 'epic' }
+			});
+			await settle();
+			expect(q('cod-panel').textContent).toContain('penalty per week, USD');
+			expect(document.querySelector('[data-testid="cod-summary"]')).toBeNull();
+			await create();
+			expect(sent.body?.type).toBe('epic');
+			expect(sent.body && 'cost_of_delay' in sent.body).toBe(false);
+		});
+	});
+
 	// S-0167: the board's lane menu opens the form on a lane, and the item is moved there once made
 	describe('the lane it starts in', () => {
 		const submit = async (lane?: 'backlog' | 'ready' | 'in-progress') => {

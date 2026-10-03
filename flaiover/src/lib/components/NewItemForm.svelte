@@ -10,6 +10,8 @@
 	import { render } from '$lib/markdown';
 	import { agentFrom, parseConfig, type Agent } from '$lib/agent';
 	import AgentFields from './AgentFields.svelte';
+	import CostOfDelayPanel from './CostOfDelayPanel.svelte';
+	import { costFields, costInputs, DEFAULT_CURRENCY } from '$lib/costofdelay';
 	import { movesTo, START_LANES, type StartLane } from '$lib/lanes';
 
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
@@ -48,6 +50,9 @@
 	let model = $state('');
 	let agentConfig = $state('');
 	let defaultAgent = $state<Agent | undefined>(undefined);
+	// the cost of delay inputs (S-0204), in the manifest's currency; only those given are sent
+	let cost = $state(costFields());
+	let currency = $state(DEFAULT_CURRENCY);
 	let error = $state<string | null>(null);
 	let findings = $state<Finding[]>([]);
 	let busy = $state(false);
@@ -97,16 +102,19 @@
 	$effect(() => {
 		void loadEpics();
 	});
-	async function loadDefaultAgent() {
+	async function loadManifest() {
 		try {
 			const r = await api('/api/manifest');
-			if (r.ok) defaultAgent = ((await r.json()) as { agent?: Agent }).agent;
+			if (!r.ok) return;
+			const m = (await r.json()) as { agent?: Agent; planning?: { currency?: string } };
+			defaultAgent = m.agent;
+			currency = m.planning?.currency || DEFAULT_CURRENCY;
 		} catch {
-			// no default shown; flai still applies it
+			// no default shown and amounts labelled in the default currency; flai still applies both
 		}
 	}
 	$effect(() => {
-		void loadDefaultAgent();
+		void loadManifest();
 	});
 
 	async function create(e: Event) {
@@ -137,6 +145,7 @@
 					topics: list(topics),
 					touches: list(touches),
 					agent,
+					cost_of_delay: costInputs(cost),
 					body
 				})
 			});
@@ -259,6 +268,8 @@
 			/>
 		</label>
 	</div>
+
+	<CostOfDelayPanel bind:fields={cost} {currency} />
 
 	{#if type === 'story'}
 		<AgentFields

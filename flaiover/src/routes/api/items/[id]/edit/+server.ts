@@ -2,6 +2,7 @@ import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 import type { Agent } from '$lib/agent';
+import type { CostOfDelay } from '$lib/planning';
 
 /**
  * An item's own words, changed after it was made (S-0085): title, nature, tags, touches, a story's
@@ -28,6 +29,9 @@ export type ItemView = {
 	/** A story's agent, and the project's default a new story would get (S-0103). */
 	agent?: Agent;
 	default_agent?: Agent;
+	/** An epic's or story's cost of delay, and the ISO 4217 code its amounts are in (S-0204). */
+	cost_of_delay?: CostOfDelay;
+	currency?: string;
 	body: string;
 	path: string;
 	hash: string;
@@ -41,11 +45,22 @@ export type ItemView = {
 export const GET: RequestHandler = ({ params }) =>
 	respond(async () => (await repo().run<ItemView>('item.show', { id: params.id })).data);
 
-const FIELDS = ['title', 'nature', 'tags', 'topics', 'touches', 'after', 'parent', 'body'] as const;
+const FIELDS = [
+	'title',
+	'nature',
+	'tags',
+	'topics',
+	'touches',
+	'after',
+	'parent',
+	'cost_of_delay',
+	'body'
+] as const;
 
 /**
- * PUT { hash, title?, nature?, tags?, topics?, touches?, after?, parent?, agent?, body? }: change what is given and leave the
- * rest. 409 { error, current, hash } when the item changed after it was read; 422 { error, findings }
+ * PUT { hash, title?, nature?, tags?, topics?, touches?, after?, parent?, agent?, cost_of_delay?, body? }: change what is given and leave the
+ * rest. cost_of_delay is { revenue_per_week?, penalty_per_week?, time_lost_per_cycle? } as text (S-0204): a key absent is
+ * left, an empty one removed, and the operator is who set them. 409 { error, current, hash } when the item changed after it was read; 422 { error, findings }
  * when flai check refuses the change, and then nothing was changed; 400 for a value that is not
  * what it should be.
  */

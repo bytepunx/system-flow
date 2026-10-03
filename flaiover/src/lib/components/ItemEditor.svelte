@@ -3,11 +3,15 @@
 	// (S-0135), what it touches, the stories a story waits for (S-0130), its parent, and the body below its heading. flai on the host makes every change and
 	// decides what is allowed; this form only collects it. What is the item's state, its ID, type,
 	// status, owner, and dates, is shown and is not a field. A draft story says it cannot go to ready
-	// until it is finalized, and is finalized here (S-0201).
+	// until it is finalized, and is finalized here (S-0201). An epic's or story's cost of delay inputs
+	// are in a closed panel (S-0204); the planner's value is not a field.
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
 	import { agentFrom, configText, parseConfig, sameAgent, type Agent } from '$lib/agent';
 	import AgentFields from './AgentFields.svelte';
+	import CostOfDelayPanel from './CostOfDelayPanel.svelte';
+	import { costFields, costPatch, DEFAULT_CURRENCY } from '$lib/costofdelay';
+	import type { CostOfDelay } from '$lib/planning';
 
 	type View = {
 		id: string;
@@ -26,6 +30,9 @@
 		default_agent?: Agent;
 		/** a story an agent wrote that the operator has not finalized (S-0199) */
 		draft?: boolean;
+		/** an epic's or story's cost of delay, and the currency of its amounts (S-0204) */
+		cost_of_delay?: CostOfDelay;
+		currency?: string;
 		body: string;
 		path: string;
 		hash: string;
@@ -54,6 +61,7 @@
 	let harness = $state('');
 	let model = $state('');
 	let agentConfig = $state('');
+	let cost = $state(costFields());
 	let body = $state('');
 	let preview = $state(false);
 	let saving = $state(false);
@@ -81,6 +89,7 @@
 		harness = v.agent?.harness ?? '';
 		model = v.agent?.model ?? '';
 		agentConfig = configText(v.agent?.config);
+		cost = costFields(v.cost_of_delay);
 		body = v.body;
 	}
 
@@ -120,6 +129,11 @@
 					? view.agent
 					: agentFrom(harness, model, parsed.config, view.agent?.roles);
 			if (!sameAgent(next, view.agent)) out.agent = next ?? null;
+		}
+		if (view.type !== 'task') {
+			// the inputs that changed, an emptied one as "" to remove it; the planner's value is left
+			const patch = costPatch(costFields(view.cost_of_delay), cost);
+			if (patch) out.cost_of_delay = patch;
 		}
 		if (body.trim() !== view.body.trim()) out.body = body;
 		return out;
@@ -178,6 +192,7 @@
 		'after',
 		'parent',
 		'agent',
+		'cost_of_delay',
 		'body'
 	] as const;
 	const words = (v: Partial<View>) => JSON.stringify(WORDS.map((k) => v[k] ?? null));
@@ -336,6 +351,9 @@
 				defaults={view.default_agent}
 				note="Empty fields leave this story without them; the default applies only to new stories"
 			/>
+		{/if}
+		{#if view.type !== 'task'}
+			<CostOfDelayPanel bind:fields={cost} currency={view.currency || DEFAULT_CURRENCY} />
 		{/if}
 		<div>
 			<div class="mb-1 flex items-center justify-between text-sm">

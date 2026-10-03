@@ -23,12 +23,13 @@ export const GET: RequestHandler = ({ url }) =>
 	});
 
 /**
- * POST { type, title, nature?, parent?, tags?, topics?, touches?, agent?, body }: create an epic or a story with the
+ * POST { type, title, nature?, parent?, tags?, topics?, touches?, agent?, cost_of_delay?, body }: create an epic or a story with the
  * designer's markdown as its body (S-0059; flai's item.new on the host, S-0075). flai does it as one
  * step (ADR-0016): the item from the project's template with the next ID, linked into its parent,
  * checked with it in place, committed on its own, owned by the manifest's owner. 400 when an
  * argument is not what it should be; a story's agent ({ harness?, model?, config?, roles? }, S-0103, S-0189) goes over
- * the project's default, which fills in the rest, role by role; 422 { error, findings } when the check refuses it, and then
+ * the project's default, which fills in the rest, role by role; its cost of delay inputs
+ * ({ revenue_per_week?, penalty_per_week?, time_lost_per_cycle? } as text, S-0204) are set by the operator; 422 { error, findings } when the check refuses it, and then
  * nothing was created.
  */
 export const POST: RequestHandler = ({ request }) =>
@@ -43,6 +44,7 @@ export const POST: RequestHandler = ({ request }) =>
 			topics: body.topics,
 			touches: body.touches,
 			agent: body.agent,
+			cost_of_delay: body.cost_of_delay,
 			body: body.body
 		});
 		return { ...data, log: warnings };

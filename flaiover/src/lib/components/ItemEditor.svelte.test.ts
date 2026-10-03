@@ -266,6 +266,90 @@ describe('ItemEditor (S-0085)', () => {
 		expect(sent()).toEqual({ agent: null, hash: view.hash });
 	});
 
+	// S-0204: an epic's or story's cost of delay inputs in a closed panel; a save sends the changed
+	// inputs, an emptied one as "", and never the planner's value
+	describe('the cost of delay panel', () => {
+		const planned = {
+			...view,
+			cost_of_delay: {
+				inputs: { revenue_per_week: 1200, penalty_per_week: 300, time_lost_per_cycle: '6h' },
+				value: 900,
+				by: 'alex',
+				at: '2026-10-01T09:00:00Z'
+			},
+			currency: 'EUR'
+		};
+		const panel = () => document.querySelector<HTMLDetailsElement>('[data-testid="cod-panel"]');
+
+		it('is closed, says the inputs, and sends only those changed', async () => {
+			api.mockImplementation((_url: string, init?: { method?: string }) =>
+				Promise.resolve(
+					init?.method === 'PUT'
+						? answer(200, { changed: ['cost_of_delay'] })
+						: answer(200, planned)
+				)
+			);
+			await mountIt();
+			expect(panel()!.open).toBe(false);
+			expect(document.querySelector('[data-testid="cod-summary"]')!.textContent).toBe(
+				'revenue 1,200 EUR/week · penalty 300 EUR/week · 6h lost per cycle'
+			);
+			expect(document.querySelector<HTMLInputElement>('[data-testid="cod-revenue"]')!.value).toBe(
+				'1200'
+			);
+			const save = document.querySelector<HTMLButtonElement>('[data-testid="edit-save"]')!;
+			expect(save.disabled).toBe(true);
+			type('[data-testid="cod-revenue"]', '1500');
+			expect(save.disabled).toBe(false);
+			await submit();
+			expect(sent()).toEqual({ cost_of_delay: { revenue_per_week: '1500' }, hash: view.hash });
+		});
+
+		it('clears every input as "" and leaves the value', async () => {
+			api.mockImplementation((_url: string, init?: { method?: string }) =>
+				Promise.resolve(
+					init?.method === 'PUT'
+						? answer(200, { changed: ['cost_of_delay'] })
+						: answer(200, planned)
+				)
+			);
+			await mountIt();
+			type('[data-testid="cod-revenue"]', '');
+			type('[data-testid="cod-penalty"]', '');
+			type('[data-testid="cod-time-lost"]', '');
+			await submit();
+			expect(sent()).toEqual({
+				cost_of_delay: { revenue_per_week: '', penalty_per_week: '', time_lost_per_cycle: '' },
+				hash: view.hash
+			});
+		});
+
+		it('is on an epic in USD when the view names no currency, and not on a task', async () => {
+			api.mockImplementation((_url: string, init?: { method?: string }) =>
+				Promise.resolve(
+					init?.method === 'PUT'
+						? answer(200, { changed: ['cost_of_delay'] })
+						: answer(200, { ...view, type: 'epic', parent: undefined })
+				)
+			);
+			await mountIt();
+			expect(panel()!.textContent).toContain('revenue per week, USD');
+			expect(document.querySelector('[data-testid="cod-summary"]')).toBeNull();
+			type('[data-testid="cod-time-lost"]', '1h30m');
+			await submit();
+			expect(sent()).toEqual({
+				cost_of_delay: { time_lost_per_cycle: '1h30m' },
+				hash: view.hash
+			});
+			unmount(c!);
+			api.mockReset();
+			api.mockResolvedValue(answer(200, { ...view, id: 'T-0001', type: 'task' }));
+			await mountIt();
+			expect(document.querySelector('[data-testid="item-editor"]')).not.toBeNull();
+			expect(panel()).toBeNull();
+		});
+	});
+
 	// S-0201: a draft story says it cannot go to ready and is finalized from the form
 	describe('a draft story', () => {
 		const draft = { ...view, status: 'backlog', draft: true };
