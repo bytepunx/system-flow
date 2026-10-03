@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -22,6 +23,9 @@ type Options struct {
 	// Activities are the strategic agents' activity documents, read by the
 	// caller (ADR-0079).
 	Activities []*workitem.Activity
+	// Threads are the threads the items' agents waited on, read by the caller
+	// (S-0205).
+	Threads []*threads.Thread
 }
 
 // ItemMetrics are the per-item derived values.
@@ -55,6 +59,10 @@ type ItemMetrics struct {
 	// backlog and ready cost at that value (S-0205).
 	CostOfDelay  *float64 `json:"cost_of_delay,omitempty"`
 	CostIncurred *float64 `json:"cost_of_delay_incurred,omitempty"`
+	// WaitThreads is the time its agent waited on its threads while it was in
+	// progress, and WaitReview the time it spent in review (S-0205).
+	WaitThreads *float64 `json:"wait_threads_seconds,omitempty"`
+	WaitReview  *float64 `json:"wait_review_seconds,omitempty"`
 	// Usage is what agents spent on it, when it carries any (S-0143).
 	Usage *ItemUsage `json:"usage,omitempty"`
 }
@@ -134,6 +142,9 @@ type Report struct {
 	Forecasts Forecasts `json:"forecasts"`
 	// CostOfDelay is what waiting for the items cost (S-0205).
 	CostOfDelay CostOfDelay `json:"cost_of_delay"`
+	// Waiting is how long the items' agents waited on threads and in review
+	// (S-0205).
+	Waiting Waiting `json:"waiting"`
 }
 
 // Compute derives every metric from the items.
@@ -165,8 +176,10 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		Burnup: map[string][]DayPoint{},
 	}
 	perItem := map[string]ItemMetrics{}
+	waits := threadWaits(all, opt.Threads, opt.Now)
 	for _, it := range items {
 		m := Derive(it, opt.Now)
+		m.WaitThreads = waitInProgress(it, waits[workitem.CanonicalID(it.ID)], opt.Now)
 		perItem[it.ID] = m
 		rep.Items = append(rep.Items, m)
 	}
@@ -213,6 +226,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Strategic = strategic(opt.Activities, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
+	rep.Waiting = waiting(items, perItem, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
@@ -291,6 +305,7 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 	}
 	deriveForecast(&m, it, completed)
 	deriveCostOfDelay(&m, it)
+	deriveWaitReview(&m, it)
 	m.Usage = itemUsage(it.Usage)
 	return m
 }

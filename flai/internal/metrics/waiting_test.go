@@ -1,0 +1,161 @@
+package metrics
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
+)
+
+// waitItems are stories created on 20 August 2026 and moved as the pairs of
+// state and time say, and a task of S-0004.
+func waitItems() []*workitem.Item {
+	item := func(id string, moves ...string) *workitem.Item {
+		it := &workitem.Item{ID: id, Type: workitem.Story, Status: workitem.Backlog, Created: "2026-08-20T00:00:00Z"}
+		for i := 0; i < len(moves); i += 2 {
+			it.Transitions = append(it.Transitions, workitem.Transition{To: moves[i], At: moves[i+1]})
+			it.Status = moves[i]
+		}
+		return it
+	}
+	ip, rv, done := workitem.InProgress, workitem.Review, workitem.Done
+	task := item("T-0004", ip, "2026-08-27T01:00:00Z")
+	task.Type, task.Parent = workitem.Task, "S-0004"
+	return []*workitem.Item{
+		// answered while in progress, the opener's own follow-up not an answer
+		item("S-0001", workitem.Ready, "2026-08-24T00:00:00Z", ip, "2026-08-25T00:00:00Z", done, "2026-08-26T00:00:00Z"),
+		// opened before in progress and answered during it; anchored as S-12
+		item("S-0012", ip, "2026-08-25T00:00:00Z", rv, "2026-08-25T12:00:00Z", done, "2026-08-25T18:00:00Z"),
+		// two overlapping threads
+		item("S-0003", ip, "2026-08-26T00:00:00Z", done, "2026-08-27T00:00:00Z"),
+		// a thread on its task
+		item("S-0004", ip, "2026-08-27T00:00:00Z", done, "2026-08-27T12:00:00Z"),
+		// an open thread nobody answered, to now
+		item("S-0005", ip, "2026-09-01T06:00:00Z"),
+		// a resolved thread nobody else answered, to updated; in review at now
+		item("S-0006", ip, "2026-08-31T00:00:00Z", rv, "2026-08-31T12:00:00Z"),
+		// an open thread without entries, from created
+		item("S-0007", ip, "2026-08-31T00:00:00Z", done, "2026-08-31T10:00:00Z"),
+		// sent back from review: two intervals in progress and two in review
+		item("S-0008", ip, "2026-08-28T00:00:00Z", rv, "2026-08-28T06:00:00Z", ip, "2026-08-28T08:00:00Z",
+			rv, "2026-08-28T10:00:00Z", done, "2026-08-28T11:00:00Z"),
+		// no thread and never in review
+		item("S-0009", ip, "2026-08-29T00:00:00Z", done, "2026-08-29T01:00:00Z"),
+		// cancelled from review: left out of the weeks
+		item("S-0010", ip, "2026-08-27T00:00:00Z", rv, "2026-08-27T01:00:00Z", workitem.Cancelled, "2026-08-27T05:00:00Z"),
+		// a thread answered after it was done
+		item("S-0011", ip, "2026-08-31T00:00:00Z", done, "2026-08-31T02:00:00Z"),
+		// done before the window
+		item("S-0013", ip, "2026-08-20T06:00:00Z", done, "2026-08-21T00:00:00Z"),
+		task,
+	}
+}
+
+// thread is a thread on an item whose entries are the pairs of time and
+// author given.
+func thread(item, status, created, updated string, entries ...string) *threads.Thread {
+	th := &threads.Thread{Anchor: threads.Anchor{Path: "wip/kanban/x.md", Item: item}, Status: status, Created: created, Updated: updated}
+	th.Body = "\n# TH-0001 A question\n\n## Entries\n"
+	for i := 0; i < len(entries); i += 2 {
+		th.Body += "\n### " + entries[i] + " " + entries[i+1] + "\nSome text.\n"
+	}
+	return th
+}
+
+func waitThreads() []*threads.Thread {
+	return []*threads.Thread{
+		thread("S-0001", "answered", "2026-08-25T02:00:00Z", "2026-08-25T05:00:00Z",
+			"2026-08-25T02:00:00Z", "agent", "2026-08-25T03:00:00Z", "agent", "2026-08-25T05:00:00Z", "designer"),
+		thread("S-12", "answered", "2026-08-24T22:00:00Z", "2026-08-25T01:00:00Z",
+			"2026-08-24T22:00:00Z", "agent", "2026-08-25T01:00:00Z", "designer"),
+		thread("S-0003", "answered", "2026-08-26T01:00:00Z", "2026-08-26T03:00:00Z",
+			"2026-08-26T01:00:00Z", "agent", "2026-08-26T03:00:00Z", "designer"),
+		thread("S-0003", "answered", "2026-08-26T02:00:00Z", "2026-08-26T04:00:00Z",
+			"2026-08-26T02:00:00Z", "agent", "2026-08-26T04:00:00Z", "designer"),
+		thread("T-4", "answered", "2026-08-27T06:00:00Z", "2026-08-27T07:00:00Z",
+			"2026-08-27T06:00:00Z", "agent", "2026-08-27T07:00:00Z", "designer"),
+		thread("S-0005", "open", "2026-09-01T08:00:00Z", "2026-09-01T08:00:00Z",
+			"2026-09-01T08:00:00Z", "agent"),
+		thread("S-0006", "resolved", "2026-08-31T02:00:00Z", "2026-08-31T03:00:00Z",
+			"2026-08-31T02:00:00Z", "agent", "2026-08-31T03:00:00Z", "agent"),
+		thread("S-0007", "open", "2026-08-31T08:00:00Z", "2026-08-31T08:00:00Z"),
+		thread("S-0008", "answered", "2026-08-28T05:00:00Z", "2026-08-28T09:00:00Z",
+			"2026-08-28T05:00:00Z", "agent", "2026-08-28T09:00:00Z", "designer"),
+		thread("S-0011", "answered", "2026-08-31T03:00:00Z", "2026-08-31T04:00:00Z",
+			"2026-08-31T03:00:00Z", "agent", "2026-08-31T04:00:00Z", "designer"),
+		thread("", "open", "2026-08-25T00:00:00Z", "2026-08-25T00:00:00Z",
+			"2026-08-25T00:00:00Z", "agent"),
+	}
+}
+
+// tenDays starts the window at noon on Saturday 22 August 2026, in the ISO
+// week that started on Monday 17 August.
+const tenDays = 10 * 24 * time.Hour
+
+// S-0205: the union of the waits of an item's threads and its tasks' that
+// fall in its in-progress intervals, and its time in review, each absent
+// without the input.
+func TestWaitPerItemIsThreadsInProgressAndTimeInReview(t *testing.T) {
+	rep := Compute(waitItems(), Options{Now: now, Since: tenDays, Threads: waitThreads()})
+	want := map[string][2]*float64{ // threads, review
+		"S-0001": {val(10800), nil},
+		"S-0012": {val(3600), val(21600)},
+		"S-0003": {val(10800), nil},
+		"S-0004": {val(3600), nil},
+		"S-0005": {val(14400), nil},
+		"S-0006": {val(3600), val(86400)},
+		"S-0007": {val(7200), nil},
+		"S-0008": {val(7200), val(10800)},
+		"S-0009": {nil, nil},
+		"S-0010": {nil, val(14400)},
+		"S-0011": {val(0), nil},
+		"S-0013": {nil, nil},
+	}
+	if len(rep.Items) != len(want) {
+		t.Fatalf("items = %d, want %d", len(rep.Items), len(want))
+	}
+	for _, m := range rep.Items {
+		w := want[m.ID]
+		for k, got := range [2]*float64{m.WaitThreads, m.WaitReview} {
+			if (got == nil) != (w[k] == nil) || (got != nil && *got != *w[k]) {
+				t.Errorf("%s [threads, review][%d] = %v, want %v", m.ID, k, deref(got), deref(w[k]))
+			}
+		}
+	}
+	data, err := json.Marshal(rep.Items[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keys := `"wait_threads_seconds":3600,"wait_review_seconds":21600`; !strings.Contains(string(data), keys) {
+		t.Errorf("S-0012 json lacks %s: %s", keys, data)
+	}
+	data, err = json.Marshal(rep.Items[8])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "wait_") {
+		t.Errorf("S-0009 has no thread and no review and carries a wait: %s", data)
+	}
+}
+
+// S-0205: per ISO week of the window, the items done in it and the sum and
+// mean of their waits; a week without items has no mean, and cancelled items
+// and those done before the window are left out.
+func TestWaitingByTheWeek(t *testing.T) {
+	data, err := json.Marshal(Compute(waitItems(), Options{Now: now, Since: tenDays, Threads: waitThreads()}).Waiting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"weeks":[` +
+		`{"week":"2026-W34","start":"2026-08-17","items":0,"threads":{"total_seconds":0},"review":{"total_seconds":0}},` +
+		`{"week":"2026-W35","start":"2026-08-24","items":6,` +
+		`"threads":{"total_seconds":36000,"mean_seconds":6000},"review":{"total_seconds":32400,"mean_seconds":5400}},` +
+		`{"week":"2026-W36","start":"2026-08-31","items":2,` +
+		`"threads":{"total_seconds":7200,"mean_seconds":3600},"review":{"total_seconds":0,"mean_seconds":0}}]}`
+	if string(data) != want {
+		t.Errorf("waiting =\n%s\nwant\n%s", data, want)
+	}
+}
