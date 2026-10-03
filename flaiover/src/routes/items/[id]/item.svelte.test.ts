@@ -392,6 +392,111 @@ describe('the item page (S-0154)', () => {
 		expect(document.querySelector('[data-testid="item-forecast"]')).toBeNull();
 	});
 
+	// S-0201: a draft story says so beside its title and is finalized from its page without a reload
+	describe('a draft story (S-0201)', () => {
+		const draftStory = { ...story, status: 'backlog', draft: true };
+		const epic = { ...story, id: 'E-0016', type: 'epic', draft: undefined };
+		const indicator = () => document.querySelector('[data-testid="item-draft"]');
+		const button = () => document.querySelector<HTMLButtonElement>('[data-testid="item-finalize"]');
+		const show = async (
+			item: Record<string, unknown>,
+			children: unknown[] = [],
+			writable = true
+		) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children });
+				if (url === '/api/board') return answer({ writable });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const again = () => {
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+		};
+
+		it('shows [Draft] beside the title and a Finalize button', async () => {
+			await show(draftStory);
+			expect(indicator()!.textContent).toBe('[Draft]');
+			expect(indicator()!.closest('h1')).not.toBeNull();
+			expect(button()!.textContent).toBe('Finalize');
+		});
+
+		it('shows neither on a story that is not a draft, nor on an epic', async () => {
+			await show(story);
+			expect(indicator()).toBeNull();
+			expect(button()).toBeNull();
+			again();
+			await show({ ...epic, draft: true });
+			expect(indicator()).toBeNull();
+			expect(button()).toBeNull();
+		});
+
+		it('offers Finalize only where the dashboard may write, and not on an archived story', async () => {
+			await show(draftStory, [], false);
+			expect(indicator()).not.toBeNull();
+			expect(button()).toBeNull();
+			again();
+			await show({ ...draftStory, archived: true });
+			expect(button()).toBeNull();
+		});
+
+		it('finalizes through the API and, once reloaded, shows neither', async () => {
+			let current: Record<string, unknown> = draftStory;
+			api.mockImplementation(async (url: string, init?: RequestInit) => {
+				if (url === '/api/items/S-0154') return answer({ item: current, children: [] });
+				if (url === '/api/items/S-0154/finalize' && init?.method === 'POST') {
+					current = { ...draftStory, draft: false };
+					return answer({ id: 'S-0154', draft: false, warnings: [] });
+				}
+				if (url === '/api/board') return answer({ writable: true });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			button()!.click();
+			await settle();
+			expect(asked('/api/items/S-0154/finalize')).toBe(1);
+			expect(indicator()).toBeNull();
+			expect(button()).toBeNull();
+			expect(document.querySelector('[data-testid="item-notice"]')!.textContent).toBe('done');
+		});
+
+		it('says why when flai refuses, and keeps the draft', async () => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item: draftStory, children: [] });
+				if (url === '/api/items/S-0154/finalize')
+					return { ok: false, json: async () => ({ error: 'S-0154 is not a draft' }) };
+				if (url === '/api/board') return answer({ writable: true });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			button()!.click();
+			await settle();
+			expect(document.querySelector('[data-testid="item-notice"]')!.textContent).toBe(
+				'refused: S-0154 is not a draft'
+			);
+			expect(indicator()).not.toBeNull();
+		});
+
+		it("marks an epic's draft story among its children", async () => {
+			await show(epic, [
+				{ ...story, id: 'S-0201', title: 'Drafted', draft: true },
+				{ ...story, id: 'S-0200', title: 'Finalized' }
+			]);
+			const marks = [...document.querySelectorAll('[data-testid="child-draft"]')];
+			expect(marks).toHaveLength(1);
+			expect(marks[0].textContent).toBe('Draft');
+			expect(marks[0].closest('li')!.textContent).toContain('S-0201');
+		});
+	});
+
 	// S-0176: a story's page shows its task plan, and follows it as tasks move
 	it("shows a story's task plan when flai sends one, and follows it as the tasks move", async () => {
 		const plan = {

@@ -78,6 +78,9 @@
 			: []
 	);
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
+	// A story an agent wrote that the operator has not finalized (S-0199): it says so, and the
+	// operator takes it as their own with Finalize (S-0201).
+	const draft = $derived(item?.type === 'story' && item.draft === true);
 	// The item's planning data, read only (S-0199): each block a line, then lines under it.
 	const costOfDelay = $derived(costOfDelayLines(item?.cost_of_delay));
 	const forecast = $derived(forecastLines(item?.forecast));
@@ -298,6 +301,10 @@
 				<h1 class="text-2xl font-semibold">
 					<span class="font-mono">{item.id}</span>
 					{item.title}
+					{#if draft}<span
+							class="ml-1 align-middle text-sm font-semibold text-warn"
+							data-testid="item-draft">[Draft]</span
+						>{/if}
 				</h1>
 				{#if newQuery}
 					<div class="flex shrink-0 gap-2">
@@ -375,6 +382,14 @@
 							class="rounded border border-line-strong px-2 py-1 text-xs hover:bg-raised"
 							onclick={() => (editing = true)}
 							data-testid="edit-item">edit…</button
+						>
+					{/if}
+					{#if draft}
+						<button
+							type="button"
+							class="rounded border border-line-strong px-2 py-1 text-xs hover:bg-raised"
+							onclick={() => post(`/api/items/${id}/finalize`, {})}
+							data-testid="item-finalize">Finalize</button
 						>
 					{/if}
 					{#if blocked}
@@ -467,6 +482,10 @@
 							<li>
 								<a class="font-mono underline" href={resolve('/items/[id]', { id: c.id })}>{c.id}</a
 								> <span class="text-muted">{c.status}</span>
+								{#if c.type === 'story' && c.draft}<span
+										class="font-semibold text-warn"
+										data-testid="child-draft">Draft</span
+									>{/if}
 								{c.title}
 							</li>
 						{/each}
