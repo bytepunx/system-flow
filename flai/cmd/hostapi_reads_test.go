@@ -110,10 +110,16 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 			}
 		}
 	}
+	// E-0001 follows its stories into review, where it cannot be cancelled,
+	// and is accepted with the last of them (S-0200): the preview is of an
+	// epic with nothing under it.
+	if _, errOut, code := runIn(t, root, "epic", "new", "Spare"); code != 0 {
+		t.Fatal(errOut)
+	}
 	all := func() (publish string) {
 		t.Helper()
 		says("item.show", answered("item.show", `{"id":"S-0002"}`, "edit", "S-0002", "--show"), `"hash"`)
-		says("item.move.preview", answered("item.move.preview", `{"id":"E-0001"}`, "move", "E-0001", "cancelled", "--by=designer", "--reason=preview", "--dry-run"), `"dry_run":true`)
+		says("item.move.preview", answered("item.move.preview", `{"id":"E-0002"}`, "move", "E-0002", "cancelled", "--by=designer", "--reason=preview", "--dry-run"), `"dry_run":true`)
 		answered("stats.get", `{}`, "stats")
 		answered("stats.get", `{"since":"12w","type":"task","by":"parent"}`, "stats", "--since=12w", "--type=task", "--by=parent")
 		says("stats.get by the hour", answered("stats.get", `{"since":"7d","bucket":"hour"}`, "stats", "--since=7d", "--bucket=hour"), `"bucket":"hour"`, `"spend":{"epic":`)

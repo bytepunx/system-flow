@@ -127,7 +127,8 @@ func TestCancellingAStoryCancelsItsOpenTasks(t *testing.T) {
 		t.Errorf("cancelled with it: %+v", res.Cancelled)
 	}
 	after := statuses(t, r)
-	if after["T-0005"] != Cancelled || after["T-0006"] != Done || after["S-0002"] != Ready || after["E-0001"] != Backlog {
+	// The epic follows the cancelled story: its stories in review and done have started it (S-0200).
+	if after["T-0005"] != Cancelled || after["T-0006"] != Done || after["S-0002"] != Ready || after["E-0001"] != InProgress || after["E-0002"] != Backlog {
 		t.Errorf("after: %v", after)
 	}
 }

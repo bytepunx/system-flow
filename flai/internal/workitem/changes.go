@@ -16,15 +16,16 @@ const (
 // front matter: a transition, or the start or end of a blocked interval.
 // Nothing is recorded to produce it (S-0058).
 type Change struct {
-	ID     string `json:"id"`
-	Type   string `json:"type"`
-	Title  string `json:"title"`
-	Kind   string `json:"kind"`
-	To     string `json:"to,omitempty"`     // the state moved to
-	By     string `json:"by,omitempty"`     // who, when the file says; blocked intervals do not
-	Reason string `json:"reason,omitempty"` // why it was blocked
-	Cause  string `json:"cause,omitempty"`  // the item whose cancellation took this one with it (ADR-0028)
-	At     string `json:"at"`
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Title   string `json:"title"`
+	Kind    string `json:"kind"`
+	To      string `json:"to,omitempty"`      // the state moved to
+	By      string `json:"by,omitempty"`      // who, when the file says; blocked intervals do not
+	Reason  string `json:"reason,omitempty"`  // why it was blocked
+	Cause   string `json:"cause,omitempty"`   // the item whose cancellation took this one with it (ADR-0028)
+	Follows string `json:"follows,omitempty"` // the story whose move this epic followed (S-0200)
+	At      string `json:"at"`
 }
 
 // Key identifies a change, for telling apart changes within one second.
@@ -55,6 +56,8 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 			c.Kind, c.To, c.By, c.At = Moved, tr.To, tr.By, tr.At
 			if tr.To == Cancelled {
 				c.Cause = CancelledWith(byID, it, tr.At)
+			} else if it.Type == Epic {
+				c.Follows = FollowedWith(byID, it, tr)
 			}
 			if tr.By != self && after(tr.At, c) {
 				out = append(out, c)
@@ -100,4 +103,23 @@ func CancelledWith(byID map[string]*Item, it *Item, at string) string {
 		}
 	}
 	return cause
+}
+
+// FollowedWith names the story whose move an epic's transition followed: a
+// child story moved at the same time by the same actor, the lowest ID if
+// several. Nothing records it; a story and its epic share one stamp (S-0200).
+func FollowedWith(byID map[string]*Item, it *Item, tr Transition) string {
+	found := ""
+	for _, c := range byID {
+		if c.Parent != it.ID || c.Type != Story || (found != "" && !lessID(c.ID, found)) {
+			continue
+		}
+		for _, st := range c.Transitions {
+			if st.At == tr.At && st.By == tr.By {
+				found = c.ID
+				break
+			}
+		}
+	}
+	return found
 }

@@ -458,7 +458,13 @@ func TestBoardToolMatchesTheSharedView(t *testing.T) {
 		t.Errorf("limits, order, and breaches belong to the view: %v", out)
 	}
 	all, _ := f.call(t, "board", map[string]any{"all": true})
-	if n := len(all["columns"].(map[string]any)["backlog"].([]any)); n < 2 {
+	count := func(cols map[string]any) (n int) {
+		for _, c := range cols {
+			n += len(c.([]any))
+		}
+		return n
+	}
+	if n := count(all["columns"].(map[string]any)) - count(cols); n < 2 {
 		t.Errorf("all adds the epic and the task: %d", n)
 	}
 }

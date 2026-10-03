@@ -69,7 +69,8 @@ func TestMoveCancelledDryRunListsAndChangesNothing(t *testing.T) {
 			t.Errorf("dry run does not say %q:\n%s", want, out)
 		}
 	}
-	if st := statusOf(t, root, "epics/E-0001-*.md"); st != "backlog" {
+	// in progress with S-0001 (S-0200)
+	if st := statusOf(t, root, "epics/E-0001-*.md"); st != "in-progress" {
 		t.Errorf("dry run moved the epic to %s", st)
 	}
 	if st := statusOf(t, root, "tasks/T-0001-*.md"); st != "backlog" {

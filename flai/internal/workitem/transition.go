@@ -15,6 +15,9 @@ type MoveResult struct {
 	// RolledUp lists the items above one that entered done whose usage was
 	// summed again (S-0143).
 	RolledUp []string
+	// Followed is the walk the moved story's epic took with it, nil when it
+	// took none (S-0200).
+	Followed *Followed
 }
 
 // Cascaded is one item a cancellation takes with it, and the state it was in.
@@ -61,16 +64,25 @@ func (r *Repo) Transition(it *Item, to, by, reason string, now time.Time) (warni
 // actor and time, and a note naming the item that caused it. Every move is
 // validated before any file is written, so a refusal changes nothing. With
 // finalize, a draft story moved to ready is finalized with the move (S-0199).
+// A moved story's epic follows it, short of done, in the same write
+// (S-0200); the stories a cancellation takes along do not move their epic.
 func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, finalize bool) (*MoveResult, error) {
-	items, err := r.List(false)
+	all, err := r.List(true)
 	if err != nil {
 		return nil, err
+	}
+	var items []*Item
+	for _, x := range all {
+		if !x.Archived {
+			items = append(items, x)
+		}
 	}
 	board, err := r.LoadBoard()
 	if err != nil {
 		return nil, err
 	}
 	res := &MoveResult{Cancelled: []Cascaded{}}
+	from := it.Status
 	res.Warnings, err = r.Move(it, to, MoveOptions{By: by, Reason: reason, Now: now, Items: items, Board: board, Finalize: finalize})
 	if err != nil {
 		return nil, err
@@ -87,6 +99,17 @@ func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, fin
 			res.Cancelled = append(res.Cancelled, was)
 			changed = append(changed, c)
 			storyMoved = storyMoved || c.Type == Story
+		}
+	}
+	if it.Type == Story {
+		// The archive counts: a story accepted and archived still holds its epic.
+		epic, followed, err := r.Follow(all, it, from, by, now, false)
+		if err != nil {
+			return nil, err
+		}
+		if followed != nil {
+			changed = append(changed, epic)
+			res.Followed = followed
 		}
 	}
 	for _, c := range changed {

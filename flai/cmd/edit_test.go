@@ -113,7 +113,7 @@ func TestEditFieldsParentAndBody(t *testing.T) {
 			t.Errorf("the item lacks %q:\n%s", want, item)
 		}
 	}
-	if was := read(t, filepath.Join(root, "wip/kanban/epics/E-0001-first-epic.md")); strings.Contains(was, "S-0001") {
+	if was := read(t, filepath.Join(root, "wip/kanban/epics/E-0001-first-epic.md")); strings.Contains(was, "- S-0001 ") {
 		t.Errorf("it left the old parent's list:\n%s", was)
 	}
 	if now := read(t, filepath.Join(root, "wip/kanban/epics/E-0002-second-epic.md")); !strings.Contains(now, "- S-0001 A plain story") {
