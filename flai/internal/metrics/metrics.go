@@ -44,6 +44,13 @@ type ItemMetrics struct {
 	Estimate  *float64           `json:"estimate_seconds,omitempty"`
 	EstError  *float64           `json:"estimate_error,omitempty"`
 	Age       *float64           `json:"age_seconds,omitempty"` // active items: now - started
+	// EstErrorSeconds is cycle time minus the estimate (S-0205).
+	EstErrorSeconds *float64 `json:"estimate_error_seconds,omitempty"`
+	// Forecast is the forecast duration; the errors are cycle time minus it
+	// and completed minus the forecast delivery (S-0205).
+	Forecast      *float64 `json:"forecast_seconds,omitempty"`
+	ForecastError *float64 `json:"forecast_error_seconds,omitempty"`
+	DeliveryError *float64 `json:"delivery_error_seconds,omitempty"`
 	// Usage is what agents spent on it, when it carries any (S-0143).
 	Usage *ItemUsage `json:"usage,omitempty"`
 }
@@ -118,6 +125,9 @@ type Report struct {
 	Usage UsageReport `json:"usage"`
 	// Strategic is each strategic agent's activity document (ADR-0079).
 	Strategic []StrategicAgent `json:"strategic"`
+	// Forecasts is how far forecasts and estimates were from what happened
+	// (S-0205).
+	Forecasts Forecasts `json:"forecasts"`
 }
 
 // Compute derives every metric from the items.
@@ -195,6 +205,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage.Bucket = opt.Bucket
 	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
 	rep.Strategic = strategic(opt.Activities, start, opt.Now)
+	rep.Forecasts = forecasts(items, perItem, inWindow)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
@@ -271,6 +282,7 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 	if !it.Closed() && !started.IsZero() {
 		m.Age = secs(now.Sub(started))
 	}
+	deriveForecast(&m, it, completed)
 	m.Usage = itemUsage(it.Usage)
 	return m
 }
