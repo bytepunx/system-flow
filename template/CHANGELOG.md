@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.34 - 2026-10-03
+
+- S-0197 Agents commit each task after flai stream sync, and stream sync makes conflicts easy to resolve (patch).
+- S-0242 A publish refused because the remote moved drops its tags, takes the remote by rebase or merge, and works conflicts through tasks and threads (patch).
+- S-0198 Give the operator the option to have all issues turned into stories (patch).
+
 ## 1.0.33 - 2026-10-03
 
 - S-0197 Agents commit each task after flai stream sync, and stream sync makes conflicts easy to resolve (patch): `git.md` says to use `flai stream sync` for the branch's git operations and never start a `git rebase` or `git merge` by hand, finishing a rebase the sync stopped on with `git add` and `git rebase --continue`, or undoing it with `git rebase --abort`; to commit each task when it is done, then sync and resolve, then run its tests and commit any fix; and before review to commit what is outstanding, sync again, and close out. `work-management.md` points to that cycle for each task, before review, and on an `overlapped` change, and its definition of done asks for the branch synced after its last commit. `delegation.md` syncs again before the verifier runs. `scripts/close-out.sh` stops while a rebase is unfinished, and when the branch does not contain the main branch, saying to run `flai stream sync`: before the tests when there is nothing to commit, after the commit otherwise.
