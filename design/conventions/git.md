@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-02
+updated: 2026-10-03
 audience: agent
 order: 70
 status: active
@@ -54,4 +54,4 @@ How history is made in this repository.
 ## Project additions
 
 - The `Co-Authored-By:` trailer rule was decided on TH-0009.
-- Releases are per component with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`; the template is versioned in `template/template.yaml` and `template/CHANGELOG.md`. `flai accept <id> --by <operator> --trailer "Co-Authored-By: ..."` performs acceptance only (merge, done, archive, commit); `flai push --pending` pushes what was accepted and releases nothing unless the `auto-publish` host action is enabled (S-0144, ADR-0048), when it first computes and applies the release as S-0094 made it; otherwise `flai release --pending` (by hand, or the board's Publish action) is where a release is cut, when the operator chooses: the component an accepted item delivers to (story tags `cli`, `dashboard`, `template`, or the epic's, and only a component its commits touched: tag a story with where it delivers, and when it touches two, put the main one first) gets the highest delivery-type bump among everything accepted for it since its last tag, every other touched component a patch, and design, docs, or wip-only items contribute nothing. Dependabot merges are a patch on the sub-project they touch, tagged by hand until they are items.
+- Releases are per component with prefixed tags: `flai/vX.Y.Z` (GoReleaser, see `flai/.goreleaser.yaml`) and `flaiover/vX.Y.Z`; the template is versioned in `template/template.yaml` and `template/CHANGELOG.md`. `flai accept <id> --by <operator> --trailer "Co-Authored-By: ..."` performs acceptance only (merge, done, archive, commit). Publishing is the one way accepted work reaches the remote (ADR-0067): `git fetch`, then `flai release --pending` (by hand, or the board's Publish action), when the operator chooses or asks an agent to; it is where a release is cut, and it refuses a clone behind its remote's tags or branch until that is fetched and merged. `flai push --pending` and the `auto-publish` host action (S-0144, ADR-0048) are the operator's shell tools outside the workflow; no agent runs them on its own. In a release, the component an accepted item delivers to (story tags `cli`, `dashboard`, `template`, or the epic's, and only a component its commits touched: tag a story with where it delivers, and when it touches two, put the main one first) gets the highest delivery-type bump among everything accepted for it since its last tag, every other touched component a patch, and design, docs, or wip-only items contribute nothing. Dependabot merges are a patch on the sub-project they touch, tagged by hand until they are items.

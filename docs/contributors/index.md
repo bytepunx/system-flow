@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-01
+updated: 2026-10-03
 status: draft
 ---
 
@@ -42,7 +42,7 @@ Write a new ADR in `design/adrs` that supersedes the old one, then update `desig
 
 ## Releasing
 
-Releases are per component and computed from what was accepted, never tagged by hand; the rules are in [git.md](../../design/conventions/git.md). `flai release --pending`, the board's Publish action, or `flai push --pending` bumps each component that has accepted work since its last release:
+Releases are per component and computed from what was accepted, never tagged by hand; the rules are in [git.md](../../design/conventions/git.md). Publishing, `flai release --pending` after a fetch or the board's Publish action, bumps each component that has accepted work since its last release, and is the one way accepted work reaches the remote ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)):
 
 - `flai`: tag `flai/vX.Y.Z`, GoReleaser publishes binaries.
 - `flaiover`: tag `flaiover/vX.Y.Z`, the image workflow publishes to GHCR.

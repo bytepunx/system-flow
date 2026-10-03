@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-02
+updated: 2026-10-03
 status: active
 ---
 
@@ -22,7 +22,7 @@ status: active
 
 ## Running the dashboard
 
-> **Do not expose the dashboard.** By default `flai dashboard` publishes it on every interface of the host, over plain HTTP, at port `4242`. Whoever holds its token can move, edit, create, and accept work in every project it serves, committed as you; with the push action on, push and publish with your credentials; with the agent action on, start agents on this host; with the settings action on for every project, run any command on this host as you. Never publish its port to the internet or an untrusted network. On a machine only you use, bind it to loopback (`flai dashboard --bind 127.0.0.1`, or `dashboard.bind: 127.0.0.1`). To reach it from elsewhere, keep it bound to loopback and put a tunnel or reverse proxy that terminates TLS in front of it. See [Security posture](#security-posture).
+> **Do not expose the dashboard.** By default `flai dashboard` publishes it on every interface of the host, over plain HTTP, at port `4242`. Whoever holds its token can move, edit, create, and accept work in every project it serves, committed as you; with the push action on, publish with your credentials; with the agent action on, start agents on this host; with the settings action on for every project, run any command on this host as you. Never publish its port to the internet or an untrusted network. On a machine only you use, bind it to loopback (`flai dashboard --bind 127.0.0.1`, or `dashboard.bind: 127.0.0.1`). To reach it from elsewhere, keep it bound to loopback and put a tunnel or reverse proxy that terminates TLS in front of it. See [Security posture](#security-posture).
 
 What each page of the dashboard does is in the [users guide](../users/flaiover.md).
 
@@ -51,7 +51,7 @@ It shows nothing until a `flai serve` that knows a project and holds the same cr
 Earlier releases mounted the repository read-write into the container, with `.git/hooks`, `.git/config`, and `.git/info` read-only over it, your git identity and global excludes passed in, and optionally an SSH key to push with. All of that is gone.
 
 - **Restart the dashboard** with the new flai: `flai dashboard stop`, then `flai dashboard`. A container started by an older flai keeps its mounts until then, and `flai dashboard status` says so.
-- **If you configured a push key** (`dashboard.push_key`, `--push-key`, `dashboard.push_known_hosts`): it is ignored, and `flai dashboard` says so at every start until you clear it with `flai config set dashboard.push_key ""` (and `dashboard.push_known_hosts` likewise). The container has no git or ssh to push with and no repository to push from. An acceptance from the board is committed on the host; it is tagged and pushed from the host with your own credentials: `flai push --pending`, or from the board once you enable the push action, both below. If the key was a deploy key made for this purpose, delete it from the repository's settings and from `~/.ssh`; nothing uses it any more. `.flai-cache/dashboard.known_hosts` and `.flai-cache/dashboard.passwd` can be deleted.
+- **If you configured a push key** (`dashboard.push_key`, `--push-key`, `dashboard.push_known_hosts`): it is ignored, and `flai dashboard` says so at every start until you clear it with `flai config set dashboard.push_key ""` (and `dashboard.push_known_hosts` likewise). The container has no git or ssh to push with and no repository to push from. An acceptance from the board is committed on the host; it reaches the remote when you publish, from the host with your own credentials: `flai release --pending`, or **Publish** on the board once you enable the push action, both below. If the key was a deploy key made for this purpose, delete it from the repository's settings and from `~/.ssh`; nothing uses it any more. `.flai-cache/dashboard.known_hosts` and `.flai-cache/dashboard.passwd` can be deleted.
 - **Nothing to do for git settings.** Commits from the board are made on the host with your git configuration of the moment; the advice to restart the dashboard after changing git settings no longer applies.
 - **A Windows or otherwise unusual host path** no longer matters: git runs where `flai serve` runs, so a story with a branch can be accepted from the board anywhere.
 
@@ -69,28 +69,38 @@ Before this release, `flai dashboard` started a container per project, each with
 
 The dashboard has one login token, shared by every project it serves, and so one holder. What it does for a given project is recorded as that project's manifest's `owner` (`system-flow.yaml`), or `designer` when there is none: thread entries, moves made on the board, and acceptances, which run `flai accept <id> --by <owner>`. All of it is done by `flai serve` on the host, as you: commits carry your git identity and the dashboard's `Co-Authored-By` trailer.
 
-### Accepting and pushing release nothing; publishing does (S-0087, S-0144)
+### Accepting releases nothing; publishing reaches the remote (S-0087, S-0195)
 
-A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Pushing it releases nothing either, unless you choose otherwise (below). A release is cut when you publish, and covers everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three.
+A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Accepted work stays local until you publish it. Publishing is the one way it reaches the remote ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)). A release is cut when you publish, and covers everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three. Agents publish only when you ask them to; `flai board` and the agents' MCP `inbox` list what is accepted and not yet published, as information.
 
 Research and experiment stories are accepted the same way and never count towards a release, whatever they touched: their code reaches the main branch unreleased, and the next story that delivers to the component releases it. An experiment story is accepted only once its results document, `design/experiments/<S-nnnn>-<slug>.md`, is committed on its branch; until then acceptance, from the board or the host, refuses it and names the document ([ADR-0066](../../design/adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md)). A flai older than this rule refuses every experiment story, so upgrade the host's flai (`flai self-upgrade`) before accepting one.
 
-**Pushing.** `flai push --pending`, on the host, pushes the branch, and any tag already made and not yet pushed, with your own credentials. `--dry-run` shows what it would push and changes nothing. It never forces, and refuses when the remote has moved until you fetch and merge; run it again after it fails partway and it does not redo what already succeeded. `--publish` also publishes the template when its version moved. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. The board, the story's page, `flai board`, and the agents' MCP `inbox` all keep saying "accepted, not pushed" until it is pushed; an agent session that is running does this itself when `inbox` reports it. From the board, once you enable the push action (below), the standing notice's **Push now** button does the same thing.
+**Publishing, when you choose.** On the host, run `git fetch`, then `flai release --pending`. It tags everything accumulated and unreleased for each component since its last tag (the highest delivery type among what is pending, not a sum), bumps and commits the version files, and pushes the branch and every tag together. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. `--dry-run` shows what it would do and changes nothing; run again after a partial failure and it does not redo what already succeeded. It never forces.
 
-**Publishing, when you choose.** On the host, `flai release --pending` tags everything accumulated and unreleased for each component since its last tag (the highest delivery type among what is pending, not a sum), bumps and commits the version files, and pushes the branch and every tag together. `--dry-run` shows what it would do and changes nothing; run again after a partial failure. When the stories it releases were pushed already, which is the usual case now, it pushes the new tags on their own. From the board, once you enable the push action, the done column shows a card as **published** or **waiting to publish**, and a banner at its top lists what publishing now would release (which components, which bump, which stories) with its own **Publish** button. Off, the banner says what enables it and changes nothing; the dashboard cannot enable it itself.
-
-**Publishing at every push, if you want it.** From S-0094 until S-0144, every push first tagged everything accumulated, so each acceptance an agent pushed was released on its own. That is now a setting of its own, the `auto-publish` host action, off by default ([ADR-0048](../../design/adrs/0048-pushing-accepted-work-releases-nothing-unless-the-auto-publish-host-action-is-enabled.md)). With it on for a project, `flai push --pending` and **Push now** tag the pending release first, then push it with the branch, and `--dry-run` previews that release:
+flai never fetches by itself. Before it plans anything, `flai release --pending` asks the remote for its release tags and for the head of the branch this clone tracks. It refuses (exit 3) before committing or tagging anything when this clone lacks a newer release tag the remote has, or lacks commits on the remote branch, and names what to run:
 
 ```bash
-flai serve enable auto-publish     # every push of this project also releases; --all-projects for every project
-flai serve disable auto-publish    # pushing releases nothing again; publish from Publish or flai release --pending
+git fetch --tags origin                          # the remote has release tags this clone lacks
+git fetch origin && git merge origin/main        # the remote branch has commits this clone lacks
+git merge origin/main                            # the same, already fetched (or rebase onto it instead)
 ```
 
-`flai push --pending` reads it from the flai configuration it runs with, so a push from your shell, from an agent's, or from the board each follows the configuration of the flai that ran it. Enabling `push` alone never turns it on.
+Then run `flai release --pending` again.
+
+From the board, once you enable the push action (below), the done column shows a card as **published** or **waiting to publish**, and a banner at its top lists what publishing now would release (which components, which bump, which stories) with its own **Publish** button, which runs `flai release --pending` on the host. Off, the banner says what enables it and changes nothing; the dashboard cannot enable it itself. When the clone is behind its remote, the banner offers nothing to publish and shows the command to run on the host.
+
+**Pushing outside the workflow.** `flai push --pending` and the `auto-publish` host action ([ADR-0048](../../design/adrs/0048-pushing-accepted-work-releases-nothing-unless-the-auto-publish-host-action-is-enabled.md)) are kept as your own shell tools. They are not part of the workflow: no agent is told to run them, and the dashboard neither offers a push nor shows or changes `auto-publish`. `flai push --pending`, on the host, pushes the branch, and any tag already made and not yet pushed, with your own credentials; `--dry-run` shows what it would push; it never forces and refuses when the remote has moved. `--publish` also publishes the template when its version moved. With `auto-publish` on for a project, it first tags the pending release, as `flai release --pending` would:
+
+```bash
+flai serve enable auto-publish     # flai push --pending in this project also releases; --all-projects for every project
+flai serve disable auto-publish    # pushing releases nothing again
+```
+
+`flai push --pending` reads it from the flai configuration it runs with. Enabling `push` never turns it on. The dashboard's settings page does not list it, and it refuses to change it.
 
 ### The push host action
 
-Both publishing and pushing ordinary merged commits are a *host action*: something `flai serve` does on your machine, as you and with your credentials, because the dashboard asked. It is off until you enable it by name, in a shell on the host:
+Publishing from the board is a *host action*: something `flai serve` does on your machine, as you and with your credentials, because the dashboard asked. It is off until you enable it by name, in a shell on the host:
 
 ```bash
 flai serve actions          # what there is, what each means, where each is on
@@ -101,15 +111,15 @@ flai serve disable push     # --all-projects turns it off everywhere
 
 Enabling and disabling take effect at once, with no restart. The setting is `host_actions` in your flai configuration (`~/.flai/config.json`); `flai config set` does not reach it, and nothing the dashboard can ask for reads or changes it or the journal.
 
-**Understand what enabling it means.** The dashboard token becomes the power to publish: whoever holds it can publish any release accumulated so far, and push what any story an agent has put in review adds once accepted, with your git credentials and with nobody at the keyboard. A compromised dashboard container could ask for the same. If that is more than you want a token to be worth, leave it off and publish and push by hand, or from a timer of your own.
+**Understand what enabling it means.** The dashboard token becomes the power to publish: whoever holds it can publish any release accumulated so far, and what any story an agent has put in review adds once accepted, with your git credentials and with nobody at the keyboard. A compromised dashboard container could ask for the same. If that is more than you want a token to be worth, leave it off and publish by hand, or from a timer of your own.
 
-With it on, the done column's Publish button and the standing "accepted, not pushed" notice's **Push now** button both work (Push now releases only with `auto-publish` on as well); the confirmation for each says what it will do before you click it. Both are refused (HTTP 403) and journalled while it is off, and say what enables it. Neither ever forces a push, and when the remote has moved they are refused with the reason and the command to run by hand.
+With it on, the done column's **Publish** button works; its confirmation says what it will do before you click it. It is refused (HTTP 403) and journalled while the action is off, and says what enables it. It never forces a push, and when the remote has moved it is refused with the reason and the command to run by hand.
 
 The journal is `journal.jsonl` beside `flai serve`'s state (the `serve` folder next to your flai configuration), mode 0600, one line per request: when, the action, the method, the project, for whom (the manifest's `owner`), the request, and the outcome (`done`, `failed`, or `disabled`) with what was pushed and published or why not.
 
 Beside it, `requests.json` (mode 0600) records each write that can end the connection it came on, or the `flai serve` taking it: a restart or stop of serve, an upgrade of flai or the dashboard, a checks run, an import. The record is made before the write acts, and is forgotten ten minutes after it ends. When the dashboard sends the same request again, for example after a serve restart dropped its connection, flai answers from the record and does not do it again: with the outcome, or that it is still under way, or that the serve that took it ended before it could say (S-0109). If the record cannot be written, the write is refused. If the file is damaged, those writes are refused with its path until you remove it.
 
-> **Correction, 2026-09-20.** From flai 1.5.3 to 1.6.1, an acceptance made from the board was pushed and published with your credentials although nothing had enabled it (I-0028). Acceptance had moved from the container, which held no credential, to `flai serve` on the host, which has yours, and the push was not turned off on the way. This page said during that time that nothing was pushed unasked and that the token was not the power to publish; both were wrong. If you accepted from the board with one of those releases, check what was pushed against what you meant to release. The release after 1.6.1 restores the default described above. Since S-0087, acceptance itself does not push at all, whatever this setting is: only publishing and the standing push notice do.
+> **Correction, 2026-09-20.** From flai 1.5.3 to 1.6.1, an acceptance made from the board was pushed and published with your credentials although nothing had enabled it (I-0028). Acceptance had moved from the container, which held no credential, to `flai serve` on the host, which has yours, and the push was not turned off on the way. This page said during that time that nothing was pushed unasked and that the token was not the power to publish; both were wrong. If you accepted from the board with one of those releases, check what was pushed against what you meant to release. The release after 1.6.1 restores the default described above. Since S-0087, acceptance itself does not push at all, whatever this setting is; since S-0195 only publishing does.
 
 ### Starting an agent when a story becomes ready
 

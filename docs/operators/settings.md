@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-02
+updated: 2026-10-03
 status: active
 ---
 
@@ -44,7 +44,7 @@ Keys only the `flai serve` commands on the host change, or the dashboard's Setti
 
 | Key | Default | Changed with | For |
 |-----|---------|--------------|-----|
-| `host_actions.<name>` | absent: every action off | `flai serve enable`, `flai serve disable` | For each host action (`push`, `auto-publish`, `agent`, `checks`, `dashboard`, `host`, `settings`), the main checkouts it is on for, or `*` for every project ([The push host action](index.md#the-push-host-action); `auto-publish` makes every push release first: [Publishing at every push](index.md#accepting-and-pushing-release-nothing-publishing-does-s-0087-s-0144)) |
+| `host_actions.<name>` | absent: every action off | `flai serve enable`, `flai serve disable` | For each host action (`push`, `auto-publish`, `agent`, `checks`, `dashboard`, `host`, `settings`), the main checkouts it is on for, or `*` for every project ([The push host action](index.md#the-push-host-action), which lets the board publish). `auto-publish` has `flai push --pending` release first; it is shell only, outside the workflow, and the dashboard's Settings page neither lists nor changes it ([Pushing outside the workflow](index.md#accepting-releases-nothing-publishing-reaches-the-remote-s-0087-s-0195)) |
 | `agent.command` | none | `flai serve agent set -- ...`, `flai serve agent clear` | What starts a ready story's agent when the story names no harness ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.name` | `agent` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents flai serve starts |
 | `agent.attended_minutes` | `6` | `flai serve agent set --attended-minutes` | How recent a sign of someone attending must be, and how long it holds a ready story back |

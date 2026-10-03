@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-09-29
+updated: 2026-10-03
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -8,6 +8,8 @@ topics: [server-side, back-end, cli, dashboard]
 # Server-side response times
 
 The finding of S-0152, for E-0012. The board and other pages pause for long moments while they load. This document says how the time a request takes is now measured beneath its transport, what was measured on this repository, where the time goes, and what would take it away. Each cause has a story under E-0012.
+
+> Since S-0195 ([ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)) the dashboard has no unpushed notice: the method `push.pending` and the route `/api/unpushed` are gone, and a board load no longer asks for them. The measurements below keep them as they were measured.
 
 ## How it is measured
 
@@ -27,7 +29,7 @@ On 2026-09-29, on the operator's host (WSL2, 24 cores, load 3 to 4 with two agen
 | `items.list` (archive, bodies) | items page | 122 ms | 1.28 MB | `repo.list` 115, `encode` 6 |
 | `docs.tree` | documents page | 135 ms | 772 KB | `docs.walk` 127, `encode` 8 |
 | `publish.preview` | board, publish banner | 235 to 276 ms | 52 B | `exec.flai.release` all of it |
-| `push.pending` | unpushed notice, review | 157 ms | 66 B | `exec.flai.push` all of it |
+| `push.pending` | unpushed notice, review (both removed in S-0195) | 157 ms | 66 B | `exec.flai.push` all of it |
 | `stats.get` | charts | 282 ms | 82 KB | `exec.flai.stats` all of it |
 | `stream.diff` | story page | 261 ms | 82 KB | `exec.flai.stream.diff` all of it |
 | `item.show` | story page, editor | 167 ms | 2 KB | `exec.flai.edit` all of it |
@@ -57,7 +59,7 @@ On 2026-09-29, on the operator's host (WSL2, 24 cores, load 3 to 4 with two agen
 | `/api/projects` | 42 | 244 ms | 268 ms | `board.get`, `inbox.designer`, `agent.status` together |
 | `/api/publish` | 56 | 234 ms | 249 ms | `publish.preview` 235 ms |
 | `/api/board` | 18 | 192 ms | 209 ms | `board.get` 190 ms |
-| `/api/unpushed` | 58 | 161 ms | 172 ms | `push.pending` 157 ms |
+| `/api/unpushed` (removed in S-0195) | 58 | 161 ms | 172 ms | `push.pending` 157 ms |
 | `/api/inbox` | 13 | 159 ms | 179 ms | `inbox.designer` 163 ms |
 | `/api/items/[id]` | 1 | 114 ms | | `item.get` 118 ms |
 | `/api/agent`, `/api/host-agent` | 287 | 2 to 10 ms | | |
@@ -78,7 +80,7 @@ The transport is not where the time goes. Each dashboard route takes within a fe
 
 Cause 2 is gone since S-0157: `release.Pending` reads git through a history kept per repository root ([flai-cli.md](flai-cli.md#internal-structure)), and while HEAD and the tags are unchanged it starts one git process, `show-ref`. On 2026-09-29, on the same host and repository, `release.pending` in a kept `board.get`, called through the host API's method table as `flai serve` answers it, took 8.2 to 9.5 ms with that one process, and 7.9 to 10.2 ms in a kept MCP `board`, against 242 to 259 ms and 69 processes (45 `diff-tree`, 12 `log`, 12 `tag`) in a `board.get` before the change the same hour, since more items are in range than when this was first measured. After an acceptance it took 10.8 ms with two processes, and after a publish 8.3 ms with one, measured in a clone. The first look in a process, and every one-shot `flai board`, reads the whole history with four processes in about 60 ms. Most of what remains beyond `show-ref` is parsing work items in `repo.Get`, which cause 1's story addresses.
 
-The pauses the operator sees come from these adding up. A board load asks `board.get` (190 ms), `publish.preview` (235 ms), and `push.pending` (157 ms), and `/api/projects` asks `board.get`, `inbox.designer`, and `agent.status` again (about 360 ms). Each of them reads every work item from disk, and the three that start flai also pay the 145 ms start. They run at once, on a host where agents keep asking the same MCP tools, so they compete for the disk and the CPU.
+The pauses the operator sees come from these adding up. A board load asked `board.get` (190 ms), `publish.preview` (235 ms), and `push.pending` (157 ms; since S-0195 the board no longer asks for it), and `/api/projects` asks `board.get`, `inbox.designer`, and `agent.status` again (about 360 ms). Each of them reads every work item from disk, and the three that start flai also pay the 145 ms start. They run at once, on a host where agents keep asking the same MCP tools, so they compete for the disk and the CPU.
 
 Cause 3 is gone since S-0158: `inbox.designer` runs the `wip.overlap` rule alone, over the items it has already listed, and `check.run` is no longer one of its phases. On 2026-09-29, on the same host and repository, it took 11 to 14 ms, median 12.7 ms, against 170 to 195 ms, median 178 ms, before the change the same hour; its phases were `threads.read` 5.6, `repo.list` 4.7, and `check.overlap` under 0.1 ms.
 
@@ -106,7 +108,7 @@ Each story remeasures what its cause cost, on the same host and repository, and 
 
 ### Cause 4: the dashboard's reads answered in flai serve's process (S-0159)
 
-`publish.preview`, `push.pending`, `stats.get`, `stream.diff`, `item.show`, `item.move.preview`, and `accept.preview` start no flai: `flai serve` answers them from the code the commands print with, over the items and git history it keeps (causes 1 and 2), with the answer the command gave ([flai-cli.md](flai-cli.md#commands)). Their `request answered` events have no `exec.flai` phase; each names its work, such as `push.preview` or `stats.compute`. Measured on 2026-09-29, on the same host and repository, load about 2: each method called six times in one process through the table `flai serve` answers with, the first call cold, beside the command run three times by a flai built from `main` the same hour, which already starts in about 6 ms (cause 5) and keeps nothing between runs.
+`publish.preview`, `push.pending` (removed in S-0195), `stats.get`, `stream.diff`, `item.show`, `item.move.preview`, and `accept.preview` start no flai: `flai serve` answers them from the code the commands print with, over the items and git history it keeps (causes 1 and 2), with the answer the command gave ([flai-cli.md](flai-cli.md#commands)). Their `request answered` events have no `exec.flai` phase; each names its work, such as `release.pending` or `stats.compute`. Measured on 2026-09-29, on the same host and repository, load about 2: each method called six times in one process through the table `flai serve` answers with, the first call cold, beside the command run three times by a flai built from `main` the same hour, which already starts in about 6 ms (cause 5) and keeps nothing between runs.
 
 | Method | A flai process (S-0152) | A flai process, same hour | In-process, cold | In-process, warm | Warm, where the time went |
 |--------|-------------------------|---------------------------|------------------|------------------|---------------------------|
@@ -118,7 +120,7 @@ Each story remeasures what its cause cost, on the same host and repository, and 
 | `item.move.preview`, an epic | | 16 ms | 5.8 ms | 4.9 to 5.8 ms | three `git rev-parse` |
 | `accept.preview`, refused | | 9 ms | 2.1 ms | 1.9 to 2.6 ms | one `git rev-parse` |
 
-`publish.preview` and `push.pending`, which the board asks for at every change, answer in under 20 ms once warm. What is left is git's: `push.pending` asks git where the branch stands against its remote at every call, and `stream.diff` reads each file's patch with a process of its own, which grows with the story.
+`publish.preview` and `push.pending`, which the board asked for at every change, answered in under 20 ms once warm; since S-0195 the board asks for `publish.preview` alone. What is left is git's: `push.pending` asked git where the branch stands against its remote at every call, and `stream.diff` reads each file's patch with a process of its own, which grows with the story.
 
 ### Cause 5: a flai process starts without searching PATH (S-0160)
 
@@ -126,7 +128,7 @@ flai asks its questions through a prompt package of its own and no longer depend
 
 ### Cause 6: the dashboard forgets and asks only for what a change affects (S-0161)
 
-A change reaches the dashboard's server with the path's kind, read against the manifest's layout: a work item (`board.md` and the archive included), a narrative, a thread, an ADR, another document, the manifest, or anything else. The server forgets only the answers flai reads from that kind ([flaiover-dashboard.md](flaiover-dashboard.md#where-the-data-comes-from-s-0073)), so a narrative log line keeps `board.get`, the items, the statistics, and the ADRs, and forgets the inbox, the activity, and the documentation tree. Pages ask again only for the kinds they show, once for the changes that arrive within 500 ms of each other, and at least every 2 s during a burst that does not settle. The board asks for `board.get`, `/api/publish`, and `/api/unpushed` again only when a work item or the manifest changes, and for the agents when a work item or a thread changes or flai serve says an agent started or ended. Behaviour tests pin which paths forget which answers (`repo-forget.test.ts`) and what the board asks for each kind (`routes/board/board.svelte.test.ts`). The request rate was not measured again in the running dashboard: that needs an image built from this story in place of the operator's container.
+A change reaches the dashboard's server with the path's kind, read against the manifest's layout: a work item (`board.md` and the archive included), a narrative, a thread, an ADR, another document, the manifest, or anything else. The server forgets only the answers flai reads from that kind ([flaiover-dashboard.md](flaiover-dashboard.md#where-the-data-comes-from-s-0073)), so a narrative log line keeps `board.get`, the items, the statistics, and the ADRs, and forgets the inbox, the activity, and the documentation tree. Pages ask again only for the kinds they show, once for the changes that arrive within 500 ms of each other, and at least every 2 s during a burst that does not settle. The board asks for `board.get` and `/api/publish` (and `/api/unpushed` until S-0195 removed it, [ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)) again only when a work item or the manifest changes, and for the agents when a work item or a thread changes or flai serve says an agent started or ended. Behaviour tests pin which paths forget which answers (`repo-forget.test.ts`) and what the board asks for each kind (`routes/board/board.svelte.test.ts`). The request rate was not measured again in the running dashboard: that needs an image built from this story in place of the operator's container.
 
 ### Cause 7: the items and documents pages ask for what they show (S-0162)
 

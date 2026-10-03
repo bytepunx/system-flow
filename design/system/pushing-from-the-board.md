@@ -1,11 +1,13 @@
 ---
 title: Pushing an acceptance made from the board
-updated: 2026-09-19
+updated: 2026-10-03
 status: active
 topics: [cli, dashboard]
 ---
 
 # Pushing an acceptance made from the board
+
+> Current state, since S-0195 ([ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)): publishing is the one way accepted work reaches the remote. Publishing is `git fetch`, then `flai release --pending`, or the board's Publish, which runs the same on the host; it tags what was accepted since each component's last release and pushes the branch and the tags, never forcing, and refuses a clone missing the remote's tags or commits on its remote branch. Agents publish only when the operator asks. The standing "accepted, not pushed" notice, its **Push now** button, and the agent's duty to push what `inbox` reported as `unpushed` are gone; `inbox` and `flai board` list what is accepted and not yet published, as information. `flai push --pending` and the `auto-publish` host action are kept as the operator's shell tools, outside the workflow; the dashboard neither offers nor shows them. Everything below is the S-0052 finding and what S-0062 and S-0063 built from it, kept as history.
 
 The finding of S-0052. An acceptance made from the flaiover board is merged, archived, committed, and tagged in the clone, and not pushed: `flai dashboard` gives the container the host's git identity and global excludes and no credential ([ADR-0018](../adrs/0018-dashboard-token.md), [operators](../../docs/operators/index.md)). The board says "accepted locally" and prints the `git push` command. The operator was surprised by this twice, and between 2026-09-18 and 2026-09-19 an agent session pushed `main` and the release tags from the host after every one of ten board acceptances. This document weighs the ways the push could happen, says what was tried, and ends with one recommendation. Nothing here is built; the decision and the stories that follow are at the end.
 
@@ -114,6 +116,6 @@ The operator decided on 2026-09-19, recorded in [ADR-0026](../adrs/0026-the-dash
 
 Nothing was built in S-0052. What followed:
 
-1. **S-0062** (built; see [operators](../../docs/operators/index.md#pushing-what-the-board-accepts)) The container pushes an acceptance when the operator has given it a key: the opt-in, the SSH client in the image, the passwd entry, pinned host keys, refusing a passphrase-protected key with the reason, a warning at start that names what the container holds, and the operators' documentation with the safer choice first.
-2. **S-0063** A standing "accepted, not pushed" state on the board and the item page, the same fact in `inbox` for agents, and `flai push --pending` on the host for projects that give the container nothing and for pushes that failed.
+1. **S-0062** (built, then retired by S-0077; see [operators](../../docs/operators/index.md#upgrading-from-a-release-that-mounted-the-repository)) The container pushes an acceptance when the operator has given it a key: the opt-in, the SSH client in the image, the passwd entry, pinned host keys, refusing a passphrase-protected key with the reason, a warning at start that names what the container holds, and the operators' documentation with the safer choice first.
+2. **S-0063** A standing "accepted, not pushed" state on the board and the item page, the same fact in `inbox` for agents, and `flai push --pending` on the host for projects that give the container nothing and for pushes that failed. S-0195 removed the standing state and the `inbox` fact; `flai push --pending` remains as an operator's shell tool (ADR-0067).
 3. **S-0064** A container cannot leave git hooks or configuration that run on the host: the finding under "What is at stake", which matters most for the default set-up, where the container holds nothing and the hook is the only way to the operator's credentials.

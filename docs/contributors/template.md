@@ -1,6 +1,6 @@
 ---
 title: Template guide
-updated: 2026-10-01
+updated: 2026-10-03
 status: active
 ---
 
@@ -220,4 +220,4 @@ flai template push ./template --tag       # push, and tag v<version>
 
 The command clones the branch (creating it if missing), replaces its contents with the local template, commits with the version in the message, and pushes. `--tag` refuses a tag that exists. `--remote` and `--ref` publish somewhere else; `--force` force-pushes and replaces a tag, and needs the same care as any force push. A template that is its own repository needs none of this: commit, tag `v<version>`, push.
 
-In this monorepo publishing is part of releasing: `flai release --pending`, the board's Publish action, and `flai push --pending --publish` bump `template/` when an accepted item released it, push this repository, and then run `flai template push --tag`. `flai push --pending` without `--publish` bumps and pushes this repository but leaves the template repository behind; run `flai template push ./template --tag` after it.
+In this monorepo publishing is part of releasing: `flai release --pending` and the board's Publish action bump `template/` when an accepted item released it, push this repository, and then run `flai template push --tag`. `flai push --pending`, the operator's shell tool outside the workflow ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)), does the same with `--publish` and the `auto-publish` host action on; without `--publish` it leaves the template repository behind, so run `flai template push ./template --tag` after it.
