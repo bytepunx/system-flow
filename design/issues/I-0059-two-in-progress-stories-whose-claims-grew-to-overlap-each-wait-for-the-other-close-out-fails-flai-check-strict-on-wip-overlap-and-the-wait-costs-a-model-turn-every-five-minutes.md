@@ -3,11 +3,11 @@ id: I-0059
 title: "Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes"
 class: defect
 status: open
-count: 3
-cost: 24m
+count: 4
+cost: 21m
 first_reported: 2026-10-03T02:27:09Z
-last_reported: 2026-10-03T08:15:16Z
-updated: 2026-10-03T08:15:16Z
+last_reported: 2026-10-03T19:31:58Z
+updated: 2026-10-03T19:31:58Z
 ---
 
 # I-0059 Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes
@@ -31,6 +31,10 @@ The waiting is not free. Both agents wait with the MCP `wait_for_events`, asking
 ### 2026-10-03T08:15:16Z
 Story: S-0201.
 S-0201's touches grew to flai/internal/workitem, flai/internal/itemedit, flai/cmd/edit.go, and docs/users while S-0200 was in progress on them; flai check --strict warns wip.overlap four times and stops S-0201's close-out.
+
+### 2026-10-03T19:31:58Z
+Story: S-0206.
+S-0206's close-out stopped on flai check --strict's 14 wip.overlap warnings against S-0204 (in progress), after S-0206 widened its touches to the paths its tasks changed (flai/cmd files, hostapi, mcpserver, docs/users/flai.md, design/issues/summary.md); every test tier and the lint passed. S-0206 waited for S-0204 to leave in-progress and ran the close-out again.
 
 ## Remediation
 
