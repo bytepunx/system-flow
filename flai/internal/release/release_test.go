@@ -41,7 +41,7 @@ func TestVersionsAndLevels(t *testing.T) {
 		t.Error("partial version accepted")
 	}
 	cases := map[*workitem.Item]string{
-		{Type: workitem.Epic, Nature: "feature"}:      Major,
+		{Type: workitem.Epic, Nature: "feature"}:      None, // ADR-0077
 		{Type: workitem.Story, Nature: "feature"}:     Minor,
 		{Type: workitem.Story, Nature: "remediation"}: Patch,
 		{Type: workitem.Story, Nature: "improvement"}: Patch,
@@ -265,9 +265,9 @@ func TestPendingLeavesOutWhatALaterTagAlreadyCovered(t *testing.T) {
 	}
 }
 
-// An epic done outranks a feature story, which outranks a remediation: a
-// batch spanning an epic's completion is a major release.
-func TestPendingAnEpicInTheBatchIsMajor(t *testing.T) {
+// A feature story outranks a remediation, and an epic accepted in the batch
+// adds no bump of its own (ADR-0077): its stories carry theirs.
+func TestPendingAnEpicInTheBatchAddsNothing(t *testing.T) {
 	root, r := gitRepo(t)
 	repo := &workitem.Repo{Root: root, Manifest: m}
 	writeAcceptedItem(t, root, r, "S-101", workitem.Story, "remediation", "Fix one", map[string]string{"cli/a.go": "package main\n"})
@@ -278,8 +278,8 @@ func TestPendingAnEpicInTheBatchIsMajor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(plans) != 1 || plans[0].Level != Major || plans[0].To.String() != "1.0.0" {
-		t.Fatalf("an epic in the batch makes it major: %+v", plans)
+	if len(plans) != 1 || plans[0].Level != Minor || plans[0].To.String() != "0.11.0" || len(plans[0].Items) != 2 {
+		t.Fatalf("the feature story's minor, not a major for the epic: %+v", plans[0])
 	}
 }
 
@@ -380,18 +380,19 @@ func TestComputeAndApply(t *testing.T) {
 	if !strings.Contains(string(ty), "version: 1.0.1") || !strings.HasPrefix(string(cl), "# Changelog\n\n## 1.0.1 - 2026-09-17\n\n- S-004 Template tweak (patch).\n\n## 1.0.0") {
 		t.Errorf("apply:\n%s\n%s", ty, cl)
 	}
-	// epic: major on delivered
+	// epic: no bump of its own, whatever its commits touched (ADR-0077)
 	epic := &workitem.Item{ID: "S-002", Type: workitem.Epic, Nature: "feature", Title: "Epic", Tags: []string{"cli"}}
 	plan, _ = Compute(r, root, m, epic, nil, "")
-	if plan.Steps[0].To.String() != "1.0.0" {
-		t.Errorf("epic major: %+v", plan.Steps[0])
+	if len(plan.Steps) != 0 || !strings.Contains(plan.Skipped, "is an epic") || len(plan.Unreleased) == 0 {
+		t.Errorf("epic: %+v", plan)
 	}
+	plan, _ = Compute(r, root, m, story, nil, "")
 	tags, err := Tag(r, root, plan)
-	if err != nil || len(tags) != 2 || tags[0] != "cli/v1.0.0" {
+	if err != nil || len(tags) != 2 || tags[0] != "cli/v0.11.0" {
 		t.Errorf("tag: %v %v", tags, err)
 	}
 	out, _ := r.Run(root, "git", "tag", "-l", "cli/*")
-	if !strings.Contains(out, "cli/v1.0.0") {
+	if !strings.Contains(out, "cli/v0.11.0") {
 		t.Errorf("tags: %s", out)
 	}
 }

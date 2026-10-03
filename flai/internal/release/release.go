@@ -114,12 +114,12 @@ type Unreleased struct {
 	Files     []string `json:"files"`
 }
 
-// LevelFor maps an item's type and nature to a bump level. A research story
-// and an experiment are accepted without a release (None; ADR-0025,
-// ADR-0066).
+// LevelFor maps an item's type and nature to a bump level. A research story,
+// an experiment, and an epic, whose stories carry their own bumps, are
+// accepted without a release (None; ADR-0025, ADR-0066, ADR-0077).
 func LevelFor(it *workitem.Item) (string, error) {
 	if it.Type == workitem.Epic {
-		return Major, nil
+		return None, nil
 	}
 	switch it.Nature {
 	case "feature":
@@ -241,6 +241,9 @@ func Compute(r execx.Runner, root string, m manifest.Manifest, it *workitem.Item
 // noReleaseReason says why a research story or an experiment plans no
 // release.
 func noReleaseReason(it *workitem.Item) string {
+	if it.Type == workitem.Epic {
+		return fmt.Sprintf("%s is an epic: its stories carry their own bumps, and an epic cuts no release of its own (ADR-0077)", it.ID)
+	}
 	if it.Nature == "experiment" {
 		return fmt.Sprintf("%s is an experiment: its results land on main, and an experiment cuts no release whatever it touched (ADR-0066)", it.ID)
 	}

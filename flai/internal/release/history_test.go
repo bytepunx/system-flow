@@ -225,8 +225,8 @@ func TestPendingFromTheKeptHistoryAnswersAsTheProcessesDid(t *testing.T) {
 
 	writeAcceptedItem(t, root, r, "S-103", workitem.Story, "improvement", "Template text", map[string]string{"tpl/root/y.md": "y\n"})
 	writeAcceptedItem(t, root, r, "S-104", workitem.Story, "research", "A finding", map[string]string{"cli/r.go": "package main\n"})
-	writeAcceptedItem(t, root, r, "E-010", workitem.Epic, "feature", "The epic", map[string]string{"web/e.js": "// e\n"})
-	same("three components, research, an epic", "S-100", "S-101", "S-102", "S-103", "E-010")
+	writeAcceptedItem(t, root, r, "S-107", workitem.Story, "feature", "The web page", map[string]string{"web/e.js": "// e\n"})
+	same("three components and research", "S-100", "S-101", "S-102", "S-103", "S-107")
 
 	// Publish as flai release --pending does: bump the template's version
 	// file, commit, and tag the code components.

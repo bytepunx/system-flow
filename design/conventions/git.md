@@ -34,7 +34,7 @@ How history is made in this repository.
 - Accepting an item merges it, moves it to done, archives it, and commits: nothing is tagged and nothing is pushed.
 - Publishing is a deliberate step of its own, over everything accumulated since the last one, not tied to any single item: `git fetch`, then `flai release --pending` computes, tags, and pushes the branch and the tags, run by hand or from the board's Publish action, when the operator chooses to.
 - A component's bump, once published, is the highest delivery type among everything accepted for it since its last release, not one release per item:
-  - an epic contributes a major bump
+  - an epic contributes no bump of its own: its stories carry theirs
   - a `feature` story a minor bump
   - a `remediation` or `improvement` story, a documentation-only change, or a non-breaking dependency update a patch
   - any other component a story touched incidentally with additive, non-breaking changes contributes a patch when it publishes
