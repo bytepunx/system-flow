@@ -122,9 +122,17 @@ func newStreamSyncCmd(a *app) *cobra.Command {
 		Use:   "sync <story-id>",
 		Short: "Rebase the story branch onto the main branch in its worktree",
 		Long: `Rebases story/<story-id> onto the branch checked out in the main checkout,
-stashing and restoring uncommitted work. Conflicts stop the rebase inside the
-worktree and are listed; resolve them, run git rebase --continue there, and
-sync again.
+inside its worktree (ADR-0069). It never stashes: a worktree with uncommitted
+changes is refused, touching nothing, and each uncommitted path is named, so
+commit each task on the story branch before you sync. A worktree with a rebase
+already in progress is refused too.
+
+Conflicts stop the rebase inside the worktree. Each conflicting path is listed
+on a line of its own, with how to continue (resolve each path, git add it, run
+git rebase --continue in the worktree, and sync again) and how to abort (git
+rebase --abort in the worktree, which puts the branch back as it was before
+the sync). It exits non-zero; with --json it prints uncommitted, conflicts,
+rebase_in_progress, continue, and abort, with ok false.
 
 After a clean rebase it trial-merges the branch with the branch of every other
 story in progress or in review (git merge-tree --write-tree, git 2.38 or
@@ -147,10 +155,21 @@ so that they are widened with flai touches.`,
 			}
 			base, conflicts, err := a.syncStoryBranch(repo, it.ID)
 			if err != nil {
-				if a.jsonOut {
-					_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": false})
+				var stop *syncStopped
+				if !errors.As(err, &stop) {
+					if a.jsonOut {
+						_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": false})
+					}
+					return err
 				}
-				return err
+				if a.jsonOut {
+					_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "worktree": stop.Worktree, "ok": false,
+						"uncommitted": nonNil(stop.Uncommitted), "conflicts": nonNil(stop.Conflicts), "rebase_in_progress": stop.RebaseInProgress,
+						"continue": stop.Continue, "abort": stop.Abort})
+				} else {
+					fmt.Fprint(a.out, stop.Report())
+				}
+				return stop
 			}
 			checks, cerr := a.checkSync(repo, it, base)
 			if cerr != nil {

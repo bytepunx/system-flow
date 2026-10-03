@@ -14,8 +14,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -331,5 +333,161 @@ func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 	}
 	if out, _, _ := runIn(t, wt, "stream", "sync", "S-0001"); strings.Contains(out, "outside") {
 		t.Errorf("widened, still outside:\n%s", out)
+	}
+}
+
+// ADR-0069: sync never stashes; it refuses a worktree with uncommitted
+// changes, touching nothing, and names each path.
+func TestSyncRefusesUncommittedChanges(t *testing.T) {
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/guide.md", "branch's line\n")
+	// main moves on, so a rebase would have something to do
+	_ = os.WriteFile(filepath.Join(root, "README.md"), []byte("readme\n"), 0o644)
+	gitIn(t, root, "add", "README.md")
+	gitIn(t, root, "commit", "-q", "-m", "docs: readme")
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	_ = os.WriteFile(filepath.Join(wt, "docs", "guide.md"), []byte("half done\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(wt, "notes.txt"), []byte("untracked\n"), 0o644)
+
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code == 0 {
+		t.Fatalf("sync over uncommitted changes succeeded: %s", out)
+	}
+	for _, want := range []string{
+		"story/S-0001 was not synced: its worktree .flai-cache/worktrees/S-0001 has uncommitted changes in 2 paths:\n",
+		"\n  docs/guide.md\n",
+		"\n  notes.txt\n",
+		"To continue: commit them on story/S-0001 (or stash them), then run flai stream sync S-0001 again\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("refusal lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "To abort") {
+		t.Errorf("nothing to abort:\n%s", out)
+	}
+	if !strings.Contains(errOut, "uncommitted changes in docs/guide.md, notes.txt") {
+		t.Errorf("error: %s", errOut)
+	}
+
+	out, _, code = runIn(t, wt, "--json", "stream", "sync", "S-0001")
+	var res struct {
+		OK          bool     `json:"ok"`
+		Uncommitted []string `json:"uncommitted"`
+		Conflicts   []string `json:"conflicts"`
+		InProgress  bool     `json:"rebase_in_progress"`
+		Continue    string   `json:"continue"`
+		Abort       string   `json:"abort"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if code == 0 || res.OK || strings.Join(res.Uncommitted, ",") != "docs/guide.md,notes.txt" || res.Conflicts == nil || len(res.Conflicts) != 0 ||
+		res.InProgress || !strings.Contains(res.Continue, "commit them on story/S-0001") || res.Abort != "" {
+		t.Errorf("json: %d %+v", code, res)
+	}
+
+	// nothing was touched: no rebase, no stash, the work as it was
+	if got := gitIn(t, wt, "rev-parse", "HEAD"); got != head {
+		t.Errorf("HEAD moved: %s, was %s", got, head)
+	}
+	if got := gitIn(t, wt, "stash", "list"); got != "" {
+		t.Errorf("a stash was made: %s", got)
+	}
+	for rel, want := range map[string]string{"docs/guide.md": "half done\n", "notes.txt": "untracked\n"} {
+		if got, _ := os.ReadFile(filepath.Join(wt, rel)); string(got) != want {
+			t.Errorf("%s is %q", rel, got)
+		}
+	}
+}
+
+// A sync that stops on conflicts lists each path and how to continue or
+// abort, leaves the rebase in progress, and a sync while it is in progress
+// is refused with the same paths and steps.
+func TestSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	// one commit, so the rebase stops on both paths at once
+	_ = os.WriteFile(filepath.Join(wt, "docs", "more.md"), []byte("branch's more\n"), 0o644)
+	commitIn(t, wt, "docs/guide.md", "branch's line\n")
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	_ = os.WriteFile(filepath.Join(root, "docs", "guide.md"), []byte("main's line\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "docs", "more.md"), []byte("main's more\n"), 0o644)
+	gitIn(t, root, "add", "docs")
+	gitIn(t, root, "commit", "-q", "-m", "docs: on main")
+	inProgress := func() bool { return storygit.RebaseInProgress(execx.System{}, wt) }
+	steps := []string{
+		"\n  docs/guide.md\n",
+		"\n  docs/more.md\n",
+		"To continue: in .flai-cache/worktrees/S-0001, resolve each conflicting path, git add it, and run git rebase --continue; then run flai stream sync S-0001 again\n",
+		"To abort: in .flai-cache/worktrees/S-0001, run git rebase --abort, which puts story/S-0001 back as it was before the sync\n",
+	}
+	type result struct {
+		OK          bool     `json:"ok"`
+		Uncommitted []string `json:"uncommitted"`
+		Conflicts   []string `json:"conflicts"`
+		InProgress  bool     `json:"rebase_in_progress"`
+		Continue    string   `json:"continue"`
+		Abort       string   `json:"abort"`
+	}
+	syncJSON := func() result {
+		t.Helper()
+		out, _, code := runIn(t, wt, "--json", "stream", "sync", "S-0001")
+		var res result
+		if err := json.Unmarshal([]byte(out), &res); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+		if code == 0 || res.OK || !res.InProgress || strings.Join(res.Conflicts, ",") != "docs/guide.md,docs/more.md" ||
+			res.Uncommitted == nil || len(res.Uncommitted) != 0 ||
+			!strings.Contains(res.Continue, "git rebase --continue") || !strings.Contains(res.Abort, "git rebase --abort") {
+			t.Errorf("json: %d %+v", code, res)
+		}
+		return res
+	}
+
+	// the sync stops on the conflicts
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code == 0 {
+		t.Fatalf("conflicting sync succeeded: %s", out)
+	}
+	for _, want := range append([]string{"story/S-0001 was not synced: the rebase onto main stopped on conflicts in 2 paths:\n"}, steps...) {
+		if !strings.Contains(out, want) {
+			t.Errorf("conflict report lacks %q:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(errOut, "stopped on conflicts in docs/guide.md, docs/more.md") {
+		t.Errorf("error: %s", errOut)
+	}
+	if !inProgress() {
+		t.Fatal("the rebase is not left in progress")
+	}
+
+	// syncing again while it is in progress is refused with the same steps
+	out, errOut, code = runIn(t, wt, "stream", "sync", "S-0001")
+	if code == 0 {
+		t.Fatalf("sync during a rebase succeeded: %s", out)
+	}
+	for _, want := range append([]string{"story/S-0001 was not synced: a rebase is already in progress in .flai-cache/worktrees/S-0001, with conflicts in 2 paths:\n"}, steps...) {
+		if !strings.Contains(out, want) {
+			t.Errorf("in-progress report lacks %q:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(errOut, "already in progress") {
+		t.Errorf("error: %s", errOut)
+	}
+	syncJSON()
+	if !inProgress() {
+		t.Fatal("the refused sync touched the rebase")
+	}
+
+	// abort as it says puts the branch back; a --json sync stops the same way
+	gitIn(t, wt, "rebase", "--abort")
+	if got := gitIn(t, wt, "rev-parse", "HEAD"); got != head {
+		t.Errorf("abort left HEAD at %s, was %s", got, head)
+	}
+	syncJSON()
+	if !inProgress() {
+		t.Fatal("the --json sync did not stop on the conflicts")
 	}
 }

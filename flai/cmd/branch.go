@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
@@ -116,9 +117,105 @@ func (a *app) relativeWorktrees() bool {
 	return true
 }
 
+// syncStopped is a sync that did not rebase the story branch (ADR-0069):
+// refused over uncommitted changes or a rebase already in progress, or
+// stopped on conflicts. It names each path and how to continue or abort, so
+// an agent never has to work out a rebase by hand and no work is lost.
+type syncStopped struct {
+	Story    string
+	Base     string
+	Worktree string // relative to the main checkout
+	// Uncommitted is set when the sync was refused over uncommitted changes;
+	// nothing was touched.
+	Uncommitted []string
+	// RebaseInProgress is set when a rebase waits in the worktree, whether
+	// this sync stopped it or found it.
+	RebaseInProgress bool
+	// Found is set when the rebase was in progress before this sync, which
+	// refused to touch it.
+	Found     bool
+	Conflicts []string
+	Continue  string
+	Abort     string // "" when there is nothing to abort
+}
+
+// headline says why the branch was not synced, with what names the paths:
+// the paths themselves for the one-line error, a count for the report.
+func (s *syncStopped) headline(paths string) string {
+	b := storyBranch(s.Story)
+	switch {
+	case s.Found && paths != "":
+		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s, with conflicts in %s", b, s.Worktree, paths)
+	case s.Found:
+		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s", b, s.Worktree)
+	case s.RebaseInProgress && paths != "":
+		return fmt.Sprintf("%s was not synced: the rebase onto %s stopped on conflicts in %s", b, s.Base, paths)
+	case s.RebaseInProgress:
+		return fmt.Sprintf("%s was not synced: the rebase onto %s stopped", b, s.Base)
+	}
+	return fmt.Sprintf("%s was not synced: its worktree %s has uncommitted changes in %s", b, s.Worktree, paths)
+}
+
+// Error is one short line, for the error a command exits with: why, the
+// paths (at most ten), and the next step.
+func (s *syncStopped) Error() string {
+	msg := s.headline(workitem.Shorten(s.paths(), 10))
+	if s.RebaseInProgress {
+		return msg + fmt.Sprintf("; resolve them and git rebase --continue, or git rebase --abort, in %s", s.Worktree)
+	}
+	return msg + fmt.Sprintf("; commit them on %s, then sync again", storyBranch(s.Story))
+}
+
+// Report is why, each path on a line of its own, and the steps to continue
+// and abort, for flai stream sync to print.
+func (s *syncStopped) Report() string {
+	var b strings.Builder
+	paths := s.paths()
+	if len(paths) > 0 {
+		b.WriteString(s.headline(plural(len(paths), "path")) + ":\n")
+	} else {
+		b.WriteString(s.headline("") + "\n")
+	}
+	for _, p := range paths {
+		b.WriteString("  " + p + "\n")
+	}
+	b.WriteString("To continue: " + s.Continue + "\n")
+	if s.Abort != "" {
+		b.WriteString("To abort: " + s.Abort + "\n")
+	}
+	return b.String()
+}
+
+// paths is every path the stop names: uncommitted or conflicting.
+func (s *syncStopped) paths() []string { return slices.Concat(s.Uncommitted, s.Conflicts) }
+
+// nonNil is l, or an empty list for JSON's [] in place of null.
+func nonNil(l []string) []string {
+	if l == nil {
+		return []string{}
+	}
+	return l
+}
+
+// rebaseStopped describes the rebase waiting in a story's worktree.
+func rebaseStopped(id, base, wt string, conflicts []string, found bool) *syncStopped {
+	cont := fmt.Sprintf("in %s, resolve each conflicting path, git add it, and run git rebase --continue; then run flai stream sync %s again", wt, id)
+	if len(conflicts) == 0 {
+		cont = fmt.Sprintf("in %s, git add the resolved paths and run git rebase --continue; then run flai stream sync %s again", wt, id)
+	}
+	return &syncStopped{
+		Story: id, Base: base, Worktree: wt, RebaseInProgress: true, Found: found, Conflicts: conflicts,
+		Continue: cont,
+		Abort:    fmt.Sprintf("in %s, run git rebase --abort, which puts %s back as it was before the sync", wt, storyBranch(id)),
+	}
+}
+
 // syncStoryBranch rebases the story branch onto the main branch inside its
-// worktree. On conflicts the rebase is left in progress for the agent to
-// resolve, and the conflicting files are returned with the error.
+// worktree, without stashing (ADR-0069). It refuses, touching nothing, a
+// worktree with uncommitted changes or with a rebase already in progress. On
+// conflicts the rebase is left in progress for the agent to resolve. Each of
+// these returns a *syncStopped, and the conflicting paths when there are
+// any.
 func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conflicts []string, err error) {
 	path := repo.WorktreePath(id)
 	if _, err := os.Stat(path); err != nil {
@@ -128,17 +225,27 @@ func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conf
 	if err != nil {
 		return "", nil, err
 	}
-	if _, err := a.runner.Run(path, "git", "rebase", "--autostash", base); err != nil {
-		out, _ := a.runner.Run(path, "git", "diff", "--name-only", "--diff-filter=U")
-		for _, f := range strings.Split(out, "\n") {
-			if f = strings.TrimSpace(f); f != "" {
-				conflicts = append(conflicts, f)
-			}
-		}
-		if len(conflicts) > 0 {
-			return base, conflicts, fmt.Errorf("rebase of %s onto %s stopped on conflicts in %s; resolve them in %s, then `git rebase --continue` there and run flai stream sync %s again (or `git rebase --abort`)", storyBranch(id), base, strings.Join(conflicts, ", "), relPath(repo.MainRoot, path), id)
-		}
+	wt := relPath(repo.MainRoot, path)
+	if storygit.RebaseInProgress(a.runner, path) {
+		conflicts = storygit.Conflicts(a.runner, path)
+		return base, conflicts, rebaseStopped(id, base, wt, conflicts, true)
+	}
+	dirty, err := storygit.Uncommitted(a.runner, path)
+	if err != nil {
 		return base, nil, err
+	}
+	if len(dirty) > 0 {
+		return base, nil, &syncStopped{
+			Story: id, Base: base, Worktree: wt, Uncommitted: dirty,
+			Continue: fmt.Sprintf("commit them on %s (or stash them), then run flai stream sync %s again", storyBranch(id), id),
+		}
+	}
+	if _, err := a.runner.Run(path, "git", "rebase", base); err != nil {
+		if !storygit.RebaseInProgress(a.runner, path) {
+			return base, nil, err
+		}
+		conflicts = storygit.Conflicts(a.runner, path)
+		return base, conflicts, rebaseStopped(id, base, wt, conflicts, false)
 	}
 	return base, nil, nil
 }
