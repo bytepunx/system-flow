@@ -19,6 +19,9 @@
 		activityLine,
 		anyRunning,
 		reasonParts,
+		retryable,
+		startable,
+		startableHere,
 		storyActivity,
 		type Hold,
 		type HostAgent,
@@ -85,24 +88,15 @@
 	});
 	// A held story's run is flai's stand-in when it never had an agent: it has not started.
 	const started = $derived(!!activity?.run.started);
+	// The rules are the card menu's too (S-0202); Retry hides once pressed for that run.
 	const canRetry = $derived(
-		writable &&
-			!!status?.enabled &&
-			(activity?.state === 'failed' || (!!activity?.hold && activity.run.outcome === 'failed')) &&
-			activity.run.started !== retried &&
-			(storyStatus === 'ready' || storyStatus === 'in-progress')
+		retryable(activity, !!status?.enabled, storyStatus, writable) &&
+			activity.run.started !== retried
 	);
 	// A ready story no agent was started for; flai says why not when it refuses.
-	const canStart = $derived(
-		writable &&
-			!!status?.enabled &&
-			storyStatus === 'ready' &&
-			(!activity || (!!activity.hold && !started))
-	);
+	const canStart = $derived(startable(activity, !!status?.enabled, storyStatus, writable));
 	// A story in progress begun with no agent of this host's: flai serve agent restart starts one.
-	const canStartHere = $derived(
-		writable && !!status?.enabled && storyStatus === 'in-progress' && !!activity?.elsewhere
-	);
+	const canStartHere = $derived(startableHere(activity, !!status?.enabled, storyStatus, writable));
 	// Why flai serve has not started it, from the reasons it gives for each story that waits.
 	const waitingWhy = $derived(
 		status?.state?.waiting?.split('; ').find((w) => new RegExp(`\\b${story}\\b`).test(w))

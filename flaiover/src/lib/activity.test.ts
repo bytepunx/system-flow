@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
 	activityLine,
+	agentAction,
 	anyRunning,
 	dotClass,
 	elsewhereLine,
 	holdLine,
 	holdWaitsFor,
 	reasonParts,
+	retryable,
+	startable,
+	startableHere,
 	stoppable,
 	storyActivity,
 	type StoryActivity
@@ -208,5 +212,59 @@ describe('stopping an agent (S-0170)', () => {
 			run: { ...run, harness: 'claude-code', ended: 'e', outcome: 'stopped', stopped: 's' }
 		};
 		expect(activityLine(stopped)).toBe('agent stopped by the operator (claude-code)');
+	});
+});
+
+// S-0202: one rule for what a writer may have flai do for a story's agent, on its page and its card
+describe("a story's agent action", () => {
+	const failed: StoryActivity = {
+		state: 'failed',
+		run: { ...run, ended: '2026-09-23T18:30:00Z', outcome: 'failed' }
+	};
+	const hold = { code: 'overlap', reason: 'held (overlap)' };
+	const standIn = { story: 'S-0104', command: '', agent: '', started: '' };
+	const held: StoryActivity = { state: 'waiting', run: standIn, hold };
+	const heldFailed: StoryActivity = { ...held, run: failed.run };
+	const begun: StoryActivity = {
+		state: 'waiting',
+		run: { ...standIn, agent: 'agent-S-0104' },
+		elsewhere: { by: 'alex', at: '2026-10-01T07:40:00Z' }
+	};
+	const retry = { action: 'restart', label: 'Retry' };
+	const start = { action: 'start', label: 'Start agent' };
+	const startHere = { action: 'restart', label: 'Start agent' };
+
+	it('retries a failed agent of a story in ready or in progress, held or not', () => {
+		expect(agentAction(failed, true, 'ready', true)).toEqual(retry);
+		expect(agentAction(failed, true, 'in-progress', true)).toEqual(retry);
+		expect(agentAction(heldFailed, true, 'ready', true)).toEqual(retry);
+		expect(retryable(failed, true, 'review', true)).toBe(false);
+		expect(retryable({ state: 'working', run }, true, 'in-progress', true)).toBe(false);
+	});
+	it('starts the agent of a story in ready that has had none, held or not', () => {
+		expect(agentAction(undefined, true, 'ready', true)).toEqual(start);
+		expect(agentAction(held, true, 'ready', true)).toEqual(start);
+		expect(startable(undefined, true, 'backlog', true)).toBe(false);
+		expect(startable(undefined, true, 'in-progress', true)).toBe(false);
+		expect(startable({ state: 'working', run }, true, 'ready', true)).toBe(false);
+		expect(startable(heldFailed, true, 'ready', true)).toBe(false);
+	});
+	it('starts one here for a story in progress begun elsewhere', () => {
+		expect(agentAction(begun, true, 'in-progress', true)).toEqual(startHere);
+		expect(startableHere(begun, true, 'ready', true)).toBe(false);
+		expect(startableHere(undefined, true, 'in-progress', true)).toBe(false);
+	});
+	it('offers nothing to a reader, with the action off, or for a story in another status', () => {
+		for (const [a, status] of [
+			[failed, 'in-progress'],
+			[undefined, 'ready'],
+			[begun, 'in-progress']
+		] as const) {
+			expect(agentAction(a, true, status, false)).toBeNull();
+			expect(agentAction(a, false, status, true)).toBeNull();
+		}
+		expect(agentAction(failed, true, 'done', true)).toBeNull();
+		expect(agentAction(undefined, true, 'backlog', true)).toBeNull();
+		expect(agentAction({ state: 'working', run }, true, 'in-progress', true)).toBeNull();
 	});
 });

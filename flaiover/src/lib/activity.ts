@@ -188,6 +188,59 @@ export function stoppable(a: StoryActivity | undefined): a is StoryActivity {
 	return a.state === 'waiting' && (!a.run.ended || a.run.outcome === 'asked');
 }
 
+// What a writer may have flai do for a story's agent, with the agent action on (S-0115, S-0116,
+// S-0177): one rule for the story page and the card's menu (S-0202).
+
+/** Whether a writer may retry a story in ready or in progress whose agent failed (S-0116). */
+export function retryable(
+	a: StoryActivity | undefined,
+	enabled: boolean,
+	status: string,
+	writable: boolean
+): a is StoryActivity {
+	return (
+		writable &&
+		enabled &&
+		(a?.state === 'failed' || (!!a?.hold && a.run.outcome === 'failed')) &&
+		(status === 'ready' || status === 'in-progress')
+	);
+}
+
+/** Whether a writer may start the agent of a story in ready that has had none (S-0115, S-0129). */
+export function startable(
+	a: StoryActivity | undefined,
+	enabled: boolean,
+	status: string,
+	writable: boolean
+): boolean {
+	return writable && enabled && status === 'ready' && (!a || (!!a.hold && !a.run.started));
+}
+
+/** Whether a writer may start an agent here for a story in progress begun elsewhere (S-0177). */
+export function startableHere(
+	a: StoryActivity | undefined,
+	enabled: boolean,
+	status: string,
+	writable: boolean
+): boolean {
+	return writable && enabled && status === 'in-progress' && !!a?.elsewhere;
+}
+
+/** The one thing a writer may have flai do for a story's agent, Retry first, or null. */
+export function agentAction(
+	activity: StoryActivity | undefined,
+	enabled: boolean,
+	status: string,
+	writable: boolean
+): { action: 'start' | 'restart'; label: 'Start agent' | 'Retry' } | null {
+	if (retryable(activity, enabled, status, writable)) return { action: 'restart', label: 'Retry' };
+	if (startable(activity, enabled, status, writable))
+		return { action: 'start', label: 'Start agent' };
+	if (startableHere(activity, enabled, status, writable))
+		return { action: 'restart', label: 'Start agent' };
+	return null;
+}
+
 /**
  * Whether any agent is still running, so its state is worth asking for again. A story begun elsewhere
  * has none here, and changes only when its files do.
