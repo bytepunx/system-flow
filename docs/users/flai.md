@@ -858,6 +858,17 @@ git fetch origin && git merge origin/main   # commits on the remote branch this 
 git merge origin/main                       # the same, already fetched; or rebase onto origin/main instead
 ```
 
+The remote can still move between that check and the push. Each push goes as one `git push --atomic`, so when the remote refuses the branch it refuses that push's tags too. flai then asks the remote again, and when its branch has moved it deletes here the release tags that did not reach the remote, because they no longer tag what will be published, names them, and exits 3. Tags an earlier push in the same publish already sent (more than three tags go in batches of three, the branch with the last) are kept, here and on the remote, and named; then merge rather than rebase, so the commits they tag stay in the history. `--json` carries `remote_moved`, `deleted_tags`, and `kept_tags`. The publish commit that bumped the template's version stays: a rebase replays it and a merge keeps it, and the rerun does not bump again. To recover:
+
+```bash
+git fetch origin
+git rebase origin/main                      # or git merge origin/main; merge when tags were kept
+flai check --strict                         # and your tests: verify what you now have
+flai release --pending                      # tags again and pushes
+```
+
+When the rebase or merge conflicts, the conflicts are worked through tasks: a `remediation` story for the publish's conflicts, with one task for each accepted story whose changes conflict, each discussed with you on a thread on its task before it is resolved. A push that fails for any other reason (credentials, a hook, an unreachable remote) keeps its tags, and running `flai release --pending` again finishes the push.
+
 When the remote cannot be reached, `--dry-run` still shows the plan with a warning that it was not checked, and publishing waits until the remote can be reached, since it pushes there anyway. A clone with no remote publishes locally as before.
 
 `flai push --pending` and the `auto-publish` host action are kept as the operator's own shell tools, outside the workflow: no agent is told to run them, and the dashboard neither offers a push nor shows `auto-publish`. `flai push --pending` pushes the branch and any tags already made when the commits ahead include an acceptance or a release tag; ordinary commits are yours to push with git. It never forces, and refuses when the remote has commits this clone lacks. It releases nothing unless `auto-publish` is on for the project (`flai serve enable auto-publish`, off by default, S-0144): then it first tags whatever has accumulated, as `flai release --pending` would, and refuses as it does.
