@@ -70,7 +70,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 
 - Each kind has one activity document per project: `wip/agents/planner.md`, `wip/agents/orchestrator.md`, and `wip/agents/analyzer.md`.
 - `flai serve` writes an entry when an activity ends: the timestamp, a one-line summary, the items touched, the duration, and the cost.
-- A run that spans activities, as the orchestrator's does, reports each one through the MCP tool `activity_log` with its summary.
+- A run that spans activities, as the orchestrator's does, reports each one when it ends through the MCP tool `activity_log`, with its kind, its summary, and the items it touched; flai measures the duration and the cost from the run's log. When a run ends, the time since its last reported activity is logged with the run's final reply as its summary.
 - Give a summary a reader can act on: what changed, on which items, and why.
 - Never write the activity document by hand.
 
