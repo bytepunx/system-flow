@@ -74,8 +74,8 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 // progress whose last agent flai serve started has ended or dropped, or that
 // this host has had no agent for (S-0177, ADR-0064): a story in progress
 // that was begun elsewhere gets an agent told where, when, and by whom. For
-// a story in ready while the in-progress limit is full or a claim holds it
-// (S-0128), it queues one instead
+// a story in ready while the in-progress limit is full, review is full
+// (S-0243), or a claim holds it (S-0128), it queues one instead
 // and returns the run with Queued set: flai serve starts it when there is
 // room, as it starts a story that enters ready (S-0118). It is refused while
 // the agent action is off for the project, when the story is in another
@@ -112,7 +112,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	case run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)
 	case run.Queued != "" && it.Status == workitem.Ready:
-		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when the in-progress limit has room", it.ID, run.Queued)
+		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
 	}
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
@@ -193,8 +193,8 @@ func restartWhy(run *AgentRun) string {
 	return "ended"
 }
 
-// queue marks run's story for another agent once the in-progress limit has
-// room, and journals it. The serving flai's next look with room starts it.
+// queue marks run's story for another agent once the in-progress limit and
+// review have room and nothing holds it (S-0243), and journals it. The serving flai's next look with room starts it.
 func queue(o Options, e Entry, run *AgentRun) *AgentRun {
 	now := time.Now
 	if o.Now != nil {
@@ -205,7 +205,7 @@ func queue(o Options, e Entry, run *AgentRun) *AgentRun {
 	o.Dir.updateAgent(e.Root, func(s *AgentState) { s.put(&queued) })
 	if o.Host.Record != nil {
 		o.Host.Record(hostapi.Entry{At: queued.Queued, Action: hostapi.ActionAgent, Method: "serve.agent", Project: e.Key, Root: e.Root, By: "flai serve",
-			Outcome: "done", Detail: fmt.Sprintf("queued another agent for %s: the in-progress limit leaves no room, and flai serve starts it when there is", run.Story)})
+			Outcome: "done", Detail: fmt.Sprintf("queued another agent for %s: the in-progress limit, a full review, or a hold leaves no room, and flai serve starts it when there is", run.Story)})
 	}
 	if o.Logger != nil {
 		o.Logger.Info("agent queued", "component", "serve", "project", e.Key, "story", run.Story)

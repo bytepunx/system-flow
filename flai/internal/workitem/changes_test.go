@@ -91,3 +91,35 @@ func TestBoardViewReadyInPullOrder(t *testing.T) {
 		t.Error("all adds the task and still leaves the archived story out")
 	}
 }
+
+// S-0243: no story is pulled while review is at or over its limit, as while
+// the in-progress limit is full, and the hold says which, in-progress first.
+func TestBoardViewPullHold(t *testing.T) {
+	now := time.Date(2026, 9, 19, 12, 0, 0, 0, time.UTC)
+	mk := func(id, status string) *Item {
+		return &Item{ID: id, Type: Story, Title: id, Status: status, Created: "2026-09-19T11:00:00Z"}
+	}
+	items := []*Item{mk("S-0001", Ready), mk("S-0002", InProgress), mk("S-0003", Review), mk("S-0004", Review),
+		{ID: "T-0001", Type: Task, Status: Review, Created: "2026-09-19T11:00:00Z"}}
+	for _, c := range []struct {
+		name   string
+		limits map[string]int
+		hold   string
+	}{
+		{"no limits", nil, ""},
+		{"review under its limit", map[string]int{InProgress: 3, Review: 3}, ""},
+		{"review at its limit", map[string]int{InProgress: 3, Review: 2}, "review is full (2 of 2): accept or send back a story"},
+		{"review over its limit", map[string]int{Review: 1}, "review is full (2 of 1): accept or send back a story"},
+		{"a review limit of zero is none", map[string]int{Review: 0}, ""},
+		{"in progress full", map[string]int{InProgress: 1, Review: 3}, "the in-progress limit is full (1 of 1)"},
+		{"both full, in progress first", map[string]int{InProgress: 1, Review: 2}, "the in-progress limit is full (1 of 1)"},
+	} {
+		v := NewBoardView(items, &Board{WIPLimits: c.limits}, now, true, nil, nil)
+		if got := v.PullHold(); got != c.hold {
+			t.Errorf("%s: pull hold %q, want %q", c.name, got, c.hold)
+		}
+		if v.CanPull() != (c.hold == "") {
+			t.Errorf("%s: can pull %v with hold %q", c.name, v.CanPull(), c.hold)
+		}
+	}
+}

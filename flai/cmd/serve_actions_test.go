@@ -475,7 +475,7 @@ func TestServeAgentRestartQueuesWhenTheLimitIsFull(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(root, "wip/kanban/board.md"), []byte("---\ntitle: Board\nstatus: active\nwip_limits:\n  ready: 5\n  in-progress: 1\n  review: 3\n---\n\n# Board\n"), 0o644)
 
 	out, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-1")
-	if code != 0 || !strings.HasPrefix(out, "queued another agent for S-0001: the in-progress limit leaves no room") {
+	if code != 0 || !strings.HasPrefix(out, "queued another agent for S-0001: the in-progress limit, a full review, or a hold leaves no room") {
 		t.Fatalf("restart: %d %s %s", code, out, errOut)
 	}
 	if _, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-1"); code == 0 || !strings.Contains(errOut, "already queued") {

@@ -19,7 +19,7 @@ import (
 // what the pack briefs (ADR-0049, S-0148).
 const primeInstructions = "When you start work on a story, call prime with it: the pack holds the conventions that apply and what the story names, whole, and briefs the design and ADRs its topics and links select, within a size budget. A brief is not the document: when one bears on the story, read it, or its section that does, with doc_get and its heading before relying on it or changing what it describes, and find sections by their words with doc_search."
 
-const inboxDescription = "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull from the in-progress limit (one whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it: it is not offered), and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."
+const inboxDescription = "What needs this agent: unresolved threads (awaiting is 'you' when the last entry is not yours), the stories ready to pull in pull order with can_pull, false while the in-progress limit is full or review is full, and pull_hold saying which (one whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it: it is not offered), and the changes others made to work items since this agent last looked, reported once: at most 50, newest kept, with changes_omitted counting the older ones left out. A first look covers 24 hours of stories and epics only. Filter by story to see only threads on a story and its tasks."
 
 // projects is what the tools are served for: one project, or every project
 // in a folder (S-0101).
@@ -193,11 +193,11 @@ func newFolderServer(opt Options) *mcp.Server {
 	}
 	fw := &folderWaits{f: f, poll: poll, maxWait: maxWait, now: now, closing: opt.Closing}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow projects in " + f.root, Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of every system-flow project in " + f.root + " and the folders below it (S-0101): it was started in a folder that is not itself a project. inbox, wait_for_work, and wait_for_events cover every project and say which one each thing is in; every other tool takes project, a key inbox lists (or the project's folder), and needs it whenever there is more than one project. Projects created or imported below the folder join within seconds. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review. Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names in the project it names (item_move it to in-progress with that project, then flai stream open in that project's folder on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready in some project whose in-progress limit leaves room, and waits otherwise; when it times out, call it again. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words: if it is your story, read it again with item_get before you go on. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. Publishing is the operator's: a project's accepted work reaches its remote only when it is published (git fetch, then flai release --pending in that project's folder, or the board's Publish), and you publish only when the operator asks (ADR-0067); each project's unpublished in inbox lists what is accepted there and not yet published, for that.",
+		Instructions: "This server is the agent's view of every system-flow project in " + f.root + " and the folders below it (S-0101): it was started in a folder that is not itself a project. inbox, wait_for_work, and wait_for_events cover every project and say which one each thing is in; every other tool takes project, a key inbox lists (or the project's folder), and needs it whenever there is more than one project. Projects created or imported below the folder join within seconds. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review. Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names in the project it names (item_move it to in-progress with that project, then flai stream open in that project's folder on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready in some project whose in-progress limit leaves room and whose review is under its limit, and waits otherwise; when it times out, call it again. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words: if it is your story, read it again with item_get before you go on. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. Publishing is the operator's: a project's accepted work reaches its remote only when it is published (git fetch, then flai release --pending in that project's folder, or the board's Publish), and you publish only when the operator asks (ADR-0067); each project's unpublished in inbox lists what is accepted there and not yet published, for that.",
 	})
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent in every project here, one entry per project with its key, name, and folder: " + inboxDescription + " Name project to see only that one; story needs project when there is more than one."}, fw.inbox)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on, across every project here (S-0097, S-0101). Answers at once with reason resume and your own story still in progress, in whichever project; thread with threads awaiting you written to since it last answered, each with its project; pull with the first ready story that is not held, in key order of projects and pull order within one, of a project whose in-progress limit leaves room (pull it: item_move it to in-progress with that project, then flai stream open in its folder on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, up to timeout_seconds; timed_out then says whether it is waiting for room, for a held story to be clear (held: every ready story with room is held, and ready says why each is), or for a story to be ready: call it again."}, fw.work)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on, across every project here (S-0097, S-0101). Answers at once with reason resume and your own story still in progress, in whichever project; thread with threads awaiting you written to since it last answered, each with its project; pull with the first ready story that is not held, in key order of projects and pull order within one, of a project whose in-progress limit leaves room and whose review is under its limit (pull it: item_move it to in-progress with that project, then flai stream open in its folder on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, up to timeout_seconds; timed_out then says whether it is waiting for room, for review (full, waiting on the operator's acceptance), for a held story to be clear (held: every ready story with room is held, and ready says why each is), or for a story to be ready: call it again."}, fw.work)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed in any project here since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes in any of them or the timeout passes. Each event names its project; changed paths are relative to the folder. At most 50 events per project, newest kept; events_omitted counts the rest."}, fw.events)
 	addProjectTools(srv, f)
 	return srv
@@ -264,12 +264,15 @@ func (fw *folderWaits) agent() string {
 	return "agent"
 }
 
-// ProjectWork is one project's ready stories and room, for wait_for_work.
+// ProjectWork is one project's ready stories and room, for wait_for_work:
+// a project whose in-progress limit or review is full offers no pull, and
+// says which (S-0243).
 type ProjectWork struct {
-	Project string               `json:"project"`
-	Folder  string               `json:"folder"`
-	Ready   []workitem.BoardCard `json:"ready"`
-	CanPull bool                 `json:"can_pull"`
+	Project  string               `json:"project"`
+	Folder   string               `json:"folder"`
+	Ready    []workitem.BoardCard `json:"ready"`
+	CanPull  bool                 `json:"can_pull"`
+	PullHold string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled in this project now: the in-progress limit is full, or review is full and waits on acceptance"`
 }
 
 // FolderWorkOut is WorkOut across every project in a folder.
@@ -279,7 +282,7 @@ type FolderWorkOut struct {
 	Folder     string              `json:"folder,omitempty" jsonschema:"that project's folder, where flai stream open runs"`
 	Story      *workitem.BoardCard `json:"story,omitempty"`
 	Threads    []ThreadSummary     `json:"threads" jsonschema:"threads awaiting you written to since wait_for_work last answered, each with its project"`
-	Projects   []ProjectWork       `json:"projects" jsonschema:"every project's ready stories and whether its limit leaves room"`
+	Projects   []ProjectWork       `json:"projects" jsonschema:"every project's ready stories and whether its limits leave room to pull one"`
 	WaitingFor string              `json:"waiting_for,omitempty"`
 	TimedOut   bool                `json:"timed_out"`
 }
@@ -288,16 +291,18 @@ type FolderWorkOut struct {
 func (fw *folderWaits) decide(ctx context.Context, since time.Time) (FolderWorkOut, error) {
 	out := FolderWorkOut{Threads: []ThreadSummary{}, Projects: []ProjectWork{}}
 	var pull *FolderWorkOut
-	anyReady, anyRoom := false, false
+	anyReady, anyRoom, anyFull, anyReview := false, false, false, false
 	for _, s := range fw.f.all() {
 		one, err := s.work(ctx, since)
 		if err != nil {
 			return FolderWorkOut{}, fmt.Errorf("%s: %w", s.key, err)
 		}
 		folder := fw.f.rel(projectRoot(s.repo))
-		out.Projects = append(out.Projects, ProjectWork{Project: s.key, Folder: folder, Ready: one.Ready, CanPull: one.CanPull})
+		out.Projects = append(out.Projects, ProjectWork{Project: s.key, Folder: folder, Ready: one.Ready, CanPull: one.CanPull, PullHold: one.PullHold})
 		anyReady = anyReady || len(one.Ready) > 0
 		anyRoom = anyRoom || (one.CanPull && len(one.Ready) > 0)
+		anyFull = anyFull || (!one.CanPull && !one.review && len(one.Ready) > 0)
+		anyReview = anyReview || (one.review && len(one.Ready) > 0)
 		switch one.Reason {
 		case WorkResume:
 			res := out
@@ -322,8 +327,10 @@ func (fw *folderWaits) decide(ctx context.Context, since time.Time) (FolderWorkO
 		out.Reason, out.Project, out.Folder, out.Story = WorkPull, pull.Project, pull.Folder, pull.Story
 	case anyRoom:
 		out.WaitingFor = WaitingForHeld
-	case anyReady:
+	case anyFull:
 		out.WaitingFor = WaitingForRoom
+	case anyReview:
+		out.WaitingFor = WaitingForReview
 	default:
 		out.WaitingFor = WaitingForReady
 	}

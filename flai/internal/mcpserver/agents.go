@@ -29,7 +29,7 @@ type AgentStarted struct {
 	PID     int    `json:"pid,omitempty"`
 	Log     string `json:"log,omitempty" jsonschema:"the agent's output, on the host"`
 	Started string `json:"started,omitempty"`
-	Queued  string `json:"queued,omitempty" jsonschema:"set when no agent started yet: flai serve starts it when the in-progress limit has room and nothing holds the story"`
+	Queued  string `json:"queued,omitempty" jsonschema:"set when no agent started yet: flai serve starts it when the in-progress limit has room, review is under its limit, and nothing holds the story"`
 }
 
 // AgentIn names the story whose agent to start.

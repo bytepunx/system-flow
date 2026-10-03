@@ -225,6 +225,42 @@ func TestAStoryMovedFromBacklogToReadyGetsItsAgentWhenThereIsRoom(t *testing.T) 
 	waitFor(t, "both end", func() bool { return !lab.run(first).live() && !lab.run(second).live() })
 }
 
+// S-0243, I-0007: while review is full no ready story's agent is started,
+// whatever room the in-progress limit leaves, and the state says why; an
+// agent already started goes on; once a story leaves review, the waiting
+// one is started.
+func TestNoAgentStartsWhileReviewIsFull(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limits(3, 1)
+	lab.hold()
+	started := lab.ready("Started")
+	lab.l.look(ctx, false)
+	waitFor(t, "the started story's agent runs", func() bool { return lab.run(started).live() })
+	reviewed := lab.ready("Reviewed")
+	lab.move(reviewed, workitem.InProgress)
+	lab.move(reviewed, workitem.Review)
+	waiting := lab.ready("Waiting")
+	lab.l.look(ctx, false)
+	full := "review is full (1 of 1): accept or send back a story; it holds " + waiting
+	if lab.run(waiting) != nil || !strings.Contains(lab.state().Waiting, full) || lab.said(waiting) != 1 {
+		t.Fatalf("started with review full: %+v", lab.state())
+	}
+	if !lab.run(started).live() {
+		t.Errorf("a full review stopped an agent already started: %+v", lab.run(started))
+	}
+	// the reviewed story is sent back: review has room, and the waiting one is started
+	back, _ := lab.repo.Get(reviewed)
+	if _, err := lab.repo.Transition(back, workitem.InProgress, "alex", "not yet", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "the waiting story's agent runs", func() bool { return lab.run(waiting).live() })
+	lab.release(started)
+	lab.release(waiting)
+	waitFor(t, "both end", func() bool { return !lab.run(started).live() && !lab.run(waiting).live() })
+}
+
 func (lab *agentLab) state() AgentState { return lab.l.dir.AgentStates()[lab.root] }
 
 func (lab *agentLab) run(id string) *AgentRun { return lab.state().Stories[id] }
@@ -244,8 +280,11 @@ func (lab *agentLab) move(id, to string) {
 	}
 }
 
-func (lab *agentLab) limit(inProgress int) {
-	_ = os.WriteFile(filepath.Join(lab.root, "wip/kanban/board.md"), []byte(fmt.Sprintf("---\ntitle: Board\nstatus: active\nwip_limits:\n  ready: 5\n  in-progress: %d\n  review: 3\n---\n\n# Board\n", inProgress)), 0o644)
+func (lab *agentLab) limit(inProgress int) { lab.limits(inProgress, 3) }
+
+// limits sets the in-progress and review limits (S-0243).
+func (lab *agentLab) limits(inProgress, review int) {
+	_ = os.WriteFile(filepath.Join(lab.root, "wip/kanban/board.md"), []byte(fmt.Sprintf("---\ntitle: Board\nstatus: active\nwip_limits:\n  ready: 5\n  in-progress: %d\n  review: %d\n---\n\n# Board\n", inProgress, review)), 0o644)
 }
 
 func (lab *agentLab) release(id string) {

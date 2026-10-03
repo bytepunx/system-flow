@@ -159,10 +159,30 @@ func FirstClear(cards []BoardCard) *BoardCard {
 	return nil
 }
 
-// CanPull reports whether the in-progress limit leaves room for one more story.
-func (v BoardView) CanPull() bool {
-	limit, ok := v.WIPLimits[InProgress]
-	return !ok || limit <= 0 || v.Counts[InProgress] < limit
+// CanPull reports whether a story may be pulled now: the in-progress limit
+// leaves room for one more, and review is under its limit (S-0243).
+func (v BoardView) CanPull() bool { return v.PullHold() == "" }
+
+// PullHold says why no story may be pulled now, or "" when one may: the
+// in-progress limit is full, or review is full and waits on the operator's
+// acceptance (S-0243, I-0007), in-progress first when both are. Stories
+// already in progress still finish; only the pull stops.
+func (v BoardView) PullHold() string {
+	if limit, ok := v.WIPLimits[InProgress]; ok && limit > 0 && v.Counts[InProgress] >= limit {
+		return fmt.Sprintf("the in-progress limit is full (%d of %d)", v.Counts[InProgress], limit)
+	}
+	return v.ReviewHold()
+}
+
+// ReviewHold says that review is at or over its limit, so that no story is
+// pulled until one is accepted or sent back, or "" when review has room or
+// no limit (S-0243). flai serve, which counts the agents it started against
+// the in-progress limit itself, asks it on its own.
+func (v BoardView) ReviewHold() string {
+	if limit, ok := v.WIPLimits[Review]; ok && limit > 0 && v.Counts[Review] >= limit {
+		return fmt.Sprintf("review is full (%d of %d): accept or send back a story", v.Counts[Review], limit)
+	}
+	return ""
 }
 
 // HumanDuration is an age for people: now, 12m, 5h, 3d.

@@ -33,10 +33,12 @@ import (
 // story since it entered ready, whether that was before or after flai serve
 // began to serve it (S-0112: serve/agents.json remembers each story's runs
 // across a restart), or its agent has been changed since the last one was
-// started (S-0116); and the in-progress limit leaves room, counting an agent
-// started for a story still in ready as a story in progress. Each ready
-// story it does not start, and has no agent running, is named in the state's
-// waiting with the reason, and logged when its reason changes.
+// started (S-0116); the in-progress limit leaves room, counting an agent
+// started for a story still in ready as a story in progress; and review is
+// under its limit (S-0243), so that review does not grow without end while
+// the operator batches acceptance. Each ready story it does not start, and
+// has no agent running, is named in the state's waiting with the reason, and
+// logged when its reason changes.
 //
 // The story says which harness works it, with which model and options (its
 // agent, S-0103); package harness turns that into a command, with the
@@ -44,12 +46,13 @@ import (
 // harness is started with the operator's command, when one is set.
 //
 // Nobody attending holds a ready story back any more (S-0116, ADR-0043): the
-// in-progress limit does, and so does a claim (S-0128, ADR-0046). A ready
-// story whose claim overlaps the claim of a story in progress, in review, or
-// in ready with an agent started for it is held: it is skipped, keeps its
-// place, and is started first once it is clear. An agent holding wait_for_work and the
-// launcher may both go for a story; the second move to in-progress is
-// refused, and the loser pulls the next one.
+// in-progress limit does, a full review does (S-0243), and so does a claim
+// (S-0128, ADR-0046). A ready story whose claim overlaps the claim of a
+// story in progress, in review, or in ready with an agent started for it is
+// held: it is skipped, keeps its place, and is started first once it is
+// clear. An agent holding wait_for_work and the launcher may both go for a
+// story; the second move to in-progress is refused, and the loser pulls the
+// next one.
 //
 // Each command is run as it stands in the project's directory, never through
 // a shell. The story's ID is flai's own reading of the files, checked against
@@ -293,7 +296,7 @@ type readyStory struct {
 	Asked *AgentRun
 	// Started is set when the operator has its agent started now (S-0115),
 	// and Past says what that start went past: a hold's reason, a full
-	// in-progress limit, or nothing (S-0182).
+	// in-progress limit, a full review (S-0243), or nothing (S-0182).
 	Started bool
 	Past    []string
 	// Begun says where a story in progress that this host has had no agent
@@ -303,16 +306,17 @@ type readyStory struct {
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
-// stories they are held by, and how many more stories the in-progress limit
-// leaves room for, -1 when there is none.
-func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, err error) {
+// stories they are held by, how many more stories the in-progress limit
+// leaves room for, -1 when there is none, and why review being full holds
+// every one back, "" when it does not (S-0243).
+func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, review string, err error) {
 	items, err := repo.List(false)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, "", err
 	}
 	board, err := repo.LoadBoard()
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, "", err
 	}
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
@@ -330,7 +334,7 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 	if limit, ok := view.WIPLimits[workitem.InProgress]; ok && limit > 0 {
 		free = max(0, limit-view.Counts[workitem.InProgress])
 	}
-	return ready, repo.Holds(items), free, nil
+	return ready, repo.Holds(items), free, view.ReviewHold(), nil
 }
 
 // agentStarted is how a hold names a story in ready whose agent has been
@@ -380,7 +384,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if err != nil {
 		return
 	}
-	stories, holds, free, err := readyStories(repo)
+	stories, holds, free, review, err := readyStories(repo)
 	if err != nil {
 		return
 	}
@@ -404,7 +408,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	}
 	st := l.dir.AgentStates()[l.entry.Root]
 	commandSet := cfg.host(harness.Command).Program != ""
-	var todo, nothing, noRoom []readyStory
+	var todo, nothing, noRoom, reviewFull []readyStory
 	reserved := 0
 	for _, s := range stories {
 		run := st.Stories[s.ID]
@@ -440,6 +444,10 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			sk.add(s.ID+" "+h.Reason, s)
 		case free >= 0 && reserved >= free:
 			noRoom = append(noRoom, s)
+		case review != "":
+			// review full stops the pull, not the work: what is started
+			// or in progress goes on (S-0243, I-0007)
+			reviewFull = append(reviewFull, s)
 		case l.start(ctx, cfg, s, s.Asked):
 			reserved++
 			holds.Open(s.item, agentStarted)
@@ -447,6 +455,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	}
 	if len(noRoom) > 0 {
 		sk.add("the in-progress limit leaves no room for "+strings.Join(ids(noRoom), ", "), noRoom...)
+	}
+	if len(reviewFull) > 0 {
+		sk.add(review+"; it holds "+strings.Join(ids(reviewFull), ", "), reviewFull...)
 	}
 }
 
@@ -871,7 +882,7 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 		case run.Outcome == OutcomeAsked:
 			a.State, a.Thread, a.Why = ActivityWaiting, run.Thread, run.Why
 		case run.Queued != "" && inReady(repo, id):
-			a.State, a.Why = ActivityWaiting, "queued: flai serve starts another agent when the in-progress limit has room"
+			a.State, a.Why = ActivityWaiting, "queued: flai serve starts another agent when there is room"
 		default:
 			a.State, a.Why = ActivityFailed, run.Why
 			if a.Why == "" {

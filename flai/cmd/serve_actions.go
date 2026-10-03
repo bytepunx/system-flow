@@ -287,7 +287,7 @@ func newServeAgentCmd(a *app) *cobra.Command {
 		Use:   "agent",
 		Short: "What flai serve starts when a story becomes ready: each story's harness, or your command",
 		Long: `flai serve can start an agent for each story that becomes ready, while the
-in-progress limit leaves room and no agent of yours is attending the project.
+in-progress limit leaves room, review is under its limit, and no agent of yours is attending the project.
 It is a host action, off until you enable it (flai serve enable agent).
 
 A story names its agent (flai agent, flai edit --harness): a harness, a
@@ -853,8 +853,8 @@ A story that this host's flai serve has started no agent for gets one too
 told who began it, when, and on which host, which threads have been written
 to since, and to reconcile with what is committed rather than start over.
 
-For a story in ready while the in-progress limit is full, or a claim holds
-it, it queues the new agent instead: flai serve starts it as soon as the
+For a story in ready while the in-progress limit is full, review is full,
+or a claim holds it, it queues the new agent instead: flai serve starts it as soon as the
 story can start, as it starts a story that enters ready, and until then the
 story's agent reads as waiting, queued (S-0118).
 
@@ -885,8 +885,8 @@ again on an answer (S-0115).
 It refuses, and says why, while the agent action is off for the project,
 when the story is not in ready, while its agent runs or waits for an
 answer, and when nothing can start it (no harness and no command). A full
-in-progress limit does not stop it: it starts past the limit, with a
-warning, as a move does. A story in progress whose agent dropped or failed,
+in-progress limit or a full review does not stop it: it starts past them,
+with a warning, as a move does. A story in progress whose agent dropped or failed,
 or that has had no agent here, gets one from flai serve agent restart. The story page's Start agent
 button runs this.`,
 		Example: `  flai serve agent start S-0115`,
@@ -1080,7 +1080,8 @@ func printStream(a *app, got *serve.StreamRead) {
 // start and restart do, under the same agent host action, and journals who
 // asked and what came of it. They are for the operator's own agent: one that
 // flai serve started, whose flai mcp has FLAI_STARTED_BY, is refused, since
-// a start goes past holds and the in-progress limit on the operator's word.
+// a start goes past holds, the in-progress limit, and a full review on the
+// operator's word.
 func (a *app) mcpAgents(ctx context.Context, verb, root, story, by string) (mcpserver.AgentStarted, error) {
 	if os.Getenv("FLAI_STARTED_BY") == "flai-serve" {
 		return mcpserver.AgentStarted{}, fmt.Errorf("an agent flai serve started does not start agents: %s's agent is the operator's to %s, from the story's page or with flai serve agent %s %s on the host", story, verb, verb, story)
@@ -1138,7 +1139,7 @@ func (a *app) agentNow(story string, how func(context.Context, serve.Options, se
 		if a.jsonOut {
 			return a.printJSON(map[string]any{"story": run.Story, "agent": run.Agent, "queued": run.Queued})
 		}
-		fmt.Fprintf(a.out, "queued another agent for %s: the in-progress limit leaves no room, and flai serve starts it when there is\n", run.Story)
+		fmt.Fprintf(a.out, "queued another agent for %s: the in-progress limit, a full review, or a hold leaves no room, and flai serve starts it when there is\n", run.Story)
 		return nil
 	}
 	if a.jsonOut {

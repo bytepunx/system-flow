@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,6 +132,65 @@ func TestWaitForWorkWaitsForRoomUnderTheLimit(t *testing.T) {
 	}
 	if out := answered(t, done); out["reason"] != "pull" || storyOf(out) != first.ID {
 		t.Errorf("once there is room: %v", out)
+	}
+}
+
+func (f *fixture) limits(t *testing.T, inProgress, review int) {
+	t.Helper()
+	board := fmt.Sprintf("---\ntitle: Board\nwip_limits:\n  in-progress: %d\n  review: %d\norder: []\n---\n\n# Board\n", inProgress, review)
+	if err := os.WriteFile(filepath.Join(f.repo.KanbanDir(), "board.md"), []byte(board), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0243, I-0007: while review is at its limit no story is pulled, whatever
+// room the in-progress limit leaves: wait_for_work waits for review and says
+// why, inbox says the same, and a story is offered once one leaves review.
+func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
+	f := setup(t)
+	f.toReview(t) // the fixture's story is the one in review
+	next := f.readyStory(t, "Next", t0)
+	f.limits(t, 3, 1)
+	full := "review is full (1 of 1): accept or send back a story"
+	quiet := answered(t, f.held(t, 1))
+	if quiet["timed_out"] != true || quiet["waiting_for"] != "review" || quiet["can_pull"] != false || quiet["pull_hold"] != full || len(quiet["ready"].([]any)) != 1 {
+		t.Fatalf("review full: %v", quiet)
+	}
+	if in, _ := f.call(t, "inbox", map[string]any{}); in["can_pull"] != false || in["pull_hold"] != full {
+		t.Errorf("inbox with review full: %v %v", in["can_pull"], in["pull_hold"])
+	}
+
+	// both full: the in-progress limit is named first, and it waits for room
+	theirs := f.readyStory(t, "Theirs", t0)
+	if _, err := f.repo.Transition(theirs, workitem.InProgress, "codex", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	f.limits(t, 1, 1)
+	quiet = answered(t, f.held(t, 1))
+	if quiet["waiting_for"] != "room" || quiet["pull_hold"] != "the in-progress limit is full (1 of 1)" {
+		t.Fatalf("both full: %v", quiet)
+	}
+
+	// the in-progress limit has room again, and the story in review is
+	// accepted, its task dropped: review has room, and the ready story is offered
+	f.limits(t, 3, 1)
+	items, _ := f.repo.List(false)
+	for _, it := range items {
+		if it.Parent == f.story.ID && it.Type == workitem.Task {
+			if _, err := f.repo.Transition(it, workitem.Cancelled, "alex", "not needed", t0); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	done := f.held(t, 3)
+	time.Sleep(150 * time.Millisecond)
+	mine, _ := f.repo.Get(f.story.ID)
+	if _, err := f.repo.Transition(mine, workitem.Done, "alex", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	out := answered(t, done)
+	if out["reason"] != "pull" || storyOf(out) != next.ID || out["can_pull"] != true || out["pull_hold"] != nil {
+		t.Errorf("once review has room: %v", out)
 	}
 }
 

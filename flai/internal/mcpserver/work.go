@@ -15,11 +15,12 @@ import (
 const (
 	WorkResume = "resume" // this agent's own story is still in progress
 	WorkThread = "thread" // a thread awaiting this agent was written to while it waited
-	WorkPull   = "pull"   // a story is ready and the in-progress limit leaves room for it
+	WorkPull   = "pull"   // a story is ready, the in-progress limit leaves room for it, and review is under its limit
 
-	WaitingForRoom  = "room"  // a story is ready, and the in-progress limit is full
-	WaitingForReady = "ready" // no story is ready
-	WaitingForHeld  = "held"  // every ready story is held by an open story's claim or its after (S-0128, S-0130)
+	WaitingForRoom   = "room"   // a story is ready, and the in-progress limit is full
+	WaitingForReview = "review" // a story is ready, and review is full: it waits on acceptance (S-0243)
+	WaitingForReady  = "ready"  // no story is ready
+	WaitingForHeld   = "held"   // every ready story is held by an open story's claim or its after (S-0128, S-0130)
 )
 
 // WorkIn bounds one wait.
@@ -33,15 +34,20 @@ type WorkOut struct {
 	Story      *workitem.BoardCard  `json:"story,omitempty" jsonschema:"the story to resume or to pull"`
 	Threads    []ThreadSummary      `json:"threads" jsonschema:"threads awaiting you that were written to since wait_for_work last answered"`
 	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds, or that waits for a story it names in after, carries held with the reason and what clears it, and is not offered"`
-	CanPull    bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room to pull one"`
-	WaitingFor string               `json:"waiting_for,omitempty" jsonschema:"when it timed out: room, when a story is ready but the in-progress limit is full; held, when every ready story is held (ready says why each is); ready, when no story is ready"`
+	CanPull    bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
+	PullHold   string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
+	WaitingFor string               `json:"waiting_for,omitempty" jsonschema:"when it timed out: room, when a story is ready but the in-progress limit is full; review, when a story is ready but review is full and waits on the operator's acceptance; held, when every ready story is held (ready says why each is); ready, when no story is ready"`
 	TimedOut   bool                 `json:"timed_out"`
+	// review is set when review being full, not the in-progress limit, is
+	// what holds the pull (S-0243).
+	review bool
 }
 
 // work says what an idle agent should do now, if anything: resume its own
 // story, answer a thread written to since `since`, or pull the first ready
-// story that is not held when the in-progress limit leaves room (a held one
-// keeps its place and is offered once clear, S-0128). A thread that was already
+// story that is not held when the in-progress limit leaves room and review is
+// under its limit (a held one keeps its place and is offered once clear,
+// S-0128; a full review holds every one, S-0243). A thread that was already
 // awaiting the agent before is not work here, so one the agent cannot answer
 // does not wake it again and again; inbox lists every thread awaiting it.
 func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
@@ -49,7 +55,9 @@ func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
 	if err != nil {
 		return WorkOut{}, err
 	}
-	out := WorkOut{Ready: view.ReadyInPullOrder(), CanPull: view.CanPull(), Threads: []ThreadSummary{}}
+	out := WorkOut{Ready: view.ReadyInPullOrder(), CanPull: view.CanPull(), PullHold: view.PullHold(), Threads: []ThreadSummary{}}
+	// the hold is review's only when the in-progress limit has room
+	out.review = out.PullHold != "" && out.PullHold == view.ReviewHold()
 	if out.Ready == nil {
 		out.Ready = []workitem.BoardCard{}
 	}
@@ -83,6 +91,8 @@ func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
 		out.Reason, out.Story = WorkPull, workitem.FirstClear(out.Ready)
 	case out.CanPull && len(out.Ready) > 0:
 		out.WaitingFor = WaitingForHeld
+	case len(out.Ready) > 0 && out.review:
+		out.WaitingFor = WaitingForReview
 	case len(out.Ready) > 0:
 		out.WaitingFor = WaitingForRoom
 	default:

@@ -99,6 +99,38 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 		}
 		lab.release(id)
 	})
+	// S-0243: the operator's word goes past a full review as past a full
+	// in-progress limit, and says so.
+	t.Run("past a full review, with a warning", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		lab.limits(3, 1)
+		reviewed := lab.ready("Reviewed")
+		lab.move(reviewed, workitem.InProgress)
+		lab.move(reviewed, workitem.Review)
+		id := lab.ready("Waits")
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r != nil {
+			t.Fatalf("the launcher started it with review full: %+v", r)
+		}
+		run, err := start(lab, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !run.live() {
+			t.Errorf("not started: %+v", run)
+		}
+		lab.logs.mu.Lock()
+		logged := lab.logs.buf.String()
+		lab.logs.mu.Unlock()
+		if !strings.Contains(logged, `level=WARN msg="agent started past a full review"`) || !strings.Contains(logged, "story="+id) {
+			t.Errorf("no warning: %s", logged)
+		}
+		if j := lab.entries(); len(j) == 0 || !strings.Contains(j[len(j)-1].Detail, "for "+id+" as builder-"+id+" on the operator's word, past review was full (1 of 1) (pid ") {
+			t.Errorf("journal: %+v", j)
+		}
+		lab.release(id)
+	})
 	// S-0182, I-0050: an agent started past a hold is told so, and so is the
 	// journal, so that neither takes it for flai serve's own start.
 	t.Run("past a hold, the agent and the journal say so", func(t *testing.T) {
