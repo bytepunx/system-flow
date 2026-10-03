@@ -1,6 +1,6 @@
 ---
 title: "Runbook: migrate"
-updated: 2026-09-26
+updated: 2026-10-03
 status: active
 ---
 
@@ -49,7 +49,7 @@ The host's registry (`serve/projects.json`, `removed.json`, `dashboards.json`) a
 
 5. Agents that reach flai's MCP server over HTTP are given the new address and token (`flai mcp status`, `flai mcp token`).
 
-Ready stories have had no agent on this machine, so with the `agent` action on, each is started once, in pull order, as the in-progress limit allows.
+Ready stories have had no agent on this machine, so with the `agent` action on, each is started once, in pull order, as the in-progress limit and review allow.
 
 ### flaiover
 
