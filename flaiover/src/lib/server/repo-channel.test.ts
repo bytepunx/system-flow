@@ -179,6 +179,7 @@ describe('Repo over the channel', () => {
 							status: 'ready',
 							entered_at: '2026-09-20T08:00:00Z',
 							blocked: false,
+							draft: true,
 							age_in_column: '1h',
 							age_in_column_seconds: 3600,
 							tasks: { ready: 1, waiting: 2, in_progress: 1, done: 3, layers: 3 }
@@ -228,6 +229,9 @@ describe('Repo over the channel', () => {
 			layers: 3
 		});
 		expect(b.columns.ready[1]).not.toHaveProperty('tasks');
+		// a draft story says so (S-0201); flai omits the flag otherwise, and so does the card
+		expect(b.columns.ready[0].draft).toBe(true);
+		expect(b.columns.ready[1]).not.toHaveProperty('draft');
 	});
 
 	it('repeats a write once, with the same request ID, when flai was lost and came back', async () => {

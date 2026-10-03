@@ -287,6 +287,30 @@ describe('BoardCard', () => {
 		expect(line()).toBeNull();
 	});
 
+	// S-0201: a draft story says so in words, after BLOCKED, in the warning colour
+	it('marks a draft story DRAFT, after BLOCKED, and nothing else', () => {
+		const draft = () => document.querySelector<HTMLElement>('[data-testid="draft"]');
+		component = render({ ...base, blocked: true, draft: true, parent: 'E-0016' });
+		expect(draft()!.textContent).toBe('DRAFT');
+		expect(draft()!.className).toContain('text-warn');
+		expect(draft()!.className).not.toMatch(sizeClass);
+		expect([...details()!.children].map((c) => c.textContent)).toEqual([
+			'improvement',
+			'BLOCKED',
+			'DRAFT',
+			'E-0016'
+		]);
+		unmount(component);
+		component = render(base);
+		expect(draft()).toBeNull();
+		unmount(component);
+		component = render({ ...base, draft: false });
+		expect(draft()).toBeNull();
+		unmount(component);
+		component = render({ ...base, id: 'T-0755', type: 'task', draft: true });
+		expect(draft()).toBeNull();
+	});
+
 	// S-0177: a story in progress that this host has had no agent for says who began it, and where
 	it('shows a story begun on another host, with no agent here', () => {
 		const activity = {

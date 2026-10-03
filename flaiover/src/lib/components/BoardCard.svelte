@@ -4,7 +4,8 @@
 	// blocked flag on the left and the parent's ID on the right (S-0048). The background
 	// is tinted by nature and the left edge striped by type (S-0055); the text stays. A held story
 	// says why it waits after BLOCKED: the hold's code and the stories it waits for (S-0129). A story
-	// with tasks counts them by state, with its plan's layers (S-0176).
+	// with tasks counts them by state, with its plan's layers (S-0176). A draft story, one an agent
+	// wrote that the operator has not finalized, says DRAFT after BLOCKED (S-0201).
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
 	import { stripeFor, tintFor } from '$lib/cardcolour';
@@ -21,6 +22,7 @@
 		parent_title?: string;
 		status?: string;
 		blocked: boolean;
+		draft?: boolean;
 		age_seconds: number;
 		tasks?: TaskSummary;
 	};
@@ -89,6 +91,10 @@
 		<span>{card.nature}</span>
 		{#if card.type !== 'story'}<span>{card.type}</span>{/if}
 		{#if card.blocked}<span class="font-semibold text-danger">BLOCKED</span>{/if}
+		{#if card.type === 'story' && card.draft}<span
+				class="font-semibold text-warn"
+				data-testid="draft">DRAFT</span
+			>{/if}
 		{#if activity?.hold}<span class="font-semibold text-warn" data-testid="held"
 				>{holdLine(activity.hold)}</span
 			>{/if}

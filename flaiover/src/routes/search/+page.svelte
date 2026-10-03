@@ -13,6 +13,8 @@
 		status?: string;
 		type?: string;
 		nature?: string;
+		/** A story an agent wrote that the operator has not finalized (S-0201). */
+		draft?: boolean;
 		snippet: string;
 		route: string;
 	};
@@ -75,7 +77,10 @@
 				>{h.scope}{#if h.type || h.nature}<span class="mx-1">·</span><KindChips
 						type={h.type}
 						nature={h.kind === 'item' ? h.nature : undefined}
-					/>{/if}{h.status ? ` · ${h.status}` : ''}</span
+					/>{/if}{h.status
+					? ` · ${h.status}`
+					: ''}{#if h.kind === 'item' && h.type === 'story' && h.draft}<span class="mx-1">·</span
+					><span class="font-semibold text-warn" data-testid="hit-draft">Draft</span>{/if}</span
 			>
 			<p class="mt-1 text-sm text-ink-soft">{h.snippet}</p>
 			<p class="mt-1 font-mono text-xs text-muted">{h.path}</p>

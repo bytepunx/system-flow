@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
-import { Repo } from './repo';
+import { Repo, type Ask } from './repo';
 import { flaiAsk } from './testing';
 import { adrs, search } from './search';
 
@@ -30,6 +30,40 @@ describe('search on the fixture, through flai', () => {
 	it('snippets show the match', async () => {
 		const hits = await find('session');
 		expect(hits[0].snippet.toLowerCase()).toContain('session');
+	});
+});
+
+// S-0201: flai marks a draft story's hit, and the dashboard passes the mark on with its route.
+describe('search, as flai answers it', () => {
+	it('passes a draft story’s flag through, and adds none where flai gave none', async () => {
+		const hit = {
+			kind: 'item',
+			scope: 'wip',
+			status: 'backlog',
+			type: 'story',
+			score: 1,
+			snippet: ''
+		};
+		const ask = (async () => ({
+			query: 'cranes',
+			indexed: 2,
+			hits: [
+				{
+					...hit,
+					path: 'wip/kanban/stories/S-0002.md',
+					itemId: 'S-0002',
+					title: 'Cranes',
+					draft: true
+				},
+				{ ...hit, path: 'wip/kanban/stories/S-0001.md', itemId: 'S-0001', title: 'Berths' }
+			]
+		})) as unknown as Ask;
+		const { hits } = await search(new Repo('/nowhere', ask), 'cranes');
+		expect(hits.map((h) => [h.itemId, h.route, h.draft])).toEqual([
+			['S-0002', '/items/S-0002', true],
+			['S-0001', '/items/S-0001', undefined]
+		]);
+		expect(hits[1]).not.toHaveProperty('draft');
 	});
 });
 

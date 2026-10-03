@@ -12,6 +12,8 @@ export type Hit = {
 	status?: string;
 	type?: string;
 	nature?: string;
+	/** A story an agent wrote that the operator has not yet finalized (S-0201); absent otherwise. */
+	draft?: boolean;
 	score: number;
 	snippet: string;
 	route: string;
