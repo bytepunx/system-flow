@@ -161,7 +161,7 @@ What claims cost in holds and parallelism, and how far a story's declared touche
 
 | Value | Definition |
 |-------|------------|
-| `items[].held_seconds` | The seconds a story in `ready` was held by the hold rules (`overlap`, `no-touches`, `after`), replayed at every transition of any item from the states of the time and today's touches and `after`: flai records neither a hold nor older touches. Absent for an item that is not a story or was never in ready |
+| `items[].held_seconds` | The seconds a story in `ready` was held by the hold rules (`overlap`, `no-touches`, `after`), replayed at every creation and transition of a story or task, up to now, from the states of the time and today's touches and `after`: flai records neither a hold nor older touches. Absent for an item that is not a story or was never in ready |
 | `claims.limit` | The board's `in-progress` limit today; absent when it has none |
 | `claims.days[]` | `date`, and `in_progress`, the items in `in-progress` at the end of the day |
 | `claims.drift[]` | One entry per story of the report that a commit names, by ID: `id`, `committed` (the files its commits changed), `outside` (those under none of its touches), and `unchanged` (its touches no committed file is under), each a sorted list of paths, with `outside_count` and `unchanged_count` |

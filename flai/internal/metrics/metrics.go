@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -26,6 +27,13 @@ type Options struct {
 	// Threads are the threads the items' agents waited on, read by the caller
 	// (S-0205).
 	Threads []*threads.Thread
+	// Projects are the manifest's sub-projects, whose names and tags a touch
+	// may name; WIPLimit is the board's in-progress limit, 0 without one; and
+	// Commits are the files each story's commits changed, by its canonical
+	// ID, nil when git could not be read (S-0205).
+	Projects []manifest.Project
+	WIPLimit int
+	Commits  map[string][]string
 }
 
 // ItemMetrics are the per-item derived values.
@@ -63,6 +71,8 @@ type ItemMetrics struct {
 	// progress, and WaitReview the time it spent in review (S-0205).
 	WaitThreads *float64 `json:"wait_threads_seconds,omitempty"`
 	WaitReview  *float64 `json:"wait_review_seconds,omitempty"`
+	// HeldSeconds is the time a story spent held in ready (S-0205).
+	HeldSeconds *float64 `json:"held_seconds,omitempty"`
 	// Usage is what agents spent on it, when it carries any (S-0143).
 	Usage *ItemUsage `json:"usage,omitempty"`
 }
@@ -145,6 +155,9 @@ type Report struct {
 	// Waiting is how long the items' agents waited on threads and in review
 	// (S-0205).
 	Waiting Waiting `json:"waiting"`
+	// Claims is the items in progress against the limit and the stories'
+	// touches drift (S-0205).
+	Claims Claims `json:"claims"`
 }
 
 // Compute derives every metric from the items.
@@ -177,9 +190,11 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	}
 	perItem := map[string]ItemMetrics{}
 	waits := threadWaits(all, opt.Threads, opt.Now)
+	held := heldSeconds(items, all, opt.Projects, opt.Now)
 	for _, it := range items {
 		m := Derive(it, opt.Now)
 		m.WaitThreads = waitInProgress(it, waits[workitem.CanonicalID(it.ID)], opt.Now)
+		m.HeldSeconds = held[it.ID]
 		perItem[it.ID] = m
 		rep.Items = append(rep.Items, m)
 	}
@@ -227,6 +242,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.Waiting = waiting(items, perItem, start, opt.Now)
+	rep.Claims = claims(items, all, start, opt)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
