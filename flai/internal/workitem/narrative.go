@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -368,7 +369,8 @@ func (r *Repo) AnswerOpenQuestion(storyID, question, answer, by string, now time
 	return n, nil
 }
 
-// ActiveNarratives lists narratives under wip/agents.
+// ActiveNarratives lists narratives under wip/agents: the S-*.md files, so
+// not the strategic agents' activity documents.
 func (r *Repo) ActiveNarratives() ([]*Narrative, error) {
 	matches, _ := filepath.Glob(filepath.Join(r.AgentsDir(), "S-*.md"))
 	var out []*Narrative
@@ -383,7 +385,8 @@ func (r *Repo) ActiveNarratives() ([]*Narrative, error) {
 	return out, nil
 }
 
-// WriteIndex regenerates wip/agents/index.md from the active narratives.
+// WriteIndex regenerates wip/agents/index.md from the active narratives and,
+// under a heading of their own, the strategic agents' activity documents.
 func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 	narratives, err := r.ActiveNarratives()
 	if err != nil {
@@ -398,6 +401,25 @@ func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 	b.WriteString("| Stream | Title | Status | Last agent | Updated |\n|--------|-------|--------|------------|---------|\n")
 	for _, n := range narratives {
 		fmt.Fprintf(&b, "| [%s](%s.md) | %s | %s | %s | %s |\n", n.Stream, n.Stream, n.Title, orDefault(status[n.Stream], "unknown"), n.Agent, n.Updated)
+	}
+	// An activity document that does not parse is listed as such rather than
+	// failing the index, which every move rewrites; flai check names the fault.
+	var rows []string
+	for _, kind := range ActivityKinds {
+		a, err := ReadActivity(r.ActivityPath(kind))
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+		case err != nil:
+			rows = append(rows, fmt.Sprintf("| [%s](%s.md) | unreadable, see flai check | | | |\n", kind, kind))
+		default:
+			rows = append(rows, fmt.Sprintf("| [%s](%s.md) | %d | %s USD | %d | %s |\n", a.Kind, a.Kind, a.TasksCompleted, formatCost(a.AccruedCost), a.AccruedSeconds, orDefault(a.LastRun, "none")))
+		}
+	}
+	if len(rows) > 0 {
+		b.WriteString("\n## Strategic agents\n\n| Agent | Activities | Cost | Seconds | Last run |\n|-------|------------|------|---------|----------|\n")
+		for _, row := range rows {
+			b.WriteString(row)
+		}
 	}
 	if err := os.MkdirAll(r.AgentsDir(), 0o755); err != nil {
 		return err

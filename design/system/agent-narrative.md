@@ -15,7 +15,10 @@ topics: [all]
 wip/agents/
 ├── README.md        # this convention in brief, shipped by the template
 ├── index.md         # table of active streams, maintained by flai and agents
-└── S-0004.md         # one narrative per active story, named by story ID
+├── S-0004.md         # one narrative per active story, named by story ID
+├── planner.md        # the planner's activity document, written by flai
+├── orchestrator.md   # the orchestrator's activity document, written by flai
+└── analyzer.md       # the analyzer's activity document, written by flai
 ```
 
 A work stream is a story. Tasks report into their story's narrative through the `stream` key. Epics have no narrative; their story narratives are enough.
@@ -60,6 +63,49 @@ Started. Pulled S-0004 to in-progress. Read design/system/flai-cli.md.
 ### 2026-09-15T16:40:00Z
 T-0021 done. Config read/write with tests. Decided on plain encoding/json over viper, see Decisions.
 ```
+
+## Strategic agents' activity documents
+
+The planner, the orchestrator, and the analyzer work above a story and keep no narrative. Each has one activity document per project instead: `planner.md`, `orchestrator.md`, and `analyzer.md` ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). flai writes them; no agent edits them by hand. A document exists once its agent has logged its first activity.
+
+```markdown
+---
+kind: planner
+accrued_cost: 0.4213
+accrued_seconds: 723
+tasks_completed: 1
+last_run: 2026-10-03T18:00:00Z
+---
+
+# Planner activity
+
+flai writes this document, one entry per activity, newest last; do not edit it by hand.
+
+## Log
+
+### 2026-10-03T18:00:00Z
+
+- Summary: Drafted five stories for E-0016.
+- Items: E-0016, S-0230
+- Seconds: 723
+- Cost: 0.4213 USD, estimated
+```
+
+| Front matter | Meaning |
+|--------------|---------|
+| `kind` | `planner`, `orchestrator`, or `analyzer`; the file's name |
+| `accrued_cost` | Sum of the entries' cost, in US dollars |
+| `accrued_seconds` | Sum of the entries' wall-clock seconds |
+| `tasks_completed` | Number of activities logged |
+| `last_run` | When the newest activity ended |
+
+The front matter holds these five keys and no others; it is parsed strictly, so an unknown key is an error.
+
+Each log entry is one activity. Its heading is when the activity ended; a second entry ending in the same second gets `(2)` after the time, so no two headings are the same. The summary is one line the agent gives. `Items` lists the items the activity touched, or `none`. `Cost` has four decimals and is marked `estimated` when it was apportioned or priced rather than reported. Appending an entry adds its cost and seconds to the totals, counts it, and moves `last_run` to its end when that is later.
+
+An activity ends in one of two ways. An agent whose run spans activities, as the orchestrator's does, reports each with the MCP tool `activity_log`, giving its kind, summary, and items; flai measures it and writes the entry. When a strategic run ends, `flai serve` logs the time since the last entry as one activity, with the run's last result as its summary, unless nothing was spent in it. Either way the activity's seconds and cost come from the run's stream-json log, apportioned to the activity's span as a task's are to its intervals ([ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)).
+
+`index.md` lists the documents that exist under `## Strategic agents`, after the active streams, with each agent's activities, cost, seconds, and last run, or that it is unreadable when it does not parse. `flai check` validates their front matter and log and does not treat them as narratives. `flai stats --json` reports each kind's totals and its log entries in the window as `strategic`, defined in [metrics.md](metrics.md).
 
 ## What an agent is told through MCP
 
