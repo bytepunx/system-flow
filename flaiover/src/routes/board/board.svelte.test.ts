@@ -1,5 +1,5 @@
-// S-0161: the board asks for its board, the Publish banner, and the unpushed notice again only when
-// a work item changes, once for changes that arrive together; the agents also when a thread does.
+// S-0161: the board asks for its board and the Publish banner again only when a work item changes,
+// once for changes that arrive together; the agents also when a thread does.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { GATHER_MS } from '$lib/events';
@@ -44,7 +44,6 @@ describe('the board follows the work items (S-0161)', () => {
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/board') return answer(board);
 			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
-			if (url === '/api/unpushed') return answer({ unpushed: null });
 			return answer({ enabled: false });
 		});
 	});
@@ -61,18 +60,27 @@ describe('the board follows the work items (S-0161)', () => {
 		return {
 			board: n('/api/board'),
 			publish: n('/api/publish'),
-			unpushed: n('/api/unpushed'),
 			agents: n('/api/host-agent')
 		};
 	};
 	const open = async () => {
 		c = mount(BoardPage, { target: document.body });
 		await settle();
-		// the unpushed notice asks when it is drawn and again once the first board is in
-		expect(counts()).toEqual({ board: 1, publish: 1, unpushed: 2, agents: 1 });
+		expect(counts()).toEqual({ board: 1, publish: 1, agents: 1 });
 		api.mockClear();
 		return FakeEventSource.opened[0];
 	};
+
+	// S-0195, ADR-0067: publishing is the one way accepted work reaches the remote, so the board has
+	// no push banner and never asks what is unpushed.
+	it('shows no push banner and asks nothing about pushing', async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+		expect(document.querySelector('[data-testid="unpushed"]')).toBeNull();
+		expect(document.querySelector('[data-testid="push-now"]')).toBeNull();
+		expect(document.body.textContent).not.toContain('flai push');
+		expect(api.mock.calls.map(([u]) => u)).not.toContain('/api/unpushed');
+	});
 
 	it('asks nothing again when a narrative or a document changes', async () => {
 		const events = await open();
@@ -80,14 +88,14 @@ describe('the board follows the work items (S-0161)', () => {
 		events.emit('change', { path: 'design/system/overview.md', kind: 'document' });
 		events.emit('change', { path: 'design/adrs/0052-x.md', kind: 'adr' });
 		await settle(GATHER_MS + 50);
-		expect(counts()).toEqual({ board: 0, publish: 0, unpushed: 0, agents: 0 });
+		expect(counts()).toEqual({ board: 0, publish: 0, agents: 0 });
 	});
 
 	it('asks only for the agents when a thread changes', async () => {
 		const events = await open();
 		events.emit('change', { path: 'wip/threads/TH-0001-x.md', kind: 'thread' });
 		await settle(GATHER_MS + 50);
-		expect(counts()).toEqual({ board: 0, publish: 0, unpushed: 0, agents: 1 });
+		expect(counts()).toEqual({ board: 0, publish: 0, agents: 1 });
 	});
 
 	it('asks once for everything when work items change together', async () => {
@@ -98,23 +106,23 @@ describe('the board follows the work items (S-0161)', () => {
 		events.emit('change', { path: 'wip/kanban/board.md', kind: 'item' });
 		events.emit('change', { path: 'wip/agents/S-0001.md', kind: 'narrative' });
 		await settle(GATHER_MS / 2);
-		expect(counts()).toEqual({ board: 0, publish: 0, unpushed: 0, agents: 0 });
+		expect(counts()).toEqual({ board: 0, publish: 0, agents: 0 });
 		await settle(GATHER_MS);
-		expect(counts()).toEqual({ board: 1, publish: 1, unpushed: 1, agents: 1 });
+		expect(counts()).toEqual({ board: 1, publish: 1, agents: 1 });
 	});
 
 	it('asks for everything when the manifest changes', async () => {
 		const events = await open();
 		events.emit('change', { path: 'system-flow.yaml', kind: 'project' });
 		await settle(GATHER_MS + 50);
-		expect(counts()).toEqual({ board: 1, publish: 1, unpushed: 1, agents: 1 });
+		expect(counts()).toEqual({ board: 1, publish: 1, agents: 1 });
 	});
 
 	it("asks for the agents when flai serve says a story's agent started or ended", async () => {
 		const events = await open();
 		events.emit('agent', { story: 'S-0161' });
 		await settle(GATHER_MS + 50);
-		expect(counts()).toEqual({ board: 0, publish: 0, unpushed: 0, agents: 1 });
+		expect(counts()).toEqual({ board: 0, publish: 0, agents: 1 });
 	});
 });
 
@@ -146,7 +154,6 @@ describe('the done lane of a clone missing published tags (S-0174)', () => {
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/board') return answer(withDone);
 			if (url === '/api/publish') return answer(publish);
-			if (url === '/api/unpushed') return answer({ unpushed: null });
 			return answer({ enabled: false });
 		});
 		c = mount(BoardPage, { target: document.body });
@@ -169,7 +176,7 @@ describe('the done lane of a clone missing published tags (S-0174)', () => {
 	it('leaves out the archived cards and says how to fetch the tags', async () => {
 		await open({ plans: [], remote, unplanned: [], push_enabled: true });
 		expect(shown()).toEqual(['S-0002']);
-		const banner = document.querySelector('[data-testid="publish-missing-tags"]')!.textContent!;
+		const banner = document.querySelector('[data-testid="publish-behind"]')!.textContent!;
 		expect(banner).toContain('cli/v1.4.0');
 		expect(banner).toContain('git fetch --tags origin');
 	});
@@ -190,6 +197,9 @@ describe('the done lane of a clone missing published tags (S-0174)', () => {
 			push_enabled: true
 		});
 		expect(shown()).toEqual(['S-0001', 'S-0002']);
-		expect(document.querySelector('[data-testid="publish-missing-tags"]')).toBeNull();
+		expect(document.querySelector('[data-testid="publish-behind"]')).toBeNull();
+		expect(document.querySelector('[data-testid="publish-pending"]')!.textContent).toContain(
+			'S-0001'
+		);
 	});
 });

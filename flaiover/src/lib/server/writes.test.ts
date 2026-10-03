@@ -151,9 +151,9 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 		const back = await r.write<{ status: string }>('item.move', { id: 'S-004', to: 'backlog' });
 		expect(back.data.status).toBe('backlog');
 	});
-	it('asks flai, offline, whether an acceptance is unpushed (S-0063)', async () => {
+	it('is told what a clone behind its remote branch must run before it publishes (S-0195)', async () => {
 		const { execFileSync } = await import('node:child_process');
-		const base = await mkdtemp(join(tmpdir(), 'flaiover-unpushed-'));
+		const base = await mkdtemp(join(tmpdir(), 'flaiover-behind-'));
 		const git = (cwd: string, ...args: string[]) =>
 			execFileSync('git', args, {
 				cwd,
@@ -174,32 +174,31 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 			git(clone, 'commit', '-q', '-m', 'init');
 			git(clone, 'remote', 'add', 'origin', join(base, 'origin.git'));
 			git(clone, 'push', '-q', '-u', 'origin', 'main');
+			// another clone publishes first: the remote branch moves on
+			git(base, 'clone', '-q', 'origin.git', 'other');
+			git(join(base, 'other'), 'commit', '-q', '--allow-empty', '-m', 'chore: elsewhere');
+			git(join(base, 'other'), 'push', '-q', 'origin', 'main');
 			const ask = () =>
 				new Repo(clone, flaiAsk(clone)).run<{
-					pushed: boolean;
-					reason?: string;
-					unpushed?: { acceptances: string[]; tags: string[] };
-				}>('push.pending');
-			expect((await ask()).data).toMatchObject({ pushed: false, reason: 'nothing pending' });
-			git(
-				clone,
-				'commit',
-				'-q',
-				'--allow-empty',
-				'-m',
-				'chore: [S-004] accept and archive; release cli 1.1.0'
-			);
-			git(clone, 'tag', '-a', 'cli/v1.1.0', '-m', 'cli 1.1.0');
-			const { data } = await ask();
-			expect(data.pushed).toBe(false);
-			expect(data.unpushed).toMatchObject({ acceptances: ['S-004'], tags: ['cli/v1.1.0'] });
-			// a dry run pushes nothing
-			expect(git(join(base, 'origin.git'), 'tag', '--list').trim()).toBe('');
+					plans?: unknown[];
+					remote?: {
+						branch?: { upstream: string; head: string; fetched: boolean };
+						fix: string;
+					};
+				}>('publish.preview');
+			const before = (await ask()).data;
+			expect(before.plans ?? []).toEqual([]);
+			expect(before.remote?.branch).toMatchObject({ upstream: 'origin/main', fetched: false });
+			expect(before.remote?.fix).toBe('git fetch origin && git merge origin/main');
+			git(clone, 'fetch', '-q', 'origin');
+			const fetched = (await ask()).data;
+			expect(fetched.remote?.branch).toMatchObject({ upstream: 'origin/main', fetched: true });
+			expect(fetched.remote?.fix).toBe('git merge origin/main');
 		} finally {
 			await rm(base, { recursive: true, force: true });
 		}
 	});
-	it('is refused a push while the operator has not enabled it, and told what enables it (S-0078)', async () => {
+	it('is refused a publish while the operator has not enabled it, and told what enables it (S-0078)', async () => {
 		// a configuration of its own: the refusal is journalled beside it, and that is not the operator's
 		const was = process.env.FLAI_CONFIG;
 		const host = await mkdtemp(join(tmpdir(), 'flaiover-host-'));
@@ -215,7 +214,7 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 				checks: false
 			});
 			expect(Object.values(info.host_actions).every((on) => on === false)).toBe(true);
-			await expect(r.write('push.run')).rejects.toMatchObject({
+			await expect(r.write('publish.run')).rejects.toMatchObject({
 				status: 403,
 				message: expect.stringContaining('flai serve enable push'),
 				data: { action: 'push', enable: 'flai serve enable push' }
@@ -223,7 +222,7 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 			const journal = await readFile(join(host, 'serve', 'journal.jsonl'), 'utf8');
 			expect(JSON.parse(journal.trim())).toMatchObject({
 				action: 'push',
-				method: 'push.run',
+				method: 'publish.run',
 				outcome: 'disabled'
 			});
 		} finally {

@@ -23,6 +23,7 @@ const plans = [
 	}
 ];
 const pending = () => document.querySelector<HTMLElement>('[data-testid="publish-pending"]');
+const behind = () => document.querySelector<HTMLElement>('[data-testid="publish-behind"]');
 
 describe('PublishBanner', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -49,6 +50,7 @@ describe('PublishBanner', () => {
 		expect(document.querySelectorAll('button')).toHaveLength(0);
 		expect(text).toContain('Publishing from the board is off');
 		expect(text).toContain('flai serve enable push');
+		expect(behind()).toBeNull();
 	});
 
 	it('offers a Publish button when the action is enabled, and reports success', async () => {
@@ -110,14 +112,61 @@ describe('PublishBanner', () => {
 			props: { plans: [], enabled: true, remote }
 		});
 		flushSync();
-		const text = document
-			.querySelector('[data-testid="publish-missing-tags"]')!
-			.textContent!.replace(/\s+/g, ' ');
-		expect(text).toContain('missing release tags origin has');
-		expect(text).toContain('flai/v1.26.3 (here flai/v1.18.0)');
+		const text = behind()!.textContent!.replace(/\s+/g, ' ');
+		expect(text).toContain('This clone is behind origin');
+		expect(text).toContain('missing release tag flai/v1.26.3 (here flai/v1.18.0)');
 		expect(text).toContain('flaiover/v0.32.1 (here none)');
-		expect(text).toContain('git fetch --tags origin');
+		expect(text).toContain('run git fetch --tags origin, then look again');
+		expect(text).not.toContain('rebase');
+		expect(document.querySelector('[data-testid="publish-behind-branch"]')).toBeNull();
 		expect(pending()).toBeNull();
+		expect(document.querySelectorAll('button')).toHaveLength(0);
+	});
+
+	// S-0195: a clone behind its remote branch is told so the same way, with the fetch and merge to
+	// run on the host, no plan, and no Publish.
+	it('says the clone is behind its remote branch and names the fetch and merge, offering nothing', () => {
+		const remote = {
+			remote: 'origin',
+			branch: { upstream: 'origin/main', head: '0123456789abcdef0123', fetched: false },
+			fix: 'git fetch origin && git merge origin/main',
+			message: 'origin/main has commits this clone lacks'
+		};
+		c = mount(PublishBanner, {
+			target: document.body,
+			props: { plans: [], enabled: true, remote }
+		});
+		flushSync();
+		const text = behind()!.textContent!.replace(/\s+/g, ' ');
+		expect(text).toContain('This clone is behind origin');
+		expect(text).toContain(
+			'origin/main has commits this clone lacks (at 0123456789ab, not fetched here)'
+		);
+		expect(text).toContain('git fetch origin && git merge origin/main');
+		expect(text).toContain('or rebase onto origin/main instead of merging');
+		expect(document.querySelector('[data-testid="publish-missing-tag"]')).toBeNull();
+		expect(pending()).toBeNull();
+		expect(document.querySelector('[data-testid="publish-now"]')).toBeNull();
+		expect(document.querySelectorAll('button')).toHaveLength(0);
+	});
+
+	it('says when the remote head is fetched but not merged, beside missing tags', () => {
+		const remote = {
+			remote: 'origin',
+			behind: [{ component: 'flai', local: 'flai/v1.18.0', remote: 'flai/v1.26.3' }],
+			branch: { upstream: 'origin/main', head: 'fedcba9876543210', fetched: true },
+			fix: 'git fetch --tags origin && git merge origin/main',
+			message: 'both'
+		};
+		c = mount(PublishBanner, {
+			target: document.body,
+			props: { plans: [], enabled: true, remote }
+		});
+		flushSync();
+		const text = behind()!.textContent!.replace(/\s+/g, ' ');
+		expect(text).toContain('missing release tag flai/v1.26.3');
+		expect(text).toContain('fetched here but not merged');
+		expect(text).toContain('git fetch --tags origin && git merge origin/main');
 		expect(document.querySelectorAll('button')).toHaveLength(0);
 	});
 
@@ -136,7 +185,7 @@ describe('PublishBanner', () => {
 		expect(warn).toContain('Not checked against origin');
 		expect(warn).toContain('unable to access the remote');
 		expect(document.querySelector('[data-testid="publish-now"]')).toBeNull();
-		expect(document.querySelector('[data-testid="publish-missing-tags"]')).toBeNull();
+		expect(behind()).toBeNull();
 	});
 
 	// I-0024: what no plan covers is named with why, beside the plan.

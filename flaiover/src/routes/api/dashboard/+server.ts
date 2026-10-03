@@ -47,8 +47,8 @@ async function dashboardEnabled(): Promise<boolean> {
 
 /**
  * POST {action}: check reports whether a newer image is available, changing nothing (a read that
- * pulls, like push.pending's dry-run fetch — S-0081); restart, upgrade, and stop are the
- * dashboard host action, gated the same way push and publish are (flai serve enable dashboard).
+ * pulls — S-0081); restart, upgrade, and stop are the dashboard host action, gated the same way
+ * Publish is (flai serve enable dashboard).
  * Real Docker time: restart and upgrade get generous timeouts, upgrade longest of all since it
  * pulls an image and waits for a temporary container to answer healthy before it touches anything
  * running. 403 with what enables it while the operator has not; the running container is never

@@ -7,7 +7,7 @@ import type { RequestHandler } from './$types';
  * read, S-0082): which check is running, pass/fail so far, outcome and
  * duration once it has ended. A story with no run yet answers { running:
  * false }, not an error. Carries checks_enabled alongside it (project.info's
- * host_actions.checks), asked of flai each time like push's own pushEnabled:
+ * host_actions.checks), asked of flai each time like publish's pushEnabled:
  * a setting of the host, not of the project, so no change notice would ever
  * clear a remembered answer.
  */

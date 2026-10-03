@@ -1,6 +1,5 @@
 <script lang="ts">
 	import KindChips from '$lib/components/KindChips.svelte';
-	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
@@ -229,8 +228,6 @@
 		});
 		const data = await r.json();
 		if (!r.ok) notice = `refused: ${data.error}`;
-		else if (data.push_error)
-			notice = `accepted locally but not pushed (${data.push_error}); push the commit and tags from a shell`;
 		else if (data.tags?.length) notice = `accepted: released ${data.tags.join(', ')}`;
 		else notice = `done${data.warnings?.length ? ': ' + data.warnings.join(' ') : ''}`;
 		await load();
@@ -339,7 +336,6 @@
 						href={resolve('/items/[id]', { id: item.parent })}>{item.parent}</a
 					>{/if}
 			</p>
-			{#if item.status === 'done'}<div class="mt-2"><UnpushedNotice item={item.id} /></div>{/if}
 			{#if notice}<DismissibleNotice
 					class="mt-2 rounded border border-line-strong bg-raised p-2 text-sm"
 					testid="item-notice"

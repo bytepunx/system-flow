@@ -41,7 +41,7 @@ export const POST: RequestHandler = ({ params, request }) =>
 				reason: body.reason,
 				include_uncommitted: body.include_uncommitted === true
 			},
-			// A story moved to done is accepted: a merge, a release, and a push take their time.
+			// A story moved to done is accepted: a rebase, a merge, and an archive take their time.
 			{ timeoutMs: body.to === 'done' ? 600000 : 60000 }
 		);
 		return { ...data, warnings: [...(data?.warnings ?? []), ...warnings] };

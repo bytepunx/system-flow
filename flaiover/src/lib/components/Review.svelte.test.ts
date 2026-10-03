@@ -156,6 +156,10 @@ describe('Review', () => {
 		expect(text).toContain('story/S-0041');
 		expect(text).toContain('docs/a.md');
 		expect(text).toContain('0.12.1 → 0.13.0');
+		// ADR-0067: accepting pushes nothing, and the page names no push command
+		const local = document.querySelector('[data-testid="accept-stays-local"]')!.textContent!;
+		expect(local.replace(/\s+/g, ' ')).toContain('stays local until it is published');
+		expect(text).not.toContain('flai push');
 		// hunks on demand, with + and - kept
 		expect(text).not.toContain('+three');
 		[...document.querySelectorAll('button')]
@@ -195,14 +199,14 @@ describe('Review', () => {
 		expect(box?.textContent).toContain('agent-S-0041 is committing them (pid 7)');
 	});
 
-	it('accepts as a stream: each step, then the tags, and says it was not pushed', async () => {
+	// ADR-0067: acceptance pushes nothing; what is accepted stays local until it is published.
+	it('accepts as a stream: each step, then says it stays local until published', async () => {
 		backend({
 			accept: () =>
 				ndjson([
 					{ event: 'progress', step: 'merged', msg: 'story/S-0041 rebased and fast-forwarded' },
 					{ event: 'progress', step: 'committed', msg: 'chore: [S-0041] accept and archive' },
-					{ event: 'warning', msg: 'run: git push origin HEAD flaiover/v0.13.0' },
-					{ event: 'done', result: { status: 'done', tags: ['flaiover/v0.13.0'], pushed: false } }
+					{ event: 'done', result: { id: 'S-0041', status: 'done', merged: true, archived: 3 } }
 				])
 		});
 		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
@@ -214,8 +218,13 @@ describe('Review', () => {
 		expect(text).toContain('story/S-0041 rebased and fast-forwarded');
 		expect(text).toContain('chore: [S-0041] accept and archive');
 		expect(text).toContain('S-0041 is accepted');
-		expect(text).toContain('flaiover/v0.13.0');
-		expect(text).toContain('Not pushed');
+		expect(text).toContain('Nothing was released');
+		const local = document.querySelector('[data-testid="accept-unpublished"]')!.textContent!;
+		expect(local.replace(/\s+/g, ' ')).toContain(
+			'stays local until it is published: Publish on the board, or flai release --pending'
+		);
+		expect(text).not.toContain('flai push');
+		expect(api.mock.calls.map(([u]) => u)).not.toContain('/api/unpushed');
 		expect(button('Accept')).toBeUndefined();
 	});
 

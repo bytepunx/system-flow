@@ -4,9 +4,10 @@
 	// operator, when they have enabled the push action (flai serve enable push, S-0078; the same
 	// gate the old automatic push used). The plan is shown before it runs, same as an acceptance's
 	// preview; what happened after, success or flai's error verbatim, same as the review page.
-	// A clone missing release tags its remote has offers nothing to publish and says how to fetch
-	// them; a remote that could not be asked is a warning over the plan (S-0174). Accepted items no
-	// plan covers are named with why (I-0024).
+	// Publishing is the one way accepted work reaches the remote (ADR-0067). A clone missing
+	// release tags its remote has (S-0174), or behind its remote branch (S-0195), offers nothing to
+	// publish and names the command that brings it in step; a remote that could not be asked is a
+	// warning over the plan (S-0174). Accepted items no plan covers are named with why (I-0024).
 	import { api } from '$lib/api';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 	import { lagging, type RemoteTags, type Unplanned } from '$lib/publish';
@@ -77,20 +78,30 @@
 	<div
 		class="mb-2 rounded border border-warn bg-warn-soft p-2 text-xs text-warn"
 		role="status"
-		data-testid="publish-missing-tags"
+		data-testid="publish-behind"
 	>
-		<p class="font-semibold">This clone is missing release tags {remote.remote} has:</p>
+		<p class="font-semibold">This clone is behind {remote.remote}:</p>
 		<ul class="mt-1 space-y-1">
 			{#each remote.behind ?? [] as b (b.component)}
-				<li>
-					<span class="font-mono">{b.remote}</span> (here {b.local ?? 'none'})
+				<li data-testid="publish-missing-tag">
+					missing release tag <span class="font-mono">{b.remote}</span> (here {b.local ?? 'none'})
 				</li>
 			{/each}
+			{#if remote.branch}
+				<li data-testid="publish-behind-branch">
+					<span class="font-mono">{remote.branch.upstream}</span> has commits this clone lacks (at
+					<span class="font-mono">{remote.branch.head.slice(0, 12)}</span>, {remote.branch.fetched
+						? 'fetched here but not merged'
+						: 'not fetched here'})
+				</li>
+			{/if}
 		</ul>
 		<p class="mt-1">
-			What was accepted since may already be published, so nothing is offered to publish. Fetch the
-			tags in the project's checkout on the host:
-			<code class="rounded bg-surface px-1 text-ink">{remote.fix}</code>
+			What was accepted since may already be published, so nothing is offered to publish. In the
+			project's checkout on the host, run
+			<code class="rounded bg-surface px-1 text-ink">{remote.fix}</code>{#if remote.branch}
+				(or rebase onto <span class="font-mono">{remote.branch.upstream}</span> instead of merging){/if},
+			then look again.
 		</p>
 	</div>
 {/if}

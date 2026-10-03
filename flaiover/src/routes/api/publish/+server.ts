@@ -20,10 +20,10 @@ export type PendingPlan = {
 
 /**
  * GET: what publishing now would release (flai's release.pending, `flai release --pending
- * --dry-run`), and whether the operator has enabled the push host action, which also gates
- * publishing (ADR-0031, S-0078). `remote` is how the clone's release tags stand against its
- * remote's when that has something to say (S-0174), and `unplanned` the accepted items no plan
- * covers (I-0024). No flai connected reads as nothing pending, not an error: the host flai banner
+ * --dry-run`), and whether the operator has enabled the push host action, which gates publishing
+ * (ADR-0031, S-0078, ADR-0067). `remote` is how the clone's release tags and branch stand against
+ * its remote's when that has something to say (S-0174, S-0195), and `unplanned` the accepted items
+ * no plan covers (I-0024). No flai connected reads as nothing pending, not an error: the host flai banner
  * already says why.
  */
 export const GET: RequestHandler = () =>

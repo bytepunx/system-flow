@@ -71,7 +71,6 @@ describe('the lane menu (S-0167)', () => {
 			}
 			if (url === '/api/board') return answer(board(writable));
 			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
-			if (url === '/api/unpushed') return answer({ unpushed: null });
 			return answer({ enabled: false });
 		});
 		c = mount(BoardPage, { target: document.body });

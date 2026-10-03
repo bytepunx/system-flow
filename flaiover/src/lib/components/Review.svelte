@@ -80,14 +80,7 @@
 	let running = $state(false);
 	let progress = $state<Progress[]>([]);
 	let warnings = $state<string[]>([]);
-	let result = $state<{
-		tags?: string[];
-		pushed?: boolean;
-		push_error?: string;
-		published?: string[];
-	} | null>(null);
-	// whether the operator enabled pushing from the board, on the host (S-0078)
-	let pushEnabled = $state(false);
+	let result = $state<{ tags?: string[] } | null>(null);
 	let failure = $state<string | null>(null);
 
 	let sendingBack = $state(false);
@@ -95,9 +88,8 @@
 
 	// Checks (S-0082): the operator's named commands, run in the story's
 	// worktree, gated on the checks host action. checksEnabled comes from
-	// project.info's host_actions, asked afresh each load like pushEnabled;
-	// checksRun is the last known state, kept live by watchChecks while a
-	// run is active. watchToken guards against a stale loop from a previous
+	// project.info's host_actions, asked afresh each load; checksRun is the
+	// last known state, kept live by watchChecks while a run is active. watchToken guards against a stale loop from a previous
 	// story still running after id changes.
 	let checksEnabled = $state(false);
 	let checksRun = $state<ChecksRun | null>(null);
@@ -159,9 +151,6 @@
 		api('/api/board')
 			.then(async (r) => (writable = r.ok ? (await r.json()).writable : false))
 			.catch(() => (writable = false));
-		api('/api/unpushed')
-			.then(async (r) => (pushEnabled = r.ok ? (await r.json()).push_enabled === true : false))
-			.catch(() => (pushEnabled = false));
 		get<{ body: string }>(`/api/docs/file?path=${encodeURIComponent(`wip/agents/${target}.md`)}`)
 			.then(async (d) => {
 				narrative = d.body;
@@ -381,21 +370,10 @@
 			{#if result.tags?.length}<p>Released: {result.tags.join(', ')}</p>{:else}<p>
 					Nothing was released.
 				</p>{/if}
-			{#if result.pushed}
-				<p data-testid="accept-pushed">
-					Pushed from the host{result.tags?.length ? ', tags included' : ''}{result.published
-						?.length
-						? `; published ${result.published.join(', ')}`
-						: ''}.
-				</p>
-			{:else}
-				<p data-testid="accept-not-pushed">
-					Not pushed{result.push_error ? ` (${result.push_error})` : ''}: on the host, run
-					<code class="rounded bg-surface px-1 text-ink">flai push --pending</code>{pushEnabled
-						? ', or push from the notice on the board'
-						: ''}.
-				</p>
-			{/if}
+			<p data-testid="accept-unpublished">
+				It stays local until it is published: Publish on the board, or
+				<code class="rounded bg-surface px-1 text-ink">flai release --pending</code> on the host.
+			</p>
 		</div>
 	{:else if !inReview}
 		<p class="mb-4 rounded border border-line bg-surface p-3 text-sm" role="status">
@@ -533,18 +511,10 @@
 								{v(s.from)} → {v(s.to)}{/each}
 						</li>
 					{/if}
-					{#if pushEnabled}
-						<li>
-							Push the commit and the release tags from the host, with the operator's credentials,
-							and publish the template if its version moves: the operator enabled pushing from the
-							board.
-						</li>
-					{:else}
-						<li>
-							Nothing is pushed: pushing from the board is off. Push from a shell on the host
-							afterwards (<code>flai push --pending</code>).
-						</li>
-					{/if}
+					<li data-testid="accept-stays-local">
+						Nothing is pushed: the accepted work stays local until it is published, from Publish on
+						the board or with <code>flai release --pending</code> on the host.
+					</li>
 				</ul>
 			{/if}
 

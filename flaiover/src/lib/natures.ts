@@ -17,7 +17,7 @@ export const NATURES = [
 	{
 		name: 'research',
 		meaning:
-			'Producing knowledge: a spike or investigation with a written finding as the deliverable. Accepted and pushed, no release.'
+			'Producing knowledge: a spike or investigation with a written finding as the deliverable. Accepted onto main, no release.'
 	},
 	{
 		name: 'experiment',

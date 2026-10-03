@@ -12,7 +12,6 @@
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import BoardTypes from '$lib/components/BoardTypes.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
-	import UnpushedNotice from '$lib/components/UnpushedNotice.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import { anyRunning, storyActivity, type HostAgent } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
@@ -58,8 +57,6 @@
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
 
-	// bumped on every load so the unpushed notice asks again when a work item changes (S-0161)
-	let loads = $state(0);
 	async function load() {
 		const r = await api('/api/board');
 		const body = await r.json();
@@ -70,7 +67,6 @@
 		}
 		if (notice?.kind === 'error' && !board) notice = null;
 		board = body;
-		loads += 1;
 	}
 
 	// Everything accepted and unreleased since each component's last tag (S-0087), for the done
@@ -133,10 +129,10 @@
 		load();
 		void loadPublish();
 		void loadAgents();
-		// The board, the Publish banner, and the unpushed notice are read from the work items: a
-		// narrative, a thread, or a document changing asks for none of them, and changes that arrive
-		// together ask once (S-0161). The agents are read from the items and the threads, and flai
-		// serve says when one starts or ends.
+		// The board and the Publish banner are read from the work items: a narrative, a thread, or a
+		// document changing asks for neither of them, and changes that arrive together ask once
+		// (S-0161). The agents are read from the items and the threads, and flai serve says when one
+		// starts or ends.
 		const agents = debounced(() => void loadAgents());
 		const stops = [
 			follow(['item'], () => {
@@ -332,11 +328,6 @@
 		if (!r.ok) notice = { kind: 'error', text: body.error ?? r.statusText };
 		else if (body.warnings?.length)
 			notice = { kind: 'warn', text: `${id} → ${to}. ${body.warnings.join(' ')}` };
-		else if (body.push_error)
-			notice = {
-				kind: 'warn',
-				text: `${id} accepted locally${body.tags?.length ? ` (${body.tags.join(', ')})` : ''} but not pushed: ${body.push_error}. Push the commit and tags from a shell.`
-			};
 		else if (body.tags?.length)
 			notice = { kind: 'ok', text: `${id} accepted: released ${body.tags.join(', ')}` };
 		else if (body.cancelled?.length)
@@ -427,7 +418,6 @@
 	{/if}
 </div>
 <div class="mb-3"><BoardLegend /></div>
-<UnpushedNotice refresh={loads} />
 <HostAgentNotice status={hostAgent} />
 {#if notice}
 	<DismissibleNotice
