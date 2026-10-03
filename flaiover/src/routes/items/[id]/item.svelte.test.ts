@@ -357,39 +357,74 @@ describe('the item page (S-0154)', () => {
 		inboxState.data = null;
 	});
 
-	// S-0199: a story's page shows its cost of delay and forecast, read only, each only when set
-	it("shows a story's cost of delay and forecast when set, and neither when not", async () => {
+	// S-0199: a story's page shows its cost of delay and forecast, read only, each only when set;
+	// S-0204: the inputs and the planner's value each with who set them and when (ADR-0080)
+	describe('its cost of delay and forecast', () => {
 		const text = (testid: string) =>
 			[...(document.querySelector(`[data-testid="${testid}"]`)?.children ?? [])].map((d) =>
 				d.textContent!.trim()
 			);
-		serve({
-			...story,
-			cost_of_delay: {
-				inputs: { revenue_per_week: 1000, time_lost_per_cycle: '4h' },
-				value: 1500,
+		const stale = () => document.querySelector('[data-testid="item-cost-of-delay-stale"]');
+		const costOfDelay = (inputsAt: string) => ({
+			inputs: {
+				revenue_per_week: 1200,
+				time_lost_per_cycle: '6h',
 				by: 'alex',
-				at: '2026-10-03T09:00:00Z'
+				at: inputsAt
 			},
-			forecast: { delivery: '2026-10-07T17:00:00Z', by: 'planner', at: '2026-10-03T09:30:00Z' }
-		} as typeof story);
-		c = mount(ItemPage, { target: document.body });
-		await settle();
-		expect(text('item-cost-of-delay')).toEqual([
-			'cost of delay: 1,500 per week',
-			'revenue 1,000 per week · 4h lost per cycle',
-			'set by alex at 2026-10-03T09:00:00Z'
-		]);
-		expect(text('item-forecast')).toEqual([
-			'forecast: delivery 2026-10-07T17:00:00Z',
-			'set by planner at 2026-10-03T09:30:00Z'
-		]);
-		unmount(c);
-		serve(story);
-		c = mount(ItemPage, { target: document.body });
-		await settle();
-		expect(document.querySelector('[data-testid="item-cost-of-delay"]')).toBeNull();
-		expect(document.querySelector('[data-testid="item-forecast"]')).toBeNull();
+			value: 1650,
+			by: 'planner',
+			at: '2026-10-03T09:20:00Z'
+		});
+
+		it("shows a story's cost of delay and forecast when set, and neither when not", async () => {
+			serve({
+				...story,
+				cost_of_delay: costOfDelay('2026-10-03T09:00:00Z'),
+				forecast: { delivery: '2026-10-07T17:00:00Z', by: 'planner', at: '2026-10-03T09:30:00Z' }
+			} as typeof story);
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(text('item-cost-of-delay')).toEqual([
+				'cost of delay: 1,650 per week, set by planner at 2026-10-03T09:20:00Z',
+				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03T09:00:00Z'
+			]);
+			expect(stale()).toBeNull();
+			expect(text('item-forecast')).toEqual([
+				'forecast: delivery 2026-10-07T17:00:00Z',
+				'set by planner at 2026-10-03T09:30:00Z'
+			]);
+			unmount(c);
+			serve(story);
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(document.querySelector('[data-testid="item-cost-of-delay"]')).toBeNull();
+			expect(document.querySelector('[data-testid="item-forecast"]')).toBeNull();
+		});
+
+		it('notes that the value is out of date when the inputs were set after it', async () => {
+			serve({ ...story, cost_of_delay: costOfDelay('2026-10-03T10:00:00Z') } as typeof story);
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(stale()?.textContent?.trim()).toBe(
+				"The inputs changed after the value was set, so the planner's value is out of date."
+			);
+			expect(text('item-cost-of-delay')[1]).toBe(
+				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03T10:00:00Z'
+			);
+		});
+
+		it('says an epic has no value yet when only its inputs are set, with no note', async () => {
+			const { inputs } = costOfDelay('2026-10-03T10:00:00Z');
+			serve({ ...story, type: 'epic', cost_of_delay: { inputs } } as typeof story);
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(text('item-cost-of-delay')).toEqual([
+				'cost of delay: no value yet',
+				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03T10:00:00Z'
+			]);
+			expect(stale()).toBeNull();
+		});
 	});
 
 	// S-0201: a draft story says so beside its title and is finalized from its page without a reload

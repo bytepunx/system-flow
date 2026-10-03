@@ -18,7 +18,13 @@
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
 	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
-	import { costOfDelayLines, forecastLines, type CostOfDelay, type Forecast } from '$lib/planning';
+	import {
+		costOfDelayLines,
+		costOfDelayStale,
+		forecastLines,
+		type CostOfDelay,
+		type Forecast
+	} from '$lib/planning';
 	import type { Hold, StoryActivity } from '$lib/activity';
 	import type { TaskPlan as Plan } from '$lib/taskplan';
 
@@ -83,6 +89,8 @@
 	const draft = $derived(item?.type === 'story' && item.draft === true);
 	// The item's planning data, read only (S-0199): each block a line, then lines under it.
 	const costOfDelay = $derived(costOfDelayLines(item?.cost_of_delay));
+	// The inputs changed after the planner set the value (ADR-0080), so it is to be worked out again.
+	const valueStale = $derived(costOfDelayStale(item?.cost_of_delay));
 	const forecast = $derived(forecastLines(item?.forecast));
 	// The form for another item of this one's type (S-0171): the dashboard makes epics and stories,
 	// and a new story starts on its own (S-0192). Tasks are the agent's to write.
@@ -557,6 +565,12 @@
 					{#if costOfDelay.length}<div data-testid="item-cost-of-delay">
 							<div>{costOfDelay[0]}</div>
 							{#each costOfDelay.slice(1) as line, i (i)}<div class="text-muted">{line}</div>{/each}
+							{#if valueStale}<div
+									class="font-semibold text-warn"
+									data-testid="item-cost-of-delay-stale"
+								>
+									The inputs changed after the value was set, so the planner's value is out of date.
+								</div>{/if}
 						</div>{/if}
 					{#if forecast.length}<div data-testid="item-forecast">
 							<div>{forecast[0]}</div>
