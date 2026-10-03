@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // sameAnswer runs the command a read of the dashboard's used to start, with
@@ -116,11 +117,19 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "epic", "new", "Spare"); code != 0 {
 		t.Fatal(errOut)
 	}
+	// a strategic agent's activity document, which stats reads (ADR-0079)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.AppendActivity(workitem.ActivityPlanner, workitem.ActivityEntry{At: time.Now(), Summary: "Planned E-0001.", Items: []string{"E-0001"}, Seconds: 60, Cost: 0.1}); err != nil {
+		t.Fatal(err)
+	}
 	all := func() (publish string) {
 		t.Helper()
 		says("item.show", answered("item.show", `{"id":"S-0002"}`, "edit", "S-0002", "--show"), `"hash"`)
 		says("item.move.preview", answered("item.move.preview", `{"id":"E-0002"}`, "move", "E-0002", "cancelled", "--by=designer", "--reason=preview", "--dry-run"), `"dry_run":true`)
-		answered("stats.get", `{}`, "stats")
+		says("stats.get", answered("stats.get", `{}`, "stats"), `"strategic":[{"kind":"planner","cost":0.1,"seconds":60,"activities":1`)
 		answered("stats.get", `{"since":"12w","type":"task","by":"parent"}`, "stats", "--since=12w", "--type=task", "--by=parent")
 		says("stats.get by the hour", answered("stats.get", `{"since":"7d","bucket":"hour"}`, "stats", "--since=7d", "--bucket=hour"), `"bucket":"hour"`, `"spend":{"epic":`)
 		return answered("publish.preview", `{}`, "release", "--pending", "--dry-run")

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -133,5 +134,65 @@ func TestStatsCommand(t *testing.T) {
 	}
 	if _, errOut, code := a("stats", "--bucket", "hour", "--since", "90d"); code == 0 || !strings.Contains(errOut, "31 days or less") {
 		t.Errorf("an hour over 90 days: %s", errOut)
+	}
+}
+
+// ADR-0079: flai stats prints each strategic agent's totals from its
+// activity document, --json carries them and the window's log entries under
+// strategic, and an unreadable document stops stats as an unreadable item
+// does.
+func TestStatsReportsTheStrategicAgents(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+	a := func(args ...string) (string, string, int) { return runInAt(t, root, at, args...) }
+	out, errOut, code := a("stats")
+	if code != 0 || strings.Contains(out, "strategic") {
+		t.Fatalf("no documents: %d %s %s", code, out, errOut)
+	}
+	write := func(doc *workitem.Activity) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, "wip", "agents", doc.Kind+".md"), []byte(doc.Marshal()), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(&workitem.Activity{Kind: workitem.ActivityPlanner, AccruedCost: 0.5213, AccruedSeconds: 823, TasksCompleted: 2, LastRun: "2026-10-03T18:00:00Z",
+		Entries: []workitem.ActivityEntry{
+			{At: time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), Summary: "Long ago", Seconds: 100, Cost: 0.1},
+			{At: time.Date(2026, 10, 3, 18, 0, 0, 0, time.UTC), Summary: "Drafted five stories", Items: []string{"E-0016", "S-0230"}, Seconds: 723, Cost: 0.4213, Estimated: true},
+		}})
+	write(&workitem.Activity{Kind: workitem.ActivityAnalyzer, AccruedCost: 0.05, AccruedSeconds: 60, TasksCompleted: 1, LastRun: "2026-10-01T08:00:00Z",
+		Entries: []workitem.ActivityEntry{{At: time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC), Summary: "Read the issues", Seconds: 60, Cost: 0.05}}})
+	out, errOut, code = a("stats")
+	want := "\nstrategic agents (all time):\n  planner: 2 activities, 0.5213 USD, 823 s, last 2026-10-03T18:00:00Z\n  analyzer: 1 activity, 0.0500 USD, 60 s, last 2026-10-01T08:00:00Z\n"
+	if code != 0 || !strings.Contains(out, want) || strings.Contains(out, "orchestrator") {
+		t.Errorf("text: %d %s\n%s", code, errOut, out)
+	}
+	out, errOut, code = a("stats", "--json")
+	var rep struct {
+		Strategic []struct {
+			Kind       string  `json:"kind"`
+			Cost       float64 `json:"cost"`
+			Seconds    int64   `json:"seconds"`
+			Activities int     `json:"activities"`
+			Log        []struct {
+				At        string   `json:"at"`
+				Estimated bool     `json:"estimated"`
+				Items     []string `json:"items"`
+			} `json:"log"`
+		} `json:"strategic"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &rep) != nil {
+		t.Fatalf("json: %d %s %s", code, errOut, out)
+	}
+	if s := rep.Strategic; len(s) != 2 || s[0].Kind != "planner" || s[0].Seconds != 823 || len(s[0].Log) != 1 || s[0].Log[0].At != "2026-10-03T18:00:00Z" ||
+		!s[0].Log[0].Estimated || len(s[0].Log[0].Items) != 2 || s[1].Kind != "analyzer" || s[1].Activities != 1 || len(s[1].Log) != 1 {
+		t.Errorf("strategic = %+v", s)
+	}
+	if err := os.WriteFile(filepath.Join(root, "wip", "agents", "orchestrator.md"), []byte("---\nkind: orchestrator\nmood: busy\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := a("stats"); code == 0 || !strings.Contains(errOut, "orchestrator.md") || !strings.Contains(errOut, "activity documents") {
+		t.Errorf("an unreadable document: %d %s", code, errOut)
 	}
 }

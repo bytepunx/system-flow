@@ -50,7 +50,11 @@ scripts. A bucket of an hour needs a window of 31 days or less.`,
 			if err != nil {
 				return err
 			}
-			rep := metrics.Compute(items, metrics.Options{Now: a.now(), Since: window, Type: typ, By: by, Bucket: bucket})
+			activities, err := repo.Activities()
+			if err != nil {
+				return fmt.Errorf("cannot read the strategic agents' activity documents: %w; flai writes them, so restore the file from git or run flai check to see what is wrong", err)
+			}
+			rep := metrics.Compute(items, metrics.Options{Now: a.now(), Since: window, Type: typ, By: by, Bucket: bucket, Activities: activities})
 			if a.jsonOut {
 				return a.printJSON(rep)
 			}
@@ -91,6 +95,27 @@ func printSummary(a *app, rep *metrics.Report) {
 		for _, w := range rep.Throughput {
 			fmt.Fprintf(a.out, "  %s (%s)  %d\n", w.Week, w.Start, w.Done)
 		}
+	}
+	printStrategic(a, rep.Strategic)
+}
+
+// printStrategic prints each strategic agent's totals as its activity
+// document holds them, all time (ADR-0079).
+func printStrategic(a *app, agents []metrics.StrategicAgent) {
+	if len(agents) == 0 {
+		return
+	}
+	fmt.Fprintln(a.out, "\nstrategic agents (all time):")
+	for _, s := range agents {
+		noun := "activities"
+		if s.Activities == 1 {
+			noun = "activity"
+		}
+		last := ""
+		if s.LastRun != "" {
+			last = ", last " + s.LastRun
+		}
+		fmt.Fprintf(a.out, "  %s: %d %s, %.4f USD, %d s%s\n", s.Kind, s.Activities, noun, s.Cost, s.Seconds, last)
 	}
 }
 

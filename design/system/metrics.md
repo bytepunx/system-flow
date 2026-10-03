@@ -90,6 +90,28 @@ A value is absent when its divisor is zero.
 
 `flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, and since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `minutes_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, and its `models`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
 
+## Strategic agents (S-0206)
+
+What the planner, the orchestrator, and the analyzer spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). This is apart from item usage: an activity's cost is not on any item.
+
+`flai stats --json` carries them under `strategic`, a list with one entry per document that exists, in the order planner, orchestrator, analyzer, and an empty list when none does. The totals are the document's front matter as written, over all time, not the window's; only `log` is windowed. `flai stats` prints the totals, one line per agent, and nothing when there are no documents. An unreadable document stops `flai stats` with its path and what is wrong, as an unreadable item does.
+
+| Field | Source | Precision |
+|-------|--------|-----------|
+| `kind` | `kind`: `planner`, `orchestrator`, or `analyzer` | |
+| `cost` | `accrued_cost`, in US dollars | Four decimals, as written |
+| `seconds` | `accrued_seconds`, wall-clock | Whole seconds |
+| `activities` | `tasks_completed`, the number of activities logged | |
+| `last_run` | `last_run`, when the newest activity ended; `""` before the first | UTC, to the second |
+| `log` | The log entries that ended in the window, from its start to the report's now, both included, oldest first | |
+| `log[].at` | When the activity ended, the entry's heading | UTC, to the second |
+| `log[].seconds` | The entry's wall-clock seconds | Whole seconds |
+| `log[].cost` | The entry's cost, in US dollars | Four decimals, as written |
+| `log[].estimated` | `true` when the cost was apportioned or priced rather than reported; absent otherwise | |
+| `log[].items` | The IDs of the items the activity touched; `[]` for none | |
+
+The cost and use per day, and their comparison with delivery, come with S-0205.
+
 ## Charts
 
 Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.

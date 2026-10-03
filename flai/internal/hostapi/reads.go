@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -187,7 +188,11 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 				if err != nil {
 					return nil, err
 				}
-				return metrics.Compute(items, metrics.Options{Now: now(), Since: window, Type: in.Type, By: in.By, Bucket: in.Bucket}), nil
+				activities, err := repo.Activities()
+				if err != nil {
+					return nil, fmt.Errorf("cannot read the strategic agents' activity documents: %w; flai writes them, so restore the file from git or run flai check to see what is wrong", err)
+				}
+				return metrics.Compute(items, metrics.Options{Now: now(), Since: window, Type: in.Type, By: in.By, Bucket: in.Bucket, Activities: activities}), nil
 			})
 		},
 

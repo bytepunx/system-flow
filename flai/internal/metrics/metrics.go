@@ -19,6 +19,9 @@ type Options struct {
 	// Bucket is what spend over time is laid out in: hour, day, or week,
 	// default day (S-0163).
 	Bucket string
+	// Activities are the strategic agents' activity documents, read by the
+	// caller (ADR-0079).
+	Activities []*workitem.Activity
 }
 
 // ItemMetrics are the per-item derived values.
@@ -113,6 +116,8 @@ type Report struct {
 	Aging       []AgingItem           `json:"aging"`
 	// Usage is what agents spent on the items done in the window (S-0143).
 	Usage UsageReport `json:"usage"`
+	// Strategic is each strategic agent's activity document (ADR-0079).
+	Strategic []StrategicAgent `json:"strategic"`
 }
 
 // Compute derives every metric from the items.
@@ -189,6 +194,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage = spendReport(items, start, opt.Now)
 	rep.Usage.Bucket = opt.Bucket
 	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
+	rep.Strategic = strategic(opt.Activities, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
