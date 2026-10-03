@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 457
-      cache_read: 3976378
-      cache_write: 94268
-      cost: 1.6531
+      input: 59
+      output: 18767
+      cache_read: 3999512
+      cache_write: 71150
+      cost: 1.6114
 ---
 # T-0775 flai stats reports each strategic agent's accrued cost, seconds, activities, and log from its activity document
 

@@ -27,17 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 711
-      cache_read: 4724647
-      cache_write: 120262
-      cost: 1.9633
+      input: 84
+      output: 22250
+      cache_read: 4756194
+      cache_write: 88726
+      cost: 1.9431
     - model: claude-sonnet-5
-      input: 32
-      output: 76
-      cache_read: 396281
-      cache_write: 42557
-      cost: 0.1742
+      input: 15
+      output: 3505
+      cache_read: 415633
+      cache_write: 23222
+      cost: 0.1763
 ---
 # T-0767 flai story new and flai epic new take cost of delay inputs, and hostapi item.new passes them
 

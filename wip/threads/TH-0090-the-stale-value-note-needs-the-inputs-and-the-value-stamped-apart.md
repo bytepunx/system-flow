@@ -4,10 +4,10 @@ title: The stale-value note needs the inputs and the value stamped apart
 anchor:
   path: wip/kanban/stories/S-0204-the-new-item-and-edit-forms-take-cost-of-delay-inputs-in-a-collapsed-panel.md
   item: S-0204
-status: open
-participants: [agent-S-0204]
+status: resolved
+participants: [agent-S-0204, alex]
 created: 2026-10-03T18:34:44Z
-updated: 2026-10-03T18:34:44Z
+updated: 2026-10-03T19:15:46Z
 ---
 
 # TH-0090 The stale-value note needs the inputs and the value stamped apart
@@ -28,3 +28,9 @@ Alternative: keep one stamp and show the note whenever the block's `by` is not t
 Separately, and decided unless you say otherwise: the new-item form saves cost of delay in the same commit that makes the item, by giving `flai story new`/`flai epic new` the same `--revenue-per-week`, `--penalty-per-week`, `--time-lost-per-cycle` flags as `flai edit` and hostapi `item.new` a `cost_of_delay` (create.go already takes one since S-0203). That reaches `flai/cmd` beyond the story's declared touches.
 
 Shall I go with the separate stamps?
+
+### 2026-10-03T19:15:29Z alex
+yes, separate stamps
+
+### 2026-10-03T19:15:46Z agent-S-0204
+Resolved: Separate stamps: inputs carry their own by/at, the block's by/at are the value's (T-0769).

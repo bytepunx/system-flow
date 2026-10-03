@@ -3,11 +3,11 @@ id: S-0206
 type: story
 nature: feature
 title: Planner, orchestrator, and analyzer runs are logged in an activity document, with cost, seconds, and work completed in its front matter
-status: in-progress
+status: review
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-03T19:12:18Z
+updated: 2026-10-03T19:49:24Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:34Z
@@ -15,8 +15,11 @@ transitions:
   - to: in-progress
     at: 2026-10-03T18:34:00Z
     by: agent-S-0206
+  - to: review
+    at: 2026-10-03T19:49:24Z
+    by: agent-S-0206
 tags: [flai, dashboard]
-touches: [flai/internal/serve, flai/internal/usage, flai/internal/workitem, flai/internal/check, design/system/agent-narrative.md, design/adrs, template/root/wip/agents/README.md, wip/agents/README.md, flai/internal/metrics, flai/cmd/stats.go, design/system/metrics.md, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0067-flai-touches-with-paths-replaces-an-item-s-touches-and-its-help-does-not-say-so.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md, flai/cmd/check_stats_test.go, flai/cmd/hostapi_reads_test.go, flai/internal/hostapi/reads.go, design/conventions/strategic-agents.md, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
+touches: [flai/internal/serve, flai/internal/usage, flai/internal/workitem, flai/internal/check, design/system/agent-narrative.md, design/adrs, template/root/wip/agents/README.md, wip/agents/README.md, flai/internal/metrics, flai/cmd/stats.go, design/system/metrics.md, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues, flai/cmd/check_stats_test.go, flai/cmd/hostapi_reads_test.go, flai/internal/hostapi/reads.go, design/conventions/strategic-agents.md, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +27,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2338
-  estimated: true
+  seconds: 4577
   models:
     - model: claude-haiku-4-5-20251001
       input: 98
-      output: 19
+      output: 7027
       cache_read: 430141
       cache_write: 60012
-      cost: 0.1518
+      cost: 0.1533
     - model: claude-opus-5-5
-      input: 490
-      output: 4559
-      cache_read: 26368161
-      cache_write: 672379
-      cost: 10.9816
+      input: 600
+      output: 189970
+      cache_read: 40485215
+      cache_write: 720222
+      cost: 16.3111
+    - model: claude-sonnet-5
+      input: 120
+      output: 33899
+      cache_read: 3235294
+      cache_write: 206186
+      cost: 1.5018
 ---
 # S-0206 Planner, orchestrator, and analyzer runs are logged in an activity document, with cost, seconds, and work completed in its front matter
 

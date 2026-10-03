@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 392
-      cache_read: 3538042
-      cache_write: 83970
-      cost: 1.4709
+      input: 53
+      output: 16699
+      cache_read: 3558716
+      cache_write: 63309
+      cost: 1.4338
 ---
 # T-0774 flai check validates the activity documents' front matter and stops calling them orphan narratives
 

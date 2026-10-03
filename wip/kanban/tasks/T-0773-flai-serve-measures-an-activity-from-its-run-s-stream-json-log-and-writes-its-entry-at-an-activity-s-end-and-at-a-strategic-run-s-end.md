@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 1260
-      cache_read: 4678806
-      cache_write: 123575
-      cost: 1.9505
+      input: 70
+      output: 22141
+      cache_read: 4718455
+      cache_write: 83940
+      cost: 1.901
 ---
 # T-0773 flai serve measures an activity from its run's stream-json log and writes its entry, at an activity's end and at a strategic run's end
 

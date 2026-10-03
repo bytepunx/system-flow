@@ -3,19 +3,36 @@ id: T-0771
 type: task
 nature: feature
 title: The dashboard design and the user guide describe the Cost of delay panel and the item page
-status: ready
+status: done
 parent: S-0204
 owner: alex
 created: 2026-10-03T18:35:53Z
-updated: 2026-10-03T18:36:19Z
+updated: 2026-10-03T19:31:35Z
 transitions:
   - to: ready
     at: 2026-10-03T18:36:19Z
+    by: agent-S-0204
+  - to: in-progress
+    at: 2026-10-03T19:30:50Z
+    by: agent-S-0204
+  - to: done
+    at: 2026-10-03T19:31:35Z
     by: agent-S-0204
 stream: S-0204
 tags: []
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0768, T-0770]
+usage:
+  source: log
+  seconds: 45
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 8553
+      cache_read: 1828267
+      cache_write: 34106
+      cost: 0.7469
 ---
 # T-0771 The dashboard design and the user guide describe the Cost of delay panel and the item page
 

@@ -3,19 +3,36 @@ id: T-0769
 type: task
 nature: feature
 title: Cost of delay inputs carry their own by and at, apart from the value's
-status: ready
+status: done
 parent: S-0204
 owner: alex
 created: 2026-10-03T18:35:52Z
-updated: 2026-10-03T18:36:18Z
+updated: 2026-10-03T19:25:13Z
 transitions:
   - to: ready
     at: 2026-10-03T18:36:18Z
     by: agent-S-0204
+  - to: in-progress
+    at: 2026-10-03T19:16:09Z
+    by: agent-S-0204
+  - to: done
+    at: 2026-10-03T19:25:13Z
+    by: agent-S-0204
 stream: S-0204
 tags: []
-touches: [flai/internal/workitem, flai/internal/itemedit, design/adrs, design/system/work-hierarchy.md]
+touches: [flai/internal/workitem, flai/internal/itemedit, flai/internal/issues, flai/cmd, flai/internal/mcpserver, design/adrs, design/system/work-hierarchy.md, docs/users/flai.md]
 after: [T-0767]
+usage:
+  source: log
+  seconds: 544
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 140
+      output: 37285
+      cache_read: 7969998
+      cache_write: 148679
+      cost: 3.2561
 ---
 # T-0769 Cost of delay inputs carry their own by and at, apart from the value's
 

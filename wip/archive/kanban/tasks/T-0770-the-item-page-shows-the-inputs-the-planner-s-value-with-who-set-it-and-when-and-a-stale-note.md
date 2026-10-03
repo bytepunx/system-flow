@@ -3,19 +3,36 @@ id: T-0770
 type: task
 nature: feature
 title: The item page shows the inputs, the planner's value with who set it and when, and a stale note
-status: ready
+status: done
 parent: S-0204
 owner: alex
 created: 2026-10-03T18:35:52Z
-updated: 2026-10-03T18:36:19Z
+updated: 2026-10-03T19:30:50Z
 transitions:
   - to: ready
     at: 2026-10-03T18:36:19Z
+    by: agent-S-0204
+  - to: in-progress
+    at: 2026-10-03T19:25:13Z
+    by: agent-S-0204
+  - to: done
+    at: 2026-10-03T19:30:50Z
     by: agent-S-0204
 stream: S-0204
 tags: []
 touches: [flaiover/src/lib/planning.ts, flaiover/src/lib/planning.test.ts, flaiover/src/routes/items]
 after: [T-0769]
+usage:
+  source: log
+  seconds: 337
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 8841
+      cache_read: 1889841
+      cache_write: 35255
+      cost: 0.7721
 ---
 # T-0770 The item page shows the inputs, the planner's value with who set it and when, and a stale note
 

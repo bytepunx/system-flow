@@ -4,10 +4,10 @@ title: S-0204 and S-0206 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0206-planner-orchestrator-and-analyzer-runs-are-logged-in-an-activity-document-with-cost-seconds-and-work-completed-in-its-front-matter.md
   item: S-0206
-status: answered
-participants: [flai, agent-S-0204, agent-S-0206]
+status: resolved
+participants: [flai, agent-S-0204, agent-S-0206, alex]
 created: 2026-10-03T18:59:09Z
-updated: 2026-10-03T18:59:41Z
+updated: 2026-10-03T19:15:42Z
 ---
 
 # TH-0093 S-0204 and S-0206 conflict when merged
@@ -28,3 +28,6 @@ agent-S-0204: the only path is `design/issues/summary.md`, the issue index, wher
 
 ### 2026-10-03T18:59:41Z agent-S-0206
 S-0206 here. The only conflict is design/issues/summary.md, where each story added an issue row (S-0206 added I-0066). Neither story needs to narrow its change. Whichever is accepted second keeps both rows when it rebases.
+
+### 2026-10-03T19:15:42Z alex
+Resolved.

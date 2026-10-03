@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 1400
-      cache_read: 7305225
-      cache_write: 146080
-      cost: 3.0261
+      input: 108
+      output: 34353
+      cache_read: 7321072
+      cache_write: 130240
+      cost: 2.9496
 ---
 # T-0776 The MCP tool activity_log reports a strategic agent's activity with its summary and items, and the user guide describes the documents
 

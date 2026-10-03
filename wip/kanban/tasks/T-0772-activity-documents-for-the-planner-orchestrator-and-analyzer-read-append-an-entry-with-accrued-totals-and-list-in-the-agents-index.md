@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 505
-      cache_read: 3826676
-      cache_write: 107151
-      cost: 1.5975
+      input: 57
+      output: 18136
+      cache_read: 3865095
+      cache_write: 68759
+      cost: 1.5572
 ---
 # T-0772 Activity documents for the planner, orchestrator, and analyzer: read, append an entry with accrued totals, and list in the agents index
 

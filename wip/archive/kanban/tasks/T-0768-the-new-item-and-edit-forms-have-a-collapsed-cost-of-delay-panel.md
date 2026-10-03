@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 1518
-      cache_read: 3969520
-      cache_write: 110055
-      cost: 1.6536
+      input: 70
+      output: 18736
+      cache_read: 4004874
+      cache_write: 74710
+      cost: 1.6362
 ---
 # T-0768 The new-item and edit forms have a collapsed Cost of delay panel
 
