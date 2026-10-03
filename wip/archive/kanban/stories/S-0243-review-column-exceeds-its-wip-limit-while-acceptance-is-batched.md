@@ -29,21 +29,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2570
-  estimated: true
+  seconds: 2800
   models:
     - model: claude-haiku-4-5-20251001
       input: 226
-      output: 35
+      output: 6213
       cache_read: 1262015
       cache_write: 71252
-      cost: 0.2515
+      cost: 0.2466
     - model: claude-opus-5-5
-      input: 336
-      output: 2761
-      cache_read: 12180122
-      cache_write: 367666
-      cost: 5.2119
+      input: 350
+      output: 104078
+      cache_read: 13281357
+      cache_write: 378917
+      cost: 7.0865
+    - model: claude-sonnet-5-5
+      input: 12
+      output: 3133
+      cache_read: 100544
+      cache_write: 30263
+      cost: 0.1271
 ---
 # S-0243 Review column exceeds its WIP limit while acceptance is batched
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 128
-      output: 816
-      cache_read: 5539758
-      cache_write: 112492
-      cost: 2.3476
+      input: 145
+      output: 43065
+      cache_read: 5495448
+      cache_write: 156785
+      cost: 2.9322
 ---
 # T-0738 An ADR, the design, and the docs say a full review holds the pull, and I-0007 is closed
 

@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 89
-      output: 432
-      cache_read: 3359123
-      cache_write: 117647
-      cost: 1.444
+      output: 26490
+      cache_read: 3380325
+      cache_write: 96441
+      cost: 1.8036
 ---
 # T-0737 The pull respects the review limit
 

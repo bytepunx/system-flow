@@ -27,11 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 1083
-      cache_read: 1267087
-      cache_write: 61885
-      cost: 0.5523
+      input: 34
+      output: 10126
+      cache_read: 1292123
+      cache_write: 36864
+      cost: 0.6894
+    - model: claude-sonnet-5-5
+      input: 12
+      output: 3133
+      cache_read: 100544
+      cache_write: 30263
+      cost: 0.1271
 ---
 # T-0736 flai check --strict passes over the review column over its limit
 
