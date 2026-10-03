@@ -1,8 +1,9 @@
 // Package itemedit changes a work item after it was created (S-0085): its
 // title, nature, tags, touches, a story's or epic's topics (S-0135), a
-// story's or a task's after: (S-0130, S-0176), parent, and the
-// body below its heading, in one step that is checked and committed the way
-// a document save is (ADR-0023). What is the item's state stays flai's and
+// story's or a task's after: (S-0130, S-0176), parent, a story's draft
+// flag, an epic's or story's cost of delay, a story's forecast (S-0199), and
+// the body below its heading, in one step that is checked and committed the
+// way a document save is (ADR-0023). What is the item's state stays flai's and
 // is not reachable from here: ID, type, status, transitions, blocked
 // intervals, owner, and dates.
 //
@@ -17,6 +18,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +48,29 @@ type Change struct {
 	// Agent replaces a story's agent (S-0103) when set; ClearAgent removes it.
 	Agent      *manifest.Agent
 	ClearAgent bool
+	// Draft makes a story a draft, or finalizes one (S-0199).
+	Draft *bool
+	// CostOfDelay changes keys of an epic's or story's cost of delay;
+	// ClearCostOfDelay removes it first, so that with both the edit replaces it.
+	CostOfDelay      *CostOfDelayEdit
+	ClearCostOfDelay bool
+	// Forecast changes keys of a story's forecast; ClearForecast removes it
+	// first, so that with both the edit replaces it.
+	Forecast      *ForecastEdit
+	ClearForecast bool
+}
+
+// CostOfDelayEdit changes keys of a cost of delay: a nil key is left as it
+// is, an empty one is removed, and any other is its new value. Amounts are
+// numbers in the project's currency, time lost a Go duration.
+type CostOfDelayEdit struct {
+	RevenuePerWeek, PenaltyPerWeek, TimeLostPerCycle, Value *string
+}
+
+// ForecastEdit changes keys of a forecast as CostOfDelayEdit does: the
+// duration a Go duration, the delivery a UTC timestamp, the basis a sentence.
+type ForecastEdit struct {
+	Duration, Delivery, Basis *string
 }
 
 // Options parameterise an edit.
@@ -74,11 +99,17 @@ type View struct {
 	// story created now would get (S-0103).
 	Agent        *manifest.Agent `json:"agent,omitempty"`
 	DefaultAgent *manifest.Agent `json:"default_agent,omitempty"`
-	Body         string          `json:"body"` // below the heading
-	Path         string          `json:"path"`
-	Hash         string          `json:"hash"`
-	Editable     bool            `json:"editable"`
-	Reason       string          `json:"reason,omitempty"` // why not
+	// Draft, CostOfDelay, and Forecast are the item's planning data (S-0199),
+	// and Currency the unit of its amounts.
+	Draft       bool                  `json:"draft"`
+	CostOfDelay *workitem.CostOfDelay `json:"cost_of_delay,omitempty"`
+	Forecast    *workitem.Forecast    `json:"forecast,omitempty"`
+	Currency    string                `json:"currency"`
+	Body        string                `json:"body"` // below the heading
+	Path        string                `json:"path"`
+	Hash        string                `json:"hash"`
+	Editable    bool                  `json:"editable"`
+	Reason      string                `json:"reason,omitempty"` // why not
 	// Natures and Parents are what the fields may be set to.
 	Natures []string `json:"natures"`
 	Parents []Option `json:"parents"`
@@ -95,7 +126,7 @@ type Result struct {
 	ID          string          `json:"id"`
 	Path        string          `json:"path"`
 	Hash        string          `json:"hash"`
-	Changed     []string        `json:"changed"` // title, nature, tags, topics, touches, after, agent, parent, goal, criteria, notes, body
+	Changed     []string        `json:"changed"` // title, nature, tags, topics, touches, after, agent, draft, cost_of_delay, forecast, parent, goal, criteria, notes, body
 	Renamed     string          `json:"renamed_from,omitempty"`
 	Files       []string        `json:"files"` // every file written or removed, relative to the checkout
 	Unchanged   bool            `json:"unchanged,omitempty"`
@@ -158,7 +189,8 @@ func Show(repo *workitem.Repo, id string) (*View, error) {
 		return nil, err
 	}
 	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches), Topics: orEmpty(it.Topics), After: orEmpty(it.After),
-		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
+		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Draft: it.Draft, CostOfDelay: it.CostOfDelay, Forecast: it.Forecast,
+		Currency: repo.Manifest.Planning.CurrencyCode(), Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
 	v.Editable, v.Reason = editable(it)
 	if want := parentType(it.Type); want != "" {
 		items, err := repo.List(false)
@@ -319,6 +351,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 
 	// ---- validate and work out what changes ----
 	var changed []string
+	wasValid := it.Validate() == nil
 	oldTitle, oldPath := it.Title, it.Path
 	if ch.Title != nil {
 		t := workitem.CleanTitle(*ch.Title)
@@ -411,6 +444,18 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			changed = append(changed, "agent")
 		}
 	}
+	planned, err := applyPlanning(it, ch, opt, repo.Manifest.Planning.CurrencyCode())
+	if err != nil {
+		return nil, err
+	}
+	// an item that was valid stays so; one that was not is the check's to
+	// judge, by what the change adds
+	if len(planned) > 0 && wasValid {
+		if err := it.Validate(); err != nil {
+			return nil, invalid("%s: %v", it.ID, err)
+		}
+	}
+	changed = append(changed, planned...)
 	var newParent, formerParent *workitem.Item
 	if ch.Parent != nil && workitem.CanonicalID(*ch.Parent) != workitem.CanonicalID(it.Parent) {
 		want := parentType(it.Type)
@@ -587,6 +632,176 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		res.Committed, res.Commit = true, sha
 	}
 	return res, nil
+}
+
+// applyPlanning makes the change's draft flag, cost of delay, and forecast
+// on the item, and names what changed. A block that changes records who
+// changed it and when.
+func applyPlanning(it *workitem.Item, ch Change, opt Options, currency string) ([]string, error) {
+	var changed []string
+	by := opt.By
+	if by == "" {
+		by = "agent"
+	}
+	at := opt.Now.UTC().Format(workitem.TimeFormat)
+	if ch.Draft != nil && *ch.Draft != it.Draft {
+		if *ch.Draft {
+			if it.Type != workitem.Story {
+				return nil, invalid("%s is not a story; only a story is a draft", it.ID)
+			}
+			if it.Status != workitem.Backlog {
+				return nil, invalid("%s is %s; only a story in the backlog is a draft", it.ID, it.Status)
+			}
+		}
+		it.Draft = *ch.Draft
+		changed = append(changed, "draft")
+	}
+	if ch.ClearCostOfDelay || ch.CostOfDelay != nil {
+		if !workitem.Carries(it.Type, "cost_of_delay") {
+			return nil, invalid("%s is a task; a cost of delay belongs to stories and epics", it.ID)
+		}
+		next, err := editCostOfDelay(it.CostOfDelay, ch.ClearCostOfDelay, ch.CostOfDelay, currency)
+		if err != nil {
+			return nil, err
+		}
+		if !sameCost(it.CostOfDelay, next) {
+			if next != nil {
+				next.By, next.At = by, at
+			}
+			it.CostOfDelay = next
+			changed = append(changed, "cost_of_delay")
+		}
+	}
+	if ch.ClearForecast || ch.Forecast != nil {
+		if !workitem.Carries(it.Type, "forecast") {
+			return nil, invalid("%s is not a story; a forecast belongs to stories", it.ID)
+		}
+		next := editForecast(it.Forecast, ch.ClearForecast, ch.Forecast)
+		if !sameForecast(it.Forecast, next) {
+			if next != nil {
+				next.By, next.At = by, at
+			}
+			it.Forecast = next
+			changed = append(changed, "forecast")
+		}
+	}
+	return changed, nil
+}
+
+// editCostOfDelay is cur with the edit merged in, or nil when neither inputs
+// nor a value are left.
+func editCostOfDelay(cur *workitem.CostOfDelay, clear bool, e *CostOfDelayEdit, currency string) (*workitem.CostOfDelay, error) {
+	var next workitem.CostOfDelay
+	var in workitem.CostInputs
+	if cur != nil && !clear {
+		next = *cur
+		if cur.Inputs != nil {
+			in = *cur.Inputs
+		}
+	}
+	if e != nil {
+		for _, a := range []struct {
+			key  string
+			to   **float64
+			edit *string
+		}{
+			{"cost_of_delay.inputs.revenue_per_week", &in.RevenuePerWeek, e.RevenuePerWeek},
+			{"cost_of_delay.inputs.penalty_per_week", &in.PenaltyPerWeek, e.PenaltyPerWeek},
+			{"cost_of_delay.value", &next.Value, e.Value},
+		} {
+			if err := setAmount(a.to, a.key, a.edit, currency); err != nil {
+				return nil, err
+			}
+		}
+		setString(&in.TimeLostPerCycle, e.TimeLostPerCycle)
+	}
+	next.Inputs = nil
+	if !in.IsZero() {
+		next.Inputs = &in
+	}
+	if next.Inputs == nil && next.Value == nil {
+		return nil, nil
+	}
+	return &next, nil
+}
+
+// editForecast is cur with the edit merged in. A forecast left with neither
+// a duration nor a delivery by removals is removed; one the edit gives only a
+// basis is kept for the item's validation to refuse.
+func editForecast(cur *workitem.Forecast, clear bool, e *ForecastEdit) *workitem.Forecast {
+	var next workitem.Forecast
+	if cur != nil && !clear {
+		next = *cur
+	}
+	sets := false
+	if e != nil {
+		for _, f := range []struct {
+			to   *string
+			edit *string
+		}{{&next.Duration, e.Duration}, {&next.Delivery, e.Delivery}, {&next.Basis, e.Basis}} {
+			setString(f.to, f.edit)
+			sets = sets || (f.edit != nil && *f.to != "")
+		}
+	}
+	if next.Duration == "" && next.Delivery == "" && !sets {
+		return nil
+	}
+	return &next
+}
+
+// setAmount sets *to from an edit: nil leaves it, empty removes it, anything
+// else must be a number.
+func setAmount(to **float64, key string, edit *string, currency string) error {
+	if edit == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*edit)
+	if v == "" {
+		*to = nil
+		return nil
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return invalid("%s %q is not a number: write an amount in %s such as 1200 or 99.5, or nothing to remove it", key, *edit, currency)
+	}
+	*to = &f
+	return nil
+}
+
+// setString sets *to from an edit: nil leaves it, anything else, trimmed,
+// replaces it, and empty removes it.
+func setString(to *string, edit *string) {
+	if edit != nil {
+		*to = strings.TrimSpace(*edit)
+	}
+}
+
+func sameAmount(a, b *float64) bool {
+	return (a == nil) == (b == nil) && (a == nil || *a == *b)
+}
+
+// sameCost compares what two costs of delay say, not who set them.
+func sameCost(a, b *workitem.CostOfDelay) bool {
+	if a.IsZero() || b.IsZero() {
+		return a.IsZero() == b.IsZero()
+	}
+	ai, bi := a.Inputs, b.Inputs
+	if ai.IsZero() || bi.IsZero() {
+		if ai.IsZero() != bi.IsZero() {
+			return false
+		}
+	} else if !sameAmount(ai.RevenuePerWeek, bi.RevenuePerWeek) || !sameAmount(ai.PenaltyPerWeek, bi.PenaltyPerWeek) || ai.TimeLostPerCycle != bi.TimeLostPerCycle {
+		return false
+	}
+	return sameAmount(a.Value, b.Value)
+}
+
+// sameForecast compares what two forecasts say, not who set them.
+func sameForecast(a, b *workitem.Forecast) bool {
+	if a.IsZero() || b.IsZero() {
+		return a.IsZero() == b.IsZero()
+	}
+	return a.Duration == b.Duration && a.Delivery == b.Delivery && a.Basis == b.Basis
 }
 
 var childLine = func(id string) *regexp.Regexp {

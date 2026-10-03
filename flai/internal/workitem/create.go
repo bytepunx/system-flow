@@ -34,6 +34,9 @@ type NewOptions struct {
 	// Agent is who works a story, over the project's default (S-0103): what
 	// it sets wins, and the project's default fills in the rest.
 	Agent *manifest.Agent
+	// Draft makes a story a draft (S-0199): an agent wrote it, and it is
+	// finalized before it is ready.
+	Draft bool
 	Now   time.Time
 	// Body replaces what the template puts below the item's heading: the
 	// author's goal, criteria, and notes, written before the item exists
@@ -124,6 +127,10 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	} else if !opt.Agent.IsZero() {
 		return nil, fmt.Errorf("only a story carries an agent, not a %s", opt.Type)
 	}
+	if opt.Draft && opt.Type != Story {
+		return nil, fmt.Errorf("only a story is a draft, not %s", articled(opt.Type))
+	}
+	it.Draft = opt.Draft
 	if it.Tags == nil {
 		it.Tags = []string{}
 	}

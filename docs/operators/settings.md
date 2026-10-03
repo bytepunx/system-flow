@@ -215,19 +215,26 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--clear` | [flai touches](../users/flai-reference.md#flai-touches) |
 | `--clear-after` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-agent` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--clear-cost-of-delay` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--clear-forecast` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-tags` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-topics` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-touches` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--commit` | [flai import](../users/flai-reference.md#flai-import) |
 | `--config` | every command ([global flags](../users/flai-reference.md#flai)), [flai agent set](../users/flai-reference.md#flai-agent-set) |
 | `--cost` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
+| `--cost-of-delay-value` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--defaults` | [flai new](../users/flai-reference.md#flai-new) |
 | `--deliver` | [flai release](../users/flai-reference.md#flai-release) |
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
+| `--draft` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--epic` | [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--force` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
+| `--forecast-basis` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--forecast-delivery` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--forecast-duration` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
 | `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
@@ -248,6 +255,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--no-branch` | [flai stream open](../users/flai-reference.md#flai-stream-open) |
 | `--no-commit` | [flai doc save](../users/flai-reference.md#flai-doc-save) |
 | `--no-descriptions` | [flai completion bash](../users/flai-reference.md#flai-completion-bash), [flai completion fish](../users/flai-reference.md#flai-completion-fish), [flai completion powershell](../users/flai-reference.md#flai-completion-powershell), [flai completion zsh](../users/flai-reference.md#flai-completion-zsh) |
+| `--no-draft` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--no-git` | [flai new](../users/flai-reference.md#flai-new) |
 | `--no-restart` | [flai dashboard token](../users/flai-reference.md#flai-dashboard-token) |
 | `--no-serve` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
@@ -256,6 +264,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--open` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--owner` | [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--penalty-per-week` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--pending` | [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release) |
 | `--port` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--print-body` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
@@ -271,6 +280,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--replace-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--repo` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
+| `--revenue-per-week` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--role` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--role-config` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--role-harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
@@ -284,6 +294,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--tag` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new), [flai template push](../users/flai-reference.md#flai-template-push) |
 | `--template` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template show](../users/flai-reference.md#flai-template-show), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
+| `--time-lost-per-cycle` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--timing` | [flai hostapi](../users/flai-reference.md#flai-hostapi) |
 | `--title` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--top` | [flai order](../users/flai-reference.md#flai-order) |

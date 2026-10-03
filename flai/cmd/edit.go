@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
@@ -19,9 +20,11 @@ func newEditCmd(a *app) *cobra.Command {
 	var rf roleFlags
 	var tags, touches, topics, after, trailers []string
 	var clearTags, clearTouches, clearTopics, clearAfter, clearAgent, bodyStdin, autocommit, show bool
+	var draft, noDraft, clearCost, clearForecast bool
+	var revenue, penalty, timeLost, costValue, duration, delivery, basis string
 	c := &cobra.Command{
 		Use:   "edit <id>",
-		Short: "Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step",
+		Short: "Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step",
 		Long: `Change what an item says about itself. Any of the fields and the body can
 change together. What is the item's state stays flai's and is changed by its
 own commands: status by flai move, blocking by flai block, never here.
@@ -42,6 +45,18 @@ the story is held in ready, and flai serve and wait_for_work pass it over
 (S-0176). flai check refuses an entry that does not exist, a task of another
 story, and a cycle.
 
+Planning data (S-0199). --draft makes a backlog story a draft and
+--no-draft finalizes one, which may then go to ready. A cost of delay, on a
+story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as
+amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and
+a value per week (--cost-of-delay-value). A story's forecast has a duration
+(--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC
+timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one
+sentence). Each flag changes its key only: an empty value removes it, and
+removing the last input or value, or the last of duration and delivery,
+removes the block. --clear-cost-of-delay and --clear-forecast remove a
+block. A block that changes records who changed it (--by) and when.
+
 --body-stdin reads what lies below the heading; the heading is the ID and the
 title, and flai writes it. With --hash, the hash flai edit --show printed, a
 change someone made meanwhile is a conflict (exit 3) and nothing is written.
@@ -59,6 +74,10 @@ the item changed.`,
   flai edit S-0130 --after S-0128,S-0129
   flai edit T-0042 --after T-0040,T-0041
   flai edit S-0135 --topics logging,release
+  flai edit S-0199 --no-draft
+  flai edit S-0199 --revenue-per-week 1200 --time-lost-per-cycle 4h
+  flai edit S-0199 --penalty-per-week ""
+  flai edit S-0199 --forecast-duration 6h --forecast-basis "three tasks like S-0185's"
   flai edit S-0085 --body-stdin --hash 3f0c... < body.md`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -86,6 +105,9 @@ the item changed.`,
 				}
 				if v.Type == "story" {
 					fmt.Fprintf(a.out, "  agent: %s (project default: %s)\n", v.Agent, v.DefaultAgent)
+				}
+				for _, l := range planningLines(v.Draft, v.CostOfDelay, v.Forecast, v.Currency) {
+					fmt.Fprintf(a.out, "  %s\n", l)
 				}
 				fmt.Fprintf(a.out, "  file: %s\n  hash: %s\n", v.Path, v.Hash)
 				if !v.Editable {
@@ -148,6 +170,12 @@ the item changed.`,
 					ch.Agent = next
 				}
 			}
+			if err := planningChange(f, &ch, draft, noDraft, clearCost, clearForecast, map[string]*string{
+				"revenue-per-week": &revenue, "penalty-per-week": &penalty, "time-lost-per-cycle": &timeLost, "cost-of-delay-value": &costValue,
+				"forecast-duration": &duration, "forecast-delivery": &delivery, "forecast-basis": &basis,
+			}); err != nil {
+				return err
+			}
 			if bodyStdin {
 				data, err := io.ReadAll(cmd.InOrStdin())
 				if err != nil {
@@ -157,7 +185,7 @@ the item changed.`,
 				ch.Body = &body
 			}
 			if ch == (itemedit.Change{}) {
-				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, or --body-stdin (flai edit %s --show prints what is there)", args[0])
+				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, --draft, --no-draft, a cost of delay or forecast flag, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
 			by, _ := agentIdentity()
 			if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
@@ -230,6 +258,17 @@ the item changed.`,
 	f.StringArrayVar(&agentConfig, "agent-config", nil, "a story's agent: an option, key=value, and key= to remove one (repeatable)")
 	f.BoolVar(&clearAgent, "clear-agent", false, "remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those")
 	rf.register(c, true)
+	f.BoolVar(&draft, "draft", false, "make a story in the backlog a draft, which must be finalized before it is ready")
+	f.BoolVar(&noDraft, "no-draft", false, "finalize a draft story, so that it may go to ready")
+	f.StringVar(&revenue, "revenue-per-week", "", "cost of delay input: revenue each week it is done brings, in planning.currency; empty removes it")
+	f.StringVar(&penalty, "penalty-per-week", "", "cost of delay input: what each week it is not done costs beyond revenue; empty removes it")
+	f.StringVar(&timeLost, "time-lost-per-cycle", "", "cost of delay input: work lost each cycle it is not done, a Go duration; empty removes it")
+	f.StringVar(&costValue, "cost-of-delay-value", "", "the cost of delay per week, in planning.currency; empty removes it")
+	f.BoolVar(&clearCost, "clear-cost-of-delay", false, "remove the cost of delay")
+	f.StringVar(&duration, "forecast-duration", "", "a story's forecast: the work it is expected to take, a Go duration; empty removes it")
+	f.StringVar(&delivery, "forecast-delivery", "", "a story's forecast: when it is expected done, a UTC timestamp; empty removes it")
+	f.StringVar(&basis, "forecast-basis", "", "a story's forecast: what it rests on, in one sentence; empty removes it")
+	f.BoolVar(&clearForecast, "clear-forecast", false, "remove the story's forecast")
 	f.BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input")
 	f.StringVar(&hash, "hash", "", "the hash flai edit --show printed; a change made meanwhile is then a conflict")
 	f.StringVar(&byFlag, "by", "", "who edits, as agents are told (default: FLAI_AGENT, then the config author)")
@@ -237,4 +276,39 @@ the item changed.`,
 	f.BoolVar(&autocommit, "autocommit", false, "commit every file the edit touched, unless dashboard.autocommit is false")
 	f.StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	return c
+}
+
+// planningChange puts the draft, cost of delay, and forecast flags given on
+// the command line into ch (S-0199); flags names each string flag's value.
+func planningChange(f *pflag.FlagSet, ch *itemedit.Change, draft, noDraft, clearCost, clearForecast bool, flags map[string]*string) error {
+	if draft && noDraft {
+		return fmt.Errorf("--draft and --no-draft contradict each other")
+	}
+	if draft || noDraft {
+		ch.Draft = &draft
+	}
+	given := func(name string) *string {
+		if f.Changed(name) {
+			return flags[name]
+		}
+		return nil
+	}
+	cost := itemedit.CostOfDelayEdit{RevenuePerWeek: given("revenue-per-week"), PenaltyPerWeek: given("penalty-per-week"),
+		TimeLostPerCycle: given("time-lost-per-cycle"), Value: given("cost-of-delay-value")}
+	if cost != (itemedit.CostOfDelayEdit{}) {
+		if clearCost {
+			return fmt.Errorf("--clear-cost-of-delay and a cost of delay flag contradict each other; give one or the other")
+		}
+		ch.CostOfDelay = &cost
+	}
+	ch.ClearCostOfDelay = clearCost
+	fc := itemedit.ForecastEdit{Duration: given("forecast-duration"), Delivery: given("forecast-delivery"), Basis: given("forecast-basis")}
+	if fc != (itemedit.ForecastEdit{}) {
+		if clearForecast {
+			return fmt.Errorf("--clear-forecast and a --forecast- flag contradict each other; give one or the other")
+		}
+		ch.Forecast = &fc
+	}
+	ch.ClearForecast = clearForecast
+	return nil
 }

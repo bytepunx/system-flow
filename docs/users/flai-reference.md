@@ -24,7 +24,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [doc](#flai-doc) | Search, read, and save markdown documents |
-| [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step |
+| [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [guard](#flai-guard) | Refuse a sub-agent's writes, as a Claude Code PreToolUse hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
@@ -85,7 +85,7 @@ Subcommands:
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [doc](#flai-doc): Search, read, and save markdown documents
-- [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step
+- [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [guard](#flai-guard): Refuse a sub-agent's writes, as a Claude Code PreToolUse hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
@@ -903,7 +903,7 @@ Flags:
 
 ### flai edit
 
-Change an item's title, nature, tags, topics, touches, after, parent, or body, checked and in one step.
+Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step.
 
 ```text
 flai edit <id> [flags]
@@ -916,6 +916,8 @@ A retitle keeps everything that carries the title in step: the front matter, the
 --topics names what a story or epic is about beyond the components its tags and touches reach, such as logging or release (ADR-0047); flai show prints a story's topics with where each came from.
 
 --after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). On a task it names the tasks of the same story the task waits for (S-0176). flai check refuses an entry that does not exist, a task of another story, and a cycle.
+
+Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready. A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the title, and flai writes it. With --hash, the hash flai edit --show printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. flai check runs with the change in place: if it reports anything the change introduces, every file is put back and the findings are printed (exit 4). --autocommit commits every file the edit touched in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
@@ -931,6 +933,10 @@ flai edit S-0085 --parent E-0004
 flai edit S-0130 --after S-0128,S-0129
 flai edit T-0042 --after T-0040,T-0041
 flai edit S-0135 --topics logging,release
+flai edit S-0199 --no-draft
+flai edit S-0199 --revenue-per-week 1200 --time-lost-per-cycle 4h
+flai edit S-0199 --penalty-per-week ""
+flai edit S-0199 --forecast-duration 6h --forecast-basis "three tasks like S-0185's"
 flai edit S-0085 --body-stdin --hash 3f0c... < body.md
 ```
 
@@ -945,20 +951,31 @@ Flags:
 | `--by` string | who edits, as agents are told (default: FLAI\_AGENT, then the config author) |
 | `--clear-after` | remove what a story or a task waits for |
 | `--clear-agent` | remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those |
+| `--clear-cost-of-delay` | remove the cost of delay |
+| `--clear-forecast` | remove the story's forecast |
 | `--clear-tags` | remove every tag |
 | `--clear-topics` | remove a story's or epic's topics |
 | `--clear-touches` | remove the list |
+| `--cost-of-delay-value` string | the cost of delay per week, in planning.currency; empty removes it |
+| `--draft` | make a story in the backlog a draft, which must be finalized before it is ready |
+| `--forecast-basis` string | a story's forecast: what it rests on, in one sentence; empty removes it |
+| `--forecast-delivery` string | a story's forecast: when it is expected done, a UTC timestamp; empty removes it |
+| `--forecast-duration` string | a story's forecast: the work it is expected to take, a Go duration; empty removes it |
 | `--harness` string | a story's agent: the harness that runs it |
 | `--hash` string | the hash flai edit --show printed; a change made meanwhile is then a conflict |
 | `--message` string | commit subject after the prefix (default names what changed) |
 | `--model` string | a story's agent: the model it runs |
 | `--nature` string | one of feature, improvement, remediation, research, experiment |
+| `--no-draft` | finalize a draft story, so that it may go to ready |
 | `--parent` string | the new parent: an epic for a story, a story for a task |
+| `--penalty-per-week` string | cost of delay input: what each week it is not done costs beyond revenue; empty removes it |
+| `--revenue-per-week` string | cost of delay input: revenue each week it is done brings, in planning.currency; empty removes it |
 | `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
 | `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
 | `--role-model` stringArray | the model a sub-agent role runs, role=model, such as verify=sonnet (repeatable) |
 | `--show` | print the fields, the body, the hash, and whether the item may be edited |
 | `--tag` strings | the tags, replacing the ones there (repeatable or comma separated) |
+| `--time-lost-per-cycle` string | cost of delay input: work lost each cycle it is not done, a Go duration; empty removes it |
 | `--title` string | the new title |
 | `--topics` strings | what a story or epic is about, such as logging or release, replacing the ones there |
 | `--touches` strings | the paths or components the work changes, replacing the ones there |
@@ -1462,6 +1479,8 @@ Move an item to a new state. States: backlog, ready, in-progress, review, done, 
 
 Rules from design/system/workflow.md are enforced: a story needs acceptance criteria before ready, and at least one task and no open question in its narrative before review; children must be closed before done; cancelling or sending review back needs --reason. WIP limit breaches warn.
 
+A draft story, one an agent wrote (S-0199), is refused to ready until it is finalized: flai edit --no-draft finalizes it, and so does this move with --yes, which finalizes it as it goes to ready.
+
 An item also moves back one column: ready to backlog, in-progress to ready, review to in-progress, cancelled to backlog, the last only while its parent is not cancelled (ADR-0055). Done is final.
 
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.
@@ -1473,6 +1492,7 @@ Examples:
 ```bash
 flai move S-004 in-progress
 flai move T-021 done
+flai move S-005 ready --yes                            # a draft, finalized with the move
 flai move S-004 in-progress --reason "tests missing"   # from review
 flai move S-006 backlog                                # from ready, or from cancelled
 flai move S-009 cancelled --reason "superseded by S-012"
@@ -2260,6 +2280,8 @@ With --body-stdin the body below the item's heading is read from standard input 
 
 --after names the stories this story waits for: while any of them is not done, it is held in ready (ADR-0046). It is checked as --body-stdin is: a story that does not exist, or a cycle, refuses the creation.
 
+--draft makes the story a draft, as the stories an agent writes are (S-0199): moving it to ready is refused until it is finalized, by flai edit with --no-draft, or by flai move to ready with --yes.
+
 Flags:
 
 | Flag | Meaning |
@@ -2268,6 +2290,7 @@ Flags:
 | `--agent-config` stringArray | an option for the harness, key=value, over the project's default (repeatable) |
 | `--autocommit` | commit the new item and its parent on their own, unless dashboard.autocommit is false |
 | `--body-stdin` | read the body below the heading from standard input; checked before it is kept |
+| `--draft` | make the story a draft, which must be finalized before it is ready |
 | `--epic` string | parent epic ID (optional: a story need not belong to one, S-0092) |
 | `--harness` string | the harness that runs the agent for this story, over the project's default |
 | `--model` string | the model it runs, over the project's default |

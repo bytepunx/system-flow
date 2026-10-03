@@ -24,6 +24,10 @@ criteria before ready, and at least one task and no open question in its
 narrative before review; children must be closed before done; cancelling or
 sending review back needs --reason. WIP limit breaches warn.
 
+A draft story, one an agent wrote (S-0199), is refused to ready until it is
+finalized: flai edit --no-draft finalizes it, and so does this move with
+--yes, which finalizes it as it goes to ready.
+
 An item also moves back one column: ready to backlog, in-progress to ready,
 review to in-progress, cancelled to backlog, the last only while its parent
 is not cancelled (ADR-0055). Done is final.
@@ -39,6 +43,7 @@ There is no other way for a story to become done. Acceptance computes no
 release; see flai release --pending.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
+  flai move S-005 ready --yes                            # a draft, finalized with the move
   flai move S-004 in-progress --reason "tests missing"   # from review
   flai move S-006 backlog                                # from ready, or from cancelled
   flai move S-009 cancelled --reason "superseded by S-012"
@@ -68,17 +73,23 @@ release; see flai release --pending.`,
 			if dryRun {
 				return fmt.Errorf("--dry-run previews a cancellation or an acceptance; other moves have nothing to preview")
 			}
-			warnings, err := repo.Transition(it, args[1], a.movedBy(by), reason, a.now())
+			draft := it.Draft
+			// --yes is the operator's say that a draft story is finished (S-0199)
+			res, err := repo.TransitionAll(it, args[1], a.movedBy(by), reason, a.now(), a.yes)
 			if err != nil {
 				return err
 			}
+			warnings := res.Warnings
 			for _, w := range warnings {
 				a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings})
+				return a.printJSON(map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings, "finalized": draft && !it.Draft})
 			}
 			fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
+			if draft && !it.Draft {
+				fmt.Fprintf(a.out, "  %s is finalized: no longer a draft\n", it.ID)
+			}
 			if it.Status == workitem.Done && it.Type == workitem.Epic {
 				a.logger().Info("epic closed without an archive or a commit; flai accept does move, archive, and commit in one step", "component", "workitem", "item", it.ID)
 			}

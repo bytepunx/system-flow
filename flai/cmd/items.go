@@ -26,7 +26,7 @@ func newItemNewCmd(a *app, typ string) *cobra.Command {
 	var nature, owner, parent, harness, model string
 	var tags, touches, topics, after, trailers, agentConfig []string
 	var rf roleFlags
-	var bodyStdin, autocommit, printBody bool
+	var bodyStdin, autocommit, printBody, draft bool
 	parentFlag := map[string]string{workitem.Story: "epic", workitem.Task: "story"}[typ]
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
@@ -41,7 +41,7 @@ it reports anything the item introduces, the item is removed, its parent is
 restored, and the findings are printed (exit 4). --autocommit commits the new
 item and its parent on their own, unless the project sets
 dashboard.autocommit: false. Nothing is pushed. --print-body prints the body
-the template gives, for a form or a script to start from, and creates nothing.%s`, withArticle(typ), afterHelp(typ)),
+the template gives, for a form or a script to start from, and creates nothing.%s%s`, withArticle(typ), afterHelp(typ), draftHelp(typ)),
 		Args: func(cmd *cobra.Command, args []string) error {
 			if printBody {
 				return cobra.NoArgs(cmd, args)
@@ -70,7 +70,7 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 			}
 			opt := workitem.NewOptions{
 				Type: typ, Title: args[0], Nature: nature, Parent: parent,
-				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Topics: topics, After: after, Agent: agent, Now: a.now(),
+				Owner: orDefault(owner, a.author()), Tags: tags, Touches: touches, Topics: topics, After: after, Agent: agent, Draft: draft, Now: a.now(),
 			}
 			// an after: entry that names nothing, or forms a cycle, is the
 			// check's to find, so a creation that sets one is checked
@@ -146,6 +146,7 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 		c.Flags().StringVar(&model, "model", "", "the model it runs, over the project's default")
 		c.Flags().StringArrayVar(&agentConfig, "agent-config", nil, "an option for the harness, key=value, over the project's default (repeatable)")
 		rf.register(c, false)
+		c.Flags().BoolVar(&draft, "draft", false, "make the story a draft, which must be finalized before it is ready")
 	}
 	if parentFlag != "" {
 		help := "parent " + parentFlag + " ID"
@@ -250,6 +251,9 @@ the plan as plan, beside item and children.`,
 			if !it.Agent.IsZero() {
 				fmt.Fprintf(a.out, "  agent: %s\n", it.Agent)
 			}
+			for _, l := range planningLines(it.Draft, it.CostOfDelay, it.Forecast, repo.Manifest.Planning.CurrencyCode()) {
+				fmt.Fprintf(a.out, "  %s\n", l)
+			}
 			if !it.Usage.Empty() {
 				fmt.Fprintf(a.out, "  usage: %s\n", it.Usage.Summary())
 				for _, m := range it.Usage.Models {
@@ -332,6 +336,18 @@ for nothing undone (S-0176). It is checked as --body-stdin is: a task that
 does not exist, a task of another story, or a cycle refuses the creation.`
 	}
 	return ""
+}
+
+// draftHelp is what flai story new says of --draft.
+func draftHelp(typ string) string {
+	if typ != workitem.Story {
+		return ""
+	}
+	return `
+
+--draft makes the story a draft, as the stories an agent writes are (S-0199):
+moving it to ready is refused until it is finalized, by flai edit with
+--no-draft, or by flai move to ready with --yes.`
 }
 
 // pluralType is an item type's plural: epics, stories, tasks.
