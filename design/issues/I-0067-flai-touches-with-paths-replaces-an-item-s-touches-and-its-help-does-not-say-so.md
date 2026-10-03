@@ -1,5 +1,5 @@
 ---
-id: I-0066
+id: I-0067
 title: flai touches with paths replaces an item's touches, and its help does not say so
 class: impression
 status: open
@@ -10,7 +10,7 @@ last_reported: 2026-10-03T18:47:44Z
 updated: 2026-10-03T18:47:44Z
 ---
 
-# I-0066 flai touches with paths replaces an item's touches, and its help does not say so
+# I-0067 flai touches with paths replaces an item's touches, and its help does not say so
 
 ## Description
 flai touches with paths replaces an item's touches, and its help does not say so
