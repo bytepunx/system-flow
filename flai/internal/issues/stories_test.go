@@ -145,6 +145,30 @@ func TestForStory(t *testing.T) {
 	}
 }
 
+// TestForStoryLeavesOutStoriesMadeBefore: a story made again, after the
+// first was cancelled, recommends the solution, not the line naming the first.
+func TestForStoryLeavesOutStoriesMadeBefore(t *testing.T) {
+	dir := t.TempDir()
+	is := &Issue{ID: "I-0056", Title: "Lint version mismatch", Class: "defect", Status: "open", Count: 1,
+		FirstReported: "2026-09-16T10:00:00Z", LastReported: "2026-09-16T10:00:00Z", Updated: "2026-09-16T10:00:00Z",
+		Path: filepath.Join(dir, "I-0056-lint-version-mismatch.md"),
+		Body: "\n# I-0056 Lint version mismatch\n\n## Remediation\n\nPin the linter.\n"}
+	if err := LinkStory(is, "S-0301", t0); err != nil {
+		t.Fatal(err)
+	}
+	d := ForStory(is, t0, cycle)
+	if strings.Contains(d.Body, "S-0301") || !strings.Contains(d.Body, "solution:\n\nPin the linter.\n\n## Acceptance criteria\n") {
+		t.Errorf("the solution without the earlier story:\n%s", d.Body)
+	}
+	is.Body = "\n# I-0056 Lint version mismatch\n\n## Remediation\n"
+	if err := LinkStory(is, "S-0301", t0); err != nil {
+		t.Fatal(err)
+	}
+	if d := ForStory(is, t0, cycle); !strings.Contains(d.Body, "propose one from its instances") {
+		t.Errorf("no solution yet:\n%s", d.Body)
+	}
+}
+
 // costIssue is I-0007 with a cost, a count, a first report that long before
 // t0, and an Impact section when impact is not empty.
 func costIssue(cost string, count int, before time.Duration, impact string) *Issue {

@@ -291,13 +291,17 @@ func LinkStory(is *Issue, story string, now time.Time) error {
 	return is.Save()
 }
 
-// remediation is the text of the issue's Remediation section.
+// linkedLineRe is a line LinkStory writes.
+var linkedLineRe = regexp.MustCompile(`(?m)^Story S-\d+ remediates this issue, created from it at \S+\.\n?`)
+
+// remediation is the text of the issue's Remediation section, without the
+// lines naming stories made from it before, which are no solution.
 func remediation(is *Issue) string {
 	start, end, ok := section(is.Body, "## Remediation")
 	if !ok {
 		return ""
 	}
-	return strings.TrimSpace(is.Body[start:end])
+	return strings.TrimSpace(linkedLineRe.ReplaceAllString(is.Body[start:end], ""))
 }
 
 // Links reports whether a work item body names the issue by its ID, as a
