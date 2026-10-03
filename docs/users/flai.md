@@ -319,6 +319,15 @@ flai move S-0005 ready --yes    # a draft: finalizes it as it moves
 
 An item moves back one column from ready, in-progress, review, or cancelled, and never out of done ([ADR-0055](../../design/adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)). A reopened item is refused while its parent is cancelled; move the parent back first. What its cancellation cancelled under it stays cancelled. Until it closes again it has no completed time, lead time, or cycle time in `flai stats`.
 
+An epic follows its stories (S-0200, [ADR-0075](../../design/adrs/0075-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). You do not move it by hand: it goes to ready with its first ready story, to in-progress with its first started one, and to review with its last open one, and it goes back only when no other story holds it. Cancelled stories do not count. Each step is recorded on the epic with the story's actor and time and a note such as `follows S-0001, which moved to ready`. `flai move` says so under the item's line, and `--json` returns it as `followed`:
+
+```text
+S-0001 → in-progress
+  E-0001 → in-progress, following S-0001
+```
+
+An epic reaches done only when you accept its last open story (see [Accept and release](#accept-and-release)). You can still move an epic yourself; a story moving forward never pulls it back. The full rule is in [the workflow](../../design/system/workflow.md#an-epic-follows-its-stories). Agents see the epic's move in their MCP `inbox` as `E-0001 <title> moved to in-progress by <who>, following S-0001`, and `item_move` returns it as `followed`.
+
 ### Drafts, cost of delay, and forecasts
 
 Stories and epics carry planning data, each part saying who set it and when ([ADR-0074](../../design/adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)).
@@ -376,7 +385,7 @@ Cancelling E-0003 also cancels 3 items:
   story S-0010  review      Cranes  (in review: its work stays on its branch, unmerged)
 ```
 
-A story in review cannot be cancelled directly: accept it or send it back. It is cancelled only with its epic, and the list says so; accept it first if you want the work. Cancelled is final. Nothing of git is touched: the command names each cancelled story's narrative, branch, and worktree and leaves them for you to keep or remove (`flai archive` moves the narratives). If a tree was cancelled by an older flai or edited by hand, `flai check` reports each open item under a cancelled parent as `item.parent-cancelled`.
+A story in review cannot be cancelled directly: accept it or send it back. It is cancelled only with its epic, and the list says so; accept it first if you want the work. An epic in review cannot be cancelled directly either: move it back to in-progress first. Cancelling a story moves its epic forward when the story was what held it back, to review at most: when its other stories are all done, accept the epic with `flai accept E-nnnn`. The list, `--json`, and `--dry-run` say so. Cancelled is final. Nothing of git is touched: the command names each cancelled story's narrative, branch, and worktree and leaves them for you to keep or remove (`flai archive` moves the narratives). If a tree was cancelled by an older flai or edited by hand, `flai check` reports each open item under a cancelled parent as `item.parent-cancelled`.
 
 Every move appends to the item's `transitions` with a timestamp and who made it (`--by`, default the config author). Reasons land under the item's Notes.
 
@@ -619,6 +628,8 @@ flai edit S-0085 --no-draft --revenue-per-week 800   # finalize a draft and give
 
 `flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's or epic's `topics`, a story's or a task's `after`, a story's agent, a story's draft flag and forecast, a story's or epic's cost of delay (see [Drafts, cost of delay, and forecasts](#drafts-cost-of-delay-and-forecasts)), and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
 
+A story given another epic with `--parent` moves the epic it joined as though the story had just entered it from backlog, and the epic it left as though the story had been cancelled out of it: either goes forward, never back, and never to done. `flai edit` prints each move, indented, as `E-0004 → in-progress, following S-0085`, and `--json` lists them in `followed`.
+
 A title lives in several places, and a retitle keeps them in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name under design, docs, and wip (from a story's worktree only under wip, because design and docs there are another branch's). With `--hash`, the one `--show` printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. `flai check` runs with the change in place: what the change introduces refuses it, every file is put back, and the findings are printed (exit 4). What is simply not allowed, a nature there is not, an epic as a task's parent, is said as a `rule:`. `--autocommit` commits every file the edit touched in one commit; nothing is pushed.
 
 Agents connected over MCP are told of an edit someone else made, as a change of kind `edited` that names what changed. That comes from a small log under `.flai-cache`, outside git, like an agent's read marker: hand edits of a file are not reported, as before.
@@ -772,13 +783,13 @@ This is the save path of the dashboard's editor, usable from a script too. `show
 
 ```bash
 flai check            # errors exit 1
-flai check --strict   # warnings exit 1 too, save review over its limit; use this in CI
+flai check --strict   # warnings exit 1 too, save review over its limit and an epic behind its stories; use this in CI
 flai check ../other-repo --json
 ```
 
 Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, and front matter on `design/` and `docs/` files including ADR numbering. `README.md` files are exempt from front matter.
 
-`--strict` fails on every warning but one: `board.wip-limit` for review over its limit. Only you clear it, by accepting or sending back a story, so it must not stop an agent's close-out of another story. It is still printed, and the summary line ends `(1 that --strict passes over: review over its limit waits on acceptance)`; `--json` counts it in `advisory` as well as `warnings`. Ready or in-progress over its limit still fails `--strict` (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)).
+`--strict` fails on every warning but two. One is `board.wip-limit` for review over its limit: only you clear it, by accepting or sending back a story (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). The other is `epic.lags-stories`, an open epic that its stories put further on than its status, because it was moved before S-0200 or moved back by hand: the message names the `flai move`s that catch it up, or `flai accept E-nnnn` when its stories are all done, and only you move an epic ([ADR-0075](../../design/adrs/0075-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Neither must stop an agent's close-out of another story. Both are still printed, the summary line ends `(N that --strict passes over: only the operator clears them, by accepting or by moving an epic)`, and `--json` counts them in `advisory` as well as `warnings`. Ready or in-progress over its limit still fails `--strict`.
 
 When the project has a markdownlint configuration at its root (`.markdownlint.yaml`, `.yml`, `.json`, or `.jsonc`, or a `.markdownlint-cli2` file's `config`), `flai check` also lints every markdown file under the wip folder with it and warns on each finding, `markdown.MD024` and the like, with markdownlint's own message: work items, threads, and narratives are written in the main checkout, where a story's own lint never runs, and would otherwise reach CI unlinted. flai checks the markdownlint rules what it writes can break (headings, blank lines, trailing spaces, lists, emphasis, fences, bare URLs); your CI's markdownlint still checks the rest. Without a configuration nothing is linted.
 
@@ -905,12 +916,14 @@ Each instance names the story it was recorded for. `new` and `bump` take it from
 ```bash
 flai release S-0031 --dry-run          # what a release would look like now
 flai accept S-0031 --by alex           # move to done, archive, commit — no release, no tag, no push
-flai accept E-0002 --by alex           # an epic: the same
+flai accept E-0002 --by alex           # an epic whose stories are all done: the same
 git fetch                              # flai never fetches by itself
 flai release --pending                 # publish: tag whatever has accumulated and push it
 ```
 
 Acceptance is one step, and for a story it is the only way to reach done: `flai move S-0031 done` from review, a card dropped on done in the dashboard, and `flai accept S-0031` all run the same flow with the same flags. It rebases the story branch and fast-forwards it into the main branch, moves the item to done (the same rules as `flai move`), archives it with its children and narrative, and commits. It computes no release, creates no tag, and pushes nothing: that is a deliberate step of its own, not tied to any one item, publishing, below. `--dry-run` prints anything that would block acceptance and any uncommitted files outside `wip/`, and stops without refusing; `--trailer` appends lines such as co-author attribution to the commit message. The working tree must be clean outside `wip/` so the acceptance commit holds only acceptance, unless you pass `--yes`, which includes those files in it. From the dashboard the same choice is a checkbox in the confirmation.
+
+Accepting an epic's last open story accepts the epic too (S-0200, [the workflow](../../design/system/workflow.md#an-epic-follows-its-stories)): the epic moves to done after the story and is archived with it and with its cancelled stories, in the one acceptance commit, `chore: [S-0031] accept and archive, with E-0002`. `--dry-run` says `would also move E-0002 <title> from review to done, following S-0031, and archive it`, and anything that would stop the epic is a blocker before anything is merged. `--json` has the epic's move in `epic`. An epic accepted this way counts toward the next publish as one you accept yourself.
 
 Acceptance then tells the stories still in progress or in review what it changed under them. For each one whose `touches`, with those of its open tasks, cover a path the merge brought into the main branch, it records which paths those are. A story with no touches is told of every path. The command prints `told S-0040 it overlaps: flai/cmd/accept.go`, `--json` lists them in `overlaps`, and the story's agent sees it in its MCP `inbox` as an `overlapped` change. Acceptance from the dashboard does the same.
 

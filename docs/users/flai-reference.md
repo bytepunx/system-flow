@@ -381,7 +381,7 @@ flai check [dir] [flags]
 
 Check the manifest, layout, every work item in kanban and archive, the narratives and their index, the board, and documentation front matter.
 
-Findings print as path:line: level: rule: message. Errors exit 1; with --strict warnings do too, except the review column over its limit, which only acceptance clears.
+Findings print as path:line: level: rule: message. Errors exit 1; with --strict warnings do too, except two that only the operator clears: the review column over its limit, which acceptance clears, and an epic behind its stories (epic.lags-stories), which moving or accepting the epic clears.
 
 Flags:
 
@@ -1487,7 +1487,9 @@ An item also moves back one column: ready to backlog, in-progress to ready, revi
 
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.
 
-Moving a story from review to done is acceptance: it runs the same flow as flai accept (merge the story branch, archive, commit), with the same flags. There is no other way for a story to become done. Acceptance computes no release; see flai release --pending.
+A story's epic follows it in the same write (ADR-0075): to ready with its first ready story, to in-progress with its first started one, to review with its last open one, and back only as far as no other story holds it; cancelled stories do not count. The epic's move is printed under the story's, and --json returns it as followed.
+
+Moving a story from review to done is acceptance: it runs the same flow as flai accept (merge the story branch, archive, commit), with the same flags. There is no other way for a story to become done. When the story is its epic's last open one, the epic is accepted and archived with it. Acceptance computes no release; see flai release --pending.
 
 Examples:
 

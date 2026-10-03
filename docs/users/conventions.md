@@ -73,7 +73,7 @@ Work is specified top-down and delivered bottom-up.
 
 | Level | Is | Sized so that | Parent |
 |-------|----|---------------|--------|
-| Epic | A deliverable that spans several stories | It closes when its stories close | None |
+| Epic | A deliverable that spans several stories | It closes when its stories close: it follows them across the board and is accepted with the last one ([flai.md](flai.md#moving-work)) | None |
 | Story | One incremental, demonstrable deliverable | An agent finishes it in one to a few sessions | An epic, usually |
 | Task | One piece of a story's work | It is done or not done, with no partial state | Its story, always |
 

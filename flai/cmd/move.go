@@ -37,10 +37,17 @@ cancelling a story cancels its open tasks (ADR-0028). The items are listed
 first, a terminal is asked unless --yes is given, and --dry-run changes
 nothing. Branches, worktrees, and narratives are left as they are.
 
+A story's epic follows it in the same write (ADR-0075): to ready with its
+first ready story, to in-progress with its first started one, to review
+with its last open one, and back only as far as no other story holds it;
+cancelled stories do not count. The epic's move is printed under the
+story's, and --json returns it as followed.
+
 Moving a story from review to done is acceptance: it runs the same flow as
 flai accept (merge the story branch, archive, commit), with the same flags.
-There is no other way for a story to become done. Acceptance computes no
-release; see flai release --pending.`,
+There is no other way for a story to become done. When the story is its
+epic's last open one, the epic is accepted and archived with it. Acceptance
+computes no release; see flai release --pending.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-005 ready --yes                            # a draft, finalized with the move
