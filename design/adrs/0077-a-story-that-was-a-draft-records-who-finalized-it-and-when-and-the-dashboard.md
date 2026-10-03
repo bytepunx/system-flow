@@ -1,7 +1,7 @@
 ---
 id: ADR-0077
 title: "A story that was a draft records who finalized it and when, and the dashboard finalizes through item.finalize"
-status: proposed
+status: accepted
 date: 2026-10-03
 supersedes: []
 superseded_by: []
