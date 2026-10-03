@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.35 - 2026-10-03
+
+- S-0243 Review column exceeds its WIP limit while acceptance is batched (patch): `work-management.md` says `wait_for_work` names a story to pull only while review is under its limit as well as the in-progress limit, and that on a timeout it may be waiting for a story in review to be accepted or sent back (ADR-0073, with the designer's consent on TH-0079).
+
 ## 1.0.34 - 2026-10-03
 
 - S-0197 Agents commit each task after flai stream sync, and stream sync makes conflicts easy to resolve (patch).
