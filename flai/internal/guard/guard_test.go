@@ -32,7 +32,7 @@ func TestASubAgentReadsFlaiOverMCP(t *testing.T) {
 			t.Errorf("%s refused: %s", tool, why)
 		}
 	}
-	for _, tool := range []string{"item_move", "item_edit", "item_new", "inbox", "wait_for_work", "wait_for_events", "thread_open", "thread_reply", "thread_resolve"} {
+	for _, tool := range []string{"item_move", "item_edit", "item_new", "inbox", "wait_for_work", "wait_for_events", "thread_open", "thread_reply", "thread_resolve", "activity_log"} {
 		why := g.Check(Event{ToolName: MCPPrefix + tool, AgentID: "a1", AgentType: "verifier"})
 		if !strings.Contains(why, "a sub-agent (verifier) cannot call "+tool) || !strings.Contains(why, "final message") {
 			t.Errorf("%s: %q", tool, why)
