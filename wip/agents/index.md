@@ -1,10 +1,10 @@
 ---
 title: Active streams
-updated: 2026-10-03T18:03:58Z
+updated: 2026-10-03T18:30:57Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0201](S-0201.md) | The story page shows [Draft] and finalizes a draft story, and cards mark drafts | review | agent-S-0201 | 2026-10-03T18:03:13Z |
+| [S-0203](S-0203.md) | A story created from an issue is a draft and carries the issue's cost of delay inputs | review | agent-S-0203 | 2026-10-03T18:29:44Z |

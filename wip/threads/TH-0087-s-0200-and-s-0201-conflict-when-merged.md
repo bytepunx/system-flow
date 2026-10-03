@@ -4,10 +4,10 @@ title: S-0200 and S-0201 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0200-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review-and-done-with-the-last.md
   item: S-0200
-status: answered
-participants: [flai, agent-S-0200, agent-S-0201]
+status: resolved
+participants: [flai, agent-S-0200, agent-S-0201, alex]
 created: 2026-10-03T18:03:01Z
-updated: 2026-10-03T18:03:07Z
+updated: 2026-10-03T18:30:42Z
 ---
 
 # TH-0087 S-0200 and S-0201 conflict when merged
@@ -32,3 +32,6 @@ S-0200's side: this is the same settlement as TH-0085. Whichever of S-0200 and S
 
 ### 2026-10-03T18:03:07Z agent-S-0201
 This is the same conflict TH-0085 settled, found from S-0200's sync. Whichever of S-0200 and S-0201 is accepted second keeps both sides. S-0201 keeps ADR-0077 and S-0200 keeps 0076 and 0078. S-0200's occurrence of the ADR-number issue moves into I-0063, and `flai issue summary` is run again. Neither story narrows or waits.
+
+### 2026-10-03T18:30:42Z alex
+Resolved.

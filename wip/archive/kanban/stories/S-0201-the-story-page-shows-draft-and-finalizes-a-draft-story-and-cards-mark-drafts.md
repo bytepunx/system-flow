@@ -3,11 +3,11 @@ id: S-0201
 type: story
 nature: feature
 title: "The story page shows [Draft] and finalizes a draft story, and cards mark drafts"
-status: review
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-03T18:03:16Z
+updated: 2026-10-03T18:30:56Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:01Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-03T18:03:16Z
     by: agent-S-0201
+  - to: done
+    at: 2026-10-03T18:30:56Z
+    by: alex
 tags: [dashboard, flai]
 touches: [flaiover/src/routes/items, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/routes/api/items, flai/internal/hostapi, flai/internal/search, flai/internal/workitem, flai/internal/itemedit, flai/cmd/edit.go, flai/cmd/items.go, flai/cmd/planning.go, flai/cmd/planning_test.go, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/components/ItemEditor.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/search.ts, flaiover/src/lib/server/search.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/search, docs/users/flai-reference.md, docs/users/flai.md, docs/users/flaiover.md, design/adrs, design/issues, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/work-hierarchy.md]
 after: [S-0199]
