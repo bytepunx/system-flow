@@ -106,7 +106,8 @@ func TestIssueListStory(t *testing.T) {
 func TestIssueStory(t *testing.T) {
 	root := issueProject(t)
 	for _, args := range [][]string{
-		{"issue", "new", "Fixture was ignored", "--class", "defect"},
+		{"issue", "new", "Fixture was ignored", "--class", "defect", "--cost", "20m"},
+		{"issue", "bump", "I-0001", "--cost", "20m"},
 		{"issue", "new", "Lint on the host is v1", "--class", "efficiency"},
 		{"issue", "new", "Go not on PATH", "--class", "blocker"},
 		{"epic", "new", "Upkeep"},
@@ -115,10 +116,7 @@ func TestIssueStory(t *testing.T) {
 			t.Fatalf("%v: %d %s", args, code, errOut)
 		}
 	}
-	issueFiles := map[string][]byte{}
-	for _, f := range []string{"I-0001-fixture-was-ignored.md", "I-0002-lint-on-the-host-is-v1.md", "summary.md"} {
-		issueFiles[f] = readIssueFile(t, root, f)
-	}
+	summary := readIssueFile(t, root, "summary.md")
 	out, errOut, code := runIn(t, root, "issue", "story", "I-0001")
 	if code != 0 || out != "S-0001 Fixture was ignored\n  wip/kanban/stories/S-0001-fixture-was-ignored.md\n" {
 		t.Fatalf("issue story I-0001: %d %q %s", code, out, errOut)
@@ -128,26 +126,43 @@ func TestIssueStory(t *testing.T) {
 	if code != 0 || json.Unmarshal([]byte(out), &made) != nil {
 		t.Fatalf("issue story I-0002 --json: %d %s %s", code, out, errOut)
 	}
-	want := map[string]any{"id": "S-0002", "title": "Lint on the host is v1", "nature": "improvement", "path": "wip/kanban/stories/S-0002-lint-on-the-host-is-v1.md", "issue": "I-0002", "committed": false}
+	want := map[string]any{"id": "S-0002", "title": "Lint on the host is v1", "nature": "improvement", "path": "wip/kanban/stories/S-0002-lint-on-the-host-is-v1.md", "issue": "I-0002", "draft": true, "committed": false}
 	for k, v := range want {
 		if made[k] != v {
 			t.Errorf("issue story --json %s = %v, want %v", k, made[k], v)
 		}
 	}
+	if _, ok := made["cost_of_delay"]; ok {
+		t.Errorf("an issue with no cost gives no cost of delay: %v", made["cost_of_delay"])
+	}
 	for file, nature := range map[string]string{"S-0001-fixture-was-ignored.md": "remediation", "S-0002-lint-on-the-host-is-v1.md": "improvement"} {
 		data, _ := os.ReadFile(filepath.Join(root, "wip", "kanban", "stories", file))
-		if !strings.Contains(string(data), "\nnature: "+nature+"\n") || !strings.Contains(string(data), "\nstatus: backlog\n") {
-			t.Errorf("%s should be a %s story in backlog:\n%s", file, nature, data)
+		if !strings.Contains(string(data), "\nnature: "+nature+"\n") || !strings.Contains(string(data), "\nstatus: backlog\n") || !strings.Contains(string(data), "\ndraft: true\n") {
+			t.Errorf("%s should be a draft %s story in backlog:\n%s", file, nature, data)
 		}
+	}
+	// S-0203: the issue's cost and count give the story's time lost per
+	// cycle, set by flai and explained in its Notes
+	data, _ := os.ReadFile(filepath.Join(root, "wip", "kanban", "stories", "S-0001-fixture-was-ignored.md"))
+	for _, want := range []string{"\n    time_lost_per_cycle: 40m\n", "\n  by: flai\n", "time_lost_per_cycle 40m: 20m per occurrence × 2 occurrences ÷ 1 cycle of 168h"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("S-0001 should carry %q:\n%s", want, data)
+		}
+	}
+	if data, _ := os.ReadFile(filepath.Join(root, "wip", "kanban", "stories", "S-0002-lint-on-the-host-is-v1.md")); strings.Contains(string(data), "cost_of_delay") {
+		t.Errorf("an issue with no cost gives no cost of delay:\n%s", data)
 	}
 	epic, _ := os.ReadFile(filepath.Join(root, "wip", "kanban", "epics", "E-0001-upkeep.md"))
 	if !strings.Contains(string(epic), "S-0002") {
 		t.Errorf("the epic should link the story made under it:\n%s", epic)
 	}
-	for _, f := range []string{"I-0001-fixture-was-ignored.md", "I-0002-lint-on-the-host-is-v1.md", "summary.md"} {
-		if string(issueFiles[f]) != string(readIssueFile(t, root, f)) {
-			t.Errorf("issue story should not change design/issues/%s", f)
+	for f, id := range map[string]string{"I-0001-fixture-was-ignored.md": "S-0001", "I-0002-lint-on-the-host-is-v1.md": "S-0002"} {
+		if data := readIssueFile(t, root, f); !strings.Contains(string(data), "## Remediation\n\nStory "+id+" remediates this issue, created from it at 2026-09-15T21:00:00Z.\n") {
+			t.Errorf("the issue's Remediation section should name %s:\n%s", id, data)
 		}
+	}
+	if string(summary) != string(readIssueFile(t, root, "summary.md")) {
+		t.Error("issue story should not change design/issues/summary.md")
 	}
 
 	storyFiles := func() int {
@@ -170,7 +185,9 @@ func TestIssueStory(t *testing.T) {
 }
 
 // The dashboard makes a story from an issue as it makes any item: as the
-// manifest's owner, committed on its own with its trailer.
+// manifest's owner, committed on its own with its trailer, and with it the
+// issue that now names it (S-0203). An issue in another story's worktree is
+// named there and left for that story to commit.
 func TestIssueStoryAutocommit(t *testing.T) {
 	root := bodyProject(t)
 	t.Setenv("FLAI_STORY", "")
@@ -197,11 +214,37 @@ func TestIssueStoryAutocommit(t *testing.T) {
 	if !strings.HasPrefix(show, "chore: [S-0001] create story: Fixture was ignored|Created-with: flaiover") {
 		t.Errorf("commit: %s", show)
 	}
-	if !strings.Contains(show, "S-0001-fixture-was-ignored.md") || !strings.Contains(show, "E-0001-workbench.md") || !strings.Contains(show, "2 files changed") {
-		t.Errorf("the commit should hold the story and its epic only: %s", show)
+	if !strings.Contains(show, "S-0001-fixture-was-ignored.md") || !strings.Contains(show, "E-0001-workbench.md") || !strings.Contains(show, "I-0001-fixture-was-ignored.md") || !strings.Contains(show, "3 files changed") {
+		t.Errorf("the commit should hold the story, its epic, and the issue only: %s", show)
+	}
+	if data := readIssueFile(t, root, "I-0001-fixture-was-ignored.md"); !strings.Contains(string(data), "Story S-0001 remediates this issue") {
+		t.Errorf("the committed issue should name the story:\n%s", data)
 	}
 	if st := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); st != "" {
 		t.Errorf("nothing should be left uncommitted: %q", st)
+	}
+
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0005")
+	_ = os.MkdirAll(filepath.Join(wt, "design", "issues"), 0o755)
+	for _, f := range []string{"system-flow.yaml", "design/issues/I-0001-fixture-was-ignored.md"} {
+		data, _ := os.ReadFile(filepath.Join(root, f))
+		_ = os.WriteFile(filepath.Join(wt, f), data, 0o644)
+	}
+	if _, errOut, code := runIn(t, wt, "issue", "new", "Only on the branch", "--class", "defect", "--story", "S-0005"); code != 0 {
+		t.Fatalf("issue new in the worktree: %s", errOut)
+	}
+	out, errOut, code = runIn(t, root, "issue", "story", "I-0002", "--story", "S-0005", "--autocommit", "--json")
+	if code != 0 || json.Unmarshal([]byte(out), &made) != nil || made.ID != "S-0002" || !made.Committed {
+		t.Fatalf("issue story --story --autocommit: %d %s %s", code, out, errOut)
+	}
+	if show := gitIn(t, root, "show", "--stat", "--format=%s", "HEAD"); !strings.Contains(show, "S-0002-only-on-the-branch.md") || !strings.Contains(show, "1 file changed") {
+		t.Errorf("the commit should hold the story only, not the worktree's issue: %s", show)
+	}
+	if data := readIssueFile(t, wt, "I-0002-only-on-the-branch.md"); !strings.Contains(string(data), "Story S-0002 remediates this issue") {
+		t.Errorf("the worktree's issue should name the story:\n%s", data)
+	}
+	if st := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); st != "" {
+		t.Errorf("nothing should be left uncommitted in the main checkout: %q", st)
 	}
 }
 
@@ -216,7 +259,8 @@ func readIssueFile(t *testing.T, root, name string) []byte {
 
 // A story's issues are committed on its branch, so until it is accepted
 // they are in its worktree and not in the main checkout: --story reads them
-// there, and the story made from one goes to wip/ in the main checkout.
+// there and names the story there, and the story made from one goes to wip/
+// in the main checkout.
 func TestIssueStoryWorktree(t *testing.T) {
 	root := issueProject(t)
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0005")
@@ -252,7 +296,6 @@ func TestIssueStoryWorktree(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "issue", "story", "I-0002"); code == 0 || !strings.Contains(errOut, "I-0002 not found") {
 		t.Errorf("without --story the issue is read from the root, which has no I-0002: %d %s", code, errOut)
 	}
-	before := readIssueFile(t, wt, "I-0002-only-on-the-branch.md")
 	out, errOut, code := runIn(t, root, "issue", "story", "I-0002", "--story", "S-0005")
 	if code != 0 || out != "S-0001 Only on the branch\n  wip/kanban/stories/S-0001-only-on-the-branch.md\n" {
 		t.Fatalf("issue story --story: %d %q %s", code, out, errOut)
@@ -260,8 +303,11 @@ func TestIssueStoryWorktree(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(wt, "wip", "kanban", "stories")); err == nil {
 		t.Error("the story should be made in the main checkout's wip, not the worktree's")
 	}
-	if string(before) != string(readIssueFile(t, wt, "I-0002-only-on-the-branch.md")) {
-		t.Error("issue story should not change the issue in the worktree")
+	if data := readIssueFile(t, wt, "I-0002-only-on-the-branch.md"); !strings.Contains(string(data), "Story S-0001 remediates this issue") {
+		t.Errorf("the issue in the worktree should name the story:\n%s", data)
+	}
+	if _, err := os.Stat(filepath.Join(root, "design", "issues", "I-0002-only-on-the-branch.md")); err == nil {
+		t.Error("the worktree's issue should not be written to the main checkout")
 	}
 	out, _, _ = runIn(t, root, "issue", "list", "--story", "S-0005", "--json")
 	var list []map[string]any
