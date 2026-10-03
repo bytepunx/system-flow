@@ -1,6 +1,7 @@
 package itemnew
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,5 +112,94 @@ func TestABodyWithAnIndentedListIsRefusedWithMD007(t *testing.T) {
 		if lines[i] != want[i] {
 			t.Fatalf("MD007 on lines %v, want %v", lines, want)
 		}
+	}
+}
+
+// gitLog is a git that is always inside a work tree and records what it is
+// asked to do.
+type gitLog struct{ calls [][]string }
+
+func (g *gitLog) Run(_, name string, args ...string) (string, error) {
+	g.calls = append(g.calls, append([]string{name}, args...))
+	return "", nil
+}
+
+func (g *gitLog) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (g *gitLog) LookPath(name string) (string, error) { return name, nil }
+
+// committed is what the recorded git commit was given after "--".
+func (g *gitLog) committed() []string {
+	for _, c := range g.calls {
+		if len(c) > 1 && c[1] == "commit" {
+			for i, a := range c {
+				if a == "--" {
+					return c[i+1:]
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// S-0203: what Then writes with the new item is committed with it; a path
+// outside the repository is not handed to git.
+func TestThenIsCommittedWithTheItem(t *testing.T) {
+	repo := project(t)
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	issue := filepath.Join(repo.Root, "design", "issues", "I-0001.md")
+	g := &gitLog{}
+	res, err := Create(repo, g, Options{
+		New:        workitem.NewOptions{Type: workitem.Story, Title: "From an issue", Now: now},
+		Autocommit: true,
+		Then: func(it *workitem.Item) ([]string, error) {
+			if err := os.MkdirAll(filepath.Dir(issue), 0o755); err != nil {
+				return nil, err
+			}
+			return []string{issue, "design/issues/summary.md", filepath.Join(t.TempDir(), "elsewhere.md")}, os.WriteFile(issue, []byte(it.ID+"\n"), 0o644)
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{res.Path, "design/issues/I-0001.md", "design/issues/summary.md"}
+	if got := g.committed(); strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("committed %v, want %v", got, want)
+	}
+	if !res.Committed {
+		t.Errorf("the item is committed: %+v", res)
+	}
+}
+
+// S-0203: when Then fails, the new item is removed, its parent restored, and
+// the error returned.
+func TestThenFailingLeavesNothing(t *testing.T) {
+	repo := project(t)
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	epic, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Issues", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentWas, _ := os.ReadFile(epic.Path)
+	boom := errors.New("the issue file is gone")
+	g := &gitLog{}
+	_, err = Create(repo, g, Options{
+		New:        workitem.NewOptions{Type: workitem.Story, Title: "From an issue", Parent: epic.ID, Now: now},
+		Autocommit: true,
+		Then:       func(*workitem.Item) ([]string, error) { return nil, boom },
+	})
+	if !errors.Is(err, boom) {
+		t.Fatalf("want the hook's error, got %v", err)
+	}
+	if m, _ := filepath.Glob(filepath.Join(repo.Root, "wip/kanban/stories", "*")); len(m) != 0 {
+		t.Errorf("nothing is created: %v", m)
+	}
+	if now, _ := os.ReadFile(epic.Path); string(now) != string(parentWas) {
+		t.Errorf("the parent is left as it was:\n%s", now)
+	}
+	if len(g.calls) != 0 {
+		t.Errorf("nothing is committed: %v", g.calls)
 	}
 }

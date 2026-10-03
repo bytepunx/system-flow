@@ -37,7 +37,10 @@ type NewOptions struct {
 	// Draft makes a story a draft (S-0199): an agent wrote it, and it is
 	// finalized before it is ready.
 	Draft bool
-	Now   time.Time
+	// CostOfDelay is what waiting for a story or an epic costs (S-0203): a
+	// story made from an issue carries the issue's cost of delay inputs.
+	CostOfDelay *CostOfDelay
+	Now         time.Time
 	// Body replaces what the template puts below the item's heading: the
 	// author's goal, criteria, and notes, written before the item exists
 	// (S-0059). The heading stays the one flai renders, so the ID and the
@@ -131,6 +134,16 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		return nil, fmt.Errorf("only a story is a draft, not %s", articled(opt.Type))
 	}
 	it.Draft = opt.Draft
+	if c := opt.CostOfDelay; !c.IsZero() {
+		if !Carries(opt.Type, "cost_of_delay") {
+			return nil, fmt.Errorf("only a story or an epic carries a cost of delay, not %s", articled(opt.Type))
+		}
+		// checked here, so that a wrong one is not blamed on the template below
+		if errs := planningErrors(&Item{Type: opt.Type, CostOfDelay: c}); len(errs) > 0 {
+			return nil, fmt.Errorf("the new %s's cost of delay: %s", opt.Type, strings.Join(errs, "; "))
+		}
+		it.CostOfDelay = c.clone()
+	}
 	if it.Tags == nil {
 		it.Tags = []string{}
 	}

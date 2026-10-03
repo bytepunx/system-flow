@@ -26,3 +26,29 @@ func TestCreateDraft(t *testing.T) {
 		}
 	}
 }
+
+// S-0203: a story is created with a cost of delay, as one made from an issue
+// is; a task is not, and a block without who set it is refused.
+func TestCreateCostOfDelay(t *testing.T) {
+	r := newProject(t)
+	cod := &CostOfDelay{Inputs: &CostInputs{TimeLostPerCycle: "2h"}, By: "flai", At: t0.Format(TimeFormat)}
+	s, err := r.Create(NewOptions{Type: Story, Title: "Costed", CostOfDelay: cod, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cod.Inputs.TimeLostPerCycle = "9h"
+	got, err := r.Get(s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := got.CostOfDelay; c.IsZero() || c.Inputs.TimeLostPerCycle != "2h" || c.By != "flai" || c.At != t0.Format(TimeFormat) {
+		t.Errorf("the story carries the cost of delay it was given: %+v", c)
+	}
+	if _, err := r.Create(NewOptions{Type: Task, Title: "No", Parent: s.ID, CostOfDelay: cod, Now: t0}); err == nil || !strings.Contains(err.Error(), "not a task") {
+		t.Errorf("a task with a cost of delay must be refused: %v", err)
+	}
+	unsigned := &CostOfDelay{Inputs: &CostInputs{TimeLostPerCycle: "2h"}, At: t0.Format(TimeFormat)}
+	if _, err := r.Create(NewOptions{Type: Story, Title: "Unsigned", CostOfDelay: unsigned, Now: t0}); err == nil || !strings.Contains(err.Error(), "cost_of_delay.by is required") {
+		t.Errorf("a cost of delay without who set it must be refused: %v", err)
+	}
+}

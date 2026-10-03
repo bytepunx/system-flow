@@ -29,6 +29,10 @@ type Options struct {
 	// the project sets dashboard.autocommit: false.
 	Autocommit bool
 	Trailers   []string
+	// Then writes what goes with the new item once the check keeps it, and
+	// returns the paths it wrote, absolute or relative to the repository's
+	// root, to commit with the item.
+	Then func(it *workitem.Item) ([]string, error)
 }
 
 // Result is the created item and what became of it.
@@ -101,6 +105,15 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		}
 		return nil, &docedit.RefusedError{Path: rel, Reason: fmt.Sprintf("flai check has %d finding(s) with this %s; nothing was created", len(blocking), it.Type), Findings: blocking}
 	}
+	var then []string
+	if opt.Then != nil {
+		if then, err = opt.Then(it); err != nil {
+			if uerr := undo(); uerr != nil {
+				return nil, fmt.Errorf("writing what goes with new %s %s: %w; removing it failed too, delete %s: %w", it.Type, it.ID, err, rel, uerr)
+			}
+			return nil, fmt.Errorf("writing what goes with new %s %s, so it was not created: %w", it.Type, it.ID, err)
+		}
+	}
 	if !opt.Autocommit || !repo.Manifest.Autocommit() {
 		return res, nil
 	}
@@ -111,6 +124,15 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	paths := []string{relTo(root, it.Path)}
 	if parentPath != "" {
 		paths = append(paths, relTo(root, parentPath))
+	}
+	for _, p := range then {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(repo.Root, p)
+		}
+		// a path outside the commit's root is not git's to add there
+		if p = relTo(root, p); !filepath.IsAbs(p) {
+			paths = append(paths, p)
+		}
 	}
 	msg := fmt.Sprintf("chore: [%s] create %s: %s", it.ID, it.Type, it.Title)
 	if len(opt.Trailers) > 0 {
