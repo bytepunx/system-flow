@@ -102,8 +102,11 @@ var refused = map[string][]string{
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","topics":["flai/cmd"],` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","body":"  ",` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":"t"}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","clear_cost_of_delay":true,"cost_of_delay":{"value":"5"},` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","clear_forecast":true,"forecast":{"duration":"6h"},` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","cost_of_delay":{"value":5},` + rid + `}`,
 	},
-	"item.new":          {`{"type":"task","title":"t","body":"b",` + rid + `}`, `{"type":"story","title":"t","body":"b","parent":"S-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","parent":"E-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["a,b"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["two words"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","nature":"urgent",` + rid + `}`, `{"type":"epic","title":"","body":"b",` + rid + `}`, `{"type":"epic","title":"t","body":"  ",` + rid + `}`},
+	"item.new":          {`{"type":"task","title":"t","body":"b",` + rid + `}`, `{"type":"story","title":"t","body":"b","parent":"S-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","parent":"E-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["a,b"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["two words"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","nature":"urgent",` + rid + `}`, `{"type":"epic","title":"","body":"b",` + rid + `}`, `{"type":"epic","title":"t","body":"  ",` + rid + `}`, `{"type":"epic","title":"t","body":"b","draft":true,` + rid + `}`},
 	"item.template":     {`{"type":"task"}`},
 	"issue.list":        {`{"story":"--all"}`, `{"story":"T-0001"}`, `{"story":"S-1 --all"}`, `[]`},
 	"issue.story":       {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","epic":"S-0001",` + rid + `}`, `{"id":"I-0001","epic":"--json",` + rid + `}`, `{"id":"I-0001"}`},
@@ -967,5 +970,83 @@ func TestAnAgentRestartThatWasQueuedIsJournalledAsQueued(t *testing.T) {
 	commit := describeAgentNow("started", " to commit what its worktree holds")
 	if _, detail := commit(Written{Data: json.RawMessage(`{"story":"S-0001","agent":"agent-S-0001","command":"claude","pid":42}`)}, nil); detail != "started claude for S-0001 as agent-S-0001 to commit what its worktree holds (pid 42)" {
 		t.Errorf("commit: %q", detail)
+	}
+}
+
+// S-0199: the planning data reaches flai as flags: draft on a new story,
+// each cost of delay and forecast key on an edit (an empty value removes
+// it), the clears, and finalize on a move to ready as --yes.
+func TestPlanningDataReachesFlaiAsFlags(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+	m := writeMethods(rec.run, time.Now, Host{})
+	n := 0
+	run := func(name, params string) (string, *channel.Error) {
+		n++
+		before := len(rec.runs)
+		_, e := m[name](context.Background(), p, json.RawMessage(strings.Replace(params, "{", fmt.Sprintf(`{"request_id":"req-%08d",`, n), 1)))
+		if len(rec.runs) == before {
+			return "", e
+		}
+		return strings.Join(rec.runs[len(rec.runs)-1].Args, " "), e
+	}
+	if args, e := run("item.new", `{"type":"story","title":"T","body":"b","draft":true}`); e != nil || !strings.Contains(args, " --draft --body-stdin") {
+		t.Errorf("a new draft: %v %s", e, args)
+	}
+	if args, _ := run("item.new", `{"type":"story","title":"T","body":"b"}`); strings.Contains(args, "draft") {
+		t.Errorf("a story not a draft: %s", args)
+	}
+	edit := `{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `",`
+	for params, want := range map[string]string{
+		`"draft":true}`:  " --draft --json",
+		`"draft":false}`: " --no-draft --json",
+		`"cost_of_delay":{"revenue_per_week":"1200.5","penalty_per_week":"300","time_lost_per_cycle":" 4h ","value":"2000"}}`: " --revenue-per-week=1200.5 --penalty-per-week=300 --time-lost-per-cycle=4h --cost-of-delay-value=2000 --json",
+		`"cost_of_delay":{"penalty_per_week":""}}`: " --penalty-per-week= --json",
+		`"clear_cost_of_delay":true}`:              " --clear-cost-of-delay --json",
+		`"forecast":{"duration":"6h","delivery":"2026-10-09T17:00:00Z","basis":"three  tasks\n like S-0185"}}`: " --forecast-duration=6h --forecast-delivery=2026-10-09T17:00:00Z --forecast-basis=three tasks like S-0185 --json",
+		`"forecast":{"basis":""}}`: " --forecast-basis= --json",
+		`"clear_forecast":true}`:   " --clear-forecast --json",
+		`"draft":true,"clear_forecast":true,"cost_of_delay":{"value":"5"}}`: " --draft --clear-forecast --cost-of-delay-value=5 --json",
+	} {
+		if args, e := run("item.edit", edit+params); e != nil || !strings.HasSuffix(args, "--trailer="+Trailer+want) {
+			t.Errorf("item.edit %s: %v %s", params, e, args)
+		}
+	}
+	for _, params := range []string{`"cost_of_delay":{}}`, `"forecast":{}}`} {
+		if _, e := run("item.edit", edit+params); e == nil || e.Message != "nothing to change" {
+			t.Errorf("an empty block %s: %+v", params, e)
+		}
+	}
+	if args, e := run("item.move", `{"id":"S-0001","to":"ready","finalize":true}`); e != nil || args != "move S-0001 ready --by=designer --yes --json" {
+		t.Errorf("finalize: %v %s", e, args)
+	}
+	if args, _ := run("item.move", `{"id":"S-0001","to":"ready"}`); strings.Contains(args, "--yes") {
+		t.Errorf("a move without finalize: %s", args)
+	}
+	if args, _ := run("item.move", `{"id":"S-0001","to":"in-progress","finalize":true}`); strings.Contains(args, "--yes") {
+		t.Errorf("finalize on a move not to ready: %s", args)
+	}
+}
+
+// S-0199: flai's refusal of a draft story to ready reaches the dashboard as
+// a rule, in workitem's own words.
+func TestADraftRefusedToReadyIsARule(t *testing.T) {
+	p := harbour(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Drafted", Owner: "olive", Draft: true, Body: "## Acceptance criteria\n- [ ] works\n", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, refusal := repo.Transition(draft, workitem.Ready, "olive", "", t0)
+	if refusal == nil || !strings.HasPrefix(refusal.Error(), "rule: ") {
+		t.Fatalf("workitem should refuse a draft to ready as a rule: %v", refusal)
+	}
+	rec := &recorder{ran: Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "err": refusal.Error()}}}}
+	_, e := writeMethods(rec.run, time.Now, Host{})["item.move"](context.Background(), p, json.RawMessage(`{"id":"`+draft.ID+`","to":"ready",`+rid+`}`))
+	if e == nil || e.Code != Rule || !strings.HasPrefix(e.Message, draft.ID+" is a draft: finalize it first") {
+		t.Errorf("a draft to ready: %+v", e)
 	}
 }

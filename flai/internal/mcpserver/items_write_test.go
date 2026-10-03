@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // S-0103: stories are created and edited over MCP with their agent: the
@@ -172,5 +173,109 @@ func TestItemNewAndEditCarryTopics(t *testing.T) {
 	}
 	if got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID}); got["topics"] != nil {
 		t.Errorf("cleared: %v", got["topics"])
+	}
+}
+
+// S-0199: item_new makes a story a draft, which item_get shows, and refuses a
+// draft of anything else; item_move refuses a draft story to ready, since
+// finalizing is the operator's, and so does item_edit's draft false.
+func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
+	f := setup(t)
+	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Drafted", "draft": true, "body": "## Goal\n\nx\n\n## Acceptance criteria\n- [ ] it works\n"})
+	if failed != "" || out["draft"] != true {
+		t.Fatalf("new draft: %v %s", out, failed)
+	}
+	id := out["id"].(string)
+	for typ, parent := range map[string]string{"epic": "", "task": f.story.ID} {
+		if _, failed := f.call(t, "item_new", map[string]any{"type": typ, "title": "Not a story", "parent": parent, "draft": true}); !strings.Contains(failed, "only a story is a draft") {
+			t.Errorf("a draft %s: %q", typ, failed)
+		}
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"id": id, "to": "ready"}); !strings.Contains(failed, id+" is a draft") || !strings.Contains(failed, "operator's") {
+		t.Errorf("a draft to ready: %q", failed)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": id, "draft": false}); !strings.Contains(failed, "operator's") {
+		t.Errorf("finalized by an agent: %q", failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": id}); got["status"] != "backlog" || got["draft"] != true {
+		t.Errorf("still a backlog draft: %v %v", got["status"], got["draft"])
+	}
+	plain, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Plain"})
+	if failed != "" || plain["draft"] != nil {
+		t.Fatalf("new story: %v %s", plain, failed)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": plain["id"], "draft": true}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "draft" {
+		t.Errorf("made a draft: %v %s", ed, failed)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "draft": true}); !strings.Contains(failed, "only a story in the backlog") {
+		t.Errorf("an in-progress story made a draft: %q", failed)
+	}
+}
+
+// S-0199: item_edit sets, removes one key of, replaces, and clears a cost of
+// delay and a forecast, each stamped with the agent and the time.
+func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
+	f := setup(t)
+	at := f.clock.UTC().Format(workitem.TimeFormat)
+	planning := func(key string) map[string]any {
+		t.Helper()
+		got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID})
+		v, _ := got[key].(map[string]any)
+		return v
+	}
+	edit := func(args map[string]any, want string) {
+		t.Helper()
+		args["id"] = f.story.ID
+		ed, failed := f.call(t, "item_edit", args)
+		if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != want {
+			t.Fatalf("%v: %v %s", args, ed, failed)
+		}
+	}
+
+	edit(map[string]any{"cost_of_delay": map[string]any{"revenue_per_week": 1200.5, "penalty_per_week": 300, "time_lost_per_cycle": "4h", "value": 2000}}, "cost_of_delay")
+	got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID})
+	c := got["cost_of_delay"].(map[string]any)
+	in := c["inputs"].(map[string]any)
+	if in["revenue_per_week"] != 1200.5 || in["penalty_per_week"] != 300.0 || in["time_lost_per_cycle"] != "4h" || c["value"] != 2000.0 || c["by"] != "claude" || c["at"] != at || got["currency"] != "USD" {
+		t.Errorf("set: %v, currency %v", c, got["currency"])
+	}
+	edit(map[string]any{"cost_of_delay": map[string]any{"time_lost_per_cycle": ""}}, "cost_of_delay")
+	if in := planning("cost_of_delay")["inputs"].(map[string]any); in["time_lost_per_cycle"] != nil || in["revenue_per_week"] != 1200.5 {
+		t.Errorf("one key removed: %v", in)
+	}
+	// an amount is removed by replacing the block with the keys to keep
+	edit(map[string]any{"clear_cost_of_delay": true, "cost_of_delay": map[string]any{"revenue_per_week": 1200.5}}, "cost_of_delay")
+	if c := planning("cost_of_delay"); c["value"] != nil || len(c["inputs"].(map[string]any)) != 1 {
+		t.Errorf("replaced: %v", c)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "cost_of_delay": map[string]any{"time_lost_per_cycle": "soon"}}); !strings.Contains(failed, "not a Go duration") {
+		t.Errorf("a bad duration: %q", failed)
+	}
+	edit(map[string]any{"clear_cost_of_delay": true}, "cost_of_delay")
+	if c := planning("cost_of_delay"); c != nil {
+		t.Errorf("cleared: %v", c)
+	}
+
+	edit(map[string]any{"forecast": map[string]any{"duration": "6h", "delivery": "2026-10-09T17:00:00Z", "basis": "three tasks like the last story's"}}, "forecast")
+	if fc := planning("forecast"); fc["duration"] != "6h" || fc["delivery"] != "2026-10-09T17:00:00Z" || fc["basis"] != "three tasks like the last story's" || fc["by"] != "claude" || fc["at"] != at {
+		t.Errorf("set: %v", fc)
+	}
+	edit(map[string]any{"forecast": map[string]any{"basis": ""}}, "forecast")
+	if fc := planning("forecast"); fc["basis"] != nil || fc["duration"] != "6h" {
+		t.Errorf("one key removed: %v", fc)
+	}
+	edit(map[string]any{"clear_forecast": true, "forecast": map[string]any{"delivery": "2026-10-10T09:00:00Z"}}, "forecast")
+	if fc := planning("forecast"); fc["duration"] != nil || fc["delivery"] != "2026-10-10T09:00:00Z" {
+		t.Errorf("replaced: %v", fc)
+	}
+	edit(map[string]any{"clear_forecast": true}, "forecast")
+	if fc := planning("forecast"); fc != nil {
+		t.Errorf("cleared: %v", fc)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.Parent, "forecast": map[string]any{"duration": "6h"}}); !strings.Contains(failed, "a forecast belongs to stories") {
+		t.Errorf("an epic's forecast: %q", failed)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.Parent, "cost_of_delay": map[string]any{"value": 500}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "cost_of_delay" {
+		t.Errorf("an epic's cost of delay: %v %s", ed, failed)
 	}
 }

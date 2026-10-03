@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -28,6 +29,7 @@ type ItemNewIn struct {
 	After   []string        `json:"after,omitempty" jsonschema:"what it waits for until they are done: a story's stories (it is held in ready meanwhile), a task's tasks of the same story; flai check runs with it, and an entry that does not exist, a task of another story, or a cycle refuses the creation"`
 	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, config, and roles (explore, verify: each a harness, model, and config for that sub-agent), over the project's default, which fills in what is not given, role by role"`
 	Body    string          `json:"body,omitempty" jsonschema:"the goal, criteria, and notes below the heading; the template's empty sections when not given"`
+	Draft   bool            `json:"draft,omitempty" jsonschema:"a story's only: true makes it a draft, which cannot go to ready until the operator finalizes it; give it for a story you wrote for the operator to review"`
 }
 
 func (in ItemNewIn) project() string { return in.Project }
@@ -42,7 +44,7 @@ func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNew
 		owner = s.agent
 	}
 	opt := workitem.NewOptions{Type: in.Type, Title: strings.TrimSpace(in.Title), Nature: nature, Parent: in.Parent, Owner: owner,
-		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, After: in.After, Agent: in.Agent, Body: in.Body, Now: s.now()}
+		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, After: in.After, Agent: in.Agent, Body: in.Body, Draft: in.Draft, Now: s.now()}
 	var it *workitem.Item
 	var err error
 	if len(in.After) > 0 {
@@ -79,22 +81,77 @@ type ItemEditIn struct {
 	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, config, and roles; roles left out are removed"`
 	ClearAgent bool            `json:"clear_agent,omitempty" jsonschema:"removes the story's agent"`
 	Body       *string         `json:"body,omitempty" jsonschema:"replaces everything below the heading"`
+	// Draft, CostOfDelay, and Forecast are the item's planning data (S-0199),
+	// each block stamped with this agent as who set it.
+	Draft            *bool          `json:"draft,omitempty" jsonschema:"a story's: true makes a story in the backlog a draft; false is refused, since finalizing a draft is the operator's"`
+	CostOfDelay      *CostOfDelayIn `json:"cost_of_delay,omitempty" jsonschema:"a story's or epic's cost of delay: only the keys given change; with clear_cost_of_delay it replaces the cost of delay"`
+	ClearCostOfDelay bool           `json:"clear_cost_of_delay,omitempty" jsonschema:"removes the cost of delay; to remove one amount, give this and cost_of_delay with the keys to keep"`
+	Forecast         *ForecastIn    `json:"forecast,omitempty" jsonschema:"a story's forecast: only the keys given change; with clear_forecast it replaces the forecast"`
+	ClearForecast    bool           `json:"clear_forecast,omitempty" jsonschema:"removes the story's forecast"`
 }
 
 func (in ItemEditIn) project() string { return in.Project }
 
+// CostOfDelayIn is the keys of a cost of delay an edit sets. An amount cannot
+// be removed alone, since a JSON number has no empty value: clear the cost of
+// delay and give the keys to keep.
+type CostOfDelayIn struct {
+	RevenuePerWeek   *float64 `json:"revenue_per_week,omitempty" jsonschema:"input: the revenue the item brings each week once it is done, in the project's currency"`
+	PenaltyPerWeek   *float64 `json:"penalty_per_week,omitempty" jsonschema:"input: what each week it is not done costs beyond revenue, in the project's currency"`
+	TimeLostPerCycle *string  `json:"time_lost_per_cycle,omitempty" jsonschema:"input: the work lost each cycle it is not done, a Go duration such as 4h; an empty string removes it"`
+	Value            *float64 `json:"value,omitempty" jsonschema:"the cost of delay per week, in the project's currency"`
+}
+
+// ForecastIn is the keys of a forecast an edit sets: nil leaves a key, an
+// empty string removes it.
+type ForecastIn struct {
+	Duration *string `json:"duration,omitempty" jsonschema:"the agent time the story is expected to take, a Go duration such as 6h; an empty string removes it"`
+	Delivery *string `json:"delivery,omitempty" jsonschema:"when it is expected to be done, a UTC timestamp such as 2026-10-09T17:00:00Z; an empty string removes it"`
+	Basis    *string `json:"basis,omitempty" jsonschema:"what the forecast rests on, in one sentence; an empty string removes it"`
+}
+
+// edit is the itemedit change the keys given make.
+func (in *CostOfDelayIn) edit() *itemedit.CostOfDelayEdit {
+	if in == nil {
+		return nil
+	}
+	return &itemedit.CostOfDelayEdit{RevenuePerWeek: amount(in.RevenuePerWeek), PenaltyPerWeek: amount(in.PenaltyPerWeek), TimeLostPerCycle: in.TimeLostPerCycle, Value: amount(in.Value)}
+}
+
+func (in *ForecastIn) edit() *itemedit.ForecastEdit {
+	if in == nil {
+		return nil
+	}
+	return &itemedit.ForecastEdit{Duration: in.Duration, Delivery: in.Delivery, Basis: in.Basis}
+}
+
+// amount is v as itemedit reads an amount, nil when it is not given.
+func amount(v *float64) *string {
+	if v == nil {
+		return nil
+	}
+	s := strconv.FormatFloat(*v, 'f', -1, 64)
+	return &s
+}
+
 // ItemEditOut is what an edit changed.
 type ItemEditOut struct {
 	ID        string   `json:"id"`
-	Changed   []string `json:"changed" jsonschema:"title, nature, tags, topics, touches, after, agent, parent, goal, criteria, notes, body"`
+	Changed   []string `json:"changed" jsonschema:"title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body"`
 	Unchanged bool     `json:"unchanged,omitempty"`
 	Hash      string   `json:"hash"`
 }
 
 func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEditIn) (*mcp.CallToolResult, ItemEditOut, error) {
-	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Topics: in.Topics, Touches: in.Touches, After: in.After, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent}
+	if in.Draft != nil && !*in.Draft {
+		// finalizing is the operator's: no agent may until the orchestrator's
+		// permission to finalize exists (S-0218)
+		return nil, ItemEditOut{}, fmt.Errorf("%s: draft false would finalize it, which is the operator's: say in a thread or your narrative that it is ready to be finalized", in.ID)
+	}
+	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Topics: in.Topics, Touches: in.Touches, After: in.After, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent,
+		Draft: in.Draft, CostOfDelay: in.CostOfDelay.edit(), ClearCostOfDelay: in.ClearCostOfDelay, Forecast: in.Forecast.edit(), ClearForecast: in.ClearForecast}
 	if ch == (itemedit.Change{}) {
-		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, topics, touches, after, parent, agent, clear_agent, or body")
+		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, topics, touches, after, parent, agent, clear_agent, body, draft, cost_of_delay, clear_cost_of_delay, forecast, or clear_forecast")
 	}
 	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, NoCommit: true, Now: s.now()})
 	if err != nil {

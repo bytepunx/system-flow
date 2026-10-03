@@ -534,6 +534,7 @@ func itemSpecs() map[string]spec {
 			Reason             string `json:"reason"`
 			IncludeUncommitted bool   `json:"include_uncommitted"`
 			DryRun             bool   `json:"dry_run"`
+			Finalize           bool   `json:"finalize"`
 		}](raw)
 		if e != nil {
 			return nil, "", e
@@ -557,6 +558,11 @@ func itemSpecs() map[string]spec {
 		}
 		// --yes is the designer's choice, in the acceptance confirmation, to include uncommitted files.
 		if in.IncludeUncommitted && in.To == workitem.Done {
+			args = append(args, "--yes")
+		}
+		// and, on a move to ready, the designer's say that a draft story is
+		// finished (S-0199); without it flai refuses a draft as a rule
+		if in.Finalize && in.To == workitem.Ready {
 			args = append(args, "--yes")
 		}
 		return args, "", nil
@@ -661,6 +667,7 @@ func itemSpecs() map[string]spec {
 				Topics  []string        `json:"topics"` // what a story or epic is about (S-0135)
 				Agent   *manifest.Agent `json:"agent"`
 				Body    string          `json:"body"`
+				Draft   bool            `json:"draft"` // a story not yet finalized (S-0199)
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -730,6 +737,12 @@ func itemSpecs() map[string]spec {
 				}
 				args = append(args, agent...)
 			}
+			if in.Draft {
+				if in.Type != workitem.Story {
+					return nil, "", bad("only a story is a draft")
+				}
+				args = append(args, "--draft")
+			}
 			return append(args, "--body-stdin", "--autocommit", "--trailer="+Trailer, "--", title), in.Body, nil
 		}},
 
@@ -752,6 +765,23 @@ func itemSpecs() map[string]spec {
 				// Agent replaces the story's agent: absent leaves it, null (or an
 				// empty object) removes it (S-0103)
 				Agent json.RawMessage `json:"agent"`
+				// the planning data (S-0199): draft makes a story a draft or
+				// finalizes one; in cost_of_delay and forecast an absent key is
+				// left, an empty one removed; a clear removes the block
+				Draft       *bool `json:"draft"`
+				CostOfDelay *struct {
+					RevenuePerWeek   *string `json:"revenue_per_week"`
+					PenaltyPerWeek   *string `json:"penalty_per_week"`
+					TimeLostPerCycle *string `json:"time_lost_per_cycle"`
+					Value            *string `json:"value"`
+				} `json:"cost_of_delay"`
+				ClearCostOfDelay bool `json:"clear_cost_of_delay"`
+				Forecast         *struct {
+					Duration *string `json:"duration"`
+					Delivery *string `json:"delivery"`
+					Basis    *string `json:"basis"`
+				} `json:"forecast"`
+				ClearForecast bool `json:"clear_forecast"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -816,6 +846,42 @@ func itemSpecs() map[string]spec {
 					return nil, "", e
 				}
 				args = append(append(args, "--clear-agent"), more...)
+			}
+			switch {
+			case in.Draft == nil:
+			case *in.Draft:
+				args = append(args, "--draft")
+			default:
+				args = append(args, "--no-draft")
+			}
+			type key struct {
+				flag  string
+				value *string
+			}
+			var keys []key
+			if c := in.CostOfDelay; c != nil {
+				if in.ClearCostOfDelay {
+					return nil, "", bad("clear_cost_of_delay and cost_of_delay contradict each other: give one or the other")
+				}
+				keys = append(keys, key{"revenue-per-week", c.RevenuePerWeek}, key{"penalty-per-week", c.PenaltyPerWeek}, key{"time-lost-per-cycle", c.TimeLostPerCycle}, key{"cost-of-delay-value", c.Value})
+			}
+			if in.ClearCostOfDelay {
+				args = append(args, "--clear-cost-of-delay")
+			}
+			if f := in.Forecast; f != nil {
+				if in.ClearForecast {
+					return nil, "", bad("clear_forecast and forecast contradict each other: give one or the other")
+				}
+				keys = append(keys, key{"forecast-duration", f.Duration}, key{"forecast-delivery", f.Delivery}, key{"forecast-basis", f.Basis})
+			}
+			if in.ClearForecast {
+				args = append(args, "--clear-forecast")
+			}
+			// an empty value removes the key; flai checks what is left
+			for _, k := range keys {
+				if k.value != nil {
+					args = append(args, "--"+k.flag+"="+text(*k.value))
+				}
 			}
 			stdin := ""
 			if in.Body != nil {
