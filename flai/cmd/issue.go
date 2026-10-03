@@ -66,17 +66,6 @@ func (a *app) issueStory(repo *workitem.Repo, flag string) string {
 	})
 }
 
-// linkingStory is the ID of the first open story whose body links the issue,
-// or "".
-func linkingStory(is *issues.Issue, items []*workitem.Item) string {
-	for _, it := range items {
-		if it.Type == workitem.Story && !it.Archived && !it.Closed() && issues.Links(it.Body, is) {
-			return it.ID
-		}
-	}
-	return ""
-}
-
 func (a *app) refreshSummary() ([]*issues.Issue, error) {
 	repo, err := a.project()
 	if err != nil {
@@ -229,7 +218,7 @@ the stories its occurrences name, and story, the open story that links it, or
 			if err != nil {
 				return err
 			}
-			list, err := issues.List(issuesRepo(repo, story))
+			list, err := issues.List(issues.RepoFor(repo, story))
 			if err != nil {
 				return err
 			}
@@ -243,7 +232,7 @@ the stories its occurrences name, and story, the open story that links it, or
 				}
 				out := make([]issueListed, 0, len(list))
 				for _, is := range list {
-					out = append(out, issueListed{Issue: is, Stories: append([]string{}, issues.Stories(is)...), Story: linkingStory(is, items)})
+					out = append(out, issueListed{Issue: is, Stories: append([]string{}, issues.Stories(is)...), Story: issues.LinkedBy(is, items)})
 				}
 				return a.printJSON(out)
 			}
@@ -292,7 +281,7 @@ always.`,
 			if err != nil {
 				return err
 			}
-			is, err := issues.Get(issuesRepo(repo, story), args[0])
+			is, err := issues.Get(issues.RepoFor(repo, story), args[0])
 			if err != nil {
 				return err
 			}
@@ -303,7 +292,7 @@ always.`,
 			if err != nil {
 				return err
 			}
-			if id := linkingStory(is, items); id != "" {
+			if id := issues.LinkedBy(is, items); id != "" {
 				return fmt.Errorf("%s is already linked by open story %s, so no story was made for it; work it in %s, or cancel %s first", is.ID, id, id, id)
 			}
 			draft := issues.ForStory(is)
@@ -327,21 +316,4 @@ always.`,
 	c.Flags().StringVar(&epic, "epic", "", "parent epic ID (optional: a story need not belong to one)")
 	c.Flags().StringVar(&story, "story", "", "read the issue from this story's worktree when it has one")
 	return c
-}
-
-// issuesRepo is the project to read issues from for a story: the story's
-// worktree when it has one, where the issues it recorded are until it is
-// accepted, else the project as opened. Work items are read from the main
-// checkout either way.
-func issuesRepo(repo *workitem.Repo, story string) *workitem.Repo {
-	if strings.TrimSpace(story) == "" {
-		return repo
-	}
-	path := repo.WorktreePath(workitem.CanonicalID(strings.TrimSpace(story)))
-	if fi, err := os.Stat(path); err != nil || !fi.IsDir() {
-		return repo
-	}
-	wt := *repo
-	wt.Root = path
-	return &wt
 }

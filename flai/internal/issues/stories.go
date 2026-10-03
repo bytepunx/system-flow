@@ -2,6 +2,7 @@ package issues
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -141,29 +142,41 @@ func wordByte(c byte) bool {
 	return c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
 }
 
-// NoStory returns the open issues that no open story links.
-func NoStory(list []*Issue, items []*workitem.Item) []*Issue {
-	var stories []*workitem.Item
+// LinkedBy is the ID of the first open story, one not archived, done, or
+// cancelled, whose body links the issue, or "" when none does.
+func LinkedBy(is *Issue, items []*workitem.Item) string {
 	for _, it := range items {
-		if it.Type == workitem.Story && contains([]string{workitem.Backlog, workitem.Ready, workitem.InProgress, workitem.Review}, it.Status) {
-			stories = append(stories, it)
+		if it.Type == workitem.Story && !it.Archived && !it.Closed() && Links(it.Body, is) {
+			return it.ID
 		}
 	}
+	return ""
+}
+
+// NoStory returns the open issues that no open story links.
+func NoStory(list []*Issue, items []*workitem.Item) []*Issue {
 	var out []*Issue
 	for _, is := range list {
-		if is.Status != "open" {
-			continue
-		}
-		linked := false
-		for _, it := range stories {
-			if Links(it.Body, is) {
-				linked = true
-				break
-			}
-		}
-		if !linked {
+		if is.Status == "open" && LinkedBy(is, items) == "" {
 			out = append(out, is)
 		}
 	}
 	return out
+}
+
+// RepoFor is the project to read issues from for a story: a copy whose Root
+// is the story's worktree when it has one, since the issues a story records
+// are committed on its branch until it is accepted, else r. Work items are
+// read from the main checkout either way.
+func RepoFor(r *workitem.Repo, story string) *workitem.Repo {
+	if strings.TrimSpace(story) == "" {
+		return r
+	}
+	path := r.WorktreePath(workitem.CanonicalID(strings.TrimSpace(story)))
+	if fi, err := os.Stat(path); err != nil || !fi.IsDir() {
+		return r
+	}
+	wt := *r
+	wt.Root = path
+	return &wt
 }
