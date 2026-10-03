@@ -160,7 +160,7 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 	if err := epic.Validate(); err != nil {
 		t.Errorf("an epic with a cost of delay: %v", err)
 	}
-	// ADR-0079: inputs alone have no value's stamp, a value alone no inputs'
+	// ADR-0080: inputs alone have no value's stamp, a value alone no inputs'
 	for name, c := range map[string]*CostOfDelay{
 		"inputs only": {Inputs: &CostInputs{RevenuePerWeek: amount(1), By: "b", At: "2026-09-15T09:00:00Z"}},
 		"value only":  {Value: amount(0), By: "a", At: "2026-09-15T10:00:00Z"},
@@ -404,7 +404,7 @@ func TestTheFlaiOfS0199KeepsFinalizedWhereThisFlaiWritesIt(t *testing.T) {
 	}
 }
 
-// ADR-0079: a cost of delay written with one stamp for the whole block
+// ADR-0080: a cost of delay written with one stamp for the whole block
 // (ADR-0074) is read as the new shape and written back in it: without a
 // value the stamp is the inputs', and with one it is the value's and the
 // inputs' too, so the value is not stale. flai check passes either.
@@ -444,7 +444,7 @@ func TestACostOfDelayWithOneStampIsReadAsTwo(t *testing.T) {
 	}
 }
 
-// ADR-0079: the value is stale when the inputs' at is later than its own.
+// ADR-0080: the value is stale when the inputs' at is later than its own.
 func TestCostOfDelayStale(t *testing.T) {
 	amount := func(v float64) *float64 { return &v }
 	inputs := func(at string) *CostInputs { return &CostInputs{RevenuePerWeek: amount(1), By: "alex", At: at} }

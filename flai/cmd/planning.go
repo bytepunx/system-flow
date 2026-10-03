@@ -22,7 +22,7 @@ func planningLines(draft bool, fin *workitem.Finalized, c *workitem.CostOfDelay,
 		amount := func(v float64) string {
 			return strconv.FormatFloat(v, 'f', -1, 64) + " " + currency + "/week"
 		}
-		// the inputs and the value each say who set them (ADR-0079)
+		// the inputs and the value each say who set them (ADR-0080)
 		var parts []string
 		if in := c.Inputs; !in.IsZero() {
 			var inputs []string

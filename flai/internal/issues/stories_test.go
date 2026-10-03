@@ -226,7 +226,7 @@ func TestForStoryDerivesTheTimeLostPerCycle(t *testing.T) {
 			t.Errorf("time lost %q is not a duration longer than zero: %v", cod.Inputs.TimeLostPerCycle, err)
 		}
 		if cod.Inputs.By != "flai" || cod.Inputs.At != "2026-09-16T10:00:00Z" || cod.By != "" || cod.At != "" {
-			t.Errorf("the inputs set by flai at t0, and no value's stamp (ADR-0079): %+v %+v", cod, *cod.Inputs)
+			t.Errorf("the inputs set by flai at t0, and no value's stamp (ADR-0080): %+v %+v", cod, *cod.Inputs)
 		}
 		lintStory(t, lint, d)
 	}
@@ -281,7 +281,7 @@ func TestForStoryCarriesTheImpactOver(t *testing.T) {
 		t.Errorf("inputs carried over, the first of each: %+v", *in)
 	}
 	if in.By != "flai" || in.At != "2026-09-16T10:00:00Z" || cod.By != "" || cod.At != "" {
-		t.Errorf("the inputs set by flai at t0, and no value's stamp (ADR-0079): %+v %+v", cod, *in)
+		t.Errorf("the inputs set by flai at t0, and no value's stamp (ADR-0080): %+v %+v", cod, *in)
 	}
 	want := "Cost of delay inputs set by flai from I-0007. revenue_per_week 1200, penalty_per_week 300.5 and time_lost_per_cycle 4h carried over from I-0007's Impact section. Its Impact time_lost_per_cycle was taken rather than the 35m derived from its cost and count."
 	if got := notes(d); got != want {

@@ -12,7 +12,7 @@ import (
 // stories carry a cost of delay, and a story carries a forecast. Amounts are
 // in the project's currency (planning.currency in system-flow.yaml), and each
 // block records who set it and when; a cost of delay records it for its
-// inputs and for its value apart (ADR-0079). A story that was a draft records
+// inputs and for its value apart (ADR-0080). A story that was a draft records
 // who finalized it and when (S-0201).
 
 // CostOfDelay is what waiting for an item costs: the inputs it is worked out
@@ -75,7 +75,7 @@ func (c *CostOfDelay) IsZero() bool {
 }
 
 // Stale reports whether the inputs changed after the value was set: there
-// are both, and the inputs' at is later than the value's (ADR-0079).
+// are both, and the inputs' at is later than the value's (ADR-0080).
 func (c *CostOfDelay) Stale() bool {
 	if c == nil || c.Value == nil || c.Inputs.IsZero() {
 		return false
@@ -92,7 +92,7 @@ func (c *CostOfDelay) Stale() bool {
 }
 
 // readOneStamp reads a cost of delay written with one by and at for the
-// whole block (ADR-0074) as ADR-0079 stamps it: with no value the stamp is
+// whole block (ADR-0074) as ADR-0080 stamps it: with no value the stamp is
 // the inputs', and with a value it is the value's and the inputs' too, so
 // that the value does not read as stale. A block whose inputs are stamped is
 // left as it is.

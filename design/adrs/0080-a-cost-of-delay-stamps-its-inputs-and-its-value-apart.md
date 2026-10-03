@@ -1,5 +1,5 @@
 ---
-id: ADR-0079
+id: ADR-0080
 title: A cost of delay stamps its inputs and its value apart
 status: accepted
 date: 2026-10-03
@@ -8,7 +8,7 @@ superseded_by: []
 refines: [ADR-0074]
 ---
 
-# ADR-0079 A cost of delay stamps its inputs and its value apart
+# ADR-0080 A cost of delay stamps its inputs and its value apart
 
 ## Context
 

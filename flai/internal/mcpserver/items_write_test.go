@@ -214,7 +214,7 @@ func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
 
 // S-0199: item_edit sets, removes one key of, replaces, and clears a cost of
 // delay and a forecast, each stamped with the agent and the time; a cost of
-// delay's inputs and value each carry the stamp (ADR-0079).
+// delay's inputs and value each carry the stamp (ADR-0080).
 func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 	f := setup(t)
 	at := f.clock.UTC().Format(workitem.TimeFormat)
@@ -246,7 +246,7 @@ func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 	}
 	// an amount is removed by replacing the block with the keys to keep
 	edit(map[string]any{"clear_cost_of_delay": true, "cost_of_delay": map[string]any{"revenue_per_week": 1200.5}}, "cost_of_delay")
-	// the inputs and the value are stamped apart (ADR-0079): with the value
+	// the inputs and the value are stamped apart (ADR-0080): with the value
 	// gone, so is its stamp
 	if c := planning("cost_of_delay"); c["value"] != nil || c["by"] != nil || c["at"] != nil || len(c["inputs"].(map[string]any)) != 3 || c["inputs"].(map[string]any)["by"] != "claude" {
 		t.Errorf("replaced: %v", c)

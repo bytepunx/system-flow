@@ -28,7 +28,7 @@ func planningProject(t *testing.T, storyArgs ...string) (root, story string) {
 
 // S-0199: each cost of delay and forecast flag sets its key and an empty
 // value removes it; the block records who changed it and when, a cost of
-// delay for its inputs and its value apart (ADR-0079).
+// delay for its inputs and its value apart (ADR-0080).
 func TestEditPlanningFlags(t *testing.T) {
 	root, story := planningProject(t)
 	out, errOut, code := runIn(t, root, "edit", "S-0001", "--revenue-per-week", "1200", "--penalty-per-week", "50", "--time-lost-per-cycle", "4h", "--cost-of-delay-value", "1400",
@@ -176,7 +176,7 @@ func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
 }
 
 // S-0204: flai story new and flai epic new take the cost of delay inputs,
-// the inputs set by the owner when the item is made (ADR-0079); none given is no block, a bad
+// the inputs set by the owner when the item is made (ADR-0080); none given is no block, a bad
 // amount or duration is refused with nothing made, and a task has no flags.
 func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
 	root, story := planningProject(t, "--revenue-per-week", "1200", "--penalty-per-week", " 50.5 ", "--time-lost-per-cycle", "4h")
@@ -217,7 +217,7 @@ func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
 
 // S-0199: flai show prints the cost of delay in the project's currency and
 // the forecast, with who set each: a cost of delay's inputs and value apart,
-// and that the value is stale when the inputs changed after it (ADR-0079).
+// and that the value is stale when the inputs changed after it (ADR-0080).
 func TestShowPrintsPlanning(t *testing.T) {
 	root, _ := planningProject(t)
 	cfg := filepath.Join(root, "system-flow.yaml")

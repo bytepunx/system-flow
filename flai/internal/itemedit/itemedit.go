@@ -670,7 +670,7 @@ func followParent(repo *workitem.Repo, story *workitem.Item, former string, join
 // applyPlanning makes the change's draft flag, cost of delay, and forecast
 // on the item, and names what changed. A block that changes records who
 // changed it and when; a cost of delay records it for its inputs and its
-// value apart (ADR-0079).
+// value apart (ADR-0080).
 func applyPlanning(it *workitem.Item, ch Change, opt Options, currency string) ([]string, error) {
 	var changed []string
 	by := opt.By

@@ -376,7 +376,7 @@ delay; flai edit sets and changes them later.`
 }
 
 // newCostOfDelay is a new item's cost of delay from its input flags, the
-// inputs set by by at now (ADR-0079), or nil when none is given (S-0204). An
+// inputs set by by at now (ADR-0080), or nil when none is given (S-0204). An
 // amount that is not a number is refused as flai edit refuses it; Create
 // checks the rest.
 func newCostOfDelay(revenue, penalty, timeLost, currency, by string, now time.Time) (*workitem.CostOfDelay, error) {

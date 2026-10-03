@@ -52,7 +52,7 @@ func edit(t *testing.T, repo *workitem.Repo, id string, ch Change, by string, at
 
 // S-0199: each cost of delay key is set and removed on its own, and the
 // inputs and the value each record who changed them last and when
-// (ADR-0079); removing the last input and the value removes the block.
+// (ADR-0080); removing the last input and the value removes the block.
 func TestCostOfDelayKeysSetAndClear(t *testing.T) {
 	repo := planningRepo(t)
 	t1 := time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC)
