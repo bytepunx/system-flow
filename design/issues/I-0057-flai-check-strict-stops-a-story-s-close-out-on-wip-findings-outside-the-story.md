@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 6
+count: 7
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-03T18:29:38Z
-updated: 2026-10-03T18:29:38Z
+last_reported: 2026-10-03T18:50:07Z
+updated: 2026-10-03T18:50:07Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -43,5 +43,9 @@ S-0200's second close-out stopped in the integration tier: TestMonorepoIsClean f
 ### 2026-10-03T18:29:38Z
 Story: S-0203.
 S-0203's close-out stopped in the integration tier: TestMonorepoIsClean failed on main's issues.duplicate-id (two I-0062 files), with story.unaccepted on S-0173, epic.lags-stories on E-0015, and threads.archived on TH-0087; main's check reports the same four. None is in S-0203's diff. The verifier ran the smoke, check, markdown lint, and install tests by hand; all passed but the check on main's findings.
+
+### 2026-10-03T18:50:07Z
+Story: S-0202.
+S-0202's close-out stopped at flai check --strict on findings outside its diff: story.unaccepted on S-0173's unmerged branch, epic.lags-stories on E-0015, wip.overlap between S-0202 and S-0204 (in progress side by side, both describing their dashboard changes in design/system/flaiover-dashboard.md and docs/users/flaiover.md; flai stream sync reports they merge cleanly), and wip.overlap among S-0204, S-0206, and their tasks. The verifier ran the steps the script did not reach by hand: flaiover-test.sh passed (809 tests), the markdown lint passed, and the narrative and ancestry checks hold.
 
 ## Remediation
