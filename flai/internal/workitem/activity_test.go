@@ -57,6 +57,9 @@ func TestAppendActivity(t *testing.T) {
 	if a, err = r.AppendActivity(ActivityPlanner, second); err != nil {
 		t.Fatal(err)
 	}
+	if a.TasksCompleted != 2 || a.LastRun != "2026-10-03T18:00:00Z" {
+		t.Errorf("totals after two (an earlier end keeps last_run): %+v", a)
+	}
 	third := ActivityEntry{At: activityAt, Summary: "Same second.", Items: []string{"S-0232"}, Seconds: 1, Cost: 0}
 	if a, err = r.AppendActivity(ActivityPlanner, third); err != nil {
 		t.Fatal(err)
