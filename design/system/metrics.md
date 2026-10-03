@@ -215,6 +215,7 @@ So that `flai stats` and the dashboard agree to the second:
 - Throughput per week is completed items in the window divided by window days over seven. Weekly buckets are ISO weeks starting Monday, from the one that holds the window's start to the one that holds now.
 - Flow efficiency averages `(cycle - blocked) / cycle` over completed items with a positive cycle time.
 - Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
+- The planning, waiting, and claims values (S-0205) are seconds between timestamps, whole since timestamps are, and their means are not rounded. A day is a UTC day, from 00:00:00 up to, not including, the next; a day's or a week's share of an interval is the part of it inside the day or week, and today's ends at now. Cost of delay amounts are rounded to two decimals once summed, and strategic costs to four.
 - A bucket holds the moments from its start up to, not including, the next one's. A week's bucket starts on the Monday of the ISO week, at 00:00:00 UTC. The running mean divides by the number of buckets from the first of the series, empty ones counted.
 
 ## Data access
