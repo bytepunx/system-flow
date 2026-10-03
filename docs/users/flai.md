@@ -381,11 +381,32 @@ Only ready and backlog stories can be placed, and only relative to a story in th
 
 ```bash
 flai stream open S-0037        # narrative, plus branch story/S-0037 in .flai-cache/worktrees/S-0037
-flai stream sync S-0037        # rebase the branch onto main, then check it against the other open branches; run at every task transition
+flai stream sync S-0037        # rebase the branch onto main, then check it against the other open branches; run after committing each task
 flai stream open S-0037 --no-branch
 ```
 
-Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, stashing uncommitted work around it; conflicts stop inside the worktree and are listed, resolve them, `git rebase --continue`, and sync again. `flai accept` rebases, fast-forwards the branch into main, removes the worktree and branch, then tags and pushes.
+Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, and is the only way a story's agent rebases it: agents never start a `git rebase` or `git merge` by hand. `flai accept` rebases, fast-forwards the branch into main, and removes the worktree and branch.
+
+A story's agent works through its tasks one at a time, and keeps the branch close to main as it goes:
+
+1. When a task is done, it commits the task's changes, with their docs and work item updates, on `story/S-0037`.
+2. It runs `flai stream sync`, and resolves each conflict sync lists.
+3. It runs the tests for what the task changed, and commits any fix they need.
+
+Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out with `scripts/close-out.sh`, which refuses a branch that does not yet contain the main branch and says to sync.
+
+Sync never stashes, so it never has your work in hand when something goes wrong:
+
+- **Uncommitted changes.** A worktree with uncommitted changes is refused before anything is touched. Sync names each path; commit them on the story branch (or stash them yourself) and sync again. A worktree where a rebase is already in progress is refused too.
+- **Conflicts.** When the rebase stops on conflicts, it stays stopped in the worktree. Sync prints each conflicting path on a line of its own, then how to continue (in the worktree, resolve each path, `git add` it, run `git rebase --continue`, then sync again) and how to abort (`git rebase --abort`, which puts the branch back as it was before the sync). It exits non-zero; `--json` reports `ok: false` with `worktree`, `uncommitted`, `conflicts`, `rebase_in_progress`, `continue`, and `abort`.
+
+```text
+story/S-0037 was not synced: the rebase onto main stopped on conflicts in 2 paths:
+  flai/cmd/edit.go
+  docs/users/flai.md
+To continue: in .flai-cache/worktrees/S-0037, resolve each conflicting path, git add it, and run git rebase --continue; then run flai stream sync S-0037 again
+To abort: in .flai-cache/worktrees/S-0037, run git rebase --abort, which puts story/S-0037 back as it was before the sync
+```
 
 A story begun on another host reaches your clone with its narrative and tasks, but not its branch or worktree. `flai stream open` on it keeps the narrative and records your host, agent, and session in it. It then checks out `story/<id>`: your clone's branch if you have one, otherwise the remote's, fetched from `origin`, otherwise a new branch from main. It says which (`reopened wip/agents/S-0037.md`, `branch story/S-0037 (fetched from origin) checked out at …`). Only what the other host pushed comes with it. A story that already has its worktree here is refused, as before.
 
