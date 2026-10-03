@@ -110,7 +110,7 @@ What the planner, the orchestrator, and the analyzer spent, from their activity 
 | `log[].estimated` | `true` when the cost was apportioned or priced rather than reported; absent otherwise | |
 | `log[].items` | The IDs of the items the activity touched; `[]` for none | |
 
-Their cost and use per day, beside delivery, are in [Strategic use per day](#strategic-use-per-day-s-0205).
+Their cost and use per day, beside delivery, are in [Strategic use per day](#strategic-use-per-day).
 
 ## Planning, waiting, and claims (S-0205)
 
