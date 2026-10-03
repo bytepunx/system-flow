@@ -219,6 +219,9 @@ func describe(c workitem.Change) string {
 		if c.Cause != "" {
 			return c.ID + " " + c.Title + " was cancelled with " + c.Cause + who
 		}
+		if c.Follows != "" {
+			return c.ID + " " + c.Title + " moved to " + c.To + who + ", following " + c.Follows
+		}
 		return c.ID + " " + c.Title + " moved to " + c.To + who
 	case workitem.WasBlocked:
 		return c.ID + " " + c.Title + " was blocked: " + c.Reason
