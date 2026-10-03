@@ -59,12 +59,13 @@ const (
 	ExceededBriefs      = "briefs"
 )
 
-// Pack is the context pack for one story.
+// Pack is the context pack for one story, or for a strategic agent.
 type Pack struct {
-	Story       string              `json:"story"`
-	Title       string              `json:"title"`
-	Role        string              `json:"role,omitempty"` // the sub-agent's role, for a role pack (ADR-0059)
-	Goal        string              `json:"goal,omitempty"` // a role pack's story goal and acceptance criteria`
+	Story       string              `json:"story,omitempty"` // the story worked, empty for a strategic agent's pack
+	Item        string              `json:"item,omitempty"`  // the epic or story the planner plans
+	Title       string              `json:"title"`           // the story's or the item's
+	Role        string              `json:"role,omitempty"`  // a sub-agent's role (ADR-0059) or a strategic agent's (E-0016); empty for the story's agent
+	Goal        string              `json:"goal,omitempty"`  // a role pack's story goal and acceptance criteria`
 	Topics      []topics.StoryTopic `json:"topics"`
 	Budget      int                 `json:"budget"`             // bytes the pack is fitted to
 	Exceeded    string              `json:"exceeded,omitempty"` // conventions, named, or briefs: the part that takes the pack over the budget
@@ -429,10 +430,20 @@ var roleHead = map[string]string{
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the story names and those the pack reached, each by its decision sentence. When one bears on your question, read it with the MCP doc_get.\n\n",
 }
 
+// strategicHead is groupHead for a strategic agent's pack, which has no
+// story.
+var strategicHead = map[string]string{
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the item planned or its stories name by a path written out and that are too large to load whole (reason: named in <ID>), then those the pack's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the work, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
+	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, and those named by a path written out and too large to load whole, each by its decision sentence. When one bears on the work, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
+}
+
 // groupHead is the heading each group prints under in this pack.
 func (p *Pack) groupHead() map[string]string {
-	if p.Role != "" {
+	switch {
+	case p.subAgent():
 		return roleHead
+	case p.strategic():
+		return strategicHead
 	}
 	return groupHead
 }
@@ -441,7 +452,7 @@ func (p *Pack) groupHead() map[string]string {
 // pack does not say a document it names is briefed for its size, because
 // it briefs everything.
 func (p *Pack) printed(it Item) string {
-	if p.Role != "" {
+	if p.subAgent() {
 		return it.print(false)
 	}
 	return it.Printed()
@@ -542,18 +553,29 @@ func (p *Pack) writeCatalog(b *strings.Builder) {
 	}
 }
 
-// Header names the story, its topics and where each came from, the size
-// of the pack against its budget, whether a part alone exceeds it, and the
-// size of each thing the pack prints.
+// Header names the story, or the item planned, its topics and where each
+// came from, the size of the pack against its budget, whether a part alone
+// exceeds it, and the size of each thing the pack prints.
 func (p *Pack) Header() string {
 	var b strings.Builder
-	head := p.Story + " context pack"
+	subject := p.Story
+	switch {
+	case p.Item != "":
+		subject = p.Item
+	case p.strategic():
+		subject = "Project"
+	}
+	head := subject + " context pack"
 	if p.Role != "" {
 		head += " for the " + p.Role + " role"
 	}
 	fmt.Fprintf(&b, "%s\n%s\n\n", head, strings.Repeat("=", len(head)))
-	fmt.Fprintf(&b, "story: %s %s\n", p.Story, p.Title)
-	if p.Role != "" {
+	if p.strategic() {
+		b.WriteString(p.strategicLines())
+	} else {
+		fmt.Fprintf(&b, "story: %s %s\n", p.Story, p.Title)
+	}
+	if p.subAgent() {
 		fmt.Fprintf(&b, "role: %s, a sub-agent of the story's agent (ADR-0059): the conventions the role reads, the story's goal and criteria, and briefs while the budget has room; doc_search and doc_get find the rest. Report back to the agent that started you; never move, edit, or create an item, and never write to a thread.\n", p.Role)
 	}
 	b.WriteString("topics:\n")
@@ -566,10 +588,12 @@ func (p *Pack) Header() string {
 	}
 	fmt.Fprintf(&b, "size: %d bytes, %d lines, this header included; budget %d bytes\n", p.Size.Bytes, p.Size.Lines, p.Budget)
 	switch {
-	case p.Role != "" && p.Exceeded == ExceededConventions:
+	case p.subAgent() && p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the role's conventions and the story's goal alone exceed it, so no brief is printed; narrowing the conventions' roles or topics makes room (ADR-0059)\n")
 	case p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
+	case p.Exceeded == ExceededNamed && p.Item != "":
+		fmt.Fprintf(&b, "over budget: the conventions and what %s names exceed it, so nothing is ranked (ADR-0049)\n", p.Item)
 	case p.Exceeded == ExceededNamed:
 		b.WriteString("over budget: the conventions and what the story, its epic, and its tasks name exceed it, so nothing is ranked; a story that names more than the budget holds is a story to split (ADR-0049)\n")
 	case p.Exceeded == ExceededBriefs:

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -20,6 +21,7 @@ func newPrimeCmd(a *app) *cobra.Command {
 		story  string
 		budget string
 		role   string
+		epic   string
 	)
 	c := &cobra.Command{
 		Use:   "prime",
@@ -65,14 +67,28 @@ acceptance criteria; and briefs, never bodies, of what the story names,
 what its topics select, and the ADRs one step reaches, each while the
 budget has room, with a count of those left out. No open issues, nothing
 ranked, no catalog. Its budget is half the story's agent's unless --budget
-is given.`,
+is given.
+
+--role plan, orchestrate, or analyze prints the pack for a strategic agent,
+one that works above a story: the planner (plan), with --epic E-nnnn or
+--story S-nnnn, and the orchestrator (orchestrate) and the analyzer
+(analyze), for the whole project, with neither. Its topics are the role's,
+planning, orchestration, or analysis, with the planner's item's as well; it
+holds the conventions whose roles are empty or list the role, with the
+sections its topics leave out taken out, and no README; the open issues;
+for the planner, what the item names, whole, as a story's pack loads it (a
+story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech,
+and ADRs its topics select and the ADRs one step reaches; and a catalog of
+the rest. Its budget is the story's agent's, and --budget sets it.`,
 		Example: `  flai prime
   flai prime --cat
   flai prime --json
   flai prime --story S-0136
   flai prime --story S-0136 --json
   flai prime --story S-0136 --budget 120KB
-  flai prime --story S-0136 --role verify`,
+  flai prime --story S-0136 --role verify
+  flai prime --role plan --epic E-0016
+  flai prime --role orchestrate --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -97,11 +113,16 @@ is given.`,
 			for rel, e := range errs {
 				a.logger().Warn("convention file unreadable", "component", "conventions", "path", rel, "err", e.Error())
 			}
-			if budget != "" && story == "" {
+			strategic := slices.Contains(conventions.StrategicRoles, role)
+			switch {
+			case epic != "" && role != conventions.RolePlan:
+				return fmt.Errorf("--epic primes the planner for an epic; give --role plan too")
+			case strategic:
+				return a.primeStrategic(repo, role, epic, story, budget)
+			case budget != "" && story == "":
 				return fmt.Errorf("--budget sizes a story's context pack; give --story too")
-			}
-			if role != "" && story == "" {
-				return fmt.Errorf("--role primes a sub-agent working a story; give --story too")
+			case role != "" && story == "":
+				return fmt.Errorf("--role %s primes a sub-agent working a story; give --story too, or give a strategic role: %s", role, strings.Join(conventions.StrategicRoles, ", "))
 			}
 			if story != "" {
 				return a.primeStory(repo, story, role, budget)
@@ -140,8 +161,9 @@ is given.`,
 	}
 	c.Flags().BoolVar(&cat, "cat", false, "print file contents instead of paths")
 	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest")
-	c.Flags().StringVar(&budget, "budget", "", "the size the story's context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role)")
-	c.Flags().StringVar(&role, "role", "", "print the pack for a sub-agent of the story's agent in this role: explore or verify (ADR-0059)")
+	c.Flags().StringVar(&budget, "budget", "", "the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify)")
+	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent")
+	c.Flags().StringVar(&epic, "epic", "", "with --role plan, print the planner's pack for this epic")
 	return c
 }
 
@@ -159,6 +181,22 @@ func (a *app) primeStory(repo *workitem.Repo, id, role, budget string) error {
 	if err != nil {
 		return err
 	}
+	return a.printPack(pack)
+}
+
+// primeStrategic prints the pack for a strategic agent in role, for the
+// planner's epic or story or, with neither, the whole project, as
+// ctxpack.ForStrategic builds it.
+func (a *app) primeStrategic(repo *workitem.Repo, role, epic, story, budget string) error {
+	pack, err := ctxpack.ForStrategic(repo, role, epic, story, budget)
+	if err != nil {
+		return err
+	}
+	return a.printPack(pack)
+}
+
+// printPack prints a context pack, as JSON with --json.
+func (a *app) printPack(pack *ctxpack.Pack) error {
 	if a.jsonOut {
 		return a.printJSON(pack)
 	}

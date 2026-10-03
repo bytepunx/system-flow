@@ -1586,6 +1586,8 @@ List design/conventions in read order (README first, then by order) so an agent,
 
 --role explore or --role verify, with --story, prints the smaller pack for a sub-agent the story's agent hands work to (ADR-0059): the conventions whose front matter roles are empty or list the role (ADR-0068), with the sections the story's topics leave out taken out; the story's goal and acceptance criteria; and briefs, never bodies, of what the story names, what its topics select, and the ADRs one step reaches, each while the budget has room, with a count of those left out. No open issues, nothing ranked, no catalog. Its budget is half the story's agent's unless --budget is given.
 
+--role plan, orchestrate, or analyze prints the pack for a strategic agent, one that works above a story: the planner (plan), with --epic E-nnnn or --story S-nnnn, and the orchestrator (orchestrate) and the analyzer (analyze), for the whole project, with neither. Its topics are the role's, planning, orchestration, or analysis, with the planner's item's as well; it holds the conventions whose roles are empty or list the role, with the sections its topics leave out taken out, and no README; the open issues; for the planner, what the item names, whole, as a story's pack loads it (a story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech, and ADRs its topics select and the ADRs one step reaches; and a catalog of the rest. Its budget is the story's agent's, and --budget sets it.
+
 Examples:
 
 ```bash
@@ -1596,15 +1598,18 @@ flai prime --story S-0136
 flai prime --story S-0136 --json
 flai prime --story S-0136 --budget 120KB
 flai prime --story S-0136 --role verify
+flai prime --role plan --epic E-0016
+flai prime --role orchestrate --json
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--budget` string | the size the story's context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role) |
+| `--budget` string | the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify) |
 | `--cat` | print file contents instead of paths |
-| `--role` string | print the pack for a sub-agent of the story's agent in this role: explore or verify (ADR-0059) |
+| `--epic` string | with --role plan, print the planner's pack for this epic |
+| `--role` string | print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent |
 | `--story` string | print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest |
 
 ### flai push

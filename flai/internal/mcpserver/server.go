@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
@@ -620,15 +622,25 @@ func (s *server) docSearch(_ context.Context, _ *mcp.CallToolRequest, in DocSear
 
 // ---- context pack ----
 
-// PrimeIn names the story to prime for.
+// PrimeIn names the story, or the role, to prime for.
 type PrimeIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
-	Story   string `json:"story" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today"`
-	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB, and half that with role"`
-	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); empty for the story's agent's own pack"`
+	Story   string `json:"story,omitempty" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today. Needed but for role orchestrate or analyze, and for role plan given an epic"`
+	Epic    string `json:"epic,omitempty" jsonschema:"with role plan, the epic the planner plans, such as E-0016, instead of a story"`
+	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB, and half that with role explore or verify"`
+	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); plan, orchestrate, or analyze: the pack for a strategic agent, the planner for an epic or a story, or the orchestrator or the analyzer for the whole project; empty for the story's agent's own pack"`
 }
 
 func (s *server) prime(_ context.Context, _ *mcp.CallToolRequest, in PrimeIn) (*mcp.CallToolResult, *ctxpack.Pack, error) {
+	switch {
+	case in.Epic != "" && in.Role != conventions.RolePlan:
+		return nil, nil, fmt.Errorf("prime: epic primes the planner for an epic; give role plan too")
+	case slices.Contains(conventions.StrategicRoles, in.Role):
+		pack, err := ctxpack.ForStrategic(s.repo, in.Role, in.Epic, in.Story, in.Budget)
+		return nil, pack, err
+	case in.Story == "":
+		return nil, nil, fmt.Errorf("prime: give story, or role %s", strings.Join(conventions.StrategicRoles, ", "))
+	}
 	if in.Role != "" {
 		pack, err := ctxpack.ForRole(s.repo, in.Story, in.Role, in.Budget)
 		return nil, pack, err

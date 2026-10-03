@@ -49,7 +49,7 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 // ParseSize reads it; empty means half the story's agent's.
 func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	if !slices.Contains(conventions.SubAgentRoles, role) {
-		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s", role, strings.Join(conventions.SubAgentRoles, " or "))
+		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s, and a strategic agent's %s", role, strings.Join(conventions.SubAgentRoles, " or "), strings.Join(conventions.StrategicRoles, ", "))
 	}
 	size, err := Budget(budget, repo.Manifest.Prime.Budget)
 	if err != nil {
@@ -76,29 +76,52 @@ func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	return pack, nil
 }
 
-// story is what a pack is built from: the story, the conventions, its
-// topics, the design documents, and what links them.
+// project is what every pack is built from: the conventions and the design
+// documents.
+type project struct {
+	set  *conventions.Set
+	docs []*Doc
+}
+
+// story is what a story's pack is built from: the project, the story, its
+// topics, and what links them.
 type story struct {
+	*project
 	item    *workitem.Item
-	set     *conventions.Set
 	topics  []topics.StoryTopic
-	docs    []*Doc
 	sources []Source
 }
 
 // readBy is the conventions the agent in role reads (ADR-0068): those whose
 // roles are empty or list it, with the README when readme is set.
-func (st *story) readBy(role string, readme bool) *conventions.Set {
-	sub := &conventions.Set{Dir: st.set.Dir}
+func (p *project) readBy(role string, readme bool) *conventions.Set {
+	sub := &conventions.Set{Dir: p.set.Dir}
 	if readme {
-		sub.README = st.set.README
+		sub.README = p.set.README
 	}
-	for _, f := range st.set.Files {
+	for _, f := range p.set.Files {
 		if f.ReadBy(role) {
 			sub.Files = append(sub.Files, f)
 		}
 	}
 	return sub
+}
+
+// loadProject reads the conventions and the design documents; cmd is the
+// command the errors name.
+func loadProject(repo *workitem.Repo, cmd string) (*project, error) {
+	set, _, err := conventions.Load(repo)
+	if err != nil {
+		return nil, err
+	}
+	if set.Missing {
+		return nil, fmt.Errorf("no conventions folder at %s; render it from the template or run flai upgrade", rel(repo.Root, set.Dir))
+	}
+	docs, err := LoadDocs(repo.Root, repo.Manifest.Dir(repo.Root, "design"))
+	if err != nil {
+		return nil, fmt.Errorf("%s: reading the design documents: %w", cmd, err)
+	}
+	return &project{set: set, docs: docs}, nil
 }
 
 func loadStory(repo *workitem.Repo, id string) (*story, error) {
@@ -109,26 +132,19 @@ func loadStory(repo *workitem.Repo, id string) (*story, error) {
 	if it.Type != workitem.Story {
 		return nil, fmt.Errorf("flai prime --story %s: %s is %s, not a story", id, it.ID, it.Type)
 	}
-	set, _, err := conventions.Load(repo)
+	pr, err := loadProject(repo, "flai prime --story "+id)
 	if err != nil {
 		return nil, err
-	}
-	if set.Missing {
-		return nil, fmt.Errorf("no conventions folder at %s; render it from the template or run flai upgrade", rel(repo.Root, set.Dir))
 	}
 	storyTopics, err := topics.ForStory(repo, it.ID)
 	if err != nil {
 		return nil, err
 	}
-	docs, err := LoadDocs(repo.Root, repo.Manifest.Dir(repo.Root, "design"))
-	if err != nil {
-		return nil, fmt.Errorf("flai prime --story %s: reading the design documents: %w", id, err)
-	}
 	sources, err := storySources(repo, it)
 	if err != nil {
 		return nil, err
 	}
-	return &story{item: it, set: set, topics: storyTopics, docs: docs, sources: sources}, nil
+	return &story{project: pr, item: it, topics: storyTopics, sources: sources}, nil
 }
 
 // storySources is the story, its epic, and its tasks, archived or not, for

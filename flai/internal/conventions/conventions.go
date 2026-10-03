@@ -27,23 +27,28 @@ const MaxLines = 120
 
 // The roles of the agents that read conventions (ADR-0068, refining
 // ADR-0059): the agent working a story, the sub-agents it hands work to,
-// and the strategic agents, the orchestrator, the planner, and the analyzer.
+// and the strategic agents, the planner, the orchestrator, and the analyzer.
 const (
-	RoleStory        = "story"
-	RoleExplore      = "explore"
-	RoleVerify       = "verify"
-	RoleOrchestrator = "orchestrator"
-	RolePlanner      = "planner"
-	RoleAnalyzer     = "analyzer"
+	RoleStory       = "story"
+	RoleExplore     = "explore"
+	RoleVerify      = "verify"
+	RolePlan        = "plan"
+	RoleOrchestrate = "orchestrate"
+	RoleAnalyze     = "analyze"
 )
 
 // Roles are the roles a convention may list; flai check warns about any
 // other (ADR-0068).
-var Roles = []string{RoleStory, RoleExplore, RoleVerify, RoleOrchestrator, RolePlanner, RoleAnalyzer}
+var Roles = []string{RoleStory, RoleExplore, RoleVerify, RolePlan, RoleOrchestrate, RoleAnalyze}
 
-// SubAgentRoles are the roles flai prime --role takes: the sub-agents a
-// story's agent hands work to (ADR-0059).
+// SubAgentRoles are the roles flai prime --role takes with --story: the
+// sub-agents a story's agent hands work to (ADR-0059).
 var SubAgentRoles = []string{RoleExplore, RoleVerify}
+
+// StrategicRoles are the roles flai prime --role takes for the agents that
+// work above a story: the planner, for an epic or a story, and the
+// orchestrator and the analyzer, for the whole project (E-0016).
+var StrategicRoles = []string{RolePlan, RoleOrchestrate, RoleAnalyze}
 
 // File is one convention file.
 type File struct {
