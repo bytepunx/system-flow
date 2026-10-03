@@ -27,8 +27,10 @@ func newAcceptCmd(a *app) *cobra.Command {
 design/conventions/work-management.md and git.md:
 
   0. rebase the story branch and fast-forward it into the main branch
-  1. move the item to done (its rules apply: children closed, criteria checked)
-  2. flai archive for the item and its children and narrative
+  1. move the item to done (its rules apply: children closed, criteria checked);
+     a story's epic follows it, to done when it was the epic's last open story
+  2. flai archive for the item and its children and narrative, and for an
+     epic that followed its story to done, the epic and its cancelled stories
   3. git commit the work item and archive
   4. tell every story in progress or in review whose touches cover a path
      the merge changed which paths those are, for its agent's MCP inbox
@@ -122,6 +124,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if err != nil {
 		return nil, err
 	}
+	from := it.Status
 	if !res.Resumed {
 		for _, st := range preview.StepsToDone(it.Status) {
 			if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {
@@ -142,9 +145,16 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	res.Status = it.Status
 	a.acceptStep(it, "done", it.ID+" moved to done")
+	// 1a. the story's epic follows it, to done with its last open story
+	// (S-0200); the story's roll-up has already summed the epic's usage
+	if it.Type == workitem.Story && !res.Resumed {
+		if res.Epic, err = a.followAccepted(repo, it, from, orDefault(o.by, a.author())); err != nil {
+			return nil, err
+		}
+	}
 	// 2. archive
 	items, _ = repo.List(false)
-	ap, err := repo.PlanArchive(items, []string{it.ID})
+	ap, err := repo.PlanArchive(items, preview.ArchivedWith(items, it.ID, res.Epic))
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +177,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	msg := fmt.Sprintf("chore: [%s] accept and archive", it.ID)
+	if res.Epic != nil && res.Epic.To == workitem.Done {
+		msg += ", with " + res.Epic.ID
+	}
 	for _, t := range o.trailers {
 		msg += "\n\n" + t
 	}
@@ -184,6 +197,24 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		a.acceptStep(it, "told", "told "+strings.Join(ids, ", ")+" which changed paths their claims cover")
 	}
 	return res, nil
+}
+
+// followAccepted moves and saves the epic of story, accepted from from, the
+// way its acceptance takes it, and says where it went; nil when it stays.
+func (a *app) followAccepted(repo *workitem.Repo, story *workitem.Item, from, by string) (*workitem.Followed, error) {
+	all, err := repo.List(true)
+	if err != nil {
+		return nil, err
+	}
+	epic, followed, err := repo.Follow(all, story, from, by, a.now(), true)
+	if err != nil || followed == nil {
+		return nil, err
+	}
+	if err := repo.Save(epic); err != nil {
+		return nil, err
+	}
+	a.acceptStep(story, "epic", fmt.Sprintf("%s followed %s to %s", epic.ID, story.ID, epic.Status))
+	return followed, nil
 }
 
 // acceptStep logs one completed step of an acceptance as an info event with
@@ -211,6 +242,13 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 		if res.Branch != "" {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)
 		}
+		if e := res.Epic; e != nil {
+			fmt.Fprintf(a.out, "would also move %s %s from %s to %s, following %s", e.ID, e.Title, e.From, e.To, e.Story)
+			if e.To == workitem.Done {
+				fmt.Fprint(a.out, ", and archive it")
+			}
+			fmt.Fprintln(a.out)
+		}
 		fmt.Fprintln(a.out, "dry run: nothing changed")
 		return nil
 	}
@@ -223,6 +261,13 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}
 	fmt.Fprintln(a.out, "; nothing released yet, run flai release --pending to publish")
+	if e := res.Epic; e != nil {
+		fmt.Fprintf(a.out, "%s followed it from %s to %s", e.ID, e.From, e.To)
+		if e.To == workitem.Done {
+			fmt.Fprint(a.out, ", archived")
+		}
+		fmt.Fprintln(a.out)
+	}
 	for _, n := range res.Overlaps {
 		fmt.Fprintf(a.out, "told %s it overlaps: %s\n", n.ID, strings.Join(n.Paths, ", "))
 	}

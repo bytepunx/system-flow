@@ -89,7 +89,8 @@ func assertAccepted(t *testing.T, root, remote string) {
 		t.Errorf("acceptance creates no tag, got %q", got)
 	}
 	subject := strings.TrimSpace(gitIn(t, root, "log", "-1", "--format=%s"))
-	if subject != "chore: [S-0001] accept and archive" {
+	// E-0001's only story: the epic is accepted with it (S-0200)
+	if subject != "chore: [S-0001] accept and archive, with E-0001" {
 		t.Errorf("the acceptance commit names no release, got %q", subject)
 	}
 	if status := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); status != "" {

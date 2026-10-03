@@ -141,7 +141,7 @@ func TestAcceptLogsEachStep(t *testing.T) {
 			steps = append(steps, e.Step)
 		}
 	}
-	if got := strings.Join(steps, " "); got != "merged done archived committed" {
+	if got := strings.Join(steps, " "); got != "merged done epic archived committed" {
 		t.Errorf("steps in order, no tags without a release and no push without a remote: %q", got)
 	}
 }

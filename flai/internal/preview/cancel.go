@@ -36,6 +36,9 @@ type Cancellation struct {
 	Cancelled  []workitem.Cascaded `json:"cancelled"`
 	LeftBehind []LeftBehind        `json:"left_behind"`
 	Warnings   []string            `json:"warnings"`
+	// Followed is the walk a cancelled story's epic takes with it: to review
+	// at most, when its other stories are all in review or done (S-0200).
+	Followed *workitem.Followed `json:"followed,omitempty"`
 }
 
 // Cancel is what moving it to cancelled would do: the item's own rules,
@@ -55,6 +58,11 @@ func Cancel(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by, reason s
 	res := &Cancellation{ID: it.ID, Status: it.Status, DryRun: true, Cancelled: []workitem.Cascaded{}, Warnings: []string{}}
 	for _, c := range workitem.CancelPlan(items, it.ID) {
 		res.Cancelled = append(res.Cancelled, workitem.Cascaded{ID: c.ID, Type: c.Type, Title: c.Title, From: c.Status})
+	}
+	if it.Type == workitem.Story {
+		if _, res.Followed, err = EpicWalk(repo, &probe, it.Status, by, now, false); err != nil {
+			return nil, err
+		}
 	}
 	res.LeftBehind = Left(r, repo, it, res.Cancelled)
 	return res, nil

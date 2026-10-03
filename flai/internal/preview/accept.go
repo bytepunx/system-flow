@@ -41,6 +41,9 @@ type Acceptance struct {
 	// The open stories told which paths the merge changed under their claim
 	// (S-0132).
 	Overlaps []itemedit.Overlap `json:"overlaps,omitempty"`
+	// Epic is the walk the story's epic takes with it: done, and archived
+	// with it, when the story is the epic's last open one (S-0200).
+	Epic *workitem.Followed `json:"epic,omitempty"`
 }
 
 // Accept is what accepting a story or an epic would do, worked out before
@@ -82,11 +85,16 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 		if items, err := repo.List(false); err == nil {
 			probe := *it
 			probe.Transitions = append([]workitem.Transition(nil), it.Transitions...)
+			walked := true
 			for _, st := range StepsToDone(it.Status) {
 				if _, err := repo.Move(&probe, st, workitem.MoveOptions{By: by, Now: now, Items: items}); err != nil {
 					res.Blockers = append(res.Blockers, strings.TrimPrefix(err.Error(), "rule: "))
+					walked = false
 					break
 				}
+			}
+			if walked && it.Type == workitem.Story {
+				res.Blockers = append(res.Blockers, epicAccepted(repo, res, &probe, it.Status, by, now)...)
 			}
 		}
 	}
@@ -118,6 +126,69 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 		res.Branch = storygit.Branch(it.ID)
 	}
 	return res, nil
+}
+
+// epicAccepted works out what the story's epic would do were the story,
+// walked to done as probe from from, accepted, sets it on res, and returns
+// what would stop it: the epic's walk, or the archive of the epic with
+// everything of it still on the board.
+func epicAccepted(repo *workitem.Repo, res *Acceptance, probe *workitem.Item, from, by string, now time.Time) []string {
+	all, followed, err := EpicWalk(repo, probe, from, by, now, true)
+	if err != nil {
+		return []string{err.Error()}
+	}
+	res.Epic = followed
+	if followed == nil || followed.To != workitem.Done {
+		return nil
+	}
+	var open []*workitem.Item
+	for _, x := range all {
+		if !x.Archived {
+			open = append(open, x)
+		}
+	}
+	if _, err := repo.PlanArchive(open, ArchivedWith(open, probe.ID, followed)); err != nil {
+		return []string{fmt.Sprintf("%s would follow %s to done but cannot be archived with it: %v", followed.ID, probe.ID, err)}
+	}
+	return nil
+}
+
+// EpicWalk is what the epic of probe, a story moved from from, would do with
+// it, worked out on copies so that nothing real changes (S-0200). It returns
+// the items, archived ones included, with probe and the epic's copy in them.
+func EpicWalk(repo *workitem.Repo, probe *workitem.Item, from, by string, now time.Time, accept bool) ([]*workitem.Item, *workitem.Followed, error) {
+	all, err := repo.List(true)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i, x := range all {
+		switch {
+		case x.ID == probe.ID:
+			all[i] = probe
+		case x.ID == probe.Parent && x.Type == workitem.Epic:
+			epic := *x
+			epic.Transitions = append([]workitem.Transition(nil), x.Transitions...)
+			all[i] = &epic
+		}
+	}
+	_, followed, err := repo.Follow(all, probe, from, by, now, accept)
+	return all, followed, err
+}
+
+// ArchivedWith is what accepting story archives: the story, and when its
+// epic followed it to done, the epic's other stories still on the board
+// (cancelled ones) and then the epic, so that nothing of it is left there.
+func ArchivedWith(items []*workitem.Item, story string, epic *workitem.Followed) []string {
+	ids := []string{story}
+	if epic == nil || epic.To != workitem.Done {
+		return ids
+	}
+	for _, c := range workitem.Children(items, epic.ID) {
+		if c.ID != story && !c.Archived {
+			ids = append(ids, c.ID)
+		}
+	}
+	return append(ids, epic.ID)
 }
 
 // resultsBlocker is why an experiment story cannot be accepted for want of

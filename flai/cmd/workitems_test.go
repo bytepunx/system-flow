@@ -109,7 +109,7 @@ func TestWorkItemLifecycle(t *testing.T) {
 	// Moving a story to done is acceptance (S-0046): outside git that is the
 	// transition plus the archive, so the story leaves the board at once.
 	out, errOut, code = runIn(t, nested, "move", "S-0001", "done", "--by", "alex")
-	if code != 0 || !strings.Contains(out, "accepted S-0001: done, 2 items archived") {
+	if code != 0 || !strings.Contains(out, "accepted S-0001: done, 3 items archived") {
 		t.Fatalf("done: %s %s", out, errOut)
 	}
 	out, _, _ = runIn(t, nested, "show", "S-0001")
@@ -120,8 +120,9 @@ func TestWorkItemLifecycle(t *testing.T) {
 		t.Error("the accepted story should have left the kanban folder")
 	}
 	out, _, _ = runIn(t, nested, "board", "--all")
-	if strings.Contains(out, "S-0001") || !strings.Contains(out, "E-0001") {
-		t.Errorf("board should no longer list the accepted story:\n%s", out)
+	// nor E-0001, accepted with its only story (S-0200)
+	if strings.Contains(out, "S-0001") || strings.Contains(out, "E-0001") {
+		t.Errorf("board should no longer list the accepted story or its epic:\n%s", out)
 	}
 	out, _, code = runIn(t, nested, "archive", "--dry-run")
 	if code != 0 || !strings.Contains(out, "nothing to archive") {

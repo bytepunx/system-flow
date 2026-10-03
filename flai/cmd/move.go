@@ -84,9 +84,14 @@ release; see flai release --pending.`,
 				a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings, "finalized": draft && !it.Draft})
+				out := map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings, "finalized": draft && !it.Draft}
+				if res.Followed != nil {
+					out["followed"] = res.Followed
+				}
+				return a.printJSON(out)
 			}
 			fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
+			a.printFollowed(res.Followed)
 			if draft && !it.Draft {
 				fmt.Fprintf(a.out, "  %s is finalized: no longer a draft\n", it.ID)
 			}
@@ -101,6 +106,13 @@ release; see flai release --pending.`,
 	c.Flags().StringVar(&by, "by", "", "who made the change (default: FLAI_AGENT when set, else the config author)")
 	addAcceptFlags(c, &accept)
 	return c
+}
+
+// printFollowed names the move a story's epic made with it (S-0200).
+func (a *app) printFollowed(f *workitem.Followed) {
+	if f != nil {
+		fmt.Fprintf(a.out, "  %s → %s, following %s\n", f.ID, f.To, f.Story)
+	}
 }
 
 // movedBy is who a transition is recorded as made by: --by, else FLAI_AGENT

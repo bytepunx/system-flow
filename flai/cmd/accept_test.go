@@ -56,14 +56,15 @@ func TestAcceptEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("accept: %s\n%s", errOut, out)
 	}
-	if !strings.Contains(out, "accepted S-0001: done, 2 items archived, committed") {
+	// the story, its task, and E-0001, whose only story it is (S-0200)
+	if !strings.Contains(out, "accepted S-0001: done, 3 items archived, committed") || !strings.Contains(out, "E-0001 followed it from review to done, archived") {
 		t.Errorf("summary: %s", out)
 	}
 	if _, err := os.Stat(filepath.Join(root, "wip", "archive", "kanban", "stories", "S-0001-ship-it.md")); err != nil {
 		t.Error("story not archived")
 	}
 	log, _ := r.Run(root, "git", "log", "-1", "--format=%B")
-	if !strings.HasPrefix(log, "chore: [S-0001] accept and archive") || !strings.Contains(log, "Co-Authored-By: t <t@t>") {
+	if !strings.HasPrefix(log, "chore: [S-0001] accept and archive, with E-0001") || !strings.Contains(log, "Co-Authored-By: t <t@t>") {
 		t.Errorf("commit message:\n%s", log)
 	}
 	st, _ := r.Run(root, "git", "status", "--porcelain")
@@ -78,9 +79,16 @@ func TestAcceptEndToEnd(t *testing.T) {
 	if code == 0 || !strings.Contains(errOut, "already done") {
 		t.Errorf("second accept must refuse: %s", errOut)
 	}
-	// the epic is accepted straight from backlog: walked to done, no release
-	out, errOut, code = runIn(t, root, "accept", "E-0001", "--by", "alex")
-	if code != 0 || !strings.Contains(out, "accepted E-0001: done") {
+	if _, err := os.Stat(filepath.Join(root, "wip", "archive", "kanban", "epics", "E-0001-e.md")); err != nil {
+		t.Error("the epic is archived with its last story")
+	}
+	// an epic with no story is accepted straight from backlog: walked to
+	// done, no release
+	if _, errOut, code := runIn(t, root, "epic", "new", "Empty"); code != 0 {
+		t.Fatal(errOut)
+	}
+	out, errOut, code = runIn(t, root, "accept", "E-0002", "--by", "alex")
+	if code != 0 || !strings.Contains(out, "accepted E-0002: done") {
 		t.Errorf("epic accept from backlog: %d %s %s", code, out, errOut)
 	}
 }

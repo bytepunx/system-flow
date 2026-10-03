@@ -110,9 +110,9 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 			}
 		}
 	}
-	// E-0001 follows its stories into review, where it cannot be cancelled,
-	// and is accepted with the last of them (S-0200): the preview is of an
-	// epic with nothing under it.
+	// E-0001 follows its first story into review, where it cannot be
+	// cancelled, and stays there (S-0200): the preview is of an epic with
+	// nothing under it.
 	if _, errOut, code := runIn(t, root, "epic", "new", "Spare"); code != 0 {
 		t.Fatal(errOut)
 	}

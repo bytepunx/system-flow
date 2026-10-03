@@ -43,6 +43,9 @@ func (a *app) cancelItem(repo *workitem.Repo, it *workitem.Item, by, reason stri
 		if len(res.Cancelled) == 0 {
 			fmt.Fprintf(a.out, "%s would be cancelled; nothing open under it\n", it.ID)
 		}
+		if f := res.Followed; f != nil {
+			fmt.Fprintf(a.out, "would also move %s %s from %s to %s, following %s\n", f.ID, f.Title, f.From, f.To, f.Story)
+		}
 		a.printLeftBehind(res.LeftBehind, true)
 		return nil
 	}
@@ -59,7 +62,7 @@ func (a *app) cancelItem(repo *workitem.Repo, it *workitem.Item, by, reason stri
 	if err != nil {
 		return err
 	}
-	res.Status, res.Cancelled = it.Status, done.Cancelled
+	res.Status, res.Cancelled, res.Followed = it.Status, done.Cancelled, done.Followed
 	if done.Warnings != nil {
 		res.Warnings = done.Warnings
 	}
@@ -71,6 +74,7 @@ func (a *app) cancelItem(repo *workitem.Repo, it *workitem.Item, by, reason stri
 		return a.printJSON(res)
 	}
 	fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
+	a.printFollowed(res.Followed)
 	if n := len(res.Cancelled); n > 0 {
 		fmt.Fprintf(a.out, "%s cancelled with it\n", plural(n, "item"))
 	}

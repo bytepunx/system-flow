@@ -127,8 +127,10 @@ The operator's acceptance step as one command, per design/conventions/work-manag
 
 ```text
 0. rebase the story branch and fast-forward it into the main branch
-1. move the item to done (its rules apply: children closed, criteria checked)
-2. flai archive for the item and its children and narrative
+1. move the item to done (its rules apply: children closed, criteria checked);
+   a story's epic follows it, to done when it was the epic's last open story
+2. flai archive for the item and its children and narrative, and for an
+   epic that followed its story to done, the epic and its cancelled stories
 3. git commit the work item and archive
 4. tell every story in progress or in review whose touches cover a path
    the merge changed which paths those are, for its agent's MCP inbox
@@ -385,7 +387,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--strict` | treat warnings as failures, except the review column over its limit |
+| `--strict` | treat warnings as failures, except the review column over its limit and an epic behind its stories |
 
 ### flai checks
 

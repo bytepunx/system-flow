@@ -13,7 +13,8 @@ import (
 
 // pendingProject is a git project like researchProject's, with a second
 // story ready to accept, so a batch of two items against cli can build up
-// before a publish.
+// before a publish. A third story waits in backlog, so that accepting the
+// two leaves E-0001 open (S-0200) and the batch is of stories alone.
 func pendingProject(t *testing.T) (root, remote string) {
 	t.Helper()
 	root, remote = researchProject(t, "remediation", true)
@@ -37,6 +38,9 @@ func pendingProject(t *testing.T) (root, remote string) {
 	gitIn(t, wt, "add", "-A")
 	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0002] the fix")
 	if _, errOut, code := runIn(t, root, "move", "S-0002", "review"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Later", "--epic", "E-0001", "--nature", "feature"); code != 0 {
 		t.Fatal(errOut)
 	}
 	return root, remote
