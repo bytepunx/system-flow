@@ -411,7 +411,7 @@ type ItemOut struct {
 	// Draft, CostOfDelay, and Forecast are the item's planning data, and
 	// Currency what its amounts are in (S-0199).
 	Draft       bool                  `json:"draft,omitempty" jsonschema:"a story an agent wrote that the operator has not finalized: it cannot go to ready"`
-	CostOfDelay *workitem.CostOfDelay `json:"cost_of_delay,omitempty" jsonschema:"what each week of waiting for the item costs: the inputs it is worked out from, the value per week, and who set it and when"`
+	CostOfDelay *workitem.CostOfDelay `json:"cost_of_delay,omitempty" jsonschema:"what each week of waiting for the item costs: the inputs it is worked out from with who set them and when, and the value per week with who set it and when (ADR-0079)"`
 	Forecast    *workitem.Forecast    `json:"forecast,omitempty" jsonschema:"a story's expected duration and delivery, what they rest on, and who set it and when"`
 	Currency    string                `json:"currency,omitempty" jsonschema:"the currency of the cost of delay's amounts"`
 	// Hash is what item_edit takes to refuse a change made meanwhile.

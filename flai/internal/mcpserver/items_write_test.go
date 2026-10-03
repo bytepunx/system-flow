@@ -213,7 +213,8 @@ func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
 }
 
 // S-0199: item_edit sets, removes one key of, replaces, and clears a cost of
-// delay and a forecast, each stamped with the agent and the time.
+// delay and a forecast, each stamped with the agent and the time; a cost of
+// delay's inputs and value each carry the stamp (ADR-0079).
 func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 	f := setup(t)
 	at := f.clock.UTC().Format(workitem.TimeFormat)
@@ -236,7 +237,7 @@ func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 	got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID})
 	c := got["cost_of_delay"].(map[string]any)
 	in := c["inputs"].(map[string]any)
-	if in["revenue_per_week"] != 1200.5 || in["penalty_per_week"] != 300.0 || in["time_lost_per_cycle"] != "4h" || c["value"] != 2000.0 || c["by"] != "claude" || c["at"] != at || got["currency"] != "USD" {
+	if in["revenue_per_week"] != 1200.5 || in["penalty_per_week"] != 300.0 || in["time_lost_per_cycle"] != "4h" || c["value"] != 2000.0 || c["by"] != "claude" || c["at"] != at || in["by"] != "claude" || in["at"] != at || got["currency"] != "USD" {
 		t.Errorf("set: %v, currency %v", c, got["currency"])
 	}
 	edit(map[string]any{"cost_of_delay": map[string]any{"time_lost_per_cycle": ""}}, "cost_of_delay")
@@ -245,7 +246,9 @@ func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 	}
 	// an amount is removed by replacing the block with the keys to keep
 	edit(map[string]any{"clear_cost_of_delay": true, "cost_of_delay": map[string]any{"revenue_per_week": 1200.5}}, "cost_of_delay")
-	if c := planning("cost_of_delay"); c["value"] != nil || len(c["inputs"].(map[string]any)) != 1 {
+	// the inputs and the value are stamped apart (ADR-0079): with the value
+	// gone, so is its stamp
+	if c := planning("cost_of_delay"); c["value"] != nil || c["by"] != nil || c["at"] != nil || len(c["inputs"].(map[string]any)) != 3 || c["inputs"].(map[string]any)["by"] != "claude" {
 		t.Errorf("replaced: %v", c)
 	}
 	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "cost_of_delay": map[string]any{"time_lost_per_cycle": "soon"}}); !strings.Contains(failed, "not a Go duration") {

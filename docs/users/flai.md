@@ -354,7 +354,7 @@ flai edit S-0005 --cost-of-delay-value 400
 flai edit S-0005 --clear-cost-of-delay                 # remove it all
 ```
 
-You can give the inputs when you make a story or an epic, with the same flags. They are recorded as set by its owner (`--owner`, else your config author) at the time it is made. Without them the item has no cost of delay. The dashboard's new-item form passes its cost of delay panel this way, as you:
+You can give the inputs when you make a story or an epic, with the same flags. The inputs are recorded as set by its owner (`--owner`, else your config author) at the time it is made. Without them the item has no cost of delay. The dashboard's new-item form passes its cost of delay panel this way, as you:
 
 ```bash
 flai story new "Export to CSV" --epic E-0001 --revenue-per-week 1200 --time-lost-per-cycle 2h
@@ -372,7 +372,7 @@ flai edit S-0005 --forecast-duration 6h --forecast-delivery 2026-10-09T17:00:00Z
 flai edit S-0005 --clear-forecast
 ```
 
-Amounts are plain numbers in the project's currency. Durations are Go durations such as `6h` or `90m`, and the delivery is a UTC timestamp. Each edit changes only what you give, and the cost of delay or forecast it changes records you (`--by`, else `FLAI_AGENT`, else your config author) and the time. `flai show` prints all three. The project manifest sets the currency, what an hour of work costs, and the cycle time lost is counted over: `planning.currency` (default `USD`), `planning.hour_rate` (unset), and `planning.cycle` (default `168h`), listed in the [settings index](../operators/settings.md#project-manifest).
+Amounts are plain numbers in the project's currency. Durations are Go durations such as `6h` or `90m`, and the delivery is a UTC timestamp. Each edit changes only what you give, and the forecast it changes records you (`--by`, else `FLAI_AGENT`, else your config author) and the time. A cost of delay records who set its inputs and who set its value apart, each when it changes ([ADR-0079](../../design/adrs/0079-a-cost-of-delay-stamps-its-inputs-and-its-value-apart.md)), so changing an input keeps the planner's name on the value. The value is stale when the inputs changed after it: the planner should work it out again. `flai show` prints all three, with `stale: the inputs changed after the value` when it is. The project manifest sets the currency, what an hour of work costs, and the cycle time lost is counted over: `planning.currency` (default `USD`), `planning.hour_rate` (unset), and `planning.cycle` (default `168h`), listed in the [settings index](../operators/settings.md#project-manifest).
 
 A flai older than the one that brought these fields reads past them with a warning and does not act on them, so it would let a draft go to ready. Publishing that release raises `flai.minimum`, so upgrade the flai on your host (`flai self-upgrade`) first.
 

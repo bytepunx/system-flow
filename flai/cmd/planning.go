@@ -22,22 +22,28 @@ func planningLines(draft bool, fin *workitem.Finalized, c *workitem.CostOfDelay,
 		amount := func(v float64) string {
 			return strconv.FormatFloat(v, 'f', -1, 64) + " " + currency + "/week"
 		}
+		// the inputs and the value each say who set them (ADR-0079)
 		var parts []string
-		if c.Value != nil {
-			parts = append(parts, "value "+amount(*c.Value))
-		}
-		if in := c.Inputs; in != nil {
+		if in := c.Inputs; !in.IsZero() {
+			var inputs []string
 			if in.RevenuePerWeek != nil {
-				parts = append(parts, "revenue "+amount(*in.RevenuePerWeek))
+				inputs = append(inputs, "revenue "+amount(*in.RevenuePerWeek))
 			}
 			if in.PenaltyPerWeek != nil {
-				parts = append(parts, "penalty "+amount(*in.PenaltyPerWeek))
+				inputs = append(inputs, "penalty "+amount(*in.PenaltyPerWeek))
 			}
 			if in.TimeLostPerCycle != "" {
-				parts = append(parts, "time lost "+in.TimeLostPerCycle+"/cycle")
+				inputs = append(inputs, "time lost "+in.TimeLostPerCycle+"/cycle")
 			}
+			parts = append(parts, "inputs "+strings.Join(inputs, ", ")+" · "+setBy(in.By, in.At))
 		}
-		out = append(out, "cost of delay: "+strings.Join(append(parts, setBy(c.By, c.At)), " · "))
+		if c.Value != nil {
+			parts = append(parts, "value "+amount(*c.Value)+" · "+setBy(c.By, c.At))
+		}
+		if c.Stale() {
+			parts = append(parts, "stale: the inputs changed after the value")
+		}
+		out = append(out, "cost of delay: "+strings.Join(parts, "; "))
 	}
 	if !f.IsZero() {
 		var parts []string

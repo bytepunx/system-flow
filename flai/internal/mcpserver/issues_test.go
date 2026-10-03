@@ -47,7 +47,7 @@ func TestIssueStoryMakesAStoryFromAnOpenIssue(t *testing.T) {
 		t.Error("the story should be a draft")
 	}
 	cod := story.CostOfDelay
-	if cod == nil || cod.Inputs == nil || cod.Inputs.TimeLostPerCycle != "20m" || cod.Inputs.RevenuePerWeek == nil || *cod.Inputs.RevenuePerWeek != 1200 || cod.By != "flai" {
+	if cod == nil || cod.Inputs == nil || cod.Inputs.TimeLostPerCycle != "20m" || cod.Inputs.RevenuePerWeek == nil || *cod.Inputs.RevenuePerWeek != 1200 || cod.Inputs.By != "flai" || cod.By != "" {
 		t.Errorf("the story should carry the issue's time lost per cycle and its Impact's revenue, set by flai: %+v", cod)
 	}
 	for _, want := range []string{"time_lost_per_cycle 20m: 20m per occurrence × 1 occurrence ÷ 1 cycle of 168h", "revenue_per_week 1200 carried over from I-0001's Impact section."} {

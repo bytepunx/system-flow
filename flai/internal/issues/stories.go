@@ -119,8 +119,8 @@ func ForStory(is *Issue, now time.Time, cycle time.Duration) StoryDraft {
 	return StoryDraft{Title: is.Title, Nature: nature, Body: b.String(), Draft: true, CostOfDelay: cod}
 }
 
-// costOfDelay is the cost of delay inputs the issue gives, set by flai at now,
-// or nil when it gives none, and the sentences that say how each was set and
+// costOfDelay is the cost of delay inputs the issue gives, the inputs set by
+// flai at now (ADR-0079), or nil when it gives none, and the sentences that say how each was set and
 // which values were left out.
 func costOfDelay(is *Issue, now time.Time, cycle time.Duration) (*workitem.CostOfDelay, string) {
 	in, carried, skipped := impact(is)
@@ -144,7 +144,8 @@ func costOfDelay(is *Issue, now time.Time, cycle time.Duration) (*workitem.CostO
 		return nil, strings.Join(skipped, " ")
 	}
 	set = append([]string{fmt.Sprintf("Cost of delay inputs set by flai from %s.", is.ID)}, set...)
-	cod := &workitem.CostOfDelay{Inputs: &in, By: "flai", At: now.UTC().Format(workitem.TimeFormat)}
+	in.By, in.At = "flai", now.UTC().Format(workitem.TimeFormat)
+	cod := &workitem.CostOfDelay{Inputs: &in}
 	return cod, strings.Join(append(set, skipped...), " ")
 }
 

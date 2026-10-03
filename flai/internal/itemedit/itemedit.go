@@ -669,7 +669,8 @@ func followParent(repo *workitem.Repo, story *workitem.Item, former string, join
 
 // applyPlanning makes the change's draft flag, cost of delay, and forecast
 // on the item, and names what changed. A block that changes records who
-// changed it and when.
+// changed it and when; a cost of delay records it for its inputs and its
+// value apart (ADR-0079).
 func applyPlanning(it *workitem.Item, ch Change, opt Options, currency string) ([]string, error) {
 	var changed []string
 	by := opt.By
@@ -701,9 +702,7 @@ func applyPlanning(it *workitem.Item, ch Change, opt Options, currency string) (
 			return nil, err
 		}
 		if !sameCost(it.CostOfDelay, next) {
-			if next != nil {
-				next.By, next.At = by, at
-			}
+			stampCost(it.CostOfDelay, next, by, at)
 			it.CostOfDelay = next
 			changed = append(changed, "cost_of_delay")
 		}
@@ -816,20 +815,49 @@ func sameAmount(a, b *float64) bool {
 	return (a == nil) == (b == nil) && (a == nil || *a == *b)
 }
 
+// stampCost records by at at on what next changes of cur: the inputs when an
+// input is added, changed, or removed and inputs remain, and the value when
+// it is added or changed. What it leaves keeps who set it; a value removed
+// takes its stamp with it.
+func stampCost(cur, next *workitem.CostOfDelay, by, at string) {
+	if next == nil {
+		return
+	}
+	var was workitem.CostOfDelay
+	if cur != nil {
+		was = *cur
+	}
+	if in := next.Inputs; in != nil {
+		if sameInputs(was.Inputs, in) {
+			in.By, in.At = was.Inputs.By, was.Inputs.At
+		} else {
+			in.By, in.At = by, at
+		}
+	}
+	switch {
+	case next.Value == nil:
+		next.By, next.At = "", ""
+	case sameAmount(was.Value, next.Value):
+		next.By, next.At = was.By, was.At
+	default:
+		next.By, next.At = by, at
+	}
+}
+
 // sameCost compares what two costs of delay say, not who set them.
 func sameCost(a, b *workitem.CostOfDelay) bool {
 	if a.IsZero() || b.IsZero() {
 		return a.IsZero() == b.IsZero()
 	}
-	ai, bi := a.Inputs, b.Inputs
-	if ai.IsZero() || bi.IsZero() {
-		if ai.IsZero() != bi.IsZero() {
-			return false
-		}
-	} else if !sameAmount(ai.RevenuePerWeek, bi.RevenuePerWeek) || !sameAmount(ai.PenaltyPerWeek, bi.PenaltyPerWeek) || ai.TimeLostPerCycle != bi.TimeLostPerCycle {
-		return false
+	return sameInputs(a.Inputs, b.Inputs) && sameAmount(a.Value, b.Value)
+}
+
+// sameInputs compares what two sets of inputs say, not who set them.
+func sameInputs(a, b *workitem.CostInputs) bool {
+	if a.IsZero() || b.IsZero() {
+		return a.IsZero() == b.IsZero()
 	}
-	return sameAmount(a.Value, b.Value)
+	return sameAmount(a.RevenuePerWeek, b.RevenuePerWeek) && sameAmount(a.PenaltyPerWeek, b.PenaltyPerWeek) && a.TimeLostPerCycle == b.TimeLostPerCycle
 }
 
 // sameForecast compares what two forecasts say, not who set them.

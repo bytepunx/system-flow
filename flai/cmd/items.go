@@ -375,9 +375,10 @@ planner to turn into a value. Without them the ` + typ + ` has no cost of
 delay; flai edit sets and changes them later.`
 }
 
-// newCostOfDelay is a new item's cost of delay from its input flags, set by
-// by at now, or nil when none is given (S-0204). An amount that is not a
-// number is refused as flai edit refuses it; Create checks the rest.
+// newCostOfDelay is a new item's cost of delay from its input flags, the
+// inputs set by by at now (ADR-0079), or nil when none is given (S-0204). An
+// amount that is not a number is refused as flai edit refuses it; Create
+// checks the rest.
 func newCostOfDelay(revenue, penalty, timeLost, currency, by string, now time.Time) (*workitem.CostOfDelay, error) {
 	var in workitem.CostInputs
 	for _, a := range []struct {
@@ -401,7 +402,8 @@ func newCostOfDelay(revenue, penalty, timeLost, currency, by string, now time.Ti
 	if in.IsZero() {
 		return nil, nil
 	}
-	return &workitem.CostOfDelay{Inputs: &in, By: by, At: now.UTC().Format(workitem.TimeFormat)}, nil
+	in.By, in.At = by, now.UTC().Format(workitem.TimeFormat)
+	return &workitem.CostOfDelay{Inputs: &in}, nil
 }
 
 // pluralType is an item type's plural: epics, stories, tasks.

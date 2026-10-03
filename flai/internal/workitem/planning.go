@@ -11,8 +11,9 @@ import (
 // Planning data (S-0199): a story is a draft until it is finalized, epics and
 // stories carry a cost of delay, and a story carries a forecast. Amounts are
 // in the project's currency (planning.currency in system-flow.yaml), and each
-// block records who set it and when. A story that was a draft records who
-// finalized it and when (S-0201).
+// block records who set it and when; a cost of delay records it for its
+// inputs and for its value apart (ADR-0079). A story that was a draft records
+// who finalized it and when (S-0201).
 
 // CostOfDelay is what waiting for an item costs: the inputs it is worked out
 // from, the value, or both.
@@ -20,8 +21,9 @@ type CostOfDelay struct {
 	Inputs *CostInputs `yaml:"inputs" json:"inputs,omitempty"`
 	// Value is the cost of delay per week, in the project's currency.
 	Value *float64 `yaml:"value" json:"value,omitempty"`
-	By    string   `yaml:"by" json:"by,omitempty"`
-	At    string   `yaml:"at" json:"at,omitempty"`
+	// By and At are who set the value and when; there are none without one.
+	By string `yaml:"by" json:"by,omitempty"`
+	At string `yaml:"at" json:"at,omitempty"`
 }
 
 // CostInputs are what a cost of delay is worked out from; an absent amount is
@@ -33,6 +35,9 @@ type CostInputs struct {
 	PenaltyPerWeek *float64 `yaml:"penalty_per_week" json:"penalty_per_week,omitempty"`
 	// TimeLostPerCycle is the work lost each cycle it is not done, a Go duration.
 	TimeLostPerCycle string `yaml:"time_lost_per_cycle" json:"time_lost_per_cycle,omitempty"`
+	// By and At are who last added, changed, or removed an input, and when.
+	By string `yaml:"by" json:"by,omitempty"`
+	At string `yaml:"at" json:"at,omitempty"`
 }
 
 // Forecast is when a story is expected to be delivered, and why.
@@ -53,14 +58,52 @@ type Finalized struct {
 	At string `yaml:"at" json:"at,omitempty"`
 }
 
-// IsZero reports whether the inputs give nothing.
+// IsZero reports whether the inputs give no amount or duration, whoever is
+// recorded as setting them.
 func (in *CostInputs) IsZero() bool {
 	return in == nil || (in.RevenuePerWeek == nil && in.PenaltyPerWeek == nil && in.TimeLostPerCycle == "")
 }
 
+// stamped reports whether the inputs record who set them or when.
+func (in *CostInputs) stamped() bool {
+	return in != nil && (in.By != "" || in.At != "")
+}
+
 // IsZero reports whether the cost of delay is absent or empty.
 func (c *CostOfDelay) IsZero() bool {
-	return c == nil || (c.Inputs.IsZero() && c.Value == nil && c.By == "" && c.At == "")
+	return c == nil || (c.Inputs.IsZero() && !c.Inputs.stamped() && c.Value == nil && c.By == "" && c.At == "")
+}
+
+// Stale reports whether the inputs changed after the value was set: there
+// are both, and the inputs' at is later than the value's (ADR-0079).
+func (c *CostOfDelay) Stale() bool {
+	if c == nil || c.Value == nil || c.Inputs.IsZero() {
+		return false
+	}
+	inputs, err := time.Parse(TimeFormat, c.Inputs.At)
+	if err != nil {
+		return false
+	}
+	value, err := time.Parse(TimeFormat, c.At)
+	if err != nil {
+		return false
+	}
+	return inputs.After(value)
+}
+
+// readOneStamp reads a cost of delay written with one by and at for the
+// whole block (ADR-0074) as ADR-0079 stamps it: with no value the stamp is
+// the inputs', and with a value it is the value's and the inputs' too, so
+// that the value does not read as stale. A block whose inputs are stamped is
+// left as it is.
+func (c *CostOfDelay) readOneStamp() {
+	if c == nil || c.Inputs.IsZero() || c.Inputs.stamped() || (c.By == "" && c.At == "") {
+		return
+	}
+	c.Inputs.By, c.Inputs.At = c.By, c.At
+	if c.Value == nil {
+		c.By, c.At = "", ""
+	}
 }
 
 // IsZero reports whether the forecast is absent or empty.
@@ -139,6 +182,8 @@ func planningBlock(it *Item) string {
 			writeAmount(&b, "    revenue_per_week", in.RevenuePerWeek)
 			writeAmount(&b, "    penalty_per_week", in.PenaltyPerWeek)
 			writeString(&b, "    time_lost_per_cycle", in.TimeLostPerCycle)
+			writeString(&b, "    by", in.By)
+			writeTime(&b, "    at", in.At)
 		}
 		writeAmount(&b, "  value", c.Value)
 		writeString(&b, "  by", c.By)
@@ -193,13 +238,20 @@ func planningErrors(it *Item) []string {
 		if c.Inputs.IsZero() && c.Value == nil {
 			errs = append(errs, "cost_of_delay has neither inputs nor a value: give one or both")
 		}
-		if in := c.Inputs; in != nil {
+		if in := c.Inputs; !in.IsZero() {
 			errs = append(errs, amountErrors("cost_of_delay.inputs.revenue_per_week", in.RevenuePerWeek)...)
 			errs = append(errs, amountErrors("cost_of_delay.inputs.penalty_per_week", in.PenaltyPerWeek)...)
 			errs = append(errs, durationErrors("cost_of_delay.inputs.time_lost_per_cycle", in.TimeLostPerCycle)...)
+			errs = append(errs, setByErrors("cost_of_delay.inputs", in.By, in.At)...)
+		} else if in.stamped() {
+			errs = append(errs, "cost_of_delay.inputs.by and at say who set the inputs, and there are none: give an input, or remove them")
 		}
-		errs = append(errs, amountErrors("cost_of_delay.value", c.Value)...)
-		errs = append(errs, setByErrors("cost_of_delay", c.By, c.At)...)
+		if c.Value != nil {
+			errs = append(errs, amountErrors("cost_of_delay.value", c.Value)...)
+			errs = append(errs, setByErrors("cost_of_delay", c.By, c.At)...)
+		} else if c.By != "" || c.At != "" {
+			errs = append(errs, "cost_of_delay.by and at say who set the value, and there is none: give a value, or remove them")
+		}
 	}
 	if f := it.Forecast; !f.IsZero() {
 		if !Carries(it.Type, "forecast") {

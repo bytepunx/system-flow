@@ -143,6 +143,7 @@ func ParseItem(doc string) (*Item, error) {
 		return nil, err
 	}
 	it.Unknown = UnknownFields(fm, it)
+	it.CostOfDelay.readOneStamp()
 	it.Body = body
 	return &it, nil
 }

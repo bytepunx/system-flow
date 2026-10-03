@@ -51,8 +51,8 @@ func edit(t *testing.T, repo *workitem.Repo, id string, ch Change, by string, at
 }
 
 // S-0199: each cost of delay key is set and removed on its own, and the
-// block records who changed it last and when; removing the last input and
-// the value removes the block.
+// inputs and the value each record who changed them last and when
+// (ADR-0079); removing the last input and the value removes the block.
 func TestCostOfDelayKeysSetAndClear(t *testing.T) {
 	repo := planningRepo(t)
 	t1 := time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC)
@@ -62,28 +62,58 @@ func TestCostOfDelayKeysSetAndClear(t *testing.T) {
 		t.Fatalf("set: %v %+v", err, res)
 	}
 	c := it.CostOfDelay
-	if c == nil || c.Inputs == nil || *c.Inputs.RevenuePerWeek != 1200 || *c.Inputs.PenaltyPerWeek != 99.5 || c.Inputs.TimeLostPerCycle != "4h" || *c.Value != 1500 || c.By != "alex" || c.At != "2026-10-02T09:00:00Z" {
+	if c == nil || c.Inputs == nil || *c.Inputs.RevenuePerWeek != 1200 || *c.Inputs.PenaltyPerWeek != 99.5 || c.Inputs.TimeLostPerCycle != "4h" || *c.Value != 1500 || c.By != "alex" || c.At != "2026-10-02T09:00:00Z" || c.Inputs.By != "alex" || c.Inputs.At != "2026-10-02T09:00:00Z" {
 		t.Fatalf("the cost of delay: %+v %+v", c, c.Inputs)
 	}
 	data, _ := os.ReadFile(it.Path)
-	if !strings.Contains(string(data), "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 99.5\n    time_lost_per_cycle: 4h\n  value: 1500\n  by: alex\n  at: 2026-10-02T09:00:00Z\n") {
+	if !strings.Contains(string(data), "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 99.5\n    time_lost_per_cycle: 4h\n    by: alex\n    at: 2026-10-02T09:00:00Z\n  value: 1500\n  by: alex\n  at: 2026-10-02T09:00:00Z\n") {
 		t.Errorf("the front matter:\n%s", data)
 	}
 
-	// one key removed: the rest stay, and the block is stamped by whoever removed it
+	// one key removed: the rest stay, and the inputs are stamped by whoever
+	// removed it; the value keeps its own stamp, and is now stale
 	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{PenaltyPerWeek: str("")}}, "", t2)
-	if err != nil || it.CostOfDelay.Inputs.PenaltyPerWeek != nil || *it.CostOfDelay.Inputs.RevenuePerWeek != 1200 || it.CostOfDelay.By != "agent" || it.CostOfDelay.At != "2026-10-02T10:00:00Z" {
-		t.Fatalf("remove penalty: %v %+v", err, it.CostOfDelay)
+	if c := it.CostOfDelay; err != nil || c.Inputs.PenaltyPerWeek != nil || *c.Inputs.RevenuePerWeek != 1200 || c.Inputs.By != "agent" || c.Inputs.At != "2026-10-02T10:00:00Z" || c.By != "alex" || c.At != "2026-10-02T09:00:00Z" || !c.Stale() {
+		t.Fatalf("remove penalty: %v %+v %+v", err, it.CostOfDelay, it.CostOfDelay.Inputs)
 	}
-	// the same again changes nothing, and the stamp stays
-	res, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{RevenuePerWeek: str("1200.0")}}, "bob", t2.Add(time.Hour))
-	if err != nil || !res.Unchanged || it.CostOfDelay.By != "agent" {
+	// the same again changes nothing, and the stamps stay
+	res, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{RevenuePerWeek: str("1200.0"), Value: str("1500")}}, "bob", t2.Add(time.Hour))
+	if err != nil || !res.Unchanged || it.CostOfDelay.Inputs.By != "agent" || it.CostOfDelay.By != "alex" {
 		t.Fatalf("the same value: %v %+v %+v", err, res, it.CostOfDelay)
 	}
-	// the inputs go, the value stays
-	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{RevenuePerWeek: str(""), TimeLostPerCycle: str("")}}, "bob", t2)
-	if err != nil || it.CostOfDelay == nil || it.CostOfDelay.Inputs != nil || *it.CostOfDelay.Value != 1500 {
+	// the value changed: it is stamped, the inputs keep theirs, and it is
+	// no longer stale
+	t3 := t2.Add(2 * time.Hour)
+	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{Value: str("1600")}}, "planner", t3)
+	if c := it.CostOfDelay; err != nil || *c.Value != 1600 || c.By != "planner" || c.At != "2026-10-02T12:00:00Z" || c.Inputs.By != "agent" || c.Inputs.At != "2026-10-02T10:00:00Z" || c.Stale() {
+		t.Fatalf("change the value: %v %+v %+v", err, it.CostOfDelay, it.CostOfDelay.Inputs)
+	}
+	// the inputs go, and their stamp with them; the value stays with its own
+	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{RevenuePerWeek: str(""), TimeLostPerCycle: str("")}}, "bob", t3.Add(time.Hour))
+	if c := it.CostOfDelay; err != nil || c == nil || c.Inputs != nil || *c.Value != 1600 || c.By != "planner" || c.At != "2026-10-02T12:00:00Z" || c.Stale() {
 		t.Fatalf("remove the inputs: %v %+v", err, it.CostOfDelay)
+	}
+	if data, _ := os.ReadFile(it.Path); !strings.Contains(string(data), "cost_of_delay:\n  value: 1600\n  by: planner\n  at: 2026-10-02T12:00:00Z\n") {
+		t.Errorf("the value alone:\n%s", data)
+	}
+	// an input added to a value alone stamps the inputs only
+	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{PenaltyPerWeek: str("5")}}, "bob", t3.Add(2*time.Hour))
+	if c := it.CostOfDelay; err != nil || c.Inputs.By != "bob" || c.Inputs.At != "2026-10-02T14:00:00Z" || c.By != "planner" || !c.Stale() {
+		t.Fatalf("add an input: %v %+v %+v", err, it.CostOfDelay, it.CostOfDelay.Inputs)
+	}
+	// clear and give the same inputs back: only the value is new, so only it is stamped
+	_, it, err = edit(t, repo, "S-0001", Change{ClearCostOfDelay: true, CostOfDelay: &CostOfDelayEdit{PenaltyPerWeek: str("5"), Value: str("7")}}, "carol", t3.Add(3*time.Hour))
+	if c := it.CostOfDelay; err != nil || c.Inputs.By != "bob" || c.Inputs.At != "2026-10-02T14:00:00Z" || c.By != "carol" || c.At != "2026-10-02T15:00:00Z" {
+		t.Fatalf("replace: %v %+v %+v", err, it.CostOfDelay, it.CostOfDelay.Inputs)
+	}
+	// clear and give only inputs: the value goes, and its stamp with it
+	_, it, err = edit(t, repo, "S-0001", Change{ClearCostOfDelay: true, CostOfDelay: &CostOfDelayEdit{PenaltyPerWeek: str("6")}}, "dan", t3.Add(4*time.Hour))
+	if c := it.CostOfDelay; err != nil || c.Value != nil || c.By != "" || c.At != "" || c.Inputs.By != "dan" {
+		t.Fatalf("replace with inputs only: %v %+v %+v", err, it.CostOfDelay, it.CostOfDelay.Inputs)
+	}
+	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{PenaltyPerWeek: str(""), Value: str("1500")}}, "bob", t2)
+	if err != nil || it.CostOfDelay == nil || it.CostOfDelay.Inputs != nil || *it.CostOfDelay.Value != 1500 {
+		t.Fatalf("swap the inputs for a value: %v %+v", err, it.CostOfDelay)
 	}
 	// the last key goes, and the block with it
 	_, it, err = edit(t, repo, "S-0001", Change{CostOfDelay: &CostOfDelayEdit{Value: str("")}}, "bob", t2)

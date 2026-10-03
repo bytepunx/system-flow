@@ -27,7 +27,8 @@ func planningProject(t *testing.T, storyArgs ...string) (root, story string) {
 }
 
 // S-0199: each cost of delay and forecast flag sets its key and an empty
-// value removes it; the block records who changed it and when.
+// value removes it; the block records who changed it and when, a cost of
+// delay for its inputs and its value apart (ADR-0079).
 func TestEditPlanningFlags(t *testing.T) {
 	root, story := planningProject(t)
 	out, errOut, code := runIn(t, root, "edit", "S-0001", "--revenue-per-week", "1200", "--penalty-per-week", "50", "--time-lost-per-cycle", "4h", "--cost-of-delay-value", "1400",
@@ -37,7 +38,7 @@ func TestEditPlanningFlags(t *testing.T) {
 	}
 	item := read(t, story)
 	for _, want := range []string{
-		"cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 50\n    time_lost_per_cycle: 4h\n  value: 1400\n  by: planner\n  at: 2026-09-15T21:00:00Z\n",
+		"cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 50\n    time_lost_per_cycle: 4h\n    by: planner\n    at: 2026-09-15T21:00:00Z\n  value: 1400\n  by: planner\n  at: 2026-09-15T21:00:00Z\n",
 		"forecast:\n  duration: 6h\n  delivery: 2026-10-09T17:00:00Z\n  basis: like S-0185\n  by: planner\n  at: 2026-09-15T21:00:00Z\n",
 	} {
 		if !strings.Contains(item, want) {
@@ -53,8 +54,9 @@ func TestEditPlanningFlags(t *testing.T) {
 		}
 	}
 	item = read(t, story)
-	if !strings.Contains(item, "cost_of_delay:\n  value: 1400\n  by: olive\n") || !strings.Contains(item, "forecast:\n  duration: 6h\n  by: olive\n") {
-		t.Errorf("what is left, by the config author:\n%s", item)
+	// the value was not changed, so it keeps who set it; the forecast was
+	if !strings.Contains(item, "cost_of_delay:\n  value: 1400\n  by: planner\n") || !strings.Contains(item, "forecast:\n  duration: 6h\n  by: olive\n") {
+		t.Errorf("what is left, the forecast by the config author:\n%s", item)
 	}
 	for _, args := range [][]string{{"--cost-of-delay-value", ""}, {"--forecast-duration", ""}} {
 		if _, errOut, code := runIn(t, root, append([]string{"edit", "S-0001"}, args...)...); code != 0 {
@@ -174,17 +176,17 @@ func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
 }
 
 // S-0204: flai story new and flai epic new take the cost of delay inputs,
-// set by the owner when the item is made; none given is no block, a bad
+// the inputs set by the owner when the item is made (ADR-0079); none given is no block, a bad
 // amount or duration is refused with nothing made, and a task has no flags.
 func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
 	root, story := planningProject(t, "--revenue-per-week", "1200", "--penalty-per-week", " 50.5 ", "--time-lost-per-cycle", "4h")
-	if item := read(t, story); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 50.5\n    time_lost_per_cycle: 4h\n  by: olive\n  at: 2026-09-15T21:00:00Z\n") {
+	if item := read(t, story); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 50.5\n    time_lost_per_cycle: 4h\n    by: olive\n    at: 2026-09-15T21:00:00Z\n---\n") {
 		t.Errorf("the story's inputs, by its owner:\n%s", item)
 	}
 	if _, errOut, code := runIn(t, root, "epic", "new", "Costly", "--penalty-per-week", "300", "--owner", "alex"); code != 0 {
 		t.Fatal(errOut)
 	}
-	if item := read(t, filepath.Join(root, "wip/kanban/epics/E-0002-costly.md")); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    penalty_per_week: 300\n  by: alex\n  at: 2026-09-15T21:00:00Z\n") {
+	if item := read(t, filepath.Join(root, "wip/kanban/epics/E-0002-costly.md")); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    penalty_per_week: 300\n    by: alex\n    at: 2026-09-15T21:00:00Z\n---\n") {
 		t.Errorf("the epic's input, by --owner:\n%s", item)
 	}
 	if _, errOut, code := runIn(t, root, "story", "new", "Free", "--epic", "E-0001", "--revenue-per-week", " "); code != 0 {
@@ -214,7 +216,8 @@ func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
 }
 
 // S-0199: flai show prints the cost of delay in the project's currency and
-// the forecast, with who set each.
+// the forecast, with who set each: a cost of delay's inputs and value apart,
+// and that the value is stale when the inputs changed after it (ADR-0079).
 func TestShowPrintsPlanning(t *testing.T) {
 	root, _ := planningProject(t)
 	cfg := filepath.Join(root, "system-flow.yaml")
@@ -225,14 +228,22 @@ func TestShowPrintsPlanning(t *testing.T) {
 	}
 	out, _, _ := runIn(t, root, "show", "S-0001")
 	for _, want := range []string{
-		"  cost of delay: value 1500 EUR/week · revenue 1200 EUR/week · set by planner at 2026-09-15T21:00:00Z\n",
+		"  cost of delay: inputs revenue 1200 EUR/week · set by planner at 2026-09-15T21:00:00Z; value 1500 EUR/week · set by planner at 2026-09-15T21:00:00Z\n",
 		"  forecast: duration 6h · basis: like S-0185 · set by planner at 2026-09-15T21:00:00Z\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("show lacks %q:\n%s", want, out)
 		}
 	}
-	if out, _, _ := runIn(t, root, "edit", "S-0001", "--show"); !strings.Contains(out, "  cost of delay: value 1500 EUR/week") {
+	if out, _, _ := runIn(t, root, "edit", "S-0001", "--show"); !strings.Contains(out, "; value 1500 EUR/week · set by planner") {
 		t.Errorf("edit --show:\n%s", out)
+	}
+	// an input changed later stamps the inputs alone, and the value is stale
+	if _, errOut, code := runInAt(t, root, time.Date(2026, 9, 16, 8, 0, 0, 0, time.UTC), "edit", "S-0001", "--penalty-per-week", "50", "--time-lost-per-cycle", "2h", "--by", "alex"); code != 0 {
+		t.Fatal(errOut)
+	}
+	want := "  cost of delay: inputs revenue 1200 EUR/week, penalty 50 EUR/week, time lost 2h/cycle · set by alex at 2026-09-16T08:00:00Z; value 1500 EUR/week · set by planner at 2026-09-15T21:00:00Z; stale: the inputs changed after the value\n"
+	if out, _, _ := runIn(t, root, "show", "S-0001"); !strings.Contains(out, want) {
+		t.Errorf("show lacks %q:\n%s", want, out)
 	}
 }

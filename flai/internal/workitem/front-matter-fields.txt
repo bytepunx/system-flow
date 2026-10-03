@@ -12,7 +12,7 @@ issue: class cost count first_reported id last_reported status title updated
 item.agent: config harness model roles
 item.agent.roles: config harness model
 item.cost_of_delay: at by inputs value
-item.cost_of_delay.inputs: penalty_per_week revenue_per_week time_lost_per_cycle
+item.cost_of_delay.inputs: at by penalty_per_week revenue_per_week time_lost_per_cycle
 item.forecast: at basis by delivery duration
 item.finalized: at by
 item.types: after=story,task agent=story cost_of_delay=epic,story draft=story finalized=story forecast=story topics=epic,story

@@ -32,6 +32,8 @@ func TestPlanningFieldsRoundTrip(t *testing.T) {
     revenue_per_week: 1200.5
     penalty_per_week: 0
     time_lost_per_cycle: 2h30m
+    by: alex
+    at: 2026-09-15T21:00:00Z
   value: 1500
   by: planner
   at: 2026-09-16T08:00:00Z
@@ -44,7 +46,16 @@ func TestPlanningFieldsRoundTrip(t *testing.T) {
 		"one input": `cost_of_delay:
   inputs:
     penalty_per_week: 300
-  by: alex
+    by: alex
+    at: 2026-09-16T08:00:00Z
+`,
+		"inputs newer than the value": `cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 4h
+    by: Alex Robson
+    at: 2026-09-17T08:00:00Z
+  value: 20
+  by: planner
   at: 2026-09-16T08:00:00Z
 `,
 		"forecast": `forecast:
@@ -133,7 +144,9 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 		}
 		return it
 	}
-	cod := func() *CostOfDelay { return &CostOfDelay{Value: amount(5), By: "a", At: "2026-09-15T10:00:00Z"} }
+	cod := func() *CostOfDelay {
+		return &CostOfDelay{Inputs: &CostInputs{PenaltyPerWeek: amount(3), By: "b", At: "2026-09-15T09:00:00Z"}, Value: amount(5), By: "a", At: "2026-09-15T10:00:00Z"}
+	}
 	fc := func() *Forecast { return &Forecast{Duration: "4h", By: "a", At: "2026-09-15T10:00:00Z"} }
 	fin := func() *Finalized { return &Finalized{By: "a", At: "2026-09-15T10:00:00Z"} }
 
@@ -146,6 +159,17 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 	epic.CostOfDelay = cod()
 	if err := epic.Validate(); err != nil {
 		t.Errorf("an epic with a cost of delay: %v", err)
+	}
+	// ADR-0079: inputs alone have no value's stamp, a value alone no inputs'
+	for name, c := range map[string]*CostOfDelay{
+		"inputs only": {Inputs: &CostInputs{RevenuePerWeek: amount(1), By: "b", At: "2026-09-15T09:00:00Z"}},
+		"value only":  {Value: amount(0), By: "a", At: "2026-09-15T10:00:00Z"},
+	} {
+		it := valid(Story)
+		it.CostOfDelay = c
+		if err := it.Validate(); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
 	}
 	finalized := valid(Story)
 	finalized.Finalized = fin()
@@ -182,6 +206,14 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 		{"negative penalty", "cost_of_delay.inputs.penalty_per_week -2.5 is negative", func(it *Item) { it.CostOfDelay.Inputs = &CostInputs{PenaltyPerWeek: amount(-2.5)} }},
 		{"bad time lost", `cost_of_delay.inputs.time_lost_per_cycle "two hours" is not a Go duration`, func(it *Item) { it.CostOfDelay.Inputs = &CostInputs{TimeLostPerCycle: "two hours"} }},
 		{"zero time lost", `cost_of_delay.inputs.time_lost_per_cycle "0s" is not a Go duration longer than zero`, func(it *Item) { it.CostOfDelay.Inputs = &CostInputs{TimeLostPerCycle: "0s"} }},
+		{"inputs without by", "cost_of_delay.inputs.by is required", func(it *Item) { it.CostOfDelay.Inputs.By = "" }},
+		{"inputs without at", `cost_of_delay.inputs.at "" is not a UTC timestamp`, func(it *Item) { it.CostOfDelay.Inputs.At = "" }},
+		{"inputs at not UTC", `cost_of_delay.inputs.at "2026-09-15T12:00:00+02:00" is not a UTC timestamp`, func(it *Item) { it.CostOfDelay.Inputs.At = "2026-09-15T12:00:00+02:00" }},
+		{"inputs stamp without inputs", "cost_of_delay.inputs.by and at say who set the inputs, and there are none", func(it *Item) {
+			it.CostOfDelay.Inputs = &CostInputs{By: "a", At: "2026-09-15T10:00:00Z"}
+		}},
+		{"value stamp without value", "cost_of_delay.by and at say who set the value, and there is none", func(it *Item) { it.CostOfDelay.Value = nil }},
+		{"value stamp only", "cost_of_delay.by and at say who set the value, and there is none", func(it *Item) { it.CostOfDelay = &CostOfDelay{By: "a"} }},
 		{"cost without by", "cost_of_delay.by is required", func(it *Item) { it.CostOfDelay.By = " " }},
 		{"cost without at", `cost_of_delay.at "" is not a UTC timestamp`, func(it *Item) { it.CostOfDelay.At = "" }},
 		{"cost bad at", `cost_of_delay.at "yesterday" is not a UTC timestamp`, func(it *Item) { it.CostOfDelay.At = "yesterday" }},
@@ -296,7 +328,7 @@ type olderItem struct {
 // past them, as S-0181 reads any field it does not know, and writes them
 // back as they were; this flai knows them and keeps none as unknown.
 func TestAnOlderFlaiReadsPastThePlanningFields(t *testing.T) {
-	planning := "draft: true\ncost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    time_lost_per_cycle: 4h\n  value: 1500\n  by: alex\n  at: 2026-10-01T09:00:00Z\nforecast:\n  duration: 6h\n  delivery: 2026-10-09T17:00:00Z\n  basis: \"three tasks: like S-0185's\"\n  by: planner\n  at: 2026-10-02T09:00:00Z\n"
+	planning := "draft: true\ncost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    time_lost_per_cycle: 4h\n    by: alex\n    at: 2026-09-30T09:00:00Z\n  value: 1500\n  by: planner\n  at: 2026-10-01T09:00:00Z\nforecast:\n  duration: 6h\n  delivery: 2026-10-09T17:00:00Z\n  basis: \"three tasks: like S-0185's\"\n  by: planner\n  at: 2026-10-02T09:00:00Z\n"
 	fm := strings.TrimPrefix(plannedHead, "---\n") + planning
 
 	older := UnknownFields(fm, olderItem{})
@@ -369,5 +401,69 @@ func TestTheFlaiOfS0199KeepsFinalizedWhereThisFlaiWritesIt(t *testing.T) {
 	WriteFields(&b, older)
 	if b.String() != finalized {
 		t.Errorf("the flai of S-0199 writes it back changed:\n%s", b.String())
+	}
+}
+
+// ADR-0079: a cost of delay written with one stamp for the whole block
+// (ADR-0074) is read as the new shape and written back in it: without a
+// value the stamp is the inputs', and with one it is the value's and the
+// inputs' too, so the value is not stale. flai check passes either.
+func TestACostOfDelayWithOneStampIsReadAsTwo(t *testing.T) {
+	for name, c := range map[string]struct{ was, is string }{
+		"inputs only": {
+			was: "cost_of_delay:\n  inputs:\n    penalty_per_week: 300\n  by: alex\n  at: 2026-09-16T08:00:00Z\n",
+			is:  "cost_of_delay:\n  inputs:\n    penalty_per_week: 300\n    by: alex\n    at: 2026-09-16T08:00:00Z\n",
+		},
+		"inputs and value": {
+			was: "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n  value: 1500\n  by: planner\n  at: 2026-09-16T08:00:00Z\n",
+			is:  "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    by: planner\n    at: 2026-09-16T08:00:00Z\n  value: 1500\n  by: planner\n  at: 2026-09-16T08:00:00Z\n",
+		},
+		"value only, as it was": {
+			was: "cost_of_delay:\n  value: 9\n  by: alex\n  at: 2026-09-16T08:00:00Z\n",
+			is:  "cost_of_delay:\n  value: 9\n  by: alex\n  at: 2026-09-16T08:00:00Z\n",
+		},
+	} {
+		it, err := ParseItem(plannedHead + c.was + "---\n# S-0001 S\n")
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if err := it.Validate(); err != nil {
+			t.Errorf("%s: flai check flags it: %v", name, err)
+		}
+		if it.CostOfDelay.Stale() {
+			t.Errorf("%s: read as stale", name)
+		}
+		if got, want := it.Marshal(), plannedHead+c.is+"---\n# S-0001 S\n"; got != want {
+			t.Errorf("%s: written as\n%s\nwant\n%s", name, got, want)
+		}
+	}
+	// a block whose inputs are stamped is the new shape, read as written
+	doc := plannedHead + "cost_of_delay:\n  inputs:\n    penalty_per_week: 1\n    by: alex\n    at: 2026-09-17T08:00:00Z\n  value: 2\n  by: planner\n  at: 2026-09-16T08:00:00Z\n---\n"
+	if it, _ := ParseItem(doc); it.CostOfDelay.Inputs.By != "alex" || it.CostOfDelay.By != "planner" || it.Marshal() != doc {
+		t.Errorf("the new shape changed on read: %+v %+v", it.CostOfDelay, it.CostOfDelay.Inputs)
+	}
+}
+
+// ADR-0079: the value is stale when the inputs' at is later than its own.
+func TestCostOfDelayStale(t *testing.T) {
+	amount := func(v float64) *float64 { return &v }
+	inputs := func(at string) *CostInputs { return &CostInputs{RevenuePerWeek: amount(1), By: "alex", At: at} }
+	for _, c := range []struct {
+		name string
+		cod  *CostOfDelay
+		want bool
+	}{
+		{"none", nil, false},
+		{"inputs later", &CostOfDelay{Inputs: inputs("2026-09-16T08:00:01Z"), Value: amount(2), By: "planner", At: "2026-09-16T08:00:00Z"}, true},
+		{"inputs earlier", &CostOfDelay{Inputs: inputs("2026-09-15T08:00:00Z"), Value: amount(2), By: "planner", At: "2026-09-16T08:00:00Z"}, false},
+		{"same time", &CostOfDelay{Inputs: inputs("2026-09-16T08:00:00Z"), Value: amount(2), By: "planner", At: "2026-09-16T08:00:00Z"}, false},
+		{"no value", &CostOfDelay{Inputs: inputs("2026-09-16T08:00:00Z")}, false},
+		{"no inputs", &CostOfDelay{Value: amount(2), By: "planner", At: "2026-09-16T08:00:00Z"}, false},
+		{"stamp only inputs", &CostOfDelay{Inputs: &CostInputs{By: "a", At: "2026-09-17T08:00:00Z"}, Value: amount(2), By: "planner", At: "2026-09-16T08:00:00Z"}, false},
+		{"bad at", &CostOfDelay{Inputs: inputs("later"), Value: amount(2), By: "planner", At: "2026-09-16T08:00:00Z"}, false},
+	} {
+		if got := c.cod.Stale(); got != c.want {
+			t.Errorf("%s: stale %v, want %v", c.name, got, c.want)
+		}
 	}
 }

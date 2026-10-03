@@ -144,7 +144,7 @@ func TestIssueStory(t *testing.T) {
 	// S-0203: the issue's cost and count give the story's time lost per
 	// cycle, set by flai and explained in its Notes
 	data, _ := os.ReadFile(filepath.Join(root, "wip", "kanban", "stories", "S-0001-fixture-was-ignored.md"))
-	for _, want := range []string{"\n    time_lost_per_cycle: 40m\n", "\n  by: flai\n", "time_lost_per_cycle 40m: 20m per occurrence × 2 occurrences ÷ 1 cycle of 168h"} {
+	for _, want := range []string{"\n    time_lost_per_cycle: 40m\n    by: flai\n", "time_lost_per_cycle 40m: 20m per occurrence × 2 occurrences ÷ 1 cycle of 168h"} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("S-0001 should carry %q:\n%s", want, data)
 		}
