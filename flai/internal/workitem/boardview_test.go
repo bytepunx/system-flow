@@ -1,6 +1,8 @@
 package workitem
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -48,6 +50,48 @@ func TestBoardViewListsWhatIsUnpublished(t *testing.T) {
 	v := NewBoardView(items, &Board{}, time.Now(), false, pending, nil)
 	if got := v.Unpublished; len(got) != 2 || got[0] != "S-0002" || got[1] != "S-0009" {
 		t.Errorf("unpublished: %v", got)
+	}
+}
+
+// S-0201: a story an agent wrote and the operator has not finalized carries
+// draft on its card, so the dashboard can mark it; any other card leaves the
+// key out, and only a story is ever a draft.
+func TestADraftStorysCardSaysSo(t *testing.T) {
+	items := []*Item{
+		{ID: "S-0001", Type: Story, Title: "Drafted", Status: Backlog, Draft: true},
+		{ID: "S-0002", Type: Story, Title: "Finalized", Status: Backlog},
+		{ID: "E-0001", Type: Epic, Title: "Not a story", Status: Backlog, Draft: true},
+	}
+	v := NewBoardView(items, &Board{}, time.Now(), true, nil, nil)
+	cards := map[string]BoardCard{}
+	for _, c := range v.Columns[Backlog] {
+		cards[c.ID] = c
+	}
+	for _, tc := range []struct {
+		id    string
+		draft bool
+	}{
+		{"S-0001", true},
+		{"S-0002", false},
+		{"E-0001", false},
+	} {
+		c, ok := cards[tc.id]
+		if !ok {
+			t.Fatalf("%s: no card in %v", tc.id, ids(v.Columns[Backlog]))
+		}
+		if c.Draft != tc.draft {
+			t.Errorf("%s: draft %v, want %v", tc.id, c.Draft, tc.draft)
+		}
+		data, err := json.Marshal(c)
+		if err != nil {
+			t.Fatalf("%s: marshal: %v", tc.id, err)
+		}
+		if got := strings.Contains(string(data), `"draft":true`); got != tc.draft {
+			t.Errorf("%s: JSON %s", tc.id, data)
+		}
+		if !tc.draft && strings.Contains(string(data), `"draft"`) {
+			t.Errorf("%s: a card that is not a draft has a draft key: %s", tc.id, data)
+		}
 	}
 }
 

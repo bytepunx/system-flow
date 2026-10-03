@@ -26,6 +26,7 @@ type Doc struct {
 	Nature   string
 	Status   string
 	Scope    string // design, wip, or docs
+	Draft    bool   // a story not yet finalized (S-0201)
 }
 
 // Hit is one result, with what the search page shows.
@@ -40,6 +41,9 @@ type Hit struct {
 	Nature  string  `json:"nature,omitempty"`
 	Score   float64 `json:"score"`
 	Snippet string  `json:"snippet"`
+	// Draft marks a story not yet finalized, so the search page can say so
+	// on its hit (S-0201).
+	Draft bool `json:"draft,omitempty"`
 }
 
 const (
@@ -255,7 +259,8 @@ func (ix *Index) Search(query string, includeDocs bool, limit int) []Hit {
 			found = append(found, t)
 		}
 		hits = append(hits, Hit{Path: doc.Path, Kind: doc.Kind, ItemID: doc.ItemID, Title: doc.Title, Scope: doc.Scope, Status: doc.Status,
-			Type: doc.Type, Nature: doc.Nature, Score: math.Round(scores[d]*100) / 100, Snippet: Snippet(doc.Body, found, 160)})
+			Type: doc.Type, Nature: doc.Nature, Score: math.Round(scores[d]*100) / 100, Snippet: Snippet(doc.Body, found, 160),
+			Draft: doc.Draft && doc.Type == "story"})
 	}
 	return hits
 }

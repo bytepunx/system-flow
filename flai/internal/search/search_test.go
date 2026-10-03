@@ -1,6 +1,7 @@
 package search
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -82,5 +83,47 @@ func TestSnippet(t *testing.T) {
 	}
 	if s := Snippet("ünïcödé 🚢 "+strings.Repeat("x ", 200), nil, 10); s != "ünïcödé 🚢 …" {
 		t.Errorf("runes, not bytes: %q", s)
+	}
+}
+
+// S-0201: a draft story's hit says so, for the search page to mark it; a
+// finalized story's hit and a document's leave the key out.
+func TestADraftStorysHitSaysSo(t *testing.T) {
+	ix := Build([]Doc{
+		{Path: "wip/kanban/stories/S-0001-a.md", Kind: "item", ItemID: "S-0001", Title: "Lantern drafted", Type: "story", Status: "backlog", Scope: "wip", Draft: true},
+		{Path: "wip/kanban/stories/S-0002-b.md", Kind: "item", ItemID: "S-0002", Title: "Lantern finalized", Type: "story", Status: "backlog", Scope: "wip"},
+		{Path: "wip/kanban/epics/E-0001-c.md", Kind: "item", ItemID: "E-0001", Title: "Lantern epic", Type: "epic", Status: "backlog", Scope: "wip", Draft: true},
+		{Path: "design/system/lantern.md", Kind: "doc", Title: "Lantern design", Scope: "design"},
+	})
+	hits := map[string]Hit{}
+	for _, h := range ix.Search("lantern", false, 0) {
+		hits[h.Path] = h
+	}
+	for _, tc := range []struct {
+		path  string
+		draft bool
+	}{
+		{"wip/kanban/stories/S-0001-a.md", true},
+		{"wip/kanban/stories/S-0002-b.md", false},
+		{"wip/kanban/epics/E-0001-c.md", false},
+		{"design/system/lantern.md", false},
+	} {
+		h, ok := hits[tc.path]
+		if !ok {
+			t.Fatalf("%s: not found", tc.path)
+		}
+		if h.Draft != tc.draft {
+			t.Errorf("%s: draft %v, want %v", tc.path, h.Draft, tc.draft)
+		}
+		data, err := json.Marshal(h)
+		if err != nil {
+			t.Fatalf("%s: marshal: %v", tc.path, err)
+		}
+		if got := strings.Contains(string(data), `"draft":true`); got != tc.draft {
+			t.Errorf("%s: JSON %s", tc.path, data)
+		}
+		if !tc.draft && strings.Contains(string(data), `"draft"`) {
+			t.Errorf("%s: a hit that is not a draft has a draft key: %s", tc.path, data)
+		}
 	}
 }

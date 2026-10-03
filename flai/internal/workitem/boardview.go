@@ -34,6 +34,9 @@ type BoardCard struct {
 	Held *Hold `json:"held,omitempty"`
 	// Tasks is a story's task plan in counts, when it has tasks (S-0176).
 	Tasks *TaskSummary `json:"tasks,omitempty"`
+	// Draft marks a story an agent wrote that the operator has not finalized,
+	// so the board can say so on its card (S-0201).
+	Draft bool `json:"draft,omitempty"`
 }
 
 // BoardView is the board with its cards: one reading of the repository for
@@ -88,7 +91,7 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			ID: it.ID, Type: it.Type, Title: it.Title, Nature: it.Nature, Parent: it.Parent,
 			ParentTitle: titles[it.Parent], Status: it.Status, EnteredAt: it.EnteredAt().UTC().Format(TimeFormat),
 			Blocked: it.IsBlocked(), Age: HumanDuration(age), AgeSecs: int64(age.Seconds()),
-			Touches: it.Touches, Archived: it.Archived,
+			Touches: it.Touches, Archived: it.Archived, Draft: it.Type == Story && it.Draft,
 		}
 		if it.Type == Story && it.Status == Ready && !it.Archived {
 			card.Held = holds.Of(it)

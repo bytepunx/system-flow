@@ -107,6 +107,7 @@ func searchIndex(root string) (*search.Index, error) {
 		}
 		doc.Nature, _ = fm["nature"].(string)
 		doc.Status, _ = fm["status"].(string)
+		doc.Draft, _ = fm["draft"].(bool)
 		if title, ok := fm["title"].(string); ok {
 			doc.Title = title
 		} else if m := topHeading.FindStringSubmatch(body); m != nil {
