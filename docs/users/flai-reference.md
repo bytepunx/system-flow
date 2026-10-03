@@ -1487,7 +1487,7 @@ An item also moves back one column: ready to backlog, in-progress to ready, revi
 
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.
 
-A story's epic follows it in the same write (ADR-0075): to ready with its first ready story, to in-progress with its first started one, to review with its last open one, and back only as far as no other story holds it; cancelled stories do not count. The epic's move is printed under the story's, and --json returns it as followed.
+A story's epic follows it in the same write (ADR-0076): to ready with its first ready story, to in-progress with its first started one, to review with its last open one, and back only as far as no other story holds it; cancelled stories do not count. The epic's move is printed under the story's, and --json returns it as followed.
 
 Moving a story from review to done is acceptance: it runs the same flow as flai accept (merge the story branch, archive, commit), with the same flags. There is no other way for a story to become done. When the story is its epic's last open one, the epic is accepted and archived with it. Acceptance computes no release; see flai release --pending.
 

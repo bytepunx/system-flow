@@ -1,5 +1,5 @@
 ---
-id: ADR-0075
+id: ADR-0076
 title: "An epic follows its stories: to ready and in-progress with the first, to review with the last open one, to done when that one is accepted"
 status: accepted
 date: 2026-10-03
@@ -8,7 +8,7 @@ superseded_by: []
 refines: [ADR-0004]
 ---
 
-# ADR-0075 An epic follows its stories: to ready and in-progress with the first, to review with the last open one, to done when that one is accepted
+# ADR-0076 An epic follows its stories: to ready and in-progress with the first, to review with the last open one, to done when that one is accepted
 
 ## Context
 

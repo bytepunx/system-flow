@@ -37,7 +37,7 @@ cancelling a story cancels its open tasks (ADR-0028). The items are listed
 first, a terminal is asked unless --yes is given, and --dry-run changes
 nothing. Branches, worktrees, and narratives are left as they are.
 
-A story's epic follows it in the same write (ADR-0075): to ready with its
+A story's epic follows it in the same write (ADR-0076): to ready with its
 first ready story, to in-progress with its first started one, to review
 with its last open one, and back only as far as no other story holds it;
 cancelled stories do not count. The epic's move is printed under the

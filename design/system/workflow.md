@@ -69,7 +69,7 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 
 ### An epic follows its stories
 
-Since S-0200 an epic's state is a summary of its stories' ([ADR-0075](../adrs/0075-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Its stories, cancelled ones left out and archived ones counted, put it in a state: done when all are done, review when all are in review or done, in-progress when any has started (in-progress, review, or done), ready when any is ready, else backlog. An epic with no story that counts stays where it is.
+Since S-0200 an epic's state is a summary of its stories' ([ADR-0076](../adrs/0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Its stories, cancelled ones left out and archived ones counted, put it in a state: done when all are done, review when all are in review or done, in-progress when any has started (in-progress, review, or done), ready when any is ready, else backlog. An epic with no story that counts stays where it is.
 
 When a story moves, its epic moves toward that state in the same write, but only in the direction the story moved:
 
