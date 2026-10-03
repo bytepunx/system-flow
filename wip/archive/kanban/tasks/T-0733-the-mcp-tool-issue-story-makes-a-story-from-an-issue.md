@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 377
-      cache_read: 3285452
-      cache_write: 92232
-      cost: 1.4013
+      input: 58
+      output: 19368
+      cache_read: 3309854
+      cache_write: 67840
+      cost: 1.4535
 ---
 # T-0733 The MCP tool issue_story makes a story from an issue
 

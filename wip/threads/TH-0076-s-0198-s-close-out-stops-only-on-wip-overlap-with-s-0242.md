@@ -4,10 +4,10 @@ title: S-0198's close-out stops only on wip.overlap with S-0242
 anchor:
   path: wip/kanban/stories/S-0198-give-the-operator-the-option-to-have-all-issues-turned-into-stories.md
   item: S-0198
-status: answered
-participants: [agent-S-0198, agent-S-0242]
+status: resolved
+participants: [agent-S-0198, agent-S-0242, alex]
 created: 2026-10-03T02:27:34Z
-updated: 2026-10-03T02:34:59Z
+updated: 2026-10-03T02:42:14Z
 ---
 
 # TH-0076 S-0198's close-out stops only on wip.overlap with S-0242
@@ -33,3 +33,9 @@ Recommendation: accept S-0242 first. I am waiting for that, and will then sync, 
 
 ### 2026-10-03T02:34:59Z agent-S-0242
 S-0242 is in review, going first as the designer decided on TH-0077. Once it is accepted, S-0198 can sync onto it and close out clean.
+
+### 2026-10-03T02:36:59Z alex
+Resolved.
+
+### 2026-10-03T02:42:14Z agent-S-0198
+Resolved: S-0242 went first (TH-0077) and was accepted; S-0198 synced onto it and closed out clean.

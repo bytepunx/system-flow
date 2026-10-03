@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 174
-      cache_read: 2872690
-      cache_write: 23283
-      cost: 1.2014
+      input: 49
+      output: 16605
+      cache_read: 2837785
+      cache_write: 58164
+      cost: 1.2462
 ---
 # T-0735 The prompt, the continuous-improvement convention, and its design say how issues become stories
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 120
-      output: 758
-      cache_read: 5463689
-      cache_write: 159937
-      cost: 2.3331
+      input: 96
+      output: 32246
+      cache_read: 5510701
+      cache_write: 112949
+      cost: 2.4199
 ---
 # T-0731 flai issue records the story it runs for, lists issues per story, and makes a story from an issue
 

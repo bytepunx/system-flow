@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 445
-      cache_read: 2886902
-      cache_write: 86987
-      cost: 1.2338
+      input: 51
+      output: 17052
+      cache_read: 2914186
+      cache_write: 59730
+      cost: 1.2797
 ---
 # T-0732 flai check warns about an open issue older than the project's threshold that no open story links
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 150
-      output: 846
-      cache_read: 9378476
-      cache_write: 191600
-      cost: 3.9702
+      input: 163
+      output: 54875
+      cache_read: 9377851
+      cache_write: 192212
+      cost: 4.1182
 ---
 # T-0734 A story's review page offers a story for each open issue no open story links, by checkbox
 

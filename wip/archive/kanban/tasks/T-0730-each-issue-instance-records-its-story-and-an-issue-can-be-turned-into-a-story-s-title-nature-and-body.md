@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 1019
-      cache_read: 1581546
-      cache_write: 73814
-      cost: 0.6871
+      input: 28
+      output: 9492
+      cache_read: 1622134
+      cache_write: 33248
+      cost: 0.7123
 ---
 # T-0730 Each issue instance records its story, and an issue can be turned into a story's title, nature, and body
 
