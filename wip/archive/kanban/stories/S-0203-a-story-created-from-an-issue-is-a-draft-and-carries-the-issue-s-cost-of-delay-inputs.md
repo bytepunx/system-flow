@@ -3,11 +3,11 @@ id: S-0203
 type: story
 nature: improvement
 title: A story created from an issue is a draft and carries the issue's cost of delay inputs
-status: review
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-03T18:29:46Z
+updated: 2026-10-03T18:33:15Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:14Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-03T18:29:46Z
     by: agent-S-0203
+  - to: done
+    at: 2026-10-03T18:33:15Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/issues, flai/cmd/issue.go, flai/internal/mcpserver, flai/internal/itemnew, flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/cmd/issue_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/issues/I-0064-flai-stream-sync-s-trial-merge-blames-a-story-for-conflicts-between-main-and-another-story-s-stale-branch.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md]
 after: [S-0199, S-0198]

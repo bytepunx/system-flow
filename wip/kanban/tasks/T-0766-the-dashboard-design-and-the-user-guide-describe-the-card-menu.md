@@ -1,0 +1,31 @@
+---
+id: T-0766
+type: task
+nature: feature
+title: The dashboard design and the user guide describe the card menu
+status: ready
+parent: S-0202
+owner: alex
+created: 2026-10-03T18:32:22Z
+updated: 2026-10-03T18:32:55Z
+transitions:
+  - to: ready
+    at: 2026-10-03T18:32:55Z
+    by: agent-S-0202
+stream: S-0202
+tags: []
+touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+after: [T-0765]
+---
+
+# T-0766 The dashboard design and the user guide describe the card menu
+
+## Work
+
+Describe the card menu in `design/system/flaiover-dashboard.md` (the `/board` row) and in `docs/users/flaiover.md` (the board, beside the lane menu), as T-0765 built it. Waits for T-0765, so that the documents say what was built.
+
+## Done when
+
+- Both documents describe how the menu opens, its entries and when each shows, what each runs, and how it closes, with `updated` bumped.
+
+## Notes
