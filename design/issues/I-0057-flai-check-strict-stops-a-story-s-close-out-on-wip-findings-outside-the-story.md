@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 4
+count: 5
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-03T17:53:04Z
-updated: 2026-10-03T17:53:04Z
+last_reported: 2026-10-03T18:03:01Z
+updated: 2026-10-03T18:03:01Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -35,5 +35,9 @@ S-0201's close-out stopped at flai check --strict on story.unaccepted for S-0173
 ### 2026-10-03T17:53:04Z
 Story: S-0200.
 S-0200's close-out stopped at flai check --strict on two findings outside it: story.unaccepted on S-0173's unmerged branch, and wip.overlap with T-0753 of S-0201, which touches flai/internal/workitem/boardview.go inside S-0200's claim. Every other step passed.
+
+### 2026-10-03T18:03:01Z
+Story: S-0200.
+S-0200's second close-out stopped in the integration tier: TestMonorepoIsClean failed on issues.duplicate-id, two I-0062 files on main from S-0207's acceptance, which story/S-0201 renames. Every finding was main's own. The verifier ran the narrative and ancestry checks by hand.
 
 ## Remediation
