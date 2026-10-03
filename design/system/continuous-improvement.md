@@ -43,9 +43,20 @@ What goes wrong, for whom, and what it costs.
 Story: S-0008.
 Where it happened and what was done about it.
 
+## Impact
+Evidence for the figures below, in any words.
+
+- revenue_per_week: 1200
+- penalty_per_week: 300
+- time_lost_per_cycle: 4h
+
 ## Remediation
 Proposed fix. Closed issues say what closed them.
+
+Story S-0009 remediates this issue, created from it at 2026-09-16T09:00:00Z.
 ```
+
+`## Impact` is optional. `flai issue story` reads it, and it is the format the analyzer of S-0224 is to write. A line `revenue_per_week: <amount>`, `penalty_per_week: <amount>`, or `time_lost_per_cycle: <duration>`, as a list item or not, gives a cost of delay input. The first value of each key that parses is used. An amount is a number of zero or more in `planning.currency`; a duration is a Go duration longer than zero. Every other line is evidence and is not read.
 
 | Class | Meaning |
 |-------|---------|
@@ -62,9 +73,14 @@ Proposed fix. Closed issues say what closed them.
 
 - Record an occurrence when it happens, not at the end of the story.
 - Each instance names the story it was recorded for, in a `Story: S-nnnn.` line under its heading (S-0198). `flai issue new` and `bump` take it from `--story`, else `FLAI_STORY`, else `FLAI_AGENT` of the form `agent-S-nnnn`, else the `story/S-nnnn` branch checked out; outside a story the instance names none. `flai issue list --story S-nnnn` lists a story's issues. Issues live under the checkout's `design/`, so a story's own issues are committed on its branch and are in its worktree, not the main checkout, until it is accepted; `--story` reads them there.
-- A story links an issue when its body names the issue's ID. That link is the only record of an issue's story: the issue file is not changed, so making a story from the dashboard leaves nothing uncommitted outside `wip/`. `flai issue list --json` gives each issue's `stories` and `story`, the open story that links it.
+- A story links an issue when its body names the issue's ID. That link is what ties them: `flai issue list --json` gives each issue's `stories` and `story`, the open story that links it. The line `flai issue story` adds to the issue's Remediation section is for a reader of the issue; flai does not link by it.
 - The story's agent makes no story for an issue. The operator chooses at acceptance (decided 2026-10-02, replacing the summary presented at an epic's end; refined on TH-0074): a story's review page lists the open issues it recorded or bumped, checked, then every other open issue no open story links, unchecked. With any checked, Accept reads `Accept and Create Stories`; once the acceptance succeeds, a backlog story is made, and committed, for each checked issue, and none when it fails. The page names each story made and each issue refused.
 - `flai issue story I-nnnn [--epic] [--story]`, or the MCP tool `issue_story`, makes that story: the issue's title; nature `remediation` for a `defect` or `blocker`, `improvement` for `efficiency` or `impression`; a goal that links the issue's document and carries its `## Remediation` text as the recommended solution, or asks for one; and a last criterion closing the issue with `flai issue close`. A closed issue, or one an open story links, is refused. An agent runs it when the operator asks, or for an issue `flai check` warns about.
+- That story is a draft (`draft: true`, S-0203, [ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)): an agent's words until the operator finalizes it, so it cannot go to ready before. It carries the cost of delay inputs the issue gives, in `cost_of_delay.inputs` with `by: flai` and `at` the time it was made:
+  - `time_lost_per_cycle` is the issue's `cost` × `count` ÷ the cycles of `planning.cycle` (default `168h`) since `first_reported`, to a tenth and at least one, rounded to the minute (to the second under a minute). A `cost` that is not a duration longer than zero, or a `first_reported` that is not a timestamp (counted as one cycle), is said in the Notes.
+  - `revenue_per_week`, `penalty_per_week`, and `time_lost_per_cycle` from the issue's `## Impact`. An Impact time lost takes precedence over the derived one. A value that does not parse is left out.
+  - With no inputs, the story has no `cost_of_delay`. Its `## Notes` say how each input was set and what was left out.
+- The issue's `## Remediation` then gets a last paragraph, `Story S-nnnn remediates this issue, created from it at <ts>.`, and its `updated` is set; the section is added when the issue has none. The story is named by ID, because its file moves to `wip/archive/` on acceptance. With `--autocommit` the issue is committed with the story and its epic, so the dashboard's acceptance flow leaves nothing uncommitted; with `--story` the issue is in that story's worktree and is that story's to commit. MCP `issue_story` commits neither.
 - `flai check` warns with `issues.no-story` about an open issue first reported longer ago than `issues.story_after` in `system-flow.yaml` (a Go duration, `168h` when unset, `0` turns it off) that no open story links. Age, rather than the recording story, finds the issues from before instances named their story.
 - Remediation is a story with nature `remediation` or `improvement` that closes the issue.
 

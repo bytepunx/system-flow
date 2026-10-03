@@ -1280,7 +1280,7 @@ Make a backlog story that remediates an open issue.
 flai issue story <id> [flags]
 ```
 
-Make a backlog story from an open issue, as flai story new --body-stdin makes one. It takes the issue's title. Its nature is remediation for a defect or a blocker, improvement otherwise. Its goal links the issue and carries the issue's recommended solution; that link is what ties the issue to the story, and the issue's file is not changed. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces (exit 4). A closed issue, or one an open story already links, is refused and nothing changes. --story reads the issue from that story's worktree, where the issues it recorded are until it is accepted; the new story is made in wip/ as always. --autocommit commits the new story and its epic on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed.
+Make a backlog story from an open issue, as flai story new --body-stdin makes one. It takes the issue's title. Its nature is remediation for a defect or a blocker, improvement otherwise. Its goal links the issue and carries the issue's recommended solution; that link is what ties the issue to the story. The story is a draft: the operator finalizes it before it can be ready. When the issue gives them, it carries the issue's cost of delay inputs, set by flai: time\_lost\_per\_cycle from the issue's cost and count over the planning cycles since it was first reported, and the figures its Impact section gives, which take precedence; its Notes say how each was set. The issue's Remediation section then names the story. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces (exit 4). A closed issue, or one an open story already links, is refused and nothing changes. --story reads the issue from that story's worktree, where the issues it recorded are until it is accepted, and names the story in the issue there, for that story to commit; the new story is made in wip/ as always. --autocommit commits the new story, its epic, and the issue it names on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
 Examples:
 
@@ -1294,7 +1294,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--autocommit` | commit the new story and its epic on their own, unless dashboard.autocommit is false |
+| `--autocommit` | commit the new story, its epic, and the issue it names on their own, unless dashboard.autocommit is false |
 | `--epic` string | parent epic ID (optional: a story need not belong to one) |
 | `--owner` string | owner (default: config author) |
 | `--story` string | read the issue from this story's worktree when it has one |
