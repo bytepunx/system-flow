@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 1
+count: 2
 cost: 5m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-02T16:13:36Z
-updated: 2026-10-02T16:13:36Z
+last_reported: 2026-10-03T06:49:36Z
+updated: 2026-10-03T06:49:36Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -19,5 +19,9 @@ flai check --strict stops a story's close-out on wip/ findings outside the story
 
 ### 2026-10-02T16:13:36Z
 2026-10-02: S-0191's close-out stopped at flai check --strict on one warning, threads.archived on TH-0067 (answered, its story S-0231 archived), which the story did not change and its agent may not resolve: the thread still asks the operator a question (point 5). S-0176 (TH-0032), S-0181 (14 warnings, none its own), and S-0187 (TH-0032) stopped the same way, and each went to review with the finding noted. TH-0056's answer: a finding outside the story is a note, and flai records it as an issue or bumps its count; until flai does, the story's agent records it here.
+
+### 2026-10-03T06:49:36Z
+Story: S-0199.
+S-0199's close-out stopped at flai check --strict on one warning that is not its own: story.unaccepted on the archived S-0173, whose branch story/S-0173 still exists unmerged. S-0199 changed nothing there; the branch is the operator's to merge or delete. Gone to review with the finding noted.
 
 ## Remediation
