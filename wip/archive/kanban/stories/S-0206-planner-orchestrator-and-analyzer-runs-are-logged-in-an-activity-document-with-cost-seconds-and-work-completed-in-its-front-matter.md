@@ -3,11 +3,11 @@ id: S-0206
 type: story
 nature: feature
 title: Planner, orchestrator, and analyzer runs are logged in an activity document, with cost, seconds, and work completed in its front matter
-status: review
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-03T19:49:24Z
+updated: 2026-10-03T20:33:24Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:34Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-03T19:49:24Z
     by: agent-S-0206
+  - to: done
+    at: 2026-10-03T20:33:24Z
+    by: alex
 tags: [flai, dashboard]
 touches: [flai/internal/serve, flai/internal/usage, flai/internal/workitem, flai/internal/check, design/system/agent-narrative.md, design/adrs, template/root/wip/agents/README.md, wip/agents/README.md, flai/internal/metrics, flai/cmd/stats.go, design/system/metrics.md, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues, flai/cmd/check_stats_test.go, flai/cmd/hostapi_reads_test.go, flai/internal/hostapi/reads.go, design/conventions/strategic-agents.md, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
 agent:
