@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-03T08:15:16Z
-updated: 2026-10-03T08:15:16Z
+last_reported: 2026-10-03T17:53:04Z
+updated: 2026-10-03T17:53:04Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -31,5 +31,9 @@ scripts/close-out.sh S-0207 stopped at flai check --strict on 10 warnings, none 
 ### 2026-10-03T08:15:16Z
 Story: S-0201.
 S-0201's close-out stopped at flai check --strict on story.unaccepted for S-0173's unmerged branch and wip.overlap with S-0200, none in S-0201's diff; main fails the same. The verifier ran the remaining steps (flaiover tests, markdown lint) by hand.
+
+### 2026-10-03T17:53:04Z
+Story: S-0200.
+S-0200's close-out stopped at flai check --strict on two findings outside it: story.unaccepted on S-0173's unmerged branch, and wip.overlap with T-0753 of S-0201, which touches flai/internal/workitem/boardview.go inside S-0200's claim. Every other step passed.
 
 ## Remediation
