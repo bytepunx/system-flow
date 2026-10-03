@@ -1,7 +1,6 @@
 package issues
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -101,7 +100,7 @@ func TestForStory(t *testing.T) {
 	} {
 		for _, fix := range []string{"", "Pin the linter in the Makefile.\n\n- and say so in design/tech"} {
 			is := &Issue{ID: "I-0056", Title: "Lint: version mismatch", Class: c.class, Path: "/x/design/issues/I-0056-lint-version-mismatch.md",
-				Body: "\n# I-0056 Lint: version mismatch\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nfirst\n\n## Remediation\n" + fix + "\n\nStory: S-0300.\n"}
+				Body: "\n# I-0056 Lint: version mismatch\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nfirst\n\n## Remediation\n" + fix + "\n"}
 			d := ForStory(is)
 			if d.Title != is.Title || d.Nature != c.nature {
 				t.Errorf("%s: %+v", c.class, d)
@@ -114,9 +113,6 @@ func TestForStory(t *testing.T) {
 			}
 			if fix == "" && !strings.Contains(d.Body, "propose one from its instances") {
 				t.Errorf("goal asks for a solution:\n%s", d.Body)
-			}
-			if strings.Contains(d.Body, "S-0300") {
-				t.Errorf("a story made from the issue is not its solution:\n%s", d.Body)
 			}
 			criteria := d.Body[strings.Index(d.Body, "## Acceptance criteria\n"):strings.Index(d.Body, "## Tasks")]
 			lines := strings.Split(strings.TrimSpace(criteria), "\n")
@@ -175,40 +171,10 @@ func TestNoStory(t *testing.T) {
 	}
 }
 
-func TestSetRemediation(t *testing.T) {
-	is := &Issue{Body: "\n# I-0001 x\n\n## Instances\n\n### t\nfirst\n\n## Remediation\n"}
-	SetRemediation(is, "s-300")
-	SetRemediation(is, "S-0300")
-	if !strings.HasSuffix(is.Body, "## Remediation\nStory: S-0300.\n") {
-		t.Errorf("the story, once:\n%s", is.Body)
-	}
-	SetRemediation(is, "S-0301")
-	if !strings.HasSuffix(is.Body, "## Remediation\nStory: S-0300.\n\nStory: S-0301.\n") {
-		t.Errorf("a second story:\n%s", is.Body)
-	}
-
-	text := &Issue{Body: "\n## Remediation\nPin it.\n\n## Later\nmore\n"}
-	SetRemediation(text, "S-0300")
-	if text.Body != "\n## Remediation\nPin it.\n\nStory: S-0300.\n\n## Later\nmore\n" {
-		t.Errorf("under remediation text, before the next section:\n%q", text.Body)
-	}
-
-	none := &Issue{Body: "\n# I-0001 x\n\n## Instances\n\n### t\nfirst\n"}
-	SetRemediation(none, "S-0300")
-	if !strings.HasSuffix(none.Body, "first\n\n## Remediation\nStory: S-0300.\n") {
-		t.Errorf("the section is made at the end:\n%s", none.Body)
-	}
-	if len(Stories(none)) != 0 {
-		t.Error("a remediation story is not an instance's story")
-	}
-}
-
 // The story an issue's file names round-trips through the file.
 func TestTheStoryLineSurvivesReading(t *testing.T) {
 	r := repo(t)
-	is, _ := New(r, NewOptions{Title: "A", Class: "defect", Story: "S-0198", Now: t0})
-	SetRemediation(is, "S-0300")
-	if err := is.Save(); err != nil {
+	if _, err := New(r, NewOptions{Title: "A", Class: "defect", Story: "S-0198", Now: t0}); err != nil {
 		t.Fatal(err)
 	}
 	list, err := List(r)
@@ -217,9 +183,5 @@ func TestTheStoryLineSurvivesReading(t *testing.T) {
 	}
 	if got := Stories(list[0]); len(got) != 1 || got[0] != "S-0198" {
 		t.Errorf("stories: %v", got)
-	}
-	raw, _ := os.ReadFile(is.Path)
-	if !strings.HasSuffix(string(raw), "## Remediation\nStory: S-0300.\n") {
-		t.Errorf("file:\n%s", raw)
 	}
 }

@@ -824,13 +824,18 @@ A sub-agent that needs the designer puts the question in its final message, and 
 
 ```bash
 flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
-flai issue bump I-0001 --cost 8m --note "reinstalled again in S-0008"
+flai issue bump I-0001 --cost 8m --note "reinstalled again in S-0008" [--story S-0008]
 flai issue close I-0001 --reason "scripts/install-tools.sh pins v2"
-flai issue list [--all]
+flai issue list [--all] [--story S-0008]
+flai issue story I-0001 [--epic E-0002] [--story S-0008]
 flai issue summary
 ```
 
 Issues live in `design/issues/`, one file per recurring problem with a class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, and one dated instance per occurrence. `bump` increments the count, updates the average, and appends the instance. Every command regenerates `summary.md`, the table of open issues most expensive first, and `flai prime` lists it after the conventions when anything is open. `flai check` validates the files and warns when the summary is stale.
+
+Each instance names the story it was recorded for. `new` and `bump` take it from `--story`; without the flag, from `FLAI_STORY`, else from `FLAI_AGENT` when it has the form `agent-S-nnnn`, else from the story branch, `story/S-nnnn`, checked out where the command runs. Outside any story, the instance names none. `list --story S-0008` lists only the issues with an instance recorded for that story. It reads them from the story's worktree when it has one: the issues a story records are committed on its branch, so they are there, and not in the main checkout, until the story is accepted. Without a worktree, or without `--story`, issues are read from where the command runs. `list --json` gives every issue, closed ones too, with `stories`, the stories its instances name, and `story`, the open story that links it, or empty when none does.
+
+`flai issue story I-0001` makes a backlog story from an open issue, the way `flai story new --body-stdin` makes one. The story takes the issue's title. Its nature is `remediation` for a defect or a blocker and `improvement` otherwise. Its goal links the issue and carries the solution the issue's Remediation recommends. That link is what ties the issue to the story: the issue's file is not changed. `flai check` runs with the story in place; if it reports anything the story introduces, the story is removed and the findings are printed (exit 4). A closed issue, or one an open story already links, is refused, and the refusal names that story. `--story S-0008` reads the issue from that story's worktree, as `list --story` does, so a story in review can turn the issues it recorded into stories; the new story is made in `wip/` as always. `--epic` puts the story under an epic; `--json` prints `id`, `title`, `nature`, `path`, and `issue`.
 
 ## Accept and release
 

@@ -1179,6 +1179,7 @@ Subcommands:
 - [close](#flai-issue-close): Close an issue with a reason
 - [list](#flai-issue-list): List issues without touching files
 - [new](#flai-issue-new): Record a new issue (count 1)
+- [story](#flai-issue-story): Make a backlog story that remediates an open issue
 - [summary](#flai-issue-summary): Regenerate summary.md and print the open issues table
 
 #### flai issue bump
@@ -1195,6 +1196,7 @@ Flags:
 |------|---------|
 | `--cost` string | wall-clock cost of this occurrence; the average is updated |
 | `--note` string | what happened this time |
+| `--story` string | the story this occurrence belongs to (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
 
 #### flai issue close
 
@@ -1218,11 +1220,14 @@ List issues without touching files.
 flai issue list [flags]
 ```
 
+List issues without touching files. --story lists only the issues with an occurrence recorded for that story, read from the story's worktree when it has one: the issues a story records are committed on its branch and are there until it is accepted. --json gives every issue, closed ones too, with stories, the stories its occurrences name, and story, the open story that links it, or "" when none does.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
 | `--all` | include closed issues |
+| `--story` string | list only the issues with an occurrence recorded for this story, from its worktree when it has one |
 
 #### flai issue new
 
@@ -1246,6 +1251,32 @@ Flags:
 | `--class` string | one of defect, blocker, efficiency, impression |
 | `--cost` string | wall-clock cost of this occurrence, e.g. 20m |
 | `--note` string | what happened, recorded as the first instance |
+| `--story` string | the story this occurrence belongs to (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+
+#### flai issue story
+
+Make a backlog story that remediates an open issue.
+
+```text
+flai issue story <id> [flags]
+```
+
+Make a backlog story from an open issue, as flai story new --body-stdin makes one. It takes the issue's title. Its nature is remediation for a defect or a blocker, improvement otherwise. Its goal links the issue and carries the issue's recommended solution; that link is what ties the issue to the story, and the issue's file is not changed. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces (exit 4). A closed issue, or one an open story already links, is refused and nothing changes. --story reads the issue from that story's worktree, where the issues it recorded are until it is accepted; the new story is made in wip/ as always.
+
+Examples:
+
+```bash
+flai issue story I-0007
+flai issue story I-0007 --epic E-0002
+flai issue story I-0012 --story S-0198
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--epic` string | parent epic ID (optional: a story need not belong to one) |
+| `--story` string | read the issue from this story's worktree when it has one |
 
 #### flai issue summary
 

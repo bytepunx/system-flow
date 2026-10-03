@@ -221,7 +221,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--deliver` | [flai release](../users/flai-reference.md#flai-release) |
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
-| `--epic` | [flai story new](../users/flai-reference.md#flai-story-new) |
+| `--epic` | [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--force` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
@@ -275,7 +275,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--since` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
-| `--story` | [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
+| `--story` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--tag` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new), [flai template push](../users/flai-reference.md#flai-template-push) |

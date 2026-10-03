@@ -105,24 +105,13 @@ func ForStory(is *Issue) StoryDraft {
 	return StoryDraft{Title: is.Title, Nature: nature, Body: b.String()}
 }
 
-// remediation is the text of the issue's Remediation section without the
-// lines naming the stories made from it.
+// remediation is the text of the issue's Remediation section.
 func remediation(is *Issue) string {
 	start, end, ok := section(is.Body, "## Remediation")
 	if !ok {
 		return ""
 	}
-	var keep []string
-	for _, l := range strings.Split(is.Body[start:end], "\n") {
-		if !storyLineRe.MatchString(l) {
-			keep = append(keep, l)
-		}
-	}
-	text := strings.TrimSpace(strings.Join(keep, "\n"))
-	for strings.Contains(text, "\n\n\n") {
-		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
-	}
-	return text
+	return strings.TrimSpace(is.Body[start:end])
 }
 
 // Links reports whether a work item body names the issue by its ID, as a
@@ -177,29 +166,4 @@ func NoStory(list []*Issue, items []*workitem.Item) []*Issue {
 		}
 	}
 	return out
-}
-
-// SetRemediation names a story made from the issue under its Remediation
-// section, once. The caller saves the issue.
-func SetRemediation(is *Issue, story string) {
-	line := "Story: " + workitem.CanonicalID(strings.TrimSpace(story)) + "."
-	body := strings.TrimRight(is.Body, "\n") + "\n"
-	start, end, ok := section(body, "## Remediation")
-	if !ok {
-		is.Body = strings.TrimRight(body, "\n") + "\n\n## Remediation\n" + line + "\n"
-		return
-	}
-	text := strings.TrimRight(body[start:end], "\n")
-	if contains(strings.Split(text, "\n"), line) {
-		return
-	}
-	if strings.TrimSpace(text) == "" {
-		text = line + "\n"
-	} else {
-		text += "\n\n" + line + "\n"
-	}
-	if end < len(body) {
-		text += "\n"
-	}
-	is.Body = body[:start] + text + body[end:]
 }
