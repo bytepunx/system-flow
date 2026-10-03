@@ -47,3 +47,20 @@ export const LIMITED_LANES = ['ready', 'in-progress', 'review'] as const;
 export function hasLimit(lane: string): boolean {
 	return (LIMITED_LANES as readonly string[]).includes(lane);
 }
+
+/** What a lane's menu does: create an item there, move stories a column, or change the limit. */
+export type LaneAction = 'create' | 'forward' | 'back' | 'limit';
+
+/** The lane's menu, in order (S-0167); a card's menu offers it too, under the lane (S-0202). */
+export function laneEntries(lane: string): { action: LaneAction; label: string }[] {
+	const forward = forwardOf(lane);
+	const backTo = backOf(lane);
+	return [
+		{ action: 'create' as const, label: 'Create item here' },
+		...(forward
+			? [{ action: 'forward' as const, label: `Move stories forward to ${forward}…` }]
+			: []),
+		...(backTo ? [{ action: 'back' as const, label: `Move stories back to ${backTo}…` }] : []),
+		...(hasLimit(lane) ? [{ action: 'limit' as const, label: 'Change WIP limit…' }] : [])
+	];
+}

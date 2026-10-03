@@ -3,6 +3,10 @@
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import LaneMenu, { type LaneAction } from '$lib/components/LaneMenu.svelte';
+	import CardMenu from '$lib/components/CardMenu.svelte';
+	import type { MenuClose } from '$lib/components/Menu.svelte';
+	import type { CardEntry } from '$lib/cardmenu';
+	import { longPress } from './longpress';
 	import LaneMoveDialog from '$lib/components/LaneMoveDialog.svelte';
 	import WipLimitDialog from '$lib/components/WipLimitDialog.svelte';
 	import { backOf, forwardOf } from '$lib/lanes';
@@ -40,6 +44,7 @@
 		parent_title?: string;
 		status: string;
 		blocked: boolean;
+		draft?: boolean;
 		age_seconds: number;
 		archived?: boolean;
 		tasks?: TaskSummary;
@@ -215,8 +220,9 @@
 	}
 
 	// A lane's right-click menu (S-0167): create an item starting there, move its stories a column
-	// forward or back, or change its WIP limit. Opened on a card, the move starts with that story.
-	let laneMenu = $state<{ lane: string; x: number; y: number; card?: string } | null>(null);
+	// forward or back, or change its WIP limit. A card's menu offers the same under the lane's name,
+	// and a move from there starts with that story.
+	let laneMenu = $state<{ lane: string; x: number; y: number } | null>(null);
 	let laneMove = $state<{ from: string; to: string; picked: string[] } | null>(null);
 	let laneLimit = $state<string | null>(null);
 	const laneStories = (lane: string) =>
@@ -224,26 +230,49 @@
 			.filter((c) => c.type === 'story')
 			.map((c) => ({ id: c.id, title: c.title }));
 
-	function openLaneMenu(e: MouseEvent, lane: string) {
+	// A card's menu (S-0202): what the item's page offers, then its lane's menu. A right click opens
+	// it at the pointer; the keyboard, the card's menu button, and a long press below the card.
+	let menuCard = $state<{ id: string; lane: string; x: number; y: number } | null>(null);
+	const press = longPress();
+	function below(el: Element) {
+		const box = el.getBoundingClientRect();
+		return { x: box.left, y: box.bottom };
+	}
+	function openCardMenu(id: string, lane: string, at: { x: number; y: number }) {
+		notice = null;
+		laneMenu = null;
+		menuCard = { id, lane, ...at };
+	}
+
+	function openMenu(e: MouseEvent, lane: string) {
 		// Shift with the mouse keeps the browser's own menu, for a card's link
 		if (!board?.writable || (e.shiftKey && e.button === 2)) return;
 		e.preventDefault();
-		const card = (e.target as HTMLElement | null)
-			?.closest('[data-card]')
-			?.getAttribute('data-card');
+		// from the keyboard there is no pointer: open beside what has focus
+		const keyboard = e.clientX === 0 && e.clientY === 0;
+		const card = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-card]');
+		if (card) {
+			// a long press that already opened it is the same press's native menu
+			press.cancel();
+			if (press.fired) return;
+			openCardMenu(
+				card.dataset.card!,
+				lane,
+				keyboard ? below(card) : { x: e.clientX, y: e.clientY }
+			);
+			return;
+		}
 		let { clientX: x, clientY: y } = e;
-		if (x === 0 && y === 0) {
-			// from the keyboard: beside what has focus
+		if (keyboard) {
 			const box = (e.target as HTMLElement).getBoundingClientRect();
 			x = box.left + 8;
 			y = box.bottom;
 		}
 		notice = null;
-		laneMenu = { lane, x, y, card: card ?? undefined };
+		menuCard = null;
+		laneMenu = { lane, x, y };
 	}
-	function pickLane(action: LaneAction) {
-		const { lane, card } = laneMenu!;
-		laneMenu = null;
+	function pickLane(action: LaneAction, lane: string, card?: string) {
 		if (action === 'create') {
 			// eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it
 			void goto(resolve('/new') + `?status=${encodeURIComponent(lane)}`);
@@ -257,6 +286,62 @@
 		if (!to) return;
 		const picked = card && cardOf(card)?.type === 'story' ? [card] : [];
 		laneMove = { from: lane, to, picked };
+	}
+
+	// A write from a card's menu, as the item's page makes it: say what came of it and read the
+	// board again, so the card shows it.
+	async function write(id: string, what: string, body: object, done: string) {
+		notice = null;
+		const r = await api(`/api/items/${id}/${what}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify(body)
+		});
+		const answer = await r.json().catch(() => ({}));
+		notice = r.ok
+			? { kind: 'ok', text: done }
+			: { kind: 'error', text: answer.error ?? r.statusText };
+		await load();
+	}
+	async function pickCard(entry: CardEntry) {
+		const id = menuCard!.id;
+		menuCard = null;
+		const c = cardOf(id);
+		if (!c) return;
+		switch (entry.action) {
+			case 'open':
+				// the card's own link: a story in review opens on its review
+				if (c.type === 'story' && c.status === 'review') void goto(resolve('/review/[id]', { id }));
+				else void goto(resolve('/items/[id]', { id }));
+				return;
+			case 'finalize':
+				return write(id, 'finalize', {}, `${id} finalized`);
+			case 'block': {
+				const reason = prompt('Why is it blocked?');
+				if (reason) await write(id, 'block', { reason }, `${id} blocked`);
+				return;
+			}
+			case 'unblock':
+				return write(id, 'unblock', {}, `${id} unblocked`);
+			case 'agent':
+				await write(
+					id,
+					'agent',
+					{ action: entry.agent },
+					`${id}: agent ${entry.label === 'Retry' ? 'restarted' : 'started'}`
+				);
+				return loadAgents();
+			case 'cancel':
+				cancelling = id;
+		}
+	}
+	async function closeCardMenu(how: MenuClose) {
+		const id = menuCard?.id;
+		menuCard = null;
+		// Escape gives focus back to the card it was opened on
+		if (how !== 'escape' || !id) return;
+		await tick();
+		document.querySelector<HTMLElement>(`a[data-id="${id}"]`)?.focus();
 	}
 
 	// One move after another, each by flai's rules; one notice says what moved and what was refused.
@@ -359,9 +444,35 @@
 		lane={laneMenu.lane}
 		x={laneMenu.x}
 		y={laneMenu.y}
-		onpick={pickLane}
+		onpick={(action) => {
+			const { lane } = laneMenu!;
+			laneMenu = null;
+			pickLane(action, lane);
+		}}
 		onclose={() => (laneMenu = null)}
 	/>
+{/if}
+
+{#if menuCard}
+	{@const card = cardOf(menuCard.id)}
+	{#if card}
+		<CardMenu
+			{card}
+			lane={menuCard.lane}
+			writable={board?.writable === true}
+			activity={activity[card.id]}
+			agentEnabled={hostAgent?.enabled === true}
+			x={menuCard.x}
+			y={menuCard.y}
+			oncard={pickCard}
+			onlane={(action) => {
+				const { id, lane } = menuCard!;
+				menuCard = null;
+				pickLane(action, lane, id);
+			}}
+			onclose={closeCardMenu}
+		/>
+	{/if}
 {/if}
 
 {#if laneMove}
@@ -442,7 +553,7 @@
 				role="group"
 				aria-label={state}
 				data-lane={state}
-				oncontextmenu={(e) => openLaneMenu(e, state)}
+				oncontextmenu={(e) => openMenu(e, state)}
 				ondragover={(e) => {
 					if (!board?.writable || !dragging) return;
 					const from = cardOf(dragging);
@@ -505,10 +616,21 @@
 				{#each cards(state) as c (c.id)}
 					<!-- The wrapper is the drop target for reordering and holds the controls beside the
 					     card's link. A drop on a card of another column falls through to the column. -->
+					<!-- On touch a long press opens the card's menu (S-0202); the browser's own callout
+					     would cover it. -->
 					<div
-						class="group relative"
+						class="group relative {board.writable ? '[-webkit-touch-callout:none]' : ''}"
 						role="presentation"
 						data-card={c.id}
+						onpointerdown={(e) => {
+							if (!board?.writable) return;
+							const card = e.currentTarget;
+							press.down(e, () => openCardMenu(c.id, state, below(card)));
+						}}
+						onpointermove={(e) => press.move(e)}
+						onpointerup={() => press.up()}
+						onpointercancel={() => press.up()}
+						onclickcapture={(e) => press.click(e)}
 						ondragover={(e) => {
 							const from = dragging ? cardOf(dragging) : undefined;
 							if (!canReorderOnto(from, c, writable())) {
@@ -576,6 +698,25 @@
 								onplace={(p, dir) =>
 									place(c.id, p, `button[data-step="${dir}"][data-for="${c.id}"]`)}
 							/>
+						{/if}
+						{#if board.writable && !dragging}
+							<!-- The card's menu from the keyboard (S-0202): beside the link, never in it, at the
+							     top right, clear of the reorder controls. -->
+							<button
+								type="button"
+								class="absolute top-1.5 right-1.5 z-10 rounded border border-line-strong bg-surface px-1.5 text-xs leading-4 text-ink hover:bg-raised {menuCard?.id ===
+								c.id
+									? 'block'
+									: 'hidden group-focus-within:block group-hover:block'}"
+								aria-label="Actions for {c.id}"
+								aria-haspopup="menu"
+								aria-expanded={menuCard?.id === c.id}
+								title="Actions"
+								data-testid="card-menu-button"
+								data-for={c.id}
+								onclick={(e) => openCardMenu(c.id, state, below(e.currentTarget.parentElement!))}
+								>⋯</button
+							>
 						{/if}
 					</div>
 				{/each}

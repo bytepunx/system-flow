@@ -94,6 +94,13 @@ describe('the lane menu (S-0167)', () => {
 		[
 			...document.querySelectorAll<HTMLButtonElement>('[data-testid="lane-menu"] [role="menuitem"]')
 		].map((b) => b.dataset.action);
+	// a right click on a card opens the card's menu, the lane's entries in its lane group (S-0202)
+	const cardEntries = () =>
+		[
+			...document.querySelectorAll<HTMLButtonElement>(
+				'[data-testid="card-menu"] [role="group"][aria-label] [role="menuitem"]'
+			)
+		].map((b) => b.dataset.action);
 	const pick = async (action: string) => {
 		document
 			.querySelector<HTMLButtonElement>(`[role="menuitem"][data-action="${action}"]`)!
@@ -169,6 +176,8 @@ describe('the lane menu (S-0167)', () => {
 	it('moves the ticked backlog stories forward to ready, the card clicked ticked first', async () => {
 		await open();
 		rightClick(document.querySelector('[data-card="S-0002"]')!);
+		expect(document.querySelector('[data-testid="lane-menu"]')).toBeNull();
+		expect(cardEntries()).toEqual(['create', 'forward']);
 		await pick('forward');
 		expect(document.querySelector('[data-testid="lane-move"] h2')!.textContent).toContain(
 			'from backlog to ready'
@@ -211,6 +220,7 @@ describe('the lane menu (S-0167)', () => {
 		expect(posts.at(-1)).toEqual({ url: '/api/items/S-0007/move', body: { to: 'backlog' } });
 
 		rightClick(document.querySelector('[data-card="S-0005"]')!);
+		expect(cardEntries()).toEqual(['create', 'back', 'limit']);
 		await pick('back');
 		expect(ticked()).toEqual(['S-0005']);
 		expect(confirm().disabled).toBe(true); // review to in-progress needs a reason

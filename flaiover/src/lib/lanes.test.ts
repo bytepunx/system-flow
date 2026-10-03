@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { backOf, forwardOf, hasLimit, LANES, movesTo, needsReason, startLane } from './lanes';
+import {
+	backOf,
+	forwardOf,
+	hasLimit,
+	laneEntries,
+	LANES,
+	movesTo,
+	needsReason,
+	startLane
+} from './lanes';
 
 // S-0167, ADR-0055: what each lane's menu offers
 describe('lanes', () => {
@@ -35,5 +44,20 @@ describe('lanes', () => {
 
 	it('changes the WIP limit of ready, in-progress, and review only', () => {
 		expect(LANES.filter(hasLimit)).toEqual(['ready', 'in-progress', 'review']);
+	});
+
+	// S-0202: the lane's entries, shared by the lane's menu and a card's
+	it("lists each lane's menu entries in order, with the column a move goes to", () => {
+		expect(laneEntries('backlog')).toEqual([
+			{ action: 'create', label: 'Create item here' },
+			{ action: 'forward', label: 'Move stories forward to ready…' }
+		]);
+		expect(laneEntries('review')).toEqual([
+			{ action: 'create', label: 'Create item here' },
+			{ action: 'back', label: 'Move stories back to in-progress…' },
+			{ action: 'limit', label: 'Change WIP limit…' }
+		]);
+		expect(laneEntries('done').map((e) => e.action)).toEqual(['create']);
+		expect(laneEntries('cancelled').map((e) => e.action)).toEqual(['create', 'back']);
 	});
 });
