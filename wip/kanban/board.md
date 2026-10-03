@@ -6,7 +6,17 @@ wip_limits:
   ready: 10
   in-progress: 3
   review: 5
-order: []
+order:
+  - S-0200
+  - S-0201
+  - S-0202
+  - S-0203
+  - S-0204
+  - S-0205
+  - S-0206
+  - S-0207
+  - S-0208
+  - S-0209
 ---
 
 # Board

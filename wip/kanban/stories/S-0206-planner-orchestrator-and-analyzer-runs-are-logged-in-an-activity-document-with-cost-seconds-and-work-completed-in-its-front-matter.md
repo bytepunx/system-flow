@@ -3,12 +3,15 @@ id: S-0206
 type: story
 nature: feature
 title: Planner, orchestrator, and analyzer runs are logged in an activity document, with cost, seconds, and work completed in its front matter
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-02T11:54:13Z
-transitions: []
+updated: 2026-10-03T05:34:34Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:34Z
+    by: alex
 tags: [flai, dashboard]
 touches: [flai/internal/serve, flai/internal/usage, flai/internal/workitem, flai/internal/check, design/system/agent-narrative.md]
 agent:

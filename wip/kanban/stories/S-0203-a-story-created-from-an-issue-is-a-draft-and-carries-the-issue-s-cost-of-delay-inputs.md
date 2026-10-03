@@ -3,12 +3,15 @@ id: S-0203
 type: story
 nature: improvement
 title: A story created from an issue is a draft and carries the issue's cost of delay inputs
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-02T11:54:39Z
-transitions: []
+updated: 2026-10-03T05:34:14Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:14Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/issues, flai/cmd/issue.go, flai/internal/mcpserver]
 after: [S-0199, S-0198]

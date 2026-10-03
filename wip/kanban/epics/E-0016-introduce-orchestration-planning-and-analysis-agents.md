@@ -3,13 +3,41 @@ id: E-0016
 type: epic
 nature: feature
 title: Introduce Orchestration, Planning, and Analysis agents
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-02T10:51:49Z
-updated: 2026-10-02T11:54:18Z
-transitions: []
+updated: 2026-10-03T06:23:28Z
+transitions:
+  - to: ready
+    at: 2026-10-03T06:23:24Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-03T06:23:28Z
+    by: alex
 tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
+usage:
+  source: sum
+  seconds: 5186
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 386
+      output: 9063
+      cache_read: 2585583
+      cache_write: 87703
+      cost: 0.4139
+    - model: claude-opus-5-5
+      input: 602
+      output: 222159
+      cache_read: 35920872
+      cache_write: 906189
+      cost: 16.9748
+    - model: claude-sonnet-5
+      input: 136
+      output: 38939
+      cache_read: 4014068
+      cache_write: 320478
+      cost: 1.9937
 ---
 # E-0016 Introduce Orchestration, Planning, and Analysis agents
 

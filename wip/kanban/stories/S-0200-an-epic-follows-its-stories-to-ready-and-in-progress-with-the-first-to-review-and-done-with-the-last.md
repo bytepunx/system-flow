@@ -3,12 +3,15 @@ id: S-0200
 type: story
 nature: improvement
 title: "An epic follows its stories: to ready and in-progress with the first, to review and done with the last"
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:11Z
-updated: 2026-10-02T11:54:11Z
-transitions: []
+updated: 2026-10-03T05:33:53Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:33:53Z
+    by: alex
 tags: [flai, dashboard]
 touches: [flai/internal/workitem, flai/internal/itemedit, flai/cmd/move.go, flai/cmd/accept.go, flai/internal/hostapi, flai/internal/mcpserver, design/system/workflow.md]
 agent:

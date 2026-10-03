@@ -3,12 +3,15 @@ id: S-0205
 type: story
 nature: feature
 title: flai stats and metrics.md gain the planning, waiting, and strategic-agent metrics
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-02T11:54:39Z
-transitions: []
+updated: 2026-10-03T05:34:33Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:33Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/metrics, flai/cmd/stats.go, design/system/metrics.md, flai/internal/usage]
 after: [S-0199, S-0206]

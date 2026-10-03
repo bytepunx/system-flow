@@ -20,6 +20,16 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 108
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 3255
+      cache_read: 337862
+      cache_write: 57739
+      cost: 0.5946
 ---
 # S-0139 Nonsense
 

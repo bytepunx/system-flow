@@ -3,12 +3,15 @@ id: S-0207
 type: story
 nature: improvement
 title: The conventions and prime know the planner, orchestrator, and analyzer as roles
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-02T11:54:40Z
-transitions: []
+updated: 2026-10-03T05:34:36Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:36Z
+    by: alex
 tags: [flai, template]
 touches: [design/conventions/, template/root/design/conventions, flai/internal/conventions, flai/internal/context, flai/cmd/prime.go]
 after: [S-0196]

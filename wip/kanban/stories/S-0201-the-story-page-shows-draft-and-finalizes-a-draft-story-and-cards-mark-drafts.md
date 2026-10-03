@@ -3,12 +3,15 @@ id: S-0201
 type: story
 nature: feature
 title: "The story page shows [Draft] and finalizes a draft story, and cards mark drafts"
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-02T11:54:38Z
-transitions: []
+updated: 2026-10-03T05:34:01Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:01Z
+    by: alex
 tags: [dashboard, flai]
 touches: [flaiover/src/routes/items, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/routes/api/items, flai/internal/hostapi]
 after: [S-0199]

@@ -3,12 +3,15 @@ id: S-0208
 type: story
 nature: feature
 title: The planner is an agent flai serve starts for an epic or a story, behind the plan host action
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:13Z
-updated: 2026-10-02T11:54:40Z
-transitions: []
+updated: 2026-10-03T05:34:39Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:39Z
+    by: alex
 tags: [flai, dashboard]
 touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, flaiover/src, ".claude/agents", template/]
 after: [S-0199, S-0206, S-0207]

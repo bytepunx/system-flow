@@ -3,12 +3,15 @@ id: S-0202
 type: story
 nature: feature
 title: A card's right-click menu offers Finalize on a draft story and the card's other actions
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-02T11:54:39Z
-transitions: []
+updated: 2026-10-03T05:34:10Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:10Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/lib/components/BoardCard.svelte, flaiover/src/routes/board]
 after: [S-0201]

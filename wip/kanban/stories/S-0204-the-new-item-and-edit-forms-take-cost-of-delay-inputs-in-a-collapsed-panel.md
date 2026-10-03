@@ -3,12 +3,15 @@ id: S-0204
 type: story
 nature: feature
 title: The new-item and edit forms take cost of delay inputs in a collapsed panel
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:12Z
-updated: 2026-10-02T11:54:39Z
-transitions: []
+updated: 2026-10-03T05:34:24Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:24Z
+    by: alex
 tags: [dashboard, flai]
 touches: [flaiover/src/routes/new, flaiover/src/routes/edit, flaiover/src/routes/items, flai/internal/hostapi]
 after: [S-0199]

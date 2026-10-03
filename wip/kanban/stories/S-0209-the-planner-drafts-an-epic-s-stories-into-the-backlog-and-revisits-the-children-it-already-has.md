@@ -3,12 +3,15 @@ id: S-0209
 type: story
 nature: feature
 title: The planner drafts an epic's stories into the backlog and revisits the children it already has
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-02T11:54:40Z
-transitions: []
+updated: 2026-10-03T05:34:40Z
+transitions:
+  - to: ready
+    at: 2026-10-03T05:34:40Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/harness, ".claude/agents/planner.md", template/, design/system/strategic-agents.md]
 after: [S-0208]
