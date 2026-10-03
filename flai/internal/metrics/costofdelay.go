@@ -140,3 +140,9 @@ func costValue(it *workitem.Item) *float64 {
 func round2(x float64) float64 {
 	return math.Round(x*100) / 100
 }
+
+// round4 rounds an amount in US dollars to four decimals, as activity costs
+// are written.
+func round4(x float64) float64 {
+	return math.Round(x*1e4) / 1e4
+}

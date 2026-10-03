@@ -147,6 +147,9 @@ type Report struct {
 	Usage UsageReport `json:"usage"`
 	// Strategic is each strategic agent's activity document (ADR-0079).
 	Strategic []StrategicAgent `json:"strategic"`
+	// StrategicDays is the strategic agents' use per day beside delivery
+	// (S-0205).
+	StrategicDays []StrategicDay `json:"strategic_days"`
 	// Forecasts is how far forecasts and estimates were from what happened
 	// (S-0205).
 	Forecasts Forecasts `json:"forecasts"`
@@ -243,6 +246,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.Waiting = waiting(items, perItem, start, opt.Now)
 	rep.Claims = claims(items, all, start, opt)
+	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
