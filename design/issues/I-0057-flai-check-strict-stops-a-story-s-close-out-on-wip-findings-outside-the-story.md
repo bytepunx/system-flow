@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 5
+count: 6
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-03T18:03:01Z
-updated: 2026-10-03T18:03:01Z
+last_reported: 2026-10-03T18:29:38Z
+updated: 2026-10-03T18:29:38Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -39,5 +39,9 @@ S-0200's close-out stopped at flai check --strict on two findings outside it: st
 ### 2026-10-03T18:03:01Z
 Story: S-0200.
 S-0200's second close-out stopped in the integration tier: TestMonorepoIsClean failed on issues.duplicate-id, two I-0062 files on main from S-0207's acceptance, which story/S-0201 renames. Every finding was main's own. The verifier ran the narrative and ancestry checks by hand.
+
+### 2026-10-03T18:29:38Z
+Story: S-0203.
+S-0203's close-out stopped in the integration tier: TestMonorepoIsClean failed on main's issues.duplicate-id (two I-0062 files), with story.unaccepted on S-0173, epic.lags-stories on E-0015, and threads.archived on TH-0087; main's check reports the same four. None is in S-0203's diff. The verifier ran the smoke, check, markdown lint, and install tests by hand; all passed but the check on main's findings.
 
 ## Remediation
