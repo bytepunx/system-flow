@@ -34,7 +34,7 @@ type MoveOptions struct {
 	// everything under it, and the item's branch is left as it is.
 	Cascade bool
 	// Finalize lets a draft story go to ready, and makes it no longer a
-	// draft (S-0199).
+	// draft (S-0199), recording By and Now as who finalized it (S-0201).
 	Finalize bool
 }
 
@@ -146,7 +146,7 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	it.Status = to
 	it.Updated = now
 	if to == Ready && opt.Finalize {
-		it.Draft = false
+		it.Finalize(opt.By, opt.Now)
 	}
 	if opt.Reason != "" {
 		it.Body = appendNote(it.Body, fmt.Sprintf("- %s: moved to %s: %s", now, to, opt.Reason))

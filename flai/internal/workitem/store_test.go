@@ -307,7 +307,8 @@ func TestCloneSharesNothing(t *testing.T) {
 			Inputs: &CostInputs{RevenuePerWeek: new(float64), PenaltyPerWeek: new(float64)},
 			Value:  new(float64),
 		},
-		Forecast: &Forecast{Duration: "4h"},
+		Forecast:  &Forecast{Duration: "4h"},
+		Finalized: &Finalized{By: "alex"},
 	}
 	c := it.clone()
 	if !reflect.DeepEqual(it, c) {

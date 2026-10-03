@@ -99,6 +99,9 @@ type Item struct {
 	// Forecast is when the story is expected to be delivered (S-0199).
 	// Stories only.
 	Forecast *Forecast `yaml:"forecast" json:"forecast,omitempty"`
+	// Finalized is who cleared the story's draft flag, and when (S-0201).
+	// Stories only.
+	Finalized *Finalized `yaml:"finalized" json:"finalized,omitempty"`
 	// Unknown is the front matter this flai does not know, kept for writing
 	// back (S-0181).
 	Unknown []Field `yaml:"-" json:"-"`

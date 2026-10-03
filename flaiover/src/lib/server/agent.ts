@@ -67,6 +67,7 @@ export const REQUIRED_METHODS = [
 	'item.template',
 	'item.show',
 	'item.edit',
+	'item.finalize',
 	'accept.preview',
 	'accept.run',
 	'stream.diff',

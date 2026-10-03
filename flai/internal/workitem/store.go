@@ -147,5 +147,6 @@ func (it *Item) clone() *Item {
 	}
 	c.CostOfDelay = it.CostOfDelay.clone()
 	c.Forecast = it.Forecast.clone()
+	c.Finalized = it.Finalized.clone()
 	return &c
 }

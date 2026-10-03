@@ -131,6 +131,7 @@ var fieldTypes = map[string][]string{
 	"agent":         {Story},
 	"cost_of_delay": {Epic, Story},
 	"draft":         {Story},
+	"finalized":     {Story},
 	"forecast":      {Story},
 	"topics":        {Epic, Story},
 }

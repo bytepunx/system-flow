@@ -396,6 +396,10 @@ type spec struct {
 	build func(p channel.Project, raw json.RawMessage) (args []string, stdin string, err *channel.Error)
 	// exits maps exit codes that carry a payload on standard output to error codes.
 	exits map[int]int
+	// judge, when set, reads a successful answer and may refuse it after all:
+	// item.finalize refuses a story flai edit left unchanged, which was not a
+	// draft (S-0201).
+	judge func(w Written) *channel.Error
 	// progress sends each log event to the dashboard while the command runs.
 	progress bool
 	// reads marks a command that changes nothing: no request ID is asked for.
@@ -894,6 +898,23 @@ func itemSpecs() map[string]spec {
 				return nil, "", bad("nothing to change")
 			}
 			return args, stdin, nil
+		}},
+
+		// item.finalize: the designer's say, from the story page, that a draft
+		// story is finished (S-0201). flai edit clears the draft flag and
+		// records the owner as who finalized it, and when; a story that is not
+		// a draft is refused, since there is nothing to finalize.
+		"item.finalize": {exits: map[int]int{4: Refused}, judge: notADraft, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needStory(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"edit", in.ID, "--no-draft", "--by=" + owner(p), "--autocommit", "--trailer=" + Trailer}, "", nil
 		}},
 
 		"item.template": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
@@ -1656,6 +1677,11 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			ran, err := run(execCtx, r)
 			done()
 			res, rerr := outcome(ran, err, sp.exits)
+			if w, ok := res.(Written); ok && rerr == nil && sp.judge != nil {
+				if e := sp.judge(w); e != nil {
+					res, rerr = nil, e
+				}
+			}
 			// A detached write's own ctx being cancelled is not news — it is
 			// the very connection this write's success can sever — so only
 			// the ordinary case still checks it: a cancelled, non-detached
@@ -1739,6 +1765,21 @@ func orElse(s, d string) string {
 // missingItem is what flai says when an ID names nothing: workitem's
 // "<ID> not found", possibly wrapped by the command that looked it up.
 var missingItem = regexp.MustCompile(`(^|[ :])[EST]-\d+ not found$`)
+
+// notADraft refuses, as a rule, what flai edit --no-draft answered
+// unchanged: the story was not a draft (S-0201). flai edit leaves any edit to
+// what is already there unchanged; finalizing is an act the dashboard reports.
+func notADraft(w Written) *channel.Error {
+	var res struct {
+		ID        string `json:"id"`
+		Unchanged bool   `json:"unchanged"`
+	}
+	_ = json.Unmarshal(w.Data, &res) // an answer that is not the edit's result is not "unchanged"
+	if !res.Unchanged {
+		return nil
+	}
+	return &channel.Error{Code: Rule, Message: fmt.Sprintf("%s is not a draft: there is nothing to finalize (someone may have finalized it meanwhile; reload the story)", res.ID)}
+}
 
 func outcome(ran Ran, err error, exits map[int]int) (any, *channel.Error) {
 	if err != nil {

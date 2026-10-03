@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 const plannedHead = `---
@@ -59,6 +60,14 @@ func TestPlanningFieldsRoundTrip(t *testing.T) {
   by: planner
   at: 2026-09-16T08:00:00Z
 `,
+		"finalized, after forecast": `forecast:
+  duration: 4h
+  by: planner
+  at: 2026-09-16T08:00:00Z
+finalized:
+  by: alex
+  at: 2026-09-17T09:30:00Z
+`,
 		"all, after usage": `usage:
   source: sum
   seconds: 1
@@ -106,7 +115,8 @@ forecast:
 	it.Draft = false
 	it.CostOfDelay = &CostOfDelay{}
 	it.Forecast = &Forecast{}
-	if got := it.Marshal(); strings.Contains(got, "draft") || strings.Contains(got, "cost_of_delay") || strings.Contains(got, "forecast") {
+	it.Finalized = &Finalized{}
+	if got := it.Marshal(); strings.Contains(got, "draft") || strings.Contains(got, "cost_of_delay") || strings.Contains(got, "forecast") || strings.Contains(got, "finalized") {
 		t.Errorf("empty blocks written:\n%s", got)
 	}
 }
@@ -125,6 +135,7 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 	}
 	cod := func() *CostOfDelay { return &CostOfDelay{Value: amount(5), By: "a", At: "2026-09-15T10:00:00Z"} }
 	fc := func() *Forecast { return &Forecast{Duration: "4h", By: "a", At: "2026-09-15T10:00:00Z"} }
+	fin := func() *Finalized { return &Finalized{By: "a", At: "2026-09-15T10:00:00Z"} }
 
 	ok := valid(Story)
 	ok.Draft, ok.CostOfDelay, ok.Forecast = true, cod(), fc()
@@ -136,6 +147,11 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 	if err := epic.Validate(); err != nil {
 		t.Errorf("an epic with a cost of delay: %v", err)
 	}
+	finalized := valid(Story)
+	finalized.Finalized = fin()
+	if err := finalized.Validate(); err != nil {
+		t.Errorf("a finalized story: %v", err)
+	}
 
 	cases := []struct {
 		name, want string
@@ -146,6 +162,8 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 		{"task cost", "cost_of_delay is for stories and epics, and this is a task", func() *Item { it := valid(Task); it.CostOfDelay = cod(); return it }()},
 		{"epic forecast", "forecast is for stories, and this is an epic", func() *Item { it := valid(Epic); it.Forecast = fc(); return it }()},
 		{"task forecast", "forecast is for stories, and this is a task", func() *Item { it := valid(Task); it.Forecast = fc(); return it }()},
+		{"epic finalized", "finalized is for stories, and this is an epic", func() *Item { it := valid(Epic); it.Finalized = fin(); return it }()},
+		{"task finalized", "finalized is for stories, and this is a task", func() *Item { it := valid(Task); it.Finalized = fin(); return it }()},
 	}
 	story := func(edit func(*Item)) *Item {
 		it := valid(Story)
@@ -173,6 +191,10 @@ func TestPlanningFieldsAreValidated(t *testing.T) {
 		{"two-line basis", "forecast.basis is more than one line", func(it *Item) { it.Forecast.Basis = "one.\ntwo." }},
 		{"forecast without by", "forecast.by is required", func(it *Item) { it.Forecast.By = "" }},
 		{"forecast bad at", `forecast.at "2026-09-15 10:00" is not a UTC timestamp`, func(it *Item) { it.Forecast.At = "2026-09-15 10:00" }},
+		{"finalized without by", "finalized.by is required", func(it *Item) { it.Finalized = &Finalized{At: "2026-09-15T10:00:00Z"} }},
+		{"finalized without at", `finalized.at "" is not a UTC timestamp`, func(it *Item) { it.Finalized = &Finalized{By: "a"} }},
+		{"finalized not UTC", `finalized.at "2026-09-15T12:00:00+02:00" is not a UTC timestamp`, func(it *Item) { it.Finalized = &Finalized{By: "a", At: "2026-09-15T12:00:00+02:00"} }},
+		{"finalized and still a draft", "finalized says who finalized the story, and it is still a draft", func(it *Item) { it.Draft, it.Finalized = true, fin() }},
 	} {
 		cases = append(cases, struct {
 			name, want string
@@ -226,10 +248,23 @@ func TestADraftStoryIsFinalizedToGoToReady(t *testing.T) {
 	if data, _ := os.ReadFile(back.Path); strings.Contains(string(data), "draft") {
 		t.Errorf("a finalized story still writes draft:\n%s", data)
 	}
-	// finalize on a story that is not a draft changes nothing else
+	// S-0201: the move records who finalized it, the name its transition
+	// gets, and when
+	last := back.Transitions[len(back.Transitions)-1]
+	if f := back.Finalized; f == nil || f.By != "alex" || f.By != last.By || f.At != "2026-09-15T20:00:00Z" || f.At != last.At {
+		t.Errorf("finalized by the move: %+v, transition %+v", back.Finalized, last)
+	}
+	// finalize on a story that is not a draft changes nothing else, and
+	// leaves who finalized it as it was
 	mustMove(t, r, back, Backlog, "")
-	if _, err := r.Move(back, Ready, MoveOptions{Now: t0, Items: items, Finalize: true}); err != nil || back.Draft {
-		t.Errorf("finalize a story that is no draft: %v, draft %v", err, back.Draft)
+	if _, err := r.Move(back, Ready, MoveOptions{By: "bob", Now: t0.Add(time.Hour), Items: items, Finalize: true}); err != nil || back.Draft || back.Finalized.By != "alex" {
+		t.Errorf("finalize a story that is no draft: %v, draft %v, finalized %+v", err, back.Draft, back.Finalized)
+	}
+	// nor does it give one that never was a draft a finalized block
+	other := mustCreate(t, r, Story, "Other", "E-0001")
+	other.Body = strings.Replace(other.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] works\n", 1)
+	if _, err := r.Move(other, Ready, MoveOptions{By: "bob", Now: t0, Items: items, Finalize: true}); err != nil || other.Finalized != nil {
+		t.Errorf("finalize a story that never was a draft: %v, finalized %+v", err, other.Finalized)
 	}
 }
 
@@ -280,5 +315,59 @@ func TestAnOlderFlaiReadsPastThePlanningFields(t *testing.T) {
 	}
 	if len(it.Unknown) != 0 || !it.Draft || it.CostOfDelay == nil || it.Forecast == nil {
 		t.Errorf("this flai should know every planning field: unknown %v, item %+v", FieldNames(it.Unknown), it)
+	}
+}
+
+// S-0201: the flai of S-0199, which knows draft, cost_of_delay, and forecast
+// but not finalized, keeps finalized as a field it does not know and writes
+// it back after the forecast, where this flai writes it: either flai writes
+// a finalized story the same bytes.
+func TestTheFlaiOfS0199KeepsFinalizedWhereThisFlaiWritesIt(t *testing.T) {
+	// the front matter the flai of S-0199 knew
+	type s0199Item struct {
+		ID          string       `yaml:"id"`
+		Type        string       `yaml:"type"`
+		Nature      string       `yaml:"nature"`
+		Title       string       `yaml:"title"`
+		Status      string       `yaml:"status"`
+		Parent      string       `yaml:"parent"`
+		Owner       string       `yaml:"owner"`
+		Created     string       `yaml:"created"`
+		Updated     string       `yaml:"updated"`
+		Transitions []Transition `yaml:"transitions"`
+		Blocked     []Block      `yaml:"blocked"`
+		Estimate    string       `yaml:"estimate"`
+		Stream      string       `yaml:"stream"`
+		Tags        []string     `yaml:"tags"`
+		Touches     []string     `yaml:"touches"`
+		Topics      []string     `yaml:"topics"`
+		After       []string     `yaml:"after"`
+		Agent       any          `yaml:"agent"`
+		Usage       any          `yaml:"usage"`
+		Draft       bool         `yaml:"draft"`
+		CostOfDelay any          `yaml:"cost_of_delay"`
+		Forecast    any          `yaml:"forecast"`
+	}
+	finalized := "finalized:\n  by: alex\n  at: 2026-10-02T09:00:00Z\n"
+	doc := plannedHead + "forecast:\n  duration: 6h\n  by: planner\n  at: 2026-10-01T09:00:00Z\n" + finalized + "---\n# S-0001 S\n"
+	it, err := ParseItem(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(it.Unknown) != 0 || it.Finalized == nil || it.Marshal() != doc {
+		t.Fatalf("this flai: unknown %v, finalized %+v, written as\n%s", FieldNames(it.Unknown), it.Finalized, it.Marshal())
+	}
+	fm, _, err := SplitFrontMatter(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	older := UnknownFields(fm, s0199Item{})
+	if got := strings.Join(FieldNames(older), ","); got != "finalized" {
+		t.Fatalf("the flai of S-0199 keeps %q as unknown, want finalized", got)
+	}
+	var b strings.Builder
+	WriteFields(&b, older)
+	if b.String() != finalized {
+		t.Errorf("the flai of S-0199 writes it back changed:\n%s", b.String())
 	}
 }

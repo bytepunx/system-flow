@@ -148,13 +148,32 @@ func TestDraftSetAndClear(t *testing.T) {
 	if res, it, err := edit(t, repo, "S-0001", Change{Draft: &no}, "alex", t1); err != nil || it.Draft || strings.Join(res.Changed, ",") != "draft" {
 		t.Fatalf("finalize: %v %+v", err, res)
 	}
-	if res, _, err := edit(t, repo, "S-0001", Change{Draft: &no}, "alex", t1); err != nil || !res.Unchanged {
+	// S-0201: finalizing records who did it and when, as the other blocks do
+	t2 := t1.Add(time.Hour)
+	if res, _, err := edit(t, repo, "S-0001", Change{Draft: &no}, "bob", t2); err != nil || !res.Unchanged {
 		t.Errorf("finalizing a story that is not a draft changes nothing: %v %+v", err, res)
+	}
+	it, _ := repo.Get("S-0001")
+	if f := it.Finalized; f == nil || f.By != "alex" || f.At != "2026-10-02T09:00:00Z" {
+		t.Fatalf("finalized: %+v", it.Finalized)
+	}
+	if data, _ := os.ReadFile(it.Path); !strings.Contains(string(data), "finalized:\n  by: alex\n  at: 2026-10-02T09:00:00Z\n") {
+		t.Errorf("the front matter:\n%s", data)
+	}
+	if v, err := Show(repo, "S-0001"); err != nil || v.Draft || v.Finalized == nil || v.Finalized.By != "alex" {
+		t.Errorf("show a finalized story: %v %+v", err, v)
+	}
+	// a draft again is no longer finalized; finalized again, by whoever does it
+	if _, it, err := edit(t, repo, "S-0001", Change{Draft: &yes}, "alex", t2); err != nil || !it.Draft || it.Finalized != nil {
+		t.Fatalf("a draft again: %v %+v", err, it.Finalized)
+	}
+	if _, it, err := edit(t, repo, "S-0001", Change{Draft: &no}, "", t2); err != nil || it.Finalized == nil || it.Finalized.By != "agent" || it.Finalized.At != "2026-10-02T10:00:00Z" {
+		t.Fatalf("finalized again: %v %+v", err, it.Finalized)
 	}
 	if _, _, err := edit(t, repo, "E-0001", Change{Draft: &yes}, "alex", t1); !isInvalid(err) || !strings.Contains(err.Error(), "only a story is a draft") {
 		t.Errorf("an epic: %v", err)
 	}
-	it, _ := repo.Get("S-0001")
+	it, _ = repo.Get("S-0001")
 	it.Body = strings.Replace(it.Body, "## Acceptance criteria\n- [ ]", "## Acceptance criteria\n- [ ] works", 1)
 	if err := repo.Save(it); err != nil {
 		t.Fatal(err)

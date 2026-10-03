@@ -46,7 +46,9 @@ the story is held in ready, and flai serve and wait_for_work pass it over
 story, and a cycle.
 
 Planning data (S-0199). --draft makes a backlog story a draft and
---no-draft finalizes one, which may then go to ready. A cost of delay, on a
+--no-draft finalizes one, which may then go to ready; finalizing records who
+finalized it (--by) and when, in its finalized block, and --draft again
+removes that block (S-0201). A cost of delay, on a
 story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as
 amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and
 a value per week (--cost-of-delay-value). A story's forecast has a duration
@@ -106,7 +108,7 @@ the item changed.`,
 				if v.Type == "story" {
 					fmt.Fprintf(a.out, "  agent: %s (project default: %s)\n", v.Agent, v.DefaultAgent)
 				}
-				for _, l := range planningLines(v.Draft, v.CostOfDelay, v.Forecast, v.Currency) {
+				for _, l := range planningLines(v.Draft, v.Finalized, v.CostOfDelay, v.Forecast, v.Currency) {
 					fmt.Fprintf(a.out, "  %s\n", l)
 				}
 				fmt.Fprintf(a.out, "  file: %s\n  hash: %s\n", v.Path, v.Hash)
@@ -262,7 +264,7 @@ the item changed.`,
 	f.BoolVar(&clearAgent, "clear-agent", false, "remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those")
 	rf.register(c, true)
 	f.BoolVar(&draft, "draft", false, "make a story in the backlog a draft, which must be finalized before it is ready")
-	f.BoolVar(&noDraft, "no-draft", false, "finalize a draft story, so that it may go to ready")
+	f.BoolVar(&noDraft, "no-draft", false, "finalize a draft story, so that it may go to ready, recording who finalized it and when")
 	f.StringVar(&revenue, "revenue-per-week", "", "cost of delay input: revenue each week it is done brings, in planning.currency; empty removes it")
 	f.StringVar(&penalty, "penalty-per-week", "", "cost of delay input: what each week it is not done costs beyond revenue; empty removes it")
 	f.StringVar(&timeLost, "time-lost-per-cycle", "", "cost of delay input: work lost each cycle it is not done, a Go duration; empty removes it")

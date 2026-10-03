@@ -32,6 +32,7 @@ var good = map[string]struct {
 	"item.unblock":      {`{"id":"T-0001",` + rid + `}`, "unblock T-0001 --json", ""},
 	"item.new":          {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
 	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
+	"item.finalize":     {`{"id":"S-0001",` + rid + `}`, "edit S-0001 --no-draft --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
 	"issue.list":        {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
 	"issue.story":       {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
 	"item.edit":         {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
@@ -82,11 +83,12 @@ var good = map[string]struct {
 
 // refused is, per method, params that must never reach a command line.
 var refused = map[string][]string{
-	"item.move":    {`{"id":"--help","to":"ready",` + rid + `}`, `{"id":"S-0001","to":"--yes",` + rid + `}`, `{"id":"S-0001; rm -rf /","to":"ready",` + rid + `}`, `{"id":"S-0001","to":"ready"}`, `{"id":"S-0001","to":"ready","request_id":"x"}`},
-	"item.order":   {`{"id":"S-0002","before":"--top",` + rid + `}`, `{"id":"S-0002","top":true,"bottom":true,` + rid + `}`, `{"id":"S-0002",` + rid + `}`},
-	"item.block":   {`{"id":"T-0001","reason":"  ",` + rid + `}`, `{"id":"T","reason":"x",` + rid + `}`},
-	"board.limit":  {`{"column":"backlog","limit":3,` + rid + `}`, `{"column":"--json","limit":3,` + rid + `}`, `{"column":"ready","limit":-1,` + rid + `}`, `{"column":"ready","limit":100,` + rid + `}`, `{"column":"ready",` + rid + `}`},
-	"item.unblock": {`{"id":"--json",` + rid + `}`},
+	"item.move":     {`{"id":"--help","to":"ready",` + rid + `}`, `{"id":"S-0001","to":"--yes",` + rid + `}`, `{"id":"S-0001; rm -rf /","to":"ready",` + rid + `}`, `{"id":"S-0001","to":"ready"}`, `{"id":"S-0001","to":"ready","request_id":"x"}`},
+	"item.order":    {`{"id":"S-0002","before":"--top",` + rid + `}`, `{"id":"S-0002","top":true,"bottom":true,` + rid + `}`, `{"id":"S-0002",` + rid + `}`},
+	"item.block":    {`{"id":"T-0001","reason":"  ",` + rid + `}`, `{"id":"T","reason":"x",` + rid + `}`},
+	"board.limit":   {`{"column":"backlog","limit":3,` + rid + `}`, `{"column":"--json","limit":3,` + rid + `}`, `{"column":"ready","limit":-1,` + rid + `}`, `{"column":"ready","limit":100,` + rid + `}`, `{"column":"ready",` + rid + `}`},
+	"item.unblock":  {`{"id":"--json",` + rid + `}`},
+	"item.finalize": {`{"id":"--help",` + rid + `}`, `{"id":"E-0001",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001 --draft",` + rid + `}`, `{"id":"S-0001"}`},
 	"item.edit": {
 		`{"id":"S-0001","title":"no hash",` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `",` + rid + `}`,
@@ -1025,6 +1027,40 @@ func TestPlanningDataReachesFlaiAsFlags(t *testing.T) {
 	}
 	if args, _ := run("item.move", `{"id":"S-0001","to":"in-progress","finalize":true}`); strings.Contains(args, "--yes") {
 		t.Errorf("finalize on a move not to ready: %s", args)
+	}
+}
+
+// S-0201: item.finalize runs flai edit --no-draft as the owner, committed
+// as the dashboard's other edits are. What the edit leaves unchanged was not
+// a draft, and is refused as a rule in so many words.
+func TestItemFinalizeFinalizesADraftAndRefusesWhatIsNot(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	finalize := func(ran Ran, params string) (any, *channel.Error, string) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, Host{})["item.finalize"](context.Background(), p, json.RawMessage(params))
+		if len(rec.runs) == 0 {
+			return res, e, ""
+		}
+		return res, e, strings.Join(rec.runs[0].Args, " ")
+	}
+	res, e, args := finalize(Ran{Stdout: []byte(`{"id":"S-0007","changed":["draft"],"committed":true}`)}, `{"id":"S-0007",`+rid+`}`)
+	if e != nil || args != "edit S-0007 --no-draft --by=designer --autocommit --trailer="+Trailer+" --json" {
+		t.Errorf("finalize: %+v %s", e, args)
+	}
+	if w, ok := res.(Written); !ok || !strings.Contains(string(w.Data), `"changed":["draft"]`) {
+		t.Errorf("the answer: %#v", res)
+	}
+	_, e, _ = finalize(Ran{Stdout: []byte(`{"id":"S-0007","changed":[],"unchanged":true}`)}, `{"id":"S-0007",`+rid+`}`)
+	if e == nil || e.Code != Rule || !strings.HasPrefix(e.Message, "S-0007 is not a draft: there is nothing to finalize") {
+		t.Errorf("a story that is not a draft: %+v", e)
+	}
+	if _, e, args := finalize(Ran{}, `{"id":"E-0001",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || e.Message != "E-0001 is not a story" || args != "" {
+		t.Errorf("an epic: %+v %s", e, args)
+	}
+	// what flai check refuses reaches the dashboard as flai said it
+	refusal := Ran{Exit: 4, Stdout: []byte(`{"refused":{"findings":[{"rule":"item.front-matter"}]}}`), Events: []map[string]any{{"level": "FATAL", "err": "refused: flai check has 1 finding(s)"}}}
+	if _, e, _ := finalize(refusal, `{"id":"S-0007",`+rid+`}`); e == nil || e.Code != Refused {
+		t.Errorf("a refusal of flai check: %+v", e)
 	}
 }
 

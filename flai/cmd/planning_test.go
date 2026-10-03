@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // planningProject is a project with an epic and a story under it whose
@@ -131,6 +132,13 @@ func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
 	if item := read(t, story); strings.Contains(item, "draft:") || !strings.Contains(item, "status: ready") {
 		t.Errorf("finalized and ready:\n%s", item)
 	}
+	// S-0201: the move records who finalized it, the name its transition got
+	if item := read(t, story); !strings.Contains(item, "  - to: ready\n    at: 2026-09-15T21:00:00Z\n    by: olive\n") || !strings.Contains(item, "finalized:\n  by: olive\n  at: 2026-09-15T21:00:00Z\n") {
+		t.Errorf("finalized by the move:\n%s", item)
+	}
+	if out, _, _ := runIn(t, root, "show", "S-0001"); !strings.Contains(out, "  finalized by olive at 2026-09-15T21:00:00Z\n") {
+		t.Errorf("show:\n%s", out)
+	}
 
 	// back to the backlog, a draft again, and finalized by an edit
 	if _, errOut, code := runIn(t, root, "edit", "S-0001", "--draft"); code == 0 || !strings.Contains(errOut, "only a story in the backlog is a draft") {
@@ -141,11 +149,24 @@ func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
 			t.Fatalf("%v: %s", args, errOut)
 		}
 	}
-	if out, _, _ := runIn(t, root, "edit", "S-0001", "--show"); !strings.Contains(out, "  draft: yes") {
+	if out, _, _ := runIn(t, root, "edit", "S-0001", "--show"); !strings.Contains(out, "  draft: yes") || strings.Contains(out, "finalized by") {
 		t.Errorf("edit --show:\n%s", out)
 	}
-	if out, errOut, code := runIn(t, root, "edit", "S-0001", "--no-draft"); code != 0 || !strings.Contains(out, "changed draft") {
+	if item := read(t, story); strings.Contains(item, "finalized:") {
+		t.Errorf("a draft again is still finalized:\n%s", item)
+	}
+	if out, errOut, code := runInAt(t, root, time.Date(2026, 9, 16, 8, 0, 0, 0, time.UTC), "edit", "S-0001", "--no-draft", "--by", "alex"); code != 0 || !strings.Contains(out, "changed draft") {
 		t.Fatalf("--no-draft: %d %s %s", code, out, errOut)
+	}
+	if item := read(t, story); !strings.Contains(item, "finalized:\n  by: alex\n  at: 2026-09-16T08:00:00Z\n") {
+		t.Errorf("finalized by the edit:\n%s", item)
+	}
+	if out, _, _ := runIn(t, root, "edit", "S-0001", "--show"); !strings.Contains(out, "  finalized by alex at 2026-09-16T08:00:00Z\n") {
+		t.Errorf("edit --show:\n%s", out)
+	}
+	// a story that is not a draft is unchanged, as any edit to what is there
+	if out, errOut, code := runIn(t, root, "edit", "S-0001", "--no-draft"); code != 0 || !strings.Contains(out, "S-0001 is unchanged") || !strings.Contains(read(t, story), "  by: alex\n") {
+		t.Errorf("--no-draft on a story that is not a draft: %d %s %s", code, out, errOut)
 	}
 	if out, errOut, code := runIn(t, root, "move", "S-0001", "ready"); code != 0 || strings.Contains(out, "finalized") {
 		t.Errorf("a finalized story moves without --yes: %d %s %s", code, out, errOut)

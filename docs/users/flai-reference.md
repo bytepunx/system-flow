@@ -919,7 +919,7 @@ A retitle keeps everything that carries the title in step: the front matter, the
 
 --after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). On a task it names the tasks of the same story the task waits for (S-0176). flai check refuses an entry that does not exist, a task of another story, and a cycle.
 
-Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready. A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
+Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready; finalizing records who finalized it (--by) and when, in its finalized block, and --draft again removes that block (S-0201). A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the title, and flai writes it. With --hash, the hash flai edit --show printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. flai check runs with the change in place: if it reports anything the change introduces, every file is put back and the findings are printed (exit 4). --autocommit commits every file the edit touched in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
@@ -968,7 +968,7 @@ Flags:
 | `--message` string | commit subject after the prefix (default names what changed) |
 | `--model` string | a story's agent: the model it runs |
 | `--nature` string | one of feature, improvement, remediation, research, experiment |
-| `--no-draft` | finalize a draft story, so that it may go to ready |
+| `--no-draft` | finalize a draft story, so that it may go to ready, recording who finalized it and when |
 | `--parent` string | the new parent: an epic for a story, a story for a task |
 | `--penalty-per-week` string | cost of delay input: what each week it is not done costs beyond revenue; empty removes it |
 | `--revenue-per-week` string | cost of delay input: revenue each week it is done brings, in planning.currency; empty removes it |

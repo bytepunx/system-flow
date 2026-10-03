@@ -7,13 +7,16 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// planningLines are an item's draft flag, cost of delay, and forecast
-// (S-0199) as flai show and flai edit --show print them, one line each and
-// only when set; amounts are in currency.
-func planningLines(draft bool, c *workitem.CostOfDelay, f *workitem.Forecast, currency string) []string {
+// planningLines are an item's draft flag, who finalized it (S-0201), cost of
+// delay, and forecast (S-0199) as flai show and flai edit --show print them,
+// one line each and only when set; amounts are in currency.
+func planningLines(draft bool, fin *workitem.Finalized, c *workitem.CostOfDelay, f *workitem.Forecast, currency string) []string {
 	var out []string
 	if draft {
 		out = append(out, "draft: yes, finalized before it is ready")
+	}
+	if !fin.IsZero() {
+		out = append(out, "finalized by "+orDefault(fin.By, "?")+" at "+orDefault(fin.At, "?"))
 	}
 	if !c.IsZero() {
 		amount := func(v float64) string {

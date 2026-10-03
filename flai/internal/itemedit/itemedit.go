@@ -1,7 +1,8 @@
 // Package itemedit changes a work item after it was created (S-0085): its
 // title, nature, tags, touches, a story's or epic's topics (S-0135), a
 // story's or a task's after: (S-0130, S-0176), parent, a story's draft
-// flag, an epic's or story's cost of delay, a story's forecast (S-0199), and
+// flag (finalizing a draft records who did, S-0201), an epic's or story's
+// cost of delay, a story's forecast (S-0199), and
 // the body below its heading, in one step that is checked and committed the
 // way a document save is (ADR-0023). What is the item's state stays flai's and
 // is not reachable from here: ID, type, status, transitions, blocked
@@ -48,7 +49,8 @@ type Change struct {
 	// Agent replaces a story's agent (S-0103) when set; ClearAgent removes it.
 	Agent      *manifest.Agent
 	ClearAgent bool
-	// Draft makes a story a draft, or finalizes one (S-0199).
+	// Draft makes a story a draft, or finalizes one (S-0199), which records
+	// who finalized it and when (S-0201).
 	Draft *bool
 	// CostOfDelay changes keys of an epic's or story's cost of delay;
 	// ClearCostOfDelay removes it first, so that with both the edit replaces it.
@@ -99,11 +101,12 @@ type View struct {
 	// story created now would get (S-0103).
 	Agent        *manifest.Agent `json:"agent,omitempty"`
 	DefaultAgent *manifest.Agent `json:"default_agent,omitempty"`
-	// Draft, CostOfDelay, and Forecast are the item's planning data (S-0199),
-	// and Currency the unit of its amounts.
+	// Draft, CostOfDelay, Forecast, and Finalized are the item's planning
+	// data (S-0199, S-0201), and Currency the unit of its amounts.
 	Draft       bool                  `json:"draft"`
 	CostOfDelay *workitem.CostOfDelay `json:"cost_of_delay,omitempty"`
 	Forecast    *workitem.Forecast    `json:"forecast,omitempty"`
+	Finalized   *workitem.Finalized   `json:"finalized,omitempty"` // who finalized a story that was a draft (S-0201)
 	Currency    string                `json:"currency"`
 	Body        string                `json:"body"` // below the heading
 	Path        string                `json:"path"`
@@ -192,7 +195,7 @@ func Show(repo *workitem.Repo, id string) (*View, error) {
 		return nil, err
 	}
 	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches), Topics: orEmpty(it.Topics), After: orEmpty(it.After),
-		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Draft: it.Draft, CostOfDelay: it.CostOfDelay, Forecast: it.Forecast,
+		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Draft: it.Draft, CostOfDelay: it.CostOfDelay, Forecast: it.Forecast, Finalized: it.Finalized,
 		Currency: repo.Manifest.Planning.CurrencyCode(), Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
 	v.Editable, v.Reason = editable(it)
 	if want := parentType(it.Type); want != "" {
@@ -682,8 +685,11 @@ func applyPlanning(it *workitem.Item, ch Change, opt Options, currency string) (
 			if it.Status != workitem.Backlog {
 				return nil, invalid("%s is %s; only a story in the backlog is a draft", it.ID, it.Status)
 			}
+			// a draft again: who finalized it before no longer says anything
+			it.Draft, it.Finalized = true, nil
+		} else {
+			it.Finalize(by, opt.Now)
 		}
-		it.Draft = *ch.Draft
 		changed = append(changed, "draft")
 	}
 	if ch.ClearCostOfDelay || ch.CostOfDelay != nil {

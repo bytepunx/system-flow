@@ -251,7 +251,7 @@ the plan as plan, beside item and children.`,
 			if !it.Agent.IsZero() {
 				fmt.Fprintf(a.out, "  agent: %s\n", it.Agent)
 			}
-			for _, l := range planningLines(it.Draft, it.CostOfDelay, it.Forecast, repo.Manifest.Planning.CurrencyCode()) {
+			for _, l := range planningLines(it.Draft, it.Finalized, it.CostOfDelay, it.Forecast, repo.Manifest.Planning.CurrencyCode()) {
 				fmt.Fprintf(a.out, "  %s\n", l)
 			}
 			if !it.Usage.Empty() {

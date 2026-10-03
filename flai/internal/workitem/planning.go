@@ -11,7 +11,8 @@ import (
 // Planning data (S-0199): a story is a draft until it is finalized, epics and
 // stories carry a cost of delay, and a story carries a forecast. Amounts are
 // in the project's currency (planning.currency in system-flow.yaml), and each
-// block records who set it and when.
+// block records who set it and when. A story that was a draft records who
+// finalized it and when (S-0201).
 
 // CostOfDelay is what waiting for an item costs: the inputs it is worked out
 // from, the value, or both.
@@ -44,6 +45,12 @@ type Forecast struct {
 	Basis string `yaml:"basis" json:"basis,omitempty"`
 	By    string `yaml:"by" json:"by,omitempty"`
 	At    string `yaml:"at" json:"at,omitempty"`
+}
+
+// Finalized is who cleared a story's draft flag, and when (S-0201).
+type Finalized struct {
+	By string `yaml:"by" json:"by,omitempty"`
+	At string `yaml:"at" json:"at,omitempty"`
 }
 
 // IsZero reports whether the inputs give nothing.
@@ -84,6 +91,29 @@ func (f *Forecast) clone() *Forecast {
 	return &out
 }
 
+// IsZero reports whether the finalized block is absent or empty.
+func (f *Finalized) IsZero() bool {
+	return f == nil || *f == Finalized{}
+}
+
+func (f *Finalized) clone() *Finalized {
+	if f == nil {
+		return nil
+	}
+	out := *f
+	return &out
+}
+
+// Finalize clears a story's draft flag and records who cleared it and when
+// (S-0201); an item that is not a draft is left as it is.
+func (it *Item) Finalize(by string, at time.Time) {
+	if !it.Draft {
+		return
+	}
+	it.Draft = false
+	it.Finalized = &Finalized{By: orDefault(by, "agent"), At: at.UTC().Format(TimeFormat)}
+}
+
 func cloneAmount(v *float64) *float64 {
 	if v == nil {
 		return nil
@@ -92,9 +122,11 @@ func cloneAmount(v *float64) *float64 {
 	return &x
 }
 
-// planningBlock is an item's draft flag, cost of delay, and forecast as front
-// matter, each only when set. It follows the fields an older flai knows, where
-// such a flai writes them back, so that either writes the same bytes.
+// planningBlock is an item's draft flag, cost of delay, forecast, and
+// finalized block as front matter, each only when set. It follows the fields
+// an older flai knows, where such a flai writes them back, so that either
+// writes the same bytes: finalized, which the flai of S-0199 keeps as a field
+// it does not know, comes last.
 func planningBlock(it *Item) string {
 	var b strings.Builder
 	if it.Draft {
@@ -117,6 +149,11 @@ func planningBlock(it *Item) string {
 		writeString(&b, "  duration", f.Duration)
 		writeTime(&b, "  delivery", f.Delivery)
 		writeString(&b, "  basis", f.Basis)
+		writeString(&b, "  by", f.By)
+		writeTime(&b, "  at", f.At)
+	}
+	if f := it.Finalized; !f.IsZero() {
+		b.WriteString("finalized:\n")
 		writeString(&b, "  by", f.By)
 		writeTime(&b, "  at", f.At)
 	}
@@ -143,7 +180,7 @@ func writeTime(b *strings.Builder, key, v string) {
 }
 
 // planningErrors are what is wrong with an item's draft flag, cost of delay,
-// and forecast.
+// forecast, and finalized block.
 func planningErrors(it *Item) []string {
 	var errs []string
 	if it.Draft && !Carries(it.Type, "draft") {
@@ -181,6 +218,15 @@ func planningErrors(it *Item) []string {
 			errs = append(errs, "forecast.basis is more than one line: write it as one sentence")
 		}
 		errs = append(errs, setByErrors("forecast", f.By, f.At)...)
+	}
+	if f := it.Finalized; !f.IsZero() {
+		if !Carries(it.Type, "finalized") {
+			errs = append(errs, "finalized is for stories, and this is "+articled(it.Type))
+		}
+		if it.Draft {
+			errs = append(errs, "finalized says who finalized the story, and it is still a draft: remove draft, or remove finalized if it is a draft again")
+		}
+		errs = append(errs, setByErrors("finalized", f.By, f.At)...)
 	}
 	return errs
 }

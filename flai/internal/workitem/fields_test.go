@@ -39,6 +39,7 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		"item.cost_of_delay: " + strings.Join(workitem.KnownFields(workitem.CostOfDelay{}), " "),
 		"item.cost_of_delay.inputs: " + strings.Join(workitem.KnownFields(workitem.CostInputs{}), " "),
 		"item.forecast: " + strings.Join(workitem.KnownFields(workitem.Forecast{}), " "),
+		"item.finalized: " + strings.Join(workitem.KnownFields(workitem.Finalized{}), " "),
 		// the types each type-restricted field is valid on (S-0176): an older
 		// flai refuses an item that carries one on a type it does not allow
 		"item.types: " + workitem.FieldTypes(),
