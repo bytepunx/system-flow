@@ -431,7 +431,7 @@ func TestSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 		Continue    string   `json:"continue"`
 		Abort       string   `json:"abort"`
 	}
-	syncJSON := func() result {
+	syncJSON := func() {
 		t.Helper()
 		out, _, code := runIn(t, wt, "--json", "stream", "sync", "S-0001")
 		var res result
@@ -443,7 +443,6 @@ func TestSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 			!strings.Contains(res.Continue, "git rebase --continue") || !strings.Contains(res.Abort, "git rebase --abort") {
 			t.Errorf("json: %d %+v", code, res)
 		}
-		return res
 	}
 
 	// the sync stops on the conflicts

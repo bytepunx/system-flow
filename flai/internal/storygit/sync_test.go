@@ -11,7 +11,7 @@ import (
 )
 
 // Integration: these run real git.
-func gitRepo(t *testing.T) (execx.Runner, string) {
+func gitRepo(t *testing.T) string {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("integration: runs real git")
@@ -32,7 +32,7 @@ func gitRepo(t *testing.T) (execx.Runner, string) {
 	write(t, dir, "a.md", "one\n")
 	git(t, r, dir, "add", "-A")
 	git(t, r, dir, "commit", "-q", "-m", "init")
-	return r, dir
+	return dir
 }
 
 func write(t *testing.T, dir, rel, content string) {
@@ -50,7 +50,7 @@ func git(t *testing.T, r execx.Runner, dir string, args ...string) {
 }
 
 func TestUncommittedRebaseInProgressAndConflicts(t *testing.T) {
-	r, dir := gitRepo(t)
+	r, dir := execx.Runner(execx.System{}), gitRepo(t)
 	if got, err := Uncommitted(r, dir); err != nil || len(got) != 0 {
 		t.Fatalf("clean: %v %v", got, err)
 	}
