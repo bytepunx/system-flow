@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-01
+updated: 2026-10-03
 status: active
 topics: [cli, template]
 ---
@@ -55,6 +55,8 @@ agent:                                       # optional (S-0103): the agent ever
       model: sonnet
 prime:                                       # optional (S-0146): how flai prime --story builds context packs
   budget: 80KB                               # the size a story's pack fits; default 80KB
+issues:                                      # optional (S-0198): how flai check treats open issues
+  story_after: 168h                          # how long an issue may stay open with no open story linking it; default 168h, 0 turns the warning off
 flai:                                        # optional (S-0181): what the project asks of the flai that reads it
   minimum: 1.27.0                            # the oldest flai release that may read it; publishing a flai release that changes the front-matter fields raises it
 ```
@@ -70,5 +72,6 @@ Rules:
 - `dashboard.autocommit: false` leaves documents saved from the dashboard uncommitted; the default commits each save on the main checkout, one path per commit (ADR-0023).
 - `agent` is the project's default agent (S-0103, [ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)): a harness, a model, and `config`, a flat map of options for the harness. A story made while it is set gets a copy in its front matter, which the story may change. A change to the default reaches new stories only. `flai agent` shows it, `flai agent set --harness --model --config key=value --unset key` changes only what is given, and `flai agent clear` removes it. Each rewrites the `agent:` block alone. A harness is a lower-case name; a model may also hold `.`, `:`, `/`, and `@`; config keys are lower-case words and values are one line. `flai check` reports a default that is not (`manifest.agent`). `roles` (S-0189) maps a sub-agent role (`explore`, `verify`) to its own harness, model, and config, checked the same way; a story gets them merged role by role, and `flai agent set --role-harness role=h --role-model role=m --role-config role.key=v --unset-role role` changes them.
 - `prime.budget` is the size a story's context pack fits, `flai prime --story` and the MCP `prime` tool alike ([ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md), S-0146): bytes, or a number with `KB` or `MB` (1024-based). `--budget` overrides it for one run. It is the project's, not the host's, because a pack is the same for every agent that works the project. Unset, it is 80 KB.
+- `issues.story_after` is how long an issue may stay open with no open story linking it before `flai check` warns with `issues.no-story` (S-0198). It is a Go duration, such as `168h` or `24h`. Unset, it is 168h, seven days; `0` turns the warning off. A value that is not a duration, or is negative, is a `manifest.issues` error, and the warning is off until it is fixed. A story links an issue when its body names the issue's ID, as `flai issue story` writes it.
 - `flai.minimum` is the oldest flai release, `X.Y.Z`, that may read the project (S-0181): one that knows every front-matter field its items, threads, and issues carry. `manifest.Load` refuses the manifest for a flai below it, so every command, `flai serve` (which leaves the project unserved and says why), and `flai mcp` stop before reading any item, with `manifest.TooOldError`: the version needed, the running one, and the upgrade (`flai host upgrade`, or `flai self-upgrade` where no flai host runs). A dev build (`dev`) is never below it, and one that is not a release version is a load error. Publishing a flai release raises it to that release when `flai/internal/workitem/front-matter-fields.txt` changed since the previous `flai/v*` tag (`release.RaiseMinimum`, in the publish commit, which warns that the host's flai must be upgraded once the release's binaries are built), so a release that adds a front-matter field raises it. A fields file the previous tag did not have raises nothing. A flai older than S-0181 does not know the key and ignores it, as the manifest is decoded leniently; what keeps such a flai reading is that it is told it is behind ([flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)). Unset, any flai reads the project.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent`, `flai.minimum`) and preserves comments where the YAML library allows it.

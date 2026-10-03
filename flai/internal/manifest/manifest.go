@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 
@@ -43,6 +44,8 @@ type Manifest struct {
 	// Prime is how flai prime --story builds this project's context packs
 	// (ADR-0049).
 	Prime Prime `yaml:"prime,omitempty" json:"prime,omitzero"`
+	// Issues is how flai check treats the project's open issues (S-0198).
+	Issues Issues `yaml:"issues,omitempty" json:"issues,omitzero"`
 	// Flai is what the project asks of the flai that reads it (S-0181).
 	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
 }
@@ -72,6 +75,35 @@ type Prime struct {
 	// Budget is the size a story's context pack fits, such as 80KB or
 	// 81920 (bytes); empty means flai's default.
 	Budget string `yaml:"budget,omitempty" json:"budget,omitempty"`
+}
+
+// Issues is the project's say about its open issues.
+type Issues struct {
+	// StoryAfter is how long an issue may stay open with no open story
+	// linking it before flai check warns, a Go duration such as 168h; empty
+	// means DefaultStoryAfter, and 0 turns the warning off.
+	StoryAfter string `yaml:"story_after,omitempty" json:"story_after,omitempty"`
+}
+
+// DefaultStoryAfter is how long an issue may stay open with no open story
+// linking it when issues.story_after is not set: 7 days.
+const DefaultStoryAfter = 168 * time.Hour
+
+// StoryAfterDuration is issues.story_after as a duration: DefaultStoryAfter
+// when it is empty, and zero when the warning is off.
+func (i Issues) StoryAfterDuration() (time.Duration, error) {
+	s := strings.TrimSpace(i.StoryAfter)
+	if s == "" {
+		return DefaultStoryAfter, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("issues.story_after %q is not a duration; write one such as 168h or 24h, or 0 to turn the warning off", i.StoryAfter)
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("issues.story_after %q is negative; write a duration such as 168h or 24h, or 0 to turn the warning off", i.StoryAfter)
+	}
+	return d, nil
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

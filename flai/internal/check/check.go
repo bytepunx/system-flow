@@ -174,6 +174,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.agent", mf, keyLine(mf, "agent"), "%s; flai agent set replaces it", err)
 	}
+	if _, err := m.Issues.StoryAfterDuration(); err != nil {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.issues", mf, keyLine(mf, "issues"), "%v", err)
+	}
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
 			c.add(Warning, "layout.lock", filepath.Join(c.repo.Root, "system-flow.yaml"), keyLine(filepath.Join(c.repo.Root, "system-flow.yaml"), "template"), "template %s is recorded but there is no system-flow.lock.yaml; run flai upgrade --relock", m.Template.Version)
@@ -953,6 +957,7 @@ func (c *checker) issues() {
 			c.add(Error, "issues.filename", is.Path, 1, "file name should start with %s-", is.ID)
 		}
 	}
+	c.issuesNoStory(list)
 	summaryPath := filepath.Join(dir, issues.SummaryFile)
 	data, err := os.ReadFile(summaryPath)
 	if err != nil {
@@ -970,6 +975,29 @@ func (c *checker) issues() {
 		case is.Status != "open" && linked:
 			c.add(Warning, "issues.summary", summaryPath, 1, "closed issue %s is still in summary.md; run flai issue summary", is.ID)
 		}
+	}
+}
+
+// issuesNoStory warns about each open issue older than issues.story_after
+// that no open story links (S-0198). An invalid story_after is layout's
+// finding, and turns this rule off, as 0 does.
+func (c *checker) issuesNoStory(list []*issues.Issue) {
+	after, err := c.repo.Manifest.Issues.StoryAfterDuration()
+	if err != nil || after == 0 {
+		return
+	}
+	setting := "issues.story_after is " + strings.TrimSpace(c.repo.Manifest.Issues.StoryAfter)
+	if strings.TrimSpace(c.repo.Manifest.Issues.StoryAfter) == "" {
+		setting = "issues.story_after is unset, so " + strings.TrimSuffix(manifest.DefaultStoryAfter.String(), "0m0s")
+	}
+	for _, is := range issues.NoStory(list, c.items) {
+		first, err := time.Parse(workitem.TimeFormat, is.FirstReported)
+		if err != nil || c.now.Sub(first) <= after {
+			continue // an unreadable first_reported is issues.front-matter's finding
+		}
+		c.add(Warning, "issues.no-story", is.Path, keyLine(is.Path, "first_reported"),
+			"%s has been open since %s with no open story linking it (%s): make one with flai issue story %s",
+			is.ID, first.Format(time.DateOnly), setting, is.ID)
 	}
 }
 

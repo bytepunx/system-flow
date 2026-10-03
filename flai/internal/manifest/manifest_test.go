@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
@@ -66,6 +67,38 @@ func TestChecksRoundTrip(t *testing.T) {
 	}())
 	if err != nil || m2.Checks != nil {
 		t.Errorf("no checks: named: %v %+v", err, m2.Checks)
+	}
+}
+
+// S-0198: issues.story_after reads from the manifest; empty is seven days, 0
+// turns the warning off, and a value that is not a duration, or is negative,
+// is an error naming the key and what to write.
+func TestIssuesStoryAfter(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nissues:\n  story_after: 24h\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d, err := m.Issues.StoryAfterDuration(); err != nil || d != 24*time.Hour {
+		t.Errorf("read 24h as %v, %v", d, err)
+	}
+	for in, want := range map[string]time.Duration{"": DefaultStoryAfter, " ": DefaultStoryAfter, "0": 0, "0s": 0, "36h30m": 36*time.Hour + 30*time.Minute} {
+		if d, err := (Issues{StoryAfter: in}).StoryAfterDuration(); err != nil || d != want {
+			t.Errorf("%q: got %v, %v; want %v", in, d, err, want)
+		}
+	}
+	if DefaultStoryAfter != 7*24*time.Hour {
+		t.Errorf("the default is %v, not seven days", DefaultStoryAfter)
+	}
+	for _, bad := range []string{"7d", "a week", "-1h"} {
+		_, err := (Issues{StoryAfter: bad}).StoryAfterDuration()
+		if err == nil || !strings.Contains(err.Error(), "issues.story_after") || !strings.Contains(err.Error(), "168h") || !strings.Contains(err.Error(), bad) {
+			t.Errorf("%q: %v", bad, err)
+		}
 	}
 }
 
