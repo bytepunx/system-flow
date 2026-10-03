@@ -3,6 +3,7 @@
 // shapes mirror design/system/work-hierarchy.md and repository-layout.md; flai's Go
 // implementation is the reference.
 import type { Agent } from '$lib/agent';
+import type { CostOfDelay, Forecast } from '$lib/planning';
 import { planFrom, type FlaiPlan, type TaskPlan } from '$lib/taskplan';
 import { posix, resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -73,6 +74,9 @@ export type Item = {
 	touches?: string[]; // paths or components the work changes (ADR-0019)
 	topics?: string[]; // what a story or epic is about beyond its components (S-0135, ADR-0047)
 	agent?: Agent; // who works a story (S-0103)
+	draft?: boolean; // a story an agent wrote that the operator has not finalized (S-0199)
+	cost_of_delay?: CostOfDelay; // epics and stories (S-0199)
+	forecast?: Forecast; // stories (S-0199)
 	path: string; // repo-relative
 	archived: boolean;
 	body: string;

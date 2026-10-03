@@ -18,6 +18,7 @@
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
 	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
+	import { costOfDelayLines, forecastLines, type CostOfDelay, type Forecast } from '$lib/planning';
 	import type { Hold, StoryActivity } from '$lib/activity';
 	import type { TaskPlan as Plan } from '$lib/taskplan';
 
@@ -42,6 +43,9 @@
 		topics?: string[];
 		agent?: Agent;
 		usage?: Usage;
+		draft?: boolean;
+		cost_of_delay?: CostOfDelay;
+		forecast?: Forecast;
 		path: string;
 		archived: boolean;
 		body: string;
@@ -74,6 +78,9 @@
 			: []
 	);
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
+	// The item's planning data, read only (S-0199): each block a line, then lines under it.
+	const costOfDelay = $derived(costOfDelayLines(item?.cost_of_delay));
+	const forecast = $derived(forecastLines(item?.forecast));
 	// The form for another item of this one's type (S-0171): the dashboard makes epics and stories,
 	// and a new story starts on its own (S-0192). Tasks are the agent's to write.
 	const newQuery = $derived(
@@ -524,10 +531,20 @@
 						</div>{/each}
 				</section>
 			{/if}
-			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent}
+			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent || costOfDelay.length || forecast.length}
 				<section class="rounded border border-line bg-surface p-3 text-xs">
 					{#if item.owner}<div>owner: {item.owner}</div>{/if}
 					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
+					{#if costOfDelay.length}<div data-testid="item-cost-of-delay">
+							<div>{costOfDelay[0]}</div>
+							{#each costOfDelay.slice(1) as line, i (i)}<div class="text-muted">{line}</div>{/each}
+						</div>{/if}
+					{#if forecast.length}<div data-testid="item-forecast">
+							<div>{forecast[0]}</div>
+							{#each forecast.slice(1) as line, i (i)}<div class="text-muted">
+									{line}
+								</div>{/each}
+						</div>{/if}
 					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
 					{#if item.topics?.length}<div data-testid="item-topics">
 							topics: {item.topics.join(', ')}

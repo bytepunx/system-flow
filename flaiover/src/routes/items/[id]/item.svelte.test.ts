@@ -357,6 +357,41 @@ describe('the item page (S-0154)', () => {
 		inboxState.data = null;
 	});
 
+	// S-0199: a story's page shows its cost of delay and forecast, read only, each only when set
+	it("shows a story's cost of delay and forecast when set, and neither when not", async () => {
+		const text = (testid: string) =>
+			[...(document.querySelector(`[data-testid="${testid}"]`)?.children ?? [])].map((d) =>
+				d.textContent!.trim()
+			);
+		serve({
+			...story,
+			cost_of_delay: {
+				inputs: { revenue_per_week: 1000, time_lost_per_cycle: '4h' },
+				value: 1500,
+				by: 'alex',
+				at: '2026-10-03T09:00:00Z'
+			},
+			forecast: { delivery: '2026-10-07T17:00:00Z', by: 'planner', at: '2026-10-03T09:30:00Z' }
+		} as typeof story);
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		expect(text('item-cost-of-delay')).toEqual([
+			'cost of delay: 1,500 per week',
+			'revenue 1,000 per week · 4h lost per cycle',
+			'set by alex at 2026-10-03T09:00:00Z'
+		]);
+		expect(text('item-forecast')).toEqual([
+			'forecast: delivery 2026-10-07T17:00:00Z',
+			'set by planner at 2026-10-03T09:30:00Z'
+		]);
+		unmount(c);
+		serve(story);
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		expect(document.querySelector('[data-testid="item-cost-of-delay"]')).toBeNull();
+		expect(document.querySelector('[data-testid="item-forecast"]')).toBeNull();
+	});
+
 	// S-0176: a story's page shows its task plan, and follows it as tasks move
 	it("shows a story's task plan when flai sends one, and follows it as the tasks move", async () => {
 		const plan = {
