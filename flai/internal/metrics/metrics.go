@@ -51,6 +51,10 @@ type ItemMetrics struct {
 	Forecast      *float64 `json:"forecast_seconds,omitempty"`
 	ForecastError *float64 `json:"forecast_error_seconds,omitempty"`
 	DeliveryError *float64 `json:"delivery_error_seconds,omitempty"`
+	// CostOfDelay is its value per week, and CostIncurred what its time in
+	// backlog and ready cost at that value (S-0205).
+	CostOfDelay  *float64 `json:"cost_of_delay,omitempty"`
+	CostIncurred *float64 `json:"cost_of_delay_incurred,omitempty"`
 	// Usage is what agents spent on it, when it carries any (S-0143).
 	Usage *ItemUsage `json:"usage,omitempty"`
 }
@@ -128,6 +132,8 @@ type Report struct {
 	// Forecasts is how far forecasts and estimates were from what happened
 	// (S-0205).
 	Forecasts Forecasts `json:"forecasts"`
+	// CostOfDelay is what waiting for the items cost (S-0205).
+	CostOfDelay CostOfDelay `json:"cost_of_delay"`
 }
 
 // Compute derives every metric from the items.
@@ -206,6 +212,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
 	rep.Strategic = strategic(opt.Activities, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
+	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
@@ -283,6 +290,7 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 		m.Age = secs(now.Sub(started))
 	}
 	deriveForecast(&m, it, completed)
+	deriveCostOfDelay(&m, it)
 	m.Usage = itemUsage(it.Usage)
 	return m
 }
