@@ -80,6 +80,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.layout()
 	c.workItems()
 	c.narratives()
+	c.activities()
 	c.overlap()
 	c.componentTag()
 	c.after()
