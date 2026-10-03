@@ -436,6 +436,7 @@ func owner(p channel.Project) string {
 
 var (
 	anyItemID  = regexp.MustCompile(`^[EST]-\d{1,6}$`)
+	issueID    = regexp.MustCompile(`^I-\d{1,6}$`)
 	threadID   = regexp.MustCompile(`^(?i:TH-)?\d{1,6}$|^TH-\d{1,6}$`)
 	adrNumber  = regexp.MustCompile(`^(?:ADR-)?(\d{1,4})$`)
 	listValue  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/@+-]*$`)
@@ -446,6 +447,17 @@ var (
 func needID(id string) *channel.Error {
 	if !anyItemID.MatchString(id) {
 		return bad("%q is not an item ID", id)
+	}
+	return nil
+}
+
+// needStory checks id is a story's ID.
+func needStory(id string) *channel.Error {
+	if e := needID(id); e != nil {
+		return e
+	}
+	if !strings.HasPrefix(id, "S-") {
+		return bad("%s is not a story", id)
 	}
 	return nil
 }
@@ -830,6 +842,49 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{in.Type, "new", "--print-body"}, "", nil
 		}),
+
+		// issue.list: every issue, with the stories it names and the open
+		// story that links it, or only those a story recorded, read from its
+		// worktree while it has one (S-0198).
+		"issue.list": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Story string `json:"story"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			args := []string{"issue", "list"}
+			if in.Story != "" {
+				if e := needStory(in.Story); e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--story="+in.Story)
+			}
+			return args, "", nil
+		}),
+
+		// issue.story: a backlog story made from an open issue, as item.new
+		// makes one (S-0198). It reads the issue from the main checkout.
+		"issue.story": {exits: map[int]int{4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID   string `json:"id"`
+				Epic string `json:"epic"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if !issueID.MatchString(in.ID) {
+				return nil, "", bad("%q is not an issue ID", in.ID)
+			}
+			args := []string{"issue", "story", in.ID, "--owner=" + owner(p), "--autocommit", "--trailer=" + Trailer}
+			if in.Epic != "" {
+				if !anyItemID.MatchString(in.Epic) || !strings.HasPrefix(in.Epic, "E-") {
+					return nil, "", bad("a story's parent must be an epic")
+				}
+				args = append(args, "--epic="+in.Epic)
+			}
+			return args, "", nil
+		}},
 
 		"accept.run": {progress: true, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {

@@ -32,6 +32,8 @@ var good = map[string]struct {
 	"item.unblock":      {`{"id":"T-0001",` + rid + `}`, "unblock T-0001 --json", ""},
 	"item.new":          {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
 	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
+	"issue.list":        {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
+	"issue.story":       {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
 	"item.edit":         {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
 	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
 	"stream.log":        {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
@@ -103,6 +105,8 @@ var refused = map[string][]string{
 	},
 	"item.new":          {`{"type":"task","title":"t","body":"b",` + rid + `}`, `{"type":"story","title":"t","body":"b","parent":"S-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","parent":"E-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["a,b"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["two words"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","nature":"urgent",` + rid + `}`, `{"type":"epic","title":"","body":"b",` + rid + `}`, `{"type":"epic","title":"t","body":"  ",` + rid + `}`},
 	"item.template":     {`{"type":"task"}`},
+	"issue.list":        {`{"story":"--all"}`, `{"story":"T-0001"}`, `{"story":"S-1 --all"}`, `[]`},
+	"issue.story":       {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","epic":"S-0001",` + rid + `}`, `{"id":"I-0001","epic":"--json",` + rid + `}`, `{"id":"I-0001"}`},
 	"accept.run":        {`{"id":"S-1 --no-push",` + rid + `}`},
 	"stream.log":        {`{"id":"S-0001","entry":"  ",` + rid + `}`},
 	"stream.answer":     {`{"id":"../../etc","question":"q","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"  ","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"q","answer":"  ",` + rid + `}`},
@@ -226,6 +230,30 @@ func TestItemNewStoryWithNoEpic(t *testing.T) {
 	}
 	if !strings.HasPrefix(args, "story new --nature=feature --owner=olive --body-stdin") {
 		t.Errorf("ran %s", args)
+	}
+}
+
+// S-0198: issue.list without a story lists every issue, issue.story without
+// an epic makes a story under none, and a story flai check refuses is
+// Refused, as item.new's is.
+func TestIssueMethodsWithTheirOptionsLeftOut(t *testing.T) {
+	p := withDocs(t)
+	for name, c := range map[string]struct{ params, args string }{
+		"issue.list":  {`{}`, "issue list --json"},
+		"issue.story": {`{"id":"I-12",` + rid + `}`, "issue story I-12 --owner=olive --autocommit --trailer=" + Trailer + " --json"},
+	} {
+		rec := &recorder{ran: Ran{Stdout: []byte(`[]`)}}
+		if _, e := writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(c.params)); e != nil {
+			t.Fatalf("%s: %+v", name, e)
+		}
+		if got := strings.Join(rec.runs[0].Args, " "); got != c.args {
+			t.Errorf("%s ran %q, want %q", name, got, c.args)
+		}
+	}
+	rec := &recorder{ran: Ran{Exit: 4, Stdout: []byte(`{"refused":{"findings":[{"rule":"item.heading"}]}}`), Events: []map[string]any{{"level": "FATAL", "err": "refused: flai check has 1 finding(s)"}}}}
+	_, e := writeMethods(rec.run, time.Now, Host{})["issue.story"](context.Background(), p, json.RawMessage(good["issue.story"].params))
+	if e == nil || e.Code != Refused || e.Data.(map[string]any)["findings"] == nil {
+		t.Errorf("a refusal: %+v", e)
 	}
 }
 

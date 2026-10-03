@@ -7,6 +7,7 @@
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { criteriaOf, readNdjson, sectionOf } from '$lib/review';
+	import { acceptLabel, issueRows, type Issue, type IssueRow } from '$lib/issues';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import Threads from '$lib/components/Threads.svelte';
 	import { render, enhance } from '$lib/markdown';
@@ -86,6 +87,15 @@
 	let sendingBack = $state(false);
 	let reason = $state('');
 
+	// Issues (S-0198): the open issues no open story links, the story's own
+	// first and checked. Accepting makes a backlog story for each checked one,
+	// once the acceptance has succeeded.
+	let issues = $state<IssueRow[]>([]);
+	let issuesError = $state<string | null>(null);
+	let creating = $state(false);
+	let made = $state<{ issue: string; id: string; title: string; note?: string }[]>([]);
+	let unmade = $state<{ issue: string; error: string }[]>([]);
+
 	// Checks (S-0082): the operator's named commands, run in the story's
 	// worktree, gated on the checks host action. checksEnabled comes from
 	// project.info's host_actions, asked afresh each load; checksRun is the
@@ -108,6 +118,7 @@
 	const ticked = $derived(criteria.filter((c) => c.checked).length);
 	const inReview = $derived(item?.status === 'review');
 	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
+	const chosen = $derived(issues.filter((r) => r.checked));
 	const canAccept = $derived(
 		writable &&
 			inReview &&
@@ -142,6 +153,10 @@
 		currentStateHtml = nextStepsHtml = '';
 		progress = [];
 		warnings = [];
+		issues = [];
+		issuesError = null;
+		made = [];
+		unmade = [];
 		try {
 			item = (await get<{ item: Item }>(`/api/items/${target}`)).item;
 		} catch (e) {
@@ -160,11 +175,61 @@
 		get<Record<string, unknown>>(`/api/items/${target}/diff`)
 			.then((d) => (diff = d))
 			.catch((e) => (diffError = e instanceof Error ? e.message : String(e)));
-		if (item.status === 'review')
+		if (item.status === 'review') {
 			get<Preview>(`/api/items/${target}/acceptance`)
 				.then((p) => (preview = p))
 				.catch((e) => (previewError = e instanceof Error ? e.message : String(e)));
+			void loadIssues(target);
+		}
 		void loadChecks(target);
+	}
+
+	async function issueList(query: string): Promise<Issue[]> {
+		const data = await get<unknown>(`/api/issues${query}`);
+		return Array.isArray(data) ? (data as Issue[]) : [];
+	}
+
+	// Both lists: the main checkout's, and the story's own, which holds the
+	// issues it recorded on its branch until it is accepted.
+	async function loadIssues(target: string) {
+		try {
+			const [main, own] = await Promise.all([
+				issueList(''),
+				issueList(`?story=${encodeURIComponent(target)}`)
+			]);
+			if (target === id) issues = issueRows(target, main, own);
+		} catch (e) {
+			if (target === id) issuesError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	// One at a time, from the main checkout: each makes a commit of its own.
+	async function createStories(rows: IssueRow[]) {
+		creating = true;
+		for (const row of rows) {
+			try {
+				const r = await api(`/api/issues/${row.id}/story`, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: '{}'
+				});
+				const data = await r.json().catch(() => ({}));
+				if (!r.ok) unmade = [...unmade, { issue: row.id, error: data.error ?? r.statusText }];
+				else
+					made = [
+						...made,
+						{
+							issue: row.id,
+							id: String(data.id),
+							title: String(data.title),
+							note: data.commit_error ? `not committed: ${data.commit_error}` : undefined
+						}
+					];
+			} catch (e) {
+				unmade = [...unmade, { issue: row.id, error: e instanceof Error ? e.message : String(e) }];
+			}
+		}
+		creating = false;
 	}
 	$effect(() => {
 		void load(id);
@@ -299,6 +364,7 @@
 
 	async function accept() {
 		if (!canAccept) return;
+		const toMake = chosen;
 		running = true;
 		failure = null;
 		progress = [];
@@ -331,6 +397,8 @@
 				if (fresh) item = fresh.item;
 			}
 		}
+		// the stories only once the story is accepted: a failed acceptance makes none
+		if (result && !failure && toMake.length) await createStories(toMake);
 	}
 
 	async function sendBack() {
@@ -374,7 +442,29 @@
 				It stays local until it is published: Publish on the board, or
 				<code class="rounded bg-surface px-1 text-ink">flai release --pending</code> on the host.
 			</p>
+			{#if creating}<p>Making stories for the checked issues…</p>{/if}
+			{#each made as m (m.issue)}
+				<p data-testid="issue-story-made">
+					Made <a class="underline" href={resolve('/items/[id]', { id: m.id })}>{m.id}</a>
+					{m.title} from {m.issue}, in backlog.{#if m.note}
+						{m.note}{/if}
+				</p>
+			{/each}
 		</div>
+		{#if unmade.length}
+			<div
+				class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger"
+				role="alert"
+				data-testid="issue-story-failed"
+			>
+				<p class="font-medium">No story was made for these issues. flai said:</p>
+				<ul class="mt-1 ml-4 list-disc">
+					{#each unmade as u (u.issue)}<li>
+							<span class="font-medium">{u.issue}</span>: {u.error}
+						</li>{/each}
+				</ul>
+			</div>
+		{/if}
 	{:else if !inReview}
 		<p class="mb-4 rounded border border-line bg-surface p-3 text-sm" role="status">
 			{item.id} is {item.status}, not in review, so there is nothing to accept or send back. What
@@ -447,6 +537,46 @@
 		{/if}
 	</section>
 
+	{#if (inReview || result) && (issues.length || issuesError)}
+		<section
+			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="issues-section"
+		>
+			<h2 class="mb-2 font-medium">
+				Issues
+				<span class="text-xs font-normal text-muted"
+					>a backlog story is made for each one checked</span
+				>
+			</h2>
+			{#if issuesError}
+				<p class="text-muted">{issuesError}</p>
+			{:else}
+				<ul class="space-y-1">
+					{#each issues as row (row.id)}
+						<li>
+							<label class="flex items-baseline gap-2">
+								<input
+									type="checkbox"
+									bind:checked={row.checked}
+									disabled={running || !!result || !writable}
+								/>
+								<span>
+									<a class="underline" href={resolve('/docs/[...path]', { path: row.doc })}
+										>{row.id}</a
+									>
+									{row.title}
+									<span class="text-xs text-muted"
+										>{row.class}{row.recorded ? ', recorded by this story' : ''}</span
+									>
+								</span>
+							</label>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/if}
+
 	{#if inReview || result}
 		<section class="mt-4 rounded border border-line bg-surface p-3 text-sm">
 			<h2 class="mb-2 font-medium">What accepting does</h2>
@@ -511,6 +641,13 @@
 								{v(s.from)} → {v(s.to)}{/each}
 						</li>
 					{/if}
+					{#if chosen.length}
+						<li data-testid="accept-makes-stories">
+							Then, once it is accepted, make a backlog story for each checked issue: {chosen
+								.map((r) => r.id)
+								.join(', ')}.
+						</li>
+					{/if}
 					<li data-testid="accept-stays-local">
 						Nothing is pushed: the accepted work stays local until it is published, from Publish on
 						the board or with <code>flai release --pending</code> on the host.
@@ -542,7 +679,7 @@
 						type="button"
 						class="rounded bg-primary px-3 py-1 text-on-primary disabled:opacity-50"
 						disabled={!canAccept}
-						onclick={accept}>{running ? 'Accepting…' : 'Accept'}</button
+						onclick={accept}>{acceptLabel(chosen.length, running)}</button
 					>
 					<button
 						type="button"

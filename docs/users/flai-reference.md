@@ -1261,13 +1261,13 @@ Make a backlog story that remediates an open issue.
 flai issue story <id> [flags]
 ```
 
-Make a backlog story from an open issue, as flai story new --body-stdin makes one. It takes the issue's title. Its nature is remediation for a defect or a blocker, improvement otherwise. Its goal links the issue and carries the issue's recommended solution; that link is what ties the issue to the story, and the issue's file is not changed. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces (exit 4). A closed issue, or one an open story already links, is refused and nothing changes. --story reads the issue from that story's worktree, where the issues it recorded are until it is accepted; the new story is made in wip/ as always.
+Make a backlog story from an open issue, as flai story new --body-stdin makes one. It takes the issue's title. Its nature is remediation for a defect or a blocker, improvement otherwise. Its goal links the issue and carries the issue's recommended solution; that link is what ties the issue to the story, and the issue's file is not changed. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces (exit 4). A closed issue, or one an open story already links, is refused and nothing changes. --story reads the issue from that story's worktree, where the issues it recorded are until it is accepted; the new story is made in wip/ as always. --autocommit commits the new story and its epic on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
 Examples:
 
 ```bash
 flai issue story I-0007
-flai issue story I-0007 --epic E-0002
+flai issue story I-0007 --epic E-0002 --autocommit
 flai issue story I-0012 --story S-0198
 ```
 
@@ -1275,8 +1275,11 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--autocommit` | commit the new story and its epic on their own, unless dashboard.autocommit is false |
 | `--epic` string | parent epic ID (optional: a story need not belong to one) |
+| `--owner` string | owner (default: config author) |
 | `--story` string | read the issue from this story's worktree when it has one |
+| `--trailer` stringArray | trailer line for the commit (repeatable) |
 
 #### flai issue summary
 

@@ -257,8 +257,22 @@ type issueListed struct {
 	Story   string   `json:"story"`
 }
 
+// issueStoryMade is the story flai issue story --json says it made.
+type issueStoryMade struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Nature      string `json:"nature"`
+	Path        string `json:"path"`
+	Issue       string `json:"issue"`
+	Committed   bool   `json:"committed"`
+	Commit      string `json:"commit,omitempty"`
+	CommitError string `json:"commit_error,omitempty"`
+}
+
 func newIssueStoryCmd(a *app) *cobra.Command {
-	var epic, story string
+	var epic, story, owner string
+	var trailers []string
+	var autocommit bool
 	c := &cobra.Command{
 		Use:   "story <id>",
 		Short: "Make a backlog story that remediates an open issue",
@@ -271,9 +285,10 @@ and refuses it, leaving nothing, if it reports anything the story introduces
 (exit 4). A closed issue, or one an open story already links, is refused and
 nothing changes. --story reads the issue from that story's worktree, where the
 issues it recorded are until it is accepted; the new story is made in wip/ as
-always.`,
+always. --autocommit commits the new story and its epic on their own, unless
+the project sets dashboard.autocommit: false. Nothing is pushed.`,
 		Example: `  flai issue story I-0007
-  flai issue story I-0007 --epic E-0002
+  flai issue story I-0007 --epic E-0002 --autocommit
   flai issue story I-0012 --story S-0198`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -298,8 +313,8 @@ always.`,
 			draft := issues.ForStory(is)
 			res, err := itemnew.Create(repo, a.runner, itemnew.Options{New: workitem.NewOptions{
 				Type: workitem.Story, Title: draft.Title, Nature: draft.Nature, Parent: epic,
-				Owner: a.author(), Body: draft.Body, Now: a.now(),
-			}})
+				Owner: orDefault(owner, a.author()), Body: draft.Body, Now: a.now(),
+			}, Autocommit: autocommit, Trailers: trailers})
 			if refusal, ok := a.refusedADR(err); ok {
 				return refusal
 			}
@@ -307,13 +322,23 @@ always.`,
 				return fmt.Errorf("making a story for %s: %w", is.ID, err)
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]string{"id": res.Item.ID, "title": res.Item.Title, "nature": res.Item.Nature, "path": res.Path, "issue": is.ID})
+				return a.printJSON(issueStoryMade{ID: res.Item.ID, Title: res.Item.Title, Nature: res.Item.Nature, Path: res.Path, Issue: is.ID,
+					Committed: res.Committed, Commit: res.Commit, CommitError: res.CommitError})
 			}
 			fmt.Fprintf(a.out, "%s %s\n  %s\n", res.Item.ID, res.Item.Title, res.Path)
+			switch {
+			case res.Committed:
+				fmt.Fprintf(a.out, "  committed %s\n", res.Commit)
+			case res.CommitError != "":
+				fmt.Fprintf(a.out, "  NOT committed (%s)\n", firstLine(res.CommitError))
+			}
 			return nil
 		},
 	}
 	c.Flags().StringVar(&epic, "epic", "", "parent epic ID (optional: a story need not belong to one)")
 	c.Flags().StringVar(&story, "story", "", "read the issue from this story's worktree when it has one")
+	c.Flags().StringVar(&owner, "owner", "", "owner (default: config author)")
+	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the new story and its epic on their own, unless dashboard.autocommit is false")
+	c.Flags().StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	return c
 }

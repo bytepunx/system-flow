@@ -120,7 +120,10 @@ export const REQUIRED_METHODS = [
 	// S-0170: the story's agent stopped, with what it started, gated by the agent host action
 	'agent.stop',
 	// S-0142: what a story's agent said and did, read from its log; read-only like agent.status
-	'agent.stream'
+	'agent.stream',
+	// S-0198: the open issues, and a story made from one, offered at acceptance
+	'issue.list',
+	'issue.story'
 ];
 
 export type AgentStatus = {

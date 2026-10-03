@@ -124,14 +124,14 @@ func TestIssueStory(t *testing.T) {
 		t.Fatalf("issue story I-0001: %d %q %s", code, out, errOut)
 	}
 	out, errOut, code = runIn(t, root, "issue", "story", "I-0002", "--epic", "E-0001", "--json")
-	var made map[string]string
+	var made map[string]any
 	if code != 0 || json.Unmarshal([]byte(out), &made) != nil {
 		t.Fatalf("issue story I-0002 --json: %d %s %s", code, out, errOut)
 	}
-	want := map[string]string{"id": "S-0002", "title": "Lint on the host is v1", "nature": "improvement", "path": "wip/kanban/stories/S-0002-lint-on-the-host-is-v1.md", "issue": "I-0002"}
+	want := map[string]any{"id": "S-0002", "title": "Lint on the host is v1", "nature": "improvement", "path": "wip/kanban/stories/S-0002-lint-on-the-host-is-v1.md", "issue": "I-0002", "committed": false}
 	for k, v := range want {
 		if made[k] != v {
-			t.Errorf("issue story --json %s = %q, want %q", k, made[k], v)
+			t.Errorf("issue story --json %s = %v, want %v", k, made[k], v)
 		}
 	}
 	for file, nature := range map[string]string{"S-0001-fixture-was-ignored.md": "remediation", "S-0002-lint-on-the-host-is-v1.md": "improvement"} {
@@ -166,6 +166,42 @@ func TestIssueStory(t *testing.T) {
 	after, _ := os.ReadFile(filepath.Join(root, "design", "issues", "I-0003-go-not-on-path.md"))
 	if code == 0 || !strings.Contains(errOut, "I-0003 is closed") || storyFiles() != 2 || string(before) != string(after) {
 		t.Errorf("a closed issue should be refused with nothing changed: %d %s", code, errOut)
+	}
+}
+
+// The dashboard makes a story from an issue as it makes any item: as the
+// manifest's owner, committed on its own with its trailer.
+func TestIssueStoryAutocommit(t *testing.T) {
+	root := bodyProject(t)
+	t.Setenv("FLAI_STORY", "")
+	if _, errOut, code := runIn(t, root, "issue", "new", "Fixture was ignored", "--class", "defect"); code != 0 {
+		t.Fatalf("issue new: %s", errOut)
+	}
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "the issue")
+	out, errOut, code := runIn(t, root, "issue", "story", "I-0001", "--epic", "E-0001", "--owner", "olive", "--autocommit", "--trailer", "Created-with: flaiover", "--json")
+	var made struct {
+		ID, Path, Commit string
+		Committed        bool
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &made) != nil {
+		t.Fatalf("issue story --autocommit: %d %s %s", code, out, errOut)
+	}
+	if made.ID != "S-0001" || !made.Committed || made.Commit == "" {
+		t.Errorf("the story should be made and committed: %+v", made)
+	}
+	if data, _ := os.ReadFile(filepath.Join(root, made.Path)); !strings.Contains(string(data), "\nowner: olive\n") {
+		t.Errorf("the story should be owned by --owner:\n%s", data)
+	}
+	show := gitIn(t, root, "show", "--stat", "--format=%s|%b", "HEAD")
+	if !strings.HasPrefix(show, "chore: [S-0001] create story: Fixture was ignored|Created-with: flaiover") {
+		t.Errorf("commit: %s", show)
+	}
+	if !strings.Contains(show, "S-0001-fixture-was-ignored.md") || !strings.Contains(show, "E-0001-workbench.md") || !strings.Contains(show, "2 files changed") {
+		t.Errorf("the commit should hold the story and its epic only: %s", show)
+	}
+	if st := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); st != "" {
+		t.Errorf("nothing should be left uncommitted: %q", st)
 	}
 }
 

@@ -72,9 +72,19 @@ function backend(over: {
 	checksTail?: () => unknown;
 	narrative?: string;
 	agent?: () => unknown;
+	issues?: unknown[];
+	ownIssues?: unknown[];
+	issueStory?: (id: string) => unknown;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+		const made = /^\/api\/issues\/([^/]+)\/story$/.exec(url);
+		if (made && init?.method === 'POST')
+			return over.issueStory
+				? over.issueStory(made[1])
+				: json({ id: 'S-0099', title: 'x', issue: made[1], committed: true });
+		if (url.startsWith('/api/issues?story=')) return json(over.ownIssues ?? []);
+		if (url === '/api/issues') return json(over.issues ?? []);
 		if (url.includes('/checks/tail'))
 			return over.checksTail
 				? over.checksTail()
@@ -316,6 +326,104 @@ describe('Review', () => {
 		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
 		await settle();
 		expect(document.body.textContent).toContain('has no branch story/S-0041');
+	});
+
+	describe('issues (S-0198)', () => {
+		const issue = (id: string, over: Record<string, unknown> = {}) => ({
+			id,
+			title: `Title of ${id}`,
+			class: 'defect',
+			status: 'open',
+			count: 1,
+			path: `/repo/design/issues/${id}-slug.md`,
+			stories: [],
+			story: '',
+			...over
+		});
+		const MAIN = [issue('I-0003'), issue('I-0004', { story: 'S-0050' })];
+		const OWN = [issue('I-0012', { stories: ['S-0041'] })];
+		const boxes = () =>
+			[...document.querySelectorAll<HTMLInputElement>('[data-testid="issues-section"] input')].map(
+				(b) => [b.closest('li')!.querySelector('a')!.textContent, b.checked]
+			);
+		const posted = () =>
+			api.mock.calls
+				.filter((c) => /\/api\/issues\/.*\/story$/.test(String(c[0])))
+				.map((c) => String(c[0]));
+
+		it('offers the story’s own issues checked, then the other open ones, and names the button for it', async () => {
+			backend({ issues: MAIN, ownIssues: OWN });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(boxes()).toEqual([
+				['I-0012', true],
+				['I-0003', false]
+			]);
+			const link = document.querySelector('[data-testid="issues-section"] a')!;
+			expect(link.getAttribute('href')).toBe('/docs/design/issues/I-0012-slug.md');
+			expect(button('Accept').textContent?.trim()).toBe('Accept and Create Stories');
+			expect(document.querySelector('[data-testid="accept-makes-stories"]')?.textContent).toContain(
+				'I-0012'
+			);
+			document.querySelector<HTMLInputElement>('[data-testid="issues-section"] input')!.click();
+			flushSync();
+			expect(button('Accept').textContent?.trim()).toBe('Accept');
+		});
+
+		it('shows no issues section when there is none to offer', async () => {
+			backend({ issues: [issue('I-0001', { status: 'closed' })] });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(document.querySelector('[data-testid="issues-section"]')).toBeNull();
+			expect(button('Accept').textContent?.trim()).toBe('Accept');
+		});
+
+		it('accepts first, then makes a story for each checked issue, naming each that failed and why', async () => {
+			backend({
+				issues: MAIN,
+				ownIssues: OWN,
+				issueStory: (id) =>
+					id === 'I-0012'
+						? json({ id: 'S-0060', title: 'Title of I-0012', issue: id, committed: true })
+						: json({ error: 'I-0003 is already linked by open story S-0061' }, 400)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const second = document.querySelectorAll<HTMLInputElement>(
+				'[data-testid="issues-section"] input'
+			)[1];
+			second.click();
+			flushSync();
+			button('Accept').click();
+			await settle();
+			const order = api.mock.calls.map((c) => String(c[0]));
+			expect(order.indexOf('/api/items/S-0041/accept')).toBeLessThan(
+				order.indexOf('/api/issues/I-0012/story')
+			);
+			expect(posted()).toEqual(['/api/issues/I-0012/story', '/api/issues/I-0003/story']);
+			expect(JSON.parse(String(calls('/api/issues/I-0012/story')[0][1].body))).toEqual({});
+			expect(document.querySelector('[data-testid="issue-story-made"]')?.textContent).toContain(
+				'S-0060'
+			);
+			const failed = document.querySelector('[data-testid="issue-story-failed"]')!.textContent!;
+			expect(failed).toContain('I-0003');
+			expect(failed).toContain('already linked by open story S-0061');
+			expect(failed).not.toContain('I-0012');
+		});
+
+		it('makes no story when the acceptance fails', async () => {
+			backend({
+				issues: MAIN,
+				ownIssues: OWN,
+				accept: () => ndjson([{ event: 'error', status: 500, error: 'rebase stopped' }])
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Accept').click();
+			await settle();
+			expect(calls('/accept')).toHaveLength(1);
+			expect(posted()).toEqual([]);
+		});
 	});
 
 	describe('checks (S-0082)', () => {
