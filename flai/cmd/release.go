@@ -96,7 +96,12 @@ newer <name>/vX.Y.Z than this clone, or commits on the branch this clone
 lacks, nothing is planned, applied, committed, or tagged, and publishing is
 refused (exit 3), naming what to run: git fetch --tags for the tags; for the
 branch, git fetch, then git merge <remote>/<branch> or git rebase onto it,
-then flai release --pending again. When the remote cannot be reached,
+then flai release --pending again. When the branch moves after that check
+and the push is refused, the release tags the push did not send are deleted
+here, since they no longer tag what will be published, and the exit is 3:
+git fetch, rebase onto the remote branch or merge it (merge when some tags
+already went), verify, and flai release --pending again tags again
+(S-0242). When the remote cannot be reached,
 --dry-run warns and shows the plan, and publishing is refused. A clone with
 no remote publishes locally. An accepted item no plan can
 cover, such as one touching two components with no tag saying which it
@@ -297,13 +302,24 @@ func (a *app) publishPending(dryRun bool) error {
 		fmt.Fprintf(a.out, "published locally: %s (no upstream to push to)\n", summarizePlans(plans))
 		return nil
 	}
-	for _, batch := range u.Pushes() {
-		if _, err := a.runner.Run(repo.Root, "git", append([]string{"push", "-q", u.Remote}, batch...)...); err != nil {
+	pushes := u.Pushes()
+	for i, batch := range pushes {
+		// --atomic: a batch whose branch the remote refuses takes its tags
+		// with it, where a plain push would leave them on the remote tagging
+		// commits it never got (S-0242).
+		if _, err := a.runner.Run(repo.Root, "git", append([]string{"push", "-q", "--atomic", u.Remote}, batch...)...); err != nil {
 			result["push_error"] = firstLine(err.Error())
+			// Only a push carrying commits can be refused because the
+			// remote's branch moved; tags alone tag what it already has.
+			if u.Commits > 0 {
+				if now := release.CheckRemoteAfresh(a.runner, repo.Root, repo.Manifest); now != nil && now.Branch != nil {
+					return a.remoteMovedUnderPush(repo, u.Remote, now.Branch, pushes[:i], pushes[i:], result)
+				}
+			}
 			if a.jsonOut {
 				return a.printJSON(result)
 			}
-			return fmt.Errorf("published and committed locally, but the push failed and nothing was forced: %s. Fetch and merge if the remote moved, then run flai release --pending again; what already tagged is not redone", firstLine(err.Error()))
+			return fmt.Errorf("published and committed locally, but the push failed and nothing was forced: %s. Put that right, then run flai release --pending again; what already tagged is not redone", firstLine(err.Error()))
 		}
 	}
 	result["pushed"] = true
@@ -330,6 +346,53 @@ func (a *app) publishPending(dryRun bool) error {
 	}
 	fmt.Fprintln(a.out)
 	return nil
+}
+
+// remoteMovedUnderPush is a publish whose push the remote refused because
+// its branch moved between the check before tagging and the push (S-0242,
+// ADR-0067, TH-0070). The release tags of the batch refused and of every
+// batch after it never reached the remote and tag commits that a rebase or
+// merge will replace as what is published, so they are deleted here; the
+// next flai release --pending tags again. Tags of the batches before it did
+// reach the remote and are kept, which is why the advice is then to merge.
+// Exit 3, as for the remote-moved refusal.
+func (a *app) remoteMovedUnderPush(repo *workitem.Repo, remote string, moved *release.BranchLag, sent, unsent [][]string, result map[string]any) error {
+	kept, deleted := []string{}, []string{}
+	for _, batch := range sent {
+		kept = append(kept, batch...)
+	}
+	for _, batch := range unsent {
+		for _, tag := range batch {
+			if !release.IsReleaseTag(repo.Manifest, tag) {
+				continue
+			}
+			if _, err := a.runner.Run(repo.Root, "git", "tag", "-d", tag); err != nil {
+				return fmt.Errorf("the push was refused because %s moved (at %s), and deleting the release tag %s here failed: %s. Delete it with git tag -d %s, then fetch, rebase onto %s or merge it, verify, and run flai release --pending again", moved.Upstream, short(moved.Head), tag, firstLine(err.Error()), tag, moved.Upstream)
+			}
+			deleted = append(deleted, tag)
+		}
+	}
+	result["remote_moved"] = true
+	result["deleted_tags"] = deleted
+	result["kept_tags"] = kept
+	if a.jsonOut {
+		if err := a.printJSON(result); err != nil {
+			return err
+		}
+		return &exitError{code: exitPushDiverged}
+	}
+	var msg strings.Builder
+	fmt.Fprintf(&msg, "conflict: the push was refused because %s moved (now at %s)", moved.Upstream, short(moved.Head))
+	if len(deleted) > 0 {
+		fmt.Fprintf(&msg, "; deleted the release tags %s here, because they no longer tag what will be published", strings.Join(deleted, ", "))
+	}
+	if len(kept) > 0 {
+		fmt.Fprintf(&msg, ". Tags %s already reached %s and are kept, here and on %s. Run git fetch %s, then merge %s rather than rebase onto it, so the commits they tag stay in history", strings.Join(kept, ", "), remote, remote, remote, moved.Upstream)
+	} else {
+		fmt.Fprintf(&msg, ". Run git fetch %s, then rebase onto %s or merge it", remote, moved.Upstream)
+	}
+	msg.WriteString("; resolve any conflicts, verify, and run flai release --pending again, which tags again")
+	return &exitError{code: exitPushDiverged, msg: msg.String()}
 }
 
 func summarizePlans(plans []*release.PendingPlan) string {

@@ -123,6 +123,36 @@ func CheckRemote(r execx.Runner, root string, m manifest.Manifest) *RemoteTags {
 	return t
 }
 
+// CheckRemoteAfresh is CheckRemote asking the remote again, whatever answer
+// is kept for root: after a push the remote refused, the answer kept from the
+// check before tagging is the one that let the publish through (S-0242).
+func CheckRemoteAfresh(r execx.Runner, root string, m manifest.Manifest) *RemoteTags {
+	remoteKept.Lock()
+	for key := range remoteKept.answers {
+		if strings.HasPrefix(key, root+"\x00") {
+			delete(remoteKept.answers, key)
+		}
+	}
+	remoteKept.Unlock()
+	return CheckRemote(r, root, m)
+}
+
+// IsReleaseTag reports whether tag is one flai release makes, <name>/vX.Y.Z
+// for a code component in m, rather than a tag of the user's own.
+func IsReleaseTag(m manifest.Manifest, tag string) bool {
+	for _, p := range m.Projects {
+		if p.Kind == "template" {
+			continue
+		}
+		if v, ok := strings.CutPrefix(tag, p.Name+"/v"); ok {
+			if _, ok := ParseVersion(v); ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // tagsBehind are the code components whose highest release tag among
 // theirs is newer than the highest here.
 func tagsBehind(r execx.Runner, root string, m manifest.Manifest, theirs []string) ([]Lag, error) {

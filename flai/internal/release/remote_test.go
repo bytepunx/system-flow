@@ -251,3 +251,39 @@ func TestCheckRemoteWithoutTheBranch(t *testing.T) {
 		t.Errorf("a branch the remote lacks: %+v, want nil", got)
 	}
 }
+
+// S-0242: asking afresh does not take the kept answer, which after a push
+// the remote refused is the one from before the remote moved; and the next
+// CheckRemote keeps the fresh one.
+func TestCheckRemoteAfreshBypassesTheKeptAnswer(t *testing.T) {
+	root, remote, git := withRemote(t)
+	asked := 0
+	c := countingRemote{Runner: execx.System{}, mu: &sync.Mutex{}, asked: &asked}
+	if got := CheckRemote(c, root, m); got != nil {
+		t.Fatalf("in step: %+v", got)
+	}
+	head := pushFromElsewhere(t, remote, git)
+	if got := CheckRemote(c, root, m); got != nil || asked != 1 {
+		t.Fatalf("within the TTL the kept answer stands: %+v, asked %d", got, asked)
+	}
+	got := CheckRemoteAfresh(c, root, m)
+	if asked != 2 || got == nil || got.Branch == nil || got.Branch.Head != head {
+		t.Fatalf("asked afresh: %+v, asked %d", got, asked)
+	}
+	if again := CheckRemote(c, root, m); asked != 2 || again == nil || again.Branch == nil {
+		t.Errorf("the fresh answer is kept: %+v, asked %d", again, asked)
+	}
+}
+
+// S-0242: a release tag is <name>/vX.Y.Z for a code component; a template's,
+// an unknown component's, or one of the user's own is not.
+func TestIsReleaseTag(t *testing.T) {
+	for tag, want := range map[string]bool{
+		"cli/v1.2.3": true, "web/v0.1.0": true,
+		"tpl/v1.0.0": false, "other/v1.0.0": false, "cli/1.2.3": false, "cli/v1.2": false, "cli/v1.2.3-rc1": false, "v1.2.3": false, "mine": false,
+	} {
+		if got := IsReleaseTag(m, tag); got != want {
+			t.Errorf("IsReleaseTag(%q) = %v, want %v", tag, got, want)
+		}
+	}
+}
