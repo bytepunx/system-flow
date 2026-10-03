@@ -343,6 +343,8 @@ flai move S-0005 ready --yes                           # or finalize it as it mo
 
 `flai move S-0005 ready` without `--yes` is refused with "finalize it first". Agents cannot finalize: over MCP, `item_move` refuses a draft to ready and `item_edit` refuses `draft: false`, so an agent tells you in a thread or its narrative that a story is ready to be finalized. `flai check` warns (`story.draft`) on a draft that reached ready some other way.
 
+Finalizing records who did it and when, in the story's `finalized` block, so the story still says it was a draft once the flag is gone ([ADR-0077](../../design/adrs/0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md)). `flai edit --no-draft` records you (`--by`, else `FLAI_AGENT`, else your config author); a finalizing move records the move's `--by` and time. `flai show` prints `finalized by alex at 2026-10-03T10:00:00Z`. `flai edit --draft` makes the story a draft again and removes the block. The dashboard's **Finalize** button, on a draft story's page and in its edit form, does the same as `flai edit --no-draft` ([The item page](flaiover.md#the-item-page)).
+
 The cost of delay says what each week of waiting for a story or an epic costs. Its inputs are yours to give, each optional: the revenue it brings each week once done, the penalty each week it is not done, and the work lost each cycle it is not done. Its value, the cost of delay per week, is the planner's, and you can set it too:
 
 ```bash
