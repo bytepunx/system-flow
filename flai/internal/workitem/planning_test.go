@@ -232,3 +232,53 @@ func TestADraftStoryIsFinalizedToGoToReady(t *testing.T) {
 		t.Errorf("finalize a story that is no draft: %v, draft %v", err, back.Draft)
 	}
 }
+
+// olderItem is the front matter a flai before S-0199 knew: Item without the
+// planning fields.
+type olderItem struct {
+	ID          string       `yaml:"id"`
+	Type        string       `yaml:"type"`
+	Nature      string       `yaml:"nature"`
+	Title       string       `yaml:"title"`
+	Status      string       `yaml:"status"`
+	Parent      string       `yaml:"parent"`
+	Owner       string       `yaml:"owner"`
+	Created     string       `yaml:"created"`
+	Updated     string       `yaml:"updated"`
+	Transitions []Transition `yaml:"transitions"`
+	Blocked     []Block      `yaml:"blocked"`
+	Estimate    string       `yaml:"estimate"`
+	Stream      string       `yaml:"stream"`
+	Tags        []string     `yaml:"tags"`
+	Touches     []string     `yaml:"touches"`
+	Topics      []string     `yaml:"topics"`
+	After       []string     `yaml:"after"`
+	Agent       any          `yaml:"agent"`
+	Usage       any          `yaml:"usage"`
+}
+
+// S-0199: a flai older than the planning fields reads an item carrying them
+// past them, as S-0181 reads any field it does not know, and writes them
+// back as they were; this flai knows them and keeps none as unknown.
+func TestAnOlderFlaiReadsPastThePlanningFields(t *testing.T) {
+	planning := "draft: true\ncost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    time_lost_per_cycle: 4h\n  value: 1500\n  by: alex\n  at: 2026-10-01T09:00:00Z\nforecast:\n  duration: 6h\n  delivery: 2026-10-09T17:00:00Z\n  basis: \"three tasks: like S-0185's\"\n  by: planner\n  at: 2026-10-02T09:00:00Z\n"
+	fm := strings.TrimPrefix(plannedHead, "---\n") + planning
+
+	older := UnknownFields(fm, olderItem{})
+	if got := strings.Join(FieldNames(older), ","); got != "draft,cost_of_delay,forecast" {
+		t.Fatalf("an older flai keeps %q as unknown, want draft,cost_of_delay,forecast", got)
+	}
+	var b strings.Builder
+	WriteFields(&b, older)
+	if b.String() != planning {
+		t.Errorf("an older flai writes the fields back changed:\n%s\nwant:\n%s", b.String(), planning)
+	}
+
+	it, err := ParseItem(plannedHead + planning + "---\n# S-0001 S\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(it.Unknown) != 0 || !it.Draft || it.CostOfDelay == nil || it.Forecast == nil {
+		t.Errorf("this flai should know every planning field: unknown %v, item %+v", FieldNames(it.Unknown), it)
+	}
+}
