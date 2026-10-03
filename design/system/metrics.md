@@ -1,8 +1,8 @@
 ---
 title: Flow metrics
-updated: 2026-09-30
+updated: 2026-10-03
 status: active
-topics: [cli, dashboard]
+topics: [cli, dashboard, analysis]
 ---
 
 # Flow metrics

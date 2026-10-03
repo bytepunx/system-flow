@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-02
+updated: 2026-10-03
 status: active
 topics: [cli, conventions]
 ---
@@ -253,7 +253,19 @@ A sub-agent's flai calls arrive on its parent's MCP connection under its parent'
 2. The story's `## Goal` and `## Acceptance criteria`.
 3. Briefs, never bodies: what the story, its epic, and its tasks name, then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
 
-The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. In the baseline the explorer reads `delegation` and the conventions without roles: `communication`, `documentation`, `safety`, `tooling`, and `telemetry`. The verifier reads those, `code-quality`, and `logging`. The story's agent reads every baseline convention, since each lists `story` or carries no roles ([conventions.md](conventions.md#roles)).
+The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. In the baseline the explorer reads `delegation`, `telemetry`, and the conventions without roles: `communication`, `documentation`, `safety`, and `tooling`. The verifier reads those, `code-quality`, and `logging`. The story's agent reads every baseline convention but `strategic-agents`, since each other lists `story` or carries no roles ([conventions.md](conventions.md#roles)).
+
+### Strategic packs
+
+The planner, the orchestrator, and the analyzer (E-0016) work above a story, so neither the story's pack nor a sub-agent's fits them. [ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md) (S-0207) primes each by role: `flai prime --role plan --epic E-nnnn` or `--story S-nnnn`, `flai prime --role orchestrate`, and `flai prime --role analyze`, or `role` with `epic` or `story` on the MCP `prime` tool. The pack is shaped like the story's agent's, in the same budget, because these agents are top level and have no one holding the detail for them:
+
+1. Topics: the role's, `planning`, `orchestration`, or `analysis`, and for the planner its item's.
+2. The conventions whose `roles` are empty or list the role, with the sections those topics leave out taken out. No README.
+3. The open issues.
+4. For the planner, what its item names, whole: a story with its epic and tasks, or an epic alone. An epic's pack does not load what its stories name: on E-0016 that came to 131 KB, past what a tool result carries. The planner reads the stories as items instead. Then the sections ranked highest against the item.
+5. Briefs of the design, tech, and ADRs the topics select and the ADRs one step reaches, and a catalog of the rest.
+
+In the baseline the planner reads `strategic-agents`, `work-management`, and the conventions without roles; the orchestrator the same and `decisions`; the analyzer `strategic-agents`, `continuous-improvement`, `code-quality`, `telemetry`, and the conventions without roles. `metrics.md` carries the topic `analysis`; `work-hierarchy.md` and `workflow.md` are `[all]` and so are briefed in every pack.
 
 ### Measured
 
