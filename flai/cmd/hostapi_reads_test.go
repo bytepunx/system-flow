@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -125,11 +126,19 @@ func TestTheReadsAnswerWhatTheCommandsPrint(t *testing.T) {
 	if _, err := repo.AppendActivity(workitem.ActivityPlanner, workitem.ActivityEntry{At: time.Now(), Summary: "Planned E-0001.", Items: []string{"E-0001"}, Seconds: 60, Cost: 0.1}); err != nil {
 		t.Fatal(err)
 	}
+	// a thread on S-0002, which stats reads for the time its agent waited
+	// (S-0205)
+	if _, err := threads.New(repo, threads.NewOptions{Title: "Which way", On: "S-0002", Author: "agent", Text: "Left?", Now: time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)}); err != nil {
+		t.Fatal(err)
+	}
 	all := func() (publish string) {
 		t.Helper()
 		says("item.show", answered("item.show", `{"id":"S-0002"}`, "edit", "S-0002", "--show"), `"hash"`)
 		says("item.move.preview", answered("item.move.preview", `{"id":"E-0002"}`, "move", "E-0002", "cancelled", "--by=designer", "--reason=preview", "--dry-run"), `"dry_run":true`)
-		says("stats.get", answered("stats.get", `{}`, "stats"), `"strategic":[{"kind":"planner","cost":0.1,"seconds":60,"activities":1`)
+		// and the threads, the board's limit, and the stories' commits
+		// (S-0205): S-0002's on its branch changed cli/another.go
+		says("stats.get", answered("stats.get", `{}`, "stats"), `"strategic":[{"kind":"planner","cost":0.1,"seconds":60,"activities":1`,
+			`"waiting":{"weeks":[`, `"claims":{"limit":2,"days":[`, `"drift":[`, `{"id":"S-0002","committed":["cli/another.go"]`, `"wait_threads_seconds":`)
 		answered("stats.get", `{"since":"12w","type":"task","by":"parent"}`, "stats", "--since=12w", "--type=task", "--by=parent")
 		says("stats.get by the hour", answered("stats.get", `{"since":"7d","bucket":"hour"}`, "stats", "--since=7d", "--bucket=hour"), `"bucket":"hour"`, `"spend":{"epic":`)
 		return answered("publish.preview", `{}`, "release", "--pending", "--dry-run")

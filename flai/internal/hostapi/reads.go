@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/statsread"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -172,7 +172,7 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 			if in.Bucket != "" && in.Bucket != metrics.BucketHour && in.Bucket != metrics.BucketDay && in.Bucket != metrics.BucketWeek {
 				return nil, bad("bucket must be hour, day, or week")
 			}
-			return answer(ctx, p, "stats.compute", func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+			return answer(ctx, p, "stats.compute", func(r execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, error) {
 				since := in.Since
 				if since == "" {
 					since = metrics.DefaultWindow
@@ -184,15 +184,12 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 				if err := metrics.CheckBucket(in.Bucket, window); err != nil {
 					return nil, err
 				}
-				items, err := repo.List(true)
+				items, opt, err := statsread.Read(r, repo, log)
 				if err != nil {
 					return nil, err
 				}
-				activities, err := repo.Activities()
-				if err != nil {
-					return nil, fmt.Errorf("cannot read the strategic agents' activity documents: %w; flai writes them, so restore the file from git or run flai check to see what is wrong", err)
-				}
-				return metrics.Compute(items, metrics.Options{Now: now(), Since: window, Type: in.Type, By: in.By, Bucket: in.Bucket, Activities: activities}), nil
+				opt.Now, opt.Since, opt.Type, opt.By, opt.Bucket = now(), window, in.Type, in.By, in.Bucket
+				return metrics.Compute(items, opt), nil
 			})
 		},
 

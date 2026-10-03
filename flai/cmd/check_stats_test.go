@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -194,5 +196,105 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 	}
 	if _, errOut, code := a("stats"); code == 0 || !strings.Contains(errOut, "orchestrator.md") || !strings.Contains(errOut, "activity documents") {
 		t.Errorf("an unreadable document: %d %s", code, errOut)
+	}
+}
+
+// S-0205: flai stats carries forecasts, cost of delay, waiting, claims, and
+// the strategic agents' use by the day, and prints them. Outside git it
+// leaves the touches drift out, warns on stderr, and still succeeds.
+func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("LOG_FORMAT", "json")
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story := func(title string, value float64, created string, moves ...string) *workitem.Item {
+		t.Helper()
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "t", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Created = created
+		it.Transitions = []workitem.Transition{{To: workitem.Backlog, At: created, By: "t"}}
+		for i := 0; i < len(moves); i += 2 {
+			it.Transitions = append(it.Transitions, workitem.Transition{To: moves[i], At: moves[i+1], By: "t"})
+		}
+		it.Status = it.Transitions[len(it.Transitions)-1].To
+		it.CostOfDelay = &workitem.CostOfDelay{Value: &value, By: "designer", At: created}
+		return it
+	}
+	// done after 48 hours in progress, forecast at 24, delivery forecast 10
+	// hours early, estimated at 50 hours; one in ready, valued at 50
+	done := story("Done", 100, "2026-09-28T09:00:00Z", workitem.Ready, "2026-09-28T10:00:00Z", workitem.InProgress, "2026-09-29T10:00:00Z",
+		workitem.Review, "2026-10-01T06:00:00Z", workitem.Done, "2026-10-01T10:00:00Z")
+	done.Forecast = &workitem.Forecast{Duration: "24h", Delivery: "2026-10-01T00:00:00Z"}
+	done.Estimate = "50h"
+	waiting := story("Waiting", 50, "2026-09-30T09:00:00Z", workitem.Ready, "2026-09-30T12:00:00Z")
+	for _, it := range []*workitem.Item{done, waiting} {
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// its agent asked at noon on its first day and was answered two hours on
+	th, err := threads.New(repo, threads.NewOptions{Title: "Which way", On: "S-0001", Author: "agent", Text: "Left?", Now: time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.Reply(repo, th.ID, "designer", "Left.", time.Date(2026, 9, 29, 14, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.AppendActivity(workitem.ActivityPlanner, workitem.ActivityEntry{At: time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC), Summary: "Planned.", Seconds: 90, Cost: 0.25}); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+
+	out, errOut, code := runInAt(t, root, at, "stats", "--json")
+	if code != 0 {
+		t.Fatalf("stats --json: %s", errOut)
+	}
+	var rep map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(out), &rep); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days"} {
+		if len(rep[key]) == 0 || string(rep[key]) == "null" {
+			t.Errorf("--json lacks %s", key)
+		}
+	}
+	var claims map[string]json.RawMessage
+	if err := json.Unmarshal(rep["claims"], &claims); err != nil || claims["drift"] != nil || string(claims["limit"]) != "2" {
+		t.Errorf("claims outside git: %v %s", err, rep["claims"])
+	}
+	warned := false
+	for _, line := range strings.Split(errOut, "\n") {
+		var ev map[string]any
+		if json.Unmarshal([]byte(line), &ev) == nil && ev["level"] == "WARN" && ev["component"] == "stats" && ev["err"] != nil && ev["detail"] != nil {
+			warned = true
+		}
+	}
+	if !warned {
+		t.Errorf("no warning that the commits could not be read:\n%s", errOut)
+	}
+
+	out, _, code = runInAt(t, root, at, "stats")
+	for _, want := range []string{
+		"\nforecast and estimate error (absolute):\n  forecast     p50 1d · p85 1d (n=1)\n  delivery     p50 10h · p85 10h (n=1)\n  estimate     p50 2h · p85 2h (n=1)\n",
+		"\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 50.00 · in-progress 0.00 · review 0.00\n  incurred in the window 39.57\n",
+		"\nwaiting, over 1 completed:\n  on threads   total 2h · mean 2h\n  in review    total 4h · mean 4h\n",
+		"\nclaims:\n  held in ready  total 0m · mean 0m, over 1 completed\n  in progress now 0 of a limit of 2\n",
+		"\nstrategic agents in the window:\n  $0.25 · 1m, beside 1 completed\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if code != 0 || strings.Contains(out, "touches drift") {
+		t.Errorf("text outside git: %d\n%s", code, out)
+	}
+	// the dashboard's read answers the same and warns the same
+	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {
+		t.Errorf("stats.get outside git: %+v", rerr)
 	}
 }
