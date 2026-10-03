@@ -5,7 +5,7 @@ audience: agent
 order: 100
 status: active
 topics: [all]
-roles: [story]
+roles: [story, analyze]
 ---
 
 # Continuous improvement

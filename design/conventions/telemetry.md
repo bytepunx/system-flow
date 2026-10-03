@@ -1,10 +1,11 @@
 ---
 title: Telemetry
-updated: 2026-09-16
+updated: 2026-10-03
 audience: agent
 order: 120
 status: active
 topics: [all]
+roles: [story, explore, verify, analyze]
 ---
 
 # Telemetry
