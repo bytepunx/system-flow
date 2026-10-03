@@ -110,7 +110,76 @@ What the planner, the orchestrator, and the analyzer spent, from their activity 
 | `log[].estimated` | `true` when the cost was apportioned or priced rather than reported; absent otherwise | |
 | `log[].items` | The IDs of the items the activity touched; `[]` for none | |
 
-The cost and use per day, and their comparison with delivery, come with S-0205.
+Their cost and use per day, beside delivery, are in [Strategic use per day](#strategic-use-per-day-s-0205).
+
+## Planning, waiting, and claims (S-0205)
+
+What the planner's figures, the operator's cost of delay, waiting, and claims come to, for the charts of E-0016 ([ADR-0081](../adrs/0081-flai-stats-reports-forecast-error-cost-of-delay-waiting-holds-touches-drift-and.md)). Each value is of the report's type, as the other aggregates are: a story's here, an epic's with `--type epic`. Per-item values are under `items[]`, absent when an input is. The aggregates cover the items of the type completed in the window, cancelled ones left out, unless a row says otherwise. A series by the day runs from the day that holds the window's start to the day that holds now, one point per day; one by the week, from the ISO week that holds the window's start to the one that holds now.
+
+### Forecasts and estimates
+
+The planner's `forecast` and the human's `estimate` against what happened ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)). A positive error is later or longer than forecast.
+
+| Per item | Definition |
+|----------|------------|
+| `forecast_seconds` | `forecast.duration` |
+| `forecast_error_seconds` | Cycle time minus `forecast.duration` |
+| `delivery_error_seconds` | `completed` minus `forecast.delivery` |
+| `estimate_error_seconds` | Cycle time minus `estimate`. `estimate_error` stays beside it, the same over the estimate |
+
+`forecasts` has `forecast`, `delivery`, and `estimate`, each over the items with that error: `count`, `p50_seconds`, and `p85_seconds` of the absolute error, and the same per nature under `by_nature` and per story agent model (`agent.model`, `(none)` without one) under `by_model`. A set with no items has `count` 0 and no percentiles.
+
+### Cost of delay
+
+The `cost_of_delay.value` of an item is what a week of waiting for it costs, in the project's currency ([ADR-0080](../adrs/0080-a-cost-of-delay-stamps-its-inputs-and-its-value-apart.md)). An item waits while it is in `backlog` or `ready`. Its value today is used for all of its history: flai keeps no older values.
+
+| Value | Definition |
+|-------|------------|
+| `items[].cost_of_delay` | Its `value`; absent without one |
+| `items[].cost_of_delay_incurred` | Its value times the seconds it spent in `backlog` or `ready`, up to now, over 604800 (a week) |
+| `cost_of_delay.days[].outstanding` | Per column, `backlog`, `ready`, `in-progress`, and `review`, the sum of the values of the items in it at the end of the day (23:59:59 UTC), every column present |
+| `cost_of_delay.days[].incurred` | Over every item, its value times the seconds of the day it spent in `backlog` or `ready`, over 604800. Today ends at now |
+| `cost_of_delay.weeks[]` | `week`, `start`, and `incurred`, the same over the week's seconds. The window's first week is whole |
+
+Each day point has `date`; each amount is rounded to two decimals once summed. Items without a value add nothing.
+
+### Waiting
+
+The time a story's agent waited for someone else: on its threads while it was in progress, and in review.
+
+| Value | Definition |
+|-------|------------|
+| A thread's wait | From its first entry to the first later entry by another author. A thread nobody else answered waits until `updated` once resolved, and until now while open |
+| `items[].wait_threads_seconds` | The seconds of the union of the waits of the threads anchored to the item or one of its tasks that fall in its `in-progress` intervals. Absent with no such thread |
+| `items[].wait_review_seconds` | The seconds it spent in `review`, the open interval up to now. Absent if it was never in review |
+
+`waiting.weeks[]` has `week`, `start`, `items` (those completed in the week), and `threads` and `review`, each with `total_seconds`, their sum over those items, and `mean_seconds`, the sum over `items`.
+
+### Claims and touches
+
+What claims cost in holds and parallelism, and how far a story's declared touches were from what it changed ([ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)).
+
+| Value | Definition |
+|-------|------------|
+| `items[].held_seconds` | The seconds a story in `ready` was held by the hold rules (`overlap`, `no-touches`, `after`), replayed at every transition of any item from the states of the time and today's touches and `after`: flai records neither a hold nor older touches. Absent for an item that is not a story or was never in ready |
+| `claims.limit` | The board's `in-progress` limit today; absent when it has none |
+| `claims.days[]` | `date`, and `in_progress`, the items in `in-progress` at the end of the day |
+| `claims.drift[]` | One entry per story of the report that a commit names, by ID: `id`, `committed` (the files its commits changed), `outside` (those under none of its touches), and `unchanged` (its touches no committed file is under), each a sorted list of paths, with `outside_count` and `unchanged_count` |
+
+A story's commits are those on the main branch and the `story/` branches whose subject names it in brackets, `[S-nnnn]`, merges left out; their files under the `wip` folder are left out, since flai writes them. Its touches are its own and those of its tasks not cancelled, a project's name or tag read as its path, as a claim reads them. A file is under a touch that is the file or a folder that holds it. When git cannot be read, `claims.drift` is absent and `flai stats` says so on stderr.
+
+### Strategic use per day
+
+`strategic_days[]` lays the strategic agents' activity beside delivery, for the Strategic Cost and Strategic Use charts. One point per day, each with:
+
+| Field | Definition | Precision |
+|-------|------------|-----------|
+| `date` | The day | `YYYY-MM-DD` |
+| `agents` | Per kind with an entry that ended that day: `cost`, `seconds`, and `estimated` when any entry was | Four decimals; whole seconds |
+| `cost`, `seconds` | The sums over the kinds | Four decimals; whole seconds |
+| `completed` | The items of the report's type completed that day | |
+| `cost_per_item` | The usage cost of those carrying usage, over their number | Four decimals; absent when none carries usage |
+| `cycle_time_seconds` | The mean cycle time of those with one | Absent when none has one |
 
 ## Charts
 
