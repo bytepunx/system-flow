@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-02
+updated: 2026-10-03
 audience: agent
 order: 130
 status: active
@@ -31,7 +31,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - run only the tests for what you changed
   - leave the whole suite tests, linting, and `flai check` to the verifier
 - Before moving a story to `review`:
-  - commit what is outstanding and have one fresh verifier run the whole suite, the lint, and `flai check` in the worktree through the project's close-out script where it has one
+  - commit what is outstanding, run `flai stream sync` again and resolve what it reports, as `git.md` says, and have one fresh verifier run the whole suite, the lint, and `flai check` in the worktree through the project's close-out script where it has one
   - and check the diff against the story's acceptance criteria and these conventions
   - if an issue is found, fix it, commit, and run a fresh verifier to confirm the fixes
   - a verifier's passing run is the story's run before review; do not repeat it.

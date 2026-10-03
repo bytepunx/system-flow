@@ -15,11 +15,12 @@ How history is made in this repository.
 ## Rules
 
 - Each story is worked on its branch, `story/S-nnnn`, in the worktree `flai stream open` creates under `.flai-cache/worktrees/`. Story commits land there; `wip/` is written in the main checkout and committed by `flai accept`.
-- Use `flai stream sync` for the branch's git operations, never `git rebase` or `git merge` by hand: it rebases the story's branch onto `main`.
+- Use `flai stream sync` for the branch's git operations, never start a `git rebase` or `git merge` by hand: it rebases the story's branch onto `main`, and refuses a worktree with uncommitted changes. When it stops on conflicts, finishing that rebase is part of the sync: resolve each path it lists in the worktree, `git add` it, and run `git rebase --continue`, or `git rebase --abort` to put the branch back as it was.
 - Commit each task when it is done:
-  - run `flai stream sync` first, resolve any conflicts it reports in the worktree, and run the tests for what the task changed
-  - then commit the task's changes with its documentation and work item updates
-- Before moving a story to `review`, run `flai stream sync` again, resolve any conflicts, and commit what is outstanding.
+  - commit the task's changes with its documentation and work item updates on `story/S-nnnn`
+  - then run `flai stream sync` and resolve any conflicts it reports
+  - then run the tests for what the task changed, and commit any fix they need
+- Before moving a story to `review`, commit what is outstanding, run `flai stream sync` again, resolve any conflicts, and close out with `scripts/close-out.sh`, which runs the tests.
 - Use conventional commit style. Commit messages name the story: subject line `<type>: [S-nnnn] what changed`, or the epic for cross-story work. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`. Body says what and why, not how; a reader should not need the diff to understand purpose.
 - Commit messages end with a `Co-Authored-By:` trailer naming the model that authored the change, such as `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, when an agent authored it.
 - Avoid incomplete commits by including the documentation and work item updates with the associated code changes.
