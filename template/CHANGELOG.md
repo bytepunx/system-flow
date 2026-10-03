@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.37 - 2026-10-03
+
+- S-0199 Work items carry planning data: draft, cost of delay inputs and value, and a forecast with who set it (patch): `work-management.md`'s definition of ready says a draft story is finalized before it is ready (ADR-0074).
+
 ## 1.0.36 - 2026-10-03
 
 - S-0243 Review column exceeds its WIP limit while acceptance is batched (patch).

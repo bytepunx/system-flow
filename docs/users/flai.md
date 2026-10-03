@@ -314,9 +314,45 @@ flai move S-0002 cancelled --reason "superseded by S-0005"
 flai move E-0003 cancelled --reason "a different route" --dry-run   # what would go with it
 flai move S-0003 backlog        # back from ready, or reopened from cancelled
 flai move S-0004 ready          # back from in-progress; it goes last in the ready order
+flai move S-0005 ready --yes    # a draft: finalizes it as it moves
 ```
 
 An item moves back one column from ready, in-progress, review, or cancelled, and never out of done ([ADR-0055](../../design/adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)). A reopened item is refused while its parent is cancelled; move the parent back first. What its cancellation cancelled under it stays cancelled. Until it closes again it has no completed time, lead time, or cycle time in `flai stats`.
+
+### Drafts, cost of delay, and forecasts
+
+Stories and epics carry planning data, each part saying who set it and when ([ADR-0074](../../design/adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)).
+
+A draft is a story an agent wrote, such as one the planner drafted or one made from an issue, that you have not read yet. It cannot go to ready until you finalize it:
+
+```bash
+flai story new "Export to CSV" --epic E-0001 --draft   # make a story as a draft
+flai edit S-0005 --draft                               # mark a backlog story as a draft
+flai edit S-0005 --no-draft                            # finalize it where it is
+flai move S-0005 ready --yes                           # or finalize it as it moves to ready
+```
+
+`flai move S-0005 ready` without `--yes` is refused with "finalize it first". Agents cannot finalize: over MCP, `item_move` refuses a draft to ready and `item_edit` refuses `draft: false`, so an agent tells you in a thread or its narrative that a story is ready to be finalized. `flai check` warns (`story.draft`) on a draft that reached ready some other way.
+
+The cost of delay says what each week of waiting for a story or an epic costs. Its inputs are yours to give, each optional: the revenue it brings each week once done, the penalty each week it is not done, and the work lost each cycle it is not done. Its value, the cost of delay per week, is the planner's, and you can set it too:
+
+```bash
+flai edit E-0001 --revenue-per-week 1200 --penalty-per-week 300 --time-lost-per-cycle 6h
+flai edit E-0001 --penalty-per-week ""                 # an empty value removes one input
+flai edit S-0005 --cost-of-delay-value 400
+flai edit S-0005 --clear-cost-of-delay                 # remove it all
+```
+
+A forecast says how long a story is expected to take in agent time, when it is expected done, and what that rests on. It sits beside `estimate`, which stays yours:
+
+```bash
+flai edit S-0005 --forecast-duration 6h --forecast-delivery 2026-10-09T17:00:00Z --forecast-basis "three tasks like S-0185's"
+flai edit S-0005 --clear-forecast
+```
+
+Amounts are plain numbers in the project's currency. Durations are Go durations such as `6h` or `90m`, and the delivery is a UTC timestamp. Each edit changes only what you give, and the cost of delay or forecast it changes records you (`--by`, else `FLAI_AGENT`, else your config author) and the time. `flai show` prints all three. The project manifest sets the currency, what an hour of work costs, and the cycle time lost is counted over: `planning.currency` (default `USD`), `planning.hour_rate` (unset), and `planning.cycle` (default `168h`), listed in the [settings index](../operators/settings.md#project-manifest).
+
+A flai older than the one that brought these fields reads past them with a warning and does not act on them, so it would let a draft go to ready. Publishing that release raises `flai.minimum`, so upgrade the flai on your host (`flai self-upgrade`) first.
 
 ### Tokens and cost
 
@@ -578,9 +614,10 @@ flai edit S-0085 --after S-0084                 # hold it until S-0084 is done; 
 flai edit T-0679 --after T-0677                 # a task's plan: the tasks of its story it waits for
 flai edit S-0085 --topics logging               # what it is about; --clear-topics removes them
 flai edit S-0085 --harness claude-code --model claude-sonnet-5 --agent-config effort=high
+flai edit S-0085 --no-draft --revenue-per-week 800   # finalize a draft and give a cost of delay input
 ```
 
-`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's or epic's `topics`, a story's or a task's `after`, a story's agent, and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
+`flai edit` changes what an item says about itself: title, nature, tags, touches, parent, a story's or epic's `topics`, a story's or a task's `after`, a story's agent, a story's draft flag and forecast, a story's or epic's cost of delay (see [Drafts, cost of delay, and forecasts](#drafts-cost-of-delay-and-forecasts)), and the body below its heading, any of them together. What is the item's state stays with its own commands: the status with `flai move`, blocking with `flai block`. A closed or archived item is refused.
 
 A title lives in several places, and a retitle keeps them in step: the front matter, the heading, the file's name, the line in the parent's list, the story's narrative, and links to the old file name under design, docs, and wip (from a story's worktree only under wip, because design and docs there are another branch's). With `--hash`, the one `--show` printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. `flai check` runs with the change in place: what the change introduces refuses it, every file is put back, and the findings are printed (exit 4). What is simply not allowed, a nature there is not, an epic as a task's parent, is said as a `rule:`. `--autocommit` commits every file the edit touched in one commit; nothing is pushed.
 
@@ -610,8 +647,8 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `inbox` | (Since S-0181 `flai_outdated`, on every call while it is true: the flai serving the agent is older than the newest flai release in the project's history, with `running`, `newest`, and the `upgrade` command.) (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what. Since S-0132 it reports `overlapped`: a story was accepted, `cause`, that changed paths this story claims, `to`.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull`, false while the in-progress limit is full or review is at or over its limit, and `pull_hold` saying which, and `held` with why on a story an open story's claim holds, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once. `unpublished`: the IDs of accepted items no release has covered yet, as information; publishing them is the operator's, or an agent's the operator asks (S-0195, ADR-0067) |
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why, a story with tasks with their counts in `tasks`; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
-| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours |
-| `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it is checked, as `flai task new --after` is), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. Neither commits: the agent commits with its work |
+| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
+| `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it is checked, as `flai task new --after` is), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. `draft` makes a story a draft, and `draft: false` is refused. `cost_of_delay` and `forecast` set the keys given; `clear_cost_of_delay` and `clear_forecast` remove them, and to remove one amount the agent clears the cost of delay and gives the keys to keep. Neither commits: the agent commits with its work |
 | `issue_story` | Make a backlog story from an open issue, as `flai issue story` does: `id` is the issue, `epic` puts the story under an epic, and `story` reads the issue from that story's worktree. Returns the story's `id`, `title`, `nature`, `path`, and the `issue`. A closed issue, or one an open story already links, is refused, naming that story. Nothing is committed ([Record recurring friction](#record-recurring-friction)) |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |

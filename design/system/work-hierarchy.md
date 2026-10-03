@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-10-02
+updated: 2026-10-03
 status: active
 topics: [all]
 ---
@@ -66,6 +66,16 @@ Epics, stories, and tasks may carry `usage`, what agents spent on them: the toke
 - A task's usage is its story's session totals in the share of their input and cache tokens that are its own: the calls of the sub-agents started for it, and an even share, among the tasks in progress at the time, of every other call made while it was in progress ([ADR-0071](../adrs/0071-a-task-s-usage-is-the-calls-of-the-sub-agents-started-for-it-and-an-even-share.md), S-0230). So it is `estimated`; so is any cost the harness did not report, priced at the rate the logs report for the model.
 
 Only agents flai serve starts with the `claude-code` harness are measured: their stream-json logs are the only record flai reads. As with `after`, a flai older than S-0143 refuses an item that carries `usage`: upgrade the flai on the host before any item is measured.
+
+Stories and epics carry planning data that the planner, the orchestrator, and the analyzer of E-0016 read and write, each block saying who set it ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md), S-0199). Every field is set through flai: `flai edit`, MCP's `item_edit`, and the dashboard's `item.edit`, which runs `flai edit`. Each edit changes only the keys it names, and an empty value removes a key. A block that changes is stamped with the editor (`--by`, else `FLAI_AGENT`, else the config author) and the time; an edit that changes no value stamps nothing.
+
+A story may carry `draft: true`, which marks a story an agent wrote, by the planner or from an issue, that the operator has not yet read. It is set with `flai story new --draft`, MCP's `item_new` `draft`, and `flai edit --draft` on a story in the backlog. A draft cannot go to ready: it is finalized first, by `flai edit --no-draft`, or as it moves by `flai move <story> ready --yes` and the dashboard's `item.move` `finalize`. No agent may finalize until the orchestrator's permission to finalize exists (S-0218): MCP's `item_move` refuses a draft to ready, and `item_edit` refuses `draft: false`. `flai check` warns (`story.draft`) on a draft story in ready or later. Only a story is a draft, and the key is written only when it is true.
+
+Epics and stories may carry `cost_of_delay`, what each week of waiting for the item costs. Its `inputs` are the operator's, each optional: `revenue_per_week` and `penalty_per_week`, amounts, and `time_lost_per_cycle`, a Go duration counted over `planning.cycle`. Its `value` is the cost of delay per week that the planner derives. A story with no inputs of its own may carry only a `value`, its share of its epic's. Amounts are plain numbers of zero or more in `planning.currency` ([project-manifest.md](project-manifest.md)). It is set with `flai edit --revenue-per-week`, `--penalty-per-week`, `--time-lost-per-cycle`, and `--cost-of-delay-value`, and removed with `--clear-cost-of-delay`. A cost of delay with neither inputs nor a value is refused.
+
+A story may carry `forecast`, the planner's figure for how long it will take and when it will land: `duration` (agent wall clock, a Go duration), `delivery` (a UTC timestamp), and `basis` (what it rests on, in one sentence). `estimate` stays the human's figure; the metrics compare each with the actual (S-0205). It is set with `flai edit --forecast-duration`, `--forecast-delivery`, and `--forecast-basis`, and removed with `--clear-forecast`. A forecast with neither a duration nor a delivery is refused.
+
+`Validate`, and through it `flai check` (`item.front-matter`), refuses a planning field on a type that does not carry it, a negative or non-finite amount, a duration that is not a Go duration longer than zero, a timestamp that is not UTC, and a block without `by` and `at`. `flai show` and MCP's `item_get` give all three. The fields are written after `usage`, where an older flai writes back the keys it does not know, so either writes the same bytes. A flai older than the release that carries S-0199 reads past them with a warning and does not act on them: it lets a draft go to ready. Publishing that release raises `flai.minimum` to it, because the field list changed (see [Fields an older flai does not know](#fields-an-older-flai-does-not-know)), so the host must run it before any item carries them.
 
 ## States
 
@@ -146,6 +156,21 @@ usage:                           # optional, written by flai (S-0143): what agen
       cache_read: 19723140
       cache_write: 327605
       cost: 8.1258               # US dollars
+draft: true                      # stories only, optional (S-0199): written by an agent, not yet finalized
+cost_of_delay:                   # stories and epics, optional (S-0199): what each week of waiting costs
+  inputs:                        # optional, the operator's; each key optional
+    revenue_per_week: 1200       # in planning.currency
+    penalty_per_week: 300        # in planning.currency
+    time_lost_per_cycle: 6h      # Go duration, per planning.cycle
+  value: 1650                    # optional, the planner's: cost of delay per week, in planning.currency
+  by: alex                       # who last changed the block
+  at: 2026-10-03T09:00:00Z
+forecast:                        # stories only, optional (S-0199): the planner's figure, beside the human's estimate
+  duration: 6h                   # Go duration, agent wall clock
+  delivery: 2026-10-09T17:00:00Z # UTC timestamp
+  basis: three tasks like S-0185's # one sentence
+  by: planner
+  at: 2026-10-03T09:05:00Z
 ---
 ```
 
@@ -157,9 +182,9 @@ Rules:
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the last transition while the item is `done` or `cancelled`. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.
 - A cancelled epic has no open story and a cancelled story has no open task: cancelling a parent cancels what is open under it, including an item in `review`, which can be cancelled in no other way ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)). `flai check` reports a tree where this does not hold.
-- Who changes what after an item is made (S-0085). `title`, `nature`, `tags`, `touches`, `parent`, a story's or epic's `topics`, a story's or a task's `after`, a story's `agent`, and the body below the heading are the item's own words and change with `flai edit`, or from a story's or an epic's page in the dashboard, which runs it. A title also lives in the heading, the file's name, the parent's list, and a story's narrative; `flai edit` keeps them in step, a hand edit does not. `id`, `type`, `status`, `transitions`, `blocked`, `owner`, `created`, `updated`, and `usage` are the item's state and change only through the commands that own them (`flai move`, `flai block`, `flai accept`, and for `usage` `flai serve`). No key is added to the front matter to record an edit: a key an older flai does not know is one it cannot act on.
+- Who changes what after an item is made (S-0085). `title`, `nature`, `tags`, `touches`, `parent`, a story's or epic's `topics`, a story's or a task's `after`, a story's `agent`, a story's `draft` and `forecast`, a story's or epic's `cost_of_delay` (S-0199), and the body below the heading are the item's own words and change with `flai edit`, or from a story's or an epic's page in the dashboard, which runs it. A title also lives in the heading, the file's name, the parent's list, and a story's narrative; `flai edit` keeps them in step, a hand edit does not. `id`, `type`, `status`, `transitions`, `blocked`, `owner`, `created`, `updated`, and `usage` are the item's state and change only through the commands that own them (`flai move`, `flai block`, `flai accept`, and for `usage` `flai serve`). No key is added to the front matter to record an edit: a key an older flai does not know is one it cannot act on.
 - A story's `agent` names the harness, the model, and the harness's options that work it (S-0103, [ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)). A story made while the project has a default agent (`agent` in `system-flow.yaml`) gets a copy, with what `flai story new --harness --model --agent-config` or the dashboard gives laid over it. A story made with neither has no `agent` key, so a project that does not use agents stays readable by an older flai. Only a story carries one. `flai edit --harness/--model/--agent-config/--clear-agent`, MCP's `item_edit`, and the story's page change it. Its `roles` (S-0189) map a sub-agent role, `explore` or `verify`, to a harness, model, and config of that role's own; a story gets the default's, merged role by role, and `--role-harness`, `--role-model`, `--role-config role.key=value`, and `--unset-role` set them. `flai serve` starts `claude-code` with each role's model over the project's sub-agent definition ([agent-context.md](agent-context.md#sub-agents)). The dashboard shows roles and keeps them on a save; flai sets them.
-- A story cannot be `ready` without an acceptance criteria section with at least one checkbox. It can be `ready` and `in-progress` with no tasks, and cannot be `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)).
+- A story cannot be `ready` without an acceptance criteria section with at least one checkbox, nor while it is a `draft` unless the move finalizes it (S-0199). It can be `ready` and `in-progress` with no tasks, and cannot be `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)).
 
 ### Fields an older flai does not know
 

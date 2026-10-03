@@ -35,6 +35,9 @@ Work is pulled, not pushed. An agent starting a session:
 
 - `## Goal` and `## Acceptance criteria` are filled.
 - Parent epic is not `cancelled`.
+- The story is not a `draft` (S-0199).
+
+A draft is a story an agent wrote, by the planner or from an issue, that the operator has not yet read ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)). `flai move` refuses a draft to ready with "finalize it first". The operator finalizes it: `flai move <story> ready --yes` finalizes it as it moves, `flai edit <story> --no-draft` finalizes it in place, and the dashboard's `item.move` with `finalize` runs the move with `--yes`. No agent finalizes until the orchestrator's permission to finalize exists (S-0218): MCP's `item_move` refuses a draft to ready, and `item_edit` refuses `draft: false`; the agent says in a thread or its narrative that the story is ready to be finalized. `flai check` warns (`story.draft`) on a draft in ready or later.
 
 Tasks are not part of ready. The agent that pulls the story writes them once it is `in-progress`, and a story cannot enter `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)). `flai move` and `flai check` enforce both halves: nothing about tasks is checked on the way into `ready` or `in-progress`, and `story.tasks` is raised for `review` and `done` stories.
 
@@ -50,7 +53,7 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 
 | Transition | Made by | Required action |
 |------------|---------|-----------------|
-| backlog to ready | Human or agent during refinement | Definition of ready met |
+| backlog to ready | Human or agent during refinement; a draft story, the operator only | Definition of ready met; a draft is finalized first or by the move (`--yes`) |
 | ready to in-progress | Agent pulling work | Narrative opened; tasks written next if the story has none |
 | in-progress to review | Agent | At least one task exists, no open question in the narrative, nothing uncommitted in the story's worktree (S-0140: `flai move` and `item_move` refuse it, naming the paths), acceptance criteria self-checked, narrative summary current |
 | review to done | Human, or agent if the story is tagged `auto-accept` | Definition of done met. For a story this transition is acceptance, however it is made: `flai accept`, `flai move <story> done`, a card dropped on done, or the item page button all run the same flow (S-0046). `flai accept` does the acceptance: rebase and merge the story branch, move to done, archive, commit. Its preview lists anything uncommitted in the story's worktree (`worktree_uncommitted`) and blocks on it before anything is merged; `flai serve agent commit <story>`, or **Have an agent commit them** in the dashboard's confirmation, starts the story's agent to commit it (S-0140). Nothing is tagged or pushed at acceptance (S-0087, ADR-0032): publishing what has accumulated is `flai release --pending`, a deliberate step of its own, run by hand or from the board's Publish action, see `design/conventions/git.md`. Publishing is the one way accepted work reaches the remote: `git fetch`, then `flai release --pending` or Publish, which tags and pushes the branch and the tags, never forcing, and refuses a clone behind its remote's tags or branch. The operator publishes, or an agent the operator asks; no agent pushes accepted work on its own ([ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)) |
