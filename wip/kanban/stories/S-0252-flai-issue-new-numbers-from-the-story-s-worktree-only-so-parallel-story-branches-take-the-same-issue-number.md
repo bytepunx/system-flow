@@ -3,11 +3,14 @@ id: S-0252
 type: story
 nature: remediation
 title: flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-03T18:33:16Z
-updated: 2026-10-03T18:33:16Z
-transitions: []
+updated: 2026-10-04T21:42:51Z
+transitions:
+  - to: ready
+    at: 2026-10-04T21:42:51Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

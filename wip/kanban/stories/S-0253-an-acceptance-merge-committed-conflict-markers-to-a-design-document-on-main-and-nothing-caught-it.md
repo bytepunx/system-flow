@@ -3,11 +3,14 @@ id: S-0253
 type: story
 nature: remediation
 title: An acceptance merge committed conflict markers to a design document on main, and nothing caught it
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-03T20:06:56Z
-updated: 2026-10-03T20:06:56Z
-transitions: []
+updated: 2026-10-04T21:42:57Z
+transitions:
+  - to: ready
+    at: 2026-10-04T21:42:57Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

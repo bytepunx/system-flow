@@ -3,11 +3,14 @@ id: S-0257
 type: story
 nature: remediation
 title: A story agent started by flai serve cannot edit .claude/settings.json, so a story that changes the guard hook's matcher cannot ship it
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-04T03:59:16Z
-updated: 2026-10-04T03:59:16Z
-transitions: []
+updated: 2026-10-04T21:43:07Z
+transitions:
+  - to: ready
+    at: 2026-10-04T21:43:07Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

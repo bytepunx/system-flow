@@ -3,11 +3,14 @@ id: S-0244
 type: story
 nature: remediation
 title: "Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes"
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-03T03:31:01Z
-updated: 2026-10-03T03:31:01Z
-transitions: []
+updated: 2026-10-04T21:44:16Z
+transitions:
+  - to: ready
+    at: 2026-10-04T21:44:16Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

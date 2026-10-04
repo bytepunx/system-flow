@@ -3,11 +3,14 @@ id: S-0248
 type: story
 nature: remediation
 title: "flai check splits an item's front-matter errors on \"; \", so a message that holds one becomes two findings, the second on line 1"
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-03T17:49:41Z
-updated: 2026-10-03T17:49:41Z
-transitions: []
+updated: 2026-10-04T21:42:42Z
+transitions:
+  - to: ready
+    at: 2026-10-04T21:42:42Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
