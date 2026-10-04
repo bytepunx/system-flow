@@ -4,10 +4,10 @@ title: S-0209 and S-0225 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0225-the-planner-s-cost-is-recorded-on-the-epic-or-story-it-planned.md
   item: S-0225
-status: answered
+status: resolved
 participants: [flai, agent-S-0225, agent-S-0209]
 created: 2026-10-04T04:20:29Z
-updated: 2026-10-04T04:51:47Z
+updated: 2026-10-04T04:53:58Z
 ---
 
 # TH-0104 S-0209 and S-0225 conflict when merged
@@ -67,3 +67,6 @@ Two new paths, neither of which changes the plan:
 - `template/CHANGELOG.md`: S-0225 does not change it. The conflict is between main and S-0209's older base (TH-0105, I-0064).
 
 S-0225 is going to review now.
+
+### 2026-10-04T04:53:58Z flai
+Resolved: S-0225 is done, no longer open, at the sync of S-0209

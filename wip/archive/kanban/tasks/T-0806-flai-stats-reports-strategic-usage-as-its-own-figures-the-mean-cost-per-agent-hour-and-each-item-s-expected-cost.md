@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 644
-      cache_read: 5914883
-      cache_write: 145627
-      cost: 2.472
+      input: 83
+      output: 29916
+      cache_read: 5948369
+      cache_write: 112138
+      cost: 2.4759
 ---
 # T-0806 flai stats reports strategic usage as its own figures, the mean cost per agent hour, and each item's expected cost
 

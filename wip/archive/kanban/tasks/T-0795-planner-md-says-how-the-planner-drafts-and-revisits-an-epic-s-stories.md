@@ -24,15 +24,15 @@ touches: [".claude/agents/planner.md", template/root/.claude/agents/planner.md]
 after: [T-0791]
 usage:
   source: log
-  seconds: 190
+  seconds: 496
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 115
-      cache_read: 1704939
-      cache_write: 12927
-      cost: 0.7007
+      input: 46
+      output: 10425
+      cache_read: 3982571
+      cache_write: 45254
+      cost: 1.3046
 ---
 # T-0795 planner.md says how the planner drafts and revisits an epic's stories
 

@@ -7,11 +7,11 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-04T04:48:23Z
+updated: 2026-10-04T04:53:20Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/issues, flai/internal/metrics, design/system/continuous-improvement.md, design/adrs]
-after: [S-0223]
+after: [S-0223, S-0226]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -32,14 +32,18 @@ forecast:
 
 ## Goal
 
-ADR-0051 records what story agents spend on the items they work. The analyzer has no story, so what it spends would be lost to the items' totals and to the charts. Its cost and seconds should land on the issues it filed and the stories made from them, marked as strategic so the item's own agent cost stays readable.
+S-0225 charges a planner activity's usage to the item it planned (ADR-0083), and the entry's `kind` leaves room for the analyzer. The analyzer's work ends in a report and in issues, but issues carry no usage today.
+
+Its cost should land on the issues it filed or bumped. It should then travel with an issue to the draft story that the issue step makes from it, so that the cost of a remediation includes the cost of finding it.
 
 ## Acceptance criteria
-- [ ] When a analyzer activity ends, its usage (tokens, cost, seconds, from the run's log apportioned by activity as ADR-0051 apportions tasks) is added to the item's `usage` under a `strategic` entry per agent kind, `estimated: true`, and summed up the hierarchy as other usage is
-- [ ] `flai stats` and the cost charts show strategic cost per item and in totals as its own series, and leave it out of the per-model agent figures
-- [ ] An item that gets a analyzer forecast or estimate before any agent works it shows the planner's expected cost beside it, from the forecast duration and the project's mean cost per agent hour, marked as an estimate
-- [ ] `design/system/metrics.md` records the `strategic` usage entry (the ADR of the metrics story covers it); tests pin the apportioning
+- [ ] An issue carries `usage` with a `strategic` entry per kind, in the shape ADR-0083 gives items. An ADR extends ADR-0083 to issues, and `front-matter-fields.txt` lists the key
+- [ ] An analyzer activity's usage is charged when the activity ends, apportioned as ADR-0083 apportions a planner's. It goes under the `analyzer` entry of the issues its `activity_log` call named, split evenly between them. An activity that names no issue is charged to the project total that S-0226 adds
+- [ ] The story the issue step makes from an issue carries the issue's strategic usage as its own `strategic` entry, summed up to its epic. `flai stats` counts it once in totals: the issue's until a story is made from it, the story's after
+- [ ] `flai stats` reports analyzer usage per issue and in totals, apart from the agents' figures. `design/system/metrics.md` and `design/system/continuous-improvement.md` describe it. Tests pin the charge, the split, and the carry-over
 
 ## Tasks
 
 ## Notes
+
+- Rewritten on TH-0107: the first version restated S-0225's criteria, which S-0225 delivers for every kind. It waits for S-0226 because S-0226 adds the project total.

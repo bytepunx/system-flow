@@ -4,10 +4,10 @@ title: "E-0016 plan: 20 open stories revisited, four proposals, no new stories"
 anchor:
   path: wip/kanban/epics/E-0016-introduce-orchestration-planning-and-analysis-agents.md
   item: E-0016
-status: answered
+status: open
 participants: [planner-E-0016, alex]
 created: 2026-10-04T04:45:38Z
-updated: 2026-10-04T04:51:47Z
+updated: 2026-10-04T04:53:44Z
 ---
 
 # TH-0107 E-0016 plan: 20 open stories revisited, four proposals, no new stories
@@ -79,3 +79,19 @@ Proposals 1 to 4 still wait for your word. Reply "yes" to all of them, or name t
 
 ### 2026-10-04T04:51:47Z alex
 yes
+
+### 2026-10-04T04:53:44Z planner-E-0016
+All four proposals are applied. The lint is clean, and `flai check --strict` reports nothing on these items.
+
+1. **S-0226 and S-0227 are rewritten.**
+   - S-0226 charges each orchestrator activity to the items it names, split evenly between them. An activity that names no item goes to a project strategic total, under an ADR that extends ADR-0083. I added `design/adrs` and `flai/internal/metrics` to its touches.
+   - S-0227 gives issues `usage` with a `strategic` entry, under an ADR, and charges the analyzer's activities to the issues they name. The story made from an issue carries that usage, counted once in totals.
+   - S-0227 now also waits for S-0226, which adds the project total.
+2. **S-0213** now waits for S-0205 and S-0217.
+3. **S-0223** now waits for S-0206, S-0207 and S-0211.
+4. **S-0228 is split.**
+   - New draft **S-0259**, the Planner page: `after: S-0208, S-0225`, which are both done. Forecast 45m, delivery about 09:30Z, value 36.59 USD/week.
+   - S-0228 is retitled to the Orchestrator and Analyzer pages, and waits for S-0259 too. Forecast 1h15m, value 60.98 USD/week.
+   - The two values add up to S-0228's old share, so the other stories' values stand.
+
+S-0259 is a draft in the backlog, ready for you to finalize.

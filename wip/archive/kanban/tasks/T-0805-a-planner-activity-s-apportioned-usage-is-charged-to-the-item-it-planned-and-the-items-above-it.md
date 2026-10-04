@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 626
-      cache_read: 5180606
-      cache_write: 126340
-      cost: 2.1646
+      input: 73
+      output: 26196
+      cache_read: 5208754
+      cache_write: 98195
+      cost: 2.1681
 ---
 # T-0805 A planner activity's apportioned usage is charged to the item it planned and the items above it
 

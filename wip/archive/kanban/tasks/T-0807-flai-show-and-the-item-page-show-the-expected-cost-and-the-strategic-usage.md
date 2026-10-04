@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 148
-      output: 1018
-      cache_read: 10759967
-      cache_write: 140707
-      cost: 4.4462
+      input: 150
+      output: 53808
+      cache_read: 10698977
+      cache_write: 201695
+      cost: 4.4533
 ---
 # T-0807 flai show and the item page show the expected cost and the strategic usage
 

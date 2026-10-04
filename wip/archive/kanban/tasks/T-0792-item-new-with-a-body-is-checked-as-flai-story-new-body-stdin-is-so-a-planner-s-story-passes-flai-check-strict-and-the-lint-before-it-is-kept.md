@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 77
-      output: 530
-      cache_read: 3110942
-      cache_write: 94599
-      cost: 1.3076
+      input: 37
+      output: 8297
+      cache_read: 3169558
+      cache_write: 36016
+      cost: 1.0383
 ---
 # T-0792 item_new with a body is checked as flai story new --body-stdin is, so a planner's story passes flai check --strict and the lint before it is kept
 

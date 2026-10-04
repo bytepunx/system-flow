@@ -27,11 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 266
-      cache_read: 1996600
-      cache_write: 81583
-      cost: 0.8477
+      input: 24
+      output: 5379
+      cache_read: 2054862
+      cache_write: 23350
+      cost: 0.6731
+    - model: claude-sonnet-5
+      input: 30
+      output: 8296
+      cache_read: 851795
+      cache_write: 68182
+      cost: 0.4238
 ---
 # T-0791 The planner's prompt asks for a plan thread, revisit proposals, and a summary naming the stories, and the guard holds its stories to drafts
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 392
-      cache_read: 3352348
-      cache_write: 83569
-      cost: 1.4015
+      input: 39
+      output: 8893
+      cache_read: 3397337
+      cache_write: 38604
+      cost: 1.1129
 ---
 # T-0794 The convention, design, docs, and template say how the planner drafts and revisits an epic's stories
 

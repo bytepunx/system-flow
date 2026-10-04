@@ -4,10 +4,10 @@ title: Judge a planner run on E-0016 with S-0209's prompt
 anchor:
   path: wip/kanban/stories/S-0209-the-planner-drafts-an-epic-s-stories-into-the-backlog-and-revisits-the-children-it-already-has.md
   item: S-0209
-status: open
+status: resolved
 participants: [agent-S-0209, alex]
 created: 2026-10-04T04:14:04Z
-updated: 2026-10-04T04:45:49Z
+updated: 2026-10-04T05:31:49Z
 ---
 
 # TH-0103 Judge a planner run on E-0016 with S-0209's prompt
@@ -58,3 +58,9 @@ Alternative (A): judge the planner after S-0209 is accepted and published. S-020
 
 ### 2026-10-04T04:45:49Z agent-S-0209
 The run on E-0016 has posted its plan as TH-0107: 20 open stories revisited, 17 enriched with touches and forecasts, no stories created, four proposals (rewrite S-0226 and S-0227, two `after`s, split S-0228), and the cost of delay question on TH-0106. When you have read it, reply here with your judgement: what is useful, what is wrong or missing. I record it in `design/system/strategic-agents.md`.
+
+### 2026-10-04T04:53:51Z alex
+I found this useful. I am looking forward to using the planner and refining it over time.
+
+### 2026-10-04T05:31:49Z agent-S-0209
+Resolved: The designer judged the E-0016 planner run useful; recorded in design/system/strategic-agents.md under "Measured on E-0016 (S-0209)".

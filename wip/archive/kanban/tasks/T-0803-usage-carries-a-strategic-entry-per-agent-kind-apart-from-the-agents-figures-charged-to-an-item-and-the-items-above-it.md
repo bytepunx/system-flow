@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 561
-      cache_read: 4273989
-      cache_write: 103122
-      cost: 1.7854
+      input: 60
+      output: 21606
+      cache_read: 4296141
+      cache_write: 80990
+      cost: 1.7882
 ---
 # T-0803 Usage carries a strategic entry per agent kind, apart from the agents' figures, charged to an item and the items above it
 

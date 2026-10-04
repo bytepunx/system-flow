@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 222
-      cache_read: 1657109
-      cache_write: 75109
-      cost: 0.7066
+      input: 20
+      output: 4484
+      cache_read: 1712776
+      cache_write: 19462
+      cost: 0.5611
 ---
 # T-0793 A planner run's activity entry names the items it created and changed
 

@@ -6,7 +6,7 @@ title: Introduce Orchestration, Planning, and Analysis agents
 status: in-progress
 owner: alex
 created: 2026-10-02T10:51:49Z
-updated: 2026-10-04T04:48:12Z
+updated: 2026-10-04T04:53:11Z
 transitions:
   - to: ready
     at: 2026-10-03T06:23:24Z
@@ -18,27 +18,27 @@ tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
 usage:
   source: sum
-  seconds: 38253
+  seconds: 44548
   estimated: true
   models:
     - model: claude-haiku-4-5-20251001
       input: 2512
-      output: 81716
+      output: 97673
       cache_read: 16440074
       cache_write: 975785
-      cost: 3.6855
+      cost: 3.4968
     - model: claude-opus-5-5
-      input: 6522
-      output: 1801843
-      cache_read: 394098169
-      cache_write: 9278161
-      cost: 175.3567
+      input: 6912
+      output: 2161328
+      cache_read: 443960226
+      cache_write: 9491912
+      cost: 191.3439
     - model: claude-sonnet-5
-      input: 1026
-      output: 264112
-      cache_read: 37574092
-      cache_write: 1993445
-      cost: 15.1417
+      input: 1224
+      output: 313557
+      cache_read: 43529902
+      cache_write: 2336465
+      cost: 17.6853
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10h
@@ -102,8 +102,9 @@ Three new agents get introduced to system-flow:
 - S-0225 The planner's cost is recorded on the epic or story it planned
 - S-0226 The orchestrator's cost is recorded on the story or epic each decision concerned
 - S-0227 The analyzer's cost is recorded on the issues it filed and the stories made from them
-- S-0228 The Workflow menu has Planner, Orchestrator, and Analyzer pages showing their status, activity log, and runs
+- S-0228 The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
 - S-0229 The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents
 - S-0255 The planner drafts a story's tasks into the backlog and revisits the children it already has
+- S-0259 The Workflow menu has a Planner page showing its status, activity log, and runs
 
 ## Notes

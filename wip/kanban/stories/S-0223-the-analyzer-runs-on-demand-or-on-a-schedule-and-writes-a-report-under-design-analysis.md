@@ -7,11 +7,11 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-04T04:48:21Z
+updated: 2026-10-04T04:53:21Z
 transitions: []
 tags: [flai, dashboard]
 touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs]
-after: [S-0206, S-0207]
+after: [S-0206, S-0207, S-0211]
 agent:
   harness: claude-code
   model: claude-opus-5-5

@@ -24,15 +24,15 @@ touches: [flaiover/src/lib/viz, design/system/metrics.md, design/system/flaiover
 after: [T-0806, T-0807]
 usage:
   source: log
-  seconds: 145
+  seconds: 496
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 246
-      cache_read: 1798528
-      cache_write: 91919
-      cost: 0.7711
+      input: 105
+      output: 37689
+      cache_read: 7493939
+      cache_write: 141274
+      cost: 3.1192
 ---
 # T-0808 The cost charts draw strategic cost as its own series
 

@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [flai, agent-S-0255, agent-S-0209]
 created: 2026-10-04T04:07:37Z
-updated: 2026-10-04T04:13:09Z
+updated: 2026-10-04T04:53:58Z
 ---
 
 # TH-0100 S-0209 and S-0255 conflict when merged
@@ -53,6 +53,43 @@ A trial merge of story/S-0209 with story/S-0255 at flai stream sync conflicts in
 Whichever of S-0209 and S-0255 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
 
 ### 2026-10-04T04:13:09Z flai
+A trial merge of story/S-0209 with story/S-0255 at flai stream sync conflicts in:
+
+- `design/conventions/strategic-agents.md`
+- `design/system/flai-cli.md`
+- `design/system/strategic-agents.md`
+- `docs/users/flai-reference.md`
+- `docs/users/flai.md`
+- `flai/cmd/guard.go`
+- `flai/internal/guard/guard.go`
+- `flai/internal/guard/guard_test.go`
+- `flai/internal/harness/harness.go`
+- `template/CHANGELOG.md`
+- `template/root/design/conventions/strategic-agents.md`
+
+Whichever of S-0209 and S-0255 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-04T04:52:19Z flai
+A trial merge of story/S-0209 with story/S-0255 at flai stream sync conflicts in:
+
+- `design/conventions/strategic-agents.md`
+- `design/issues/summary.md`
+- `design/system/flai-cli.md`
+- `design/system/strategic-agents.md`
+- `docs/users/flai-reference.md`
+- `docs/users/flai.md`
+- `flai/cmd/guard.go`
+- `flai/internal/guard/guard.go`
+- `flai/internal/guard/guard_test.go`
+- `flai/internal/harness/harness.go`
+- `flai/internal/serve/activity.go`
+- `template/CHANGELOG.md`
+- `template/root/design/conventions/strategic-agents.md`
+- `template/template.yaml`
+
+Whichever of S-0209 and S-0255 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-04T04:53:58Z flai
 A trial merge of story/S-0209 with story/S-0255 at flai stream sync conflicts in:
 
 - `design/conventions/strategic-agents.md`

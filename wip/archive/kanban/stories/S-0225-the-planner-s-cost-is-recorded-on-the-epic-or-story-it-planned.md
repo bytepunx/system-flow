@@ -31,21 +31,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1942
-  estimated: true
+  seconds: 3164
   models:
     - model: claude-haiku-4-5-20251001
       input: 364
-      output: 59
+      output: 16016
       cache_read: 2510303
       cache_write: 173513
-      cost: 0.7371
+      cost: 0.5484
     - model: claude-opus-5-5
-      input: 530
-      output: 3758
-      cache_read: 33001732
-      cache_write: 768385
-      cost: 13.7744
+      input: 632
+      output: 227399
+      cache_read: 45215359
+      cache_write: 852392
+      cost: 18.8201
+    - model: claude-sonnet-5
+      input: 120
+      output: 27945
+      cache_read: 3748354
+      cache_write: 166323
+      cost: 1.4452
 ---
 # S-0225 The planner's cost is recorded on the epic or story it planned
 
