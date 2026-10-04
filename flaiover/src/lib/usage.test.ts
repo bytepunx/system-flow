@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { count, dollars, modelLine, spent, usageLine, type Usage } from './usage';
+import {
+	count,
+	dollars,
+	expectedCostLine,
+	modelLine,
+	spent,
+	strategicLines,
+	usageLine,
+	type Usage
+} from './usage';
 
 const u: Usage = {
 	source: 'log',
@@ -37,5 +46,45 @@ describe('usage', () => {
 		expect(spent({ source: 'log', seconds: 0, models: [] })).toBe(false);
 		expect(spent(undefined)).toBe(false);
 		expect(spent(u)).toBe(true);
+	});
+	// S-0225, ADR-0083: what the planner spent stands apart, and alone when no agent worked the item
+	it('says what each kind of strategic agent spent, apart from the agents', () => {
+		const planned: Usage = {
+			source: 'sum',
+			seconds: 0,
+			models: [],
+			strategic: [
+				{
+					kind: 'planner',
+					seconds: 412,
+					estimated: true,
+					models: [
+						{
+							model: 'claude-opus-5-5',
+							input: 12000,
+							output: 0,
+							cache_read: 800000,
+							cache_write: 0,
+							cost: 0.81
+						}
+					]
+				}
+			]
+		};
+		expect(strategicLines(planned)).toEqual([
+			'planner, strategic: 812.0K tokens · $0.810 (estimated) · 6m'
+		]);
+		expect(spent(planned)).toBe(false);
+		expect(strategicLines(u)).toEqual([]);
+		expect(strategicLines(undefined)).toEqual([]);
+	});
+	it('says the expected cost as an estimate, and what it was priced from', () => {
+		expect(expectedCostLine({ cost: 12.1234, from: 'forecast', estimated: true })).toBe(
+			'expected cost: $12.12 (estimated, from the forecast)'
+		);
+		expect(expectedCostLine({ cost: 80.8, from: 'estimate', estimated: true })).toBe(
+			'expected cost: $80.80 (estimated, from the estimate)'
+		);
+		expect(expectedCostLine(undefined)).toBeUndefined();
 	});
 });

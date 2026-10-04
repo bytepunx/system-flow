@@ -1,5 +1,7 @@
 // What agents spent on a work item (S-0143, ADR-0051): the usage block of its front matter,
-// as flai writes it, and how the dashboard says it.
+// as flai writes it, and how the dashboard says it. What strategic agents such as the planner
+// spent on it is carried apart, and an item with a forecast or estimate has an expected cost
+// (S-0225, ADR-0083).
 
 export type ModelUsage = {
 	model: string;
@@ -10,11 +12,27 @@ export type ModelUsage = {
 	cost: number;
 };
 
+/** What one kind of strategic agent spent on an item: apart from its agents' figures, and estimated. */
+export type StrategicUsage = {
+	kind: string; // planner, orchestrator, or analyzer
+	seconds: number;
+	estimated: boolean;
+	models: ModelUsage[];
+};
+
 export type Usage = {
 	source: 'log' | 'sum';
 	seconds: number;
 	estimated?: boolean;
 	models: ModelUsage[];
+	strategic?: StrategicUsage[];
+};
+
+/** What an item is expected to cost before agents work it: its forecast or estimate priced at the project's cost per agent hour. */
+export type ExpectedCost = {
+	cost: number;
+	from: 'forecast' | 'estimate';
+	estimated: boolean;
 };
 
 export const modelTokens = (m: ModelUsage) => m.input + m.output + m.cache_read + m.cache_write;
@@ -59,7 +77,22 @@ export function modelLine(m: ModelUsage): string {
 	return `${m.model}: ${count(m.input)} in · ${count(m.output)} out · ${count(m.cache_read)} cache read · ${count(m.cache_write)} cache write · ${dollars(m.cost)}`;
 }
 
-/** Whether there is anything to say: an empty measurement says nothing was spent. */
+/** Whether the agents spent anything: an empty measurement, or strategic usage alone, says not. */
 export function spent(u: Usage | undefined | null): u is Usage {
 	return !!u && (u.models.length > 0 || u.seconds > 0);
+}
+
+/** A line per kind of strategic agent that spent on the item, apart from its agents' usage. */
+export function strategicLines(u: Usage | undefined | null): string[] {
+	return (u?.strategic ?? []).map((s) => {
+		const tokens = s.models.reduce((n, m) => n + modelTokens(m), 0);
+		const cost = s.models.reduce((c, m) => c + m.cost, 0);
+		return `${s.kind}, strategic: ${count(tokens)} tokens · ${dollars(cost)}${s.estimated ? ' (estimated)' : ''} · ${duration(s.seconds)}`;
+	});
+}
+
+/** The expected cost in a line, marked as an estimate and saying what it was priced from. */
+export function expectedCostLine(e: ExpectedCost | undefined | null): string | undefined {
+	if (!e) return undefined;
+	return `expected cost: ${dollars(e.cost)} (${e.estimated ? 'estimated, ' : ''}from the ${e.from})`;
 }

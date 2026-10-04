@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -66,11 +67,13 @@ type ProjectDashboard struct {
 }
 
 // ItemWithChildren is what item.get answers: a story with tasks has its
-// task plan too (S-0176).
+// task plan too (S-0176), and an item with a forecast or an estimate its
+// expected cost (ADR-0083).
 type ItemWithChildren struct {
-	Item     *workitem.Item   `json:"item"`
-	Children []*workitem.Item `json:"children"`
-	Plan     *workitem.Plan   `json:"plan,omitempty"`
+	Item         *workitem.Item        `json:"item"`
+	Children     []*workitem.Item      `json:"children"`
+	Plan         *workitem.Plan        `json:"plan,omitempty"`
+	ExpectedCost *metrics.ExpectedCost `json:"expected_cost,omitempty"`
 }
 
 // ItemCount is what items.count answers.
@@ -377,6 +380,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if it.Type == workitem.Story {
 				out.Plan = workitem.PlanOf(children, it.ID)
 			}
+			out.ExpectedCost = metrics.ExpectedCostOf(it, metrics.CostPerAgentHour(all))
 			return out, nil
 		},
 

@@ -387,6 +387,15 @@ An item may carry `usage`: the tokens each model read and wrote on it, what they
 
 `(estimated)` after the cost means some of it was not reported by the harness: a task's share of its story's session, or a run that ended without its totals, priced at the rate the logs report for the model. `flai show --json` returns it under `item.usage`, and `flai stats` charts it ([Flow metrics](#flow-metrics)). A flai older than the one that brought `usage` refuses an item that carries it: upgrade the flai on your host first.
 
+Since S-0225 what the planner spent planning an item is charged to it under `usage.strategic`, apart from what its agents spent ([ADR-0083](../../design/adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)). `flai show` prints it on a line of its own per kind of agent, with its models below, and without an agents' line when no agent has worked the item yet. An item with a forecast duration, or else an estimate, also gets its expected cost below its planning: that duration priced at the project's cost per agent hour, always an estimate. It is absent until a story has been measured from its logs. `flai show --json` returns it as `expected_cost`, beside `item`, with `cost`, `from` (`forecast` or `estimate`), and `estimated`.
+
+```text
+  forecast: duration 3h · set by planner at 2026-10-04T09:30:00Z
+  expected cost: $12.12 (estimated, from the forecast of 3h at $4.04 per agent hour)
+  planner, strategic: 812.0K tokens · $0.81 (estimated) · 6m52s, apart from the agents' usage
+    claude-opus-5-5  input 12.0K · output 0 · cache read 800.0K · cache write 0 · $0.8100
+```
+
 ### Cancelling
 
 Cancelling an epic cancels every story under it that is still open and their open tasks; cancelling a story cancels its open tasks. Items that are done or already cancelled are left alone. `flai move` lists what will be cancelled first and, on a terminal, asks before doing it (`--yes` skips the question, `--dry-run` only lists). Each cancelled item records its own transition and a note that names the cause, such as `E-0003 cancelled: a different route`, so an archived task still says why it ended.

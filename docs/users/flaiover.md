@@ -112,6 +112,8 @@ The page keeps itself current: when the story moves, gains a task, is edited, or
 
 The side column has the story's agent, when it has one; the history, every transition with when and by whom, and the intervals it was blocked with their reasons; the children, with their states and `Draft` on a draft story; the file, which opens in the explorer; the narrative, with a box to add a log entry to it; and the owner, estimate, tags, topics, touches, and agent from the front matter. An epic or a story with a cost of delay shows the planner's value per week with who set it and when, or that there is no value yet, then the inputs with who set them and when. When the inputs changed after the value was set, a note says the planner's value is out of date: it is worked out again from the new inputs.
 
+An item's usage shows what its agents spent, then what the planner spent planning it on a line of its own, marked estimated, apart from the agents' figures. That line shows even before any agent works the item. An item with a forecast duration, or else an estimate, shows its expected cost after the forecast: that duration priced at the project's cost per agent hour, marked estimated, with what it was priced from. It shows once a story has been measured from its logs ([ADR-0083](../../design/adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)).
+
 ### Reviewing a story
 
 A story in review has a review page: open it from the card in the review column, or from **Review this story** on the item page. It puts what you need to decide in one place.

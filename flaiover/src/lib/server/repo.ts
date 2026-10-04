@@ -5,6 +5,7 @@
 import type { Agent } from '$lib/agent';
 import type { CostOfDelay, Forecast } from '$lib/planning';
 import { planFrom, type FlaiPlan, type TaskPlan } from '$lib/taskplan';
+import type { ExpectedCost } from '$lib/usage';
 import { posix, resolve } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
@@ -319,17 +320,22 @@ export class Repo extends EventEmitter {
 	 * Find an item by ID in any padding (S-32, S-032, S-0032 name the same item), with its children,
 	 * and for a story with tasks its task plan (S-0176).
 	 */
-	async itemById(id: string): Promise<{ item: Item; children: Item[]; plan?: TaskPlan }> {
+	async itemById(
+		id: string
+	): Promise<{ item: Item; children: Item[]; plan?: TaskPlan; expected_cost?: ExpectedCost }> {
 		const got = await this.remember<{
 			item: FlaiItem;
 			children: FlaiItem[] | null;
 			plan?: FlaiPlan;
+			expected_cost?: ExpectedCost;
 		}>(`item:${id.trim()}`, 'item.get', { id: id.trim() });
 		const plan = planFrom(got.plan);
 		return {
 			item: fromFlai(got.item),
 			children: (got.children ?? []).map(fromFlai),
-			...(plan ? { plan } : {})
+			...(plan ? { plan } : {}),
+			// what the item is expected to cost, priced by flai (ADR-0083)
+			...(got.expected_cost ? { expected_cost: got.expected_cost } : {})
 		};
 	}
 

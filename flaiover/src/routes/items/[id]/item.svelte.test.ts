@@ -425,6 +425,63 @@ describe('the item page (S-0154)', () => {
 			]);
 			expect(stale()).toBeNull();
 		});
+
+		// S-0225, ADR-0083: what the planner expects it to cost, and what planning it cost, apart
+		it("shows a planned story's expected cost and the planner's usage before any agent works it", async () => {
+			const planned = {
+				...story,
+				status: 'backlog',
+				forecast: { duration: '3h', by: 'planner', at: '2026-10-03T09:30:00Z' },
+				usage: {
+					source: 'sum',
+					seconds: 0,
+					models: [],
+					strategic: [
+						{
+							kind: 'planner',
+							seconds: 412,
+							estimated: true,
+							models: [
+								{
+									model: 'claude-opus-5-5',
+									input: 12000,
+									output: 0,
+									cache_read: 800000,
+									cache_write: 0,
+									cost: 0.81
+								}
+							]
+						}
+					]
+				}
+			};
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154')
+					return answer({
+						item: planned,
+						children: [],
+						expected_cost: { cost: 12, from: 'forecast', estimated: true }
+					});
+				if (url === '/api/board') return answer({ writable: false });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(
+				document.querySelector('[data-testid="item-expected-cost"]')?.textContent?.trim()
+			).toBe('expected cost: $12.00 (estimated, from the forecast)');
+			const usage = document.querySelector('[data-testid="item-usage"]')!.textContent!;
+			expect(usage).toContain('planner, strategic: 812.0K tokens · $0.810 (estimated) · 6m');
+			// no agent has worked it, so there is no agents' line of nothing
+			expect(usage).not.toContain('of agent work');
+			unmount(c);
+			serve(story);
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(document.querySelector('[data-testid="item-expected-cost"]')).toBeNull();
+			expect(document.querySelector('[data-testid="item-usage"]')).toBeNull();
+		});
 	});
 
 	// S-0201: a draft story says so beside its title and is finalized from its page without a reload

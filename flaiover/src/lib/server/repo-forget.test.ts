@@ -159,3 +159,21 @@ describe('Repo.changed forgets what the changed file affects (S-0161)', () => {
 		expect(seen).toEqual([['wip/threads/TH-0001-berths.md', 'thread']]);
 	});
 });
+
+// S-0225: item.get's expected cost reaches the item page, and its absence adds no key.
+describe('itemById', () => {
+	it('passes on the expected cost flai priced', async () => {
+		const expected_cost = { cost: 24, from: 'estimate', estimated: true };
+		const ask = vi.fn(async () => ({
+			...(answers['item.get'] as object),
+			expected_cost
+		})) as unknown as Ask;
+		expect((await new Repo('/nowhere', ask).itemById('S-0001')).expected_cost).toEqual(
+			expected_cost
+		);
+		const without = vi.fn(async () => answers['item.get']) as unknown as Ask;
+		expect(await new Repo('/nowhere', without).itemById('S-0001')).not.toHaveProperty(
+			'expected_cost'
+		);
+	});
+});

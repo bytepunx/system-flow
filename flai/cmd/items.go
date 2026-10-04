@@ -11,7 +11,9 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
+	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -188,7 +190,14 @@ progress, done, or cancelled; and the layers, the open and done tasks
 grouped by the longest chain of after steps before each, so that the tasks
 of a layer can run at once when those of the layers before it are done. A
 task on a cycle of after, or waiting on one, is in no layer. --json gives
-the plan as plan, beside item and children.`,
+the plan as plan, beside item and children.
+
+An item with a forecast duration, or else an estimate, gets its expected
+cost: that duration priced at the project's cost per agent hour, an
+estimate, absent while no story has been measured from its logs
+(ADR-0083). --json gives it as expected_cost. What strategic agents such as
+the planner spent on the item is printed per kind, apart from what its
+agents spent.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -216,8 +225,19 @@ the plan as plan, beside item and children.`,
 			if it.Type == workitem.Story {
 				plan = workitem.PlanOf(children, it.ID)
 			}
+			// what the item is expected to cost, priced only when it has a
+			// duration to price (ADR-0083)
+			var rate *float64
+			var expected *metrics.ExpectedCost
+			if (it.Forecast != nil && it.Forecast.Duration != "") || it.Estimate != "" {
+				rate = metrics.CostPerAgentHour(items)
+				expected = metrics.ExpectedCostOf(it, rate)
+			}
 			if a.jsonOut {
 				out := map[string]any{"item": it, "children": children}
+				if expected != nil {
+					out["expected_cost"] = expected
+				}
 				if storyTopics != nil {
 					out["topics"] = storyTopics
 				}
@@ -264,10 +284,23 @@ the plan as plan, beside item and children.`,
 			for _, l := range planningLines(it.Draft, it.Finalized, it.CostOfDelay, it.Forecast, repo.Manifest.Planning.CurrencyCode()) {
 				fmt.Fprintf(a.out, "  %s\n", l)
 			}
+			if expected != nil {
+				fmt.Fprintf(a.out, "  %s\n", expectedCostLine(it, expected, *rate))
+			}
 			if !it.Usage.Empty() {
 				fmt.Fprintf(a.out, "  usage: %s\n", it.Usage.Summary())
 				for _, m := range it.Usage.Models {
 					fmt.Fprintf(a.out, "    %s\n", m)
+				}
+			}
+			// strategic usage stands apart, and alone when no agent has
+			// worked the item yet (ADR-0083)
+			if it.Usage != nil {
+				for _, s := range it.Usage.Strategic {
+					fmt.Fprintf(a.out, "  %s\n", strategicLine(s))
+					for _, m := range s.Models {
+						fmt.Fprintf(a.out, "    %s\n", m)
+					}
 				}
 			}
 			fmt.Fprintf(a.out, "  file: %s\n", relPath(repo.Root, it.Path))
@@ -293,6 +326,26 @@ the plan as plan, beside item and children.`,
 			return nil
 		},
 	}
+}
+
+// expectedCostLine is flai show's line for an item's expected cost: the
+// cost, that it is an estimate, and the duration and rate it comes from.
+func expectedCostLine(it *workitem.Item, e *metrics.ExpectedCost, rate float64) string {
+	d := it.Estimate
+	if e.From == "forecast" {
+		d = it.Forecast.Duration
+	}
+	return fmt.Sprintf("expected cost: $%.2f (estimated, from the %s of %s at $%.2f per agent hour)", e.Cost, e.From, d, rate)
+}
+
+// strategicLine is flai show's line for what one kind of strategic agent
+// spent on an item, kept apart from what its agents spent.
+func strategicLine(s usage.Strategic) string {
+	cost := fmt.Sprintf("$%.2f", s.Cost())
+	if s.Estimated {
+		cost += " (estimated)"
+	}
+	return fmt.Sprintf("%s, strategic: %s tokens · %s · %s, apart from the agents' usage", s.Kind, usage.Count(s.Tokens()), cost, (time.Duration(s.Seconds) * time.Second).String())
 }
 
 // printTaskPlan prints a story's task plan as flai show gives it: each task's

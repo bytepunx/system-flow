@@ -18,7 +18,15 @@
 	import { follow } from '$lib/events';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
-	import { modelLine, spent, usageLine, type Usage } from '$lib/usage';
+	import {
+		expectedCostLine,
+		modelLine,
+		spent,
+		strategicLines,
+		usageLine,
+		type ExpectedCost,
+		type Usage
+	} from '$lib/usage';
 	import {
 		costOfDelayLines,
 		costOfDelayStale,
@@ -62,6 +70,8 @@
 	let children = $state<Item[]>([]);
 	// A story's task plan (S-0176): flai sends it for a story with tasks.
 	let plan = $state<Plan | undefined>();
+	// What the item is expected to cost from its forecast or estimate (ADR-0083), when flai sends it.
+	let expectedCost = $state<ExpectedCost | undefined>();
 	let html = $state('');
 	let error = $state<string | null>(null);
 	let notice = $state<string | null>(null);
@@ -93,6 +103,9 @@
 	// The inputs changed after the planner set the value (ADR-0080), so it is to be worked out again.
 	const valueStale = $derived(costOfDelayStale(item?.cost_of_delay));
 	const forecast = $derived(forecastLines(item?.forecast));
+	const expected = $derived(expectedCostLine(expectedCost));
+	// What strategic agents such as the planner spent on the item, apart from its agents (ADR-0083).
+	const strategic = $derived(strategicLines(item?.usage));
 	// The form for another item of this one's type (S-0171): the dashboard makes epics and stories,
 	// and a new story starts on its own (S-0192). Tasks are the agent's to write.
 	const newQuery = $derived(
@@ -164,6 +177,7 @@
 		item = data.item;
 		children = data.children;
 		plan = data.plan;
+		expectedCost = data.expected_cost;
 		if (writableFor !== item!.id) {
 			writable = (await (await api('/api/board')).json()).writable;
 			writableFor = item!.id;
@@ -554,16 +568,17 @@
 					be opened as a document.
 				</p>
 			{/if}
-			{#if spent(item.usage)}
+			{#if spent(item.usage) || strategic.length}
 				<section class="rounded border border-line bg-surface p-3 text-xs" data-testid="item-usage">
 					<div class="mb-1 font-medium">usage</div>
-					<div>{usageLine(item.usage)}</div>
-					{#each item.usage.models as m (m.model)}<div class="text-muted">
-							{modelLine(m)}
-						</div>{/each}
+					{#if spent(item.usage)}<div>{usageLine(item.usage)}</div>
+						{#each item.usage.models as m (m.model)}<div class="text-muted">
+								{modelLine(m)}
+							</div>{/each}{/if}
+					{#each strategic as line, i (i)}<div data-testid="item-strategic">{line}</div>{/each}
 				</section>
 			{/if}
-			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent || costOfDelay.length || forecast.length}
+			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent || costOfDelay.length || forecast.length || expected}
 				<section class="rounded border border-line bg-surface p-3 text-xs">
 					{#if item.owner}<div>owner: {item.owner}</div>{/if}
 					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
@@ -583,6 +598,7 @@
 									{line}
 								</div>{/each}
 						</div>{/if}
+					{#if expected}<div data-testid="item-expected-cost">{expected}</div>{/if}
 					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
 					{#if item.topics?.length}<div data-testid="item-topics">
 							topics: {item.topics.join(', ')}

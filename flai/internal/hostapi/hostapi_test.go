@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -249,5 +250,44 @@ func TestThreadsList(t *testing.T) {
 	_ = call(t, p, "threads.list", `{"on":"S-1"}`, &list)
 	if len(list) != 1 {
 		t.Errorf("threads on the story in short padding: %+v", list)
+	}
+}
+
+// TestItemGetExpectedCost: item.get prices an item's forecast, or else its
+// estimate, at the project's cost per agent hour, and gives nothing before a
+// story has been measured from its logs (ADR-0083).
+func TestItemGetExpectedCost(t *testing.T) {
+	p := harbour(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	set := func(id string, edit func(*workitem.Item)) {
+		it, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		edit(it)
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var got ItemWithChildren
+	set("S-0001", func(it *workitem.Item) { it.Estimate = "2h" })
+	if err := call(t, p, "item.get", `{"id":"S-0001"}`, &got); err != nil || got.ExpectedCost != nil {
+		t.Errorf("no story measured, no expected cost: %+v %+v", err, got.ExpectedCost)
+	}
+	// $6 over half an hour of agent work: $12 an hour
+	set("S-0003", func(it *workitem.Item) {
+		it.Usage = &usage.Usage{Source: usage.SourceLog, Seconds: 1800, Models: []usage.Model{{Model: "m", Input: 10, Cost: 6}}}
+	})
+	got = ItemWithChildren{}
+	if err := call(t, p, "item.get", `{"id":"S-0001"}`, &got); err != nil || got.ExpectedCost == nil ||
+		got.ExpectedCost.Cost != 24 || got.ExpectedCost.From != "estimate" || !got.ExpectedCost.Estimated {
+		t.Errorf("an estimate of 2h at $12 an hour: %+v %+v", err, got.ExpectedCost)
+	}
+	got = ItemWithChildren{}
+	if err := call(t, p, "item.get", `{"id":"T-0001"}`, &got); err != nil || got.ExpectedCost != nil {
+		t.Errorf("an item with no duration has no expected cost: %+v %+v", err, got.ExpectedCost)
 	}
 }
