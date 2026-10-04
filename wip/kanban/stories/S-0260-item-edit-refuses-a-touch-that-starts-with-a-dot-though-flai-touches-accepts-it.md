@@ -3,11 +3,14 @@ id: S-0260
 type: story
 nature: remediation
 title: item_edit refuses a touch that starts with a dot, though flai touches accepts it
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-04T06:29:48Z
-updated: 2026-10-04T23:14:24Z
-transitions: []
+updated: 2026-10-04T23:14:26Z
+transitions:
+  - to: ready
+    at: 2026-10-04T23:14:26Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

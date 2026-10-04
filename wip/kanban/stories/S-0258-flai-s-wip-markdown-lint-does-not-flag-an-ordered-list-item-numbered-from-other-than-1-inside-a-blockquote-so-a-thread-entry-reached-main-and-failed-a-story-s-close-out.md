@@ -3,11 +3,14 @@ id: S-0258
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag an ordered list item numbered from other than 1 inside a blockquote, so a thread entry reached main and failed a story's close-out
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-04T04:52:01Z
-updated: 2026-10-04T23:14:16Z
-transitions: []
+updated: 2026-10-04T23:14:18Z
+transitions:
+  - to: ready
+    at: 2026-10-04T23:14:18Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

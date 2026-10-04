@@ -3,12 +3,15 @@ id: S-0259
 type: story
 nature: feature
 title: The Workflow menu has a Planner page showing its status, activity log, and runs
-status: backlog
+status: ready
 parent: E-0016
 owner: alex
 created: 2026-10-04T04:53:03Z
-updated: 2026-10-04T23:40:46Z
-transitions: []
+updated: 2026-10-04T23:40:49Z
+transitions:
+  - to: ready
+    at: 2026-10-04T23:40:49Z
+    by: alex
 tags: [dashboard]
 topics: [planning]
 touches: [flaiover/src/routes/workflow, flaiover/src/routes/api, flaiover/src/lib/components, flaiover/src/lib/sitemenu.ts, flai/internal/hostapi, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
