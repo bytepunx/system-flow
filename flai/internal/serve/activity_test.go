@@ -212,7 +212,8 @@ func TestARunEndWithNothingSpentSinceLogsNothing(t *testing.T) {
 }
 
 // A run that ends with calls since its last activity logs them as one, with
-// the first line of the run's final text as its summary.
+// the first line of the run's final text as its summary, and no trigger when
+// none is given (ADR-0084).
 func TestARunEndLogsWhatWasSpentSinceTheLastActivity(t *testing.T) {
 	lab := newActivityLab(t)
 	lab.log("t-planner-20261003T100000Z.log",
@@ -227,8 +228,8 @@ func TestARunEndLogsWhatWasSpentSinceTheLastActivity(t *testing.T) {
 		t.Fatalf("run end = %+v (%v), want logged", got, err)
 	}
 	e := got.Entry
-	if e.Summary != "Planned S-0001 and S-0002." || len(e.Items) != 0 || e.Seconds != 31 || e.Cost != 0.75 || !e.At.Equal(runStart.Add(61*time.Second)) {
-		t.Errorf("entry = %+v, want the result's first line, 31 s, and m2's 0.75 USD", e)
+	if e.Summary != "Planned S-0001 and S-0002." || e.Trigger != "" || len(e.Items) != 0 || e.Seconds != 31 || e.Cost != 0.75 || !e.At.Equal(runStart.Add(61*time.Second)) {
+		t.Errorf("entry = %+v, want the result's first line, no trigger, 31 s, and m2's 0.75 USD", e)
 	}
 	if doc := lab.doc(workitem.ActivityPlanner); doc.TasksCompleted != 2 || doc.AccruedCost != 1.0 {
 		t.Errorf("document = %+v, want both entries' totals", doc)

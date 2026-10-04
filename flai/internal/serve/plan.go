@@ -34,13 +34,25 @@ import (
 // story's.
 var planned = regexp.MustCompile(`^[ES]-\d{3,}$`)
 
+// triggerAsked is the trigger of a planner run the operator asked for
+// (ADR-0084).
+const triggerAsked = "asked"
+
 // Plan starts the planner for item, an epic or a story, in project e, and
 // returns its run as recorded. It is refused while the plan host action is
 // off for the project, for an ID that is not an epic's or a story's, for an
 // item that is archived, done, or cancelled, while a planner runs for the
 // item, and when nothing can start it. It does not wait for the planner:
-// the serving flai settles the run once the process is gone.
+// the serving flai settles the run once the process is gone. The run's
+// trigger is asked (ADR-0084).
 func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, error) {
+	return planFor(ctx, o, e, item, triggerAsked)
+}
+
+// planFor is Plan for a run started by trigger, what the run records and its
+// activity entry says started it (ADR-0084): asked for the operator's, the
+// replanner's triggers otherwise. It is refused as Plan is.
+func planFor(ctx context.Context, o Options, e Entry, item, trigger string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Plan {
 		return nil, refused("the plan host action is off for this project: flai serve enable plan")
@@ -74,7 +86,7 @@ func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, erro
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.plan(ctx, cfg, it.ID, agent)
+	l.plan(ctx, cfg, it.ID, agent, trigger)
 	run := o.Dir.AgentStates()[e.Root].Plans[it.ID]
 	if run == nil {
 		return nil, fmt.Errorf("the planner run for %s was not recorded in %s", it.ID, o.Dir.agents())
@@ -85,11 +97,11 @@ func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, erro
 	return run, nil
 }
 
-// plan starts the planner for item with agent, records the run, journals
-// it, and says whether it started.
-func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent) bool {
+// plan starts the planner for item with agent, records the run with what
+// started it, trigger, journals it, and says whether it started.
+func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent, trigger string) bool {
 	now := l.now().UTC()
-	run := &AgentRun{Item: item, Agent: workitem.ActivityPlanner + "-" + item, Started: now.Format(time.RFC3339), Session: newSession()}
+	run := &AgentRun{Item: item, Agent: workitem.ActivityPlanner + "-" + item, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
 	if agent != nil {
 		run.Model = agent.Model
 	}
@@ -130,10 +142,10 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 
 // planEnded records a planner run as ended, with its exit code when it was
 // seen, as judgePlan judges it, and logs its activity in the planner's
-// activity document (ADR-0079), naming the items it planned. An activity
-// that cannot be logged is warned of, and the run stays recorded as it
-// ended; items that cannot be read are warned of, and the activity names
-// the planned item alone.
+// activity document (ADR-0079), naming the items it planned and what started
+// the run (ADR-0084). An activity that cannot be logged is warned of, and
+// the run stays recorded as it ended; items that cannot be read are warned
+// of, and the activity names the planned item alone.
 func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -151,7 +163,7 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 		items = []string{run.Item}
 		l.warn("planner's items not named", "item", run.Item, "err", err)
 	}
-	if _, err := LogRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner, items); err != nil {
+	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner, run.Trigger, items); err != nil {
 		l.warn("planner activity not logged", "item", run.Item, "err", err)
 	}
 }

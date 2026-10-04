@@ -58,6 +58,11 @@ type ActivityEntry struct {
 	At time.Time `json:"at"`
 	// Summary is one line saying what the agent did.
 	Summary string `json:"summary"`
+	// Trigger is one line saying what started the activity, written for a
+	// planner run flai serve started (ADR-0084): asked, or the replanner's
+	// triggers, separated by semicolons. It is empty on older entries and on
+	// those an agent logs itself.
+	Trigger string `json:"trigger,omitempty"`
 	// Items are the IDs of the items the activity touched.
 	Items   []string `json:"items"`
 	Seconds int64    `json:"seconds"`
@@ -149,6 +154,7 @@ var activityHeading = regexp.MustCompile(`^### (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)
 
 const (
 	summaryField = "- Summary: "
+	triggerField = "- Trigger: "
 	itemsField   = "- Items: "
 	secondsField = "- Seconds: "
 	costField    = "- Cost: "
@@ -157,7 +163,9 @@ const (
 	estimated    = ", estimated"
 )
 
-// parseActivityLog reads the entries under ## Log, as Marshal writes them.
+// parseActivityLog reads the entries under ## Log, as Marshal writes them:
+// each entry must have its Summary, Items, Seconds, and Cost lines, may have a
+// Trigger line, and has no line twice and no other line.
 func parseActivityLog(body string) ([]ActivityEntry, error) {
 	lines := strings.Split(body, "\n")
 	start := -1
@@ -225,6 +233,9 @@ func parseActivityField(e *ActivityEntry, l string) (string, error) {
 	case strings.HasPrefix(l, summaryField):
 		e.Summary = strings.TrimPrefix(l, summaryField)
 		return summaryField, nil
+	case strings.HasPrefix(l, triggerField):
+		e.Trigger = strings.TrimPrefix(l, triggerField)
+		return triggerField, nil
 	case strings.HasPrefix(l, itemsField):
 		if v := strings.TrimPrefix(l, itemsField); v != noItems {
 			e.Items = strings.Split(v, ", ")
@@ -248,7 +259,7 @@ func parseActivityField(e *ActivityEntry, l string) (string, error) {
 		e.Cost = f
 		return costField, nil
 	}
-	return "", fmt.Errorf("line %q is not one of Summary, Items, Seconds, or Cost", l)
+	return "", fmt.Errorf("line %q is not one of Summary, Trigger, Items, Seconds, or Cost", l)
 }
 
 // Marshal renders the activity document. Entries whose end times share a
@@ -286,7 +297,11 @@ func (a *Activity) Marshal() string {
 		if e.Estimated {
 			cost += estimated
 		}
-		fmt.Fprintf(&b, "\n### %s\n\n%s%s\n%s%s\n%s%d\n%s%s\n", heading, summaryField, e.Summary, itemsField, items, secondsField, e.Seconds, costField, cost)
+		fmt.Fprintf(&b, "\n### %s\n\n%s%s\n", heading, summaryField, e.Summary)
+		if e.Trigger != "" {
+			fmt.Fprintf(&b, "%s%s\n", triggerField, e.Trigger)
+		}
+		fmt.Fprintf(&b, "%s%s\n%s%d\n%s%s\n", itemsField, items, secondsField, e.Seconds, costField, cost)
 	}
 	return b.String()
 }
@@ -336,10 +351,11 @@ func (r *Repo) AppendActivity(kind string, e ActivityEntry) (*Activity, error) {
 }
 
 // cleanActivityEntry refuses an entry flai cannot log and puts the rest in
-// the form the log keeps: one-line summary, trimmed items, whole seconds of
-// UTC, and the cost to the cent's hundredth.
+// the form the log keeps: one-line summary and trigger, trimmed items, whole
+// seconds of UTC, and the cost to the cent's hundredth.
 func cleanActivityEntry(kind string, e ActivityEntry) (ActivityEntry, error) {
 	e.Summary = strings.Join(strings.Fields(e.Summary), " ")
+	e.Trigger = strings.Join(strings.Fields(e.Trigger), " ")
 	if e.Summary == "" {
 		return e, fmt.Errorf("an activity needs a summary: say in one line what the %s did", kind)
 	}

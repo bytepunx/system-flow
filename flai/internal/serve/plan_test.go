@@ -45,12 +45,12 @@ func (lab *agentLab) plan(id string) (*AgentRun, error) {
 	return Plan(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
 }
 
-// planHere has the lab's launcher start the planner for id and wait for it,
-// as a serving flai would.
+// planHere has the lab's launcher start the planner for id, as the operator
+// asked, and wait for it, as a serving flai would.
 func (lab *agentLab) planHere(id string) bool {
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.plan(context.Background(), lab.cfg, id, nil)
+	return lab.l.plan(context.Background(), lab.cfg, id, nil, triggerAsked)
 }
 
 func (lab *agentLab) planRun(id string) *AgentRun { return lab.state().Plans[id] }
@@ -69,8 +69,8 @@ func (lab *agentLab) given(item string) string {
 
 // S-0208: the planner is started for an epic in the project's main
 // checkout, as the planner and for its item alone, logged as the planner's
-// run, and recorded by item, apart from the stories' runs; a second run on
-// the item is refused while the first runs.
+// run, and recorded by item, apart from the stories' runs, as asked
+// (ADR-0084); a second run on the item is refused while the first runs.
 func TestThePlannerIsStartedForAnItem(t *testing.T) {
 	t.Setenv("FLAI_STORY", "S-0999") // the session that ran flai plan
 	lab := planLab(t)
@@ -80,8 +80,11 @@ func TestThePlannerIsStartedForAnItem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if run.Item != id || run.Story != "" || run.Agent != "planner-"+id || run.PID == 0 || run.Session == "" || run.Harness != "command" || run.Command != "plan-agent" {
+	if run.Item != id || run.Story != "" || run.Agent != "planner-"+id || run.PID == 0 || run.Session == "" || run.Harness != "command" || run.Command != "plan-agent" || run.Trigger != "asked" {
 		t.Errorf("run = %+v", run)
+	}
+	if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"trigger": "asked"`) {
+		t.Errorf("serve/agents.json does not record the run as asked (%v):\n%s", err, data)
 	}
 	logs, err := lab.o.Dir.ActivityLogs("t", workitem.ActivityPlanner)
 	if err != nil || len(logs) != 1 || logs[0] != run.Log {
@@ -124,7 +127,7 @@ func TestThePlannerIsStartedForAnItem(t *testing.T) {
 
 // S-0208: a planner run that ends is recorded as a story's agent's is, with
 // its exit and how it went, and its activity is logged in the planner's
-// document from its log.
+// document from its log, with what started it (ADR-0084).
 func TestAPlannerRunThatEndsIsRecordedAndItsActivityLogged(t *testing.T) {
 	lab := planLab(t)
 	id := lab.epic.ID
@@ -145,8 +148,11 @@ func TestAPlannerRunThatEndsIsRecordedAndItsActivityLogged(t *testing.T) {
 		return err == nil && len(doc.Entries) == 1
 	})
 	doc, _ := lab.repo.Activity(workitem.ActivityPlanner)
-	if e := doc.Entries[0]; e.Summary != "Drafted three stories for "+id+"." || e.Cost != 0.5 || e.Seconds != 61 {
-		t.Errorf("activity = %+v, want the run's summary, its 0.5 USD, and its 61 s", e)
+	if e := doc.Entries[0]; e.Summary != "Drafted three stories for "+id+"." || e.Trigger != "asked" || e.Cost != 0.5 || e.Seconds != 61 {
+		t.Errorf("activity = %+v, want the run's summary, asked, its 0.5 USD, and its 61 s", e)
+	}
+	if data, _ := os.ReadFile(doc.Path); !strings.Contains(string(data), "\n- Summary: Drafted three stories for "+id+".\n- Trigger: asked\n") {
+		t.Errorf("the entry does not say it was asked:\n%s", data)
 	}
 	// ADR-0083: and what it spent is charged to the epic it planned, once
 	// the entry is in
@@ -196,14 +202,16 @@ func TestAPlannerRunsActivityNamesWhatItPlanned(t *testing.T) {
 		t.Fatal(err)
 	}
 	zero := 0
-	lab.l.planEnded(&AgentRun{Item: lab.epic.ID, Agent: "planner-" + lab.epic.ID, Started: runStart.Format(time.RFC3339), Session: "s"}, &zero)
+	// coalesced triggers (ADR-0084) are logged as the run recorded them
+	trigger := "edited goal by alex; schedule daily"
+	lab.l.planEnded(&AgentRun{Item: lab.epic.ID, Agent: "planner-" + lab.epic.ID, Started: runStart.Format(time.RFC3339), Session: "s", Trigger: trigger}, &zero)
 	doc, err := lab.repo.Activity(workitem.ActivityPlanner)
 	if err != nil || len(doc.Entries) != 1 {
 		t.Fatalf("activity = %+v (%v), want one entry", doc, err)
 	}
 	want := strings.Join([]string{lab.epic.ID, made.ID, task.ID, edited.ID}, ",")
-	if e := doc.Entries[0]; strings.Join(e.Items, ",") != want || e.Cost != 0.5 {
-		t.Errorf("entry = %+v, want items %s (not %s or %s) and the run's 0.5 USD", e, want, left.ID, elsewhere.ID)
+	if e := doc.Entries[0]; strings.Join(e.Items, ",") != want || e.Cost != 0.5 || e.Trigger != trigger {
+		t.Errorf("entry = %+v, want items %s (not %s or %s), the run's 0.5 USD, and trigger %q", e, want, left.ID, elsewhere.ID, trigger)
 	}
 	// planned on a story, the run names the story and its tasks
 	if got, err := plannedItems(lab.root, made.ID, runStart); err != nil || strings.Join(got, ",") != made.ID+","+task.ID {

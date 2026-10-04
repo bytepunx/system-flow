@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-10-03
+updated: 2026-10-04
 status: active
 topics: [all]
 ---
@@ -86,6 +86,7 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-03T18:00:00Z
 
 - Summary: Drafted five stories for E-0016.
+- Trigger: asked
 - Items: E-0016, S-0230
 - Seconds: 723
 - Cost: 0.4213 USD, estimated
@@ -101,7 +102,7 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 The front matter holds these five keys and no others; it is parsed strictly, so an unknown key is an error.
 
-Each log entry is one activity. Its heading is when the activity ended; a second entry ending in the same second gets `(2)` after the time, so no two headings are the same. The summary is one line the agent gives. `Items` lists the items the activity touched, or `none`. `Cost` has four decimals and is marked `estimated` when it was apportioned or priced rather than reported. Appending an entry adds its cost and seconds to the totals, counts it, and moves `last_run` to its end when that is later.
+Each log entry is one activity. Its heading is when the activity ended; a second entry ending in the same second gets `(2)` after the time, so no two headings are the same. The summary is one line the agent gives. `Trigger` is one line saying what started the run, written for a planner run `flai serve` started: `asked` when the operator asked for it, otherwise the replanner's triggers, separated by semicolons ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md)). It is absent from older entries and from those an agent logs with `activity_log`. `Items` lists the items the activity touched, or `none`. `Cost` has four decimals and is marked `estimated` when it was apportioned or priced rather than reported. Appending an entry adds its cost and seconds to the totals, counts it, and moves `last_run` to its end when that is later.
 
 An activity ends in one of two ways. An agent whose run spans activities, as the orchestrator's does, reports each with the MCP tool `activity_log`, giving its kind, summary, and items; flai measures it and writes the entry. When a strategic run ends, `flai serve` logs the time since the last entry as one activity, with the run's last result as its summary, unless nothing was spent in it. Either way the activity's seconds and cost come from the run's stream-json log, apportioned to the activity's span as a task's are to its intervals ([ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)).
 

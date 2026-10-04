@@ -90,6 +90,38 @@ func TestAppendActivity(t *testing.T) {
 	mustLintClean(t, r.ActivityPath(ActivityPlanner))
 }
 
+// ADR-0084: a planner run's entry names what started it on a Trigger line
+// after its summary, made one line, and reads back with it; an entry without
+// one, as older entries and an agent's own are, reads back without it.
+func TestActivityTrigger(t *testing.T) {
+	r := lintProject(t)
+	with := ActivityEntry{At: activityAt, Summary: "Planned S-0230.", Trigger: "edited goal by alex;\n  schedule daily", Items: []string{"S-0230"}, Seconds: 60, Cost: 0.1}
+	without := ActivityEntry{At: activityAt.Add(time.Minute), Summary: "Logged by hand.", Seconds: 1}
+	for _, e := range []ActivityEntry{with, without} {
+		if _, err := r.AppendActivity(ActivityPlanner, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data, _ := os.ReadFile(r.ActivityPath(ActivityPlanner))
+	want := "### 2026-10-03T18:00:00Z\n\n- Summary: Planned S-0230.\n- Trigger: edited goal by alex; schedule daily\n- Items: S-0230\n- Seconds: 60\n- Cost: 0.1000 USD\n\n" +
+		"### 2026-10-03T18:01:00Z\n\n- Summary: Logged by hand.\n- Items: none\n- Seconds: 1\n- Cost: 0.0000 USD\n"
+	if !strings.HasSuffix(string(data), want) {
+		t.Errorf("document:\n%s\nwant it to end\n%s", data, want)
+	}
+	back, err := ReadActivity(r.ActivityPath(ActivityPlanner))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantEntries := []ActivityEntry{
+		{At: activityAt, Summary: "Planned S-0230.", Trigger: "edited goal by alex; schedule daily", Items: []string{"S-0230"}, Seconds: 60, Cost: 0.1},
+		{At: activityAt.Add(time.Minute), Summary: "Logged by hand.", Seconds: 1},
+	}
+	if !reflect.DeepEqual(back.Entries, wantEntries) {
+		t.Errorf("log read back:\n got %+v\nwant %+v", back.Entries, wantEntries)
+	}
+	mustLintClean(t, r.ActivityPath(ActivityPlanner))
+}
+
 func TestActivityMissingIsEmpty(t *testing.T) {
 	r := newProject(t)
 	a, err := r.Activity(ActivityAnalyzer)
@@ -142,6 +174,7 @@ func TestReadActivityIsStrict(t *testing.T) {
 		"bad last_run":  {"last_run: 2026-10-03T18:00:00Z\n", "last_run: yesterday\n", "last_run"},
 		"stray line":    {"- Seconds: 0\n", "- Seconds: 0\nby hand\n", "not one of"},
 		"missing field": {"- Seconds: 0\n", "", "Seconds"},
+		"two triggers":  {"- Items: none\n", "- Trigger: asked\n- Trigger: reordered\n- Items: none\n", "two \"- Trigger:\" lines"},
 		"bad cost":      {"- Cost: 0.0000 USD\n", "- Cost: free\n", "dollars"},
 	} {
 		if err := os.WriteFile(path, []byte(strings.Replace(string(good), c.from, c.to, 1)), 0o644); err != nil {
