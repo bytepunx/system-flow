@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.43 - 2026-10-04
+
+- S-0209 The planner drafts an epic's stories into the backlog and revisits the children it already has (patch): `strategic-agents.md`'s section "As the planner" says to create each story as a draft (`draft: true`), since flai refuses a planner's story that is not one, and to write every section of the item's template, since flai check refuses a story missing one; to summarise the plan in one thread on the item, naming on an epic the stories, their order, and the assumptions made; for an epic with stories, to enrich each one not done or cancelled again and propose in that thread each story to split, merge, add, or drop, drafting the additions only; and to end with one line naming the stories created and revisited. `.claude/agents/planner.md`, the planner's definition, says the same.
+
 ## 1.0.42 - 2026-10-04
 
 - S-0208 The planner is an agent flai serve starts for an epic or a story, behind the plan host action (patch).

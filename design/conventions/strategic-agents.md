@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-03
+updated: 2026-10-04
 audience: agent
 order: 140
 status: active
@@ -30,12 +30,16 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 
 ## As the planner
 
-- For an epic, draft the stories that deliver its outcome. Give each a goal, acceptance criteria as checkboxes, a nature, tags, topics, `touches`, and `after`. Create each as a draft (`draft: true`) in the backlog.
-- For an epic that has stories, revisit each one not `done` or `cancelled` against the epic's outcome.
+- For an epic, draft the stories that deliver its outcome. Give each a goal, acceptance criteria as checkboxes, a nature, tags, topics, `touches`, and `after`.
+- Create each story as a draft (`draft: true`) in the backlog. flai refuses a planner's story that is not one.
+- Write every section of the item's template. flai refuses a story missing one.
+- For an epic that has stories, revisit each one not `done` or `cancelled` against the epic's outcome, and enrich it again as you would a story.
 - For a story, enrich it: its predicted `touches`, a forecast, and a cost of delay `value` worked out from the operator's inputs.
 - Size stories as `work-management.md` says.
 - Make every story you write pass `flai check --strict` and the markdown lint.
-- Summarise your plan in one thread on the epic.
+- Summarise your plan in one thread on the item. On an epic, name the stories, their order (their `after`), and the assumptions you made.
+- In that thread, propose each story you would split, merge, add, or drop. Create drafts for the additions only.
+- End with a one-line summary. On an epic, name the stories you created and the stories you revisited.
 - Never move an item past `backlog`.
 - Never finalize a draft. The operator does.
 - Never cancel a finalized story, or rewrite its words, without asking.
