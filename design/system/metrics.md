@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-03
+updated: 2026-10-04
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -48,6 +48,8 @@ Computed over a window (default 30 days, by `completed`) and groupable by `type`
 
 What agents spent on items, from each item's `usage` front matter ([work-hierarchy.md](work-hierarchy.md), [ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)), and how it is laid out over time ([ADR-0053](../adrs/0053-usage-is-charted-as-spend-over-time-in-buckets-for-every-item-type-at-once-and.md)). An item without `usage`, or with an empty one, has no usage values and is left out of every usage aggregate.
 
+What strategic agents spent on an item, its `usage.strategic` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)), is reported beside the agents' figures and apart from them: it is never added to any agent figure, total, per-model value, series, or rate below, and an item that carries only `strategic` has its agents' values at zero and is left out of every agent aggregate, as an empty usage is. [Strategic usage](#strategic-usage) defines its values.
+
 | Value | Definition |
 |-------|------------|
 | Tokens | Sum over the item's models of `input + output + cache_read + cache_write` |
@@ -63,6 +65,24 @@ Aggregates cover the items of the report's type that entered `done` in the windo
 - **Per model**: for each model, the items it worked on, its tokens and cost over them, and its tokens over the agent minutes of those items.
 - **Completion against time and cost**: the items in order of `completed` (then ID), each point carrying `completed`, the ID, and the cumulative count of items, tokens, and cost up to and including it. Per model, the same over the items that model worked on, counting that model's tokens and cost. Reported for scripts; no chart draws it since [ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md).
 
+### Strategic usage
+
+What the planner, and later the orchestrator and the analyzer, spent on an item is charged to it and to the items above it when the activity is logged ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)). An entry's tokens and cost are those of its `models`, as an agent model's are.
+
+| Value | Definition |
+|-------|------------|
+| `items[].usage.strategic` | One entry per kind the item's `usage.strategic` lists, in its order (`planner`, `orchestrator`, `analyzer`): `kind`, `tokens`, `cost`, `seconds`, and `estimated`, `true` since every charge is apportioned. `[]` when the item's usage has no `strategic` |
+| `usage.strategic` | Over the items of the report's type that entered `done` in the window and carry `strategic`, cancelled ones left out: `items`, their count; `tokens`, `cost`, and `seconds`, the sums over every kind; `estimated`, whether any entry is; and `kinds`, the same per kind (`kind`, `items` that carry it, `tokens`, `cost`, `seconds`), in the order planner, orchestrator, analyzer, only the kinds present. Always present: zeros and `kinds: []` when no item carries any |
+
+An item with `usage` that carries only `strategic` has `items[].usage` with `tokens`, `cost`, and `seconds` 0 and `models: []`.
+
+### Cost per agent hour and expected cost
+
+| Value | Definition |
+|-------|------------|
+| `usage.cost_per_agent_hour` | The project's mean cost of an hour of agent work: the sum of the agents' cost over the sum of their `seconds` in hours, over every story, whatever its status, archived ones included, whose `usage` has `source: log` and `seconds` above 0. Not windowed, and of stories whatever the report's type. What strategic agents spent is left out. Absent when no story qualifies |
+| `items[].expected_cost` | What the item is expected to cost: `cost`, its `forecast.duration`, or else its `estimate`, in hours, times `usage.cost_per_agent_hour`; `from`, `forecast` or `estimate`, the one used; and `estimated: true`. Present on any item, open or closed. Absent when the item has neither duration, or there is no cost per agent hour |
+
 ### Spend over time (S-0163)
 
 Spend is laid out in buckets, for epics, for stories, and for tasks, whatever the report's type. Each type is summed over its own items: a story's usage holds its tasks' and is never added to them.
@@ -70,8 +90,8 @@ Spend is laid out in buckets, for epics, for stories, and for tasks, whatever th
 | Term | Definition |
 |------|------------|
 | Bucket | An hour, a day, or an ISO week starting Monday, in UTC, named by its start. A day unless asked otherwise. An hour needs a window of 31 days or less |
-| An item's bucket | The one that holds the moment it entered `done`. Its whole usage counts there |
-| Series | For a type, one point per bucket from the bucket of the first item of that type done in the window with usage, to the bucket that holds now. A bucket with no such item is a point of zeros. A type with no such item has no points |
+| An item's bucket | The one that holds the moment it entered `done`. Its whole usage counts there, its agents' figures and its strategic ones apart |
+| Series | For a type, one point per bucket from the bucket of the first item of that type done in the window with usage, agents' or strategic, to the bucket that holds now. An item that carries only strategic usage starts the series as one with agents' usage does, so its bucket is a point whose agents' values are zero. A bucket with no such item is a point of zeros. A type with no such item has no points |
 
 A set of items, whether those of a bucket, of a type over the window, or of either that one model worked on, has these values:
 
@@ -88,11 +108,13 @@ A set of items, whether those of a bucket, of a type over the window, or of eith
 
 A value is absent when its divisor is zero.
 
-`flai stats --json` carries each item's usage under `items[].usage` and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, and since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `minutes_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, and its `models`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
+Each type over the window, and each point of its series, also has `strategic`: `items`, the items among them that carry strategic usage, and `tokens`, `cost`, and `seconds`, what strategic agents spent on those, summed over every kind ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)). It is always present, zeros when nothing was spent, and no other value of the type or the point counts it: the values above, the models, and the running means are the agents' alone.
+
+`flai stats --json` carries each item's usage under `items[].usage`, with its `strategic` list, and its expected cost under `items[].expected_cost`; and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`, and since S-0225 `strategic` and `cost_per_agent_hour`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `minutes_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, its `strategic`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, its `models`, and its `strategic`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
 
 ## Strategic agents (S-0206)
 
-What the planner, the orchestrator, and the analyzer spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). This is apart from item usage: an activity's cost is not on any item.
+What the planner, the orchestrator, and the analyzer spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). A planner activity's cost is also charged to the item it planned and the items above it, under their `usage.strategic` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [Strategic usage](#strategic-usage)): the activity documents and the items are two views of one spend, and nothing adds them together.
 
 `flai stats --json` carries them under `strategic`, a list with one entry per document that exists, in the order planner, orchestrator, analyzer, and an empty list when none does. The totals are the document's front matter as written, over all time, not the window's; only `log` is windowed. `flai stats` prints the totals, one line per agent, and nothing when there are no documents. An unreadable document stops `flai stats` with its path and what is wrong, as an unreadable item does.
 
@@ -178,7 +200,7 @@ A story's commits are those on the main branch and the `story/` branches whose s
 | `agents` | Per kind with an entry that ended that day: `cost`, `seconds`, and `estimated` when any entry was | Four decimals; whole seconds |
 | `cost`, `seconds` | The sums over the kinds | Four decimals; whole seconds |
 | `completed` | The items of the report's type completed that day | |
-| `cost_per_item` | The usage cost of those carrying usage, over their number | Four decimals; absent when none carries usage |
+| `cost_per_item` | The agents' usage cost of those on which agents spent, over their number; strategic usage is left out | Four decimals; absent when agents spent on none |
 | `cycle_time_seconds` | The mean cycle time of those with one | Absent when none has one |
 
 ## Charts
@@ -216,6 +238,7 @@ So that `flai stats` and the dashboard agree to the second:
 - Flow efficiency averages `(cycle - blocked) / cycle` over completed items with a positive cycle time.
 - Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
 - The planning, waiting, and claims values (S-0205) are seconds between timestamps, whole since timestamps are, and their means are not rounded. A day is a UTC day, from 00:00:00 up to, not including, the next; a day's or a week's share of an interval is the part of it inside the day or week, and today's ends at now. Cost of delay amounts are rounded to two decimals once summed, and strategic costs to four.
+- Strategic usage costs, per item, in totals, per kind, and in spend, are rounded to four decimals once summed, as activity costs are written; their tokens and seconds are whole. The cost per agent hour is rounded to four decimals, and an expected cost is the duration in hours times that rounded rate, rounded to four decimals, so that it can be recomputed from the JSON. Durations are Go durations, as `forecast_seconds` and `estimate_seconds` read them.
 - A bucket holds the moments from its start up to, not including, the next one's. A week's bucket starts on the Monday of the ISO week, at 00:00:00 UTC. The running mean divides by the number of buckets from the first of the series, empty ones counted.
 
 ## Data access

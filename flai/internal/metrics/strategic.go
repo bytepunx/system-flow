@@ -36,7 +36,8 @@ type StrategicDay struct {
 	Cost    float64                 `json:"cost"`
 	Seconds int64                   `json:"seconds"`
 	// Completed counts the items of the report's type done that day;
-	// CostPerItem is the mean usage cost of those carrying usage, and
+	// CostPerItem is the mean agents' cost of those on which agents spent,
+	// what strategic agents spent left out, and
 	// CycleTime the mean cycle time of those with one.
 	Completed   int      `json:"completed"`
 	CostPerItem *float64 `json:"cost_per_item,omitempty"`
@@ -89,7 +90,7 @@ func strategicDays(docs []*workitem.Activity, items []*workitem.Item, per map[st
 		}
 		out[i].Completed++
 		m := per[it.ID]
-		if m.Usage != nil {
+		if !it.Usage.Empty() {
 			done[i].cost += m.Usage.Cost
 			done[i].used++
 		}

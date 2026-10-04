@@ -73,8 +73,12 @@ type ItemMetrics struct {
 	WaitReview  *float64 `json:"wait_review_seconds,omitempty"`
 	// HeldSeconds is the time a story spent held in ready (S-0205).
 	HeldSeconds *float64 `json:"held_seconds,omitempty"`
-	// Usage is what agents spent on it, when it carries any (S-0143).
+	// Usage is what agents spent on it, when it carries any (S-0143), and
+	// what strategic agents did (ADR-0083).
 	Usage *ItemUsage `json:"usage,omitempty"`
+	// ExpectedCost is what it is expected to cost, from its forecast or
+	// estimate and the project's cost per agent hour (ADR-0083).
+	ExpectedCost *ExpectedCost `json:"expected_cost,omitempty"`
 }
 
 // Distribution summarises a set of durations in seconds.
@@ -194,8 +198,10 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	perItem := map[string]ItemMetrics{}
 	waits := threadWaits(all, opt.Threads, opt.Now)
 	held := heldSeconds(items, all, opt.Projects, opt.Now)
+	rate := CostPerAgentHour(all)
 	for _, it := range items {
 		m := Derive(it, opt.Now)
+		m.ExpectedCost = ExpectedCostOf(it, rate)
 		m.WaitThreads = waitInProgress(it, waits[workitem.CanonicalID(it.ID)], opt.Now)
 		m.HeldSeconds = held[it.ID]
 		perItem[it.ID] = m
@@ -241,6 +247,8 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage = spendReport(items, start, opt.Now)
 	rep.Usage.Bucket = opt.Bucket
 	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
+	rep.Usage.Strategic = strategicTotals(items, start, opt.Now)
+	rep.Usage.CostPerAgentHour = rate
 	rep.Strategic = strategic(opt.Activities, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)

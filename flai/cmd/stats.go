@@ -35,6 +35,9 @@ carries forecasts (forecast, delivery, and estimate error), cost_of_delay
 threads and in review, by the week), claims (in progress by the day against
 the limit, and each story's touches against the files its commits changed),
 and strategic_days (the strategic agents' cost and time beside delivery).
+What strategic agents spent on items is reported apart from what agents did,
+under usage.strategic and each item's usage.strategic, beside the project's
+usage.cost_per_agent_hour and each item's expected_cost (ADR-0083).
 Touches drift needs git; without it flai stats warns and leaves it out.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
@@ -297,11 +300,27 @@ func printGroup(a *app, s metrics.Summary) {
 
 // printUsage prints what agents spent on the items done in the window: in
 // total, per item, per minute of agent work, and per dollar, and per model
-// (S-0143, S-0163).
+// (S-0143, S-0163); then apart what strategic agents spent on them, and the
+// project's cost per agent hour (ADR-0083).
 func printUsage(a *app, typ string, u metrics.UsageReport) {
-	if u.Items == 0 {
-		return
+	if u.Items > 0 {
+		printAgentUsage(a, typ, u)
 	}
+	if s := u.Strategic; s.Items > 0 {
+		kinds := make([]string, 0, len(s.Kinds))
+		for _, k := range s.Kinds {
+			kinds = append(kinds, fmt.Sprintf("%s $%.2f", k.Kind, k.Cost))
+		}
+		fmt.Fprintf(a.out, "  strategic usage, apart: %s tokens · $%.2f (estimated) · %s of strategic agent work, over %d done (%s)\n",
+			usage.Count(s.Tokens), s.Cost, (time.Duration(s.Seconds) * time.Second).String(), s.Items, strings.Join(kinds, " · "))
+	}
+	if r := u.CostPerAgentHour; r != nil {
+		fmt.Fprintf(a.out, "  cost per agent hour $%.2f, over every story measured from its logs\n", *r)
+	}
+}
+
+// printAgentUsage prints what agents spent on the items done in the window.
+func printAgentUsage(a *app, typ string, u metrics.UsageReport) {
 	estimated := ""
 	if u.Estimated {
 		estimated = " (estimated in part)"

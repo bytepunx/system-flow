@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -84,7 +86,9 @@ func TestStatsCommand(t *testing.T) {
 	// of agent work, and per dollar, then per model (S-0163)
 	for _, want := range []string{"usage: 4.1M tokens · $2.02 (estimated in part) · 30m0s of agent work, over 2 done",
 		"per story 2.0M tokens, $1.01, 15m of agent work · per agent minute 136.7K tokens · per dollar 2.0M tokens",
-		"claude-haiku-4-5  100.0K tokens · $0.02 · 10.0K tokens/min (1)", "claude-opus-5-5  4.0M tokens · $2.00 · 133.3K tokens/min (2)"} {
+		"claude-haiku-4-5  100.0K tokens · $0.02 · 10.0K tokens/min (1)", "claude-opus-5-5  4.0M tokens · $2.00 · 133.3K tokens/min (2)",
+		// $2.02 over the half hour of S-001 and S-002, measured from their logs (ADR-0083)
+		"  cost per agent hour $4.04, over every story measured from its logs\n"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}
@@ -136,6 +140,32 @@ func TestStatsCommand(t *testing.T) {
 	}
 	if _, errOut, code := a("stats", "--bucket", "hour", "--since", "90d"); code == 0 || !strings.Contains(errOut, "31 days or less") {
 		t.Errorf("an hour over 90 days: %s", errOut)
+	}
+}
+
+// ADR-0083: flai stats prints what strategic agents spent on the items done
+// in the window on a line of its own, after the agents' figures, and does so
+// when agents spent nothing on them.
+func TestStatsPrintsStrategicUsageApart(t *testing.T) {
+	var out bytes.Buffer
+	a := &app{out: &out}
+	rate := 4.04
+	u := metrics.UsageReport{CostPerAgentHour: &rate, Strategic: metrics.StrategicTotals{
+		StrategicSpend: metrics.StrategicSpend{Items: 2, Tokens: 12_500, Cost: 0.4213, Seconds: 723}, Estimated: true,
+		Kinds: []metrics.StrategicKindSpend{
+			{Kind: "planner", StrategicSpend: metrics.StrategicSpend{Items: 2, Tokens: 12_000, Cost: 0.4113, Seconds: 700}},
+			{Kind: "analyzer", StrategicSpend: metrics.StrategicSpend{Items: 1, Tokens: 500, Cost: 0.01, Seconds: 23}},
+		}}}
+	printUsage(a, workitem.Story, u)
+	want := "  strategic usage, apart: 12.5K tokens · $0.42 (estimated) · 12m3s of strategic agent work, over 2 done (planner $0.41 · analyzer $0.01)\n" +
+		"  cost per agent hour $4.04, over every story measured from its logs\n"
+	if out.String() != want {
+		t.Errorf("printed:\n%s\nwant:\n%s", out.String(), want)
+	}
+	out.Reset()
+	printUsage(a, workitem.Story, metrics.UsageReport{})
+	if out.Len() != 0 {
+		t.Errorf("nothing spent printed %q", out.String())
 	}
 }
 

@@ -28,7 +28,8 @@ type ModelSpend struct {
 	Items int `json:"items,omitempty"`
 }
 
-// ItemUsage is what agents spent on one item.
+// ItemUsage is what agents spent on one item, and apart from that what
+// strategic agents spent on it.
 type ItemUsage struct {
 	Source          string       `json:"source"`
 	Tokens          int64        `json:"tokens"`
@@ -38,6 +39,61 @@ type ItemUsage struct {
 	TokensPerHour   *float64     `json:"tokens_per_hour,omitempty"`
 	Estimated       bool         `json:"estimated,omitempty"`
 	Models          []ModelSpend `json:"models"`
+	// Strategic is what each kind of strategic agent spent on it, never
+	// added to the agents' figures above (ADR-0083).
+	Strategic []ItemStrategic `json:"strategic"`
+}
+
+// ItemStrategic is what one kind of strategic agent spent on an item.
+type ItemStrategic struct {
+	Kind      string  `json:"kind"`
+	Tokens    int64   `json:"tokens"`
+	Cost      float64 `json:"cost"`
+	Seconds   int64   `json:"seconds"`
+	Estimated bool    `json:"estimated"`
+}
+
+// StrategicSpend is what strategic agents spent on a set of items: those
+// that carry any of it, and their tokens, cost, and seconds (ADR-0083).
+type StrategicSpend struct {
+	Items   int     `json:"items"`
+	Tokens  int64   `json:"tokens"`
+	Cost    float64 `json:"cost"`
+	Seconds int64   `json:"seconds"`
+}
+
+// add adds what strategic agents spent on one item, if anything.
+func (s *StrategicSpend) add(u *usage.Usage) {
+	if u == nil || len(u.Strategic) == 0 {
+		return
+	}
+	s.Items++
+	s.Tokens += u.StrategicTokens()
+	s.Cost += u.StrategicCost()
+	s.Seconds += u.StrategicSeconds()
+}
+
+// rounded is s with its cost rounded to four decimals.
+func (s StrategicSpend) rounded() StrategicSpend {
+	s.Cost = round4(s.Cost)
+	return s
+}
+
+// StrategicKindSpend is what one kind of strategic agent spent on the items
+// it worked on.
+type StrategicKindSpend struct {
+	Kind string `json:"kind"`
+	StrategicSpend
+}
+
+// StrategicTotals is what strategic agents spent on the items done in the
+// window, in all and per kind.
+type StrategicTotals struct {
+	StrategicSpend
+	Estimated bool `json:"estimated"`
+	// Kinds are the same per kind, in the order planner, orchestrator,
+	// analyzer, only those that spent.
+	Kinds []StrategicKindSpend `json:"kinds"`
 }
 
 // SpendPoint is one item done, in order of completion, with what had been
@@ -72,6 +128,12 @@ type UsageReport struct {
 	// and over time, whatever type the report is about (S-0163).
 	Bucket string                `json:"bucket"`
 	Spend  map[string]*TypeSpend `json:"spend"`
+	// Strategic is what strategic agents spent on the items of the report's
+	// type done in the window, apart from every figure above (ADR-0083).
+	Strategic StrategicTotals `json:"strategic"`
+	// CostPerAgentHour is the project's mean cost of an hour of agent work,
+	// over every story measured from its logs; absent before the first.
+	CostPerAgentHour *float64 `json:"cost_per_agent_hour,omitempty"`
 }
 
 func perHour(tokens, seconds int64) *float64 {
@@ -82,25 +144,140 @@ func perMinute(tokens, seconds int64) *float64 {
 	return over(float64(tokens), float64(seconds)/60)
 }
 
-// itemUsage is what an item's usage comes to; nil when it has none.
+// itemUsage is what an item's usage comes to; nil when neither agents nor
+// strategic agents spent anything on it. An item that carries only what
+// strategic agents spent has the agents' figures at zero.
 func itemUsage(u *usage.Usage) *ItemUsage {
-	if u.Empty() {
+	if u.Nothing() {
 		return nil
 	}
-	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, Models: []ModelSpend{}}
+	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, Models: []ModelSpend{}, Strategic: []ItemStrategic{}}
 	out.TokensPerMinute, out.TokensPerHour = perMinute(out.Tokens, u.Seconds), perHour(out.Tokens, u.Seconds)
 	for _, m := range u.Models {
 		out.Models = append(out.Models, ModelSpend{Model: m.Model, Tokens: m.Tokens(), Cost: m.Cost,
 			TokensPerMinute: perMinute(m.Tokens(), u.Seconds), TokensPerHour: perHour(m.Tokens(), u.Seconds)})
 	}
+	for _, s := range u.Strategic {
+		out.Strategic = append(out.Strategic, ItemStrategic{Kind: s.Kind, Tokens: s.Tokens(), Cost: round4(s.Cost()), Seconds: s.Seconds, Estimated: s.Estimated})
+	}
 	return out
 }
 
+// agentsSpent says agents spent something on the item; spentAny says agents
+// or strategic agents did; strategicSpent says strategic agents did.
+func agentsSpent(u *usage.Usage) bool    { return !u.Empty() }
+func spentAny(u *usage.Usage) bool       { return !u.Nothing() }
+func strategicSpent(u *usage.Usage) bool { return u != nil && len(u.Strategic) > 0 }
+
+// strategicTotals sums what strategic agents spent on the items done in the
+// window, in all and per kind.
+func strategicTotals(items []*workitem.Item, start, now time.Time) StrategicTotals {
+	var all StrategicSpend
+	kinds := map[string]*StrategicSpend{}
+	var names []string
+	estimated := false
+	for _, c := range spent(items, start, now, strategicSpent) {
+		u := c.it.Usage
+		all.add(u)
+		for _, s := range u.Strategic {
+			k := kinds[s.Kind]
+			if k == nil {
+				k = &StrategicSpend{}
+				kinds[s.Kind] = k
+				names = append(names, s.Kind)
+			}
+			k.Items++
+			k.Tokens += s.Tokens()
+			k.Cost += s.Cost()
+			k.Seconds += s.Seconds
+			estimated = estimated || s.Estimated
+		}
+	}
+	out := StrategicTotals{StrategicSpend: all.rounded(), Estimated: estimated, Kinds: []StrategicKindSpend{}}
+	rank := func(kind string) int {
+		if i := slices.Index(usage.StrategicKinds, kind); i >= 0 {
+			return i
+		}
+		return len(usage.StrategicKinds)
+	}
+	slices.SortFunc(names, func(a, b string) int {
+		if d := rank(a) - rank(b); d != 0 {
+			return d
+		}
+		return strings.Compare(a, b)
+	})
+	for _, n := range names {
+		out.Kinds = append(out.Kinds, StrategicKindSpend{Kind: n, StrategicSpend: kinds[n].rounded()})
+	}
+	return out
+}
+
+// CostPerAgentHour is the project's mean cost of an hour of agent work: the
+// agents' cost over their hours, summed over every story, whatever its status
+// and archived ones included, whose usage was measured from its logs and
+// took agent time; what strategic agents spent is left out. It is rounded to
+// four decimals, and nil when no story has been measured (ADR-0083).
+func CostPerAgentHour(items []*workitem.Item) *float64 {
+	var cost float64
+	var seconds int64
+	for _, it := range items {
+		u := it.Usage
+		if it.Type != workitem.Story || u == nil || u.Source != usage.SourceLog || u.Seconds <= 0 {
+			continue
+		}
+		cost += u.Cost()
+		seconds += u.Seconds
+	}
+	r := over(cost, float64(seconds)/3600)
+	if r != nil {
+		*r = round4(*r)
+	}
+	return r
+}
+
+// ExpectedCost is what an item is expected to cost before agents work it:
+// the duration of its forecast, or else of its estimate, priced at the
+// project's cost per agent hour. It is always an estimate.
+type ExpectedCost struct {
+	Cost float64 `json:"cost"`
+	// From is what the duration came from: "forecast" or "estimate".
+	From      string `json:"from"`
+	Estimated bool   `json:"estimated"`
+}
+
+// ExpectedCostOf is the item's expected cost at rate, CostPerAgentHour's:
+// its forecast duration, or else its estimate, in hours, times rate, rounded
+// to four decimals. It is nil when rate is, or the item has neither duration.
+func ExpectedCostOf(it *workitem.Item, rate *float64) *ExpectedCost {
+	if rate == nil {
+		return nil
+	}
+	hours := func(v string) float64 {
+		d, err := time.ParseDuration(v)
+		if err != nil || d <= 0 {
+			return 0
+		}
+		return d.Hours()
+	}
+	from, h := "", 0.0
+	if it.Forecast != nil {
+		from, h = "forecast", hours(it.Forecast.Duration)
+	}
+	if h == 0 && it.Estimate != "" {
+		from, h = "estimate", hours(it.Estimate)
+	}
+	if h == 0 {
+		return nil
+	}
+	return &ExpectedCost{Cost: round4(h * *rate), From: from, Estimated: true}
+}
+
 // spendReport totals the usage of the items done in the window, and lays
-// them out against time and cost.
+// them out against time and cost. An item on which only strategic agents
+// spent is left out.
 func spendReport(items []*workitem.Item, start, now time.Time) UsageReport {
 	rep := UsageReport{Models: []ModelSpend{}, Done: []SpendPoint{}, ByModel: map[string][]SpendPoint{}}
-	list := spent(items, start, now)
+	list := spent(items, start, now, agentsSpent)
 	models := map[string]*ModelSpend{}
 	seconds := map[string]int64{}
 	for _, d := range list {

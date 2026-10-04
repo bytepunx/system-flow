@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -74,6 +75,9 @@ type Bucket struct {
 	MeanCost   float64 `json:"mean_cost"`
 	// Models are the same per model, in order of name.
 	Models []ModelShare `json:"models,omitempty"`
+	// Strategic is what strategic agents spent on the items done in the
+	// bucket, apart from the agents' figures (ADR-0083).
+	Strategic StrategicSpend `json:"strategic"`
 }
 
 // TypeSpend is what was spent on the items of one type done in the window,
@@ -82,6 +86,9 @@ type TypeSpend struct {
 	Spend
 	Models  []ModelShare `json:"models"`
 	Buckets []Bucket     `json:"buckets"`
+	// Strategic is what strategic agents spent on them, apart from the
+	// agents' figures (ADR-0083).
+	Strategic StrategicSpend `json:"strategic"`
 }
 
 // tally sums a set of items, or one model's share of them.
@@ -129,14 +136,21 @@ func (t *tally) spend() Spend {
 	}
 }
 
-// group is a set of items and each model's share of them.
+// group is a set of items and each model's share of them, and what
+// strategic agents spent on them. An item on which agents spent nothing adds
+// only to the last.
 type group struct {
-	all    tally
-	models map[string]*tally
+	all       tally
+	models    map[string]*tally
+	strategic StrategicSpend
 }
 
 func (g *group) add(it *workitem.Item) {
 	u := it.Usage
+	g.strategic.add(u)
+	if u.Empty() {
+		return
+	}
 	g.all.add(u.Tokens(), u.Cost(), u.Seconds, u.Estimated)
 	if g.models == nil {
 		g.models = map[string]*tally{}
@@ -190,13 +204,13 @@ type completion struct {
 	it *workitem.Item
 }
 
-// spent lists the items done in the window that carry usage, oldest first,
-// then by ID.
-func spent(items []*workitem.Item, start, now time.Time) []completion {
+// spent lists the items done in the window whose usage carries what keep
+// asks for, oldest first, then by ID.
+func spent(items []*workitem.Item, start, now time.Time, keep func(*usage.Usage) bool) []completion {
 	var list []completion
 	for _, it := range items {
 		at := it.FirstAt(workitem.Done)
-		if at.IsZero() || at.Before(start) || at.After(now) || it.Usage.Empty() {
+		if at.IsZero() || at.Before(start) || at.After(now) || !keep(it.Usage) {
 			continue
 		}
 		list = append(list, completion{at, it})
@@ -211,7 +225,8 @@ func spent(items []*workitem.Item, start, now time.Time) []completion {
 }
 
 // spendOverTime lays out what was spent on each type's items, whatever type
-// the report is about.
+// the report is about. An item on which only strategic agents spent counts
+// in its bucket's strategic figures, and may start the series.
 func spendOverTime(all []*workitem.Item, start, now time.Time, bucket string) map[string]*TypeSpend {
 	out := map[string]*TypeSpend{}
 	for _, typ := range []string{workitem.Epic, workitem.Story, workitem.Task} {
@@ -221,7 +236,7 @@ func spendOverTime(all []*workitem.Item, start, now time.Time, bucket string) ma
 				items = append(items, it)
 			}
 		}
-		out[typ] = typeSpend(spent(items, start, now), now, bucket)
+		out[typ] = typeSpend(spent(items, start, now, spentAny), now, bucket)
 	}
 	return out
 }
@@ -245,6 +260,7 @@ func typeSpend(list []completion, now time.Time, bucket string) *TypeSpend {
 	}
 	ts.Spend = window.all.spend()
 	ts.Models = window.shares()
+	ts.Strategic = window.strategic.rounded()
 	var tokens, cost float64
 	n := 0
 	last := bucketStart(now, bucket)
@@ -259,6 +275,7 @@ func typeSpend(list []completion, now time.Time, bucket string) *TypeSpend {
 		ts.Buckets = append(ts.Buckets, Bucket{
 			At: at.Format(workitem.TimeFormat), Spend: g.all.spend(),
 			MeanTokens: tokens / float64(n), MeanCost: cost / float64(n), Models: g.shares(),
+			Strategic: g.strategic.rounded(),
 		})
 	}
 	return ts
