@@ -161,6 +161,79 @@ func TestPlanning(t *testing.T) {
 	}
 }
 
+// S-0211: planning.replan and planning.schedule read from the manifest;
+// unset, the policy is deterministic and there is no schedule, and a bad
+// value is an error naming the key.
+func TestPlanningTriggers(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nplanning:\n  replan: agent\n  schedule: \"*/30 * * * *\"\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, err := m.Planning.ReplanPolicy(); err != nil || r != ReplanAgent {
+		t.Errorf("replan %q, %v", r, err)
+	}
+	s, err := m.Planning.PlanSchedule()
+	if err != nil || s == nil || s.String() != "*/30 * * * *" {
+		t.Fatalf("schedule %v, %v", s, err)
+	}
+	at := time.Date(2026, 10, 4, 9, 10, 0, 0, time.UTC)
+	if next := s.Next(at); !next.Equal(at.Add(20 * time.Minute)) {
+		t.Errorf("next after %v: %v", at, next)
+	}
+	if errs := m.Planning.Errors(); len(errs) != 0 {
+		t.Errorf("valid triggers: %v", errs)
+	}
+
+	var unset Planning
+	if r, err := unset.ReplanPolicy(); err != nil || r != ReplanDeterministic {
+		t.Errorf("unset replan %q, %v", r, err)
+	}
+	if s, err := unset.PlanSchedule(); err != nil || s != nil {
+		t.Errorf("unset schedule %v, %v", s, err)
+	}
+	if s, err := (Planning{Schedule: "  "}).PlanSchedule(); err != nil || s != nil {
+		t.Errorf("blank schedule %v, %v", s, err)
+	}
+	for _, v := range []string{ReplanNever, ReplanDeterministic, ReplanAgent} {
+		if r, err := (Planning{Replan: v}).ReplanPolicy(); err != nil || r != v {
+			t.Errorf("%q: %q, %v", v, r, err)
+		}
+	}
+	s, err = (Planning{Schedule: "daily"}).PlanSchedule()
+	if err != nil || s == nil || s.String() != "daily" {
+		t.Fatalf("daily: %v, %v", s, err)
+	}
+	if next := s.Next(at); !next.Equal(time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("daily after %v: %v", at, next)
+	}
+
+	for _, c := range []struct {
+		p    Planning
+		want string
+	}{
+		{Planning{Replan: "sometimes"}, `planning.replan "sometimes" is not a replan policy; write never`},
+		{Planning{Replan: "Agent"}, `planning.replan "Agent" is not a replan policy`},
+		{Planning{Schedule: "61 * * * *"}, `planning.schedule "61 * * * *": the minute "61" is outside 0-59`},
+		{Planning{Schedule: "hourly"}, `planning.schedule "hourly" has 1 fields, not five`},
+	} {
+		got := c.p.Errors()
+		if len(got) != 1 || !strings.Contains(got[0], c.want) {
+			t.Errorf("%+v: got %q, want one error saying %q", c.p, got, c.want)
+		}
+	}
+	if _, err := (Planning{Replan: "sometimes"}).ReplanPolicy(); err == nil {
+		t.Error("a bad replan policy is accepted")
+	}
+	if s, err := (Planning{Schedule: "61 * * * *"}).PlanSchedule(); err == nil || s != nil {
+		t.Errorf("a bad schedule is accepted: %v", s)
+	}
+}
+
 // S-0208: planning.agent reads as agent does, is checked as agent is under
 // its own name, and the planner's agent is it merged over the project's
 // agent, field by field, config key by key, and role by role.

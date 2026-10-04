@@ -15,6 +15,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/cron"
 )
 
 // File is the manifest file name at a project root.
@@ -130,7 +131,28 @@ type Planning struct {
 	// Agent is the planner's agent over the project's (S-0208): what it sets
 	// wins, and what it leaves out is the project's agent's.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Replan is what flai serve does when a story is accepted or cancelled
+	// or the pull order changes (S-0211, ADR-0084): ReplanNever,
+	// ReplanDeterministic, or ReplanAgent; empty means ReplanDeterministic.
+	Replan string `yaml:"replan,omitempty" json:"replan,omitempty"`
+	// Schedule is when flai serve runs the planner over the ready column
+	// (S-0211, ADR-0084): a five-field cron expression in UTC or daily; empty
+	// means no schedule.
+	Schedule string `yaml:"schedule,omitempty" json:"schedule,omitempty"`
 }
+
+// The values of planning.replan.
+const (
+	// ReplanNever does nothing when work ahead completes or the order
+	// changes.
+	ReplanNever = "never"
+	// ReplanDeterministic plays the board out again and moves each forecast
+	// delivery that changed, with no agent. It is the default.
+	ReplanDeterministic = "deterministic"
+	// ReplanAgent does what ReplanDeterministic does and queues the planner
+	// for each story whose delivery moved.
+	ReplanAgent = "agent"
+)
 
 // DefaultCurrency is the currency of amounts when planning.currency is not
 // set.
@@ -181,6 +203,31 @@ func (p Planning) FallbackDuration() (time.Duration, error) {
 	return d, nil
 }
 
+// ReplanPolicy is planning.replan: ReplanDeterministic when it is empty.
+func (p Planning) ReplanPolicy() (string, error) {
+	switch s := strings.TrimSpace(p.Replan); s {
+	case "":
+		return ReplanDeterministic, nil
+	case ReplanNever, ReplanDeterministic, ReplanAgent:
+		return s, nil
+	}
+	return "", fmt.Errorf("planning.replan %q is not a replan policy; write never (do nothing), deterministic (play the board out again and move forecast deliveries), or agent (do that and queue the planner for each story whose delivery moved), or remove it for deterministic", p.Replan)
+}
+
+// PlanSchedule is planning.schedule parsed: nil when it is empty.
+func (p Planning) PlanSchedule() (*cron.Schedule, error) {
+	s := strings.TrimSpace(p.Schedule)
+	if s == "" {
+		return nil, nil
+	}
+	sched, err := cron.Parse(s)
+	if err != nil {
+		// cron's refusals begin with the schedule quoted: name the key.
+		return nil, fmt.Errorf("planning.%w", err)
+	}
+	return &sched, nil
+}
+
 // Errors are what is wrong with the planning settings, one sentence each;
 // none when they are valid.
 func (p Planning) Errors() []string {
@@ -195,6 +242,12 @@ func (p Planning) Errors() []string {
 		errs = append(errs, err.Error())
 	}
 	if _, err := p.FallbackDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := p.ReplanPolicy(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := p.PlanSchedule(); err != nil {
 		errs = append(errs, err.Error())
 	}
 	return append(errs, p.Agent.problems("planning.agent")...)
