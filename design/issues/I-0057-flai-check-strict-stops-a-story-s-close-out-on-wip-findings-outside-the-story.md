@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 17
+count: 18
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-04T21:36:06Z
-updated: 2026-10-04T21:36:06Z
+last_reported: 2026-10-04T21:55:53Z
+updated: 2026-10-04T21:55:53Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -87,5 +87,9 @@ S-0210's close-out stopped at flai check --strict on main's story.unaccepted (S-
 ### 2026-10-04T21:36:06Z
 Story: S-0256.
 S-0256's close-out stopped at flai check --strict on main's story.unaccepted (S-0173) and threads.archived (TH-0094), not in the story; the verifier ran the flaiover suite (853 tests) by hand, all passing, and the markdown lint had passed before it.
+
+### 2026-10-04T21:55:53Z
+Story: S-0247.
+S-0247's close-out stopped at flai check --strict on warnings outside the story: TH-0094 threads.archived (answered, on archived S-0206) and E-0015 epic.lags-stories; S-0173 story.unaccepted was the one --strict passes over. The verifier ran flaiover-test.sh by hand: 853 tests passing.
 
 ## Remediation
