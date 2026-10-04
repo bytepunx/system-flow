@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -38,6 +39,7 @@ func newTouchesCmd(a *app) *cobra.Command {
 				return fmt.Errorf("%s is an epic; touches belong to stories and tasks", it.ID)
 			}
 			if clear || len(args) > 1 {
+				before := slices.Clone(it.Touches)
 				it.Touches = nil
 				for _, p := range args[1:] {
 					p = strings.TrimSuffix(strings.TrimSpace(p), "/")
@@ -48,6 +50,15 @@ func newTouchesCmd(a *app) *cobra.Command {
 				it.Updated = a.now().UTC().Format(workitem.TimeFormat)
 				if err := repo.Save(it); err != nil {
 					return err
+				}
+				// an edit notice, as flai edit leaves, so that agents hear of it
+				// and flai serve plans the story again (S-0211)
+				if !slices.Equal(before, it.Touches) {
+					by, _ := agentIdentity()
+					if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
+						by = cfg.Author
+					}
+					itemedit.Record(repo, itemedit.Notice{At: it.Updated, By: by, ID: it.ID, Type: it.Type, Title: it.Title, Changed: []string{"touches"}})
 				}
 			}
 			if a.jsonOut {

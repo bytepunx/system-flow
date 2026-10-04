@@ -6,11 +6,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // S-0210: flai touches suggest is a subcommand, while flai touches <id>
@@ -40,6 +43,33 @@ func TestTouchesSuggestRoutesAndRefuses(t *testing.T) {
 	}
 	if _, errOut, code := runIn(t, root, "touches", "suggest"); code == 0 || !strings.Contains(errOut, "requires at least 1 arg") {
 		t.Errorf("suggest with no ID: %d %s", code, errOut)
+	}
+}
+
+// S-0211: setting a story's touches leaves an edit notice, as flai edit does,
+// naming touches and who set them, so that flai serve plans the story again;
+// showing them, or setting what is already there, leaves none.
+func TestTouchesLeavesAnEditNotice(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "alex")
+	root := tempProject(t)
+	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001"}, {"touches", "S-0001", "a/b"}, {"touches", "S-0001"}, {"touches", "S-0001", "a/b"}} {
+		if _, errOut, code := runIn(t, root, step...); code != 0 {
+			t.Fatalf("%v: %s", step, errOut)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var touched []itemedit.Notice
+	for _, n := range itemedit.Notices(repo) {
+		if slices.Contains(n.Changed, "touches") {
+			touched = append(touched, n)
+		}
+	}
+	if len(touched) != 1 || touched[0].ID != "S-0001" || touched[0].By != "alex" || touched[0].Type != workitem.Story || touched[0].At == "" {
+		t.Errorf("one touches notice by alex on S-0001, got %+v", touched)
 	}
 }
 
@@ -75,6 +105,8 @@ func TestTouchesSuggestCountsFilesChangedWithTheSeeds(t *testing.T) {
 	gitRun("init", "-q", "-b", "main")
 	gitRun("config", "user.email", "t@t")
 	gitRun("config", "user.name", "t")
+	// flai's cache, the edit notices among it, is ignored as a project's is
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	commit("init")
 	for _, step := range [][]string{
 		{"story", "new", "S"}, {"task", "new", "T", "--story", "S-0001"}, {"task", "new", "U", "--story", "S-0001"},
