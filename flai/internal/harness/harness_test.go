@@ -518,6 +518,187 @@ func TestClaudeCodeRunsEachRolesModel(t *testing.T) {
 	}
 }
 
+func planReq(item string, a *manifest.Agent) Request {
+	return Request{Role: "plan", Item: item, Root: "/p/flow", Project: "flow", Agent: a, Name: "planner-" + item, Flai: "/usr/local/bin/flai"}
+}
+
+// S-0208: the planner is asked to plan its item as its state calls for,
+// through flai alone, to ask the operator on the item for a missing input,
+// and to end with the summary flai serve logs; never to work a story.
+func TestThePlannersPromptPlansItsItem(t *testing.T) {
+	common := func(id, flag string) []string {
+		return []string{
+			"You are planner-" + id + ", the planner",
+			"Plan " + id + ", and nothing else, as design/conventions/strategic-agents.md says under As the planner",
+			"flai prime --role plan --" + flag + " " + id + " (or the flai MCP tool prime with role plan and " + flag + " " + id + ")",
+			"A brief is not the document", "doc_get and its heading", "doc_search",
+			"Call the flai MCP tool inbox", "Read " + id + " with item_get, and what it links with item_get and doc_get",
+			"to the explorer with the Agent tool",
+			"write only through flai: the flai MCP tools item_new and item_edit, or the flai CLI",
+			"Never edit a file yourself, code or anything else, never move an item past backlog, and never finalize a draft",
+			"Never overwrite the operator's inputs",
+			"ask with the flai MCP tool thread_open on " + id + ", your recommended answer first, plan what needs no answer meanwhile, and hold the flai MCP tool wait_for_events",
+			"End with a one-line summary of what you changed, on which items: flai serve logs the run's activity",
+		}
+	}
+	for _, c := range []struct {
+		id, flag string
+		want     []string
+	}{
+		{"E-0016", "epic", []string{"If it has no stories, draft the stories that deliver its outcome", "create each as a draft in the backlog", "If it has stories, revisit each one not done or cancelled against the epic's outcome"}},
+		{"S-0208", "story", []string{"It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs"}},
+	} {
+		p := Prompt(planReq(c.id, nil))
+		for _, w := range append(common(c.id, c.flag), c.want...) {
+			if !strings.Contains(p, w) {
+				t.Errorf("%s: prompt lacks %q:\n%s", c.id, w, p)
+			}
+		}
+		for _, never := range []string{"flai stream open", "flai move", "worktree", "work story", "publish"} {
+			if strings.Contains(p, never) {
+				t.Errorf("%s: the planner's prompt says %q:\n%s", c.id, never, p)
+			}
+		}
+	}
+	if p := Prompt(planReq("S-0208", nil)); strings.Contains(p, "draft the stories") {
+		t.Errorf("a story's planner is told to draft an epic's stories:\n%s", p)
+	}
+}
+
+// S-0208: claude-code runs the planner's session as the project's planner
+// definition, passed with --agents beside the explorer and the verifier, with
+// the planner's model over the definition's, and tells it its role and item
+// in its environment; what is not a planner's request is refused.
+func TestClaudeCodeStartsThePlanner(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, def := range map[string]string{
+		"planner":  "---\nname: planner\ndescription: Plans one item.\ntools: Read, mcp__flai__item_new\nmodel: inherit\n---\n\nYou are the planner.\n",
+		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
+		"verifier": "---\nname: verifier\ndescription: Runs the checks.\ntools: Read, Bash\nmodel: sonnet\n---\n\nYou are the verifier.\n",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := planReq("E-0016", &manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5", Roles: map[string]manifest.Role{
+		"explore": {Model: "claude-haiku-4-5"},
+		"verify":  {Model: "claude-sonnet-5"},
+	}})
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := st.Argv[2]; !strings.Contains(p, "asked for E-0016 to be planned") || !strings.Contains(p, "--role plan --epic E-0016") {
+		t.Errorf("prompt: %s", p)
+	}
+	for flag, want := range map[string]string{"--agent": "planner", "--model": "claude-opus-5-5", "--name": "flow plan E-0016"} {
+		if got := after(st.Argv, flag); got != want {
+			t.Errorf("%s = %q, want %q (%q)", flag, got, want, st.Argv)
+		}
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	for def, want := range map[string]string{"planner": "claude-opus-5-5", "explorer": "claude-haiku-4-5", "verifier": "claude-sonnet-5"} {
+		if got := agents[def]; got["model"] != want || got["prompt"] == "" || got["name"] != nil {
+			t.Errorf("%s: %v", def, got)
+		}
+	}
+	if i, j := slices.Index(st.Argv, "--agent"), slices.Index(st.Argv, "--permission-mode"); i < 0 || j < i {
+		t.Errorf("--agent comes before the operator's arguments: %v", st.Argv)
+	}
+	if want := []string{"FLAI_ROLE=plan", "FLAI_ITEM=E-0016"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+	// flai guard judges the planner's file edits, which the project's hook
+	// does not match
+	var settings struct {
+		Hooks map[string][]struct {
+			Matcher string `json:"matcher"`
+			Hooks   []struct {
+				Type    string `json:"type"`
+				Command string `json:"command"`
+			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(after(st.Argv, "--settings")), &settings); err != nil {
+		t.Fatalf("--settings: %v in %v", err, st.Argv)
+	}
+	if pre := settings.Hooks["PreToolUse"]; len(pre) != 1 || pre[0].Matcher != "Edit|Write|NotebookEdit" || len(pre[0].Hooks) != 1 || pre[0].Hooks[0].Type != "command" ||
+		pre[0].Hooks[0].Command != `out=$('/usr/local/bin/flai' guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2` {
+		t.Errorf("settings: %+v", settings)
+	}
+	if got := shQuote("/opt/it's/flai"); got != `'/opt/it'\''s/flai'` {
+		t.Errorf("quoted %s", got)
+	}
+
+	// a planner's agent with no model and no roles: the definition's model,
+	// and the planner alone
+	plain := planReq("S-0208", &manifest.Agent{Harness: ClaudeCode})
+	plain.Root = root
+	st, err = (claudeCode{}).Start(plain, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agents = nil
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil || len(agents) != 1 || agents["planner"]["model"] != "inherit" {
+		t.Errorf("--agents %v: %v", agents, err)
+	}
+	if slices.Contains(st.Argv, "--model") || !slices.Contains(st.Env, "FLAI_ITEM=S-0208") {
+		t.Errorf("argv %q, env %q", st.Argv, st.Env)
+	}
+
+	// a story's agent is not the planner
+	story := req(&manifest.Agent{Harness: ClaudeCode})
+	story.Root = root
+	if st, _ := (claudeCode{}).Start(story, Host{}); slices.Contains(st.Argv, "--agent") || slices.Contains(st.Argv, "--settings") || st.Env != nil {
+		t.Errorf("a story's agent: argv %q, env %q", st.Argv, st.Env)
+	}
+
+	missing := planReq("E-0016", nil)
+	missing.Root = t.TempDir()
+	bad := map[string]Request{"runs as the agent planner, and its definition could not be read": missing}
+	for want, mod := range map[string]func(*Request){
+		`flai cannot start an agent in role "orchestrate"`: func(r *Request) { r.Role = "orchestrate" },
+		"was given story S-0104 to work":                   func(r *Request) { r.Story = "S-0104" },
+		`"T-0784" is neither`:                              func(r *Request) { r.Item = "T-0784" },
+		`"" is neither`:                                    func(r *Request) { r.Item = "" },
+	} {
+		x := planReq("E-0016", nil)
+		x.Root = root
+		mod(&x)
+		bad[want] = x
+	}
+	for want, x := range bad {
+		if _, err := (claudeCode{}).Start(x, Host{}); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%+v: %v, want %q", x, err, want)
+		}
+		if want != "runs as the agent planner, and its definition could not be read" {
+			if _, err := (command{}).Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("command %+v: %v, want %q", x, err, want)
+			}
+		}
+	}
+
+	// the operator's command is told the role and the item, with no prompt
+	cmd, err := (command{}).Start(planReq("E-0016", nil), Host{Program: "run-agent", Args: []string{"{story}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"run-agent", ""}; !slices.Equal(cmd.Argv, want) {
+		t.Errorf("argv %q, want %q", cmd.Argv, want)
+	}
+	if !slices.Contains(cmd.Env, "FLAI_ROLE=plan") || !slices.Contains(cmd.Env, "FLAI_ITEM=E-0016") {
+		t.Errorf("command env: %q", cmd.Env)
+	}
+}
+
 // The template's own definitions read as --agents takes them.
 func TestTheTemplatesDefinitionsRead(t *testing.T) {
 	for _, def := range []string{"explorer", "verifier"} {

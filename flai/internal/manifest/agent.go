@@ -69,25 +69,31 @@ func (r Role) IsZero() bool {
 // and role names that are identifiers, each role setting something and
 // checked the same way.
 func (a *Agent) Validate() error {
+	if errs := a.problems("agent"); len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+// problems are what Validate finds, one phrase each, each naming the block
+// as what: agent, or planning.agent.
+func (a *Agent) problems(what string) []string {
 	if a == nil {
 		return nil
 	}
-	errs := validate("agent", a.Harness, a.Model, a.Config)
+	errs := validate(what, a.Harness, a.Model, a.Config)
 	for _, n := range a.RoleNames() {
 		r := a.Roles[n]
 		switch {
 		case !rolePattern.MatchString(n):
-			errs = append(errs, fmt.Sprintf("agent role %q is not a name such as explore or verify (lower case letters, digits, _ -)", n))
+			errs = append(errs, fmt.Sprintf("%s role %q is not a name such as explore or verify (lower case letters, digits, _ -)", what, n))
 		case r.IsZero():
-			errs = append(errs, fmt.Sprintf("agent role %s sets nothing; give it a harness, a model, or config, or leave it out", n))
+			errs = append(errs, fmt.Sprintf("%s role %s sets nothing; give it a harness, a model, or config, or leave it out", what, n))
 		default:
-			errs = append(errs, validate("agent role "+n, r.Harness, r.Model, r.Config)...)
+			errs = append(errs, validate(what+" role "+n, r.Harness, r.Model, r.Config)...)
 		}
 	}
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "; "))
-	}
-	return nil
+	return errs
 }
 
 func validate(what, harness, model string, config map[string]string) []string {

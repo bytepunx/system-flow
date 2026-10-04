@@ -33,12 +33,18 @@ var claudeCodeTakes = map[string]option{
 }
 
 // Start runs claude -p with the prompt, the story's model and options, flai's
-// MCP server, and the operator's arguments last.
+// MCP server, and the operator's arguments last. A planner's session runs as
+// the project's planner definition, with flai guard on its file edits
+// (S-0208).
 func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
 	if r.Agent != nil {
 		model, config = r.Agent.Model, r.Agent.Config
+	}
+	env, err := roleEnv(r)
+	if err != nil {
+		return Start{}, err
 	}
 	opts, err := options(ClaudeCode, config, claudeCodeTakes)
 	if err != nil {
@@ -67,8 +73,12 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
+	subject := r.Story
+	if r.Role != "" {
+		subject = r.Role + " " + r.Item
+	}
 	argv := []string{host.Program, "-p", Prompt(r), "--output-format", "stream-json", "--verbose",
-		"--mcp-config", string(mcp), "--strict-mcp-config", "--name", strings.TrimSpace(r.Project + " " + r.Story)}
+		"--mcp-config", string(mcp), "--strict-mcp-config", "--name", strings.TrimSpace(r.Project + " " + subject)}
 	// A session of its own, so that an agent that ended waiting for an
 	// answer goes on with what it knew.
 	switch {
@@ -81,33 +91,76 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 		argv = append(argv, "--model", model)
 	}
 	argv = append(argv, opts...)
-	agents, err := subAgents(r.Root, r.Agent)
+	agents, err := subAgents(r)
 	if err != nil {
 		return Start{}, err
 	}
 	if agents != "" {
 		argv = append(argv, "--agents", agents)
 	}
+	if r.Role != "" {
+		settings, err := plannerSettings(r.Flai)
+		if err != nil {
+			return Start{}, err
+		}
+		argv = append(argv, "--agent", claudeCodePlanner, "--settings", settings)
+	}
 	argv = append(argv, host.Args...)
-	return Start{Harness: ClaudeCode, Argv: argv}, nil
+	return Start{Harness: ClaudeCode, Argv: argv, Env: env}, nil
 }
 
 // claudeCodeRoles are the sub-agent definitions, in the project's
 // .claude/agents/, that each role runs as (ADR-0059).
 var claudeCodeRoles = map[string]string{manifest.RoleExplore: "explorer", manifest.RoleVerify: "verifier"}
 
-// subAgents is the --agents JSON that runs each of the story's roles on its
+// claudeCodePlanner is the definition, in the project's .claude/agents/, that
+// a planner's session runs as (S-0208).
+const claudeCodePlanner = "planner"
+
+// plannerSettings is the --settings JSON that has flai guard judge a planner
+// session's file edits as well as its shell and flai calls (S-0208): the
+// project's hook matches only Bash and flai's MCP tools, so Edit, Write, and
+// NotebookEdit get a hook of their own, which runs flai guard with the
+// run's flai and passes on only its refusals, as the project's hook does.
+func plannerSettings(flai string) (string, error) {
+	hook := "out=$(" + shQuote(flai) + ` guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2`
+	js, err := json.Marshal(map[string]any{"hooks": map[string]any{"PreToolUse": []any{
+		map[string]any{"matcher": "Edit|Write|NotebookEdit", "hooks": []any{map[string]any{"type": "command", "command": hook}}},
+	}}})
+	if err != nil {
+		return "", err
+	}
+	return string(js), nil
+}
+
+// shQuote is s as one word for sh, in single quotes.
+func shQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// subAgents is the --agents JSON that runs each of the agent's roles on its
 // own model (S-0189): the project's definition of the role's sub-agent, its
 // front matter and its prompt, with the role's model over the definition's.
 // A session's --agents outranks the project's definitions, so the file stays
-// the source of everything but the model. Empty when no role names a model.
-// A role sub-agents cannot run, because it names another harness or config,
-// or has no definition, refuses the start.
-func subAgents(root string, a *manifest.Agent) (string, error) {
-	if a == nil || len(a.Roles) == 0 {
-		return "", nil
-	}
+// the source of everything but the model. For a planner it holds the
+// planner's definition as well, with the planner's model when its agent
+// names one, whatever its roles (S-0208). Empty when nothing is to be
+// passed. A role sub-agents cannot run, because it names another harness or
+// config, or has no definition, refuses the start, as a planner with no
+// definition does.
+func subAgents(r Request) (string, error) {
 	out := map[string]map[string]any{}
+	if r.Role != "" {
+		agent, err := readDefinition(r.Root, claudeCodePlanner)
+		if err != nil {
+			return "", fmt.Errorf("a planner's session runs as the agent %s, and %w; flai upgrade adds it from the template when it is missing", claudeCodePlanner, err)
+		}
+		if r.Agent != nil && r.Agent.Model != "" {
+			agent["model"] = r.Agent.Model
+		}
+		out[claudeCodePlanner] = agent
+	}
+	a := r.Agent
 	for _, n := range a.RoleNames() {
 		role := a.Roles[n]
 		def, ok := claudeCodeRoles[n]
@@ -121,14 +174,9 @@ func subAgents(root string, a *manifest.Agent) (string, error) {
 		case role.Model == "":
 			continue
 		}
-		path := filepath.Join(root, ".claude", "agents", def+".md")
-		data, err := os.ReadFile(path)
+		agent, err := readDefinition(r.Root, def)
 		if err != nil {
-			return "", fmt.Errorf("role %s runs the sub-agent %s, and its definition could not be read: %w", n, def, err)
-		}
-		agent, err := definition(data)
-		if err != nil {
-			return "", fmt.Errorf("role %s: %s: %w", n, path, err)
+			return "", fmt.Errorf("role %s runs the sub-agent %s, and %w", n, def, err)
 		}
 		agent["model"] = role.Model
 		out[def] = agent
@@ -141,6 +189,21 @@ func subAgents(root string, a *manifest.Agent) (string, error) {
 		return "", err
 	}
 	return string(js), nil
+}
+
+// readDefinition reads the project's .claude/agents/<def>.md as --agents
+// takes it. Its error is a clause, for what needed the definition to finish.
+func readDefinition(root, def string) (map[string]any, error) {
+	path := filepath.Join(root, ".claude", "agents", def+".md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("its definition could not be read: %w", err)
+	}
+	agent, err := definition(data)
+	if err != nil {
+		return nil, fmt.Errorf("its definition %s does not read: %w", path, err)
+	}
+	return agent, nil
 }
 
 func roleNames() []string {
@@ -198,6 +261,8 @@ func definition(data []byte) (map[string]any, error) {
 // FLAI_AGENT_ROLES, when it has any (S-0189). Started again after
 // its question was answered, it has FLAI_ANSWERED, the thread's ID; started
 // to commit what a story's worktree holds, FLAI_COMMIT, the worktree (S-0140).
+// Started as the planner, it has FLAI_ROLE and FLAI_ITEM, and {story} is
+// empty (S-0208).
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -207,6 +272,10 @@ func (command) DefaultHost() Host { return Host{} }
 func (command) Start(r Request, host Host) (Start, error) {
 	if host.Program == "" {
 		return Start{}, fmt.Errorf("no command is set on the host (flai serve agent set -- <program> [args...])")
+	}
+	planner, err := roleEnv(r)
+	if err != nil {
+		return Start{}, err
 	}
 	var model, harness string
 	config := map[string]string{}
@@ -242,5 +311,6 @@ func (command) Start(r Request, host Host) (Start, error) {
 	if r.Commit != "" {
 		env = append(env, "FLAI_COMMIT="+r.Commit)
 	}
+	env = append(env, planner...)
 	return Start{Harness: Command, Argv: argv, Env: env}, nil
 }

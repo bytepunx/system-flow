@@ -152,6 +152,56 @@ func TestPlanning(t *testing.T) {
 	}
 }
 
+// S-0208: planning.agent reads as agent does, is checked as agent is under
+// its own name, and the planner's agent is it merged over the project's
+// agent, field by field, config key by key, and role by role.
+func TestPlanningAgent(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  config:\n    effort: high\n    max_budget_usd: \"10\"\n  roles:\n    explore:\n      model: haiku\n" +
+		"planning:\n  currency: EUR\n  agent:\n    model: claude-sonnet-5\n    config:\n      effort: medium\n    roles:\n      verify:\n        model: sonnet\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := m.Planning.Errors(); len(errs) != 0 {
+		t.Errorf("valid planning.agent: %v", errs)
+	}
+	got := m.PlanningAgent()
+	if s := got.String(); s != "claude-code, claude-sonnet-5, effort=medium, max_budget_usd=10; explore: haiku; verify: sonnet" {
+		t.Errorf("planner's agent: %s", s)
+	}
+	if m.Agent.Model != "claude-opus-5-5" || m.Agent.Config["effort"] != "high" || len(m.Agent.Roles) != 1 {
+		t.Errorf("the project's agent was changed by the merge: %+v", m.Agent)
+	}
+	if a := (Manifest{Agent: m.Agent}).PlanningAgent(); !a.Same(m.Agent) {
+		t.Errorf("no planning.agent: %v", a)
+	}
+	if a := (Manifest{Planning: Planning{Agent: m.Planning.Agent}}).PlanningAgent(); !a.Same(m.Planning.Agent) {
+		t.Errorf("no project agent: %v", a)
+	}
+	if a := (Manifest{}).PlanningAgent(); a != nil {
+		t.Errorf("neither: %v", a)
+	}
+	for _, c := range []struct {
+		a    *Agent
+		want string
+	}{
+		{&Agent{Harness: "Claude Code"}, `planning.agent harness "Claude Code" is not a name such as claude-code`},
+		{&Agent{Model: "has space"}, `planning.agent model "has space" is not a model ID`},
+		{&Agent{Config: map[string]string{"k": "two\nlines"}}, "planning.agent config k spans lines"},
+		{&Agent{Roles: map[string]Role{"verify": {}}}, "planning.agent role verify sets nothing"},
+		{&Agent{Roles: map[string]Role{"verify": {Model: "has space"}}}, `planning.agent role verify model "has space"`},
+	} {
+		if got := strings.Join((Planning{Agent: c.a}).Errors(), "; "); !strings.Contains(got, c.want) {
+			t.Errorf("%+v: got %q, want %q", c.a, got, c.want)
+		}
+	}
+}
+
 // S-0181: a flai below the manifest's minimum says so, naming the version
 // needed and the upgrade, before anything else is read; a dev build and a
 // release at or above it read the project.

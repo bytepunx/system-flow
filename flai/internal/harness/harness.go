@@ -17,20 +17,29 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Command is the harness that runs the operator's own command (S-0079).
 const Command = "command"
 
-// Request is what an agent is started for.
+// Request is what an agent is started for: a story, or, for the planner, an
+// epic or a story to plan (S-0208).
 type Request struct {
-	Story   string          // the story's ID, checked by the caller
+	Story   string          // the story's ID, checked by the caller; empty for the planner
 	Root    string          // the project's directory, where it runs
 	Project string          // the project's key, for a session's name
-	Agent   *manifest.Agent // the story's agent; nil when it has none
+	Agent   *manifest.Agent // the story's agent, or the planner's; nil when it has none
 	Name    string          // FLAI_AGENT the session works under
 	Flai    string          // this flai's executable, the agent's MCP server
+	// Role is conventions.RolePlan when the agent is the planner, and empty
+	// when it works a story.
+	Role string
+	// Item is the epic or story the planner plans, checked by the caller;
+	// empty when the agent works a story.
+	Item string
 	// Session names the harness's session, so that it can be resumed; a
 	// harness that has no sessions ignores it.
 	Session string
@@ -200,8 +209,12 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // operator started past a hold or a full limit is told what it went past
 // (S-0182). Every agent working a story is told how its issues are recorded
 // and that the operator chooses at acceptance which become stories (S-0198).
-// Only the claude-code adapter sends a prompt.
+// The planner is asked to plan its item instead (planPrompt). Only the
+// claude-code adapter sends a prompt.
 func Prompt(r Request) string {
+	if r.Role == conventions.RolePlan {
+		return planPrompt(r)
+	}
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
 
@@ -232,6 +245,48 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 %[6]s
 
 %[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r))
+}
+
+// planPrompt is what the planner is asked to do (S-0208): plan its item, an
+// epic or a story, as strategic-agents.md says, through flai alone; ask the
+// operator on the item for an input it owns that is missing; and end with a
+// summary, which flai serve logs as the run's activity (ADR-0079).
+func planPrompt(r Request) string {
+	kind := workitem.TypeOfID(r.Item)
+	work := "It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs."
+	if kind == workitem.Epic {
+		work = "It is an epic. If it has no stories, draft the stories that deliver its outcome, each with a goal, acceptance criteria as checkboxes, a nature, tags, topics, touches, and after, and create each as a draft in the backlog. If it has stories, revisit each one not done or cancelled against the epic's outcome, enrich it as you would a story, and draft the stories the outcome still lacks."
+	}
+	return fmt.Sprintf(`You are %[1]s, the planner, started by flai serve on this host because the operator asked for %[2]s to be planned, in the project at %[3]s.
+
+Plan %[2]s, and nothing else, as design/conventions/strategic-agents.md says under As the planner. Prime your session with flai prime --role plan --%[4]s %[2]s (or the flai MCP tool prime with role plan and %[4]s %[2]s), which prints the conventions you work by and what %[2]s names whole, and briefs the design its topics select. A brief is not the document: read the section that bears on the plan with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox. Read %[2]s with item_get, and what it links with item_get and doc_get. Hand wide search of the code, such as for a story's touches, to the explorer with the Agent tool.
+
+%[5]s Size stories as work-management.md says, make each one you write pass flai check --strict, and summarise your plan in one thread on %[2]s.
+
+Work in the main checkout and write only through flai: the flai MCP tools item_new and item_edit, or the flai CLI. Never edit a file yourself, code or anything else, never move an item past backlog, and never finalize a draft. Never overwrite the operator's inputs: a cost of delay's inputs, a story's estimate, and a finalized story's words; never cancel or rewrite a finalized story without asking.
+
+When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[2]s, your recommended answer first, plan what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
+
+End with a one-line summary of what you changed, on which items: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, r.Root, kind, work)
+}
+
+// roleEnv tells a planner's session its role and its item, which flai guard
+// reads to hold it to planning (S-0208); nothing for an agent working a
+// story. A role other than the planner's, or a planner with a story of its
+// own or with no epic or story to plan, is refused.
+func roleEnv(r Request) ([]string, error) {
+	switch {
+	case r.Role == "":
+		return nil, nil
+	case r.Role != conventions.RolePlan:
+		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, and an agent for a story", r.Role, conventions.RolePlan)
+	case r.Story != "":
+		return nil, fmt.Errorf("the planner for %s was given story %s to work; it works no story of its own, so start it with none", r.Item, r.Story)
+	}
+	if k := workitem.TypeOfID(r.Item); k != workitem.Epic && k != workitem.Story {
+		return nil, fmt.Errorf("the planner plans an epic or a story, and %q is neither; give it an E-nnnn or an S-nnnn", r.Item)
+	}
+	return []string{"FLAI_ROLE=" + r.Role, "FLAI_ITEM=" + r.Item}, nil
 }
 
 // answeredSince asks the agent to read the threads written to since its

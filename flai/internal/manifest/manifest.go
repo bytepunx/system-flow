@@ -48,7 +48,8 @@ type Manifest struct {
 	Prime Prime `yaml:"prime,omitempty" json:"prime,omitzero"`
 	// Issues is how flai check treats the project's open issues (S-0198).
 	Issues Issues `yaml:"issues,omitempty" json:"issues,omitzero"`
-	// Planning is the units the planner's numbers are in (S-0199).
+	// Planning is the units the planner's numbers are in (S-0199), and the
+	// planner's agent (S-0208).
 	Planning Planning `yaml:"planning,omitempty" json:"planning,omitzero"`
 	// Flai is what the project asks of the flai that reads it (S-0181).
 	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
@@ -110,7 +111,8 @@ func (i Issues) StoryAfterDuration() (time.Duration, error) {
 	return d, nil
 }
 
-// Planning is the project's say about the units of its planning data.
+// Planning is the project's say about the units of its planning data and
+// the agent that plans.
 type Planning struct {
 	// Currency is the ISO 4217 code of every amount items carry, such as
 	// EUR; empty means DefaultCurrency.
@@ -121,6 +123,9 @@ type Planning struct {
 	// Cycle is the period a cost of delay's time lost is counted over, a Go
 	// duration such as 168h; empty means DefaultCycle.
 	Cycle string `yaml:"cycle,omitempty" json:"cycle,omitempty"`
+	// Agent is the planner's agent over the project's (S-0208): what it sets
+	// wins, and what it leaves out is the project's agent's.
+	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
 }
 
 // DefaultCurrency is the currency of amounts when planning.currency is not
@@ -167,7 +172,14 @@ func (p Planning) Errors() []string {
 	if _, err := p.CycleDuration(); err != nil {
 		errs = append(errs, err.Error())
 	}
-	return errs
+	return append(errs, p.Agent.problems("planning.agent")...)
+}
+
+// PlanningAgent is the agent the planner is started with: planning.agent
+// merged over the project's agent, as a story's agent is merged over the
+// default (ADR-0037, ADR-0065). Nil when neither sets anything.
+func (m Manifest) PlanningAgent() *Agent {
+	return m.Agent.With(m.Planning.Agent)
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,
