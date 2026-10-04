@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { doneLane } from '$lib/publish';
 import { AgentError } from './agent';
 import { board } from './board';
 import { Repo, RepoError, type Ask } from './repo';
@@ -196,7 +197,34 @@ describe('Repo over the channel', () => {
 							age_in_column_seconds: 7200
 						}
 					],
-					review: null
+					review: null,
+					done: [
+						{
+							id: 'S-0003',
+							type: 'story',
+							title: 'Moorings',
+							nature: 'feature',
+							status: 'done',
+							entered_at: '2026-09-19T08:00:00Z',
+							blocked: false,
+							archived: true,
+							age_in_column: '1d',
+							age_in_column_seconds: 90000
+						},
+						{
+							id: 'T-0001',
+							type: 'task',
+							title: 'Bollards',
+							nature: 'feature',
+							parent: 'S-0002',
+							parent_title: 'Cranes',
+							status: 'done',
+							entered_at: '2026-09-20T06:00:00Z',
+							blocked: false,
+							age_in_column: '3h',
+							age_in_column_seconds: 10800
+						}
+					]
 				},
 				wip_limits: { ready: 5, 'in-progress': 2, review: 3 },
 				order: ['S-0002', 'S-0001'],
@@ -232,6 +260,17 @@ describe('Repo over the channel', () => {
 		// a draft story says so (S-0201); flai omits the flag otherwise, and so does the card
 		expect(b.columns.ready[0].draft).toBe(true);
 		expect(b.columns.ready[1]).not.toHaveProperty('draft');
+		// an archived done card says so, or the done lane cannot leave it out while the clone lags its
+		// remote's tags (I-0060); flai omits the flag otherwise, and so does the card
+		expect(b.columns.done[0].archived).toBe(true);
+		expect(b.columns.done[1]).not.toHaveProperty('archived');
+		const tagsBehind = {
+			remote: 'origin',
+			behind: [{ component: 'flai', remote: 'flai/v1.0.0' }],
+			fix: 'git fetch --tags',
+			message: 'behind'
+		};
+		expect(doneLane(b.columns.done, tagsBehind).map((c) => c.id)).toEqual(['T-0001']);
 	});
 
 	it('repeats a write once, with the same request ID, when flai was lost and came back', async () => {

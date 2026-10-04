@@ -16,6 +16,8 @@ export type Card = {
 	blocked: boolean;
 	/** A story an agent wrote that the operator has not yet finalized (S-0201); absent otherwise. */
 	draft?: boolean;
+	/** A done card flai keeps only because its release looks pending (S-0087); absent otherwise. */
+	archived?: boolean;
 	entered_at: string;
 	age_seconds: number;
 	/** A story's tasks by state and its plan's layers (S-0176); absent when it has no tasks. */
@@ -61,6 +63,7 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 			status: c.status,
 			blocked: c.blocked,
 			...(c.draft ? { draft: true } : {}),
+			...(c.archived ? { archived: true } : {}),
 			entered_at: c.entered_at,
 			age_seconds: Math.max(0, Math.round((now.getTime() - Date.parse(c.entered_at)) / 1000)),
 			...(c.tasks ? { tasks: c.tasks } : {})
