@@ -558,8 +558,9 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 		}},
 		{"S-0208", "story", []string{
 			"It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs",
-			"make each one you write pass flai check --strict, and summarise your plan in one thread on S-0208",
-			"End with a one-line summary of what you changed, on which items: flai serve logs",
+			"Make each task you write pass flai check --strict and the markdown lint",
+			"Open one thread on S-0208 that summarises the plan",
+			"End with a one-line summary that names by ID the tasks you created and the tasks you revisited: flai serve logs",
 		}},
 	} {
 		p := Prompt(planReq(c.id, nil))
@@ -576,6 +577,38 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 	}
 	if p := Prompt(planReq("S-0208", nil)); strings.Contains(p, "draft the stories") || strings.Contains(p, "split, merge, add, or drop") {
 		t.Errorf("a story's planner is told to plan an epic's stories:\n%s", p)
+	}
+}
+
+// S-0255: a story's planner drafts its tasks into the backlog in layers, or
+// revisits the open ones without cancelling or rewriting them unasked, sums
+// up the plan in one thread, and names the tasks it created and revisited in
+// the summary flai serve logs; an epic's planner is told none of it.
+func TestAStorysPlannerDraftsAndRevisitsItsTasks(t *testing.T) {
+	task := []string{
+		"If it has no tasks, draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for)",
+		"so that they form layers as work-management.md says",
+		"create each in the backlog with the flai MCP tool item_new, type task and parent the story, or flai task new",
+		"If it has tasks, revisit each one not done or cancelled against the story's outcome: re-enrich its touches and after with item_edit, create the tasks the outcome still lacks",
+		"propose in the plan's thread any task you would split, merge, or drop",
+		"Never cancel a task, or rewrite the title, Work, or Done when of a task you did not write, without asking on that thread",
+		"Tasks carry no topics: when a task reaches a topic the story lacks, add the topic to the story",
+		"Make each task you write pass flai check --strict and the markdown lint: flai refuses one that does not, so fix what the refusal names",
+		"Open one thread on S-0255 that summarises the plan",
+		"In the plan's thread, name the tasks, their order and layers, and the assumptions you made",
+		"End with a one-line summary that names by ID the tasks you created and the tasks you revisited",
+	}
+	p := Prompt(planReq("S-0255", nil))
+	for _, w := range task {
+		if !strings.Contains(p, w) {
+			t.Errorf("a story's planner prompt lacks %q:\n%s", w, p)
+		}
+	}
+	e := Prompt(planReq("E-0016", nil))
+	for _, w := range task {
+		if strings.Contains(e, w) {
+			t.Errorf("an epic's planner is told %q:\n%s", w, e)
+		}
 	}
 }
 
