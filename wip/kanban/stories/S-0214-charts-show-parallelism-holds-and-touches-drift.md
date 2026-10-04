@@ -3,14 +3,17 @@ id: S-0214
 type: story
 nature: feature
 title: Charts show parallelism, holds, and touches drift
-status: ready
+status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-03T20:33:54Z
+updated: 2026-10-04T00:41:39Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
+    by: alex
+  - to: backlog
+    at: 2026-10-04T00:41:39Z
     by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

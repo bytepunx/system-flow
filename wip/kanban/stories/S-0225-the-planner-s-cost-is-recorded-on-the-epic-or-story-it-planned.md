@@ -3,12 +3,15 @@ id: S-0225
 type: story
 nature: improvement
 title: The planner's cost is recorded on the epic or story it planned
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-02T11:54:44Z
-transitions: []
+updated: 2026-10-04T00:41:02Z
+transitions:
+  - to: ready
+    at: 2026-10-04T00:41:02Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md]
 after: [S-0208]

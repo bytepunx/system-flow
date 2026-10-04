@@ -3,14 +3,17 @@ id: S-0212
 type: story
 nature: feature
 title: Charts compare forecasts and estimates with what happened
-status: ready
+status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-03T20:33:50Z
+updated: 2026-10-04T00:41:38Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
+    by: alex
+  - to: backlog
+    at: 2026-10-04T00:41:38Z
     by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
