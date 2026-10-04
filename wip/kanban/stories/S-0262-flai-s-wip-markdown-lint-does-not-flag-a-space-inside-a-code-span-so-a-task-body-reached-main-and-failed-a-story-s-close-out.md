@@ -6,7 +6,7 @@ title: flai's wip markdown lint does not flag a space inside a code span, so a t
 status: backlog
 owner: alex
 created: 2026-10-04T21:41:59Z
-updated: 2026-10-04T21:41:59Z
+updated: 2026-10-04T23:14:01Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-04T21:41:59Z
+finalized:
+  by: alex
+  at: 2026-10-04T23:14:01Z
 ---
 # S-0262 flai's wip markdown lint does not flag a space inside a code span, so a task body reached main and failed a story's close-out
 
