@@ -36,4 +36,4 @@ agent:
   config:
     effort: high
 flai:
-  minimum: 1.28.0
+  minimum: 1.30.0

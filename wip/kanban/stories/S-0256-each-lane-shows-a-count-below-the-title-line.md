@@ -3,11 +3,14 @@ id: S-0256
 type: story
 nature: improvement
 title: Each lane shows a count below the title line
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-04T03:16:14Z
-updated: 2026-10-04T03:16:14Z
-transitions: []
+updated: 2026-10-04T04:00:41Z
+transitions:
+  - to: ready
+    at: 2026-10-04T04:00:41Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard-board]
 agent:

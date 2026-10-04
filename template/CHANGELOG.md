@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.42 - 2026-10-04
+
+- S-0208 The planner is an agent flai serve starts for an epic or a story, behind the plan host action (patch).
+
 ## 1.0.41 - 2026-10-04
 
 - S-0208 The planner is an agent flai serve starts for an epic or a story, behind the plan host action (patch): the template ships `.claude/agents/planner.md`, the definition `flai plan` runs the planner's session as, which writes work items and threads through flai only. `.claude/settings.json` keeps its hook on `Bash` and flai's MCP tools and gains a second `PreToolUse` entry that runs `flai guard` before `Edit`, `Write`, and `NotebookEdit` in a planner's session alone (`FLAI_ROLE=plan`), so the guard can refuse the planner a file edit while a story's session runs no hook per edit (ADR-0082, the operator's choice on TH-0096).
