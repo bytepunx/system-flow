@@ -6,7 +6,7 @@ title: flai issue new numbers from the story's worktree only, so parallel story 
 status: ready
 owner: alex
 created: 2026-10-03T18:33:16Z
-updated: 2026-10-04T23:56:18Z
+updated: 2026-10-04T23:56:22Z
 transitions:
   - to: ready
     at: 2026-10-04T21:42:51Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T23:56:18Z
 forecast:
   duration: 40m
-  delivery: 2026-10-05T00:30:00Z
-  basis: "flai's 12m (55 s per unit times size 13) raised to 40m: the fix adds a git helper across story branches and worktrees with a repository fixture, a reproduction test, three documents and a reference regeneration, and S-0181, S-0203 and S-0179, comparable flai remediations with tests and docs, took 23 to 35 minutes; delivery allows for the hold behind S-0248, which shares flai-cli.md and design/issues/summary.md."
-  by: planner-S-0252
-  at: 2026-10-04T23:28:19Z
+  delivery: 2026-10-05T00:42:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
+  by: flai
+  at: 2026-10-04T23:56:22Z
 ---
 # S-0252 flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number
 
