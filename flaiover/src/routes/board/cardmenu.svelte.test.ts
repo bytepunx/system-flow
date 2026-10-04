@@ -1,6 +1,6 @@
 // S-0202: a right click, the context-menu key, the card's menu button, or a long press opens a card's
-// menu, which offers what the item's page does (Open, Finalize on a draft, the agent, Block or
-// Unblock, Cancel) and then the lane's menu, and makes the page's writes.
+// menu, which offers what the item's page does (Open, Finalize on a draft, the agent, Plan since
+// S-0263, Block or Unblock, Cancel) and then the lane's menu, and makes the page's writes.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { resetForTests } from '$lib/project.svelte';
@@ -54,12 +54,13 @@ describe('a card’s menu (S-0202)', () => {
 	let posts: { url: string; body: Record<string, unknown> }[];
 	let columns: Record<string, Card[]>;
 	let agents: unknown;
+	let posted: ReturnType<typeof answer>;
 
 	const open = async (writable = true) => {
 		api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
 			if (init?.method === 'POST') {
 				posts.push({ url, body: JSON.parse(init.body ?? '{}') });
-				return answer({});
+				return posted;
 			}
 			if (url === '/api/board')
 				return answer({ wip_limits: { ready: 5 }, order: [], writable, columns });
@@ -102,6 +103,7 @@ describe('a card’s menu (S-0202)', () => {
 		vi.stubGlobal('EventSource', QuietEventSource);
 		posts = [];
 		agents = { enabled: false };
+		posted = answer({});
 		columns = {
 			backlog: [card('S-0001', 'backlog', { draft: true }), card('S-0002', 'backlog')],
 			ready: [card('S-0003', 'ready')],
@@ -250,6 +252,38 @@ describe('a card’s menu (S-0202)', () => {
 		expect(posts).toEqual([{ url: '/api/items/S-0003/agent', body: { action: 'start' } }]);
 		expect(notice()).toContain('S-0003: agent started');
 		expect(api.mock.calls.filter(([u]) => u === '/api/host-agent').length).toBe(asked + 1);
+	});
+
+	it('starts the planner when the plan host action is on, and says where its output goes (S-0263)', async () => {
+		agents = { enabled: false, plan_enabled: true };
+		await open();
+		rightClick(link('S-0002'));
+		expect(offered()).toEqual([
+			'Open',
+			'Plan',
+			'Block…',
+			'Cancel…',
+			'Create item here',
+			'Move stories forward to ready…'
+		]);
+		const asked = api.mock.calls.filter(([u]) => u === '/api/host-agent').length;
+		posted = answer({ item: 'S-0002', pid: 42, log: '/home/op/.flai/serve/plan-S-0002.log' });
+		await pick('plan');
+		expect(posts).toEqual([{ url: '/api/items/S-0002/plan', body: {} }]);
+		expect(notice()).toContain(
+			'planner started for S-0002 (pid 42); its output is in /home/op/.flai/serve/plan-S-0002.log on the host'
+		);
+		expect(api.mock.calls.filter(([u]) => u === '/api/host-agent').length).toBe(asked + 1);
+	});
+
+	it('says why flai refused to start the planner (S-0263)', async () => {
+		agents = { enabled: false, plan_enabled: true };
+		await open();
+		rightClick(link('S-0002'));
+		posted = answer({ error: 'the planner is already running for S-0002 (pid 42)' }, false);
+		await pick('plan');
+		expect(notice()).toContain('the planner is already running for S-0002 (pid 42)');
+		expect(notice()).not.toContain('planner started');
 	});
 
 	it('cancels through the confirmation the board already asks', async () => {

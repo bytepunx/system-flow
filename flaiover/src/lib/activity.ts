@@ -88,6 +88,8 @@ export type StoryActivity = {
 
 export type HostAgent = {
 	enabled: boolean;
+	/** Whether the plan host action is on for the project (S-0263). */
+	plan_enabled?: boolean;
 	state?: {
 		command: string;
 		running?: AgentRun | null;

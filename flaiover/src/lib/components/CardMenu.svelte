@@ -12,6 +12,7 @@
 		writable,
 		activity,
 		agentEnabled,
+		planEnabled,
 		x,
 		y,
 		oncard,
@@ -23,6 +24,7 @@
 		writable: boolean;
 		activity?: StoryActivity;
 		agentEnabled: boolean;
+		planEnabled: boolean;
 		x: number;
 		y: number;
 		oncard: (entry: CardEntry) => void;
@@ -30,7 +32,7 @@
 		onclose: (how: MenuClose) => void;
 	} = $props();
 
-	const entries = $derived(cardMenu(card, { writable, activity, agentEnabled }));
+	const entries = $derived(cardMenu(card, { writable, activity, agentEnabled, planEnabled }));
 </script>
 
 <Menu

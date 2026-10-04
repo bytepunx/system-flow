@@ -3,7 +3,7 @@
 import { agentAction, type StoryActivity } from './activity';
 
 /** What an entry of the card's menu does. */
-export type CardAction = 'open' | 'finalize' | 'agent' | 'block' | 'unblock' | 'cancel';
+export type CardAction = 'open' | 'finalize' | 'agent' | 'plan' | 'block' | 'unblock' | 'cancel';
 
 /** One entry of the card's menu: its action, its label, and for the agent, which flai runs. */
 export type CardEntry = { action: CardAction; label: string; agent?: 'start' | 'restart' };
@@ -18,7 +18,7 @@ export function cardMenu(
 		draft?: boolean;
 		archived?: boolean;
 	},
-	ctx: { writable: boolean; activity?: StoryActivity; agentEnabled: boolean }
+	ctx: { writable: boolean; activity?: StoryActivity; agentEnabled: boolean; planEnabled: boolean }
 ): CardEntry[] {
 	const entries: CardEntry[] = [{ action: 'open', label: 'Open' }];
 	const story = card.type === 'story';
@@ -30,6 +30,9 @@ export function cardMenu(
 		? agentAction(ctx.activity, ctx.agentEnabled, card.status, ctx.writable)
 		: null;
 	if (agent) entries.push({ action: 'agent', label: agent.label, agent: agent.action });
+	// the planner, as an epic's or a story's page offers it while the plan host action is on (S-0263)
+	if (changeable && open && ctx.planEnabled && (story || card.type === 'epic'))
+		entries.push({ action: 'plan', label: 'Plan' });
 	if (changeable && card.blocked) entries.push({ action: 'unblock', label: 'Unblock' });
 	else if (changeable && open) entries.push({ action: 'block', label: 'Block…' });
 	if (changeable && open) entries.push({ action: 'cancel', label: 'Cancel…' });

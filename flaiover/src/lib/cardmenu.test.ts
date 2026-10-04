@@ -5,7 +5,7 @@ import type { StoryActivity } from './activity';
 // S-0202: a board card's menu offers what the item's page does, to a writer
 describe('a card’s menu', () => {
 	const story = { id: 'S-0202', type: 'story', status: 'backlog', blocked: false };
-	const writer = { writable: true, agentEnabled: true };
+	const writer = { writable: true, agentEnabled: true, planEnabled: false };
 	const labels = (...args: Parameters<typeof cardMenu>) => cardMenu(...args).map((e) => e.label);
 	const failed: StoryActivity = {
 		state: 'failed',
@@ -31,7 +31,7 @@ describe('a card’s menu', () => {
 		);
 	});
 	it('offers only Open on a read-only board', () => {
-		const reader = { writable: false, agentEnabled: true };
+		const reader = { writable: false, agentEnabled: true, planEnabled: true };
 		expect(cardMenu({ ...story, status: 'ready', draft: true }, reader)).toEqual([
 			{ action: 'open', label: 'Open' }
 		]);
@@ -67,13 +67,35 @@ describe('a card’s menu', () => {
 			cardMenu({ ...story, type: 'task', status: 'ready' }, writer).map((e) => e.action)
 		).not.toContain('agent');
 	});
-	it('lists Open, Finalize, the agent, Block… or Unblock, then Cancel…', () => {
+	// S-0263: Plan, as an epic's or a story's page offers it while the plan host action is on
+	it('offers Plan on an open epic or story with the plan host action on', () => {
+		const planner = { ...writer, planEnabled: true };
+		expect(cardMenu(story, planner)).toContainEqual({ action: 'plan', label: 'Plan' });
+		expect(labels({ ...story, type: 'epic', id: 'E-0016' }, planner)).toContain('Plan');
+		expect(labels({ ...story, status: 'in-progress', blocked: true }, planner)).toContain('Plan');
+		expect(labels({ ...story, type: 'task', id: 'T-0834' }, planner)).not.toContain('Plan');
+		expect(labels(story, writer)).not.toContain('Plan');
+		for (const status of ['done', 'cancelled']) {
+			expect(labels({ ...story, status }, planner)).not.toContain('Plan');
+			expect(labels({ ...story, type: 'epic', status }, planner)).not.toContain('Plan');
+		}
+		expect(labels({ ...story, archived: true }, planner)).not.toContain('Plan');
+		expect(labels(story, { ...planner, writable: false })).not.toContain('Plan');
+	});
+	it('lists Open, Finalize, the agent, Plan, Block… or Unblock, then Cancel…', () => {
 		expect(cardMenu({ ...story, status: 'ready', draft: true }, writer)).toEqual([
 			{ action: 'open', label: 'Open' },
 			{ action: 'finalize', label: 'Finalize' },
 			{ action: 'agent', label: 'Start agent', agent: 'start' },
 			{ action: 'block', label: 'Block…' },
 			{ action: 'cancel', label: 'Cancel…' }
+		]);
+		expect(labels({ ...story, status: 'ready' }, { ...writer, planEnabled: true })).toEqual([
+			'Open',
+			'Start agent',
+			'Plan',
+			'Block…',
+			'Cancel…'
 		]);
 		expect(labels({ ...story, status: 'in-progress', blocked: true }, writer)).toEqual([
 			'Open',

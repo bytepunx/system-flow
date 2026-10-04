@@ -17,7 +17,7 @@
 	import BoardTypes from '$lib/components/BoardTypes.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
-	import { anyRunning, storyActivity, type HostAgent } from '$lib/activity';
+	import { anyRunning, storyActivity, type HostAgent, type PlanRun } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
 	import { doneLane, type RemoteTags, type Unplanned } from '$lib/publish';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
@@ -288,9 +288,15 @@
 		laneMove = { from: lane, to, picked };
 	}
 
-	// A write from a card's menu, as the item's page makes it: say what came of it and read the
-	// board again, so the card shows it.
-	async function write(id: string, what: string, body: object, done: string) {
+	// A write from a card's menu, as the item's page makes it: say what came of it, from flai's
+	// answer where that says more than the write's name (S-0263), and read the board again, so the
+	// card shows it.
+	async function write<A>(
+		id: string,
+		what: string,
+		body: object,
+		done: string | ((answer: A) => string)
+	) {
 		notice = null;
 		const r = await api(`/api/items/${id}/${what}`, {
 			method: 'POST',
@@ -299,7 +305,7 @@
 		});
 		const answer = await r.json().catch(() => ({}));
 		notice = r.ok
-			? { kind: 'ok', text: done }
+			? { kind: 'ok', text: typeof done === 'string' ? done : done(answer) }
 			: { kind: 'error', text: answer.error ?? r.statusText };
 		await load();
 	}
@@ -329,6 +335,16 @@
 					'agent',
 					{ action: entry.agent },
 					`${id}: agent ${entry.label === 'Retry' ? 'restarted' : 'started'}`
+				);
+				return loadAgents();
+			case 'plan':
+				// as the item's Plan says it (S-0208): the planner's process and where its output goes
+				await write(
+					id,
+					'plan',
+					{},
+					(run: Partial<PlanRun>) =>
+						`planner started for ${id} (pid ${run.pid})${run.log ? `; its output is in ${run.log} on the host` : ''}`
 				);
 				return loadAgents();
 			case 'cancel':
@@ -462,6 +478,7 @@
 			writable={board?.writable === true}
 			activity={activity[card.id]}
 			agentEnabled={hostAgent?.enabled === true}
+			planEnabled={hostAgent?.plan_enabled === true}
 			x={menuCard.x}
 			y={menuCard.y}
 			oncard={pickCard}
