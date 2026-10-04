@@ -305,6 +305,12 @@ const ActionHost = "host"
 // in a shell on the host alone: no method changes it.
 const ActionSettings = "settings"
 
+// ActionPlan is the host action that starts the planner for an epic or a
+// story on the operator's word (S-0208, ADR-0075): plan.run, from the item's
+// page, and flai plan in a shell. flai serve never starts a planner by
+// itself.
+const ActionPlan = "plan"
+
 // Actions are the host actions there are, with what each lets a dashboard
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
@@ -315,6 +321,7 @@ var Actions = map[string]string{
 	ActionChecks:      "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
 	ActionHost:        "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
+	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
 }
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):
@@ -1413,7 +1420,41 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"serve", "agent", "stop", id}, "", nil
 		}},
+		// plan.run: the planner for an epic or a story, on the operator's
+		// word from the item's page (S-0208); flai plan judges whether it
+		// may, and says why not.
+		"plan.run": {action: ActionPlan, describe: describePlan, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			if strings.HasPrefix(in.ID, "T-") {
+				return nil, "", bad("%s is a task; the planner plans an epic or a story", in.ID)
+			}
+			return []string{"plan", in.ID}, "", nil
+		}},
 	}
+}
+
+// describePlan reads flai plan's --json shape for the journal.
+func describePlan(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Item    string `json:"item"`
+		Agent   string `json:"agent"`
+		Command string `json:"command"`
+		PID     int    `json:"pid"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	return "done", fmt.Sprintf("started %s to plan %s as %s (pid %d)", said.Command, said.Item, said.Agent, said.PID)
 }
 
 // agentNow is the write that runs flai serve agent <verb> for a story, gated

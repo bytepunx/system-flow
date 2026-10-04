@@ -47,7 +47,11 @@ func (a *app) host() hostapi.Host {
 			if len(cfg.Agent.Command) > 0 {
 				command = filepath.Base(cfg.Agent.Command[0]) // its name, never its arguments
 			}
-			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st)}
+			plans := st.Plans // the newest planner run for each item, by its ID (S-0208)
+			if plans == nil {
+				plans = map[string]*serve.AgentRun{}
+			}
+			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans}
 		},
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
@@ -455,6 +459,7 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	return serve.AgentConfig{
 		Flai:      self,
 		Enabled:   cfg.ActionEnabled(hostapi.ActionAgent, root),
+		Plan:      cfg.ActionEnabled(hostapi.ActionPlan, root),
 		Command:   cfg.Agent.Command,
 		Harnesses: hosts,
 		Name:      cfg.Agent.Name,

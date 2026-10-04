@@ -124,7 +124,9 @@ export const REQUIRED_METHODS = [
 	'agent.stream',
 	// S-0198: the open issues, and a story made from one, offered at acceptance
 	'issue.list',
-	'issue.story'
+	'issue.story',
+	// S-0208: the planner for an epic or a story, gated by the plan host action
+	'plan.run'
 ];
 
 export type AgentStatus = {

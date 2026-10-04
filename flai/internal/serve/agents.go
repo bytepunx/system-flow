@@ -62,6 +62,9 @@ import (
 // every look so that enabling, disabling, and a new command need no restart.
 type AgentConfig struct {
 	Enabled bool
+	// Plan is whether the plan host action is enabled for the project: the
+	// operator may have the planner started for an epic or a story (S-0208).
+	Plan    bool
 	Command []string
 	Name    string // FLAI_AGENT is this and the story's ID; "agent" when empty
 	// Harnesses are the program and arguments each harness runs with on this
@@ -94,9 +97,13 @@ const (
 	OutcomeStopped = "stopped"
 )
 
-// AgentRun is one agent flai serve started, or failed to.
+// AgentRun is one agent flai serve started, or failed to: a story's agent,
+// or the planner for an item (S-0208).
 type AgentRun struct {
-	Story   string `json:"story"`
+	Story string `json:"story"`
+	// Item is the epic or story a planner run plans; empty on a story's
+	// agent's run, whose story is Story, and Story is empty on a planner's.
+	Item    string `json:"item,omitempty"`
 	Harness string `json:"harness,omitempty"`
 	Model   string `json:"model,omitempty"`
 	Command string `json:"command"` // the program's name, not its arguments
@@ -136,7 +143,7 @@ type AgentRun struct {
 // same says whether r and o are one run: the same start of the same
 // process.
 func (r *AgentRun) same(o *AgentRun) bool {
-	return r != nil && o != nil && r.Story == o.Story && r.Started == o.Started && r.PID == o.PID
+	return r != nil && o != nil && r.Story == o.Story && r.Item == o.Item && r.Started == o.Started && r.PID == o.PID
 }
 
 // stopped makes an ended run read as the operator's stop, when they stopped
@@ -168,10 +175,31 @@ type AgentState struct {
 	Waiting string `json:"waiting,omitempty"`
 	// Stories are each story's newest run, by ID (S-0104).
 	Stories map[string]*AgentRun `json:"stories,omitempty"`
+	// Plans are the newest planner run for each item it planned, by the
+	// item's ID (S-0208). They are no story's runs: Running and Last never
+	// name one.
+	Plans map[string]*AgentRun `json:"plans,omitempty"`
 }
 
-// put records a run as its story's newest, and keeps Running and Last true.
+// of is the newest run recorded for what r is for: its item's planner run,
+// or its story's agent's run.
+func (s *AgentState) of(r *AgentRun) *AgentRun {
+	if r.Item != "" {
+		return s.Plans[r.Item]
+	}
+	return s.Stories[r.Story]
+}
+
+// put records a run as its story's newest, and keeps Running and Last true,
+// or a planner run as its item's newest.
 func (s *AgentState) put(r *AgentRun) {
+	if r.Item != "" {
+		if s.Plans == nil {
+			s.Plans = map[string]*AgentRun{}
+		}
+		s.Plans[r.Item] = r
+		return
+	}
 	if s.Stories == nil {
 		s.Stories = map[string]*AgentRun{}
 	}
@@ -240,17 +268,17 @@ type launcher struct {
 	// started the agent (S-0115).
 	handOver bool
 	again    chan struct{} // an agent ended: look again
-	// changed is told the story whose run was recorded as started, not
-	// started, or ended: none of these changes a file of the project, so
-	// flai serve says so to the dashboard (S-0154). Nil tells no one.
-	changed func(story string)
+	// changed is told the run recorded as started, not started, or ended:
+	// none of these changes a file of the project, so flai serve says so to
+	// the dashboard (S-0154). Nil tells no one.
+	changed func(run *AgentRun)
 }
 
-// told records a run in the host's state and tells changed its story.
+// told records a run in the host's state and tells changed.
 func (l *launcher) told(run *AgentRun) {
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) { s.put(run) })
 	if l.changed != nil {
-		l.changed(run.Story)
+		l.changed(run)
 	}
 }
 
@@ -259,14 +287,14 @@ func (l *launcher) told(run *AgentRun) {
 // the process makes is theirs, not a failure.
 func (l *launcher) ended(run *AgentRun) {
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) {
-		if cur := s.Stories[run.Story]; cur.same(run) && cur.Stopped != "" {
+		if cur := s.of(run); cur.same(run) && cur.Stopped != "" {
 			run.Stopped = cur.Stopped
 			run.stopped()
 		}
 		s.put(run)
 	})
 	if l.changed != nil {
-		l.changed(run.Story)
+		l.changed(run)
 	}
 }
 
@@ -534,7 +562,8 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 // for it: flai serve was restarted while they ran, or a command started them
 // on the operator's word and handed them over (S-0115, S-0116). A process
 // that has the run's PID and is not the one started for it, after a reboot,
-// is gone too (S-0170).
+// is gone too (S-0170). A planner's run is settled the same way, and its
+// activity logged (S-0208).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
@@ -547,6 +576,12 @@ func (l *launcher) settleOrphans() {
 		l.ended(&ended)
 		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 		l.measure(run.Story)
+	}
+	for _, run := range st.Plans {
+		if !run.live() || l.waiting[run.PID] || run.running() {
+			continue
+		}
+		l.planEnded(run, nil)
 	}
 }
 
@@ -579,13 +614,19 @@ func asked(run *AgentRun) bool {
 // agentEnv is flai serve's environment without the host's address and token
 // and the config it was started with (S-0183, I-0044): a flai the agent runs
 // finds its own config, and a flai serve it runs does not reach the
-// operator's host.
+// operator's host. Nor does it carry what marks the session of whoever
+// started it, such as an agent that ran flai plan (S-0208): each run sets
+// FLAI_STORY, or FLAI_ROLE and FLAI_ITEM, for itself, and has the other
+// unset.
 func agentEnv(env []string) []string {
 	return slices.DeleteFunc(slices.Clone(env), func(kv string) bool {
 		name, _, _ := strings.Cut(kv, "=")
-		return name == host.URLEnv || name == host.TokenEnv || name == config.EnvVar
+		return name == host.URLEnv || name == host.TokenEnv || name == config.EnvVar || slices.Contains(runMarks, name)
 	})
 }
+
+// runMarks are the variables that say what a run is for.
+var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM"}
 
 // start starts an agent for story, or starts again the one that ended asking
 // in after, and says whether it did.
@@ -635,37 +676,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	if err != nil {
 		return fail(err)
 	}
-	argv := spec.Argv
-	run.Command = filepath.Base(argv[0])
-	logDir := filepath.Join(string(l.dir), "agents")
-	if err := os.MkdirAll(logDir, 0o700); err != nil {
-		return fail(err)
-	}
-	run.Log = filepath.Join(logDir, fmt.Sprintf("%s-%s-%s.log", l.entry.Key, story.ID, now.Format("20060102T150405Z")))
-	out, err := os.OpenFile(run.Log, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	cmd, out, err := l.spawn(ctx, run, spec.Argv, story.ID, now, append([]string{"FLAI_STORY=" + story.ID}, spec.Env...))
 	if err != nil {
 		return fail(err)
-	}
-	// It outlives the look that started it and flai serve itself: a session
-	// at work is not ended because its starter is restarted.
-	cmd := exec.CommandContext(context.WithoutCancel(ctx), argv[0], argv[1:]...)
-	cmd.Dir = l.entry.Root
-	cmd.Stdout, cmd.Stderr = out, out
-	cmd.Env = append(agentEnv(os.Environ()), "FLAI_AGENT="+run.Agent, "FLAI_STORY="+story.ID, "FLAI_SESSION="+now.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
-	cmd.Env = append(cmd.Env, spec.Env...)
-	Detach(cmd)
-	if err := cmd.Start(); err != nil {
-		_ = out.Close()
-		var ee *exec.Error
-		if errors.As(err, &ee) {
-			err = fmt.Errorf("%s: %w", ee.Name, ee.Err)
-		}
-		return fail(err)
-	}
-	run.PID = cmd.Process.Pid
-	run.Start = Started(run.PID)
-	if !l.handOver {
-		l.waiting[run.PID] = true
 	}
 	l.told(run)
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
@@ -685,10 +698,90 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		l.record(entry)
 	}
 	l.log("agent started", "story", story.ID, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	l.await(cmd, out, run.PID, func(code int) {
+		ended := *run
+		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
+		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, story.ID, run.Agent, &code)
+		l.ended(&ended)
+		l.log("agent ended", "story", story.ID, "pid", run.PID, "exit", code, "outcome", ended.Outcome)
+		l.measure(story.ID)
+	})
+	return true
+}
+
+// openLog opens the log of a run for subject, a story or a strategic
+// agent's kind, started at: beside the others in serve/agents, named for the
+// project's key, the subject, and the time, which Dir.AgentLogs and
+// Dir.ActivityLogs read by. A story's runs append to the log of the second
+// they started in. A strategic agent's runs, whose logs only the time tells
+// apart, each get a log of their own (S-0208): named for the first second
+// from their start that no other run's log is, within a minute.
+func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
+	dir := filepath.Join(string(l.dir), "agents")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil, err
+	}
+	name := func(t time.Time) string {
+		return filepath.Join(dir, fmt.Sprintf("%s-%s-%s.log", l.entry.Key, subject, t.Format("20060102T150405Z")))
+	}
+	if !workitem.IsActivityKind(subject) {
+		return os.OpenFile(name(at), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	}
+	for i := 0; ; i++ {
+		f, err := os.OpenFile(name(at.Add(time.Duration(i)*time.Second)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if !errors.Is(err, os.ErrExist) || i == 59 {
+			return f, err
+		}
+	}
+}
+
+// spawn starts argv as run's process, in the project's directory, its
+// output in the log openLog opens for subject, and its environment flai
+// serve's without the host's address, token, and config, with FLAI_AGENT,
+// the session started at, FLAI_STARTED_BY, and env. It sets run's command,
+// log, PID, and process start, and has the launcher wait for it unless it
+// hands its agents over. It records nothing: the caller does, as started or
+// as failed with the error.
+func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (*exec.Cmd, *os.File, error) {
+	run.Command = filepath.Base(argv[0])
+	out, err := l.openLog(subject, at)
+	if err != nil {
+		return nil, nil, err
+	}
+	run.Log = out.Name()
+	// It outlives the look that started it and flai serve itself: a session
+	// at work is not ended because its starter is restarted.
+	cmd := exec.CommandContext(context.WithoutCancel(ctx), argv[0], argv[1:]...)
+	cmd.Dir = l.entry.Root
+	cmd.Stdout, cmd.Stderr = out, out
+	cmd.Env = append(agentEnv(os.Environ()), "FLAI_AGENT="+run.Agent, "FLAI_SESSION="+at.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
+	cmd.Env = append(cmd.Env, env...)
+	Detach(cmd)
+	if err := cmd.Start(); err != nil {
+		_ = out.Close()
+		var ee *exec.Error
+		if errors.As(err, &ee) {
+			err = fmt.Errorf("%s: %w", ee.Name, ee.Err)
+		}
+		return nil, nil, err
+	}
+	run.PID = cmd.Process.Pid
+	run.Start = Started(run.PID)
+	if !l.handOver {
+		l.waiting[run.PID] = true
+	}
+	return cmd, out, nil
+}
+
+// await waits in the background for the process spawn started, has end
+// record how it ended from its exit code, and has the launcher look again;
+// a launcher that hands its agents over lets it go instead, for the serving
+// flai to settle once it is gone.
+func (l *launcher) await(cmd *exec.Cmd, out *os.File, pid int, end func(code int)) {
 	if l.handOver {
 		_ = out.Close()
 		_ = cmd.Process.Release()
-		return true
+		return
 	}
 	go func() {
 		err := cmd.Wait()
@@ -700,21 +793,15 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		} else if err != nil {
 			code = -1
 		}
-		ended := *run
-		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
-		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, story.ID, run.Agent, &code)
-		l.ended(&ended)
+		end(code)
 		l.mu.Lock()
-		delete(l.waiting, run.PID)
+		delete(l.waiting, pid)
 		l.mu.Unlock()
-		l.log("agent ended", "story", story.ID, "pid", run.PID, "exit", code, "outcome", ended.Outcome)
-		l.measure(story.ID)
 		select {
 		case l.again <- struct{}{}:
 		default:
 		}
 	}()
-	return true
 }
 
 func oneOrMany(n int, one, many string) string {

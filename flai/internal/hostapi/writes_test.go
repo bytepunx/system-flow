@@ -66,6 +66,7 @@ var good = map[string]struct {
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
 	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
 	"agent.stop":    {`{"id":"S-0001",` + rid + `}`, "serve agent stop S-0001 --json", ""},
+	"plan.run":      {`{"id":"E-0001",` + rid + `}`, "plan E-0001 --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
@@ -142,6 +143,7 @@ var refused = map[string][]string{
 	"agent.start":   {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.stop":    {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"plan.run":      {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001 --json",` + rid + `}`, `{"id":"E-0001"}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -631,6 +633,41 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 		if sp := specs()[name]; sp.action != ActionAgent {
 			t.Errorf("%s is gated by %q, not the agent action", name, sp.action)
 		}
+	}
+}
+
+// S-0208: plan.run starts the planner for an epic or a story only while the
+// operator has enabled the plan action for the project, says what enables it
+// when not, and journals both, the start as what it started.
+func TestPlanRunNeedsThePlanAction(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := false
+	host := Host{Enabled: func(action, root string) bool { return on && action == ActionPlan && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"item":"E-0001","agent":"planner-E-0001","harness":"command","command":"plan-it","pid":42,"log":"/l","session":"s","started":"2026-10-03T10:00:00Z"}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	_, e := m["plan.run"](context.Background(), p, json.RawMessage(`{"id":"E-0001","request_id":"req-00000001"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, `the host action "plan" is not enabled`) || !strings.Contains(e.Message, "flai serve enable plan") {
+		t.Fatalf("off: %+v", e)
+	}
+	if len(rec.runs) != 0 {
+		t.Fatalf("a refused plan ran %+v", rec.runs)
+	}
+	on = true
+	if _, e := m["plan.run"](context.Background(), p, json.RawMessage(`{"id":"E-0001","request_id":"req-00000002"}`)); e != nil {
+		t.Fatalf("on: %+v", e)
+	}
+	if len(rec.runs) != 1 || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "plan E-0001 --json" {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+	if len(journal) != 2 || journal[0].Outcome != "disabled" || journal[0].Action != ActionPlan || journal[0].Method != "plan.run" {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if j := journal[1]; j.Outcome != "done" || j.Action != ActionPlan || j.Detail != "started plan-it to plan E-0001 as planner-E-0001 (pid 42)" {
+		t.Errorf("started: %+v", j)
+	}
+	if !DashboardSees(ActionPlan) {
+		t.Error("the dashboard is not told of the plan action, so it cannot offer Plan")
 	}
 }
 
