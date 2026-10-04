@@ -1,6 +1,8 @@
 package mcpserver
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,7 +17,7 @@ func TestItemNewAndEditCarryTheAgent(t *testing.T) {
 	f := setup(t)
 	f.repo.Manifest.Agent = &manifest.Agent{Harness: "claude-code", Model: "claude-opus-5-5", Config: map[string]string{"effort": "high"}}
 
-	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "From an agent", "agent": map[string]any{"model": "claude-sonnet-5"}, "body": "## Goal\n\nSomething.\n\n## Acceptance criteria\n- [ ] it works\n"})
+	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "From an agent", "agent": map[string]any{"model": "claude-sonnet-5"}, "body": "## Goal\n\nSomething.\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"})
 	if failed != "" {
 		t.Fatal(failed)
 	}
@@ -181,7 +183,7 @@ func TestItemNewAndEditCarryTopics(t *testing.T) {
 // finalizing is the operator's, and so does item_edit's draft false.
 func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
 	f := setup(t)
-	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Drafted", "draft": true, "body": "## Goal\n\nx\n\n## Acceptance criteria\n- [ ] it works\n"})
+	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Drafted", "draft": true, "body": "## Goal\n\nx\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"})
 	if failed != "" || out["draft"] != true {
 		t.Fatalf("new draft: %v %s", out, failed)
 	}
@@ -209,6 +211,55 @@ func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
 	}
 	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "draft": true}); !strings.Contains(failed, "only a story in the backlog") {
 		t.Errorf("an in-progress story made a draft: %q", failed)
+	}
+}
+
+// S-0209: item_new with a body is checked as flai story new --body-stdin is,
+// so a story the planner writes passes flai check --strict and the markdown
+// lint before it is kept. One that leaves out a section, or that the lint
+// rejects, is refused with the findings and leaves nothing: no file, and its
+// epic as it was. A clean one is kept and listed in its epic.
+func TestItemNewWithABodyIsChecked(t *testing.T) {
+	f := setup(t)
+	// the lint this project runs, in short: a front matter title is not a heading
+	if err := os.WriteFile(filepath.Join(f.repo.Root, ".markdownlint.yaml"), []byte("default: true\nMD013: false\nMD025:\n  front_matter_title: \"\"\nMD041: false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	epic, err := f.repo.Get(f.story.Parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epicWas, _ := os.ReadFile(epic.Path)
+	stories := func() string {
+		entries, _ := os.ReadDir(filepath.Join(f.repo.Root, "wip/kanban/stories"))
+		names := make([]string, len(entries))
+		for i, e := range entries {
+			names[i] = e.Name()
+		}
+		return strings.Join(names, " ")
+	}
+	storiesWere := stories()
+	for name, c := range map[string]struct{ body, want string }{
+		"a missing section": {"## Goal\n\nx\n\n## Acceptance criteria\n\n- [ ] it works\n\n## Notes\n", `item.heading: body is missing the "## Tasks" section`},
+		"a lint finding":    {"## Goal\n\nx\n\n#### Too deep\n\n## Acceptance criteria\n\n- [ ] it works\n\n## Tasks\n\n## Notes\n", "markdown.MD001"},
+	} {
+		_, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Planned", "parent": epic.ID, "draft": true, "body": c.body})
+		if !strings.Contains(failed, c.want) || !strings.Contains(failed, "nothing was created") {
+			t.Errorf("%s: refused with %q", name, failed)
+		}
+		if got := stories(); got != storiesWere {
+			t.Errorf("%s: a refused story leaves nothing: %s", name, got)
+		}
+		if got, _ := os.ReadFile(epic.Path); string(got) != string(epicWas) {
+			t.Errorf("%s: the epic changed:\n%s", name, got)
+		}
+	}
+	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Planned", "parent": epic.ID, "draft": true, "body": "## Goal\n\nx\n\n## Acceptance criteria\n\n- [ ] it works\n\n## Tasks\n\n## Notes\n"})
+	if failed != "" {
+		t.Fatalf("a clean story: %s", failed)
+	}
+	if got, _ := os.ReadFile(epic.Path); !strings.Contains(string(got), out["id"].(string)) {
+		t.Errorf("the epic lists the kept story:\n%s", got)
 	}
 }
 

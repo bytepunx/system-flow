@@ -47,10 +47,12 @@ func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNew
 		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, After: in.After, Agent: in.Agent, Body: in.Body, Draft: in.Draft, Now: s.now()}
 	var it *workitem.Item
 	var err error
-	if len(in.After) > 0 {
+	if len(in.After) > 0 || strings.TrimSpace(in.Body) != "" {
 		// an after: entry that names nothing, or forms a cycle, is the check's
 		// to find, so a creation that sets one is checked, as the CLI's --after
-		// is (S-0176)
+		// is (S-0176). A body its author wrote is checked as --body-stdin is: a
+		// missing section or a lint finding refuses it and leaves nothing
+		// (S-0209). The template's own body is not, as flai story new's is not.
 		var res *itemnew.Result
 		if res, err = itemnew.Create(s.repo, s.runner, itemnew.Options{New: opt}); err == nil {
 			it = res.Item
