@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-04T21:41:59Z
+updated: 2026-10-04T23:13:46Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md, flai/internal/guard, flai/internal/manifest, design/system/project-manifest.md, docs/operators/settings.md]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:21Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T14:38:00Z
-  basis: "Its own forecast of 1h15m; 11th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220 and S-0221."
+  delivery: 2026-10-05T16:15:00Z
+  basis: "Its own forecast of 1h15m; 16th in the pull order with an in-progress limit of 3, behind S-0248, S-0252, S-0253, S-0257, S-0244, S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220 and S-0221."
   by: flai
-  at: 2026-10-04T21:41:59Z
+  at: 2026-10-04T23:13:46Z
 ---
 # S-0222 The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold
 
