@@ -221,10 +221,7 @@ func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
 // epic as it was. A clean one is kept and listed in its epic.
 func TestItemNewWithABodyIsChecked(t *testing.T) {
 	f := setup(t)
-	// the lint this project runs, in short: a front matter title is not a heading
-	if err := os.WriteFile(filepath.Join(f.repo.Root, ".markdownlint.yaml"), []byte("default: true\nMD013: false\nMD025:\n  front_matter_title: \"\"\nMD041: false\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	f.lintAsThisProjectDoes(t)
 	epic, err := f.repo.Get(f.story.Parent)
 	if err != nil {
 		t.Fatal(err)
@@ -260,6 +257,74 @@ func TestItemNewWithABodyIsChecked(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(epic.Path); !strings.Contains(string(got), out["id"].(string)) {
 		t.Errorf("the epic lists the kept story:\n%s", got)
+	}
+}
+
+// lintAsThisProjectDoes gives the fixture the lint this project runs, in
+// short: a front matter title is not a heading.
+func (f *fixture) lintAsThisProjectDoes(t *testing.T) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(f.repo.Root, ".markdownlint.yaml"), []byte("default: true\nMD013: false\nMD025:\n  front_matter_title: \"\"\nMD041: false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0255: a task the planner writes over item_new with a body is checked as
+// a story's is (S-0209). One the lint rejects, here a list indented one
+// space, or that leaves out a section, is refused with the finding and
+// leaves nothing: no task file, and its story as it was. One with its work,
+// what done means, a nature, tags, touches, and after its sibling is kept as
+// written and listed in its story.
+func TestItemNewWithABodyChecksAStorysTask(t *testing.T) {
+	f := setup(t)
+	f.lintAsThisProjectDoes(t)
+	storyWas, _ := os.ReadFile(f.story.Path)
+	tasks := func() string {
+		entries, _ := os.ReadDir(filepath.Join(f.repo.Root, "wip/kanban/tasks"))
+		names := make([]string, len(entries))
+		for i, e := range entries {
+			names[i] = e.Name()
+		}
+		return strings.Join(names, " ")
+	}
+	tasksWere := tasks()
+	clean := "## Work\n\nTest the guard.\n\n## Done when\n\n- The test fails without the rule.\n\n## Notes\n\nNone.\n"
+	task := func(body string) map[string]any {
+		return map[string]any{"type": "task", "title": "Test the guard", "parent": f.story.ID, "nature": "improvement",
+			"tags": []string{"planner"}, "touches": []string{"flai/internal/guard"}, "body": body}
+	}
+	// no after, so that it is the body alone that has the task checked
+	for name, c := range map[string]struct{ body, want string }{
+		"a lint finding":    {strings.ReplaceAll(clean, "\n- ", "\n - "), "markdown.MD007"},
+		"a missing section": {"## Work\n\nTest the guard.\n\n## Notes\n\nNone.\n", `item.heading: body is missing the "## Done when" section`},
+	} {
+		_, failed := f.call(t, "item_new", task(c.body))
+		if !strings.Contains(failed, c.want) || !strings.Contains(failed, "nothing was created") {
+			t.Errorf("%s: refused with %q", name, failed)
+		}
+		if got := tasks(); got != tasksWere {
+			t.Errorf("%s: a refused task leaves nothing: %s", name, got)
+		}
+		if got, _ := os.ReadFile(f.story.Path); string(got) != string(storyWas) {
+			t.Errorf("%s: the story changed:\n%s", name, got)
+		}
+	}
+	kept := task(clean)
+	kept["after"] = []string{f.task.ID}
+	out, failed := f.call(t, "item_new", kept)
+	if failed != "" {
+		t.Fatalf("a clean task: %s", failed)
+	}
+	id := out["id"].(string)
+	if out["parent"] != f.story.ID || out["nature"] != "improvement" || strings.Join(toStrings(out["tags"]), ",") != "planner" ||
+		strings.Join(toStrings(out["touches"]), ",") != "flai/internal/guard" || strings.Join(toStrings(out["after"]), ",") != f.task.ID {
+		t.Errorf("kept as written: %v", out)
+	}
+	if !strings.Contains(out["body"].(string), "## Done when\n\n- The test fails without the rule.") {
+		t.Errorf("the body is the planner's:\n%s", out["body"])
+	}
+	if got, _ := os.ReadFile(f.story.Path); !strings.Contains(string(got), id) {
+		t.Errorf("the story lists the kept task:\n%s", got)
 	}
 }
 

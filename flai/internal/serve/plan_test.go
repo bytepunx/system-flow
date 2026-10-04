@@ -211,6 +211,51 @@ func TestAPlannerRunsActivityNamesWhatItPlanned(t *testing.T) {
 	}
 }
 
+// S-0255: a planner run on a story, which drafts its tasks or revisits the
+// ones it has, names the story in its activity, then the tasks it created
+// under it, then those it changed there, and not a task it left alone or a
+// task of another story.
+func TestAPlannerRunOnAStoryNamesItsTasks(t *testing.T) {
+	lab := planLab(t)
+	before, during := runStart.Add(-time.Hour), runStart.Add(30*time.Second)
+	item := func(typ, parent, title string, at time.Time) *workitem.Item {
+		t.Helper()
+		it, err := lab.repo.Create(workitem.NewOptions{Type: typ, Title: title, Parent: parent, Owner: "alex", Now: at})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return it
+	}
+	story := item(workitem.Story, lab.epic.ID, "Planned", before)
+	left := item(workitem.Task, story.ID, "Left alone", before)
+	edited := item(workitem.Task, story.ID, "Edited", before)
+	edited.Updated = runStart.Format(workitem.TimeFormat) // the second the run started
+	if err := lab.repo.Save(edited); err != nil {
+		t.Fatal(err)
+	}
+	made := item(workitem.Task, story.ID, "Drafted", during)
+	other := item(workitem.Story, lab.epic.ID, "Other", before)
+	elsewhere := item(workitem.Task, other.ID, "Elsewhere", during)
+	logs := filepath.Join(string(lab.o.Dir), "agents")
+	if err := os.MkdirAll(logs, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(logs, "t-planner-20261003T100000Z.log"), []byte(strings.Join([]string{
+		streamCall("s", "m1", runStart, 999), streamFinal("Drafted "+made.ID+" for "+story.ID+".", 1000, 0.5)}, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	zero := 0
+	lab.l.planEnded(&AgentRun{Item: story.ID, Agent: "planner-" + story.ID, Started: runStart.Format(time.RFC3339), Session: "s"}, &zero)
+	doc, err := lab.repo.Activity(workitem.ActivityPlanner)
+	if err != nil || len(doc.Entries) != 1 {
+		t.Fatalf("activity = %+v (%v), want one entry", doc, err)
+	}
+	want := strings.Join([]string{story.ID, made.ID, edited.ID}, ",")
+	if e := doc.Entries[0]; strings.Join(e.Items, ",") != want || e.Cost != 0.5 {
+		t.Errorf("entry = %+v, want items %s (not %s or %s) and the run's 0.5 USD", e, want, left.ID, elsewhere.ID)
+	}
+}
+
 // S-0208: a planner that ended with its question on its item open is asked;
 // one that exited with a failure, failed.
 func TestAPlannerRunIsJudgedByItsQuestionAndItsExit(t *testing.T) {
