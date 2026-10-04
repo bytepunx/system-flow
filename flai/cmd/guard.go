@@ -48,8 +48,8 @@ Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as
 any sub-agent is.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP
-tools; flai serve has a planner run's session run it before Edit, Write,
-and NotebookEdit as well.`,
+tools, and, in a planner session alone, before Edit, Write, and NotebookEdit
+as well.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

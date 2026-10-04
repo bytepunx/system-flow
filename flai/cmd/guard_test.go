@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -49,6 +52,44 @@ func TestGuardHoldsThePlannerToPlanning(t *testing.T) {
 		_, errOut, code := runStdin(t, dir, c.in, "guard")
 		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
 			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+}
+
+// S-0208, TH-0096: this repository's settings and the template's run the
+// guard before Bash and flai's MCP tools in every session, and before Edit,
+// Write, and NotebookEdit in a planner session alone.
+func TestTheSettingsRunTheGuardOnThePlannersEdits(t *testing.T) {
+	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var settings struct {
+			Hooks map[string][]struct {
+				Matcher string `json:"matcher"`
+				Hooks   []struct {
+					Command string `json:"command"`
+				} `json:"hooks"`
+			} `json:"hooks"`
+		}
+		if err := json.Unmarshal(data, &settings); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		commands := map[string]string{}
+		for _, h := range settings.Hooks["PreToolUse"] {
+			if len(h.Hooks) == 1 {
+				commands[h.Matcher] = h.Hooks[0].Command
+			}
+		}
+		if c := commands["Bash|mcp__flai__.*"]; !strings.Contains(c, " guard 2>&1") || strings.Contains(c, "FLAI_ROLE") {
+			t.Errorf("%s: Bash and flai's MCP tools are not guarded in every session: %q", path, c)
+		}
+		if c := commands["Edit|Write|NotebookEdit"]; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || exit 0; `) || !strings.Contains(c, " guard 2>&1") {
+			t.Errorf("%s: a planner's file edits are not guarded, or a story's are: %q", path, c)
+		}
+		if len(commands) != 2 {
+			t.Errorf("%s: hooks %v", path, commands)
 		}
 	}
 }

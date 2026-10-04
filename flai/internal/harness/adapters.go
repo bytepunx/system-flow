@@ -99,11 +99,7 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 		argv = append(argv, "--agents", agents)
 	}
 	if r.Role != "" {
-		settings, err := plannerSettings(r.Flai)
-		if err != nil {
-			return Start{}, err
-		}
-		argv = append(argv, "--agent", claudeCodePlanner, "--settings", settings)
+		argv = append(argv, "--agent", claudeCodePlanner)
 	}
 	argv = append(argv, host.Args...)
 	return Start{Harness: ClaudeCode, Argv: argv, Env: env}, nil
@@ -116,27 +112,6 @@ var claudeCodeRoles = map[string]string{manifest.RoleExplore: "explorer", manife
 // claudeCodePlanner is the definition, in the project's .claude/agents/, that
 // a planner's session runs as (S-0208).
 const claudeCodePlanner = "planner"
-
-// plannerSettings is the --settings JSON that has flai guard judge a planner
-// session's file edits as well as its shell and flai calls (S-0208): the
-// project's hook matches only Bash and flai's MCP tools, so Edit, Write, and
-// NotebookEdit get a hook of their own, which runs flai guard with the
-// run's flai and passes on only its refusals, as the project's hook does.
-func plannerSettings(flai string) (string, error) {
-	hook := "out=$(" + shQuote(flai) + ` guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2`
-	js, err := json.Marshal(map[string]any{"hooks": map[string]any{"PreToolUse": []any{
-		map[string]any{"matcher": "Edit|Write|NotebookEdit", "hooks": []any{map[string]any{"type": "command", "command": hook}}},
-	}}})
-	if err != nil {
-		return "", err
-	}
-	return string(js), nil
-}
-
-// shQuote is s as one word for sh, in single quotes.
-func shQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
 
 // subAgents is the --agents JSON that runs each of the agent's roles on its
 // own model (S-0189): the project's definition of the role's sub-agent, its

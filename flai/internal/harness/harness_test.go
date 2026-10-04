@@ -616,26 +616,9 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	if want := []string{"FLAI_ROLE=plan", "FLAI_ITEM=E-0016"}; !slices.Equal(st.Env, want) {
 		t.Errorf("env %q, want %q", st.Env, want)
 	}
-	// flai guard judges the planner's file edits, which the project's hook
-	// does not match
-	var settings struct {
-		Hooks map[string][]struct {
-			Matcher string `json:"matcher"`
-			Hooks   []struct {
-				Type    string `json:"type"`
-				Command string `json:"command"`
-			} `json:"hooks"`
-		} `json:"hooks"`
-	}
-	if err := json.Unmarshal([]byte(after(st.Argv, "--settings")), &settings); err != nil {
-		t.Fatalf("--settings: %v in %v", err, st.Argv)
-	}
-	if pre := settings.Hooks["PreToolUse"]; len(pre) != 1 || pre[0].Matcher != "Edit|Write|NotebookEdit" || len(pre[0].Hooks) != 1 || pre[0].Hooks[0].Type != "command" ||
-		pre[0].Hooks[0].Command != `out=$('/usr/local/bin/flai' guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2` {
-		t.Errorf("settings: %+v", settings)
-	}
-	if got := shQuote("/opt/it's/flai"); got != `'/opt/it'\''s/flai'` {
-		t.Errorf("quoted %s", got)
+	// the project's settings have flai guard judge the planner's file edits
+	if slices.Contains(st.Argv, "--settings") {
+		t.Errorf("a planner run is passed --settings: %v", st.Argv)
 	}
 
 	// a planner's agent with no model and no roles: the definition's model,
