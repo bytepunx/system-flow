@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-04T04:48:24Z
+updated: 2026-10-04T21:41:59Z
 transitions: []
 tags: [dashboard, flai]
 touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:24Z
 forecast:
   duration: 2h
-  delivery: 2026-10-05T16:00:00Z
-  basis: "Three settings panels and a validating settings.manifest hostapi write, like S-0204 (4322 s); last in the flai lane because it shares hostapi and manifest with the orchestrator stories."
-  by: planner-E-0016
-  at: 2026-10-04T04:45:06Z
+  delivery: 2026-10-05T15:56:00Z
+  basis: "Its own forecast of 2h; 17th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0223, S-0224, S-0226, S-0227 and S-0228."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0229 The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents
 

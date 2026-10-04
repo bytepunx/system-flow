@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-04T04:53:21Z
+updated: 2026-10-04T21:41:59Z
 transitions: []
 tags: [flai, dashboard]
 touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:21Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-04T18:00:00Z
-  basis: "A second strategic agent behind a host action like S-0208 (3912 s) plus a CLI, MCP tool, schedule, path guard and a new design/analysis folder in the layout and check; serial after S-0211 on serve."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:52Z
+  delivery: 2026-10-05T11:38:00Z
+  basis: "Its own forecast of 2h30m; 12th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220, S-0221 and S-0222."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0223 The analyzer runs on demand or on a schedule and writes a report under design/analysis
 

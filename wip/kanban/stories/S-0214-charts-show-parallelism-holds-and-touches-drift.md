@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T04:48:15Z
+updated: 2026-10-04T21:41:59Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:15Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-04T11:30:00Z
-  basis: "Parallelism and touches drift exist in flai stats (claims.days, claims.drift); hold time by reason is a new metric needing an ADR; waits for S-0210 to free flai/internal/metrics."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:12Z
+  delivery: 2026-10-05T00:23:00Z
+  basis: "Its own forecast of 1h45m; 3rd in the pull order with an in-progress limit of 3, behind S-0212 and S-0213."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0214 Charts show parallelism, holds, and touches drift
 

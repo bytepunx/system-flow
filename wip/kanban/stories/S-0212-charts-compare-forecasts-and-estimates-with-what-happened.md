@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-04T04:48:14Z
+updated: 2026-10-04T21:41:59Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:14Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-04T08:00:00Z
-  basis: "Three charts over metrics S-0205 already computes (forecasts.forecast, forecasts.delivery, by model), like S-0204 (4322 s) less the flai side; first in the dashboard lane once S-0225 frees flaiover/src/lib/viz."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:06Z
+  delivery: 2026-10-05T04:31:00Z
+  basis: "Its own forecast of 1h15m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0212 Charts compare forecasts and estimates with what happened
 

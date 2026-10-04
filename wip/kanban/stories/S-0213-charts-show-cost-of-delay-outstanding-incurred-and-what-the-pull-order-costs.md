@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T04:53:21Z
+updated: 2026-10-04T21:41:59Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:14Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-04T15:30:00Z
-  basis: "cod-outstanding and cod-incurred exist in flai stats; the order projection under cod and WSJF is new arithmetic in flai with an ADR; fourth in the dashboard lane and after S-0217's ordering."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:08Z
+  delivery: 2026-10-05T00:00:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0212."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 

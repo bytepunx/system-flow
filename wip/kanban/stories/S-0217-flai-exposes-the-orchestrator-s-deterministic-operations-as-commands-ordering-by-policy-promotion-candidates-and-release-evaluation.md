@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-04T19:09:47Z
+updated: 2026-10-04T21:41:59Z
 transitions:
   - to: ready
     at: 2026-10-03T20:34:00Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:17Z
 forecast:
   duration: 2h
-  delivery: 2026-10-05T02:00:00Z
-  basis: "Six tasks in four layers (manifest and order, then promote and release, then reads and tools, then docs), sized like S-0205 (4208 s) plus a layer; starts after S-0255 and S-0210 are accepted, about 23:00Z, with about an hour in review."
-  by: planner-S-0217
-  at: 2026-10-04T19:09:47Z
+  delivery: 2026-10-05T02:30:00Z
+  basis: "Its own forecast of 2h; 6th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215 and S-0216."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0217 flai exposes the orchestrator's deterministic operations as commands: ordering by policy, promotion candidates, and release evaluation
 

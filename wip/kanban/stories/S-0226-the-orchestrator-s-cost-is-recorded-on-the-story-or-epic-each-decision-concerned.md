@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-04T04:53:16Z
+updated: 2026-10-04T21:41:59Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/mcpserver, design/system/strategic-agents.md, flai/internal/metrics, design/adrs]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:22Z
 forecast:
   duration: 45m
-  delivery: 2026-10-05T11:00:00Z
-  basis: "S-0225 already makes the strategic usage entry generic per kind and shows it in stats and charts, so what is left is charging each orchestrator activity to the items it names, else the project; small like S-0202 (1197 s)."
-  by: planner-E-0016
-  at: 2026-10-04T04:45:00Z
+  delivery: 2026-10-05T09:55:00Z
+  basis: "Its own forecast of 45m; 14th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0223 and S-0224."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0226 The orchestrator's cost is recorded on the story or epic each decision concerned
 

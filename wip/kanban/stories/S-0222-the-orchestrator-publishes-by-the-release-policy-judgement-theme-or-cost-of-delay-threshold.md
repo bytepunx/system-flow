@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-04T04:48:21Z
+updated: 2026-10-04T21:41:59Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md, flai/internal/guard, flai/internal/manifest, design/system/project-manifest.md, docs/operators/settings.md]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:21Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T07:30:00Z
-  basis: "Policy evaluation already in S-0217's flai release --evaluate; this adds the prompt, whole_epics, refusal threads and tests; like S-0203 (1555 s) doubled; serial after S-0221."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:58Z
+  delivery: 2026-10-05T14:38:00Z
+  basis: "Its own forecast of 1h15m; 11th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220 and S-0221."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0222 The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold
 

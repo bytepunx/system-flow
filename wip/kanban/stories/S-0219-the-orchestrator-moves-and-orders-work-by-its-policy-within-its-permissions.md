@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-04T04:48:19Z
+updated: 2026-10-04T21:41:59Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/harness, ".claude/agents/orchestrator.md", template, design/system/strategic-agents.md, flai/internal/guard, flai/internal/serve]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:19Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T00:00:00Z
-  basis: "Prompt behaviour over S-0217's commands with a fixture-board test per permission; like S-0201 (3771 s); serial after S-0218 on flai/internal/harness."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:49Z
+  delivery: 2026-10-05T14:29:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216, S-0217 and S-0218."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0219 The orchestrator moves and orders work by its policy within its permissions
 

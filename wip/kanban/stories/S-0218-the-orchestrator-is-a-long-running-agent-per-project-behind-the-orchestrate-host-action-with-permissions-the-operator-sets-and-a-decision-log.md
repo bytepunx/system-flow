@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-04T04:48:17Z
+updated: 2026-10-04T21:41:59Z
 transitions: []
 tags: [flai, dashboard]
 touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/config, ".claude/agents", template, flai/internal/manifest, flai/internal/guard, flai/cmd, flaiover/src/routes/activity, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators, docs/users/flai.md]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:17Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-04T21:30:00Z
-  basis: "Mirrors S-0208's plan action (3912 s) with a restart lifecycle, seven manifest permissions and guard enforcement on top; serial on harness, hostapi and mcpserver after S-0223."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:48Z
+  delivery: 2026-10-05T06:19:00Z
+  basis: "Its own forecast of 2h30m; 7th in the pull order with an in-progress limit of 3, behind S-0212, S-0213, S-0214, S-0215, S-0216 and S-0217."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0218 The orchestrator is a long-running agent per project behind the orchestrate host action, with permissions the operator sets and a decision log
 

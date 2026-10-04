@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T04:48:15Z
+updated: 2026-10-04T21:41:59Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:15Z
 forecast:
   duration: 1h
-  delivery: 2026-10-04T13:00:00Z
-  basis: "One chart over waiting.weeks, which flai stats has, and a longest-waits table that may need a per-wait list in the metrics; like S-0202 (1197 s) plus the table."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:13Z
+  delivery: 2026-10-05T04:24:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0212, S-0213 and S-0214."
+  by: flai
+  at: 2026-10-04T21:41:59Z
 ---
 # S-0215 A chart shows how long agents spend waiting on threads and on review
 
