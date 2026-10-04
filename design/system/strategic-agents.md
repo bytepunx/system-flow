@@ -18,7 +18,7 @@ The planner, the orchestrator, and the analyzer are agents that work above a sto
 
 ## The planner
 
-The planner plans one epic or one story and ends (S-0208, [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). For an epic with no stories it drafts them; for a story it adds touches, a forecast, and a cost of delay value, and drafts its tasks or revisits those it has (S-0255); for an epic with stories it revisits each one not done or cancelled, enriches it again, and proposes on the epic's plan thread what it would split, merge, add, or drop, drafting the additions (S-0209). It writes through flai alone, every story it creates is a draft, and it moves nothing past backlog.
+The planner plans one epic or one story and ends (S-0208, [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). For an epic with no stories it drafts them; for a story it adds touches, a forecast, and a cost of delay value ([Enriching a story](#enriching-a-story-s-0210)), and drafts its tasks or revisits those it has (S-0255); for an epic with stories it revisits each one not done or cancelled, enriches it again, and proposes on the epic's plan thread what it would split, merge, add, or drop, drafting the additions (S-0209). It writes through flai alone, every story it creates is a draft, and it moves nothing past backlog.
 
 ### Starting it
 
@@ -72,6 +72,83 @@ Tasks carry no topics, so a topic a task reaches goes on the story. `itemnew.Cre
 
 `planner.md` says the same in short and lists the planner's tools: `Read`, `Grep`, `Glob`, `Bash`, `Agent`, and flai's MCP tools for reading, `inbox`, `item_new`, `item_edit`, `item_move`, `thread_open`, `thread_reply`, `activity_log`, and `wait_for_events`. It lists no `Edit`, `Write`, or `NotebookEdit`.
 
+### Enriching a story (S-0210)
+
+To enrich a story, the planner runs three commands, reviews what they print, and writes what it decides. The commands write nothing. Each prints its result, and `--json` gives the structure. The guard lets every sub-agent and the planner run all three (`cliReads`).
+
+| Command | Prints | Code |
+|---------|--------|------|
+| `flai touches suggest <S-nnnn> [path...] [--min 2] [--limit 20]` | The files most often changed together with the story's touches | `cmd/touches.go`, `storygit.CommitFiles`, `planning.CoChanged` |
+| `flai forecast <S-nnnn>` | A duration, a delivery, and a one-sentence basis | `cmd/forecast.go`, `planning.Forecast` |
+| `flai cod <E-nnnn\|S-nnnn>` | A cost of delay per week, and its basis | `cmd/cod.go`, `planning.CostOfDelay` |
+
+#### Touches from co-change
+
+The seeds are the story's touches, its own and those of its tasks not cancelled, read as a claim reads them (`Holds.Claim`: a sub-project's name or tag means its path), and the paths given. A story with no touches and no path given is refused.
+
+`CommitFiles` reads the main branch's history once, in the main checkout: commits that are not merges, renames not followed, paths from the project's root. Story branches are not read, so a commit is not counted on its branch and again after acceptance. Files under the wip folder are left out, since flai writes them. So are flai's own bookkeeping commits, whose files would otherwise seem to change with everything:
+
+| Left out | Subject |
+|----------|---------|
+| Acceptance | `chore: [ID] accept and archive`, with an older release in it or not |
+| Creation | `chore: [ID] create …` |
+| Edit by fields | `chore: [ID] edit …` |
+| Release | `chore: publish …` |
+| Default agent | `chore: set the project's default agent`, `chore: clear the project's default agent` |
+| Import | `chore: bring … under system-flow (flai import)` |
+
+A commit with no file left is dropped. A seed commit is one that changed a file under a seed: the file itself, or a folder that holds it. Every other file is counted by the seed commits it is in, with that count's share of them. Files counted at least `--min` times are kept, ordered by count, most first, then by path, and cut at `--limit` (0 keeps every one). The header names the seeds and how many of the commits are seed commits.
+
+#### Forecast
+
+A story's size is its acceptance criteria's checkboxes and its own touches counted together, at least 1. Its band is small up to 6, medium up to 12, and large from 13.
+
+The history is the done stories with `usage.seconds` above zero and a cycle time, from first in progress to done. Each gives three ratios: agent seconds per unit of size; seconds in progress, over every spell, per agent second; and cycle time per agent second. The match takes the first rung with at least three stories:
+
+| Rung | The done stories that share the story's |
+|------|------------------------------------------|
+| 1 | Nature, model (`agent.model`), and band |
+| 2 | Nature and band |
+| 3 | Nature |
+| 4 | Nothing: all of them |
+
+| Figure | From the matched stories |
+|--------|--------------------------|
+| Duration | The median seconds per unit times the size, rounded up to the minute |
+| Busy factor | The median seconds in progress per agent second, at least 1: how long a story holds its place in progress |
+| Cycle factor | The median cycle time per agent second, at least 1: how long from the start of progress to done |
+
+With fewer than three stories on every rung, the duration is `planning.default_duration` (1h unset, [project-manifest.md](project-manifest.md)), both factors are 1, and the basis says so.
+
+The delivery plays out the board from now. The lanes are the board's in-progress limit; with none, every story starts as soon as what it waits for allows. The stories are played out in this order:
+
+| Stories | Played out |
+|---------|------------|
+| The story itself, in progress or in review | Delivered at its start plus its duration times the cycle factor, never before now. Nothing else is played out |
+| In progress | Each holds a lane until its start plus its duration times the busy factor, and is delivered at its start plus its duration times the cycle factor, neither before now. More than the limit free a lane only once enough have finished to bring the count under it |
+| In review | Not played out: they hold no lane |
+| Ready, then backlog, in pull order | Each starts at the earliest free lane, but not before the delivery of any story in its `after` already played out; holds the lane for its duration times the busy factor; and is delivered at its start plus its duration times the cycle factor. The play-out stops at the story |
+
+A story ahead with its own `forecast.duration` is played out with it; the others, and the story itself, with the duration worked out from history. Times are UTC, rounded up to the minute. `--json` adds `size`, `criteria`, `touches`, `default`, `history` (`match`, `stories`, `seconds_per_unit`, `busy_factor`, `cycle_factor`), `position` (its place among the ready and backlog stories, 0 in progress or in review), `limit`, and `ahead`, each story played out before it with its duration, `from_forecast`, start, and delivery.
+
+#### Cost of delay
+
+From an epic's or a story's own inputs, the value per week is:
+
+`revenue_per_week` + `penalty_per_week` + hours of `time_lost_per_cycle` × `planning.hour_rate` × (168h ÷ `planning.cycle`)
+
+Time lost with no `planning.hour_rate` is refused. E-0016's 10h lost per 168h cycle at 150 USD an hour is 1500 USD a week.
+
+A story without inputs takes a share of its epic's value: the epic's worked out from its inputs, else the value recorded on it. The share is the story's duration over the sum of the durations of the epic's open stories without inputs, each its own `forecast.duration`, else the one `flai forecast` works out. On 2026-10-04 S-0210's was 2h of 30h45m over 20 stories, 97.56 USD a week.
+
+Refused: an epic without inputs; a story without inputs that has no epic, or whose epic has neither inputs nor a value; a task; an item closed or archived. Each refusal names the `flai edit` flags that give the inputs, which are the operator's. Amounts are rounded to two decimals, in `planning.currency`. `--json` adds `from` (`inputs` or `epic`), the `inputs` with the hour rate, cycle, and cycles a week when time lost is among them, and the `epic` share with the stories it was apportioned over.
+
+#### What the planner writes
+
+The planner predicts the touches from what `touches suggest` lists, the story's goal and criteria, the design it links, and the code layout, and keeps every touch the story declares. It reviews the forecast and the value, adjusts a figure only with a stated reason, and writes the touches, the forecast's duration, delivery, and basis, and the cost of delay value through flai: `item_edit`, or `flai edit` and `flai touches`, which stamp `by` and `at` ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)). It never changes the operator's inputs.
+
+It records why under a `### Planning` heading in the story's Notes: where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted. That heading is the planner's, rewritten on each run; the rest of the Notes is left as it was. `planPrompt`, the convention's "As the planner", and `planner.md` say the same.
+
 ### The guard
 
 `flai guard` reads `FLAI_ROLE` from the hook's environment. With `plan`, it checks the session's own calls, which carry no agent ID, against the planner's rules ([flai-cli.md](flai-cli.md#commands), `flai guard`):
@@ -79,7 +156,7 @@ Tasks carry no topics, so a topic a task reaches goes on the story. `itemnew.Cre
 | Kind | Passes | Refused |
 |------|--------|---------|
 | flai MCP tools | the reads a sub-agent has; `inbox`, `item_new` (of a story only with `draft: true`), `item_edit`, `thread_open`, `thread_reply`, `activity_log`, `wait_for_events`; `item_move` to `backlog` | every other tool; `item_new` of a story without `draft: true`; `item_move` to any other state |
-| flai commands | the reads; `story new` with `--draft`, `epic new`, `task new`, `edit` without `--no-draft`, `touches`, `thread new` and `reply`, `issue new` and `bump`, `move` to `backlog` | every other command that writes; `story new` without `--draft` (S-0209), since the planner's stories are drafts for the operator to finalize; `edit --no-draft`, since finalizing is the operator's |
+| flai commands | the reads, `forecast`, `cod`, and `touches suggest` among them; `story new` with `--draft`, `epic new`, `task new`, `edit` without `--no-draft`, `touches`, `thread new` and `reply`, `issue new` and `bump`, `move` to `backlog` | every other command that writes; `story new` without `--draft` (S-0209), since the planner's stories are drafts for the operator to finalize; `edit --no-draft`, since finalizing is the operator's |
 | git | the reads a sub-agent has | every other git command |
 | File tools | | `Edit`, `Write`, `NotebookEdit` |
 

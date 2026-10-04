@@ -372,7 +372,40 @@ flai edit S-0005 --forecast-duration 6h --forecast-delivery 2026-10-09T17:00:00Z
 flai edit S-0005 --clear-forecast
 ```
 
-Amounts are plain numbers in the project's currency. Durations are Go durations such as `6h` or `90m`, and the delivery is a UTC timestamp. Each edit changes only what you give, and the forecast it changes records you (`--by`, else `FLAI_AGENT`, else your config author) and the time. A cost of delay records who set its inputs and who set its value apart, each when it changes ([ADR-0080](../../design/adrs/0080-a-cost-of-delay-stamps-its-inputs-and-its-value-apart.md)), so changing an input keeps the planner's name on the value. The value is stale when the inputs changed after it: the planner should work it out again. `flai show` prints all three, with `stale: the inputs changed after the value` when it is. The project manifest sets the currency, what an hour of work costs, and the cycle time lost is counted over: `planning.currency` (default `USD`), `planning.hour_rate` (unset), and `planning.cycle` (default `168h`), listed in the [settings index](../operators/settings.md#project-manifest).
+Amounts are plain numbers in the project's currency. Durations are Go durations such as `6h` or `90m`, and the delivery is a UTC timestamp. Each edit changes only what you give, and the forecast it changes records you (`--by`, else `FLAI_AGENT`, else your config author) and the time. A cost of delay records who set its inputs and who set its value apart, each when it changes ([ADR-0080](../../design/adrs/0080-a-cost-of-delay-stamps-its-inputs-and-its-value-apart.md)), so changing an input keeps the planner's name on the value. The value is stale when the inputs changed after it: the planner should work it out again. `flai show` prints all three, with `stale: the inputs changed after the value` when it is. The project manifest sets the currency, what an hour of work costs, and the cycle time lost is counted over: `planning.currency` (default `USD`), `planning.hour_rate` (unset), and `planning.cycle` (default `168h`), and the duration a forecast falls back on, `planning.default_duration` (default `1h`), listed in the [settings index](../operators/settings.md#project-manifest).
+
+flai works the touches, the forecast, and the cost of delay value out for you. These commands only print; the planner, or you, records what they print with `flai touches` and the `flai edit` flags above. The model behind each is in [Enriching a story](../../design/system/strategic-agents.md#enriching-a-story-s-0210).
+
+```bash
+flai touches suggest S-0005                               # files often changed with its touches
+flai touches suggest S-0005 flai/cmd --min 3 --limit 10   # start from more paths, keep fewer files
+flai forecast S-0005                                      # how long, when done, and why
+flai cod E-0001                                           # an epic's cost of delay from its inputs
+flai cod S-0005 --json                                    # a story's, or its share of its epic's
+```
+
+`flai touches suggest` takes the main branch's commits that changed the story's touches, its tasks', or the paths you give, and counts the other files each changed. It leaves out the wip folder and flai's own commits, such as acceptances and releases. It lists the files changed in at least `--min` of those commits (default 2), most first, at most `--limit` of them (default 20, 0 for all). Each line gives the file, the commits, and their share. On S-0212 with `--limit 3`:
+
+```text
+S-0212 from flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts: 150 of 778 commits changed them
+design/system/flai-cli.md  67   45%
+docs/users/flai.md         61   41%
+docs/operators/index.md    53   35%
+```
+
+`flai forecast` sizes the story by its acceptance criteria and touches, and takes the median agent time per unit of size of the done stories most like it: the same nature, model, and size band, falling back to fewer of them until three stories match. For the delivery it plays out the board's pull order and in-progress limit from now. With fewer than three done stories to go on, it gives `planning.default_duration` and says so:
+
+```text
+S-0210 forecast 1h6m, delivery 2026-10-04T21:27:00Z
+Median 151 s per unit of size over 12 done feature stories on claude-opus-5-5 in the large band, times size 26 (5 criteria, 21 touches); in progress since it started at 2026-10-04T19:35:00Z, so delivery counts from then.
+```
+
+`flai cod` adds the revenue and the penalty per week to the hours lost per cycle, priced at `planning.hour_rate`, times the cycles in a week. A story without inputs gets a share of its epic's value, by its forecast duration among the epic's open stories without inputs. It refuses an epic without inputs, and time lost without an hour rate: those are yours to give.
+
+```text
+E-0016 cost of delay 1500.00 USD a week
+10h of time lost per 168h cycle at 150 USD an hour, 1.00 cycles a week: 1500.00 USD a week.
+```
 
 A flai older than the one that brought these fields reads past them with a warning and does not act on them, so it would let a draft go to ready. Publishing that release raises `flai.minimum`, so upgrade the flai on your host (`flai self-upgrade`) first.
 
@@ -902,6 +935,8 @@ The header names the role and, for the planner, the item. `--json` gives the pla
 #### Running the planner
 
 The planner plans one epic or one story and ends ([ADR-0082](../../design/adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). For an epic with no stories it drafts the stories that deliver its outcome. For a story it adds the paths it will touch, a forecast, and a cost of delay value worked out from your inputs. For an epic with stories it revisits each one not done or cancelled and enriches it again (S-0209). Every story it creates is a draft in the backlog, for you to read and finalize; flai refuses it a story that is not one.
+
+It works a story's figures out with `flai touches suggest`, `flai forecast`, and `flai cod` ([Drafts, cost of delay, and forecasts](#drafts-cost-of-delay-and-forecasts)), keeps every touch the story declares, and changes a figure only with a reason (S-0210). It records where each touch came from and why each figure stands under a `### Planning` heading in the story's Notes. That heading is the planner's, rewritten on each run; the rest of the Notes is yours.
 
 On an epic it opens one thread, the plan: the stories, their order (their `after`), and the assumptions it made. When the epic already had stories, the same thread proposes each one it would split, merge, add, or drop. It drafts the additions only; it never cancels a finalized story or rewrites its words without asking, so the rest is yours to decide there.
 
