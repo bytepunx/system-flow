@@ -9,7 +9,7 @@
 	import { longPress } from './longpress';
 	import LaneMoveDialog from '$lib/components/LaneMoveDialog.svelte';
 	import WipLimitDialog from '$lib/components/WipLimitDialog.svelte';
-	import { backOf, forwardOf } from '$lib/lanes';
+	import { backOf, forwardOf, laneCounts, longCounts, shortCounts } from '$lib/lanes';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
@@ -153,15 +153,15 @@
 		};
 	});
 
-	// The types ticked above the board (S-0141); WIP counts and reordering count stories regardless.
-	// While the clone lags its remote's release tags, the done lane leaves out the archived cards it
-	// holds only because they look unpublished (S-0174).
-	const cards = (state: string) => {
+	// What a lane holds: while the clone lags its remote's release tags, the done lane leaves out the
+	// archived cards it holds only because they look unpublished (S-0174).
+	const held = (state: string) => {
 		const column = board?.columns[state] ?? [];
-		return (state === 'done' ? doneLane(column, publishRemote) : column).filter(
-			(c) => boardTypes.shown[c.type as ItemType]
-		);
+		return state === 'done' ? doneLane(column, publishRemote) : column;
 	};
+	// The types ticked above the board (S-0141); WIP counts and reordering count stories regardless,
+	// and the lane's counts by type (S-0256) every card it holds.
+	const cards = (state: string) => held(state).filter((c) => boardTypes.shown[c.type as ItemType]);
 	const count = (state: string) =>
 		(board?.columns[state] ?? []).filter((c) => c.type === 'story').length;
 
@@ -546,6 +546,7 @@
 {#if board}
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
 		{#each states as state (state)}
+			{@const counts = laneCounts(held(state))}
 			<section
 				class="min-h-40 rounded border bg-surface p-2 {over === state
 					? 'border-accent'
@@ -591,7 +592,7 @@
 					if (p) void place(id, p);
 				}}
 			>
-				<h2 class="mb-2 flex items-baseline justify-between text-sm font-medium">
+				<h2 class="flex items-baseline justify-between text-sm font-medium">
 					<span>{state}</span>
 					{#if board.wip_limits[state]}
 						<span
@@ -601,6 +602,14 @@
 						>
 					{/if}
 				</h2>
+				<p
+					class="mb-2 text-xs text-muted"
+					data-testid="lane-counts"
+					title={longCounts(counts)}
+					aria-label={longCounts(counts)}
+				>
+					{shortCounts(counts)}
+				</p>
 				{#if state === 'done'}
 					<PublishBanner
 						plans={publishPlans}

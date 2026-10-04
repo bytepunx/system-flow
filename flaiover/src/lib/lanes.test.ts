@@ -3,10 +3,13 @@ import {
 	backOf,
 	forwardOf,
 	hasLimit,
+	laneCounts,
 	laneEntries,
 	LANES,
+	longCounts,
 	movesTo,
 	needsReason,
+	shortCounts,
 	startLane
 } from './lanes';
 
@@ -59,5 +62,21 @@ describe('lanes', () => {
 		]);
 		expect(laneEntries('done').map((e) => e.action)).toEqual(['create']);
 		expect(laneEntries('cancelled').map((e) => e.action)).toEqual(['create', 'back']);
+	});
+
+	// S-0256: what a lane holds, below its title
+	it('counts the epics, stories, and tasks a lane holds, and nothing else', () => {
+		const cards = ['epic', 'story', 'task', 'story', 'task', 'task', 'task', 'bug', 'toString'].map(
+			(type) => ({ type })
+		);
+		expect(laneCounts(cards)).toEqual({ epic: 1, story: 2, task: 4 });
+		expect(laneCounts([])).toEqual({ epic: 0, story: 0, task: 0 });
+	});
+
+	it('gives the counts short, epics | stories | tasks, and long, each pluralized', () => {
+		expect(shortCounts({ epic: 1, story: 2, task: 4 })).toBe('1 | 2 | 4');
+		expect(longCounts({ epic: 1, story: 2, task: 4 })).toBe('1 epic, 2 stories, 4 tasks');
+		expect(longCounts({ epic: 0, story: 1, task: 1 })).toBe('0 epics, 1 story, 1 task');
+		expect(longCounts({ epic: 2, story: 0, task: 0 })).toBe('2 epics, 0 stories, 0 tasks');
 	});
 });

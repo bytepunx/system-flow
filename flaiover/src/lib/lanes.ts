@@ -64,3 +64,31 @@ export function laneEntries(lane: string): { action: LaneAction; label: string }
 		...(hasLimit(lane) ? [{ action: 'limit' as const, label: 'Change WIP limit…' }] : [])
 	];
 }
+
+// What a lane holds, by type (S-0256): a short count below its title, the long form on hover.
+
+/** How many epics, stories, and tasks a lane holds. */
+export type LaneCounts = { epic: number; story: number; task: number };
+
+/** How many epics, stories, and tasks the cards hold; other types are not counted. */
+export function laneCounts(cards: { type: string }[]): LaneCounts {
+	const n: LaneCounts = { epic: 0, story: 0, task: 0 };
+	for (const c of cards) if (Object.hasOwn(n, c.type)) n[c.type as keyof LaneCounts]++;
+	return n;
+}
+
+/** The short form, epics | stories | tasks: `1 | 2 | 4`. */
+export function shortCounts(n: LaneCounts): string {
+	return `${n.epic} | ${n.story} | ${n.task}`;
+}
+
+const many = (n: number, one: string, other: string) => `${n} ${n === 1 ? one : other}`;
+
+/** The long form, each type pluralized: `1 epic, 2 stories, 0 tasks`. */
+export function longCounts(n: LaneCounts): string {
+	return [
+		many(n.epic, 'epic', 'epics'),
+		many(n.story, 'story', 'stories'),
+		many(n.task, 'task', 'tasks')
+	].join(', ');
+}

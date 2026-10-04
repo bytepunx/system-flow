@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { GATHER_MS } from '$lib/events';
 import { resetForTests } from '$lib/project.svelte';
+import { boardTypes } from '$lib/boardtypes.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -201,5 +202,87 @@ describe('the done lane of a clone missing published tags (S-0174)', () => {
 		expect(document.querySelector('[data-testid="publish-pending"]')!.textContent).toContain(
 			'S-0001'
 		);
+	});
+});
+
+// S-0256: below each lane's title, how many epics, stories, and tasks it holds, whichever types the
+// board shows, and the long form on hover; the done lane counts what it shows of the archived.
+describe("each lane's counts by type (S-0256)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, type: string, status: string, archived = false) => ({
+		id,
+		type,
+		title: id,
+		nature: 'feature',
+		status,
+		blocked: false,
+		age_seconds: 0,
+		archived
+	});
+	const withCards = {
+		...board,
+		columns: {
+			ready: [
+				card('E-0001', 'epic', 'ready'),
+				card('S-0001', 'story', 'ready'),
+				card('S-0002', 'story', 'ready'),
+				...['T-0001', 'T-0002', 'T-0003', 'T-0004'].map((id) => card(id, 'task', 'ready'))
+			],
+			done: [card('S-0003', 'story', 'done', true), card('S-0004', 'story', 'done')]
+		}
+	};
+	const remote = {
+		remote: 'origin',
+		behind: [{ component: 'cli', local: 'cli/v1.0.0', remote: 'cli/v1.4.0' }],
+		fix: 'git fetch --tags origin',
+		message: 'missing'
+	};
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('EventSource', FakeEventSource);
+		// stories only: the epic and the tasks are counted though not shown
+		boardTypes.set('epic', false);
+		boardTypes.set('story', true);
+		boardTypes.set('task', false);
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board') return answer(withCards);
+			if (url === '/api/publish')
+				return answer({ plans: [], remote, unplanned: [], push_enabled: true });
+			return answer({ enabled: false });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	it('shows each count below its title, with the long form as its title and name', async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+		const lane = (state: string) => {
+			const section = document.querySelector(`[data-lane="${state}"]`)!;
+			const counts = section.querySelector<HTMLElement>('[data-testid="lane-counts"]')!;
+			expect(counts.previousElementSibling?.tagName).toBe('H2');
+			return {
+				short: counts.textContent!.trim(),
+				long: counts.title,
+				name: counts.getAttribute('aria-label')
+			};
+		};
+		expect(lane('ready')).toEqual({
+			short: '1 | 2 | 4',
+			long: '1 epic, 2 stories, 4 tasks',
+			name: '1 epic, 2 stories, 4 tasks'
+		});
+		expect(document.querySelectorAll('[data-lane="ready"] [data-card]')).toHaveLength(2);
+		expect(lane('done').long).toBe('0 epics, 1 story, 0 tasks');
+		expect(lane('backlog')).toEqual({
+			short: '0 | 0 | 0',
+			long: '0 epics, 0 stories, 0 tasks',
+			name: '0 epics, 0 stories, 0 tasks'
+		});
 	});
 });
