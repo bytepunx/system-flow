@@ -3,11 +3,11 @@ id: I-0065
 title: flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number
 class: defect
 status: open
-count: 2
+count: 3
 cost: 4m
 first_reported: 2026-10-03T18:11:17Z
-last_reported: 2026-10-03T19:00:10Z
-updated: 2026-10-03T19:00:10Z
+last_reported: 2026-10-04T04:54:27Z
+updated: 2026-10-04T04:54:27Z
 ---
 
 # I-0065 flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number
@@ -24,5 +24,9 @@ S-0203's flai issue new took I-0063, which story/S-0201 already holds for its ow
 ### 2026-10-03T19:00:10Z
 Story: S-0206.
 S-0206 and S-0204 each recorded a different issue as I-0066 from their own worktrees within minutes; TH-0093's reply named the collision, and S-0206 renumbered its own to I-0067 by hand.
+
+### 2026-10-04T04:54:27Z
+Story: S-0209.
+S-0209 numbered an issue I-0070 in its worktree while another story's I-0070 reached main; the rebase onto S-0225's acceptance stopped on design/issues/summary.md, and the issue was renumbered I-0071 by hand.
 
 ## Remediation
