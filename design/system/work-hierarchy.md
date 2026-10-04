@@ -106,7 +106,7 @@ stateDiagram-v2
 | State | Meaning | Clock |
 |-------|---------|-------|
 | `backlog` | Captured, not committed, may be one paragraph | Lead time starts at `created` |
-| `ready` | Refined enough to start: goal and acceptance criteria present. Tasks are written by the agent that starts the story | Queue time |
+| `ready` | Refined enough to start: goal and acceptance criteria present. Tasks are written by the agent that starts the story, or drafted by the planner when the operator asks it to plan the story (S-0255) | Queue time |
 | `in-progress` | Being worked | Cycle time starts on first entry |
 | `review` | Work complete, awaiting verification or human acceptance | Review time |
 | `done` | Accepted | Cycle and lead time end |

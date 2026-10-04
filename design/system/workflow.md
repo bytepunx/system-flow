@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-10-03
+updated: 2026-10-04
 status: active
 topics: [all]
 ---
@@ -28,7 +28,7 @@ Work is pulled, not pushed. An agent starting a session:
 1. Reads `wip/agents/index.md` to find streams with open narratives it was working on.
 2. If none, reads `wip/kanban/board.md` and pulls the highest ordered `ready` story into `in-progress`, respecting the in-progress limit. While review is at or over its limit, it pulls nothing and waits for acceptance (S-0243, [ADR-0073](../adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)).
 3. Opens or resumes the narrative for that story in `wip/agents/<story-id>.md`.
-4. If the story has no tasks, reads its goal, acceptance criteria, and notes and writes them, each with `## Work` and `## Done when`. If the story does not say enough to do that, blocks it with the reason, opens a thread on it saying what is missing, and pulls the next story.
+4. If the story has no tasks, reads its goal, acceptance criteria, and notes and writes them, each with `## Work` and `## Done when`. If the planner drafted them (S-0255), reviews them against the story first and changes, adds, or cancels what it would plan differently. If the story does not say enough to do that, blocks it with the reason, opens a thread on it saying what is missing, and pulls the next story.
 5. Works tasks in order, transitioning each task as it goes.
 
 ## Definition of ready (story)
@@ -39,7 +39,7 @@ Work is pulled, not pushed. An agent starting a session:
 
 A draft is a story an agent wrote, by the planner or from an issue, that the operator has not yet read ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)). `flai move` refuses a draft to ready with "finalize it first". The operator finalizes it: `flai move <story> ready --yes` finalizes it as it moves, `flai edit <story> --no-draft` finalizes it in place, and the dashboard's `item.move` with `finalize` runs the move with `--yes`. No agent finalizes until the orchestrator's permission to finalize exists (S-0218): MCP's `item_move` refuses a draft to ready, and `item_edit` refuses `draft: false`; the agent says in a thread or its narrative that the story is ready to be finalized. `flai check` warns (`story.draft`) on a draft in ready or later.
 
-Tasks are not part of ready. The agent that pulls the story writes them once it is `in-progress`, and a story cannot enter `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)). `flai move` and `flai check` enforce both halves: nothing about tasks is checked on the way into `ready` or `in-progress`, and `story.tasks` is raised for `review` and `done` stories.
+Tasks are not part of ready. The agent that pulls the story writes them once it is `in-progress`, or reviews those the planner drafted in the backlog when the operator asked it to plan the story ([strategic-agents.md](strategic-agents.md)), and a story cannot enter `review` without at least one ([ADR-0021](../adrs/0021-story-ready-without-tasks.md)). `flai move` and `flai check` enforce both halves: nothing about tasks is checked on the way into `ready` or `in-progress`, and `story.tasks` is raised for `review` and `done` stories.
 
 ## Definition of done (story)
 
