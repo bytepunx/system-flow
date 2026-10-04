@@ -6,7 +6,7 @@ title: flai's wip markdown lint does not flag an ordered list item numbered from
 status: backlog
 owner: alex
 created: 2026-10-04T04:52:01Z
-updated: 2026-10-04T04:52:01Z
+updated: 2026-10-04T23:14:16Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-04T04:52:01Z
+finalized:
+  by: alex
+  at: 2026-10-04T23:14:16Z
 ---
 # S-0258 flai's wip markdown lint does not flag an ordered list item numbered from other than 1 inside a blockquote, so a thread entry reached main and failed a story's close-out
 
