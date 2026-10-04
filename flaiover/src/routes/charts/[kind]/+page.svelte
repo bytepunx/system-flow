@@ -22,6 +22,8 @@
 		USAGE_KINDS,
 		WINDOWS,
 		withUsage,
+		withCost,
+		strategicCost,
 		type BucketSize,
 		type Kind,
 		type Report
@@ -58,7 +60,10 @@
 	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket));
 	const spend = $derived(report?.usage?.spend?.[report.type]);
 	// the items the window holds, which the tables list as the charts plot them (S-0166)
-	const spenders = $derived(report ? withUsage(report, epic || undefined) : []);
+	// $ / Item also lists the items only strategic agents spent on, as it draws them (ADR-0083)
+	const spenders = $derived(
+		report ? (kind === 'cost' ? withCost : withUsage)(report, epic || undefined) : []
+	);
 	const completed = $derived(report ? completedIn(report) : []);
 	/** What the items done in the window spent, and what that comes to, in a line. */
 	const usageSummary = $derived.by(() => {
@@ -250,7 +255,14 @@
 									><td class="pr-4">{m.model}</td><td class="pr-4">{count(m.tokens)}</td><td
 										class="pr-4">{perMinute(m) !== undefined ? count(perMinute(m)!) : '-'}</td
 									><td>{dollars(m.cost)}{i.usage?.estimated ? '*' : ''}</td></tr
-								>{/each}{/each}</tbody
+								>{/each}{#if kind === 'cost' && strategicCost(i) > 0}<tr
+									data-testid="usage-strategic"
+									><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
+										>{i.completed?.slice(0, 10) ?? '-'}</td
+									><td class="pr-4">strategic</td><td class="pr-4"
+										>{count((i.usage?.strategic ?? []).reduce((n, x) => n + x.tokens, 0))}</td
+									><td class="pr-4">-</td><td>{dollars(strategicCost(i))}*</td></tr
+								>{/if}{/each}</tbody
 					>
 				</table>
 			{:else if kind === 'throughput' && report}

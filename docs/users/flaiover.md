@@ -164,9 +164,9 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Tokens / Day | The tokens spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
 | Tokens per item | The tokens an item took on average, over time: a line for epics, for stories, and for tasks |
 | Tokens / $ | How many tokens a dollar bought, over time, one line per model |
-| $ / Day | The dollars spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
+| $ / Day | The dollars spent on the items done each day, stacked by model, with the mean per day so far as a dashed line. What the planner spent on them is stacked on top as its own series, strategic, estimated; the mean leaves it out |
 | $ / Work Type | What an item cost on average, over time: a line for epics, for stories, and for tasks |
-| $ / Item | What each item completed in the window cost, stacked by model; an asterisk marks an item whose cost is estimated in part |
+| $ / Item | What each item completed in the window cost, stacked by model; an asterisk marks an item whose cost is estimated in part. What the planner spent on an item is stacked on top as its own series, strategic, estimated, and apart from the item's total. An item only the planner spent on shows that alone |
 | Avg. Time / Model | The minutes of agent work an item of the chosen type took on average, over time, one line per model |
 | Avg. Cost / Model | What an item of the chosen type cost on average, over time, one line per model |
 

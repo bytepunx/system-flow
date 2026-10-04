@@ -38,6 +38,10 @@ export function modelSlot(model: string): number {
 	return h % 2 === 0 ? 3 : 4;
 }
 
+// What strategic agents spent, on the cost charts beside the models (S-0225): a slot no model
+// takes, and one those charts use for nothing else.
+export const STRATEGIC_SLOT = 7;
+
 // A model's mark on a line, by family, so that two models are told apart by more than colour:
 // opus and fable are close for a reader who sees little red or green (S-0163).
 export const MODEL_SYMBOL: Record<string, string> = {

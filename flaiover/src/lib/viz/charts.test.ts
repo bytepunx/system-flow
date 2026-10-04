@@ -27,6 +27,7 @@ import {
 	tokensPerItem,
 	tokensSpent,
 	models,
+	spendRows,
 	withUsage,
 	type Bucket,
 	type Report
@@ -643,6 +644,161 @@ describe('chart builders', () => {
 		} as unknown as Report;
 		for (const kind of KINDS) expect(() => build(kind, empty, light)).not.toThrow();
 		expect(normalise(empty).cfd).toEqual([]);
+	});
+	// What the planner spent (S-0225, ADR-0083): on S-002 beside its agents, and on S-003 alone,
+	// done on 4 August, a day whose bucket has no agents' items; S-005 carries neither and stays out.
+	const planned: Report = {
+		...report,
+		items: [
+			...report.items.map((i) =>
+				i.id === 'S-002'
+					? {
+							...i,
+							usage: {
+								...i.usage!,
+								strategic: [
+									{ kind: 'planner', tokens: 100000, cost: 0.1, seconds: 300, estimated: true },
+									{ kind: 'orchestrator', tokens: 1000, cost: 0.2, seconds: 10, estimated: true }
+								]
+							}
+						}
+					: i
+			),
+			...(['S-003', 'S-005'] as const).map((id) => ({
+				...report.items[0],
+				id,
+				title: id === 'S-003' ? 'Three' : 'Five',
+				completed: '2026-08-04T10:00:00Z',
+				usage: {
+					source: 'sum',
+					tokens: 0,
+					cost: 0,
+					seconds: 0,
+					models: [],
+					strategic:
+						id === 'S-003'
+							? [{ kind: 'planner', tokens: 200000, cost: 0.4, seconds: 600, estimated: true }]
+							: []
+				}
+			}))
+		],
+		usage: {
+			...report.usage!,
+			spend: {
+				...report.usage!.spend!,
+				story: {
+					...report.usage!.spend!.story,
+					strategic: { items: 1, tokens: 200000, cost: 0.4, seconds: 600 },
+					buckets: storyDays.map((b) => ({
+						...b,
+						strategic:
+							b.at === '2026-08-04T00:00:00Z'
+								? { items: 1, tokens: 200000, cost: 0.4, seconds: 600 }
+								: { items: 0, tokens: 0, cost: 0, seconds: 0 }
+					}))
+				}
+			}
+		}
+	};
+	it('$ / Item stacks strategic spend apart from the models, estimated, and only when there is some', () => {
+		type Bars = {
+			legend: { show: boolean };
+			xAxis: { data: string[] };
+			series: { name: string; stack: string; data: number[]; itemStyle: { color: string } }[];
+			tooltip: {
+				formatter: (p: { dataIndex: number; seriesName: string; value: number }[]) => string;
+			};
+		};
+		const c = cost(planned, light) as Bars;
+		// S-003, on which only the planner spent, has a bar; S-005, with neither, has none
+		expect(c.xAxis.data).toEqual(['S-001', 'S-003*', 'S-002*']);
+		expect(c.series.map((s) => [s.name, s.data])).toEqual([
+			['claude-haiku-4-5', [0.3, 0, 0]],
+			['claude-opus-5-5', [1.2, 0, 0.25]],
+			['strategic', [0, 0.4, 0.3]]
+		]);
+		expect(new Set(c.series.map((s) => s.stack)).size).toBe(1);
+		expect(c.series[2].itemStyle.color).toBe(CATEGORICAL.light[7]);
+		expect((cost(planned, dark) as Bars).series[2].itemStyle.color).toBe(CATEGORICAL.dark[7]);
+		expect(c.series.slice(0, 2).map((s) => s.itemStyle.color)).not.toContain(CATEGORICAL.light[7]);
+		const at = (dataIndex: number) =>
+			c.tooltip.formatter(
+				c.series.map((s) => ({ dataIndex, seriesName: s.name, value: s.data[dataIndex] }))
+			);
+		// the total is the agents'; the strategic spend is apart from it, and estimated, its kinds
+		// summed to four decimals: 0.1 and 0.2 make 0.3
+		expect(at(2)).toBe(
+			'S-002 Two<br/>claude-opus-5-5: $0.250<br/>total $0.250 (estimated in part)<br/>strategic: $0.300 (estimated)'
+		);
+		expect(at(1)).toBe('S-003 Three<br/>no agent spend<br/>strategic: $0.400 (estimated)');
+		expect(at(0)).toBe(
+			'S-001 One<br/>claude-haiku-4-5: $0.300<br/>claude-opus-5-5: $1.20<br/>total $1.50'
+		);
+		// one model and strategic spend: a legend for the two
+		const one = cost({ ...planned, items: planned.items.slice(1, 2) }, light) as Bars;
+		expect(one.series.map((s) => s.name)).toEqual(['claude-opus-5-5', 'strategic']);
+		expect(one.legend.show).toBe(true);
+		// without strategic spend, no series for it
+		expect((cost(report, light) as Bars).series.map((s) => s.name)).not.toContain('strategic');
+	});
+	it("$ / bucket stacks strategic spend as a series of its own; the mean stays the agents'", () => {
+		const c = costSpent(planned, light) as Over;
+		expect(c.series.map((s) => [s.name, s.type])).toEqual([
+			['claude-haiku-4-5', 'bar'],
+			['claude-opus-5-5', 'bar'],
+			['strategic', 'bar'],
+			['mean per day', 'line']
+		]);
+		expect(c.series[2].stack).toBe('spent');
+		expect(c.series[2].itemStyle.color).toBe(CATEGORICAL.light[7]);
+		expect(values(c.series[2]).map((v) => v[1])).toEqual([0, 0.4, 0]);
+		expect(values(c.series[3])).toEqual(values((costSpent(report, light) as Over).series[2]));
+		expect(c.tooltip.formatter([{ seriesName: 'strategic', data: c.series[2].data[1] }])).toBe(
+			'2026-08-04<br/>strategic: $0.400 (estimated)'
+		);
+		// without strategic spend, or of tokens, no series for it
+		expect((costSpent(report, light) as Over).series.map((s) => s.name)).not.toContain('strategic');
+		expect((tokensSpent(planned, light) as Over).series).toEqual(
+			(tokensSpent(report, light) as Over).series
+		);
+		// the table of cost per bucket lists it, estimated, even for a bucket the agents spent nothing in
+		const rows = spendRows(planned, 'cost-spent');
+		expect(rows.filter((r) => r.of === 'strategic')).toEqual([
+			{
+				items: 1,
+				tokens: 200000,
+				cost: 0.4,
+				seconds: 600,
+				estimated: true,
+				at: '2026-08-04T00:00:00Z',
+				of: 'strategic',
+				mean_tokens: undefined,
+				mean_cost: undefined
+			}
+		]);
+		expect(rows.some((r) => 'strategic' in r && r.of !== 'strategic')).toBe(false);
+		expect(spendRows(planned, 'tokens-spent')).toEqual(spendRows(report, 'tokens-spent'));
+	});
+	it('strategic spend leaves the per-model and per-type charts as they were', () => {
+		for (const kind of [
+			'token-rate',
+			'tokens-per-dollar',
+			'time-per-model',
+			'cost-per-model',
+			'cost-per-item',
+			'tokens-per-item'
+		] as const) {
+			expect((build(kind, planned, light) as Over).series, kind).toEqual(
+				(build(kind, report, light) as Over).series
+			);
+		}
+		for (const kind of [
+			'token-rate',
+			'tokens-per-dollar',
+			'time-per-model',
+			'cost-per-model'
+		] as const)
+			expect(spendRows(planned, kind), kind).toEqual(spendRows(report, kind));
 	});
 	it('dark theme swaps the palette and surface', () => {
 		expect(dark.series[0]).toBe(CATEGORICAL.dark[0]);

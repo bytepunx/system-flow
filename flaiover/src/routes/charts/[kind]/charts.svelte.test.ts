@@ -274,6 +274,48 @@ describe('the charts page (S-0163)', () => {
 		expect(document.querySelectorAll('[data-testid="spend-table"] tbody tr').length).toBe(0);
 	});
 
+	it('lists what strategic agents spent apart in the $ / Item table (S-0225)', async () => {
+		const done = '2026-09-29T12:00:00Z';
+		const planner = { kind: 'planner', tokens: 2000, cost: 0.5, seconds: 60, estimated: true };
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const r = reportIn('day');
+			return answer({
+				...r,
+				items: [
+					{
+						id: 'S-0001',
+						status: 'done',
+						completed: done,
+						usage: {
+							tokens: 1000,
+							cost: 2,
+							seconds: 600,
+							models: [{ model: 'claude-opus-5-5', tokens: 1000, cost: 2 }],
+							strategic: [planner]
+						}
+					},
+					{
+						id: 'S-0002',
+						status: 'done',
+						completed: done,
+						usage: { tokens: 0, cost: 0, seconds: 0, models: [], strategic: [planner] }
+					}
+				]
+			});
+		});
+		await open('cost');
+		const rows = [...document.querySelectorAll('[data-testid="usage-table"] tbody tr')].map((tr) =>
+			[...tr.querySelectorAll('td')].map((td) => td.textContent!.trim())
+		);
+		expect(rows.map((r) => [r[0], r[2]])).toEqual([
+			['S-0001', 'claude-opus-5-5'],
+			['S-0001', 'strategic'],
+			['S-0002', 'strategic']
+		]);
+		expect(rows[2][5]).toMatch(/\*$/);
+	});
+
 	it('keeps the epic and the table per item on the charts of S-0143', async () => {
 		await open('cost');
 		expect(text('h1')).toBe('$ / Item');

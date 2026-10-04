@@ -7,6 +7,7 @@ import {
 	modelSymbol,
 	NATURE_SLOT,
 	STATE_SLOT,
+	STRATEGIC_SLOT,
 	TYPE_SLOT,
 	TYPE_SYMBOL,
 	type Theme
@@ -72,7 +73,22 @@ export type ItemUsage = {
 	tokens_per_hour?: number;
 	estimated?: boolean;
 	models: ModelSpend[];
+	/** Absent from a flai older than S-0225. */
+	strategic?: StrategicShare[];
 };
+/**
+ * What one kind of strategic agent spent on an item, apart from its agents' figures and every
+ * per-model value (S-0225, ADR-0083).
+ */
+export type StrategicShare = {
+	kind: string;
+	tokens: number;
+	cost: number;
+	seconds: number;
+	estimated: boolean;
+};
+/** What strategic agents spent on the items of a set that carry it, apart from its other values. */
+export type StrategicSpend = { items: number; tokens: number; cost: number; seconds: number };
 /**
  * What was spent on a set of items, and what that comes to per item, per minute of agent work,
  * and per dollar; a value whose divisor is zero is absent (S-0163, ADR-0053).
@@ -105,8 +121,14 @@ export type Bucket = Spend & {
 	mean_tokens: number;
 	mean_cost: number;
 	models?: ModelShare[];
+	/** Absent from a flai older than S-0225. */
+	strategic?: StrategicSpend;
 };
-export type TypeSpend = Spend & { models: ModelShare[]; buckets: Bucket[] };
+export type TypeSpend = Spend & {
+	models: ModelShare[];
+	buckets: Bucket[];
+	strategic?: StrategicSpend;
+};
 export const BUCKETS = ['hour', 'day', 'week'] as const;
 export type BucketSize = (typeof BUCKETS)[number];
 /** The longest window flai lays out by the hour, in days. */
@@ -122,6 +144,11 @@ export type UsageReport = {
 	/** Absent from a flai older than S-0163, with spend. */
 	bucket?: BucketSize;
 	spend?: Record<string, TypeSpend>;
+	/** Absent from a flai older than S-0225. */
+	strategic?: StrategicSpend & {
+		estimated: boolean;
+		kinds: (StrategicSpend & { kind: string })[];
+	};
 };
 /**
  * Older flai builds emit null for empty lists; give every list the charts
@@ -592,6 +619,14 @@ export const withUsage = (r: Report, epic?: string) =>
 	completedIn(r).filter(
 		(i) => i.usage && i.usage.models.length > 0 && (!epic || i.parent === epic)
 	);
+/** The same, with the items only strategic agents spent on: the items $ / Item draws (ADR-0083). */
+export const withCost = (r: Report, epic?: string) =>
+	completedIn(r).filter(
+		(i) =>
+			i.usage &&
+			(i.usage.models.length > 0 || (i.usage.strategic ?? []).length > 0) &&
+			(!epic || i.parent === epic)
+	);
 
 /** The series flai laid out for a type; none from a flai older than S-0163. */
 export function bucketsOf(r: Report, type: string = r.type): Bucket[] {
@@ -614,8 +649,18 @@ function modelsIn(buckets: Bucket[]): string[] {
 	return [...names].sort();
 }
 const ALL = 'all models';
+/**
+ * The series of what strategic agents spent, on the cost charts only: apart from the models, and
+ * estimated, since every charge is apportioned (S-0225, ADR-0083).
+ */
+const STRATEGIC = 'strategic';
+const strategicColor = (t: Theme) => t.series[STRATEGIC_SLOT];
+/** What strategic agents spent on an item, every kind summed, to four decimals as flai rounds it. */
+export const strategicCost = (i: ItemMetrics) =>
+	Math.round((i.usage?.strategic ?? []).reduce((n, s) => n + s.cost, 0) * 1e4) / 1e4;
 
-type Point = { value: [string, number]; items: number; estimated?: boolean };
+/** A point's cost is estimated in part, or all of it is, as strategic spend is. */
+type Point = { value: [string, number]; items: number; estimated?: boolean | 'all' };
 type Hover = { marker?: string; seriesName: string; data: Point };
 /** The tooltip of a chart over time: the bucket, then each series with its value and items. */
 function hover(bucket: BucketSize, say: (v: number) => string, per: string) {
@@ -625,7 +670,9 @@ function hover(bucket: BucketSize, say: (v: number) => string, per: string) {
 		const lines = list.map((p) => {
 			const d = p.data;
 			const of = per && d.items > 0 ? ` over ${d.items} ${d.items === 1 ? 'item' : 'items'}` : '';
-			return `${p.marker ?? ''}${p.seriesName}: ${say(d.value[1])}${per}${of}${d.estimated ? ' (estimated in part)' : ''}`;
+			const est =
+				d.estimated === 'all' ? ' (estimated)' : d.estimated ? ' (estimated in part)' : '';
+			return `${p.marker ?? ''}${p.seriesName}: ${say(d.value[1])}${per}${of}${est}`;
 		});
 		return `${bucketLabel(list[0].data.value[0], bucket)}<br/>${lines.join('<br/>')}`;
 	};
@@ -770,24 +817,47 @@ export const tokensPerDollar = (r: Report, t: Theme) =>
 
 /**
  * What each bucket spent, stacked by model, with the running mean per bucket as a line: tokens
- * per day, or cost per day.
+ * per day, or cost per day. Cost per day stacks what strategic agents spent on top, as a series
+ * of its own, when any bucket has it; the running mean stays the agents' (S-0225).
  */
 function spentOverTime(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 	const buckets = bucketsOf(r);
 	const names = modelsIn(buckets);
 	const bucket = bucketSize(r);
 	const say = what === 'tokens' ? count : dollars;
-	const bars = names.map((m) => ({
-		name: m,
+	const bar = (name: string, color: string, data: Point[]) => ({
+		name,
 		type: 'bar',
 		stack: 'spent',
 		barMaxWidth: 24,
-		itemStyle: { color: modelColor(t, m), borderColor: t.surface, borderWidth: 1 },
-		data: buckets.map((b): Point => {
-			const s = share(b, m);
-			return { value: [b.at, s?.[what] ?? 0], items: s?.items ?? 0, estimated: s?.estimated };
-		})
-	}));
+		itemStyle: { color, borderColor: t.surface, borderWidth: 1 },
+		data
+	});
+	const bars = names.map((m) =>
+		bar(
+			m,
+			modelColor(t, m),
+			buckets.map((b): Point => {
+				const s = share(b, m);
+				return { value: [b.at, s?.[what] ?? 0], items: s?.items ?? 0, estimated: s?.estimated };
+			})
+		)
+	);
+	if (what === 'cost' && buckets.some((b) => (b.strategic?.cost ?? 0) > 0))
+		bars.push(
+			bar(
+				STRATEGIC,
+				strategicColor(t),
+				buckets.map((b): Point => {
+					const c = b.strategic?.cost ?? 0;
+					return {
+						value: [b.at, c],
+						items: b.strategic?.items ?? 0,
+						estimated: c > 0 ? 'all' : undefined
+					};
+				})
+			)
+		);
 	const mean = line(
 		t,
 		`mean per ${bucket}`,
@@ -857,7 +927,8 @@ export type SpendRow = Spend & { at: string; of: string; mean_tokens?: number; m
 /**
  * What a chart over time plots, as rows: per item, each bucket of each item type in which items
  * were done; otherwise each such bucket of the report's type, whole, with its running means,
- * and then per model. Newest first.
+ * and then per model, and for cost per bucket what strategic agents spent in it (S-0225), which
+ * may be all a bucket holds. Newest first.
  */
 export function spendRows(r: Report, kind: Kind): SpendRow[] {
 	const rows: SpendRow[] = [];
@@ -874,10 +945,13 @@ export function spendRows(r: Report, kind: Kind): SpendRow[] {
 			for (const b of bucketsOf(r, type)) if (b.items > 0) put(b, type, b, false);
 	} else {
 		for (const b of bucketsOf(r)) {
-			if (b.items === 0) continue;
-			const { models, ...whole } = b;
-			put(b, models && models.length > 1 ? ALL : r.type, whole, true);
-			for (const m of models ?? []) put(b, m.model, m, false);
+			const { models, strategic, ...whole } = b;
+			if (b.items > 0) {
+				put(b, models && models.length > 1 ? ALL : r.type, whole, true);
+				for (const m of models ?? []) put(b, m.model, m, false);
+			}
+			if (kind === 'cost-spent' && strategic && strategic.items > 0)
+				put(b, STRATEGIC, { ...strategic, estimated: true }, false);
 		}
 	}
 	// newest bucket first; within a bucket, the order the rows were put in
@@ -886,27 +960,40 @@ export function spendRows(r: Report, kind: Kind): SpendRow[] {
 }
 
 /**
- * Cost: one bar per completed item with usage, in order of completion, stacked by model. An item
- * whose cost is estimated in part carries an asterisk on its label and says so in the tooltip.
+ * Cost: one bar per completed item with usage, in order of completion, stacked by model, with
+ * what strategic agents spent on it on top as a series of its own (S-0225); an item on which only
+ * they spent has that alone. An item whose cost is estimated in part, or that carries strategic
+ * spend, which is estimated, carries an asterisk on its label and says so in the tooltip, where
+ * the total is the agents' and the strategic spend stays apart from it.
  */
 export function cost(r: Report, t: Theme, epic?: string): Opt {
 	const all = models(r);
-	const done = withUsage(r, epic)
-		.filter((i) => i.completed)
-		.sort((a, b) => (a.completed! < b.completed! ? -1 : a.completed! > b.completed! ? 1 : 0));
+	const done = withCost(r, epic).sort((a, b) =>
+		a.completed! < b.completed! ? -1 : a.completed! > b.completed! ? 1 : 0
+	);
 	const present = all.filter((name) =>
 		done.some((i) => i.usage!.models.some((m) => m.model === name))
 	);
-	const series = present.map((name) => ({
+	const bar = (name: string, color: string, data: number[]) => ({
 		name,
 		type: 'bar',
 		stack: 'cost',
 		barMaxWidth: 24,
-		itemStyle: { color: modelColor(t, name), borderColor: t.surface, borderWidth: 1 },
-		data: done.map((i) => i.usage!.models.find((m) => m.model === name)?.cost ?? 0)
-	}));
+		itemStyle: { color, borderColor: t.surface, borderWidth: 1 },
+		data
+	});
+	const series = present.map((name) =>
+		bar(
+			name,
+			modelColor(t, name),
+			done.map((i) => i.usage!.models.find((m) => m.model === name)?.cost ?? 0)
+		)
+	);
+	const strategic = done.map(strategicCost);
+	if (strategic.some((c) => c > 0)) series.push(bar(STRATEGIC, strategicColor(t), strategic));
+	const planned = (i: ItemMetrics) => (i.usage!.strategic ?? []).some((s) => s.estimated);
 	return base(t, {
-		legend: legend(t, present.length > 1),
+		legend: legend(t, series.length > 1),
 		tooltip: tooltip(t, {
 			trigger: 'axis',
 			axisPointer: { type: 'shadow' },
@@ -914,14 +1001,21 @@ export function cost(r: Report, t: Theme, epic?: string): Opt {
 				const i = done[ps[0]?.dataIndex ?? 0];
 				if (!i) return '';
 				const lines = ps
-					.filter((p) => p.value > 0)
+					.filter((p) => p.value > 0 && p.seriesName !== STRATEGIC)
 					.map((p) => `${p.seriesName}: ${dollars(p.value)}`);
-				return `${i.id} ${i.title}<br/>${lines.join('<br/>')}<br/>total ${dollars(i.usage!.cost)}${i.usage!.estimated ? ' (estimated in part)' : ''}`;
+				const agents =
+					i.usage!.models.length > 0
+						? `${lines.join('<br/>')}<br/>total ${dollars(i.usage!.cost)}${i.usage!.estimated ? ' (estimated in part)' : ''}`
+						: 'no agent spend';
+				const s = strategicCost(i);
+				const apart =
+					s > 0 ? `<br/>${STRATEGIC}: ${dollars(s)}${planned(i) ? ' (estimated)' : ''}` : '';
+				return `${i.id} ${i.title}<br/>${agents}${apart}`;
 			}
 		}),
 		xAxis: axisX(t, {
 			type: 'category',
-			data: done.map((i) => (i.usage!.estimated ? `${i.id}*` : i.id)),
+			data: done.map((i) => (i.usage!.estimated || planned(i) ? `${i.id}*` : i.id)),
 			axisLabel: { color: t.textSecondary, rotate: done.length > 12 ? 45 : 0 }
 		}),
 		yAxis: axisY(t, {
