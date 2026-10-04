@@ -6,7 +6,7 @@ title: Introduce Orchestration, Planning, and Analysis agents
 status: in-progress
 owner: alex
 created: 2026-10-02T10:51:49Z
-updated: 2026-10-04T00:51:25Z
+updated: 2026-10-04T00:51:58Z
 transitions:
   - to: ready
     at: 2026-10-03T06:23:24Z
@@ -95,6 +95,6 @@ Three new agents get introduced to system-flow:
 - S-0227 The analyzer's cost is recorded on the issues it filed and the stories made from them
 - S-0228 The Workflow menu has Planner, Orchestrator, and Analyzer pages showing their status, activity log, and runs
 - S-0229 The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents
-- S-0255 The planner drafts a a story's tasks into the backlog and revisits the children it already has
+- S-0255 The planner drafts a story's tasks into the backlog and revisits the children it already has
 
 ## Notes

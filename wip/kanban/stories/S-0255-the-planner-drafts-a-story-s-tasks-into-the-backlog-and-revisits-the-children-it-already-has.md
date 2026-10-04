@@ -2,13 +2,16 @@
 id: S-0255
 type: story
 nature: feature
-title: The planner drafts a a story's tasks into the backlog and revisits the children it already has
-status: backlog
+title: The planner drafts a story's tasks into the backlog and revisits the children it already has
+status: ready
 parent: E-0016
 owner: alex
 created: 2026-10-04T00:51:25Z
-updated: 2026-10-04T00:51:25Z
-transitions: []
+updated: 2026-10-04T00:51:58Z
+transitions:
+  - to: ready
+    at: 2026-10-04T00:51:31Z
+    by: alex
 tags: [cli]
 topics: [planner-agent]
 touches: [flai/cmd]
@@ -18,7 +21,7 @@ agent:
   config:
     effort: high
 ---
-# S-0255 The planner drafts a a story's tasks into the backlog and revisits the children it already has
+# S-0255 The planner drafts a story's tasks into the backlog and revisits the children it already has
 
 ## Goal
 
