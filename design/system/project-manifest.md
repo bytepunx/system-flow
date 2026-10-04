@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-03
+updated: 2026-10-04
 status: active
 topics: [cli, template]
 ---
@@ -61,6 +61,10 @@ planning:                                    # optional (S-0199): what items' pl
   currency: USD                              # ISO 4217 code of every amount; default USD
   hour_rate: 95                              # what an hour of work costs, in currency; default unset, meaning unknown
   cycle: 168h                                # the period time lost is counted over; default 168h
+  agent:                                     # optional (S-0208): the planner's agent, over agent above
+    model: claude-sonnet-5
+    config:
+      effort: medium
 flai:                                        # optional (S-0181): what the project asks of the flai that reads it
   minimum: 1.27.0                            # the oldest flai release that may read it; publishing a flai release that changes the front-matter fields raises it
 ```
@@ -78,5 +82,6 @@ Rules:
 - `prime.budget` is the size a story's context pack fits, `flai prime --story` and the MCP `prime` tool alike ([ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md), S-0146): bytes, or a number with `KB` or `MB` (1024-based). `--budget` overrides it for one run. It is the project's, not the host's, because a pack is the same for every agent that works the project. Unset, it is 80 KB.
 - `issues.story_after` is how long an issue may stay open with no open story linking it before `flai check` warns with `issues.no-story` (S-0198). It is a Go duration, such as `168h` or `24h`. Unset, it is 168h, seven days; `0` turns the warning off. A value that is not a duration, or is negative, is a `manifest.issues` error, and the warning is off until it is fixed. A story links an issue when its body names the issue's ID, as `flai issue story` writes it.
 - `planning` sets what the planning data on work items is counted in ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md), S-0199; the fields are in [work-hierarchy.md](work-hierarchy.md#identifiers)). `planning.currency` is the ISO 4217 code, three capital letters, of every amount in an item's `cost_of_delay` and of `hour_rate`; unset, it is USD. `planning.hour_rate` is what an hour of work costs, a number of zero or more, which prices a cost of delay's time lost; unset means unknown, not free. `planning.cycle` is the period `time_lost_per_cycle` is counted over, a Go duration longer than zero; unset, it is 168h, a week. `flai check` reports a value that is none of these as a `manifest.planning` error. `flai show` and MCP's `item_get` give an item's amounts in the currency.
+- `planning.agent` is the planner's agent (S-0208, [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)): the same shape as `agent`, a harness, a model, `config`, and `roles`, merged over `agent` field by field, config key by config key, and role by role (`Manifest.PlanningAgent`), so it names only what the planner runs differently. Unset, the planner runs on `agent`. `flai check` reports a value that is not valid, under the name `planning.agent`, as a `manifest.planning` error. The operator sets it by hand, as the other `planning` keys; no flai command changes it, `flai agent` included. How the planner runs is in [strategic-agents.md](strategic-agents.md#its-agent).
 - `flai.minimum` is the oldest flai release, `X.Y.Z`, that may read the project (S-0181): one that knows every front-matter field its items, threads, and issues carry. `manifest.Load` refuses the manifest for a flai below it, so every command, `flai serve` (which leaves the project unserved and says why), and `flai mcp` stop before reading any item, with `manifest.TooOldError`: the version needed, the running one, and the upgrade (`flai host upgrade`, or `flai self-upgrade` where no flai host runs). A dev build (`dev`) is never below it, and one that is not a release version is a load error. Publishing a flai release raises it to that release when `flai/internal/workitem/front-matter-fields.txt` changed since the previous `flai/v*` tag (`release.RaiseMinimum`, in the publish commit, which warns that the host's flai must be upgraded once the release's binaries are built), so a release that adds a front-matter field raises it. A fields file the previous tag did not have raises nothing. A flai older than S-0181 does not know the key and ignores it, as the manifest is decoded leniently; what keeps such a flai reading is that it is told it is behind ([flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)). Unset, any flai reads the project.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent`, `flai.minimum`) and preserves comments where the YAML library allows it.

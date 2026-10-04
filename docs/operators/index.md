@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-03
+updated: 2026-10-04
 status: active
 ---
 
@@ -206,6 +206,21 @@ flai serve disable host
 ```
 
 **Understand what enabling it means.** Whoever holds the dashboard token can then stop, start, or restart `flai serve` and every project's MCP server on this host. A stopped `flai serve` cuts the dashboard off until someone starts it again in a shell (`flai serve start`). They can also have the host download the newest flai release with your GitHub credentials (`GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token`), install it over the flai on this host, and restart on it. It installs only a published release, checked against its checksum, never a binary the dashboard sends. Reading the host's status, and whether a newer flai exists, needs no action.
+
+### The plan host action: the planner (S-0208)
+
+`flai serve` can start the planner for an epic or a story, on your machine, as you, because you asked: `flai plan <id>` in a shell, **Plan** on the item's page, or the MCP tool `plan` from your own agent ([ADR-0082](../../design/adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). It is a host action, off until you enable it:
+
+```bash
+flai serve enable plan      # for the project in the working directory; --all-projects for every project
+flai plan E-0016            # start the planner for an epic or a story
+flai serve journal          # every planner started, or that could not be
+flai serve disable plan
+```
+
+**Understand what enabling it means.** Whoever holds the dashboard token can start the planner for any epic or story that is open, on your machine, as you, with the planner's agent (`planning.agent` in `system-flow.yaml` over `agent`) and the harnesses and command you set with `flai serve agent`. One planner runs per item at a time, and it does not count against the in-progress limit, so each start spends what one agent session costs. The planner runs in the project's main checkout. It may write work items and threads through flai, and `flai guard` refuses it everything else: moves past backlog, finalizing a draft, acceptance, publishing, git's writes, and Claude Code's file edits. That holds only while `.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` for a planner's session, as the template's does, and `flai` on `PATH` has the planner's rules. An agent `flai serve` started cannot start a planner through MCP.
+
+**Where to look.** The run is kept in `serve/agents.json` under `plans`, its output in `serve/agents/<key>-planner-<time>.log`, and what it did and cost in `wip/agents/planner.md`. `flai hostapi agent.status` lists the runs as `plans`. A planner asks you in a thread on its item and waits for the answer. One that ended before you answered is recorded as `asked` and is not started again by the answer: ask for another run.
 
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 

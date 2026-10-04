@@ -1,6 +1,6 @@
 ---
 title: System design index
-updated: 2026-09-26
+updated: 2026-10-04
 status: active
 ---
 
@@ -23,6 +23,7 @@ Living documents describing system-flow as it currently is. Read them in this or
 | [template.md](template.md) | The template repository: structure, manifest, variables, rendering |
 | [flai-cli.md](flai-cli.md) | The `flai` command line tool |
 | [flaiover-dashboard.md](flaiover-dashboard.md) | The `flaiover` web dashboard |
+| [strategic-agents.md](strategic-agents.md) | How flai runs the planner, the orchestrator, and the analyzer: the planner's start, run, record, refusals, prompt, guard, and activity log |
 | [pushing-from-the-board.md](pushing-from-the-board.md) | The finding of S-0052: the ways an acceptance made from the board could be pushed, what was tried, the recommendation, and the operator's decision (ADR-0026) |
 | [dashboard-host-channel.md](dashboard-host-channel.md) | The finding of S-0071: what the dashboard does with the mounted clone, how flai on the host and the dashboard could talk with flai dialling in, what was tried, what each way exposes, the recommendation, and the operator's decision |
 | [agent-coordination.md](agent-coordination.md) | The finding of S-0124: what flai does today when stories run in parallel, how others decide whether work may run at once, the ranked designs, and the designer's decision |
