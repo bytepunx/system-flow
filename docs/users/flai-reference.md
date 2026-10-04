@@ -20,6 +20,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [board](#flai-board) | Print the kanban board |
 | [check](#flai-check) | Validate the repository against the system-flow standard |
 | [checks](#flai-checks) | Run, watch, and cancel checks for a story in review |
+| [cod](#flai-cod) | Print an epic's or story's cost of delay per week, from its inputs or its epic's share |
 | [completion](#flai-completion) | Generate the autocompletion script for the specified shell |
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
@@ -83,6 +84,7 @@ Subcommands:
 - [board](#flai-board): Print the kanban board
 - [check](#flai-check): Validate the repository against the system-flow standard
 - [checks](#flai-checks): Run, watch, and cancel checks for a story in review
+- [cod](#flai-cod): Print an epic's or story's cost of delay per week, from its inputs or its epic's share
 - [completion](#flai-completion): Generate the autocompletion script for the specified shell
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
@@ -452,6 +454,23 @@ Flags:
 |------|---------|
 | `--from` int | byte offset into the log to read from |
 | `--wait` int | seconds to wait for more output while the run is active (default `20`) |
+
+### flai cod
+
+Print an epic's or story's cost of delay per week, from its inputs or its epic's share.
+
+```text
+flai cod <E-nnnn|S-nnnn>
+```
+
+Works out what each week of waiting for an epic or a story costs, in planning.currency. From the item's own cost of delay inputs, the value per week is revenue\_per\_week plus penalty\_per\_week plus the hours of time\_lost\_per\_cycle times planning.hour\_rate times the cycles in a week (a week over planning.cycle, 168h by default); time lost needs planning.hour\_rate. A story without inputs of its own takes a share of its epic's value, worked out from the epic's inputs or, without them, the value recorded on it: the share its forecast duration is of the durations of the epic's open stories without inputs, each its own forecast.duration or one worked out from history as flai forecast does. An epic without inputs, or a story with neither inputs nor an epic that has inputs or a value, is refused: the inputs are the operator's to give, with flai edit --revenue-per-week, --penalty-per-week, and --time-lost-per-cycle. Amounts are rounded to two decimals. flai cod writes nothing; record the result with flai edit --cost-of-delay-value.
+
+Examples:
+
+```bash
+flai cod E-0016
+flai cod S-0210 --json
+```
 
 ### flai completion
 
