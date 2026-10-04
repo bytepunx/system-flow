@@ -166,7 +166,7 @@ func TestAnActivityInAResumedRunIsChargedItsShare(t *testing.T) {
 		streamCall("s", "m1", runStart, 999),
 		streamCall("s", "m2", runStart.Add(time.Minute), 999),
 		streamFinal("Waiting for an answer.", 2000, 2.0))
-	ended, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator)
+	ended, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator, nil)
 	if err != nil || ended == nil {
 		t.Fatalf("the first run's end = %+v (%v), want logged", ended, err)
 	}
@@ -202,7 +202,7 @@ func TestARunEndWithNothingSpentSinceLogsNothing(t *testing.T) {
 	if _, err := LogActivity(lab.dir, lab.root, "t", workitem.ActivityPlanner, "planned", []string{"S-0001"}, runStart.Add(90*time.Second)); err != nil {
 		t.Fatal(err)
 	}
-	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil)
 	if err != nil || got != nil {
 		t.Fatalf("run end = %+v (%v), want nothing logged", got, err)
 	}
@@ -222,7 +222,7 @@ func TestARunEndLogsWhatWasSpentSinceTheLastActivity(t *testing.T) {
 	if _, err := LogActivity(lab.dir, lab.root, "t", workitem.ActivityPlanner, "read the board", nil, runStart.Add(30*time.Second)); err != nil {
 		t.Fatal(err)
 	}
-	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil)
 	if err != nil || got == nil {
 		t.Fatalf("run end = %+v (%v), want logged", got, err)
 	}
@@ -239,7 +239,7 @@ func TestARunEndLogsWhatWasSpentSinceTheLastActivity(t *testing.T) {
 func TestARunEndWithNoTextIsSaidToHaveEnded(t *testing.T) {
 	lab := newActivityLab(t)
 	lab.log("t-analyzer-20261003T100000Z.log", streamCall("s", "m1", runStart, 999), streamResult("s", 1000, 0.5))
-	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityAnalyzer)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityAnalyzer, nil)
 	if err != nil || got == nil || got.Entry.Summary != "run ended" || got.Entry.Cost != 0.5 {
 		t.Fatalf("run end = %+v (%v), want run ended at 0.5 USD", got, err)
 	}
@@ -249,7 +249,7 @@ func TestARunEndWithNoTextIsSaidToHaveEnded(t *testing.T) {
 // seconds and no cost; a run end with no run logs nothing.
 func TestAnActivityWithNoRunIsLoggedWithNothingMeasured(t *testing.T) {
 	lab := newActivityLab(t)
-	if got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner); err != nil || got != nil {
+	if got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil); err != nil || got != nil {
 		t.Fatalf("run end with no run = %+v (%v)", got, err)
 	}
 	got, err := LogActivity(lab.dir, lab.root, "t", workitem.ActivityPlanner, "planned by hand", []string{"S-0001"}, runStart.Add(-time.Hour))
@@ -261,7 +261,7 @@ func TestAnActivityWithNoRunIsLoggedWithNothingMeasured(t *testing.T) {
 	}
 	// a run logged to its end, then an activity by hand an hour later
 	lab.log("t-planner-20261003T100000Z.log", streamCall("s", "m1", runStart, 999), streamResult("s", 1000, 0.5))
-	if _, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner); err != nil {
+	if _, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil); err != nil {
 		t.Fatal(err)
 	}
 	got, err = LogActivity(lab.dir, lab.root, "t", workitem.ActivityPlanner, "planned by hand again", nil, runStart.Add(time.Hour))
@@ -285,7 +285,7 @@ func TestAnUnknownKindIsRefused(t *testing.T) {
 	if _, err := LogActivity(lab.dir, lab.root, "t", "builder", "built", nil, runStart); err == nil {
 		t.Error("logging builder's activity was not refused")
 	}
-	if _, err := LogRunEnd(lab.dir, lab.root, "t", "../stories"); err == nil {
+	if _, err := LogRunEnd(lab.dir, lab.root, "t", "../stories", nil); err == nil {
 		t.Error("ending a run of ../stories was not refused")
 	}
 	if m, _ := filepath.Glob(filepath.Join(lab.root, "wip", "agents", "*.md")); len(m) != 0 {
@@ -346,7 +346,7 @@ func TestAPlannerRunEndIsChargedToTheItemItPlannedAndAbove(t *testing.T) {
 		streamCall("s", "m2", runStart.Add(time.Minute), 999),
 		streamFinal("Drafted the story's tasks.", 2000, 0.5))
 	lab.planRun(story, name)
-	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil)
 	if err != nil || got == nil {
 		t.Fatalf("run end = %+v (%v), want logged", got, err)
 	}
@@ -383,7 +383,7 @@ func TestEachPlannerActivityChargesItsShare(t *testing.T) {
 	if s := lab.strategic(epic); s == nil || s.Cost() != first.Entry.Cost || first.Entry.Cost != 0.25 || s.Seconds != 30 {
 		t.Fatalf("after the first activity = %+v, want its 0.25 USD over 30 s", s)
 	}
-	second, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	second, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil)
 	if err != nil || second == nil {
 		t.Fatalf("run end = %+v (%v)", second, err)
 	}
@@ -405,7 +405,7 @@ func TestAResumedPlannerSessionIsNotChargedTwice(t *testing.T) {
 		streamCall("s", "m1", runStart, 999),
 		streamFinal("Waiting for an answer.", 1000, 2.0))
 	lab.planRun(story, "t-planner-20261003T100000Z.log")
-	if _, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner); err != nil {
+	if _, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil); err != nil {
 		t.Fatal(err)
 	}
 	later := runStart.Add(time.Hour)
@@ -413,7 +413,7 @@ func TestAResumedPlannerSessionIsNotChargedTwice(t *testing.T) {
 		streamCall("s", "m2", later, 999),
 		streamFinal("Done.", 2000, 4.0))
 	lab.planRun(story, "t-planner-20261003T110000Z.log")
-	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil)
 	if err != nil || got == nil || got.Entry.Cost != 2.0 {
 		t.Fatalf("resumed run end = %+v (%v), want its 2.0 USD share", got, err)
 	}
@@ -432,7 +432,7 @@ func TestAnActivityOfNoPlannedRunChargesNothing(t *testing.T) {
 		streamCall("s", "m1", runStart, 999),
 		streamFinal("Planned by hand.", 1000, 0.5))
 	lab.planRun(story, "t-planner-20261003T090000Z.log")
-	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, nil)
 	if err != nil || got == nil || got.Entry.Cost != 0.5 {
 		t.Fatalf("run end = %+v (%v), want logged", got, err)
 	}
@@ -448,7 +448,7 @@ func TestAnActivityOfNoPlannedRunChargesNothing(t *testing.T) {
 	// an orchestrator's run is no plan, whatever its log is called
 	lab.log("t-orchestrator-20261003T100000Z.log", streamCall("o", "m1", runStart, 999), streamResult("o", 1000, 0.5))
 	lab.planRun(epic, "t-orchestrator-20261003T100000Z.log")
-	if got, err = LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator); err != nil || got == nil || got.Charged != nil {
+	if got, err = LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator, nil); err != nil || got == nil || got.Charged != nil {
 		t.Fatalf("orchestrator = %+v (%v), want logged and nothing charged", got, err)
 	}
 	for _, id := range []string{story, epic} {

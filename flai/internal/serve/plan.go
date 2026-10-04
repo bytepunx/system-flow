@@ -130,8 +130,10 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 
 // planEnded records a planner run as ended, with its exit code when it was
 // seen, as judgePlan judges it, and logs its activity in the planner's
-// activity document (ADR-0079). An activity that cannot be logged is
-// warned of, and the run stays recorded as it ended.
+// activity document (ADR-0079), naming the items it planned. An activity
+// that cannot be logged is warned of, and the run stays recorded as it
+// ended; items that cannot be read are warned of, and the activity names
+// the planned item alone.
 func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -142,9 +144,55 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 		args = append(args, "exit", *exit)
 	}
 	l.log("planner ended", args...)
-	if _, err := LogRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner); err != nil {
+	items := []string{run.Item}
+	if since, err := time.Parse(time.RFC3339, run.Started); err != nil {
+		l.warn("planner's items not named", "item", run.Item, "err", err)
+	} else if items, err = plannedItems(l.entry.Root, run.Item, since); err != nil {
+		items = []string{run.Item}
+		l.warn("planner's items not named", "item", run.Item, "err", err)
+	}
+	if _, err := LogRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner, items); err != nil {
 		l.warn("planner activity not logged", "item", run.Item, "err", err)
 	}
+}
+
+// plannedItems are the items a planner run on item, started at since, is
+// said to have planned (S-0209): item first, then the items under it created
+// since, then those under it created before and changed since, each in ID
+// order. Under an epic are its stories and their tasks; under a story, its
+// tasks. Archived items are not under it. The second since started counts
+// as since.
+func plannedItems(root, item string, since time.Time) ([]string, error) {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	all, err := repo.List(false)
+	if err != nil {
+		return nil, err
+	}
+	since = since.UTC().Truncate(time.Second)
+	after := func(at string) bool {
+		t, err := time.Parse(workitem.TimeFormat, at)
+		return err == nil && !t.Before(since)
+	}
+	under := map[string]bool{item: true}
+	var created, changed []string
+	// List puts stories before tasks, so a story is known to be under the
+	// epic before its tasks are seen.
+	for _, it := range all {
+		if it.ID == item || !under[it.Parent] {
+			continue
+		}
+		under[it.ID] = true
+		switch {
+		case after(it.Created):
+			created = append(created, it.ID)
+		case after(it.Updated):
+			changed = append(changed, it.ID)
+		}
+	}
+	return append(append([]string{item}, created...), changed...), nil
 }
 
 // judgePlan is how a planner run that has ended went: asked when a question

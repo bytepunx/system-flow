@@ -88,10 +88,11 @@ func LogActivity(d Dir, root, key, kind, summary string, items []string, end tim
 
 // LogRunEnd logs the newest run of the strategic agent kind in the project
 // at root, named key, as having ended: the time in it since the last entry
-// is one activity, with the run's final text as its summary, and a
-// planner's is charged to the item it planned, as LogActivity's is. It logs
-// nothing, and returns nil, when nothing was spent in that time.
-func LogRunEnd(d Dir, root, key, kind string) (*Logged, error) {
+// is one activity, with the run's final text as its summary and items as
+// the items it names (S-0209), and a planner's is charged to the item it
+// planned, as LogActivity's is. It logs nothing, and returns nil, when
+// nothing was spent in that time.
+func LogRunEnd(d Dir, root, key, kind string, items []string) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
 	if err != nil {
 		return nil, err
@@ -109,7 +110,7 @@ func LogRunEnd(d Dir, root, key, kind string) (*Logged, error) {
 		return nil, nil
 	}
 	logged, err := m.append(workitem.ActivityEntry{
-		At: s.To, Summary: firstLine(run.Result, "run ended"),
+		At: s.To, Summary: firstLine(run.Result, "run ended"), Items: items,
 		Seconds: seconds(s), Cost: u.Cost(), Estimated: u.Estimated,
 	})
 	if err != nil {
