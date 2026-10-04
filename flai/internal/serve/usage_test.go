@@ -117,6 +117,40 @@ func TestMeasureWritesAStoryItsTasksAndItsEpic(t *testing.T) {
 	}
 }
 
+// ADR-0083: measuring a story from its agents' logs keeps what the planner
+// spent on it, and on its epic, and measuring again writes nothing.
+func TestMeasureKeepsWhatThePlannerSpent(t *testing.T) {
+	lab := newAgentLab(t)
+	story := lab.backlog("Planned", nil)
+	planned := &usage.Usage{Source: usage.SourceLog, Seconds: 61, Estimated: true, Models: []usage.Model{{Model: "claude-opus-5-5", Input: 2, Output: 300, CacheRead: 2000, Cost: 0.5}}}
+	if _, err := lab.repo.ChargeStrategic(story, workitem.ActivityPlanner, planned); err != nil {
+		t.Fatal(err)
+	}
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	logs := filepath.Join(string(lab.o.Dir), "agents")
+	_ = os.MkdirAll(logs, 0o700)
+	if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(streamCall("s", "m0", t0, 1000)+"\n"+streamResult("s", 1000, 1.0)+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(m.Changed, ",") != story+","+lab.epic.ID {
+		t.Errorf("changed = %v, want the story and its epic", m.Changed)
+	}
+	for _, id := range []string{story, lab.epic.ID} {
+		u := lab.usageOf(id)
+		if u == nil || u.Cost() != 1.0 || len(u.Strategic) != 1 || u.Strategic[0].Kind != workitem.ActivityPlanner || u.Strategic[0].Cost() != 0.5 || u.Strategic[0].Seconds != 61 {
+			t.Errorf("%s's usage = %+v, want the agent's 1.0 USD and the planner's 0.5 kept", id, u)
+		}
+	}
+	again, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+	if err != nil || len(again.Changed) != 0 {
+		t.Errorf("measuring again changed %v (%v), want nothing", again.Changed, err)
+	}
+}
+
 // subAgentCall is a call of opus in session s at at by the sub-agent the
 // tool_use parent started, or by the story's agent when parent is empty,
 // with content blocks.

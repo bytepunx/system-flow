@@ -138,7 +138,12 @@ func Measure(d Dir, root, key, story string, write bool) (*Measured, error) {
 		if err != nil {
 			return err
 		}
-		if u == nil || (fresh.Usage != nil && usage.Same(fresh.Usage, u)) {
+		if u == nil {
+			return nil
+		}
+		// what strategic agents spent on it is no agent's: keep it (ADR-0083)
+		u = usage.WithStrategic(u, fresh.Usage)
+		if fresh.Usage != nil && usage.Same(fresh.Usage, u) {
 			return nil
 		}
 		fresh.Usage = u

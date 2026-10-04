@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -290,6 +291,181 @@ func TestAnUnknownKindIsRefused(t *testing.T) {
 	if m, _ := filepath.Glob(filepath.Join(lab.root, "wip", "agents", "*.md")); len(m) != 0 {
 		t.Errorf("wrote %v", m)
 	}
+}
+
+// planned makes an epic and a story under it, and returns their IDs.
+func (lab *activityLab) planned() (epic, story string) {
+	lab.t.Helper()
+	e, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Epic", Owner: "alex", Now: runStart})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	s, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Story", Parent: e.ID, Owner: "alex", Now: runStart})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return e.ID, s.ID
+}
+
+// planRun records in serve/agents.json, as flai serve does, that the newest
+// planner run for item kept its log in name.
+func (lab *activityLab) planRun(item, name string) {
+	lab.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Item: item, Agent: "planner-" + item, Started: runStart.Format(time.RFC3339), Log: filepath.Join(string(lab.dir), "agents", name)})
+	})
+}
+
+// strategic is what the planner spent on id, as its usage says; nil when
+// nothing.
+func (lab *activityLab) strategic(id string) *usage.Strategic {
+	lab.t.Helper()
+	it, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	if it.Usage == nil {
+		return nil
+	}
+	for i, s := range it.Usage.Strategic {
+		if s.Kind == workitem.ActivityPlanner {
+			return &it.Usage.Strategic[i]
+		}
+	}
+	return nil
+}
+
+// ADR-0083: a planner run for a story ends; what its activity spent, the
+// share its entry's cost is, is charged to the story and to its epic, apart
+// from the agents' figures.
+func TestAPlannerRunEndIsChargedToTheItemItPlannedAndAbove(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story := lab.planned()
+	name := "t-planner-20261003T100000Z.log"
+	lab.log(name,
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 999),
+		streamFinal("Drafted the story's tasks.", 2000, 0.5))
+	lab.planRun(story, name)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if got.Planned != story || strings.Join(got.Charged, ",") != story+","+epic {
+		t.Errorf("charged %s: %v, want %s and its epic", got.Planned, got.Charged, story)
+	}
+	e := got.Entry
+	for _, id := range []string{story, epic} {
+		s := lab.strategic(id)
+		if s == nil || s.Cost() != e.Cost || e.Cost != 0.5 || s.Seconds != e.Seconds || !s.Estimated || s.Tokens() != 2+300+2000 {
+			t.Errorf("%s's planner usage = %+v, want the entry's %v USD over %d s and the run's 2302 tokens, estimated", id, s, e.Cost, e.Seconds)
+		}
+		if u := lab.usageOf(id); !u.Empty() || u.Source != usage.SourceSum {
+			t.Errorf("%s's agents' figures = %+v, want none, summed from nothing", id, u)
+		}
+	}
+}
+
+// ADR-0083: two activities in one run each charge only their span's share,
+// so that the item ends with their entries' sum.
+func TestEachPlannerActivityChargesItsShare(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, _ := lab.planned()
+	name := "t-planner-20261003T100000Z.log"
+	lab.log(name,
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 2999),
+		streamFinal("Drafted two stories.", 4000, 1.0))
+	lab.planRun(epic, name)
+	first, err := LogActivity(lab.dir, lab.root, "t", workitem.ActivityPlanner, "read the epic", nil, runStart.Add(30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := lab.strategic(epic); s == nil || s.Cost() != first.Entry.Cost || first.Entry.Cost != 0.25 || s.Seconds != 30 {
+		t.Fatalf("after the first activity = %+v, want its 0.25 USD over 30 s", s)
+	}
+	second, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	if err != nil || second == nil {
+		t.Fatalf("run end = %+v (%v)", second, err)
+	}
+	s := lab.strategic(epic)
+	if s == nil || s.Cost() != toTheCentsHundredth(first.Entry.Cost+second.Entry.Cost) || s.Cost() != 1.0 || s.Seconds != first.Entry.Seconds+second.Entry.Seconds {
+		t.Errorf("epic's planner usage = %+v, want the two entries' sum, 1.0 USD", s)
+	}
+	if n := s.Tokens(); n < 4301 || n > 4303 {
+		t.Errorf("tokens = %d, want the run's 4302 split between the two", n)
+	}
+}
+
+// ADR-0083: a session resumed in a later run reports cumulative totals; the
+// item is charged the later run's share alone, not the first run's again.
+func TestAResumedPlannerSessionIsNotChargedTwice(t *testing.T) {
+	lab := newActivityLab(t)
+	_, story := lab.planned()
+	lab.log("t-planner-20261003T100000Z.log",
+		streamCall("s", "m1", runStart, 999),
+		streamFinal("Waiting for an answer.", 1000, 2.0))
+	lab.planRun(story, "t-planner-20261003T100000Z.log")
+	if _, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner); err != nil {
+		t.Fatal(err)
+	}
+	later := runStart.Add(time.Hour)
+	lab.log("t-planner-20261003T110000Z.log",
+		streamCall("s", "m2", later, 999),
+		streamFinal("Done.", 2000, 4.0))
+	lab.planRun(story, "t-planner-20261003T110000Z.log")
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	if err != nil || got == nil || got.Entry.Cost != 2.0 {
+		t.Fatalf("resumed run end = %+v (%v), want its 2.0 USD share", got, err)
+	}
+	if s := lab.strategic(story); s == nil || s.Cost() != 4.0 {
+		t.Errorf("story's planner usage = %+v, want the session's 4.0 USD once", s)
+	}
+}
+
+// ADR-0083: a run no item's newest planner run kept its log in, such as one
+// a person ran by hand or one replaced by a newer run for its item, charges
+// nothing; nor does an activity outside any run, nor another kind's.
+func TestAnActivityOfNoPlannedRunChargesNothing(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story := lab.planned()
+	lab.log("t-planner-20261003T100000Z.log",
+		streamCall("s", "m1", runStart, 999),
+		streamFinal("Planned by hand.", 1000, 0.5))
+	lab.planRun(story, "t-planner-20261003T090000Z.log")
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner)
+	if err != nil || got == nil || got.Entry.Cost != 0.5 {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if got.Planned != "" || got.Charged != nil {
+		t.Errorf("charged %s: %v, want nothing", got.Planned, got.Charged)
+	}
+	// the run logged to its end, then an activity outside any run
+	lab.planRun(story, "t-planner-20261003T100000Z.log")
+	got, err = LogActivity(lab.dir, lab.root, "t", workitem.ActivityPlanner, "planned by hand again", nil, runStart.Add(time.Hour))
+	if err != nil || got.Charged != nil {
+		t.Fatalf("outside a run = %+v (%v), want nothing charged", got, err)
+	}
+	// an orchestrator's run is no plan, whatever its log is called
+	lab.log("t-orchestrator-20261003T100000Z.log", streamCall("o", "m1", runStart, 999), streamResult("o", 1000, 0.5))
+	lab.planRun(epic, "t-orchestrator-20261003T100000Z.log")
+	if got, err = LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator); err != nil || got == nil || got.Charged != nil {
+		t.Fatalf("orchestrator = %+v (%v), want logged and nothing charged", got, err)
+	}
+	for _, id := range []string{story, epic} {
+		if u := lab.usageOf(id); u != nil {
+			t.Errorf("%s's usage = %+v, want none", id, u)
+		}
+	}
+}
+
+// usageOf is the item's usage as it stands.
+func (lab *activityLab) usageOf(id string) *usage.Usage {
+	lab.t.Helper()
+	it, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return it.Usage
 }
 
 // A run that died without its end logged charges a later activity only up to

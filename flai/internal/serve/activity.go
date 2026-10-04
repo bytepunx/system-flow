@@ -18,7 +18,9 @@ import (
 // its span runs from the later of the newest run's start and the document's
 // last entry to its end, and its cost is what the kind's logs say was spent,
 // apportioned to that span as a task's is to its intervals (ADR-0051), so a
-// session resumed in a later run is charged only its share.
+// session resumed in a later run is charged only its share. A planner's
+// activity is also charged, that same share, to the item its run was started
+// for and every item above it, under usage.strategic (S-0225, ADR-0083).
 
 // ActivityLogs are the logs flai serve keeps of the runs of the strategic
 // agent kind in the project named key, oldest first.
@@ -39,13 +41,20 @@ type Logged struct {
 	Entry    workitem.ActivityEntry `json:"entry"`
 	Activity *workitem.Activity     `json:"activity"`
 	Logs     []string               `json:"logs"`
+	// Planned is the item a planner's activity was charged to, and Charged
+	// the items whose usage the charge changed, that item's first and then
+	// upward; both empty when nothing was charged (ADR-0083).
+	Planned string   `json:"planned,omitempty"`
+	Charged []string `json:"charged,omitempty"`
 }
 
 // LogActivity logs an activity of the strategic agent kind in the project at
-// root, named key, that ended at end, measured from the kind's logs. An
-// activity outside any run flai serve logged, such as a planner a person
-// runs by hand, is logged with no seconds and no cost, so that it is still
-// recorded.
+// root, named key, that ended at end, measured from the kind's logs, and
+// charges a planner's to the item it planned. An activity outside any run
+// flai serve logged, such as a planner a person runs by hand, is logged with
+// no seconds and no cost, so that it is still recorded, and charges nothing.
+// When the charge fails the activity is logged all the same, and is returned
+// with the error.
 func LogActivity(d Dir, root, key, kind, summary string, items []string, end time.Time) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
 	if err != nil {
@@ -53,7 +62,9 @@ func LogActivity(d Dir, root, key, kind, summary string, items []string, end tim
 	}
 	end = end.UTC().Truncate(time.Second)
 	e := workitem.ActivityEntry{At: end, Summary: summary, Items: items}
-	if run, ok := m.newest(); ok {
+	run, ok := m.newest()
+	var spent *usage.Usage
+	if ok {
 		// no later than the second after the run's last event: a run that
 		// died without its end logged is not charged the time since
 		to := end
@@ -61,15 +72,24 @@ func LogActivity(d Dir, root, key, kind, summary string, items []string, end tim
 			to = last
 		}
 		if s, inRun := activitySpan(run, m.last, to); inRun {
-			e.Seconds, e.Cost, e.Estimated = m.measure(s)
+			spent = m.spent(s)
+			e.Seconds = seconds(s)
+			if spent != nil && len(spent.Models) > 0 {
+				e.Cost, e.Estimated = spent.Cost(), spent.Estimated
+			}
 		}
 	}
-	return m.append(e)
+	logged, err := m.append(e)
+	if err != nil {
+		return nil, err
+	}
+	return logged, m.charge(logged, run, spent)
 }
 
 // LogRunEnd logs the newest run of the strategic agent kind in the project
 // at root, named key, as having ended: the time in it since the last entry
-// is one activity, with the run's final text as its summary. It logs
+// is one activity, with the run's final text as its summary, and a
+// planner's is charged to the item it planned, as LogActivity's is. It logs
 // nothing, and returns nil, when nothing was spent in that time.
 func LogRunEnd(d Dir, root, key, kind string) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
@@ -88,15 +108,20 @@ func LogRunEnd(d Dir, root, key, kind string) (*Logged, error) {
 	if u == nil || len(u.Models) == 0 {
 		return nil, nil
 	}
-	return m.append(workitem.ActivityEntry{
+	logged, err := m.append(workitem.ActivityEntry{
 		At: s.To, Summary: firstLine(run.Result, "run ended"),
 		Seconds: seconds(s), Cost: u.Cost(), Estimated: u.Estimated,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return logged, m.charge(logged, run, u)
 }
 
 // activityMeasure is what an activity is measured from: the kind's logs and
 // the document's last entry.
 type activityMeasure struct {
+	dir   Dir
 	repo  *workitem.Repo
 	kind  string
 	logs  []string
@@ -119,7 +144,7 @@ func readActivity(d Dir, root, key, kind string) (*activityMeasure, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot measure the %s's activity: %w", kind, err)
 	}
-	m := &activityMeasure{repo: repo, kind: kind, logs: logs}
+	m := &activityMeasure{dir: d, repo: repo, kind: kind, logs: logs}
 	if m.logs == nil {
 		m.logs = []string{}
 	}
@@ -178,13 +203,47 @@ func (m *activityMeasure) spent(s usage.Span) *usage.Usage {
 	return m.rec.Tasks(map[string][]usage.Span{id: {s}}, m.rates)[id]
 }
 
-// measure is the span's wall-clock seconds and the cost apportioned to it.
-func (m *activityMeasure) measure(s usage.Span) (secs int64, cost float64, estimated bool) {
-	u := m.spent(s)
-	if u == nil || len(u.Models) == 0 {
-		return seconds(s), 0, false
+// charge charges u, what a planner's activity in run spent, to the item the
+// run was started for, as serve/agents.json records it under plans, and to
+// every item above it (ADR-0083), with the entry's seconds, so that the
+// items and the activity document are two views of one spend. It charges
+// nothing for another kind, for a u that spent nothing, and for a run no
+// item's newest planner run is, such as one a person ran by hand. It notes
+// what it charged on logged.
+func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) error {
+	if m.kind != workitem.ActivityPlanner || u == nil || len(u.Models) == 0 {
+		return nil
 	}
-	return seconds(s), u.Cost(), u.Estimated
+	item := m.planned(run)
+	if item == "" {
+		return nil
+	}
+	c := u.Clone()
+	c.Seconds = logged.Entry.Seconds
+	changed, err := m.repo.ChargeStrategic(item, m.kind, c)
+	if len(changed) > 0 {
+		logged.Planned, logged.Charged = item, changed
+	}
+	if err != nil {
+		return fmt.Errorf("the %s's activity was logged, but its cost could not be charged to %s: %w", m.kind, item, err)
+	}
+	return nil
+}
+
+// planned is the item whose newest planner run kept its log in run's, or ""
+// when there is none. The log is told by its name, which holds the
+// project's key, so that the form a root or the serve folder is written in
+// does not matter.
+func (m *activityMeasure) planned(run usage.Run) string {
+	name := filepath.Base(run.Path)
+	for _, st := range m.dir.AgentStates() {
+		for item, r := range st.Plans {
+			if r != nil && r.Log != "" && filepath.Base(r.Log) == name {
+				return item
+			}
+		}
+	}
+	return ""
 }
 
 func (m *activityMeasure) append(e workitem.ActivityEntry) (*Logged, error) {

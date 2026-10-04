@@ -148,6 +148,13 @@ func TestAPlannerRunThatEndsIsRecordedAndItsActivityLogged(t *testing.T) {
 	if e := doc.Entries[0]; e.Summary != "Drafted three stories for "+id+"." || e.Cost != 0.5 || e.Seconds != 61 {
 		t.Errorf("activity = %+v, want the run's summary, its 0.5 USD, and its 61 s", e)
 	}
+	// ADR-0083: and what it spent is charged to the epic it planned, once
+	// the entry is in
+	waitFor(t, "its cost charged", func() bool { it, err := lab.repo.Get(id); return err == nil && it.Usage != nil })
+	it, _ := lab.repo.Get(id)
+	if u := it.Usage; u == nil || len(u.Strategic) != 1 || u.Strategic[0].Kind != workitem.ActivityPlanner || u.Strategic[0].Cost() != 0.5 || u.Strategic[0].Seconds != 61 {
+		t.Errorf("epic's usage = %+v, want the planner's 0.5 USD over 61 s", u)
+	}
 }
 
 // S-0208: a planner that ended with its question on its item open is asked;
