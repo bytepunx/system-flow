@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 279
-      cache_read: 2011864
-      cache_write: 86191
-      cost: 0.845
+      input: 33
+      output: 12742
+      cache_read: 2046354
+      cache_write: 51718
+      cost: 0.9744
 ---
 # T-0822 A planner run records its trigger, and its activity entry says it
 

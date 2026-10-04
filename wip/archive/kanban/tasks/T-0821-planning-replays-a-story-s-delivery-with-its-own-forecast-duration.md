@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 877
-      cache_read: 919681
-      cache_write: 56893
-      cost: 0.3936
+      input: 15
+      output: 5931
+      cache_read: 952510
+      cache_write: 24073
+      cost: 0.4536
 ---
 # T-0821 planning replays a story's delivery with its own forecast duration
 

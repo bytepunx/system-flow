@@ -31,21 +31,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2533
-  estimated: true
+  seconds: 2890
   models:
     - model: claude-haiku-4-5-20251001
       input: 274
-      output: 63
+      output: 10001
       cache_read: 1467818
       cache_write: 65985
-      cost: 0.3755
+      cost: 0.2795
     - model: claude-opus-5-5
-      input: 540
-      output: 4032
-      cache_read: 32094616
-      cache_write: 875798
-      cost: 13.2782
+      input: 560
+      output: 218534
+      cache_read: 35096714
+      cache_write: 887014
+      cost: 16.7118
+    - model: claude-sonnet-5
+      input: 84
+      output: 16220
+      cache_read: 3709656
+      cache_write: 134410
+      cost: 1.2403
 cost_of_delay:
   value: 85.37
   by: planner-E-0016

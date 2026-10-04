@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 126
-      output: 777
-      cache_read: 10907353
-      cache_write: 215442
-      cost: 4.4792
+      input: 173
+      output: 67550
+      cache_read: 10848562
+      cache_write: 274180
+      cost: 5.1657
 ---
 # T-0824 flai serve queues the planner on an edit, replans when work ahead completes or the order changes, and runs the schedule, coalescing runs
 

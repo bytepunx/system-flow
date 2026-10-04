@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 495
-      cache_read: 4905212
-      cache_write: 122078
-      cost: 2.0246
+      input: 78
+      output: 30531
+      cache_read: 4903373
+      cache_write: 123925
+      cost: 2.3348
 ---
 # T-0826 The design and the user guides describe when the planner runs again
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 77
-      cache_read: 960155
-      cache_write: 60925
-      cost: 0.4112
+      input: 16
+      output: 6201
+      cache_read: 995922
+      cache_write: 25170
+      cost: 0.4742
 ---
 # T-0820 flai parses a five-field cron expression or daily and finds its next time
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 322
-      cache_read: 2793359
-      cache_write: 74079
-      cost: 1.1548
+      input: 45
+      output: 17414
+      cache_read: 2796764
+      cache_write: 70684
+      cost: 1.3317
 ---
 # T-0823 The manifest takes planning.replan and planning.schedule, and flai check validates them
 

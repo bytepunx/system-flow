@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 401
-      cache_read: 3027192
-      cache_write: 92915
-      cost: 1.2566
+      input: 49
+      output: 18949
+      cache_read: 3043210
+      cache_write: 76912
+      cost: 1.4491
 ---
 # T-0825 The settings page shows the planning triggers
 
