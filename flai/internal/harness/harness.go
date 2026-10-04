@@ -250,24 +250,31 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 // planPrompt is what the planner is asked to do (S-0208): plan its item, an
 // epic or a story, as strategic-agents.md says, through flai alone; ask the
 // operator on the item for an input it owns that is missing; and end with a
-// summary, which flai serve logs as the run's activity (ADR-0079).
+// summary, which flai serve logs as the run's activity (ADR-0079). An epic's
+// planner writes its stories as drafts, summarises the plan in one thread on
+// the epic, proposes there what it would change in the stories the epic
+// already has, and names in its summary the stories it created and revisited
+// (S-0209).
 func planPrompt(r Request) string {
 	kind := workitem.TypeOfID(r.Item)
-	work := "It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs."
+	enrich := "its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs"
+	work := fmt.Sprintf("It is a story: enrich it with %[1]s. Size stories as work-management.md says, make each one you write pass flai check --strict, and summarise your plan in one thread on %[2]s.", enrich, r.Item)
+	summary := "End with a one-line summary of what you changed, on which items"
 	if kind == workitem.Epic {
-		work = "It is an epic. If it has no stories, draft the stories that deliver its outcome, each with a goal, acceptance criteria as checkboxes, a nature, tags, topics, touches, and after, and create each as a draft in the backlog. If it has stories, revisit each one not done or cancelled against the epic's outcome, enrich it as you would a story, and draft the stories the outcome still lacks."
+		work = fmt.Sprintf("It is an epic. If it has no stories, draft the stories that deliver its outcome, each with a goal, acceptance criteria as checkboxes, a nature, tags, topics, touches, and after, and create each with draft true in the backlog (item_new's draft, or flai story new --draft). If it has stories, revisit each one not done or cancelled against the epic's outcome, and enrich it again as you would a story: %[1]s. Size stories as work-management.md says, and make each one you write pass flai check --strict.\n\nOpen one thread on %[2]s that summarises the plan: the stories, their order (their after), and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item)
+		summary = "End with a one-line summary that names the stories you created and the stories you revisited"
 	}
 	return fmt.Sprintf(`You are %[1]s, the planner, started by flai serve on this host because the operator asked for %[2]s to be planned, in the project at %[3]s.
 
 Plan %[2]s, and nothing else, as design/conventions/strategic-agents.md says under As the planner. Prime your session with flai prime --role plan --%[4]s %[2]s (or the flai MCP tool prime with role plan and %[4]s %[2]s), which prints the conventions you work by and what %[2]s names whole, and briefs the design its topics select. A brief is not the document: read the section that bears on the plan with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox. Read %[2]s with item_get, and what it links with item_get and doc_get. Hand wide search of the code, such as for a story's touches, to the explorer with the Agent tool.
 
-%[5]s Size stories as work-management.md says, make each one you write pass flai check --strict, and summarise your plan in one thread on %[2]s.
+%[5]s
 
 Work in the main checkout and write only through flai: the flai MCP tools item_new and item_edit, or the flai CLI. Never edit a file yourself, code or anything else, never move an item past backlog, and never finalize a draft. Never overwrite the operator's inputs: a cost of delay's inputs, a story's estimate, and a finalized story's words; never cancel or rewrite a finalized story without asking.
 
 When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[2]s, your recommended answer first, plan what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
 
-End with a one-line summary of what you changed, on which items: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, r.Root, kind, work)
+%[6]s: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, r.Root, kind, work, summary)
 }
 
 // roleEnv tells a planner's session its role and its item, which flai guard

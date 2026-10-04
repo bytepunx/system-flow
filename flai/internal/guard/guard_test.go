@@ -208,6 +208,60 @@ func TestThePlannerNeitherAcceptsNorPublishesNorEditsCode(t *testing.T) {
 	}
 }
 
+// itemNew is the planner's item_new of an item of a type, a draft or not.
+func itemNew(typ string, draft bool) Event {
+	e := Event{ToolName: MCPPrefix + "item_new"}
+	e.ToolInput.Type, e.ToolInput.Draft = typ, draft
+	return e
+}
+
+// S-0209: the stories the planner writes are drafts for the operator to
+// finalize; a task or an epic it creates as before.
+func TestThePlannerCreatesAStoryOnlyAsADraft(t *testing.T) {
+	for _, e := range []Event{itemNew("story", true), itemNew("task", false), itemNew("epic", false)} {
+		if why := planGuard.Check(e); why != "" {
+			t.Errorf("item_new %s draft %v refused: %s", e.ToolInput.Type, e.ToolInput.Draft, why)
+		}
+	}
+	if why := planGuard.Check(itemNew("story", false)); !strings.HasPrefix(why, "the planner cannot create a story that is not a draft: ") || !strings.Contains(why, "give item_new draft true, or flai story new --draft") || !strings.Contains(why, "Ask the operator with thread_open on the item") {
+		t.Errorf("item_new story without draft: %q", why)
+	}
+	for _, c := range []string{
+		"flai story new --epic E-0001 'T' --draft",
+		"flai story new --draft=true --epic E-0001 'T'",
+		"flai story new --draft=false --draft 'T'",
+		"scripts/flai.sh --config c.json story new --epic E-0001 --draft 'T'",
+		"flai epic new 'Outcome'",
+		"flai story new --help",
+	} {
+		if why := planGuard.Check(bash("", c)); why != "" {
+			t.Errorf("%q refused: %s", c, why)
+		}
+	}
+	for _, c := range []string{
+		"flai story new --epic E-0001 'T'",
+		"flai story new --epic E-0001 'T' --draft=false",
+		"flai story new --draft --draft=false 'T'",
+		"flai story new --draft=maybe 'T'",
+		"scripts/flai.sh story new --epic E-0001 'T'",
+		"flai story new --epic E-0001 --draft 'A' && flai story new 'B'",
+	} {
+		why := planGuard.Check(bash("", c))
+		if !strings.HasPrefix(why, "the planner cannot run ") || !strings.Contains(why, ": the stories it writes are drafts for the operator to finalize") || !strings.Contains(why, "Ask the operator with thread_open on the item") {
+			t.Errorf("%q: %q", c, why)
+		}
+	}
+	// a sub-agent is held as before, and a session not the planner's not at all
+	sub := itemNew("story", true)
+	sub.AgentID, sub.AgentType = "a1", "explorer"
+	if why := planGuard.Check(sub); !strings.Contains(why, "a sub-agent (explorer) cannot call item_new") {
+		t.Errorf("sub-agent item_new: %q", why)
+	}
+	if why := g.Check(itemNew("story", false)); why != "" {
+		t.Errorf("the story's agent's item_new refused: %s", why)
+	}
+}
+
 // The planner's explorer is a sub-agent like any other.
 func TestThePlannersSubAgentIsHeldAsASubAgent(t *testing.T) {
 	sub := mcp("item_move", "backlog")

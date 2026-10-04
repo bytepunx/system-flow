@@ -538,15 +538,29 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"Never edit a file yourself, code or anything else, never move an item past backlog, and never finalize a draft",
 			"Never overwrite the operator's inputs",
 			"ask with the flai MCP tool thread_open on " + id + ", your recommended answer first, plan what needs no answer meanwhile, and hold the flai MCP tool wait_for_events",
-			"End with a one-line summary of what you changed, on which items: flai serve logs the run's activity",
+			"flai serve logs the run's activity in wip/agents/planner.md",
 		}
 	}
 	for _, c := range []struct {
 		id, flag string
 		want     []string
 	}{
-		{"E-0016", "epic", []string{"If it has no stories, draft the stories that deliver its outcome", "create each as a draft in the backlog", "If it has stories, revisit each one not done or cancelled against the epic's outcome"}},
-		{"S-0208", "story", []string{"It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs"}},
+		{"E-0016", "epic", []string{
+			"If it has no stories, draft the stories that deliver its outcome",
+			"create each with draft true in the backlog (item_new's draft, or flai story new --draft)",
+			"If it has stories, revisit each one not done or cancelled against the epic's outcome, and enrich it again as you would a story: its predicted touches, a forecast, and a cost of delay value",
+			"make each one you write pass flai check --strict",
+			// S-0209: one thread holds the plan and what the planner proposes
+			"Open one thread on E-0016 that summarises the plan: the stories, their order (their after), and the assumptions you made",
+			"In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only",
+			"never cancel a finalized story or rewrite its words without asking",
+			"End with a one-line summary that names the stories you created and the stories you revisited: flai serve logs",
+		}},
+		{"S-0208", "story", []string{
+			"It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs",
+			"make each one you write pass flai check --strict, and summarise your plan in one thread on S-0208",
+			"End with a one-line summary of what you changed, on which items: flai serve logs",
+		}},
 	} {
 		p := Prompt(planReq(c.id, nil))
 		for _, w := range append(common(c.id, c.flag), c.want...) {
@@ -560,8 +574,8 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			}
 		}
 	}
-	if p := Prompt(planReq("S-0208", nil)); strings.Contains(p, "draft the stories") {
-		t.Errorf("a story's planner is told to draft an epic's stories:\n%s", p)
+	if p := Prompt(planReq("S-0208", nil)); strings.Contains(p, "draft the stories") || strings.Contains(p, "split, merge, add, or drop") {
+		t.Errorf("a story's planner is told to plan an epic's stories:\n%s", p)
 	}
 }
 

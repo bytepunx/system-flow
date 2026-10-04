@@ -14,7 +14,8 @@
 // may read, write work items and threads through flai, and move an item to
 // backlog, but not edit files with Edit, Write, or NotebookEdit, move an
 // item further, accept, publish, work a story, or change the repository's
-// history. Its sub-agents are held as every sub-agent is.
+// history. A story it creates is a draft for the operator to finalize
+// (S-0209). Its sub-agents are held as every sub-agent is.
 package guard
 
 import (
@@ -22,6 +23,7 @@ import (
 	"path"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -29,12 +31,15 @@ import (
 // reads.
 type Event struct {
 	ToolName string `json:"tool_name"`
-	// ToolInput holds Bash's command, and item_move's item and the state it
-	// moves the item to.
+	// ToolInput holds Bash's command; item_move's item and the state it
+	// moves the item to; and item_new's type and whether it makes a story a
+	// draft.
 	ToolInput struct {
 		Command string `json:"command"`
 		ID      string `json:"id"`
 		To      string `json:"to"`
+		Type    string `json:"type"`
+		Draft   bool   `json:"draft"`
 	} `json:"tool_input"`
 	// AgentID is set only when a sub-agent makes the call; AgentType names
 	// the sub-agent's definition. A session started with --agent may carry
@@ -104,6 +109,9 @@ var moveValues = map[string]bool{"--by": true, "--config": true, "--reason": tru
 // what to do instead.
 const planner = "it plans through flai and never edits code, moves an item past backlog, accepts, or publishes (strategic-agents.md, ADR-0060). Ask the operator with thread_open on the item, or say it in your final summary."
 
+// drafts says why the planner may create a story only as a draft (S-0209).
+const drafts = "the stories it writes are drafts for the operator to finalize, so give item_new draft true, or flai story new --draft"
+
 // Guard decides on the calls of one flai: Commands are the names of its
 // commands, so that a word flai on a command line counts as running flai
 // only when a command of its follows. Role is the session's role, from
@@ -148,11 +156,13 @@ var planning = rules{
 			return "it moves an item to backlog and no further"
 		case cmd == "edit" && slices.ContainsFunc(rest, finalizes):
 			return "finalizing a draft is the operator's"
+		case cmd == "story" && sub == "new" && !drafted(rest):
+			return drafts
 		}
 		if subs, ok := cliPlans[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
 			return ""
 		}
-		return "of flai's commands that write, it runs only story new, epic new, edit, touches, thread new and reply, issue new and bump, and move to backlog"
+		return "of flai's commands that write, it runs only story new with --draft, epic new, edit, touches, thread new and reply, issue new and bump, and move to backlog"
 	},
 	git: "it runs only git's reads",
 }
@@ -166,6 +176,21 @@ func reads(cmd, sub string) bool {
 // finalizes says whether a word of flai edit finalizes a draft.
 func finalizes(w string) bool {
 	return w == "--no-draft" || strings.HasPrefix(w, "--no-draft=")
+}
+
+// drafted says whether the words of flai story new make the story a draft:
+// the last --draft decides, bare or with a value that is true. A value that
+// is not a boolean, which flai refuses anyway, is not a draft.
+func drafted(words []string) bool {
+	draft := false
+	for _, w := range words {
+		if w == "--draft" {
+			draft = true
+		} else if v, ok := strings.CutPrefix(w, "--draft="); ok {
+			draft, _ = strconv.ParseBool(v)
+		}
+	}
+	return draft
 }
 
 // Check says why a call is refused, or "" when it is not.
@@ -204,6 +229,8 @@ func (g Guard) plan(e Event) string {
 	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
 		switch {
+		case tool == "item_new" && e.ToolInput.Type == "story" && !e.ToolInput.Draft:
+			return fmt.Sprintf("the planner cannot create a story that is not a draft: %s; %s", drafts, planner)
 		case slices.Contains(MCPReads, tool), slices.Contains(MCPPlans, tool):
 			return ""
 		case tool == "item_move" && e.ToolInput.To == Backlog:
