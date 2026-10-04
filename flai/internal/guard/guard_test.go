@@ -6,7 +6,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "doc", "edit", "guard", "help", "issue", "move", "prime", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "doc", "edit", "epic", "guard", "help", "issue", "move", "prime", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -118,6 +118,122 @@ func TestASubAgentCannotMakeTheCorrectionsItFinds(t *testing.T) {
 		e := Event{ToolName: MCPPrefix + "item_edit", AgentID: "a1", AgentType: who}
 		if why := g.Check(e); !strings.Contains(why, "cannot call item_edit") {
 			t.Errorf("%s item_edit: %q", who, why)
+		}
+	}
+}
+
+// planGuard is a guard in a planner session (S-0208).
+var planGuard = Guard{Commands: g.Commands, Role: RolePlan}
+
+func mcp(tool, to string) Event {
+	e := Event{ToolName: MCPPrefix + tool}
+	e.ToolInput.ID, e.ToolInput.To = "S-0001", to
+	return e
+}
+
+// S-0208: the planner writes work items and threads through flai and moves
+// an item to backlog, and nothing further.
+func TestThePlannerPlansThroughFlai(t *testing.T) {
+	allowed := []Event{mcp("item_move", "backlog"), {ToolName: "Read"}, {ToolName: "Grep"}, {ToolName: "Agent"}}
+	for _, tool := range append(append([]string{}, MCPReads...), MCPPlans...) {
+		allowed = append(allowed, mcp(tool, ""))
+	}
+	for _, c := range []string{
+		"flai story new --epic E-0001 --draft 'Title'",
+		"scripts/flai.sh epic new 'Outcome'",
+		"flai edit S-0001 --touches flai/cmd --forecast-duration 4h",
+		"flai touches S-0001 flai/internal/guard",
+		"flai thread new --on E-0001 'Plan' 'text' && flai thread reply TH-0001 'more'",
+		"flai move S-0001 backlog",
+		"flai --config c.json move --reason 'back' S-0001 backlog --yes",
+		"flai issue new 'friction' && flai issue bump I-0001",
+		"flai board --json; flai show S-0001; flai stats",
+		"flai move --help",
+		"git log --oneline -5 && git diff main",
+		"ls design/system",
+	} {
+		allowed = append(allowed, bash("", c))
+	}
+	for _, e := range allowed {
+		if why := planGuard.Check(e); why != "" {
+			t.Errorf("%s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+		}
+	}
+}
+
+func TestThePlannerNeverMovesAnItemPastBacklog(t *testing.T) {
+	for _, to := range []string{"ready", "in-progress", "review", "done", "cancelled", ""} {
+		why := planGuard.Check(mcp("item_move", to))
+		if !strings.Contains(why, "the planner cannot move S-0001 to "+to+":") || !strings.Contains(why, "thread_open") {
+			t.Errorf("item_move to %q: %q", to, why)
+		}
+	}
+	for _, c := range []string{"flai move S-0001 ready", "flai move S-0001 ready --reason backlog", "flai move S-0001", "flai move --by backlog S-0001 in-progress"} {
+		if why := planGuard.Check(bash("", c)); !strings.Contains(why, "moves an item to backlog and no further") {
+			t.Errorf("%q: %q", c, why)
+		}
+	}
+}
+
+func TestThePlannerNeitherAcceptsNorPublishesNorEditsCode(t *testing.T) {
+	for _, tool := range []string{"thread_resolve", "wait_for_work", "agent_start", "agent_restart", "issue_story"} {
+		if why := planGuard.Check(mcp(tool, "")); !strings.Contains(why, "the planner cannot call "+tool+": it plans through flai") {
+			t.Errorf("%s: %q", tool, why)
+		}
+	}
+	for _, tool := range fileEdits {
+		if why := planGuard.Check(Event{ToolName: tool}); !strings.Contains(why, "the planner cannot use "+tool+":") || !strings.Contains(why, "strategic-agents.md") {
+			t.Errorf("%s: %q", tool, why)
+		}
+	}
+	for _, c := range []string{
+		"flai accept S-0001",
+		"flai release --pending",
+		"flai push --pending",
+		"flai archive S-0001",
+		"flai stream sync S-0001",
+		"flai stream open S-0001",
+		"flai task new --story S-0001 'x'",
+		"flai block S-0001 --reason x",
+		"flai thread resolve TH-0001",
+		"flai edit S-0001 --no-draft",
+		"git commit -m plan",
+		"git push",
+		"bash -c 'git checkout -b plan'",
+	} {
+		why := planGuard.Check(bash("", c))
+		if !strings.HasPrefix(why, "the planner cannot run ") || !strings.Contains(why, "Ask the operator with thread_open on the item") {
+			t.Errorf("%q: %q", c, why)
+		}
+	}
+}
+
+// The planner's explorer is a sub-agent like any other.
+func TestThePlannersSubAgentIsHeldAsASubAgent(t *testing.T) {
+	sub := mcp("item_move", "backlog")
+	sub.AgentID, sub.AgentType = "a1", "explorer"
+	if why := planGuard.Check(sub); !strings.Contains(why, "a sub-agent (explorer) cannot call item_move") {
+		t.Errorf("item_move: %q", why)
+	}
+	if why := planGuard.Check(bash("explorer", "flai story new 'x'")); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
+		t.Errorf("story new: %q", why)
+	}
+	if why := planGuard.Check(Event{ToolName: "Edit", AgentID: "a1", AgentType: "explorer"}); why != "" {
+		t.Errorf("Edit refused: %s", why)
+	}
+}
+
+// Without the role plan the guard decides as it did before the planner.
+func TestOtherRolesAreDecidedAsBefore(t *testing.T) {
+	for _, role := range []string{"", "orchestrate", "story"} {
+		gr := Guard{Commands: g.Commands, Role: role}
+		for _, e := range []Event{{ToolName: "Edit"}, {ToolName: "Write"}, mcp("item_move", "review"), bash("", "flai accept S-1 && git commit -m x"), {ToolName: "Edit", AgentID: "a1", AgentType: "verifier"}} {
+			if why := gr.Check(e); why != "" {
+				t.Errorf("role %q %s refused: %s", role, e.ToolName, why)
+			}
+		}
+		if why := gr.Check(bash("verifier", "flai move S-1 backlog")); !strings.Contains(why, "a sub-agent (verifier) cannot run") || !strings.Contains(why, "story's agent's") {
+			t.Errorf("role %q sub-agent move: %q", role, why)
 		}
 	}
 }

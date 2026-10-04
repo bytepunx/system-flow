@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -17,7 +18,7 @@ const exitGuardRefused = 2
 func newGuardCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "guard",
-		Short: "Refuse a sub-agent's writes, as a Claude Code PreToolUse hook",
+		Short: "Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
@@ -36,8 +37,19 @@ does anything it cannot read: the guard fails open. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
 it) gets past it.
 
+In a planner session, one flai serve starts with FLAI_ROLE=plan, the
+session's own calls are held to planning too (strategic-agents.md): besides
+what a sub-agent may do, the MCP tools inbox, item_new, item_edit,
+thread_open, thread_reply, activity_log, wait_for_events, and item_move to
+backlog; the commands story new, epic new, edit (but not --no-draft),
+touches, thread new and reply, issue new and bump, and move to backlog. It
+refuses the planner every other flai tool and command, git's writes, and the
+Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as
+any sub-agent is.
+
 The template's .claude/settings.json runs it before Bash and flai's MCP
-tools.`,
+tools; flai serve has a planner run's session run it before Edit, Write,
+and NotebookEdit as well.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -51,7 +63,7 @@ tools.`,
 				a.logger().Warn("hook input is not a tool call", "component", "guard", "err", err.Error())
 				return nil
 			}
-			g := guard.Guard{}
+			g := guard.Guard{Role: os.Getenv("FLAI_ROLE")}
 			for _, c := range cmd.Root().Commands() {
 				g.Commands = append(g.Commands, c.Name())
 			}

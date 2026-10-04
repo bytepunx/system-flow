@@ -8,6 +8,13 @@
 // runs well enough to stop a sub-agent that follows its instructions
 // carelessly, not one that sets out to hide a command (a backslash inside a
 // name, a command held in a variable).
+//
+// A planner session, one flai serve starts with the role plan, is held to
+// planning (strategic-agents.md): its own calls, which carry no agent ID,
+// may read, write work items and threads through flai, and move an item to
+// backlog, but not edit files with Edit, Write, or NotebookEdit, move an
+// item further, accept, publish, work a story, or change the repository's
+// history. Its sub-agents are held as every sub-agent is.
 package guard
 
 import (
@@ -21,9 +28,13 @@ import (
 // Event is the part of a Claude Code PreToolUse hook's input the guard
 // reads.
 type Event struct {
-	ToolName  string `json:"tool_name"`
+	ToolName string `json:"tool_name"`
+	// ToolInput holds Bash's command, and item_move's item and the state it
+	// moves the item to.
 	ToolInput struct {
 		Command string `json:"command"`
+		ID      string `json:"id"`
+		To      string `json:"to"`
 	} `json:"tool_input"`
 	// AgentID is set only when a sub-agent makes the call; AgentType names
 	// the sub-agent's definition. A session started with --agent may carry
@@ -60,16 +71,109 @@ var cliReads = map[string][]string{
 // gitReads are the git commands a sub-agent may run.
 var gitReads = []string{"blame", "cat-file", "describe", "diff", "grep", "log", "ls-files", "ls-tree", "merge-base", "rev-list", "rev-parse", "shortlog", "show", "status"}
 
+// RolePlan is the planner's role, as flai serve sets it in FLAI_ROLE.
+const RolePlan = "plan"
+
+// Backlog is the one state the planner may move an item to.
+const Backlog = "backlog"
+
+// MCPPlans are flai's MCP tools the planner may call besides MCPReads;
+// item_move it may call only to move an item to backlog.
+var MCPPlans = []string{"activity_log", "inbox", "item_edit", "item_new", "thread_open", "thread_reply", "wait_for_events"}
+
+// cliPlans are the flai commands the planner may run besides cliReads, in
+// the form cliReads has; flai move it may run only to move an item to
+// backlog.
+var cliPlans = map[string][]string{
+	"edit":    nil,
+	"epic":    {"new"},
+	"issue":   {"new", "bump"},
+	"story":   {"new"},
+	"thread":  {"new", "reply"},
+	"touches": nil,
+}
+
+// fileEdits are the tools that change files, which the planner never uses.
+var fileEdits = []string{"Edit", "NotebookEdit", "Write"}
+
+// moveValues are the flags of flai move, flai's own among them, that take
+// a value.
+var moveValues = map[string]bool{"--by": true, "--config": true, "--reason": true}
+
+// planner ends each of the planner's refusals: the rule the call breaks and
+// what to do instead.
+const planner = "it plans through flai and never edits code, moves an item past backlog, accepts, or publishes (strategic-agents.md, ADR-0060). Ask the operator with thread_open on the item, or say it in your final summary."
+
 // Guard decides on the calls of one flai: Commands are the names of its
 // commands, so that a word flai on a command line counts as running flai
-// only when a command of its follows.
+// only when a command of its follows. Role is the session's role, from
+// FLAI_ROLE: RolePlan holds the session's own calls to planning, and any
+// other leaves them alone.
 type Guard struct {
 	Commands []string
+	Role     string
+}
+
+// rules are what one kind of caller may run on a command line: flai says
+// why a flai command is refused, or "" when it is not, from its command, its
+// subcommand, and the words after flai; git says why a git command other
+// than a read is refused.
+type rules struct {
+	flai func(cmd, sub string, rest []string) string
+	git  string
+}
+
+// subAgent are a sub-agent's rules: flai's reads and git's.
+var subAgent = rules{
+	flai: func(cmd, sub string, _ []string) string {
+		if reads(cmd, sub) {
+			return ""
+		}
+		return "flai commands that change work items, threads, narratives, or releases are the story's agent's"
+	},
+	git: "git commands that change the worktree, the index, branches, or history are the story's agent's",
+}
+
+// planning are the planner's rules: flai's reads and its planning commands,
+// and git's reads.
+var planning = rules{
+	flai: func(cmd, sub string, rest []string) string {
+		switch {
+		case reads(cmd, sub):
+			return ""
+		case cmd == "move":
+			if args := positionals(rest, moveValues); len(args) > 2 && args[2] == Backlog {
+				return ""
+			}
+			return "it moves an item to backlog and no further"
+		case cmd == "edit" && slices.ContainsFunc(rest, finalizes):
+			return "finalizing a draft is the operator's"
+		}
+		if subs, ok := cliPlans[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
+			return ""
+		}
+		return "of flai's commands that write, it runs only story new, epic new, edit, touches, thread new and reply, issue new and bump, and move to backlog"
+	},
+	git: "it runs only git's reads",
+}
+
+// reads says whether a flai command with its subcommand only reads.
+func reads(cmd, sub string) bool {
+	subs, ok := cliReads[cmd]
+	return ok && (subs == nil || slices.Contains(subs, sub))
+}
+
+// finalizes says whether a word of flai edit finalizes a draft.
+func finalizes(w string) bool {
+	return w == "--no-draft" || strings.HasPrefix(w, "--no-draft=")
 }
 
 // Check says why a call is refused, or "" when it is not.
 func (g Guard) Check(e Event) string {
 	if e.AgentID == "" {
+		if g.Role == RolePlan {
+			return g.plan(e)
+		}
 		return ""
 	}
 	who := e.AgentType
@@ -86,8 +190,35 @@ func (g Guard) Check(e Event) string {
 		return ""
 	}
 	for _, words := range commands(e.ToolInput.Command) {
-		if why := g.refuse(words); why != "" {
+		if why := g.refuse(words, subAgent); why != "" {
 			return fmt.Sprintf("a sub-agent (%s) cannot run %q: %s (ADR-0060). Put what you need done in your final message; the story's agent does it.", who, strings.Join(words, " "), why)
+		}
+	}
+	return ""
+}
+
+// plan says why the planner's own call is refused, or "" when it is not.
+func (g Guard) plan(e Event) string {
+	if slices.Contains(fileEdits, e.ToolName) {
+		return fmt.Sprintf("the planner cannot use %s: %s", e.ToolName, planner)
+	}
+	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
+		switch {
+		case slices.Contains(MCPReads, tool), slices.Contains(MCPPlans, tool):
+			return ""
+		case tool == "item_move" && e.ToolInput.To == Backlog:
+			return ""
+		case tool == "item_move":
+			return fmt.Sprintf("the planner cannot move %s to %s: %s", e.ToolInput.ID, e.ToolInput.To, planner)
+		}
+		return fmt.Sprintf("the planner cannot call %s: %s", tool, planner)
+	}
+	if e.ToolName != "Bash" {
+		return ""
+	}
+	for _, words := range commands(e.ToolInput.Command) {
+		if why := g.refuse(words, planning); why != "" {
+			return fmt.Sprintf("the planner cannot run %q: %s; %s", strings.Join(words, " "), why, planner)
 		}
 	}
 	return ""
@@ -99,13 +230,13 @@ var (
 	shellFlags = regexp.MustCompile(`^-[a-zA-Z]*c[a-zA-Z]*$`)
 )
 
-// refuse says why one simple command is refused, or "" when it is not. It
+// refuse says why r refuses one simple command, or "" when it does not. It
 // does not trust the first word to be the program: wrappers such as env,
 // sudo, timeout, xargs, and find -exec put it further along, so every word
 // is looked at. A word is git run with a subcommand when a plain word
 // follows it after git's own flags, and flai run with one when one of its
 // commands follows; a shell given -c, or eval, has its script checked too.
-func (g Guard) refuse(words []string) string {
+func (g Guard) refuse(words []string, r rules) string {
 	for i, w := range words {
 		if assignment.MatchString(w) {
 			continue
@@ -115,14 +246,14 @@ func (g Guard) refuse(words []string) string {
 		case "sh", "bash", "zsh", "dash", "ksh":
 			for j, f := range rest {
 				if shellFlags.MatchString(f) && j+1 < len(rest) {
-					if why := g.script(rest[j+1]); why != "" {
+					if why := g.script(rest[j+1], r); why != "" {
 						return why
 					}
 					break
 				}
 			}
 		case "eval":
-			if why := g.script(strings.Join(rest, " ")); why != "" {
+			if why := g.script(strings.Join(rest, " "), r); why != "" {
 				return why
 			}
 		case "flai", "flai.sh":
@@ -130,25 +261,24 @@ func (g Guard) refuse(words []string) string {
 			if !slices.Contains(g.Commands, cmd) || slices.Contains(rest, "--help") || slices.Contains(rest, "-h") {
 				continue
 			}
-			if subs, ok := cliReads[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
-				continue
+			if why := r.flai(cmd, sub, rest); why != "" {
+				return why
 			}
-			return "flai commands that change work items, threads, narratives, or releases are the story's agent's"
 		case "git":
 			cmd, _ := subcommands(rest, map[string]bool{"-C": true, "-c": true, "--git-dir": true, "--work-tree": true, "--namespace": true})
 			if !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) {
 				continue
 			}
-			return "git commands that change the worktree, the index, branches, or history are the story's agent's"
+			return r.git
 		}
 	}
 	return ""
 }
 
-// script checks each simple command of a script a shell is given.
-func (g Guard) script(text string) string {
+// script checks each simple command of a script a shell is given against r.
+func (g Guard) script(text string, r rules) string {
 	for _, c := range commands(text) {
-		if why := g.refuse(c); why != "" {
+		if why := g.refuse(c, r); why != "" {
 			return why
 		}
 	}
@@ -176,6 +306,22 @@ func subcommands(words []string, takesValue map[string]bool) (cmd, sub string) {
 		sub = found[1]
 	}
 	return cmd, sub
+}
+
+// positionals are the words that are not flags; a flag in takesValue
+// consumes the word after it, wherever it stands.
+func positionals(words []string, takesValue map[string]bool) []string {
+	var out []string
+	for i := 0; i < len(words); i++ {
+		if strings.HasPrefix(words[i], "-") {
+			if takesValue[words[i]] {
+				i++
+			}
+			continue
+		}
+		out = append(out, words[i])
+	}
+	return out
 }
 
 // commands splits a shell command line into simple commands, each as its

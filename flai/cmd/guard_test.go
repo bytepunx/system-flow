@@ -28,3 +28,27 @@ func TestGuard(t *testing.T) {
 		}
 	}
 }
+
+// S-0208: in a session flai serve starts with FLAI_ROLE=plan, flai guard
+// holds the planner's own calls to planning.
+func TestGuardHoldsThePlannerToPlanning(t *testing.T) {
+	t.Setenv("FLAI_ROLE", "plan")
+	dir := t.TempDir()
+	for _, c := range []struct {
+		in   string
+		code int
+		err  string
+	}{
+		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"backlog"}}`, 0, ""},
+		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"ready"}}`, 2, "the planner cannot move S-1 to ready"},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai story new --epic E-1 --draft x"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai accept S-1"}}`, 2, "the planner cannot run \"flai accept S-1\""},
+		{`{"tool_name":"Write","tool_input":{"file_path":"x.go","content":""}}`, 2, "the planner cannot use Write"},
+		{`{"tool_name":"mcp__flai__item_new","tool_input":{"type":"story"},"agent_type":"explorer","agent_id":"a1"}`, 2, "a sub-agent (explorer) cannot call item_new"},
+	} {
+		_, errOut, code := runStdin(t, dir, c.in, "guard")
+		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
+			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+}
