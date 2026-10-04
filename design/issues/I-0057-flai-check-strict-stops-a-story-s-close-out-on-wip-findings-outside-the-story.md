@@ -3,11 +3,11 @@ id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
 status: open
-count: 10
+count: 11
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
-last_reported: 2026-10-03T21:37:49Z
-updated: 2026-10-03T21:37:49Z
+last_reported: 2026-10-04T03:52:28Z
+updated: 2026-10-04T03:52:28Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -59,5 +59,9 @@ S-0206's close-out stopped at flai check --strict on two warnings outside the st
 ### 2026-10-03T21:37:49Z
 Story: S-0205.
 S-0205's close-out stopped at flai check --strict on three warnings outside its diff, which main reports too: story.unaccepted on archived S-0173 (branch never merged), epic.lags-stories on E-0015, and threads.archived on TH-0094 (answered, S-0206 archived). The verifier ran the steps the script did not reach by hand.
+
+### 2026-10-04T03:52:28Z
+Story: S-0208.
+close-out stopped at flai check --strict on story.unaccepted (archived S-0173) and threads.archived (TH-0094), neither in S-0208's diff; the verifier ran the remaining steps by hand, all passing
 
 ## Remediation
