@@ -306,13 +306,21 @@ describe('AgentRegistry and AgentHub', () => {
 				params: { project: 'harbour', story: 'S-0154' }
 			})
 		);
+		// S-0208: the planner for an epic, which names the item in place of the story
+		flai.ws.send(
+			JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'agent',
+				params: { project: 'harbour', item: 'E-0016' }
+			})
+		);
 		// not a story, and not a notification: neither is announced
 		flai.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'agent', params: { story: 7 } }));
 		flai.ws.send(
 			JSON.stringify({ jsonrpc: '2.0', id: 98, method: 'agent', params: { story: 'S-1' } })
 		);
 		await new Promise((r) => setTimeout(r, 50));
-		expect(stories).toEqual(['S-0154']);
+		expect(stories).toEqual(['S-0154', 'E-0016']);
 	});
 
 	it('says what a flai older than the dashboard does not offer', async () => {

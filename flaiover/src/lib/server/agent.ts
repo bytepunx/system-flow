@@ -352,10 +352,12 @@ export class AgentHub extends EventEmitter {
 			if (typeof path === 'string' && path) this.emit('change', path);
 			return;
 		}
-		// a story's agent started or ended, which changes no file (S-0154)
+		// a story's agent started or ended, which changes no file (S-0154), or the planner for an
+		// epic or a story, which names the item in place of the story (S-0208)
 		if (m.method === 'agent' && m.id === undefined) {
-			const story = (m.params as { story?: unknown } | undefined)?.story;
-			if (typeof story === 'string' && story) this.emit('agent', story);
+			const p = m.params as { story?: unknown; item?: unknown } | undefined;
+			const id = p?.story || p?.item;
+			if (typeof id === 'string' && id) this.emit('agent', id);
 			return;
 		}
 		// flai serve no longer serves the project, and is about to close (S-0121)

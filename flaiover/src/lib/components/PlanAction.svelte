@@ -6,7 +6,7 @@
 	// page's other actions say theirs.
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import { follow } from '$lib/events';
+	import { follow, listen } from '$lib/events';
 	import type { PlanRun } from '$lib/activity';
 
 	let { id, onresult }: { id: string; onresult: (text: string) => void } = $props();
@@ -29,8 +29,15 @@
 		run = null;
 		void ask(id);
 	});
-	// The planner writes the items it plans, and its run ends with them.
-	onMount(() => follow(['item'], () => void ask(id)));
+	// The planner writes the items it plans, and flai serve says when its run starts or ends.
+	onMount(() => {
+		const unfollow = follow(['item'], () => void ask(id));
+		const unlisten = listen({ agent: (of) => of === id && void ask(id) });
+		return () => {
+			unfollow();
+			unlisten();
+		};
+	});
 
 	const going = $derived(!!run && !run.ended && !run.error);
 

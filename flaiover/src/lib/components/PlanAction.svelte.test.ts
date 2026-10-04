@@ -4,11 +4,19 @@ import PlanAction from './PlanAction.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
-const events = vi.hoisted(() => ({ heard: [] as (() => void)[] }));
+const events = vi.hoisted(() => ({
+	heard: [] as (() => void)[],
+	agents: [] as ((id: string) => void)[]
+}));
 vi.mock('$lib/events', () => ({
 	follow: (_kinds: string[], f: () => void) => {
 		events.heard.push(f);
 		return () => events.heard.splice(events.heard.indexOf(f), 1);
+	},
+	listen: (l: { agent?: (id: string) => void }) => {
+		const f = l.agent ?? (() => {});
+		events.agents.push(f);
+		return () => events.agents.splice(events.agents.indexOf(f), 1);
 	}
 }));
 
@@ -42,6 +50,7 @@ describe('PlanAction (S-0208)', () => {
 		c = undefined;
 		api.mockReset();
 		events.heard = [];
+		events.agents = [];
 		said = [];
 		document.body.innerHTML = '';
 	});
@@ -78,6 +87,21 @@ describe('PlanAction (S-0208)', () => {
 		c = undefined;
 		await show({ plan_enabled: true, run: { ...run, ended: '2026-10-03T10:05:00Z' } });
 		expect(button()).not.toBeNull();
+		expect(running()).toBeNull();
+	});
+
+	it('asks again when flai serve says the item’s planner started or ended, and only then', async () => {
+		await show({ plan_enabled: true, run });
+		expect(running()).not.toBeNull();
+		api.mockResolvedValue(
+			answer({ plan_enabled: true, run: { ...run, ended: '2026-10-03T10:05:00Z' } })
+		);
+		const asked = api.mock.calls.length;
+		events.agents.forEach((f) => f('S-0001'));
+		await settle();
+		expect(api.mock.calls.length).toBe(asked);
+		events.agents.forEach((f) => f('E-0016'));
+		await settle();
 		expect(running()).toBeNull();
 	});
 
