@@ -94,8 +94,13 @@ export type HostAgent = {
 		last?: AgentRun | null;
 		waiting?: string;
 		stories?: Record<string, StoryActivity>;
+		/** The newest planner run for each epic or story it planned, by the item's ID (S-0208). */
+		plans?: Record<string, PlanRun>;
 	};
 };
+
+/** A planner run (S-0208): an agent's run for the epic or story it plans, which is no story's. */
+export type PlanRun = Omit<AgentRun, 'story'> & { item: string };
 
 /** The dot's colour, or none for an agent that finished its story. */
 export function dotClass(state: ActivityState): string | null {

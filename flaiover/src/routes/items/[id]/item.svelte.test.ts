@@ -532,6 +532,71 @@ describe('the item page (S-0154)', () => {
 		});
 	});
 
+	// S-0208: an open epic's or story's page offers Plan while the plan host action is on
+	describe('the Plan action (S-0208)', () => {
+		const epic = { ...story, id: 'E-0016', type: 'epic' };
+		const button = () => document.querySelector<HTMLButtonElement>('[data-testid="item-plan"]');
+		const show = async (item: Record<string, unknown>, writable = true, enabled = true) => {
+			api.mockImplementation(async (url: string, init?: RequestInit) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url === '/api/board') return answer({ writable });
+				if (url.startsWith('/api/threads')) return answer([]);
+				if (url === `/api/items/${item.id}/plan` && init?.method === 'POST')
+					return {
+						ok: false,
+						json: async () => ({
+							error: `the planner is already running for ${item.id} (pid 42, started 2026-10-03T10:00:00Z); one item has one planner at a time`
+						})
+					};
+				if (url === `/api/items/${item.id}/plan`)
+					return answer({ plan_enabled: enabled, run: null });
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const again = () => {
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+		};
+
+		it("is among an epic's and a story's actions while the host action is on", async () => {
+			await show(epic);
+			expect(button()!.textContent).toBe('Plan');
+			again();
+			await show(story);
+			expect(button()!.textContent).toBe('Plan');
+			again();
+			await show(story, true, false);
+			expect(button()).toBeNull();
+		});
+
+		it('is not offered on a task, a closed or archived item, or when the dashboard cannot write', async () => {
+			for (const item of [
+				{ ...story, id: 'T-0788', type: 'task' },
+				{ ...story, status: 'done' },
+				{ ...epic, status: 'cancelled' },
+				{ ...story, archived: true }
+			]) {
+				await show(item);
+				expect(button()).toBeNull();
+				again();
+			}
+			await show(story, false);
+			expect(button()).toBeNull();
+		});
+
+		it("says in the page's notice why flai refused", async () => {
+			await show(epic);
+			button()!.click();
+			await settle();
+			expect(document.querySelector('[data-testid="item-notice"]')!.textContent).toContain(
+				'refused: the planner is already running for E-0016'
+			);
+		});
+	});
+
 	// S-0176: a story's page shows its task plan, and follows it as tasks move
 	it("shows a story's task plan when flai sends one, and follows it as the tasks move", async () => {
 		const plan = {

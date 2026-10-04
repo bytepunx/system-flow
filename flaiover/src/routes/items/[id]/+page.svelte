@@ -9,6 +9,7 @@
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import ItemEditor from '$lib/components/ItemEditor.svelte';
 	import StoryAgent from '$lib/components/StoryAgent.svelte';
+	import PlanAction from '$lib/components/PlanAction.svelte';
 	import TaskPlan from '$lib/components/TaskPlan.svelte';
 	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
@@ -391,6 +392,10 @@
 							onclick={() => (editing = true)}
 							data-testid="edit-item">edit…</button
 						>
+					{/if}
+					{#if canEdit}
+						<!-- flai plans an epic or a story that is open, as it is edited here (S-0208). -->
+						<PlanAction id={item.id} onresult={(text) => (notice = text)} />
 					{/if}
 					{#if draft}
 						<button
