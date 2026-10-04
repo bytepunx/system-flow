@@ -98,14 +98,14 @@ wip folder are left out. Nothing is written.`,
 				return err
 			}
 			if it.Type != workitem.Story {
-				return fmt.Errorf("%s is not a story; touches are suggested for a story: flai touches suggest S-nnnn <path>...", it.ID)
+				return fmt.Errorf("%s is not a story; run flai touches suggest on a story: flai touches suggest S-nnnn <path>", it.ID)
 			}
 			seeds, err := storySeeds(repo, it, args[1:])
 			if err != nil {
 				return err
 			}
 			if len(seeds) == 0 {
-				return fmt.Errorf("%s touches nothing and no path was given; name the paths to start from: flai touches suggest %s <path>...", it.ID, it.ID)
+				return fmt.Errorf("%s touches nothing and no path was given; name the paths to start from: flai touches suggest %s <path>", it.ID, it.ID)
 			}
 			commits, err := storygit.CommitFiles(a.runner, repo)
 			if err != nil {
