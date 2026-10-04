@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -84,6 +85,32 @@ func TestPlanningSettingsAreChecked(t *testing.T) {
 		if f.Level != Error || f.Path != "system-flow.yaml" || f.Line != 8 || !strings.Contains(f.Message, want) {
 			t.Errorf("finding %d: %+v, want an error on line 8 saying %q", i, f, want)
 		}
+	}
+}
+
+// S-0248: a front-matter problem whose message holds "; " is one finding on
+// its key's line, not two with the second on line 1; two problems stay two.
+func TestAFrontMatterProblemHoldingASemicolonIsOneFinding(t *testing.T) {
+	repo := planningProject(t, "")
+	s := mustItem(t, repo, workitem.Story, "Roles", "")
+	s.Agent = &manifest.Agent{Harness: "claude-code", Roles: map[string]manifest.Role{"verify": {}}}
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	got := findings(t, repo, "item.front-matter")
+	if len(got) != 1 {
+		t.Fatalf("want one finding, the message whole: %+v", got)
+	}
+	f := got[0]
+	if f.Line != keyLine(s.Path, "agent") || f.Line == 1 || !strings.HasPrefix(f.Message, "agent role verify sets nothing; give it") {
+		t.Errorf("want an error on the agent line saying the role sets nothing: %+v", f)
+	}
+	s.Agent = &manifest.Agent{Harness: "Claude Code", Model: "opus 5"}
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if got := findings(t, repo, "item.front-matter"); len(got) != 2 {
+		t.Errorf("want two findings, the harness and the model: %+v", got)
 	}
 }
 

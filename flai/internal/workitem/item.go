@@ -163,7 +163,7 @@ func ReadItem(path string) (*Item, error) {
 }
 
 // Validate checks the closed lists and structural rules that do not need
-// other items.
+// other items, and returns what it finds as Problems.
 func (it *Item) Validate() error {
 	var errs []string
 	if !idPattern.MatchString(it.ID) {
@@ -262,15 +262,22 @@ func (it *Item) Validate() error {
 		if !Carries(it.Type, "agent") {
 			errs = append(errs, "only a story carries an agent")
 		}
-		if err := it.Agent.Validate(); err != nil {
-			errs = append(errs, err.Error())
-		}
+		errs = append(errs, it.Agent.Problems()...)
 	}
 	errs = append(errs, planningErrors(it)...)
 	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "; "))
+		return Problems(errs)
 	}
 	return nil
+}
+
+// Problems are what Validate finds, one phrase each. A phrase may hold "; ",
+// so a caller that reports each on its own ranges over them rather than
+// splitting Error.
+type Problems []string
+
+func (p Problems) Error() string {
+	return strings.Join(p, "; ")
 }
 
 func (it *Item) lastState() string {

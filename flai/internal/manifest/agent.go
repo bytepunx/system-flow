@@ -69,10 +69,16 @@ func (r Role) IsZero() bool {
 // and role names that are identifiers, each role setting something and
 // checked the same way.
 func (a *Agent) Validate() error {
-	if errs := a.problems("agent"); len(errs) > 0 {
+	if errs := a.Problems(); len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
 	return nil
+}
+
+// Problems are what Validate finds, one phrase each, for a caller that reports
+// each on its own.
+func (a *Agent) Problems() []string {
+	return a.problems("agent")
 }
 
 // problems are what Validate finds, one phrase each, each naming the block

@@ -5,6 +5,7 @@ package check
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -270,8 +271,9 @@ func (c *checker) workItems() {
 
 func (c *checker) oneItem(it *workitem.Item) {
 	p := it.Path
-	if err := it.Validate(); err != nil {
-		for _, msg := range strings.Split(err.Error(), "; ") {
+	var problems workitem.Problems
+	if err := it.Validate(); errors.As(err, &problems) {
+		for _, msg := range problems {
 			key := strings.Fields(msg)[0]
 			// transitions[0].at and cost_of_delay.value are on their block's key
 			key = strings.SplitN(strings.SplitN(key, "[", 2)[0], ".", 2)[0]
