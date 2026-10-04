@@ -387,6 +387,54 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	}
 }
 
+// S-0211, ADR-0084: the settings page is told when flai serve plans again on
+// its own: whether the plan host action is on, the replan policy and whether
+// the manifest sets it, and the schedule as written with its next run; a
+// value flai cannot read comes with its error.
+func TestSettingsShowThePlanningTriggers(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &app{errOut: &bytes.Buffer{}, clock: func() time.Time { return time.Date(2026, 10, 4, 9, 30, 0, 0, time.UTC) }}
+	planning := func() string {
+		t.Helper()
+		got, _ := json.Marshal(a.hostSettings(mainRootOf(repo)).(map[string]any)["planning"])
+		return string(got)
+	}
+	if got, want := planning(), `{"plan":false,"replan":"deterministic","replan_set":false,"schedule":""}`; got != want {
+		t.Errorf("defaults:\n got %s\nwant %s", got, want)
+	}
+	m := filepath.Join(root, "system-flow.yaml")
+	data, err := os.ReadFile(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(m, append(data, []byte("planning:\n  replan: agent\n  schedule: daily\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "plan"); code != 0 {
+		t.Fatalf("enable plan: %d %s", code, errOut)
+	}
+	if got, want := planning(), `{"next":"2026-10-05T00:00:00Z","plan":true,"replan":"agent","replan_set":true,"schedule":"daily"}`; got != want {
+		t.Errorf("set:\n got %s\nwant %s", got, want)
+	}
+	if err := os.WriteFile(m, append(data, []byte("planning:\n  replan: sometimes\n  schedule: \"61 * * * *\"\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got := planning()
+	for _, want := range []string{`"replan":"sometimes"`, `"replan_error":"planning.replan \"sometimes\" is not a replan policy`, `"schedule":"61 * * * *"`, `"schedule_error":"planning.schedule`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("errors lack %s:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, `"next"`) {
+		t.Errorf("a schedule flai cannot read has no next run: %s", got)
+	}
+}
+
 // ADR-0067: auto-publish is the operator's shell tool, outside the workflow.
 // The serve actions listing names it and serve enable turns it on, saying
 // what it has flai push do; the dashboard is neither told of it nor can turn

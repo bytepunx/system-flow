@@ -53,6 +53,44 @@ export type ServedProject = {
 	settings: boolean;
 };
 
+/**
+ * When flai serve plans again on its own (S-0211, ADR-0084), read from system-flow.yaml's
+ * planning and the plan host action; set by hand in the manifest, never from the page.
+ */
+export type PlanningTriggers = {
+	/**
+	 * Whether the plan host action is on for this project: every trigger needs it, and while it is
+	 * on an edit to a planned story queues the planner.
+	 */
+	plan: boolean;
+	/** planning.replan, or deterministic when it is unset: never, deterministic, or agent. */
+	replan: string;
+	/** Whether the manifest sets planning.replan. */
+	replan_set: boolean;
+	/** Why planning.replan cannot be read, when it cannot. */
+	replan_error?: string;
+	/** planning.schedule as written, a five-field cron expression in UTC or daily; empty when unset. */
+	schedule: string;
+	/** The schedule's next run, RFC 3339 in UTC, when it is set and can be read. */
+	next?: string;
+	/** Why planning.schedule cannot be read, when it cannot. */
+	schedule_error?: string;
+};
+
+/** What a replan policy does when a story is accepted or cancelled or the pull order changes. */
+export function replanMeans(policy: string): string {
+	switch (policy) {
+		case 'never':
+			return 'nothing';
+		case 'deterministic':
+			return 'forecast deliveries follow, with no agent';
+		case 'agent':
+			return 'forecast deliveries follow, and the planner runs for each story whose delivery moved';
+		default:
+			return '';
+	}
+}
+
 export type ProjectsView = {
 	running: boolean;
 	served: ServedProject[];
@@ -80,6 +118,7 @@ export type SettingsView = {
 		import_roots: string[];
 		projects?: ProjectsView;
 		mcp?: { running: boolean; url?: string; pid?: number };
+		planning?: PlanningTriggers;
 		error?: string;
 	};
 };

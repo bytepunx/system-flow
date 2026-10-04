@@ -12,6 +12,7 @@
 		argv,
 		health,
 		lines,
+		replanMeans,
 		type ServedProject,
 		type SettingsKind,
 		type SettingsView
@@ -276,6 +277,44 @@
 			>
 			{@render result('default')}
 		</section>
+
+		{#if h.planning}
+			{@const p = h.planning}
+			<section data-testid="section-planning">
+				<h2 class="mb-2 font-medium">Planning again, for this project</h2>
+				<p class="text-xs text-muted">
+					Read-only: set by hand in system-flow.yaml, under planning (replan, schedule).
+				</p>
+				<ul class="mt-2 space-y-2">
+					<li data-testid="planning-edits">
+						Edits to a planned story start the planner: <span class="font-medium"
+							>{p.plan ? 'on' : 'off'}</span
+						>
+						<p class="text-xs text-muted">
+							The plan host action is {p.plan ? 'on' : 'off'} for this project; replanning and the schedule
+							act only while it is on.
+						</p>
+					</li>
+					<li data-testid="planning-replan">
+						When work ahead completes or the pull order changes:
+						<span class="font-mono">{p.replan}</span>
+						{#if !p.replan_set}<span class="text-xs text-muted">(default)</span>{/if}
+						{#if p.replan_error}
+							<p class="text-xs text-danger" role="alert">{p.replan_error}</p>
+						{:else}
+							<p class="text-xs text-muted">{replanMeans(p.replan)}</p>
+						{/if}
+					</li>
+					<li data-testid="planning-schedule">
+						Schedule, the planner over every ready story, in UTC:
+						{#if p.schedule}<code class="text-xs">{p.schedule}</code>{#if p.next}, next run {p.next}{/if}{:else}none{/if}
+						{#if p.schedule_error}
+							<p class="text-xs text-danger" role="alert">{p.schedule_error}</p>
+						{/if}
+					</li>
+				</ul>
+			</section>
+		{/if}
 
 		<section data-testid="section-agent">
 			<h2 class="mb-2 font-medium">Starting agents, on this host</h2>

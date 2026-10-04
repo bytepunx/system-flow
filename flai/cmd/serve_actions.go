@@ -786,11 +786,36 @@ func (a *app) hostSettings(root string) any {
 	if repo, err := workitem.Open(root); err == nil {
 		out["default_agent"] = repo.Manifest.Agent
 		out["manifest_checks"] = repo.Manifest.Checks
+		out["planning"] = planningTriggers(repo.Manifest.Planning, cfg.ActionEnabled(hostapi.ActionPlan, root), a.now())
 		if st, running := readMCPState(repo, a.now()); running {
 			out["mcp"] = map[string]any{"running": true, "url": st.URL, "pid": st.PID}
 		} else {
 			out["mcp"] = map[string]any{"running": false}
 		}
+	}
+	return out
+}
+
+// planningTriggers is when flai serve plans again on its own, for the
+// settings page (S-0211, ADR-0084): plan, whether the plan host action is on
+// for the project, which every trigger needs and under which an edit to a
+// planned story queues the planner; replan, planning.replan or its default,
+// with replan_set saying whether the manifest sets it; and schedule as
+// written, with next, its next run in UTC. A value flai cannot read is
+// given with its error instead.
+func planningTriggers(p manifest.Planning, plan bool, now time.Time) map[string]any {
+	out := map[string]any{"plan": plan, "replan_set": strings.TrimSpace(p.Replan) != "",
+		"schedule": strings.TrimSpace(p.Schedule)}
+	if policy, err := p.ReplanPolicy(); err != nil {
+		out["replan"] = p.Replan
+		out["replan_error"] = err.Error()
+	} else {
+		out["replan"] = policy
+	}
+	if sched, err := p.PlanSchedule(); err != nil {
+		out["schedule_error"] = err.Error()
+	} else if sched != nil {
+		out["next"] = sched.Next(now).UTC().Format(time.RFC3339)
 	}
 	return out
 }

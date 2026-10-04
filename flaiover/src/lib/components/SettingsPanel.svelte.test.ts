@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import SettingsPanel from './SettingsPanel.svelte';
-import type { SettingsView } from '$lib/settings';
+import type { PlanningTriggers, SettingsView } from '$lib/settings';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -386,6 +386,84 @@ describe('SettingsPanel (S-0105)', () => {
 			q<HTMLButtonElement>('confirm-remove-yes')!.click();
 			await settle();
 			expect(q('said-projects')!.textContent).toContain('not enabled for /home/me/git/sf');
+		});
+	});
+
+	// S-0211, ADR-0084: when flai serve plans again on its own, read-only, from the manifest and the
+	// plan host action.
+	describe('planning triggers', () => {
+		const planning = (p: PlanningTriggers) => {
+			const v = view(false, false);
+			v.host!.planning = p;
+			return v;
+		};
+		const text = (id: string) => (q(id)!.textContent ?? '').replace(/\s+/g, ' ');
+
+		it('shows whether edits replan, the default policy and what it means, and the schedule with its next run', async () => {
+			backend(
+				planning({
+					plan: true,
+					replan: 'deterministic',
+					replan_set: false,
+					schedule: '0 6 * * 1-5',
+					next: '2026-10-05T06:00:00Z'
+				})
+			);
+			await show();
+			expect(text('section-planning')).toContain(
+				'system-flow.yaml, under planning (replan, schedule)'
+			);
+			expect(text('planning-edits')).toContain('Edits to a planned story start the planner: on');
+			expect(text('planning-edits')).toContain('The plan host action is on for this project');
+			expect(text('planning-replan')).toContain('deterministic (default)');
+			expect(text('planning-replan')).toContain('forecast deliveries follow, with no agent');
+			expect(text('planning-schedule')).toContain('0 6 * * 1-5, next run 2026-10-05T06:00:00Z');
+		});
+
+		it('says none without a schedule, a set policy without (default), and what flai cannot read', async () => {
+			backend(
+				planning({
+					plan: false,
+					replan: 'agent',
+					replan_set: true,
+					schedule: ''
+				})
+			);
+			await show();
+			expect(text('planning-edits')).toContain('start the planner: off');
+			expect(text('planning-replan')).toContain('agent');
+			expect(text('planning-replan')).not.toContain('(default)');
+			expect(text('planning-replan')).toContain(
+				'the planner runs for each story whose delivery moved'
+			);
+			expect(text('planning-schedule')).toContain('in UTC: none');
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+			backend(
+				planning({
+					plan: true,
+					replan: 'sometimes',
+					replan_set: true,
+					replan_error: 'planning.replan "sometimes" is not a replan policy',
+					schedule: '61 * * * *',
+					schedule_error: 'planning.schedule "61 * * * *": minute 61 is out of range'
+				})
+			);
+			await show();
+			expect(q('planning-replan')!.querySelector('[role="alert"]')!.textContent).toContain(
+				'is not a replan policy'
+			);
+			expect(text('planning-schedule')).not.toContain('next run');
+			expect(q('planning-schedule')!.querySelector('[role="alert"]')!.textContent).toContain(
+				'minute 61 is out of range'
+			);
+		});
+
+		it('leaves the section out when flai does not say', async () => {
+			backend(view(false, false));
+			await show();
+			expect(q('section-planning')).toBeNull();
 		});
 	});
 });
