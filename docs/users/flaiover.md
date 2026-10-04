@@ -78,6 +78,7 @@ Board shows one column per state with the WIP count against the limit from `wip/
 | **Open** | every card | opens the item's page, or a story in review's review page, as clicking the card does |
 | **Finalize** | a draft story that is not archived | takes the story as yours, as **Finalize** on its page does: `DRAFT` leaves the card |
 | **Start agent** or **Retry** | a story, when its page offers it | the same button as on the story's page (see **Agents** above) |
+| **Plan** | an open epic or story, while the `plan` host action is on | starts the planner for it on the host, as **Plan** on its page does (see [The item page](#the-item-page)) |
 | **Block…** or **Unblock** | an item not done or cancelled, or one that is blocked | asks why and blocks it, or unblocks it, as its page does |
 | **Cancel…** | an item not done or cancelled | opens the same confirmation as dropping it on cancelled |
 
