@@ -62,6 +62,9 @@ type Options struct {
 	// agent_start and agent_restart (S-0177); without it they say how to on
 	// the host.
 	Agents AgentStart
+	// Plans starts the planner for an epic or a story on the host for the
+	// tool plan (S-0208); without it the tool says how to on the host.
+	Plans PlanStart
 	// Activities logs a strategic agent's activity for the tool activity_log
 	// (S-0206); without it the tool says it cannot.
 	Activities ActivityLog
@@ -77,6 +80,7 @@ type server struct {
 	runner  execx.Runner
 	closing <-chan struct{}
 	agents  AgentStart
+	plans   PlanStart // starts the planner (S-0208)
 	// activities logs a strategic agent's activity (S-0206)
 	activities ActivityLog
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
@@ -88,7 +92,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, activities: opt.Activities, version: opt.Version}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}

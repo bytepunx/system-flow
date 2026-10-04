@@ -3,11 +3,14 @@
 package cmd
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
@@ -71,6 +74,41 @@ func TestPlanStartsThePlannerForAnItem(t *testing.T) {
 	for _, want := range []string{`"outcome": "disabled"`, "started true (command) to plan E-0001 as planner-E-0001", "started true to plan S-0001 as planner-S-0001"} {
 		if !strings.Contains(js, want) {
 			t.Errorf("the journal has no %q: %s", want, js)
+		}
+	}
+}
+
+// S-0208: flai mcp's plan starts the planner as flai plan does, under the
+// same plan host action, and journals the agent that asked.
+func TestTheMCPServerStartsThePlannerUnderThePlanAction(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_STARTED_BY", "") // the operator's own agent, whoever runs the tests
+	root := tempProject(t)
+	runIn(t, root, "epic", "new", "Epic")
+	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
+	var out, errOut bytes.Buffer
+	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC) }}
+	ctx := context.Background()
+	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-ops"); err == nil || !strings.Contains(err.Error(), "the plan host action is off for this project: flai serve enable plan") {
+		t.Errorf("action off: %v", err)
+	}
+	runIn(t, root, "serve", "enable", "plan")
+	runIn(t, root, "serve", "agent", "set", "--", "true")
+	if _, err := a.mcpPlan(ctx, root, "T-0001", "agent-ops"); err == nil || !strings.Contains(err.Error(), "T-0001 is a task") {
+		t.Errorf("a task: %v", err)
+	}
+	got, err := a.mcpPlan(ctx, root, "S-0001", "agent-ops")
+	if err != nil || got.Item != "S-0001" || got.Agent != "planner-S-0001" || got.PID == 0 || got.Command != "true" || got.Log == "" || got.Session == "" {
+		t.Fatalf("a story: %+v %v", got, err)
+	}
+	t.Setenv("FLAI_STARTED_BY", "flai-serve")
+	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-S-0001"); err == nil || !strings.Contains(err.Error(), "an agent flai serve started does not start the planner") {
+		t.Errorf("an agent flai serve started: %v", err)
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	for _, want := range []string{`"method": "mcp.plan"`, `"by": "agent-ops"`, `"outcome": "disabled"`, "agent-ops asked to plan S-0001: started true as planner-S-0001", "agent-ops asked to plan T-0001: T-0001 is a task"} {
+		if !strings.Contains(js, want) {
+			t.Errorf("journal lacks %q: %s", want, js)
 		}
 	}
 }
