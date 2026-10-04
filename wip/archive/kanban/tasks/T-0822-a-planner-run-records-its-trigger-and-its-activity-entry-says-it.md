@@ -37,7 +37,7 @@ usage:
 
 ## Work
 
-`ActivityEntry` gains `Trigger`, written as an optional `- Trigger: ` line after the summary and read back; an entry without one stays valid (ADR-0084). `AgentRun` gains `trigger` in `serve/agents.json`. `serve.Plan` keeps its signature and records `asked`; an internal start takes a trigger, for the queue to come. `planEnded` passes the run's trigger to `LogRunEnd`, which writes it on the entry. `design/system/agent-narrative.md` shows the line in its example. It waits for nothing: the first layer; the queue task waits for it.
+`ActivityEntry` gains `Trigger`, written as an optional `- Trigger:` line after the summary and read back; an entry without one stays valid (ADR-0084). `AgentRun` gains `trigger` in `serve/agents.json`. `serve.Plan` keeps its signature and records `asked`; an internal start takes a trigger, for the queue to come. `planEnded` passes the run's trigger to `LogRunEnd`, which writes it on the entry. `design/system/agent-narrative.md` shows the line in its example. It waits for nothing: the first layer; the queue task waits for it.
 
 ## Done when
 
