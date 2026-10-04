@@ -3,11 +3,11 @@ id: I-0069
 title: A story agent started by flai serve cannot edit .claude/settings.json, so a story that changes the guard hook's matcher cannot ship it
 class: blocker
 status: open
-count: 4
-cost: 9m
+count: 5
+cost: 8m
 first_reported: 2026-10-04T00:50:33Z
-last_reported: 2026-10-04T04:11:00Z
-updated: 2026-10-04T04:11:00Z
+last_reported: 2026-10-04T20:07:01Z
+updated: 2026-10-04T20:07:01Z
 ---
 
 # I-0069 A story agent started by flai serve cannot edit .claude/settings.json, so a story that changes the guard hook's matcher cannot ship it
@@ -32,5 +32,9 @@ the settings files too: after the operator granted it on TH-0096, Edit of .claud
 ### 2026-10-04T04:11:00Z
 Story: S-0209.
 T-0795 had to change template/root/.claude/agents/planner.md and .claude/agents/planner.md; Claude Code refused the Edit as a sensitive file, so the contents went to the operator on TH-0101 to copy.
+
+### 2026-10-04T20:07:01Z
+Story: S-0210.
+S-0210's agent and its task sub-agent could not edit template/root/.claude/agents/planner.md or .claude/agents/planner.md (Claude Code calls them sensitive); asked the operator to paste the file on TH-0109.
 
 ## Remediation
