@@ -701,7 +701,7 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 
 // The template's own definitions read as --agents takes them.
 func TestTheTemplatesDefinitionsRead(t *testing.T) {
-	for _, def := range []string{"explorer", "verifier"} {
+	for _, def := range []string{"explorer", "verifier", "planner"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", ".claude", "agents", def+".md"))
 		if err != nil {
 			t.Fatal(err)
