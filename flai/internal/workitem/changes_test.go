@@ -123,3 +123,23 @@ func TestBoardViewPullHold(t *testing.T) {
 		}
 	}
 }
+
+// Only a change of priority among the stories two pull orders share is a
+// reordering; a story entering or leaving the order is a move (S-0211).
+func TestReorderedOnlyWhenPrioritiesChange(t *testing.T) {
+	for _, c := range []struct {
+		before, after []string
+		want          bool
+	}{
+		{[]string{"S-1", "S-2"}, []string{"S-1", "S-2", "S-3"}, false}, // a story became ready
+		{[]string{"S-1", "S-2"}, []string{"S-2"}, false},               // one was started
+		{[]string{"S-1", "S-2", "S-3"}, []string{"S-3", "S-1"}, true},  // S-3 now comes first
+		{[]string{"S-1", "S-2"}, []string{"S-2", "S-1"}, true},
+		{nil, []string{"S-1"}, false},
+		{nil, nil, false},
+	} {
+		if got := Reordered(c.before, c.after); got != c.want {
+			t.Errorf("Reordered(%v, %v) = %v, want %v", c.before, c.after, got, c.want)
+		}
+	}
+}

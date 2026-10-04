@@ -514,8 +514,8 @@ func TestPullOrderChangeIsReportedOnlyWhenPrioritiesChange(t *testing.T) {
 		{[]string{"S-1", "S-2", "S-3"}, []string{"S-3", "S-1"}, true},  // S-3 now comes first
 		{nil, []string{"S-1"}, false},
 	} {
-		if got := reordered(c.before, c.after); got != c.want {
-			t.Errorf("reordered(%v, %v) = %v, want %v", c.before, c.after, got, c.want)
+		if got := workitem.Reordered(c.before, c.after); got != c.want {
+			t.Errorf("Reordered(%v, %v) = %v, want %v", c.before, c.after, got, c.want)
 		}
 	}
 	f := setup(t)

@@ -323,7 +323,12 @@ func Run(ctx context.Context, o Options) error {
 				}
 				r.client.Notify(AgentChanged, about)
 			}
+			// The replanner looks after each look of the launcher: on the same
+			// changes, when an agent ends and its queue can move on, and every
+			// minute, which is when the schedule is seen to come round (S-0211).
+			replanner := newReplanner(o, e, starter)
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
+			replanner.look(cctx)
 			go func() {
 				for {
 					select {
@@ -335,6 +340,7 @@ func Run(ctx context.Context, o Options) error {
 						// an agent that outlived an earlier flai serve is not waited for
 						starter.look(cctx, false)
 					}
+					replanner.look(cctx)
 				}
 			}()
 			go func() {
@@ -345,6 +351,7 @@ func Run(ctx context.Context, o Options) error {
 					// board; an answer to an agent's question is in its thread
 					if slashed := filepath.ToSlash(rel); strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") {
 						starter.look(cctx, false)
+						replanner.look(cctx)
 					}
 				})
 				r.client.Run(cctx)

@@ -53,48 +53,74 @@ func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, erro
 // activity entry says started it (ADR-0084): asked for the operator's, the
 // replanner's triggers otherwise. It is refused as Plan is.
 func planFor(ctx context.Context, o Options, e Entry, item, trigger string) (*AgentRun, error) {
-	cfg := o.Agent(e.Root)
-	if !cfg.Plan {
-		return nil, refused("the plan host action is off for this project: flai serve enable plan")
-	}
-	if strings.HasPrefix(item, "T-") {
-		return nil, refused("%s is a task; the planner plans an epic or a story", item)
-	}
-	if !planned.MatchString(item) {
-		return nil, refused("%q is not an epic's or a story's ID; the planner plans an E-nnnn or an S-nnnn", item)
-	}
-	repo, err := workitem.Open(e.Root)
+	ps, err := planCheck(o, e, item)
 	if err != nil {
 		return nil, err
-	}
-	it, err := repo.Get(item)
-	if err != nil {
-		return nil, err
-	}
-	switch {
-	case it.Archived:
-		return nil, refused("%s is archived; the planner plans an epic or a story still on the board", it.ID)
-	case it.Status == workitem.Done || it.Status == workitem.Cancelled:
-		return nil, refused("%s is %s; there is nothing left to plan", it.ID, it.Status)
-	}
-	if run := o.Dir.AgentStates()[e.Root].Plans[it.ID]; run.running() {
-		return nil, refused("the planner is already running for %s (pid %d, started %s); one item has one planner at a time", it.ID, run.PID, run.Started)
-	}
-	agent := repo.Manifest.PlanningAgent()
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return nil, refused("the planner's agent names no harness (planning.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])")
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.plan(ctx, cfg, it.ID, agent, trigger)
-	run := o.Dir.AgentStates()[e.Root].Plans[it.ID]
+	l.plan(ctx, ps.cfg, ps.item, ps.agent, trigger)
+	run := o.Dir.AgentStates()[e.Root].Plans[ps.item]
 	if run == nil {
-		return nil, fmt.Errorf("the planner run for %s was not recorded in %s", it.ID, o.Dir.agents())
+		return nil, fmt.Errorf("the planner run for %s was not recorded in %s", ps.item, o.Dir.agents())
 	}
 	if run.Error != "" {
 		return run, errors.New(run.Why)
 	}
 	return run, nil
+}
+
+// planStart is what the planner is started with for an item the checks pass:
+// the operator's say, the item's canonical ID, and the planner's agent.
+type planStart struct {
+	cfg   AgentConfig
+	item  string
+	agent *manifest.Agent
+}
+
+// planCheck makes the checks before the planner is started for item in
+// project e, for the operator (Plan) and for the replanner alike (S-0211),
+// and returns what it is started with. It is refused, as a *Refused, while
+// the plan host action is off, for an ID that is not an epic's or a story's,
+// for an item that is archived, done, or cancelled, while a planner runs for
+// the item, and when nothing can start it; an item that cannot be read is an
+// error.
+func planCheck(o Options, e Entry, item string) (planStart, error) {
+	var cfg AgentConfig
+	if o.Agent != nil {
+		cfg = o.Agent(e.Root)
+	}
+	if !cfg.Plan {
+		return planStart{}, refused("the plan host action is off for this project: flai serve enable plan")
+	}
+	if strings.HasPrefix(item, "T-") {
+		return planStart{}, refused("%s is a task; the planner plans an epic or a story", item)
+	}
+	if !planned.MatchString(item) {
+		return planStart{}, refused("%q is not an epic's or a story's ID; the planner plans an E-nnnn or an S-nnnn", item)
+	}
+	repo, err := workitem.Open(e.Root)
+	if err != nil {
+		return planStart{}, err
+	}
+	it, err := repo.Get(item)
+	if err != nil {
+		return planStart{}, err
+	}
+	switch {
+	case it.Archived:
+		return planStart{}, refused("%s is archived; the planner plans an epic or a story still on the board", it.ID)
+	case it.Status == workitem.Done || it.Status == workitem.Cancelled:
+		return planStart{}, refused("%s is %s; there is nothing left to plan", it.ID, it.Status)
+	}
+	if run := o.Dir.AgentStates()[e.Root].Plans[it.ID]; run.running() {
+		return planStart{}, refused("the planner is already running for %s (pid %d, started %s); one item has one planner at a time", it.ID, run.PID, run.Started)
+	}
+	agent := repo.Manifest.PlanningAgent()
+	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		return planStart{}, refused("the planner's agent names no harness (planning.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])")
+	}
+	return planStart{cfg: cfg, item: it.ID, agent: agent}, nil
 }
 
 // plan starts the planner for item with agent, records the run with what

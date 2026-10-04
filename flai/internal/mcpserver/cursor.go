@@ -172,7 +172,7 @@ func (s *server) catchUpWith(items []*workitem.Item) ([]Event, int, error) {
 			next.Keys[k] = true
 		}
 	}
-	if cur.known && reordered(cur.Order, board.Order) {
+	if cur.known && workitem.Reordered(cur.Order, board.Order) {
 		events = append(events, Event{
 			Change:  workitem.Change{ID: "board", Type: "board", Title: "pull order", Kind: "reordered", At: next.Seen},
 			Summary: "the pull order is now " + strings.Join(board.Order, ", "),
@@ -180,33 +180,6 @@ func (s *server) catchUpWith(items []*workitem.Item) ([]Event, int, error) {
 	}
 	s.saveCursor(next)
 	return events, omitted, nil
-}
-
-// reordered reports whether the stories two pull orders share come in a
-// different sequence. Stories entering and leaving the order are moves,
-// reported as such (flai move appends a ready story and drops a started
-// one); only a change of priority among them is news of its own.
-func reordered(before, after []string) bool {
-	in := func(list []string) map[string]bool {
-		m := map[string]bool{}
-		for _, id := range list {
-			m[id] = true
-		}
-		return m
-	}
-	inBefore, inAfter := in(before), in(after)
-	var a, b []string
-	for _, id := range before {
-		if inAfter[id] {
-			a = append(a, id)
-		}
-	}
-	for _, id := range after {
-		if inBefore[id] {
-			b = append(b, id)
-		}
-	}
-	return strings.Join(a, ",") != strings.Join(b, ",")
 }
 
 func describe(c workitem.Change) string {

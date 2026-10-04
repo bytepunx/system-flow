@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"slices"
 	"sort"
 	"time"
 )
@@ -85,6 +86,34 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 		return lessID(out[i].ID, out[j].ID)
 	})
 	return out
+}
+
+// Reordered reports whether the stories two pull orders share come in a
+// different sequence. Stories entering and leaving the order are moves,
+// reported as such (flai move appends a ready story and drops a started
+// one); only a change of priority among them is news of its own. The MCP
+// server's inbox and flai serve's replanner (S-0211, ADR-0084) both ask it.
+func Reordered(before, after []string) bool {
+	in := func(list []string) map[string]bool {
+		m := map[string]bool{}
+		for _, id := range list {
+			m[id] = true
+		}
+		return m
+	}
+	inBefore, inAfter := in(before), in(after)
+	var a, b []string
+	for _, id := range before {
+		if inAfter[id] {
+			a = append(a, id)
+		}
+	}
+	for _, id := range after {
+		if inBefore[id] {
+			b = append(b, id)
+		}
+	}
+	return !slices.Equal(a, b)
 }
 
 // CancelledWith names the item whose cancellation at the same moment took it
