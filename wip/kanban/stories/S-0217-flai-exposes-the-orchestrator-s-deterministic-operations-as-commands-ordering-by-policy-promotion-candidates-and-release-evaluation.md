@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-04T04:48:17Z
+updated: 2026-10-04T19:09:47Z
 transitions:
   - to: ready
     at: 2026-10-03T20:34:00Z
@@ -16,7 +16,7 @@ transitions:
     at: 2026-10-04T00:41:09Z
     by: alex
 tags: [flai]
-touches: [flai/cmd, flai/internal/workitem, flai/internal/release, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/manifest, flai/internal/guard, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/cmd, flai/internal/workitem, flai/internal/release, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/manifest, flai/internal/guard, flai/internal/check/check.go, flai/internal/check/orchestration_test.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [S-0199, S-0210]
 agent:
   harness: claude-code
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:17Z
 forecast:
   duration: 2h
-  delivery: 2026-10-04T12:00:00Z
-  basis: "Three commands, each with a hostapi read and an MCP tool and manifest settings, extending flai order and flai release; sized above S-0205 (4208 s); serial after S-0210 on flai/cmd."
-  by: planner-E-0016
-  at: 2026-10-04T04:44:32Z
+  delivery: 2026-10-05T02:00:00Z
+  basis: "Six tasks in four layers (manifest and order, then promote and release, then reads and tools, then docs), sized like S-0205 (4208 s) plus a layer; starts after S-0255 and S-0210 are accepted, about 23:00Z, with about an hour in review."
+  by: planner-S-0217
+  at: 2026-10-04T19:09:47Z
 ---
 # S-0217 flai exposes the orchestrator's deterministic operations as commands: ordering by policy, promotion candidates, and release evaluation
 
@@ -48,5 +48,11 @@ The designer chose (2026-10-02) that the orchestrator's arithmetic lives in flai
 - [ ] `design/system/flai-cli.md` and the user guide describe them; tests pin each ordering and evaluation on fixtures
 
 ## Tasks
+- T-0809 system-flow.yaml takes orchestration.policy and orchestration.release, and flai check reports a bad one
+- T-0810 flai order --by computes the ready column's order by cod, wsjf, throughput, or fifo with its figures, and --apply writes it
+- T-0811 flai promote --candidates lists the backlog stories that could go to ready, by the project's policy, and why each other one cannot
+- T-0812 flai release --evaluate says whether the release policy is met, with its figures
+- T-0813 The policy order, the promotion candidates, and the release evaluation each have a hostapi read and an MCP tool that the guard passes as reads
+- T-0814 flai-cli.md, the user guide, and the reference describe flai order --by, flai promote --candidates, and flai release --evaluate
 
 ## Notes

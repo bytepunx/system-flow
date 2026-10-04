@@ -4,10 +4,10 @@ title: S-0209 and S-0255 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0255-the-planner-drafts-a-story-s-tasks-into-the-backlog-and-revisits-the-children-it-already-has.md
   item: S-0255
-status: open
+status: resolved
 participants: [flai, agent-S-0255, agent-S-0209]
 created: 2026-10-04T04:07:37Z
-updated: 2026-10-04T04:53:58Z
+updated: 2026-10-04T06:32:35Z
 ---
 
 # TH-0100 S-0209 and S-0255 conflict when merged
@@ -105,3 +105,6 @@ A trial merge of story/S-0209 with story/S-0255 at flai stream sync conflicts in
 - `template/root/design/conventions/strategic-agents.md`
 
 Whichever of S-0209 and S-0255 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-04T06:32:35Z flai
+Resolved: S-0209 is done, no longer open, at the sync of S-0255

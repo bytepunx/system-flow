@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 220
-      cache_read: 1363194
-      cache_write: 69577
-      cost: 0.5844
+      input: 17
+      output: 3258
+      cache_read: 1410439
+      cache_write: 22355
+      cost: 0.5038
 ---
 
 # T-0799 A task the planner writes that fails flai check --strict or the markdown lint is refused and leaves nothing

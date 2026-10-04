@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 242
-      cache_read: 1253205
-      cache_write: 53702
-      cost: 0.5331
+      input: 15
+      output: 2972
+      cache_read: 1286538
+      cache_write: 20392
+      cost: 0.4595
 ---
 
 # T-0798 The guard lets the planner run flai task new

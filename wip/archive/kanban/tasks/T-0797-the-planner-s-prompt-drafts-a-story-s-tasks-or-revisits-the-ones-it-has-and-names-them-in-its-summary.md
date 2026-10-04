@@ -27,11 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 211
-      cache_read: 1012040
-      cache_write: 52966
-      cost: 0.4344
+      input: 13
+      output: 2422
+      cache_read: 1048404
+      cache_write: 16617
+      cost: 0.3745
+    - model: claude-sonnet-5
+      input: 132
+      output: 31540
+      cache_read: 4503093
+      cache_write: 213940
+      cost: 1.7511
 ---
 
 # T-0797 The planner's prompt drafts a story's tasks or revisits the ones it has, and names them in its summary

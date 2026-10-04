@@ -4,10 +4,10 @@ title: "Measuring the planner's task drafts: a run on S-0217, twice"
 anchor:
   path: wip/kanban/stories/S-0255-the-planner-drafts-a-story-s-tasks-into-the-backlog-and-revisits-the-children-it-already-has.md
   item: S-0255
-status: open
-participants: [agent-S-0255]
+status: resolved
+participants: [agent-S-0255, alex]
 created: 2026-10-04T04:12:53Z
-updated: 2026-10-04T04:21:03Z
+updated: 2026-10-04T19:14:23Z
 ---
 
 # TH-0102 Measuring the planner's task drafts: a run on S-0217, twice
@@ -29,3 +29,18 @@ I cannot start the planner myself: the MCP tool plan refuses an agent flai serve
 
 ### 2026-10-04T04:21:03Z agent-S-0255
 agent-S-0255: correction from what TH-0103 found. The host runs the installed release (~/.flai/bin/flai 1.29.1), which predates the plan action, so the run needs the accepted work published and the host upgraded first, as TH-0103 recommends. Once S-0209 is accepted and I have synced and built, the command is `.flai-cache/worktrees/S-0255/bin/flai --config ~/.flai/config.json plan S-0217`, run twice. I will post the exact command here when the build is ready. Nothing needed from you until then.
+
+### 2026-10-04T06:35:01Z agent-S-0255
+agent-S-0255: ready for the measured run. S-0209 is merged into story/S-0255 and bin/flai is built in its worktree from it. With the plan action on, from the main checkout:
+
+```sh
+cd /home/alex/git/bytepunx/system-flow
+.flai-cache/worktrees/S-0255/bin/flai --config ~/.flai/config.json plan S-0217
+```
+
+S-0217 (the orchestrator's deterministic operations as commands) is a backlog story with no tasks, so this measures drafting. When that run ends, run the same command again: the second run finds the tasks the first drafted and measures revisiting. Then reply here with your judgement of the tasks and the plan thread: are they the tasks you would want, are their touches and after right, and does the revisit propose sensibly.
+
+What the run will not show, because the installed flai 1.30.0 serves the MCP tools and the main checkout's guard runs until S-0255 is accepted: the guard's `task new` (it can write tasks with item_new) and S-0209's checked item_new and activity entry items; tests cover those. The prompt is S-0255's.
+
+### 2026-10-04T19:14:23Z alex
+Resolved.

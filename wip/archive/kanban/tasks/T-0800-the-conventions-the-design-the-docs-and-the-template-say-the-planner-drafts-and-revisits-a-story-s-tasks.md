@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 879
-      cache_read: 5808566
-      cache_write: 115841
-      cost: 2.4166
+      input: 70
+      output: 13472
+      cache_read: 5832005
+      cache_write: 92437
+      cost: 2.0832
 ---
 
 # T-0800 The conventions, the design, the docs, and the template say the planner drafts and revisits a story's tasks
