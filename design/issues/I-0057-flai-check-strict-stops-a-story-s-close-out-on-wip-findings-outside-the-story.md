@@ -90,6 +90,6 @@ S-0256's close-out stopped at flai check --strict on main's story.unaccepted (S-
 
 ### 2026-10-04T21:55:53Z
 Story: S-0247.
-S-0247's close-out stopped at flai check --strict on warnings outside the story: TH-0094 threads.archived (answered, on archived S-0206) and E-0015 epic.lags-stories; S-0173 story.unaccepted was the one --strict passes over. The verifier ran flaiover-test.sh by hand: 853 tests passing.
+S-0247's close-out stopped at flai check --strict on warnings outside the story: S-0173 story.unaccepted and TH-0094 threads.archived (answered, on archived S-0206); E-0015 epic.lags-stories was the one --strict passes over. The verifier ran flaiover-test.sh by hand: 853 tests passing.
 
 ## Remediation
