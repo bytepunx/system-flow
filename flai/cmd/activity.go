@@ -18,8 +18,12 @@ func (a *app) mcpActivity(_ context.Context, root, kind, summary string, items [
 		return mcpserver.ActivityLogged{}, err
 	}
 	logged, err := serve.LogActivity(a.serveDir(), mainRootOf(repo), repo.Manifest.Key, kind, summary, items, a.now())
-	if err != nil {
+	if err != nil && logged == nil {
 		return mcpserver.ActivityLogged{}, err
+	}
+	if err != nil {
+		// the activity is logged; only its charge to the item it planned failed (ADR-0083)
+		a.logger().Warn("activity not charged to its item", "component", "mcp", "agent", by, "project", repo.Manifest.Key, "kind", kind, "err", err)
 	}
 	e, doc := logged.Entry, logged.Activity
 	a.logger().Info("activity logged", "component", "mcp", "agent", by, "project", repo.Manifest.Key, "kind", kind, "seconds", e.Seconds, "cost", e.Cost)
