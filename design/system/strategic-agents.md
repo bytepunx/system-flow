@@ -131,6 +131,22 @@ The designer's judgement, on TH-0103: "I found this useful. I am looking forward
 
 An epic with no stories was not measured: the only open epics, E-0015 and E-0016, both had stories.
 
+### Measured on S-0217 (S-0255)
+
+On 2026-10-04 the operator ran the planner on S-0217, a backlog story with no tasks, with S-0255's prompt, over flai 1.30.0 on the host. The guard's `task new`, the checked `item_new`, and the entry's items were not yet in that flai; tests cover them.
+
+| Measure | Result |
+|---------|--------|
+| Run | Ended 19:10Z; 333 s of agent time, 1.80 USD (estimated), one activity entry |
+| Created | Six tasks in the backlog, T-0809 to T-0814, in four layers: T-0809 and T-0810, then T-0811 and T-0812, then T-0813, then T-0814. Each has `## Work` saying what it changes and why it waits, `## Done when` with its tests, a nature, tags, file-level `touches`, and `after`; no two tasks of a layer share a path. `flai check --strict` reports nothing on them |
+| Story | Touches widened by the check package one task needs; forecast duration kept at 2h and delivery moved for the stories ahead of it; cost of delay value kept |
+| Plan thread | TH-0108: the tasks and layers as a table, nine assumptions to confirm, no split, merge, or drop, and two notes for later stories (S-0213, S-0222) |
+| Summary | The entry's summary named the six tasks created, said none were revisited, and named TH-0108 |
+
+The designer resolved TH-0108 and TH-0102 without asking for a change: the drafts stand as written.
+
+Revisiting a story's open tasks was not measured: the second run on S-0217 was not made. The prompt and the convention cover it.
+
 ### On the dashboard
 
 An epic's or a story's page shows **Plan** while the `plan` action is on, the dashboard can write, and the item is open: not done, cancelled, or archived. It says when the item's newest planner run has not ended. See [flaiover-dashboard.md](flaiover-dashboard.md).
