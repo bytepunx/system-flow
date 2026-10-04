@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-10-03
+updated: 2026-10-04
 status: active
 topics: [all]
 ---
@@ -64,6 +64,7 @@ Epics, stories, and tasks may carry `usage`, what agents spent on them: the toke
 - `flai serve` measures a story from the logs it keeps of the agents it started for the story, and each of its tasks from the calls of the sub-agents started for it and a share of the rest while it was in progress, when an agent ends and when a task of a running agent enters done; `flai serve agent usage --write` does the same by hand. Such usage has `source: log`. How the logs are read is in [flai-cli.md](flai-cli.md).
 - Whenever an item enters done, by `flai move`, MCP's `item_move`, or `flai accept`, each item above it whose usage was not measured is given the sum of its children's, archived ones and cancelled ones included, up to its epic, with `source: sum`. A story measured from its log keeps its measurement, which already holds its tasks'; its epic sums it with its other stories.
 - A task's usage is its story's session totals in the share of their input and cache tokens that are its own: the calls of the sub-agents started for it, and an even share, among the tasks in progress at the time, of every other call made while it was in progress ([ADR-0071](../adrs/0071-a-task-s-usage-is-the-calls-of-the-sub-agents-started-for-it-and-an-even-share.md), S-0230). So it is `estimated`; so is any cost the harness did not report, priced at the rate the logs report for the model.
+- `strategic` is what strategic agents spent on the item, one entry per kind: `planner`, then `orchestrator`, then `analyzer` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), S-0225). Each entry has `kind`, `seconds`, `estimated: true`, and `models`, in the shape of the agents' models. It is apart from the agents' figures and never added to them: an item's tokens, cost, seconds, and models are its agents' alone. When flai serve logs a planner activity, it charges the share of the run's usage that the activity's entry has to the item the planner was started for, and to every item above it, up to its epic, at once. An item with no usage is given `source: sum`, no seconds, and no models beside it. Roll-up and a story's measurement keep `strategic` as it is. A story moved to another epic after it was planned leaves its planning on the old epic: the charge was added up the hierarchy when it was made. An item may carry `usage` with nothing but `strategic`; agent aggregates leave it out. `strategic` is listed in `front-matter-fields.txt`, so the release that carries it raises `flai.minimum`.
 
 Only agents flai serve starts with the `claude-code` harness are measured: their stream-json logs are the only record flai reads. As with `after`, a flai older than S-0143 refuses an item that carries `usage`: upgrade the flai on the host before any item is measured.
 
@@ -160,6 +161,17 @@ usage:                           # optional, written by flai (S-0143): what agen
       cache_read: 19723140
       cache_write: 327605
       cost: 8.1258               # US dollars
+  strategic:                     # optional (S-0225): what strategic agents spent on it, apart from the models above
+    - kind: planner              # planner | orchestrator | analyzer, each once, in that order
+      seconds: 412               # the share of the agent's runs charged to this item and every item above it
+      estimated: true            # always: the share is apportioned
+      models:                    # as above
+        - model: claude-opus-5-5
+          input: 12
+          output: 3400
+          cache_read: 812000
+          cache_write: 40210
+          cost: 0.8123
 draft: true                      # stories only, optional (S-0199): written by an agent, not yet finalized
 cost_of_delay:                   # stories and epics, optional (S-0199): what each week of waiting costs
   inputs:                        # optional, the operator's; each key optional

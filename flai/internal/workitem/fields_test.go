@@ -9,6 +9,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -40,6 +41,11 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		"item.cost_of_delay.inputs: " + strings.Join(workitem.KnownFields(workitem.CostInputs{}), " "),
 		"item.forecast: " + strings.Join(workitem.KnownFields(workitem.Forecast{}), " "),
 		"item.finalized: " + strings.Join(workitem.KnownFields(workitem.Finalized{}), " "),
+		// the usage block, its models, and its strategic entries (S-0225),
+		// likewise
+		"item.usage: " + strings.Join(workitem.KnownFields(usage.Usage{}), " "),
+		"item.usage.models: " + strings.Join(workitem.KnownFields(usage.Model{}), " "),
+		"item.usage.strategic: " + strings.Join(workitem.KnownFields(usage.Strategic{}), " "),
 		// the types each type-restricted field is valid on (S-0176): an older
 		// flai refuses an item that carries one on a type it does not allow
 		"item.types: " + workitem.FieldTypes(),

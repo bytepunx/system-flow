@@ -140,11 +140,7 @@ func (it *Item) clone() *Item {
 	c.After = slices.Clone(it.After)
 	c.Unknown = slices.Clone(it.Unknown)
 	c.Agent = it.Agent.Clone()
-	if it.Usage != nil {
-		u := *it.Usage
-		u.Models = slices.Clone(it.Usage.Models)
-		c.Usage = &u
-	}
+	c.Usage = it.Usage.Clone()
 	c.CostOfDelay = it.CostOfDelay.clone()
 	c.Forecast = it.Forecast.clone()
 	c.Finalized = it.Finalized.clone()

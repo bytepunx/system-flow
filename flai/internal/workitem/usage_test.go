@@ -168,3 +168,227 @@ usage:
 ---
 # T-0001 T
 `
+
+// S-0225: what strategic agents spent is written after the agents' models
+// and read back the same, with or without agents' figures beside it.
+func TestStrategicUsageIsWrittenAndReadBack(t *testing.T) {
+	for name, doc := range map[string]string{"beside the agents'": strategicDoc, "alone": strategicOnlyDoc} {
+		parsed, err := ParseItem(doc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := parsed.Validate(); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+		if s := parsed.Usage.Strategic; len(s) != 2 || s[0].Kind != ActivityPlanner || s[0].Models[0].CacheWrite != 40210 || s[1].Kind != ActivityAnalyzer {
+			t.Errorf("%s: strategic = %+v", name, s)
+		}
+		if got := parsed.Marshal(); got != doc {
+			t.Errorf("%s: round trip:\n%s", name, got)
+		}
+	}
+}
+
+func TestStrategicUsageIsValidated(t *testing.T) {
+	u := &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: []usage.Strategic{
+		{Kind: "planner", Seconds: -1, Estimated: true, Models: []usage.Model{{Model: "m", Output: -1}, {Model: "m"}, {}}},
+		{Kind: "planner", Estimated: true},
+		{Kind: "guesser", Estimated: true},
+		{Kind: "analyzer"},
+	}}
+	got := strings.Join(usageErrors(u), "; ")
+	for _, want := range []string{
+		"usage.strategic[0].seconds is negative",
+		"usage.strategic[0].models[0] has a negative count or cost",
+		"usage.strategic[0].models[1].model m is listed twice",
+		"usage.strategic[0].models[2].model is required",
+		"usage.strategic[1].kind planner is listed twice",
+		`usage.strategic[2].kind "guesser" must be one of planner, orchestrator, analyzer`,
+		"usage.strategic[3].estimated must be true",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("errors %q lack %q", got, want)
+		}
+	}
+}
+
+// the usage package orders strategic entries by kinds it cannot import
+func TestStrategicKindsAreTheActivityKinds(t *testing.T) {
+	if strings.Join(usage.StrategicKinds, ",") != strings.Join(ActivityKinds, ",") {
+		t.Errorf("usage.StrategicKinds %v, ActivityKinds %v", usage.StrategicKinds, ActivityKinds)
+	}
+}
+
+func planned(seconds int64, cost float64) *usage.Usage {
+	return &usage.Usage{Source: usage.SourceLog, Seconds: seconds, Estimated: true,
+		Models: []usage.Model{{Model: "claude-opus-5-5", Input: 1, Output: 200, CacheRead: 5000, CacheWrite: 300, Cost: cost}}}
+}
+
+func TestPlanningAStoryChargesItAndItsEpic(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "E", "")
+	s := mustCreate(t, r, Story, "S", "E-0001")
+	changed, err := r.ChargeStrategic(s.ID, ActivityPlanner, planned(400, 0.8))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(changed, ",") != "S-0001,E-0001" {
+		t.Errorf("changed %v, want the story then its epic", changed)
+	}
+	if _, err := r.ChargeStrategic(s.ID, ActivityPlanner, planned(12, 0.2)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"S-0001", "E-0001"} {
+		it, _ := r.Get(id)
+		u := it.Usage
+		if u == nil || u.Source != usage.SourceSum || !u.Empty() || len(u.Strategic) != 1 {
+			t.Fatalf("%s usage = %+v, want empty agents' figures and the planner's", id, u)
+		}
+		if p := u.Strategic[0]; p.Kind != ActivityPlanner || p.Seconds != 412 || !p.Estimated || p.Cost() != 1 || p.Models[0].Output != 400 {
+			t.Errorf("%s planner = %+v, want both charges added", id, p)
+		}
+		if err := it.Validate(); err != nil {
+			t.Error(err)
+		}
+	}
+	epic, _ := r.Get("E-0001")
+	data, _ := os.ReadFile(epic.Path)
+	if !strings.Contains(string(data), "usage:\n  source: sum\n  seconds: 0\n  models: []\n  strategic:\n    - kind: planner\n      seconds: 412\n      estimated: true\n      models:\n        - model: claude-opus-5-5\n          input: 2\n") {
+		t.Errorf("epic front matter:\n%s", data)
+	}
+	if changed, err := r.ChargeStrategic(s.ID, ActivityPlanner, nil); err != nil || changed != nil {
+		t.Errorf("charging nothing changed %v (%v)", changed, err)
+	}
+	if _, err := r.ChargeStrategic(s.ID, "guesser", planned(1, 1)); err == nil {
+		t.Error("an unknown kind was charged")
+	}
+}
+
+func TestPlanningAnEpicChargesItAlone(t *testing.T) {
+	r, s, _ := usageProject(t)
+	changed, err := r.ChargeStrategic("E-0001", ActivityPlanner, planned(60, 0.5))
+	if err != nil || strings.Join(changed, ",") != "E-0001" {
+		t.Fatalf("changed %v (%v), want the epic alone", changed, err)
+	}
+	story, _ := r.Get(s.ID)
+	if story.Usage != nil {
+		t.Errorf("story usage = %+v", story.Usage)
+	}
+}
+
+// a roll-up sums the agents' figures again and keeps what was spent
+// planning, whether the children spent anything or not
+func TestARollUpKeepsWhatPlanningSpent(t *testing.T) {
+	r, s, t2 := usageProject(t)
+	if _, err := r.ChargeStrategic(s.ID, ActivityPlanner, planned(400, 0.8)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.TransitionAll(t2, Done, "test", "", t0, false); err != nil {
+		t.Fatal(err)
+	}
+	story, _ := r.Get(s.ID)
+	epic, _ := r.Get("E-0001")
+	if story.Usage.Cost() != 1.75 || story.Usage.StrategicCost() != 0.8 {
+		t.Errorf("story usage = %+v, want its tasks' sum and its planning", story.Usage)
+	}
+	if epic.Usage.Cost() != 3.75 || epic.Usage.StrategicCost() != 0.8 {
+		t.Errorf("epic usage = %+v, want its stories' sum and its story's planning", epic.Usage)
+	}
+	if again, err := r.RollUp(t2); err != nil || len(again) != 0 {
+		t.Errorf("a second roll-up changed %v (%v)", again, err)
+	}
+
+	// children that spent nothing: the epic keeps its planning
+	r = newProject(t)
+	mustCreate(t, r, Epic, "E", "")
+	s = mustCreate(t, r, Story, "S", "E-0001")
+	task := mustCreate(t, r, Task, "T", s.ID)
+	if _, err := r.ChargeStrategic(s.ID, ActivityPlanner, planned(10, 0.1)); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := r.RollUp(task); err != nil || len(changed) != 0 {
+		t.Errorf("roll-up changed %v (%v)", changed, err)
+	}
+	for _, id := range []string{"S-0001", "E-0001"} {
+		it, _ := r.Get(id)
+		if it.Usage == nil || it.Usage.StrategicSeconds() != 10 {
+			t.Errorf("%s usage = %+v, want its planning kept", id, it.Usage)
+		}
+	}
+}
+
+const strategicDoc = `---
+id: S-0001
+type: story
+nature: feature
+title: S
+status: backlog
+parent: E-0001
+owner: alex
+created: 2026-09-15T20:00:00Z
+updated: 2026-09-15T20:00:00Z
+transitions: []
+tags: []
+usage:
+  source: sum
+  seconds: 42
+  models:
+    - model: claude-opus-5-5
+      input: 1
+      output: 2
+      cache_read: 3
+      cache_write: 5
+      cost: 0.1234
+  strategic:
+    - kind: planner
+      seconds: 412
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 12
+          output: 3400
+          cache_read: 812000
+          cache_write: 40210
+          cost: 0.8123
+    - kind: analyzer
+      seconds: 0
+      estimated: true
+      models: []
+---
+# S-0001 S
+`
+
+const strategicOnlyDoc = `---
+id: S-0001
+type: story
+nature: feature
+title: S
+status: backlog
+parent: E-0001
+owner: alex
+created: 2026-09-15T20:00:00Z
+updated: 2026-09-15T20:00:00Z
+transitions: []
+tags: []
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 412
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 12
+          output: 3400
+          cache_read: 812000
+          cache_write: 40210
+          cost: 0.8123
+    - kind: analyzer
+      seconds: 0
+      estimated: true
+      models: []
+---
+# S-0001 S
+`
