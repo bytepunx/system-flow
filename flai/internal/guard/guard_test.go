@@ -193,7 +193,6 @@ func TestThePlannerNeitherAcceptsNorPublishesNorEditsCode(t *testing.T) {
 		"flai archive S-0001",
 		"flai stream sync S-0001",
 		"flai stream open S-0001",
-		"flai task new --story S-0001 'x'",
 		"flai block S-0001 --reason x",
 		"flai thread resolve TH-0001",
 		"flai edit S-0001 --no-draft",
@@ -259,6 +258,28 @@ func TestThePlannerCreatesAStoryOnlyAsADraft(t *testing.T) {
 	}
 	if why := g.Check(itemNew("story", false)); why != "" {
 		t.Errorf("the story's agent's item_new refused: %s", why)
+	}
+}
+
+// S-0255: the planner drafts a story's tasks with flai task new, and runs
+// no other task command.
+func TestThePlannerDraftsTasksThroughFlai(t *testing.T) {
+	for _, c := range []string{
+		`flai task new --story S-0001 "x"`,
+		"scripts/flai.sh task new --story S-0001 'x'",
+	} {
+		if why := planGuard.Check(bash("", c)); why != "" {
+			t.Errorf("%q refused: %s", c, why)
+		}
+	}
+	for _, c := range []string{"flai task foo", "flai task", "flai task move T-0001 ready"} {
+		why := planGuard.Check(bash("", c))
+		if !strings.Contains(why, "it runs only story new with --draft, epic new, task new, edit,") || !strings.Contains(why, "Ask the operator with thread_open on the item") {
+			t.Errorf("%q: %q", c, why)
+		}
+	}
+	if why := planGuard.Check(bash("explorer", "flai task new --story S-0001 'x'")); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
+		t.Errorf("sub-agent task new: %q", why)
 	}
 }
 

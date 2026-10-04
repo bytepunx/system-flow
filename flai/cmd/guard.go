@@ -41,13 +41,13 @@ In a planner session, one flai serve starts with FLAI_ROLE=plan, the
 session's own calls are held to planning too (strategic-agents.md): besides
 what a sub-agent may do, the MCP tools inbox, item_new, item_edit,
 thread_open, thread_reply, activity_log, wait_for_events, and item_move to
-backlog; the commands story new, epic new, edit (but not --no-draft),
-touches, thread new and reply, issue new and bump, and move to backlog. A
-story the planner creates is a draft for the operator to finalize: item_new
-of a story needs draft true, and story new needs --draft. It refuses the
-planner every other flai tool and command, git's writes, and the Edit,
-Write, and NotebookEdit tools. The planner's sub-agents are held as any
-sub-agent is.
+backlog; the commands story new, epic new, task new, edit (but not
+--no-draft), touches, thread new and reply, issue new and bump, and move to
+backlog. A story the planner creates is a draft for the operator to
+finalize: item_new of a story needs draft true, and story new needs
+--draft. It refuses the planner every other flai tool and command, git's
+writes, and the Edit, Write, and NotebookEdit tools. The planner's
+sub-agents are held as any sub-agent is.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP
 tools, and, in a planner session alone, before Edit, Write, and NotebookEdit

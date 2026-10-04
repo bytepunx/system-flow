@@ -94,6 +94,7 @@ var cliPlans = map[string][]string{
 	"epic":    {"new"},
 	"issue":   {"new", "bump"},
 	"story":   {"new"},
+	"task":    {"new"},
 	"thread":  {"new", "reply"},
 	"touches": nil,
 }
@@ -162,7 +163,7 @@ var planning = rules{
 		if subs, ok := cliPlans[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
 			return ""
 		}
-		return "of flai's commands that write, it runs only story new with --draft, epic new, edit, touches, thread new and reply, issue new and bump, and move to backlog"
+		return "of flai's commands that write, it runs only story new with --draft, epic new, task new, edit, touches, thread new and reply, issue new and bump, and move to backlog"
 	},
 	git: "it runs only git's reads",
 }
