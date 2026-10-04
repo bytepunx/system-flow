@@ -38,4 +38,4 @@ agent:
 planning:
   hour_rate: 150
 flai:
-  minimum: 1.30.0
+  minimum: 1.31.0
