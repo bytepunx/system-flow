@@ -3,12 +3,15 @@ id: S-0211
 type: story
 nature: improvement
 title: Planning runs again when a story changes, when work ahead of it completes, and on a schedule
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-02T11:54:41Z
-transitions: []
+updated: 2026-10-03T20:33:48Z
+transitions:
+  - to: ready
+    at: 2026-10-03T20:33:48Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/mcpserver]
 after: [S-0209, S-0210]

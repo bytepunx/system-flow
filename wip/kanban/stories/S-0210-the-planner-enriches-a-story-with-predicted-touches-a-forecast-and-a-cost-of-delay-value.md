@@ -3,12 +3,15 @@ id: S-0210
 type: story
 nature: feature
 title: The planner enriches a story with predicted touches, a forecast, and a cost of delay value
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-02T11:54:40Z
-transitions: []
+updated: 2026-10-03T20:33:46Z
+transitions:
+  - to: ready
+    at: 2026-10-03T20:33:46Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/harness, flai/internal/metrics, flai/cmd, flai/internal/storygit, ".claude/agents/planner.md", design/system/strategic-agents.md]
 after: [S-0208]

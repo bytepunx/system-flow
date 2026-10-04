@@ -30,7 +30,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4577
+  seconds: 4753
   models:
     - model: claude-haiku-4-5-20251001
       input: 98
@@ -39,11 +39,11 @@ usage:
       cache_write: 60012
       cost: 0.1533
     - model: claude-opus-5-5
-      input: 600
-      output: 189970
-      cache_read: 40485215
-      cache_write: 720222
-      cost: 16.3111
+      input: 640
+      output: 197902
+      cache_read: 41391414
+      cache_write: 768502
+      cost: 17.0373
     - model: claude-sonnet-5
       input: 120
       output: 33899
