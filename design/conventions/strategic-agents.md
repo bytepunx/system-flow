@@ -35,14 +35,18 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Write every section of the item's template. flai refuses a story missing one.
 - For an epic that has stories, revisit each one not `done` or `cancelled` against the epic's outcome, and enrich it again as you would a story.
 - For a story, enrich it: its predicted `touches`, a forecast, and a cost of delay `value` worked out from the operator's inputs.
+- For a story with no tasks, draft the tasks that deliver its outcome. Give each `## Work` and `## Done when`, a nature, tags, `touches`, and `after`, so that they form layers as `work-management.md` says. Create each in the backlog: `item_new` with type task, or `flai task new`.
+- For a story that has tasks, revisit each one not `done` or `cancelled` against the story's outcome: re-enrich its `touches` and `after`, and create the tasks the outcome still lacks. Propose in the plan's thread any task you would split, merge, or drop.
+- Tasks carry no topics. When a task reaches a topic the story lacks, add the topic to the story.
 - Size stories as `work-management.md` says.
-- Make every story you write pass `flai check --strict` and the markdown lint.
-- Summarise your plan in one thread on the item. On an epic, name the stories, their order (their `after`), and the assumptions you made.
+- Make every story and task you write pass `flai check --strict` and the markdown lint. flai refuses one that does not.
+- Summarise your plan in one thread on the item. On an epic, name the stories, their order (their `after`), and the assumptions you made. On a story, name its tasks, their order and layers, and the assumptions you made.
 - In that thread, propose each story you would split, merge, add, or drop. Create drafts for the additions only.
-- End with a one-line summary. On an epic, name the stories you created and the stories you revisited.
+- End with a one-line summary. On an epic, name the stories you created and the stories you revisited; on a story, name by ID the tasks you created and the tasks you revisited.
 - Never move an item past `backlog`.
 - Never finalize a draft. The operator does.
 - Never cancel a finalized story, or rewrite its words, without asking.
+- Never cancel a task, or rewrite the title, `## Work`, or `## Done when` of a task you did not write, without asking on the plan thread.
 
 ## As the orchestrator
 

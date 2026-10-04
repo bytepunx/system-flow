@@ -37,7 +37,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [move](#flai-move) | Transition a work item, enforcing the workflow rules |
 | [new](#flai-new) | Create a new monorepo from the template |
 | [order](#flai-order) | Place a ready or backlog story in the pull order |
-| [plan](#flai-plan) | Start the planner for an epic or a story: it drafts and enriches the item's stories through flai |
+| [plan](#flai-plan) | Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai |
 | [prime](#flai-prime) | Print the conventions an agent reads at session start, in order |
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
 | [release](#flai-release) | Compute a release for one item, or publish everything accepted since the last release |
@@ -99,7 +99,7 @@ Subcommands:
 - [move](#flai-move): Transition a work item, enforcing the workflow rules
 - [new](#flai-new): Create a new monorepo from the template
 - [order](#flai-order): Place a ready or backlog story in the pull order
-- [plan](#flai-plan): Start the planner for an epic or a story: it drafts and enriches the item's stories through flai
+- [plan](#flai-plan): Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai
 - [prime](#flai-prime): Print the conventions an agent reads at session start, in order
 - [push](#flai-push): Push an acceptance that was made and not pushed
 - [release](#flai-release): Compute a release for one item, or publish everything accepted since the last release
@@ -1035,7 +1035,7 @@ flai guard
 
 Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, prime, thread\_get, and who\_touches; a flai command other than one that reads (board, check, doc search and show, help, issue list, prime, show, stats, stream diff, thread list and show, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, as does anything it cannot read: the guard fails open. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
 
-In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
+In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, task new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP tools, and, in a planner session alone, before Edit, Write, and NotebookEdit as well.
 
@@ -1587,13 +1587,13 @@ Flags:
 
 ### flai plan
 
-Start the planner for an epic or a story: it drafts and enriches the item's stories through flai.
+Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai.
 
 ```text
 flai plan <epic-or-story-id>
 ```
 
-Starts the planner for an epic or a story, now, on this host and as you (S-0208, ADR-0075). It runs in the project's main checkout with the project's planning agent: planning.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent. For an epic with no stories it drafts the stories that deliver its outcome; for a story it adds touches, a forecast, and a cost of delay; for an epic with stories it revisits each one not done or cancelled and drafts what the outcome still lacks. It writes work items and threads through flai alone, moves nothing past backlog, finalizes no draft, and asks you on a thread on the item when an input of yours is missing.
+Starts the planner for an epic or a story, now, on this host and as you (S-0208, ADR-0075). It runs in the project's main checkout with the project's planning agent: planning.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent. For an epic with no stories it drafts the stories that deliver its outcome; for a story it adds touches, a forecast, and a cost of delay, and drafts its tasks or revisits those it has (S-0255); for an epic with stories it revisits each one not done or cancelled and drafts what the outcome still lacks. It writes work items and threads through flai alone, moves nothing past backlog, finalizes no draft, and asks you on a thread on the item when an input of yours is missing.
 
 The run is recorded where flai serve tracks agents, by item, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked, asked, or failed) and logs what it did and cost in wip/agents/planner.md. It is no story's agent: the in-progress limit does not count it, and it holds no story back.
 

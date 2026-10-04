@@ -20,15 +20,16 @@ import (
 func newPlanCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "plan <epic-or-story-id>",
-		Short: "Start the planner for an epic or a story: it drafts and enriches the item's stories through flai",
+		Short: "Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai",
 		Long: `Starts the planner for an epic or a story, now, on this host and as you
 (S-0208, ADR-0075). It runs in the project's main checkout with the
 project's planning agent: planning.agent in system-flow.yaml over the
 project's agent, started with the harnesses and the command you set with
 flai serve agent. For an epic with no stories it drafts the stories that
 deliver its outcome; for a story it adds touches, a forecast, and a cost of
-delay; for an epic with stories it revisits each one not done or cancelled
-and drafts what the outcome still lacks. It writes work items and threads
+delay, and drafts its tasks or revisits those it has (S-0255); for an epic
+with stories it revisits each one not done or cancelled and drafts what the
+outcome still lacks. It writes work items and threads
 through flai alone, moves nothing past backlog, finalizes no draft, and
 asks you on a thread on the item when an input of yours is missing.
 
