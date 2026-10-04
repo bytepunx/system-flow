@@ -145,6 +145,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(newReferenceCmd(a))
 	root.AddCommand(newLicenseCmd(a))
 	root.AddCommand(newPlanCmd(a))
+	root.AddCommand(newForecastCmd(a))
 	return root
 }
 

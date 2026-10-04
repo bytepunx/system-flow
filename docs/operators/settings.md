@@ -94,6 +94,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `planning.currency` | `USD` | The ISO 4217 code, three capital letters such as `EUR`, of every amount in an item's `cost_of_delay` and of `planning.hour_rate` |
 | `planning.hour_rate` | unset | What an hour of work costs, in `planning.currency`; a number of zero or more. Unset means unknown, not free |
 | `planning.cycle` | `168h` | The period a cost of delay's `time_lost_per_cycle` is counted over; a Go duration longer than zero |
+| `planning.default_duration` | `1h` | The work `flai forecast` gives a story when fewer than three done stories with usage are on record to forecast it from; a Go duration longer than zero |
 | `planning.agent.harness` | `agent.harness` | The planner's harness, over the project's `agent` ([Running the planner](../users/flai.md#running-the-planner)) |
 | `planning.agent.model` | `agent.model` | The planner's model |
 | `planning.agent.config.<name>` | `agent.config` | The planner's options for its harness, merged key by key over `agent.config` |
@@ -254,9 +255,10 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
-| `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search) |
+| `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search), [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
 | `--max-sessions` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
 | `--message` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
+| `--min` | [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
 | `--model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--name` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set), [flai serve checks set](../users/flai-reference.md#flai-serve-checks-set) |
 | `--nature` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |

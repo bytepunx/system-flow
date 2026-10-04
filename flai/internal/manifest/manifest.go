@@ -123,6 +123,10 @@ type Planning struct {
 	// Cycle is the period a cost of delay's time lost is counted over, a Go
 	// duration such as 168h; empty means DefaultCycle.
 	Cycle string `yaml:"cycle,omitempty" json:"cycle,omitempty"`
+	// DefaultDuration is the work a story is forecast to take when there is
+	// too little history to forecast it from (S-0210), a Go duration such as
+	// 2h; empty means DefaultDuration.
+	DefaultDuration string `yaml:"default_duration,omitempty" json:"default_duration,omitempty"`
 	// Agent is the planner's agent over the project's (S-0208): what it sets
 	// wins, and what it leaves out is the project's agent's.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
@@ -134,6 +138,10 @@ const DefaultCurrency = "USD"
 
 // DefaultCycle is the planning cycle when planning.cycle is not set: a week.
 const DefaultCycle = 168 * time.Hour
+
+// DefaultDuration is a story's forecast duration when there is too little
+// history and planning.default_duration is not set: an hour.
+const DefaultDuration = time.Hour
 
 var currencyCode = regexp.MustCompile(`^[A-Z]{3}$`)
 
@@ -159,6 +167,20 @@ func (p Planning) CycleDuration() (time.Duration, error) {
 	return d, nil
 }
 
+// FallbackDuration is planning.default_duration as a duration:
+// DefaultDuration when it is empty.
+func (p Planning) FallbackDuration() (time.Duration, error) {
+	s := strings.TrimSpace(p.DefaultDuration)
+	if s == "" {
+		return DefaultDuration, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d <= 0 {
+		return 0, fmt.Errorf("planning.default_duration %q is not a duration longer than zero; write one such as 1h or 90m, or remove it for an hour", p.DefaultDuration)
+	}
+	return d, nil
+}
+
 // Errors are what is wrong with the planning settings, one sentence each;
 // none when they are valid.
 func (p Planning) Errors() []string {
@@ -170,6 +192,9 @@ func (p Planning) Errors() []string {
 		errs = append(errs, fmt.Sprintf("planning.hour_rate %v is not an amount of zero or more; write what an hour of work costs in the project's currency, or remove it", *r))
 	}
 	if _, err := p.CycleDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := p.FallbackDuration(); err != nil {
 		errs = append(errs, err.Error())
 	}
 	return append(errs, p.Agent.problems("planning.agent")...)

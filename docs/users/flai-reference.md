@@ -26,6 +26,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [doc](#flai-doc) | Search, read, and save markdown documents |
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
+| [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
 | [guard](#flai-guard) | Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
@@ -88,6 +89,7 @@ Subcommands:
 - [doc](#flai-doc): Search, read, and save markdown documents
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
+- [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
 - [guard](#flai-guard): Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
@@ -1024,6 +1026,23 @@ Flags:
 | `--topics` strings | topics the epic is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+### flai forecast
+
+Print a story's forecast duration and delivery, worked out from history and the pull order.
+
+```text
+flai forecast <S-nnnn>
+```
+
+Works out how long a story will take from the done stories with usage: the median agent seconds per unit of size (acceptance criteria plus touches) over the done stories that share its nature, model, and size band, falling back to nature and band, then nature, then all, until at least three match; with fewer than three on every rung it uses planning.default\_duration. The delivery plays out the pull order from now: the stories in progress hold their places in progress, then ready and backlog stories start in order as the in-progress limit leaves room, each after the stories in its after. A story ahead with a forecast.duration is played out with it. flai forecast writes nothing; record the result with flai edit --forecast-duration, --forecast-delivery, and --forecast-basis.
+
+Examples:
+
+```bash
+flai forecast S-0210
+flai forecast S-0210 --json
+```
 
 ### flai guard
 
@@ -2667,6 +2686,34 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--clear` | remove the list |
+
+Subcommands:
+
+- [suggest](#flai-touches-suggest): List files often changed together with a story's touches, from git history
+
+#### flai touches suggest
+
+List files often changed together with a story's touches, from git history.
+
+```text
+flai touches suggest <S-nnnn> [path...] [flags]
+```
+
+Seeds are the story's touches, its own and those of its tasks not cancelled, and the paths given. Every commit on the main branch that changed a file under a seed counts the other files it changed; flai's own bookkeeping commits and the wip folder are left out. Nothing is written.
+
+Examples:
+
+```bash
+flai touches suggest S-0037
+flai touches suggest S-0037 flai/internal/workitem --min 3 --limit 10
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--limit` int | at most this many files; 0 for every one (default `20`) |
+| `--min` int | only files changed in at least this many of the seed commits (default `2`) |
 
 ### flai unblock
 

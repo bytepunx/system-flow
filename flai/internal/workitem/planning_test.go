@@ -467,3 +467,21 @@ func TestCostOfDelayStale(t *testing.T) {
 		}
 	}
 }
+
+// S-0210: a story's criteria are the checkbox lines of its acceptance
+// criteria section, ticked or not, and no others.
+func TestCriteriaCount(t *testing.T) {
+	for _, c := range []struct {
+		body string
+		want int
+	}{
+		{"", 0},
+		{"## Acceptance criteria\n- [ ]\n", 0},
+		{"## Acceptance criteria\n- [ ] one\n- [x] two\n  - [X] nested\n- plain\n", 3},
+		{"- [ ] before\n## Acceptance criteria\n- [ ] one\n\n## Notes\n- [ ] after\n", 1},
+	} {
+		if got := CriteriaCount(c.body); got != c.want {
+			t.Errorf("CriteriaCount(%q) = %d, want %d", c.body, got, c.want)
+		}
+	}
+}

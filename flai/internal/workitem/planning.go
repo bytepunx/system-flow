@@ -157,6 +157,12 @@ func (it *Item) Finalize(by string, at time.Time) {
 	it.Finalized = &Finalized{By: orDefault(by, "agent"), At: at.UTC().Format(TimeFormat)}
 }
 
+// CriteriaCount is the number of checkbox lines in a body's
+// "## Acceptance criteria" section, ticked or not (S-0210).
+func CriteriaCount(body string) int {
+	return len(checkbox.FindAllString(criteriaSection(body), -1))
+}
+
 func cloneAmount(v *float64) *float64 {
 	if v == nil {
 		return nil

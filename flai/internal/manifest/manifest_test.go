@@ -104,11 +104,12 @@ func TestIssuesStoryAfter(t *testing.T) {
 }
 
 // S-0199: planning reads from the manifest; unset, the currency is USD, the
-// hour rate unknown, and the cycle a week, and each bad value is an error
+// hour rate unknown, the cycle a week, and the default duration an hour
+// (S-0210), and each bad value is an error
 // naming the key and what to write.
 func TestPlanning(t *testing.T) {
 	p := filepath.Join(t.TempDir(), File)
-	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nplanning:\n  currency: EUR\n  hour_rate: 85.5\n  cycle: 336h\n"
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nplanning:\n  currency: EUR\n  hour_rate: 85.5\n  cycle: 336h\n  default_duration: 90m\n"
 	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -119,10 +120,16 @@ func TestPlanning(t *testing.T) {
 	if d, err := m.Planning.CycleDuration(); m.Planning.CurrencyCode() != "EUR" || m.Planning.HourRate == nil || *m.Planning.HourRate != 85.5 || err != nil || d != 336*time.Hour {
 		t.Errorf("read %+v, cycle %v, %v", m.Planning, d, err)
 	}
+	if d, err := m.Planning.FallbackDuration(); err != nil || d != 90*time.Minute {
+		t.Errorf("default duration %v, %v", d, err)
+	}
 	if errs := m.Planning.Errors(); len(errs) != 0 {
 		t.Errorf("valid planning: %v", errs)
 	}
 	var unset Planning
+	if d, err := unset.FallbackDuration(); err != nil || d != time.Hour {
+		t.Errorf("unset default duration %v, %v", d, err)
+	}
 	if d, err := unset.CycleDuration(); unset.CurrencyCode() != "USD" || unset.HourRate != nil || err != nil || d != 168*time.Hour {
 		t.Errorf("defaults: %s, %v, %v", unset.CurrencyCode(), d, err)
 	}
@@ -145,6 +152,8 @@ func TestPlanning(t *testing.T) {
 		{Planning{Cycle: "1w"}, `planning.cycle "1w" is not a duration longer than zero; write one such as 168h`},
 		{Planning{Cycle: "0s"}, `planning.cycle "0s" is not a duration longer than zero`},
 		{Planning{Cycle: "-24h"}, `planning.cycle "-24h" is not a duration longer than zero`},
+		{Planning{DefaultDuration: "1d"}, `planning.default_duration "1d" is not a duration longer than zero; write one such as 1h`},
+		{Planning{DefaultDuration: "0s"}, `planning.default_duration "0s" is not a duration longer than zero`},
 	} {
 		if got := strings.Join(c.p.Errors(), "; "); !strings.Contains(got, c.want) {
 			t.Errorf("%+v: got %q, want %q", c.p, got, c.want)
