@@ -550,7 +550,7 @@ flai touches T-0121 --clear
 
 `touches` is the list of paths or components a story or task is changing. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path, the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
 
-It is also a claim that decides what starts ([ADR-0046](../../design/adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). A story's claim is its `touches` and those of its tasks that are not done or cancelled; a sub-project's name or tag (`cli`, `flai`) means its path. A ready story is *held* while its claim overlaps the claim of a story in progress or in review: the same path, or one inside the other (`flai/cmd` and `flai/cmd/serve`, not `flai` and `flaiover`). A story with no touches may change anything, so it is held while any story is open, and while it is open itself it holds every ready story. Declare touches when you create a story; the agent that pulls it may widen them.
+It is also a claim that decides what starts ([ADR-0046](../../design/adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). A story's claim is its `touches` and those of its tasks that are not done or cancelled; a sub-project's name or tag (`cli`, `flai`) means its path. A ready story is *held* while its claim overlaps the claim of a story in progress or in review: the same path, or one inside the other (`flai/cmd` and `flai/cmd/serve`, not `flai` and `flaiover`). A story with no touches may change anything, so it is held while any story is open, and while it is open itself it holds every ready story. Declare touches when you create a story; the agent that pulls it may widen them. `flai touches` leaves an edit notice when it changes them, as `flai edit` does, so agents connected over MCP hear of it and `flai serve` may plan the story again ([Running the planner](#running-the-planner)).
 
 A held story is not started by `flai serve` and not offered by `wait_for_work`. The next ready story that is not held goes ahead of it, and it keeps its place and goes first once it is clear. The board says why:
 
@@ -942,7 +942,7 @@ On an epic it opens one thread, the plan: the stories, their order (their `after
 
 For a story it also plans the tasks (S-0255). With none, it drafts the tasks that deliver the story's outcome, each with its work, what done means, the paths it touches, and the tasks it waits for ([Planning a story's tasks](#planning-a-storys-tasks)), in the backlog. With tasks, it revisits each one not done or cancelled and adds what the outcome still lacks. It opens one thread on the story with the plan: the tasks, their order, and the assumptions it made. There it proposes any task it would split, merge, or drop; it does not cancel a task, or rewrite one it did not write, without asking there. The agent that pulls the story reviews the planner's tasks before it works them, and changes what it would plan differently.
 
-It runs only when you ask, behind a host action that is off until you turn it on:
+You start it, behind a host action that is off until you turn it on:
 
 ```bash
 flai serve enable plan     # for this project; --all-projects for every project
@@ -969,11 +969,33 @@ It writes items and threads through flai and nothing else. `flai guard` holds it
 
 flai refuses, and says why, while the `plan` action is off, for a task, for an item done, cancelled, or archived, while a planner already runs for the item, and when the planner's agent names no harness and no command is set. A planner does not count against the in-progress limit and holds no story back. When it ends, `flai serve` records how: `worked`, `asked` (it ended with its question to you open; the answer does not start it again, so ask for another run), or `failed`. It logs what the run did and cost in `wip/agents/planner.md`. The entry's summary is the planner's last line, which on an epic names the stories it created and revisited, and on a story the tasks. Its items are the planned item, then the items under it created during the run, then those changed during it: an epic's stories and their tasks, or a story's tasks. Its output is in `serve/agents/<key>-planner-<time>.log` beside flai serve's state.
 
+While `plan` is on, `flai serve` also plans again on its own, so that forecasts keep up with the board ([ADR-0084](../../design/adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md)):
+
+| When | What happens |
+|------|--------------|
+| You or an agent edit the goal, criteria, or touches of a backlog or ready story that has a forecast or a cost of delay value, or change its cost of delay inputs after its value | The planner runs for that story. A story never planned is not planned on an edit: planning it first is yours to ask. The planner's own edits start nothing |
+| A story is accepted or cancelled, or the pull order changes | What `planning.replan` says. By default flai plays the board out again with no agent and moves the delivery of each ready and backlog forecast that changed, keeping its duration, in one commit, `chore: replan forecasts after …` |
+| `planning.schedule` comes round | The planner runs for every ready story |
+
+```yaml
+planning:
+  replan: deterministic      # the default; or never, or agent
+  schedule: "0 6 * * 1-5"    # five-field cron in UTC, or daily for 00:00 UTC; unset, no schedule
+```
+
+`never` does nothing when work ahead completes or the order changes, and `agent` does what `deterministic` does, then runs the planner for each story whose delivery moved. You set both keys by hand; [project-manifest.md](../../design/system/project-manifest.md) has them, and `flai check` reports a value flai cannot read.
+
+flai serve sees the edits made with `flai edit`, `flai touches`, the dashboard, and the MCP tool `item_edit`; a hand edit of a file is not seen. It runs one planner at a time per project. A story queued more than once runs once, with every trigger, and one whose planner already runs, such as one you asked for, waits its turn. A queued story that can no longer be planned, such as one accepted meanwhile, is dropped. flai serve acts only on what happens while it runs with `plan` on: what passed while it was down, or while `plan` was off, is not acted on.
+
+What it costs: `deterministic` uses no agent, but each forecast it moves takes about a second, because flai checks the project before and after each write, as `flai edit` does. `agent` and a schedule start planner sessions you pay for without asking each time, so both are off until you set them.
+
+To see it, the dashboard's Settings page shows, for the project, whether edits start the planner, the replan policy, and the schedule with its next run ([Settings](flaiover.md#settings)). Each planner run's entry in `wip/agents/planner.md` has a `- Trigger:` line saying what started it: `asked` when you asked, otherwise such as `edited goal, touches by alex`, `accepted S-0210`, `cancelled S-0213`, `reordered`, or `schedule daily`, joined by semicolons when several came together. [Planning again](../../design/system/strategic-agents.md#planning-again) has the whole of it.
+
 #### What they did: activity documents
 
 Each of these agents has one activity document in the project: `wip/agents/planner.md`, `wip/agents/orchestrator.md`, and `wip/agents/analyzer.md` ([ADR-0079](../../design/adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). flai writes them; do not edit them by hand. A document appears with its agent's first activity, in the main checkout, and is committed with the work around it.
 
-Its front matter holds the totals: `kind`, `accrued_cost` in US dollars, `accrued_seconds`, `tasks_completed` (the number of activities logged), and `last_run`, when the newest one ended. Under `## Log` is one entry per activity, newest last: when it ended, a one-line summary, the items it touched, its seconds, and its cost. A cost marked `estimated` is the run's cost apportioned to the activity, as a task's is ([Tokens and cost](#tokens-and-cost)).
+Its front matter holds the totals: `kind`, `accrued_cost` in US dollars, `accrued_seconds`, `tasks_completed` (the number of activities logged), and `last_run`, when the newest one ended. Under `## Log` is one entry per activity, newest last: when it ended, a one-line summary, for a planner run `flai serve` started what triggered it, the items it touched, its seconds, and its cost. A cost marked `estimated` is the run's cost apportioned to the activity, as a task's is ([Tokens and cost](#tokens-and-cost)).
 
 flai measures each activity from the log `flai serve` keeps of the agent's run. An agent that does several things in one run, such as the orchestrator, reports each when it ends with the MCP tool `activity_log`, giving its kind, a summary, and the items it touched. When a run ends, flai logs the time since the last entry as one activity, so an agent that does one thing and ends need not call the tool. `wip/agents/index.md` lists the documents under a heading of their own, `flai check` validates them, and `flai stats --json` reports their totals and entries ([Flow metrics](#flow-metrics)).
 

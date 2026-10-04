@@ -241,6 +241,7 @@ Settings shows how flai on the host is set up for this project:
 
 - which host actions are on;
 - the default agent new stories get;
+- when `flai serve` plans again on its own;
 - the command and harnesses that start agents;
 - the checks run on a story in review;
 - the folders the board offers repositories from;
@@ -250,6 +251,8 @@ Settings shows how flai on the host is set up for this project:
 It changes nothing until the operator runs `flai serve enable settings` on the host. Each section says so and names the command. After that, this project's own settings can be changed here: its host actions, its default agent, and its MCP token. The settings the host keeps for every project also need `flai serve enable settings --all-projects`.
 
 Projects lists every project `flai serve` serves, with its key, name, and folder, and whether it is connected and since when, the last error, or why it cannot be served. A project below an import folder is served as soon as `flai serve` next looks, and joins the switcher without a reload. One it does not serve is listed under "Below the import folders or the folder flai serve was started in, not served" with why: you removed it, its `system-flow.yaml` has no key, or its key is served already for another folder. **Remove** asks first, then stops serving the project, as `flai serve project remove` does, and the switcher drops it without a reload; none of its files is touched. A registered project is unregistered, and the page says how to serve it again on the host. A project served because it is below an import folder, or below the folder `flai serve` was started in, says which folder serves it; removing it puts it on `flai serve`'s list of removed projects, and it moves to the not-served list as removed (S-0123). **Serve** on a removed project takes it off that list, as `flai serve project add` does, and the switcher gains it without a reload. On any other project not served, Serve asks `flai serve` to register it and shows the answer; for no key or a key served already that is a refusal saying what to fix. Removing the folder under Import folders stops every project below it at once. Serve and Remove need `flai serve enable settings` for the project served or removed, and each says so, with the command, where it is off.
+
+Planning again, for this project, is read-only: you set it by hand in `system-flow.yaml`, under `planning` (`replan`, `schedule`). It shows whether edits to a planned story start the planner, which is whether the `plan` host action is on, since replanning and the schedule act only while it is; what happens when work ahead completes or the pull order changes, `never`, `deterministic`, or `agent`, marked when it is the default, with what that means; and the schedule in UTC with its next run, or none. A value flai cannot read is shown with its error. [Running the planner](flai.md#running-the-planner) says what each does.
 
 Commands are written one argument a line, and are run exactly as written, with no shell in between. Each section says whether the change was saved, or why flai refused it. Rotating the dashboard token keeps you logged in and shows the new login link once. Everyone else is logged out.
 

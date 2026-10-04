@@ -7,14 +7,14 @@ topics: [planning, orchestration, analysis]
 
 # Strategic agents
 
-The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. So far the planner runs; the orchestrator and the analyzer have their packs and their activity documents, and nothing starts them yet.
+The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. So far the planner runs, when the operator asks for it and, behind the `plan` host action, on its own; the orchestrator and the analyzer have their packs and their activity documents, and nothing starts them yet.
 
 | Part | Planner | Orchestrator | Analyzer |
 |------|---------|--------------|----------|
 | Pack: `flai prime --role` ([ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md)) | `plan`, with `--epic` or `--story` | `orchestrate` | `analyze` |
 | Activity document ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)) | `wip/agents/planner.md` | `wip/agents/orchestrator.md` | `wip/agents/analyzer.md` |
 | Host action | `plan` | not yet | not yet |
-| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)) | not yet | not yet |
+| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | not yet | not yet |
 
 ## The planner
 
@@ -22,7 +22,7 @@ The planner plans one epic or one story and ends (S-0208, [ADR-0082](../adrs/008
 
 ### Starting it
 
-The operator asks for it. Nothing starts it on a move or a timer.
+The operator asks for it, in one of the ways below. While the `plan` host action is on, `flai serve` also starts it on its own: on an edit, when work ahead completes or the order changes, and on a schedule ([Planning again](#planning-again)).
 
 | Way | For | What it runs |
 |-----|-----|--------------|
@@ -170,7 +170,7 @@ A story the planner writes through `item_new` with a body is checked as `flai st
 
 ### The run and how it ended
 
-The run is recorded in `serve/agents.json` under `plans`, by item, the newest run for each, with the fields a story's run has and `item` in place of `story`. `Running` and `Last` never name a planner run, and the in-progress limit does not count it. Its output is in `serve/agents/<key>-planner-<start>.log`, beside the story agents' logs; each planner run gets a log of its own, at the first free second from its start.
+The run is recorded in `serve/agents.json` under `plans`, by item, the newest run for each, with the fields a story's run has, `item` in place of `story`, and `trigger`, what started it: `asked` when the operator asked, otherwise the replanner's triggers ([What a run records](#what-a-run-records)). `Running` and `Last` never name a planner run, and the in-progress limit does not count it. Its output is in `serve/agents/<key>-planner-<start>.log`, beside the story agents' logs; each planner run gets a log of its own, at the first free second from its start.
 
 When the process ends, or the next look finds it gone, flai serve settles the run (`planEnded`):
 
@@ -180,13 +180,70 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 | `failed` | it exited with a code other than 0, or the project or its threads could not be read |
 | `worked` | otherwise, an exit nobody saw included |
 
-It then logs the activity in `wip/agents/planner.md` with `serve.LogRunEnd`: the time since the last entry, the run's final reply as the summary, the items it planned, and the seconds and cost measured from the log ([metrics.md](metrics.md#strategic-agents-s-0206)).
+It then logs the activity in `wip/agents/planner.md` with `serve.LogRunEnd`: the time since the last entry, the run's final reply as the summary, the run's trigger as the entry's `- Trigger:` line ([agent-narrative.md](agent-narrative.md#strategic-agents-activity-documents)), the items it planned, and the seconds and cost measured from the log ([metrics.md](metrics.md#strategic-agents-s-0206)).
 
 The items are named in this order (`plannedItems`, S-0209): the planned item; then the items under it created since the run started; then those under it created before and changed (`updated`) since. Under an epic are its stories and their tasks; under a story, its tasks. Archived items are left out, and each group is in ID order. When the items cannot be read, flai warns and the entry names the planned item alone. An `asked` planner is not started again when the thread is answered; the operator asks for another run.
 
 The usage apportioned to the activity's span, the same share the entry's cost is, is also charged to the item the run was started for and to every item above it, under `usage.strategic` as the planner's entry, with the entry's seconds (S-0225, [ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [work-hierarchy.md](work-hierarchy.md)). An activity the planner logs with `activity_log` during the run is charged the same way, its own span's share. flai serve finds the item by the run's log: the item whose newest run under `plans` kept its log in the run being measured. A planner a person runs by hand, a run that a newer run for its item has replaced, and an activity outside any run charge nothing. The charge on the items and the entry in `planner.md` are two views of one spend; nothing adds them together. A charge that fails leaves the entry logged and is warned of. Measuring a story from its agents' logs keeps what the planner spent on it.
 
 Every start and failure is a journal entry with action `plan`. `agent.status` carries the runs as `plans`. When a planner run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that names the `item` in place of a story.
+
+### Planning again
+
+While the `plan` host action is on, `flai serve` plans again without the operator asking (S-0211, [ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md)). The operator's own asking is unchanged. A replanner per served project (`internal/serve/replan.go`) looks whenever the project's launcher does: when its work items or threads change, when an agent ends, and every minute. It acts on three triggers.
+
+| Trigger | When | What `flai serve` does |
+|---------|------|------------------------|
+| An edit | Someone other than a planner edits the goal, criteria, or touches of a backlog or ready story whose forecast or cost of delay value is older than the edit; or edits its cost of delay inputs, leaving them newer than its value (`CostOfDelay.Stale`) | Queues the planner for the story |
+| Work ahead completes or the order changes | A story is accepted or cancelled, or the pull order changes | What `planning.replan` says ([The replan policy](#the-replan-policy)) |
+| The schedule | `planning.schedule` comes round | Queues the planner for every ready story, in pull order |
+
+Edits are read from the edit notices in `.flai-cache/edits.jsonl`, which `flai edit`, `flai touches`, the dashboard, and the MCP tool `item_edit` leave ([flai-cli.md](flai-cli.md#commands)); a hand edit of a file leaves none. An edit by an agent named `planner-…` never triggers, so a planner's own writes do not start it again. A story never planned, with neither a forecast nor a cost of delay value, is not planned on an edit: replanning keeps planning fresh, and planning a story first is the operator's to ask. A cost of delay value written alone triggers nothing.
+
+#### The replan policy
+
+`planning.replan` in `system-flow.yaml` ([project-manifest.md](project-manifest.md)) says what happens when a story is accepted or cancelled or the pull order changes:
+
+| Value | What happens |
+|-------|--------------|
+| `never` | Nothing |
+| `deterministic`, the default | Every ready and backlog story with a forecast duration is played out again, in pull order, with `planning.Replay`: the [forecast](#forecast)'s play-out, keeping the story's own duration. Where the delivery moved, the new delivery and basis are written; the duration stays. No agent runs |
+| `agent` | The same, then the planner is queued for each story written, with the triggers |
+
+The replay writes each story through `itemedit.Apply`, the path `flai edit` takes, stamped `by: flai`, with no commit per story. The files written, the items and `wip/agents/index.md`, are then committed together in the main checkout as `chore: replan forecasts after <triggers>`, unless `dashboard.autocommit` is false. flai serve logs `forecasts replanned` with the policy, how many moved, and the triggers. A replay or a write that fails is warned of, and the others go on.
+
+A known cost: `itemedit.Apply` runs `flai check` before and after each write, as `flai edit` does, so a replan that moves many forecasts takes about a second per story it writes.
+
+#### The schedule
+
+`planning.schedule` is a five-field cron expression in UTC (minute, hour, day of month, month, day of week), such as `0 6 * * 1-5`, or `daily`, which is 00:00 UTC. flai parses it itself (`internal/cron`, no library): `*`, values, ranges, comma lists, and steps `/n`; Sunday is 0 or 7; with both day fields given, a day either names matches. An expression that never comes round, such as February 31st, is refused. `flai check` reports one it cannot parse as `manifest.planning`.
+
+The replanner sees the schedule come round at the next look after its time, so at most a minute late. A schedule set or changed comes round first at its next time from then. Times missed between two looks come round once.
+
+#### The queue
+
+The queue holds a story once: a trigger for a story already queued is added to its entry, not queued again. flai serve drains it one planner at a time per project, with its own launcher, so it sees the run end at once and starts the next. It passes over an entry whose item has a planner running, such as one the operator asked for, and comes back to it. Each entry goes through `planCheck`, the checks `serve.Plan` makes ([Starting it](#starting-it)); an entry they refuse, such as a story accepted meanwhile, is dropped and logged at info as `queued planner dropped`, with the reason. A run the operator asks for is not queued.
+
+#### What a run records
+
+A run's triggers, joined by semicolons, are its `trigger` in `serve/agents.json` and the `- Trigger:` line of its activity entry in `wip/agents/planner.md` ([agent-narrative.md](agent-narrative.md#strategic-agents-activity-documents)), such as `- Trigger: accepted S-0210; reordered`.
+
+| Trigger | Said as |
+|---------|---------|
+| The operator asked | `asked` |
+| An edit | `edited <fields> by <who>`, the fields among `goal`, `criteria`, `touches`, and `cost_of_delay` |
+| A story accepted | `accepted <ID>` |
+| A story cancelled | `cancelled <ID>` |
+| The pull order changed | `reordered` |
+| The schedule | `schedule <expression>`, as written in the manifest |
+
+#### What it keeps
+
+What the replanner has seen is kept in memory, from flai serve's start: an edit, a move, or a scheduled time that passed while flai serve was down is not acted on. While `plan` is off it acts on nothing and drops its queue, but keeps up with what happens, so turning `plan` on does not act on the past. A `planning.replan` or `planning.schedule` that is not valid is warned of once in flai serve's log, and nothing is done for it until it is fixed.
+
+#### On the settings page
+
+The Settings page shows the triggers read-only, under "Planning again, for this project" (`planningTriggers` in `cmd/serve_actions.go`): whether edits to a planned story start the planner, which is whether `plan` is on; the replan policy, marked when it is the default; and the schedule with its next run in UTC. A value flai cannot read is shown with its error. The operator sets both keys in `system-flow.yaml` by hand, as the other `planning` keys.
 
 ### Measured on E-0016 (S-0209)
 
