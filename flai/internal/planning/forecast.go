@@ -85,6 +85,19 @@ type Ahead struct {
 // items with usage, and when it will be delivered by playing out the board's
 // pull order and in-progress limit from now. items includes archived ones.
 func Forecast(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time) (Result, error) {
+	return playOut(items, board, plan, id, now, false)
+}
+
+// Replay is Forecast for a story that keeps its own forecast.duration: only
+// its delivery and basis are worked out again. A story without a valid one
+// replays as Forecast gives it.
+func Replay(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time) (Result, error) {
+	return playOut(items, board, plan, id, now, true)
+}
+
+// playOut forecasts story id, played out with its own forecast.duration when
+// keep is set and it has a valid one, else with its estimate.
+func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time, keep bool) (Result, error) {
 	fallback, err := plan.FallbackDuration()
 	if err != nil {
 		return Result{}, fmt.Errorf("cannot forecast %s: %w", id, err)
@@ -108,20 +121,24 @@ func Forecast(items []*workitem.Item, board *workitem.Board, plan manifest.Plann
 	now = now.UTC()
 	f := newForecaster(items, fallback)
 	est := f.estimate(target)
+	dur, basis, def := est.duration, est.basis, est.def
+	if d, ok := ownDuration(target); keep && ok {
+		dur, basis, def = d, "Its own forecast of "+FormatDuration(d), false
+	}
 	var order []string
 	limit := 0
 	if board != nil {
 		order, limit = board.Order, max(board.WIPLimits[workitem.InProgress], 0)
 	}
 	res := Result{
-		ID: id, Duration: FormatDuration(est.duration), DurationSeconds: int64(est.duration / time.Second),
-		Default: est.def, Size: est.size, Criteria: est.criteria, Touches: est.touches,
+		ID: id, Duration: FormatDuration(dur), DurationSeconds: int64(dur / time.Second),
+		Default: def, Size: est.size, Criteria: est.criteria, Touches: est.touches,
 		History: est.history, Limit: limit, Ahead: []Ahead{},
 	}
 	if target.Status == workitem.InProgress || target.Status == workitem.Review {
 		start := startedAt(target, now)
-		res.Delivery = stamp(later(now, start.Add(scale(est.duration, est.cycle))))
-		res.Basis = fmt.Sprintf("%s; %s since it started at %s, so delivery counts from then.", est.basis, phrase(target.Status), stamp(start))
+		res.Delivery = stamp(later(now, start.Add(scale(dur, est.cycle))))
+		res.Basis = fmt.Sprintf("%s; %s since it started at %s, so delivery counts from then.", basis, phrase(target.Status), stamp(start))
 		return res, nil
 	}
 
@@ -141,7 +158,7 @@ func Forecast(items []*workitem.Item, board *workitem.Board, plan manifest.Plann
 	for i, sid := range queue {
 		it := byID[sid]
 		e := f.estimate(it)
-		d, fromForecast := e.duration, false
+		d, fromForecast := dur, false
 		if sid != id {
 			d, fromForecast = f.durationOf(it)
 		}
@@ -156,7 +173,7 @@ func Forecast(items []*workitem.Item, board *workitem.Board, plan manifest.Plann
 		if sid == id {
 			res.Position = i + 1
 			res.Delivery = stamp(delivered[sid])
-			res.Basis = fmt.Sprintf("%s; %s in the pull order with %s, %s.", est.basis, ordinal(i+1), limitPhrase(limit), behind(res.Ahead))
+			res.Basis = fmt.Sprintf("%s; %s in the pull order with %s, %s.", basis, ordinal(i+1), limitPhrase(limit), behind(res.Ahead))
 			break
 		}
 		res.Ahead = append(res.Ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(delivered[sid])})
@@ -288,12 +305,21 @@ func (f *forecaster) estimate(it *workitem.Item) estimate {
 // durationOf is the duration a story ahead is played out with: its own
 // forecast.duration when it has a valid one, else its estimate.
 func (f *forecaster) durationOf(it *workitem.Item) (time.Duration, bool) {
+	if d, ok := ownDuration(it); ok {
+		return d, true
+	}
+	return f.estimate(it).duration, false
+}
+
+// ownDuration is a story's own forecast.duration; false when it has none or
+// it is not a positive duration.
+func ownDuration(it *workitem.Item) (time.Duration, bool) {
 	if it.Forecast != nil && it.Forecast.Duration != "" {
 		if d, err := time.ParseDuration(it.Forecast.Duration); err == nil && d > 0 {
 			return d, true
 		}
 	}
-	return f.estimate(it).duration, false
+	return 0, false
 }
 
 // sizeOf is a story's criteria, its own touches, and its size, at least 1.
