@@ -6,7 +6,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "doc", "edit", "epic", "guard", "help", "issue", "move", "prime", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "prime", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -280,6 +280,36 @@ func TestThePlannerDraftsTasksThroughFlai(t *testing.T) {
 	}
 	if why := planGuard.Check(bash("explorer", "flai task new --story S-0001 'x'")); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
 		t.Errorf("sub-agent task new: %q", why)
+	}
+}
+
+// S-0210: touches suggest, forecast, and cod print and write nothing, so a
+// sub-agent and the planner run them; flai touches with a story's ID sets its
+// touches, which the planner may and a sub-agent may not.
+func TestPlanningReadsAreReads(t *testing.T) {
+	for _, c := range []string{
+		"flai touches suggest S-0001",
+		"flai touches suggest S-0001 flai/cmd design/system/flai-cli.md --min 2 --limit 10 --json",
+		"scripts/flai.sh --config c.json touches suggest S-0001",
+		"flai forecast S-0001 --json",
+		"flai cod E-0001 && flai cod S-0001",
+	} {
+		for _, gr := range []Guard{g, planGuard} {
+			if why := gr.Check(bash("explorer", c)); why != "" {
+				t.Errorf("role %q sub-agent %q refused: %s", gr.Role, c, why)
+			}
+		}
+		if why := planGuard.Check(bash("", c)); why != "" {
+			t.Errorf("planner %q refused: %s", c, why)
+		}
+	}
+	for _, c := range []string{"flai touches S-0001 flai/cmd", "flai touches S-0001 suggest", "flai --config c.json touches S-0001 a/b"} {
+		if why := g.Check(bash("verifier", c)); !strings.Contains(why, "a sub-agent (verifier) cannot run") || !strings.Contains(why, "ADR-0060") {
+			t.Errorf("sub-agent %q: %q", c, why)
+		}
+		if why := planGuard.Check(bash("", c)); why != "" {
+			t.Errorf("planner %q refused: %s", c, why)
+		}
 	}
 }
 

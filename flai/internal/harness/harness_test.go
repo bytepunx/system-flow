@@ -549,6 +549,7 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"If it has no stories, draft the stories that deliver its outcome",
 			"create each with draft true in the backlog (item_new's draft, or flai story new --draft)",
 			"If it has stories, revisit each one not done or cancelled against the epic's outcome, and enrich it again as you would a story: its predicted touches, a forecast, and a cost of delay value",
+			"Run flai touches suggest S-nnnn, adding", "Run flai forecast S-nnnn and flai cod S-nnnn", "under a ### Planning heading",
 			"make each one you write pass flai check --strict",
 			// S-0209: one thread holds the plan and what the planner proposes
 			"Open one thread on E-0016 that summarises the plan: the stories, their order (their after), and the assumptions you made",
@@ -558,6 +559,13 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 		}},
 		{"S-0208", "story", []string{
 			"It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs",
+			// S-0210: from flai's three planning reads, reviewed, with its reasoning in the Notes
+			"Run flai touches suggest S-0208, adding the paths its goal, criteria, and linked design name when it declares no touches",
+			"predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares",
+			"Run flai forecast S-0208 and flai cod S-0208",
+			"Review each figure, adjust it where you have a reason and state the reason",
+			"write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches",
+			"In the story's Notes, under a ### Planning heading that is yours to rewrite, record where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted, and leave the rest of the Notes as it was. If it has no tasks",
 			"Make each task you write pass flai check --strict and the markdown lint",
 			"Open one thread on S-0208 that summarises the plan",
 			"End with a one-line summary that names by ID the tasks you created and the tasks you revisited: flai serve logs",

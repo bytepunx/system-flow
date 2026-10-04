@@ -34,7 +34,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Create each story as a draft (`draft: true`) in the backlog. flai refuses a planner's story that is not one.
 - Write every section of the item's template. flai refuses a story missing one.
 - For an epic that has stories, revisit each one not `done` or `cancelled` against the epic's outcome, and enrich it again as you would a story.
-- For a story, enrich it: its predicted `touches`, a forecast, and a cost of delay `value` worked out from the operator's inputs.
+- For a story, enrich it: its predicted `touches` (`flai touches suggest`, with the goal, the criteria, the design it links, and the code layout; keep every touch it declares), a forecast (`flai forecast`), and a cost of delay `value` (`flai cod`) from the operator's inputs. Review each figure, adjust it with a stated reason, and record where each touch came from and why each figure stands under a `### Planning` heading in the story's Notes, which is yours to rewrite.
 - For a story with no tasks, draft the tasks that deliver its outcome. Give each `## Work` and `## Done when`, a nature, tags, `touches`, and `after`, so that they form layers as `work-management.md` says. Create each in the backlog: `item_new` with type task, or `flai task new`.
 - For a story that has tasks, revisit each one not `done` or `cancelled` against the story's outcome: re-enrich its `touches` and `after`, and create the tasks the outcome still lacks. Propose in the plan's thread any task you would split, merge, or drop.
 - Tasks carry no topics. When a task reaches a topic the story lacks, add the topic to the story.

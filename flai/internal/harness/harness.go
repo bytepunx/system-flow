@@ -257,9 +257,19 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 // already has, and names in its summary the stories it created and revisited
 // (S-0209). A story's planner drafts its tasks, or revisits the open ones,
 // and names in its summary the tasks it created and revisited (S-0255).
+// It enriches a story from flai touches suggest, flai forecast, and flai cod,
+// and records why under a ### Planning heading in the story's Notes (S-0210).
 func planPrompt(r Request) string {
 	kind := workitem.TypeOfID(r.Item)
-	enrich := "its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs"
+	story := r.Item
+	if kind == workitem.Epic {
+		story = "S-nnnn"
+	}
+	enrich := fmt.Sprintf("its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs. "+
+		"Run flai touches suggest %[1]s, adding the paths its goal, criteria, and linked design name when it declares no touches, and predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares. "+
+		"Run flai forecast %[1]s and flai cod %[1]s. "+
+		"Review each figure, adjust it where you have a reason and state the reason, and write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches. "+
+		"In the story's Notes, under a ### Planning heading that is yours to rewrite, record where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted, and leave the rest of the Notes as it was", story)
 	work := fmt.Sprintf("It is a story: enrich it with %[1]s. "+
 		"If it has no tasks, draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for), so that they form layers as work-management.md says, and create each in the backlog with the flai MCP tool item_new, type task and parent the story, or flai task new. "+
 		"If it has tasks, revisit each one not done or cancelled against the story's outcome: re-enrich its touches and after with item_edit, create the tasks the outcome still lacks, and propose in the plan's thread any task you would split, merge, or drop. "+

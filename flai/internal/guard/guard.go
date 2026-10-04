@@ -60,17 +60,20 @@ var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "prime", "
 // subcommands it may run; nil allows the command whatever follows it, and ""
 // allows it with no subcommand.
 var cliReads = map[string][]string{
-	"board":   {""},
-	"check":   nil,
-	"doc":     {"search", "show"},
-	"help":    nil,
-	"issue":   {"list"},
-	"prime":   nil,
-	"show":    nil,
-	"stats":   nil,
-	"stream":  {"diff"},
-	"thread":  {"list", "show"},
-	"version": nil,
+	"board":    {""},
+	"check":    nil,
+	"cod":      nil,
+	"doc":      {"search", "show"},
+	"forecast": nil,
+	"help":     nil,
+	"issue":    {"list"},
+	"prime":    nil,
+	"show":     nil,
+	"stats":    nil,
+	"stream":   {"diff"},
+	"thread":   {"list", "show"},
+	"touches":  {"suggest"},
+	"version":  nil,
 }
 
 // gitReads are the git commands a sub-agent may run.
