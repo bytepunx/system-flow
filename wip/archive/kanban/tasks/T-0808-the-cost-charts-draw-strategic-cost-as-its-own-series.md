@@ -3,19 +3,36 @@ id: T-0808
 type: task
 nature: improvement
 title: The cost charts draw strategic cost as its own series
-status: ready
+status: done
 parent: S-0225
 owner: alex
 created: 2026-10-04T04:07:30Z
-updated: 2026-10-04T04:07:54Z
+updated: 2026-10-04T04:37:32Z
 transitions:
   - to: ready
     at: 2026-10-04T04:07:54Z
+    by: agent-S-0225
+  - to: in-progress
+    at: 2026-10-04T04:29:16Z
+    by: agent-S-0225
+  - to: done
+    at: 2026-10-04T04:37:32Z
     by: agent-S-0225
 stream: S-0225
 tags: []
 touches: [flaiover/src/lib/viz, design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0806, T-0807]
+usage:
+  source: log
+  seconds: 145
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 246
+      cache_read: 1798528
+      cache_write: 91919
+      cost: 0.7711
 ---
 # T-0808 The cost charts draw strategic cost as its own series
 

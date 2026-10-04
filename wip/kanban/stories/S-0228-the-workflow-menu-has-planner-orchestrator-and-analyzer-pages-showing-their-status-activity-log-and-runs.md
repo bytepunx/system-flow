@@ -7,16 +7,26 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-02T11:54:45Z
+updated: 2026-10-04T04:48:23Z
 transitions: []
 tags: [dashboard]
-touches: [flaiover/src/routes, flaiover/src/lib/components, flaiover/src/routes/api, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes, flaiover/src/lib/components, flaiover/src/routes/api, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/sitemenu.ts, flai/internal/hostapi]
 after: [S-0208, S-0218, S-0223]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 97.56
+  by: planner-E-0016
+  at: 2026-10-04T04:48:23Z
+forecast:
+  duration: 2h
+  delivery: 2026-10-05T00:30:00Z
+  basis: "Three pages with live updates and run forms, each larger than S-0202 (1197 s), like S-0204 (4322 s) in all; waits for S-0218 and S-0223."
+  by: planner-E-0016
+  at: 2026-10-04T04:45:04Z
 ---
 # S-0228 The Workflow menu has Planner, Orchestrator, and Analyzer pages showing their status, activity log, and runs
 

@@ -3,11 +3,11 @@ id: T-0807
 type: task
 nature: improvement
 title: flai show and the item page show the expected cost and the strategic usage
-status: in-progress
+status: done
 parent: S-0225
 owner: alex
 created: 2026-10-04T04:07:29Z
-updated: 2026-10-04T04:21:11Z
+updated: 2026-10-04T04:29:16Z
 transitions:
   - to: ready
     at: 2026-10-04T04:07:53Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-04T04:21:11Z
     by: agent-S-0225
+  - to: done
+    at: 2026-10-04T04:29:16Z
+    by: agent-S-0225
 stream: S-0225
 tags: []
 touches: [flai/cmd/show.go, flaiover/src/routes/items, flaiover/src/lib/usage.ts, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
 after: [T-0806]
+usage:
+  source: log
+  seconds: 485
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 148
+      output: 1018
+      cache_read: 10759967
+      cache_write: 140707
+      cost: 4.4462
 ---
 # T-0807 flai show and the item page show the expected cost and the strategic usage
 

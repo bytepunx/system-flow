@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T00:41:16Z
+updated: 2026-10-04T04:48:16Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:57Z
@@ -16,13 +16,23 @@ transitions:
     at: 2026-10-04T00:41:16Z
     by: alex
 tags: [dashboard]
-touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts]
 after: [S-0205, S-0225, S-0226, S-0227]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 48.78
+  by: planner-E-0016
+  at: 2026-10-04T04:48:16Z
+forecast:
+  duration: 1h
+  delivery: 2026-10-05T14:30:00Z
+  basis: "Two charts over strategic_days, which flai stats has; small like S-0202 (1197 s) with a new menu group; delivery waits for its after, S-0227, at the end of the flai lane."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:14Z
 ---
 # S-0216 Strategic Cost and Strategic Use charts show what the planner, orchestrator, and analyzer add against delivery
 

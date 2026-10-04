@@ -7,19 +7,29 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-03T20:33:46Z
+updated: 2026-10-04T04:48:13Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:46Z
     by: alex
 tags: [flai]
-touches: [flai/internal/harness, flai/internal/metrics, flai/cmd, flai/internal/storygit, ".claude/agents/planner.md", design/system/strategic-agents.md]
+touches: [flai/internal/harness, flai/internal/metrics, flai/cmd, flai/internal/storygit, ".claude/agents/planner.md", design/system/strategic-agents.md, flai/internal/workitem/planning.go, flai/internal/guard, flai/internal/manifest, template/root/.claude/agents/planner.md, template/CHANGELOG.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [S-0208]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 97.56
+  by: planner-E-0016
+  at: 2026-10-04T04:48:13Z
+forecast:
+  duration: 2h
+  delivery: 2026-10-04T09:00:00Z
+  basis: "Three new deterministic commands with fixture tests plus a prompt change, sized above S-0205 (4208 s) and S-0208 (3912 s); starts when S-0209, S-0225 and S-0255 are accepted, about 06:00Z."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:29Z
 ---
 # S-0210 The planner enriches a story with predicted touches, a forecast, and a cost of delay value
 

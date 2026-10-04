@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T00:41:39Z
+updated: 2026-10-04T04:48:15Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -16,13 +16,23 @@ transitions:
     at: 2026-10-04T00:41:39Z
     by: alex
 tags: [dashboard]
-touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, docs/users/flai.md]
 after: [S-0205]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 85.37
+  by: planner-E-0016
+  at: 2026-10-04T04:48:15Z
+forecast:
+  duration: 1h45m
+  delivery: 2026-10-04T11:30:00Z
+  basis: "Parallelism and touches drift exist in flai stats (claims.days, claims.drift); hold time by reason is a new metric needing an ADR; waits for S-0210 to free flai/internal/metrics."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:12Z
 ---
 # S-0214 Charts show parallelism, holds, and touches drift
 

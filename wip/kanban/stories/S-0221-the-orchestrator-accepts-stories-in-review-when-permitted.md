@@ -7,16 +7,26 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-02T11:54:43Z
+updated: 2026-10-04T04:48:20Z
 transitions: []
 tags: [flai]
-touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs]
+touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs, flai/cmd/accept.go, flai/internal/guard, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/items, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md]
 after: [S-0218]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 73.17
+  by: planner-E-0016
+  at: 2026-10-04T04:48:20Z
+forecast:
+  duration: 1h30m
+  delivery: 2026-10-05T05:30:00Z
+  basis: "An ADR refining ADR-0032, the orchestrator's identity on accept.run and flai accept, guard checks, and who-accepted on the review page; like S-0201 (3771 s); serial after S-0220 on harness."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:56Z
 ---
 # S-0221 The orchestrator accepts stories in review when permitted
 

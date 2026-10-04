@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-04T04:13:17Z
+updated: 2026-10-04T04:46:05Z
 transitions:
   - to: ready
     at: 2026-10-03T05:34:40Z
@@ -16,7 +16,7 @@ transitions:
     at: 2026-10-04T03:59:46Z
     by: system-flow
 tags: [flai]
-touches: [flai/internal/harness, flai/internal/guard, flai/internal/mcpserver, flai/internal/serve, flai/cmd/guard.go, ".claude/agents/planner.md", template, design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, design/issues/I-0069-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md]
+touches: [flai/internal/harness, flai/internal/guard, flai/internal/mcpserver, flai/internal/serve, flai/cmd/guard.go, ".claude/agents/planner.md", template, design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, design/issues/I-0069-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md, design/issues/I-0070-item-edit-refuses-a-touch-that-starts-with-a-dot-though-flai-touches-accepts-it.md]
 after: [S-0208]
 agent:
   harness: claude-code

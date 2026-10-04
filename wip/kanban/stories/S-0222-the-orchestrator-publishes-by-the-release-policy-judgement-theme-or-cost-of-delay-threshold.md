@@ -7,16 +7,26 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-02T11:54:43Z
+updated: 2026-10-04T04:48:21Z
 transitions: []
 tags: [flai]
-touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md]
+touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md, flai/internal/guard, flai/internal/manifest, design/system/project-manifest.md, docs/operators/settings.md]
 after: [S-0218, S-0174]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 60.98
+  by: planner-E-0016
+  at: 2026-10-04T04:48:21Z
+forecast:
+  duration: 1h15m
+  delivery: 2026-10-05T07:30:00Z
+  basis: "Policy evaluation already in S-0217's flai release --evaluate; this adds the prompt, whole_epics, refusal threads and tests; like S-0203 (1555 s) doubled; serial after S-0221."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:58Z
 ---
 # S-0222 The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold
 

@@ -7,16 +7,26 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-02T11:54:44Z
+updated: 2026-10-04T04:48:21Z
 transitions: []
 tags: [flai, dashboard]
-touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template/, design/analysis]
+touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs]
 after: [S-0206, S-0207]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 121.95
+  by: planner-E-0016
+  at: 2026-10-04T04:48:21Z
+forecast:
+  duration: 2h30m
+  delivery: 2026-10-04T18:00:00Z
+  basis: "A second strategic agent behind a host action like S-0208 (3912 s) plus a CLI, MCP tool, schedule, path guard and a new design/analysis folder in the layout and check; serial after S-0211 on serve."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:52Z
 ---
 # S-0223 The analyzer runs on demand or on a schedule and writes a report under design/analysis
 

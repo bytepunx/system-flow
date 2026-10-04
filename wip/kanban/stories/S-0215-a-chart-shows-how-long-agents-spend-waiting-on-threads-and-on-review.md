@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T00:41:41Z
+updated: 2026-10-04T04:48:15Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -16,13 +16,23 @@ transitions:
     at: 2026-10-04T00:41:41Z
     by: alex
 tags: [dashboard]
-touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md]
 after: [S-0205]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 48.78
+  by: planner-E-0016
+  at: 2026-10-04T04:48:15Z
+forecast:
+  duration: 1h
+  delivery: 2026-10-04T13:00:00Z
+  basis: "One chart over waiting.weeks, which flai stats has, and a longest-waits table that may need a per-wait list in the metrics; like S-0202 (1197 s) plus the table."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:13Z
 ---
 # S-0215 A chart shows how long agents spend waiting on threads and on review
 

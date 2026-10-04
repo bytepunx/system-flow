@@ -6,7 +6,7 @@ title: Introduce Orchestration, Planning, and Analysis agents
 status: in-progress
 owner: alex
 created: 2026-10-02T10:51:49Z
-updated: 2026-10-04T00:51:58Z
+updated: 2026-10-04T04:48:12Z
 transitions:
   - to: ready
     at: 2026-10-03T06:23:24Z
@@ -18,7 +18,7 @@ tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
 usage:
   source: sum
-  seconds: 37623
+  seconds: 38253
   estimated: true
   models:
     - model: claude-haiku-4-5-20251001
@@ -28,17 +28,25 @@ usage:
       cache_write: 975785
       cost: 3.6855
     - model: claude-opus-5-5
-      input: 6338
-      output: 1800579
-      cache_read: 381539674
-      cache_write: 9045535
-      cost: 170.1394
+      input: 6522
+      output: 1801843
+      cache_read: 394098169
+      cache_write: 9278161
+      cost: 175.3567
     - model: claude-sonnet-5
       input: 1026
       output: 264112
       cache_read: 37574092
       cache_write: 1993445
       cost: 15.1417
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 10h
+    by: alex
+    at: 2026-10-04T04:42:30Z
+  value: 1500
+  by: planner-E-0016
+  at: 2026-10-04T04:48:12Z
 ---
 # E-0016 Introduce Orchestration, Planning, and Analysis agents
 

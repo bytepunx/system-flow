@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-04T00:41:46Z
+updated: 2026-10-04T04:48:14Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -16,13 +16,23 @@ transitions:
     at: 2026-10-04T00:41:46Z
     by: alex
 tags: [dashboard]
-touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs]
 after: [S-0205]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 73.17
+  by: planner-E-0016
+  at: 2026-10-04T04:48:14Z
+forecast:
+  duration: 1h30m
+  delivery: 2026-10-04T15:30:00Z
+  basis: "cod-outstanding and cod-incurred exist in flai stats; the order projection under cod and WSJF is new arithmetic in flai with an ADR; fourth in the dashboard lane and after S-0217's ordering."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:08Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 

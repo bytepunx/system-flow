@@ -7,16 +7,26 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-02T11:54:43Z
+updated: 2026-10-04T04:48:19Z
 transitions: []
 tags: [flai]
-touches: [flai/internal/harness, ".claude/agents/orchestrator.md", template/, design/system/strategic-agents.md]
+touches: [flai/internal/harness, ".claude/agents/orchestrator.md", template, design/system/strategic-agents.md, flai/internal/guard, flai/internal/serve]
 after: [S-0218, S-0209]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 73.17
+  by: planner-E-0016
+  at: 2026-10-04T04:48:19Z
+forecast:
+  duration: 1h30m
+  delivery: 2026-10-05T00:00:00Z
+  basis: "Prompt behaviour over S-0217's commands with a fixture-board test per permission; like S-0201 (3771 s); serial after S-0218 on flai/internal/harness."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:49Z
 ---
 # S-0219 The orchestrator moves and orders work by its policy within its permissions
 

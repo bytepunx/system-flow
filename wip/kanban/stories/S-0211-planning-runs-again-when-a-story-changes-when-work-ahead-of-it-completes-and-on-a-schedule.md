@@ -7,19 +7,29 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-03T20:33:48Z
+updated: 2026-10-04T04:48:13Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:48Z
     by: alex
 tags: [flai]
-touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/mcpserver]
+touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/manifest, flaiover/src/routes/settings, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]
 after: [S-0209, S-0210]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 85.37
+  by: planner-E-0016
+  at: 2026-10-04T04:48:13Z
+forecast:
+  duration: 1h45m
+  delivery: 2026-10-04T14:30:00Z
+  basis: "Event triggers, a new scheduler in flai serve (none exists), coalescing and a settings readout, like S-0206 (4753 s); serial after S-0210 and S-0217, which share flai/cmd, hostapi and mcpserver."
+  by: planner-E-0016
+  at: 2026-10-04T04:44:04Z
 ---
 # S-0211 Planning runs again when a story changes, when work ahead of it completes, and on a schedule
 

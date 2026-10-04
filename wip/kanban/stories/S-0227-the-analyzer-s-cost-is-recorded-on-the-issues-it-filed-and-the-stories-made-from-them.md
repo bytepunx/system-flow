@@ -7,16 +7,26 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-02T11:54:45Z
+updated: 2026-10-04T04:48:23Z
 transitions: []
 tags: [flai]
-touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md]
+touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/issues, flai/internal/metrics, design/system/continuous-improvement.md, design/adrs]
 after: [S-0223]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 60.98
+  by: planner-E-0016
+  at: 2026-10-04T04:48:23Z
+forecast:
+  duration: 1h15m
+  delivery: 2026-10-05T13:00:00Z
+  basis: "Issues carry no usage today, so this adds a usage field to issues with an ADR and carries it to the story made from an issue, beyond S-0225's generic strategic entry; like S-0203 (1555 s) doubled."
+  by: planner-E-0016
+  at: 2026-10-04T04:45:02Z
 ---
 # S-0227 The analyzer's cost is recorded on the issues it filed and the stories made from them
 
