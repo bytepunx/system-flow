@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -314,21 +315,29 @@ func Run(ctx context.Context, o Options) error {
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
 			// An agent starting or ending changes no file: the dashboard is told
-			// so that a story page shows it at once (S-0154), and a planner's
-			// item page, with the item in place of the story (S-0208).
+			// so that a story page shows it at once (S-0154), a planner's
+			// item page, with the item in place of the story (S-0208), and
+			// the orchestrator's run, with its role (S-0218).
 			starter.changed = func(run *AgentRun) {
 				about := map[string]string{"project": e.Key, "story": run.Story}
-				if run.Item != "" {
+				switch {
+				case run.Item != "":
 					about = map[string]string{"project": e.Key, "item": run.Item}
+				case run.orchestrates():
+					about = map[string]string{"project": e.Key, "role": conventions.RoleOrchestrate}
 				}
 				r.client.Notify(AgentChanged, about)
 			}
 			// The replanner looks after each look of the launcher: on the same
 			// changes, when an agent ends and its queue can move on, and every
 			// minute, which is when the schedule is seen to come round (S-0211).
+			// So does the orchestrator, which starts its run again when it
+			// ends and stops it once the action is off (S-0218).
 			replanner := newReplanner(o, e, starter)
+			orch := newOrchestrator(o, e, starter)
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			replanner.look(cctx)
+			orch.look(cctx)
 			go func() {
 				for {
 					select {
@@ -341,6 +350,7 @@ func Run(ctx context.Context, o Options) error {
 						starter.look(cctx, false)
 					}
 					replanner.look(cctx)
+					orch.look(cctx)
 				}
 			}()
 			go func() {
@@ -352,6 +362,7 @@ func Run(ctx context.Context, o Options) error {
 					if slashed := filepath.ToSlash(rel); strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") {
 						starter.look(cctx, false)
 						replanner.look(cctx)
+						orch.look(cctx)
 					}
 				})
 				r.client.Run(cctx)

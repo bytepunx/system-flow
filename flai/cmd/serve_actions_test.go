@@ -75,7 +75,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, auto-approve, auto-publish, checks, dashboard, host, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, auto-approve, auto-publish, checks, dashboard, host, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -185,6 +185,53 @@ func TestServeAgentCommand(t *testing.T) {
 	}
 	if got := (&app{}).agentConfig(root); len(got.Command) != 0 {
 		t.Errorf("cleared: %+v", got)
+	}
+}
+
+// S-0218: orchestrate is off until the operator enables it, flai serve is
+// told at every look whether it is on, and agent.status carries the
+// project's orchestrator run, null before the first.
+func TestServeOrchestrateAction(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	root := tempProject(t)
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "orchestrate: off everywhere") || !strings.Contains(out, "orchestration.permissions") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if (&app{}).agentConfig(root).Orchestrate {
+		t.Error("orchestrate is on by default")
+	}
+	status := func() string {
+		t.Helper()
+		got, err := json.Marshal((&app{}).host().Agent(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(got)
+	}
+	if got := status(); !strings.Contains(got, `"orchestrator":null`) {
+		t.Errorf("agent.status before any run: %s", got)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "enable", "orchestrate"); code != 0 || !strings.Contains(out, "orchestrate enabled for t") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if !(&app{}).agentConfig(root).Orchestrate {
+		t.Error("enabled, flai serve is not told")
+	}
+	run := `{"` + root + `":{"orchestrator":{"story":"","harness":"command","command":"run-agent","agent":"orchestrator","pid":42,"started":"2026-10-05T10:00:00Z","session":"s","log":"/l/t-orchestrator-20261005T100000Z.log"}}}`
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(run), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := status(); !strings.Contains(got, `"orchestrator":{"story":"","harness":"command","command":"run-agent","agent":"orchestrator","pid":42,"started":"2026-10-05T10:00:00Z"`) || !strings.Contains(got, `"running":null`) {
+		t.Errorf("agent.status with a run: %s", got)
+	}
+	runIn(t, root, "serve", "disable", "orchestrate")
+	if (&app{}).agentConfig(root).Orchestrate {
+		t.Error("disabled, flai serve is still told it is on")
 	}
 }
 

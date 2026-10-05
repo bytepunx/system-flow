@@ -321,6 +321,12 @@ const ActionSettings = "settings"
 // itself.
 const ActionPlan = "plan"
 
+// ActionOrchestrate is the host action under which flai serve runs one
+// orchestrator per project for as long as it is on (S-0218): started when it
+// is turned on, started again when a run ends, and stopped when it is turned
+// off. No method asks for it; flai serve sees it at every look.
+const ActionOrchestrate = "orchestrate"
+
 // Actions are the host actions there are, with what each lets a dashboard
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
@@ -333,6 +339,7 @@ var Actions = map[string]string{
 	ActionHost:        "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
+	ActionOrchestrate: "run the orchestrator, with the project's orchestration agent (orchestration.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for as long as this is on: started again when it ends, a minute after a failure, and stopped when this is turned off; it keeps work moving through flai only as far as orchestration.permissions in system-flow.yaml allow, each off by default, and logs each decision in wip/agents/orchestrator.md",
 }
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):
@@ -365,6 +372,11 @@ type Host struct {
 	// for an epic or a story (S-0259), as AgentStream reads a story's agent's;
 	// ErrNoAgent when it started none. Nil when nothing starts agents here.
 	PlanStream func(root, item string, after int64) (any, error)
+	// OrchestratorStream reads the stream of the newest orchestrator flai
+	// serve started for the project (S-0218), as AgentStream reads a story's
+	// agent's; ErrNoAgent when it started none. Nil when nothing starts
+	// agents here.
+	OrchestratorStream func(root string, after int64) (any, error)
 	// Settings reports the host's settings as they apply to a project
 	// (S-0105), for the dashboard's settings page. Nil when there are none.
 	Settings func(root string) any

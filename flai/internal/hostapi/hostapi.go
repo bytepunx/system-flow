@@ -223,22 +223,35 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// agent.stream: what the newest agent flai serve started for a story
 		// said and did, read from its log from the byte offset after, or its
 		// tail when after is absent (S-0142); with plan in place of story, the
-		// newest planner flai serve started for that epic or story (S-0259).
+		// newest planner flai serve started for that epic or story (S-0259);
+		// with orchestrator true, the project's newest orchestrator (S-0218).
 		// Read-only, like agent.status.
 		"agent.stream": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
-				Story string `json:"story"`
-				Plan  string `json:"plan"`
-				After *int64 `json:"after"`
+				Story        string `json:"story"`
+				Plan         string `json:"plan"`
+				Orchestrator bool   `json:"orchestrator"`
+				After        *int64 `json:"after"`
 			}
 			if e := params(raw, &in); e != nil {
 				return nil, e
 			}
-			if (in.Story == "") == (in.Plan == "") {
-				return nil, bad("give one of story, for a story's agent, and plan, for the planner of an epic or a story")
+			given := 0
+			for _, g := range []bool{in.Story != "", in.Plan != "", in.Orchestrator} {
+				if g {
+					given++
+				}
+			}
+			if given != 1 {
+				return nil, bad("give one of story, for a story's agent, plan, for the planner of an epic or a story, and orchestrator, for the project's orchestrator")
 			}
 			id, read := in.Story, host.AgentStream
-			if in.Plan != "" {
+			if in.Orchestrator {
+				read = nil
+				if host.OrchestratorStream != nil {
+					read = func(root, _ string, after int64) (any, error) { return host.OrchestratorStream(root, after) }
+				}
+			} else if in.Plan != "" {
 				if !planID.MatchString(in.Plan) {
 					return nil, bad("%q is not an epic's or a story's ID", in.Plan)
 				}

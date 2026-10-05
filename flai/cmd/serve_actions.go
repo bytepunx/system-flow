@@ -51,13 +51,18 @@ func (a *app) host() hostapi.Host {
 			if plans == nil {
 				plans = map[string]*serve.AgentRun{}
 			}
-			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans}
+			// the newest orchestrator run, null before the first (S-0218)
+			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
+				"orchestrator": st.Orchestrator}
 		},
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
 		},
 		PlanStream: func(root, item string, after int64) (any, error) {
 			return serve.PlanStream(a.serveDir().AgentStates()[root], item, after)
+		},
+		OrchestratorStream: func(root string, after int64) (any, error) {
+			return serve.OrchestratorStream(a.serveDir().AgentStates()[root], after)
 		},
 		Settings: a.hostSettings,
 		Requests: a.serveDir().Requests,
@@ -460,12 +465,13 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	}
 	self, _ := os.Executable()
 	return serve.AgentConfig{
-		Flai:      self,
-		Enabled:   cfg.ActionEnabled(hostapi.ActionAgent, root),
-		Plan:      cfg.ActionEnabled(hostapi.ActionPlan, root),
-		Command:   cfg.Agent.Command,
-		Harnesses: hosts,
-		Name:      cfg.Agent.Name,
+		Flai:        self,
+		Enabled:     cfg.ActionEnabled(hostapi.ActionAgent, root),
+		Plan:        cfg.ActionEnabled(hostapi.ActionPlan, root),
+		Orchestrate: cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
+		Command:     cfg.Agent.Command,
+		Harnesses:   hosts,
+		Name:        cfg.Agent.Name,
 	}
 }
 

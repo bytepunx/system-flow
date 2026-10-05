@@ -189,7 +189,7 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 		items = []string{run.Item}
 		l.warn("planner's items not named", "item", run.Item, "err", err)
 	}
-	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner, run.Trigger, items); err != nil {
+	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner, run.Trigger, "", items); err != nil {
 		l.warn("planner activity not logged", "item", run.Item, "err", err)
 	}
 }

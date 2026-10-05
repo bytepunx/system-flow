@@ -733,6 +733,38 @@ func TestPlanRunNeedsThePlanAction(t *testing.T) {
 	}
 }
 
+// S-0218: orchestrate is a host action the dashboard sees, as plan is, off
+// until the operator turns it on, and turned on and off from the settings
+// page as the others are; no method of its own asks for it.
+func TestOrchestrateIsAHostActionTheDashboardSees(t *testing.T) {
+	p := withDocs(t)
+	means := Actions[ActionOrchestrate]
+	for _, w := range []string{"orchestration.agent", "orchestration.permissions", "stopped when this is turned off"} {
+		if !strings.Contains(means, w) {
+			t.Errorf("orchestrate says what it does without %q: %q", w, means)
+		}
+	}
+	if !DashboardSees(ActionOrchestrate) {
+		t.Error("the dashboard is not told of the orchestrate action")
+	}
+	if on, ok := enabledActions(Host{}, p.Root)[ActionOrchestrate]; !ok || on {
+		t.Errorf("project.info names orchestrate, off by default: %v %v", on, ok)
+	}
+	for name, sp := range specs() {
+		if sp.action == ActionOrchestrate {
+			t.Errorf("%s asks for orchestrate; flai serve sees it at every look", name)
+		}
+	}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, Host{Enabled: func(action, _ string) bool { return action == ActionSettings }})
+	if _, e := m["settings.action"](context.Background(), p, json.RawMessage(`{"action":"orchestrate","on":true,"request_id":"req-00000031"}`)); e != nil {
+		t.Fatalf("settings.action: %+v", e)
+	}
+	if len(rec.runs) != 1 || strings.Join(rec.runs[0].Args, " ") != "serve enable orchestrate --json" {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+}
+
 // S-0142: agent.stream reads a story's agent's stream through the host, from
 // an offset or the tail, and refuses what is not a story or has no agent.
 func TestAgentStreamAsksTheHost(t *testing.T) {
@@ -835,6 +867,40 @@ func TestAgentStreamOfAPlanAsksTheHost(t *testing.T) {
 	}
 	if _, e := MethodsFor("test", nil, Host{AgentStream: host.AgentStream})["agent.stream"](context.Background(), p, json.RawMessage(`{"plan":"E-0001"}`)); e == nil || e.Code != NotFound {
 		t.Errorf("on a host that reads no planner's stream: %+v", e)
+	}
+}
+
+// S-0218: agent.stream with orchestrator reads the project's orchestrator's
+// stream through the host's OrchestratorStream, and takes it alone.
+func TestAgentStreamOfTheOrchestratorAsksTheHost(t *testing.T) {
+	p := withDocs(t)
+	var asked []int64
+	host := Host{
+		AgentStream: func(root, story string, after int64) (any, error) { return nil, errors.New("asked a story's agent") },
+		PlanStream:  func(root, item string, after int64) (any, error) { return nil, errors.New("asked a planner") },
+		OrchestratorStream: func(root string, after int64) (any, error) {
+			if root != p.Root {
+				t.Errorf("root %q, want %q", root, p.Root)
+			}
+			asked = append(asked, after)
+			return map[string]any{"agent": "orchestrator"}, nil
+		},
+	}
+	m := MethodsFor("test", nil, host)["agent.stream"]
+	res, e := m(context.Background(), p, json.RawMessage(`{"orchestrator":true,"after":5}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if b, _ := json.Marshal(res); string(b) != `{"agent":"orchestrator"}` || len(asked) != 1 || asked[0] != 5 {
+		t.Errorf("answer %s, asked %v", b, asked)
+	}
+	for _, raw := range []string{`{"orchestrator":true,"story":"S-0001"}`, `{"orchestrator":true,"plan":"E-0001"}`, `{"orchestrator":false}`} {
+		if _, e := m(context.Background(), p, json.RawMessage(raw)); e == nil || e.Code != channel.CodeInvalidParams {
+			t.Errorf("%s: %+v, want invalid params", raw, e)
+		}
+	}
+	if _, e := MethodsFor("test", nil, Host{AgentStream: host.AgentStream})["agent.stream"](context.Background(), p, json.RawMessage(`{"orchestrator":true}`)); e == nil || e.Code != NotFound {
+		t.Errorf("on a host that reads no orchestrator's stream: %+v", e)
 	}
 }
 

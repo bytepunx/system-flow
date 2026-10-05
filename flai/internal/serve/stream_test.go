@@ -244,6 +244,25 @@ func TestPlanStreamReadsAPlannerRun(t *testing.T) {
 	}
 }
 
+// S-0218: the orchestrator's stream is read from the project's newest
+// orchestrator run, and a project with none has no stream.
+func TestOrchestratorStreamReadsTheRun(t *testing.T) {
+	text := strings.Join(sessionLines, "\n") + "\n"
+	st, log := streamState(t, text, false)
+	if _, err := OrchestratorStream(st, -1); !errors.Is(err, hostapi.ErrNoAgent) {
+		t.Errorf("no orchestrator run: err = %v, want hostapi.ErrNoAgent", err)
+	}
+	st.Orchestrator = &AgentRun{Agent: "orchestrator", Started: "2026-09-29T06:00:00Z", Log: log, PID: 44}
+	got, err := OrchestratorStream(st, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameEntries(t, got.Entries, sessionEntries)
+	if got.Item != "" || got.Story != "" || got.Agent != "orchestrator" || !got.Running || got.Next != int64(len(text)) {
+		t.Errorf("run = %+v", got)
+	}
+}
+
 func TestStreamOfARunThatHasNoLog(t *testing.T) {
 	st := AgentState{Stories: map[string]*AgentRun{
 		"S-0001": {Story: "S-0001", Started: "2026-09-29T05:00:00Z", Ended: "2026-09-29T05:00:00Z", Error: "claude: executable file not found in $PATH", Outcome: OutcomeFailed},

@@ -64,9 +64,12 @@ type AgentConfig struct {
 	Enabled bool
 	// Plan is whether the plan host action is enabled for the project: the
 	// operator may have the planner started for an epic or a story (S-0208).
-	Plan    bool
-	Command []string
-	Name    string // FLAI_AGENT is this and the story's ID; "agent" when empty
+	Plan bool
+	// Orchestrate is whether the orchestrate host action is enabled for the
+	// project: flai serve runs its orchestrator while it is (S-0218).
+	Orchestrate bool
+	Command     []string
+	Name        string // FLAI_AGENT is this and the story's ID; "agent" when empty
 	// Harnesses are the program and arguments each harness runs with on this
 	// host, the command among them when one is set (S-0104).
 	Harnesses map[string]harness.Host
@@ -98,11 +101,13 @@ const (
 )
 
 // AgentRun is one agent flai serve started, or failed to: a story's agent,
-// or the planner for an item (S-0208).
+// the planner for an item (S-0208), or the project's orchestrator (S-0218).
 type AgentRun struct {
 	Story string `json:"story"`
 	// Item is the epic or story a planner run plans; empty on a story's
 	// agent's run, whose story is Story, and Story is empty on a planner's.
+	// Both are empty on the orchestrator's run, which works the whole
+	// project.
 	Item    string `json:"item,omitempty"`
 	Harness string `json:"harness,omitempty"`
 	Model   string `json:"model,omitempty"`
@@ -163,6 +168,9 @@ func agentChanged(run *AgentRun, now *manifest.Agent) bool {
 	return run.StoryAgent != nil && !run.StoryAgent.Same(now)
 }
 
+// orchestrates is the orchestrator's run: one for no story and no item.
+func (r *AgentRun) orchestrates() bool { return r.Story == "" && r.Item == "" }
+
 // live is a run that has not ended.
 func (r *AgentRun) live() bool { return r != nil && r.Ended == "" && r.Error == "" && r.PID > 0 }
 
@@ -184,11 +192,17 @@ type AgentState struct {
 	// item's ID (S-0208). They are no story's runs: Running and Last never
 	// name one.
 	Plans map[string]*AgentRun `json:"plans,omitempty"`
+	// Orchestrator is the project's newest orchestrator run (S-0218). It is
+	// no story's run either.
+	Orchestrator *AgentRun `json:"orchestrator,omitempty"`
 }
 
 // of is the newest run recorded for what r is for: its item's planner run,
-// or its story's agent's run.
+// the orchestrator's, or its story's agent's run.
 func (s *AgentState) of(r *AgentRun) *AgentRun {
+	if r.orchestrates() {
+		return s.Orchestrator
+	}
 	if r.Item != "" {
 		return s.Plans[r.Item]
 	}
@@ -196,8 +210,12 @@ func (s *AgentState) of(r *AgentRun) *AgentRun {
 }
 
 // put records a run as its story's newest, and keeps Running and Last true,
-// or a planner run as its item's newest.
+// a planner run as its item's newest, or the orchestrator's as the newest.
 func (s *AgentState) put(r *AgentRun) {
+	if r.orchestrates() {
+		s.Orchestrator = r
+		return
+	}
 	if r.Item != "" {
 		if s.Plans == nil {
 			s.Plans = map[string]*AgentRun{}
@@ -568,7 +586,7 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 // on the operator's word and handed them over (S-0115, S-0116). A process
 // that has the run's PID and is not the one started for it, after a reboot,
 // is gone too (S-0170). A planner's run is settled the same way, and its
-// activity logged (S-0208).
+// activity logged (S-0208), and so is the orchestrator's (S-0218).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
@@ -587,6 +605,9 @@ func (l *launcher) settleOrphans() {
 			continue
 		}
 		l.planEnded(run, nil)
+	}
+	if run := st.Orchestrator; run.live() && !l.waiting[run.PID] && !run.running() {
+		l.orchestrateEnded(run, nil)
 	}
 }
 

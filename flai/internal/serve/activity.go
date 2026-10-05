@@ -93,12 +93,13 @@ func LogActivity(d Dir, root, key, kind, summary string, items []string, end tim
 // planned, as LogActivity's is. It logs nothing, and returns nil, when
 // nothing was spent in that time.
 func LogRunEnd(d Dir, root, key, kind string, items []string) (*Logged, error) {
-	return logRunEnd(d, root, key, kind, "", items)
+	return logRunEnd(d, root, key, kind, "", "", items)
 }
 
 // logRunEnd is LogRunEnd with the entry's trigger, what started the run
-// (ADR-0084); empty, the entry has none.
-func logRunEnd(d Dir, root, key, kind, trigger string, items []string) (*Logged, error) {
+// (ADR-0084), empty for none, and its summary in place of the run's final
+// text, such as why it was stopped (S-0218), empty for that text.
+func logRunEnd(d Dir, root, key, kind, trigger, summary string, items []string) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
 	if err != nil {
 		return nil, err
@@ -115,8 +116,11 @@ func logRunEnd(d Dir, root, key, kind, trigger string, items []string) (*Logged,
 	if u == nil || len(u.Models) == 0 {
 		return nil, nil
 	}
+	if summary == "" {
+		summary = firstLine(run.Result, "run ended")
+	}
 	logged, err := m.append(workitem.ActivityEntry{
-		At: s.To, Summary: firstLine(run.Result, "run ended"), Trigger: trigger, Items: items,
+		At: s.To, Summary: summary, Trigger: trigger, Items: items,
 		Seconds: seconds(s), Cost: u.Cost(), Estimated: u.Estimated,
 	})
 	if err != nil {

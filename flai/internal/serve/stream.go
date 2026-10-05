@@ -118,6 +118,16 @@ func PlanStream(st AgentState, item string, after int64) (*StreamRead, error) {
 	return out, nil
 }
 
+// OrchestratorStream reads the stream of the newest orchestrator flai serve
+// started for the project (S-0218), as Stream reads a story's agent's; an
+// error that is hostapi.ErrNoAgent when it started none.
+func OrchestratorStream(st AgentState, after int64) (*StreamRead, error) {
+	if st.Orchestrator == nil {
+		return nil, fmt.Errorf("flai serve has started no orchestrator for this project: %w", hostapi.ErrNoAgent)
+	}
+	return streamRun(st.Orchestrator, "the orchestrator", after)
+}
+
 // noPlanner is an item flai serve has started no planner for: it says so,
 // and is hostapi.ErrNoAgent to whoever asks, as a story with no agent is.
 type noPlanner string

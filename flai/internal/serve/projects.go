@@ -18,7 +18,8 @@ const Removed = "removed"
 // AgentChanged is the notification flai serve sends a dashboard when a
 // story's agent is recorded as started, not started, or ended (S-0154),
 // which changes no file of the project, with the project and the story; for
-// a planner's run, with the project and the item it plans (S-0208).
+// a planner's run, with the project and the item it plans (S-0208); for the
+// orchestrator's, with the project and role, orchestrate (S-0218).
 const AgentChanged = "agent"
 
 // Unavailable says why a registered project cannot be served (S-0121): its
