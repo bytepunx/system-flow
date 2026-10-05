@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -50,5 +51,54 @@ func TestCreateCostOfDelay(t *testing.T) {
 	unsigned := &CostOfDelay{Inputs: &CostInputs{TimeLostPerCycle: "2h", At: t0.Format(TimeFormat)}}
 	if _, err := r.Create(NewOptions{Type: Story, Title: "Unsigned", CostOfDelay: unsigned, Now: t0}); err == nil || !strings.Contains(err.Error(), "cost_of_delay.inputs.by is required") {
 		t.Errorf("a cost of delay without who set it must be refused: %v", err)
+	}
+}
+
+// I-0071: a touch is a path in the repository or a component name; one that
+// starts with a dot is a path like any other, and one that leaves the
+// repository, or would split or read as a flag, is refused.
+func TestCleanTouches(t *testing.T) {
+	got, err := CleanTouches([]string{" .claude/agents/planner.md ", ".github/workflows/", ".dockerignore", "flai/cmd", "", ".github/workflows", "a..b/c", "flai"})
+	want := []string{".claude/agents/planner.md", ".github/workflows", ".dockerignore", "flai/cmd", "a..b/c", "flai"}
+	if err != nil || !slices.Equal(got, want) {
+		t.Errorf("CleanTouches = %q, %v; want %q", got, err, want)
+	}
+	if got, err := CleanTouches([]string{" ", "/"}); err != nil || got != nil {
+		t.Errorf("nothing given is nil: %q, %v", got, err)
+	}
+	for _, c := range []struct{ touch, says string }{
+		{"../x", "climbs out of the repository"},
+		{"a/../b", "climbs out of the repository"},
+		{"..", "climbs out of the repository"},
+		{"a/..", "climbs out of the repository"},
+		{"/etc", "is absolute"},
+		{"a,b", "holds a comma"},
+		{"-x", "starts with a dash"},
+		{"a\x07b", "holds a control character"},
+		{"a\nb", "holds a control character"},
+	} {
+		_, err := CleanTouches([]string{"flai", c.touch})
+		if err == nil || !strings.Contains(err.Error(), c.says) || !strings.Contains(err.Error(), "give a repository path or component name") {
+			t.Errorf("touch %q: want an error saying %q and what a touch may be, got %v", c.touch, c.says, err)
+		}
+	}
+}
+
+// I-0071: a story or a task is created keeping a touch that starts with a
+// dot, and refused with one that leaves the repository, writing nothing.
+func TestCreateTouches(t *testing.T) {
+	r := newProject(t)
+	s, err := r.Create(NewOptions{Type: Story, Title: "Dotted", Touches: []string{".claude/agents/", "flai/cmd"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := r.Get(s.ID); err != nil || !slices.Equal(got.Touches, []string{".claude/agents", "flai/cmd"}) {
+		t.Errorf("the story keeps its touches: %v %v", got, err)
+	}
+	if _, err := r.Create(NewOptions{Type: Task, Title: "Outside", Parent: s.ID, Touches: []string{"../elsewhere"}, Now: t0}); err == nil || !strings.Contains(err.Error(), `touch "../elsewhere"`) {
+		t.Errorf("a touch outside the repository must be refused: %v", err)
+	}
+	if items, err := r.List(false); err != nil || len(items) != 1 {
+		t.Errorf("nothing is written for a refused touch: %d items, %v", len(items), err)
 	}
 }

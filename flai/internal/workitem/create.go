@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
@@ -113,7 +115,11 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		it.Body = itemHeading(it.Body) + "\n\n" + body + "\n"
 	}
 	it.Tags = append(it.Tags, opt.Tags...)
-	it.Touches = append(it.Touches, opt.Touches...)
+	touches, err := CleanTouches(opt.Touches)
+	if err != nil {
+		return nil, err
+	}
+	it.Touches = append(it.Touches, touches...)
 	topics, err := CleanTopics(opt.Topics)
 	if err != nil {
 		return nil, err
@@ -214,6 +220,49 @@ func CleanTopics(in []string) ([]string, error) {
 		out = append(out, t)
 	}
 	return out, nil
+}
+
+// touchExample ends every refusal of a touch with what a touch may be.
+const touchExample = "give a repository path or component name, such as flai/cmd or .claude/agents"
+
+// CleanTouches is a touches list as flai writes it (I-0071): trimmed, without
+// a trailing slash, empty entries, or repeats. It refuses an entry CheckTouch
+// refuses. Nothing given is nil.
+func CleanTouches(in []string) ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	for _, v := range in {
+		v = strings.TrimSuffix(strings.TrimSpace(v), "/")
+		if v == "" || seen[v] {
+			continue
+		}
+		if err := CheckTouch(v); err != nil {
+			return nil, err
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out, nil
+}
+
+// CheckTouch says why v cannot be one touch, a path in the repository or a
+// component name, or nil when it can. A leading dot is a path like any other.
+func CheckTouch(v string) error {
+	switch {
+	case v == "":
+		return fmt.Errorf("a touch is empty: %s", touchExample)
+	case strings.Contains(v, ","):
+		return fmt.Errorf("touch %q holds a comma, which would split it in two: %s", v, touchExample)
+	case strings.HasPrefix(v, "-"):
+		return fmt.Errorf("touch %q starts with a dash, which reads as a flag: %s", v, touchExample)
+	case strings.HasPrefix(v, "/"):
+		return fmt.Errorf("touch %q is absolute: %s, from the repository's root", v, touchExample)
+	case slices.Contains(strings.Split(v, "/"), ".."):
+		return fmt.Errorf("touch %q climbs out of the repository with ..: %s", v, touchExample)
+	case strings.ContainsFunc(v, unicode.IsControl):
+		return fmt.Errorf("touch %q holds a control character: %s", v, touchExample)
+	}
+	return nil
 }
 
 // CleanAfter is an after list as flai writes it, for the item self of type

@@ -488,6 +488,23 @@ func topicWords(list []string) *channel.Error {
 	return nil
 }
 
+// listEntry refuses v, a value of the list flag, where flai would: a touch
+// by workitem.CheckTouch (I-0071), so one starting with a dot passes; the rest
+// are single words or paths.
+func listEntry(flag, v string) *channel.Error {
+	v = strings.TrimSpace(v)
+	if flag == "touches" {
+		if err := workitem.CheckTouch(strings.TrimSuffix(v, "/")); err != nil {
+			return bad("%s", err)
+		}
+		return nil
+	}
+	if !listValue.MatchString(v) {
+		return bad("%s values are single words or paths without commas", flag)
+	}
+	return nil
+}
+
 func adrNo(v string) (string, *channel.Error) {
 	m := adrNumber.FindStringSubmatch(strings.TrimSpace(v))
 	if m == nil {
@@ -736,8 +753,8 @@ func itemSpecs() map[string]spec {
 			}
 			for flag, values := range map[string][]string{"tag": in.Tags, "touches": in.Touches} {
 				for _, v := range values {
-					if !listValue.MatchString(strings.TrimSpace(v)) {
-						return nil, "", bad("%s values are single words or paths without commas", flag)
+					if e := listEntry(flag, v); e != nil {
+						return nil, "", e
 					}
 				}
 			}
@@ -867,8 +884,8 @@ func itemSpecs() map[string]spec {
 					continue
 				}
 				for _, v := range *l.values {
-					if !listValue.MatchString(strings.TrimSpace(v)) {
-						return nil, "", bad("%s values are single words or paths without commas", l.flag)
+					if e := listEntry(l.flag, v); e != nil {
+						return nil, "", e
 					}
 					args = append(args, "--"+l.flag+"="+strings.TrimSpace(v))
 				}

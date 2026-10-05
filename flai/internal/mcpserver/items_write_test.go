@@ -178,6 +178,29 @@ func TestItemNewAndEditCarryTopics(t *testing.T) {
 	}
 }
 
+// I-0071: item_edit and item_new take a touch that starts with a dot, which
+// item_get shows, and refuse one that leaves the repository.
+func TestItemEditAndNewTakeATouchStartingWithADot(t *testing.T) {
+	f := setup(t)
+	ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "touches": []string{".claude/agents/planner.md"}})
+	if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "touches" {
+		t.Fatalf("set: %v %s", ed, failed)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID}); strings.Join(toStrings(got["touches"]), ",") != ".claude/agents/planner.md" {
+		t.Errorf("item_get: %v", got["touches"])
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "touches": []string{"../x"}}); !strings.Contains(failed, "give a repository path or component name") {
+		t.Errorf("a touch outside the repository: %q", failed)
+	}
+	out, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Dotted", "parent": f.story.ID, "touches": []string{".github/workflows/"}})
+	if failed != "" || strings.Join(toStrings(out["touches"]), ",") != ".github/workflows" {
+		t.Errorf("new task: %v %s", out, failed)
+	}
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Outside", "parent": f.story.ID, "touches": []string{"a/../../b"}}); !strings.Contains(failed, "climbs out of the repository") {
+		t.Errorf("a new task outside the repository: %q", failed)
+	}
+}
+
 // S-0199: item_new makes a story a draft, which item_get shows, and refuses a
 // draft of anything else; item_move refuses a draft story to ready, since
 // finalizing is the operator's, and so does item_edit's draft false.

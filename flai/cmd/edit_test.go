@@ -155,6 +155,29 @@ func TestEditFieldsParentAndBody(t *testing.T) {
 	}
 }
 
+// I-0071: a touch that starts with a dot is a repository path like any other,
+// and flai edit records it; one that leaves the repository is refused as a
+// rule, and nothing is written.
+func TestEditTouchesStartingWithADot(t *testing.T) {
+	root := editProject(t)
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-a-plain-story.md")
+	if out, errOut, code := runIn(t, root, "edit", "S-0001", "--touches", ".claude/agents/planner.md", "--touches", ".github/workflows/"); code != 0 || !strings.Contains(out, "changed touches") {
+		t.Fatalf("edit: %d %s %s", code, out, errOut)
+	}
+	if out, _, _ := runIn(t, root, "touches", "S-0001"); out != "S-0001 touches .claude/agents/planner.md, .github/workflows\n" {
+		t.Errorf("the story's touches: %q", out)
+	}
+	before := read(t, file)
+	for _, touch := range []string{"../x", "a/../b", "/etc"} {
+		if _, errOut, code := runIn(t, root, "edit", "S-0001", "--touches", touch); code == 0 || !strings.Contains(errOut, "rule: ") || !strings.Contains(errOut, "give a repository path or component name") {
+			t.Errorf("touch %q: %d %s", touch, code, errOut)
+		}
+	}
+	if read(t, file) != before {
+		t.Error("no refusal wrote anything")
+	}
+}
+
 func TestEditRefusals(t *testing.T) {
 	root := editProject(t)
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-a-plain-story.md")

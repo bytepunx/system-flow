@@ -231,10 +231,10 @@ func parentType(typ string) string {
 
 var listValue = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 _./@+-]*$`)
 
-// cleanList trims, drops empties and repeats, and refuses what cannot be a
-// tag or a path: a comma would split it in the front matter, a leading dash
-// would read as a flag somewhere downstream.
-func cleanList(what string, in []string) ([]string, error) {
+// cleanTags trims, drops empties and repeats, and refuses what cannot be a
+// tag: a comma would split it in the front matter, a leading dash would read
+// as a flag somewhere downstream. A touch is workitem.CleanTouches's.
+func cleanTags(in []string) ([]string, error) {
 	out := []string{}
 	seen := map[string]bool{}
 	for _, v := range in {
@@ -243,7 +243,7 @@ func cleanList(what string, in []string) ([]string, error) {
 			continue
 		}
 		if !listValue.MatchString(v) {
-			return nil, invalid("%s %q: letters, digits, and _ . / @ + - only, not starting with a dash", what, v)
+			return nil, invalid("tag %q: letters, digits, and _ . / @ + - only, not starting with a dash", v)
 		}
 		seen[v] = true
 		out = append(out, v)
@@ -384,7 +384,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		changed = append(changed, "nature")
 	}
 	if ch.Tags != nil {
-		tags, err := cleanList("tag", *ch.Tags)
+		tags, err := cleanTags(*ch.Tags)
 		if err != nil {
 			return nil, err
 		}
@@ -410,9 +410,9 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if it.Type == workitem.Epic {
 			return nil, invalid("%s is an epic; touches belong to stories and tasks", it.ID)
 		}
-		touches, err := cleanList("touches", *ch.Touches)
+		touches, err := workitem.CleanTouches(*ch.Touches)
 		if err != nil {
-			return nil, err
+			return nil, invalid("%s", err)
 		}
 		if !same(touches, orEmpty(it.Touches)) {
 			it.Touches = touches

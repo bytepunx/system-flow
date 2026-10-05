@@ -73,6 +73,31 @@ func TestTouchesLeavesAnEditNotice(t *testing.T) {
 	}
 }
 
+// I-0071: flai touches takes a path that starts with a dot, as flai edit
+// does, and refuses one that leaves the repository, writing nothing.
+func TestTouchesTakesADotPathAndRefusesOneOutside(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001"}} {
+		if _, errOut, code := runIn(t, root, step...); code != 0 {
+			t.Fatalf("%v: %s", step, errOut)
+		}
+	}
+	if out, errOut, code := runIn(t, root, "touches", "S-0001", ".github/workflows/", "flai", ".github/workflows"); code != 0 || out != "S-0001 touches .github/workflows, flai\n" {
+		t.Errorf("a dot path: %d %q %s", code, out, errOut)
+	}
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-s.md")
+	before := read(t, file)
+	for _, touch := range []string{"../x", "/etc", "a,b"} {
+		if _, errOut, code := runIn(t, root, "touches", "S-0001", touch); code == 0 || !strings.Contains(errOut, "give a repository path or component name") {
+			t.Errorf("touch %q: %d %s", touch, code, errOut)
+		}
+	}
+	if read(t, file) != before {
+		t.Error("no refusal wrote anything")
+	}
+}
+
 // S-0210: the seeds are the story's touches, its own and its tasks' not
 // cancelled, a component named by a tag read as its path, and the paths
 // given; the files changed with them on the main branch are counted.

@@ -40,12 +40,8 @@ func newTouchesCmd(a *app) *cobra.Command {
 			}
 			if clear || len(args) > 1 {
 				before := slices.Clone(it.Touches)
-				it.Touches = nil
-				for _, p := range args[1:] {
-					p = strings.TrimSuffix(strings.TrimSpace(p), "/")
-					if p != "" {
-						it.Touches = append(it.Touches, p)
-					}
+				if it.Touches, err = workitem.CleanTouches(args[1:]); err != nil {
+					return err
 				}
 				it.Updated = a.now().UTC().Format(workitem.TimeFormat)
 				if err := repo.Save(it); err != nil {

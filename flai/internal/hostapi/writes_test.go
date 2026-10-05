@@ -240,6 +240,36 @@ func TestItemNewStoryWithNoEpic(t *testing.T) {
 	}
 }
 
+// I-0071: item.new and item.edit pass on a touch that starts with a dot, as
+// flai takes it, and refuse one that leaves the repository, saying what a
+// touch may be, before anything runs.
+func TestItemWritesTakeATouchStartingWithADot(t *testing.T) {
+	p := withDocs(t)
+	hash := `"hash":"` + strings.Repeat("a", 64) + `",`
+	for name, c := range map[string]struct{ params, want string }{
+		"item.new":  {`{"type":"story","title":"t","body":"b","touches":[".claude/agents/planner.md"," .github/workflows/ "],` + rid + `}`, " --touches=.claude/agents/planner.md --touches=.github/workflows/ "},
+		"item.edit": {`{"id":"S-0001",` + hash + `"touches":[".claude/agents"],` + rid + `}`, " --touches=.claude/agents "},
+	} {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+		if _, e := writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(c.params)); e != nil {
+			t.Fatalf("%s: %+v", name, e)
+		}
+		if got := strings.Join(rec.runs[0].Args, " "); !strings.Contains(got, c.want) {
+			t.Errorf("%s ran %q, want %q in it", name, got, c.want)
+		}
+	}
+	for name, params := range map[string]string{
+		"item.new":  `{"type":"story","title":"t","body":"b","touches":["../x"],` + rid + `}`,
+		"item.edit": `{"id":"S-0001",` + hash + `"touches":["a/../../b"],` + rid + `}`,
+	} {
+		rec := &recorder{}
+		_, e := writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(params))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "give a repository path or component name") || len(rec.runs) != 0 {
+			t.Errorf("%s: error %+v, ran %d command(s)", name, e, len(rec.runs))
+		}
+	}
+}
+
 // S-0198: issue.list without a story lists every issue, issue.story without
 // an epic makes a story under none, and a story flai check refuses is
 // Refused, as item.new's is.
