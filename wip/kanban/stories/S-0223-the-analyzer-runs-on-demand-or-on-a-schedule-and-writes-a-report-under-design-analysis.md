@@ -3,12 +3,15 @@ id: S-0223
 type: story
 nature: feature
 title: The analyzer runs on demand or on a schedule and writes a report under design/analysis
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T05:59:10Z
-transitions: []
+updated: 2026-10-05T06:13:40Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:13:35Z
+    by: alex
 tags: [flai, dashboard]
 topics: [analysis]
 touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs, flai/internal/analysis, ".claude/settings.json", design/README.md, docs/users/conventions.md, docs/users/index.md, design/adrs, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md]
@@ -24,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:49:29Z
 forecast:
   duration: 2h
-  delivery: 2026-10-05T18:20:00Z
-  basis: "Its own forecast of 2h; 13th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215 and S-0216."
+  delivery: 2026-10-05T16:53:00Z
+  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0224 and S-0226."
   by: flai
-  at: 2026-10-05T05:59:10Z
+  at: 2026-10-05T06:13:40Z
 ---
 # S-0223 The analyzer runs on demand or on a schedule and writes a report under design/analysis
 

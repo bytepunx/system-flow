@@ -6,7 +6,7 @@ title: flai touches with paths replaces an item's touches, and its help does not
 status: backlog
 owner: alex
 created: 2026-10-03T20:33:24Z
-updated: 2026-10-05T05:59:10Z
+updated: 2026-10-05T06:13:40Z
 transitions: []
 tags: []
 topics: [cli]
@@ -16,12 +16,20 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 2m
+    by: planner-S-0254
+    at: 2026-10-05T06:11:14Z
+  value: 5
+  by: planner-S-0254
+  at: 2026-10-05T06:11:27Z
 forecast:
   duration: 30m
-  delivery: 2026-10-05T23:42:00Z
-  basis: "Its own forecast of 30m; 30th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224, S-0227, S-0228, S-0229, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246 and S-0251."
+  delivery: 2026-10-05T22:15:00Z
+  basis: "Its own forecast of 30m; 29th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0224, S-0226, S-0223, S-0212, S-0213, S-0214, S-0215, S-0216, S-0227, S-0228, S-0229, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246 and S-0251."
   by: flai
-  at: 2026-10-05T05:59:10Z
+  at: 2026-10-05T06:13:40Z
 ---
 # S-0254 flai touches with paths replaces an item's touches, and its help does not say so
 
@@ -56,6 +64,8 @@ Touches. The story declared none.
 
 Forecast. `flai forecast` gave 18m, from a median of 86 s per unit over 7 done medium improvement stories, times size 12. It is raised to 30m because the three tasks run in sequence, each with its own commit, sync, and test run. Delivery moves by the same 12m.
 
-Cost of delay. Not set: S-0254 has no inputs and no epic to take a share of, and `flai cod` refuses it. The inputs are asked for on TH-0151, with time_lost_per_cycle 2m recommended, the cost I-0067 records.
+Cost of delay. The operator gave time_lost_per_cycle 2m on TH-0151, the cost I-0067 records. `flai cod` works that out as 5.00 USD a week (2m per 168h cycle at 150 USD an hour), and the value stands as computed.
 
 Topics. `cli` was added, because the fix is to a command's flags and help.
+
+S-0251 claims `flai/cmd/stream_sync.go`, its test, and the same docs. Whichever of the two starts second is held until the first is done (TH-0153).

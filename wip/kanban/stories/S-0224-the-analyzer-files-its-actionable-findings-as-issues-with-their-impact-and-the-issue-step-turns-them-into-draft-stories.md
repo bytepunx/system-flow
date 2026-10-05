@@ -3,12 +3,15 @@ id: S-0224
 type: story
 nature: feature
 title: The analyzer files its actionable findings as issues with their impact, and the issue step turns them into draft stories
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T05:59:10Z
-transitions: []
+updated: 2026-10-05T06:13:40Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:13:39Z
+    by: alex
 tags: [flai]
 topics: [template]
 touches: [flai/internal/issues, flai/internal/harness, ".claude/agents/analyzer.md", design/system/continuous-improvement.md, flai/internal/mcpserver, template/root/.claude/agents/analyzer.md, design/system/strategic-agents.md, docs/users/flai.md, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai-reference.md, template/CHANGELOG.md]
@@ -24,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:32Z
 forecast:
   duration: 40m
-  delivery: 2026-10-05T19:21:00Z
-  basis: "Its own forecast of 40m; 14th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216 and S-0223."
+  delivery: 2026-10-05T14:12:00Z
+  basis: "Its own forecast of 40m; 6th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221 and S-0222."
   by: flai
-  at: 2026-10-05T05:59:10Z
+  at: 2026-10-05T06:13:40Z
 ---
 # S-0224 The analyzer files its actionable findings as issues with their impact, and the issue step turns them into draft stories
 
