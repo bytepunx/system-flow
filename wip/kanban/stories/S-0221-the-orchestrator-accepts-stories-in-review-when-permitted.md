@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T03:46:30Z
+updated: 2026-10-05T04:04:28Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs, flai/cmd/accept.go, flai/internal/guard, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/items, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:20Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T15:28:00Z
-  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0253, S-0257, S-0244, S-0262, S-0258, S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219 and S-0220."
+  delivery: 2026-10-05T15:46:00Z
+  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0257, S-0244, S-0262, S-0258, S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219 and S-0220."
   by: flai
-  at: 2026-10-05T03:46:30Z
+  at: 2026-10-05T04:04:28Z
 ---
 # S-0221 The orchestrator accepts stories in review when permitted
 
