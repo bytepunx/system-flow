@@ -23,15 +23,15 @@ tags: [flai, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/timing.go, flai/internal/mcpserver/timing_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
 usage:
   source: log
-  seconds: 637
+  seconds: 931
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 27785
-      cache_read: 3025461
-      cache_write: 111381
-      cost: 1.7848
+      input: 103
+      output: 36234
+      cache_read: 4555050
+      cache_write: 156678
+      cost: 2.5572
 ---
 # T-0868 wait_for_events and wait_for_work honour the requested timeout up to a 30-minute cap instead of five minutes
 

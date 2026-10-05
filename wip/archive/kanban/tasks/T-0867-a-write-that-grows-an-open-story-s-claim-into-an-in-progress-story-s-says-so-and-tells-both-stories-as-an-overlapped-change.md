@@ -23,15 +23,21 @@ tags: [flai, mcp]
 touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/cursor.go, flai/cmd/touches_overlap_test.go]
 usage:
   source: log
-  seconds: 638
+  seconds: 932
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 135
-      output: 53735
-      cache_read: 5851174
-      cache_write: 215409
-      cost: 3.4517
+      input: 168
+      output: 62184
+      cache_read: 7380763
+      cache_write: 260706
+      cost: 4.2241
+    - model: claude-sonnet-5
+      input: 103
+      output: 23937
+      cache_read: 4911200
+      cache_write: 223762
+      cost: 1.7812
 ---
 # T-0867 A write that grows an open story's claim into an in-progress story's says so and tells both stories as an overlapped change
 

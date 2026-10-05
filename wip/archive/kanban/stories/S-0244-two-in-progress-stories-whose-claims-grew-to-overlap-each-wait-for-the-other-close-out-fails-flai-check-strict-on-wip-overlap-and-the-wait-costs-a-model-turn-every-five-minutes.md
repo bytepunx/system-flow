@@ -3,10 +3,10 @@ id: S-0244
 type: story
 nature: remediation
 title: "Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-03T03:31:01Z
-updated: 2026-10-05T05:03:51Z
+updated: 2026-10-05T05:23:09Z
 transitions:
   - to: ready
     at: 2026-10-04T21:44:16Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-05T04:41:19Z
     by: agent-S-0244
+  - to: review
+    at: 2026-10-05T05:17:18Z
+    by: agent-S-0244
+  - to: done
+    at: 2026-10-05T05:23:09Z
+    by: alex
 tags: [flai, template]
-touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/harness, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0059-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md, design/issues/summary.md, flai/cmd/touches_overlap_test.go, template/template.yaml]
+touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/harness, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0059-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md, design/issues/summary.md, flai/cmd/touches_overlap_test.go, template/template.yaml, docs/operators/index.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,14 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 690
+  seconds: 1955
   models:
     - model: claude-opus-5-5
-      input: 218
-      output: 86627
-      cache_read: 9432793
-      cache_write: 347265
-      cost: 5.5645
+      input: 454
+      output: 147420
+      cache_read: 20438422
+      cache_write: 673186
+      cost: 11.1225
+    - model: claude-sonnet-5
+      input: 108
+      output: 25145
+      cache_read: 5158951
+      cache_write: 235050
+      cost: 1.8711
 cost_of_delay:
   inputs:
     penalty_per_week: 625
@@ -63,8 +75,8 @@ Possible remediations, cheapest first:
 Related: S-0197 (stream sync and conflict reporting), the agent-waiting chart in E-0016 (S-0215) would have made this visible; ADR-0046 for the hold.
 
 ## Acceptance criteria
-- [ ] The cause I-0059 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0059 is closed with `flai issue close I-0059 --reason` saying what fixed it
+- [x] The cause I-0059 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0059 is closed with `flai issue close I-0059 --reason` saying what fixed it
 
 ## Tasks
 - T-0867 A write that grows an open story's claim into an in-progress story's says so and tells both stories as an overlapped change
