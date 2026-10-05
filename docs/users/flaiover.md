@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-04
+updated: 2026-10-05
 status: active
 ---
 
@@ -25,7 +25,7 @@ The header is the same on every page.
 
   | Group | Pages |
   |-------|-------|
-  | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity |
+  | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity, Planner |
   | Status | Charts, ADRs, Docs, Search |
   | Host | Updates (the [Host](#host) page), Settings |
 
@@ -149,6 +149,18 @@ Activity shows who is working on what: one card per story with an open narrative
 When `flai serve` started an agent for the story, the card also shows the agent's dot and what it is doing, and a **stream** window: what the agent said, each tool it called (`▸ Bash List files`) and what the tool answered (`↳ …`, in red when it failed), its background tasks, and how its session ended, read by flai from the log it gave the agent. The window opens when the agent starts and follows it every two seconds, staying at the newest entry while you are at the end; scroll up and it stays where you put it until you scroll back to the end. It closes only when you close it, so one you were reading stays open when its agent ends; an agent that had ended before you opened the page shows its window closed, to open when you want to read what it did. The page holds still under you while it reads the streams, the agents, and the projects again: a reload that fails says so above the cards rather than in their place, and the windows stay while flai on the host is away. Long answers are cut to their start, and older entries are in the log on the host (`flai serve agent stream <story>` prints it there). An agent at work on a story that has no narrative yet gets a card of its own. Your flai on the host needs to be as new as the dashboard for this: an older one is named in the banner, and the window says it cannot read.
 
 **Stop** is beside an agent that runs, or that ended waiting for an answer, once the operator has turned on the `agent` host action. It asks first, and says what stopping does: the agent's process and everything it started end at once, and cannot be resumed; an agent waiting for an answer is not started again when the answer comes; the story's worktree keeps what the agent changed, committed or not; and the story stays where it is, with no agent, until you press **Retry** on its page or move it back to ready. Only **Stop the agent** in that dialog stops it. The agent then reads as stopped by the operator, with a red dot. If flai refuses, for an agent that has already ended, the dialog says why.
+
+## Planner
+
+Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost. Find it last in the Workflow group.
+
+- **The plan host action** says whether `flai serve` starts the planner here. While it is off, the page gives the command that turns it on, to run on the host in the project: `flai serve enable plan`.
+- **Running now** shows the planner run under way, if there is one: the epic or story it plans, the agent, when it started, and why (`asked`, or what changed to start it again). Its stream window shows what it is saying and doing, as the Activity page does for a story's agent.
+- **Activity** is the planner's activity document, `wip/agents/planner.md`. It shows the totals (what the planner has cost, how long it has worked, how many activities it has logged, and when it last ran), then each activity, newest first, with what it did, why it started, the items it changed, how long it took, and what it cost.
+- **Runs** lists the newest planner run for each epic or story it has planned, newest first. Each shows when it started and ended, how it went, and what it cost: the activities logged while it ran. A run that failed says why.
+- **Plan an epic or a story** takes an ID, such as `E-0016` or `S-0259`, and starts the planner for it, as **Plan** on the item's page and the card's menu do. The page says what flai answered: the run it started, or why it refused, such as a planner already running for the item. While the plan host action is off, the form is disabled and says so.
+
+The page follows the planner as it works: it reads itself again when the planner's document or a work item changes, and when a planner run starts or ends.
 
 ## Charts
 
