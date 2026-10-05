@@ -6,7 +6,7 @@ title: flai accept --dry-run, the dashboard's acceptance preview, does not repor
 status: ready
 owner: alex
 created: 2026-10-05T03:48:28Z
-updated: 2026-10-05T04:40:46Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:05:04Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-05T04:12:07Z
 forecast:
   duration: 30m
-  delivery: 2026-10-05T05:44:00Z
-  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 3, behind S-0244 and S-0258."
+  delivery: 2026-10-05T06:27:00Z
+  basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 3, behind S-0258."
   by: flai
-  at: 2026-10-05T04:40:46Z
+  at: 2026-10-05T05:23:10Z
 finalized:
   by: alex
   at: 2026-10-05T04:05:03Z

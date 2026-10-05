@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-05T04:49:47Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:20Z
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-05T04:49:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T12:46:00Z
-  basis: "Planner's: flai forecast's history rate (132 s a unit over 14 large opus features) gives 45m on the 15 declared touches and 1h24m on the 33 predicted, inflated by test files listed apart; 1h15m matches six comparable Go, dashboard, and ADR stories (S-0201, S-0204, S-0205, S-0208, S-0210, S-0225: 53 to 72 min) with eight tasks in four layers; delivery is flai's 13:00Z play-out (6th, after S-0218) less 9m times the cycle factor 1.52."
-  by: planner-S-0220
-  at: 2026-10-05T04:49:47Z
+  delivery: 2026-10-05T12:51:00Z
+  basis: "Its own forecast of 1h15m; 6th in the pull order with an in-progress limit of 3, behind S-0258, S-0276, S-0217, S-0218 and S-0219."
+  by: flai
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0220 The orchestrator answers threads, or recommends an answer, as its permission allows
 

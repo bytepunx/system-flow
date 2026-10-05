@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-05T04:41:11Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-03T20:34:00Z
@@ -32,10 +32,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:17Z
 forecast:
   duration: 2h
-  delivery: 2026-10-05T10:28:00Z
-  basis: "Its own forecast of 2h; 9th in the pull order with an in-progress limit of 3, behind S-0244, S-0258, S-0276, S-0212, S-0213, S-0214, S-0215 and S-0216."
+  delivery: 2026-10-05T08:26:00Z
+  basis: "Its own forecast of 2h; 3rd in the pull order with an in-progress limit of 3, behind S-0258 and S-0276."
   by: flai
-  at: 2026-10-05T04:40:46Z
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0217 flai exposes the orchestrator's deterministic operations as commands: ordering by policy, promotion candidates, and release evaluation
 

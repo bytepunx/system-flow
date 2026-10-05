@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T04:45:07Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:36Z
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-10-05T04:44:17Z
 forecast:
   duration: 35m
-  delivery: 2026-10-05T14:10:00Z
-  basis: "flai forecast's 16m (86 s per unit of size times 11) raised to 35m: S-0225, its sibling, took 52m in progress with dashboard work this story lacks, and this one still needs an ADR, the serve charge, and the stats total; delivery is flai's 13:49Z moved by the extra 19m."
-  by: planner-S-0226
-  at: 2026-10-05T04:44:12Z
+  delivery: 2026-10-05T13:16:00Z
+  basis: "Its own forecast of 35m; 9th in the pull order with an in-progress limit of 3, behind S-0258, S-0276, S-0217, S-0218, S-0219, S-0220, S-0221 and S-0222."
+  by: flai
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0226 The orchestrator's cost is recorded on the story or epic each decision concerned
 

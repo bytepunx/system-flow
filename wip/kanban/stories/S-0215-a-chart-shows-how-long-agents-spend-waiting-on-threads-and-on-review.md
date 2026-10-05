@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T04:40:46Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:15Z
 forecast:
   duration: 1h
-  delivery: 2026-10-05T11:53:00Z
-  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0244, S-0258, S-0276, S-0212, S-0213 and S-0214."
+  delivery: 2026-10-05T19:19:00Z
+  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0258, S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213 and S-0214."
   by: flai
-  at: 2026-10-05T04:40:46Z
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0215 A chart shows how long agents spend waiting on threads and on review
 

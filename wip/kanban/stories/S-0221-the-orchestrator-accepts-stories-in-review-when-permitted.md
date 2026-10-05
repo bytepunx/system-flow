@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T04:48:43Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:22Z
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-05T04:47:12Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T14:23:00Z
-  basis: "Raised from flai's 1h7m (132 s per unit times size 30) to 1h30m: seven tasks in four layers across the accept gate, the guard, the orchestrator's prompt, the dashboard, and an ADR, like S-0208 and S-0209 (65m and 98m); delivery is flai's play-out, 7th in the pull order, with the 23 extra minutes times its cycle factor of 1.52."
-  by: planner-S-0221
-  at: 2026-10-05T04:47:07Z
+  delivery: 2026-10-05T13:14:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0258, S-0276, S-0217, S-0218, S-0219 and S-0220."
+  by: flai
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0221 The orchestrator accepts stories in review when permitted
 

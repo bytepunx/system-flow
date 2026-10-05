@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T04:48:24Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:24Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T04:48:06Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T15:16:00Z
-  basis: "flai forecast's 45m (132 s per unit over 14 done feature stories on claude-opus-5-5, size 20) raised to 1h15m for five tasks on code S-0217 and S-0218 have yet to write and git fixtures for two refusals, as S-0221 of like shape is 1h30m; delivery is flai's 14:31Z moved by the 30m added at its cycle factor of 1.5, after S-0218 at 8th in the pull order."
-  by: planner-S-0222
-  at: 2026-10-05T04:48:02Z
+  delivery: 2026-10-05T14:06:00Z
+  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 3, behind S-0258, S-0276, S-0217, S-0218, S-0219, S-0220 and S-0221."
+  by: flai
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0222 The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold
 

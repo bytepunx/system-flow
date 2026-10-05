@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-05T04:48:20Z
+updated: 2026-10-05T05:23:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:14Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T04:48:03Z
 forecast:
   duration: 1h40m
-  delivery: 2026-10-05T10:52:00Z
-  basis: "S-0208, the planner's host action, took 65m of agent time; this adds a manifest permission model and a restart and stop lifecycle, so about 1.5 times that, over flai's 1h15m from 14 large feature stories; it starts about 08:20Z after S-0217 and takes 1h40m times the cycle factor 1.52."
-  by: planner-S-0218
-  at: 2026-10-05T04:48:03Z
+  delivery: 2026-10-05T10:57:00Z
+  basis: "Its own forecast of 1h40m; 4th in the pull order with an in-progress limit of 3, behind S-0258, S-0276 and S-0217."
+  by: flai
+  at: 2026-10-05T05:23:10Z
 ---
 # S-0218 The orchestrator is a long-running agent per project behind the orchestrate host action, with permissions the operator sets and a decision log
 
