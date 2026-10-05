@@ -3,13 +3,22 @@ id: S-0262
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag a space inside a code span, so a task body reached main and failed a story's close-out
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-04T21:41:59Z
-updated: 2026-10-05T04:04:28Z
+updated: 2026-10-05T04:38:00Z
 transitions:
   - to: ready
     at: 2026-10-04T23:14:03Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-05T04:15:34Z
+    by: agent-S-0262
+  - to: review
+    at: 2026-10-05T04:30:57Z
+    by: agent-S-0262
+  - to: in-progress
+    at: 2026-10-05T04:32:53Z
     by: alex
 tags: [flai]
 topics: [cli, go]
@@ -19,6 +28,22 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 961
+  models:
+    - model: claude-opus-5-5
+      input: 140
+      output: 44983
+      cache_read: 5014865
+      cache_write: 188498
+      cost: 3.1335
+    - model: claude-sonnet-5
+      input: 38
+      output: 10775
+      cache_read: 802713
+      cache_write: 102023
+      cost: 0.5234
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -44,8 +69,8 @@ finalized:
 This story remediates [I-0072](../../../design/issues/I-0072-flai-s-wip-markdown-lint-does-not-flag-a-space-inside-a-code-span-so-a-task-body-reached-main-and-failed-a-story-s-close-out.md), "flai's wip markdown lint does not flag a space inside a code span, so a task body reached main and failed a story's close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0072 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0072 is closed with `flai issue close I-0072 --reason` saying what fixed it
+- [x] The cause I-0072 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0072 is closed with `flai issue close I-0072 --reason` saying what fixed it
 
 ## Tasks
 - T-0856 mdlint reports MD038, spaces inside a code span, as markdownlint does
@@ -72,3 +97,4 @@ Figures:
 - Forecast 20m, delivery 2026-10-05T03:40:00Z. `flai forecast` gave 9m: 85 s per unit of size, the median over 19 done remediation stories, times size 6. It is raised to the 21m S-0240 took for the same kind of change, because markdownlint-cli2 has to be run to regenerate the reference. The story is no longer held for want of touches, and its touches overlap no story in progress, so it can start once it is pulled. The delivery is now plus the duration and a few minutes for the pull.
 - Cost of delay 25.00 USD a week stands, as `flai cod` worked it out from the operator's input: 10m lost per 168h cycle at 150 USD an hour. I-0056 and I-0070 come from the same lint gap, but each was a different rule, so they do not raise this rule's rate.
 - Topics `cli` and `go` are added: both tasks change the Go CLI.
+- 2026-10-05T04:32:53Z: moved to in-progress: Unchecked criteria
