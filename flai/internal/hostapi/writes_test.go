@@ -552,6 +552,38 @@ func TestTheDashboardPublishesAndNeverPushes(t *testing.T) {
 	}
 }
 
+// S-0257: auto-approve, which has permission_prompt allow a flai serve
+// agent's write under .claude/ without asking, is the operator's shell tool
+// as auto-publish is (ADR-0067): a dashboard is neither told of it nor turns
+// it on or off, even with every action and the settings action on.
+func TestAutoApproveIsTheShellsAlone(t *testing.T) {
+	p := withDocs(t)
+	if !strings.Contains(Actions[ActionAutoApprove], "permission_prompt") || !strings.Contains(Actions[ActionAutoApprove], ".claude/") {
+		t.Errorf("auto-approve says what it has flai do: %q", Actions[ActionAutoApprove])
+	}
+	host := Host{Enabled: func(string, string) bool { return true }}
+	if info := enabledActions(host, p.Root); !info[ActionPush] {
+		t.Errorf("project.info says the push action is on: %+v", info)
+	} else if _, ok := info[ActionAutoApprove]; ok {
+		t.Errorf("project.info names auto-approve: %+v", info)
+	}
+	if DashboardSees(ActionAutoApprove) {
+		t.Error("a dashboard sees auto-approve")
+	}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	for i, on := range []string{"true", "false"} {
+		params := fmt.Sprintf(`{"action":"auto-approve","on":%s,"request_id":"req-0000001%d"}`, on, i+2)
+		_, e := m["settings.action"](context.Background(), p, json.RawMessage(params))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "flai serve enable auto-approve") || !strings.Contains(e.Message, "flai serve disable auto-approve") || !strings.Contains(e.Message, "ADR-0067") {
+			t.Errorf("settings.action %s: %+v, want a refusal naming what to run in a shell", params, e)
+		}
+	}
+	if len(rec.runs) != 0 {
+		t.Errorf("a refused setting ran %+v", rec.runs)
+	}
+}
+
 // S-0105: a setting kept for every project needs the settings action on for
 // every project; one of this project's needs it here; either refusal says
 // what the operator runs, and is journalled.

@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 )
 
@@ -46,7 +47,7 @@ configuration looks like, and flai mcp token prints its bearer token.`,
 				return err
 			}
 			agent := mcpAgent(agentFlag)
-			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Activities: a.mcpActivity}
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove}
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
 				if opt.Folder, err = a.workingDir(); err != nil {
@@ -74,4 +75,20 @@ func mcpAgent(flag string) string {
 	}
 	agent, _ := agentIdentity()
 	return agent
+}
+
+// mcpAutoApprove reports whether the operator enabled auto-approve for the
+// project at root (S-0257): permission_prompt then allows a flai serve
+// agent's write under .claude/ in its own in-progress story's worktree
+// without asking on a thread. It reads the configuration afresh at every
+// request, so flai serve enable or disable auto-approve takes effect on the
+// next one without restarting the server; a configuration it cannot read
+// enables nothing.
+func (a *app) mcpAutoApprove(root string) bool {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		a.logger().Warn("auto-approve: cannot read the configuration, so permission_prompt asks", "component", "mcp", "error", err)
+		return false
+	}
+	return cfg.ActionEnabled(hostapi.ActionAutoApprove, root)
 }
