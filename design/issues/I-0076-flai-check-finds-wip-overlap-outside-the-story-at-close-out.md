@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 4
+count: 5
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-05T04:30:02Z
-updated: 2026-10-05T04:30:02Z
+last_reported: 2026-10-05T04:38:00Z
+updated: 2026-10-05T04:38:00Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -42,5 +42,12 @@ flai check found outside the story:
 `wip/kanban/stories/S-0262-flai-s-wip-markdown-lint-does-not-flag-a-space-inside-a-code-span-so-a-task-body-reached-main-and-failed-a-story-s-close-out.md`: S-0262 touches design/issues, which T-0877 (in progress) also touches as design/issues
 `wip/kanban/stories/S-0262-flai-s-wip-markdown-lint-does-not-flag-a-space-inside-a-code-span-so-a-task-body-reached-main-and-failed-a-story-s-close-out.md`: S-0262 touches design/system/flai-cli.md, which T-0877 (in progress) also touches as design/system/flai-cli.md
 `wip/kanban/stories/S-0262-flai-s-wip-markdown-lint-does-not-flag-a-space-inside-a-code-span-so-a-task-body-reached-main-and-failed-a-story-s-close-out.md`: S-0262 touches docs/users/flai.md, which T-0877 (in progress) also touches as docs/users/flai.md
+
+### 2026-10-05T04:38:00Z
+Story: S-0257.
+flai check found outside the story:
+`wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches design/issues, which S-0262 (in progress) also touches as design/issues
+`wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches design/system/flai-cli.md, which S-0262 (in progress) also touches as design/system/flai-cli.md
+`wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches docs/users/flai.md, which S-0262 (in progress) also touches as docs/users/flai.md
 
 ## Remediation
