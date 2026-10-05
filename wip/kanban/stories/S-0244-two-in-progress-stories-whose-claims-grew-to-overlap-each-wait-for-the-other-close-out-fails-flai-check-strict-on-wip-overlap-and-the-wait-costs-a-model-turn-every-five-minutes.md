@@ -6,17 +6,24 @@ title: "Two in-progress stories whose claims grew to overlap each wait for the o
 status: ready
 owner: alex
 created: 2026-10-03T03:31:01Z
-updated: 2026-10-04T21:44:16Z
+updated: 2026-10-05T03:17:20Z
 transitions:
   - to: ready
     at: 2026-10-04T21:44:16Z
     by: alex
-tags: []
+tags: [flai, template]
+touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/harness, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0059-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 1h30m
+  delivery: 2026-10-05T06:00:00Z
+  basis: "flai forecast's 24m (60 s per unit over 8 done large remediation stories, size 24) raised to 1h30m for four tasks, one a new overlap notice across five writers with tests; held behind S-0253 and S-0260, expected accepted by about 04:30Z."
+  by: planner-S-0244
+  at: 2026-10-05T03:16:40Z
 ---
 # S-0244 Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes
 
@@ -39,5 +46,35 @@ Related: S-0197 (stream sync and conflict reporting), the agent-waiting chart in
 - [ ] I-0059 is closed with `flai issue close I-0059 --reason` saying what fixed it
 
 ## Tasks
+- T-0867 A write that grows an open story's claim into an in-progress story's says so and tells both stories as an overlapped change
+- T-0868 wait_for_events and wait_for_work honour the requested timeout up to a 30-minute cap instead of five minutes
+- T-0869 The story agent's prompt and the conventions say to wait for sub-agents through the harness's notice, and what to do on a grown-claim overlapped change
+- T-0870 The design and the user docs describe the grown-claim notice and the longer wait, and I-0059 is closed
 
 ## Notes
+
+### Planning
+
+Planned by planner-S-0244 on 2026-10-05, plan thread TH-0125; the cost of delay question is TH-0121.
+
+**State of I-0059's remediations.** Remediation 1 is already done: S-0249 scoped the close-out's `flai check --strict` to the story, and a `wip.overlap` is now a note recorded in an issue (`scripts/close-out.sh`, work-management.md). The mutual wait at close-out cannot happen any more. What is left is remediations 2, 3, and 4. Remediation 5, detecting the mutual wait, is not planned: once the close-out no longer stops on `wip.overlap`, two stories can no longer each wait for the other.
+
+**Touches.** The story declared none; every touch is predicted.
+
+- `flai/internal/workitem/hold.go`, `flai/internal/itemedit`, `flai/internal/itemnew`, `flai/cmd/items.go`, `flai/cmd/edit.go`, `flai/cmd/touches.go`, and `flai/internal/mcpserver`. From the layout: the claim and overlap live in `hold.go`, and `itemedit.RecordOverlap` and the `overlapped` reporting are in `mcpserver/cursor.go`. The touches writers are the three commands and `mcpserver/items_write.go`. The dashboard writes through the CLI (`hostapi/writes.go`), so it is not touched. Co-change confirms `mcpserver` and `cursor.go`.
+- `flai/cmd/mcp.go` and `flai/cmd/mcp_http.go`. From the layout: the server options, and the comment that holds the five-minute wait. Co-change lists `mcp.go`.
+- `flai/internal/harness`. From the design (the issue names `harness.Prompt`). Co-change confirms `harness_test.go`.
+- `design/conventions/delegation.md` and `design/conventions/work-management.md`, and their copies under `template/root/design/conventions`, with `template/CHANGELOG.md`. From the design (the issue names both conventions). Co-change lists the template copy of delegation.md, `work-management.md`, and the changelog.
+- `design/system/agent-narrative.md`, `workflow.md`, `flai-cli.md`, `docs/users/flai.md`, and `flai-reference.md`. From the design (these describe `overlapped` and `wait_for_events`). Co-change lists `flai.md`, `flai-cli.md`, and `flai-reference.md`.
+- I-0059 and `design/issues/summary.md`, from the second criterion.
+- Not taken: `flai/internal/serve/agents.go`, `cmd/serve_actions.go`, and `docs/operators/settings.md` came up in co-change only through the harness.
+
+**Tasks and layers.**
+
+1. T-0867 (grown-claim notice) and T-0868 (long-poll cap) run together.
+2. T-0869 (prompt and conventions) waits for both.
+3. T-0870 (design, docs, and I-0059 closed) waits for all three.
+
+**Forecast.** `flai forecast` gave 24m, from 60 s per unit over 8 done large remediation stories, times size 24. Raised to 1h30m. Four tasks, and T-0867 is a new notice across five writers and the inbox cursor, with tests. S-0249 and S-0266, which were smaller, took about 30 to 50 minutes each. Delivery is 06:00Z: the story is held on overlap behind S-0253 and S-0260, both in progress since 03:10Z to 03:14Z, and recent stories have been accepted about 30 minutes after review.
+
+**Cost of delay.** None is recorded yet. The story has no inputs and no epic, so `flai cod` refuses. The inputs are asked of the operator in TH-0121, with 21m time lost per cycle recommended (I-0059's recorded cost).
