@@ -19,6 +19,14 @@ const ClaudeCode = "claude-code"
 
 type claudeCode struct{}
 
+// PermissionPromptTool is the handler claude-code asks whenever a call would
+// prompt: permission_prompt on the server named flai that Start passes in
+// --mcp-config. Claude Code run headless refuses a write under a .claude/
+// folder unless a person or a permission handler approves it; this one asks
+// the operator on a thread, or allows at once where the operator turned on
+// the auto-approve host action, and denies the rest (S-0257).
+const PermissionPromptTool = "mcp__flai__permission_prompt"
+
 // DefaultHost is the operator's default for claude-code: edits in the
 // project, any shell command (git, flai, the project's tests), and flai's
 // MCP tools; nothing else without asking, and headless there is no one to ask.
@@ -33,9 +41,12 @@ var claudeCodeTakes = map[string]option{
 }
 
 // Start runs claude -p with the prompt, the story's model and options, flai's
-// MCP server, and the operator's arguments last. A planner's session runs as
-// the project's planner definition, with flai guard on its file edits
-// (S-0208).
+// MCP server, flai's permission_prompt as its permission handler
+// (PermissionPromptTool), and the operator's arguments last, so the handler
+// applies with the default host arguments and with the operator's own. A
+// planner's session runs as the project's planner definition, with flai guard
+// on its file edits (S-0208), and has the same handler, which denies anything
+// outside a story's worktree.
 func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
@@ -101,6 +112,7 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if r.Role != "" {
 		argv = append(argv, "--agent", claudeCodePlanner)
 	}
+	argv = append(argv, "--permission-prompt-tool", PermissionPromptTool)
 	argv = append(argv, host.Args...)
 	return Start{Harness: ClaudeCode, Argv: argv, Env: env}, nil
 }

@@ -78,6 +78,25 @@ func TestClaudeCodeRunsHeadlessWithTheStorysModelAndFlaisMCP(t *testing.T) {
 	}
 }
 
+// Headless, claude-code refuses a write under .claude/ unless a permission
+// handler approves it; flai's permission_prompt is that handler, with the
+// default host arguments and with the operator's own, ahead of them (S-0257).
+func TestClaudeCodeAsksFlaisPermissionPrompt(t *testing.T) {
+	a := &manifest.Agent{Harness: ClaudeCode}
+	for _, host := range []Host{{}, {Program: "claude", Args: []string{"--permission-mode", "acceptEdits"}}} {
+		st, err := (claudeCode{}).Start(req(a), host)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := after(st.Argv, "--permission-prompt-tool"); got != "mcp__flai__permission_prompt" {
+			t.Errorf("host %v: --permission-prompt-tool = %q (%q)", host, got, st.Argv)
+		}
+		if i, j := slices.Index(st.Argv, "--permission-prompt-tool"), slices.Index(st.Argv, "--permission-mode"); i < 0 || j < i {
+			t.Errorf("host %v: the handler comes before the operator's arguments: %q", host, st.Argv)
+		}
+	}
+}
+
 func TestAStoryNamesTunablesNeverFlags(t *testing.T) {
 	for _, c := range []struct {
 		config map[string]string
@@ -734,6 +753,11 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	}
 	if i, j := slices.Index(st.Argv, "--agent"), slices.Index(st.Argv, "--permission-mode"); i < 0 || j < i {
 		t.Errorf("--agent comes before the operator's arguments: %v", st.Argv)
+	}
+	// the planner has flai's permission handler too, which denies anything
+	// outside a story's worktree (S-0257)
+	if got := after(st.Argv, "--permission-prompt-tool"); got != PermissionPromptTool {
+		t.Errorf("planner: --permission-prompt-tool = %q (%v)", got, st.Argv)
 	}
 	if want := []string{"FLAI_ROLE=plan", "FLAI_ITEM=E-0016"}; !slices.Equal(st.Env, want) {
 		t.Errorf("env %q, want %q", st.Env, want)
