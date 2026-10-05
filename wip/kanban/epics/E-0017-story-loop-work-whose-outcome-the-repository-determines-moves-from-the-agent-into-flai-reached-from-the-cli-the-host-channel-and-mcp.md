@@ -6,7 +6,7 @@ title: Story-loop work whose outcome the repository determines moves from the ag
 status: backlog
 owner: alex
 created: 2026-10-05T01:35:27Z
-updated: 2026-10-05T01:35:30Z
+updated: 2026-10-05T01:35:31Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
@@ -30,6 +30,7 @@ Drafted with the epic; finalize and order them on the board. Not in the epic bec
 - S-0269 One command closes a task: flai task done commits, syncs, moves, logs, widens touches, checks, and answers the inbox
 - S-0270 Verification is a module: flai verify runs the tiers the diff selects and answers structured findings, replacing the verifier sub-agent's run
 - S-0271 Criteria and narrative state are commands: flai story tick checks a criterion and flai stream state writes Current state and Next steps
+- S-0272 An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand
 
 ## Notes
 
