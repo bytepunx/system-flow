@@ -6,7 +6,7 @@ title: flai check --strict stops a story's close-out on wip/ findings outside th
 status: ready
 owner: alex
 created: 2026-10-03T18:03:58Z
-updated: 2026-10-05T00:25:39Z
+updated: 2026-10-05T00:33:39Z
 transitions:
   - to: ready
     at: 2026-10-05T00:13:03Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T00:19:21Z
 forecast:
   duration: 1h
-  delivery: 2026-10-05T01:33:00Z
-  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, behind S-0252 and S-0259."
+  delivery: 2026-10-05T01:41:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-05T00:25:39Z
+  at: 2026-10-05T00:33:39Z
 ---
 # S-0249 flai check --strict stops a story's close-out on wip/ findings outside the story
 
