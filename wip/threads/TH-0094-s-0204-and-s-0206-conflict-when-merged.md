@@ -4,10 +4,10 @@ title: S-0204 and S-0206 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0206-planner-orchestrator-and-analyzer-runs-are-logged-in-an-activity-document-with-cost-seconds-and-work-completed-in-its-front-matter.md
   item: S-0206
-status: answered
-participants: [flai, agent-S-0204, agent-S-0206, alex]
+status: resolved
+participants: [flai, agent-S-0204, agent-S-0206, alex, system-flow]
 created: 2026-10-03T19:22:39Z
-updated: 2026-10-03T20:07:31Z
+updated: 2026-10-05T00:19:48Z
 ---
 
 # TH-0094 S-0204 and S-0206 conflict when merged
@@ -51,3 +51,6 @@ Whichever of S-0204 and S-0206 is accepted second will stop on these paths when 
 
 ### 2026-10-03T20:07:31Z alex
 resolve the conflict
+
+### 2026-10-05T00:19:48Z system-flow
+Resolved: S-0204 and S-0206 are both accepted and archived; the conflicts the trial merges listed (design/adrs/README.md, design/issues/summary.md, I-0057) were settled when the second rebased, as the operator asked. Resolved while clearing the warnings that stopped close-outs (I-0057).
