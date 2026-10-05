@@ -3,14 +3,17 @@ id: S-0249
 type: story
 nature: improvement
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-03T18:03:58Z
-updated: 2026-10-05T00:33:39Z
+updated: 2026-10-05T00:33:56Z
 transitions:
   - to: ready
     at: 2026-10-05T00:13:03Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T00:33:56Z
+    by: agent-S-0249
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/issues, scripts/close-out.sh, scripts/check.sh, template/root/scripts/close-out.sh, template/root/scripts/check.sh, template/CHANGELOG.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/summary.md, design/issues]

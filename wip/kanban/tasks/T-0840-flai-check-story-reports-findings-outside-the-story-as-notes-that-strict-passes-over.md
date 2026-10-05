@@ -3,12 +3,18 @@ id: T-0840
 type: task
 nature: improvement
 title: flai check --story reports findings outside the story as notes that --strict passes over
-status: backlog
+status: in-progress
 parent: S-0249
 owner: alex
 created: 2026-10-05T00:17:42Z
-updated: 2026-10-05T00:17:53Z
-transitions: []
+updated: 2026-10-05T00:34:21Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:34:21Z
+    by: agent-S-0249
+  - to: in-progress
+    at: 2026-10-05T00:34:21Z
+    by: agent-S-0249
 stream: S-0249
 tags: [flai, check]
 touches: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
