@@ -6,7 +6,7 @@ title: Story-loop work whose outcome the repository determines moves from the ag
 status: backlog
 owner: alex
 created: 2026-10-05T01:35:27Z
-updated: 2026-10-05T01:35:32Z
+updated: 2026-10-05T01:35:33Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
@@ -33,6 +33,7 @@ Drafted with the epic; finalize and order them on the board. Not in the epic bec
 - S-0272 An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand
 - S-0273 flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings
 - S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together
+- S-0275 Issue and ADR handling from the worktree is one call each: bump, close, and adr new number from the whole repository and commit on the story branch
 
 ## Notes
 
