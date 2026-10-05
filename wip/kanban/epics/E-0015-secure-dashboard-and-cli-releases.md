@@ -3,13 +3,16 @@ id: E-0015
 type: epic
 nature: feature
 title: Secure Dashboard and CLI Releases
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-01T11:06:14Z
-updated: 2026-10-02T12:37:24Z
+updated: 2026-10-05T00:30:17Z
 transitions:
   - to: ready
     at: 2026-10-01T11:15:15Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-05T00:30:17Z
     by: alex
 tags: [dashboard, cli]
 topics: [releases]

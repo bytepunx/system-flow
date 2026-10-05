@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 197
-      cache_read: 971711
-      cache_write: 57140
-      cost: 0.4185
+      input: 19
+      output: 7147
+      cache_read: 999403
+      cache_write: 29462
+      cost: 0.5292
 ---
 # T-0837 The dashboard's API answers the planner's state, activity, and runs, and its run's stream
 

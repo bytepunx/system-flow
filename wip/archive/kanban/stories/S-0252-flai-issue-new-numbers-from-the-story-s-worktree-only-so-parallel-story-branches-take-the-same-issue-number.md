@@ -3,10 +3,10 @@ id: S-0252
 type: story
 nature: remediation
 title: flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-03T18:33:16Z
-updated: 2026-10-05T00:10:43Z
+updated: 2026-10-05T00:33:39Z
 transitions:
   - to: ready
     at: 2026-10-04T21:42:51Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-04T23:56:44Z
     by: agent-S-0252
+  - to: review
+    at: 2026-10-05T00:30:59Z
+    by: agent-S-0252
+  - to: done
+    at: 2026-10-05T00:33:39Z
+    by: alex
 tags: []
 topics: [cli]
 touches: [flai/internal/storygit, flai/internal/issues, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md]
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1470
+  seconds: 1877
   models:
     - model: claude-opus-5-5
-      input: 148
-      output: 38414
-      cache_read: 4806484
-      cache_write: 219345
-      cost: 3.1757
+      input: 176
+      output: 44473
+      cache_read: 5417902
+      cache_write: 271637
+      cost: 3.8377
     - model: claude-sonnet-5
-      input: 94
-      output: 18039
-      cache_read: 2274937
-      cache_write: 115398
-      cost: 0.9241
+      input: 138
+      output: 28016
+      cache_read: 3299867
+      cache_write: 176207
+      cost: 1.3809
   strategic:
     - kind: planner
       seconds: 1999

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 401
-      cache_read: 3178165
-      cache_write: 120208
-      cost: 1.3415
+      input: 62
+      output: 22911
+      cache_read: 3203930
+      cache_write: 94450
+      cost: 1.6967
 ---
 # T-0836 flai serves the planner's activity document and its run's stream to the dashboard
 

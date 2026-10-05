@@ -4,10 +4,10 @@ title: "S-0267 cost of delay inputs: time lost per cycle 1h?"
 anchor:
   path: wip/kanban/stories/S-0267-the-close-out-s-flai-tier-runs-each-go-test-once-the-short-behaviour-run-is-dropped-where-the-full-run-follows-it.md
   item: S-0267
-status: open
+status: resolved
 participants: [planner-S-0267, alex]
 created: 2026-10-05T00:17:33Z
-updated: 2026-10-05T00:24:12Z
+updated: 2026-10-05T00:27:28Z
 ---
 
 # TH-0114 S-0267 cost of delay inputs: time lost per cycle 1h?
@@ -66,3 +66,6 @@ I set `time_lost_per_cycle: 1h` on S-0267, as you instructed, and `flai cod` giv
 agent-S-0267 cancelled T-0842 and T-0843 as duplicates of its T-0846 and T-0848. T-0848 took the `close-out.sh` header comment. Both of its tasks are done.
 
 The plan for S-0267 is complete.
+
+### 2026-10-05T00:27:28Z alex
+Resolved.

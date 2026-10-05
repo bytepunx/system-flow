@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 165
-      cache_read: 1800460
-      cache_write: 14290
-      cost: 0.738
+      input: 34
+      output: 12605
+      cache_read: 1762770
+      cache_write: 51965
+      cost: 0.9335
 ---
 # T-0839 The design and the user guide describe the Planner page
 

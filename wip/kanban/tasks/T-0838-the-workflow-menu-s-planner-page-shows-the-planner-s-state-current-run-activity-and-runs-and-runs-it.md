@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 1249
-      cache_read: 4346355
-      cache_write: 141469
-      cost: 1.8255
+      input: 85
+      output: 31173
+      cache_read: 4359321
+      cache_write: 128510
+      cost: 2.3085
 ---
 # T-0838 The Workflow menu's Planner page shows the planner's state, current run, activity, and runs, and runs it
 

@@ -3,17 +3,20 @@ id: S-0259
 type: story
 nature: feature
 title: The Workflow menu has a Planner page showing its status, activity log, and runs
-status: in-progress
+status: review
 parent: E-0016
 owner: alex
 created: 2026-10-04T04:53:03Z
-updated: 2026-10-05T00:21:45Z
+updated: 2026-10-05T00:32:56Z
 transitions:
   - to: ready
     at: 2026-10-04T23:40:49Z
     by: alex
   - to: in-progress
     at: 2026-10-05T00:03:35Z
+    by: agent-S-0259
+  - to: review
+    at: 2026-10-05T00:32:56Z
     by: agent-S-0259
 tags: [dashboard]
 topics: [planning]
@@ -26,21 +29,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1175
-  estimated: true
+  seconds: 1793
   models:
     - model: claude-haiku-4-5-20251001
-      input: 114
-      output: 21
-      cache_read: 473122
-      cache_write: 62363
-      cost: 0.1279
+      input: 122
+      output: 7630
+      cache_read: 535485
+      cache_write: 62936
+      cost: 0.1705
     - model: claude-opus-5-5
-      input: 286
-      output: 2393
-      cache_read: 13104205
-      cache_write: 443120
-      cost: 5.5101
+      input: 318
+      output: 117038
+      cache_read: 16366844
+      cache_write: 482484
+      cost: 8.6672
+    - model: claude-sonnet-5
+      input: 62
+      output: 12937
+      cache_read: 1766922
+      cache_write: 121772
+      cost: 0.7873
 cost_of_delay:
   value: 36.59
   by: planner-E-0016
