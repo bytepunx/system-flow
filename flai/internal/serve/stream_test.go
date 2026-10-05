@@ -222,6 +222,28 @@ func TestStreamOfAStoryWithNoAgent(t *testing.T) {
 	}
 }
 
+// S-0259: a planner run's stream is read as a story's agent's is, from the
+// item's newest planner run, and names the item rather than a story.
+func TestPlanStreamReadsAPlannerRun(t *testing.T) {
+	text := strings.Join(sessionLines, "\n") + "\n"
+	st, log := streamState(t, text, false)
+	st.Plans = map[string]*AgentRun{"E-0001": {Item: "E-0001", Agent: "planner-E-0001", Started: "2026-09-29T06:00:00Z", Log: log, PID: 43}}
+	got, err := PlanStream(st, "E-0001", -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameEntries(t, got.Entries, sessionEntries)
+	if got.Item != "E-0001" || got.Story != "" || got.Agent != "planner-E-0001" || got.Started != "2026-09-29T06:00:00Z" || !got.Running || got.Next != int64(len(text)) {
+		t.Errorf("run = %+v", got)
+	}
+	if _, err := PlanStream(st, "S-0001", -1); !errors.Is(err, hostapi.ErrNoAgent) || err.Error() != "flai serve has started no planner for S-0001" {
+		t.Errorf("a story with an agent and no planner: err = %v, want hostapi.ErrNoAgent naming S-0001", err)
+	}
+	if _, err := Stream(st, "E-0001", -1); !errors.Is(err, hostapi.ErrNoAgent) {
+		t.Errorf("a planner run read as a story's agent's: err = %v, want hostapi.ErrNoAgent", err)
+	}
+}
+
 func TestStreamOfARunThatHasNoLog(t *testing.T) {
 	st := AgentState{Stories: map[string]*AgentRun{
 		"S-0001": {Story: "S-0001", Started: "2026-09-29T05:00:00Z", Ended: "2026-09-29T05:00:00Z", Error: "claude: executable file not found in $PATH", Outcome: OutcomeFailed},

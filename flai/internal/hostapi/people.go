@@ -221,6 +221,41 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			return map[string]any{"streams": streams}, nil
 		},
 
+		// activity.document: a strategic agent's activity document,
+		// wip/agents/<kind>.md, its totals and its entries, oldest first; empty,
+		// with zero totals, before its first activity (S-0259).
+		"activity.document": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			var in struct {
+				Kind string `json:"kind"`
+			}
+			if e := params(raw, &in); e != nil {
+				return nil, e
+			}
+			if !workitem.IsActivityKind(in.Kind) {
+				return nil, bad("kind must be a strategic agent, one of %s, not %q", strings.Join(workitem.ActivityKinds, ", "), in.Kind)
+			}
+			done := perf.Track(ctx, "repo.open")
+			repo, err := workitem.Open(p.Root)
+			done()
+			if err != nil {
+				return nil, failed(err)
+			}
+			done = perf.Track(ctx, "narratives.read")
+			a, err := repo.Activity(in.Kind)
+			done()
+			if err != nil {
+				return nil, failed(err)
+			}
+			out := *a
+			if rel, err := filepath.Rel(repo.MainRoot, a.Path); err == nil {
+				out.Path = filepath.ToSlash(rel)
+			}
+			if out.Entries == nil {
+				out.Entries = []workitem.ActivityEntry{}
+			}
+			return out, nil
+		},
+
 		// inbox.designer: what needs a human. Not the agent's MCP inbox.
 		"inbox.designer": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
 			done := perf.Track(ctx, "repo.open")

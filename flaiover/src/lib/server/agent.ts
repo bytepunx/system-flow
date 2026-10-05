@@ -55,6 +55,7 @@ export const REQUIRED_METHODS = [
 	'doc.get',
 	'adrs.list',
 	'activity.get',
+	'activity.document',
 	'inbox.designer',
 	'search.query',
 	'item.move',

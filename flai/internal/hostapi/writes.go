@@ -350,6 +350,10 @@ type Host struct {
 	// negative; ErrNoAgent when it started none. Nil when nothing starts
 	// agents here.
 	AgentStream func(root, story string, after int64) (any, error)
+	// PlanStream reads the stream of the newest planner flai serve started
+	// for an epic or a story (S-0259), as AgentStream reads a story's agent's;
+	// ErrNoAgent when it started none. Nil when nothing starts agents here.
+	PlanStream func(root, item string, after int64) (any, error)
 	// Settings reports the host's settings as they apply to a project
 	// (S-0105), for the dashboard's settings page. Nil when there are none.
 	Settings func(root string) any

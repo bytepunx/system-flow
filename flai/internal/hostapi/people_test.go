@@ -1,6 +1,7 @@
 package hostapi
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,6 +116,55 @@ func TestActivityGet(t *testing.T) {
 		s.Task == nil || s.Task.ID != "T-0001" || s.LastLog == nil || s.LastLog.Text != "Dredging started." ||
 		s.Path != "wip/agents/S-0001.md" || s.Updated != "2026-09-20T08:30:00Z" || s.AgeSeconds != 30*60 {
 		t.Errorf("%+v task %+v log %+v", s, s.Task, s.LastLog)
+	}
+}
+
+// S-0259: activity.document answers the planner's document as flai reads it,
+// with its path in the repository, and an empty one before its first entry.
+func TestActivityDocument(t *testing.T) {
+	p := harbour(t)
+	var empty map[string]any
+	if err := call(t, p, "activity.document", `{"kind":"planner"}`, &empty); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := json.Marshal(empty); string(b) != `{"accrued_cost":0,"accrued_seconds":0,"entries":[],"kind":"planner","last_run":"","path":"wip/agents/planner.md","tasks_completed":0}` {
+		t.Errorf("before the first activity: %s", b)
+	}
+
+	repo, _ := workitem.Open(p.Root)
+	for i, e := range []workitem.ActivityEntry{
+		{At: t0, Summary: "Drafted the stories of E-0001.", Trigger: "asked", Items: []string{"E-0001", "S-0001"}, Seconds: 300, Cost: 0.5},
+		{At: t0.Add(time.Hour), Summary: "Revisited S-0002.", Items: []string{"S-0002"}, Seconds: 60, Cost: 0.25, Estimated: true},
+	} {
+		if _, err := repo.AppendActivity(workitem.ActivityPlanner, e); err != nil {
+			t.Fatalf("entry %d: %v", i, err)
+		}
+	}
+	var got workitem.Activity
+	if err := call(t, p, "activity.document", `{"kind":"planner"}`, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Kind != "planner" || got.AccruedCost != 0.75 || got.AccruedSeconds != 360 || got.TasksCompleted != 2 ||
+		got.LastRun != "2026-09-20T09:00:00Z" || got.Path != "wip/agents/planner.md" || len(got.Entries) != 2 {
+		t.Fatalf("document: %+v", got)
+	}
+	if e := got.Entries[0]; !e.At.Equal(t0) || e.Summary != "Drafted the stories of E-0001." || e.Trigger != "asked" ||
+		strings.Join(e.Items, ",") != "E-0001,S-0001" || e.Seconds != 300 || e.Cost != 0.5 || e.Estimated {
+		t.Errorf("first entry: %+v", e)
+	}
+	if e := got.Entries[1]; e.Summary != "Revisited S-0002." || e.Trigger != "" || !e.Estimated {
+		t.Errorf("second entry: %+v", e)
+	}
+
+	for _, raw := range []string{`{"kind":"S-0001"}`, `{}`} {
+		var none any
+		if err := call(t, p, "activity.document", raw, &none); err == nil || err.Code != channel.CodeInvalidParams || !strings.Contains(err.Message, "planner, orchestrator, analyzer") {
+			t.Errorf("%s: %+v, want a bad request naming the kinds", raw, err)
+		}
+	}
+	var none any
+	if err := call(t, p, "activity.document", `{"kind":7}`, &none); err == nil || err.Code != channel.CodeInvalidParams {
+		t.Errorf("a kind that is not a string: %+v, want a bad request", err)
 	}
 }
 

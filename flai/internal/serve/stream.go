@@ -60,9 +60,13 @@ type StreamEntry struct {
 	Error bool `json:"error,omitempty"`
 }
 
-// StreamRead is one read of a story's newest agent's stream.
+// StreamRead is one read of a story's newest agent's stream, or of an
+// item's newest planner's.
 type StreamRead struct {
+	// Story is the story whose agent this is; empty on a planner's stream.
 	Story string `json:"story"`
+	// Item is the epic or story a planner plans; empty on a story's agent's.
+	Item  string `json:"item,omitempty"`
 	Agent string `json:"agent"`
 	// Started names the run: a new run writes a new log, so an offset from
 	// another run means nothing.
@@ -90,7 +94,44 @@ func Stream(st AgentState, story string, after int64) (*StreamRead, error) {
 	if run == nil {
 		return nil, fmt.Errorf("%s: %w", story, hostapi.ErrNoAgent)
 	}
-	out := &StreamRead{Story: story, Agent: run.Agent, Started: run.Started, Ended: run.Ended, Running: run.live(), Outcome: run.Outcome, Entries: []StreamEntry{}}
+	out, err := streamRun(run, story, after)
+	if err != nil {
+		return nil, err
+	}
+	out.Story = story
+	return out, nil
+}
+
+// PlanStream reads the stream of the newest planner flai serve started for
+// item, an epic or a story, as Stream reads a story's agent's; an error that
+// is hostapi.ErrNoAgent when it started none.
+func PlanStream(st AgentState, item string, after int64) (*StreamRead, error) {
+	run := st.Plans[item]
+	if run == nil {
+		return nil, noPlanner(item)
+	}
+	out, err := streamRun(run, item, after)
+	if err != nil {
+		return nil, err
+	}
+	out.Item = item
+	return out, nil
+}
+
+// noPlanner is an item flai serve has started no planner for: it says so,
+// and is hostapi.ErrNoAgent to whoever asks, as a story with no agent is.
+type noPlanner string
+
+// Error names the item.
+func (n noPlanner) Error() string { return "flai serve has started no planner for " + string(n) }
+
+// Is makes errors.Is find hostapi.ErrNoAgent in it.
+func (noPlanner) Is(target error) bool { return target == hostapi.ErrNoAgent }
+
+// streamRun reads run's log as Stream says; id names what the run is for in
+// its errors.
+func streamRun(run *AgentRun, id string, after int64) (*StreamRead, error) {
+	out := &StreamRead{Agent: run.Agent, Started: run.Started, Ended: run.Ended, Running: run.live(), Outcome: run.Outcome, Entries: []StreamEntry{}}
 	if run.Log == "" {
 		if run.Error != "" {
 			out.Entries = append(out.Entries, StreamEntry{Kind: StreamEnd, Text: "could not be started: " + run.Error, Error: true})
@@ -102,12 +143,12 @@ func Stream(st AgentState, story string, after int64) (*StreamRead, error) {
 		return out, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("reading the stream of %s: %w", story, err)
+		return nil, fmt.Errorf("reading the stream of %s: %w", id, err)
 	}
 	defer func() { _ = f.Close() }()
 	info, err := f.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("reading the stream of %s: %w", story, err)
+		return nil, fmt.Errorf("reading the stream of %s: %w", id, err)
 	}
 	out.Size = info.Size()
 	tail := after < 0 || after > out.Size
@@ -116,7 +157,7 @@ func Stream(st AgentState, story string, after int64) (*StreamRead, error) {
 	}
 	out.From, out.Next = after, after
 	if _, err := f.Seek(after, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("reading the stream of %s: %w", story, err)
+		return nil, fmt.Errorf("reading the stream of %s: %w", id, err)
 	}
 	r := bufio.NewReaderSize(f, 64<<10)
 	if tail && after > 0 && !lineStart(f, after) {
@@ -131,7 +172,7 @@ func Stream(st AgentState, story string, after int64) (*StreamRead, error) {
 		line, n, long, whole, err := readLine(r, streamLineBytes)
 		if !whole {
 			if err != nil && !errors.Is(err, io.EOF) {
-				return nil, fmt.Errorf("reading the stream of %s: %w", story, err)
+				return nil, fmt.Errorf("reading the stream of %s: %w", id, err)
 			}
 			break
 		}

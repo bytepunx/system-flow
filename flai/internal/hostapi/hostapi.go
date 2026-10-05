@@ -86,10 +86,12 @@ var (
 	itemID   = regexp.MustCompile(`(?i)^[EST]-?\d{1,6}$`)
 	itemType = map[string]bool{"": true, workitem.Epic: true, workitem.Story: true, workitem.Task: true}
 	storyID  = regexp.MustCompile(`^S-\d{3,}$`)
+	planID   = regexp.MustCompile(`^[ES]-\d{3,}$`)
 )
 
 // ErrNoAgent is what Host.AgentStream returns for a story flai serve has
-// started no agent for.
+// started no agent for, and Host.PlanStream, wrapped, for an item it has
+// started no planner for.
 var ErrNoAgent = errors.New("flai serve has started no agent for this story")
 
 func bad(format string, a ...any) *channel.Error {
@@ -220,16 +222,28 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 
 		// agent.stream: what the newest agent flai serve started for a story
 		// said and did, read from its log from the byte offset after, or its
-		// tail when after is absent (S-0142). Read-only, like agent.status.
+		// tail when after is absent (S-0142); with plan in place of story, the
+		// newest planner flai serve started for that epic or story (S-0259).
+		// Read-only, like agent.status.
 		"agent.stream": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Story string `json:"story"`
+				Plan  string `json:"plan"`
 				After *int64 `json:"after"`
 			}
 			if e := params(raw, &in); e != nil {
 				return nil, e
 			}
-			if !storyID.MatchString(in.Story) {
+			if (in.Story == "") == (in.Plan == "") {
+				return nil, bad("give one of story, for a story's agent, and plan, for the planner of an epic or a story")
+			}
+			id, read := in.Story, host.AgentStream
+			if in.Plan != "" {
+				if !planID.MatchString(in.Plan) {
+					return nil, bad("%q is not an epic's or a story's ID", in.Plan)
+				}
+				id, read = in.Plan, host.PlanStream
+			} else if !storyID.MatchString(in.Story) {
 				return nil, bad("%q is not a story's ID", in.Story)
 			}
 			after := int64(-1)
@@ -239,11 +253,11 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				}
 				after = *in.After
 			}
-			if host.AgentStream == nil {
+			if read == nil {
 				return nil, &channel.Error{Code: NotFound, Message: "flai serve starts no agents here, so there is no stream to read"}
 			}
 			done := perf.Track(ctx, "agent.stream")
-			out, err := host.AgentStream(p.Root, in.Story, after)
+			out, err := read(p.Root, id, after)
 			done()
 			if errors.Is(err, ErrNoAgent) {
 				return nil, &channel.Error{Code: NotFound, Message: err.Error()}

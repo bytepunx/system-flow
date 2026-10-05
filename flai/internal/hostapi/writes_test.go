@@ -719,6 +719,63 @@ func TestAgentStreamAsksTheHost(t *testing.T) {
 	}
 }
 
+// S-0259: agent.stream with plan reads an epic's or a story's planner's
+// stream through the host's PlanStream, and takes exactly one of story and
+// plan.
+func TestAgentStreamOfAPlanAsksTheHost(t *testing.T) {
+	p := withDocs(t)
+	type asked struct {
+		root, id string
+		after    int64
+	}
+	var stories, plans []asked
+	host := Host{
+		AgentStream: func(root, story string, after int64) (any, error) {
+			stories = append(stories, asked{root, story, after})
+			return map[string]any{"story": story}, nil
+		},
+		PlanStream: func(root, item string, after int64) (any, error) {
+			plans = append(plans, asked{root, item, after})
+			if item == "E-0002" {
+				return nil, fmt.Errorf("flai serve has started no planner for %s: %w", item, ErrNoAgent)
+			}
+			return map[string]any{"item": item, "next": 3}, nil
+		},
+	}
+	m := MethodsFor("test", nil, host)["agent.stream"]
+	res, e := m(context.Background(), p, json.RawMessage(`{"plan":"E-0001","after":2}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if b, _ := json.Marshal(res); string(b) != `{"item":"E-0001","next":3}` {
+		t.Errorf("answer: %s", b)
+	}
+	if _, e := m(context.Background(), p, json.RawMessage(`{"plan":"S-0001"}`)); e != nil {
+		t.Fatal(e)
+	}
+	if want := []asked{{p.Root, "E-0001", 2}, {p.Root, "S-0001", -1}}; len(plans) != 2 || plans[0] != want[0] || plans[1] != want[1] {
+		t.Errorf("asked the planner's stream %+v, want %+v", plans, want)
+	}
+	for raw, code := range map[string]int{
+		`{}`:                                 channel.CodeInvalidParams,
+		`{"story":"S-0001","plan":"E-0001"}`: channel.CodeInvalidParams,
+		`{"plan":"T-0001"}`:                  channel.CodeInvalidParams,
+		`{"plan":"E-1"}`:                     channel.CodeInvalidParams,
+		`{"plan":"E-0001","after":-1}`:       channel.CodeInvalidParams,
+		`{"plan":"E-0002"}`:                  NotFound,
+	} {
+		if _, e := m(context.Background(), p, json.RawMessage(raw)); e == nil || e.Code != code {
+			t.Errorf("%s: %+v, want code %d", raw, e, code)
+		}
+	}
+	if len(stories) != 0 {
+		t.Errorf("a plan's stream asked for a story's agent's: %+v", stories)
+	}
+	if _, e := MethodsFor("test", nil, Host{AgentStream: host.AgentStream})["agent.stream"](context.Background(), p, json.RawMessage(`{"plan":"E-0001"}`)); e == nil || e.Code != NotFound {
+		t.Errorf("on a host that reads no planner's stream: %+v", e)
+	}
+}
+
 // S-0082: checks.run and checks.cancel are off until enabled, refused and
 // journalled the same generic way every other host action is (already
 // proven for push above); this checks describeChecksRun's own journal line.

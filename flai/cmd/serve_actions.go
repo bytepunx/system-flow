@@ -56,6 +56,9 @@ func (a *app) host() hostapi.Host {
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
 		},
+		PlanStream: func(root, item string, after int64) (any, error) {
+			return serve.PlanStream(a.serveDir().AgentStates()[root], item, after)
+		},
 		Settings: a.hostSettings,
 		Requests: a.serveDir().Requests,
 		Record: func(e hostapi.Entry) {
