@@ -90,3 +90,4 @@ When and how the agent working a story hands work to a sub-agent and what it may
 
 ## Project additions
 - `.claude/settings.json` runs the guard from this tree, `scripts/flai.sh guard`, passing on only its refusals as the template's does, so it is the guard on this branch; a project made from the template runs the installed `flai guard` (ADR-0060). The agent definitions in `.claude/agents/` are copies of the template's; change them in `template/root/.claude/agents/` first.
+- Edit these files, and any other file under a `.claude/` folder, with `Edit` or `Write` like any other file: under `flai serve`, flai's `permission_prompt` asks the operator on a thread before the write, or allows it at once when they have turned on `auto-approve` (ADR-0086). Never write them through the shell.
