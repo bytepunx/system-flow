@@ -6,7 +6,7 @@ title: The verifier reads a close-out run's exit status without piping it away, 
 status: ready
 owner: alex
 created: 2026-10-05T00:06:34Z
-updated: 2026-10-05T00:34:46Z
+updated: 2026-10-05T01:13:13Z
 transitions:
   - to: ready
     at: 2026-10-05T00:13:54Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-05T00:22:55Z
 forecast:
   duration: 40m
-  delivery: 2026-10-05T01:20:00Z
-  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, behind S-0249."
+  delivery: 2026-10-05T02:04:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-05T00:34:46Z
+  at: 2026-10-05T01:13:13Z
 ---
 # S-0266 The verifier reads a close-out run's exit status without piping it away, and the story agent tells it where the run is expected to stop
 
