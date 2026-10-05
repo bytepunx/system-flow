@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-03
+updated: 2026-10-05
 audience: agent
 order: 130
 status: active
@@ -33,6 +33,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Before moving a story to `review`:
   - commit what is outstanding, run `flai stream sync` again and resolve what it reports, as `git.md` says, and have one fresh verifier run the whole suite, the lint, and `flai check` in the worktree through the project's close-out script where it has one
   - and check the diff against the story's acceptance criteria and these conventions
+  - tell that verifier to run the close-out once, in one command without a pipe or a file, and to read its last line, which names the outcome and the step it stopped at; name any step you already know will stop, and why, so that it reports that stop and checks the steps after it rather than running the close-out again
   - if an issue is found, fix it, commit, and run a fresh verifier to confirm the fixes
   - a verifier's passing run is the story's run before review; do not repeat it.
 - Fix what a verifier finds yourself; never delegate a fix to a sub-agent.
@@ -64,6 +65,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Do not edit files.
 - Do not move, create, or edit work items, write to threads, read the inbox, or wait for events or work; your tools leave them out; never work around that through the shell.
 - Answer the question you were given. Do not do the story's work.
+- Run a long script, such as the close-out, once, as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `scripts/close-out.sh S-nnnn; echo "exit $?"`. Never pipe its output, which loses the script's exit status, and never redirect it into a file. Read its last line, which names the outcome and the step it stopped at. When your prompt names a step known to stop, report that stop as expected, and run the steps after it through their own entry points rather than the script again.
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
 - Your final message is all the agent that started you sees. Lead with the answer, then the evidence, then what you could not check.
 

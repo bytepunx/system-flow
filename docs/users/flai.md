@@ -495,6 +495,8 @@ A story's agent works through its tasks one at a time, and keeps the branch clos
 
 Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out with `scripts/close-out.sh`, which refuses a branch that does not yet contain the main branch and says to sync.
 
+Every run of `scripts/close-out.sh` ends with one line naming the story, the outcome, and the step it stopped at, such as `close-out: S-0037 passed every step; ready to move to review` or `close-out: S-0037 stopped at markdown lint (exit 1)`, so a run that stops never needs running again to learn why. The agent's verifier runs it once and reads that line, and the agent tells the verifier any step it already knows will stop.
+
 Sync never stashes, so it never has your work in hand when something goes wrong:
 
 - **Uncommitted changes.** A worktree with uncommitted changes is refused before anything is touched. Sync names each path; commit them on the story branch (or stash them yourself) and sync again. A worktree where a rebase is already in progress is refused too.
