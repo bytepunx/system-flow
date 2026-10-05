@@ -6,7 +6,7 @@ title: The story agent's prompt says to batch independent edits and commands in 
 status: ready
 owner: alex
 created: 2026-10-05T00:06:36Z
-updated: 2026-10-05T00:33:39Z
+updated: 2026-10-05T00:34:46Z
 transitions:
   - to: ready
     at: 2026-10-05T00:14:14Z
@@ -21,10 +21,10 @@ agent:
     effort: high
 forecast:
   duration: 25m
-  delivery: 2026-10-05T01:00:00Z
-  basis: "Its own forecast of 25m; 3rd in the pull order with an in-progress limit of 3, behind S-0249 and S-0266."
+  delivery: 2026-10-05T01:01:00Z
+  basis: "Its own forecast of 25m; 2nd in the pull order with an in-progress limit of 3, behind S-0249 and S-0266."
   by: flai
-  at: 2026-10-05T00:33:39Z
+  at: 2026-10-05T00:34:46Z
 ---
 # S-0268 The story agent's prompt says to batch independent edits and commands in one turn, to take a new task through ready in one command, and to prove a test fails without the shared stash
 
