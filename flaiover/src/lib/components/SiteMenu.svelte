@@ -19,6 +19,7 @@
 		inbox: resolve('/inbox'),
 		threads: resolve('/threads'),
 		activity: resolve('/activity'),
+		planner: resolve('/workflow/planner'),
 		charts: resolve('/charts/[kind]', { kind: 'cycle-time' }),
 		adrs: resolve('/adrs'),
 		docs: resolve('/docs/[...path]', { path: '' }),

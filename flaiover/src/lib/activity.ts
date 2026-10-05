@@ -44,10 +44,13 @@ export type AgentStreamEntry = {
 /**
  * One read of a story's agent's stream (flai's agent.stream): the entries from byte `from` to
  * `next`, where the next read starts; `more` when the log goes on past it. `started` names the run:
- * another run writes another log.
+ * another run writes another log. A planner's stream names its epic or story in `item`, and its
+ * `story` is empty (S-0259).
  */
 export type AgentStreamRead = {
 	story: string;
+	/** The epic or story a planner's run plans, on a planner's stream only. */
+	item?: string;
 	agent: string;
 	started: string;
 	ended?: string;
@@ -101,8 +104,11 @@ export type HostAgent = {
 	};
 };
 
-/** A planner run (S-0208): an agent's run for the epic or story it plans, which is no story's. */
-export type PlanRun = Omit<AgentRun, 'story'> & { item: string };
+/**
+ * A planner run (S-0208): an agent's run for the epic or story it plans, which is no story's, and
+ * what started it (ADR-0084): asked, or the replanner's triggers separated by semicolons (S-0259).
+ */
+export type PlanRun = Omit<AgentRun, 'story'> & { item: string; trigger?: string };
 
 /** The dot's colour, or none for an agent that finished its story. */
 export function dotClass(state: ActivityState): string | null {

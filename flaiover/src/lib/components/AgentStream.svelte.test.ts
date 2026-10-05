@@ -98,6 +98,37 @@ describe('AgentStream (S-0142)', () => {
 		expect(box().dataset.running).toBe('false');
 	});
 
+	it("follows a planner's run for an item with ?plan, reading on from where it stopped (S-0259)", async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		api.mockResolvedValueOnce(
+			answer(
+				read({
+					story: '',
+					item: 'E-0016',
+					agent: 'planner',
+					entries: [{ kind: 'text', text: 'Reading the epic.' }]
+				})
+			)
+		);
+		c = mount(AgentStream, {
+			target: document.body,
+			props: { story: 'E-0016', started: '2026-09-29T05:42:53Z', plan: true }
+		});
+		await settle();
+		expect(api).toHaveBeenCalledWith('/api/agent-stream/E-0016?plan');
+		expect(lines()).toEqual(['Reading the epic.']);
+		expect(box().querySelector('ol')!.getAttribute('aria-label')).toBe(
+			'what the planner for E-0016 said and did'
+		);
+
+		api.mockResolvedValueOnce(
+			answer(read({ story: '', item: 'E-0016', from: 100, next: 150, running: false }))
+		);
+		await vi.advanceTimersByTimeAsync(2000);
+		await settle();
+		expect(api).toHaveBeenLastCalledWith('/api/agent-stream/E-0016?plan&after=100');
+	});
+
 	it('reads on at once while the log has more, and starts over for another run', async () => {
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 		api

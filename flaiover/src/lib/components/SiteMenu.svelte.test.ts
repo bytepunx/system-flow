@@ -52,7 +52,7 @@ describe('the site menu (S-0172)', () => {
 			'Status',
 			'Host'
 		]);
-		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity']);
+		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity', 'Planner']);
 	});
 
 	it('marks the page shown and its group active', () => {
@@ -78,6 +78,14 @@ describe('the site menu (S-0172)', () => {
 		).toEqual(['/host', '/settings', '/license']);
 	});
 
+	it('links the planner page under Workflow and marks it current there (S-0259)', () => {
+		show('/workflow/planner');
+		expect(group('workflow').dataset.active).toBe('true');
+		const current = document.querySelector('[aria-current="page"]')!;
+		expect(current.textContent).toBe('Planner');
+		expect(current.getAttribute('href')).toBe('/workflow/planner');
+	});
+
 	it('opens a group on hover and goes back to the page shown when the pointer leaves', () => {
 		show('/board');
 		pointer(group('status'), 'pointerenter');
@@ -85,7 +93,7 @@ describe('the site menu (S-0172)', () => {
 		expect(group('status').dataset.active).toBe('true');
 		expect(group('workflow').dataset.active).toBe('false');
 		pointer(document.querySelector('nav')!, 'pointerleave');
-		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity']);
+		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity', 'Planner']);
 		expect(group('workflow').dataset.active).toBe('true');
 	});
 
@@ -110,7 +118,7 @@ describe('the site menu (S-0172)', () => {
 			.querySelector('nav')!
 			.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		flushSync();
-		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity']);
+		expect(shownPages()).toEqual(['Overview', 'Board', 'Inbox', 'Threads', 'Activity', 'Planner']);
 	});
 
 	it('opens the group of a page only its group claims, with no page current', () => {

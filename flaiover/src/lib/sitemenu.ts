@@ -24,6 +24,7 @@ export type PageKey =
 	| 'inbox'
 	| 'threads'
 	| 'activity'
+	| 'planner'
 	| 'charts'
 	| 'adrs'
 	| 'docs'
@@ -42,7 +43,9 @@ export const SITE_MENU: MenuGroup[] = [
 			{ key: 'inbox', label: 'Inbox', path: '/inbox', badge: 'inbox' },
 			// Every open thread, where a thread on no item is answered (S-0173, TH-0041).
 			{ key: 'threads', label: 'Threads', path: '/threads' },
-			{ key: 'activity', label: 'Activity', path: '/activity' }
+			{ key: 'activity', label: 'Activity', path: '/activity' },
+			// What the planner is doing and has done, and where it is asked to plan (S-0259).
+			{ key: 'planner', label: 'Planner', path: '/workflow/planner' }
 		],
 		also: ['/items', '/review', '/new']
 	},

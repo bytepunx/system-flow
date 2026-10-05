@@ -58,7 +58,8 @@ export function dollars(c: number): string {
 	return c > 0 && c < 1 ? `$${c.toFixed(3)}` : `$${c.toFixed(2)}`;
 }
 
-function duration(seconds: number): string {
+/** A length of time in hours and minutes, or seconds under a minute. */
+export function duration(seconds: number): string {
 	const h = Math.floor(seconds / 3600);
 	const m = Math.floor((seconds % 3600) / 60);
 	if (h > 0) return m > 0 ? `${h}h${m}m` : `${h}h`;
