@@ -1,8 +1,13 @@
 package conflictmark
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 )
 
 // The markers are built here rather than written out, so that no line of
@@ -59,5 +64,61 @@ func TestIsMarker(t *testing.T) {
 		if got := IsMarker(tc.line); got != tc.want {
 			t.Errorf("IsMarker(%q) = %v, want %v", tc.line, got, tc.want)
 		}
+	}
+}
+
+// Branch reads only what the branch adds or changes since it left the base,
+// numbering lines as the files hold them, and skips binary files (S-0276).
+func TestBranch(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	write := func(name, text string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	git("init", "-q", "-b", "main")
+	git("config", "user.email", "t@t")
+	git("config", "user.name", "t")
+	write("main.md", ours+" HEAD\non main only\n"+theirs+" x\n")
+	write("changed.md", "# Changed\n")
+	write("gone.md", ours+" HEAD\n")
+	git("add", "-A")
+	git("commit", "-q", "-m", "init")
+	git("checkout", "-q", "-b", "story/S-0001")
+	write("added.md", "\n# Added\n"+ours+" HEAD\na\n"+divide+"\nb\n"+theirs+" topic\n")
+	write("changed.md", "# Changed\n\n"+theirs+" topic\n")
+	write("blob.bin", ours+" HEAD\n\x00\n")
+	write("clean.md", "# Clean\n")
+	git("rm", "-q", "gone.md")
+	git("add", "-A")
+	git("commit", "-q", "-m", "branch")
+
+	got, err := Branch(execx.System{}, root, "main", "story/S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"added.md:3", "added.md:7", "changed.md:3"}; !slices.Equal(got, want) {
+		t.Errorf("Branch = %v, want %v", got, want)
+	}
+
+	git("checkout", "-q", "main")
+	git("checkout", "-q", "-b", "story/S-0002")
+	write("clean.md", "# Clean\n")
+	git("add", "-A")
+	git("commit", "-q", "-m", "clean")
+	if got, err := Branch(execx.System{}, root, "main", "story/S-0002"); err != nil || len(got) != 0 {
+		t.Errorf("a clean branch: %v, %v", got, err)
 	}
 }
