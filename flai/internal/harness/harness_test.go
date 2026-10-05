@@ -399,6 +399,37 @@ func TestThePromptSaysHowTheVerifierRunsTheCloseOut(t *testing.T) {
 	}
 }
 
+// S-0268: the story's agent makes independent edits and commands in one turn,
+// and moves a task it has just written through ready to in-progress in one
+// command, since flai move refuses it straight from backlog; an answered or
+// commit run is not told again.
+func TestThePromptSaysToBatchIndependentCalls(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	want := []string{
+		"Make independent edits and commands in one turn, as several tool calls in one message",
+		"consecutive edits to one file, reads of files you already know, and commands that do not wait on each other",
+		"Move a task you have just written to ready and in-progress in one command",
+		"flai move T-nnnn ready && flai move T-nnnn in-progress",
+		"flai move refuses a task straight from backlog to in-progress",
+	}
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		for _, w := range want {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, "in one turn") || strings.Contains(p, "ready && flai move") {
+			t.Errorf("told to batch its calls again:\n%s", p)
+		}
+	}
+}
+
 // S-0176: the story's agent plans its tasks in layers as it writes them,
 // records why in Decisions, and hands each task to a task sub-agent, a layer
 // at once when its tasks are long, whose work it reviews and commits itself;
