@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -114,12 +116,28 @@ func TestMonorepoIsClean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// In a close-out (scripts/close-out.sh exports the story), the errors
+	// outside the story are main's, logged as scripts/check.sh notes them,
+	// and do not fail the story (S-0249).
+	story := os.Getenv("CLOSE_OUT_STORY")
+	if story != "" {
+		changed, err := storygit.StoryChanges(execx.System{}, repo, story)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := ScopeToStory(res, repo, story, changed); err != nil {
+			t.Fatal(err)
+		}
+	}
 	// Warnings (a done story awaiting archive, a WIP breach) are board state,
 	// not code defects; the strict check job gates them. Errors fail here.
 	for _, f := range res.Findings {
-		if f.Level == Error {
+		switch {
+		case f.Outside:
+			t.Logf("outside %s: %s:%d: %s: %s: %s", story, f.Path, f.Line, f.Level, f.Rule, f.Message)
+		case f.Level == Error:
 			t.Errorf("%s:%d: %s: %s: %s", f.Path, f.Line, f.Level, f.Rule, f.Message)
-		} else {
+		default:
 			t.Logf("warning: %s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
 		}
 	}

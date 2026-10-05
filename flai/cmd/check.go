@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -83,9 +82,9 @@ whether or not it passes; a failure to record is an error.`,
 					return err
 				}
 				story = it.ID
-				changed, err := a.storyChanges(repo, story)
+				changed, err := storygit.StoryChanges(a.runner, repo, story)
 				if err != nil {
-					return err
+					return fmt.Errorf("scope the check to %s: %w", story, err)
 				}
 				if err := check.ScopeToStory(res, repo, story, changed); err != nil {
 					return err
@@ -224,37 +223,6 @@ func projectPath(repo *workitem.Repo, p string) string {
 	return filepath.ToSlash(p)
 }
 
-// storyChanges is the paths story's branch changes against the main branch,
-// and those uncommitted in its worktree. A project outside version control,
-// or a story without a branch or a worktree, changes none; a branch or a
-// worktree that cannot be read is an error.
-func (a *app) storyChanges(repo *workitem.Repo, story string) ([]string, error) {
-	if repo.MainRoot == "" || !storygit.InWorkTree(a.runner, repo.MainRoot) {
-		return nil, nil
-	}
-	var paths []string
-	if storygit.BranchExists(a.runner, repo.MainRoot, storygit.Branch(story)) {
-		d, err := storygit.StoryDiff(a.runner, repo, story)
-		if err != nil {
-			return nil, fmt.Errorf("read what %s changes, for --story: %w", story, err)
-		}
-		for _, f := range d.Files {
-			paths = append(paths, f.Path)
-			if f.OldPath != "" {
-				paths = append(paths, f.OldPath)
-			}
-		}
-	}
-	if wt := repo.WorktreePath(story); dirExists(wt) {
-		dirty, err := storygit.Uncommitted(a.runner, wt)
-		if err != nil {
-			return nil, fmt.Errorf("read what %s has uncommitted in %s, for --story: %w", story, wt, err)
-		}
-		paths = append(paths, dirty...)
-	}
-	return paths, nil
-}
-
 // exitError signals a non-zero exit, with an optional message the boundary
 // logs as the fatal event.
 type exitError struct {
@@ -263,8 +231,3 @@ type exitError struct {
 }
 
 func (e *exitError) Error() string { return e.msg }
-
-func dirExists(path string) bool {
-	st, err := os.Stat(path)
-	return err == nil && st.IsDir()
-}

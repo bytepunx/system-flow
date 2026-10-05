@@ -15,6 +15,10 @@ cd "$(dirname "$0")/.."
 [ $# -ge 1 ] || { echo "usage: scripts/close-out.sh S-nnnn [git commit options]" >&2; exit 2; }
 story="$1"
 shift
+# check.sh scopes flai check to the story: the findings outside it are notes,
+# recorded in design/issues, which the commit step below commits.
+CLOSE_OUT_STORY="$story"
+export CLOSE_OUT_STORY
 
 # The narrative is written in the main checkout, which a story worktree shares
 # its git directory with; the main branch is the one checked out there.

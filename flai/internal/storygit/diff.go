@@ -2,6 +2,7 @@ package storygit
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -38,6 +39,39 @@ type Diff struct {
 	Additions int        `json:"additions"`
 	Deletions int        `json:"deletions"`
 	Truncated bool       `json:"truncated"` // some patches were cut or left out
+}
+
+// StoryChanges is the paths the story's branch changes against the main
+// branch, both sides of a rename, and those uncommitted in its worktree, as
+// flai check --story counts them inside the story (S-0249). A project outside
+// version control, or a story without a branch or a worktree, changes none; a
+// branch or a worktree that cannot be read is an error.
+func StoryChanges(r execx.Runner, repo *workitem.Repo, id string) ([]string, error) {
+	if repo.MainRoot == "" || !InWorkTree(r, repo.MainRoot) {
+		return nil, nil
+	}
+	var paths []string
+	if BranchExists(r, repo.MainRoot, Branch(id)) {
+		d, err := StoryDiff(r, repo, id)
+		if err != nil {
+			return nil, fmt.Errorf("read what %s changes: %w", id, err)
+		}
+		for _, f := range d.Files {
+			paths = append(paths, f.Path)
+			if f.OldPath != "" {
+				paths = append(paths, f.OldPath)
+			}
+		}
+	}
+	wt := repo.WorktreePath(id)
+	if st, err := os.Stat(wt); err == nil && st.IsDir() {
+		dirty, err := Uncommitted(r, wt)
+		if err != nil {
+			return nil, fmt.Errorf("read what %s has uncommitted in %s: %w", id, wt, err)
+		}
+		paths = append(paths, dirty...)
+	}
+	return paths, nil
 }
 
 // StoryDiff is the story's branch against its merge base with the main

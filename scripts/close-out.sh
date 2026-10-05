@@ -19,6 +19,11 @@ cd "$ROOT"
 [ $# -ge 1 ] || { echo "usage: scripts/close-out.sh S-nnnn [git commit options]" >&2; exit 2; }
 story="$1"
 shift
+# check.sh scopes flai check to the story, on whichever path reaches it: the
+# findings outside it are notes, recorded in design/issues, which the commit
+# step below commits (S-0249). TestMonorepoIsClean scopes itself the same way.
+CLOSE_OUT_STORY="$story"
+export CLOSE_OUT_STORY
 
 base="${CLOSE_OUT_BASE:-main}"
 
