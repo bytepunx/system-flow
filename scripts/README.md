@@ -8,10 +8,11 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `flai.sh` | Runs `bin/flai`, building it from `flai/` first if missing or stale |
 | `flai-build.sh` | Builds `bin/flai` from source |
 | `flai-reference.sh` | Regenerates `docs/users/flai-reference.md` and the flag index in `docs/operators/settings.md` from the command help (`go run`, leaves `bin/flai` alone) |
-| `test.sh` | Behavior tests: `go test -race -short` in `flai/`, seconds, no external dependencies |
+| `test.sh` | Behavior tests: `go test -race -short` in `flai/`, seconds, no external dependencies, then `flaiover-unit.sh` |
+| `flaiover-unit.sh` | flaiover's vitest against a current `bin/flai`, when `flaiover/node_modules` is present; nothing otherwise |
 | `integration.sh` | Integration tests: full `go test -race` including real git and the monorepo round-trip |
 | `smoke.sh` | Smoke tests: render the template and check it, then check this repository |
-| `flai-test.sh` | gofmt, vet, golangci-lint v2, then all three tiers in order |
+| `flai-test.sh` | gofmt, vet, golangci-lint v2, then `flaiover-unit.sh`, `integration.sh`, and `smoke.sh`: not `test.sh`, whose short Go tests the full run holds, so each Go test runs once |
 | `flai-snapshot.sh` | GoReleaser snapshot build into `flai/dist` |
 | `check.sh` | `flai check --strict` on this repository |
 | `close-out.sh` | Before a story goes to review, in its worktree: the tests its branch calls for, the markdown lint, `flai check --strict`, the narrative's `## Current state` and `## Next steps`, then the commit with the `git commit` options given; stops at the first step that fails |

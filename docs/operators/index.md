@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-04
+updated: 2026-10-05
 status: active
 ---
 
@@ -180,6 +180,8 @@ flai serve enable checks          # for the project in the working directory; --
 flai serve journal                # every run and cancel, refused ones included
 flai serve checks clear flaiover  # one name, or every name with no argument
 ```
+
+In this repository `scripts/flai-test.sh` is what a story's close-out runs for a change to `flai/`: gofmt, vet, and golangci-lint, flaiover's vitest when `flaiover/node_modules` is present, the full Go tests once with the race detector (`make integration`), and the smoke tier. It leaves out `make test`, whose short Go tests the full run holds; `make test` stays the quick run between tasks.
 
 Naming nothing here leaves the manifest's own `checks:` in effect instead — the project's own default, committed and visible to everyone. Naming any command here, on this host, uses this list instead, for this host only: your own real choice of where to name them, never a merge of both.
 

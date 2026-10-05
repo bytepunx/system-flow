@@ -8,9 +8,10 @@
 # flai stream sync and resolve what it reports, run the task's tests, and
 # commit any fix; then commit what is outstanding and sync again before this.
 # Run it in the story's worktree. The tests follow what the branch changes
-# against main (CLOSE_OUT_BASE): flai/ runs flai-test.sh (lint, every tier,
-# the check, and the markdown lint); otherwise template/ runs template-test.sh,
-# then the markdown lint and the check; flaiover/ adds flaiover-test.sh.
+# against main (CLOSE_OUT_BASE): flai/ runs flai-test.sh (lint, vitest, the
+# full Go tests once, and smoke, which holds the check and the markdown lint);
+# otherwise template/ runs template-test.sh, then the markdown lint and the
+# check; flaiover/ adds flaiover-test.sh.
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"
@@ -53,7 +54,7 @@ untracked="$(git -c core.quotePath=false ls-files --others --exclude-standard)"
 touched() { printf '%s\n%s\n%s\n' "$committed" "$pending" "$untracked" | grep -q "^$1/"; }
 
 if touched flai; then
-  echo "close-out: flai lint and every test tier"
+  echo "close-out: flai lint, vitest, the full Go tests, and smoke"
   "$ROOT/scripts/flai-test.sh"
 else
   if touched template; then
