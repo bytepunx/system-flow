@@ -6,7 +6,7 @@ title: flai touches with paths replaces an item's touches, and its help does not
 status: backlog
 owner: alex
 created: 2026-10-03T20:33:24Z
-updated: 2026-10-05T05:50:01Z
+updated: 2026-10-05T05:59:10Z
 transitions: []
 tags: []
 topics: [cli]
@@ -18,10 +18,10 @@ agent:
     effort: high
 forecast:
   duration: 30m
-  delivery: 2026-10-05T23:32:00Z
-  basis: "flai forecast's 18m (median 86 s per unit over 7 done medium improvement stories on claude-opus-5-5, size 12, 30th in the pull order) raised to 30m for three tasks worked in sequence, each with its own commit, sync, and test run; delivery moved by the same 12m"
-  by: planner-S-0254
-  at: 2026-10-05T05:50:01Z
+  delivery: 2026-10-05T23:42:00Z
+  basis: "Its own forecast of 30m; 30th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224, S-0227, S-0228, S-0229, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246 and S-0251."
+  by: flai
+  at: 2026-10-05T05:59:10Z
 ---
 # S-0254 flai touches with paths replaces an item's touches, and its help does not say so
 

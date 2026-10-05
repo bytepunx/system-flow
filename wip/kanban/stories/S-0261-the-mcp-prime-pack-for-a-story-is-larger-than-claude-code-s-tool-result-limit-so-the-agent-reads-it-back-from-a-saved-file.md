@@ -6,7 +6,7 @@ title: The MCP prime pack for a story is larger than Claude Code's tool result l
 status: backlog
 owner: alex
 created: 2026-10-04T20:34:55Z
-updated: 2026-10-05T05:52:46Z
+updated: 2026-10-05T05:59:10Z
 transitions: []
 tags: []
 topics: [cli, conventions]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:51:39Z
 forecast:
   duration: 1h
-  delivery: 2026-10-06T00:40:00Z
-  basis: "flai forecast's 21m (88 s per unit over 20 large-band improvement stories, size 14) raised to 1h because the story must first measure the instances and propose a fix as an ADR before building it, as S-0146, the budget's own story with its ADR already decided, took 39m; delivery is flai's 31st-in-pull-order date moved by the extra 39m."
-  by: planner-S-0261
-  at: 2026-10-05T05:51:39Z
+  delivery: 2026-10-06T01:01:00Z
+  basis: "Its own forecast of 1h; 31st in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224, S-0227, S-0228, S-0229, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251 and S-0254."
+  by: flai
+  at: 2026-10-05T05:59:10Z
 ---
 # S-0261 The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
 
