@@ -2,12 +2,12 @@
 id: I-0072
 title: flai's wip markdown lint does not flag a space inside a code span, so a task body reached main and failed a story's close-out
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-04T21:31:32Z
 last_reported: 2026-10-04T21:31:32Z
-updated: 2026-10-04T21:41:59Z
+updated: 2026-10-05T04:23:38Z
 ---
 
 # I-0072 flai's wip markdown lint does not flag a space inside a code span, so a task body reached main and failed a story's close-out
@@ -24,3 +24,4 @@ Story: S-0256.
 ## Remediation
 
 Story S-0262 remediates this issue, created from it at 2026-10-04T21:41:59Z.
+Closed 2026-10-05T04:23:38Z: S-0262 added MD038, spaces inside a code span, to flai's markdown lint (flai/internal/mdlint), agreeing with markdownlint-cli2 0.20.0 on a code-spans fixture that holds T-0822's line, so flai check reports such a span and the commands that write wip markdown refuse it
