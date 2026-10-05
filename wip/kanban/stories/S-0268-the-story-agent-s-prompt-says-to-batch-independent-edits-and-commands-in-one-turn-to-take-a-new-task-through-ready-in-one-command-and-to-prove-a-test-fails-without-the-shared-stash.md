@@ -3,11 +3,14 @@ id: S-0268
 type: story
 nature: improvement
 title: The story agent's prompt says to batch independent edits and commands in one turn, to take a new task through ready in one command, and to prove a test fails without the shared stash
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-05T00:06:36Z
-updated: 2026-10-05T00:06:36Z
-transitions: []
+updated: 2026-10-05T00:14:14Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:14:14Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

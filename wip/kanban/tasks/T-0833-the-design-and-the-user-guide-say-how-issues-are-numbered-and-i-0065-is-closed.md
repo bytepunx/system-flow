@@ -3,16 +3,36 @@ id: T-0833
 type: task
 nature: remediation
 title: The design and the user guide say how issues are numbered, and I-0065 is closed
-status: backlog
+status: done
 parent: S-0252
 owner: alex
 created: 2026-10-04T23:27:43Z
-updated: 2026-10-04T23:27:43Z
-transitions: []
+updated: 2026-10-05T00:04:38Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:04:12Z
+    by: agent-S-0252
+  - to: in-progress
+    at: 2026-10-05T00:04:13Z
+    by: agent-S-0252
+  - to: done
+    at: 2026-10-05T00:04:38Z
+    by: agent-S-0252
 stream: S-0252
 tags: [docs, issues]
 touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md]
 after: [T-0832]
+usage:
+  source: log
+  seconds: 25
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 4127
+      cache_read: 516419
+      cache_write: 23567
+      cost: 0.3412
 ---
 # T-0833 The design and the user guide say how issues are numbered, and I-0065 is closed
 

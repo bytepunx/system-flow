@@ -3,11 +3,11 @@ id: T-0832
 type: task
 nature: remediation
 title: flai issue new numbers past every issue on main, every story worktree, and every story branch
-status: in-progress
+status: done
 parent: S-0252
 owner: alex
 created: 2026-10-04T23:27:36Z
-updated: 2026-10-04T23:59:02Z
+updated: 2026-10-05T00:04:12Z
 transitions:
   - to: ready
     at: 2026-10-04T23:59:02Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-04T23:59:02Z
     by: agent-S-0252
+  - to: done
+    at: 2026-10-05T00:04:12Z
+    by: agent-S-0252
 stream: S-0252
 tags: [flai, issues]
 touches: [flai/internal/issues, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues_test.go, docs/users/flai-reference.md]
 after: [T-0831]
+usage:
+  source: log
+  seconds: 310
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 12276
+      cache_read: 1536075
+      cache_write: 70099
+      cost: 1.0149
 ---
 # T-0832 flai issue new numbers past every issue on main, every story worktree, and every story branch
 

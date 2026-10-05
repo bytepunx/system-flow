@@ -3,24 +3,44 @@ id: S-0259
 type: story
 nature: feature
 title: The Workflow menu has a Planner page showing its status, activity log, and runs
-status: ready
+status: in-progress
 parent: E-0016
 owner: alex
 created: 2026-10-04T04:53:03Z
-updated: 2026-10-05T00:03:14Z
+updated: 2026-10-05T00:21:45Z
 transitions:
   - to: ready
     at: 2026-10-04T23:40:49Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T00:03:35Z
+    by: agent-S-0259
 tags: [dashboard]
 topics: [planning]
-touches: [flaiover/src/routes/workflow, flaiover/src/routes/api, flaiover/src/lib/components, flaiover/src/lib/sitemenu.ts, flai/internal/hostapi, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes/workflow, flaiover/src/routes/api, flaiover/src/lib/components, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/planner.ts, flaiover/src/lib/planner.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/usage.ts, flaiover/src/lib/server/agent.ts, flai/internal/hostapi, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/cmd/serve_actions.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [S-0208, S-0225]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1175
+  estimated: true
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 114
+      output: 21
+      cache_read: 473122
+      cache_write: 62363
+      cost: 0.1279
+    - model: claude-opus-5-5
+      input: 286
+      output: 2393
+      cache_read: 13104205
+      cache_write: 443120
+      cost: 5.5101
 cost_of_delay:
   value: 36.59
   by: planner-E-0016
@@ -43,15 +63,19 @@ The planner runs today (S-0208) but has no place in the dashboard. Its page unde
 
 ## Acceptance criteria
 
-- [ ] `/workflow/planner` is in the Workflow tier of the site menu, and shows the `plan` host action's state with the command that enables it
-- [ ] The page shows the current run, if any, in the agent pane that story pages have
-- [ ] The page shows the entries of `wip/agents/planner.md`, newest first, each with its items, duration, and cost, and the document's front matter totals
-- [ ] The page lists the past runs with their cost and outcome
-- [ ] A form runs the planner on an epic or a story through the `plan` host action, and says why when the action is off
-- [ ] The page updates live from `/api/events` when `wip/agents/planner.md` changes
-- [ ] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the page, and tests cover its data and the form
+- [x] `/workflow/planner` is in the Workflow tier of the site menu, and shows the `plan` host action's state with the command that enables it
+- [x] The page shows the current run, if any, in the agent pane that story pages have
+- [x] The page shows the entries of `wip/agents/planner.md`, newest first, each with its items, duration, and cost, and the document's front matter totals
+- [x] The page lists the past runs with their cost and outcome
+- [x] A form runs the planner on an epic or a story through the `plan` host action, and says why when the action is off
+- [x] The page updates live from `/api/events` when `wip/agents/planner.md` changes
+- [x] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the page, and tests cover its data and the form
 
 ## Tasks
+- T-0836 flai serves the planner's activity document and its run's stream to the dashboard
+- T-0837 The dashboard's API answers the planner's state, activity, and runs, and its run's stream
+- T-0838 The Workflow menu's Planner page shows the planner's state, current run, activity, and runs, and runs it
+- T-0839 The design and the user guide describe the Planner page
 
 ## Notes
 

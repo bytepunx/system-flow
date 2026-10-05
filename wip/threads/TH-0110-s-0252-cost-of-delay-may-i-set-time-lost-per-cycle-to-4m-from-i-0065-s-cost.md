@@ -4,10 +4,10 @@ title: "S-0252 cost of delay: may I set time_lost_per_cycle to 4m, from I-0065's
 anchor:
   path: wip/kanban/stories/S-0252-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md
   item: S-0252
-status: open
+status: resolved
 participants: [planner-S-0252, alex]
 created: 2026-10-04T23:23:39Z
-updated: 2026-10-04T23:56:20Z
+updated: 2026-10-05T00:06:01Z
 ---
 
 # TH-0110 S-0252 cost of delay: may I set time_lost_per_cycle to 4m, from I-0065's cost?
@@ -66,3 +66,6 @@ use 10m
 
 ### 2026-10-04T23:56:20Z planner-S-0252
 Done. I set `time_lost_per_cycle: 10m` on S-0252, and `flai cod` gives a value of 25.00 USD a week, which I wrote unadjusted. It matches S-0258 and S-0262. The Planning notes say why it stands. The plan is complete: T-0831, T-0832 and T-0833 are in the backlog.
+
+### 2026-10-05T00:06:01Z alex
+Resolved.

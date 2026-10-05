@@ -23,15 +23,15 @@ tags: [flai, git]
 touches: [flai/internal/storygit]
 usage:
   source: log
-  seconds: 116
+  seconds: 118
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 145
-      cache_read: 748409
-      cache_write: 54556
-      cost: 0.3257
+      input: 24
+      output: 6137
+      cache_read: 767929
+      cache_write: 35045
+      cost: 0.5074
 ---
 # T-0831 storygit lists the file names under a design folder on main, every story worktree, and every story branch
 
