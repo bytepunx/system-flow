@@ -6,7 +6,7 @@ status: open
 count: 5
 first_reported: 2026-10-05T03:24:33Z
 last_reported: 2026-10-05T04:38:00Z
-updated: 2026-10-05T04:38:00Z
+updated: 2026-10-05T04:40:48Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -51,3 +51,5 @@ flai check found outside the story:
 `wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches docs/users/flai.md, which S-0262 (in progress) also touches as docs/users/flai.md
 
 ## Remediation
+
+Story S-0279 remediates this issue, created from it at 2026-10-05T04:40:48Z.
