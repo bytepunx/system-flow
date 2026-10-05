@@ -6,7 +6,7 @@ status: open
 count: 6
 first_reported: 2026-10-05T01:38:07Z
 last_reported: 2026-10-05T04:32:39Z
-updated: 2026-10-05T04:32:39Z
+updated: 2026-10-05T04:40:46Z
 ---
 
 # I-0073 flai check finds `threads.archived` outside the story at close-out
@@ -47,3 +47,5 @@ flai check found outside the story:
 `wip/threads/TH-0112-s-0249-cost-of-delay-inputs-time-lost-per-cycle-7m.md`: TH-0112 is answered but S-0249 is archived; resolve it or move it
 
 ## Remediation
+
+Story S-0277 remediates this issue, created from it at 2026-10-05T04:40:46Z.
