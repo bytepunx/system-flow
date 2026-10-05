@@ -3,15 +3,41 @@ id: T-0860
 type: task
 nature: remediation
 title: flai's lint parses what is inside a blockquote, so MD029 flags a quoted ordered list numbered from other than 1
-status: backlog
+status: done
 parent: S-0258
 owner: alex
 created: 2026-10-05T03:13:28Z
-updated: 2026-10-05T03:13:28Z
-transitions: []
+updated: 2026-10-05T05:37:40Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:23:52Z
+    by: agent-S-0258
+  - to: in-progress
+    at: 2026-10-05T05:23:52Z
+    by: agent-S-0258
+  - to: done
+    at: 2026-10-05T05:37:40Z
+    by: agent-S-0258
 stream: S-0258
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint]
+usage:
+  source: log
+  seconds: 828
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 58082
+      cache_read: 5116884
+      cache_write: 198599
+      cost: 3.4153
+    - model: claude-sonnet-5
+      input: 46
+      output: 24817
+      cache_read: 1354450
+      cache_write: 102428
+      cost: 0.7752
 ---
 # T-0860 flai's lint parses what is inside a blockquote, so MD029 flags a quoted ordered list numbered from other than 1
 

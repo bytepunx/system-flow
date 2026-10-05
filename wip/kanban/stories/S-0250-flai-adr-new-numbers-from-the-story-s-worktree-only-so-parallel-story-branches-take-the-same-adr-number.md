@@ -14,6 +14,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 145
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 624
+          output: 126
+          cache_read: 4433381
+          cache_write: 227929
+          cost: 0.9225
+        - model: claude-opus-5-5
+          input: 497
+          output: 16195
+          cache_read: 16618464
+          cache_write: 470742
+          cost: 8.9524
 ---
 # S-0250 flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
 

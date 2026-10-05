@@ -3,16 +3,36 @@ id: T-0861
 type: task
 nature: remediation
 title: The design names quoted lists among what flai's lint judges, and I-0070 is closed
-status: backlog
+status: done
 parent: S-0258
 owner: alex
 created: 2026-10-05T03:13:35Z
-updated: 2026-10-05T03:13:35Z
-transitions: []
+updated: 2026-10-05T05:37:53Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:23:52Z
+    by: agent-S-0258
+  - to: in-progress
+    at: 2026-10-05T05:37:40Z
+    by: agent-S-0258
+  - to: done
+    at: 2026-10-05T05:37:53Z
+    by: agent-S-0258
 stream: S-0258
 tags: [flai, mdlint]
 touches: [design/system/flai-cli.md, design/issues]
 after: [T-0860]
+usage:
+  source: log
+  seconds: 13
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 3333
+      cache_read: 293641
+      cache_write: 11397
+      cost: 0.196
 ---
 # T-0861 The design names quoted lists among what flai's lint judges, and I-0070 is closed
 

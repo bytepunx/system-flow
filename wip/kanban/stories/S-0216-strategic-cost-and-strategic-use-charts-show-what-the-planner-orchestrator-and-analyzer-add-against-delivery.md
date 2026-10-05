@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T05:23:10Z
+updated: 2026-10-05T05:45:49Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:57Z
@@ -46,5 +46,9 @@ The operator should be able to tell whether the strategic agents pay for themsel
 - [ ] Both span the window, read `/api/stats`, match `flai stats --json`; listed under a Strategic group; a note explains how to read them; design and user guide describe them; tests cover the mapping
 
 ## Tasks
+- T-0939 The chart model reads strategic_days and builds the Strategic Cost chart in a Strategic group
+- T-0941 The chart model builds the Strategic Use chart: the agents' hours against mean cycle time and waiting per story
+- T-0945 The charts page lists a Strategic group and explains how to read the two charts
+- T-0947 The dashboard design and the user guide describe the Strategic Cost and Strategic Use charts
 
 ## Notes

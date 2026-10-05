@@ -7,10 +7,10 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T05:23:10Z
+updated: 2026-10-05T05:46:03Z
 transitions: []
 tags: [flai, dashboard]
-touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs]
+touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs, flai/internal/analysis, ".claude/settings.json", design/README.md, docs/users/conventions.md, docs/users/index.md, design/adrs, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md]
 after: [S-0206, S-0207, S-0211]
 agent:
   harness: claude-code
@@ -42,5 +42,6 @@ The analyzer reads the metrics, the design, the code, and the issues, and writes
 - [ ] `design/system/strategic-agents.md` and the user guide describe it; tests cover a run, the guard, and the schedule
 
 ## Tasks
+- T-0949 system-flow.yaml takes analysis.agent and analysis.schedule, and flai check reports a bad one
 
 ## Notes

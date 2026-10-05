@@ -7,10 +7,10 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T05:23:10Z
+updated: 2026-10-05T05:46:14Z
 transitions: []
 tags: [dashboard, flai]
-touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md]
+touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/guard, flai/internal/harness, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/adrs, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0218, S-0211, S-0223]
 agent:
   harness: claude-code
@@ -18,15 +18,15 @@ agent:
   config:
     effort: high
 cost_of_delay:
-  value: 97.56
-  by: planner-E-0016
-  at: 2026-10-04T04:48:24Z
+  value: 84.52
+  by: planner-S-0229
+  at: 2026-10-05T05:45:18Z
 forecast:
-  duration: 2h
-  delivery: 2026-10-05T22:56:00Z
-  basis: "Its own forecast of 2h; 19th in the pull order with an in-progress limit of 3, behind S-0258, S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224, S-0227 and S-0228."
-  by: flai
-  at: 2026-10-05T05:23:10Z
+  duration: 1h15m
+  delivery: 2026-10-05T21:25:00Z
+  basis: "flai forecast's 1h (132 s per unit times size 27) raised to 1h15m, the agent time of S-0204 (72m) and S-0201 (63m), the closest done stories that likewise add a flai write and its dashboard form; 18th in the pull order with an in-progress limit of 3, delivered at its start plus 1h15m times the cycle factor 1.52."
+  by: planner-S-0229
+  at: 2026-10-05T05:45:12Z
 ---
 # S-0229 The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents
 
@@ -41,5 +41,6 @@ The operator decides how much freedom each strategic agent has. The manifest hol
 - [ ] `design/system/flaiover-dashboard.md`, `project-manifest.md`, and the operator guide describe every setting; tests cover a save, a refusal, and read-only
 
 ## Tasks
+- T-0952 flai manifest set writes the strategic agents' settings to system-flow.yaml, validating each and refusing with the field and the reason
 
 ## Notes

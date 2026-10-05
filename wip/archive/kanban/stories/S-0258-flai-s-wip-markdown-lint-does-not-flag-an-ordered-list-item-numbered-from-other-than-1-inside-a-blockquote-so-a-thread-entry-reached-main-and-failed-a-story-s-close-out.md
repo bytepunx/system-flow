@@ -3,13 +3,22 @@ id: S-0258
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag an ordered list item numbered from other than 1 inside a blockquote, so a thread entry reached main and failed a story's close-out
-status: ready
+status: done
 owner: alex
 created: 2026-10-04T04:52:01Z
-updated: 2026-10-05T05:23:10Z
+updated: 2026-10-05T05:46:19Z
 transitions:
   - to: ready
     at: 2026-10-04T23:14:18Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-05T05:23:52Z
+    by: agent-S-0258
+  - to: review
+    at: 2026-10-05T05:45:47Z
+    by: agent-S-0258
+  - to: done
+    at: 2026-10-05T05:46:19Z
     by: alex
 tags: []
 touches: [flai/internal/mdlint, design/issues, design/system/flai-cli.md]
@@ -18,6 +27,22 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1361
+  models:
+    - model: claude-opus-5-5
+      input: 134
+      output: 74867
+      cache_read: 6595574
+      cache_write: 255991
+      cost: 4.4022
+    - model: claude-sonnet-5
+      input: 46
+      output: 24817
+      cache_read: 1354450
+      cache_write: 102428
+      cost: 0.7752
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -43,8 +68,8 @@ finalized:
 This story remediates [I-0070](../../../design/issues/I-0070-flai-s-wip-markdown-lint-does-not-flag-an-ordered-list-item-numbered-from-other-than-1-inside-a-blockquote-so-a-thread-entry-reached-main-and-failed-a-story-s-close-out.md), "flai's wip markdown lint does not flag an ordered list item numbered from other than 1 inside a blockquote, so a thread entry reached main and failed a story's close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0070 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0070 is closed with `flai issue close I-0070 --reason` saying what fixed it
+- [x] The cause I-0070 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0070 is closed with `flai issue close I-0070 --reason` saying what fixed it
 
 ## Tasks
 - T-0860 flai's lint parses what is inside a blockquote, so MD029 flags a quoted ordered list numbered from other than 1
