@@ -3,11 +3,11 @@ id: I-0069
 title: A story agent started by flai serve cannot edit .claude/settings.json, so a story that changes the guard hook's matcher cannot ship it
 class: blocker
 status: open
-count: 5
+count: 6
 cost: 8m
 first_reported: 2026-10-04T00:50:33Z
-last_reported: 2026-10-04T20:07:01Z
-updated: 2026-10-04T20:07:01Z
+last_reported: 2026-10-05T01:18:40Z
+updated: 2026-10-05T01:18:40Z
 ---
 
 # I-0069 A story agent started by flai serve cannot edit .claude/settings.json, so a story that changes the guard hook's matcher cannot ship it
@@ -36,5 +36,9 @@ T-0795 had to change template/root/.claude/agents/planner.md and .claude/agents/
 ### 2026-10-04T20:07:01Z
 Story: S-0210.
 S-0210's agent and its task sub-agent could not edit template/root/.claude/agents/planner.md or .claude/agents/planner.md (Claude Code calls them sensitive); asked the operator to paste the file on TH-0109.
+
+### 2026-10-05T01:18:40Z
+Story: S-0266.
+T-0850's rule for the verifier's definition was refused as a sensitive file, to the story's agent and to its task sub-agent, in both .claude/agents/verifier.md and the template's template/root/.claude/agents/verifier.md; asked the operator to paste the whole file on TH-0120.
 
 ## Remediation
