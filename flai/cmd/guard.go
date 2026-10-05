@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // exitGuardRefused is the exit status with which a Claude Code hook refuses
@@ -18,7 +19,7 @@ const exitGuardRefused = 2
 func newGuardCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "guard",
-		Short: "Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook",
+		Short: "Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, as a Claude Code PreToolUse hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
@@ -52,9 +53,30 @@ finalize: item_new of a story needs draft true, and story new needs
 writes, and the Edit, Write, and NotebookEdit tools. The planner's
 sub-agents are held as any sub-agent is.
 
+In an orchestrator session, one flai serve starts with
+FLAI_ROLE=orchestrate, the session's own calls are held to
+orchestration.permissions in the system-flow.yaml of the project the hook
+runs in (S-0218), each off when unset or when the manifest is unreadable.
+Whatever its permissions it may do what a sub-agent may, call inbox,
+activity_log, wait_for_events, and thread_open, and run thread new and
+issue new and bump. Each permission allows more: plan_backlog_epics the
+MCP tool plan and flai plan on an epic; finalize_drafts flai edit
+--no-draft with nothing else to change; promote_to_ready item_move and
+flai move to ready; order_ready flai order that writes; answer_threads,
+recommend or autonomous, thread_reply and flai thread reply;
+accept_reviews flai accept; publish flai release --pending and flai push.
+A call a permission would allow is refused while it is off, naming it
+(it needs orchestration.permissions.<name>); anything else that writes is
+refused as what the orchestrator never does: other flai tools and
+commands, git's writes, and the Edit, Write, and NotebookEdit tools. Each
+refusal is logged under ## Refusals in wip/agents/orchestrator.md, with
+its time, the call, and the permission it needs; a refusal that cannot be
+logged is warned of and refused all the same. The orchestrator's
+sub-agents are held as any sub-agent is.
+
 The template's .claude/settings.json runs it before Bash and flai's MCP
-tools, and, in a planner session alone, before Edit, Write, and NotebookEdit
-as well.`,
+tools, and, in a planner's or an orchestrator's session alone, before Edit,
+Write, and NotebookEdit as well.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -72,12 +94,38 @@ as well.`,
 			for _, c := range cmd.Root().Commands() {
 				g.Commands = append(g.Commands, c.Name())
 			}
-			why := g.Check(e)
-			if why == "" {
+			var repo *workitem.Repo
+			if g.Role == guard.RoleOrchestrate && e.AgentID == "" {
+				if repo, err = a.guardProject(); err != nil {
+					a.logger().Warn("project unreadable, the orchestrator's permissions are taken as off", "component", "guard", "err", err.Error())
+				} else {
+					g.Permissions = repo.Manifest.Orchestration.Permissions
+				}
+			}
+			r := g.Decide(e)
+			if r.Why == "" {
 				return nil
 			}
-			fmt.Fprintln(a.errOut, why)
+			fmt.Fprintln(a.errOut, r.Why)
+			if repo != nil && r.Call != "" {
+				if _, err := repo.AppendRefusal(workitem.ActivityOrchestrator, workitem.ActivityRefusal{At: a.now(), Call: r.Call, Needs: r.Needs}); err != nil {
+					a.logger().Warn("refusal not logged in the orchestrator's activity document", "component", "guard", "err", err.Error())
+				}
+			}
 			return &exitError{code: exitGuardRefused}
 		},
 	}
+}
+
+// guardProject is the project the hook runs in, from the working directory,
+// for its manifest and the orchestrator's activity document.
+func (a *app) guardProject() (*workitem.Repo, error) {
+	start := a.cwd
+	if start == "" {
+		var err error
+		if start, err = os.Getwd(); err != nil {
+			return nil, err
+		}
+	}
+	return workitem.Open(start)
 }

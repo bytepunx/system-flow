@@ -3,6 +3,8 @@ package guard
 import (
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // g knows flai's commands as the cmd package gives them.
@@ -384,9 +386,191 @@ func TestThePlannersSubAgentIsHeldAsASubAgent(t *testing.T) {
 	}
 }
 
-// Without the role plan the guard decides as it did before the planner.
+// orchestrator is a guard in an orchestrator session with permissions p
+// (S-0218).
+func orchestrator(p manifest.Permissions) Guard {
+	return Guard{Commands: append(append([]string{}, g.Commands...), "plan"), Role: RoleOrchestrate, Permissions: p}
+}
+
+// allOn are every permission on; except turns one of them off.
+var allOn = manifest.Permissions{PlanBacklogEpics: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true}
+
+func except(name string) manifest.Permissions {
+	p := allOn
+	switch name {
+	case manifest.PermitPlanBacklogEpics:
+		p.PlanBacklogEpics = false
+	case manifest.PermitFinalizeDrafts:
+		p.FinalizeDrafts = false
+	case manifest.PermitPromoteToReady:
+		p.PromoteToReady = false
+	case manifest.PermitOrderReady:
+		p.OrderReady = false
+	case manifest.PermitAnswerThreads:
+		p.AnswerThreads = manifest.AnswerOff
+	case manifest.PermitAcceptReviews:
+		p.AcceptReviews = false
+	case manifest.PermitPublish:
+		p.Publish = false
+	}
+	return p
+}
+
+// itemOf is the orchestrator's call of an MCP tool on an item.
+func itemOf(tool, id, to string) Event {
+	e := Event{ToolName: MCPPrefix + tool}
+	e.ToolInput.ID, e.ToolInput.To = id, to
+	return e
+}
+
+// S-0218: each of the orchestrator's calls that a permission allows passes
+// while the permission is on, and is refused, naming it, while it is off,
+// whatever the other permissions are.
+func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
+	for _, c := range []struct {
+		permit string
+		on     manifest.Permissions
+		calls  []Event
+	}{
+		{manifest.PermitPlanBacklogEpics, manifest.Permissions{PlanBacklogEpics: true}, []Event{itemOf("plan", "E-0016", ""), itemOf("plan", "e-16", ""), bash("", "flai plan E-0016"), bash("", "scripts/flai.sh --config c.json plan E-1 --json")}},
+		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{bash("", "flai edit S-0001 --no-draft"), bash("", "flai edit --by orchestrator S-0001 --no-draft=true --hash=abc --json")}},
+		{manifest.PermitPromoteToReady, manifest.Permissions{PromoteToReady: true}, []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move --reason 'top of the backlog' S-0001 ready")}},
+		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply"), bash("", "flai order S-0001 --top")}},
+		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerRecommend}, []Event{itemOf("thread_reply", "", ""), bash("", "flai thread reply TH-0001 'I recommend S-0002'")}},
+		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerAutonomous}, []Event{itemOf("thread_reply", "", "")}},
+		{manifest.PermitAcceptReviews, manifest.Permissions{AcceptReviews: true}, []Event{bash("", "flai accept S-0001")}},
+		{manifest.PermitPublish, manifest.Permissions{Publish: true}, []Event{bash("", "flai release --pending"), bash("", "flai push --pending"), bash("", "flai accept --help; flai push")}},
+	} {
+		needs := "orchestration.permissions." + c.permit
+		for _, e := range c.calls {
+			for _, on := range []manifest.Permissions{c.on, allOn} {
+				if r := orchestrator(on).Decide(e); r.Why != "" {
+					t.Errorf("%s on: %s %q %s refused: %s", c.permit, e.ToolName, e.ToolInput.Command, e.ToolInput.ID, r.Why)
+				}
+			}
+			for _, off := range []manifest.Permissions{{}, {AnswerThreads: manifest.AnswerOff}, except(c.permit)} {
+				r := orchestrator(off).Decide(e)
+				if !strings.HasPrefix(r.Why, "the orchestrator cannot ") || !strings.Contains(r.Why, ": it needs "+needs+", which is off. Ask the operator with thread_open on the item") || r.Needs != needs || r.Call == "" {
+					t.Errorf("%s off: %s %q %s: %+v", c.permit, e.ToolName, e.ToolInput.Command, e.ToolInput.ID, r)
+				}
+			}
+		}
+	}
+}
+
+// S-0218: the orchestrator reads, opens threads, records issues, and logs its
+// activities with no permission at all, as a sub-agent reads.
+func TestTheOrchestratorAlwaysReadsAndAsks(t *testing.T) {
+	none := orchestrator(manifest.Permissions{})
+	allowed := []Event{{ToolName: "Read"}, {ToolName: "Grep"}, {ToolName: "Agent"}}
+	for _, tool := range append(append([]string{}, MCPReads...), MCPOrchestrates...) {
+		allowed = append(allowed, itemOf(tool, "", ""))
+	}
+	for _, c := range []string{
+		"flai order --by wsjf",
+		"flai promote --candidates --json",
+		"flai release --evaluate",
+		"flai thread new --on S-0001 'Ready?' 'S-0001 has no forecast'",
+		"flai issue new 'friction' && flai issue bump I-0001",
+		"flai board --json; flai show S-0001; flai stats",
+		"flai move --help",
+		"git log --oneline -5 && git status --short",
+		"ls wip/agents",
+	} {
+		allowed = append(allowed, bash("", c))
+	}
+	for _, e := range allowed {
+		if why := none.Check(e); why != "" {
+			t.Errorf("%s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+		}
+	}
+}
+
+// S-0218: what no permission allows the orchestrator never does, and its
+// refusal says so and names no permission.
+func TestTheOrchestratorNeverEditsFilesOrWritesBeyondItsPermissions(t *testing.T) {
+	all := orchestrator(allOn)
+	refused := []Event{itemOf("plan", "S-0001", ""), itemOf("item_move", "S-0001", "in-progress"), itemOf("item_move", "S-0001", "backlog"), itemOf("item_move", "S-0001", "done")}
+	for _, tool := range []string{"item_new", "item_edit", "thread_resolve", "wait_for_work", "agent_start", "agent_restart", "issue_story"} {
+		refused = append(refused, itemOf(tool, "", ""))
+	}
+	for _, tool := range fileEdits {
+		refused = append(refused, Event{ToolName: tool})
+	}
+	for _, c := range []string{
+		"flai plan S-0001",
+		"flai move S-0001 in-progress",
+		"flai move S-0001 backlog",
+		"flai edit S-0001 --no-draft --title 'Better'",
+		"flai edit S-0001 --no-draft --autocommit",
+		"flai edit S-0001 --draft",
+		"flai story new --epic E-0001 --draft 'x'",
+		"flai thread resolve TH-0001",
+		"flai release S-0001 --apply",
+		"flai stream open S-0001",
+		"flai archive S-0001",
+		"flai touches S-0001 flai/cmd",
+		"git commit -m order",
+		"git push",
+		"bash -c 'git checkout main'",
+	} {
+		refused = append(refused, bash("", c))
+	}
+	for _, e := range refused {
+		r := all.Decide(e)
+		if !strings.HasPrefix(r.Why, "the orchestrator cannot ") || !strings.Contains(r.Why, ": the orchestrator never does it, whatever its permissions: ") || !strings.Contains(r.Why, "thread_open on the item") || r.Needs != "" || r.Call == "" {
+			t.Errorf("%s %q %s: %+v", e.ToolName, e.ToolInput.Command, e.ToolInput.ID, r)
+		}
+	}
+	if r := all.Decide(itemOf("plan", "S-0001", "")); !strings.Contains(r.Why, "the orchestrator cannot plan S-0001: ") || !strings.Contains(r.Why, plansEpics) {
+		t.Errorf("plan a story: %q", r.Why)
+	}
+}
+
+// S-0218: a refusal carries the call, in one line, for the orchestrator's
+// activity document.
+func TestTheOrchestratorsRefusalNamesTheCall(t *testing.T) {
+	edit := Event{ToolName: "Edit"}
+	edit.ToolInput.FilePath = "flai/cmd/x.go"
+	for _, c := range []struct {
+		e    Event
+		call string
+	}{
+		{itemOf("item_move", "S-0001", "ready"), "item_move S-0001 ready"},
+		{itemOf("thread_reply", "", ""), "thread_reply"},
+		{bash("", "cd /w &&\n  flai move S-0001 ready"), "flai move S-0001 ready"},
+		{edit, "Edit flai/cmd/x.go"},
+	} {
+		if r := orchestrator(manifest.Permissions{}).Decide(c.e); r.Call != c.call {
+			t.Errorf("%s: call %q, want %q", c.e.ToolName, r.Call, c.call)
+		}
+	}
+	if r := orchestrator(manifest.Permissions{}).Decide(bash("", "flai move S-0001 ready")); r.Why != `the orchestrator cannot run "flai move S-0001 ready": it needs orchestration.permissions.promote_to_ready, which is off. `+askOperator {
+		t.Errorf("message: %q", r.Why)
+	}
+}
+
+// S-0218: the orchestrator's sub-agents are held as every sub-agent is,
+// whatever the orchestrator's permissions.
+func TestTheOrchestratorsSubAgentIsHeldAsASubAgent(t *testing.T) {
+	all := orchestrator(allOn)
+	sub := itemOf("item_move", "S-0001", "ready")
+	sub.AgentID, sub.AgentType = "a1", "explorer"
+	if why := all.Check(sub); !strings.Contains(why, "a sub-agent (explorer) cannot call item_move") {
+		t.Errorf("item_move: %q", why)
+	}
+	if why := all.Check(bash("explorer", "flai accept S-0001")); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
+		t.Errorf("accept: %q", why)
+	}
+	if r := all.Decide(Event{ToolName: "Edit", AgentID: "a1", AgentType: "explorer"}); r.Why != "" || r.Call != "" {
+		t.Errorf("Edit refused: %+v", r)
+	}
+}
+
+// Without the role plan or orchestrate the guard decides as it did before
+// the planner.
 func TestOtherRolesAreDecidedAsBefore(t *testing.T) {
-	for _, role := range []string{"", "orchestrate", "story"} {
+	for _, role := range []string{"", "analyze", "story"} {
 		gr := Guard{Commands: g.Commands, Role: role}
 		for _, e := range []Event{{ToolName: "Edit"}, {ToolName: "Write"}, mcp("item_move", "review"), bash("", "flai accept S-1 && git commit -m x"), {ToolName: "Edit", AgentID: "a1", AgentType: "verifier"}} {
 			if why := gr.Check(e); why != "" {

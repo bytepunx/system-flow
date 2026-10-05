@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -91,14 +94,23 @@ func (a *app) planOn(repo *workitem.Repo) (serve.Options, serve.Entry) {
 
 // mcpPlan starts the planner for item for flai mcp's tool plan (S-0208), as
 // flai plan does, under the same plan host action, and journals who asked
-// and what came of it.
+// and what came of it. Of the agents flai serve starts, the orchestrator
+// alone may ask, for an epic in the backlog, while the project gives it
+// plan_backlog_epics (S-0218).
 func (a *app) mcpPlan(ctx context.Context, root, item, by string) (mcpserver.PlanStarted, error) {
-	if os.Getenv("FLAI_STARTED_BY") == "flai-serve" {
+	orchestrator := os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate
+	if os.Getenv("FLAI_STARTED_BY") == "flai-serve" && !orchestrator {
 		return mcpserver.PlanStarted{}, fmt.Errorf("an agent flai serve started does not start the planner: planning %s is the operator's to ask for, from its page or with flai plan %s on the host", item, item)
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
 		return mcpserver.PlanStarted{}, err
+	}
+	if orchestrator {
+		if err := orchestratorPlans(repo, item); err != nil {
+			return mcpserver.PlanStarted{}, err
+		}
+		by = orchestratorBy(by)
 	}
 	o, e := a.planOn(repo)
 	run, err := serve.Plan(ctx, o, e, item)
@@ -117,4 +129,36 @@ func (a *app) mcpPlan(ctx context.Context, root, item, by string) (mcpserver.Pla
 		return mcpserver.PlanStarted{}, err
 	}
 	return mcpserver.PlanStarted{Item: run.Item, Agent: run.Agent, Harness: run.Harness, Command: run.Command, PID: run.PID, Log: run.Log, Session: run.Session, Started: run.Started}, nil
+}
+
+// orchestratorPlans says why the orchestrator may not ask for the planner on
+// item in repo, or nil when it may: item is an epic in the backlog, and the
+// project gives the orchestrator plan_backlog_epics.
+func orchestratorPlans(repo *workitem.Repo, item string) error {
+	if workitem.TypeOfID(item) != workitem.Epic {
+		return fmt.Errorf("the orchestrator asks for the planner on a backlog epic alone, and %s is not an epic", item)
+	}
+	if !repo.Manifest.Orchestration.Permissions.Allows(manifest.PermitPlanBacklogEpics) {
+		return fmt.Errorf("the orchestrator asks for the planner only with orchestration.permissions.plan_backlog_epics, which is off: ask the operator with thread_open on %s", item)
+	}
+	it, err := repo.Get(item)
+	if err != nil {
+		return err
+	}
+	if it.Status != workitem.Backlog || it.Archived {
+		return fmt.Errorf("the orchestrator asks for the planner on a backlog epic alone, and %s is %s", it.ID, it.Status)
+	}
+	return nil
+}
+
+// orchestratorBy names the orchestrator as who asks, with the name flai mcp
+// knows it by when that does not already.
+func orchestratorBy(by string) string {
+	switch {
+	case by == "":
+		return workitem.ActivityOrchestrator
+	case strings.HasPrefix(by, workitem.ActivityOrchestrator):
+		return by
+	}
+	return fmt.Sprintf("%s (%s)", workitem.ActivityOrchestrator, by)
 }

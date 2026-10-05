@@ -98,6 +98,9 @@ func keyPaths(t reflect.Type, tag, prefix string) []string {
 	for i := range t.NumField() {
 		f := t.Field(i)
 		name, _, _ := strings.Cut(f.Tag.Get(tag), ",")
+		if !f.IsExported() || name == "-" {
+			continue
+		}
 		if name == "" {
 			name = f.Name
 		}

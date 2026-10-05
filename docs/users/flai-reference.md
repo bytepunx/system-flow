@@ -28,7 +28,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
-| [guard](#flai-guard) | Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook |
+| [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, as a Claude Code PreToolUse hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
@@ -93,7 +93,7 @@ Subcommands:
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
-- [guard](#flai-guard): Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook
+- [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, as a Claude Code PreToolUse hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
@@ -1073,7 +1073,7 @@ flai forecast S-0210 --json
 
 ### flai guard
 
-Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code PreToolUse hook.
+Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, as a Claude Code PreToolUse hook.
 
 ```text
 flai guard
@@ -1083,7 +1083,9 @@ Reads a Claude Code PreToolUse hook's input on standard input and refuses the ca
 
 In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, task new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
 
-The template's .claude/settings.json runs it before Bash and flai's MCP tools, and, in a planner session alone, before Edit, Write, and NotebookEdit as well.
+In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, the session's own calls are held to orchestration.permissions in the system-flow.yaml of the project the hook runs in (S-0218), each off when unset or when the manifest is unreadable. Whatever its permissions it may do what a sub-agent may, call inbox, activity\_log, wait\_for\_events, and thread\_open, and run thread new and issue new and bump. Each permission allows more: plan\_backlog\_epics the MCP tool plan and flai plan on an epic; finalize\_drafts flai edit --no-draft with nothing else to change; promote\_to\_ready item\_move and flai move to ready; order\_ready flai order that writes; answer\_threads, recommend or autonomous, thread\_reply and flai thread reply; accept\_reviews flai accept; publish flai release --pending and flai push. A call a permission would allow is refused while it is off, naming it (it needs orchestration.permissions.&lt;name&gt;); anything else that writes is refused as what the orchestrator never does: other flai tools and commands, git's writes, and the Edit, Write, and NotebookEdit tools. Each refusal is logged under ## Refusals in wip/agents/orchestrator.md, with its time, the call, and the permission it needs; a refusal that cannot be logged is warned of and refused all the same. The orchestrator's sub-agents are held as any sub-agent is.
+
+The template's .claude/settings.json runs it before Bash and flai's MCP tools, and, in a planner's or an orchestrator's session alone, before Edit, Write, and NotebookEdit as well.
 
 Examples:
 

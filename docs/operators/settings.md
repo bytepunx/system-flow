@@ -109,6 +109,19 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `orchestration.release.count` | unset | For `threshold`: the number of accepted stories not yet released at which a release is due; zero or more |
 | `orchestration.release.epic` | unset | For `theme`: an epic ID such as `E-0001`; a release is due when every story of it is accepted. Give it or `tag`, not both |
 | `orchestration.release.tag` | unset | For `theme`: a tag; a release is due when every story with it is accepted |
+| `orchestration.permissions.plan_backlog_epics` | `false` | The orchestrator may ask the planner to draft the stories of an epic in the backlog ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
+| `orchestration.permissions.finalize_drafts` | `false` | The orchestrator may finalize a draft story, `flai edit --no-draft` |
+| `orchestration.permissions.promote_to_ready` | `false` | The orchestrator may move a story to `ready` |
+| `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order, `flai order --apply` |
+| `orchestration.permissions.answer_threads` | `off` | How the orchestrator replies on threads: `off` never; `recommend` with a recommendation for the operator; `autonomous` with an answer of its own |
+| `orchestration.permissions.accept_reviews` | `false` | The orchestrator may accept a story in review, `flai accept` |
+| `orchestration.permissions.publish` | `false` | The orchestrator may release and push accepted work, `flai release --pending` and `flai push` |
+| `orchestration.agent.harness` | `agent.harness` | The orchestrator's harness, over the project's `agent` |
+| `orchestration.agent.model` | `agent.model` | The orchestrator's model |
+| `orchestration.agent.config.<name>` | `agent.config` | The orchestrator's options for its harness, merged key by key over `agent.config` |
+| `orchestration.agent.roles.<name>.harness` | `agent.roles` | A sub-agent role's harness in the orchestrator's session, merged role by role over `agent.roles` |
+| `orchestration.agent.roles.<name>.model` | `agent.roles` | A sub-agent role's model in the orchestrator's session |
+| `orchestration.agent.roles.<name>.config.<name>` | `agent.roles` | A sub-agent role's options in the orchestrator's session; `claude-code` takes none |
 | `flai.minimum` | unset | The oldest flai release that may read the project, `X.Y.Z`; an older one stops before reading any item and names the version needed. Publishing a flai release that changes the front-matter fields flai reads raises it ([Keeping the host's flai current](index.md#keeping-the-hosts-flai-current)) |
 | `agent.roles.<name>.harness` | none | The harness of a sub-agent role (`explore`, `verify`); for `claude-code`, only `claude-code`, since a sub-agent runs in the story's session |
 | `agent.roles.<name>.model` | none | The model a sub-agent role runs, over the one its definition in `.claude/agents/` names, such as `haiku` or `claude-sonnet-5-5` |

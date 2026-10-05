@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // S-0175, ADR-0060: flai guard refuses a sub-agent's writes with exit 2 and
@@ -53,6 +57,59 @@ func TestGuardHoldsThePlannerToPlanning(t *testing.T) {
 		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
 			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
 		}
+	}
+}
+
+// S-0218: in a session flai serve starts with FLAI_ROLE=orchestrate, flai
+// guard holds the orchestrator's own calls to the permissions in the
+// project's manifest, and logs each refusal in wip/agents/orchestrator.md.
+func TestGuardHoldsTheOrchestratorToItsPermissions(t *testing.T) {
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	root := tempProject(t)
+	manifest := filepath.Join(root, "system-flow.yaml")
+	data, _ := os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, append(data, "orchestration:\n  permissions:\n    promote_to_ready: true\n    answer_threads: recommend\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		in   string
+		code int
+		err  string
+	}{
+		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"ready"}}`, 0, ""},
+		{`{"tool_name":"mcp__flai__thread_reply","tool_input":{"thread":"TH-1","text":"I recommend S-2"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai order --by wsjf && flai thread new --on S-1 'q' 'text'"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai accept S-1"}}`, 2, `the orchestrator cannot run "flai accept S-1": it needs orchestration.permissions.accept_reviews, which is off. Ask the operator with thread_open on the item`},
+		{`{"tool_name":"Write","tool_input":{"file_path":"x.go","content":""}}`, 2, "the orchestrator cannot use Write: the orchestrator never does it"},
+		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"ready"},"agent_type":"explorer","agent_id":"a1"}`, 2, "a sub-agent (explorer) cannot call item_move"},
+	} {
+		_, errOut, code := runStdin(t, root, c.in, "guard")
+		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
+			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+	doc, err := workitem.ReadActivity(filepath.Join(root, "wip", "agents", "orchestrator.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 9, 19, 2, 0, 0, 0, time.UTC)
+	want := []workitem.ActivityRefusal{{At: at, Call: "flai accept S-1", Needs: "orchestration.permissions.accept_reviews"}, {At: at, Call: "Write x.go"}}
+	if !reflect.DeepEqual(doc.Refusals, want) || len(doc.Entries) != 0 {
+		t.Errorf("the orchestrator's refusals: %+v, want %+v (a sub-agent's are not logged)", doc.Refusals, want)
+	}
+
+	// a refusal that cannot be logged is refused all the same
+	if err := os.WriteFile(doc.Path, []byte("not an activity document\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, errOut, code := runStdin(t, root, `{"tool_name":"Bash","tool_input":{"command":"flai push"}}`, "guard")
+	if code != 2 || !strings.Contains(errOut, "it needs orchestration.permissions.publish") || !strings.Contains(errOut, "refusal not logged") {
+		t.Errorf("unlogged refusal: code %d, stderr %q", code, errOut)
+	}
+	// outside a project every permission is off
+	_, errOut, code = runStdin(t, t.TempDir(), `{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"ready"}}`, "guard")
+	if code != 2 || !strings.Contains(errOut, "it needs orchestration.permissions.promote_to_ready") || !strings.Contains(errOut, "permissions are taken as off") {
+		t.Errorf("no project: code %d, stderr %q", code, errOut)
 	}
 }
 
