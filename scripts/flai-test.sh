@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 # Lint plus all three test tiers in order of cost. Needs golangci-lint v2 (scripts/install-tools.sh).
+# The full Go run in integration.sh holds every short test, so test.sh's short
+# Go run is left out here and only its vitest half, flaiover-unit.sh, is kept.
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT/flai"
@@ -14,6 +16,6 @@ case "$version" in
   *) echo "golangci-lint: $lint is version ${version:-unknown}; flai/.golangci.yaml needs v2: run scripts/install-tools.sh (make install-tools) in the main checkout"; exit 1 ;;
 esac
 "$lint" run ./...
-"$ROOT/scripts/test.sh"
+"$ROOT/scripts/flaiover-unit.sh"
 "$ROOT/scripts/integration.sh"
 "$ROOT/scripts/smoke.sh"

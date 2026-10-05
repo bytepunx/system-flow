@@ -27,7 +27,7 @@ lint-md: ## Lint all markdown with the CI globs and config
 mdlint-fixtures: ## Regenerate what markdownlint-cli2 reports on flai's markdown lint fixtures
 	scripts/mdlint-fixtures.sh
 
-flai-test: ## Lint plus all three test tiers in order
+flai-test: ## Lint, flaiover unit tests, then the full Go tests once (integration) and smoke
 	scripts/flai-test.sh
 
 flai-snapshot: ## GoReleaser snapshot build into flai/dist
