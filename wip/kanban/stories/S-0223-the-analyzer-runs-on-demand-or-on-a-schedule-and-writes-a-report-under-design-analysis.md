@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T05:49:29Z
+updated: 2026-10-05T05:59:10Z
 transitions: []
 tags: [flai, dashboard]
 topics: [analysis]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-05T05:49:29Z
 forecast:
   duration: 2h
-  delivery: 2026-10-05T18:10:00Z
-  basis: "Planner's 2h over flai's 1h13m (132 s per unit over 14 large feature stories on this model, times size 33): it joins S-0208's host action and run (65m) with S-0211's schedule (48m) and adds a report folder with its check and a guard role; it starts about 15:07Z, 13th in the pull order, and takes 2h times the cycle factor 1.52."
-  by: planner-S-0223
-  at: 2026-10-05T05:49:29Z
+  delivery: 2026-10-05T18:20:00Z
+  basis: "Its own forecast of 2h; 13th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215 and S-0216."
+  by: flai
+  at: 2026-10-05T05:59:10Z
 ---
 # S-0223 The analyzer runs on demand or on a schedule and writes a report under design/analysis
 

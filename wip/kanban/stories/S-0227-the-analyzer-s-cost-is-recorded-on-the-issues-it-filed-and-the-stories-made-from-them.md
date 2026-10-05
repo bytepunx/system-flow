@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T05:47:33Z
+updated: 2026-10-05T05:59:10Z
 transitions: []
 tags: [flai]
 topics: [analysis, planning]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:09Z
 forecast:
   duration: 50m
-  delivery: 2026-10-05T20:04:00Z
-  basis: "Its own forecast of 50m; 15th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223 and S-0224."
+  delivery: 2026-10-05T19:30:00Z
+  basis: "Its own forecast of 50m; 15th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223 and S-0224."
   by: flai
-  at: 2026-10-05T05:47:33Z
+  at: 2026-10-05T05:59:10Z
 ---
 # S-0227 The analyzer's cost is recorded on the issues it filed and the stories made from them
 
