@@ -3,11 +3,11 @@ id: I-0074
 title: Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
 class: efficiency
 status: open
-count: 1
+count: 2
 cost: 3m
 first_reported: 2026-10-05T03:22:09Z
-last_reported: 2026-10-05T03:22:09Z
-updated: 2026-10-05T03:22:09Z
+last_reported: 2026-10-05T03:48:36Z
+updated: 2026-10-05T03:48:36Z
 ---
 
 # I-0074 Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
@@ -20,5 +20,9 @@ Two stories that each record or close an issue always conflict in design/issues/
 ### 2026-10-05T03:22:09Z
 Story: S-0260.
 S-0260 closed I-0071 and S-0253 closed I-0066, each with flai issue close on its own branch. flai stream sync's trial merge then opened TH-0126: both changed summary.md's updated timestamp, and the two removed rows sit two lines apart, so the hunks meet. The resolution is mechanical (keep both removals, the later timestamp, or regenerate with flai issue summary), but whichever story is accepted second stops on it, and each story's agent spends a turn reading the thread. summary.md is generated: a rebase or merge could regenerate it rather than merge it line by line, or the trial merge could leave it out.
+
+### 2026-10-05T03:48:36Z
+Story: S-0253.
+Syncing S-0253 onto main after S-0260's acceptance stopped on design/issues/summary.md: both rewrote its updated line, S-0253 closing I-0066 and recording the close-out's findings.
 
 ## Remediation
