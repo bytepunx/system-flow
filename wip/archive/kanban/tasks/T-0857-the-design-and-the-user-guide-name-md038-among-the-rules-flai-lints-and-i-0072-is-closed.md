@@ -3,16 +3,36 @@ id: T-0857
 type: task
 nature: remediation
 title: The design and the user guide name MD038 among the rules flai lints, and I-0072 is closed
-status: backlog
+status: done
 parent: S-0262
 owner: alex
 created: 2026-10-05T03:12:58Z
-updated: 2026-10-05T03:12:58Z
-transitions: []
+updated: 2026-10-05T04:23:49Z
+transitions:
+  - to: ready
+    at: 2026-10-05T04:15:38Z
+    by: agent-S-0262
+  - to: in-progress
+    at: 2026-10-05T04:23:27Z
+    by: agent-S-0262
+  - to: done
+    at: 2026-10-05T04:23:49Z
+    by: agent-S-0262
 stream: S-0262
 tags: [flai]
 touches: [design/system/flai-cli.md, docs/users/flai.md, design/issues]
 after: [T-0856]
+usage:
+  source: log
+  seconds: 22
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5564
+      cache_read: 620346
+      cache_write: 23317
+      cost: 0.3876
 ---
 # T-0857 The design and the user guide name MD038 among the rules flai lints, and I-0072 is closed
 

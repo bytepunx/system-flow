@@ -3,15 +3,41 @@ id: T-0856
 type: task
 nature: remediation
 title: mdlint reports MD038, spaces inside a code span, as markdownlint does
-status: backlog
+status: done
 parent: S-0262
 owner: alex
 created: 2026-10-05T03:12:53Z
-updated: 2026-10-05T03:12:53Z
-transitions: []
+updated: 2026-10-05T04:23:27Z
+transitions:
+  - to: ready
+    at: 2026-10-05T04:15:37Z
+    by: agent-S-0262
+  - to: in-progress
+    at: 2026-10-05T04:15:38Z
+    by: agent-S-0262
+  - to: done
+    at: 2026-10-05T04:23:27Z
+    by: agent-S-0262
 stream: S-0262
 tags: [flai]
 touches: [flai/internal/mdlint]
+usage:
+  source: log
+  seconds: 469
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 25684
+      cache_read: 2863324
+      cache_write: 107626
+      cost: 1.7891
+    - model: claude-sonnet-5
+      input: 33
+      output: 9217
+      cache_read: 686678
+      cache_write: 87275
+      cost: 0.4478
 ---
 # T-0856 mdlint reports MD038, spaces inside a code span, as markdownlint does
 

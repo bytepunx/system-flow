@@ -4,10 +4,10 @@ title: "S-0244 plan: four tasks in three layers; I-0059's remediations 2 to 4, 1
 anchor:
   path: wip/kanban/stories/S-0244-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md
   item: S-0244
-status: open
+status: resolved
 participants: [planner-S-0244, alex]
 created: 2026-10-05T03:17:16Z
-updated: 2026-10-05T03:49:42Z
+updated: 2026-10-05T04:11:24Z
 ---
 
 # TH-0125 S-0244 plan: four tasks in three layers; I-0059's remediations 2 to 4, 1 already done by S-0249, 5 dropped
@@ -50,3 +50,6 @@ The cost of delay is now set from TH-0121: `penalty_per_week` 625, value **625.0
 flai has since replanned the delivery to 05:33Z, after S-0260's acceptance. It kept the 1h30m duration.
 
 The plan is complete. T-0867 to T-0870 are in the backlog, and `flai check --strict` and the markdown lint are clean on S-0244 and its tasks.
+
+### 2026-10-05T04:11:24Z alex
+Resolved.

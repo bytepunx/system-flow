@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 22.3132
-accrued_seconds: 8242
-tasks_completed: 10
-last_run: 2026-10-05T03:15:13Z
+accrued_cost: 23.5219
+accrued_seconds: 8673
+tasks_completed: 11
+last_run: 2026-10-05T04:12:25Z
 ---
 
 # Planner activity
@@ -89,3 +89,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0260, T-0862, T-0863, T-0864, T-0865, T-0866
 - Seconds: 71
 - Cost: 0.8566 USD, estimated
+
+### 2026-10-05T04:12:25Z
+
+- Summary: Planned S-0276: six touches (added `flai/internal/conflictmark` and `flai/cmd/accept_conflict_test.go`), forecast raised from flai's 20m to 30m (delivery about 05:19Z), cost of delay 12.50 USD/week from the 5m the operator gave on TH-0127; created T-0871, T-0872 and T-0873 in three layers, revisited none, plan summary on TH-0129.
+- Trigger: asked
+- Items: S-0276, T-0871, T-0872, T-0873
+- Seconds: 431
+- Cost: 1.2087 USD, estimated

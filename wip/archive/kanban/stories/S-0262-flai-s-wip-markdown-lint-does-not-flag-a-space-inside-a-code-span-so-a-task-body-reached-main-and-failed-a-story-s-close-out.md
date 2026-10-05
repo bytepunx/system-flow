@@ -3,10 +3,10 @@ id: S-0262
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag a space inside a code span, so a task body reached main and failed a story's close-out
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-04T21:41:59Z
-updated: 2026-10-05T04:38:00Z
+updated: 2026-10-05T04:38:16Z
 transitions:
   - to: ready
     at: 2026-10-04T23:14:03Z
@@ -19,6 +19,12 @@ transitions:
     by: agent-S-0262
   - to: in-progress
     at: 2026-10-05T04:32:53Z
+    by: alex
+  - to: review
+    at: 2026-10-05T04:38:11Z
+    by: alex
+  - to: done
+    at: 2026-10-05T04:38:16Z
     by: alex
 tags: [flai]
 topics: [cli, go]

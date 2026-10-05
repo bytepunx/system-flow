@@ -4,10 +4,10 @@ title: "S-0244 cost of delay inputs: time lost per cycle 21m?"
 anchor:
   path: wip/kanban/stories/S-0244-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md
   item: S-0244
-status: open
+status: resolved
 participants: [planner-S-0244, alex]
 created: 2026-10-05T03:12:05Z
-updated: 2026-10-05T03:49:41Z
+updated: 2026-10-05T04:11:17Z
 ---
 
 # TH-0121 S-0244 cost of delay inputs: time lost per cycle 21m?
@@ -35,3 +35,6 @@ Recorded as you chose:
 - `flai cod S-0244` gives **625.00 USD/week**, and that is the value recorded.
 
 The derivation is in the story's Notes under Planning.
+
+### 2026-10-05T04:11:17Z alex
+Resolved.
