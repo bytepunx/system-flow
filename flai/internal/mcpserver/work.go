@@ -25,7 +25,7 @@ const (
 
 // WorkIn bounds one wait.
 type WorkIn struct {
-	TimeoutSeconds int `json:"timeout_seconds,omitempty" jsonschema:"how long to wait, default the server's longest (5 minutes); call it again when it times out"`
+	TimeoutSeconds int `json:"timeout_seconds,omitempty" jsonschema:"how long to wait in seconds, default 300 (5 minutes), at most 1800 (30 minutes); call it again when it times out"`
 }
 
 // WorkOut is what an idle agent should do next, or why there is nothing yet.
@@ -108,11 +108,8 @@ func (s *server) mine(id string) bool {
 	return err == nil && n.Agent != "" && n.Agent == s.agent
 }
 
-func (s *server) waitForWork(ctx context.Context, _ *mcp.CallToolRequest, in WorkIn) (*mcp.CallToolResult, WorkOut, error) {
-	timeout := time.Duration(in.TimeoutSeconds) * time.Second
-	if timeout <= 0 || timeout > s.maxWait {
-		timeout = s.maxWait
-	}
+func (s *server) waitForWork(ctx context.Context, req *mcp.CallToolRequest, in WorkIn) (*mcp.CallToolResult, WorkOut, error) {
+	timeout := holdFor(in.TimeoutSeconds, workWait, s.maxWait)
 	s.workMu.Lock()
 	since := s.workSince
 	s.workMu.Unlock()
@@ -132,8 +129,8 @@ func (s *server) waitForWork(ctx context.Context, _ *mcp.CallToolRequest, in Wor
 	if out.Reason != "" {
 		return nil, answer(out), nil
 	}
-	deadline := time.NewTimer(timeout)
-	defer deadline.Stop()
+	deadline := s.after(timeout)
+	defer keepAlive(ctx, req, s.beat)()
 	tick := time.NewTicker(s.poll)
 	defer tick.Stop()
 	before := s.snapshot()
@@ -141,7 +138,7 @@ func (s *server) waitForWork(ctx context.Context, _ *mcp.CallToolRequest, in Wor
 		select {
 		case <-ctx.Done():
 			return nil, out, ctx.Err()
-		case <-deadline.C:
+		case <-deadline:
 			out.TimedOut = true
 			return nil, answer(out), nil
 		case <-s.closing:

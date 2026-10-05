@@ -94,6 +94,21 @@ func TestWaitForWorkWaitsForAStoryToBeReady(t *testing.T) {
 	}
 }
 
+// I-0059: wait_for_work holds for the timeout asked, up to 30 minutes, and
+// for five minutes when none is asked.
+func TestWaitForWorkHoldsUpToTheLongestWait(t *testing.T) {
+	d := newDeadlines()
+	f := setupWith(t, func(o *Options) { o.MaxWait, o.After = 0, d.after })
+	f.toReview(t)
+	checkHolds(t, d, func(args map[string]any) map[string]any {
+		out, failed := f.call(t, "wait_for_work", args)
+		if failed != "" {
+			t.Errorf("wait_for_work: %s", failed)
+		}
+		return out
+	}, 5*time.Minute)
+}
+
 // Criteria 1 and 2: with room it answers at once with the first story in
 // pull order; with the in-progress limit full it waits for room, and answers
 // once another agent's story leaves in-progress.

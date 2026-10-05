@@ -60,8 +60,18 @@ type folderFixture struct {
 
 func folderSetup(t *testing.T, root string) *folderFixture {
 	t.Helper()
+	return folderSetupWith(t, root, nil)
+}
+
+// folderSetupWith is folderSetup with options changed by with.
+func folderSetupWith(t *testing.T, root string, with func(*Options)) *folderFixture {
+	t.Helper()
 	clock := t0.Add(time.Minute)
-	srv := New(Options{Folder: root, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second, Rescan: time.Nanosecond})
+	opt := Options{Folder: root, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second, Rescan: time.Nanosecond}
+	if with != nil {
+		with(&opt)
+	}
+	srv := New(opt)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	ct, st := mcp.NewInMemoryTransports()
@@ -236,6 +246,29 @@ func TestWaitForWorkAcrossAFolderSkipsHeldStories(t *testing.T) {
 		if h, _ := card["held"].(map[string]any); card["id"] != held.ID || !strings.HasPrefix(h["reason"].(string), "held (overlap): touches flai/cmd, inside flai which "+open.ID) {
 			t.Errorf("alpha's ready: %v", pw["ready"])
 		}
+	}
+}
+
+// I-0059: across a folder too, wait_for_work and wait_for_events hold for
+// the timeout asked, up to 30 minutes, and for their defaults when none is.
+func TestWaitsAcrossAFolderHoldUpToTheLongestWait(t *testing.T) {
+	root := t.TempDir()
+	makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	d := newDeadlines()
+	f := folderSetupWith(t, root, func(o *Options) { o.MaxWait, o.After = 0, d.after })
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	for tool, def := range map[string]time.Duration{"wait_for_work": 5 * time.Minute, "wait_for_events": time.Minute} {
+		t.Run(tool, func(t *testing.T) {
+			checkHolds(t, d, func(args map[string]any) map[string]any {
+				out, failed := f.call(t, tool, args)
+				if failed != "" {
+					t.Errorf("%s: %s", tool, failed)
+				}
+				return out
+			}, def)
+		})
 	}
 }
 

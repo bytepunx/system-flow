@@ -40,7 +40,13 @@ type Options struct {
 	Version string           // flai version, reported to clients
 	Now     func() time.Time // default time.Now
 	Poll    time.Duration    // wait_for_events polling interval, default 250ms
-	MaxWait time.Duration    // upper bound for one wait_for_events call, default 5m
+	MaxWait time.Duration    // upper bound for one wait_for_events or wait_for_work call, default LongestWait
+	// After arms the deadline of a held wait_for_events or wait_for_work
+	// call; default time.After.
+	After func(time.Duration) <-chan time.Time
+	// Heartbeat is how often a held wait sends a progress notification to a
+	// call that carries a progress token; default a minute.
+	Heartbeat time.Duration
 	// Runner runs git to ask what is accepted and not yet published
 	// (ADR-0067), and whether a story's worktree is committed before it goes
 	// to review (S-0140). Without one the server says nothing about the
@@ -82,6 +88,8 @@ type server struct {
 	now     func() time.Time
 	poll    time.Duration
 	maxWait time.Duration
+	after   func(time.Duration) <-chan time.Time
+	beat    time.Duration
 	runner  execx.Runner
 	closing <-chan struct{}
 	agents  AgentStart
@@ -100,7 +108,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, logger: opt.Logger}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, logger: opt.Logger}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -114,7 +122,13 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 		s.poll = 250 * time.Millisecond
 	}
 	if s.maxWait <= 0 {
-		s.maxWait = 5 * time.Minute
+		s.maxWait = LongestWait
+	}
+	if s.after == nil {
+		s.after = time.After
+	}
+	if s.beat <= 0 {
+		s.beat = heartbeat
 	}
 	s.key = repo.Manifest.Key
 	if s.key == "" {
@@ -145,7 +159,7 @@ func New(opt Options) *mcp.Server {
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
 	addProjectTools(srv, one)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes. Hold this when idle to react to the designer within a second. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes: timeout_seconds, 60 by default and at most 1800 (30 minutes). Hold this when idle to react to the designer within a second. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on (S-0097). Answers at once when there is something: reason resume with your own story still in progress; thread with threads awaiting you written to since it last answered; pull with the first ready story that is not held when the in-progress limit leaves room for it and review is under its limit (a story whose touches overlap a story in progress or in review, or that names in after a story not yet done, is held: it keeps its place and is offered once clear) (pull it: item_move it to in-progress, then flai stream open on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, however long it takes, up to timeout_seconds; timed_out then says whether it is waiting for room (a story is ready, the in-progress limit is full), for review (a story is ready, review is full: no story is pulled until the operator accepts or sends one back), for a held story to be clear (held: every ready story is held, and ready says why each is), or for a story to be ready: call it again. Move your story to review first: while one of yours is in progress, it answers resume."}, s.waitForWork)
 	for _, key := range []string{"design", "docs"} {
 		srv.AddResourceTemplate(&mcp.ResourceTemplate{
@@ -694,7 +708,7 @@ func (s *server) readResource(_ context.Context, req *mcp.ReadResourceRequest) (
 
 // WaitIn bounds a wait.
 type WaitIn struct {
-	TimeoutSeconds int `json:"timeout_seconds,omitempty" jsonschema:"how long to wait, default 60, capped by the server"`
+	TimeoutSeconds int `json:"timeout_seconds,omitempty" jsonschema:"how long to wait in seconds, default 60, at most 1800 (30 minutes)"`
 }
 
 // WaitOut reports what changed.
@@ -764,14 +778,8 @@ func diff(before, after map[string]string) []string {
 	return changed
 }
 
-func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in WaitIn) (*mcp.CallToolResult, WaitOut, error) {
-	timeout := time.Duration(in.TimeoutSeconds) * time.Second
-	if timeout <= 0 {
-		timeout = time.Minute
-	}
-	if timeout > s.maxWait {
-		timeout = s.maxWait
-	}
+func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in WaitIn) (*mcp.CallToolResult, WaitOut, error) {
+	timeout := holdFor(in.TimeoutSeconds, eventsWait, s.maxWait)
 	// Anything that happened between two calls is behind the cursor already:
 	// report it now rather than wait for the next change.
 	before := s.snapshot()
@@ -780,15 +788,15 @@ func (s *server) waitForEvents(ctx context.Context, _ *mcp.CallToolRequest, in W
 	} else if len(events) > 0 {
 		return nil, WaitOut{Events: events, Omitted: omitted, Changed: []string{}}, nil
 	}
-	deadline := time.NewTimer(timeout)
-	defer deadline.Stop()
+	deadline := s.after(timeout)
+	defer keepAlive(ctx, req, s.beat)()
 	tick := time.NewTicker(s.poll)
 	defer tick.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}}, ctx.Err()
-		case <-deadline.C:
+		case <-deadline:
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil
 		case <-s.closing: // nil, and so never ready, unless the server was given one
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil

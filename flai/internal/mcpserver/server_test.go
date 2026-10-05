@@ -443,6 +443,24 @@ func TestWaitForEventsReportsAnEventWhileHeld(t *testing.T) {
 	}
 }
 
+// I-0059: wait_for_events holds for the timeout asked, up to 30 minutes,
+// and for a minute when none is asked.
+func TestWaitForEventsHoldsUpToTheLongestWait(t *testing.T) {
+	d := newDeadlines()
+	f := setupWith(t, func(o *Options) { o.MaxWait, o.After = 0, d.after })
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	checkHolds(t, d, func(args map[string]any) map[string]any {
+		out, failed := f.call(t, "wait_for_events", args)
+		if failed != "" {
+			t.Errorf("wait_for_events: %s", failed)
+		}
+		return out
+	}, time.Minute)
+}
+
 func TestBoardToolMatchesTheSharedView(t *testing.T) {
 	f := setup(t)
 	s := f.readyStory(t, "On the board", t0)

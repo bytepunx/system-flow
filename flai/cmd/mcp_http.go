@@ -159,7 +159,9 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 	})
 	mux := http.NewServeMux()
 	mux.Handle(mcpPath, handler)
-	// No write timeout: wait_for_events holds a request for up to five minutes.
+	// No write timeout: wait_for_events and wait_for_work hold a request for
+	// up to mcpserver.LongestWait, and the SDK pauses a session's --idle
+	// timer while one of its requests is open.
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	st := mcpState{PID: os.Getpid(), Addr: ln.Addr().String(), URL: mcpURL(ln.Addr()), Started: time.Now().UTC().Format(time.RFC3339), Version: buildinfo.Version, ExitWith: exitWith}

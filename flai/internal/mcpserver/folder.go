@@ -189,19 +189,27 @@ func newFolderServer(opt Options) *mcp.Server {
 		poll = 250 * time.Millisecond
 	}
 	if maxWait <= 0 {
-		maxWait = 5 * time.Minute
+		maxWait = LongestWait
+	}
+	after := opt.After
+	if after == nil {
+		after = time.After
+	}
+	beat := opt.Heartbeat
+	if beat <= 0 {
+		beat = heartbeat
 	}
 	if now == nil {
 		now = time.Now
 	}
-	fw := &folderWaits{f: f, poll: poll, maxWait: maxWait, now: now, closing: opt.Closing}
+	fw := &folderWaits{f: f, poll: poll, maxWait: maxWait, after: after, beat: beat, now: now, closing: opt.Closing}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow projects in " + f.root, Version: opt.Version}, &mcp.ServerOptions{
 		Instructions: "This server is the agent's view of every system-flow project in " + f.root + " and the folders below it (S-0101): it was started in a folder that is not itself a project. inbox, wait_for_work, and wait_for_events cover every project and say which one each thing is in; every other tool takes project, a key inbox lists (or the project's folder), and needs it whenever there is more than one project. Projects created or imported below the folder join within seconds. Call inbox at the start of every turn or session, at every task transition, and before moving a story to review. Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names in the project it names (item_move it to in-progress with that project, then flai stream open in that project's folder on the host), answer the threads it names, or go back to your own story. It answers as soon as a story is ready in some project whose in-progress limit leaves room and whose review is under its limit, and waits otherwise; when it times out, call it again. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words: if it is your story, read it again with item_get before you go on. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. Publishing is the operator's: a project's accepted work reaches its remote only when it is published (git fetch, then flai release --pending in that project's folder, or the board's Publish), and you publish only when the operator asks (ADR-0067); each project's unpublished in inbox lists what is accepted there and not yet published, for that.",
 	})
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent in every project here, one entry per project with its key, name, and folder: " + inboxDescription + " Name project to see only that one; story needs project when there is more than one."}, fw.inbox)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on, across every project here (S-0097, S-0101). Answers at once with reason resume and your own story still in progress, in whichever project; thread with threads awaiting you written to since it last answered, each with its project; pull with the first ready story that is not held, in key order of projects and pull order within one, of a project whose in-progress limit leaves room and whose review is under its limit (pull it: item_move it to in-progress with that project, then flai stream open in its folder on the host; if item_move says it is already in-progress, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, up to timeout_seconds; timed_out then says whether it is waiting for room, for review (full, waiting on the operator's acceptance), for a held story to be clear (held: every ready story with room is held, and ready says why each is), or for a story to be ready: call it again."}, fw.work)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed in any project here since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes in any of them or the timeout passes. Each event names its project; changed paths are relative to the folder. At most 50 events per project, newest kept; events_omitted counts the rest."}, fw.events)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed in any project here since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes in any of them or the timeout passes: timeout_seconds, 60 by default and at most 1800 (30 minutes). Each event names its project; changed paths are relative to the folder. At most 50 events per project, newest kept; events_omitted counts the rest."}, fw.events)
 	addProjectTools(srv, f)
 	return srv
 }
@@ -211,6 +219,8 @@ type folderWaits struct {
 	f       *folder
 	poll    time.Duration
 	maxWait time.Duration
+	after   func(time.Duration) <-chan time.Time
+	beat    time.Duration
 	now     func() time.Time
 	closing <-chan struct{}
 }
@@ -352,30 +362,19 @@ func (fw *folderWaits) snapshot() map[string]string {
 	return out
 }
 
-func (fw *folderWaits) timeout(seconds int, def time.Duration) time.Duration {
-	t := time.Duration(seconds) * time.Second
-	if t <= 0 {
-		t = def
-	}
-	if t > fw.maxWait {
-		t = fw.maxWait
-	}
-	return t
-}
-
 // hold waits until check says it is done, looking again whenever a watched
 // file in any project changes, or a project comes or goes.
-func (fw *folderWaits) hold(ctx context.Context, timeout time.Duration, check func(changed []string) (bool, error)) (timedOut bool, err error) {
+func (fw *folderWaits) hold(ctx context.Context, req *mcp.CallToolRequest, timeout time.Duration, check func(changed []string) (bool, error)) (timedOut bool, err error) {
 	before := fw.snapshot()
-	deadline := time.NewTimer(timeout)
-	defer deadline.Stop()
+	deadline := fw.after(timeout)
+	defer keepAlive(ctx, req, fw.beat)()
 	tick := time.NewTicker(fw.poll)
 	defer tick.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return false, ctx.Err()
-		case <-deadline.C:
+		case <-deadline:
 			return true, nil
 		case <-fw.closing:
 			return true, nil
@@ -393,7 +392,7 @@ func (fw *folderWaits) hold(ctx context.Context, timeout time.Duration, check fu
 	}
 }
 
-func (fw *folderWaits) work(ctx context.Context, _ *mcp.CallToolRequest, in WorkIn) (*mcp.CallToolResult, FolderWorkOut, error) {
+func (fw *folderWaits) work(ctx context.Context, req *mcp.CallToolRequest, in WorkIn) (*mcp.CallToolResult, FolderWorkOut, error) {
 	f := fw.f
 	f.workMu.Lock()
 	since := f.workSince
@@ -411,7 +410,7 @@ func (fw *folderWaits) work(ctx context.Context, _ *mcp.CallToolRequest, in Work
 	if err != nil || out.Reason != "" {
 		return nil, answer(out), err
 	}
-	timedOut, err := fw.hold(ctx, fw.timeout(in.TimeoutSeconds, fw.maxWait), func([]string) (bool, error) {
+	timedOut, err := fw.hold(ctx, req, holdFor(in.TimeoutSeconds, workWait, fw.maxWait), func([]string) (bool, error) {
 		next, err := fw.decide(ctx, since)
 		out = next
 		return err == nil && next.Reason != "", err
@@ -439,7 +438,7 @@ func (fw *folderWaits) catchUp(ctx context.Context) ([]Event, int, error) {
 	return events, omitted, nil
 }
 
-func (fw *folderWaits) events(ctx context.Context, _ *mcp.CallToolRequest, in WaitIn) (*mcp.CallToolResult, WaitOut, error) {
+func (fw *folderWaits) events(ctx context.Context, req *mcp.CallToolRequest, in WaitIn) (*mcp.CallToolResult, WaitOut, error) {
 	events, omitted, err := fw.catchUp(ctx)
 	if err != nil {
 		return nil, WaitOut{}, err
@@ -448,7 +447,7 @@ func (fw *folderWaits) events(ctx context.Context, _ *mcp.CallToolRequest, in Wa
 		return nil, WaitOut{Events: events, Omitted: omitted, Changed: []string{}}, nil
 	}
 	out := WaitOut{Events: []Event{}, Changed: []string{}}
-	timedOut, err := fw.hold(ctx, fw.timeout(in.TimeoutSeconds, time.Minute), func(changed []string) (bool, error) {
+	timedOut, err := fw.hold(ctx, req, holdFor(in.TimeoutSeconds, eventsWait, fw.maxWait), func(changed []string) (bool, error) {
 		// the notices wake a waiting agent and are not a path to show it:
 		// what they say arrives as events
 		notices := map[string]bool{}
