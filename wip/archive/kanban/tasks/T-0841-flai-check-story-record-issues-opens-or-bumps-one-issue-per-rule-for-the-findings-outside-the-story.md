@@ -3,16 +3,36 @@ id: T-0841
 type: task
 nature: improvement
 title: flai check --story --record-issues opens or bumps one issue per rule for the findings outside the story
-status: backlog
+status: done
 parent: S-0249
 owner: alex
 created: 2026-10-05T00:18:03Z
-updated: 2026-10-05T00:18:03Z
-transitions: []
+updated: 2026-10-05T00:51:43Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:44:47Z
+    by: agent-S-0249
+  - to: in-progress
+    at: 2026-10-05T00:44:47Z
+    by: agent-S-0249
+  - to: done
+    at: 2026-10-05T00:51:43Z
+    by: agent-S-0249
 stream: S-0249
 tags: [flai, issues]
-touches: [flai/internal/issues, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
+touches: [flai/internal/issues, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-0840]
+usage:
+  source: log
+  seconds: 416
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 22849
+      cache_read: 2980345
+      cache_write: 89772
+      cost: 1.5807
 ---
 # T-0841 flai check --story --record-issues opens or bumps one issue per rule for the findings outside the story
 

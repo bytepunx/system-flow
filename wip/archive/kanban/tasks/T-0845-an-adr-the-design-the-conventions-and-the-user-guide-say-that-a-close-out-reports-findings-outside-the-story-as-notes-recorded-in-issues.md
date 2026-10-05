@@ -3,16 +3,36 @@ id: T-0845
 type: task
 nature: improvement
 title: An ADR, the design, the conventions, and the user guide say that a close-out reports findings outside the story as notes recorded in issues
-status: backlog
+status: done
 parent: S-0249
 owner: alex
 created: 2026-10-05T00:18:31Z
-updated: 2026-10-05T00:18:31Z
-transitions: []
+updated: 2026-10-05T00:57:16Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:51:44Z
+    by: agent-S-0249
+  - to: in-progress
+    at: 2026-10-05T00:51:45Z
+    by: agent-S-0249
+  - to: done
+    at: 2026-10-05T00:57:16Z
+    by: agent-S-0249
 stream: S-0249
 tags: [flai, template, docs]
-touches: [design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md]
+touches: [design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, template/template.yaml, docs/users/flai.md]
 after: [T-0841]
+usage:
+  source: log
+  seconds: 331
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 112
+      output: 37236
+      cache_read: 4856918
+      cache_write: 146298
+      cost: 2.5759
 ---
 # T-0845 An ADR, the design, the conventions, and the user guide say that a close-out reports findings outside the story as notes recorded in issues
 

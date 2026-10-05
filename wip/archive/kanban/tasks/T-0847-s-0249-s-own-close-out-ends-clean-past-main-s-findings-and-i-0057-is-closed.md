@@ -3,16 +3,42 @@ id: T-0847
 type: task
 nature: improvement
 title: S-0249's own close-out ends clean past main's findings, and I-0057 is closed
-status: backlog
+status: done
 parent: S-0249
 owner: alex
 created: 2026-10-05T00:18:47Z
-updated: 2026-10-05T00:18:47Z
-transitions: []
+updated: 2026-10-05T01:02:06Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:57:16Z
+    by: agent-S-0249
+  - to: in-progress
+    at: 2026-10-05T00:57:16Z
+    by: agent-S-0249
+  - to: done
+    at: 2026-10-05T01:02:06Z
+    by: agent-S-0249
 stream: S-0249
 tags: [issues]
 touches: [design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/summary.md]
 after: [T-0844, T-0845]
+usage:
+  source: log
+  seconds: 290
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 8881
+      cache_read: 1158436
+      cache_write: 34894
+      cost: 0.6144
+    - model: claude-sonnet-5
+      input: 46
+      output: 8388
+      cache_read: 1128008
+      cache_write: 77725
+      cost: 0.5039
 ---
 # T-0847 S-0249's own close-out ends clean past main's findings, and I-0057 is closed
 

@@ -3,11 +3,11 @@ id: T-0840
 type: task
 nature: improvement
 title: flai check --story reports findings outside the story as notes that --strict passes over
-status: in-progress
+status: done
 parent: S-0249
 owner: alex
 created: 2026-10-05T00:17:42Z
-updated: 2026-10-05T00:34:21Z
+updated: 2026-10-05T00:44:47Z
 transitions:
   - to: ready
     at: 2026-10-05T00:34:21Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-05T00:34:21Z
     by: agent-S-0249
+  - to: done
+    at: 2026-10-05T00:44:47Z
+    by: agent-S-0249
 stream: S-0249
 tags: [flai, check]
-touches: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
+touches: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 626
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 41053
+      cache_read: 5354693
+      cache_write: 161291
+      cost: 2.8399
 ---
 # T-0840 flai check --story reports findings outside the story as notes that --strict passes over
 

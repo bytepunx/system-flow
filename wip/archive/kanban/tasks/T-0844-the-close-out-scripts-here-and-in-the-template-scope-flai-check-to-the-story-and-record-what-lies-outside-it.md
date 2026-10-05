@@ -3,16 +3,36 @@ id: T-0844
 type: task
 nature: improvement
 title: The close-out scripts, here and in the template, scope flai check to the story and record what lies outside it
-status: backlog
+status: done
 parent: S-0249
 owner: alex
 created: 2026-10-05T00:18:19Z
-updated: 2026-10-05T00:18:58Z
-transitions: []
+updated: 2026-10-05T00:57:15Z
+transitions:
+  - to: ready
+    at: 2026-10-05T00:51:44Z
+    by: agent-S-0249
+  - to: in-progress
+    at: 2026-10-05T00:51:44Z
+    by: agent-S-0249
+  - to: done
+    at: 2026-10-05T00:57:15Z
+    by: agent-S-0249
 stream: S-0249
 tags: [flai, template, scripts]
-touches: [scripts/close-out.sh, scripts/check.sh, template/root/scripts/close-out.sh, template/root/scripts/check.sh, flai/internal/check/check_test.go, design/issues]
+touches: [scripts/close-out.sh, scripts/check.sh, template/root/scripts/close-out.sh, template/root/scripts/check.sh, flai/internal/check/check_test.go, flai/internal/storygit, flai/cmd/check.go, scripts/README.md, template/root/scripts/README.md]
 after: [T-0841]
+usage:
+  source: log
+  seconds: 331
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 25966
+      cache_read: 3386887
+      cache_write: 102018
+      cost: 1.7963
 ---
 # T-0844 The close-out scripts, here and in the template, scope flai check to the story and record what lies outside it
 

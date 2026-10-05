@@ -3,10 +3,10 @@ id: S-0249
 type: story
 nature: improvement
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-03T18:03:58Z
-updated: 2026-10-05T00:33:56Z
+updated: 2026-10-05T01:13:13Z
 transitions:
   - to: ready
     at: 2026-10-05T00:13:03Z
@@ -14,14 +14,36 @@ transitions:
   - to: in-progress
     at: 2026-10-05T00:33:56Z
     by: agent-S-0249
+  - to: review
+    at: 2026-10-05T01:02:06Z
+    by: agent-S-0249
+  - to: done
+    at: 2026-10-05T01:13:13Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/issues, scripts/close-out.sh, scripts/check.sh, template/root/scripts/close-out.sh, template/root/scripts/check.sh, template/CHANGELOG.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/summary.md, design/issues]
+touches: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/issues, flai/internal/storygit, scripts/close-out.sh, scripts/check.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, template/template.yaml, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/summary.md, design/issues]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1713
+  models:
+    - model: claude-opus-5-5
+      input: 430
+      output: 142922
+      cache_read: 18641996
+      cache_write: 561525
+      cost: 9.887
+    - model: claude-sonnet-5
+      input: 46
+      output: 8388
+      cache_read: 1128008
+      cache_write: 77725
+      cost: 0.5039
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 7m
@@ -44,8 +66,8 @@ forecast:
 This story remediates [I-0057](../../../design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md), "flai check --strict stops a story's close-out on wip/ findings outside the story". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0057 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0057 is closed with `flai issue close I-0057 --reason` saying what fixed it
+- [x] The cause I-0057 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0057 is closed with `flai issue close I-0057 --reason` saying what fixed it
 
 ## Tasks
 - T-0840 flai check --story reports findings outside the story as notes that --strict passes over
