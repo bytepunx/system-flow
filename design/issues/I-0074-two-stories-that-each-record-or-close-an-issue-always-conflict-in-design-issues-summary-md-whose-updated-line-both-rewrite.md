@@ -7,7 +7,7 @@ count: 3
 cost: 3m
 first_reported: 2026-10-05T03:22:09Z
 last_reported: 2026-10-05T04:38:59Z
-updated: 2026-10-05T04:38:59Z
+updated: 2026-10-05T04:40:47Z
 ---
 
 # I-0074 Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
@@ -30,3 +30,5 @@ Story: S-0257.
 S-0257 closed I-0069 and S-0262 closed I-0072, so flai stream sync's trial merge conflicted in design/issues/summary.md (TH-0130). Each close-out then recorded a threads.archived instance in I-0073, which added a second conflict, in I-0073 itself.
 
 ## Remediation
+
+Story S-0278 remediates this issue, created from it at 2026-10-05T04:40:47Z.
