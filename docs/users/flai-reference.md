@@ -389,10 +389,13 @@ Check the manifest, layout, every work item in kanban and archive, the narrative
 
 Findings print as path:line: level: rule: message. Errors exit 1; with --strict warnings do too, except two that only the operator clears: the review column over its limit, which acceptance clears, and an epic behind its stories (epic.lags-stories), which moving or accepting the epic clears.
 
+With --story S-nnnn, a finding is inside the story when it is on the story's item file or one of its tasks', its narrative, a thread anchored on the story or one of its tasks, or a path its branch changes against the main branch (as flai stream diff reads it), or that is uncommitted in its worktree. Every other finding is outside it, and so is every wip.overlap, which the pull hold and the other story's agent clear. A finding outside keeps its level and is printed with "(outside S-nnnn)"; it is a note that neither an error nor --strict fails on, and the summary counts it, as does outside in --json. Without --story every finding counts, as the main branch's check needs.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--story` string | scope the run to a story (S-nnnn): findings outside it are notes that do not fail it |
 | `--strict` | treat warnings as failures, except the review column over its limit and an epic behind its stories |
 
 ### flai checks

@@ -42,6 +42,11 @@ type Finding struct {
 	Path    string `json:"path"`
 	Line    int    `json:"line"`
 	Message string `json:"message"`
+	// Outside marks a finding outside the story a run is scoped to
+	// (ScopeToStory): a note the run passes over, whatever its level.
+	Outside bool `json:"outside,omitempty"`
+	// advisory marks a warning --strict passes over (advise).
+	advisory bool
 }
 
 // Result is a whole run.
@@ -51,15 +56,22 @@ type Result struct {
 	Warnings int       `json:"warnings"`
 	// Advisory counts the warnings --strict passes over, which Warnings
 	// includes: the review column over its limit, which only acceptance
-	// clears (S-0243).
+	// clears (S-0243). Scoped to a story, it counts only those inside it;
+	// Outside counts the rest.
 	Advisory int `json:"advisory"`
-	Items    int `json:"items"`
+	// Outside counts the findings outside the story the run is scoped to,
+	// errors and warnings, which Errors and Warnings include (S-0249).
+	Outside int `json:"outside,omitempty"`
+	Items   int `json:"items"`
+	// outsideErrors and outsideWarnings split Outside by level, for OK.
+	outsideErrors, outsideWarnings int
 }
 
 // OK reports whether the run passed: no errors, and when strict no warnings
-// but the advisory ones.
+// but the advisory ones, leaving out the findings outside the story the run
+// is scoped to.
 func (r *Result) OK(strict bool) bool {
-	return r.Errors == 0 && (!strict || r.Warnings == r.Advisory)
+	return r.Errors == r.outsideErrors && (!strict || r.Warnings-r.outsideWarnings == r.Advisory)
 }
 
 type checker struct {
@@ -135,6 +147,7 @@ func (c *checker) add(level, rule, path string, line int, format string, args ..
 // clear, which would otherwise stop every close-out (S-0243).
 func (c *checker) advise(rule, path string, line int, format string, args ...any) {
 	c.add(Warning, rule, path, line, format, args...)
+	c.res.Findings[len(c.res.Findings)-1].advisory = true
 	c.res.Advisory++
 }
 

@@ -2,16 +2,19 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func newCheckCmd(a *app) *cobra.Command {
 	var strict bool
+	var story string
 	c := &cobra.Command{
 		Use:   "check [dir]",
 		Short: "Validate the repository against the system-flow standard",
@@ -21,7 +24,18 @@ narratives and their index, the board, and documentation front matter.
 Findings print as path:line: level: rule: message. Errors exit 1; with
 --strict warnings do too, except two that only the operator clears: the
 review column over its limit, which acceptance clears, and an epic behind
-its stories (epic.lags-stories), which moving or accepting the epic clears.`,
+its stories (epic.lags-stories), which moving or accepting the epic clears.
+
+With --story S-nnnn, a finding is inside the story when it is on the
+story's item file or one of its tasks', its narrative, a thread anchored on
+the story or one of its tasks, or a path its branch changes against the main
+branch (as flai stream diff reads it), or that is uncommitted in its
+worktree. Every other finding is outside it, and so is every wip.overlap,
+which the pull hold and the other story's agent clear. A finding outside
+keeps its level and is printed with "(outside S-nnnn)"; it is a note that
+neither an error nor --strict fails on, and the summary counts it, as does
+outside in --json. Without --story every finding counts, as the main
+branch's check needs.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var repo *workitem.Repo
@@ -43,18 +57,40 @@ its stories (epic.lags-stories), which moving or accepting the epic clears.`,
 			if v, err := gitver.Installed(a.runner); err == nil {
 				check.GitCompat(res, repo, v)
 			}
+			if story != "" {
+				it, err := repo.Get(story)
+				if err != nil {
+					return err
+				}
+				story = it.ID
+				changed, err := a.storyChanges(repo, story)
+				if err != nil {
+					return err
+				}
+				if err := check.ScopeToStory(res, repo, story, changed); err != nil {
+					return err
+				}
+			}
 			if a.jsonOut {
 				if err := a.printJSON(res); err != nil {
 					return err
 				}
 			} else {
 				for _, f := range res.Findings {
-					fmt.Fprintf(a.out, "%s:%d: %s: %s: %s\n", f.Path, f.Line, f.Level, f.Rule, f.Message)
+					fmt.Fprintf(a.out, "%s:%d: %s: %s: %s", f.Path, f.Line, f.Level, f.Rule, f.Message)
+					if f.Outside {
+						fmt.Fprintf(a.out, " (outside %s)", story)
+					}
+					fmt.Fprintln(a.out)
 				}
 				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings", res.Items, res.Errors, res.Warnings)
 				if res.Advisory > 0 {
 					// S-0243: say which warnings --strict does not fail on.
 					fmt.Fprintf(a.out, " (%d that --strict passes over: only the operator clears them, by accepting or by moving an epic)", res.Advisory)
+				}
+				if res.Outside > 0 {
+					// S-0249: say how many findings were notes outside the story.
+					fmt.Fprintf(a.out, "; %d outside %s, notes the run passes over", res.Outside, story)
 				}
 				fmt.Fprintln(a.out)
 			}
@@ -65,7 +101,39 @@ its stories (epic.lags-stories), which moving or accepting the epic clears.`,
 		},
 	}
 	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures, except the review column over its limit and an epic behind its stories")
+	c.Flags().StringVar(&story, "story", "", "scope the run to a story (S-nnnn): findings outside it are notes that do not fail it")
 	return c
+}
+
+// storyChanges is the paths story's branch changes against the main branch,
+// and those uncommitted in its worktree. A project outside version control,
+// or a story without a branch or a worktree, changes none; a branch or a
+// worktree that cannot be read is an error.
+func (a *app) storyChanges(repo *workitem.Repo, story string) ([]string, error) {
+	if repo.MainRoot == "" || !storygit.InWorkTree(a.runner, repo.MainRoot) {
+		return nil, nil
+	}
+	var paths []string
+	if storygit.BranchExists(a.runner, repo.MainRoot, storygit.Branch(story)) {
+		d, err := storygit.StoryDiff(a.runner, repo, story)
+		if err != nil {
+			return nil, fmt.Errorf("read what %s changes, for --story: %w", story, err)
+		}
+		for _, f := range d.Files {
+			paths = append(paths, f.Path)
+			if f.OldPath != "" {
+				paths = append(paths, f.OldPath)
+			}
+		}
+	}
+	if wt := repo.WorktreePath(story); dirExists(wt) {
+		dirty, err := storygit.Uncommitted(a.runner, wt)
+		if err != nil {
+			return nil, fmt.Errorf("read what %s has uncommitted in %s, for --story: %w", story, wt, err)
+		}
+		paths = append(paths, dirty...)
+	}
+	return paths, nil
 }
 
 // exitError signals a non-zero exit, with an optional message the boundary
@@ -76,3 +144,8 @@ type exitError struct {
 }
 
 func (e *exitError) Error() string { return e.msg }
+
+func dirExists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.IsDir()
+}

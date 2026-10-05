@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-04
+updated: 2026-10-05
 status: active
 ---
 
@@ -301,7 +301,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--since` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
-| `--story` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
+| `--story` | [flai check](../users/flai-reference.md#flai-check), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--tag` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new), [flai template push](../users/flai-reference.md#flai-template-push) |
