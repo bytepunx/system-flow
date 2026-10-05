@@ -150,6 +150,8 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 **Stop** is beside an agent that runs, or that ended waiting for an answer, once the operator has turned on the `agent` host action. It asks first, and says what stopping does: the agent's process and everything it started end at once, and cannot be resumed; an agent waiting for an answer is not started again when the answer comes; the story's worktree keeps what the agent changed, committed or not; and the story stays where it is, with no agent, until you press **Retry** on its page or move it back to ready. Only **Stop the agent** in that dialog stops it. The agent then reads as stopped by the operator, with a red dot. If flai refuses, for an agent that has already ended, the dialog says why.
 
+**The orchestrator.** When the operator has turned on the `orchestrate` host action (`flai serve enable orchestrate`), `flai serve` runs the project's orchestrator, and its newest run has a card above the stories: what it is doing (working, or stopped by the operator, ended, or failed, and why), its agent, harness, and model, its session, and when it started and ended, with its stream window, open while it runs. A run that could not be started says why and has no window. The page reads it again when the orchestrator starts or ends. Its decisions and its Stop are not here.
+
 ## Planner
 
 Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost. Find it last in the Workflow group.
@@ -252,7 +254,7 @@ The host flai badge in the header is a link to this page, which is Updates in th
 
 Settings shows how flai on the host is set up for this project:
 
-- which host actions are on;
+- which host actions are on, each with what it does, `plan` and `orchestrate` among them;
 - the default agent new stories get;
 - when `flai serve` plans again on its own;
 - the command and harnesses that start agents;

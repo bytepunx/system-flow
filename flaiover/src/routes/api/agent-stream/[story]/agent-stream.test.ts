@@ -67,6 +67,20 @@ describe('/api/agent-stream/[story]', () => {
 		expect((await r.json()).error).toContain('no planner');
 	});
 
+	// S-0218: the activity page reads the orchestrator's stream through the same route
+	it("asks flai for the orchestrator's stream when the query has orchestrator", async () => {
+		answer = { running: true, from: 0, next: 10, entries: [] };
+		let r = await doGet('orchestrator', '?orchestrator');
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject(answer as object);
+		r = await doGet('orchestrator', '?orchestrator&after=4096');
+		expect(r.status).toBe(200);
+		expect(asked.filter((a) => a.method !== 'project.info')).toEqual([
+			{ method: 'agent.stream', params: { orchestrator: true } },
+			{ method: 'agent.stream', params: { orchestrator: true, after: 4096 } }
+		]);
+	});
+
 	it("passes on flai's refusals: no agent is a 404, a bad ID a 400", async () => {
 		refuse = new AgentError(502, 'flai serve has started no agent for S-0142', -32004);
 		let r = await doGet('S-0142');

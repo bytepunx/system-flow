@@ -24,6 +24,8 @@ import { version } from './metrics';
 
 export const AGENT_PATH = '/agent';
 export const PROTOCOL = 1;
+/** What an 'agent' event names in place of a story when the project's orchestrator started or ended. */
+export const ORCHESTRATOR = 'orchestrator';
 /** Where a flai command's output was capped (flai.ts maxBuffer). */
 export const MAX_MESSAGE = 16 * 1024 * 1024;
 
@@ -210,7 +212,8 @@ function same(a: string, b: string): boolean {
  * One project's connection: at most one proven flai at a time, and the requests waiting on it.
  * Emits 'connected' when a flai has proven itself, 'gone' when it is lost, 'change' with a
  * repo-relative path when flai says a file of the project changed (S-0073), and 'agent' with a
- * story's ID when flai serve says that story's agent started or ended (S-0154). An AgentHub never does
+ * story's ID when flai serve says that story's agent started or ended (S-0154), an epic's or a story's
+ * for its planner (S-0208), or ORCHESTRATOR for the project's orchestrator (S-0218). An AgentHub never does
  * its own handshake: a registry proves the shared credential and hands it a socket already proven,
  * so "no host flai has ever named this project" (unknown) can be told apart from "flai is not
  * connected right now" (this hub exists, `status().connected` is false).
@@ -357,11 +360,12 @@ export class AgentHub extends EventEmitter {
 			if (typeof path === 'string' && path) this.emit('change', path);
 			return;
 		}
-		// a story's agent started or ended, which changes no file (S-0154), or the planner for an
-		// epic or a story, which names the item in place of the story (S-0208)
+		// a story's agent started or ended, which changes no file (S-0154), the planner for an epic
+		// or a story, which names the item in place of the story (S-0208), or the project's
+		// orchestrator, which names neither and has the role orchestrate (S-0218)
 		if (m.method === 'agent' && m.id === undefined) {
-			const p = m.params as { story?: unknown; item?: unknown } | undefined;
-			const id = p?.story || p?.item;
+			const p = m.params as { story?: unknown; item?: unknown; role?: unknown } | undefined;
+			const id = p?.story || p?.item || (p?.role === 'orchestrate' ? ORCHESTRATOR : '');
 			if (typeof id === 'string' && id) this.emit('agent', id);
 			return;
 		}

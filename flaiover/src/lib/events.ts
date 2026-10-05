@@ -8,8 +8,8 @@ import { affects, type Change, type ChangeKind } from '$lib/changes';
 export type Listener = {
 	/** A file of the project changed: `path` is repo-relative, `kind` what the server read it as (S-0161). */
 	change?: (path: string, kind: ChangeKind) => void;
-	/** A story's agent, or the planner for an epic or a story, started or ended (flai serve's
-	 * `agent`), which changes no file. */
+	/** A story's agent, the planner for an epic or a story, or the orchestrator, started or
+	 * ended (flai serve's `agent`), which changes no file. */
 	agent?: (story: string) => void;
 };
 

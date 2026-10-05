@@ -22,6 +22,8 @@ export type AgentRun = {
 	queued?: string;
 	/** When the operator stopped it (S-0170). */
 	stopped?: string;
+	/** The harness's session ID, when flai knows it. */
+	session?: string;
 	/** The question it ended waiting on, when it did. */
 	thread?: string;
 };
@@ -101,8 +103,33 @@ export type HostAgent = {
 		stories?: Record<string, StoryActivity>;
 		/** The newest planner run for each epic or story it planned, by the item's ID (S-0208). */
 		plans?: Record<string, PlanRun>;
+		/**
+		 * The project's newest orchestrator run, null before the first (S-0218): the long-running
+		 * agent behind the orchestrate host action, which is no story's (its `story` is empty) and
+		 * plans no item.
+		 */
+		orchestrator?: AgentRun | null;
 	};
 };
+
+/** Whether the orchestrator's run is under way: it has neither ended nor failed to start. */
+export function orchestratorRunning(run: AgentRun | null | undefined): boolean {
+	return !!run && !run.ended && !run.error;
+}
+
+/** One line for the orchestrator's run: working, or how it ended and why. */
+export function orchestratorLine(run: AgentRun): string {
+	const who = [run.harness, run.model].filter(Boolean).join(', ') || run.command;
+	if (orchestratorRunning(run)) return `orchestrator working (${who})`;
+	switch (run.outcome) {
+		case 'stopped':
+			return `orchestrator stopped by the operator (${who})`;
+		case 'worked':
+			return `orchestrator ended (${who})`;
+		default:
+			return `orchestrator failed (${who})${run.why ? `: ${run.why}` : ''}`;
+	}
+}
 
 /**
  * A planner run (S-0208): an agent's run for the epic or story it plans, which is no story's, and

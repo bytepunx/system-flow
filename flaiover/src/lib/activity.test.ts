@@ -7,6 +7,8 @@ import {
 	elsewhereLine,
 	holdLine,
 	holdWaitsFor,
+	orchestratorLine,
+	orchestratorRunning,
 	reasonParts,
 	retryable,
 	startable,
@@ -266,5 +268,26 @@ describe("a story's agent action", () => {
 		expect(agentAction(failed, true, 'done', true)).toBeNull();
 		expect(agentAction(undefined, true, 'backlog', true)).toBeNull();
 		expect(agentAction({ state: 'working', run }, true, 'in-progress', true)).toBeNull();
+	});
+});
+
+describe("the orchestrator's run (S-0218)", () => {
+	const o = { ...run, story: '', agent: 'orchestrator', model: 'claude-opus-5-5' };
+	it('runs until it ends or fails to start, and says how it ended', () => {
+		expect(orchestratorRunning(null)).toBe(false);
+		expect(orchestratorRunning(o)).toBe(true);
+		expect(orchestratorLine(o)).toBe('orchestrator working (claude-code, claude-opus-5-5)');
+		const ended = { ...o, ended: '2026-09-23T19:00:00Z' };
+		expect(orchestratorRunning(ended)).toBe(false);
+		expect(orchestratorLine({ ...ended, outcome: 'worked' })).toBe(
+			'orchestrator ended (claude-code, claude-opus-5-5)'
+		);
+		expect(orchestratorLine({ ...ended, outcome: 'stopped' })).toBe(
+			'orchestrator stopped by the operator (claude-code, claude-opus-5-5)'
+		);
+		expect(orchestratorLine({ ...ended, outcome: 'failed', why: 'exit status 1' })).toBe(
+			'orchestrator failed (claude-code, claude-opus-5-5): exit status 1'
+		);
+		expect(orchestratorRunning({ ...o, error: 'not found' })).toBe(false);
 	});
 });

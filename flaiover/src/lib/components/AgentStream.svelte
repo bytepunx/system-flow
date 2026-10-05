@@ -7,7 +7,8 @@
 	// then, except for a story flai started no agent for. It opens when told to and closes only when
 	// the reader closes it, so an agent that ends does not shorten the page under the reader (S-0178).
 	// With `plan` it follows the newest planner run for the epic or story named by `story` instead,
-	// as flai serve reads it from the planner's log (S-0259).
+	// as flai serve reads it from the planner's log (S-0259), and with `orchestrator` the project's
+	// newest orchestrator run, whatever `story` names (S-0218).
 	import { tick, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import type { AgentStreamEntry, AgentStreamRead } from '$lib/activity';
@@ -16,7 +17,8 @@
 		story,
 		started,
 		open = true,
-		plan = false
+		plan = false,
+		orchestrator = false
 	}: {
 		/** The story whose agent it follows, or with `plan` the epic or story the planner plans. */
 		story: string;
@@ -25,6 +27,8 @@
 		open?: boolean;
 		/** Follows the planner's run for the item rather than a story's agent (S-0259). */
 		plan?: boolean;
+		/** Follows the project's orchestrator rather than a story's agent (S-0218). */
+		orchestrator?: boolean;
 	} = $props();
 
 	// The page passes these from objects it makes anew on every reload. Derived, they change only
@@ -33,6 +37,7 @@
 	const since = $derived(started);
 	const opened = $derived(open);
 	const planner = $derived(plan);
+	const orchestrating = $derived(orchestrator);
 
 	/** Entries kept on the page; older ones are in the log on the host. */
 	const KEEP = 500;
@@ -55,7 +60,10 @@
 	type ReadError = Error & { status: number };
 
 	async function read(after?: number): Promise<AgentStreamRead> {
-		const query = [planner ? 'plan' : '', after === undefined ? '' : `after=${after}`]
+		const query = [
+			orchestrating ? 'orchestrator' : planner ? 'plan' : '',
+			after === undefined ? '' : `after=${after}`
+		]
 			.filter(Boolean)
 			.join('&');
 		const r = await api(
@@ -85,6 +93,7 @@
 		void following;
 		void since;
 		void planner;
+		void orchestrating;
 		// nothing else read here starts the stream over
 		return untrack(follow);
 	});
@@ -175,13 +184,19 @@
 	<ol
 		bind:this={box}
 		class="mt-1 max-h-72 space-y-0.5 overflow-y-auto rounded border border-line bg-ground p-2 font-mono text-xs"
-		aria-label={plan
-			? `what the planner for ${story} said and did`
-			: `what ${story}'s agent said and did`}
+		aria-label={orchestrator
+			? 'what the orchestrator said and did'
+			: plan
+				? `what the planner for ${story} said and did`
+				: `what ${story}'s agent said and did`}
 	>
 		{#if earlier}
 			<li class="text-muted">
-				… earlier entries are in the {plan ? "planner's" : "agent's"} log on the host
+				… earlier entries are in the {orchestrator
+					? "orchestrator's"
+					: plan
+						? "planner's"
+						: "agent's"} log on the host
 			</li>
 		{/if}
 		{#each entries as e, i (i)}

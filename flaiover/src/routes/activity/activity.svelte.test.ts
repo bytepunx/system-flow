@@ -11,12 +11,17 @@ vi.mock('$app/paths', () => ({
 }));
 // each followed kind's reload, to call as a change event would
 const followed: { kinds: string[]; f: () => void }[] = [];
+// each listener for flai serve's word that an agent started or ended
+const heard: ((id: string) => void)[] = [];
 vi.mock('$lib/events', () => ({
 	follow: (kinds: string[], f: () => void) => {
 		followed.push({ kinds, f });
 		return () => {};
 	},
-	listen: () => () => {},
+	listen: (on: { agent?: (id: string) => void }) => {
+		if (on.agent) heard.push(on.agent);
+		return () => {};
+	},
 	debounced: (f: () => void) => Object.assign(() => f(), { stop: () => {} })
 }));
 
@@ -83,6 +88,7 @@ describe('the activity page holds still (S-0178)', () => {
 		c = undefined;
 		api.mockReset();
 		followed.length = 0;
+		heard.length = 0;
 		document.body.innerHTML = '';
 	});
 
@@ -145,5 +151,99 @@ describe('the activity page holds still (S-0178)', () => {
 		await settle();
 		expect(box()).toBe(before);
 		expect(stop()).toBeNull();
+	});
+});
+
+// S-0218: the project's orchestrator is no story's: its newest run shows above the stories, with its
+// stream, and the page hears it start and end from flai serve's `agent` notification.
+describe("the activity page shows the orchestrator's run (S-0218)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		followed.length = 0;
+		heard.length = 0;
+		document.body.innerHTML = '';
+	});
+
+	const orchestrator = {
+		story: '',
+		harness: 'claude-code',
+		model: 'claude-opus-5-5',
+		command: 'claude',
+		agent: 'orchestrator',
+		pid: 4242,
+		started: '2026-10-05T10:00:00Z',
+		log: '/host/t-orchestrator-20261005T100000Z.log',
+		session: '6f1c'
+	};
+	const section = () => document.querySelector('[data-testid="orchestrator-run"]');
+	const line = () => section()?.querySelector('[data-testid="orchestrator-line"]')?.textContent;
+	const box = () => section()?.querySelector<HTMLDetailsElement>('[data-testid="agent-stream"]');
+	const open = (host: () => unknown) => {
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/activity') return answer({ streams: [] });
+			if (url === '/api/host-agent') return answer(host());
+			if (url.startsWith('/api/agent-stream/')) return answer(read(''));
+			return answer({});
+		});
+		c = mount(ActivityPage, { target: document.body });
+	};
+
+	it('shows a running orchestrator with its stream open, read as the orchestrator', async () => {
+		open(() => ({ enabled: true, state: { command: 'claude', stories: {}, orchestrator } }));
+		await settle();
+		expect(line()).toBe('orchestrator working (claude-code, claude-opus-5-5)');
+		expect(section()!.textContent).toContain('session 6f1c');
+		expect(box()!.open).toBe(true);
+		const asked = api.mock.calls.map(([url]) => url as string);
+		expect(asked).toContain('/api/agent-stream/orchestrator?orchestrator');
+	});
+
+	it('shows no orchestrator before its first run, whether flai says null or nothing', async () => {
+		for (const state of [{ command: 'claude', orchestrator: null }, { command: 'claude' }]) {
+			open(() => ({ enabled: true, state }));
+			await settle();
+			expect(section()).toBeNull();
+			unmount(c!);
+			c = undefined;
+		}
+	});
+
+	it('hears the orchestrator end, and shows a run that could not start without a stream', async () => {
+		let run: Record<string, unknown> = orchestrator;
+		open(() => ({ enabled: false, state: { command: 'claude', orchestrator: run } }));
+		await settle();
+		expect(line()).toContain('working');
+
+		run = {
+			...orchestrator,
+			ended: '2026-10-05T11:00:00Z',
+			exit: 143,
+			outcome: 'stopped',
+			stopped: '2026-10-05T10:59:58Z'
+		};
+		for (const h of heard) h('orchestrator');
+		await settle();
+		expect(line()).toBe('orchestrator stopped by the operator (claude-code, claude-opus-5-5)');
+		expect(section()!.textContent).toContain('2026-10-05T11:00:00Z');
+
+		run = {
+			story: '',
+			command: 'claude',
+			agent: 'orchestrator',
+			started: '2026-10-05T11:00:01Z',
+			ended: '2026-10-05T11:00:01Z',
+			error: 'exec: "claude": not found',
+			outcome: 'failed',
+			why: 'could not be started: exec: "claude": not found'
+		};
+		for (const h of heard) h('orchestrator');
+		await settle();
+		expect(line()).toBe(
+			'orchestrator failed (claude): could not be started: exec: "claude": not found'
+		);
+		expect(box()).toBeNull();
 	});
 });

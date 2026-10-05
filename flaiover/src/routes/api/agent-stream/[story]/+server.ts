@@ -11,12 +11,19 @@ import type { AgentStreamRead } from '$lib/activity';
  *
  * GET ?plan&after=N: the same of the newest planner flai serve started for the epic or story the path
  * names (S-0259), whatever value plan has; 404 when flai started no planner for the item.
+ *
+ * GET ?orchestrator&after=N: the same of the project's newest orchestrator run (S-0218), whatever the
+ * path names; 404 when flai started no orchestrator for the project.
  */
 export const GET: RequestHandler = ({ params, url }) =>
 	respond(async () => {
 		const raw = url.searchParams.get('after');
 		const after = raw === null ? undefined : Math.max(0, Math.floor(Number(raw)) || 0);
-		const subject = url.searchParams.has('plan') ? { plan: params.story } : { story: params.story };
+		const subject = url.searchParams.has('orchestrator')
+			? { orchestrator: true }
+			: url.searchParams.has('plan')
+				? { plan: params.story }
+				: { story: params.story };
 		return repo().ask<AgentStreamRead>('agent.stream', {
 			...subject,
 			...(after === undefined ? {} : { after })
