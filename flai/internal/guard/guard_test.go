@@ -6,7 +6,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "prime", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -157,6 +157,62 @@ func TestThePlannerPlansThroughFlai(t *testing.T) {
 	for _, e := range allowed {
 		if why := planGuard.Check(e); why != "" {
 			t.Errorf("%s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+		}
+	}
+}
+
+// S-0217: the orchestrator's operations are reads in the form that reads: a
+// sub-agent and the planner call their tools and run order --by, promote
+// --candidates, and release --evaluate, and neither applies an order,
+// places a story, or releases.
+func TestTheOrchestrationReadsPassAndTheirWritesDoNot(t *testing.T) {
+	reads := []string{
+		"flai order --by wsjf",
+		"flai order --by=cod --json",
+		"flai --json order --by throughput",
+		"scripts/flai.sh promote --candidates --limit 3",
+		"flai promote --candidates=true --json",
+		"flai release --evaluate",
+		"flai --config c.json release --evaluate --json",
+	}
+	writes := []string{
+		"flai order --by cod --apply",
+		"flai order --apply --by fifo",
+		"flai order --by=wsjf --apply=true",
+		// --apply refuses whatever its value
+		"flai order --by fifo --apply=false",
+		"flai order S-0001 --top",
+		"flai order S-0001 --by=",
+		"flai promote",
+		"flai promote --candidates=false",
+		"flai release",
+		"flai release --pending",
+		"flai release S-0001 --apply",
+		"flai release --evaluate=false --pending",
+		"flai release --evaluate; flai release --pending",
+	}
+	for _, tool := range []string{"order_by_policy", "promote_candidates", "release_evaluate"} {
+		if why := g.Check(Event{ToolName: MCPPrefix + tool, AgentID: "a1", AgentType: "explorer"}); why != "" {
+			t.Errorf("sub-agent %s refused: %s", tool, why)
+		}
+		if why := planGuard.Check(mcp(tool, "")); why != "" {
+			t.Errorf("planner %s refused: %s", tool, why)
+		}
+	}
+	for _, c := range reads {
+		if why := g.Check(bash("verifier", c)); why != "" {
+			t.Errorf("sub-agent %q refused: %s", c, why)
+		}
+		if why := planGuard.Check(bash("", c)); why != "" {
+			t.Errorf("planner %q refused: %s", c, why)
+		}
+	}
+	for _, c := range writes {
+		if why := g.Check(bash("verifier", c)); !strings.Contains(why, "a sub-agent (verifier) cannot run") {
+			t.Errorf("sub-agent %q: %q", c, why)
+		}
+		if why := planGuard.Check(bash("", c)); !strings.Contains(why, "the planner cannot run") {
+			t.Errorf("planner %q: %q", c, why)
 		}
 	}
 }

@@ -23,11 +23,13 @@ func newGuardCmd(a *app) *cobra.Command {
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
 thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any
-of flai's MCP tools but board, doc_get, doc_search, item_get, prime,
-thread_get, and who_touches; a flai command other than one that reads
-(board, check, cod, doc search and show, forecast, help, issue list, prime,
-show, stats, stream diff, thread list and show, touches suggest, version, or
-any with --help); and a git
+of flai's MCP tools but board, doc_get, doc_search, item_get,
+order_by_policy, prime, promote_candidates, release_evaluate, thread_get,
+and who_touches; a flai command other than one that reads (board, check,
+cod, doc search and show, forecast, help, issue list, order --by without
+--apply, prime, promote --candidates, release --evaluate, show, stats,
+stream diff, thread list and show, touches suggest, version, or any with
+--help); and a git
 command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files,
 ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A
 refusal prints why on standard error and exits 2, which Claude Code hands

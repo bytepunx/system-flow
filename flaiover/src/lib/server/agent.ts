@@ -85,6 +85,10 @@ export const REQUIRED_METHODS = [
 	'stats.get',
 	'agent.status',
 	'publish.preview',
+	// S-0217: the orchestrator's arithmetic, read-only
+	'order.by',
+	'promote.candidates',
+	'release.evaluate',
 	'publish.run',
 	'dashboard.status',
 	'dashboard.check',

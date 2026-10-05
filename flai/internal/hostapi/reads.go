@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
@@ -14,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/statsread"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -146,6 +149,62 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 					return nil, err
 				}
 				return storygit.StoryDiff(r, repo, it.ID)
+			})
+		},
+
+		// order.by: the ready column's order by a policy, as flai order --by
+		// <policy> prints it (S-0217). An empty policy is the manifest's
+		// orchestration.policy, fifo when it sets none. It never applies the
+		// order, which is a write.
+		"order.by": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			in, e := decode[struct {
+				Policy string `json:"policy"`
+			}](raw)
+			if e != nil {
+				return nil, e
+			}
+			if in.Policy != "" && !slices.Contains(workitem.OrderPolicies, in.Policy) {
+				return nil, bad("policy must be one of %s", strings.Join(workitem.OrderPolicies, ", "))
+			}
+			return answer(ctx, p, "order.by", func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+				policy := in.Policy
+				if policy == "" {
+					policy = repo.Manifest.Orchestration.PolicyOrDefault()
+				}
+				got, _, _, err := repo.ReadyOrderByPolicy(policy)
+				return got, err
+			})
+		},
+
+		// promote.candidates: the backlog stories that could go to ready and
+		// why each other one cannot, as flai promote --candidates prints them
+		// (S-0217); limit caps the candidates, 0 for all.
+		"promote.candidates": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			in, e := decode[struct {
+				Limit int `json:"limit"`
+			}](raw)
+			if e != nil {
+				return nil, e
+			}
+			if in.Limit < 0 {
+				return nil, bad("limit is a number of candidates, 0 for all")
+			}
+			return answer(ctx, p, "promote.candidates", func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+				return repo.PromotionCandidates(in.Limit)
+			})
+		},
+
+		// release.evaluate: whether the release policy is met, with its
+		// figures, as flai release --evaluate prints it (S-0217).
+		"release.evaluate": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, e
+			}
+			return answer(ctx, p, "release.evaluate", func(r execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+				if err := execx.Require(r, "git", "What is released is read from git tags; install git."); err != nil {
+					return nil, err
+				}
+				return release.EvaluateRepo(r, repo.Root, repo.Manifest, repo)
 			})
 		},
 

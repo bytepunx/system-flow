@@ -54,7 +54,7 @@ const MCPPrefix = "mcp__flai__"
 
 // MCPReads are flai's MCP tools a sub-agent may call: they read and use no
 // agent's identity.
-var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "prime", "thread_get", "who_touches"}
+var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "thread_get", "who_touches"}
 
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
@@ -74,6 +74,20 @@ var cliReads = map[string][]string{
 	"thread":   {"list", "show"},
 	"touches":  {"suggest"},
 	"version":  nil,
+}
+
+// flagReads are the flai commands a sub-agent may run only in the form that
+// reads (S-0217): with the flag that makes them read, and without any flag
+// that makes them write. flai order --by computes an order and --apply
+// writes it; flai order without --by places a story, and flai release
+// without --evaluate releases.
+var flagReads = map[string]struct {
+	with    string
+	without []string
+}{
+	"order":   {with: "--by", without: []string{"--apply"}},
+	"promote": {with: "--candidates"},
+	"release": {with: "--evaluate"},
 }
 
 // gitReads are the git commands a sub-agent may run.
@@ -137,8 +151,8 @@ type rules struct {
 
 // subAgent are a sub-agent's rules: flai's reads and git's.
 var subAgent = rules{
-	flai: func(cmd, sub string, _ []string) string {
-		if reads(cmd, sub) {
+	flai: func(cmd, sub string, rest []string) string {
+		if reads(cmd, sub, rest) {
 			return ""
 		}
 		return "flai commands that change work items, threads, narratives, or releases are the story's agent's"
@@ -151,7 +165,7 @@ var subAgent = rules{
 var planning = rules{
 	flai: func(cmd, sub string, rest []string) string {
 		switch {
-		case reads(cmd, sub):
+		case reads(cmd, sub, rest):
 			return ""
 		case cmd == "move":
 			if args := positionals(rest, moveValues); len(args) > 2 && args[2] == Backlog {
@@ -171,10 +185,34 @@ var planning = rules{
 	git: "it runs only git's reads",
 }
 
-// reads says whether a flai command with its subcommand only reads.
-func reads(cmd, sub string) bool {
+// reads says whether a flai command with its subcommand and the words after
+// flai only reads.
+func reads(cmd, sub string, rest []string) bool {
+	if f, ok := flagReads[cmd]; ok {
+		return given(rest, f.with) && !slices.ContainsFunc(f.without, func(w string) bool { return named(rest, w) })
+	}
 	subs, ok := cliReads[cmd]
 	return ok && (subs == nil || slices.Contains(subs, sub))
+}
+
+// given says whether words give flag, as the last of its occurrences leaves
+// it: bare, or with a value that is neither empty nor false.
+func given(words []string, flag string) bool {
+	on := false
+	for _, w := range words {
+		if w == flag {
+			on = true
+		} else if v, ok := strings.CutPrefix(w, flag+"="); ok {
+			b, err := strconv.ParseBool(v)
+			on = v != "" && (err != nil || b)
+		}
+	}
+	return on
+}
+
+// named says whether words name flag at all, whatever its value.
+func named(words []string, flag string) bool {
+	return slices.ContainsFunc(words, func(w string) bool { return w == flag || strings.HasPrefix(w, flag+"=") })
 }
 
 // finalizes says whether a word of flai edit finalizes a draft.

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -79,6 +80,79 @@ func sameAnswer(t *testing.T, root string, host hostapi.Host, method, params str
 		t.Errorf("%s: flai warned %q, the read %q", method, warnings, w.Warnings)
 	}
 	return string(w.Data), nil
+}
+
+// S-0217: the orchestrator's reads answer as flai order --by, flai promote
+// --candidates, and flai release --evaluate print them, and the order read
+// never applies its order.
+func TestTheOrchestrationReadsAnswerWhatTheCommandsPrint(t *testing.T) {
+	root, _ := evaluateProject(t)
+	t.Setenv("LOG_FORMAT", "json")
+	run := func(args ...string) {
+		t.Helper()
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	fill := func(id string) {
+		t.Helper()
+		file, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", id+"-*.md"))
+		s, _ := os.ReadFile(file[0])
+		body := strings.Replace(string(s), "## Goal\n", "## Goal\n\nDo it.\n", 1)
+		body = strings.Replace(body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)
+		if err := os.WriteFile(file[0], []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// ready: S-0004 valued and forecast, S-0005 with neither; backlog: S-0003
+	// with neither, S-0006 a candidate
+	for _, s := range [][]string{{"Valued", "docs"}, {"Bare", "template"}, {"Candidate", "scripts"}} {
+		run("story", "new", s[0], "--epic", "E-0001", "--touches", s[1])
+	}
+	run("edit", "S-0004", "--cost-of-delay-value", "200", "--forecast-duration", "2h")
+	run("edit", "S-0006", "--cost-of-delay-value", "50", "--forecast-duration", "1h")
+	for _, id := range []string{"S-0004", "S-0005", "S-0006"} {
+		fill(id)
+	}
+	run("move", "S-0005", "ready")
+	run("move", "S-0004", "ready")
+	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n")
+	manifest := filepath.Join(root, "system-flow.yaml")
+	data, _ := os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, append(data, "  policy: cod\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	board := filepath.Join(root, "wip/kanban/board.md")
+	before, _ := os.ReadFile(board)
+
+	answer := func(method, params string, args ...string) string {
+		t.Helper()
+		got, rerr := sameAnswer(t, root, hostapi.Host{}, method, params, args...)
+		if rerr != nil {
+			t.Fatalf("%s %s: %+v", method, params, rerr)
+		}
+		return got
+	}
+	for _, policy := range workitem.OrderPolicies {
+		answer("order.by", `{"policy":"`+policy+`"}`, "order", "--by", policy)
+	}
+	if got := answer("order.by", `{}`, "order", "--by", "cod"); !strings.Contains(got, `"policy":"cod"`) || !strings.Contains(got, `"applied":false`) || !strings.Contains(got, `"id":"S-0004"`) {
+		t.Errorf("order.by with no policy is the manifest's: %s", got)
+	}
+	if after, _ := os.ReadFile(board); string(after) != string(before) {
+		t.Error("order.by wrote board.md")
+	}
+	if got := answer("promote.candidates", `{}`, "promote", "--candidates"); !strings.Contains(got, `"id":"S-0006"`) || !strings.Contains(got, `"id":"S-0003"`) {
+		t.Errorf("promote.candidates lacks S-0006 as a candidate or S-0003 refused: %s", got)
+	}
+	answer("promote.candidates", `{"limit":1}`, "promote", "--candidates", "--limit", "1")
+	if got := answer("release.evaluate", `{}`, "release", "--evaluate"); !strings.Contains(got, `"met":true`) {
+		t.Errorf("release.evaluate: 300 a week pending meets a threshold of 300: %s", got)
+	}
+	setReleasePolicy(t, root, "    policy: theme\n    epic: E-0001\n")
+	if got := answer("release.evaluate", `{}`, "release", "--evaluate"); !strings.Contains(got, `"met":false`) {
+		t.Errorf("release.evaluate: E-0001 has stories not accepted: %s", got)
+	}
 }
 
 // TestTheReadsAnswerWhatTheCommandsPrint holds the reads flai serve answers

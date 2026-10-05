@@ -163,3 +163,61 @@ func (b *Board) ApplyReadyOrder(items []*Item, ids []string) error {
 	}
 	return nil
 }
+
+// ReadyOrder is the ready column's order a policy computed, as flai order
+// --by prints it.
+type ReadyOrder struct {
+	Policy string `json:"policy"`
+	// Applied says the order was written to the board.
+	Applied bool     `json:"applied"`
+	Stories []Ranked `json:"stories"`
+	// Order is the board's whole pull order, after the order was applied
+	// when it was.
+	Order []string `json:"order"`
+}
+
+// ReadyOrderByPolicy orders the ready column, taken in its pull order, by a
+// policy. It returns the board and the items it read, for Apply.
+func (r *Repo) ReadyOrderByPolicy(policy string) (ReadyOrder, *Board, []*Item, error) {
+	items, err := r.List(false)
+	if err != nil {
+		return ReadyOrder{}, nil, nil, err
+	}
+	board, err := r.LoadBoard()
+	if err != nil {
+		return ReadyOrder{}, nil, nil, err
+	}
+	byID := map[string]*Item{}
+	for _, it := range items {
+		if !it.Archived {
+			byID[it.ID] = it
+		}
+	}
+	var ready []*Item
+	for _, id := range PullSequence(board.Order, items, Ready) {
+		ready = append(ready, byID[id])
+	}
+	ranked, err := OrderByPolicy(ready, policy)
+	if err != nil {
+		return ReadyOrder{}, nil, nil, err
+	}
+	order := board.Order
+	if order == nil {
+		order = []string{}
+	}
+	return ReadyOrder{Policy: policy, Stories: ranked, Order: order}, board, items, nil
+}
+
+// Apply makes o the board's ready order, through ApplyReadyOrder, and says
+// so in o. Saving the board is the caller's.
+func (o *ReadyOrder) Apply(b *Board, items []*Item) error {
+	ids := make([]string, len(o.Stories))
+	for i, r := range o.Stories {
+		ids[i] = r.ID
+	}
+	if err := b.ApplyReadyOrder(items, ids); err != nil {
+		return err
+	}
+	o.Applied, o.Order = true, b.Order
+	return nil
+}

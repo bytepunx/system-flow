@@ -103,46 +103,22 @@ func orderBy(a *app, policy string, apply bool) error {
 	if err != nil {
 		return err
 	}
-	items, err := repo.List(false)
-	if err != nil {
-		return err
-	}
-	board, err := repo.LoadBoard()
-	if err != nil {
-		return err
-	}
-	byID := map[string]*workitem.Item{}
-	for _, it := range items {
-		if !it.Archived {
-			byID[it.ID] = it
-		}
-	}
-	var ready []*workitem.Item
-	for _, id := range workitem.PullSequence(board.Order, items, workitem.Ready) {
-		ready = append(ready, byID[id])
-	}
-	ranked, err := workitem.OrderByPolicy(ready, policy)
+	got, board, items, err := repo.ReadyOrderByPolicy(policy)
 	if err != nil {
 		return err
 	}
 	if apply {
-		ids := make([]string, len(ranked))
-		for i, r := range ranked {
-			ids[i] = r.ID
-		}
-		if err := board.ApplyReadyOrder(items, ids); err != nil {
+		if err := got.Apply(board, items); err != nil {
 			return err
 		}
 		if err := board.Save(a.now().Format("2006-01-02")); err != nil {
 			return err
 		}
 	}
-	if ranked == nil {
-		ranked = []workitem.Ranked{}
-	}
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"policy": policy, "applied": apply, "stories": ranked, "order": board.Order})
+		return a.printJSON(got)
 	}
+	ranked := got.Stories
 	if len(ranked) == 0 {
 		fmt.Fprintln(a.out, "no ready stories to order")
 		return nil

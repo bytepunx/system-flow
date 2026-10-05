@@ -19,6 +19,10 @@ var readPhase = map[string]struct{ params, phase string }{
 	"stream.diff":       {`{"id":"S-0001"}`, "stream.diff"},
 	"stats.get":         {`{"since":"12w","type":"story","by":"nature","bucket":"week"}`, "stats.compute"},
 	"publish.preview":   {`{}`, "release.pending"},
+	// S-0217
+	"order.by":           {`{"policy":"wsjf"}`, "order.by"},
+	"promote.candidates": {`{"limit":3}`, "promote.candidates"},
+	"release.evaluate":   {`{}`, "release.evaluate"},
 }
 
 // readRefused is, per read, params refused before anything is read.
@@ -29,6 +33,10 @@ var readRefused = map[string][]string{
 	"stream.diff":       {`{"id":"../../etc"}`},
 	"stats.get":         {`{"since":"30d; ls"}`, `{"type":"folder"}`, `{"by":"owner"}`, `{"bucket":"minute"}`, `{"bucket":"--json"}`},
 	"publish.preview":   {`"--force"`},
+	// S-0217
+	"order.by":           {`{"policy":"random"}`, `{"policy":"--apply"}`, `{"policy":3}`},
+	"promote.candidates": {`{"limit":-1}`, `{"limit":"3"}`},
+	"release.evaluate":   {`"--apply"`, `[1]`},
 }
 
 func TestEveryReadIsCovered(t *testing.T) {
@@ -115,5 +123,25 @@ func TestAReadAnswersAsFlaiDid(t *testing.T) {
 	}
 	if rerr != nil || json.Unmarshal(w.Data, &cancel) != nil || !cancel.DryRun || len(cancel.Cancelled) == 0 {
 		t.Errorf("item.move.preview: %s %+v", w.Data, rerr)
+	}
+
+	// S-0217: no policy is the manifest's, fifo when it names none, and the
+	// order is computed, never applied
+	w, rerr = call("order.by", `{}`)
+	var order struct {
+		Policy  string
+		Applied bool
+		Stories []struct{ ID string }
+	}
+	if rerr != nil || json.Unmarshal(w.Data, &order) != nil || order.Policy != "fifo" || order.Applied || order.Stories == nil {
+		t.Errorf("order.by: %s %+v", w.Data, rerr)
+	}
+	w, rerr = call("promote.candidates", `{}`)
+	var promote struct {
+		Policy string
+		Others []struct{ ID string }
+	}
+	if rerr != nil || json.Unmarshal(w.Data, &promote) != nil || promote.Policy != "fifo" {
+		t.Errorf("promote.candidates: %s %+v", w.Data, rerr)
 	}
 }
