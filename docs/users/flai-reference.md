@@ -41,8 +41,9 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [order](#flai-order) | Place a ready or backlog story in the pull order |
 | [plan](#flai-plan) | Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai |
 | [prime](#flai-prime) | Print the conventions an agent reads at session start, in order |
+| [promote](#flai-promote) | List the backlog stories that could go to ready |
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
-| [release](#flai-release) | Compute a release for one item, or publish everything accepted since the last release |
+| [release](#flai-release) | Compute a release for one item, publish everything accepted since the last release, or say whether a release is due |
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
 | [show](#flai-show) | Print one work item with its children and history |
@@ -105,8 +106,9 @@ Subcommands:
 - [order](#flai-order): Place a ready or backlog story in the pull order
 - [plan](#flai-plan): Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai
 - [prime](#flai-prime): Print the conventions an agent reads at session start, in order
+- [promote](#flai-promote): List the backlog stories that could go to ready
 - [push](#flai-push): Push an acceptance that was made and not pushed
-- [release](#flai-release): Compute a release for one item, or publish everything accepted since the last release
+- [release](#flai-release): Compute a release for one item, publish everything accepted since the last release, or say whether a release is due
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
 - [show](#flai-show): Print one work item with its children and history
@@ -1077,7 +1079,7 @@ Refuse a sub-agent's writes and hold the planner to planning, as a Claude Code P
 flai guard
 ```
 
-Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, prime, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, prime, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, as does anything it cannot read: the guard fails open. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
+Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, order\_by\_policy, prime, promote\_candidates, release\_evaluate, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, order --by without --apply, prime, promote --candidates, release --evaluate, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, as does anything it cannot read: the guard fails open. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
 
 In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, task new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
 
@@ -1613,6 +1615,8 @@ Put a story at a position in its column's pull order, the order list in wip/kanb
 
 Only the ready and backlog columns have an order, and only stories are in it: ready stories come first, then backlog stories in the order they should be refined. A story the list does not name comes after the ones it does, by ID. The position is relative to another story of the same column, or the top or bottom of that column. To change a story's column use flai move.
 
+With --by, it computes the ready column's order by a policy instead and prints it with the figure each story was ordered by: cod, cost of delay value, highest first; wsjf, that value over the forecast duration in hours, highest first; throughput, forecast duration, shortest first; fifo, created, oldest first. A story without the figure goes after those with it, in its current order, and ties keep the current order. It writes nothing unless --apply is given, which writes the computed order to board.md.
+
 Examples:
 
 ```bash
@@ -1620,6 +1624,8 @@ flai order S-0061 --top
 flai order S-0059 --before S-0061
 flai order S-0047 --after S-0053
 flai order S-0056 --bottom
+flai order --by wsjf
+flai order --by cod --apply
 ```
 
 Flags:
@@ -1627,8 +1633,10 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--after` string | place it just after this story of the same column |
+| `--apply` | write the order --by computes to board.md |
 | `--before` string | place it just before this story of the same column |
 | `--bottom` | place it last in its column |
+| `--by` string | compute the ready column's order by a policy: cod, wsjf, throughput, fifo |
 | `--top` | place it first in its column |
 
 ### flai plan
@@ -1693,6 +1701,36 @@ Flags:
 | `--role` string | print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent |
 | `--story` string | print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest |
 
+### flai promote
+
+List the backlog stories that could go to ready.
+
+```text
+flai promote --candidates [flags]
+```
+
+List the backlog stories that could go to ready, ordered by the project's policy, and say why each other backlog story cannot.
+
+A backlog story is a candidate when it is not a draft, meets the definition of ready (a goal, acceptance criteria with a checkbox, and an epic that is not cancelled), would not be held if it were ready (it declares touches that overlap no story in progress or in review, and every story it names in after: is done), and has a forecast duration and a cost of delay value.
+
+The candidates are ordered by orchestration.policy in system-flow.yaml, fifo when it is not set, as flai order --by orders the ready column, and each is printed with the figure it was ordered by. Every other backlog story is printed with each reason it is not a candidate.
+
+--limit caps the candidates listed; those beyond it are not listed at all. It writes nothing: moving a candidate to ready is flai move.
+
+Examples:
+
+```bash
+flai promote --candidates
+flai promote --candidates --limit 3 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--candidates` | list the backlog stories that could go to ready, and why each other one cannot |
+| `--limit` int | list at most this many candidates, 0 for all; those beyond it are not listed |
+
 ### flai push
 
 Push an acceptance that was made and not pushed.
@@ -1726,10 +1764,10 @@ Flags:
 
 ### flai release
 
-Compute a release for one item, or publish everything accepted since the last release.
+Compute a release for one item, publish everything accepted since the last release, or say whether a release is due.
 
 ```text
-flai release <id> | --pending [flags]
+flai release <id> | --pending | --evaluate [flags]
 ```
 
 Per design/conventions/git.md: the component the item delivers to gets the delivery-type bump (feature story minor, remediation or improvement patch; an epic none of its own, its stories carry theirs, ADR-0078); every other component its commits touched gets a patch. Components come from system-flow.yaml projects; the delivered one from the item's tags (a project name or one of its tags), the parent's tags, or --deliver. Code components get an annotated tag &lt;name&gt;/vX.Y.Z on HEAD; the template component gets its version file and changelog bumped (commit them).
@@ -1740,6 +1778,8 @@ flai release --pending computes one release per component, the highest delivery 
 
 What is pending is worked out from this clone's tags and branch, and flai never fetches: publishing is git fetch, then flai release --pending. Before planning, --pending asks the remote the branch tracks (else origin) for its release tags (S-0174) and its head of that branch (ADR-0067). When it has a newer &lt;name&gt;/vX.Y.Z than this clone, or commits on the branch this clone lacks, nothing is planned, applied, committed, or tagged, and publishing is refused (exit 3), naming what to run: git fetch --tags for the tags; for the branch, git fetch, then git merge &lt;remote&gt;/&lt;branch&gt; or git rebase onto it, then flai release --pending again. When the branch moves after that check and the push is refused, the release tags the push did not send are deleted here, since they no longer tag what will be published, and the exit is 3: git fetch, rebase onto the remote branch or merge it (merge when some tags already went), verify, and flai release --pending again tags again (S-0242). When the remote cannot be reached, --dry-run warns and shows the plan, and publishing is refused. A clone with no remote publishes locally. An accepted item no plan can cover, such as one touching two components with no tag saying which it delivers to, is named with the reason (I-0024).
 
+flai release --evaluate says whether system-flow.yaml's orchestration.release policy is met, why, and the figures it rests on (S-0217): the stories accepted and not yet released, their count, and their cost of delay per week summed. A threshold is met when that sum or that count is at or over the value or count it sets; a story with no value counts but adds nothing to the sum, and is named. A theme is met when every story of its epic or its tag, archived or not and cancelled ones aside, is accepted and one at least is not yet released; the ones not yet accepted are named. Judgement, the default, is never met by itself: the call is the orchestrator's or the operator's. It tags, bumps, commits, and pushes nothing, and so takes no item and none of --apply, --pending, --dry-run, or --deliver.
+
 Examples:
 
 ```bash
@@ -1747,6 +1787,7 @@ flai release S-031 --dry-run
 flai release S-031 --deliver flai --apply
 flai release --pending --dry-run
 flai release --pending
+flai release --evaluate --json
 ```
 
 Flags:
@@ -1756,6 +1797,7 @@ Flags:
 | `--apply` | create tags and bump version files |
 | `--deliver` string | component the item delivers to, when its tags do not say |
 | `--dry-run` | print the plan only, or with --pending what would publish |
+| `--evaluate` | say whether orchestration.release is met, with its figures; changes nothing |
 | `--pending` | publish everything merged and unreleased since each component's last tag |
 
 ### flai self-upgrade

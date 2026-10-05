@@ -86,7 +86,7 @@ LOG_FORMAT=json flai check 2>events.jsonl
 
 A request that takes `FLAI_SLOW_REQUEST` or longer is logged at `INFO`; the rest at `DEBUG`. `wait_for_work` and `wait_for_events` wait by design and are logged at `DEBUG` however long they take.
 
-Phases are named for what the time went to: `repo.open`, `repo.list` (every work item, the archive included when the method asks for it), `repo.get`, `board.load`, `board.view`, `release.pending`, `threads.read`, `threads.view`, `narratives.read`, `check.overlap` (the designer's inbox's overlapping touches), `docs.walk`, `doc.read`, `adrs.read`, `search.index`, `search.query`, `agent.state`, `agent.stream`, `manifest.load`, `changes.read`, `item.show`, `cancel.preview`, `accept.preview`, `stream.diff`, `stats.compute`, `encode`; and `exec.<program>.<command>` for each process flai started to answer, such as `exec.git.log`, or `exec.flai.move` for a write, which runs the flai command. Since S-0159 no read starts flai.
+Phases are named for what the time went to: `repo.open`, `repo.list` (every work item, the archive included when the method asks for it), `repo.get`, `board.load`, `board.view`, `release.pending`, `threads.read`, `threads.view`, `narratives.read`, `check.overlap` (the designer's inbox's overlapping touches), `docs.walk`, `doc.read`, `adrs.read`, `search.index`, `search.query`, `agent.state`, `agent.stream`, `manifest.load`, `changes.read`, `item.show`, `cancel.preview`, `accept.preview`, `stream.diff`, `stats.compute`, `order.by`, `promote.candidates`, `release.evaluate`, `encode`; and `exec.<program>.<command>` for each process flai started to answer, such as `exec.git.log`, or `exec.flai.move` for a write, which runs the flai command. Since S-0159 no read starts flai.
 
 To time one method with no transport at all, ask it of `flai hostapi` with `--timing`; its event goes to stderr at `INFO` whatever it took:
 
@@ -477,6 +477,41 @@ flai order S-0056 --bottom
 
 Only ready and backlog stories can be placed, and only relative to a story in the same column; `flai move` changes the column. A story you move to `ready` joins the end of the ready stories. Backlog stories you have never placed stay out of the list and come last, by ID. The dashboard's board does the same thing when you drag a card up or down within a column.
 
+#### Ordering by a policy
+
+flai can work out the ready column's order from the stories' planning data ([Drafts, cost of delay, and forecasts](#drafts-cost-of-delay-and-forecasts)), and say which backlog stories could go to ready:
+
+```bash
+flai order --by wsjf                   # the ready column by a policy, with each story's figure; writes nothing
+flai order --by cod --apply            # the same, written to board.md
+flai promote --candidates              # backlog stories that could go to ready, and why the others cannot
+flai promote --candidates --limit 3
+```
+
+These, and `flai release --evaluate` ([Accept and release](#accept-and-release)), are the orchestrator's arithmetic. They live in flai so that you and the dashboard get the same answer the orchestrator does, with no agent running; the orchestrator itself makes only the judgement calls.
+
+`flai order --by` takes one of four policies, the names `orchestration.policy` takes in `system-flow.yaml` ([settings](../operators/settings.md)):
+
+| Policy | Orders by | First |
+|--------|-----------|-------|
+| `cod` | The cost of delay value per week | Highest |
+| `wsjf` | That value divided by the forecast duration in hours | Highest |
+| `throughput` | The forecast duration | Shortest |
+| `fifo` | When the story was created | Oldest |
+
+A story without the figure its policy needs, such as a story with no forecast under `throughput`, goes after the stories that have it, in its current order, and the listing says what it lacks. Stories whose figures tie keep their current order. Without `--apply` nothing is written. With it, the order becomes `board.md`'s ready order, as if you had dragged each story into place; nothing is committed. `--by` orders the whole column, so it takes no story and none of `--before`, `--after`, `--top`, or `--bottom`.
+
+`flai promote --candidates` lists the backlog stories that could go to ready, ordered by the project's `orchestration.policy` (`fifo` when it is not set), each with its figure. A backlog story is a candidate when:
+
+- it is not a draft;
+- it meets the definition of ready: a goal, acceptance criteria with a checkbox, and an epic that is not cancelled;
+- it would not be held if it were ready ([Waiting for another story](#waiting-for-another-story)): it declares touches whenever a story is in progress or in review, they overlap none of those stories' touches, and every story it names in `after:` is done;
+- it has a forecast duration and a cost of delay value.
+
+Every other backlog story is listed with each reason it is not a candidate. `--limit` caps the candidates listed; those beyond it are left out. It writes nothing: move a candidate to ready with `flai move`.
+
+Each has a `--json` form. The dashboard reads the same answers through `flai serve` (`order.by`, `promote.candidates`), and agents through the MCP tools `order_by_policy` and `promote_candidates` ([Serving agents over MCP](#serving-agents-over-mcp)). A sub-agent and the planner may run `flai order --by` without `--apply`, and `flai promote --candidates`, as reads.
+
 ### Story branches
 
 ```bash
@@ -724,6 +759,9 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |
 | `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed; with `role` (`explore` or `verify`), the smaller pack for a sub-agent ([Sub-agents](#sub-agents)); with `role` `plan` and `epic` or `story`, or `role` `orchestrate` or `analyze`, a strategic agent's pack ([The planner, the orchestrator, and the analyzer](#the-planner-the-orchestrator-and-the-analyzer)) ([Prime a session](#prime-a-session)) |
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
+| `order_by_policy` | The ready column's order by `policy` (`cod`, `wsjf`, `throughput`, or `fifo`; the project's `orchestration.policy` when left out), as `flai order --by <policy> --json` prints it, with each story's figure. It never writes the order ([Ordering by a policy](#ordering-by-a-policy)) |
+| `promote_candidates` | The backlog stories that could go to ready and why each other one cannot, as `flai promote --candidates --json` prints them; `limit` caps the candidates. It writes nothing ([Ordering by a policy](#ordering-by-a-policy)) |
+| `release_evaluate` | Whether the release policy is met, with its figures, as `flai release --evaluate --json` prints it. It releases nothing ([Whether a release is due](#whether-a-release-is-due)) |
 | `agent_start`, `agent_restart` | Start a story's agent on the host, as `flai serve agent start` and `restart` do, so that your own agent can give a story begun on another host an agent here ([ADR-0064](../../design/adrs/0064-a-story-in-ready-or-in-progress-with-no-agent-run-on-this-host-is-started-here.md)). Only while the operator has turned on the `agent` host action for the project, as for the dashboard's buttons; otherwise, and whenever flai would refuse the command, the tool's error says why. Each call is journalled with the agent that made it. A sub-agent cannot call them, and nor can an agent `flai serve` started: starting agents is your word, not a story's agent's |
 | `plan` | Start the planner for an epic or a story on the host, as `flai plan` does ([Running the planner](#running-the-planner)). Only while the operator has turned on the `plan` host action for the project; otherwise, and whenever flai would refuse the command, the tool's error says why. Returns the run: its agent, PID, log, and session. Each call is journalled with the agent that made it. A sub-agent, the planner, and an agent `flai serve` started cannot call it: planning is the operator's to ask for |
 | `activity_log` | For the planner, the orchestrator, and the analyzer: log an activity that just ended, with `kind`, a one-line `summary`, and the `items` it touched. flai measures its seconds and cost from the agent's run log and appends it to `wip/agents/<kind>.md`. Returns the entry and the document's totals. A sub-agent cannot call it. Nothing is committed ([What they did: activity documents](#what-they-did-activity-documents)) |
@@ -1136,6 +1174,23 @@ An accepted item that no plan can cover is named with the reason (`left out:`) i
 A story that is `done` but was never accepted (an older flai, a hand edit) is flagged by `flai check` as `story.unaccepted`, and `flai accept` completes it.
 
 The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to gets the delivery-type bump: feature story minor, remediation or improvement patch. An epic, accepted with its last story or by hand, gets none of its own: its stories carry theirs ([ADR-0078](../../design/adrs/0078-an-accepted-epic-contributes-no-release-bump-of-its-own-its-stories-carry-theirs.md)), and `flai release <epic>` says so. It is found from the item's tags (a project name or one of its `tags` aliases), then its epic's tags, and only among the components the item's commits touched: when the tags name several, the one with the most touched files delivers, the earlier tag breaking a tie, and a tag naming a component no commit touched never delivers, so that component gets no release at all. `--deliver` overrides all of that. With no tag deciding, the only touched component delivers, and several ask you for a tag or `--deliver`. `flai check` warns about that earlier (`story.component-tag`): an open story whose touches reach two or more components while no tag of its own or its epic's names one of them, with the `flai edit --tag` that fixes it. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. A research or experiment story releases nothing either, whatever it touched: its findings or results are merged like any acceptance, and if its commits changed a component's files the plan says that component lands on main without a release. Publishing pushes the acceptance commit whether or not a release was cut.
+
+### Whether a release is due
+
+```bash
+flai release --evaluate          # is the release policy met, and on what figures
+flai release --evaluate --json
+```
+
+`flai release --evaluate` says whether the project's release policy, `orchestration.release` in `system-flow.yaml` ([settings](../operators/settings.md)), is met, why, and the figures it rests on. Like `flai order --by` ([Ordering by a policy](#ordering-by-a-policy)), it is the orchestrator's arithmetic, kept in flai so that you and the dashboard get the same answer with no agent running. It weighs the stories accepted and not yet released, the ones `flai release --pending --dry-run` would publish: how many there are, and their cost of delay values per week added up.
+
+| Policy | Met when |
+|--------|----------|
+| `threshold` | The summed value of the stories waiting is at or over the policy's `value`, or their count is at or over its `count`. A story with no value counts toward the count, adds nothing to the sum, and is named. With nothing waiting it is not met. |
+| `theme` | Every story of the policy's `epic`, or of its `tag`, cancelled ones aside, is accepted, and at least one of them is not yet released. The ones not yet accepted are named. |
+| `judgement` | Never, by itself: whether to release is the orchestrator's call, or yours. This is the default. |
+
+It tags, bumps, commits, and pushes nothing; publishing is still `flai release --pending`. So it takes no item and refuses `--apply`, `--pending`, `--dry-run`, and `--deliver`. The dashboard reads the same answer through `flai serve` (`release.evaluate`), and agents through the MCP tool `release_evaluate`. A sub-agent and the planner may run it as a read.
 
 ## Upgrade to a newer template
 
