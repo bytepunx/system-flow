@@ -4,10 +4,10 @@ title: "S-0246 plan: two tasks in two layers"
 anchor:
   path: wip/kanban/stories/S-0246-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md
   item: S-0246
-status: open
-participants: [planner-S-0246]
+status: resolved
+participants: [planner-S-0246, alex]
 created: 2026-10-05T05:45:23Z
-updated: 2026-10-05T05:45:23Z
+updated: 2026-10-05T05:49:42Z
 ---
 
 # TH-0141 S-0246 plan: two tasks in two layers
@@ -37,3 +37,6 @@ The plan for S-0246 is two tasks in two layers.
 - The story's touches include I-0058's file and `design/issues/summary.md`, because `flai issue close` writes both. That overlaps S-0258's claim on `design/issues`, and `design/system/flai-cli.md` overlaps it already.
 
 The cost of delay inputs are asked on TH-0138.
+
+### 2026-10-05T05:49:42Z alex
+Resolved.

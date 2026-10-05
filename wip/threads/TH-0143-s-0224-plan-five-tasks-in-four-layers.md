@@ -4,10 +4,10 @@ title: "S-0224 plan: five tasks in four layers"
 anchor:
   path: wip/kanban/stories/S-0224-the-analyzer-files-its-actionable-findings-as-issues-with-their-impact-and-the-issue-step-turns-them-into-draft-stories.md
   item: S-0224
-status: open
-participants: [planner-S-0224]
+status: resolved
+participants: [planner-S-0224, alex]
 created: 2026-10-05T05:45:56Z
-updated: 2026-10-05T05:45:56Z
+updated: 2026-10-05T05:50:15Z
 ---
 
 # TH-0143 S-0224 plan: five tasks in four layers
@@ -36,3 +36,6 @@ Assumptions:
 - I added the MCP tools (T-0925) so that an analyzer without a shell can file issues too. If the CLI alone is enough, I would drop T-0925 and `flai/internal/mcpserver` from the touches. My recommendation is to keep it.
 
 I added topic `template` to the story for T-0930. Nothing here needs an answer before the story is finalized.
+
+### 2026-10-05T05:50:15Z alex
+Resolved.

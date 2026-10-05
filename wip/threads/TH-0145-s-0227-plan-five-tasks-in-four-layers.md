@@ -4,10 +4,10 @@ title: "S-0227 plan: five tasks in four layers"
 anchor:
   path: wip/kanban/stories/S-0227-the-analyzer-s-cost-is-recorded-on-the-issues-it-filed-and-the-stories-made-from-them.md
   item: S-0227
-status: open
-participants: [planner-S-0227]
+status: resolved
+participants: [planner-S-0227, alex]
 created: 2026-10-05T05:46:14Z
-updated: 2026-10-05T05:46:14Z
+updated: 2026-10-05T05:46:42Z
 ---
 
 # TH-0145 S-0227 plan: five tasks in four layers
@@ -34,3 +34,6 @@ Assumptions:
 - S-0226's project total exists by the time this story starts, as its `after` on S-0226 says. T-0942 uses it rather than adding its own.
 - Only `I-nnnn` IDs among an analyzer activity's items are charged. Other IDs it names, such as stories, get nothing from the analyzer, which never authors stories.
 - The dashboard is left out, because the criteria ask only for `flai stats`.
+
+### 2026-10-05T05:46:42Z alex
+Resolved.

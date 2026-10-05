@@ -3,11 +3,14 @@ id: S-0250
 type: story
 nature: improvement
 title: flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
-status: backlog
+status: cancelled
 owner: alex
 created: 2026-10-03T18:03:59Z
-updated: 2026-10-03T18:03:59Z
-transitions: []
+updated: 2026-10-05T05:47:32Z
+transitions:
+  - to: cancelled
+    at: 2026-10-05T05:47:32Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -49,3 +52,4 @@ This story remediates [I-0062](../../../design/issues/I-0062-flai-adr-new-number
 ## Tasks
 
 ## Notes
+- 2026-10-05T05:47:32Z: moved to cancelled: Duplicate of S-0245

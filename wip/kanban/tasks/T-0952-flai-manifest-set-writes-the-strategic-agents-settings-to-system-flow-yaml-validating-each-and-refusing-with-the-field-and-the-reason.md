@@ -7,7 +7,7 @@ status: backlog
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:46:14Z
-updated: 2026-10-05T05:46:14Z
+updated: 2026-10-05T05:46:34Z
 transitions: []
 stream: S-0229
 tags: [flai]
@@ -30,7 +30,7 @@ ADR-0039 has every dashboard write run a flai command that hostapi builds from c
 - `--autocommit` commits `system-flow.yaml` alone, as `flai agent set --autocommit` does.
 - Register it in `flai/cmd/root.go` and regenerate `docs/users/flai-reference.md` with `make flai-reference`.
 
-This task waits for nothing in this story. It runs with T-B's sibling on the guard, whose paths it does not share.
+This task waits for nothing in this story. It runs with T-0954, whose paths it does not share.
 
 ## Done when
 

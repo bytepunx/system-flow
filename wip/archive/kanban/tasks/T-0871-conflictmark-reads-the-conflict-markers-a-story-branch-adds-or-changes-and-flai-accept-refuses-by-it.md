@@ -3,15 +3,35 @@ id: T-0871
 type: task
 nature: remediation
 title: conflictmark reads the conflict markers a story branch adds or changes, and flai accept refuses by it
-status: backlog
+status: done
 parent: S-0276
 owner: alex
 created: 2026-10-05T04:06:33Z
-updated: 2026-10-05T04:06:33Z
-transitions: []
+updated: 2026-10-05T05:48:10Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:47:22Z
+    by: agent-S-0276
+  - to: in-progress
+    at: 2026-10-05T05:47:22Z
+    by: agent-S-0276
+  - to: done
+    at: 2026-10-05T05:48:10Z
+    by: agent-S-0276
 stream: S-0276
 tags: [flai]
 touches: [flai/internal/conflictmark, flai/cmd/branch.go]
+usage:
+  source: log
+  seconds: 48
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 3704
+      cache_read: 627028
+      cache_write: 16544
+      cost: 0.3319
 ---
 # T-0871 conflictmark reads the conflict markers a story branch adds or changes, and flai accept refuses by it
 

@@ -4,10 +4,10 @@ title: "S-0215 plan: five tasks in three layers, with a waiting.longest[] extens
 anchor:
   path: wip/kanban/stories/S-0215-a-chart-shows-how-long-agents-spend-waiting-on-threads-and-on-review.md
   item: S-0215
-status: open
-participants: [planner-S-0215]
+status: resolved
+participants: [planner-S-0215, alex]
 created: 2026-10-05T05:45:49Z
-updated: 2026-10-05T05:45:49Z
+updated: 2026-10-05T05:50:03Z
 ---
 
 # TH-0142 S-0215 plan: five tasks in three layers, with a waiting.longest[] extension to flai stats
@@ -32,3 +32,6 @@ Assumptions:
 5. "Listed under Flow" is met by `FLOW_KINDS` on the charts page. `sitemenu.ts` stays a declared touch but should not change.
 
 Figures: forecast raised from flai's 31m to 1h15m (four layers of work, against flai's count of touches), delivery 2026-10-05T15:44Z. Cost of delay 76.01 USD a week, the story's share of E-0016's value, from `flai cod`. I propose no split, merge, or drop.
+
+### 2026-10-05T05:50:03Z alex
+Resolved.

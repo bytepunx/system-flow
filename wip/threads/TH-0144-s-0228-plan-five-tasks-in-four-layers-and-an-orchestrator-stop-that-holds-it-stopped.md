@@ -4,10 +4,10 @@ title: "S-0228 plan: five tasks in four layers, and an orchestrator Stop that ho
 anchor:
   path: wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md
   item: S-0228
-status: open
-participants: [planner-S-0228]
+status: resolved
+participants: [planner-S-0228, alex]
 created: 2026-10-05T05:46:00Z
-updated: 2026-10-05T05:46:00Z
+updated: 2026-10-05T05:50:24Z
 ---
 
 # TH-0144 S-0228 plan: five tasks in four layers, and an orchestrator Stop that holds it stopped
@@ -38,3 +38,6 @@ Assumptions. Correct me on any of them:
 Figures: forecast 1h, against flai's 14m on the declared touches and 1h4m on the predicted ones. The reason: S-0259 was one such page and took 29m, and this story is two pages plus the stop and start. Cost of delay is 60.81 USD a week, its share of E-0016's value. The reasons are under `### Planning` in the story's Notes.
 
 No split, merge, or drop proposed.
+
+### 2026-10-05T05:50:24Z alex
+Resolved.

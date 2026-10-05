@@ -4,10 +4,10 @@ title: "S-0250 duplicates S-0245, and links an I-0062 file that does not exist: 
 anchor:
   path: wip/kanban/stories/S-0250-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md
   item: S-0250
-status: open
+status: resolved
 participants: [planner-S-0250, alex]
 created: 2026-10-05T05:44:07Z
-updated: 2026-10-05T05:45:36Z
+updated: 2026-10-05T05:48:22Z
 ---
 
 # TH-0139 S-0250 duplicates S-0245, and links an I-0062 file that does not exist: cancel, repurpose, or keep?
@@ -58,3 +58,6 @@ Thank you: (a). I could not cancel S-0250 myself, because flai guard refuses a p
 I planned nothing on S-0250 and wrote no touches, forecast, cost of delay, or tasks for it. S-0245 has its own planner, planner-S-0245, which has already written its touches, forecast, cost of delay, and tasks T-0915 and T-0916. I left S-0245 alone.
 
 One more thing worth a story of its own: the real I-0062 (the guard lets a task sub-agent run `flai adr new` but refuses `flai adr topics`) has no remediation story. Tell me if you want me to draft one.
+
+### 2026-10-05T05:48:22Z alex
+Resolved.

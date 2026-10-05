@@ -3,16 +3,36 @@ id: T-0872
 type: task
 nature: remediation
 title: flai accept --dry-run lists a blocker naming each conflict marker the story branch carries
-status: backlog
+status: done
 parent: S-0276
 owner: alex
 created: 2026-10-05T04:06:44Z
-updated: 2026-10-05T04:06:44Z
-transitions: []
+updated: 2026-10-05T05:49:21Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:48:13Z
+    by: agent-S-0276
+  - to: in-progress
+    at: 2026-10-05T05:48:13Z
+    by: agent-S-0276
+  - to: done
+    at: 2026-10-05T05:49:21Z
+    by: agent-S-0276
 stream: S-0276
 tags: [flai]
-touches: [flai/internal/preview, flai/cmd/accept_conflict_test.go]
+touches: [flai/internal/preview, flai/cmd/accept_conflict_test.go, flai/cmd/branch.go]
 after: [T-0871]
+usage:
+  source: log
+  seconds: 68
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 4666
+      cache_read: 789816
+      cache_write: 20840
+      cost: 0.4181
 ---
 # T-0872 flai accept --dry-run lists a blocker naming each conflict marker the story branch carries
 

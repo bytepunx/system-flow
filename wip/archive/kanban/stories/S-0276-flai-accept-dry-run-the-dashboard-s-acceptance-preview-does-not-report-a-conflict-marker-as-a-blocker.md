@@ -3,16 +3,25 @@ id: S-0276
 type: story
 nature: remediation
 title: flai accept --dry-run, the dashboard's acceptance preview, does not report a conflict marker as a blocker
-status: ready
+status: done
 owner: alex
 created: 2026-10-05T03:48:28Z
-updated: 2026-10-05T05:46:20Z
+updated: 2026-10-05T05:59:10Z
 transitions:
   - to: ready
     at: 2026-10-05T04:05:04Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T05:47:22Z
+    by: agent-S-0276
+  - to: review
+    at: 2026-10-05T05:58:52Z
+    by: agent-S-0276
+  - to: done
+    at: 2026-10-05T05:59:10Z
+    by: alex
 tags: []
-touches: [flai/internal/preview, flai/cmd/branch.go, design/system/flai-cli.md, docs/users/flai.md, flai/internal/conflictmark, flai/cmd/accept_conflict_test.go]
+touches: [flai/internal/preview, flai/cmd/branch.go, design/system/flai-cli.md, docs/users/flai.md, flai/internal/conflictmark, flai/cmd/accept_conflict_test.go, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/summary.md]
 after: [S-0253]
 agent:
   harness: claude-code
@@ -20,9 +29,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 755
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 25796
+      cache_read: 4366932
+      cache_write: 115224
+      cost: 2.3115
+    - model: claude-sonnet-5
+      input: 62
+      output: 16027
+      cache_read: 1363745
+      cache_write: 112616
+      cost: 0.7147
   strategic:
     - kind: planner
       seconds: 431
@@ -59,10 +80,10 @@ finalized:
 The acceptance preview names every reason the acceptance would refuse, so that the operator sees a story branch carrying a conflict marker before pressing Accept rather than when the acceptance refuses it.
 
 ## Acceptance criteria
-- [ ] `flai accept --dry-run`, and the dashboard's preview that runs it, lists a blocker naming each file and line on the story branch that carries a conflict marker, as `flai accept` refuses it (S-0253's `refuseConflictMarkers`).
-- [ ] The preview and the acceptance find markers by one check, `flai/internal/conflictmark` over the files the branch adds or changes, so they cannot disagree.
-- [ ] A test shows the preview reporting the blocker for a branch with a marker and none for a clean branch.
-- [ ] `design/system/flai-cli.md` and `docs/users/flai.md` say the preview reports it.
+- [x] `flai accept --dry-run`, and the dashboard's preview that runs it, lists a blocker naming each file and line on the story branch that carries a conflict marker, as `flai accept` refuses it (S-0253's `refuseConflictMarkers`).
+- [x] The preview and the acceptance find markers by one check, `flai/internal/conflictmark` over the files the branch adds or changes, so they cannot disagree.
+- [x] A test shows the preview reporting the blocker for a branch with a marker and none for a clean branch.
+- [x] `design/system/flai-cli.md` and `docs/users/flai.md` say the preview reports it.
 
 ## Tasks
 - T-0871 conflictmark reads the conflict markers a story branch adds or changes, and flai accept refuses by it

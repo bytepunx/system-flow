@@ -7,10 +7,10 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T05:47:33Z
+updated: 2026-10-05T05:48:04Z
 transitions: []
 tags: [dashboard, flai]
-touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/guard, flai/internal/harness, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/adrs, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/guard_permissions_change_test.go, flai/internal/guard, flai/internal/harness, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/adrs, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0218, S-0211, S-0223]
 agent:
   harness: claude-code
@@ -49,3 +49,21 @@ The operator decides how much freedom each strategic agent has. The manifest hol
 - T-0966 An ADR, the dashboard and manifest design, flai-cli.md, and the operator and user guides describe editing the strategic agents' settings from the dashboard
 
 ## Notes
+
+### Planning
+
+Planned by planner-S-0229 on 2026-10-05.
+
+Touches, by where each came from:
+
+- Declared, kept: `flaiover/src/routes`, `flaiover/src/routes/settings`, `flaiover/src/lib/components`, `flai/internal/hostapi`, `flai/internal/manifest`, `design/system/flaiover-dashboard.md`, `design/system/project-manifest.md`, `docs/users/flaiover.md`, `docs/operators/settings.md`.
+- Co-change (`flai touches suggest`): `design/system/flai-cli.md` (30%), `docs/users/flai.md` (28%), `docs/operators/index.md` (18%, the `settings` host action's section), `docs/users/flai-reference.md` (13%, regenerated for the new command), `flaiover/src/lib/server/agent.ts` (10%, `REQUIRED_METHODS`, which `contract_test.go` holds equal to flai's methods), `flai/cmd/serve_actions.go` and its test (7%, where `settings.get` is built).
+- Design: `design/adrs` (ADR-0039 lists what the `settings` action lets a dashboard change; widening it to the manifest's strategic keys is a new decision), `design/system/strategic-agents.md` ("On the settings page" says the planning keys are set by hand), `flai/internal/guard` and `flai/internal/harness` (the second criterion: a running orchestrator held to changed permissions, S-0218's guard and prompt).
+- Layout: `flai/cmd/manifest.go`, `flai/cmd/manifest_test.go`, and `flai/cmd/root.go`, a new command, since ADR-0039 has every dashboard write run a flai command; `flai/cmd/guard_permissions_change_test.go`; `flaiover/src/lib/settings.ts` (`SETTINGS_KINDS`).
+- Left out: suggestions from unrelated work (`design/issues/summary.md`, `design/adrs/README.md`, `flai/internal/check/check.go`, `flai/internal/serve/agents.go`, `flai/internal/mcpserver/server.go`). The manifest's new keys and their `flai check` findings are S-0217's, S-0218's, S-0222's, and S-0223's.
+
+Forecast: `flai forecast` gives 1h, 132 s per unit over 14 done large feature stories on claude-opus-5-5, times size 27 (4 criteria, 23 touches at the time). Raised to 1h15m: the closest done stories, which likewise add a flai write and its dashboard form, took 72m (S-0204) and 63m (S-0201), and this one adds a command, a host API write and read, a guard test, a shared panel on three pages, and an ADR. The delivery is flai's play-out of the board with that duration.
+
+Cost of delay: 84.52 USD a week, as `flai cod` gives it: S-0229 has no inputs of its own, so it takes its share of E-0016's 1500 USD a week from the operator's inputs, 1h15m of the 22h11m forecast over the epic's 17 open stories without inputs. It replaces 97.56, which was worked out from the 2h forecast before this plan.
+
+Tasks: six, in five layers: T-0952 and T-0954, then T-0961, T-0963, T-0964, and T-0966. The plan thread on this story gives the assumptions and a proposal for `after`.

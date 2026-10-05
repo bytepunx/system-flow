@@ -4,10 +4,10 @@ title: "S-0214 plan: six tasks in four layers, metrics before charts"
 anchor:
   path: wip/kanban/stories/S-0214-charts-show-parallelism-holds-and-touches-drift.md
   item: S-0214
-status: open
-participants: [planner-S-0214]
+status: resolved
+participants: [planner-S-0214, alex]
 created: 2026-10-05T05:46:19Z
-updated: 2026-10-05T05:46:19Z
+updated: 2026-10-05T05:46:33Z
 ---
 
 # TH-0146 S-0214 plan: six tasks in four layers, metrics before charts
@@ -37,3 +37,6 @@ Assumptions:
 Figures: forecast 1h45m, kept over flai's 31m because the Go metrics and the ADR are extra work. Delivery 2026-10-05T15:47Z. Cost of delay 106.42 USD a week from `flai cod`, E-0016's share; it replaces 85.37. Topics `planning` and `analysis` added. Details are under Notes › Planning.
 
 Nothing to split, merge, or drop.
+
+### 2026-10-05T05:46:33Z alex
+Resolved.
