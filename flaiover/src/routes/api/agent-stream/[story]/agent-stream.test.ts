@@ -49,6 +49,24 @@ describe('/api/agent-stream/[story]', () => {
 		]);
 	});
 
+	// S-0259: the planner page reads a planner run's stream through the same route
+	it("asks flai for the planner's stream of the item when the query has plan", async () => {
+		answer = { item: 'E-0016', running: false, from: 0, next: 10, entries: [] };
+		let r = await doGet('E-0016', '?plan');
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject(answer as object);
+		r = await doGet('E-0016', '?plan=1&after=4096');
+		expect(r.status).toBe(200);
+		expect(asked.filter((a) => a.method !== 'project.info')).toEqual([
+			{ method: 'agent.stream', params: { plan: 'E-0016' } },
+			{ method: 'agent.stream', params: { plan: 'E-0016', after: 4096 } }
+		]);
+		refuse = new AgentError(502, 'flai serve has started no planner for E-0016', -32004);
+		r = await doGet('E-0016', '?plan');
+		expect(r.status).toBe(404);
+		expect((await r.json()).error).toContain('no planner');
+	});
+
 	it("passes on flai's refusals: no agent is a 404, a bad ID a 400", async () => {
 		refuse = new AgentError(502, 'flai serve has started no agent for S-0142', -32004);
 		let r = await doGet('S-0142');
