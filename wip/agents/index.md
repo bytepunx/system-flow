@@ -1,15 +1,16 @@
 ---
 title: Active streams
-updated: 2026-10-05T01:13:13Z
+updated: 2026-10-05T01:35:51Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0266](S-0266.md) | The verifier reads a close-out run's exit status without piping it away, and the story agent tells it where the run is expected to stop | in-progress | agent-S-0266 | 2026-10-05T01:21:50Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 6 | 14.3165 USD | 3977 | 2026-10-05T00:24:16Z |
+| [planner](planner.md) | 7 | 17.7200 USD | 8040 | 2026-10-05T01:35:00Z |
