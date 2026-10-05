@@ -1,6 +1,6 @@
 ---
 title: Continuous improvement
-updated: 2026-10-03
+updated: 2026-10-05
 status: active
 topics: [cli, conventions]
 ---
@@ -72,7 +72,7 @@ Story S-0009 remediates this issue, created from it at 2026-09-16T09:00:00Z.
 ## Cadence
 
 - Record an occurrence when it happens, not at the end of the story.
-- Each instance names the story it was recorded for, in a `Story: S-nnnn.` line under its heading (S-0198). `flai issue new` and `bump` take it from `--story`, else `FLAI_STORY`, else `FLAI_AGENT` of the form `agent-S-nnnn`, else the `story/S-nnnn` branch checked out; outside a story the instance names none. `flai issue list --story S-nnnn` lists a story's issues. Issues live under the checkout's `design/`, so a story's own issues are committed on its branch and are in its worktree, not the main checkout, until it is accepted; `--story` reads them there.
+- Each instance names the story it was recorded for, in a `Story: S-nnnn.` line under its heading (S-0198). `flai issue new` and `bump` take it from `--story`, else `FLAI_STORY`, else `FLAI_AGENT` of the form `agent-S-nnnn`, else the `story/S-nnnn` branch checked out; outside a story the instance names none. `flai issue list --story S-nnnn` lists a story's issues. Issues live under the checkout's `design/`, so a story's own issues are committed on its branch and are in its worktree, not the main checkout, until it is accepted; `--story` reads them there. So that two stories worked at once do not take the same number, `flai issue new` numbers one past the highest issue on the main branch, in the main checkout, in every story worktree, committed or not, and on every story branch (S-0252).
 - A story links an issue when its body names the issue's ID. That link is what ties them: `flai issue list --json` gives each issue's `stories` and `story`, the open story that links it. The line `flai issue story` adds to the issue's Remediation section is for a reader of the issue; flai does not link by it.
 - The story's agent makes no story for an issue. The operator chooses at acceptance (decided 2026-10-02, replacing the summary presented at an epic's end; refined on TH-0074): a story's review page lists the open issues it recorded or bumped, checked, then every other open issue no open story links, unchecked. With any checked, Accept reads `Accept and Create Stories`; once the acceptance succeeds, a backlog story is made, and committed, for each checked issue, and none when it fails. The page names each story made and each issue refused.
 - `flai issue story I-nnnn [--epic] [--story]`, or the MCP tool `issue_story`, makes that story: the issue's title; nature `remediation` for a `defect` or `blocker`, `improvement` for `efficiency` or `impression`; a goal that links the issue's document and carries its `## Remediation` text as the recommended solution, or asks for one; and a last criterion closing the issue with `flai issue close`. A closed issue, or one an open story links, is refused. An agent runs it when the operator asks, or for an issue `flai check` warns about.
