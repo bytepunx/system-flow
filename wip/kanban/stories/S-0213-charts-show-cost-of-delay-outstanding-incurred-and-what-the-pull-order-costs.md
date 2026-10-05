@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T04:38:16Z
+updated: 2026-10-05T04:40:46Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:14Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T07:34:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0257, S-0244, S-0258, S-0276 and S-0212."
+  delivery: 2026-10-05T07:36:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0244, S-0258, S-0276 and S-0212."
   by: flai
-  at: 2026-10-05T04:38:16Z
+  at: 2026-10-05T04:40:46Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 
