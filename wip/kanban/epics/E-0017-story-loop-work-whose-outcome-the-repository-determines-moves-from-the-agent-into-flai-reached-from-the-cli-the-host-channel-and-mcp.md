@@ -32,6 +32,7 @@ Drafted with the epic; finalize and order them on the board. Not in the epic bec
 - S-0271 Criteria and narrative state are commands: flai story tick checks a criterion and flai stream state writes Current state and Next steps
 - S-0272 An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand
 - S-0273 flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings
+- S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together
 
 ## Notes
 
