@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -419,5 +421,133 @@ func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 	}
 	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.Parent, "cost_of_delay": map[string]any{"value": 500}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "cost_of_delay" {
 		t.Errorf("an epic's cost of delay: %v %s", ed, failed)
+	}
+}
+
+// I-0059: a task whose touches grow its story's claim into another story in
+// progress names that story and the paths, through item_new and item_edit,
+// and each of the two stories is told once, as an overlapped change caused by
+// the other. A write that adds nothing inside another claim tells nobody.
+func TestAWriteThatGrowsAClaimIntoAnotherTellsBothStories(t *testing.T) {
+	f := setup(t)
+	other := f.readyStory(t, "Other", t0, "docs/other")
+	if _, err := f.repo.Transition(other, workitem.InProgress, "alex", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
+		t.Fatal("first look")
+	}
+	overlapped := func() map[string]map[string]any {
+		t.Helper()
+		out, _ := f.call(t, "inbox", map[string]any{})
+		got := map[string]map[string]any{}
+		for _, c := range out["changes"].([]any) {
+			c := c.(map[string]any)
+			if c["kind"] != Overlapped {
+				continue
+			}
+			if got[c["id"].(string)] != nil {
+				t.Errorf("told twice: %v", c)
+			}
+			got[c["id"].(string)] = c
+		}
+		return got
+	}
+	toldBoth := func(paths string) {
+		t.Helper()
+		got := overlapped()
+		mine, theirs := got[f.story.ID], got[other.ID]
+		if len(got) != 2 || mine == nil || theirs == nil {
+			t.Fatalf("one overlapped change for each story: %v", got)
+		}
+		if mine["cause"] != other.ID || theirs["cause"] != f.story.ID || mine["to"] != paths || theirs["to"] != paths || mine["by"] != "claude" {
+			t.Errorf("the changes: %v / %v", mine, theirs)
+		}
+		want := f.story.ID + "'s claim grew to overlap " + other.ID + "'s on " + strings.ReplaceAll(paths, ",", ", ") + ", written by claude"
+		if s := theirs["summary"].(string); !strings.Contains(s, want) || !strings.Contains(s, "coordinate with "+f.story.ID+"'s agent before "+other.ID+" Other changes them") {
+			t.Errorf("summary: %s", s)
+		}
+		if s := mine["summary"].(string); !strings.Contains(s, "coordinate with "+other.ID+"'s agent") || strings.Contains(s, "accepted") {
+			t.Errorf("summary: %s", s)
+		}
+		if again := overlapped(); len(again) != 0 {
+			t.Errorf("told once: %v", again)
+		}
+	}
+	reached := func(out map[string]any, paths ...string) {
+		t.Helper()
+		list, _ := out["overlaps"].([]any)
+		if len(list) != 1 {
+			t.Fatalf("overlaps: %v", out["overlaps"])
+		}
+		o := list[0].(map[string]any)
+		if o["story"] != other.ID || o["title"] != "Other" || strings.Join(toStrings(o["paths"]), ",") != strings.Join(paths, ",") {
+			t.Errorf("overlap: %v", o)
+		}
+	}
+
+	*f.clock = f.clock.Add(time.Minute)
+	out, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Reach", "parent": f.story.ID, "touches": []string{"docs/other/a.md", "flai/internal/mcpserver/x.go"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	reached(out, "docs/other/a.md")
+	toldBoth("docs/other/a.md")
+
+	*f.clock = f.clock.Add(time.Minute)
+	ed, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "touches": []string{"docs/other/b.md", "docs/other/a.md"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	reached(ed, "docs/other/b.md")
+	toldBoth("docs/other/b.md")
+
+	// the story itself, in progress, widened: the write stands
+	*f.clock = f.clock.Add(time.Minute)
+	ed, failed = f.call(t, "item_edit", map[string]any{"id": f.story.ID, "touches": []string{"flai/internal/mcpserver", "docs/other/c.md"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	reached(ed, "docs/other/c.md")
+	toldBoth("docs/other/c.md")
+
+	// paths already claimed, or outside every other claim, tell nobody
+	*f.clock = f.clock.Add(time.Minute)
+	for _, touches := range [][]string{{"docs/other/a.md"}, {"design/system/plan.md"}} {
+		ed, failed = f.call(t, "item_edit", map[string]any{"id": f.task.ID, "touches": touches})
+		if failed != "" || ed["overlaps"] != nil {
+			t.Errorf("%v: %v %s", touches, ed, failed)
+		}
+	}
+	out, failed = f.call(t, "item_new", map[string]any{"type": "task", "title": "Apart", "parent": f.story.ID, "touches": []string{"flai/cmd"}})
+	if failed != "" || out["overlaps"] != nil {
+		t.Errorf("apart: %v %s", out, failed)
+	}
+	if got := overlapped(); len(got) != 0 {
+		t.Errorf("nothing grew into another claim: %v", got)
+	}
+}
+
+// An overlap notice written at acceptance by a flai that predates grown
+// claims (I-0059) still reports as an acceptance.
+func TestAnOldOverlapNoticeReportsAsBefore(t *testing.T) {
+	f := setup(t)
+	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
+		t.Fatal("first look")
+	}
+	*f.clock = f.clock.Add(time.Minute)
+	line := `{"at":"` + f.clock.Format(workitem.TimeFormat) + `","by":"alex","id":"` + f.story.ID + `","title":"Open","accepted":"S-0099","paths":["flai/cmd/a.go"]}` + "\n"
+	_ = os.MkdirAll(filepath.Dir(itemedit.OverlapsPath(f.repo)), 0o700)
+	if err := os.WriteFile(itemedit.OverlapsPath(f.repo), []byte(line), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := f.call(t, "inbox", map[string]any{})
+	changes := out["changes"].([]any)
+	if len(changes) != 1 {
+		t.Fatalf("one overlap: %v", changes)
+	}
+	c := changes[0].(map[string]any)
+	if c["kind"] != Overlapped || c["cause"] != "S-0099" || c["to"] != "flai/cmd/a.go" || c["summary"] != "S-0099 was accepted by alex and changed flai/cmd/a.go, which "+f.story.ID+" Open claims. Run flai stream sync "+f.story.ID+" and the tests before you go on" {
+		t.Errorf("the change: %v", c)
 	}
 }

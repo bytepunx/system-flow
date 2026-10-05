@@ -610,6 +610,10 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		onPath := filepath.ToSlash(f.Path) == own || strings.HasSuffix(filepath.ToSlash(f.Path), "/"+filepath.Base(it.Path))
 		isNew := !known[f.Rule+"\x00"+f.Path+"\x00"+f.Message]
 		switch {
+		case isNew && f.Rule == "wip.overlap":
+			// touches that reach another story in progress are advisory
+			// (ADR-0019): the edit stands, and Grown tells both stories (I-0059)
+			res.Warnings = append(res.Warnings, f)
 		case isNew || (onPath && f.Level == check.Error):
 			blocking = append(blocking, f)
 		case onPath:

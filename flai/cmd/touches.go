@@ -38,8 +38,10 @@ func newTouchesCmd(a *app) *cobra.Command {
 			if it.Type == workitem.Epic {
 				return fmt.Errorf("%s is an epic; touches belong to stories and tasks", it.ID)
 			}
+			var told []itemedit.Overlapping
 			if clear || len(args) > 1 {
 				before := slices.Clone(it.Touches)
+				watch := itemedit.WatchClaim(repo, it.ID)
 				if it.Touches, err = workitem.CleanTouches(args[1:]); err != nil {
 					return err
 				}
@@ -50,27 +52,59 @@ func newTouchesCmd(a *app) *cobra.Command {
 				// an edit notice, as flai edit leaves, so that agents hear of it
 				// and flai serve plans the story again (S-0211)
 				if !slices.Equal(before, it.Touches) {
-					by, _ := agentIdentity()
-					if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
-						by = cfg.Author
-					}
+					by := a.writer()
 					itemedit.Record(repo, itemedit.Notice{At: it.Updated, By: by, ID: it.ID, Type: it.Type, Title: it.Title, Changed: []string{"touches"}})
+					told = a.grown(watch, it.ID, by)
 				}
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"id": it.ID, "touches": it.Touches})
+				out := map[string]any{"id": it.ID, "touches": it.Touches}
+				if len(told) > 0 {
+					out["overlaps"] = told
+				}
+				return a.printJSON(out)
 			}
 			if len(it.Touches) == 0 {
 				fmt.Fprintf(a.out, "%s touches nothing\n", it.ID)
 				return nil
 			}
 			fmt.Fprintf(a.out, "%s touches %s\n", it.ID, strings.Join(it.Touches, ", "))
+			printOverlapping(a.out, told)
 			return nil
 		},
 	}
 	c.Flags().BoolVar(&clear, "clear", false, "remove the list")
 	c.AddCommand(newTouchesSuggestCmd(a))
 	return c
+}
+
+// writer is who writes an item, as agents are told: FLAI_AGENT, else the
+// config's author.
+func (a *app) writer() string {
+	by, _ := agentIdentity()
+	if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
+		by = cfg.Author
+	}
+	return by
+}
+
+// grown is what the write to id grew its story's claim into, told to both
+// stories as by's (I-0059). A failure is logged, and the write stands: the
+// report is advisory.
+func (a *app) grown(w *itemedit.ClaimWatch, id, by string) []itemedit.Overlapping {
+	told, err := w.Grown(by, a.now())
+	if err != nil {
+		a.logger().Warn("overlap notices not sent", "component", "touches", "item", id, "err", err)
+	}
+	return told
+}
+
+// printOverlapping writes one line for each story in progress whose claim a
+// write grew its story's claim into.
+func printOverlapping(w io.Writer, told []itemedit.Overlapping) {
+	for _, o := range told {
+		fmt.Fprintf(w, "  overlaps %s %s (in progress) on %s: both stories are told; coordinate with its agent before you change them\n", o.Story, o.Title, strings.Join(o.Paths, ", "))
+	}
 }
 
 // touchesSuggestion is what flai touches suggest prints with --json.

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
@@ -80,6 +81,11 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 			if opt.CostOfDelay, err = newCostOfDelay(revenue, penalty, timeLost, repo.Manifest.Planning.CurrencyCode(), opt.Owner, opt.Now); err != nil {
 				return err
 			}
+			// a task's touches may grow its story's claim into another's (I-0059)
+			var watch *itemedit.ClaimWatch
+			if typ == workitem.Task {
+				watch = itemedit.WatchClaim(repo, parent)
+			}
 			// an after: entry that names nothing, or forms a cycle, is the
 			// check's to find, so a creation that sets one is checked
 			if bodyStdin || autocommit || len(after) > 0 {
@@ -107,8 +113,12 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 				if err != nil {
 					return err
 				}
+				told := a.grown(watch, res.Item.ID, a.writer())
 				if a.jsonOut {
-					return a.printJSON(res)
+					return a.printJSON(struct {
+						*itemnew.Result
+						Overlaps []itemedit.Overlapping `json:"overlaps,omitempty"`
+					}{res, told})
 				}
 				fmt.Fprintf(a.out, "%s %s\n  %s\n", res.Item.ID, res.Item.Title, res.Path)
 				switch {
@@ -117,16 +127,22 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 				case res.CommitError != "":
 					fmt.Fprintf(a.out, "  NOT committed (%s)\n", firstLine(res.CommitError))
 				}
+				printOverlapping(a.out, told)
 				return nil
 			}
 			it, err := repo.Create(opt)
 			if err != nil {
 				return err
 			}
+			told := a.grown(watch, it.ID, a.writer())
 			if a.jsonOut {
-				return a.printJSON(it)
+				return a.printJSON(struct {
+					*workitem.Item
+					Overlaps []itemedit.Overlapping `json:"overlaps,omitempty"`
+				}{it, told})
 			}
 			fmt.Fprintf(a.out, "%s %s\n  %s\n", it.ID, it.Title, relPath(repo.Root, it.Path))
+			printOverlapping(a.out, told)
 			return nil
 		},
 	}

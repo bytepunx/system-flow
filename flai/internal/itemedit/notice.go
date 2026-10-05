@@ -106,17 +106,35 @@ func readKept[T any](path string, ok func(T) bool) []T {
 
 // An Overlap tells an open story that an accepted story changed paths its
 // claim covers (S-0132, ADR-0046), so that its agent syncs and tests against
-// them before its own acceptance finds them. Overlaps are a log of their own
-// beside the edit notices, not in it: a flai that predates them reads every
-// line of edits.jsonl as an edit, and would tell the agent to reread its
-// story instead of to sync.
+// them before its own acceptance finds them; or that a write grew the claim of
+// one story in progress into another's (I-0059), so that their agents
+// coordinate before either changes the paths. A notice of the second kind
+// names both stories, in Grew and Reached, and leaves Accepted empty, so a flai
+// that predates it passes over it rather than report an acceptance. Overlaps
+// are a log of their own beside the edit notices, not in it: a flai that
+// predates them reads every line of edits.jsonl as an edit, and would tell the
+// agent to reread its story instead of to sync.
 type Overlap struct {
 	At       string   `json:"at"`
-	By       string   `json:"by"`       // who accepted
-	ID       string   `json:"id"`       // the open story told
-	Title    string   `json:"title"`    // its title
-	Accepted string   `json:"accepted"` // the story accepted
-	Paths    []string `json:"paths"`    // what it changed that the open story's claim covers
+	By       string   `json:"by"`                 // who accepted, or who wrote the touches
+	ID       string   `json:"id"`                 // the open story told
+	Title    string   `json:"title"`              // its title
+	Accepted string   `json:"accepted,omitempty"` // the story accepted
+	Grew     string   `json:"grew,omitempty"`     // the story in progress whose claim grew
+	Reached  string   `json:"reached,omitempty"`  // the story in progress whose claim it grew into
+	Paths    []string `json:"paths"`              // what it changed, or what the claim gained, that the open story's claim covers
+}
+
+// Cause is the story the notice is about besides the one told: the story
+// accepted, or the other of the two whose claims grew to overlap.
+func (o Overlap) Cause() string {
+	switch {
+	case o.Accepted != "":
+		return o.Accepted
+	case o.ID == o.Grew:
+		return o.Reached
+	}
+	return o.Grew
 }
 
 // OverlapsPath is where the overlap notices of a repository are.
@@ -125,12 +143,14 @@ func OverlapsPath(repo *workitem.Repo) string {
 }
 
 // RecordOverlap appends an overlap notice. A failure is dropped, as for edits:
-// the acceptance happened, and git has what it changed.
+// the acceptance or the write happened, and git or the item has what changed.
 func RecordOverlap(repo *workitem.Repo, o Overlap) {
 	appendKept(OverlapsPath(repo), o, Overlaps(repo))
 }
 
 // Overlaps returns every overlap notice kept, oldest first.
 func Overlaps(repo *workitem.Repo) []Overlap {
-	return readKept(OverlapsPath(repo), func(o Overlap) bool { return o.ID != "" && o.At != "" && o.Accepted != "" })
+	return readKept(OverlapsPath(repo), func(o Overlap) bool {
+		return o.ID != "" && o.At != "" && (o.Accepted != "" || (o.Grew != "" && o.Reached != ""))
+	})
 }

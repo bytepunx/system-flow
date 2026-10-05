@@ -34,7 +34,14 @@ type ItemNewIn struct {
 
 func (in ItemNewIn) project() string { return in.Project }
 
-func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNewIn) (*mcp.CallToolResult, ItemOut, error) {
+// ItemNewOut is the item created, and the stories in progress whose claims
+// a new task grew its story's claim into.
+type ItemNewOut struct {
+	ItemOut
+	Overlaps []itemedit.Overlapping `json:"overlaps,omitempty" jsonschema:"a new task's: the other stories in progress whose claim covers a path its touches added to its story's claim (I-0059); the task stands, and both stories are told as an overlapped change: coordinate with their agents before you change those paths"`
+}
+
+func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNewIn) (*mcp.CallToolResult, ItemNewOut, error) {
 	nature := in.Nature
 	if nature == "" {
 		nature = "feature"
@@ -45,6 +52,10 @@ func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNew
 	}
 	opt := workitem.NewOptions{Type: in.Type, Title: strings.TrimSpace(in.Title), Nature: nature, Parent: in.Parent, Owner: owner,
 		Tags: in.Tags, Touches: in.Touches, Topics: in.Topics, After: in.After, Agent: in.Agent, Body: in.Body, Draft: in.Draft, Now: s.now()}
+	var watch *itemedit.ClaimWatch
+	if in.Type == workitem.Task && in.Parent != "" {
+		watch = itemedit.WatchClaim(s.repo, in.Parent)
+	}
 	var it *workitem.Item
 	var err error
 	if len(in.After) > 0 || strings.TrimSpace(in.Body) != "" {
@@ -61,10 +72,21 @@ func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNew
 		it, err = s.repo.Create(opt)
 	}
 	if err != nil {
-		return nil, ItemOut{}, refusal(err)
+		return nil, ItemNewOut{}, refusal(err)
 	}
 	out, err := s.itemOut(ctx, it)
-	return nil, out, err
+	return nil, ItemNewOut{ItemOut: out, Overlaps: s.grown(watch, it.ID)}, err
+}
+
+// grown is what the write to id grew its story's claim into, told to both
+// stories (I-0059). A failure is logged, and the write stands: the report is
+// advisory.
+func (s *server) grown(w *itemedit.ClaimWatch, id string) []itemedit.Overlapping {
+	told, err := w.Grown(s.agent, s.now())
+	if err != nil && s.logger != nil {
+		s.logger.Warn("overlap notices not sent", "component", "mcp", "agent", s.agent, "item", id, "err", err.Error())
+	}
+	return told
 }
 
 // ItemEditIn changes an item's own words (S-0103): only what is given changes.
@@ -142,6 +164,9 @@ type ItemEditOut struct {
 	Changed   []string `json:"changed" jsonschema:"title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body"`
 	Unchanged bool     `json:"unchanged,omitempty"`
 	Hash      string   `json:"hash"`
+	// Overlaps are the stories in progress whose claims the edit grew its
+	// story's claim into (I-0059).
+	Overlaps []itemedit.Overlapping `json:"overlaps,omitempty" jsonschema:"an edit of touches: the other stories in progress whose claim covers a path it added to its story's claim (I-0059); the edit stands, and both stories are told as an overlapped change: coordinate with their agents before you change those paths"`
 }
 
 func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEditIn) (*mcp.CallToolResult, ItemEditOut, error) {
@@ -155,6 +180,10 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 	if ch == (itemedit.Change{}) {
 		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, topics, touches, after, parent, agent, clear_agent, body, draft, cost_of_delay, clear_cost_of_delay, forecast, or clear_forecast")
 	}
+	var watch *itemedit.ClaimWatch
+	if in.Touches != nil {
+		watch = itemedit.WatchClaim(s.repo, in.ID)
+	}
 	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, NoCommit: true, Now: s.now()})
 	if err != nil {
 		return nil, ItemEditOut{}, refusal(err)
@@ -163,7 +192,7 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 	if changed == nil {
 		changed = []string{}
 	}
-	return nil, ItemEditOut{ID: res.ID, Changed: changed, Unchanged: res.Unchanged, Hash: res.Hash}, nil
+	return nil, ItemEditOut{ID: res.ID, Changed: changed, Unchanged: res.Unchanged, Hash: res.Hash, Overlaps: s.grown(watch, res.ID)}, nil
 }
 
 // refusal is err with, when flai check refused the change, the findings in

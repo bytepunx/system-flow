@@ -189,12 +189,13 @@ the item changed.`,
 			if ch == (itemedit.Change{}) {
 				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, --draft, --no-draft, a cost of delay or forecast flag, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
-			by, _ := agentIdentity()
-			if cfg, _, err := a.loadConfig(); err == nil && by == "agent" && cfg.Author != "" {
-				by = cfg.Author
-			}
+			by := a.writer()
 			if byFlag != "" {
 				by = byFlag
+			}
+			var watch *itemedit.ClaimWatch
+			if ch.Touches != nil {
+				watch = itemedit.WatchClaim(repo, args[0])
 			}
 			res, err := itemedit.Apply(repo, a.runner, args[0], ch, itemedit.Options{Hash: hash, By: by, Message: message, Trailers: trailers, NoCommit: !autocommit, Now: a.now()})
 			if c, ok := docedit.IsConflict(err); ok {
@@ -222,8 +223,16 @@ the item changed.`,
 			if err != nil {
 				return err
 			}
+			// what the touches gained in another story's claim (I-0059)
+			var told []itemedit.Overlapping
+			if !res.Unchanged {
+				told = a.grown(watch, res.ID, by)
+			}
 			if a.jsonOut {
-				return a.printJSON(res)
+				return a.printJSON(struct {
+					*itemedit.Result
+					Overlaps []itemedit.Overlapping `json:"overlaps,omitempty"`
+				}{res, told})
 			}
 			if res.Unchanged {
 				fmt.Fprintf(a.out, "%s is unchanged\n", res.ID)
@@ -242,6 +251,7 @@ the item changed.`,
 			case res.CommitError != "":
 				fmt.Fprintf(a.out, "  changed, not committed: %s\n", res.CommitError)
 			}
+			printOverlapping(a.out, told)
 			return nil
 		},
 	}

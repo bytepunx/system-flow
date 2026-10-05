@@ -85,7 +85,9 @@ const Edited = "edited"
 
 // Overlapped is the kind of the change to an open story when a story whose
 // changes its claim covers is accepted: Cause is the accepted story, To the
-// paths, comma separated (S-0132).
+// paths, comma separated (S-0132). It is also the kind of the change to each
+// of two stories in progress when a write grows the claim of one into the
+// other's: Cause is the other story, To the paths the claim gained (I-0059).
 const Overlapped = "overlapped"
 
 // maxPaths is how many paths an overlap's summary names; To has them all.
@@ -135,7 +137,7 @@ func (s *server) catchUpWith(items []*workitem.Item) ([]Event, int, error) {
 	// They are not in the items' front matter, which is strict and shared
 	// with older flai; flai edit notes them beside the cursors.
 	since := cur.since(now).UTC().Truncate(time.Second)
-	noticed := func(c workitem.Change) {
+	noticed := func(c workitem.Change, summary string) {
 		at, err := time.Parse(workitem.TimeFormat, c.At)
 		news := at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])
 		if err != nil || !news {
@@ -147,18 +149,26 @@ func (s *server) catchUpWith(items []*workitem.Item) ([]Event, int, error) {
 		if !cur.known && c.Type == workitem.Task {
 			return
 		}
-		events = append(events, Event{Change: c, Summary: describe(c)})
+		events = append(events, Event{Change: c, Summary: summary})
 	}
 	for _, n := range itemedit.Notices(s.repo) {
 		if n.By != s.agent {
-			noticed(workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At})
+			c := workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At}
+			noticed(c, describe(c))
 		}
 	}
-	// Open stories that an acceptance changed paths under (S-0132): the
-	// change is on the open story, caused by the accepted one, and names the
-	// paths. Whoever accepted, it is news to the open story's agent.
+	// Open stories that an acceptance changed paths under (S-0132), and
+	// stories in progress whose claims a write grew to overlap (I-0059): the
+	// change is on the story told, caused by the accepted or the other story,
+	// and names the paths. Whoever accepted or wrote, it is news to the agent
+	// of the story told.
 	for _, o := range itemedit.Overlaps(s.repo) {
-		noticed(workitem.Change{ID: o.ID, Type: workitem.Story, Title: o.Title, Kind: Overlapped, To: strings.Join(o.Paths, ","), By: o.By, Cause: o.Accepted, At: o.At})
+		c := workitem.Change{ID: o.ID, Type: workitem.Story, Title: o.Title, Kind: Overlapped, To: strings.Join(o.Paths, ","), By: o.By, Cause: o.Cause(), At: o.At}
+		summary := describe(c)
+		if o.Accepted == "" {
+			summary = describeGrown(c, o.Grew, o.Reached)
+		}
+		noticed(c, summary)
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].At < events[j].At })
 	omitted := 0
@@ -203,12 +213,27 @@ func describe(c workitem.Change) string {
 	case Edited:
 		return c.ID + " " + c.Title + " was edited" + who + ": " + strings.ReplaceAll(c.To, ",", ", ") + ". Read it again before you go on"
 	case Overlapped:
-		paths := strings.Split(c.To, ",")
-		named := strings.Join(paths, ", ")
-		if len(paths) > maxPaths {
-			named = strings.Join(paths[:maxPaths], ", ") + fmt.Sprintf(" and %d more", len(paths)-maxPaths)
-		}
-		return c.Cause + " was accepted" + who + " and changed " + named + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
+		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	}
 	return c.ID + " " + c.Kind
+}
+
+// describeGrown says an overlapped change whose cause is not an acceptance:
+// a write grew the claim of the story grew into that of reached, and both
+// stories now claim the paths (I-0059).
+func describeGrown(c workitem.Change, grew, reached string) string {
+	who := ""
+	if c.By != "" {
+		who = ", written by " + c.By
+	}
+	return grew + "'s claim grew to overlap " + reached + "'s on " + namePaths(c.To) + who + ". Both stories claim them now: coordinate with " + c.Cause + "'s agent before " + c.ID + " " + c.Title + " changes them"
+}
+
+// namePaths names the comma-separated paths of an overlap, at most maxPaths.
+func namePaths(to string) string {
+	paths := strings.Split(to, ",")
+	if len(paths) > maxPaths {
+		return strings.Join(paths[:maxPaths], ", ") + fmt.Sprintf(" and %d more", len(paths)-maxPaths)
+	}
+	return strings.Join(paths, ", ")
 }
