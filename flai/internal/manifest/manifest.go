@@ -5,6 +5,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
@@ -265,7 +266,8 @@ func (m Manifest) PlanningAgent() *Agent {
 }
 
 // Orchestration is the project's say about the order of the ready column and
-// when accepted work is released (S-0217).
+// when accepted work is released (S-0217), and about what the orchestrator
+// may do and the agent it runs as (S-0218).
 type Orchestration struct {
 	// Policy orders the ready column: one of OrderPolicies, the names flai
 	// order --by takes; empty means OrderFIFO, which leaves the operator's
@@ -273,6 +275,135 @@ type Orchestration struct {
 	Policy string `yaml:"policy,omitempty" json:"policy,omitempty"`
 	// Release says when accepted stories not yet released are due a release.
 	Release Release `yaml:"release,omitempty" json:"release,omitzero"`
+	// Permissions are what the orchestrator may do without the operator.
+	Permissions Permissions `yaml:"permissions,omitempty" json:"permissions,omitzero"`
+	// Agent is the orchestrator's agent over the project's: what it sets
+	// wins, and what it leaves out is the project's agent's.
+	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+}
+
+// Permissions are what the orchestrator may do without the operator, each
+// off when unset (S-0218). flai guard holds an orchestrator session to them.
+type Permissions struct {
+	// PlanBacklogEpics lets it ask the planner to draft stories for an epic
+	// in the backlog.
+	PlanBacklogEpics bool `yaml:"plan_backlog_epics,omitempty" json:"plan_backlog_epics,omitempty"`
+	// FinalizeDrafts lets it finalize a draft story.
+	FinalizeDrafts bool `yaml:"finalize_drafts,omitempty" json:"finalize_drafts,omitempty"`
+	// PromoteToReady lets it move a story to ready.
+	PromoteToReady bool `yaml:"promote_to_ready,omitempty" json:"promote_to_ready,omitempty"`
+	// OrderReady lets it write the order of the ready column.
+	OrderReady bool `yaml:"order_ready,omitempty" json:"order_ready,omitempty"`
+	// AnswerThreads is how it answers threads: one of AnswerModes; empty
+	// means AnswerOff.
+	AnswerThreads string `yaml:"answer_threads,omitempty" json:"answer_threads,omitempty"`
+	// AcceptReviews lets it accept a story in review.
+	AcceptReviews bool `yaml:"accept_reviews,omitempty" json:"accept_reviews,omitempty"`
+	// Publish lets it release and push accepted work.
+	Publish bool `yaml:"publish,omitempty" json:"publish,omitempty"`
+
+	// unknown are the keys under orchestration.permissions that name no
+	// permission, for Errors.
+	unknown []string
+}
+
+// The permissions, as orchestration.permissions keys them.
+const (
+	PermitPlanBacklogEpics = "plan_backlog_epics"
+	PermitFinalizeDrafts   = "finalize_drafts"
+	PermitPromoteToReady   = "promote_to_ready"
+	PermitOrderReady       = "order_ready"
+	PermitAnswerThreads    = "answer_threads"
+	PermitAcceptReviews    = "accept_reviews"
+	PermitPublish          = "publish"
+)
+
+// PermissionNames are the keys of orchestration.permissions, in the order
+// they are listed to the operator.
+var PermissionNames = []string{PermitPlanBacklogEpics, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitAcceptReviews, PermitPublish}
+
+// The values of orchestration.permissions.answer_threads.
+const (
+	// AnswerOff leaves threads to the operator. It is the default.
+	AnswerOff = "off"
+	// AnswerRecommend replies with a recommendation for the operator.
+	AnswerRecommend = "recommend"
+	// AnswerAutonomous answers threads itself.
+	AnswerAutonomous = "autonomous"
+)
+
+// AnswerModes are the values of orchestration.permissions.answer_threads.
+var AnswerModes = []string{AnswerOff, AnswerRecommend, AnswerAutonomous}
+
+// UnmarshalYAML reads the permissions and keeps the keys that name none, so
+// that Errors can name a misspelt one rather than leave it silently off.
+func (p *Permissions) UnmarshalYAML(unmarshal func(any) error) error {
+	type plain Permissions
+	if err := unmarshal((*plain)(p)); err != nil {
+		return err
+	}
+	var keys map[string]any
+	if err := unmarshal(&keys); err != nil {
+		return err
+	}
+	p.unknown = nil
+	for _, k := range slices.Sorted(maps.Keys(keys)) {
+		if !slices.Contains(PermissionNames, k) {
+			p.unknown = append(p.unknown, k)
+		}
+	}
+	return nil
+}
+
+// AnswerMode is answer_threads, or AnswerOff when it is empty. It does not
+// say whether the value is one of AnswerModes; Errors does.
+func (p Permissions) AnswerMode() string {
+	if s := strings.TrimSpace(p.AnswerThreads); s != "" {
+		return s
+	}
+	return AnswerOff
+}
+
+// Allows reports whether the permission name, one of PermissionNames, is on:
+// a boolean set true, or answer_threads set to recommend or autonomous
+// (AnswerMode tells them apart). A name that is no permission is off.
+func (p Permissions) Allows(name string) bool {
+	switch name {
+	case PermitPlanBacklogEpics:
+		return p.PlanBacklogEpics
+	case PermitFinalizeDrafts:
+		return p.FinalizeDrafts
+	case PermitPromoteToReady:
+		return p.PromoteToReady
+	case PermitOrderReady:
+		return p.OrderReady
+	case PermitAnswerThreads:
+		m := p.AnswerMode()
+		return m == AnswerRecommend || m == AnswerAutonomous
+	case PermitAcceptReviews:
+		return p.AcceptReviews
+	case PermitPublish:
+		return p.Publish
+	}
+	return false
+}
+
+func (p Permissions) errors() []string {
+	var errs []string
+	for _, k := range p.unknown {
+		errs = append(errs, fmt.Sprintf("orchestration.permissions has no permission %q; write one of %s, or remove it", k, strings.Join(PermissionNames, ", ")))
+	}
+	if m := p.AnswerMode(); !slices.Contains(AnswerModes, m) {
+		errs = append(errs, fmt.Sprintf("orchestration.permissions.answer_threads %q is not a way of answering threads; write off (leave them to the operator), recommend (reply with a recommendation), or autonomous (answer them), or remove it for off", p.AnswerThreads))
+	}
+	return errs
+}
+
+// OrchestrationAgent is the agent the orchestrator is started with:
+// orchestration.agent merged over the project's agent, as PlanningAgent is.
+// Nil when neither sets anything.
+func (m Manifest) OrchestrationAgent() *Agent {
+	return m.Agent.With(m.Orchestration.Agent)
 }
 
 // The values of orchestration.policy, the same as flai order --by's.
@@ -354,7 +485,9 @@ func (o Orchestration) Errors() []string {
 	if p := o.PolicyOrDefault(); !slices.Contains(OrderPolicies, p) {
 		errs = append(errs, fmt.Sprintf("orchestration.policy %q is not an order policy; write cod (cost of delay), wsjf (cost of delay by duration), throughput (shortest first), or fifo (the operator's order), or remove it for fifo", o.Policy))
 	}
-	return append(errs, o.Release.errors()...)
+	errs = append(errs, o.Release.errors()...)
+	errs = append(errs, o.Permissions.errors()...)
+	return append(errs, o.Agent.problems("orchestration.agent")...)
 }
 
 func (r Release) errors() []string {

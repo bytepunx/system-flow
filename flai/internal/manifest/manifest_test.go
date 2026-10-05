@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -252,7 +253,7 @@ func TestOrchestration(t *testing.T) {
 		}
 		return m
 	}
-	o := load(t, "orchestration:\n  policy: wsjf\n  permissions:\n    later: true\n  release:\n    policy: threshold\n    value: 500\n    count: 5\n").Orchestration
+	o := load(t, "orchestration:\n  policy: wsjf\n  later: true\n  release:\n    policy: threshold\n    value: 500\n    count: 5\n").Orchestration
 	if o.PolicyOrDefault() != OrderWSJF || o.Release.PolicyOrDefault() != ReleaseThreshold || o.Release.Value == nil || *o.Release.Value != 500 || o.Release.Count == nil || *o.Release.Count != 5 {
 		t.Errorf("read %+v", o)
 	}
@@ -308,6 +309,132 @@ func TestOrchestration(t *testing.T) {
 		got := c.o.Errors()
 		if len(got) != 1 || !strings.Contains(got[0], c.want) {
 			t.Errorf("%+v: got %q, want one error saying %q", c.o, got, c.want)
+		}
+	}
+}
+
+// S-0218: orchestration.permissions read from the manifest, each off when
+// unset; answer_threads reads in each of its values; and a key that names no
+// permission, or an answer_threads outside its values, is an error naming it
+// and what to write.
+func TestOrchestrationPermissions(t *testing.T) {
+	load := func(t *testing.T, block string) Manifest {
+		t.Helper()
+		p := filepath.Join(t.TempDir(), File)
+		body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" + block
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		m, err := Load(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	all := "orchestration:\n  policy: cod\n  permissions:\n    plan_backlog_epics: true\n    finalize_drafts: true\n    promote_to_ready: true\n" +
+		"    order_ready: true\n    answer_threads: autonomous\n    accept_reviews: true\n    publish: true\n"
+	o := load(t, all).Orchestration
+	want := Permissions{PlanBacklogEpics: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: AnswerAutonomous, AcceptReviews: true, Publish: true}
+	if !reflect.DeepEqual(o.Permissions, want) {
+		t.Errorf("read %+v, want %+v", o.Permissions, want)
+	}
+	if errs := o.Errors(); len(errs) != 0 {
+		t.Errorf("every permission on: %v", errs)
+	}
+	for _, name := range PermissionNames {
+		if !o.Permissions.Allows(name) {
+			t.Errorf("%s is set and not allowed", name)
+		}
+	}
+
+	for _, block := range []string{"", "orchestration:\n  policy: cod\n", "orchestration:\n  permissions: {}\n"} {
+		o := load(t, block).Orchestration
+		if o.Permissions.AnswerMode() != AnswerOff || len(o.Errors()) != 0 {
+			t.Errorf("%q: answer mode %q, %v", block, o.Permissions.AnswerMode(), o.Errors())
+		}
+		for _, name := range PermissionNames {
+			if o.Permissions.Allows(name) {
+				t.Errorf("%q: %s is on unset", block, name)
+			}
+		}
+	}
+	if (Permissions{Publish: true}).Allows("publsh") {
+		t.Error("a name that is no permission is allowed")
+	}
+
+	for _, mode := range AnswerModes {
+		o := load(t, "orchestration:\n  permissions:\n    answer_threads: "+mode+"\n").Orchestration
+		if o.Permissions.AnswerMode() != mode || o.Permissions.Allows(PermitAnswerThreads) != (mode != AnswerOff) || len(o.Errors()) != 0 {
+			t.Errorf("%s: mode %q, allowed %v, %v", mode, o.Permissions.AnswerMode(), o.Permissions.Allows(PermitAnswerThreads), o.Errors())
+		}
+	}
+
+	o = load(t, "orchestration:\n  permissions:\n    publsh: true\n    order_ready: true\n    accept: false\n").Orchestration
+	if !o.Permissions.OrderReady || o.Permissions.Publish {
+		t.Errorf("read %+v", o.Permissions)
+	}
+	got := o.Errors()
+	if len(got) != 2 || !strings.Contains(got[0], `orchestration.permissions has no permission "accept"; write one of plan_backlog_epics,`) ||
+		!strings.Contains(got[1], `orchestration.permissions has no permission "publsh"`) || !strings.HasSuffix(got[1], "publish, or remove it") {
+		t.Errorf("unknown keys: %q", got)
+	}
+	for _, bad := range []string{"yes", "Autonomous", "always"} {
+		got := (Orchestration{Permissions: Permissions{AnswerThreads: bad}}).Errors()
+		if len(got) != 1 || !strings.Contains(got[0], `orchestration.permissions.answer_threads "`+bad+`" is not a way of answering threads; write off`) {
+			t.Errorf("%q: %q", bad, got)
+		}
+	}
+}
+
+// S-0218: orchestration.agent reads as agent does, is checked as agent is
+// under its own name, and the orchestrator's agent is it merged over the
+// project's agent, field by field, config key by key, and role by role.
+func TestOrchestrationAgent(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  config:\n    effort: high\n    max_budget_usd: \"10\"\n  roles:\n    explore:\n      model: haiku\n" +
+		"orchestration:\n  policy: wsjf\n  agent:\n    model: claude-sonnet-5\n    config:\n      effort: medium\n    roles:\n      verify:\n        model: sonnet\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := m.Orchestration.Errors(); len(errs) != 0 {
+		t.Errorf("valid orchestration.agent: %v", errs)
+	}
+	got := m.OrchestrationAgent()
+	if s := got.String(); s != "claude-code, claude-sonnet-5, effort=medium, max_budget_usd=10; explore: haiku; verify: sonnet" {
+		t.Errorf("orchestrator's agent: %s", s)
+	}
+	if m.Agent.Model != "claude-opus-5-5" || m.Agent.Config["effort"] != "high" || len(m.Agent.Roles) != 1 {
+		t.Errorf("the project's agent was changed by the merge: %+v", m.Agent)
+	}
+	if a := m.PlanningAgent(); !a.Same(m.Agent) {
+		t.Errorf("orchestration.agent reached the planner: %v", a)
+	}
+	if a := (Manifest{Agent: m.Agent}).OrchestrationAgent(); !a.Same(m.Agent) {
+		t.Errorf("no orchestration.agent: %v", a)
+	}
+	if a := (Manifest{Orchestration: Orchestration{Agent: m.Orchestration.Agent}}).OrchestrationAgent(); !a.Same(m.Orchestration.Agent) {
+		t.Errorf("no project agent: %v", a)
+	}
+	if a := (Manifest{}).OrchestrationAgent(); a != nil {
+		t.Errorf("neither: %v", a)
+	}
+	for _, c := range []struct {
+		a    *Agent
+		want string
+	}{
+		{&Agent{Harness: "Claude Code"}, `orchestration.agent harness "Claude Code" is not a name such as claude-code`},
+		{&Agent{Model: "has space"}, `orchestration.agent model "has space" is not a model ID`},
+		{&Agent{Config: map[string]string{"k": "two\nlines"}}, "orchestration.agent config k spans lines"},
+		{&Agent{Roles: map[string]Role{"verify": {}}}, "orchestration.agent role verify sets nothing"},
+		{&Agent{Roles: map[string]Role{"verify": {Model: "has space"}}}, `orchestration.agent role verify model "has space"`},
+	} {
+		if got := strings.Join((Orchestration{Agent: c.a}).Errors(), "; "); !strings.Contains(got, c.want) {
+			t.Errorf("%+v: got %q, want %q", c.a, got, c.want)
 		}
 	}
 }

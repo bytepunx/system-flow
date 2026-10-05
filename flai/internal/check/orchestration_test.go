@@ -33,3 +33,24 @@ func TestOrchestrationSettingsAreChecked(t *testing.T) {
 		t.Errorf("want one error, a theme with both epic and tag: %+v", got)
 	}
 }
+
+// S-0218: a permission key that names none, an answer_threads outside its
+// values, and an orchestration.agent that is not valid are errors on the
+// orchestration key; valid permissions and agent are not reported.
+func TestOrchestrationPermissionsAndAgentAreChecked(t *testing.T) {
+	valid := "orchestration:\n  permissions:\n    promote_to_ready: true\n    answer_threads: recommend\n  agent:\n    model: claude-sonnet-5\n"
+	if got := findings(t, planningProject(t, valid), "manifest.orchestration"); len(got) != 0 {
+		t.Errorf("valid permissions and agent: %+v", got)
+	}
+	repo := planningProject(t, "orchestration:\n  permissions:\n    promote: true\n    answer_threads: always\n  agent:\n    harness: Claude Code\n")
+	got := findings(t, repo, "manifest.orchestration")
+	if len(got) != 3 {
+		t.Fatalf("want three errors, the unknown key, answer_threads, and the agent: %+v", got)
+	}
+	for i, want := range []string{`orchestration.permissions has no permission "promote"`, `orchestration.permissions.answer_threads "always"`, `orchestration.agent harness "Claude Code"`} {
+		f := got[i]
+		if f.Level != Error || f.Path != "system-flow.yaml" || f.Line != 8 || !strings.Contains(f.Message, want) {
+			t.Errorf("finding %d: %+v, want an error on line 8 saying %q", i, f, want)
+		}
+	}
+}
