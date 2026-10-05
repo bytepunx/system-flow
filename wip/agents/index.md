@@ -1,16 +1,16 @@
 ---
 title: Active streams
-updated: 2026-10-04T23:56:22Z
+updated: 2026-10-05T00:03:14Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0263](S-0263.md) | Add "Plan" to the context menu for epic and story cards | review | agent-S-0263 | 2026-10-04T23:47:46Z |
+| [S-0252](S-0252.md) | flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number | in-progress | agent-S-0252 | 2026-10-04T23:59:03Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 2 | 6.2905 USD | 1517 | 2026-10-04T19:10:09Z |
+| [planner](planner.md) | 3 | 8.7265 USD | 3516 | 2026-10-04T23:56:24Z |

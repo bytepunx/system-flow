@@ -3,14 +3,17 @@ id: S-0252
 type: story
 nature: remediation
 title: flai issue new numbers from the story's worktree only, so parallel story branches take the same issue number
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-03T18:33:16Z
-updated: 2026-10-04T23:56:22Z
+updated: 2026-10-04T23:56:44Z
 transitions:
   - to: ready
     at: 2026-10-04T21:42:51Z
     by: alex
+  - to: in-progress
+    at: 2026-10-04T23:56:44Z
+    by: agent-S-0252
 tags: []
 topics: [cli]
 touches: [flai/internal/storygit, flai/internal/issues, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md]
@@ -19,6 +22,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 155
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 312
+      cache_read: 1362657
+      cache_write: 116163
+      cost: 0.5998
+  strategic:
+    - kind: planner
+      seconds: 1999
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 178
+          output: 7340
+          cache_read: 1260102
+          cache_write: 86038
+          cost: 0.2704
+        - model: claude-opus-5-5
+          input: 120
+          output: 21179
+          cache_read: 4518225
+          cache_write: 104732
+          cost: 2.1656
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

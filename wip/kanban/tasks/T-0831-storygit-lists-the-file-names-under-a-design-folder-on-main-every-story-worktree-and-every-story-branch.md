@@ -3,15 +3,35 @@ id: T-0831
 type: task
 nature: remediation
 title: storygit lists the file names under a design folder on main, every story worktree, and every story branch
-status: backlog
+status: done
 parent: S-0252
 owner: alex
 created: 2026-10-04T23:27:29Z
-updated: 2026-10-04T23:27:29Z
-transitions: []
+updated: 2026-10-04T23:59:02Z
+transitions:
+  - to: ready
+    at: 2026-10-04T23:57:04Z
+    by: agent-S-0252
+  - to: in-progress
+    at: 2026-10-04T23:57:04Z
+    by: agent-S-0252
+  - to: done
+    at: 2026-10-04T23:59:02Z
+    by: agent-S-0252
 stream: S-0252
 tags: [flai, git]
 touches: [flai/internal/storygit]
+usage:
+  source: log
+  seconds: 116
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 145
+      cache_read: 748409
+      cache_write: 54556
+      cost: 0.3257
 ---
 # T-0831 storygit lists the file names under a design folder on main, every story worktree, and every story branch
 

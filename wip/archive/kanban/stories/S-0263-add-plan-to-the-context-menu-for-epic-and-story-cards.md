@@ -3,10 +3,10 @@ id: S-0263
 type: story
 nature: improvement
 title: "Add \"Plan\" to the context menu for epic and story cards"
-status: review
+status: done
 owner: alex
 created: 2026-10-04T23:38:12Z
-updated: 2026-10-04T23:47:53Z
+updated: 2026-10-05T00:03:14Z
 transitions:
   - to: ready
     at: 2026-10-04T23:38:13Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-04T23:47:53Z
     by: agent-S-0263
+  - to: done
+    at: 2026-10-05T00:03:14Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 agent:
@@ -26,14 +29,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 583
+  seconds: 610
   models:
     - model: claude-opus-5-5
-      input: 156
-      output: 41839
-      cache_read: 6226545
-      cache_write: 243350
-      cost: 3.6784
+      input: 168
+      output: 44585
+      cache_read: 6410202
+      cache_write: 270435
+      cost: 3.9868
     - model: claude-sonnet-5
       input: 34
       output: 7554

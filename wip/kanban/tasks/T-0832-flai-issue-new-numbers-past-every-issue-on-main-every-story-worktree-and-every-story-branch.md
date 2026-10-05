@@ -3,12 +3,18 @@ id: T-0832
 type: task
 nature: remediation
 title: flai issue new numbers past every issue on main, every story worktree, and every story branch
-status: backlog
+status: in-progress
 parent: S-0252
 owner: alex
 created: 2026-10-04T23:27:36Z
-updated: 2026-10-04T23:27:36Z
-transitions: []
+updated: 2026-10-04T23:59:02Z
+transitions:
+  - to: ready
+    at: 2026-10-04T23:59:02Z
+    by: agent-S-0252
+  - to: in-progress
+    at: 2026-10-04T23:59:02Z
+    by: agent-S-0252
 stream: S-0252
 tags: [flai, issues]
 touches: [flai/internal/issues, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues_test.go, docs/users/flai-reference.md]
