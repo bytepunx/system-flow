@@ -155,8 +155,9 @@ func md007(c *Config, d *doc, _ *inlineOut, add adder) {
 		}
 	}
 	// The actual indent is in characters, a tab counting one, as markdownlint
-	// counts it. Lists in blockquotes and footnotes are not parsed, so are
-	// not judged.
+	// counts it, from the last quote marker on the line; nesting counts the
+	// lists up to the nearest quote. Footnotes are not parsed, so lists in
+	// them are not judged.
 	for _, l := range d.lists {
 		if l.ordered {
 			continue
@@ -172,8 +173,9 @@ func md007(c *Config, d *doc, _ *inlineOut, add adder) {
 			continue
 		}
 		for _, it := range l.items {
-			if want := start + nesting*indent; it.at != want {
-				add(it.line, fmt.Sprintf("Expected: %d; Actual: %d", want, it.at), "")
+			want, got := start+nesting*indent, it.at-it.quote
+			if got != want {
+				add(it.line, fmt.Sprintf("Expected: %d; Actual: %d", want, got), "")
 			}
 		}
 	}
@@ -418,7 +420,7 @@ func md029(c *Config, d *doc, _ *inlineOut, add adder) {
 func md031(c *Config, d *doc, _ *inlineOut, add adder) {
 	items := c.boolOpt("MD031", "list_items", true)
 	for _, f := range d.fences {
-		if !items && f.indent > 0 {
+		if !items && f.listed {
 			continue
 		}
 		if !blankLine(d, f.open-1) {
@@ -647,7 +649,8 @@ func md040(c *Config, d *doc, _ *inlineOut, add adder) {
 	only := c.boolOpt("MD040", "language_only", false)
 	for _, f := range d.fences {
 		lang := firstWord(f.info)
-		text := strings.TrimSpace(d.lines[f.open].raw)
+		ln := d.lines[f.open]
+		text := strings.TrimSpace(ln.raw[ln.start:])
 		switch {
 		case lang == "":
 			add(f.open, "", text)

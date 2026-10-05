@@ -289,3 +289,23 @@ func TestSpaceInCodeSpanOfI0072(t *testing.T) {
 		}
 	}
 }
+
+// I-0070: TH-0101's entry quoted step 3 of a list as "> 3.", which
+// markdownlint-cli2 0.20.0 reports as MD029, and it reached main because
+// mdlint did not parse blockquotes. A thread entry that brings one is now
+// refused.
+func TestQuotedOrderedListOfI0070(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".markdownlint.yaml"), []byte("default: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before := "# TH-0101\n\n## Entries\n\n### 2026-10-04T04:00:00Z agent\n\nStep 3 now begins:\n"
+	err := Guard(dir, "wip/threads/TH-0101.md", before, before+"\n> 3. Plan what your item's state calls for.\n")
+	var le *Error
+	if !errors.As(err, &le) || len(le.Findings) != 1 || !strings.Contains(err.Error(), "line 9: MD029/ol-prefix Ordered list item prefix [Expected: 1; Actual: 3; Style: 1/1/1]") {
+		t.Errorf("guard: %v", err)
+	}
+	if err := Guard(dir, "wip/threads/TH-0101.md", before, before+"\n> 3\\. Plan what your item's state calls for.\n"); err != nil {
+		t.Errorf("an escaped number is text: %v", err)
+	}
+}
