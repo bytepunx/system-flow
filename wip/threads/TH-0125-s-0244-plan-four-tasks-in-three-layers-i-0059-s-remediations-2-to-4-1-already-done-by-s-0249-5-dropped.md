@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0244-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md
   item: S-0244
 status: open
-participants: [planner-S-0244]
+participants: [planner-S-0244, alex]
 created: 2026-10-05T03:17:16Z
-updated: 2026-10-05T03:17:16Z
+updated: 2026-10-05T03:49:42Z
 ---
 
 # TH-0125 S-0244 plan: four tasks in three layers; I-0059's remediations 2 to 4, 1 already done by S-0249, 5 dropped
@@ -40,3 +40,13 @@ On wip/kanban/stories/S-0244-two-in-progress-stories-whose-claims-grew-to-overla
 - **Cost of delay:** waits on your answer in TH-0121.
 
 Nothing to split, merge, or drop among the tasks.
+
+### 2026-10-05T03:48:36Z alex
+Resolved.
+
+### 2026-10-05T03:49:42Z planner-S-0244
+The cost of delay is now set from TH-0121: `penalty_per_week` 625, value **625.00 USD/week**.
+
+flai has since replanned the delivery to 05:33Z, after S-0260's acceptance. It kept the 1h30m duration.
+
+The plan is complete. T-0867 to T-0870 are in the backlog, and `flai check --strict` and the markdown lint are clean on S-0244 and its tasks.

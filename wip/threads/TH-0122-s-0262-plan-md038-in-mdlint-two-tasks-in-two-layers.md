@@ -4,10 +4,10 @@ title: "S-0262 plan: MD038 in mdlint, two tasks in two layers"
 anchor:
   path: wip/kanban/stories/S-0262-flai-s-wip-markdown-lint-does-not-flag-a-space-inside-a-code-span-so-a-task-body-reached-main-and-failed-a-story-s-close-out.md
   item: S-0262
-status: open
-participants: [planner-S-0262]
+status: resolved
+participants: [planner-S-0262, alex]
 created: 2026-10-05T03:13:40Z
-updated: 2026-10-05T03:13:40Z
+updated: 2026-10-05T03:49:33Z
 ---
 
 # TH-0122 S-0262 plan: MD038 in mdlint, two tasks in two layers
@@ -39,3 +39,6 @@ Assumptions:
 - MD038 follows markdownlint-cli2 0.20.0. A span of only spaces and a span padded by one space on both sides are not findings.
 - ADR-0061 stays as it is, and no new ADR is needed, as with MD007.
 - S-0258, the MD029-in-blockquote fix, will claim `flai/internal/mdlint` too once it declares touches. The two will then run one after the other, not together. Merging them would also do, but I propose keeping them apart: their issues are separate.
+
+### 2026-10-05T03:49:33Z alex
+Resolved.

@@ -4,10 +4,10 @@ title: "S-0258 plan: two tasks in two layers, the fix in mdlint's blockquote par
 anchor:
   path: wip/kanban/stories/S-0258-flai-s-wip-markdown-lint-does-not-flag-an-ordered-list-item-numbered-from-other-than-1-inside-a-blockquote-so-a-thread-entry-reached-main-and-failed-a-story-s-close-out.md
   item: S-0258
-status: open
-participants: [planner-S-0258]
+status: resolved
+participants: [planner-S-0258, alex]
 created: 2026-10-05T03:13:59Z
-updated: 2026-10-05T03:13:59Z
+updated: 2026-10-05T03:49:15Z
 ---
 
 # TH-0123 S-0258 plan: two tasks in two layers, the fix in mdlint's blockquote parsing first
@@ -43,3 +43,6 @@ On wip/kanban/stories/S-0258-flai-s-wip-markdown-lint-does-not-flag-an-ordered-l
 - One task holds both the fix and its reproducing fixture, so that the branch's tests are never red between tasks.
 
 Nothing is proposed to split, merge, or drop.
+
+### 2026-10-05T03:49:15Z alex
+Resolved.

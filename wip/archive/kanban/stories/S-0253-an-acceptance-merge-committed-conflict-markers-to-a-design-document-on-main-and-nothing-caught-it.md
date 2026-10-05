@@ -3,10 +3,10 @@ id: S-0253
 type: story
 nature: remediation
 title: An acceptance merge committed conflict markers to a design document on main, and nothing caught it
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-03T20:06:56Z
-updated: 2026-10-05T03:20:57Z
+updated: 2026-10-05T04:04:28Z
 transitions:
   - to: ready
     at: 2026-10-04T21:42:57Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-05T03:10:48Z
     by: agent-S-0253
+  - to: review
+    at: 2026-10-05T04:01:37Z
+    by: agent-S-0253
+  - to: done
+    at: 2026-10-05T04:04:28Z
+    by: alex
 tags: []
 touches: [flai/internal/conflictmark, flai/internal/check, flai/cmd/branch.go, flai/cmd/accept_conflict_test.go, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md]
 agent:
@@ -23,7 +29,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1254
+  seconds: 2123
   models:
     - model: claude-haiku-4-5-20251001
       input: 178
@@ -32,17 +38,17 @@ usage:
       cache_write: 70115
       cost: 0.2275
     - model: claude-opus-5-5
-      input: 214
-      output: 59273
-      cache_read: 7443039
-      cache_write: 259329
-      cost: 4.338
+      input: 278
+      output: 73129
+      cache_read: 9255064
+      cache_write: 324577
+      cost: 5.4998
     - model: claude-sonnet-5
-      input: 38
-      output: 11540
-      cache_read: 776950
-      cache_write: 67269
-      cost: 0.439
+      input: 114
+      output: 41029
+      cache_read: 2551678
+      cache_write: 258062
+      cost: 1.566
 ---
 # S-0253 An acceptance merge committed conflict markers to a design document on main, and nothing caught it
 

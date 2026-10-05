@@ -6,7 +6,7 @@ title: "Two in-progress stories whose claims grew to overlap each wait for the o
 status: ready
 owner: alex
 created: 2026-10-03T03:31:01Z
-updated: 2026-10-05T03:46:30Z
+updated: 2026-10-05T03:49:22Z
 transitions:
   - to: ready
     at: 2026-10-04T21:44:16Z
@@ -18,6 +18,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  inputs:
+    penalty_per_week: 625
+    by: planner-S-0244
+    at: 2026-10-05T03:49:11Z
+  value: 625
+  by: planner-S-0244
+  at: 2026-10-05T03:49:16Z
 forecast:
   duration: 1h30m
   delivery: 2026-10-05T05:33:00Z
@@ -77,4 +85,4 @@ Planned by planner-S-0244 on 2026-10-05, plan thread TH-0125; the cost of delay 
 
 **Forecast.** `flai forecast` gave 24m, from 60 s per unit over 8 done large remediation stories, times size 24. Raised to 1h30m. Four tasks, and T-0867 is a new notice across five writers and the inbox cursor, with tests. S-0249 and S-0266, which were smaller, took about 30 to 50 minutes each. Delivery is 06:00Z: the story is held on overlap behind S-0253 and S-0260, both in progress since 03:10Z to 03:14Z, and recent stories have been accepted about 30 minutes after review.
 
-**Cost of delay.** None is recorded yet. The story has no inputs and no epic, so `flai cod` refuses. The inputs are asked of the operator in TH-0121, with 21m time lost per cycle recommended (I-0059's recorded cost).
+**Cost of delay.** The value is 625.00 USD a week, from the operator's `penalty_per_week` of 625, given in TH-0121 ("go with the alternative"), and `flai cod`'s value stands as computed. The input charges for the model turns the waits burned. I-0059's first instance cost 12.68 USD (S-0198) and 3.14 USD (S-0242), about 15.82 USD an incident. There were 4 incidents in about 17 hours on 2026-10-03, about 39.5 a week, which comes to about 625 USD a week. S-0249 has since removed the close-out stop, so the rate is now likely lower; the figure is the operator's choice.

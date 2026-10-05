@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-05T03:46:30Z
+updated: 2026-10-05T04:04:28Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0253](S-0253.md) | An acceptance merge committed conflict markers to a design document on main, and nothing caught it | in-progress | agent-S-0253 | 2026-10-05T03:20:58Z |
 
 ## Strategic agents
 
