@@ -391,10 +391,13 @@ Findings print as path:line: level: rule: message. Errors exit 1; with --strict 
 
 With --story S-nnnn, a finding is inside the story when it is on the story's item file or one of its tasks', its narrative, a thread anchored on the story or one of its tasks, or a path its branch changes against the main branch (as flai stream diff reads it), or that is uncommitted in its worktree. Every other finding is outside it, and so is every wip.overlap, which the pull hold and the other story's agent clear. A finding outside keeps its level and is printed with "(outside S-nnnn)"; it is a note that neither an error nor --strict fails on, and the summary counts it, as does outside in --json. Without --story every finding counts, as the main branch's check needs.
 
+With --record-issues as well, each rule with findings outside the story is recorded in design/issues, in the checkout the run reads, which is the story's worktree at close-out: in the open issue whose title names the rule, as "flai check finds `wip.overlap` outside the story at close-out" does, opened with class efficiency when none is, with an instance naming the story and each finding's path and message. An instance for the same story and the same findings is written once, so running the check again does not count it again; another story, or other findings, bump the count. summary.md is regenerated, each issue is printed as opened, bumped, or already recorded, and --json lists them in recorded. The run records whether or not it passes; a failure to record is an error.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--record-issues` | with --story, record each rule's findings outside the story in an issue, opening or bumping it once per story and findings |
 | `--story` string | scope the run to a story (S-nnnn): findings outside it are notes that do not fail it |
 | `--strict` | treat warnings as failures, except the review column over its limit and an epic behind its stories |
 

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // scopeFixture copies the good fixture, whose S-004 is in progress, and
@@ -168,5 +170,144 @@ func TestCheckStoryFailsOnAPathItChanges(t *testing.T) {
 				t.Errorf("doc.title should be outside the story:\n%s", out)
 			}
 		})
+	}
+}
+
+// issueFiles is the files under design/issues in root, by name.
+func issueFiles(t *testing.T, root string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(filepath.Join(root, "design", "issues"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
+}
+
+// S-0249: --record-issues records each rule's findings outside the story in
+// one issue, once per story and findings, and bumps it for another story.
+func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := scopeFixture(t)
+	issue := filepath.Join(root, "design", "issues", "I-0002-flai-check-finds-story-unaccepted-outside-the-story-at-close-out.md")
+	finding := "`wip/archive/kanban/stories/S-002-two.md`: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
+	read := func() string {
+		t.Helper()
+		data, err := os.ReadFile(issue)
+		if err != nil {
+			t.Fatalf("the story.unaccepted issue: %v (files: %v)", err, issueFiles(t, root))
+		}
+		return string(data)
+	}
+
+	out, errOut, code := runIn(t, root, "check", "--strict", "--story", "S-004", "--record-issues")
+	if code != 0 {
+		t.Fatalf("first run: exit %d\n%s%s", code, out, errOut)
+	}
+	if !strings.Contains(out, "recorded story.unaccepted outside S-004 in I-0002 (opened)\n") {
+		t.Errorf("first run should say it opened the issue:\n%s", out)
+	}
+	doc := read()
+	for _, want := range []string{
+		"title: \"flai check finds `story.unaccepted` outside the story at close-out\"\n",
+		"class: efficiency\n", "count: 1\n", "Story: S-0004.\n", finding + "\n",
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("first run: issue lacks %q:\n%s", want, doc)
+		}
+	}
+	if summary, err := os.ReadFile(filepath.Join(root, "design", "issues", "summary.md")); err != nil || !strings.Contains(string(summary), "[I-0002]") {
+		t.Errorf("summary.md should list I-0002: %v\n%s", err, summary)
+	}
+
+	out, errOut, code = runIn(t, root, "check", "--strict", "--story", "S-004", "--record-issues")
+	if code != 0 || !strings.Contains(out, "recorded story.unaccepted outside S-004 in I-0002 (already recorded, count 1)\n") {
+		t.Fatalf("second run: exit %d\n%s%s", code, out, errOut)
+	}
+	if again := read(); again != doc {
+		t.Errorf("an identical run should leave the issue as it was:\n%s", again)
+	}
+
+	out, errOut, code = runIn(t, root, "check", "--strict", "--story", "S-003", "--record-issues", "--json")
+	var res struct {
+		Outside  int `json:"outside"`
+		Recorded []struct {
+			Rule, Issue, Path, Outcome string
+			Count                      int
+		} `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("another story: exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if res.Outside != 2 || len(res.Recorded) != 2 {
+		t.Fatalf("json should keep outside and list both rules: %+v", res)
+	}
+	got := res.Recorded[1]
+	if got.Rule != "story.unaccepted" || got.Issue != "I-0002" || got.Outcome != "bumped" || got.Count != 2 ||
+		got.Path != "design/issues/I-0002-flai-check-finds-story-unaccepted-outside-the-story-at-close-out.md" {
+		t.Errorf("another story should bump the issue to 2: %+v", got)
+	}
+	doc = read()
+	if !strings.Contains(doc, "count: 2\n") || !strings.Contains(doc, "Story: S-0003.\n") || strings.Count(doc, finding) != 2 {
+		t.Errorf("another story should add its instance:\n%s", doc)
+	}
+	if names := issueFiles(t, root); len(names) != 3 {
+		t.Errorf("one issue per rule and the summary, got %v", names)
+	}
+}
+
+// S-0249: --record-issues needs --story, and a run with nothing outside the
+// story writes nothing under design/issues.
+func TestCheckRecordIssuesNeedsStoryAndWritesOnlyWhatIsOutside(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := scopeFixture(t)
+	out, errOut, code := runIn(t, root, "check", "--strict", "--record-issues")
+	if code == 0 || !strings.Contains(errOut, "--record-issues records the findings outside a story: give --story S-nnnn") || strings.Contains(out, "items checked") {
+		t.Errorf("without --story it should be refused before checking: %d\n%s%s", code, out, errOut)
+	}
+
+	// Without S-002's branch, the only finding is the epic, which the story's
+	// branch changes here, so nothing is outside.
+	root = t.TempDir()
+	if err := os.CopyFS(root, os.DirFS("../internal/metrics/testdata/good")); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runWithApp(t, &app{cwd: root, runner: gitScript{changed: "wip/kanban/epics/E-001-epic.md"}}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Findings []json.RawMessage `json:"findings"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if res.Outside != 0 || len(res.Findings) == 0 || res.Recorded == nil || len(res.Recorded) != 0 {
+		t.Errorf("want findings, none outside, and an empty recorded: %s", out)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("nothing outside should write nothing under design/issues, got %v", names)
+	}
+}
+
+// Run in a story's worktree, a finding on wip/, which lives in the main
+// checkout, is recorded under the path the project names it by, not with ../.
+func TestProjectPathNamesWipFromTheMainCheckout(t *testing.T) {
+	main := filepath.Join(t.TempDir(), "proj")
+	wt := filepath.Join(main, ".flai-cache", "worktrees", "S-0004")
+	repo := &workitem.Repo{Root: wt, MainRoot: main}
+	for _, c := range []struct{ in, want string }{
+		{filepath.Join("..", "..", "..", "wip", "kanban", "board.md"), "wip/kanban/board.md"},
+		{filepath.Join("design", "issues", "summary.md"), "design/issues/summary.md"},
+		{filepath.Join(main, "wip", "agents", "S-0004.md"), "wip/agents/S-0004.md"},
+	} {
+		if got := projectPath(repo, c.in); got != c.want {
+			t.Errorf("projectPath(%q) = %q, want %q", c.in, got, c.want)
+		}
 	}
 }

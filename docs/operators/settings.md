@@ -284,6 +284,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--reason` | [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
+| `--record-issues` | [flai check](../users/flai-reference.md#flai-check) |
 | `--ref` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai template show](../users/flai-reference.md#flai-template-show), [flai template use](../users/flai-reference.md#flai-template-use), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--refines` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--relock` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
