@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.50 - 2026-10-05
+
+- S-0244 Two stories in progress whose claims grew to overlap are told so, and the story agent waits for its sub-agents through the harness (patch): `work-management.md` says that an `overlapped` change whose `cause` is a story in progress, not an accepted one, means a write grew the two stories' claims until they overlap; coordinate with that story's agent on a thread while the work is small and narrow your `touches` if you can, else note the overlap in the narrative and go on, since a `wip.overlap` does not stop the close-out. `delegation.md` says to wait for a sub-agent run in the background through the harness's notice that it has finished, not by polling `wait_for_events`, which reports work items and threads, not sub-agents.
+
 ## 1.0.49 - 2026-10-05
 
 - S-0268 The story agent's prompt says to batch independent edits and commands in one turn, to take a new task through ready in one command, and to prove a test fails without the shared stash (patch).

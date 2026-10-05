@@ -467,6 +467,7 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"Work the plan layer by layer, handing each task to a task sub-agent",
 			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits, syncs, or writes through flai",
 			"Name the task's ID in each task sub-agent's description, so that flai measures the task by its calls",
+			"Wait for a sub-agent run in the background through the harness's notice that it has finished, not by polling the flai MCP tool wait_for_events, which reports work items and threads, not sub-agents",
 			"Review each one's work yourself, fix what falls short, commit it, sync and test as above, and move the task",
 			"only you commit, sync the stream, move items, and talk to the designer",
 		} {
