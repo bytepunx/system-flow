@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.49 - 2026-10-05
+
+- S-0268 The story agent's prompt says to batch independent edits and commands in one turn, to take a new task through ready in one command, and to prove a test fails without the shared stash (patch).
+
 ## 1.0.48 - 2026-10-05
 
 - S-0249 flai check --strict stops a story's close-out on wip/ findings outside the story (patch).
