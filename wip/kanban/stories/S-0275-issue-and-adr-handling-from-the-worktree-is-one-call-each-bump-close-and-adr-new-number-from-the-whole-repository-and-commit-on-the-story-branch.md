@@ -7,9 +7,10 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:33Z
-updated: 2026-10-05T01:35:33Z
+updated: 2026-10-05T01:35:52Z
 transitions: []
 tags: []
+after: [S-0250, S-0252]
 agent:
   harness: claude-code
   model: claude-opus-5-5
