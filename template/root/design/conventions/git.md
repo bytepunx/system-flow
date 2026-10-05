@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-03
+updated: 2026-10-05
 audience: agent
 order: 70
 status: active
@@ -20,6 +20,8 @@ How history is made in this repository.
   - commit the task's changes with its documentation and work item updates on `story/S-nnnn`
   - then run `flai stream sync` and resolve any conflicts it reports
   - then run the tests for what the task changed, and commit any fix they need
+- To show that a new test fails without the change under test, check the files the change touches out from `main` into a scratch copy outside the worktree (`git show main:<path>`) and run the test against that copy, or build the old binary from `main` and run the test against it.
+- Never use `git stash` in a worktree: every worktree of a clone shares one stash stack, so a stash pushed or popped in one session can take another session's work.
 - Before moving a story to `review`, commit what is outstanding, run `flai stream sync` again, resolve any conflicts, and close out with `scripts/close-out.sh`, which runs the tests.
 - Use conventional commit style. Commit messages name the story: subject line `<type>: [S-nnnn] what changed`, or the epic for cross-story work. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`. Body says what and why, not how; a reader should not need the diff to understand purpose.
 - Commit messages end with a `Co-Authored-By:` trailer naming the model that authored the change, such as `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, when an agent authored it.

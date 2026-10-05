@@ -30,6 +30,8 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - While working:
   - run only the tests for what you changed
   - leave the whole suite tests, linting, and `flai check` to the verifier
+  - make independent edits and commands in one turn, as several tool calls in one message: consecutive edits to one file, reads of files you already know, commands that do not wait on each other
+  - move a task you have just written to ready and in-progress in one command, `flai move T-nnnn ready && flai move T-nnnn in-progress`, since `flai move` refuses a task straight from `backlog` to `in-progress`
 - Before moving a story to `review`:
   - commit what is outstanding, run `flai stream sync` again and resolve what it reports, as `git.md` says, and have one fresh verifier run the whole suite, the lint, and `flai check` in the worktree through the project's close-out script where it has one
   - and check the diff against the story's acceptance criteria and these conventions
