@@ -94,6 +94,18 @@ func TestPermissionPromptRefusesAtOnceWhatItDoesNotApprove(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := f.worktreeFile(".claude/settings.json")
+	// A .claude folder in the worktree that is a link to the main checkout's.
+	outside := filepath.Join(f.repo.Root, ".claude")
+	linked := filepath.Join(f.repo.WorktreePath(f.story.ID), "linked")
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(linked, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(linked, ".claude")); err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range []struct {
 		name, tool string
 		input      map[string]any
@@ -104,6 +116,7 @@ func TestPermissionPromptRefusesAtOnceWhatItDoesNotApprove(t *testing.T) {
 		{"a relative path", "Edit", map[string]any{"file_path": ".claude/settings.json"}, "names no absolute path"},
 		{"outside any worktree", "Write", map[string]any{"file_path": filepath.Join(f.repo.Root, ".claude/settings.json")}, "is not inside a story's worktree"},
 		{"an escape with ..", "Write", map[string]any{"file_path": f.repo.WorktreePath(f.story.ID) + "/../../../.claude/settings.json"}, "is not inside a story's worktree"},
+		{"an escape through a symbolic link", "Write", map[string]any{"file_path": filepath.Join(linked, ".claude/settings.json")}, "through a symbolic link"},
 		{"not a .claude folder", "Write", map[string]any{"file_path": f.worktreeFile("flai/claude/settings.json")}, "is not in a .claude/ folder"},
 		{"a file named .claude", "Write", map[string]any{"file_path": f.worktreeFile(".claude")}, "is not in a .claude/ folder"},
 		{"no such story", "Write", map[string]any{"file_path": filepath.Join(f.repo.WorktreePath("S-0099"), ".claude/settings.json")}, "is not a story's worktree"},

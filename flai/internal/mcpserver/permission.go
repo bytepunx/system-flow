@@ -138,9 +138,13 @@ func (s *server) permissionPrompt(ctx context.Context, _ *mcp.CallToolRequest, i
 	rel, _ := filepath.Rel(s.worktrees(), path)
 	parts := strings.Split(filepath.ToSlash(rel), "/")
 	id := parts[0]
+	notStory := deny("%s is not a story's worktree: %s", filepath.Join(s.worktrees(), id), permissionScope)
 	it, err := s.repo.Get(id)
-	if err != nil || it.Type != workitem.Story || filepath.Clean(s.repo.WorktreePath(it.ID)) != filepath.Join(s.worktrees(), id) {
-		return nil, deny("%s is not a story's worktree: %s", filepath.Join(s.worktrees(), id), permissionScope), nil
+	if err != nil {
+		return nil, notStory, nil //nolint:nilerr // no such item is a refusal for Claude Code, not a tool error
+	}
+	if it.Type != workitem.Story || filepath.Clean(s.repo.WorktreePath(it.ID)) != filepath.Join(s.worktrees(), id) {
+		return nil, notStory, nil
 	}
 	if it.Status != workitem.InProgress {
 		return nil, deny("%s is %s, not in progress: %s", it.ID, it.Status, permissionScope), nil
