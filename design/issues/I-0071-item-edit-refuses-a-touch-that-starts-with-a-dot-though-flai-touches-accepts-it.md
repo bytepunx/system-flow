@@ -2,12 +2,12 @@
 id: I-0071
 title: item_edit refuses a touch that starts with a dot, though flai touches accepts it
 class: defect
-status: open
+status: closed
 count: 1
 cost: 2m
 first_reported: 2026-10-04T04:45:59Z
 last_reported: 2026-10-04T04:45:59Z
-updated: 2026-10-04T06:29:48Z
+updated: 2026-10-05T03:21:28Z
 ---
 
 # I-0071 item_edit refuses a touch that starts with a dot, though flai touches accepts it
@@ -24,3 +24,4 @@ planner-E-0016, run for S-0209's measurement (TH-0107), found item_edit refusing
 ## Remediation
 
 Story S-0260 remediates this issue, created from it at 2026-10-04T06:29:48Z.
+Closed 2026-10-05T03:21:28Z: S-0260: every writer of touches (flai touches, flai edit, story and task new, MCP item_new and item_edit, the dashboard) applies one rule, workitem.CleanTouches, which takes a path starting with a dot and refuses a comma, a leading dash, an absolute path, a .. segment, or a control character
