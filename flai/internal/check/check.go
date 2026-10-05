@@ -18,6 +18,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
@@ -107,6 +108,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.experiments()
 	c.threads()
 	c.markdown()
+	c.conflictMarkers()
 	sortFindings(c.res.Findings)
 	return c.res, nil
 }
@@ -1172,4 +1174,47 @@ func (c *checker) markdown() {
 		}
 		return nil
 	})
+}
+
+// conflictMarkers reports each line that opens or closes a merge conflict in
+// the markdown under the design, docs, and wip folders and at the root: a
+// conflict git-added unresolved reached main in a design document and nothing
+// caught it (S-0253, I-0066). Errors, so CI's check fails without --strict.
+func (c *checker) conflictMarkers() {
+	seen := map[string]bool{}
+	scan := func(path string) {
+		if seen[path] {
+			return
+		}
+		seen[path] = true
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return // unreadable files are skipped, as the other rules skip them
+		}
+		for _, line := range conflictmark.Lines(string(data)) {
+			c.add(Error, "markdown.conflict-marker", path, line, "a merge conflict marker: resolve the conflict, keeping what both sides meant, and remove the markers")
+		}
+	}
+	root := filepath.Clean(c.repo.Root)
+	for _, dir := range []string{c.repo.Manifest.Dir(c.repo.Root, "design"), c.repo.Manifest.Dir(c.repo.Root, "docs"), c.repo.WipDir()} {
+		if filepath.Clean(dir) == root {
+			continue // a folder laid out at the root: its markdown is the root's, below
+		}
+		_ = filepath.WalkDir(dir, func(path string, e fs.DirEntry, err error) error {
+			if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") {
+				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
+			}
+			scan(path)
+			return nil
+		})
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+			scan(filepath.Join(root, e.Name()))
+		}
+	}
 }

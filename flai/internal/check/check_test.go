@@ -557,6 +557,65 @@ func TestMarkdownRules(t *testing.T) {
 	}
 }
 
+// S-0253, I-0066: a conflict git-added unresolved reached main in a design
+// document. Each line that opens or closes a conflict, in the markdown under
+// design, docs, and wip and at the root, is an error; the divider is not, as
+// alone on a line it is a setext heading underline. The markers are built,
+// not written out, so that no line of this file begins with one.
+func TestConflictMarkersAreErrors(t *testing.T) {
+	ours, base, divide, theirs := "<<<<<<"+"<", "||||||"+"|", "======"+"=", ">>>>>>"+">"
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "docs/users", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive/agents", "wip/threads"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	w := func(rel, body string) {
+		_ = os.WriteFile(filepath.Join(root, rel), []byte(body), 0o644)
+	}
+	// I-0066 as it reached main: lines 7 and 11 open and close the conflict,
+	// line 9 divides it.
+	w("design/system/work-hierarchy.md", "---\ntitle: Work hierarchy\nupdated: 2026-09-01\ntopics: [all]\n---\n\n"+ours+" HEAD\nmine\n"+divide+"\ntheirs\n"+theirs+" f0f5443 (docs: [S-0201] x)\n")
+	w("docs/users/merge.md", "---\ntitle: Merge\nupdated: 2026-09-01\n---\n\n"+ours+" HEAD\na\n"+base+" base\nb\n"+divide+"\nc\n"+theirs+" topic\n")
+	w("docs/users/guide.md", "---\ntitle: Guide\nupdated: 2026-09-01\n---\n\nGuide\n"+divide+"\n\nNo conflict here.\n")
+	w("wip/archive/agents/S-0001.md", "# S-0001\n\n"+ours+"\n"+theirs+"\n")
+	w("README.md", "# Project\n\n"+theirs+" main\n")
+	w("notes.txt", ours+" HEAD\n")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range res.Findings {
+		if f.Rule != "markdown.conflict-marker" {
+			continue
+		}
+		if f.Level != Error || !strings.Contains(f.Message, "merge conflict marker") {
+			t.Errorf("finding: %+v", f)
+		}
+		got = append(got, fmt.Sprintf("%s:%d", filepath.ToSlash(f.Path), f.Line))
+	}
+	want := []string{
+		"README.md:3",
+		"design/system/work-hierarchy.md:7",
+		"design/system/work-hierarchy.md:11",
+		"docs/users/merge.md:6",
+		"docs/users/merge.md:8",
+		"docs/users/merge.md:12",
+		"wip/archive/agents/S-0001.md:3",
+		"wip/archive/agents/S-0001.md:4",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("conflict markers:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if res.Errors != len(want) || res.OK(false) {
+		t.Errorf("the markers are the fixture's only errors and fail the check without --strict: %+v", res)
+	}
+}
+
 // S-0181: the listing paths read past front-matter fields this flai does not
 // know, and check still reports each, on its line.
 func TestUnknownFieldsAreReported(t *testing.T) {

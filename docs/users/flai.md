@@ -869,6 +869,8 @@ When the project has a markdownlint configuration at its root (`.markdownlint.ya
 
 The same lint guards what flai writes there. `flai story new`, `flai task new`, `flai epic new`, `flai edit`, `flai thread new`, `reply`, and `resolve`, `flai stream log`, and the MCP tools that do the same refuse a body or entry that would bring a finding, name the rule and the line, and write nothing. A title loses a trailing `.`, `,`, `;`, `:`, or `!`, which a heading may not end with. A reply and a resolution by one author in the same second share one entry heading.
 
+Whether or not the project has a markdownlint configuration, `flai check` reports an error, `markdown.conflict-marker`, on each line of a markdown file under the design, docs, and wip folders, or at the root, that opens or closes a merge conflict: one that begins with `<<<<<<<`, `|||||||`, or `>>>>>>>` followed by a space or the line's end. Such a line means a conflict was added to git unresolved. Resolve it, keeping what both sides meant, and remove the markers. A line of `=======` alone is not reported, since markdown uses it to underline a heading.
+
 A front-matter field flai does not know, on a work item, a thread, or an issue, is an error: `item.unknown-field`, `threads.unknown-field`, or `issues.unknown-field`, on the field's line. A newer flai wrote it, or it is misspelled. Everything else reads past it: the board, `flai serve`, and the MCP tools list the item, log a warning naming the file and the field, and keep the field when they write the file. When the flai on your host is older than the project, upgrade it ([Keeping the host's flai current](../operators/index.md#keeping-the-hosts-flai-current)).
 
 ## Flow metrics
