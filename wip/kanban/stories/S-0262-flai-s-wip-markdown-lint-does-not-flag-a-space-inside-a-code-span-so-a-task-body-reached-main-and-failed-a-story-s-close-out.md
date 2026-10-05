@@ -6,7 +6,7 @@ title: flai's wip markdown lint does not flag a space inside a code span, so a t
 status: ready
 owner: alex
 created: 2026-10-04T21:41:59Z
-updated: 2026-10-05T03:13:30Z
+updated: 2026-10-05T03:46:30Z
 transitions:
   - to: ready
     at: 2026-10-04T23:14:03Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T03:13:30Z
 forecast:
   duration: 20m
-  delivery: 2026-10-05T03:40:00Z
-  basis: "flai forecast's 9m (85 s per unit over 19 done remediation stories, size 6) raised to S-0240's 21m, the same kind of change: one mdlint rule with a fixture, a regenerated reference, and the design and guide"
-  by: planner-S-0262
-  at: 2026-10-05T03:13:30Z
+  delivery: 2026-10-05T04:14:00Z
+  basis: "Its own forecast of 20m; 3rd in the pull order with an in-progress limit of 3, behind S-0253, S-0257 and S-0244."
+  by: flai
+  at: 2026-10-05T03:46:30Z
 finalized:
   by: alex
   at: 2026-10-04T23:14:01Z

@@ -6,7 +6,7 @@ title: flai's wip markdown lint does not flag an ordered list item numbered from
 status: ready
 owner: alex
 created: 2026-10-04T04:52:01Z
-updated: 2026-10-05T03:13:48Z
+updated: 2026-10-05T03:46:30Z
 transitions:
   - to: ready
     at: 2026-10-04T23:14:18Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-05T03:12:57Z
 forecast:
   duration: 30m
-  delivery: 2026-10-05T03:50:00Z
-  basis: "flai forecast's 8m (85 s per unit over 19 remediation stories, size 5) raised to 30m from S-0240, the last mdlint fix, which took 21m for one rule and two parser faults; parsing lists inside blockquotes is a container change wider than one rule, and delivery is flai's start after four stories ahead plus 30m."
-  by: planner-S-0258
-  at: 2026-10-05T03:12:57Z
+  delivery: 2026-10-05T04:30:00Z
+  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 3, behind S-0253, S-0257, S-0244 and S-0262."
+  by: flai
+  at: 2026-10-05T03:46:30Z
 finalized:
   by: alex
   at: 2026-10-04T23:14:16Z
