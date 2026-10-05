@@ -842,11 +842,26 @@ This is the save path of the dashboard's editor, usable from a script too. `show
 flai check            # errors exit 1
 flai check --strict   # warnings exit 1 too, save review over its limit and an epic behind its stories; use this in CI
 flai check ../other-repo --json
+flai check --strict --story S-0249                   # findings outside S-0249 are notes that do not fail the run
+flai check --strict --story S-0249 --record-issues   # and each rule's are recorded in an issue
 ```
 
 Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, and front matter on `design/` and `docs/` files including ADR numbering. `README.md` files are exempt from front matter.
 
 `--strict` fails on every warning but two. One is `board.wip-limit` for review over its limit: only you clear it, by accepting or sending back a story (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). The other is `epic.lags-stories`, an open epic that its stories put further on than its status, because it was moved before S-0200 or moved back by hand: the message names the `flai move`s that catch it up, or `flai accept E-nnnn` when its stories are all done, and only you move an epic ([ADR-0076](../../design/adrs/0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Neither must stop an agent's close-out of another story. Both are still printed, the summary line ends `(N that --strict passes over: only the operator clears them, by accepting or by moving an epic)`, and `--json` counts them in `advisory` as well as `warnings`. Ready or in-progress over its limit still fails `--strict`.
+
+`--story S-nnnn` scopes the run to one story, as a story's close-out does (S-0249, [ADR-0085](../../design/adrs/0085-a-close-out-s-flai-check-reports-findings-outside-the-story-as-notes-and.md)). A finding is inside the story when it is on the story's or one of its tasks' files, its narrative, a thread anchored on the story or one of its tasks, a path its branch changes against the main branch, or a path uncommitted in its worktree. Every other finding is outside it, and so is every `wip.overlap`, which the pull hold and the other story's agent clear: another story's unmerged branch, a thread answered on an archived story, or an error on the main branch no longer stops the close-out of a story that did not cause it. A finding outside keeps its level and is printed with `(outside S-nnnn)`, but neither an error nor `--strict` fails on it. The summary line counts them, and `--json` marks each `outside` and counts them in `outside`.
+
+`--record-issues`, with `--story`, records each rule's findings outside the story in `design/issues`, so you can see where they occur. Each rule has one open issue, titled ``flai check finds `<rule>` outside the story at close-out``: the first finding opens it with class `efficiency`, and each later story that meets the rule bumps its count, with an instance naming the story and the findings. Running the check again for the same story and findings records nothing new. The issue is written in the checkout the run reads, which at close-out is the story's worktree, and `summary.md` is regenerated:
+
+```text
+$ flai check --strict --story S-0249 --record-issues
+wip/archive/kanban/stories/S-0173-<slug>.md:4: warning: story.unaccepted: S-0173 is done but its branch story/S-0173 was never merged; merge or delete it (outside S-0249)
+1139 items checked, 0 errors, 1 warnings; 1 outside S-0249, notes the run passes over
+recorded story.unaccepted outside S-0249 in I-0070 (opened)
+```
+
+`scripts/close-out.sh` passes both flags to the check through `scripts/check.sh`, and commits the issues it records. Run without `--story`, as CI and `make` do, the check counts every finding.
 
 When the project has a markdownlint configuration at its root (`.markdownlint.yaml`, `.yml`, `.json`, or `.jsonc`, or a `.markdownlint-cli2` file's `config`), `flai check` also lints every markdown file under the wip folder with it and warns on each finding, `markdown.MD024` and the like, with markdownlint's own message: work items, threads, and narratives are written in the main checkout, where a story's own lint never runs, and would otherwise reach CI unlinted. flai checks the markdownlint rules what it writes can break (headings, blank lines, trailing spaces, lists, emphasis, fences, bare URLs); your CI's markdownlint still checks the rest. Without a configuration nothing is linted.
 
