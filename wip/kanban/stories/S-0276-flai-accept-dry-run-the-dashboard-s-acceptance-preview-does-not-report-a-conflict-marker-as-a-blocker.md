@@ -6,7 +6,7 @@ title: flai accept --dry-run, the dashboard's acceptance preview, does not repor
 status: backlog
 owner: alex
 created: 2026-10-05T03:48:28Z
-updated: 2026-10-05T03:48:28Z
+updated: 2026-10-05T04:05:03Z
 transitions: []
 tags: []
 touches: [flai/internal/preview, flai/cmd/branch.go, design/system/flai-cli.md, docs/users/flai.md]
@@ -16,7 +16,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-05T04:05:03Z
 ---
 # S-0276 flai accept --dry-run, the dashboard's acceptance preview, does not report a conflict marker as a blocker
 
