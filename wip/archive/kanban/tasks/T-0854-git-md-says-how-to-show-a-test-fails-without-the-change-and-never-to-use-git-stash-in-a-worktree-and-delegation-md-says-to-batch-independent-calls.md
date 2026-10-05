@@ -3,15 +3,35 @@ id: T-0854
 type: task
 nature: improvement
 title: git.md says how to show a test fails without the change and never to use git stash in a worktree, and delegation.md says to batch independent calls
-status: backlog
+status: done
 parent: S-0268
 owner: alex
 created: 2026-10-05T00:29:27Z
-updated: 2026-10-05T00:29:27Z
-transitions: []
+updated: 2026-10-05T02:36:57Z
+transitions:
+  - to: ready
+    at: 2026-10-05T02:35:36Z
+    by: agent-S-0268
+  - to: in-progress
+    at: 2026-10-05T02:35:36Z
+    by: agent-S-0268
+  - to: done
+    at: 2026-10-05T02:36:57Z
+    by: agent-S-0268
 stream: S-0268
 tags: [conventions, template]
 touches: [design/conventions/git.md, template/root/design/conventions/git.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md]
+usage:
+  source: log
+  seconds: 81
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 7273
+      cache_read: 945896
+      cache_write: 41995
+      cost: 0.6303
 ---
 # T-0854 git.md says how to show a test fails without the change and never to use git stash in a worktree, and delegation.md says to batch independent calls
 

@@ -3,16 +3,29 @@ id: T-0855
 type: task
 nature: improvement
 title: The design and the operator docs record the prompt's new sentences and git.md's rule against git stash
-status: backlog
+status: done
 parent: S-0268
 owner: alex
 created: 2026-10-05T00:29:37Z
-updated: 2026-10-05T00:29:37Z
-transitions: []
+updated: 2026-10-05T02:36:58Z
+transitions:
+  - to: ready
+    at: 2026-10-05T02:36:58Z
+    by: agent-S-0268
+  - to: in-progress
+    at: 2026-10-05T02:36:58Z
+    by: agent-S-0268
+  - to: done
+    at: 2026-10-05T02:36:58Z
+    by: agent-S-0268
 stream: S-0268
 tags: [docs, flai]
 touches: [design/system/flai-cli.md, docs/operators/index.md]
 after: [T-0853, T-0854]
+usage:
+  source: log
+  seconds: 0
+  models: []
 ---
 # T-0855 The design and the operator docs record the prompt's new sentences and git.md's rule against git stash
 

@@ -3,26 +3,47 @@ id: S-0268
 type: story
 nature: improvement
 title: The story agent's prompt says to batch independent edits and commands in one turn, to take a new task through ready in one command, and to prove a test fails without the shared stash
-status: ready
+status: done
 owner: alex
 created: 2026-10-05T00:06:36Z
-updated: 2026-10-05T02:34:59Z
+updated: 2026-10-05T03:10:20Z
 transitions:
   - to: ready
     at: 2026-10-05T00:14:14Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T02:35:35Z
+    by: agent-S-0268
+  - to: review
+    at: 2026-10-05T02:42:41Z
+    by: agent-S-0268
+  - to: done
+    at: 2026-10-05T03:10:20Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/git.md, template/root/design/conventions/git.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/flai-cli.md, docs/operators/index.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/git.md, template/root/design/conventions/git.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/flai-cli.md, docs/operators/index.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 468
+  models:
+    - model: claude-opus-5-5
+      input: 92
+      output: 21901
+      cache_read: 2848172
+      cache_write: 126450
+      cost: 1.8979
+    - model: claude-sonnet-5
+      input: 48
+      output: 14406
+      cache_read: 1356858
+      cache_write: 79230
+      cost: 0.6136
   strategic:
     - kind: planner
       seconds: 4063
@@ -56,9 +77,9 @@ forecast:
 In S-0248's run the main agent made 64 model calls, median 2.8 seconds, 3.5 minutes in all, for three edits and a test: 32 of its 48 API messages carried one tool call, three consecutive edits to one file went out as three turns, and a `flai move T-nnnn in-progress` straight from backlog was refused and retried through ready. To prove its new test fails without the fix, it pushed and dropped a `git stash` in the stash stack every worktree on the host shares, which another session's stash could have been caught by. The prompt flai serve builds for a story agent (`flai/internal/harness/harness.go`) and the conventions it points at (`design/conventions/delegation.md`, `git.md`, and the template's copies) say none of this. Each is a sentence; together they save a minute or two per story and remove one hazard.
 
 ## Acceptance criteria
-- [ ] The story agent's prompt says to make independent edits and commands in one turn and to move a task it has just written to ready and in-progress in one command
-- [ ] `design/conventions/git.md` and the template's copy say how to show a test fails without the change under test (check the files out from the main branch into a scratch copy, or build the old binary) and that `git stash` is not used in a worktree, since the stash stack is shared across the host's worktrees
-- [ ] The prompt's tests in `flai/internal/harness` cover the new sentences, and the design (`design/system/flai-cli.md` or where the prompt is described) records them
+- [x] The story agent's prompt says to make independent edits and commands in one turn and to move a task it has just written to ready and in-progress in one command
+- [x] `design/conventions/git.md` and the template's copy say how to show a test fails without the change under test (check the files out from the main branch into a scratch copy, or build the old binary) and that `git stash` is not used in a worktree, since the stash stack is shared across the host's worktrees
+- [x] The prompt's tests in `flai/internal/harness` cover the new sentences, and the design (`design/system/flai-cli.md` or where the prompt is described) records them
 
 ## Tasks
 - T-0853 The story agent's prompt says to make independent edits and commands in one turn and to move a new task to ready and in-progress in one command
