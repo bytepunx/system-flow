@@ -1,0 +1,33 @@
+---
+id: E-0017
+type: epic
+nature: improvement
+title: Story-loop work whose outcome the repository determines moves from the agent into flai, reached from the CLI, the host channel, and MCP
+status: backlog
+owner: alex
+created: 2026-10-05T01:35:27Z
+updated: 2026-10-05T01:35:27Z
+transitions: []
+tags: [cli, mcp]
+topics: [automation, mcp, hostapi]
+touches: [flai, design/conventions, template]
+---
+# E-0017 Story-loop work whose outcome the repository determines moves from the agent into flai, reached from the CLI, the host channel, and MCP
+
+## Outcome
+
+A model turn carries a judgement. Work whose outcome the repository's state fully determines, closing a task, verifying a branch, ticking a criterion, recording narrative state, opening a story, waiting for an answer, is done by flai in one call that answers structured data the agent acts on, never a log it reads. Each operation is reached the same way from the shell (`flai`), the host channel (`flai serve` to the dashboard), and MCP (`flai mcp`), as acceptance, publishing, and `flai stream sync` already are.
+
+Evidence, from the 108 story runs logged on this host to 2026-10-04 (about 43 hours of agent time, $778, a mean of 80 model turns per story, 11.9 million cache-read tokens per story): each task transition is a run of six to nine single-purpose turns (tick criteria with sed, commit, sync, move, log, touches, check, inbox), about 2,900 flai ceremony turns in all; tests and lint were run by hand 1,449 times, each returning a log for the model to read; the Sonnet verifier cost 88 minutes over 22 stories and in S-0248 ran the close-out three times; 650 turns woke from `wait_for_events` with nothing to do; narratives, task bodies, and criteria were edited by hand 253 times. Turns whose every call is pure ceremony are 9% of all turns, about $70; the mechanical work around them is the larger share.
+
+This epic is the story agent's counterpart of S-0217 under E-0016, which exposes the orchestrator's deterministic operations as commands: the same principle, applied to the loop a story agent runs.
+
+Done when a story agent's run shows no turn that only commits, syncs, moves, logs, ticks, or reads a test log, and the conventions and the harness prompt send it to the commands instead.
+
+## Stories
+
+Drafted with the epic; finalize and order them on the board. Not in the epic because stories exist: S-0261 (prime pack size), S-0266 (verifier exit status), S-0267 (duplicate test tier), S-0268 (prompt: batching, stash), S-0249 (strict check scoped to the story).
+
+## Notes
+
+Found by the operator's review of the S-0248 agent log and a classification of every main-agent tool call in the logs under `~/.flai/serve/agents/` on 2026-10-04.
