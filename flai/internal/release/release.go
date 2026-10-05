@@ -514,6 +514,22 @@ type Batch struct {
 	Unplanned []Unplanned    `json:"unplanned,omitempty"`
 }
 
+// IDs is every story and epic ID in the batch, planned or not: an item that
+// could not be planned is unpublished too, and stays in view until it is put
+// right (I-0024).
+func (b *Batch) IDs() map[string]bool {
+	ids := map[string]bool{}
+	for _, p := range b.Plans {
+		for _, it := range p.Items {
+			ids[it.ID] = true
+		}
+	}
+	for _, u := range b.Unplanned {
+		ids[u.ID] = true
+	}
+	return ids
+}
+
 // Pending computes the batch's plans: one PendingPlan per component with
 // something accepted and unreleased for it, from every item a "chore: [ID]
 // accept and archive" commit names since that component's last publish
@@ -657,18 +673,7 @@ func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem
 	if err != nil {
 		return nil
 	}
-	ids := map[string]bool{}
-	for _, p := range b.Plans {
-		for _, it := range p.Items {
-			ids[it.ID] = true
-		}
-	}
-	// an item that could not be planned is unpublished too, and stays in
-	// view until it is put right (I-0024)
-	for _, u := range b.Unplanned {
-		ids[u.ID] = true
-	}
-	return ids
+	return b.IDs()
 }
 
 // FieldsFile lists, under a component's path, the front-matter fields that

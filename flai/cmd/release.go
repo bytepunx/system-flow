@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -64,10 +66,10 @@ func (a *app) printPlan(plan *release.Plan) {
 
 func newReleaseCmd(a *app) *cobra.Command {
 	var deliver string
-	var dryRun, onlyPending bool
+	var dryRun, onlyPending, evaluate bool
 	c := &cobra.Command{
-		Use:   "release <id> | --pending",
-		Short: "Compute a release for one item, or publish everything accepted since the last release",
+		Use:   "release <id> | --pending | --evaluate",
+		Short: "Compute a release for one item, publish everything accepted since the last release, or say whether a release is due",
 		Long: `Per design/conventions/git.md: the component the item delivers to gets the
 delivery-type bump (feature story minor, remediation or improvement patch;
 an epic none of its own, its stories carry theirs, ADR-0078); every other
@@ -106,13 +108,29 @@ already went), verify, and flai release --pending again tags again
 --dry-run warns and shows the plan, and publishing is refused. A clone with
 no remote publishes locally. An accepted item no plan can
 cover, such as one touching two components with no tag saying which it
-delivers to, is named with the reason (I-0024).`,
+delivers to, is named with the reason (I-0024).
+
+flai release --evaluate says whether system-flow.yaml's orchestration.release
+policy is met, why, and the figures it rests on (S-0217): the stories
+accepted and not yet released, their count, and their cost of delay per week
+summed. A threshold is met when that sum or that count is at or over the
+value or count it sets; a story with no value counts but adds nothing to the
+sum, and is named. A theme is met when every story of its epic or its tag,
+archived or not and cancelled ones aside, is accepted and one at least is
+not yet released; the ones not yet accepted are named. Judgement, the
+default, is never met by itself: the call is the orchestrator's or the
+operator's. It tags, bumps, commits, and pushes nothing, and so takes no item
+and none of --apply, --pending, --dry-run, or --deliver.`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run
-  flai release --pending`,
+  flai release --pending
+  flai release --evaluate --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if evaluate {
+				return a.evaluateRelease(cmd, args)
+			}
 			if onlyPending {
 				if len(args) > 0 {
 					return fmt.Errorf("--pending publishes everything accumulated, not one item; drop the id")
@@ -165,7 +183,98 @@ delivers to, is named with the reason (I-0024).`,
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "print the plan only, or with --pending what would publish")
 	c.Flags().Bool("apply", false, "create tags and bump version files")
 	c.Flags().BoolVar(&onlyPending, "pending", false, "publish everything merged and unreleased since each component's last tag")
+	c.Flags().BoolVar(&evaluate, "evaluate", false, "say whether orchestration.release is met, with its figures; changes nothing")
 	return c
+}
+
+// evaluateRelease is flai release --evaluate (S-0217): whether the release
+// policy is met, and its figures. It refuses everything that would release.
+func (a *app) evaluateRelease(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		return fmt.Errorf("--evaluate weighs everything accepted and not yet released, not one item; drop %s", args[0])
+	}
+	for _, f := range []string{"apply", "pending", "dry-run", "deliver"} {
+		if cmd.Flags().Changed(f) {
+			return fmt.Errorf("--evaluate only says whether a release is due and changes nothing, so it does not take --%s; run flai release without --evaluate to release", f)
+		}
+	}
+	if err := execx.Require(a.runner, "git", "What is released is read from git tags; install git."); err != nil {
+		return err
+	}
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	ev, err := release.EvaluateRepo(a.runner, repo.Root, repo.Manifest, repo)
+	if err != nil {
+		return err
+	}
+	if a.jsonOut {
+		return a.printJSON(ev)
+	}
+	verdict := "not met"
+	if ev.Met {
+		verdict = "met"
+	}
+	fmt.Fprintf(a.out, "release policy %s: %s\n", ev.Policy, verdict)
+	fmt.Fprintln(a.out, ev.Reason)
+	value := ev.Amount(ev.Value)
+	if ev.ValueThreshold != nil {
+		value += " of " + ev.Amount(*ev.ValueThreshold)
+	}
+	count := strconv.Itoa(ev.Count)
+	if ev.CountThreshold != nil {
+		count += " of " + strconv.Itoa(*ev.CountThreshold)
+	}
+	w := tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(w, "value\t%s\n", value)
+	fmt.Fprintf(w, "count\t%s\n", count)
+	if len(ev.Unvalued) > 0 {
+		fmt.Fprintf(w, "unvalued\t%s\n", strings.Join(ev.Unvalued, ", "))
+	}
+	switch {
+	case ev.Epic != "":
+		fmt.Fprintf(w, "epic\t%s\n", ev.Epic)
+	case ev.Tag != "":
+		fmt.Fprintf(w, "tag\t%s\n", ev.Tag)
+	}
+	if len(ev.NotAccepted) > 0 {
+		fmt.Fprintf(w, "not accepted\t%s\n", strings.Join(ev.NotAccepted, ", "))
+	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	if len(ev.Theme) > 0 {
+		fmt.Fprintln(a.out, "theme:")
+		w = tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+		for _, s := range ev.Theme {
+			state := s.Status
+			switch {
+			case s.Released:
+				state = "released"
+			case s.Accepted:
+				state = "not released"
+			}
+			fmt.Fprintf(w, "  %s\t%s\t%s\n", s.ID, state, s.Title)
+		}
+		if err := w.Flush(); err != nil {
+			return err
+		}
+	}
+	if len(ev.Pending) == 0 {
+		fmt.Fprintln(a.out, "nothing accepted is waiting for a release")
+		return nil
+	}
+	fmt.Fprintln(a.out, "pending:")
+	w = tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+	for _, s := range ev.Pending {
+		value := "no value"
+		if s.Value != nil {
+			value = ev.Amount(*s.Value)
+		}
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", s.ID, value, s.Title)
+	}
+	return w.Flush()
 }
 
 // computeApplyAndTagPending is the first half of flai release --pending
