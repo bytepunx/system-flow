@@ -3,10 +3,10 @@ id: I-0073
 title: "flai check finds `threads.archived` outside the story at close-out"
 class: efficiency
 status: open
-count: 9
+count: 10
 first_reported: 2026-10-05T01:38:07Z
-last_reported: 2026-10-05T05:52:49Z
-updated: 2026-10-05T05:52:49Z
+last_reported: 2026-10-05T07:00:46Z
+updated: 2026-10-05T07:00:46Z
 ---
 
 # I-0073 flai check finds `threads.archived` outside the story at close-out
@@ -60,6 +60,12 @@ flai check found outside the story:
 Story: S-0276.
 flai check found outside the story:
 `wip/threads/TH-0112-s-0249-cost-of-delay-inputs-time-lost-per-cycle-7m.md`: TH-0112 is answered but S-0249 is archived; resolve it or move it
+
+### 2026-10-05T07:00:46Z
+Story: S-0217.
+flai check found outside the story:
+`wip/threads/TH-0112-s-0249-cost-of-delay-inputs-time-lost-per-cycle-7m.md`: TH-0112 is answered but S-0249 is archived; resolve it or move it
+`wip/threads/TH-0127-s-0276-cost-of-delay-inputs-time-lost-per-cycle-5m.md`: TH-0127 is answered but S-0276 is archived; resolve it or move it
 
 ## Remediation
 
