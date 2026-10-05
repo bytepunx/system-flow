@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T05:45:50Z
+updated: 2026-10-05T05:46:20Z
 transitions: []
 tags: [dashboard]
 topics: [orchestration, analysis]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:36Z
 forecast:
   duration: 1h
-  delivery: 2026-10-05T20:49:00Z
-  basis: "flai forecast with the predicted touches says 1h4m (132 s per unit of size over 14 done large feature stories on claude-opus-5-5, size 29); kept at 1h because S-0259, one such page with its flai reads, took 29m in progress and this is two pages plus an orchestrator stop and start; delivery is flai's play-out start, 17th in the pull order, plus 1h."
-  by: planner-S-0228
-  at: 2026-10-05T05:44:36Z
+  delivery: 2026-10-05T20:24:00Z
+  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224 and S-0227."
+  by: flai
+  at: 2026-10-05T05:46:20Z
 ---
 # S-0228 The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
 

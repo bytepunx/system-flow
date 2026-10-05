@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T05:46:14Z
+updated: 2026-10-05T05:46:20Z
 transitions: []
 tags: [dashboard, flai]
 touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/guard, flai/internal/harness, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/adrs, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:18Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T21:25:00Z
-  basis: "flai forecast's 1h (132 s per unit times size 27) raised to 1h15m, the agent time of S-0204 (72m) and S-0201 (63m), the closest done stories that likewise add a flai write and its dashboard form; 18th in the pull order with an in-progress limit of 3, delivered at its start plus 1h15m times the cycle factor 1.52."
-  by: planner-S-0229
-  at: 2026-10-05T05:45:12Z
+  delivery: 2026-10-05T21:26:00Z
+  basis: "Its own forecast of 1h15m; 18th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224, S-0227 and S-0228."
+  by: flai
+  at: 2026-10-05T05:46:20Z
 ---
 # S-0229 The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents
 
@@ -42,5 +42,6 @@ The operator decides how much freedom each strategic agent has. The manifest hol
 
 ## Tasks
 - T-0952 flai manifest set writes the strategic agents' settings to system-flow.yaml, validating each and refusing with the field and the reason
+- T-0954 A running orchestrator is held to changed permissions on its next call, and its prompt says they may change while it runs
 
 ## Notes

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T05:46:16Z
+updated: 2026-10-05T05:46:20Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:55Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T15:19:00Z
-  basis: "Kept at 1h30m over flai forecast's 31m: an ADR, a lane replay in Go, three chart builders, and the page and docs, six tasks over Go and Svelte, as S-0205 (seven tasks, 1h09m in progress) was; 11th in the pull order with an in-progress limit of 3, after S-0217."
-  by: planner-S-0213
-  at: 2026-10-05T05:45:55Z
+  delivery: 2026-10-05T15:42:00Z
+  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226 and S-0212."
+  by: flai
+  at: 2026-10-05T05:46:20Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 
@@ -49,6 +49,7 @@ Cost of delay only matters if the operator can see it accumulate and what orderi
 
 ## Tasks
 - T-0953 metrics.md defines the pull order's projected cost of delay and the count of items without a value, and an ADR records them
+- T-0955 flai stats counts the open items without a cost of delay value per column per day
 
 ## Notes
 

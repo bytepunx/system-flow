@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T05:46:07Z
+updated: 2026-10-05T05:46:20Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -30,10 +30,10 @@ cost_of_delay:
   at: 2026-10-05T05:46:07Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-05T15:47:00Z
-  basis: "Six tasks in four layers, Go metrics and an ADR before three charts; flai's 31m (132 s a unit over size 14) leaves out the metrics work, which alone took S-0205 70 minutes. 11th in the pull order with an in-progress limit of 3."
-  by: planner-S-0214
-  at: 2026-10-05T05:46:07Z
+  delivery: 2026-10-05T16:10:00Z
+  basis: "Its own forecast of 1h45m; 11th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212 and S-0213."
+  by: flai
+  at: 2026-10-05T05:46:20Z
 ---
 # S-0214 Charts show parallelism, holds, and touches drift
 

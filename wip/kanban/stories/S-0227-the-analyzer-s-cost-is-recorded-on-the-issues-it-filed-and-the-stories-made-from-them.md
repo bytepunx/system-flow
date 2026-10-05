@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T05:46:06Z
+updated: 2026-10-05T05:46:20Z
 transitions: []
 tags: [flai]
 topics: [analysis, planning]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:09Z
 forecast:
   duration: 50m
-  delivery: 2026-10-05T19:50:00Z
-  basis: "flai's 18m (86 s per unit of size, size 12) raised to 50m: S-0225, the planner's version, took 52m, and this one adds a usage block to the issue schema and the carry-over to the story the issue step makes, against S-0225's dashboard work; delivery is flai's 19:18Z moved by the 32m added."
-  by: planner-S-0227
-  at: 2026-10-05T05:45:04Z
+  delivery: 2026-10-05T20:02:00Z
+  basis: "Its own forecast of 50m; 16th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223 and S-0224."
+  by: flai
+  at: 2026-10-05T05:46:20Z
 ---
 # S-0227 The analyzer's cost is recorded on the issues it filed and the stories made from them
 

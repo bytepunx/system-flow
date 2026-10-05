@@ -6,7 +6,7 @@ title: flai adr new numbers from the story's worktree only, so parallel story br
 status: backlog
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-05T05:45:14Z
+updated: 2026-10-05T05:46:20Z
 transitions: []
 tags: []
 topics: [cli]
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:03Z
 forecast:
   duration: 25m
-  delivery: 2026-10-05T23:54:00Z
-  basis: "flai's 18m (86 s per unit of size times size 12) raised to 25m, since S-0252, the same fix for issue numbers, took 31m and this one reuses its storygit helper; 28th in the pull order with an in-progress limit of 3."
-  by: planner-S-0245
-  at: 2026-10-05T05:44:29Z
+  delivery: 2026-10-05T23:11:00Z
+  basis: "Its own forecast of 25m; 28th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213, S-0214, S-0215, S-0216, S-0223, S-0224, S-0227, S-0228, S-0229, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239 and S-0241."
+  by: flai
+  at: 2026-10-05T05:46:20Z
 ---
 # S-0245 flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
 
