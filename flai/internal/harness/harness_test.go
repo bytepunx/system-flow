@@ -795,10 +795,10 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	missing.Root = t.TempDir()
 	bad := map[string]Request{"runs as the agent planner, and its definition could not be read": missing}
 	for want, mod := range map[string]func(*Request){
-		`flai cannot start an agent in role "orchestrate"`: func(r *Request) { r.Role = "orchestrate" },
-		"was given story S-0104 to work":                   func(r *Request) { r.Story = "S-0104" },
-		`"T-0784" is neither`:                              func(r *Request) { r.Item = "T-0784" },
-		`"" is neither`:                                    func(r *Request) { r.Item = "" },
+		`flai cannot start an agent in role "analyze"`: func(r *Request) { r.Role = "analyze" },
+		"was given story S-0104 to work":               func(r *Request) { r.Story = "S-0104" },
+		`"T-0784" is neither`:                          func(r *Request) { r.Item = "T-0784" },
+		`"" is neither`:                                func(r *Request) { r.Item = "" },
 	} {
 		x := planReq("E-0016", nil)
 		x.Root = root
@@ -829,9 +829,156 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	}
 }
 
+func orchestrateReq(a *manifest.Agent) Request {
+	return Request{Role: "orchestrate", Root: "/p/flow", Project: "flow", Agent: a, Name: "orchestrator", Flai: "/usr/local/bin/flai"}
+}
+
+// S-0218: the orchestrator is asked to keep the project's work moving within
+// the operator's permissions, with flai's figures, logging each decision and
+// waiting on events between them without ending; never to edit a file, work
+// a story, or work around flai guard.
+func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T) {
+	p := Prompt(orchestrateReq(nil))
+	for _, w := range []string{
+		"You are orchestrator, the orchestrator, started by flai serve on this host because the operator turned on the orchestrate host action for the project at /p/flow",
+		"as design/conventions/strategic-agents.md says under As the orchestrator",
+		"flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate)",
+		"A brief is not the document", "doc_get and its heading", "doc_search",
+		"Call the flai MCP tool inbox, and read the board with the flai MCP tool board",
+		"to the explorer with the Agent tool",
+		"Act only within the permissions the operator sets in system-flow.yaml under orchestration.permissions, each off by default, and by its policy, orchestration.policy",
+		"with the flai MCP tool plan, only while plan_backlog_epics is on", "only while finalize_drafts is on", "only while promote_to_ready is on",
+		"only while order_ready is on", "only as answer_threads says", "only while accept_reviews is on", "publish a release only while publish is on",
+		"if a permission is unclear, ask; do not act",
+		"never do the arithmetic yourself",
+		"flai order --by (the flai MCP tool order_by_policy)", "flai promote --candidates (promote_candidates)", "flai release --evaluate (release_evaluate)",
+		"Log each decision when you have made it with the flai MCP tool activity_log, kind orchestrator: what you did, on which items, why, and the policy figure behind it",
+		"Then hold the flai MCP tool wait_for_events, again each time it returns",
+		"Repeat without ending",
+		"write only through flai",
+		"Never edit code or documents, and never work a story yourself",
+		"flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal",
+		"Ask the operator instead with the flai MCP tool thread_open on the item the decision concerns, your recommended answer first",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	for _, never := range []string{"flai stream open", "flai move", "worktree", "As the planner", "End with"} {
+		if strings.Contains(p, never) {
+			t.Errorf("the orchestrator's prompt says %q:\n%s", never, p)
+		}
+	}
+}
+
+// S-0218: claude-code runs the orchestrator's session as the project's
+// orchestrator definition, passed with --agents beside the explorer and the
+// verifier, named for the project and the role, and tells it its role alone;
+// a project with no definition, and an orchestrator given a story or an
+// item, are refused.
+func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, def := range map[string]string{
+		"orchestrator": "---\nname: orchestrator\ndescription: Keeps work moving.\ntools: Read, mcp__flai__item_move\nmodel: inherit\n---\n\nYou are the orchestrator.\n",
+		"explorer":     "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
+		"verifier":     "---\nname: verifier\ndescription: Runs the checks.\ntools: Read, Bash\nmodel: sonnet\n---\n\nYou are the verifier.\n",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := orchestrateReq(&manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5", Roles: map[string]manifest.Role{
+		"explore": {Model: "claude-haiku-4-5"},
+		"verify":  {Model: "claude-sonnet-5"},
+	}})
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := st.Argv[2]; !strings.Contains(p, "the orchestrator, started by flai serve") || !strings.Contains(p, "flai prime --role orchestrate") {
+		t.Errorf("prompt: %s", p)
+	}
+	for flag, want := range map[string]string{"--agent": "orchestrator", "--model": "claude-opus-5-5", "--name": "flow orchestrate"} {
+		if got := after(st.Argv, flag); got != want {
+			t.Errorf("%s = %q, want %q (%q)", flag, got, want, st.Argv)
+		}
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	for def, want := range map[string]string{"orchestrator": "claude-opus-5-5", "explorer": "claude-haiku-4-5", "verifier": "claude-sonnet-5"} {
+		if got := agents[def]; got["model"] != want || got["prompt"] == "" || got["name"] != nil {
+			t.Errorf("%s: %v", def, got)
+		}
+	}
+	if _, ok := agents["planner"]; ok {
+		t.Errorf("the orchestrator is passed the planner: %v", agents)
+	}
+	if got := after(st.Argv, "--permission-prompt-tool"); got != PermissionPromptTool {
+		t.Errorf("orchestrator: --permission-prompt-tool = %q (%v)", got, st.Argv)
+	}
+	if want := []string{"FLAI_ROLE=orchestrate"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+
+	// an orchestrator with no agent of its own: the definition's model, and
+	// the orchestrator alone
+	plain := orchestrateReq(nil)
+	plain.Root = root
+	st, err = (claudeCode{}).Start(plain, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agents = nil
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil || len(agents) != 1 || agents["orchestrator"]["model"] != "inherit" {
+		t.Errorf("--agents %v: %v", agents, err)
+	}
+
+	missing := orchestrateReq(nil)
+	missing.Root = t.TempDir()
+	if _, err := (claudeCode{}).Start(missing, Host{}); err == nil ||
+		!strings.Contains(err.Error(), "the orchestrator's session runs as the agent orchestrator, and its definition could not be read") ||
+		!strings.Contains(err.Error(), "flai upgrade adds it from the template") {
+		t.Errorf("a project with no orchestrator.md: %v", err)
+	}
+	for want, mod := range map[string]func(*Request){
+		"the orchestrator was given story S-0104 to work": func(r *Request) { r.Story = "S-0104" },
+		"the orchestrator was given E-0016":               func(r *Request) { r.Item = "E-0016" },
+	} {
+		x := orchestrateReq(nil)
+		x.Root = root
+		mod(&x)
+		for name, ad := range map[string]Adapter{ClaudeCode: claudeCode{}, Command: command{}} {
+			if _, err := ad.Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("%s %+v: %v, want %q", name, x, err, want)
+			}
+		}
+	}
+
+	// the operator's command is told the role and no item, with no prompt
+	cmd, err := (command{}).Start(orchestrateReq(nil), Host{Program: "run-agent", Args: []string{"{story}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"run-agent", ""}; !slices.Equal(cmd.Argv, want) {
+		t.Errorf("argv %q, want %q", cmd.Argv, want)
+	}
+	if !slices.Contains(cmd.Env, "FLAI_ROLE=orchestrate") || slices.ContainsFunc(cmd.Env, func(e string) bool {
+		return strings.HasPrefix(e, "FLAI_ITEM=") || strings.HasPrefix(e, "FLAI_STORY=")
+	}) {
+		t.Errorf("command env: %q", cmd.Env)
+	}
+}
+
 // The template's own definitions read as --agents takes them.
 func TestTheTemplatesDefinitionsRead(t *testing.T) {
-	for _, def := range []string{"explorer", "verifier", "planner"} {
+	for _, def := range []string{"explorer", "verifier", "planner", "orchestrator"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", ".claude", "agents", def+".md"))
 		if err != nil {
 			t.Fatal(err)

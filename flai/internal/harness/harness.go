@@ -26,19 +26,21 @@ import (
 const Command = "command"
 
 // Request is what an agent is started for: a story, or, for the planner, an
-// epic or a story to plan (S-0208).
+// epic or a story to plan (S-0208), or, for the orchestrator, the whole
+// project (S-0218).
 type Request struct {
-	Story   string          // the story's ID, checked by the caller; empty for the planner
+	Story   string          // the story's ID, checked by the caller; empty for a strategic agent
 	Root    string          // the project's directory, where it runs
 	Project string          // the project's key, for a session's name
-	Agent   *manifest.Agent // the story's agent, or the planner's; nil when it has none
+	Agent   *manifest.Agent // the story's agent, the planner's, or the orchestrator's; nil when it has none
 	Name    string          // FLAI_AGENT the session works under
 	Flai    string          // this flai's executable, the agent's MCP server
-	// Role is conventions.RolePlan when the agent is the planner, and empty
+	// Role is conventions.RolePlan when the agent is the planner,
+	// conventions.RoleOrchestrate when it is the orchestrator, and empty
 	// when it works a story.
 	Role string
 	// Item is the epic or story the planner plans, checked by the caller;
-	// empty when the agent works a story.
+	// empty when the agent works a story or orchestrates.
 	Item string
 	// Session names the harness's session, so that it can be resumed; a
 	// harness that has no sessions ignores it.
@@ -209,11 +211,15 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // operator started past a hold or a full limit is told what it went past
 // (S-0182). Every agent working a story is told how its issues are recorded
 // and that the operator chooses at acceptance which become stories (S-0198).
-// The planner is asked to plan its item instead (planPrompt). Only the
-// claude-code adapter sends a prompt.
+// The planner is asked to plan its item instead (planPrompt), and the
+// orchestrator to keep the project's work moving (orchestratePrompt). Only
+// the claude-code adapter sends a prompt.
 func Prompt(r Request) string {
-	if r.Role == conventions.RolePlan {
+	switch r.Role {
+	case conventions.RolePlan:
 		return planPrompt(r)
+	case conventions.RoleOrchestrate:
+		return orchestratePrompt(r)
 	}
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
@@ -295,16 +301,48 @@ When an input the operator owns is missing, do not guess past it: ask with the f
 %[6]s: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, r.Root, kind, work, summary)
 }
 
-// roleEnv tells a planner's session its role and its item, which flai guard
-// reads to hold it to planning (S-0208); nothing for an agent working a
-// story. A role other than the planner's, or a planner with a story of its
-// own or with no epic or story to plan, is refused.
+// orchestratePrompt is what the orchestrator is asked to do (S-0218): keep
+// the project's work moving as strategic-agents.md says, only as far as the
+// permissions the operator sets in orchestration.permissions allow, taking
+// every order, candidate, and release figure from flai's commands rather
+// than working it out; log each decision with activity_log, its reason and
+// the policy figure behind it; and wait on wait_for_events between
+// decisions, without ending, since flai serve runs it while the orchestrate
+// host action is on. It never edits a file or works a story, and asks the
+// operator where flai guard refuses it rather than working around the
+// refusal.
+func orchestratePrompt(r Request) string {
+	return fmt.Sprintf(`You are %[1]s, the orchestrator, started by flai serve on this host because the operator turned on the orchestrate host action for the project at %[2]s.
+
+Keep the project's work moving, and do nothing else, as design/conventions/strategic-agents.md says under As the orchestrator. Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by and briefs the design your role's topic selects. A brief is not the document: read the section that bears on a decision with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox, and read the board with the flai MCP tool board. Hand wide search to the explorer with the Agent tool.
+
+Act only within the permissions the operator sets in system-flow.yaml under orchestration.permissions, each off by default, and by its policy, orchestration.policy. Ask the planner to plan a backlog epic, with the flai MCP tool plan, only while plan_backlog_epics is on; finalize a draft only while finalize_drafts is on; promote a story to ready only while promote_to_ready is on; order the ready column only while order_ready is on; answer a thread, or recommend an answer, only as answer_threads says; accept a story only while accept_reviews is on; publish a release only while publish is on. Do none of it while its permission is off, and if a permission is unclear, ask; do not act.
+
+Take every figure from flai's commands and never do the arithmetic yourself: the ready column's order from flai order --by (the flai MCP tool order_by_policy), the stories that could go to ready from flai promote --candidates (promote_candidates), and whether a release is due from flai release --evaluate (release_evaluate).
+
+Log each decision when you have made it with the flai MCP tool activity_log, kind orchestrator: what you did, on which items, why, and the policy figure behind it. Then hold the flai MCP tool wait_for_events, again each time it returns, and when something has changed, call inbox, read the board, and decide again. Repeat without ending: flai serve runs you for as long as the orchestrate host action is on.
+
+Work in the main checkout and write only through flai: the flai MCP tools, or the flai CLI. Never edit code or documents, and never work a story yourself. flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal, by another tool, another command, or the shell. Ask the operator instead with the flai MCP tool thread_open on the item the decision concerns, your recommended answer first, and do what needs no answer meanwhile.`, r.Name, r.Root)
+}
+
+// roleEnv tells a strategic agent's session its role, which flai guard reads
+// to hold it to its work: the planner's its item as well (S-0208), the
+// orchestrator's nothing more, since it works the whole project (S-0218).
+// Nothing for an agent working a story. A role flai does not start, a
+// strategic agent with a story of its own, a planner with no epic or story
+// to plan, and an orchestrator given an item are refused.
 func roleEnv(r Request) ([]string, error) {
 	switch {
 	case r.Role == "":
 		return nil, nil
-	case r.Role != conventions.RolePlan:
-		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, and an agent for a story", r.Role, conventions.RolePlan)
+	case r.Role != conventions.RolePlan && r.Role != conventions.RoleOrchestrate:
+		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate)
+	case r.Role == conventions.RoleOrchestrate && r.Story != "":
+		return nil, fmt.Errorf("the orchestrator was given story %s to work; it works no story of its own, so start it with none", r.Story)
+	case r.Role == conventions.RoleOrchestrate && r.Item != "":
+		return nil, fmt.Errorf("the orchestrator was given %s; it works the whole project, so start it with no item", r.Item)
+	case r.Role == conventions.RoleOrchestrate:
+		return []string{"FLAI_ROLE=" + r.Role}, nil
 	case r.Story != "":
 		return nil, fmt.Errorf("the planner for %s was given story %s to work; it works no story of its own, so start it with none", r.Item, r.Story)
 	}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.52 - 2026-10-05
+
+- S-0218 The orchestrator is an agent flai serve runs for a project behind the orchestrate host action (patch): the template ships `.claude/agents/orchestrator.md`, the definition the orchestrator's session runs as, which acts only within `orchestration.permissions`, takes every order, candidate, and release figure from `order_by_policy`, `promote_candidates`, and `release_evaluate`, logs each decision with `activity_log`, waits on `wait_for_events` between decisions, and writes work items and threads through flai only. `.claude/settings.json`'s `PreToolUse` entry on `Edit`, `Write`, and `NotebookEdit` runs `flai guard` in an orchestrator's session (`FLAI_ROLE=orchestrate`) as well as a planner's, and still exits at once in a story's.
+
 ## 1.0.51 - 2026-10-05
 
 - S-0244 Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes (patch).

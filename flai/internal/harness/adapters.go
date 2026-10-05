@@ -11,6 +11,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
@@ -44,8 +45,9 @@ var claudeCodeTakes = map[string]option{
 // MCP server, flai's permission_prompt as its permission handler
 // (PermissionPromptTool), and the operator's arguments last, so the handler
 // applies with the default host arguments and with the operator's own. A
-// planner's session runs as the project's planner definition, with flai guard
-// on its file edits (S-0208), and has the same handler, which denies anything
+// planner's session runs as the project's planner definition (S-0208), and
+// an orchestrator's as its orchestrator definition (S-0218), each with flai
+// guard on its file edits and the same handler, which denies anything
 // outside a story's worktree.
 func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
@@ -84,9 +86,10 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
+	// <key> plan <item>, <key> orchestrate, or <key> <story>
 	subject := r.Story
 	if r.Role != "" {
-		subject = r.Role + " " + r.Item
+		subject = strings.TrimSpace(r.Role + " " + r.Item)
 	}
 	argv := []string{host.Program, "-p", Prompt(r), "--output-format", "stream-json", "--verbose",
 		"--mcp-config", string(mcp), "--strict-mcp-config", "--name", strings.TrimSpace(r.Project + " " + subject)}
@@ -110,7 +113,7 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 		argv = append(argv, "--agents", agents)
 	}
 	if r.Role != "" {
-		argv = append(argv, "--agent", claudeCodePlanner)
+		argv = append(argv, "--agent", claudeCodeStrategic[r.Role])
 	}
 	argv = append(argv, "--permission-prompt-tool", PermissionPromptTool)
 	argv = append(argv, host.Args...)
@@ -121,31 +124,34 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 // .claude/agents/, that each role runs as (ADR-0059).
 var claudeCodeRoles = map[string]string{manifest.RoleExplore: "explorer", manifest.RoleVerify: "verifier"}
 
-// claudeCodePlanner is the definition, in the project's .claude/agents/, that
-// a planner's session runs as (S-0208).
-const claudeCodePlanner = "planner"
+// claudeCodeStrategic are the definitions, in the project's .claude/agents/,
+// that a strategic agent's session runs as, by its role: the planner's
+// (S-0208) and the orchestrator's (S-0218). roleEnv refuses any other role
+// before they are looked up.
+var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", conventions.RoleOrchestrate: "orchestrator"}
 
 // subAgents is the --agents JSON that runs each of the agent's roles on its
 // own model (S-0189): the project's definition of the role's sub-agent, its
 // front matter and its prompt, with the role's model over the definition's.
 // A session's --agents outranks the project's definitions, so the file stays
-// the source of everything but the model. For a planner it holds the
-// planner's definition as well, with the planner's model when its agent
-// names one, whatever its roles (S-0208). Empty when nothing is to be
-// passed. A role sub-agents cannot run, because it names another harness or
-// config, or has no definition, refuses the start, as a planner with no
-// definition does.
+// the source of everything but the model. For a strategic agent, the planner
+// or the orchestrator, it holds that agent's definition as well, with the
+// agent's model when it names one, whatever its roles (S-0208, S-0218).
+// Empty when nothing is to be passed. A role sub-agents cannot run, because
+// it names another harness or config, or has no definition, refuses the
+// start, as a strategic agent with no definition does.
 func subAgents(r Request) (string, error) {
 	out := map[string]map[string]any{}
 	if r.Role != "" {
-		agent, err := readDefinition(r.Root, claudeCodePlanner)
+		def := claudeCodeStrategic[r.Role]
+		agent, err := readDefinition(r.Root, def)
 		if err != nil {
-			return "", fmt.Errorf("a planner's session runs as the agent %s, and %w; flai upgrade adds it from the template when it is missing", claudeCodePlanner, err)
+			return "", fmt.Errorf("the %[1]s's session runs as the agent %[1]s, and %[2]w; flai upgrade adds it from the template when it is missing", def, err)
 		}
 		if r.Agent != nil && r.Agent.Model != "" {
 			agent["model"] = r.Agent.Model
 		}
-		out[claudeCodePlanner] = agent
+		out[def] = agent
 	}
 	a := r.Agent
 	for _, n := range a.RoleNames() {
@@ -249,7 +255,7 @@ func definition(data []byte) (map[string]any, error) {
 // its question was answered, it has FLAI_ANSWERED, the thread's ID; started
 // to commit what a story's worktree holds, FLAI_COMMIT, the worktree (S-0140).
 // Started as the planner, it has FLAI_ROLE and FLAI_ITEM, and {story} is
-// empty (S-0208).
+// empty (S-0208); started as the orchestrator, FLAI_ROLE alone (S-0218).
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -260,7 +266,7 @@ func (command) Start(r Request, host Host) (Start, error) {
 	if host.Program == "" {
 		return Start{}, fmt.Errorf("no command is set on the host (flai serve agent set -- <program> [args...])")
 	}
-	planner, err := roleEnv(r)
+	role, err := roleEnv(r)
 	if err != nil {
 		return Start{}, err
 	}
@@ -298,6 +304,6 @@ func (command) Start(r Request, host Host) (Start, error) {
 	if r.Commit != "" {
 		env = append(env, "FLAI_COMMIT="+r.Commit)
 	}
-	env = append(env, planner...)
+	env = append(env, role...)
 	return Start{Harness: Command, Argv: argv, Env: env}, nil
 }
