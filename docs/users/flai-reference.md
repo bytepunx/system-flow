@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-04
+updated: 2026-10-05
 status: active
 ---
 
@@ -1302,6 +1302,8 @@ Record a new issue (count 1).
 ```text
 flai issue new "<title>" [flags]
 ```
+
+Record a new issue with count 1. Its number is one past the highest issue on main, in any story worktree, and on any story branch, so stories worked in parallel do not take the same number.
 
 Examples:
 

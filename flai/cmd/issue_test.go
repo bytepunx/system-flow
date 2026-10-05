@@ -373,3 +373,45 @@ func TestIssueCommands(t *testing.T) {
 		}
 	}
 }
+
+// I-0065: an issue another story recorded, committed on its branch or not
+// yet committed in its worktree, holds its number, so a third story's issue
+// takes the next one.
+func TestIssueNewNumbersPastEveryStorysIssues(t *testing.T) {
+	if testing.Short() {
+		t.Skip("needs git")
+	}
+	root := bodyProject(t)
+	t.Setenv("FLAI_STORY", "")
+	writeIssue := func(dir, name string) {
+		t.Helper()
+		path := filepath.Join(dir, "design", "issues", name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("---\nid: "+name[:6]+"\n---\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	worktree := func(story string) string {
+		t.Helper()
+		wt := filepath.Join(root, ".flai-cache", "worktrees", story)
+		gitIn(t, root, "worktree", "add", "-q", "-b", "story/"+story, wt)
+		return wt
+	}
+	writeIssue(root, "I-0001-on-main.md")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "on main")
+
+	one := worktree("S-0001")
+	writeIssue(one, "I-0002-committed-on-its-branch.md")
+	gitIn(t, one, "add", "-A")
+	gitIn(t, one, "commit", "-q", "-m", "one")
+	gitIn(t, root, "worktree", "remove", one)
+	writeIssue(worktree("S-0002"), "I-0003-uncommitted-in-its-worktree.md")
+
+	out, errOut, code := runIn(t, worktree("S-0003"), "issue", "new", "Third story's issue", "--class", "defect")
+	if code != 0 || !strings.HasPrefix(out, "I-0004 Third story's issue\n") {
+		t.Errorf("issue new in a third story's worktree should be I-0004: %d %q %s", code, out, errOut)
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -26,7 +27,7 @@ func repo(t *testing.T) *workitem.Repo {
 
 func TestLifecycle(t *testing.T) {
 	r := repo(t)
-	if id := NextID(r); id != "I-0001" {
+	if id := NextID(r, nil); id != "I-0001" {
 		t.Fatalf("first id %s", id)
 	}
 	is, err := New(r, NewOptions{Title: "Lint: version mismatch", Class: "efficiency", Cost: "5m", Note: "found in S-004", Now: t0})
@@ -133,5 +134,27 @@ func TestAnIssueWithAnUnknownFieldIsListedAndKept(t *testing.T) {
 	after, _ := os.ReadFile(is.Path)
 	if !strings.Contains(string(after), "count: 2\n") || !strings.Contains(string(after), "owner: sam\n---\n") {
 		t.Errorf("a bump dropped the unknown field:\n%s", after)
+	}
+}
+
+// A project in git with no story branches numbers past what main holds and
+// what its own checkout holds uncommitted.
+func TestNextIDWithoutStoryBranches(t *testing.T) {
+	if testing.Short() {
+		t.Skip("needs git")
+	}
+	r, run := repo(t), execx.System{}
+	if err := os.MkdirAll(Dir(r), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(Dir(r), "I-0001-committed.md"), []byte("one\n"), 0o644)
+	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"add", "-A"}, {"-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "one"}} {
+		if out, err := run.Run(r.Root, "git", args...); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	_ = os.WriteFile(filepath.Join(Dir(r), "I-0002-uncommitted.md"), []byte("two\n"), 0o644)
+	if id := NextID(r, run); id != "I-0003" {
+		t.Errorf("next id %s, want I-0003", id)
 	}
 }

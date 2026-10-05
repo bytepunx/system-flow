@@ -79,6 +79,9 @@ func newIssueNewCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
 		Short: "Record a new issue (count 1)",
+		Long: `Record a new issue with count 1. Its number is one past the highest issue
+on main, in any story worktree, and on any story branch, so stories worked
+in parallel do not take the same number.`,
 		Example: `  flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
   flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"`,
 		Args: cobra.ExactArgs(1),
@@ -87,7 +90,7 @@ func newIssueNewCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			is, err := issues.New(repo, issues.NewOptions{Title: args[0], Class: class, Cost: cost, Note: note, Story: a.issueStory(repo, story), Now: a.now()})
+			is, err := issues.New(repo, issues.NewOptions{Title: args[0], Class: class, Cost: cost, Note: note, Story: a.issueStory(repo, story), Now: a.now(), Runner: a.runner})
 			if err != nil {
 				return err
 			}

@@ -14,6 +14,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -179,23 +181,42 @@ func Get(r *workitem.Repo, id string) (*Issue, error) {
 	return nil, fmt.Errorf("%s not found", id)
 }
 
-// NextID allocates the next issue ID, zero-padded to workitem.IDWidth.
-func NextID(r *workitem.Repo) string {
-	max := 0
+// NextID allocates the next issue ID, zero-padded to workitem.IDWidth: one
+// past the highest in this checkout, on main, in any worktree, and on any
+// story branch (I-0065). A nil run is execx.System.
+func NextID(r *workitem.Repo, run execx.Runner) string {
+	if run == nil {
+		run = execx.System{}
+	}
+	var names []string
 	matches, _ := filepath.Glob(filepath.Join(Dir(r), "I-*.md"))
 	for _, m := range matches {
-		if n := num(strings.SplitN(filepath.Base(m), "-", 3)[0] + "-" + strings.SplitN(filepath.Base(m), "-", 3)[1]); n > max {
-			max = n
+		names = append(names, filepath.Base(m))
+	}
+	if folder, err := filepath.Rel(r.Root, Dir(r)); err == nil {
+		names = append(names, storygit.FolderNames(run, r, filepath.ToSlash(folder))...)
+	}
+	max := 0
+	for _, name := range names {
+		if m := fileIDPattern.FindStringSubmatch(name); m != nil {
+			if n, _ := strconv.Atoi(m[1]); n > max {
+				max = n
+			}
 		}
 	}
 	return fmt.Sprintf("I-%0*d", workitem.IDWidth, max+1)
 }
 
+// fileIDPattern is an issue file's name, capturing its number.
+var fileIDPattern = regexp.MustCompile(`^I-(\d+)-.*\.md$`)
+
 // NewOptions describe an issue to record. Story is the story the first
-// instance belongs to, or empty for none.
+// instance belongs to, or empty for none. Runner reads the other worktrees
+// and branches for the next number; nil is execx.System.
 type NewOptions struct {
 	Title, Class, Cost, Note, Story string
 	Now                             time.Time
+	Runner                          execx.Runner
 }
 
 // New creates an issue file with count 1.
@@ -216,7 +237,7 @@ func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 		return nil, err
 	}
 	now := opt.Now.UTC().Format(workitem.TimeFormat)
-	id := NextID(r)
+	id := NextID(r, opt.Runner)
 	note := strings.TrimSpace(opt.Note)
 	if note == "" {
 		note = "First occurrence."
