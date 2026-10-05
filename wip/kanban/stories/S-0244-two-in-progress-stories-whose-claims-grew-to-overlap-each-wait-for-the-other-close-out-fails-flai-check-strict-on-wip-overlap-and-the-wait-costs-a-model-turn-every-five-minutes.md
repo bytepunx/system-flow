@@ -6,7 +6,7 @@ title: "Two in-progress stories whose claims grew to overlap each wait for the o
 status: ready
 owner: alex
 created: 2026-10-03T03:31:01Z
-updated: 2026-10-05T04:04:28Z
+updated: 2026-10-05T04:38:16Z
 transitions:
   - to: ready
     at: 2026-10-04T21:44:16Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-05T03:49:16Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T05:51:00Z
-  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0257."
+  delivery: 2026-10-05T06:25:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0257."
   by: flai
-  at: 2026-10-05T04:04:28Z
+  at: 2026-10-05T04:38:16Z
 ---
 # S-0244 Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes
 

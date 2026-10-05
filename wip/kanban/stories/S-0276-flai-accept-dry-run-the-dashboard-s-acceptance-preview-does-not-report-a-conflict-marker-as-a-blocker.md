@@ -6,7 +6,7 @@ title: flai accept --dry-run, the dashboard's acceptance preview, does not repor
 status: ready
 owner: alex
 created: 2026-10-05T03:48:28Z
-updated: 2026-10-05T04:12:07Z
+updated: 2026-10-05T04:38:16Z
 transitions:
   - to: ready
     at: 2026-10-05T04:05:04Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-05T04:12:07Z
 forecast:
   duration: 30m
-  delivery: 2026-10-05T05:19:00Z
-  basis: "flai forecast's 20m (116 s per unit of size times size 10 over 10 done remediation stories), raised to 30m for three serial tasks with a git-fixture test and a cross-package move; S-0253, its two-task predecessor, spent 51m in progress; delivery is flai's 05:09Z plus the extra 10m."
-  by: planner-S-0276
-  at: 2026-10-05T04:06:57Z
+  delivery: 2026-10-05T05:42:00Z
+  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 3, behind S-0257, S-0244 and S-0258."
+  by: flai
+  at: 2026-10-05T04:38:16Z
 finalized:
   by: alex
   at: 2026-10-05T04:05:03Z

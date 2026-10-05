@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T04:04:28Z
+updated: 2026-10-05T04:38:16Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/mcpserver, design/system/strategic-agents.md, flai/internal/metrics, design/adrs]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-04T04:48:22Z
 forecast:
   duration: 45m
-  delivery: 2026-10-05T17:00:00Z
-  basis: "Its own forecast of 45m; 18th in the pull order with an in-progress limit of 3, behind S-0257, S-0244, S-0262, S-0258, S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0223 and S-0224."
+  delivery: 2026-10-05T17:44:00Z
+  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 3, behind S-0257, S-0244, S-0258, S-0276, S-0212, S-0213, S-0214, S-0215, S-0216, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0223 and S-0224."
   by: flai
-  at: 2026-10-05T04:04:28Z
+  at: 2026-10-05T04:38:16Z
 ---
 # S-0226 The orchestrator's cost is recorded on the story or epic each decision concerned
 

@@ -6,7 +6,7 @@ title: flai's wip markdown lint does not flag an ordered list item numbered from
 status: ready
 owner: alex
 created: 2026-10-04T04:52:01Z
-updated: 2026-10-05T04:04:28Z
+updated: 2026-10-05T04:38:16Z
 transitions:
   - to: ready
     at: 2026-10-04T23:14:18Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-05T03:12:57Z
 forecast:
   duration: 30m
-  delivery: 2026-10-05T04:49:00Z
-  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 3, behind S-0257, S-0244 and S-0262."
+  delivery: 2026-10-05T05:21:00Z
+  basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 3, behind S-0257 and S-0244."
   by: flai
-  at: 2026-10-05T04:04:28Z
+  at: 2026-10-05T04:38:16Z
 finalized:
   by: alex
   at: 2026-10-04T23:14:16Z
