@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T06:13:40Z
+updated: 2026-10-05T07:09:06Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:24Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T04:48:06Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T14:50:00Z
-  basis: "Its own forecast of 1h15m; 5th in the pull order with an in-progress limit of 3, behind S-0217, S-0218, S-0219, S-0220 and S-0221."
+  delivery: 2026-10-05T12:48:00Z
+  basis: "Its own forecast of 1h15m; 5th in the pull order with an in-progress limit of 3, behind S-0218, S-0219, S-0220 and S-0221."
   by: flai
-  at: 2026-10-05T06:13:40Z
+  at: 2026-10-05T07:09:06Z
 ---
 # S-0222 The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold
 

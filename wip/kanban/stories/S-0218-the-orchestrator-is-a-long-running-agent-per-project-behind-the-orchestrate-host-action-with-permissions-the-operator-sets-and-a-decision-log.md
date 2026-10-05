@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-05T06:13:40Z
+updated: 2026-10-05T07:09:06Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:14Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T04:48:03Z
 forecast:
   duration: 1h40m
-  delivery: 2026-10-05T11:41:00Z
-  basis: "Its own forecast of 1h40m; 1st in the pull order with an in-progress limit of 3, behind S-0217."
+  delivery: 2026-10-05T09:40:00Z
+  basis: "Its own forecast of 1h40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-05T06:13:40Z
+  at: 2026-10-05T07:09:06Z
 ---
 # S-0218 The orchestrator is a long-running agent per project behind the orchestrate host action, with permissions the operator sets and a decision log
 
