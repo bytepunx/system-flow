@@ -234,6 +234,84 @@ func TestPlanningTriggers(t *testing.T) {
 	}
 }
 
+// S-0217: orchestration.policy and orchestration.release read from the
+// manifest; unset, the order policy is fifo and the release policy
+// judgement, an unknown key beside them is ignored, and each bad value is an
+// error naming the key and what to write.
+func TestOrchestration(t *testing.T) {
+	load := func(t *testing.T, block string) Manifest {
+		t.Helper()
+		p := filepath.Join(t.TempDir(), File)
+		body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" + block
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		m, err := Load(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	o := load(t, "orchestration:\n  policy: wsjf\n  permissions:\n    later: true\n  release:\n    policy: threshold\n    value: 500\n    count: 5\n").Orchestration
+	if o.PolicyOrDefault() != OrderWSJF || o.Release.PolicyOrDefault() != ReleaseThreshold || o.Release.Value == nil || *o.Release.Value != 500 || o.Release.Count == nil || *o.Release.Count != 5 {
+		t.Errorf("read %+v", o)
+	}
+	if errs := o.Errors(); len(errs) != 0 {
+		t.Errorf("valid threshold: %v", errs)
+	}
+	o = load(t, "orchestration:\n  policy: cod\n  release:\n    policy: theme\n    epic: E-0012\n").Orchestration
+	if o.PolicyOrDefault() != OrderCOD || o.Release.PolicyOrDefault() != ReleaseTheme || o.Release.Epic != "E-0012" {
+		t.Errorf("read %+v", o)
+	}
+	if errs := o.Errors(); len(errs) != 0 {
+		t.Errorf("valid theme: %v", errs)
+	}
+	if o = load(t, "").Orchestration; o.PolicyOrDefault() != OrderFIFO || o.Release.PolicyOrDefault() != ReleaseJudgement || len(o.Errors()) != 0 {
+		t.Errorf("unset: %q, %q, %v", o.PolicyOrDefault(), o.Release.PolicyOrDefault(), o.Errors())
+	}
+	if len(OrderPolicies) != 4 || len(ReleasePolicies) != 3 {
+		t.Errorf("policies %v, %v", OrderPolicies, ReleasePolicies)
+	}
+	for _, p := range OrderPolicies {
+		if errs := (Orchestration{Policy: p}).Errors(); len(errs) != 0 {
+			t.Errorf("%q: %v", p, errs)
+		}
+	}
+
+	zero, five, neg, inf := 0.0, 5, -1.0, math.Inf(1)
+	negCount := -2
+	for _, r := range []Release{
+		{Policy: ReleaseJudgement},
+		{Policy: ReleaseThreshold, Value: &zero},
+		{Policy: ReleaseThreshold, Count: &five},
+		{Policy: ReleaseTheme, Tag: "cli"},
+	} {
+		if errs := (Orchestration{Release: r}).Errors(); len(errs) != 0 {
+			t.Errorf("%+v: %v", r, errs)
+		}
+	}
+	for _, c := range []struct {
+		o    Orchestration
+		want string
+	}{
+		{Orchestration{Policy: "lifo"}, `orchestration.policy "lifo" is not an order policy; write cod`},
+		{Orchestration{Policy: "WSJF"}, `orchestration.policy "WSJF" is not an order policy`},
+		{Orchestration{Release: Release{Policy: "weekly"}}, `orchestration.release.policy "weekly" is not a release policy; write judgement`},
+		{Orchestration{Release: Release{Policy: ReleaseThreshold}}, "orchestration.release is a threshold with neither value nor count"},
+		{Orchestration{Release: Release{Policy: ReleaseThreshold, Value: &neg}}, "orchestration.release.value -1 is not an amount of zero or more"},
+		{Orchestration{Release: Release{Policy: ReleaseThreshold, Value: &inf}}, "orchestration.release.value +Inf is not an amount of zero or more"},
+		{Orchestration{Release: Release{Policy: ReleaseThreshold, Count: &negCount}}, "orchestration.release.count -2 is not a number of zero or more"},
+		{Orchestration{Release: Release{Policy: ReleaseTheme}}, "orchestration.release is a theme with neither epic nor tag"},
+		{Orchestration{Release: Release{Policy: ReleaseTheme, Epic: "E-0001", Tag: "cli"}}, "orchestration.release is a theme with both epic and tag"},
+		{Orchestration{Release: Release{Policy: ReleaseTheme, Epic: "S-0001"}}, `orchestration.release.epic "S-0001" is not an epic ID`},
+	} {
+		got := c.o.Errors()
+		if len(got) != 1 || !strings.Contains(got[0], c.want) {
+			t.Errorf("%+v: got %q, want one error saying %q", c.o, got, c.want)
+		}
+	}
+}
+
 // S-0208: planning.agent reads as agent does, is checked as agent is under
 // its own name, and the planner's agent is it merged over the project's
 // agent, field by field, config key by key, and role by role.

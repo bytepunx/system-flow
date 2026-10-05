@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -52,6 +53,9 @@ type Manifest struct {
 	// Planning is the units the planner's numbers are in (S-0199), and the
 	// planner's agent (S-0208).
 	Planning Planning `yaml:"planning,omitempty" json:"planning,omitzero"`
+	// Orchestration is the policy that orders the ready column and the
+	// policy that says when to release (S-0217).
+	Orchestration Orchestration `yaml:"orchestration,omitempty" json:"orchestration,omitzero"`
 	// Flai is what the project asks of the flai that reads it (S-0181).
 	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
 }
@@ -258,6 +262,129 @@ func (p Planning) Errors() []string {
 // default (ADR-0037, ADR-0065). Nil when neither sets anything.
 func (m Manifest) PlanningAgent() *Agent {
 	return m.Agent.With(m.Planning.Agent)
+}
+
+// Orchestration is the project's say about the order of the ready column and
+// when accepted work is released (S-0217).
+type Orchestration struct {
+	// Policy orders the ready column: one of OrderPolicies, the names flai
+	// order --by takes; empty means OrderFIFO, which leaves the operator's
+	// order alone.
+	Policy string `yaml:"policy,omitempty" json:"policy,omitempty"`
+	// Release says when accepted stories not yet released are due a release.
+	Release Release `yaml:"release,omitempty" json:"release,omitzero"`
+}
+
+// The values of orchestration.policy, the same as flai order --by's.
+const (
+	// OrderCOD orders by cost of delay, the largest first.
+	OrderCOD = "cod"
+	// OrderWSJF orders by cost of delay divided by forecast duration, the
+	// largest first.
+	OrderWSJF = "wsjf"
+	// OrderThroughput orders by forecast duration, the shortest first.
+	OrderThroughput = "throughput"
+	// OrderFIFO leaves the operator's order alone. It is the default.
+	OrderFIFO = "fifo"
+)
+
+// OrderPolicies are the values of orchestration.policy and flai order --by,
+// in the order they are listed to the operator.
+var OrderPolicies = []string{OrderCOD, OrderWSJF, OrderThroughput, OrderFIFO}
+
+// Release is the project's say about when accepted stories not yet released
+// are due a release.
+type Release struct {
+	// Policy is one of ReleasePolicies; empty means ReleaseJudgement.
+	Policy string `yaml:"policy,omitempty" json:"policy,omitempty"`
+	// Value is, for ReleaseThreshold, the unreleased cost of delay per week,
+	// in the project's currency, at which a release is due; unset means none.
+	Value *float64 `yaml:"value,omitempty" json:"value,omitempty"`
+	// Count is, for ReleaseThreshold, the number of accepted stories not yet
+	// released at which a release is due; unset means none.
+	Count *int `yaml:"count,omitempty" json:"count,omitempty"`
+	// Epic is, for ReleaseTheme, the epic whose stories, every one accepted,
+	// make a release due.
+	Epic string `yaml:"epic,omitempty" json:"epic,omitempty"`
+	// Tag is, for ReleaseTheme, the tag whose stories, every one accepted,
+	// make a release due.
+	Tag string `yaml:"tag,omitempty" json:"tag,omitempty"`
+}
+
+// The values of orchestration.release.policy.
+const (
+	// ReleaseJudgement leaves the release to the operator: it is never met by
+	// itself. It is the default.
+	ReleaseJudgement = "judgement"
+	// ReleaseThreshold is met by the unreleased cost of delay per week against
+	// Value, or the accepted stories not yet released against Count.
+	ReleaseThreshold = "threshold"
+	// ReleaseTheme is met when every story of an epic or a tag is accepted.
+	ReleaseTheme = "theme"
+)
+
+// ReleasePolicies are the values of orchestration.release.policy.
+var ReleasePolicies = []string{ReleaseJudgement, ReleaseThreshold, ReleaseTheme}
+
+var epicID = regexp.MustCompile(`^E-\d{3,}$`)
+
+// PolicyOrDefault is orchestration.policy, or OrderFIFO when it is empty. It
+// does not say whether the policy is one of OrderPolicies; Errors does.
+func (o Orchestration) PolicyOrDefault() string {
+	if s := strings.TrimSpace(o.Policy); s != "" {
+		return s
+	}
+	return OrderFIFO
+}
+
+// PolicyOrDefault is orchestration.release.policy, or ReleaseJudgement when
+// it is empty. It does not say whether the policy is one of ReleasePolicies;
+// Errors does.
+func (r Release) PolicyOrDefault() string {
+	if s := strings.TrimSpace(r.Policy); s != "" {
+		return s
+	}
+	return ReleaseJudgement
+}
+
+// Errors are what is wrong with the orchestration settings, one sentence
+// each; none when they are valid.
+func (o Orchestration) Errors() []string {
+	var errs []string
+	if p := o.PolicyOrDefault(); !slices.Contains(OrderPolicies, p) {
+		errs = append(errs, fmt.Sprintf("orchestration.policy %q is not an order policy; write cod (cost of delay), wsjf (cost of delay by duration), throughput (shortest first), or fifo (the operator's order), or remove it for fifo", o.Policy))
+	}
+	return append(errs, o.Release.errors()...)
+}
+
+func (r Release) errors() []string {
+	var errs []string
+	switch r.PolicyOrDefault() {
+	case ReleaseJudgement:
+	case ReleaseThreshold:
+		if r.Value == nil && r.Count == nil {
+			errs = append(errs, "orchestration.release is a threshold with neither value nor count; write value (the unreleased cost of delay per week), count (the accepted stories not yet released), or both")
+		}
+		if v := r.Value; v != nil && (math.IsNaN(*v) || math.IsInf(*v, 0) || *v < 0) {
+			errs = append(errs, fmt.Sprintf("orchestration.release.value %v is not an amount of zero or more; write the unreleased cost of delay per week, in the project's currency, at which a release is due", *v))
+		}
+		if c := r.Count; c != nil && *c < 0 {
+			errs = append(errs, fmt.Sprintf("orchestration.release.count %d is not a number of zero or more; write the number of accepted stories not yet released at which a release is due", *c))
+		}
+	case ReleaseTheme:
+		epic, tag := strings.TrimSpace(r.Epic), strings.TrimSpace(r.Tag)
+		switch {
+		case epic == "" && tag == "":
+			errs = append(errs, "orchestration.release is a theme with neither epic nor tag; write epic (an epic ID such as E-0001) or tag (a tag), one of them")
+		case epic != "" && tag != "":
+			errs = append(errs, "orchestration.release is a theme with both epic and tag; keep one of them")
+		case epic != "" && !epicID.MatchString(epic):
+			errs = append(errs, fmt.Sprintf("orchestration.release.epic %q is not an epic ID; write one such as E-0001", r.Epic))
+		}
+	default:
+		errs = append(errs, fmt.Sprintf("orchestration.release.policy %q is not a release policy; write judgement (the operator decides), threshold (a value or a count of unreleased work), or theme (an epic or a tag accepted), or remove it for judgement", r.Policy))
+	}
+	return errs
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,
