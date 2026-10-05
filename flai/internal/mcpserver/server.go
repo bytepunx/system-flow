@@ -68,6 +68,11 @@ type Options struct {
 	// Activities logs a strategic agent's activity for the tool activity_log
 	// (S-0206); without it the tool says it cannot.
 	Activities ActivityLog
+	// AutoApprove, called at every permission_prompt request with the
+	// project's root, lets it allow a write under .claude/ in an in-progress
+	// story's worktree without asking the operator on a thread when it
+	// returns true (S-0257); nil asks every time.
+	AutoApprove AutoApprove
 }
 
 type server struct {
@@ -84,6 +89,9 @@ type server struct {
 	// activities logs a strategic agent's activity (S-0206)
 	activities ActivityLog
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
+	// autoApprove lets permission_prompt allow without asking (S-0257)
+	autoApprove AutoApprove
+	logger      *slog.Logger // nil logs nothing
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -92,7 +100,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, logger: opt.Logger}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
