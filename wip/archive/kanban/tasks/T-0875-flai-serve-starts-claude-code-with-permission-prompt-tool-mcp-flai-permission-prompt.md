@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 17
-      output: 101
-      cache_read: 588541
-      cache_write: 39589
-      cost: 0.2593
+      input: 13
+      output: 3886
+      cache_read: 616798
+      cache_write: 16119
+      cost: 0.301
 ---
 # T-0875 flai serve starts claude-code with --permission-prompt-tool mcp__flai__permission_prompt
 

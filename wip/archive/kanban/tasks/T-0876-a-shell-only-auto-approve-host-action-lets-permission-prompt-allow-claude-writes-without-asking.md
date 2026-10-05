@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 284
-      cache_read: 1347259
-      cache_write: 71489
-      cost: 0.5858
+      input: 29
+      output: 8777
+      cache_read: 1393163
+      cache_write: 36409
+      cost: 0.6798
 ---
 # T-0876 A shell-only auto-approve host action lets permission_prompt allow .claude/ writes without asking
 

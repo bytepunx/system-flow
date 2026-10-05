@@ -27,11 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 97
-      output: 480
-      cache_read: 4798640
-      cache_write: 149034
-      cost: 2.0427
+      input: 103
+      output: 30609
+      cache_read: 4858398
+      cache_write: 126968
+      cost: 2.3706
+    - model: claude-sonnet-5
+      input: 62
+      output: 15056
+      cache_read: 1699923
+      cache_write: 107896
+      cost: 0.7604
 ---
 # T-0874 flai's MCP server has a permission_prompt tool that asks the operator on a thread before a .claude/ write
 

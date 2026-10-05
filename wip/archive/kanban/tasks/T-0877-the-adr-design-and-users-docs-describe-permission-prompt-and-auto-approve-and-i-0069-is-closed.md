@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 449
-      cache_read: 3168555
-      cache_write: 84691
-      cost: 1.3432
+      input: 68
+      output: 20127
+      cache_read: 3194566
+      cache_write: 83486
+      cost: 1.5588
 ---
 # T-0877 The ADR, design, and users' docs describe permission_prompt and auto-approve, and I-0069 is closed
 
