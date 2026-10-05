@@ -3,21 +3,46 @@ id: S-0266
 type: story
 nature: improvement
 title: The verifier reads a close-out run's exit status without piping it away, and the story agent tells it where the run is expected to stop
-status: ready
+status: done
 owner: alex
 created: 2026-10-05T00:06:34Z
-updated: 2026-10-05T01:13:13Z
+updated: 2026-10-05T02:34:59Z
 transitions:
   - to: ready
     at: 2026-10-05T00:13:54Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T01:13:31Z
+    by: agent-S-0266
+  - to: review
+    at: 2026-10-05T02:02:30Z
+    by: agent-S-0266
+  - to: done
+    at: 2026-10-05T02:34:59Z
+    by: alex
 tags: [flai, template]
-touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/flai-cli.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/workflow.md, docs/users/flai.md]
+touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/flai-cli.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/workflow.md, docs/users/flai.md, design/issues]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2559
+  models:
+    - model: claude-opus-5-5
+      input: 238
+      output: 61402
+      cache_read: 10785231
+      cache_write: 294799
+      cost: 5.3307
+    - model: claude-sonnet-5
+      input: 74
+      output: 27735
+      cache_read: 2342445
+      cache_write: 186118
+      cost: 1.2113
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -40,10 +65,10 @@ forecast:
 S-0248's first verifier ran `scripts/close-out.sh` three times, about two minutes each: the first run piped the output through `tail`, which lost the script's exit status; the second printed `$?` after the pipe, which was tail's; the third redirected the output into a file, which the verifier's own rules forbid. The verifier's definition (`.claude/agents/verifier.md`, and its copy in `template/root/.claude/agents/verifier.md`) bans writing files but does not say how to read a long script's status, and `scripts/close-out.sh` prints its success line only when every step passes, so a run that stops gives nothing to tell a stop from an interrupted tail. The story agent's prompt (`flai/internal/harness/harness.go`) also hands the verifier the run without naming the step it is known to stop at, I-0057's `flai check --strict`, so the verifier treated the expected stop as something to reproduce. One run, read once, is the aim: the agent log `~/.flai/serve/agents/sf-S-0248-20261004T231346Z.log` from 23:18:07Z to 23:23:54Z shows the waste.
 
 ## Acceptance criteria
-- [ ] The verifier definition says how to run a long script and read its exit status in one command without a pipe or a file, with the timeout to give it, in `.claude/agents/verifier.md` and `template/root/.claude/agents/verifier.md`
-- [ ] `scripts/close-out.sh` ends every run with one line that says its outcome and the step it stopped at, so that the verifier never needs to run it again to learn why it stopped
-- [ ] The story agent's prompt, when it hands a close-out run to the verifier, names any step it already knows will stop and why, so that the verifier reports it and goes on to the steps after it rather than re-running
-- [ ] `design/conventions/delegation.md` and the template's copy say the same, and the design (`design/system/devex.md` or where close-out is described) records it
+- [x] The verifier definition says how to run a long script and read its exit status in one command without a pipe or a file, with the timeout to give it, in `.claude/agents/verifier.md` and `template/root/.claude/agents/verifier.md`
+- [x] `scripts/close-out.sh` ends every run with one line that says its outcome and the step it stopped at, so that the verifier never needs to run it again to learn why it stopped
+- [x] The story agent's prompt, when it hands a close-out run to the verifier, names any step it already knows will stop and why, so that the verifier reports it and goes on to the steps after it rather than re-running
+- [x] `design/conventions/delegation.md` and the template's copy say the same, and the design (`design/system/devex.md` or where close-out is described) records it
 
 ## Tasks
 - T-0849 close-out.sh ends every run with one line naming its outcome and the step it stopped at

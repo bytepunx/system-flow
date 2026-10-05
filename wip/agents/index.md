@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-05T01:35:52Z
+updated: 2026-10-05T02:34:59Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0266](S-0266.md) | The verifier reads a close-out run's exit status without piping it away, and the story agent tells it where the run is expected to stop | in-progress | agent-S-0266 | 2026-10-05T01:21:50Z |
 
 ## Strategic agents
 

@@ -3,15 +3,35 @@ id: T-0849
 type: task
 nature: improvement
 title: close-out.sh ends every run with one line naming its outcome and the step it stopped at
-status: backlog
+status: done
 parent: S-0266
 owner: alex
 created: 2026-10-05T00:18:50Z
-updated: 2026-10-05T00:18:50Z
-transitions: []
+updated: 2026-10-05T01:17:21Z
+transitions:
+  - to: ready
+    at: 2026-10-05T01:14:17Z
+    by: agent-S-0266
+  - to: in-progress
+    at: 2026-10-05T01:14:17Z
+    by: agent-S-0266
+  - to: done
+    at: 2026-10-05T01:17:21Z
+    by: agent-S-0266
 stream: S-0266
 tags: [scripts, template]
 touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md]
+usage:
+  source: log
+  seconds: 184
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 8267
+      cache_read: 1452013
+      cache_write: 39689
+      cost: 0.7177
 ---
 # T-0849 close-out.sh ends every run with one line naming its outcome and the step it stopped at
 

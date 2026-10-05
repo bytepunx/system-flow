@@ -4,10 +4,10 @@ title: "S-0268 plan: three tasks in two layers"
 anchor:
   path: wip/kanban/stories/S-0268-the-story-agent-s-prompt-says-to-batch-independent-edits-and-commands-in-one-turn-to-take-a-new-task-through-ready-in-one-command-and-to-prove-a-test-fails-without-the-shared-stash.md
   item: S-0268
-status: open
-participants: [planner-S-0268]
+status: resolved
+participants: [planner-S-0268, alex]
 created: 2026-10-05T00:30:19Z
-updated: 2026-10-05T00:30:19Z
+updated: 2026-10-05T01:34:34Z
 ---
 
 # TH-0119 S-0268 plan: three tasks in two layers
@@ -43,3 +43,6 @@ On wip/kanban/stories/S-0268-the-story-agent-s-prompt-says-to-batch-independent-
 - `delegation.md` gets the batching sentences as well as the prompt, because the goal names it and an agent started without flai serve's prompt reads only the conventions. The criteria require only the prompt.
 - `code-quality.md` already says a change gets a test that fails without it. I left it alone, and `git.md` says how to show that, as the criterion asks.
 - `template/CHANGELOG.md` and `template/template.yaml` are left to the release tooling, as for S-0266.
+
+### 2026-10-05T01:34:34Z alex
+Resolved.

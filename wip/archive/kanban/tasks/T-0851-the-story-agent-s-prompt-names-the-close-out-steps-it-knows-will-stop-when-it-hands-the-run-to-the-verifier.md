@@ -3,16 +3,36 @@ id: T-0851
 type: task
 nature: improvement
 title: The story agent's prompt names the close-out steps it knows will stop when it hands the run to the verifier
-status: backlog
+status: done
 parent: S-0266
 owner: alex
 created: 2026-10-05T00:19:04Z
-updated: 2026-10-05T00:19:04Z
-transitions: []
+updated: 2026-10-05T01:18:50Z
+transitions:
+  - to: ready
+    at: 2026-10-05T01:17:22Z
+    by: agent-S-0266
+  - to: in-progress
+    at: 2026-10-05T01:17:23Z
+    by: agent-S-0266
+  - to: done
+    at: 2026-10-05T01:18:50Z
+    by: agent-S-0266
 stream: S-0266
 tags: [harness, flai]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/flai-cli.md]
 after: [T-0849]
+usage:
+  source: log
+  seconds: 87
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 4597
+      cache_read: 807499
+      cache_write: 22072
+      cost: 0.3991
 ---
 # T-0851 The story agent's prompt names the close-out steps it knows will stop when it hands the run to the verifier
 

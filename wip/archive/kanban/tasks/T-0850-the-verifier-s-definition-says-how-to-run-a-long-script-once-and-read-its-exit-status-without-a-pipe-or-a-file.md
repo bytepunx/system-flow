@@ -3,16 +3,42 @@ id: T-0850
 type: task
 nature: improvement
 title: The verifier's definition says how to run a long script once and read its exit status without a pipe or a file
-status: backlog
+status: done
 parent: S-0266
 owner: alex
 created: 2026-10-05T00:18:58Z
-updated: 2026-10-05T00:18:58Z
-transitions: []
+updated: 2026-10-05T01:58:28Z
+transitions:
+  - to: ready
+    at: 2026-10-05T01:17:22Z
+    by: agent-S-0266
+  - to: in-progress
+    at: 2026-10-05T01:17:22Z
+    by: agent-S-0266
+  - to: done
+    at: 2026-10-05T01:58:28Z
+    by: agent-S-0266
 stream: S-0266
 tags: [agents, template]
 touches: [".claude/agents/verifier.md", template/root/.claude/agents/verifier.md]
 after: [T-0849]
+usage:
+  source: log
+  seconds: 2059
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 118
+      output: 30483
+      cache_read: 5354353
+      cache_write: 146354
+      cost: 2.6464
+    - model: claude-sonnet-5
+      input: 48
+      output: 18152
+      cache_read: 1533090
+      cache_write: 121811
+      cost: 0.7928
 ---
 # T-0850 The verifier's definition says how to run a long script once and read its exit status without a pipe or a file
 

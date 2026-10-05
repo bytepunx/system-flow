@@ -6,7 +6,7 @@ title: The story agent's prompt says to batch independent edits and commands in 
 status: ready
 owner: alex
 created: 2026-10-05T00:06:36Z
-updated: 2026-10-05T01:13:13Z
+updated: 2026-10-05T01:34:53Z
 transitions:
   - to: ready
     at: 2026-10-05T00:14:14Z
@@ -19,6 +19,29 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 4063
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 222
+          output: 25558
+          cache_read: 9862939
+          cache_write: 114854
+          cost: 3.4035
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 2h
+    by: planner-S-0268
+    at: 2026-10-05T01:34:35Z
+  value: 300
+  by: planner-S-0268
+  at: 2026-10-05T01:34:53Z
 forecast:
   duration: 25m
   delivery: 2026-10-05T01:39:00Z
@@ -65,8 +88,8 @@ The story declared no touches, so `flai touches suggest` was started from the pa
 
 **Forecast:** 25m, adjusted from `flai forecast`'s 16m. That figure is the median 86 s per unit of size over 7 done medium improvement stories, at size 11 (3 criteria, 8 touches). It was raised by 9m, because the change to `harness.go` makes the close-out run the flai tier, about two minutes a run, and the verifier runs it twice.
 
-**Delivery:** 01:47Z, moved from `flai forecast`'s 01:05Z. That figure plays out the pull order but not the hold. This story shares `harness.go`, `harness_test.go`, `delegation.md`, and `flai-cli.md` with S-0266, so it starts only when S-0266 is accepted, forecast at 01:22Z, and then takes its 25m.
+**Delivery:** set at 01:47Z, moved from `flai forecast`'s 01:05Z, because this story shares `harness.go`, `harness_test.go`, `delegation.md`, and `flai-cli.md` with S-0266 and is held until S-0266 is accepted. Since then, flai has replayed the pull order on each acceptance and keeps the delivery current itself.
 
-**Cost of delay:** not set yet. The story has no inputs and no epic, so `flai cod` refuses. TH-0117 asks the operator for `time_lost_per_cycle`, recommending 1h (150 USD/week).
+**Cost of delay:** 300.00 USD/week, as `flai cod` computes it, and unchanged. That is 2h of time lost per 168h cycle at 150 USD an hour. The operator gave the input on TH-0117, which is the alternative I offered: the full 110 minutes a week that the goal's minute or two per story comes to, rounded up.
 
 **Overlap:** S-0266's T-0851 also edits `delegation()` in `harness.go`. Whichever story is pulled second syncs over the first.

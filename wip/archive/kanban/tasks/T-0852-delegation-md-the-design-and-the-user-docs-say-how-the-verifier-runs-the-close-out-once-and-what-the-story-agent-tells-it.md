@@ -3,16 +3,36 @@ id: T-0852
 type: task
 nature: improvement
 title: delegation.md, the design, and the user docs say how the verifier runs the close-out once and what the story agent tells it
-status: backlog
+status: done
 parent: S-0266
 owner: alex
 created: 2026-10-05T00:19:12Z
-updated: 2026-10-05T00:19:12Z
-transitions: []
+updated: 2026-10-05T01:21:50Z
+transitions:
+  - to: ready
+    at: 2026-10-05T01:18:51Z
+    by: agent-S-0266
+  - to: in-progress
+    at: 2026-10-05T01:18:51Z
+    by: agent-S-0266
+  - to: done
+    at: 2026-10-05T01:21:50Z
+    by: agent-S-0266
 stream: S-0266
 tags: [conventions, docs, template]
 touches: [design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/workflow.md, docs/users/flai.md]
-after: [T-0850, T-0851]
+after: [T-0851]
+usage:
+  source: log
+  seconds: 179
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 5118
+      cache_read: 898905
+      cache_write: 24570
+      cost: 0.4443
 ---
 # T-0852 delegation.md, the design, and the user docs say how the verifier runs the close-out once and what the story agent tells it
 
