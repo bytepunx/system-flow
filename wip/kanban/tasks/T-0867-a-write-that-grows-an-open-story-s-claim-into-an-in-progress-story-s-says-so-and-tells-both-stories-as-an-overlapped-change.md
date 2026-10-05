@@ -3,15 +3,35 @@ id: T-0867
 type: task
 nature: remediation
 title: A write that grows an open story's claim into an in-progress story's says so and tells both stories as an overlapped change
-status: backlog
+status: done
 parent: S-0244
 owner: alex
 created: 2026-10-05T03:15:27Z
-updated: 2026-10-05T03:15:27Z
-transitions: []
+updated: 2026-10-05T05:01:19Z
+transitions:
+  - to: ready
+    at: 2026-10-05T04:41:44Z
+    by: agent-S-0244
+  - to: in-progress
+    at: 2026-10-05T04:41:44Z
+    by: agent-S-0244
+  - to: done
+    at: 2026-10-05T05:01:19Z
+    by: agent-S-0244
 stream: S-0244
 tags: [flai, mcp]
-touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/cursor.go]
+touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/cursor.go, flai/cmd/touches_overlap_test.go]
+usage:
+  source: log
+  seconds: 638
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 135
+      output: 53735
+      cache_read: 5851174
+      cache_write: 215409
+      cost: 3.4517
 ---
 # T-0867 A write that grows an open story's claim into an in-progress story's says so and tells both stories as an overlapped change
 

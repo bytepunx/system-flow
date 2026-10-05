@@ -3,15 +3,21 @@ id: T-0869
 type: task
 nature: remediation
 title: The story agent's prompt and the conventions say to wait for sub-agents through the harness's notice, and what to do on a grown-claim overlapped change
-status: backlog
+status: in-progress
 parent: S-0244
 owner: alex
 created: 2026-10-05T03:16:11Z
-updated: 2026-10-05T03:16:11Z
-transitions: []
+updated: 2026-10-05T05:03:51Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:01:49Z
+    by: agent-S-0244
+  - to: in-progress
+    at: 2026-10-05T05:01:49Z
+    by: agent-S-0244
 stream: S-0244
 tags: [flai, conventions, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-0867, T-0868]
 ---
 # T-0869 The story agent's prompt and the conventions say to wait for sub-agents through the harness's notice, and what to do on a grown-claim overlapped change

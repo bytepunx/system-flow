@@ -3,21 +3,34 @@ id: S-0244
 type: story
 nature: remediation
 title: "Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-03T03:31:01Z
-updated: 2026-10-05T04:38:16Z
+updated: 2026-10-05T05:03:51Z
 transitions:
   - to: ready
     at: 2026-10-04T21:44:16Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T04:41:19Z
+    by: agent-S-0244
 tags: [flai, template]
-touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/harness, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0059-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md, design/issues/summary.md]
+touches: [flai/internal/workitem/hold.go, flai/internal/itemedit, flai/internal/itemnew, flai/cmd/items.go, flai/cmd/edit.go, flai/cmd/touches.go, flai/internal/mcpserver, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/harness, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0059-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md, design/issues/summary.md, flai/cmd/touches_overlap_test.go, template/template.yaml]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 690
+  models:
+    - model: claude-opus-5-5
+      input: 218
+      output: 86627
+      cache_read: 9432793
+      cache_write: 347265
+      cost: 5.5645
 cost_of_delay:
   inputs:
     penalty_per_week: 625

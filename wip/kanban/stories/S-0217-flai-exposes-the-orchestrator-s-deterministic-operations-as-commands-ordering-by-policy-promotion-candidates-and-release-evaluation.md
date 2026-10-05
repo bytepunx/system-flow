@@ -3,17 +3,20 @@ id: S-0217
 type: story
 nature: feature
 title: "flai exposes the orchestrator's deterministic operations as commands: ordering by policy, promotion candidates, and release evaluation"
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-05T04:40:46Z
+updated: 2026-10-05T04:41:11Z
 transitions:
   - to: ready
     at: 2026-10-03T20:34:00Z
     by: alex
   - to: backlog
     at: 2026-10-04T00:41:09Z
+    by: alex
+  - to: ready
+    at: 2026-10-05T04:41:11Z
     by: alex
 tags: [flai]
 touches: [flai/cmd, flai/internal/workitem, flai/internal/release, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/manifest, flai/internal/guard, flai/internal/check/check.go, flai/internal/check/orchestration_test.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]

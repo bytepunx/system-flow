@@ -3,12 +3,18 @@ id: T-0870
 type: task
 nature: remediation
 title: The design and the user docs describe the grown-claim notice and the longer wait, and I-0059 is closed
-status: backlog
+status: in-progress
 parent: S-0244
 owner: alex
 created: 2026-10-05T03:16:19Z
-updated: 2026-10-05T03:16:19Z
-transitions: []
+updated: 2026-10-05T05:02:41Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:02:41Z
+    by: agent-S-0244
+  - to: in-progress
+    at: 2026-10-05T05:02:41Z
+    by: agent-S-0244
 stream: S-0244
 tags: [docs, design]
 touches: [design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0059-two-in-progress-stories-whose-claims-grew-to-overlap-each-wait-for-the-other-close-out-fails-flai-check-strict-on-wip-overlap-and-the-wait-costs-a-model-turn-every-five-minutes.md, design/issues/summary.md]

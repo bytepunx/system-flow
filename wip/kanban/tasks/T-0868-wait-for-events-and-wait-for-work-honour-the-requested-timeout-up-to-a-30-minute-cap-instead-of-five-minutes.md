@@ -3,15 +3,35 @@ id: T-0868
 type: task
 nature: remediation
 title: wait_for_events and wait_for_work honour the requested timeout up to a 30-minute cap instead of five minutes
-status: backlog
+status: done
 parent: S-0244
 owner: alex
 created: 2026-10-05T03:15:40Z
-updated: 2026-10-05T03:15:40Z
-transitions: []
+updated: 2026-10-05T05:01:19Z
+transitions:
+  - to: ready
+    at: 2026-10-05T04:41:45Z
+    by: agent-S-0244
+  - to: in-progress
+    at: 2026-10-05T04:41:45Z
+    by: agent-S-0244
+  - to: done
+    at: 2026-10-05T05:01:19Z
+    by: agent-S-0244
 stream: S-0244
 tags: [flai, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/timing.go, flai/internal/mcpserver/timing_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
+usage:
+  source: log
+  seconds: 637
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 27785
+      cache_read: 3025461
+      cache_write: 111381
+      cost: 1.7848
 ---
 # T-0868 wait_for_events and wait_for_work honour the requested timeout up to a 30-minute cap instead of five minutes
 
