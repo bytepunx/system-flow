@@ -261,3 +261,31 @@ func TestUnorderedListIndentOptions(t *testing.T) {
 		}
 	}
 }
+
+// I-0072: a task body's code span with a space before its closing backtick
+// reached main, and markdownlint-cli2 0.20.0 stopped a close-out on it.
+// mdlint reports it as markdownlint does, and lets CommonMark's one-space
+// padding through.
+func TestSpaceInCodeSpanOfI0072(t *testing.T) {
+	c, err := Parse([]byte("default: true\n"), false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ doc, want string }{
+		{"# T\n\n- Run `- Trigger: ` here.\n", "3 MD038/no-space-in-code Spaces inside code span elements [Context: \"`- Trigger: `\"]"},
+		{"# T\n\nPadded ` a ` and `` `x` `` and `   ` pass.\n", ""},
+		{"# T\n\nTwo `  a  ` here.\n", "3 MD038/no-space-in-code Spaces inside code span elements [Context: \"`  a  `\"]|" +
+			"3 MD038/no-space-in-code Spaces inside code span elements [Context: \"`  a  `\"]"},
+		{"# T\n\nAcross `a\nb ` lines.\n", "4 MD038/no-space-in-code Spaces inside code span elements [Context: \"`a b `\"]"},
+		{"# T\n\nA long `code span that runs past thirty characters ` here.\n", "3 MD038/no-space-in-code Spaces inside code span elements [Context: \"... runs past thirty characters `\"]"},
+		{"# T\n\n```text\n`x ` in a fence\n```\n", ""},
+	} {
+		var got []string
+		for _, f := range c.Lint(tc.doc) {
+			got = append(got, fmt.Sprintf("%d %s", f.Line, f))
+		}
+		if strings.Join(got, "|") != tc.want {
+			t.Errorf("%q:\n got  %s\n want %s", tc.doc, strings.Join(got, "|"), tc.want)
+		}
+	}
+}

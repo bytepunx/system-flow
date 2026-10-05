@@ -71,11 +71,19 @@ type delim struct {
 
 func (d *delim) count() int { return d.hi - d.lo }
 
+// codeSpan is one code span: its opening run starts at open, its content
+// runs from from to to, and its closing run ends at close, in seg.
+type codeSpan struct {
+	seg                   *segment
+	open, from, to, close int
+}
+
 // inlineOut collects what the inline rules read from every segment.
 type inlineOut struct {
 	emphs     []emph
 	leftovers []leftover
 	urls      [][2]int // line, col of each bare URL
+	codes     []codeSpan
 	groups    int
 }
 
@@ -264,6 +272,7 @@ func parseRange(seg *segment, from, to int, pair bool, out *inlineOut, info *seg
 			n := runLen(t[:to], i, '`')
 			if k := codeClose(t[:to], i+n, n); k >= 0 {
 				info.other++
+				out.codes = append(out.codes, codeSpan{seg: seg, open: i, from: i + n, to: k, close: k + n})
 				i = k + n
 			} else {
 				i += n

@@ -34,6 +34,7 @@ type line struct {
 	raw   string
 	kind  kind
 	start int // byte offset of the content in raw: after indentation and list markers
+	lead  int // byte offset where the containers' prefix ends: a code span keeps the indentation past it
 	para  *para
 	fence *fence
 }
@@ -293,8 +294,18 @@ func (p *parser) line(i int) {
 	rel := ind - base
 	off := skipColumns(raw, ind)
 	c := raw[off:]
+	ln.lead = skipColumns(raw, base)
 
 	if lazy {
+		// the containers the line still matches take their prefix; the
+		// rest of the indentation stays in the line
+		ln.lead = 0
+		for k := len(p.stack) - 1; k >= 0; k-- {
+			if p.stack[k].contentIndent <= ind {
+				ln.lead = skipColumns(raw, p.stack[k].contentIndent)
+				break
+			}
+		}
 		p.text(i, off)
 		return
 	}

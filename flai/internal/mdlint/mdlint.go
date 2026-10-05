@@ -72,6 +72,7 @@ func init() {
 		{"MD034", "Bare URL used", []string{"no-bare-urls"}, []string{"links", "url"}, md034},
 		{"MD036", "Emphasis used instead of a heading", []string{"no-emphasis-as-heading"}, []string{"headings", "emphasis"}, md036},
 		{"MD037", "Spaces inside emphasis markers", []string{"no-space-in-emphasis"}, []string{"whitespace", "emphasis"}, md037},
+		{"MD038", "Spaces inside code span elements", []string{"no-space-in-code"}, []string{"whitespace", "code"}, md038},
 		{"MD040", "Fenced code blocks should have a language specified", []string{"fenced-code-language"}, []string{"code", "language"}, md040},
 		{"MD047", "Files should end with a single newline character", []string{"single-trailing-newline"}, []string{"blank_lines"}, md047},
 		{"MD049", "Emphasis style", []string{"emphasis-style"}, []string{"emphasis"}, md049},

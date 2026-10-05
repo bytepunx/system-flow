@@ -495,6 +495,153 @@ func md037(_ *Config, d *doc, in *inlineOut, add adder) {
 	}
 }
 
+// jsSpace is JavaScript's \s, which markdownlint's rules match with.
+func jsSpace(r rune) bool {
+	switch r {
+	case '\t', '\n', '\v', '\f', '\r', ' ', 0xa0, 0x1680, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff:
+		return true
+	}
+	return r >= 0x2000 && r <= 0x200a
+}
+
+// ellipsify shortens a context as markdownlint does: past 30 characters it
+// keeps the start, the end, or both, of what the finding is about.
+func ellipsify(text string, start, end bool) string {
+	r := []rune(text)
+	switch {
+	case len(r) <= 30:
+		return text
+	case start && end:
+		return string(r[:15]) + "..." + string(r[len(r)-15:])
+	case end:
+		return "..." + string(r[len(r)-30:])
+	}
+	return string(r[:30]) + "..."
+}
+
+// codeLine is the part of a code span on one line.
+type codeLine struct {
+	line int
+	text string
+}
+
+// spanLines splits seg's text from from to to by line. A line after the
+// first keeps the indentation past its containers' prefix, as micromark
+// keeps it in a code span; with raw, it keeps all of it, as the source has
+// it.
+func spanLines(d *doc, seg *segment, from, to int, raw bool) []codeLine {
+	var out []codeLine
+	for k, p := range seg.pieces {
+		end := len(seg.text)
+		if k+1 < len(seg.pieces) {
+			end = seg.pieces[k+1].at - 1
+		}
+		if p.at > to || end < from {
+			continue
+		}
+		lo, hi := max(p.at, from), min(end, to)
+		text := seg.text[lo:hi]
+		if p.at > from {
+			lead := d.lines[p.line].lead
+			if raw {
+				lead = 0
+			}
+			if lead <= p.col {
+				text = d.lines[p.line].raw[lead:p.col] + text
+			}
+		}
+		out = append(out, codeLine{p.line, text})
+	}
+	return out
+}
+
+// md038 follows micromark's code text: one space or line ending at each end
+// is padding when both ends have one and the code is not all spaces, and
+// markdownlint reports what whitespace is left at the start of the first
+// line of code and at the end of the last, but for a space before a
+// backtick the padding cannot hold.
+func md038(_ *Config, d *doc, in *inlineOut, add adder) {
+	for _, cs := range in.codes {
+		ls := spanLines(d, cs.seg, cs.from, cs.to, false)
+		if len(ls) == 0 {
+			continue
+		}
+		first, last := ls[0].text, ls[len(ls)-1].text
+		pads := func(s string, at int) bool {
+			if len(ls) > 1 && s == "" {
+				return true // a line ending
+			}
+			return s != "" && s[at] == ' '
+		}
+		data := false
+		for _, l := range ls {
+			if strings.Trim(l.text, " ") != "" {
+				data = true
+			}
+		}
+		padding := data && pads(first, 0) && pads(last, len(last)-1)
+		if padding {
+			if first == "" {
+				ls = ls[1:]
+			} else {
+				ls[0].text = first[1:]
+			}
+			n := len(ls) - 1
+			if last == "" {
+				ls = ls[:n]
+			} else {
+				ls[n].text = ls[n].text[:len(ls[n].text)-1]
+			}
+		}
+		var datas []codeLine
+		for _, l := range ls {
+			if l.text != "" {
+				datas = append(datas, l)
+			}
+		}
+		if len(datas) == 0 {
+			continue
+		}
+		var parts []string
+		for _, l := range spanLines(d, cs.seg, cs.open, cs.close, true) {
+			parts = append(parts, l.text)
+		}
+		context := strings.Join(parts, " ")
+		// the whitespace before the first non-space and after the last
+		count := func(s string, fromEnd bool) int {
+			n := 0
+			for s != "" {
+				var r rune
+				var size int
+				if fromEnd {
+					r, size = utf8.DecodeLastRuneInString(s)
+				} else {
+					r, size = utf8.DecodeRuneInString(s)
+				}
+				if !jsSpace(r) {
+					if n > 0 && r == '`' && !padding {
+						n--
+					}
+					return n
+				}
+				n++
+				if fromEnd {
+					s = s[:len(s)-size]
+				} else {
+					s = s[size:]
+				}
+			}
+			return 0 // all whitespace
+		}
+		if s := datas[0]; count(s.text, false) > 0 {
+			add(s.line, "", ellipsify(context, true, false))
+		}
+		if s := datas[len(datas)-1]; count(s.text, true) > 0 {
+			add(s.line, "", ellipsify(context, false, true))
+		}
+	}
+}
+
 func md040(c *Config, d *doc, _ *inlineOut, add adder) {
 	allowed := c.listOpt("MD040", "allowed_languages")
 	only := c.boolOpt("MD040", "language_only", false)
