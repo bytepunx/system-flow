@@ -20,6 +20,28 @@ shift
 CLOSE_OUT_STORY="$story"
 export CLOSE_OUT_STORY
 
+# Every run ends with one line on stdout naming the story, the outcome, and
+# the step it stopped at, so nobody runs it again to learn why it stopped.
+# Set once the story is known: a usage error prints only the usage. The trap
+# reads $? before anything else can change it, and exits with it.
+step="the main branch check"
+signal=""
+finish() {
+  code="$1"
+  if [ -n "$signal" ]; then
+    echo "close-out: $story stopped at $step ($signal)"
+  elif [ "$code" -eq 0 ]; then
+    echo "close-out: $story passed every step; ready to move to review"
+  else
+    echo "close-out: $story stopped at $step (exit $code)"
+  fi
+  exit "$code"
+}
+trap 'finish "$?"' EXIT
+# An interrupt exits, which runs the EXIT trap once, with the signal's status.
+trap 'signal=interrupted; exit 130' INT
+trap 'signal=terminated; exit 143' TERM
+
 # The narrative is written in the main checkout, which a story worktree shares
 # its git directory with; the main branch is the one checked out there.
 common="$(git rev-parse --git-common-dir)"
@@ -28,6 +50,7 @@ base="$(git -C "$main" rev-parse --abbrev-ref HEAD)"
 [ "$base" != HEAD ] || { echo "close-out: the main checkout $main is not on a branch" >&2; exit 1; }
 
 # A rebase flai stream sync stopped on is finished or undone first.
+step="the rebase check"
 for dir in rebase-merge rebase-apply; do
   if [ -e "$(git rev-parse --git-path "$dir")" ]; then
     echo "close-out: a rebase is in progress; finish it with git rebase --continue, or undo it with git rebase --abort, then run this again" >&2
@@ -48,22 +71,29 @@ synced() {
   esac
 }
 checked=no
+step="the sync check"
 if [ -z "$(git status --porcelain)" ]; then
   synced
   checked=yes
 fi
 
-echo "close-out: markdown lint"
+step="markdown lint"
+echo "close-out: $step"
 scripts/lint-md.sh
-echo "close-out: behavior tests"
+step="behavior tests"
+echo "close-out: $step"
 scripts/test.sh
-echo "close-out: integration tests"
+step="integration tests"
+echo "close-out: $step"
 scripts/integration.sh
-echo "close-out: smoke tests"
+step="smoke tests"
+echo "close-out: $step"
 scripts/smoke.sh
-echo "close-out: flai check --strict"
+step="flai check --strict"
+echo "close-out: $step"
 scripts/check.sh
 
+step="the narrative"
 narrative="$main/wip/agents/$story.md"
 echo "close-out: narrative $narrative"
 [ -f "$narrative" ] || { echo "close-out: no narrative for $story at $narrative" >&2; exit 1; }
@@ -76,6 +106,7 @@ for section in "Current state" "Next steps"; do
   ' "$narrative" || { echo "close-out: ## $section in $narrative is empty; write it, then run this again" >&2; exit 1; }
 done
 
+step="commit"
 status="$(git status --porcelain)"
 if [ -n "$status" ]; then
   [ $# -gt 0 ] || { git status --short >&2; echo "close-out: uncommitted changes and no message; pass the message as git commit options (-m, or -F with a file outside the worktree)" >&2; exit 1; }
@@ -84,7 +115,9 @@ if [ -n "$status" ]; then
   git diff --cached --stat
   git commit "$@"
 fi
+step="the sync check"
 [ "$checked" = yes ] || synced
+step="the clean worktree check"
 status="$(git status --porcelain)"
 [ -z "$status" ] || { git status --short >&2; echo "close-out: the worktree is not clean after the commit" >&2; exit 1; }
-echo "close-out: $story is ready to move to review"
+# The EXIT trap prints the passing line.

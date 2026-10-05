@@ -9,4 +9,4 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `integration.sh` | Integration tests against real adapters (`make integration`) |
 | `smoke.sh` | End-to-end smoke tests (`make smoke`) |
 | `lint-md.sh` | markdownlint-cli2 over every markdown file with `.markdownlint.yaml` (`make lint-md`) |
-| `close-out.sh` | Before a story goes to review, in its worktree: lint, the three test tiers, `flai check --strict` scoped to the story, the narrative's `## Current state` and `## Next steps`, then the commit with the `git commit` options given; stops at the first step that fails |
+| `close-out.sh` | Before a story goes to review, in its worktree: lint, the three test tiers, `flai check --strict` scoped to the story, the narrative's `## Current state` and `## Next steps`, then the commit with the `git commit` options given; stops at the first step that fails, and every run ends with one line naming the story, the outcome, and the step it stopped at, so nobody runs it again to learn why it stopped |

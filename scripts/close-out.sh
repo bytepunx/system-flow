@@ -25,6 +25,28 @@ shift
 CLOSE_OUT_STORY="$story"
 export CLOSE_OUT_STORY
 
+# Every run ends with one line on stdout naming the story, the outcome, and
+# the step it stopped at, so nobody runs it again to learn why it stopped
+# (S-0266). Set once the story is known: a usage error prints only the usage.
+# The trap reads $? before anything else can change it, and exits with it.
+step="the rebase check"
+signal=""
+finish() {
+  code="$1"
+  if [ -n "$signal" ]; then
+    echo "close-out: $story stopped at $step ($signal)"
+  elif [ "$code" -eq 0 ]; then
+    echo "close-out: $story passed every step; ready to move to review"
+  else
+    echo "close-out: $story stopped at $step (exit $code)"
+  fi
+  exit "$code"
+}
+trap 'finish "$?"' EXIT
+# An interrupt exits, which runs the EXIT trap once, with the signal's status.
+trap 'signal=interrupted; exit 130' INT
+trap 'signal=terminated; exit 143' TERM
+
 base="${CLOSE_OUT_BASE:-main}"
 
 # A rebase flai stream sync stopped on is finished or undone first.
@@ -47,36 +69,44 @@ synced() {
   esac
 }
 checked=no
+step="the sync check"
 if [ -z "$(git status --porcelain)" ]; then
   synced
   checked=yes
 fi
 
 # Both sides of a rename, and paths unquoted, so a prefix match sees them all.
+step="the paths the branch changes against $base"
 committed="$(git -c core.quotePath=false diff --no-renames --name-only "$base...HEAD")"
 pending="$(git -c core.quotePath=false diff --no-renames --name-only HEAD)"
 untracked="$(git -c core.quotePath=false ls-files --others --exclude-standard)"
 touched() { printf '%s\n%s\n%s\n' "$committed" "$pending" "$untracked" | grep -q "^$1/"; }
 
 if touched flai; then
-  echo "close-out: flai lint, vitest, the full Go tests, and smoke"
+  step="flai lint, vitest, the full Go tests, and smoke"
+  echo "close-out: $step"
   "$ROOT/scripts/flai-test.sh"
 else
   if touched template; then
-    echo "close-out: template render and check"
+    step="template render and check"
+    echo "close-out: $step"
     "$ROOT/scripts/template-test.sh"
   fi
-  echo "close-out: markdown lint"
+  step="markdown lint"
+  echo "close-out: $step"
   "$ROOT/scripts/lint-md.sh"
-  echo "close-out: flai check --strict"
+  step="flai check --strict"
+  echo "close-out: $step"
   "$ROOT/scripts/check.sh"
 fi
 if touched flaiover; then
-  echo "close-out: flaiover lint, types, and unit tests"
+  step="flaiover lint, types, and unit tests"
+  echo "close-out: $step"
   "$ROOT/scripts/flaiover-test.sh"
 fi
 
 # The narrative is written in the main checkout, not on the story branch.
+step="the narrative"
 narrative="$CACHE_ROOT/wip/agents/$story.md"
 echo "close-out: narrative $narrative"
 [ -f "$narrative" ] || { echo "close-out: no narrative for $story at $narrative" >&2; exit 1; }
@@ -89,6 +119,7 @@ for section in "Current state" "Next steps"; do
   ' "$narrative" || { echo "close-out: ## $section in $narrative is empty; write it, then run this again" >&2; exit 1; }
 done
 
+step="commit"
 status="$(git status --porcelain)"
 if [ -n "$status" ]; then
   [ $# -gt 0 ] || { git status --short >&2; echo "close-out: uncommitted changes and no message; pass the message as git commit options (-m, or -F with a file outside the worktree)" >&2; exit 1; }
@@ -97,7 +128,9 @@ if [ -n "$status" ]; then
   git diff --cached --stat
   git commit "$@"
 fi
+step="the sync check"
 [ "$checked" = yes ] || synced
+step="the clean worktree check"
 status="$(git status --porcelain)"
 [ -z "$status" ] || { git status --short >&2; echo "close-out: the worktree is not clean after the commit" >&2; exit 1; }
-echo "close-out: $story is ready to move to review"
+# The EXIT trap prints the passing line.
