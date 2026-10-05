@@ -363,6 +363,42 @@ func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
 	}
 }
 
+// S-0266: the story's agent has the verifier run the close-out once, in one
+// command without a pipe or a file, and read its last line, and names in the
+// verifier's prompt any step it already knows will stop; an answered or
+// commit run is not told again.
+func TestThePromptSaysHowTheVerifierRunsTheCloseOut(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	want := []string{
+		"through the project's close-out script where it has one",
+		"Tell it to run the close-out once, in one command and without a pipe or a file",
+		"read its last line, which names the outcome and the step it stopped at",
+		"name in its prompt any step you already know will stop, and why",
+		"so that it reports that stop and checks the steps after it rather than running the close-out again",
+		"Fix what it finds yourself",
+	}
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		at := 0
+		for _, w := range want {
+			i := strings.Index(p[at:], w)
+			if i < 0 {
+				t.Errorf("prompt lacks %q after what comes before it:\n%s", w, p)
+				continue
+			}
+			at += i + len(w)
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, "run the close-out once") {
+			t.Errorf("told how the verifier runs the close-out again:\n%s", p)
+		}
+	}
+}
+
 // S-0176: the story's agent plans its tasks in layers as it writes them,
 // records why in Decisions, and hands each task to a task sub-agent, a layer
 // at once when its tasks are long, whose work it reviews and commits itself;
