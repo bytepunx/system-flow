@@ -6,7 +6,7 @@ title: Story-loop work whose outcome the repository determines moves from the ag
 status: backlog
 owner: alex
 created: 2026-10-05T01:35:27Z
-updated: 2026-10-05T01:35:28Z
+updated: 2026-10-05T01:35:29Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
@@ -28,6 +28,7 @@ Done when a story agent's run shows no turn that only commits, syncs, moves, log
 
 Drafted with the epic; finalize and order them on the board. Not in the epic because stories exist: S-0261 (prime pack size), S-0266 (verifier exit status), S-0267 (duplicate test tier), S-0268 (prompt: batching, stash), S-0249 (strict check scoped to the story).
 - S-0269 One command closes a task: flai task done commits, syncs, moves, logs, widens touches, checks, and answers the inbox
+- S-0270 Verification is a module: flai verify runs the tiers the diff selects and answers structured findings, replacing the verifier sub-agent's run
 
 ## Notes
 
