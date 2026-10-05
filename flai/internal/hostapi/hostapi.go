@@ -246,17 +246,18 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				return nil, bad("give one of story, for a story's agent, plan, for the planner of an epic or a story, and orchestrator, for the project's orchestrator")
 			}
 			id, read := in.Story, host.AgentStream
-			if in.Orchestrator {
+			switch {
+			case in.Orchestrator:
 				read = nil
 				if host.OrchestratorStream != nil {
 					read = func(root, _ string, after int64) (any, error) { return host.OrchestratorStream(root, after) }
 				}
-			} else if in.Plan != "" {
+			case in.Plan != "":
 				if !planID.MatchString(in.Plan) {
 					return nil, bad("%q is not an epic's or a story's ID", in.Plan)
 				}
 				id, read = in.Plan, host.PlanStream
-			} else if !storyID.MatchString(in.Story) {
+			case !storyID.MatchString(in.Story):
 				return nil, bad("%q is not a story's ID", in.Story)
 			}
 			after := int64(-1)
