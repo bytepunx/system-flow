@@ -2,12 +2,12 @@
 id: I-0057
 title: flai check --strict stops a story's close-out on wip/ findings outside the story
 class: efficiency
-status: open
+status: closed
 count: 21
 cost: 7m
 first_reported: 2026-10-02T16:13:36Z
 last_reported: 2026-10-05T00:30:22Z
-updated: 2026-10-05T00:30:22Z
+updated: 2026-10-05T00:57:35Z
 ---
 
 # I-0057 flai check --strict stops a story's close-out on wip/ findings outside the story
@@ -105,3 +105,4 @@ Story: S-0252.
 S-0252's second close-out, after main resolved the first run's warnings, stopped at flai check --strict on TH-0114 threads.archived (S-0267's thread) and E-0015 epic.lags-stories, which the story does not touch.
 
 ## Remediation
+Closed 2026-10-05T00:57:35Z: S-0249: flai check --story S-nnnn reports the findings outside the story as notes that neither an error nor --strict fails on, and --record-issues records each rule's in one open issue, opened or bumped once per story and findings (ADR-0085). scripts/close-out.sh exports CLOSE_OUT_STORY, so scripts/check.sh and TestMonorepoIsClean scope the close-out's check to the story, here and in the template; CI's unscoped check still gates every finding.
