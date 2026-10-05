@@ -224,6 +224,20 @@ flai serve disable plan
 
 **Where to look.** The run is kept in `serve/agents.json` under `plans`, its output in `serve/agents/<key>-planner-<time>.log`, and what it did and cost in `wip/agents/planner.md`. `flai hostapi agent.status` lists the runs as `plans`. A planner asks you in a thread on its item and waits for the answer. One that ended before you answered is recorded as `asked` and is not started again by the answer: ask for another run.
 
+### The orchestrate host action: the orchestrator (S-0218)
+
+With `orchestrate` on, `flai serve` runs one orchestrator for the project, on your machine, as you, for as long as the action stays on: it starts it, starts it again when it ends (a minute later when it failed), and stops it when you turn the action off ([ADR-0087](../../design/adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md)). It is off until you enable it:
+
+```bash
+flai serve enable orchestrate    # for the project in the working directory; --all-projects for every project
+flai serve journal               # every start, end, failure, and stop
+flai serve disable orchestrate   # stops the run
+```
+
+**Understand what enabling it means.** The orchestrator is one agent session that does not end, with the orchestrator's agent (`orchestration.agent` in `system-flow.yaml` over `agent`), so it spends while it waits and decides. It does not count against the in-progress limit. What it may do is what `orchestration.permissions` in `system-flow.yaml` turns on, each off by default: with none on, it reads, logs, and asks you on threads. `flai guard` refuses it every call outside them, names the permission the call needs, and logs the refusal; that holds only while `.claude/settings.json` runs the guard, on `Edit|Write|NotebookEdit` too for an orchestrator's session, as the template's does, and `flai` on `PATH` has the orchestrator's rules. A project whose `.claude/agents/` has no `orchestrator.md` cannot start it on `claude-code`: `flai upgrade` adds it. The permissions and what each allows are in [Running the orchestrator](../users/flai.md#running-the-orchestrator).
+
+**Where to look.** The run is kept in `serve/agents.json` under `orchestrator`, its output in `serve/agents/<key>-orchestrator-<time>.log`, and its decisions and the guard's refusals in `wip/agents/orchestrator.md`. `flai hostapi agent.status` shows the run as `orchestrator`, and the dashboard's Activity page shows it with its stream.
+
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 
 Everything above is changed in a shell on the host, and stays that way until you turn on `settings` ([ADR-0039](../../design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md)). With it on, the dashboard's **Settings** page changes the same things through flai:

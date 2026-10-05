@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-04
+updated: 2026-10-05
 status: active
 topics: [cli, template]
 ---
@@ -74,6 +74,11 @@ orchestration:                               # optional (S-0217): how the ready 
     policy: threshold                        # judgement, threshold, or theme; default judgement
     value: 500                               # threshold: the unreleased cost of delay per week, in planning.currency
     count: 5                                 # threshold: the accepted stories not yet released
+  permissions:                               # optional (S-0218): what the orchestrator may do without the operator; each off when unset
+    promote_to_ready: true                   # also plan_backlog_epics, finalize_drafts, order_ready, accept_reviews, publish
+    answer_threads: recommend                # off, recommend, or autonomous; default off
+  agent:                                     # optional (S-0218): the orchestrator's agent, over agent above
+    model: claude-sonnet-5
 flai:                                        # optional (S-0181): what the project asks of the flai that reads it
   minimum: 1.27.0                            # the oldest flai release that may read it; publishing a flai release that changes the front-matter fields raises it
 ```
@@ -95,6 +100,19 @@ Rules:
 - `planning.replan` and `planning.schedule` say when `flai serve` plans again on its own (S-0211, [ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md)). Both act only while the `plan` host action is on. `planning.replan` is what it does when a story is accepted or cancelled or the pull order changes: `never` does nothing; `deterministic` plays the board out again with no agent and moves the delivery of each forecast that changed; `agent` does that and queues the planner for each story whose delivery moved. Unset, it is `deterministic`. `planning.schedule` is when it runs the planner over every ready story: a five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`, which is 00:00 UTC. Unset, there is no schedule. `flai check` reports a value that is none of these as a `manifest.planning` error. The operator sets both by hand, as the other `planning` keys. When the planner runs again is in [strategic-agents.md](strategic-agents.md#planning-again).
 - `orchestration.policy` orders the ready column (S-0217). Its values are the names `flai order --by` takes: `cod` orders by cost of delay, the largest first; `wsjf` by cost of delay over forecast duration, the largest first; `throughput` by forecast duration, the shortest first; `fifo` leaves the operator's order alone. Unset, it is `fifo`. The list is `manifest.OrderPolicies`, and `Orchestration.PolicyOrDefault` gives the policy in effect.
 - `orchestration.release` says when accepted stories not yet released are due a release (S-0217). `orchestration.release.policy` is `judgement`, `threshold`, or `theme`. Unset, it is `judgement`, which leaves the release to the operator and is never met by itself. `threshold` takes `value`, the unreleased cost of delay per week in `planning.currency`, and `count`, the number of accepted stories not yet released; either or both, each zero or more. `theme` takes `epic`, an epic ID such as `E-0001`, or `tag`, a tag; one of them, not both. The list is `manifest.ReleasePolicies`, and `Release.PolicyOrDefault` gives the policy in effect.
-- `flai check` reports each thing wrong with `orchestration` as a `manifest.orchestration` error on its line: a policy or release policy outside its list, a threshold with neither figure or a negative one, and a theme with neither or both of `epic` and `tag`. The operator sets both keys by hand; no flai command changes them. `orchestration.permissions` is not a key yet; the manifest is decoded leniently, so it and any other unknown key are ignored.
+- `orchestration.permissions` is what the orchestrator may do without the operator (S-0218, [ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md)). Each permission is off when unset. `flai guard` reads them from the manifest at each of the orchestrator's calls, so a change applies at its next call ([strategic-agents.md](strategic-agents.md#its-permissions-and-the-guard)). The list is `manifest.PermissionNames`, and `Permissions.Allows` says whether one is on.
+
+  | Key | Values | Default | Lets the orchestrator |
+  |-----|--------|---------|-----------------------|
+  | `plan_backlog_epics` | `true`, `false` | `false` | ask for the planner on an epic in the backlog |
+  | `finalize_drafts` | `true`, `false` | `false` | finalize a draft story, `flai edit --no-draft` |
+  | `promote_to_ready` | `true`, `false` | `false` | move a story to `ready` |
+  | `order_ready` | `true`, `false` | `false` | write the order of the ready column, `flai order` |
+  | `answer_threads` | `off`, `recommend`, `autonomous` | `off` | reply on threads: `recommend` with a recommendation for the operator, `autonomous` with an answer of its own; the guard lets it reply with either |
+  | `accept_reviews` | `true`, `false` | `false` | accept a story in review, `flai accept` |
+  | `publish` | `true`, `false` | `false` | release and push accepted work, `flai release --pending` and `flai push` |
+
+- `orchestration.agent` is the orchestrator's agent (S-0218): the same shape as `agent`, merged over it as `planning.agent` is (`Manifest.OrchestrationAgent`), so it names only what the orchestrator runs differently. Unset, the orchestrator runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-orchestrator).
+- `flai check` reports each thing wrong with `orchestration` as a `manifest.orchestration` error on its line: a policy or release policy outside its list, a threshold with neither figure or a negative one, a theme with neither or both of `epic` and `tag`, a key under `permissions` that names no permission, an `answer_threads` that is not `off`, `recommend`, or `autonomous`, and an `agent` that is not valid, under the name `orchestration.agent`. The operator sets every `orchestration` key by hand; no flai command changes them.
 - `flai.minimum` is the oldest flai release, `X.Y.Z`, that may read the project (S-0181): one that knows every front-matter field its items, threads, and issues carry. `manifest.Load` refuses the manifest for a flai below it, so every command, `flai serve` (which leaves the project unserved and says why), and `flai mcp` stop before reading any item, with `manifest.TooOldError`: the version needed, the running one, and the upgrade (`flai host upgrade`, or `flai self-upgrade` where no flai host runs). A dev build (`dev`) is never below it, and one that is not a release version is a load error. Publishing a flai release raises it to that release when `flai/internal/workitem/front-matter-fields.txt` changed since the previous `flai/v*` tag (`release.RaiseMinimum`, in the publish commit, which warns that the host's flai must be upgraded once the release's binaries are built), so a release that adds a front-matter field raises it. A fields file the previous tag did not have raises nothing. A flai older than S-0181 does not know the key and ignores it, as the manifest is decoded leniently; what keeps such a flai reading is that it is told it is behind ([flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)). Unset, any flai reads the project.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent`, `flai.minimum`) and preserves comments where the YAML library allows it.

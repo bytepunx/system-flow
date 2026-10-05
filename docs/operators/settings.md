@@ -44,7 +44,7 @@ Keys only the `flai serve` commands on the host change, or the dashboard's Setti
 
 | Key | Default | Changed with | For |
 |-----|---------|--------------|-----|
-| `host_actions.<name>` | absent: every action off | `flai serve enable`, `flai serve disable` | For each host action (`push`, `auto-publish`, `agent`, `checks`, `dashboard`, `host`, `settings`, `plan`), the main checkouts it is on for, or `*` for every project ([The push host action](index.md#the-push-host-action), which lets the board publish; [the plan host action](index.md#the-plan-host-action-the-planner-s-0208), which lets you start the planner). `auto-publish` has `flai push --pending` release first; it is shell only, outside the workflow, and the dashboard's Settings page neither lists nor changes it ([Pushing outside the workflow](index.md#accepting-releases-nothing-publishing-reaches-the-remote-s-0087-s-0195)) |
+| `host_actions.<name>` | absent: every action off | `flai serve enable`, `flai serve disable` | For each host action (`push`, `auto-publish`, `agent`, `checks`, `dashboard`, `host`, `settings`, `plan`, `orchestrate`, `auto-approve`), the main checkouts it is on for, or `*` for every project ([The push host action](index.md#the-push-host-action), which lets the board publish; [the plan host action](index.md#the-plan-host-action-the-planner-s-0208), which lets you start the planner; `orchestrate`, which runs the orchestrator for as long as it is on ([Running the orchestrator](../users/flai.md#running-the-orchestrator))). `auto-approve` is shell only, like `auto-publish` ([Writes under .claude/](../users/flai.md#writes-under-claude)). `auto-publish` has `flai push --pending` release first; it is shell only, outside the workflow, and the dashboard's Settings page neither lists nor changes it ([Pushing outside the workflow](index.md#accepting-releases-nothing-publishing-reaches-the-remote-s-0087-s-0195)) |
 | `agent.command` | none | `flai serve agent set -- ...`, `flai serve agent clear` | What starts a ready story's agent when the story names no harness ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.name` | `agent` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents flai serve starts |
 | `agent.attended_minutes` | `6` | `flai serve agent set --attended-minutes` | How recent a sign of someone attending must be, and how long it holds a ready story back |
@@ -109,11 +109,11 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `orchestration.release.count` | unset | For `threshold`: the number of accepted stories not yet released at which a release is due; zero or more |
 | `orchestration.release.epic` | unset | For `theme`: an epic ID such as `E-0001`; a release is due when every story of it is accepted. Give it or `tag`, not both |
 | `orchestration.release.tag` | unset | For `theme`: a tag; a release is due when every story with it is accepted |
-| `orchestration.permissions.plan_backlog_epics` | `false` | The orchestrator may ask the planner to draft the stories of an epic in the backlog ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
+| `orchestration.permissions.plan_backlog_epics` | `false` | The orchestrator may ask the planner to draft the stories of an epic in the backlog; the `plan` host action must be on too ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
 | `orchestration.permissions.finalize_drafts` | `false` | The orchestrator may finalize a draft story, `flai edit --no-draft` |
 | `orchestration.permissions.promote_to_ready` | `false` | The orchestrator may move a story to `ready` |
-| `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order, `flai order --apply` |
-| `orchestration.permissions.answer_threads` | `off` | How the orchestrator replies on threads: `off` never; `recommend` with a recommendation for the operator; `autonomous` with an answer of its own |
+| `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order: `flai order --by <policy> --apply`, or `flai order` placing a story |
+| `orchestration.permissions.answer_threads` | `off` | How the orchestrator replies on threads: `off` never; `recommend` with a recommendation for the operator; `autonomous` with an answer of its own. `flai guard` lets it reply with either of the last two; its prompt says which |
 | `orchestration.permissions.accept_reviews` | `false` | The orchestrator may accept a story in review, `flai accept` |
 | `orchestration.permissions.publish` | `false` | The orchestrator may release and push accepted work, `flai release --pending` and `flai push` |
 | `orchestration.agent.harness` | `agent.harness` | The orchestrator's harness, over the project's `agent` |
@@ -136,7 +136,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `wip_limits` | the front matter of `wip/kanban/board.md` | as the template sets them | The WIP limit of each column; flai serve starts agents only while `in-progress` has room ([design/system/workflow.md](../../design/system/workflow.md)) |
 | `order` | the front matter of `wip/kanban/board.md` | empty | The pull order of `ready` and `backlog` stories; drag cards on the board or run `flai order` |
 | `mcpServers.flai` | `.mcp.json` | `flai mcp` on stdio | How an agent on the host reaches flai's MCP server ([MCP over HTTP](index.md#mcp-over-http)) |
-| `hooks.PreToolUse` | `.claude/settings.json` | `flai guard` before `Bash` and `mcp__flai__.*`, and before `Edit\|Write\|NotebookEdit` when `FLAI_ROLE` is `plan` | Refuses a Claude Code sub-agent's writes to work items, threads, and history ([Sub-agents](../users/flai.md#sub-agents)), and holds the planner to planning ([Running the planner](../users/flai.md#running-the-planner)) |
+| `hooks.PreToolUse` | `.claude/settings.json` | `flai guard` before `Bash` and `mcp__flai__.*`, and before `Edit\|Write\|NotebookEdit` when `FLAI_ROLE` is `plan` or `orchestrate` | Refuses a Claude Code sub-agent's writes to work items, threads, and history ([Sub-agents](../users/flai.md#sub-agents)), holds the planner to planning ([Running the planner](../users/flai.md#running-the-planner)), and holds the orchestrator to `orchestration.permissions` ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
 
 ## Environment variables
 
@@ -167,10 +167,10 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 |----------|--------|-------|
 | `FLAI_HOST_URL`, `FLAI_HOST_TOKEN` | `flai host`, for `flai serve` and the MCP servers; never passed on to an agent `flai serve` starts | The host's address and the token its API takes; `flai serve` uses them only when the host's token is the one beside its own config |
 | `FLAI_STORY` | `flai serve`, for an agent it starts for a story | The story the agent is to work |
-| `FLAI_ROLE` | `flai serve`, for the planner it starts (`flai plan`) | `plan`; `flai guard` reads it to hold the session to planning |
+| `FLAI_ROLE` | `flai serve`, for the planner it starts (`flai plan`) and the orchestrator it runs (the `orchestrate` host action) | `plan` or `orchestrate`; `flai guard` reads it to hold the session to planning, or to the orchestrator's permissions |
 | `FLAI_ITEM` | `flai serve`, for the planner it starts | The epic or story the planner plans |
 | `FLAI_STARTED_BY` | `flai serve` | `flai-serve` |
-| `FLAI_AGENT`, `FLAI_SESSION` | `flai serve` | The agent's own name, `<agent.name>-<story>`, or `planner-<item>` for the planner, and a session made from the start time |
+| `FLAI_AGENT`, `FLAI_SESSION` | `flai serve` | The agent's own name, `<agent.name>-<story>`, `planner-<item>` for the planner, or `orchestrator` for the orchestrator, and a session made from the start time |
 | `FLAI_MODEL`, `FLAI_HARNESS` | `flai serve`, for your `agent.command` | The story's model and harness |
 | `FLAI_AGENT_CONFIG` | `flai serve`, for your `agent.command` | The story's `agent.config` as a JSON object |
 | `FLAI_AGENT_ROLES` | `flai serve`, for your `agent.command`, when the story's agent has roles | The story's `agent.roles` as a JSON object, each role with its `harness`, `model`, and `config` |

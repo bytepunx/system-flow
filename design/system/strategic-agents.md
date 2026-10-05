@@ -1,20 +1,20 @@
 ---
 title: Strategic agents
-updated: 2026-10-04
+updated: 2026-10-05
 status: active
 topics: [planning, orchestration, analysis]
 ---
 
 # Strategic agents
 
-The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. So far the planner runs, when the operator asks for it and, behind the `plan` host action, on its own; the orchestrator and the analyzer have their packs and their activity documents, and nothing starts them yet.
+The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer has its pack and its activity document, and nothing starts it yet.
 
 | Part | Planner | Orchestrator | Analyzer |
 |------|---------|--------------|----------|
 | Pack: `flai prime --role` ([ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md)) | `plan`, with `--epic` or `--story` | `orchestrate` | `analyze` |
 | Activity document ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)) | `wip/agents/planner.md` | `wip/agents/orchestrator.md` | `wip/agents/analyzer.md` |
-| Host action | `plan` | not yet | not yet |
-| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | not yet | not yet |
+| Host action | `plan` | `orchestrate` | not yet |
+| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | while `orchestrate` is on, one per project, started again when it ends ([ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md), [The orchestrator](#the-orchestrator)) | not yet |
 
 ## The planner
 
@@ -40,7 +40,7 @@ Each needs the host action `plan` on for the project: `flai serve enable plan`, 
 - while a planner runs for the item: one item has one planner at a time;
 - when the planner's agent names no harness and no command is set on the host.
 
-The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. `flai guard` refuses it to a sub-agent and to the planner.
+The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic in the backlog while the operator gives it `plan_backlog_epics` ([Its permissions and the guard](#its-permissions-and-the-guard)). `flai guard` refuses the tool to a sub-agent and to the planner.
 
 ### Its agent
 
@@ -162,7 +162,7 @@ It records why under a `### Planning` heading in the story's Notes: where each t
 
 Each refusal names the rule broken and says to ask the operator on the item, or put it in the final summary. Other shell commands pass, as a sub-agent's do (ADR-0060). The planner's sub-agents are held as every sub-agent is. With `story new`, the last `--draft` decides: bare, or with a value that parses as true.
 
-Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, and exits at once otherwise, so a story's session pays one shell test per edit. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
+Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan` or `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), and exits at once otherwise, so a story's session pays one shell test per edit. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
 
 ### Checked creation
 
@@ -285,6 +285,89 @@ Revisiting a story's open tasks was not measured: the second run on S-0217 was n
 
 An epic's or a story's page shows **Plan** while the `plan` action is on, the dashboard can write, and the item is open: not done, cancelled, or archived. It says when the item's newest planner run has not ended. See [flaiover-dashboard.md](flaiover-dashboard.md).
 
-## The orchestrator and the analyzer
+## The orchestrator
 
-Each primes with its role and has its activity document; `activity_log` takes its kind. No host action, guard rule, definition, or command starts either yet. When one does, it follows the planner's shape: a host action, a role in `FLAI_ROLE`, a definition in `.claude/agents/`, and guard rules of its own.
+The orchestrator keeps a project's work moving, and nothing else (S-0218, [ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md)). It asks the planner to plan a backlog epic, finalizes drafts, promotes stories to ready, orders the ready column, answers threads, accepts stories, and publishes releases, each only while the operator's permission for it is on. It takes every figure from flai's commands, logs each decision, and waits on events between decisions. Unlike the planner, it has no item and does not end: `flai serve` runs one per project for as long as the operator wants it.
+
+### Starting and stopping it
+
+The host action `orchestrate`, off by default, turns it on for a project: `flai serve enable orchestrate`, or the dashboard's Settings page while `settings` is on. No command or method starts it. `flai serve` reads the action at every look of the project's launcher: when its work items or threads change, when an agent ends, and every minute (`internal/serve/orchestrate.go`).
+
+| At a look | What `flai serve` does |
+|-----------|------------------------|
+| The action is on and no run is going | Starts the orchestrator |
+| The action is on and the last run failed less than a minute ago | Nothing until the minute has passed, so that a run that fails at once does not spin |
+| The action is on and a run is going | Nothing |
+| The action is off and a run is going | Stops it as `flai serve agent stop` stops a story's agent: marks it stopped, ends its process group, and kills the group once the grace has passed. The stop is journalled, and the run's activity is logged with the summary `stopped: orchestrate turned off` |
+
+A run that ends while the action is on is started again at the next look. The orchestrator does not end by itself, so a run ends when it fails, when it is stopped, or when its harness ends it.
+
+A start is refused when the orchestrator's agent names no harness and no command is set on the host, and when the harness refuses it, as `claude-code` does in a project with no `.claude/agents/orchestrator.md`, naming `flai upgrade`. A refusal is recorded as a failed run and journalled once: the same refusal at the next looks is not recorded again until a start gets past it or the action is turned off.
+
+### Its agent
+
+`orchestration.agent` in `system-flow.yaml`, merged over the project's `agent` as `planning.agent` is (`Manifest.OrchestrationAgent`), gives the orchestrator's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports an `orchestration.agent` that is not valid as `manifest.orchestration`. See [project-manifest.md](project-manifest.md).
+
+### How it runs
+
+The launcher's `orchestrate` starts it through the harness adapter with a `harness.Request` whose `Role` is `orchestrate`, with no `Item` and no `Story`.
+
+- **Where.** In the project's main checkout, where the items are. No branch, no worktree.
+- **As whom.** `FLAI_AGENT` is `orchestrator`. The environment carries `FLAI_ROLE=orchestrate`, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`, and no `FLAI_ITEM` or `FLAI_STORY`. `roleEnv` refuses an orchestrator request that names an item or a story.
+- **claude-code.** The session is named `<key> orchestrate`. It runs with `--agent orchestrator` over the project's `.claude/agents/orchestrator.md`, which is passed in `--agents` beside the explorer and the verifier, with the orchestrator's agent's model when it names one. Its permission handler is flai's `permission_prompt`, as for every session `flai serve` starts ([ADR-0086](../adrs/0086-flai-serve-gives-a-claude-code-agent-flai-s-permission-prompt-as-its-permission.md)).
+- **The operator's command.** It gets `FLAI_ROLE`, and `{story}` is empty.
+
+### What it is told
+
+`harness.Prompt` gives the orchestrator a prompt of its own (`orchestratePrompt`): keep the project's work moving and do nothing else, as the convention's section "As the orchestrator" says; prime with `--role orchestrate`; call `inbox` and read the board; hand wide search to the explorer. Act only within `orchestration.permissions` and by `orchestration.policy`, and ask when a permission is unclear. Take every figure from flai and do no arithmetic: the order from `flai order --by` (`order_by_policy`), the stories that could go to ready from `flai promote --candidates` (`promote_candidates`), and whether a release is due from `flai release --evaluate` (`release_evaluate`). Log each decision with `activity_log`, kind `orchestrator`: what it did, on which items, why, and the policy figure behind it. Then hold `wait_for_events`, again each time it returns, and decide again when something has changed, without ending. Write only through flai; never edit code or documents, and never work a story. Never work around a guard refusal: ask the operator with `thread_open` on the item, the recommended answer first, and do what needs no answer meanwhile.
+
+`orchestrator.md` says the same in short and lists its tools: `Read`, `Grep`, `Glob`, `Bash`, `Agent`, and flai's MCP tools for reading, `inbox`, `board`, `item_edit`, `item_move`, `thread_open`, `thread_reply`, `activity_log`, `wait_for_events`, `plan`, `order_by_policy`, `promote_candidates`, and `release_evaluate`. It lists no `Edit`, `Write`, or `NotebookEdit`. The guard refuses it `item_edit` whatever its permissions; it finalizes a draft with `flai edit --no-draft`.
+
+### Its permissions and the guard
+
+`orchestration.permissions` in `system-flow.yaml` says what the orchestrator may do without the operator. Each is off when unset. `flai check` reports an unknown key or a bad value as `manifest.orchestration`, so that a misspelt permission is not silently off ([project-manifest.md](project-manifest.md)).
+
+`flai guard` reads `FLAI_ROLE` from the hook's environment. With `orchestrate`, it reads the permissions from the manifest of the project the hook runs in, at each call, and checks the session's own calls, which carry no agent ID (`Guard.orchestrate`). A manifest it cannot read leaves every permission off, with a warning. The orchestrator's sub-agents are held as every sub-agent is.
+
+| Permission | Allows |
+|------------|--------|
+| none needed | The reads a sub-agent has, S-0217's evaluations among them (`order_by_policy`, `promote_candidates`, `release_evaluate`, `flai order --by`, `flai promote --candidates`, `flai release --evaluate`); `inbox`, `activity_log`, `wait_for_events`, and `thread_open`; `thread new`, and `issue new` and `bump`; git's reads |
+| `plan_backlog_epics` | The MCP tool `plan` and `flai plan` on an epic |
+| `finalize_drafts` | `flai edit --no-draft` with nothing else to change: only `--by`, `--config`, `--hash`, `--json`, `--verbose`, and `--yes` beside it |
+| `promote_to_ready` | `item_move` and `flai move` to `ready` |
+| `order_ready` | `flai order` that writes: `--by` with `--apply`, or placing a story |
+| `answer_threads` | `thread_reply` and `flai thread reply`, while it is `recommend` or `autonomous` |
+| `accept_reviews` | `flai accept` |
+| `publish` | `flai release --pending` and `flai push` |
+
+A call a permission would allow is refused while that permission is off, and the refusal names it: `the orchestrator cannot <call>: it needs orchestration.permissions.<name>, which is off`. Every other write is refused whatever the permissions, saying that the orchestrator never does it, and why: `Edit`, `Write`, and `NotebookEdit`; every other flai MCP tool, `item_edit` and `item_new` among them; `plan` on anything but an epic; `item_move` and `flai move` to any state but `ready`; `flai edit` that changes anything but the draft flag; `flai release` without `--pending`; every other flai command that writes; and git's writes. Each refusal ends by telling it to ask the operator with `thread_open` on the item. Other shell commands pass, as a sub-agent's do (ADR-0060).
+
+The guard does not tell `recommend` from `autonomous`: either lets the orchestrator reply, and the prompt says which kind of reply to write. The MCP tool `plan`, asked by the orchestrator, is also checked in `flai mcp` (`orchestratorPlans`): the item must be an epic in the backlog, not archived, and `plan_backlog_epics` on. The orchestrator is journalled as who asked. The `plan` host action must be on as well, since the planner is started as `serve.Plan` starts any. Every other agent `flai serve` started is still refused the tool.
+
+Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry; a lock older than ten seconds is taken as left behind.
+
+`.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `plan` or `orchestrate` ([The guard](#the-guard)).
+
+### The run and how it ends
+
+The run is recorded in `serve/agents.json` under `orchestrator`, the project's newest run alone, with the fields a story's run has and neither `story` nor `item`. `Running` and `Last` never name it, and the in-progress limit does not count it. Its output is in `serve/agents/<key>-orchestrator-<start>.log`, beside the other agents' logs, each run with a log of its own.
+
+When the process ends, or the next look finds it gone, flai serve settles the run (`orchestrateEnded`):
+
+| Outcome | When |
+|---------|------|
+| `stopped` | the `orchestrate` action was turned off and flai serve stopped it |
+| `failed` | it exited with a code other than 0, or could not be started |
+| `worked` | otherwise, an exit nobody saw included |
+
+It then logs the run's activity since the last entry in `wip/agents/orchestrator.md` with `serve.LogRunEnd`: the run's final reply as the summary, or `stopped: orchestrate turned off`, and the seconds and cost measured from the log. Each decision the orchestrator logs with `activity_log` during the run covers its own span, so the end logs only what came after the last one. Nothing is charged to work items.
+
+Every start, end, failure, and stop is a journal entry with action `orchestrate` and method `serve.orchestrate`. `agent.status` carries the run as `orchestrator`, null before the first; `agent.stream` with `orchestrator: true` reads its log as it reads a story's agent's (`OrchestratorStream`). When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: orchestrate`.
+
+### On the dashboard
+
+The Activity page lists the orchestrator's run and its stream. The Settings page lists the `orchestrate` action with the others, to turn on and off while `settings` is on. A page of its own, with its decisions and refusals, is S-0228's. See [flaiover-dashboard.md](flaiover-dashboard.md).
+
+## The analyzer
+
+It primes with its role and has its activity document; `activity_log` takes its kind. No host action, guard rule, definition, or command starts it yet. When one does, it follows the planner's and the orchestrator's shape: a host action, a role in `FLAI_ROLE`, a definition in `.claude/agents/`, and guard rules of its own.
