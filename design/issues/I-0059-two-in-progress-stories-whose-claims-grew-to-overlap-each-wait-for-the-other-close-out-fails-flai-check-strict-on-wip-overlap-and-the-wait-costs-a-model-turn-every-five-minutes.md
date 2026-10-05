@@ -2,12 +2,12 @@
 id: I-0059
 title: "Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes"
 class: defect
-status: open
+status: closed
 count: 4
 cost: 21m
 first_reported: 2026-10-03T02:27:09Z
 last_reported: 2026-10-03T19:31:58Z
-updated: 2026-10-03T19:31:58Z
+updated: 2026-10-05T05:06:36Z
 ---
 
 # I-0059 Two in-progress stories whose claims grew to overlap each wait for the other: close-out fails flai check --strict on wip.overlap, and the wait costs a model turn every five minutes
@@ -47,3 +47,4 @@ Possible remediations, cheapest first:
 5. **Detect the mutual wait.** `flai serve` or the designer's inbox could report two in-progress stories each blocked only on the other's claim (both agents idle in waits, both close-outs failing on `wip.overlap` against each other) and open a thread to the operator naming the pair and what clears it, rather than leaving two agents polling for an hour.
 
 Related: S-0197 (stream sync and conflict reporting), the agent-waiting chart in E-0016 (S-0215) would have made this visible; ADR-0046 for the hold.
+Closed 2026-10-05T05:06:36Z: S-0244. Remediation 1 was S-0249's close-out, scoped to the story, so a wip.overlap with another story no longer stops it. 2 by T-0867: a write that grows a story's claim into another in-progress story's says so and tells both stories as an overlapped change. 3 by T-0868: wait_for_events and wait_for_work hold for the timeout asked up to 30 minutes, with a progress notification every minute that keeps Claude Code's idle limit from dropping the call. 4 by T-0869: the prompt and the delegation convention say to wait for sub-agents through the harness's notice, not wait_for_events. 5 is not needed: once the close-out no longer stops on wip.overlap, two stories can no longer each wait for the other.
