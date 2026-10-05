@@ -30,10 +30,10 @@ flai check found outside the story:
 Story: S-0260.
 flai check found outside the story:
 `wip/threads/TH-0112-s-0249-cost-of-delay-inputs-time-lost-per-cycle-7m.md`: TH-0112 is answered but S-0249 is archived; resolve it or move it
+
 ### 2026-10-05T03:23:20Z
 Story: S-0253.
 flai check found outside the story:
 `wip/threads/TH-0112-s-0249-cost-of-delay-inputs-time-lost-per-cycle-7m.md`: TH-0112 is answered but S-0249 is archived; resolve it or move it
-
 
 ## Remediation

@@ -20,10 +20,10 @@ flai check finds `wip.overlap` outside the story at close-out
 Story: S-0260.
 flai check found outside the story:
 `wip/kanban/stories/S-0253-an-acceptance-merge-committed-conflict-markers-to-a-design-document-on-main-and-nothing-caught-it.md`: S-0253 touches docs/users/flai.md, which S-0260 (in progress) also touches as docs/users/flai.md
+
 ### 2026-10-05T03:23:20Z
 Story: S-0253.
 flai check found outside the story:
 `wip/kanban/stories/S-0253-an-acceptance-merge-committed-conflict-markers-to-a-design-document-on-main-and-nothing-caught-it.md`: S-0253 touches docs/users/flai.md, which S-0260 (in progress) also touches as docs/users/flai.md
-
 
 ## Remediation
