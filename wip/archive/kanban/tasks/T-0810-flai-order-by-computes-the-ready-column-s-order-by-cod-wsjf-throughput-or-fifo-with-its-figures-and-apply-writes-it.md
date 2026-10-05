@@ -3,15 +3,35 @@ id: T-0810
 type: task
 nature: feature
 title: flai order --by computes the ready column's order by cod, wsjf, throughput, or fifo with its figures, and --apply writes it
-status: backlog
+status: done
 parent: S-0217
 owner: alex
 created: 2026-10-04T19:08:56Z
-updated: 2026-10-04T19:08:56Z
-transitions: []
+updated: 2026-10-05T06:06:11Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:59:52Z
+    by: agent-S-0217
+  - to: in-progress
+    at: 2026-10-05T05:59:52Z
+    by: agent-S-0217
+  - to: done
+    at: 2026-10-05T06:06:11Z
+    by: agent-S-0217
 stream: S-0217
 tags: [flai]
 touches: [flai/internal/workitem/policy.go, flai/internal/workitem/policy_test.go, flai/cmd/order.go, flai/cmd/order_test.go]
+usage:
+  source: log
+  seconds: 379
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 254
+      cache_read: 1231946
+      cache_write: 74569
+      cost: 1.1257
 ---
 # T-0810 flai order --by computes the ready column's order by cod, wsjf, throughput, or fifo with its figures, and --apply writes it
 

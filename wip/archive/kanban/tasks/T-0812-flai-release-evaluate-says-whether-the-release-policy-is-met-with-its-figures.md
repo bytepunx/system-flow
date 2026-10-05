@@ -3,16 +3,36 @@ id: T-0812
 type: task
 nature: feature
 title: flai release --evaluate says whether the release policy is met, with its figures
-status: backlog
+status: done
 parent: S-0217
 owner: alex
 created: 2026-10-04T19:09:11Z
-updated: 2026-10-04T19:09:11Z
-transitions: []
+updated: 2026-10-05T06:14:35Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:06:12Z
+    by: agent-S-0217
+  - to: in-progress
+    at: 2026-10-05T06:06:12Z
+    by: agent-S-0217
+  - to: done
+    at: 2026-10-05T06:14:35Z
+    by: agent-S-0217
 stream: S-0217
 tags: [flai]
 touches: [flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release.go, flai/cmd/release_evaluate_test.go]
 after: [T-0809]
+usage:
+  source: log
+  seconds: 503
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 518
+      cache_read: 2632221
+      cache_write: 103698
+      cost: 2.3572
 ---
 # T-0812 flai release --evaluate says whether the release policy is met, with its figures
 

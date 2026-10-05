@@ -4,10 +4,10 @@ title: Plan for S-0254
 anchor:
   path: wip/kanban/stories/S-0254-flai-touches-with-paths-replaces-an-item-s-touches-and-its-help-does-not-say-so.md
   item: S-0254
-status: open
-participants: [planner-S-0254]
+status: resolved
+participants: [planner-S-0254, alex]
 created: 2026-10-05T05:50:09Z
-updated: 2026-10-05T05:50:52Z
+updated: 2026-10-05T06:24:17Z
 ---
 
 # TH-0153 Plan for S-0254
@@ -32,3 +32,6 @@ Assumptions:
 
 ### 2026-10-05T05:50:52Z planner-S-0254
 An overlap to know about: S-0251, planned meanwhile, also claims `flai/cmd/stream_sync.go`, `flai/cmd/stream_sync_test.go`, `docs/users/flai.md`, `flai-reference.md`, `flai-cli.md`, and `design/issues/summary.md`. Whichever of the two starts second will be held until the first is done, so they cannot conflict. If you would rather they could run together, I can drop the sync hint change, the `stream_sync` paths, from T-0976 and S-0254. The sync hint already repeats every touch, so it does not cause I-0067; changing it to `--add` is only a tidier hint. The docs and `summary.md` would still overlap.
+
+### 2026-10-05T06:24:17Z alex
+Resolved.

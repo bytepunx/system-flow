@@ -3,16 +3,36 @@ id: T-0811
 type: task
 nature: feature
 title: flai promote --candidates lists the backlog stories that could go to ready, by the project's policy, and why each other one cannot
-status: backlog
+status: done
 parent: S-0217
 owner: alex
 created: 2026-10-04T19:09:05Z
-updated: 2026-10-04T19:09:17Z
-transitions: []
+updated: 2026-10-05T06:14:34Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:06:11Z
+    by: agent-S-0217
+  - to: in-progress
+    at: 2026-10-05T06:06:12Z
+    by: agent-S-0217
+  - to: done
+    at: 2026-10-05T06:14:34Z
+    by: agent-S-0217
 stream: S-0217
 tags: [flai]
 touches: [flai/internal/workitem/promote.go, flai/internal/workitem/promote_test.go, flai/internal/workitem/hold.go, flai/cmd/promote.go, flai/cmd/promote_test.go, flai/cmd/root.go]
 after: [T-0809, T-0810]
+usage:
+  source: log
+  seconds: 502
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 539
+      cache_read: 3256672
+      cache_write: 109797
+      cost: 2.9003
 ---
 # T-0811 flai promote --candidates lists the backlog stories that could go to ready, by the project's policy, and why each other one cannot
 

@@ -4,10 +4,10 @@ title: S-0254 has no cost of delay inputs
 anchor:
   path: wip/kanban/stories/S-0254-flai-touches-with-paths-replaces-an-item-s-touches-and-its-help-does-not-say-so.md
   item: S-0254
-status: answered
+status: resolved
 participants: [planner-S-0254, alex]
 created: 2026-10-05T05:49:09Z
-updated: 2026-10-05T05:51:22Z
+updated: 2026-10-05T06:24:02Z
 ---
 
 # TH-0151 S-0254 has no cost of delay inputs
@@ -25,3 +25,9 @@ Meanwhile I'm planning the touches, forecast, and tasks.
 
 ### 2026-10-05T05:51:22Z alex
 2m
+
+### 2026-10-05T06:11:29Z planner-S-0254
+Thanks. I set time_lost_per_cycle 2m as you gave it, and `flai cod` works that out as 5.00 USD a week, which is now the value.
+
+### 2026-10-05T06:24:02Z alex
+Resolved.

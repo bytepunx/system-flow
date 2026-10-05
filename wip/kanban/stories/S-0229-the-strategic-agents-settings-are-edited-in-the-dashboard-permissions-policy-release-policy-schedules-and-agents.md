@@ -3,12 +3,15 @@ id: S-0229
 type: story
 nature: feature
 title: "The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents"
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T06:13:40Z
-transitions: []
+updated: 2026-10-05T06:14:02Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:14:02Z
+    by: alex
 tags: [dashboard, flai]
 touches: [flaiover/src/routes, flai/internal/hostapi, flai/internal/manifest, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/routes/settings, flaiover/src/lib/components, design/system/project-manifest.md, docs/operators/settings.md, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/guard_permissions_change_test.go, flai/internal/guard, flai/internal/harness, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/adrs, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0218, S-0211, S-0223]

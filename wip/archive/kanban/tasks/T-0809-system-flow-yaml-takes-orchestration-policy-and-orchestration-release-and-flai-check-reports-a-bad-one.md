@@ -3,15 +3,41 @@ id: T-0809
 type: task
 nature: feature
 title: system-flow.yaml takes orchestration.policy and orchestration.release, and flai check reports a bad one
-status: backlog
+status: done
 parent: S-0217
 owner: alex
 created: 2026-10-04T19:08:50Z
-updated: 2026-10-04T19:09:22Z
-transitions: []
+updated: 2026-10-05T06:06:11Z
+transitions:
+  - to: ready
+    at: 2026-10-05T05:59:51Z
+    by: agent-S-0217
+  - to: in-progress
+    at: 2026-10-05T05:59:51Z
+    by: agent-S-0217
+  - to: done
+    at: 2026-10-05T06:06:11Z
+    by: agent-S-0217
 stream: S-0217
 tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/orchestration_test.go, design/system/project-manifest.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 380
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 300
+      cache_read: 1484825
+      cache_write: 91127
+      cost: 1.3578
+    - model: claude-sonnet-5
+      input: 6
+      output: 10
+      cache_read: 47259
+      cache_write: 37480
+      cost: 0.0352
 ---
 # T-0809 system-flow.yaml takes orchestration.policy and orchestration.release, and flai check reports a bad one
 

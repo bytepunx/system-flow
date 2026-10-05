@@ -3,16 +3,36 @@ id: T-0814
 type: task
 nature: feature
 title: flai-cli.md, the user guide, and the reference describe flai order --by, flai promote --candidates, and flai release --evaluate
-status: backlog
+status: done
 parent: S-0217
 owner: alex
 created: 2026-10-04T19:09:37Z
-updated: 2026-10-04T19:09:37Z
-transitions: []
+updated: 2026-10-05T06:56:41Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:25:32Z
+    by: agent-S-0217
+  - to: in-progress
+    at: 2026-10-05T06:25:32Z
+    by: agent-S-0217
+  - to: done
+    at: 2026-10-05T06:56:41Z
+    by: agent-S-0217
 stream: S-0217
 tags: [flai]
-touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [design/system/flai-cli.md, design/system/server-performance.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-0813]
+usage:
+  source: log
+  seconds: 1869
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 554
+      cache_read: 4465653
+      cache_write: 123585
+      cost: 3.9536
 ---
 # T-0814 flai-cli.md, the user guide, and the reference describe flai order --by, flai promote --candidates, and flai release --evaluate
 

@@ -3,16 +3,36 @@ id: T-0813
 type: task
 nature: feature
 title: The policy order, the promotion candidates, and the release evaluation each have a hostapi read and an MCP tool that the guard passes as reads
-status: backlog
+status: done
 parent: S-0217
 owner: alex
 created: 2026-10-04T19:09:29Z
-updated: 2026-10-04T19:09:29Z
-transitions: []
+updated: 2026-10-05T06:25:32Z
+transitions:
+  - to: ready
+    at: 2026-10-05T06:14:35Z
+    by: agent-S-0217
+  - to: in-progress
+    at: 2026-10-05T06:14:35Z
+    by: agent-S-0217
+  - to: done
+    at: 2026-10-05T06:25:32Z
+    by: agent-S-0217
 stream: S-0217
 tags: [flai]
-touches: [flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/cmd/hostapi_reads_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/cmd/hostapi_reads_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/internal/workitem/policy.go, flai/cmd/order.go, flaiover/src/lib/server/agent.ts]
 after: [T-0810, T-0811, T-0812]
+usage:
+  source: log
+  seconds: 657
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 136
+      output: 869
+      cache_read: 7627300
+      cache_write: 190254
+      cost: 6.7347
 ---
 # T-0813 The policy order, the promotion candidates, and the release evaluation each have a hostapi read and an MCP tool that the guard passes as reads
 
