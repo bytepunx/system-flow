@@ -148,6 +148,9 @@ func TestTheOrchestratorAsksForThePlannerOnABacklogEpic(t *testing.T) {
 			t.Errorf("%s: %v", item, err)
 		}
 	}
+	if _, stderr, code := runIn(t, root, "plan", "E-0002"); code == 0 || !strings.Contains(stderr, "E-0002 is cancelled") {
+		t.Errorf("flai plan in the orchestrator's shell, on a cancelled epic: exit %d %s", code, stderr)
+	}
 	got, err := a.mcpPlan(ctx, root, "E-0001", "agent-o")
 	if err != nil || got.Item != "E-0001" || got.Agent != "planner-E-0001" || got.PID == 0 {
 		t.Fatalf("a backlog epic: %+v %v", got, err)

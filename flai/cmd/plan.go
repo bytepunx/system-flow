@@ -59,11 +59,17 @@ this.`,
 }
 
 // planNow starts the planner for item and prints the run, and says on
-// standard error when no flai serve is running to settle it.
+// standard error when no flai serve is running to settle it. The
+// orchestrator's shell is held as its MCP tool plan is (orchestratorPlans).
 func (a *app) planNow(item string) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
+	}
+	if os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
+		if err := orchestratorPlans(repo, item); err != nil {
+			return fmt.Errorf("rule: %w", err)
+		}
 	}
 	o, e := a.planOn(repo)
 	run, err := serve.Plan(context.Background(), o, e, item)
