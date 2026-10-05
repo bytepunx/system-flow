@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
@@ -124,8 +125,38 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 	}
 	if it.Type == workitem.Story && useGit && storygit.BranchExists(r, repo.MainRoot, storygit.Branch(it.ID)) {
 		res.Branch = storygit.Branch(it.ID)
+		// a conflict git-added unresolved is refused by the merge, so the
+		// preview names it before Accept is pressed (S-0276)
+		if b, err := ConflictMarkers(r, repo, it.ID); err != nil {
+			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read %s for merge conflict markers: %v", res.Branch, err))
+		} else if b != "" {
+			res.Blockers = append(res.Blockers, b)
+		}
 	}
 	return res, nil
+}
+
+// ConflictMarkers is why story id's branch cannot be accepted for the merge
+// conflict markers it carries, naming each path and line of the files it
+// adds or changes against the main branch, or "" when it carries none. The
+// acceptance refuses by it and its preview reports by it, so the two cannot
+// disagree (S-0253, S-0276, I-0066).
+func ConflictMarkers(r execx.Runner, repo *workitem.Repo, id string) (string, error) {
+	branch := storygit.Branch(id)
+	base, err := storygit.MainBranch(r, repo.MainRoot)
+	if err != nil {
+		return "", err
+	}
+	found, err := conflictmark.Branch(r, repo.MainRoot, base, branch)
+	if err != nil || len(found) == 0 {
+		return "", err
+	}
+	wt := repo.WorktreePath(id)
+	where := "in " + rel(repo.MainRoot, wt)
+	if _, err := os.Stat(wt); err != nil {
+		where = fmt.Sprintf("on %s (open its worktree with flai stream open %s)", branch, id)
+	}
+	return fmt.Sprintf("%s carries merge conflict markers at %s; resolve each conflict %s keeping what both sides meant, remove the markers, commit, and accept again", branch, workitem.Shorten(found, 20), where), nil
 }
 
 // epicAccepted works out what the story's epic would do were the story,

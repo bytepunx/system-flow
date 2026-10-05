@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -271,7 +272,7 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string) (bool, error) {
 		}
 	}
 	// a conflict git-added unresolved must not reach main (S-0253, I-0066)
-	if err := a.refuseConflictMarkers(repo, id, hasWorktree); err != nil {
+	if err := a.refuseConflictMarkers(repo, id); err != nil {
 		return false, err
 	}
 	if _, err := a.runner.Run(repo.MainRoot, "git", "merge", "--ff-only", "--quiet", branch); err != nil {
@@ -290,21 +291,14 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string) (bool, error) {
 }
 
 // refuseConflictMarkers refuses a story branch any of whose files added or
-// changed against the main branch carries a merge conflict marker, as
-// conflictmark reads one, naming each path and line (S-0253, I-0066).
-func (a *app) refuseConflictMarkers(repo *workitem.Repo, id string, hasWorktree bool) error {
-	branch := storyBranch(id)
-	base, err := a.mainBranch(repo.MainRoot)
-	if err != nil {
+// changed against the main branch carries a merge conflict marker, naming
+// each path and line, by the check the acceptance preview reports by
+// (S-0253, S-0276, I-0066). It runs after the sync, so it reads the branch
+// as it will be merged.
+func (a *app) refuseConflictMarkers(repo *workitem.Repo, id string) error {
+	msg, err := preview.ConflictMarkers(a.runner, repo, id)
+	if err != nil || msg == "" {
 		return err
 	}
-	found, err := conflictmark.Branch(a.runner, repo.MainRoot, base, branch)
-	if err != nil || len(found) == 0 {
-		return err
-	}
-	where := fmt.Sprintf("in %s", relPath(repo.MainRoot, repo.WorktreePath(id)))
-	if !hasWorktree {
-		where = fmt.Sprintf("on %s (open its worktree with flai stream open %s)", branch, id)
-	}
-	return fmt.Errorf("%s carries merge conflict markers at %s; resolve each conflict %s keeping what both sides meant, remove the markers, commit, and accept again", branch, workitem.Shorten(found, 20), where)
+	return errors.New(msg)
 }

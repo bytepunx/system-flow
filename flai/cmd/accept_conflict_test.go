@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,53 +14,8 @@ import (
 // such a branch, naming each marker's path and line and merging nothing, and
 // accept it once the conflict is resolved and committed (S-0253).
 func TestAcceptRefusesABranchCarryingConflictMarkers(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not installed")
-	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	root := tempProject(t)
-	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design"} {
-		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
-		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
-	}
-	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
-	gitIn(t, root, "init", "-q", "-b", "main")
-	gitIn(t, root, "config", "user.email", "t@t")
-	gitIn(t, root, "config", "user.name", "t")
-	gitIn(t, root, "add", "-A")
-	gitIn(t, root, "commit", "-q", "-m", "init")
-	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Conflicted", "--epic", "E-0001"}} {
-		if _, errOut, code := runIn(t, root, args...); code != 0 {
-			t.Fatal(errOut)
-		}
-	}
+	root, wt, doc := conflictedStoryInReview(t)
 	storyFile := filepath.Join(root, "wip/kanban/stories/S-0001-conflicted.md")
-	s, _ := os.ReadFile(storyFile)
-	_ = os.WriteFile(storyFile, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] done\n", 1)), 0o644)
-	for _, args := range [][]string{
-		{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001"},
-		{"task", "new", "Do it", "--story", "S-0001"},
-		{"move", "T-0001", "ready"}, {"move", "T-0001", "in-progress"}, {"move", "T-0001", "done"},
-	} {
-		if _, errOut, code := runIn(t, root, args...); code != 0 {
-			t.Fatalf("flai %v: %s", args, errOut)
-		}
-	}
-	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
-	doc := filepath.Join(wt, "design", "x.md")
-	// The markers are built so that no line of this file is one. The file
-	// opens with a blank line, which a reader that trims git's output would
-	// lose and so misnumber every marker.
-	conflicted := "\n# X\n\n" +
-		strings.Repeat("<", 7) + " HEAD\nours\n" +
-		strings.Repeat("=", 7) + "\ntheirs\n" +
-		strings.Repeat(">", 7) + " f0f5443 (docs: [S-0201] keep both)\nend\n"
-	_ = os.WriteFile(doc, []byte(conflicted), 0o644)
-	gitIn(t, wt, "add", "-A")
-	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] x")
-	if _, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
-		t.Fatal(errOut)
-	}
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
 	_, errOut, code := runIn(t, root, "accept", "S-0001")
@@ -100,4 +56,105 @@ func TestAcceptRefusesABranchCarryingConflictMarkers(t *testing.T) {
 	if gitIn(t, root, "branch", "--list", "story/S-0001") != "" {
 		t.Error("an accepted story's branch is removed")
 	}
+}
+
+// S-0276: the acceptance preview, flai accept --dry-run, which the
+// dashboard's Accept dialog shows, names the same markers as a blocker before
+// Accept is pressed, and names none once they are resolved.
+func TestAcceptPreviewReportsConflictMarkers(t *testing.T) {
+	root, wt, doc := conflictedStoryInReview(t)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+
+	js, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
+	if code != 0 {
+		t.Fatalf("a dry run reports blockers rather than failing: %d %s", code, errOut)
+	}
+	var res struct {
+		Blockers []string `json:"blockers"`
+	}
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	want := "story/S-0001 carries merge conflict markers at design/x.md:4, design/x.md:8; resolve each conflict in .flai-cache/worktrees/S-0001"
+	if len(res.Blockers) != 1 || !strings.HasPrefix(res.Blockers[0], want) {
+		t.Errorf("the preview must name each marker as the one blocker, starting %q: %q", want, res.Blockers)
+	}
+	if text, _, _ := runIn(t, root, "accept", "S-0001", "--dry-run"); !strings.Contains(text, "blocked: "+want) {
+		t.Errorf("the dry run's text must name the blocker:\n%s", text)
+	}
+	if got := gitIn(t, root, "rev-parse", "main"); got != mainBefore {
+		t.Errorf("a dry run moved main from %s to %s", mainBefore, got)
+	}
+
+	// resolved and committed, the preview names no blocker
+	_ = os.WriteFile(doc, []byte("\n# X\n\nours and theirs\nend\n"), 0o644)
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] resolve x")
+	js, errOut, code = runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
+	if code != 0 {
+		t.Fatalf("%d %s", code, errOut)
+	}
+	res.Blockers = nil
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	if len(res.Blockers) != 0 {
+		t.Errorf("a clean branch has no blocker: %q", res.Blockers)
+	}
+}
+
+// conflictedStoryInReview makes a project with story S-0001 in review whose
+// branch commits design/x.md with an unresolved conflict, its markers at
+// lines 4 and 8, and returns the main checkout, the story's worktree, and
+// the file.
+func conflictedStoryInReview(t *testing.T) (root, wt, doc string) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root = tempProject(t)
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
+	}
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "config", "user.email", "t@t")
+	gitIn(t, root, "config", "user.name", "t")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Conflicted", "--epic", "E-0001"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	storyFile := filepath.Join(root, "wip/kanban/stories/S-0001-conflicted.md")
+	s, _ := os.ReadFile(storyFile)
+	_ = os.WriteFile(storyFile, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] done\n", 1)), 0o644)
+	for _, args := range [][]string{
+		{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001"},
+		{"task", "new", "Do it", "--story", "S-0001"},
+		{"move", "T-0001", "ready"}, {"move", "T-0001", "in-progress"}, {"move", "T-0001", "done"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	wt = filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	doc = filepath.Join(wt, "design", "x.md")
+	// The markers are built so that no line of this file is one. The file
+	// opens with a blank line, which a reader that trims git's output would
+	// lose and so misnumber every marker.
+	conflicted := "\n# X\n\n" +
+		strings.Repeat("<", 7) + " HEAD\nours\n" +
+		strings.Repeat("=", 7) + "\ntheirs\n" +
+		strings.Repeat(">", 7) + " f0f5443 (docs: [S-0201] keep both)\nend\n"
+	_ = os.WriteFile(doc, []byte(conflicted), 0o644)
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] x")
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
+		t.Fatal(errOut)
+	}
+	return root, wt, doc
 }
