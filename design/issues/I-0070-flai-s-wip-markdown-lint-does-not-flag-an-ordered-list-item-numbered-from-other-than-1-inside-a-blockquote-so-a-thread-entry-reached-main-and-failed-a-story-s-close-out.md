@@ -2,12 +2,12 @@
 id: I-0070
 title: flai's wip markdown lint does not flag an ordered list item numbered from other than 1 inside a blockquote, so a thread entry reached main and failed a story's close-out
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-04T04:45:41Z
 last_reported: 2026-10-04T04:45:41Z
-updated: 2026-10-04T04:52:01Z
+updated: 2026-10-05T05:37:48Z
 ---
 
 # I-0070 flai's wip markdown lint does not flag an ordered list item numbered from other than 1 inside a blockquote, so a thread entry reached main and failed a story's close-out
@@ -24,3 +24,4 @@ Story: S-0225.
 ## Remediation
 
 Story S-0258 remediates this issue, created from it at 2026-10-04T04:52:01Z.
+Closed 2026-10-05T05:37:48Z: S-0258 T-0860: flai's lint (flai/internal/mdlint/doc.go) parses a blockquote's content as blocks, with blockquotes as containers beside list items, so MD029 flags a quoted ordered list numbered from other than 1, as markdownlint-cli2 does, and the other rules judge quoted content too. testdata/cases/blockquote.md reproduces TH-0101's '> 3.' and '> 6.' entry, and TestQuotedOrderedListOfI0070 shows a thread entry bringing one is refused.

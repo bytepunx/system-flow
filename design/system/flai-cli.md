@@ -152,7 +152,7 @@ flai/
 │   ├── perf/            # a request's phases, timed beneath its transport; one "request answered" event (S-0152)
 │   ├── narrative/       # wip/agents files
 │   ├── check/           # reference validator, rule names are stable identifiers
-│   ├── mdlint/          # the markdownlint rules what flai writes can break, read from the project's configuration (S-0179, MD007 S-0240, MD038 S-0262)
+│   ├── mdlint/          # the markdownlint rules what flai writes can break, read from the project's configuration (S-0179, MD007 S-0240, MD038 S-0262), judging what lists, fences, and headings blockquotes hold as it judges them outside one (S-0258)
 │   ├── conventions/     # loads and validates design/conventions
 │   ├── issues/          # design/issues: record, bump, close, summary
 │   ├── release/         # semver plan from item, commits, and manifest components; tags and version files; pending releases from a history kept per process (S-0157)
