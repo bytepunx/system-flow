@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-05T05:46:20Z
+updated: 2026-10-05T05:47:33Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0276](S-0276.md) | flai accept --dry-run, the dashboard's acceptance preview, does not report a conflict marker as a blocker | in-progress | agent-S-0276 | 2026-10-05T05:46:32Z |
 
 ## Strategic agents
 

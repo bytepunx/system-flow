@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-05T05:46:20Z
+updated: 2026-10-05T05:47:33Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
@@ -16,6 +16,7 @@ transitions:
     at: 2026-10-04T00:41:38Z
     by: alex
 tags: [dashboard]
+topics: [planning]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, design/system/metrics.md, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts]
 after: [S-0205]
 agent:
@@ -29,10 +30,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:27Z
 forecast:
   duration: 31m
-  delivery: 2026-10-05T13:47:00Z
-  basis: "Its own forecast of 31m; 9th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222 and S-0226."
+  delivery: 2026-10-05T13:49:00Z
+  basis: "Its own forecast of 31m; 8th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222 and S-0226."
   by: flai
-  at: 2026-10-05T05:46:20Z
+  at: 2026-10-05T05:47:33Z
 ---
 # S-0212 Charts compare forecasts and estimates with what happened
 
@@ -51,6 +52,8 @@ The operator should see whether the planner's forecasts can be trusted before le
 - T-0950 The chart data types carry the forecast errors, and the forecast-accuracy chart maps them with nature and model filters
 - T-0951 The delivery-accuracy chart maps each story's delivery error in days and the weekly share delivered on time
 - T-0956 The forecast-by-model chart maps the p50 absolute forecast error per bucket per model
+- T-0958 The chart page lists the planning charts under a Planning group, with nature and model filters and a table view
+- T-0962 The dashboard design, the metrics chart table, and the user guide describe the planning charts
 
 ## Notes
 

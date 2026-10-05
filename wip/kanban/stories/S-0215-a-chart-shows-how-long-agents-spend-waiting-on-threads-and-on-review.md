@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T05:45:37Z
+updated: 2026-10-05T05:47:33Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:37Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-05T15:44:00Z
-  basis: "Five tasks across an ADR, a flai stats extension, a chart, and a table: flai's 31m from 132 s per unit of size over 14 large opus stories counts touches, not the Go and Svelte layers, so it is raised to 1h15m, near S-0212's and S-0214's; delivery is flai's 15:00Z, 12th in the pull order, plus the 44m added."
-  by: planner-S-0215
-  at: 2026-10-05T05:44:37Z
+  delivery: 2026-10-05T15:45:00Z
+  basis: "Its own forecast of 1h15m; 11th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226, S-0212, S-0213 and S-0214."
+  by: flai
+  at: 2026-10-05T05:47:33Z
 ---
 # S-0215 A chart shows how long agents spend waiting on threads and on review
 

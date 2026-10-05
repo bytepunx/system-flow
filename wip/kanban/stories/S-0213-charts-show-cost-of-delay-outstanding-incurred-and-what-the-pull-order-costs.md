@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-05T05:46:20Z
+updated: 2026-10-05T05:47:33Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:55Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-05T15:42:00Z
-  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226 and S-0212."
+  delivery: 2026-10-05T15:43:00Z
+  basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 3, behind S-0276, S-0217, S-0218, S-0219, S-0220, S-0221, S-0222, S-0226 and S-0212."
   by: flai
-  at: 2026-10-05T05:46:20Z
+  at: 2026-10-05T05:47:33Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 
@@ -50,6 +50,11 @@ Cost of delay only matters if the operator can see it accumulate and what orderi
 ## Tasks
 - T-0953 metrics.md defines the pull order's projected cost of delay and the count of items without a value, and an ADR records them
 - T-0955 flai stats counts the open items without a cost of delay value per column per day
+- T-0959 flai stats projects the ready column's cost of delay under the pull order, by cost of delay, and by WSJF
+- T-0965 flai stats prints the pull order's projected saving and the items without a cost of delay value
+- T-0967 charts.ts maps cost_of_delay to the cod-outstanding, cod-incurred, and cod-order charts in a planning group
+- T-0969 The charts page lists the cost of delay charts under Planning and states the saving and the items without a value
+- T-0970 flaiover-dashboard.md and the user guide describe the cost of delay charts
 
 ## Notes
 
