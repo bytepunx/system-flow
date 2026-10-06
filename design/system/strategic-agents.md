@@ -466,7 +466,7 @@ The Activity page lists the orchestrator's run and its stream. The Settings page
 
 ## The analyzer
 
-The analyzer looks at the whole project, writes what it finds in one report, and ends (S-0223, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)). It reads the metrics, the design, the code, and the issues, and looks for what its focus names: bottlenecks in the flow of work, gaps between `design/system` and the code (`intent`), or technical and security risks (`risk`), or all three when it is given no focus. It writes one report under `design/analysis/` and adds it to the folder's index. It edits nothing else and authors no stories. Filing its actionable findings as issues, which the convention's "As the analyzer" asks of it, is S-0224's: until then the guard refuses it `flai issue new` and `bump`, and its findings stay in the report.
+The analyzer looks at the whole project, writes what it finds in one report, and ends (S-0223, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)). It reads the metrics, the design, the code, and the issues, and looks for what its focus names: bottlenecks in the flow of work, gaps between `design/system` and the code (`intent`), or technical and security risks (`risk`), or all three when it is given no focus. It writes one report under `design/analysis/` and adds it to the folder's index. It files each actionable finding as an issue with its impact, or bumps the open issue that records it, through flai, and links each issue from its report (S-0224, [How the analyzer files its findings](#how-the-analyzer-files-its-findings-s-0224)). It edits nothing else and authors no stories: the issue step makes draft stories from its issues when the operator chooses it ([continuous-improvement.md](continuous-improvement.md#cadence)).
 
 ### Starting an analysis
 
@@ -512,9 +512,9 @@ The launcher's `analyze` starts it through the harness adapter with a `harness.R
 | `risk` | Technical and security risks in the code and in how it is built, tested, and released |
 | none, recorded as `all` | All three |
 
-Read the metrics with `flai stats --json` and take every figure from it. Read the design with `doc_search` and `doc_get`, and the section a finding rests on before relying on it. Read the issues under `design/issues`, `summary.md` first. Hand wide search of the code to the explorer. Write one report, `design/analysis/<date>-<focus>.md` ([The report and its index](#the-report-and-its-index)), and add it to `design/analysis/README.md`. Edit nothing else, no code, design, issue, or work item, author no stories, and never work around a refusal. When an input the operator owns is missing, ask with `thread_open` on the report, the recommended answer first, analyze what needs no answer meanwhile, and hold `wait_for_events` until it is answered. End with a one-line summary that names the report, which becomes the run's activity entry.
+Read the metrics with `flai stats --json` and take every figure from it. Read the design with `doc_search` and `doc_get`, and the section a finding rests on before relying on it. Read the issues under `design/issues`, `summary.md` first. Hand wide search of the code to the explorer. Write one report, `design/analysis/<date>-<focus>.md` ([The report and its index](#the-report-and-its-index)), and add it to `design/analysis/README.md`. File each actionable finding as an issue, or bump the open issue that records it, and link each issue from its finding ([How the analyzer files its findings](#how-the-analyzer-files-its-findings-s-0224)); never run `flai issue story` or `flai issue close`. Edit nothing else, no code, design, issue, or work item, since flai writes the issues it files, author no stories, and never work around a refusal. When an input the operator owns is missing, ask with `thread_open` on the report, the recommended answer first, analyze what needs no answer meanwhile, and hold `wait_for_events` until it is answered. End with a one-line summary that names the report, which becomes the run's activity entry.
 
-`analyzer.md`, which the template ships, says the same in short and lists its tools: `Read`, `Grep`, `Glob`, `Edit`, `Write`, `Bash`, `Agent`, and flai's MCP tools `prime`, `inbox`, `board`, `item_get`, `doc_get`, `doc_search`, `thread_get`, `who_touches`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events`. It lists no `NotebookEdit` and no tool that writes a work item.
+`analyzer.md`, which the template ships, says the same in short and lists its tools: `Read`, `Grep`, `Glob`, `Edit`, `Write`, `Bash`, `Agent`, and flai's MCP tools `prime`, `inbox`, `board`, `item_get`, `doc_get`, `doc_search`, `thread_get`, `who_touches`, `activity_log`, `thread_open`, `thread_reply`, `wait_for_events`, `issue_new`, and `issue_bump`. It lists no `NotebookEdit` and no tool that writes a work item, `issue_story` among them.
 
 ### The report and its index
 
@@ -528,7 +528,7 @@ A report is `<date>-<focus>.md` in the design folder's `analysis/` (`analysis.Di
 | `focus` | The focus the file is named for |
 | `from`, `to` | The window its metrics cover, as dates, `from` not after `to` |
 
-The body has one section per finding: its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact, the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them.
+The body has one section per finding: its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact, the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them. An actionable finding links the issue filed or bumped for it, as `[I-nnnn](../issues/<file>)`.
 
 `design/analysis/README.md`, which the template ships, says what the folder is for and has a row per report: its link, focus, window, and status. Only the analyzer writes in the folder. `flai check` leaves the folder out of the design documents' own rules and checks it by its own (`checker.analysis`):
 
@@ -539,18 +539,31 @@ The body has one section per finding: its evidence (the metric figures as flai g
 
 A project with no `design/analysis/` has nothing checked there. flai checks a report's status but does not change it: the analyzer writes it, `draft` while it writes the report and `active` once it is done, as its prompt and its definition tell it.
 
+### How the analyzer files its findings (S-0224)
+
+Each actionable finding becomes an issue in `design/issues/` with its impact, so that the issue step can turn it into a draft story with its cost of delay in place ([continuous-improvement.md](continuous-improvement.md)). The prompt (`analyzePrompt`) and `analyzer.md` tell the analyzer, for each one:
+
+1. List the open issues, with `flai issue list --json` or from `design/issues/summary.md`.
+2. When an open issue already records the finding, under whatever title, bump it: `flai issue bump <id> --report <its report>` with the finding's impact, or the MCP tool `issue_bump`.
+3. Otherwise file one: `flai issue new "<title>" --class <class> --report <its report> --json`, or the MCP tool `issue_new`. The class comes from the finding: `defect`, `efficiency`, or `impression` for a risk with no measured instance. The impact is the figures the report gives the finding, as `--time-lost-per-cycle` (a duration such as `4h`), or `--revenue-per-week` or `--penalty-per-week` (an amount in `planning.currency`), and `--evidence`, the evidence behind them.
+4. Link the issue from its finding in the report, as `[I-nnnn](../issues/<file>)`, the file name of the `path` flai returns.
+
+`--report` deduplicates by title as well. An open issue of exactly the title given is bumped rather than a second opened, and one an instance of which already names the report is left as it is, so that filing a report's findings again counts nothing twice; `outcome` says `opened`, `bumped`, or `already recorded`. Either way the issue's instance names the report in a `Report:` line, and its `## Remediation` links it, once. A report path that is not a markdown file under `design/analysis/`, or a figure that does not parse, is refused and nothing is written. The analyzer runs in the main checkout as `analyzer`, with no `FLAI_STORY` and no story branch, so its instances name no story and its issues are written in the main checkout beside its report; `summary.md` is regenerated and nothing is committed.
+
+The analyzer writes its issues through flai alone, never by editing a file under `design/issues/`, and authors no stories: it never runs `flai issue story`, which is the operator's choice at acceptance or an agent's when the operator asks, nor `flai issue close`.
+
 ### The analyzer's guard
 
 `flai guard` reads `FLAI_ROLE` from the hook's environment. With `analyze`, the command opens the project from the working directory and sets the guard's `Root` and `Reports`, the reports folder, and `Guard.analyze` checks the session's own calls, which carry no agent ID:
 
 | Kind | Passes | Refused |
 |------|--------|---------|
-| File tools | `Edit`, `Write`, and `NotebookEdit` on a file inside the reports folder: its report and the folder's README | the same on any other file, and on every file when the project cannot be read |
-| flai MCP tools | the reads a sub-agent has; `inbox`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events` (`guard.MCPAnalyzes`) | `item_new`, `item_edit`, and `item_move`, since the analyzer authors no stories; every other tool, `plan`, `analyze`, `issue_story`, and `release_publish` among them |
-| flai commands | the reads, `flai stats` among them | every command that writes, `issue new` and `bump`, `plan`, and `analyze` among them |
+| File tools | `Edit`, `Write`, and `NotebookEdit` on a file inside the reports folder: its report and the folder's README | the same on any other file, a file under `design/issues/` among them, and on every file when the project cannot be read |
+| flai MCP tools | the reads a sub-agent has; `inbox`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events`, and since S-0224 `issue_new` and `issue_bump` (`guard.MCPAnalyzes`) | `item_new`, `item_edit`, `item_move`, and `issue_story`, since the analyzer authors no stories; every other tool, `plan`, `analyze`, and `release_publish` among them |
+| flai commands | the reads, `flai stats` and `issue list` among them; since S-0224 `issue new` and `bump` (`cliAnalyzes`) | `story`, `epic`, `task`, and `issue story` (`cliAuthors`), since the analyzer authors no stories; every other command that writes, `issue close`, `plan`, and `analyze` among them |
 | git | the reads a sub-agent has | every other git command |
 
-A file's path is taken from the project's root when it is relative, cleaned, and resolved along the part of it that exists, symbolic links followed, as the folder's is (`inReports`), so that neither `..` nor a link leads out of the folder. A refused edit names the folder. Each refusal says that the analyzer edits nothing but its report and the index, and to put what it found, and the stories it would suggest, in its report, or ask the operator with `thread_open`. Other shell commands pass, as a sub-agent's do (ADR-0060), so a file written through the shell is not seen. The analyzer's sub-agents, the explorer among them, are held as every sub-agent is.
+A file's path is taken from the project's root when it is relative, cleaned, and resolved along the part of it that exists, symbolic links followed, as the folder's is (`inReports`), so that neither `..` nor a link leads out of the folder. A refused edit names the folder. Each refusal says that the analyzer files or bumps an issue for each actionable finding with `flai issue new` and `bump` and edits nothing but its report and the index, and to put what it found, and the stories it would suggest, in its report, or ask the operator with `thread_open`. Other shell commands pass, as a sub-agent's do (ADR-0060), so a file written through the shell is not seen. The analyzer's sub-agents, the explorer among them, are held as every sub-agent is.
 
 `.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `analyze`, as for `plan` and `orchestrate` ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
 

@@ -85,9 +85,9 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 
 - Read the metrics (`flai stats --json`), the design, the code, and the issues.
 - Write a report under `design/analysis/`. Give each finding its evidence, its severity, and its estimated impact.
-- File each actionable finding as an issue, with its impact: `flai issue new`, or bump the issue that already records it.
+- File each actionable finding as an issue, with its impact and `--report`: `flai issue new`, or `flai issue bump` the issue that already records it. Link each issue from its finding in your report.
 - Never author stories. The issue step makes draft stories from your issues, when the operator chooses it.
-- Edit nothing but your report and your issues.
+- Edit nothing but your report and its entry in the index. flai writes your issues; never edit them by hand.
 - Hand wide search to the explorer.
 
 ## Logging your activity
