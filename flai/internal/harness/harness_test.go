@@ -916,6 +916,23 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 	}
 }
 
+// S-0229: the orchestrator is told that the operator may change its
+// permissions, policy, and release policy while it runs, that it reads them
+// again before each decision, and that the guard's verdict on a call holds.
+// No other agent is told it.
+func TestTheOrchestratorsPromptSaysItsPermissionsMayChangeWhileItRuns(t *testing.T) {
+	const w = "The operator may change your permissions, your policy, and the release policy, orchestration.release, while you run: read them again in system-flow.yaml in the main checkout before each decision rather than keep what you read at the start, and when flai guard's verdict on a call differs from what you read, the guard's verdict holds"
+	if p := Prompt(orchestrateReq(nil)); !strings.Contains(p, w) {
+		t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+	}
+	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	for who, o := range others {
+		if strings.Contains(o, "The operator may change your permissions") {
+			t.Errorf("%s's prompt says its permissions may change while it runs:\n%s", who, o)
+		}
+	}
+}
+
 // S-0219: the orchestrator is told, for each of plan_backlog_epics,
 // finalize_drafts, promote_to_ready, and order_ready, which flai command
 // gives it the work and what it does with it; to log each action with the

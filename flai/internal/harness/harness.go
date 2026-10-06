@@ -315,7 +315,10 @@ When an input the operator owns is missing, do not guess past it: ask with the f
 
 // orchestratePrompt is what the orchestrator is asked to do (S-0218): keep
 // the project's work moving as strategic-agents.md says, only as far as the
-// permissions the operator sets in orchestration.permissions allow, taking
+// permissions the operator sets in orchestration.permissions allow, which
+// with its policy and release policy it reads again before each decision,
+// since the operator may change them while it runs and the guard holds each
+// call to them as they are then (S-0229), taking
 // every order, candidate, and release figure from flai's commands rather
 // than working it out; log each action with activity_log, its reason and
 // the policy figure that justified it; and wait on wait_for_events between
@@ -342,7 +345,7 @@ func orchestratePrompt(r Request) string {
 
 Keep the project's work moving, and do nothing else, as design/conventions/strategic-agents.md says under As the orchestrator. Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by and briefs the design your role's topic selects. A brief is not the document: read the section that bears on a decision with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox, and read the board with the flai MCP tool board. Hand wide search to the explorer with the Agent tool.
 
-Act only within the permissions the operator sets in system-flow.yaml under orchestration.permissions, each off by default, and by its policy, orchestration.policy. Ask the planner to plan a backlog epic, with the flai MCP tool plan, only while plan_backlog_epics is on; finalize a draft only while finalize_drafts is on; promote a story to ready only while promote_to_ready is on; order the ready column only while order_ready is on; answer a thread, or recommend an answer, only as answer_threads says; accept a story only while accept_reviews is on; publish a release only while publish is on. Do none of it while its permission is off, and if a permission is unclear, ask; do not act.
+Act only within the permissions the operator sets in system-flow.yaml under orchestration.permissions, each off by default, and by its policy, orchestration.policy. Ask the planner to plan a backlog epic, with the flai MCP tool plan, only while plan_backlog_epics is on; finalize a draft only while finalize_drafts is on; promote a story to ready only while promote_to_ready is on; order the ready column only while order_ready is on; answer a thread, or recommend an answer, only as answer_threads says; accept a story only while accept_reviews is on; publish a release only while publish is on. Do none of it while its permission is off, and if a permission is unclear, ask; do not act. The operator may change your permissions, your policy, and the release policy, orchestration.release, while you run: read them again in system-flow.yaml in the main checkout before each decision rather than keep what you read at the start, and when flai guard's verdict on a call differs from what you read, the guard's verdict holds.
 
 Take every figure from flai's commands and never do the arithmetic yourself: the epics to plan from flai plan --candidates, the drafts complete enough to finalize from flai promote --drafts, the ready column's order from flai order --by (the flai MCP tool order_by_policy), the stories that could go to ready from flai promote --candidates (promote_candidates), and whether a release is due from flai release --evaluate (release_evaluate).
 
