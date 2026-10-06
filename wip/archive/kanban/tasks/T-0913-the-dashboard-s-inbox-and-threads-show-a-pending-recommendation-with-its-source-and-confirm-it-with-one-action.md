@@ -3,16 +3,36 @@ id: T-0913
 type: task
 nature: feature
 title: The dashboard's inbox and threads show a pending recommendation with its source and confirm it with one action
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:48:30Z
-updated: 2026-10-05T04:48:30Z
-transitions: []
+updated: 2026-10-06T07:02:26Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:41:13Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:41:13Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T07:02:26Z
+    by: agent-S-0220
 stream: S-0220
 tags: [dashboard]
-touches: ["flaiover/src/routes/api/threads/[id]/confirm/+server.ts", flaiover/src/routes/api/threads/threads.test.ts, flaiover/src/lib/server/inbox.ts, flaiover/src/lib/server/inbox.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: ["flaiover/src/routes/api/threads/[id]/confirm/+server.ts", flaiover/src/routes/api/threads/threads.test.ts, flaiover/src/lib/server/inbox.ts, flaiover/src/lib/server/inbox.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/inbox.svelte.ts, flaiover/src/lib/markdown.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0908]
+usage:
+  source: log
+  seconds: 1138
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 156
+      output: 45674
+      cache_read: 6466731
+      cache_write: 282824
+      cost: 3.8886
 ---
 # T-0913 The dashboard's inbox and threads show a pending recommendation with its source and confirm it with one action
 

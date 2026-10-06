@@ -3,15 +3,41 @@ id: T-0894
 type: task
 nature: feature
 title: A thread entry can be a recommendation with a source, which leaves the thread awaiting the operator until they confirm it
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:46:50Z
-updated: 2026-10-05T04:46:50Z
-transitions: []
+updated: 2026-10-06T06:06:48Z
+transitions:
+  - to: ready
+    at: 2026-10-06T05:59:55Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T05:59:55Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:06:48Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, design/adrs, design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 413
+  estimated: true
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 276
+      output: 8815
+      cache_read: 2186103
+      cache_write: 92819
+      cost: 0.379
+    - model: claude-opus-5-5
+      input: 80
+      output: 30535
+      cache_read: 3781763
+      cache_write: 112804
+      cost: 2.0178
 ---
 # T-0894 A thread entry can be a recommendation with a source, which leaves the thread awaiting the operator until they confirm it
 

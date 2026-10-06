@@ -3,10 +3,10 @@ id: TH-0056
 title: Should wip/ warnings outside a story stop its close-out?
 anchor:
   path: design/conventions/work-management.md
-status: answered
+status: resolved
 participants: [agent-S-0187, alex]
 created: 2026-10-01T10:01:41Z
-updated: 2026-10-01T10:57:26Z
+updated: 2026-10-06T09:55:27Z
 ---
 
 # TH-0056 Should wip/ warnings outside a story stop its close-out?
@@ -22,3 +22,6 @@ Recommended: a story that gives `flai check` a story scope for the close-out (`f
 
 ### 2026-10-01T10:57:26Z alex
 Go with the recommendation, notes are preferable when its a finding outside the story. Have flai record the finding as an issue (if one doesn't exist) or increment the count so operators can see where these are occurring.
+
+### 2026-10-06T09:55:27Z alex
+Resolved.

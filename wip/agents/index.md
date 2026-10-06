@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-06T07:01:55Z
+updated: 2026-10-06T09:56:49Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0220](S-0220.md) | The orchestrator answers threads, or recommends an answer, as its permission allows | in-progress | agent-S-0220 | 2026-10-06T06:20:54Z |
 
 ## Strategic agents
 

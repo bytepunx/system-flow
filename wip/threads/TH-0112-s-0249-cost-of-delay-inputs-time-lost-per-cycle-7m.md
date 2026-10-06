@@ -4,10 +4,10 @@ title: "S-0249 cost of delay inputs: time lost per cycle 7m?"
 anchor:
   path: wip/kanban/stories/S-0249-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md
   item: S-0249
-status: answered
+status: resolved
 participants: [planner-S-0249, alex]
 created: 2026-10-05T00:14:15Z
-updated: 2026-10-05T00:15:58Z
+updated: 2026-10-06T09:55:22Z
 ---
 
 # TH-0112 S-0249 cost of delay inputs: time lost per cycle 7m?
@@ -27,3 +27,6 @@ Reply with the figure you want, or with "go with the recommendation". Meanwhile 
 
 ### 2026-10-05T00:15:58Z alex
 go with recommendation
+
+### 2026-10-06T09:55:22Z alex
+Resolved.

@@ -3,16 +3,36 @@ id: T-0914
 type: task
 nature: feature
 title: "An end-to-end test drives the orchestrator's thread calls through the MCP server and the guard: a recommendation, an autonomous answer, and an escalation"
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:48:41Z
-updated: 2026-10-05T04:48:41Z
-transitions: []
+updated: 2026-10-06T06:47:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:41:14Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:41:14Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:47:44Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/internal/mcpserver/orchestrator_threads_test.go]
 after: [T-0906, T-0908, T-0910, T-0912]
+usage:
+  source: log
+  seconds: 390
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 27935
+      cache_read: 3431287
+      cache_write: 174842
+      cost: 2.2121
 ---
 # T-0914 An end-to-end test drives the orchestrator's thread calls through the MCP server and the guard: a recommendation, an autonomous answer, and an escalation
 

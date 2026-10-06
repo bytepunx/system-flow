@@ -3,16 +3,36 @@ id: T-0902
 type: task
 nature: feature
 title: flai thread reply, the MCP tool thread_reply, and the host API post a recommendation with its source, and flai thread confirm makes it the answer
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:47:37Z
-updated: 2026-10-05T04:47:54Z
-transitions: []
+updated: 2026-10-06T06:19:41Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:06:49Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:06:49Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:19:41Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-0894]
+usage:
+  source: log
+  seconds: 772
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 175
+      output: 67243
+      cache_read: 8328022
+      cache_write: 248412
+      cost: 4.4436
 ---
 # T-0902 flai thread reply, the MCP tool thread_reply, and the host API post a recommendation with its source, and flai thread confirm makes it the answer
 

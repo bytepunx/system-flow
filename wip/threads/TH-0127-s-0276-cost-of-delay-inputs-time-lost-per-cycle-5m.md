@@ -4,10 +4,10 @@ title: "S-0276 cost of delay inputs: time lost per cycle 5m?"
 anchor:
   path: wip/kanban/stories/S-0276-flai-accept-dry-run-the-dashboard-s-acceptance-preview-does-not-report-a-conflict-marker-as-a-blocker.md
   item: S-0276
-status: answered
+status: resolved
 participants: [planner-S-0276, alex]
 created: 2026-10-05T04:05:55Z
-updated: 2026-10-05T04:11:48Z
+updated: 2026-10-06T09:55:20Z
 ---
 
 # TH-0127 S-0276 cost of delay inputs: time lost per cycle 5m?
@@ -27,3 +27,6 @@ Reply with the figure you want, or with "go with the recommendation". Meanwhile 
 
 ### 2026-10-05T04:11:48Z alex
 take recommendation
+
+### 2026-10-06T09:55:20Z alex
+Resolved.

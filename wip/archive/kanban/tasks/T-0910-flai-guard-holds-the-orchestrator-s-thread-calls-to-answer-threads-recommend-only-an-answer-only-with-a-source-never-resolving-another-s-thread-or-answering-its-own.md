@@ -3,16 +3,36 @@ id: T-0910
 type: task
 nature: feature
 title: "flai guard holds the orchestrator's thread calls to answer_threads: recommend only, an answer only with a source, never resolving another's thread or answering its own"
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:48:11Z
-updated: 2026-10-05T04:48:11Z
-transitions: []
+updated: 2026-10-06T06:40:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:19:42Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:19:42Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:40:44Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
 after: [T-0902]
+usage:
+  source: log
+  seconds: 1180
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 32053
+      cache_read: 3967433
+      cache_write: 124090
+      cost: 2.1471
 ---
 # T-0910 flai guard holds the orchestrator's thread calls to answer_threads: recommend only, an answer only with a source, never resolving another's thread or answering its own
 

@@ -3,16 +3,36 @@ id: T-0912
 type: task
 nature: feature
 title: The orchestrator's prompt and definition tell it to recommend, answer, or escalate each thread awaiting the operator, citing its source
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:48:21Z
-updated: 2026-10-05T04:48:21Z
-transitions: []
+updated: 2026-10-06T06:40:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:19:42Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:19:43Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:40:44Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
 after: [T-0902]
+usage:
+  source: log
+  seconds: 1179
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 21680
+      cache_read: 2682836
+      cache_write: 85772
+      cost: 1.4617
 ---
 # T-0912 The orchestrator's prompt and definition tell it to recommend, answer, or escalate each thread awaiting the operator, citing its source
 

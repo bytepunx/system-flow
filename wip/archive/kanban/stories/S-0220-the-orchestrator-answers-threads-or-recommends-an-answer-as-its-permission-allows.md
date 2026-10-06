@@ -3,23 +3,54 @@ id: S-0220
 type: story
 nature: feature
 title: The orchestrator answers threads, or recommends an answer, as its permission allows
-status: ready
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-06T05:58:56Z
+updated: 2026-10-06T09:56:49Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:20Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T05:59:28Z
+    by: agent-S-0220
+  - to: review
+    at: 2026-10-06T07:11:54Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T09:56:49Z
+    by: alex
 tags: [flai]
-touches: [flai/internal/harness, ".claude/agents/orchestrator.md", flai/internal/threads, design/system/strategic-agents.md, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/metrics, design/system/metrics.md, design/adrs, flaiover/src/routes/inbox, flaiover/src/routes/threads, flaiover/src/routes/api/inbox, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/guard, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flai-cli.md, docs/users/flai-reference.md, flaiover/src/routes/api/threads, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/server/inbox.ts, flaiover/src/lib/server/inbox.test.ts, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
+touches: [flai/internal/harness, ".claude/agents/orchestrator.md", flai/internal/threads, design/system/strategic-agents.md, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/metrics, design/system/metrics.md, design/adrs, flaiover/src/routes/inbox, flaiover/src/routes/threads, flaiover/src/routes/api/inbox, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/guard, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flai-cli.md, docs/users/flai-reference.md, flaiover/src/routes/api/threads, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/server/inbox.ts, flaiover/src/lib/server/inbox.test.ts, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/operators/settings.md, flaiover/src/lib/server/agent.ts, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/I-0082-flai-s-permission-prompt-returns-a-result-claude-code-calls-invalid-so-a-claude-write-and-a-tmp-write-are-refused-at-once-with-no-thread.md, design/issues/summary.md, design/system/workflow.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/serve/plan.go, template/template.yaml, flaiover/src/lib/inbox.svelte.ts, flaiover/src/lib/markdown.ts, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md]
 after: [S-0218]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 4170
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 282
+      output: 9000
+      cache_read: 2231858
+      cache_write: 94762
+      cost: 0.3869
+    - model: claude-opus-5-5
+      input: 922
+      output: 322541
+      cache_read: 41868411
+      cache_write: 1427200
+      cost: 23.1957
+    - model: claude-sonnet-5-5
+      input: 34
+      output: 7501
+      cache_read: 318422
+      cache_write: 67744
+      cost: 0.3081
 cost_of_delay:
   value: 76.01
   by: planner-S-0220
@@ -38,11 +69,11 @@ forecast:
 Agents wait on threads for the operator. With `answer_threads: recommend`, the orchestrator replies to each thread awaiting the operator with its recommended answer, marked as a recommendation, for the operator to confirm; with `autonomous`, it answers and the agent goes on.
 
 ## Acceptance criteria
-- [ ] In `recommend`, the orchestrator posts a reply tagged as a recommendation that does not set the thread to `answered`, citing the design, ADR, or convention it drew on; the inbox shows the operator a thread with a recommendation to confirm with one action (confirm makes it the answer)
-- [ ] In `autonomous`, it answers the thread (setting `answered`) when it can cite a source, and escalates to the operator with a recommendation when it cannot or when the question names the operator's judgement (a decision, a scope change, money)
-- [ ] It never resolves a thread it did not open, and never answers a thread opened by itself
-- [ ] Each answer is logged with the source cited; the metrics count thread waits ended by the orchestrator separately
-- [ ] Tests cover a recommendation, an autonomous answer, and an escalation
+- [x] In `recommend`, the orchestrator posts a reply tagged as a recommendation that does not set the thread to `answered`, citing the design, ADR, or convention it drew on; the inbox shows the operator a thread with a recommendation to confirm with one action (confirm makes it the answer)
+- [x] In `autonomous`, it answers the thread (setting `answered`) when it can cite a source, and escalates to the operator with a recommendation when it cannot or when the question names the operator's judgement (a decision, a scope change, money)
+- [x] It never resolves a thread it did not open, and never answers a thread opened by itself
+- [x] Each answer is logged with the source cited; the metrics count thread waits ended by the orchestrator separately
+- [x] Tests cover a recommendation, an autonomous answer, and an escalation
 
 ## Tasks
 - T-0894 A thread entry can be a recommendation with a source, which leaves the thread awaiting the operator until they confirm it

@@ -4,10 +4,10 @@ title: "Plan for S-0261: measure, propose an ADR, fit the pack, document, close 
 anchor:
   path: wip/kanban/stories/S-0261-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md
   item: S-0261
-status: answered
+status: resolved
 participants: [planner-S-0261, alex]
 created: 2026-10-05T05:53:18Z
-updated: 2026-10-05T05:54:46Z
+updated: 2026-10-06T09:55:17Z
 ---
 
 # TH-0157 Plan for S-0261: measure, propose an ADR, fit the pack, document, close I-0068
@@ -49,3 +49,6 @@ I propose no split, merge, or drop.
 
 ### 2026-10-05T05:54:46Z alex
 12m
+
+### 2026-10-06T09:55:17Z alex
+Resolved.

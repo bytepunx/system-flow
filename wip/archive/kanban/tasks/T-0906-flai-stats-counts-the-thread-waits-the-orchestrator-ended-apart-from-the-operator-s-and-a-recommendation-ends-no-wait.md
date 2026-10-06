@@ -3,16 +3,36 @@ id: T-0906
 type: task
 nature: feature
 title: flai stats counts the thread waits the orchestrator ended apart from the operator's, and a recommendation ends no wait
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:47:46Z
-updated: 2026-10-05T04:47:46Z
-transitions: []
+updated: 2026-10-06T06:19:41Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:06:49Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:06:50Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:19:41Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, design/system/metrics.md, design/adrs]
 after: [T-0894]
+usage:
+  source: log
+  seconds: 771
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 39265
+      cache_read: 4862921
+      cache_write: 145053
+      cost: 2.5947
 ---
 # T-0906 flai stats counts the thread waits the orchestrator ended apart from the operator's, and a recommendation ends no wait
 

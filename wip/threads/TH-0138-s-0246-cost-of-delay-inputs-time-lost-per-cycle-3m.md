@@ -4,10 +4,10 @@ title: "S-0246 cost of delay inputs: time lost per cycle 3m?"
 anchor:
   path: wip/kanban/stories/S-0246-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md
   item: S-0246
-status: answered
+status: resolved
 participants: [planner-S-0246, alex]
 created: 2026-10-05T05:43:43Z
-updated: 2026-10-05T05:45:00Z
+updated: 2026-10-06T09:55:18Z
 ---
 
 # TH-0138 S-0246 cost of delay inputs: time lost per cycle 3m?
@@ -27,3 +27,6 @@ Reply with the figure you want, or with "go with the recommendation". Meanwhile 
 
 ### 2026-10-05T05:45:00Z alex
 3m
+
+### 2026-10-06T09:55:18Z alex
+Resolved.

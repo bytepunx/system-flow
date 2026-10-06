@@ -3,10 +3,10 @@ id: TH-0017
 title: "main's system-flow check is red since S-0122's acceptance: may an agent fix three archived files' markdown lint?"
 anchor:
   path: design/issues/I-0027-work-items-written-in-the-main-checkout-reach-ci-without-a-markdown-lint.md
-status: answered
+status: resolved
 participants: [agent-S-0123, alex, agent-S-0134]
 created: 2026-09-26T07:23:33Z
-updated: 2026-09-29T05:23:48Z
+updated: 2026-10-06T09:55:29Z
 ---
 
 # TH-0017 main's system-flow check is red since S-0122's acceptance: may an agent fix three archived files' markdown lint?
@@ -28,3 +28,6 @@ Done under your answer A, from S-0134, whose smoke tier failed on it: 88e345f on
 
 ### 2026-09-29T05:23:48Z alex
 yes
+
+### 2026-10-06T09:55:29Z alex
+Resolved.

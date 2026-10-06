@@ -3,16 +3,36 @@ id: T-0908
 type: task
 nature: feature
 title: A pending recommendation is not an answer to the agent that asked, and the designer's inbox lists it to confirm
-status: backlog
+status: done
 parent: S-0220
 owner: alex
 created: 2026-10-05T04:48:02Z
-updated: 2026-10-05T04:48:02Z
-transitions: []
+updated: 2026-10-06T06:40:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:19:41Z
+    by: agent-S-0220
+  - to: in-progress
+    at: 2026-10-06T06:19:42Z
+    by: agent-S-0220
+  - to: done
+    at: 2026-10-06T06:40:44Z
+    by: agent-S-0220
 stream: S-0220
 tags: [flai]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/hostapi/people.go, flai/internal/hostapi/people_test.go]
 after: [T-0902]
+usage:
+  source: log
+  seconds: 1180
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 91
+      output: 34469
+      cache_read: 4266666
+      cache_write: 133015
+      cost: 2.3068
 ---
 # T-0908 A pending recommendation is not an answer to the agent that asked, and the designer's inbox lists it to confirm
 
