@@ -23,6 +23,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [cod](#flai-cod) | Print an epic's or story's cost of delay per week, from its inputs or its epic's share |
 | [completion](#flai-completion) | Generate the autocompletion script for the specified shell |
 | [config](#flai-config) | Read and write ~/.flai/config.json |
+| [criteria](#flai-criteria) | List, tick, and untick an item's acceptance criteria by their numbers |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [doc](#flai-doc) | Search, read, and save markdown documents |
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
@@ -88,6 +89,7 @@ Subcommands:
 - [cod](#flai-cod): Print an epic's or story's cost of delay per week, from its inputs or its epic's share
 - [completion](#flai-completion): Generate the autocompletion script for the specified shell
 - [config](#flai-config): Read and write ~/.flai/config.json
+- [criteria](#flai-criteria): List, tick, and untick an item's acceptance criteria by their numbers
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [doc](#flai-doc): Search, read, and save markdown documents
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
@@ -700,6 +702,74 @@ flai config set template.repo git@github.com:me/system-flow-template.git
 flai config set template.ref my-branch
 flai config set dashboard.port 8080
 ```
+
+### flai criteria
+
+List, tick, and untick an item's acceptance criteria by their numbers.
+
+An item's acceptance criteria are the checkboxes under its ## Acceptance criteria heading, numbered from 1 in the order they appear, as flai criteria list prints them. An agent ticks a criterion once it has verified it, and not before (work-management.md); flai criteria tick changes that one box and every other byte of the body stays as it was.
+
+tick and untick are an edit of the body, made as flai edit makes one: an archived or closed item is refused (exit 4), as is a change flai check finds fault with; with --hash, a change someone made meanwhile is a conflict (exit 3); and agents connected over MCP are told the criteria changed. A number there is not is refused, and nothing is written.
+
+The MCP tool criteria\_tick and the dashboard tick and untick criteria the same way.
+
+Examples:
+
+```bash
+flai criteria list S-0282
+flai criteria tick S-0282 1 3
+flai criteria tick S-0282 1,3 --autocommit
+flai criteria untick S-0282 2
+flai criteria list S-0282 --json
+```
+
+Subcommands:
+
+- [list](#flai-criteria-list): Print an item's acceptance criteria, numbered, and which are ticked
+- [tick](#flai-criteria-tick): Tick an item's acceptance criteria by the numbers flai criteria list prints
+- [untick](#flai-criteria-untick): Untick an item's acceptance criteria by the numbers flai criteria list prints
+
+#### flai criteria list
+
+Print an item's acceptance criteria, numbered, and which are ticked.
+
+```text
+flai criteria list <id>
+```
+
+#### flai criteria tick
+
+Tick an item's acceptance criteria by the numbers flai criteria list prints.
+
+```text
+flai criteria tick <id> <n>... [flags]
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit the item, unless dashboard.autocommit is false |
+| `--by` string | who ticks, as agents are told (default: FLAI\_AGENT, then the config author) |
+| `--hash` string | the hash flai criteria list --json or flai edit --show printed; a change made meanwhile is then a conflict |
+| `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+#### flai criteria untick
+
+Untick an item's acceptance criteria by the numbers flai criteria list prints.
+
+```text
+flai criteria untick <id> <n>... [flags]
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit the item, unless dashboard.autocommit is false |
+| `--by` string | who ticks, as agents are told (default: FLAI\_AGENT, then the config author) |
+| `--hash` string | the hash flai criteria list --json or flai edit --show printed; a change made meanwhile is then a conflict |
+| `--trailer` stringArray | trailer line for the commit (repeatable) |
 
 ### flai dashboard
 

@@ -100,6 +100,7 @@ var cliReads = map[string][]string{
 	"board":    {""},
 	"check":    nil,
 	"cod":      nil,
+	"criteria": {"list"},
 	"doc":      {"search", "show"},
 	"forecast": nil,
 	"help":     nil,

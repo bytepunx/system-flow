@@ -8,7 +8,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -104,6 +104,35 @@ func TestASubAgentRunsChecksButNotWrites(t *testing.T) {
 		if !strings.Contains(why, "a sub-agent (verifier) cannot run") || !strings.Contains(why, "ADR-0060") {
 			t.Errorf("%q: %q", c, why)
 		}
+	}
+}
+
+// S-0282: a sub-agent reads a story's criteria and does not tick them; the
+// story's agent ticks one once it has verified it, and neither the planner
+// nor the orchestrator ticks any.
+func TestOnlyTheStorysAgentTicksCriteria(t *testing.T) {
+	if why := g.Check(bash("verifier", "flai criteria list S-0001 --json")); why != "" {
+		t.Errorf("a sub-agent lists criteria: %s", why)
+	}
+	for _, c := range []string{"flai criteria tick S-0001 1", "flai criteria untick S-0001 1,2"} {
+		if why := g.Check(bash("verifier", c)); !strings.Contains(why, "a sub-agent (verifier) cannot run") {
+			t.Errorf("a sub-agent %q: %q", c, why)
+		}
+		if why := g.Check(bash("", c)); why != "" {
+			t.Errorf("the story's agent %q: %s", c, why)
+		}
+		if why := planGuard.Check(bash("", c)); !strings.Contains(why, "the planner cannot") {
+			t.Errorf("the planner %q: %q", c, why)
+		}
+		if r := orchestrator(allOn).Decide(bash("", c)); !strings.Contains(r.Why, "the orchestrator never does it, whatever its permissions") || r.Needs != "" {
+			t.Errorf("the orchestrator %q: %+v", c, r)
+		}
+	}
+	if why := planGuard.Check(bash("", "flai criteria list S-0001")); why != "" {
+		t.Errorf("the planner lists criteria: %s", why)
+	}
+	if r := orchestrator(allOn).Decide(bash("", "flai criteria list S-0001")); r.Why != "" {
+		t.Errorf("the orchestrator lists criteria: %+v", r)
 	}
 }
 
