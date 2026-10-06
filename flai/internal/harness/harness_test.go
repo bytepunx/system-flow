@@ -1180,6 +1180,11 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 			"Never a draft, never a held story.",
 			"With `order_ready`, run `flai order --by <policy> --apply`",
 			"Never place a story by hand yourself.",
+			"With `accept_reviews`, take each story in review in turn.",
+			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run`",
+			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -`",
+			"open a thread on it with `thread_open` saying what is missing",
+			"Never move a story to done with `item_move`.",
 			"the policy figure that justified it",
 			"ends that attempt: log it with the refusal",
 		} {
