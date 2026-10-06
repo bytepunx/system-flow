@@ -35,6 +35,13 @@
 // confirm, or, while it is autonomous, as an answer that cites its source,
 // and it never resolves one. Confirming a recommendation is the operator's
 // alone (ADR-0090).
+//
+// A story's agent, in a session flai serve starts with FLAI_STORY and no
+// role, is refused its own wait_for_events while a sub-agent of its session
+// runs and no thread on its story awaits the designer (S-0285): the call
+// reports work items and threads, not sub-agents, so it would run to its
+// timeout. Record keeps each session's running sub-agents, from Claude
+// Code's SubagentStart and SubagentStop hooks.
 package guard
 
 import (
@@ -52,14 +59,18 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// Event is the part of a Claude Code PreToolUse hook's input the guard
-// reads.
+// Event is the part of a Claude Code hook's input the guard reads: a
+// PreToolUse's tool call, or a SubagentStart's or SubagentStop's sub-agent,
+// as HookEventName says, in the session SessionID.
 type Event struct {
-	ToolName  string `json:"tool_name"`
-	ToolInput Input  `json:"tool_input"`
-	// AgentID is set only when a sub-agent makes the call; AgentType names
-	// the sub-agent's definition. A session started with --agent may carry
-	// an agent type of its own, so the ID is what marks a sub-agent.
+	HookEventName string `json:"hook_event_name"`
+	SessionID     string `json:"session_id"`
+	ToolName      string `json:"tool_name"`
+	ToolInput     Input  `json:"tool_input"`
+	// AgentID is set only when a sub-agent makes the call, or on the
+	// sub-agent a SubagentStart or SubagentStop reports; AgentType names the
+	// sub-agent's definition. A session started with --agent may carry an
+	// agent type of its own, so the ID is what marks a sub-agent.
 	AgentID   string `json:"agent_id"`
 	AgentType string `json:"agent_type"`
 }
@@ -259,11 +270,23 @@ const (
 // who opened the thread with an ID, for the orchestrator's calls on threads;
 // ThreadOpener reads it from a project's threads. A thread whose opener it
 // cannot tell, or every thread when Opener is nil, is held as another's.
+//
+// Story is the story a story's agent's session works, from FLAI_STORY, ""
+// outside one; with Role "" it holds the session's own wait_for_events to
+// the sub-agents Running lists and the threads ThreadOpen tells of. Running
+// lists the sub-agents running in the session, as the package's Running
+// reads them from the session's record; ThreadOpen says whether an
+// unresolved thread is on Story or one of its tasks, as StoryThreadOpen
+// reads it. A nil Running lists no sub-agent and a nil ThreadOpen no open
+// thread; an error from either lets the wait through.
 type Guard struct {
 	Commands    []string
 	Role        string
 	Permissions manifest.Permissions
 	Opener      func(id string) (string, error)
+	Story       string
+	Running     func() ([]SubAgent, error)
+	ThreadOpen  func() (bool, error)
 }
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
@@ -275,6 +298,21 @@ func ThreadOpener(r *workitem.Repo) func(id string) (string, error) {
 			return "", err
 		}
 		return th.Opener(), nil
+	}
+}
+
+// StoryThreadOpen says whether an unresolved thread in r's wip/threads is on
+// story or on one of its tasks, as the inbox filtered by a story counts them.
+func StoryThreadOpen(r *workitem.Repo, story string) func() (bool, error) {
+	return func() (bool, error) {
+		all, err := threads.List(r)
+		if err != nil {
+			return false, err
+		}
+		want := workitem.CanonicalID(story)
+		return slices.ContainsFunc(all, func(th *threads.Thread) bool {
+			return th.Open() && workitem.CanonicalID(threads.StoryOf(r, th)) == want
+		}), nil
 	}
 }
 
@@ -610,6 +648,8 @@ func (g Guard) Decide(e Event) Refusal {
 			return Refusal{Why: g.plan(e)}
 		case RoleOrchestrate:
 			return g.orchestrate(e)
+		case "":
+			return Refusal{Why: g.wait(e)}
 		}
 		return Refusal{}
 	}
@@ -632,6 +672,38 @@ func (g Guard) Decide(e Event) Refusal {
 		}
 	}
 	return Refusal{}
+}
+
+// waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why
+// it would not return, and how to wait instead.
+const waitsOnSubAgents = "wait_for_events reports work items and threads, not sub-agents, so it would run to its timeout. Wait for a sub-agent by launching it with the Agent tool's run_in_background set to false, so that its result comes back as the tool's result; launch a layer's sub-agents in one message, each so. Use wait_for_events only for a thread awaiting the designer (delegation.md)."
+
+// wait says why a story's agent's own call is refused, or "" when it is not
+// (S-0285): wait_for_events while a sub-agent of its session runs, unless a
+// thread on its story or one of its tasks is open, so that it waits on the
+// designer, whose answer the call returns on.
+func (g Guard) wait(e Event) string {
+	if g.Story == "" || e.ToolName != MCPPrefix+"wait_for_events" || g.Running == nil {
+		return ""
+	}
+	running, err := g.Running()
+	if err != nil || len(running) == 0 {
+		return ""
+	}
+	if g.ThreadOpen != nil {
+		if open, err := g.ThreadOpen(); err != nil || open {
+			return ""
+		}
+	}
+	names := make([]string, len(running))
+	for i, s := range running {
+		who := s.Type
+		if who == "" {
+			who = "unnamed"
+		}
+		names[i] = fmt.Sprintf("%s %s", who, s.ID)
+	}
+	return fmt.Sprintf("the story's agent cannot call wait_for_events while its sub-agents run (%s) and no thread on %s awaits the designer: %s", strings.Join(names, ", "), g.Story, waitsOnSubAgents)
 }
 
 // orchestrate decides on the orchestrator's own call under its permissions.

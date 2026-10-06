@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -149,4 +150,126 @@ func TestTheSettingsRunTheGuardOnTheStrategicAgentsEdits(t *testing.T) {
 			t.Errorf("%s: hooks %v", path, commands)
 		}
 	}
+}
+
+// subAgentHook is a SubagentStart's or SubagentStop's input, as Claude Code
+// 2.1.290 gives it, for the sub-agent id of type typ in session s1.
+func subAgentHook(event, id, typ string) string {
+	return `{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/tmp/x","prompt_id":"p1","agent_id":"` + id + `","agent_type":"` + typ + `","hook_event_name":"` + event + `","stop_hook_active":false}`
+}
+
+// waitHook is the story's agent's own wait_for_events in session s1.
+const waitHook = `{"session_id":"s1","hook_event_name":"PreToolUse","tool_name":"mcp__flai__wait_for_events","tool_input":{"timeout_seconds":600}}`
+
+// S-0285: the guard records each sub-agent SubagentStart reports as running
+// in its session, in the main checkout's .flai-cache, and removes it on
+// SubagentStop, saying nothing.
+func TestGuardRecordsASessionsSubAgents(t *testing.T) {
+	root := tempProject(t)
+	dir := filepath.Join(root, ".flai-cache", "guard")
+	for _, c := range []struct {
+		in   string
+		want []string
+	}{
+		{subAgentHook("SubagentStart", "ac73f87145abc4315", "general-purpose"), []string{"ac73f87145abc4315 general-purpose"}},
+		{subAgentHook("SubagentStart", "b2", "verifier"), []string{"ac73f87145abc4315 general-purpose", "b2 verifier"}},
+		{subAgentHook("SubagentStop", "ac73f87145abc4315", "general-purpose"), []string{"b2 verifier"}},
+		{subAgentHook("SubagentStop", "b2", "verifier"), nil},
+	} {
+		out, errOut, code := runStdin(t, root, c.in, "guard")
+		if code != 0 || out != "" || errOut != "" {
+			t.Errorf("%s: code %d, stdout %q, stderr %q", c.in, code, out, errOut)
+		}
+		running, err := guard.Running(dir, "s1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, s := range running {
+			got = append(got, s.ID+" "+s.Type)
+		}
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("after %s: running %v, want %v", c.in, got, c.want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "s1.json")); !os.IsNotExist(err) {
+		t.Errorf("a record with no sub-agent running is left: %v", err)
+	}
+	// a session ID that is not a file name is ignored
+	if _, errOut, code := runStdin(t, root, strings.Replace(subAgentHook("SubagentStart", "c3", "x"), `"s1"`, `"../s1"`, 1), "guard"); code != 0 || errOut != "" {
+		t.Errorf("unsafe session: code %d, stderr %q", code, errOut)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Errorf("unsafe session recorded: %v", entries)
+	}
+	// outside a project it warns and fails open
+	if _, errOut, code := runStdin(t, t.TempDir(), subAgentHook("SubagentStart", "c3", "x"), "guard"); code != 0 || !strings.Contains(errOut, "sub-agent not recorded") {
+		t.Errorf("no project: code %d, stderr %q", code, errOut)
+	}
+}
+
+// S-0285: in a story's agent's session the guard refuses the agent's own
+// wait_for_events while a sub-agent of the session runs and no thread on the
+// story or its tasks is open, naming the sub-agent and how to wait instead;
+// a wait for the designer, with a thread open, passes.
+func TestGuardRefusesTheStorysAgentsWaitOnItsSubAgents(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "agent-S-0001")
+	t.Setenv("FLAI_ROLE", "")
+	t.Setenv("FLAI_STORY", "S-0001")
+	root := tempProject(t)
+	for _, args := range [][]string{{"story", "new", "Slice"}, {"story", "new", "Other"}, {"task", "new", "--story", "S-0001", "Piece"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %s", args, errOut)
+		}
+	}
+	wait := func(what string, code int, err string) {
+		t.Helper()
+		_, errOut, got := runStdin(t, root, waitHook, "guard")
+		if got != code || (err == "" && errOut != "") || !strings.Contains(errOut, err) {
+			t.Errorf("%s: code %d, stderr %q", what, got, errOut)
+		}
+	}
+	hook := func(in string) {
+		t.Helper()
+		if _, errOut, code := runStdin(t, root, in, "guard"); code != 0 {
+			t.Fatalf("%s: code %d, stderr %q", in, code, errOut)
+		}
+	}
+	thread := func(args ...string) {
+		t.Helper()
+		if _, errOut, code := runIn(t, root, append([]string{"thread"}, args...)...); code != 0 {
+			t.Fatalf("thread %v: %s", args, errOut)
+		}
+	}
+
+	wait("no sub-agent started", 0, "")
+	hook(subAgentHook("SubagentStart", "ac73f87145abc4315", "general-purpose"))
+	wait("a sub-agent running", 2, "the story's agent cannot call wait_for_events while its sub-agents run (general-purpose ac73f87145abc4315) and no thread on S-0001 awaits the designer: wait_for_events reports work items and threads, not sub-agents, so it would run to its timeout. Wait for a sub-agent by launching it with the Agent tool's run_in_background set to false")
+	thread("new", "--on", "S-0002", "Elsewhere?", "On another story.")
+	wait("a thread open on another story", 2, "general-purpose ac73f87145abc4315")
+	thread("new", "--on", "S-0001", "Which first?", "Say which.")
+	wait("a thread open on the story", 0, "")
+	thread("resolve", "TH-0002")
+	wait("the story's thread resolved", 2, "general-purpose ac73f87145abc4315")
+	thread("new", "--on", "T-0001", "Which piece?", "Say which.")
+	wait("a thread open on the story's task", 0, "")
+	thread("resolve", "TH-0003")
+	wait("the task's thread resolved", 2, "general-purpose ac73f87145abc4315")
+
+	// a sub-agent's own wait_for_events is refused as before
+	_, errOut, code := runStdin(t, root, `{"session_id":"s1","hook_event_name":"PreToolUse","tool_name":"mcp__flai__wait_for_events","tool_input":{},"agent_id":"ac73f87145abc4315","agent_type":"general-purpose"}`, "guard")
+	if code != 2 || !strings.Contains(errOut, "a sub-agent (general-purpose) cannot call wait_for_events") {
+		t.Errorf("a sub-agent's wait: code %d, stderr %q", code, errOut)
+	}
+	// the orchestrator and a session outside a story wait as they did
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	wait("the orchestrator", 0, "")
+	t.Setenv("FLAI_ROLE", "")
+	t.Setenv("FLAI_STORY", "")
+	wait("outside a story's agent's session", 0, "")
+	t.Setenv("FLAI_STORY", "S-0001")
+
+	hook(subAgentHook("SubagentStop", "ac73f87145abc4315", "general-purpose"))
+	wait("the sub-agent stopped", 0, "")
 }

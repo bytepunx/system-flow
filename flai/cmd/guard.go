@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -19,7 +21,7 @@ const exitGuardRefused = 2
 func newGuardCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "guard",
-		Short: "Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, as a Claude Code PreToolUse hook",
+		Short: "Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
@@ -37,8 +39,10 @@ ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A
 refusal prints why on standard error and exits 2, which Claude Code hands
 back to the sub-agent. Every word of a command line is looked at, so a
 command run through env, sudo, timeout, xargs, find -exec, or a shell's -c
-is found too. The story's agent's own calls carry no agent_id and pass, as
-does anything it cannot read: the guard fails open. It is not a shell, and
+is found too. The story's agent's own calls carry no agent_id and pass, save
+the wait below, as does anything it cannot read: the guard fails open. An
+input whose hook_event_name is neither SubagentStart nor SubagentStop is a
+PreToolUse's, named or not. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
 it) gets past it.
 
@@ -85,9 +89,26 @@ its time, the call, and the permission it needs; a refusal that cannot be
 logged is warned of and refused all the same. The orchestrator's
 sub-agents are held as any sub-agent is.
 
+Given a SubagentStart or SubagentStop hook's input, as hook_event_name
+says, it records the sub-agent (its agent_id and agent_type, and when it
+started) as running in the hook's session, or no longer, in
+.flai-cache/guard/<session_id>.json in the project's main checkout, under a
+lock, since a layer's sub-agents start at once. It refuses neither and says
+nothing; a record it cannot write is warned of. In a story's agent's
+session, one flai serve starts with FLAI_STORY and no FLAI_ROLE, it refuses
+the agent's own wait_for_events while the session's record lists a
+sub-agent running and no unresolved thread is on the story or one of its
+tasks (S-0285): wait_for_events reports work items and threads, not
+sub-agents, so it would run to its timeout. The refusal names the running
+sub-agents and says to wait for one by launching it with the Agent tool's
+run_in_background set to false, which returns its result as the tool's
+result. With a thread on the story open, the agent waits on the designer,
+and the call passes and returns on the answer. A project, record, or
+threads it cannot read let the call through.
+
 The template's .claude/settings.json runs it before Bash and flai's MCP
-tools, and, in a planner's or an orchestrator's session alone, before Edit,
-Write, and NotebookEdit as well.`,
+tools, on SubagentStart and SubagentStop, and, in a planner's or an
+orchestrator's session alone, before Edit, Write, and NotebookEdit as well.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -101,7 +122,11 @@ Write, and NotebookEdit as well.`,
 				a.logger().Warn("hook input is not a tool call", "component", "guard", "err", err.Error())
 				return nil
 			}
-			g := guard.Guard{Role: os.Getenv("FLAI_ROLE")}
+			if e.HookEventName == guard.HookSubagentStart || e.HookEventName == guard.HookSubagentStop {
+				a.recordSubAgent(e)
+				return nil
+			}
+			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY")}
 			for _, c := range cmd.Root().Commands() {
 				g.Commands = append(g.Commands, c.Name())
 			}
@@ -113,6 +138,9 @@ Write, and NotebookEdit as well.`,
 					g.Permissions = repo.Manifest.Orchestration.Permissions
 					g.Opener = guard.ThreadOpener(repo)
 				}
+			}
+			if g.Role == "" && g.Story != "" && e.AgentID == "" {
+				a.holdWaits(&g, e.SessionID)
 			}
 			r := g.Decide(e)
 			if r.Why == "" {
@@ -140,4 +168,49 @@ func (a *app) guardProject() (*workitem.Repo, error) {
 		}
 	}
 	return workitem.Open(start)
+}
+
+// recordSubAgent notes in the project's .flai-cache/guard that e's
+// sub-agent started or stopped in its session. It says nothing when it
+// does, and warns when it cannot: the guard fails open.
+func (a *app) recordSubAgent(e guard.Event) {
+	repo, err := a.guardProject()
+	if err == nil {
+		err = guard.Record(filepath.Join(repo.CacheDir(), guard.RecordDir), e, a.now())
+	}
+	if err != nil {
+		a.logger().Warn("sub-agent not recorded", "component", "guard", "event", e.HookEventName, "agent_id", e.AgentID, "err", err.Error())
+	}
+}
+
+// holdWaits gives g what it needs to hold a story's agent's wait_for_events:
+// the sub-agents session's record lists as running, and whether a thread on
+// the story is open, each read from the project only when the call is
+// decided on. A project, a record, or threads it cannot read are warned of
+// and let the call through.
+func (a *app) holdWaits(g *guard.Guard, session string) {
+	project := sync.OnceValues(a.guardProject)
+	g.Running = func() ([]guard.SubAgent, error) {
+		repo, err := project()
+		if err != nil {
+			a.logger().Warn("project unreadable, the story's agent's wait is let through", "component", "guard", "err", err.Error())
+			return nil, err
+		}
+		running, err := guard.Running(filepath.Join(repo.CacheDir(), guard.RecordDir), session)
+		if err != nil {
+			a.logger().Warn("sub-agents unreadable, the story's agent's wait is let through", "component", "guard", "err", err.Error())
+		}
+		return running, err
+	}
+	g.ThreadOpen = func() (bool, error) {
+		repo, err := project()
+		if err == nil {
+			var open bool
+			if open, err = guard.StoryThreadOpen(repo, g.Story)(); err == nil {
+				return open, nil
+			}
+		}
+		a.logger().Warn("threads unreadable, the story's agent's wait is let through", "component", "guard", "story", g.Story, "err", err.Error())
+		return false, err
+	}
 }
