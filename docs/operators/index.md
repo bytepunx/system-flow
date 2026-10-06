@@ -253,6 +253,21 @@ Whatever you turn on, it never edits a file, commits, works a story, or moves a 
 
 **Where to look.** The run is kept in `serve/agents.json` under `orchestrator`, its output in `serve/agents/<key>-orchestrator-<time>.log`, and its decisions and the guard's refusals in `wip/agents/orchestrator.md`. `flai hostapi agent.status` shows the run as `orchestrator`, and the dashboard's Activity page shows it with its stream.
 
+### The analyze host action: the analyzer (S-0223)
+
+`flai serve` can start the analyzer for the project, on your machine, as you: because you asked, with `flai analyze` in a shell or the MCP tool `analyze` from your own agent, and each time `analysis.schedule` in `system-flow.yaml` comes round ([ADR-0099](../../design/adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)). The host API's `analyze.run` starts it for a dashboard too. It is a host action, off until you enable it:
+
+```bash
+flai serve enable analyze      # for the project in the working directory; --all-projects for every project
+flai analyze --focus risk      # bottlenecks, intent, or risk; all three without --focus
+flai serve journal             # every analyzer started, or that could not be
+flai serve disable analyze     # no more runs, asked for or scheduled
+```
+
+**Understand what enabling it means.** Whoever holds the dashboard token can start the analyzer whenever none runs, on your machine, as you, with the analyzer's agent (`analysis.agent` in `system-flow.yaml` over `agent`) and the harnesses and command you set with `flai serve agent`. One analyzer runs per project at a time, and it does not count against the in-progress limit, so each start spends what one agent session costs. With `analysis.schedule` set, `flai serve` starts one each time the schedule comes round, without asking you; unset, it never does. Turning the action off starts no more runs; it does not stop one under way. The analyzer runs in the project's main checkout. It reads the metrics, the design, the code, and the issues, writes one report under `design/analysis/`, and adds it to the folder's README. `flai guard` refuses it every other edit, any write to a work item or an issue, and git's writes. That holds only while `.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` for an analyzer's session, as the template's does, and `flai` on `PATH` has the analyzer's rules; the analyzer's definition gives it `Edit` and `Write`, so a project that keeps older settings has nothing that keeps its edits to its folder. A project whose `.claude/agents/` has no `analyzer.md` cannot start it on `claude-code`: `flai upgrade` adds it. An agent `flai serve` started cannot start the analyzer through MCP.
+
+**Where to look.** The run is kept in `serve/agents.json` under `analyzer`, with its focus, what started it, and the report it wrote; its output is in `serve/agents/<key>-analyzer-<time>.log`, and what it did and cost in `wip/agents/analyzer.md`, whose entry names the report or says none was written. `flai hostapi agent.status` shows the run as `analyzer`. A run that wrote no report is recorded as `failed`. The reports are under `design/analysis/`, which the dashboard's Docs page shows. The analyzer asks you in a thread on its report when it needs an input of yours.
+
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 
 Everything above is changed in a shell on the host, and stays that way until you turn on `settings` ([ADR-0039](../../design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md)). With it on, the dashboard's **Settings** page changes the same things through flai:

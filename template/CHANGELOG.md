@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.61 - 2026-10-06
+
+- S-0223 The analyzer is an agent flai serve starts for a project behind the analyze host action, on the operator's word or on `analysis.schedule`, and it writes one report under `design/analysis/` (patch): the template ships `.claude/agents/analyzer.md`, the definition the analyzer's session runs as. It primes with role `analyze`, reads the metrics with `flai stats --json`, the design with `doc_search` and `doc_get`, and the issues, hands wide search to the explorer, and looks for bottlenecks in the flow, gaps between `design/system` and the code, or technical and security risks, as its focus says, or for all three. It writes one report, `design/analysis/<date>-<focus>.md`, with front matter `title`, `updated`, `status`, `focus`, `from`, and `to`, and one section per finding with its evidence, severity, and estimated impact, and adds it to `design/analysis/README.md`. It edits nothing else, writes no work item, and authors no stories, and its last line names the report. It has `Edit` and `Write`, and no tool that writes a work item. `.claude/settings.json`'s `PreToolUse` entry on `Edit`, `Write`, and `NotebookEdit` runs `flai guard` in an analyzer's session (`FLAI_ROLE=analyze`) as well as a planner's and an orchestrator's, so that its edits stay inside `design/analysis/`, and still exits at once in a story's. A new project has `design/analysis/README.md`, which says what the folder is for, how a report is named, its front matter and statuses, and has a table with a row per report; `design/README.md` and `CLAUDE.md` list the folder in their layout tables. The commands need a flai that has them.
+
 ## 1.0.60 - 2026-10-06
 
 - S-0295 One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three (patch).

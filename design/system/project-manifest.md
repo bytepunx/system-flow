@@ -80,6 +80,10 @@ orchestration:                               # optional (S-0217): how the ready 
     answer_threads: recommend                # off, recommend, or autonomous; default off
   agent:                                     # optional (S-0218): the orchestrator's agent, over agent above
     model: claude-sonnet-5
+analysis:                                    # optional (S-0223): the analyzer's agent and schedule
+  agent:                                     # the analyzer's agent, over agent above
+    model: claude-sonnet-5
+  schedule: "0 6 * * 1"                      # when flai serve runs the analyzer, a cron expression in UTC or daily; default none
 claims:                                      # optional (S-0295): how stories' touches claim paths
   shared:                                    # glob patterns of paths whose overlaps hold no story; flai shared edits them
     - docs/users/flai.md
@@ -120,6 +124,9 @@ Rules:
 
 - `orchestration.agent` is the orchestrator's agent (S-0218): the same shape as `agent`, merged over it as `planning.agent` is (`Manifest.OrchestrationAgent`), so it names only what the orchestrator runs differently. Unset, the orchestrator runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-orchestrator).
 - `flai check` reports each thing wrong with `orchestration` as a `manifest.orchestration` error on its line: a policy or release policy outside its list, a threshold with neither figure or a negative one, a theme with neither or both of `epic` and `tag`, a key under `permissions` that names no permission, an `answer_threads` that is not `off`, `recommend`, or `autonomous`, and an `agent` that is not valid, under the name `orchestration.agent`. The operator sets every `orchestration` key by hand; no flai command changes them.
+- `analysis.agent` is the analyzer's agent (S-0223, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)): the same shape as `agent`, merged over it as `planning.agent` is (`Manifest.AnalysisAgent`), so it names only what the analyzer runs differently. Unset, the analyzer runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-analyzer).
+- `analysis.schedule` is when `flai serve` runs the analyzer on its own, with no focus, while the `analyze` host action is on: a five-field cron expression in UTC, such as `0 6 * * 1`, or `daily`, which is 00:00 UTC, parsed as `planning.schedule` is. Unset, there is no schedule, and the analyzer runs only when the operator asks for it ([The analysis schedule](strategic-agents.md#the-analysis-schedule)).
+- `flai check` reports each thing wrong with `analysis` as a `manifest.analysis` error on its line: a `schedule` it cannot parse, or one that never comes round, and an `agent` that is not valid, under the name `analysis.agent`. The operator sets both keys by hand; no flai command changes them.
 - `claims.shared` lists the paths that many stories change in separate sections or new files, as glob patterns (S-0295, [ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)). An overlap whose narrower entry lies wholly inside a pattern holds no ready story, is not a `wip.overlap`, and is not told as a grown claim; the trial merge at sync and the notice at acceptance still report it ([workflow.md](workflow.md#branches-and-collisions-adr-0019)).
   - Patterns are relative to the repository root and separated by `/`. `*` matches any characters within one segment, `**` zero or more whole segments, and `?` one character within a segment. A pattern with no glob character matches the path and everything below it, so `design/adrs` and `design/adrs/**` mean the same. A folder entry lies inside a pattern only when the whole folder does: `docs/users` is inside `docs/users/**` but not inside `docs/users/*.md`.
   - `flai check` reports an empty pattern, an absolute path, a `..` segment, or a malformed glob as an error on its line. A pattern that is not valid frees nothing.

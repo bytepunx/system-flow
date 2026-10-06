@@ -7,14 +7,14 @@ topics: [planning, orchestration, analysis]
 
 # Strategic agents
 
-The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer has its pack and its activity document, and nothing starts it yet.
+The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer runs, one per project at a time, behind the `analyze` host action, when the operator asks for it and on a schedule, and writes one report under `design/analysis/`.
 
 | Part | Planner | Orchestrator | Analyzer |
 |------|---------|--------------|----------|
 | Pack: `flai prime --role` ([ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md)) | `plan`, with `--epic` or `--story` | `orchestrate` | `analyze` |
 | Activity document ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)) | `wip/agents/planner.md` | `wip/agents/orchestrator.md` | `wip/agents/analyzer.md` |
-| Host action | `plan` | `orchestrate` | not yet |
-| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), on the orchestrator's for an epic behind `plan_backlog_epics` (S-0219), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | while `orchestrate` is on, one per project, started again when it ends ([ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md), [The orchestrator](#the-orchestrator)) | not yet |
+| Host action | `plan` | `orchestrate` | `analyze` |
+| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), on the orchestrator's for an epic behind `plan_backlog_epics` (S-0219), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | while `orchestrate` is on, one per project, started again when it ends ([ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md), [The orchestrator](#the-orchestrator)) | on the operator's word, and on `analysis.schedule` while `analyze` is on, one per project at a time ([ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md), [The analyzer](#the-analyzer)) |
 
 ## The planner
 
@@ -40,7 +40,7 @@ Each needs the host action `plan` on for the project: `flai serve enable plan`, 
 - while a planner runs for the item: one item has one planner at a time;
 - when the planner's agent names no harness and no command is set on the host.
 
-The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic `flai plan --candidates` lists while the operator gives it `plan_backlog_epics` ([What it does with each permission](#what-it-does-with-each-permission-s-0219)). `flai guard` refuses the tool to a sub-agent and to the planner.
+The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic `flai plan --candidates` lists while the operator gives it `plan_backlog_epics` ([What it does with each permission](#what-it-does-with-each-permission-s-0219)). `flai guard` refuses the tool to a sub-agent, to the planner, and to the analyzer.
 
 ### Its agent
 
@@ -162,7 +162,7 @@ It records why under a `### Planning` heading in the story's Notes: where each t
 
 Each refusal names the rule broken and says to ask the operator on the item, or put it in the final summary. Other shell commands pass, as a sub-agent's do (ADR-0060). The planner's sub-agents are held as every sub-agent is. With `story new`, the last `--draft` decides: bare, or with a value that parses as true.
 
-Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan` or `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), and exits at once otherwise, so a story's session pays one shell test per edit. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
+Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), or `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), and exits at once otherwise, so a story's session pays one shell test per edit. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
 
 ### Checked creation
 
@@ -436,7 +436,7 @@ Thread calls are held by who opened the thread as well (S-0220). On a thread it 
 
 Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry; a lock older than ten seconds is taken as left behind.
 
-`.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `plan` or `orchestrate` ([The guard](#the-guard)).
+`.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, or `analyze` ([The guard](#the-guard)).
 
 ### The run and how it ends
 
@@ -466,4 +466,115 @@ The Activity page lists the orchestrator's run and its stream. The Settings page
 
 ## The analyzer
 
-It primes with its role and has its activity document; `activity_log` takes its kind. Its activities charge no item: their cost is its project strategic total ([What it costs on the items](#what-it-costs-on-the-items-s-0226)) until S-0227 charges them to the issues it files. No host action, guard rule, definition, or command starts it yet. When one does, it follows the planner's and the orchestrator's shape: a host action, a role in `FLAI_ROLE`, a definition in `.claude/agents/`, and guard rules of its own.
+The analyzer looks at the whole project, writes what it finds in one report, and ends (S-0223, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)). It reads the metrics, the design, the code, and the issues, and looks for what its focus names: bottlenecks in the flow of work, gaps between `design/system` and the code (`intent`), or technical and security risks (`risk`), or all three when it is given no focus. It writes one report under `design/analysis/` and adds it to the folder's index. It edits nothing else and authors no stories. Filing its actionable findings as issues, which the convention's "As the analyzer" asks of it, is S-0224's: until then the guard refuses it `flai issue new` and `bump`, and its findings stay in the report.
+
+### Starting an analysis
+
+| Way | For | What it runs |
+|-----|-----|--------------|
+| `flai analyze [--focus bottlenecks\|intent\|risk] [--json]` | a shell on the host | `serve.Analyze` |
+| The host API's `analyze.run` `{focus?}` | a dashboard | `flai analyze [--focus=<focus>] --json`; a focus none of the three is refused before anything runs |
+| The MCP tool `analyze` `{focus?}` | the operator's own agent | `serve.Analyze`, as `flai analyze` does; journalled as `mcp.analyze` with the agent that asked |
+| `analysis.schedule` | `flai serve`, on its own | the launcher's `analyze` with no focus, after the checks `serve.Analyze` makes ([The analysis schedule](#the-analysis-schedule)) |
+
+Each needs the host action `analyze` on for the project: `flai serve enable analyze`, or the dashboard's Settings page while `settings` is on. It is off by default. A holder of the dashboard token can then start the analyzer whenever none runs. `flai analyze` starts the run itself, as `flai plan` does, and hands the process over: the command does not wait, and the serving flai settles the run. With no `flai serve` running it says so on standard error, and the analyzer still runs. Turning the action off starts no more runs; it does not stop one under way, which ends when the analyzer does.
+
+`serve.Analyze` (`analyzeCheck`) refuses, saying why:
+
+- while the `analyze` action is off for the project;
+- a focus that is none of `bottlenecks`, `intent`, and `risk`;
+- while an analyzer runs for the project, naming its focus, what started it, its PID, when it started, and its log: one analyzer runs per project at a time;
+- when the analyzer's agent names no harness and no command is set on the host.
+
+The MCP tool `analyze` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): an analysis is the operator's to ask for, or the schedule's. `flai guard` refuses the tool and `flai analyze` to a sub-agent, the planner, the orchestrator, and the analyzer.
+
+### The analyzer's agent
+
+`analysis.agent` in `system-flow.yaml`, merged over the project's `agent` as `planning.agent` is (`Manifest.AnalysisAgent`), gives the analyzer's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports an `analysis.agent` or an `analysis.schedule` that is not valid as `manifest.analysis`. See [project-manifest.md](project-manifest.md).
+
+### How the analyzer runs
+
+The launcher's `analyze` starts it through the harness adapter with a `harness.Request` whose `Role` is `analyze` and whose `Focus` is the focus, or empty for all three, with no `Item` and no `Story`.
+
+- **Where.** In the project's main checkout. No branch, no worktree.
+- **As whom.** `FLAI_AGENT` is `analyzer`. The environment carries `FLAI_ROLE=analyze`, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`, and no `FLAI_ITEM` or `FLAI_STORY`. `roleEnv` refuses an analyzer request that names a story or an item, or a focus none of the three, and a focus given to any other agent. `flai serve` drops `FLAI_FOCUS` from its own environment, with `FLAI_STORY`, `FLAI_ROLE`, and `FLAI_ITEM`, before it adds a run's (`runMarks`).
+- **claude-code.** The session is named `<key> analyze`, with the focus after it when there is one, such as `sf analyze risk`. It runs with `--agent analyzer` over the project's `.claude/agents/analyzer.md`, passed in `--agents` with the analyzer's agent's model when it names one, beside the sub-agents whose roles the agent gives a model. A project with no `analyzer.md` is refused, naming `flai upgrade`. Its permission handler is flai's `permission_prompt`, as for every session `flai serve` starts.
+- **The operator's command.** It gets `FLAI_ROLE`, and `FLAI_FOCUS` when the run has a focus, since a command has no prompt to be told it in. `{story}` is empty.
+
+### What the analyzer is told
+
+`harness.Prompt` gives the analyzer a prompt of its own (`analyzePrompt`): analyze the project and do nothing else, as the convention's section "As the analyzer" says; prime with `--role analyze`; call `inbox`. Look for the findings its focus names and nothing else, or for all three kinds with none:
+
+| Focus | It looks for |
+|-------|--------------|
+| `bottlenecks` | Bottlenecks in the flow of work, from the cumulative flow, the time items spend in each state, the time they wait, and the holds on them |
+| `intent` | Gaps between what `design/system` says and what the code does: a design section the code does not meet, and code the design does not describe |
+| `risk` | Technical and security risks in the code and in how it is built, tested, and released |
+| none, recorded as `all` | All three |
+
+Read the metrics with `flai stats --json` and take every figure from it. Read the design with `doc_search` and `doc_get`, and the section a finding rests on before relying on it. Read the issues under `design/issues`, `summary.md` first. Hand wide search of the code to the explorer. Write one report, `design/analysis/<date>-<focus>.md` ([The report and its index](#the-report-and-its-index)), and add it to `design/analysis/README.md`. Edit nothing else, no code, design, issue, or work item, author no stories, and never work around a refusal. When an input the operator owns is missing, ask with `thread_open` on the report, the recommended answer first, analyze what needs no answer meanwhile, and hold `wait_for_events` until it is answered. End with a one-line summary that names the report, which becomes the run's activity entry.
+
+`analyzer.md`, which the template ships, says the same in short and lists its tools: `Read`, `Grep`, `Glob`, `Edit`, `Write`, `Bash`, `Agent`, and flai's MCP tools `prime`, `inbox`, `board`, `item_get`, `doc_get`, `doc_search`, `thread_get`, `who_touches`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events`. It lists no `NotebookEdit` and no tool that writes a work item.
+
+### The report and its index
+
+A report is `<date>-<focus>.md` in the design folder's `analysis/` (`analysis.Dir`, `analysis.ReportPath`): the date is the run's UTC day as `YYYY-MM-DD`, and the focus one of the three or `all`. Two runs on one day with one focus name the same file.
+
+| Front matter | What it holds |
+|--------------|---------------|
+| `title` | The report's title |
+| `updated` | A date, `YYYY-MM-DD`, or a timestamp, `YYYY-MM-DDTHH:MM:SSZ` |
+| `status` | The documentation standard's: `draft` while the analyzer writes it, `active` once the run has ended, `deprecated` when a later report replaces it |
+| `focus` | The focus the file is named for |
+| `from`, `to` | The window its metrics cover, as dates, `from` not after `to` |
+
+The body has one section per finding: its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact, the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them.
+
+`design/analysis/README.md`, which the template ships, says what the folder is for and has a row per report: its link, focus, window, and status. Only the analyzer writes in the folder. `flai check` leaves the folder out of the design documents' own rules and checks it by its own (`checker.analysis`):
+
+| Finding | Level | When |
+|---------|-------|------|
+| `analysis.report` | error | A report not named `<date>-<focus>.md` with a real date and a known focus; with no front matter, or front matter that does not parse; missing a field; with an `updated` that is neither a date nor a timestamp, a `status` none of the three, a `focus` none of the four or not the one the file is named for, a `from` or `to` that is not a date, or a window that ends before it starts. Each is reported on its field's line |
+| `analysis.index` | warning | A report the README does not link, and a row of the README that links a report not there |
+
+A project with no `design/analysis/` has nothing checked there. flai checks a report's status but does not change it: the analyzer writes it, `draft` while it writes the report and `active` once it is done, as its prompt and its definition tell it.
+
+### The analyzer's guard
+
+`flai guard` reads `FLAI_ROLE` from the hook's environment. With `analyze`, the command opens the project from the working directory and sets the guard's `Root` and `Reports`, the reports folder, and `Guard.analyze` checks the session's own calls, which carry no agent ID:
+
+| Kind | Passes | Refused |
+|------|--------|---------|
+| File tools | `Edit`, `Write`, and `NotebookEdit` on a file inside the reports folder: its report and the folder's README | the same on any other file, and on every file when the project cannot be read |
+| flai MCP tools | the reads a sub-agent has; `inbox`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events` (`guard.MCPAnalyzes`) | `item_new`, `item_edit`, and `item_move`, since the analyzer authors no stories; every other tool, `plan`, `analyze`, `issue_story`, and `release_publish` among them |
+| flai commands | the reads, `flai stats` among them | every command that writes, `issue new` and `bump`, `plan`, and `analyze` among them |
+| git | the reads a sub-agent has | every other git command |
+
+A file's path is taken from the project's root when it is relative, cleaned, and resolved along the part of it that exists, symbolic links followed, as the folder's is (`inReports`), so that neither `..` nor a link leads out of the folder. A refused edit names the folder. Each refusal says that the analyzer edits nothing but its report and the index, and to put what it found, and the stories it would suggest, in its report, or ask the operator with `thread_open`. Other shell commands pass, as a sub-agent's do (ADR-0060), so a file written through the shell is not seen. The analyzer's sub-agents, the explorer among them, are held as every sub-agent is.
+
+`.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `analyze`, as for `plan` and `orchestrate` ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
+
+### The analysis schedule
+
+`analysis.schedule` in `system-flow.yaml` is a five-field cron expression in UTC, or `daily`, read as `planning.schedule` is ([The schedule](#the-schedule)); unset, there is none. An analysis scheduler per served project (`internal/serve/analysis_schedule.go`) looks whenever the project's launcher does: when its work items or threads change, when an agent ends, and every minute, so it sees the schedule come round at most a minute late. Each time the schedule comes round with the `analyze` action on, it starts the analyzer with no focus and the trigger `schedule <spec>`, the schedule as written, such as `schedule daily`, after the checks `serve.Analyze` makes. A start they refuse, such as while an analyzer runs, is logged at info as `scheduled analyzer not started` with the reason, and is not tried again until the schedule next comes round.
+
+Times missed between two looks come round once. A schedule set or changed comes round first at its next time from then. What the scheduler has seen is kept in memory: a time that passed while `flai serve` was down does not come round. While `analyze` is off it starts nothing and keeps up with the schedule, so turning the action on does not act on the past. A schedule that is not valid is warned of once in flai serve's log, and nothing is started for it until it is fixed. The scheduler follows its schedule as the replanner follows `planning.schedule` (`cadence`).
+
+### The analyzer's run and how it ended
+
+The run is recorded in `serve/agents.json` under `analyzer`, the project's newest run alone, with the fields a story's run has, neither `story` nor `item`, and `focus` (one of the three, or `all`), `trigger` (`asked`, or the schedule's), and, once it has ended, `report`. `Running` and `Last` never name it, and the in-progress limit does not count it. Its output is in `serve/agents/<key>-analyzer-<start>.log`, beside the other agents' logs.
+
+When the process ends, or the next look finds it gone, flai serve settles the run (`analyzeEnded`). Its report is the Markdown file directly in the reports folder, the README aside, changed last, and changed no earlier than the second the run started (`newestReport`); there is none when no such file changed.
+
+| Outcome | When |
+|---------|------|
+| `failed` | it exited with a code other than 0, or could not be started; or it ended without writing a report, which `why` says, naming the folder |
+| `worked` | otherwise: it wrote a report, whether its exit was seen or not |
+
+It then logs the run's activity in `wip/agents/analyzer.md` with `logRunEndSaying`: the time since the last entry, the seconds and cost measured from the log, and the run's trigger as the entry's `- Trigger:` line. The summary is the first line of the run's final reply, the one-line summary its prompt asks for: as it is when it names the report, with `(report <path>)` added when it does not, and with `(no report written under design/analysis)` added when there is no report. The entry names no item, so its cost charges no item: it is the analyzer's project strategic total ([What it costs on the items](#what-it-costs-on-the-items-s-0226)) until S-0227 charges it to the issues the analyzer files.
+
+Every start and failure to start is a journal entry with action `analyze` and method `serve.analyze`; `analyze.run` and the MCP tool `analyze` are journalled as well, under the same action. `agent.status` carries the run as `analyzer`, null before the first. When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: analyze`.
+
+### The analyzer on the dashboard
+
+The documents page lists the reports under `design/analysis/` beside the folder's README and shows each as it shows any design document ([flaiover-dashboard.md](flaiover-dashboard.md)). The Settings page lists the `analyze` action with the others, to turn on and off while `settings` is on. No page has an Analyze button yet: `analyze.run` is there for the analyzer's page, with its runs and activity, which is S-0228's.
