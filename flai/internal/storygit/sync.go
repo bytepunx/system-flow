@@ -42,6 +42,15 @@ func RebaseInProgress(r execx.Runner, dir string) bool {
 	return false
 }
 
+// ContinueRebase continues the rebase stopped in the worktree at dir once
+// its conflicts are resolved and staged, keeping each commit's message with
+// no editor (ADR-0098). It returns git's error when the rebase stops again,
+// which RebaseInProgress then reports waiting.
+func ContinueRebase(r execx.Runner, dir string) error {
+	_, err := r.Run(dir, "git", "-c", "core.editor=true", "rebase", "--continue")
+	return err
+}
+
 // Conflicts lists the paths left unmerged in the worktree at dir, which a
 // stopped rebase waits for an agent to resolve and git add.
 func Conflicts(r execx.Runner, dir string) []string {

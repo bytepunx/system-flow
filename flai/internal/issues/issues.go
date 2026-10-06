@@ -54,6 +54,12 @@ func Dir(r *workitem.Repo) string {
 	return filepath.Join(r.Manifest.Dir(r.Root, "design"), Folder)
 }
 
+// SummaryPath is summary.md's path relative to the repository root,
+// slash-separated, as git names it.
+func SummaryPath(r *workitem.Repo) string {
+	return filepath.ToSlash(filepath.Join(r.Manifest.Layout["design"], Folder, SummaryFile))
+}
+
 var idPattern = regexp.MustCompile(`^I-\d{3,}$`)
 
 // Parse decodes an issue document, keeping front-matter fields this flai

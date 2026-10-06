@@ -82,3 +82,48 @@ func TestUncommittedRebaseInProgressAndConflicts(t *testing.T) {
 		t.Error("aborted rebase still reported")
 	}
 }
+
+// ContinueRebase continues a resolved stop with no editor, stopping again on
+// a later commit's conflict and finishing after the last.
+func TestContinueRebase(t *testing.T) {
+	r, dir := execx.Runner(execx.System{}), gitRepo(t)
+	// no editor can run here: one that did would fail the continue
+	git(t, dir, "config", "core.editor", "false")
+	git(t, dir, "checkout", "-q", "-b", "story/S-0001")
+	write(t, dir, "a.md", "story\n")
+	git(t, dir, "commit", "-q", "-am", "story one")
+	write(t, dir, "a.md", "story again\n")
+	git(t, dir, "commit", "-q", "-am", "story two")
+	git(t, dir, "checkout", "-q", "main")
+	write(t, dir, "a.md", "main\n")
+	git(t, dir, "commit", "-q", "-am", "main")
+	git(t, dir, "checkout", "-q", "story/S-0001")
+	if _, err := r.Run(dir, "git", "rebase", "main"); err == nil {
+		t.Fatal("rebase did not stop")
+	}
+
+	// the first commit resolved, the second stops on the same line
+	write(t, dir, "a.md", "main and story\n")
+	git(t, dir, "add", "a.md")
+	if err := ContinueRebase(r, dir); err == nil {
+		t.Fatal("the second commit's conflict did not stop the rebase")
+	}
+	if !RebaseInProgress(r, dir) || strings.Join(Conflicts(r, dir), ",") != "a.md" {
+		t.Fatalf("not stopped on a.md: %v", Conflicts(r, dir))
+	}
+	write(t, dir, "a.md", "main and story again\n")
+	git(t, dir, "add", "a.md")
+	if err := ContinueRebase(r, dir); err != nil {
+		t.Fatalf("continue: %v", err)
+	}
+	if RebaseInProgress(r, dir) {
+		t.Fatal("the rebase is still in progress")
+	}
+	out, err := r.Run(dir, "git", "log", "--format=%s", "main..HEAD")
+	if err != nil || out != "story two\nstory one" {
+		t.Errorf("commits after the rebase: %q %v", out, err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "a.md")); string(got) != "main and story again\n" {
+		t.Errorf("a.md: %q", got)
+	}
+}

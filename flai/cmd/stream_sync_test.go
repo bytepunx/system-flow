@@ -542,3 +542,169 @@ func TestSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 		t.Fatal("the --json sync did not stop on the conflicts")
 	}
 }
+
+// I-0074: two stories that each record an issue both rewrite
+// design/issues/summary.md, its updated line and its rows, so the rebase
+// onto main after one is accepted stopped on it. The file is generated from
+// the issue files, so the sync writes it again at each such stop and goes on
+// (ADR-0098).
+func TestSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T) {
+	_, b := issueStories(t, nil)
+	// a second commit that rewrites the summary stops the rebase again
+	recordIssueIn(t, b, issueClock.Add(3*time.Hour), "B's second issue", nil)
+
+	out, errOut, code := runInAt(t, b, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("sync stopped on the generated summary: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(out, "story/S-0002 is rebased onto main") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if storygit.RebaseInProgress(execx.System{}, b) {
+		t.Fatal("the rebase is left in progress")
+	}
+	if st := gitIn(t, b, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+	if got := gitIn(t, b, "log", "--format=%s", "main..HEAD"); got != "chore: record B's second issue\nchore: record B's issue" {
+		t.Errorf("story/S-0002's commits on main:\n%s", got)
+	}
+	summary := gitIn(t, b, "show", "HEAD:design/issues/summary.md")
+	for _, want := range []string{"[I-0001]", "A's issue", "[I-0002]", "B's issue", "[I-0003]", "B's second issue", "updated: 2026-09-16T01:00:00Z"} {
+		if !strings.Contains(summary, want) {
+			t.Errorf("the summary lacks %q:\n%s", want, summary)
+		}
+	}
+	if strings.Contains(summary, strings.Repeat("<", 7)) || strings.Contains(summary, strings.Repeat(">", 7)) {
+		t.Errorf("the summary carries conflict markers:\n%s", summary)
+	}
+}
+
+// The acceptance syncs through the same rebase, so the second story whose
+// branch records an issue is accepted without stopping on the summary.
+func TestAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T) {
+	root, b := issueStories(t, nil)
+	issueStoryInReview(t, root, "S-0002", "T-0001")
+
+	if _, errOut, code := runInAt(t, root, issueClock.Add(4*time.Hour), "accept", "S-0002"); code != 0 {
+		t.Fatalf("acceptance stopped on the generated summary: %d %s", code, errOut)
+	}
+	if _, err := os.Stat(b); err == nil {
+		t.Error("an accepted story's worktree is removed")
+	}
+	summary := gitIn(t, root, "show", "main:design/issues/summary.md")
+	for _, want := range []string{"[I-0001]", "[I-0002]"} {
+		if !strings.Contains(summary, want) {
+			t.Errorf("main's summary lacks %s:\n%s", want, summary)
+		}
+	}
+	if strings.Contains(summary, strings.Repeat("<", 7)) {
+		t.Errorf("main's summary carries conflict markers:\n%s", summary)
+	}
+}
+
+// When another path conflicts as well, the summary's rows may depend on it,
+// so the sync stops as before and names every path, the summary included.
+func TestSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
+	_, b := issueStories(t, map[string][2]string{"docs/guide.md": {"A's line\n", "B's line\n"}})
+
+	out, errOut, code := runInAt(t, b, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
+	if code == 0 {
+		t.Fatalf("a sync with another conflict succeeded: %s", out)
+	}
+	for _, want := range []string{"stopped on conflicts in 2 paths:\n", "\n  design/issues/summary.md\n", "\n  docs/guide.md\n"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the stop lacks %q:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(errOut, "stopped on conflicts in design/issues/summary.md, docs/guide.md") {
+		t.Errorf("error: %s", errOut)
+	}
+	if !storygit.RebaseInProgress(execx.System{}, b) {
+		t.Fatal("the rebase is not left in progress for the agent")
+	}
+	if got, _ := os.ReadFile(filepath.Join(b, "design", "issues", "summary.md")); !strings.Contains(string(got), strings.Repeat("<", 7)) {
+		t.Errorf("the summary was rewritten though another path conflicts:\n%s", got)
+	}
+}
+
+// The generated files are one list, the issue summary alone today, named as
+// git names them (ADR-0098).
+func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
+	repo, err := workitem.Open(tempProject(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := generatedPaths(repo); strings.Join(got, ",") != "design/issues/summary.md" {
+		t.Errorf("generated paths: %q", got)
+	}
+}
+
+// issueClock is when main's summary is generated; the stories record their
+// issues an hour and two after it.
+var issueClock = time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
+
+// issueStories makes S-0001 and S-0002, each of whose branches records an
+// issue at its own time, and so rewrites design/issues/summary.md's updated
+// line and rows where the other does, and merges S-0001 into main as its
+// acceptance would (I-0074). Each story commits its side of files with its
+// issue. It returns the main checkout and S-0002's worktree.
+func issueStories(t *testing.T, files map[string][2]string) (root, b string) {
+	t.Helper()
+	root = syncProject(t)
+	if _, errOut, code := runInAt(t, root, issueClock, "issue", "summary"); code != 0 {
+		t.Fatal(errOut)
+	}
+	gitIn(t, root, "add", "design")
+	gitIn(t, root, "commit", "-q", "-m", "docs: issue summary")
+	a := openSyncStory(t, root, 1, "design docs")
+	b = openSyncStory(t, root, 2, "design docs")
+	side := func(i int) map[string]string {
+		m := map[string]string{}
+		for p, c := range files {
+			m[p] = c[i]
+		}
+		return m
+	}
+	recordIssueIn(t, a, issueClock.Add(time.Hour), "A's issue", side(0))
+	recordIssueIn(t, b, issueClock.Add(2*time.Hour), "B's issue", side(1))
+	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
+	return root, b
+}
+
+// recordIssueIn records an issue with flai issue new in the worktree wt at
+// at, writes files there, and commits them all.
+func recordIssueIn(t *testing.T, wt string, at time.Time, title string, files map[string]string) {
+	t.Helper()
+	if _, errOut, code := runInAt(t, wt, at, "issue", "new", title, "--class", "efficiency"); code != 0 {
+		t.Fatal(errOut)
+	}
+	for p, c := range files {
+		if err := os.WriteFile(filepath.Join(wt, p), []byte(c), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-q", "-m", "chore: record "+title)
+}
+
+// issueStoryInReview ticks the story's criterion, does a task for it, and
+// moves it to review, for flai accept.
+func issueStoryInReview(t *testing.T, root, id, task string) {
+	t.Helper()
+	matches, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", id+"-*.md"))
+	if len(matches) != 1 {
+		t.Fatalf("story file for %s: %v", id, matches)
+	}
+	s, _ := os.ReadFile(matches[0])
+	_ = os.WriteFile(matches[0], []byte(strings.Replace(string(s), "- [ ] done\n", "- [x] done\n", 1)), 0o644)
+	for _, args := range [][]string{
+		{"task", "new", "Do it", "--story", id},
+		{"move", task, "ready"}, {"move", task, "in-progress"}, {"move", task, "done"},
+		{"move", id, "review"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+}

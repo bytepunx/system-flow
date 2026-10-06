@@ -139,6 +139,21 @@ func TestAnIssueWithAnUnknownFieldIsListedAndKept(t *testing.T) {
 
 // A project in git with no story branches numbers past what main holds and
 // what its own checkout holds uncommitted.
+// SummaryPath follows layout.design, and names the file WriteSummary writes.
+func TestSummaryPath(t *testing.T) {
+	r := repo(t)
+	if got := SummaryPath(r); got != "design/issues/summary.md" {
+		t.Errorf("summary path %q", got)
+	}
+	if got, want := filepath.Join(r.Root, filepath.FromSlash(SummaryPath(r))), filepath.Join(Dir(r), SummaryFile); got != want {
+		t.Errorf("summary path %s is not where WriteSummary writes, %s", got, want)
+	}
+	r.Manifest.Layout["design"] = "./docs/design"
+	if got := SummaryPath(r); got != "docs/design/issues/summary.md" {
+		t.Errorf("summary path under another layout %q", got)
+	}
+}
+
 func TestNextIDWithoutStoryBranches(t *testing.T) {
 	if testing.Short() {
 		t.Skip("needs git")
