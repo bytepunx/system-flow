@@ -6,7 +6,7 @@ title: flai's permission_prompt waits for an answer from the story's owner, and 
 status: backlog
 owner: alex
 created: 2026-10-06T03:45:19Z
-updated: 2026-10-06T03:45:19Z
+updated: 2026-10-06T06:18:57Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
     by: flai
     at: 2026-10-06T03:45:19Z
+finalized:
+  by: alex
+  at: 2026-10-06T06:18:57Z
 ---
 # S-0284 flai's permission_prompt waits for an answer from the story's owner, and the operator's thread replies carry another name, so their allow is never seen and the write times out
 
