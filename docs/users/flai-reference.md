@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 ---
 
@@ -41,7 +41,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [order](#flai-order) | Place a ready or backlog story in the pull order |
 | [plan](#flai-plan) | Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai |
 | [prime](#flai-prime) | Print the conventions an agent reads at session start, in order |
-| [promote](#flai-promote) | List the backlog stories that could go to ready |
+| [promote](#flai-promote) | List the backlog stories that could go to ready, or the drafts and what each lacks |
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
 | [release](#flai-release) | Compute a release for one item, publish everything accepted since the last release, or say whether a release is due |
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary |
@@ -106,7 +106,7 @@ Subcommands:
 - [order](#flai-order): Place a ready or backlog story in the pull order
 - [plan](#flai-plan): Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai
 - [prime](#flai-prime): Print the conventions an agent reads at session start, in order
-- [promote](#flai-promote): List the backlog stories that could go to ready
+- [promote](#flai-promote): List the backlog stories that could go to ready, or the drafts and what each lacks
 - [push](#flai-push): Push an acceptance that was made and not pushed
 - [release](#flai-release): Compute a release for one item, publish everything accepted since the last release, or say whether a release is due
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary
@@ -950,7 +950,7 @@ A retitle keeps everything that carries the title in step: the front matter, the
 
 --after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). On a task it names the tasks of the same story the task waits for (S-0176). flai check refuses an entry that does not exist, a task of another story, and a cycle.
 
-Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready; finalizing records who finalized it (--by) and when, in its finalized block, and --draft again removes that block (S-0201). A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
+Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready; finalizing records who finalized it (--by) and when, in its finalized block, and --draft again removes that block (S-0201). The orchestrator (FLAI\_ROLE=orchestrate) finalizes with --no-draft alone, and only a draft that flai promote --drafts finds complete; it is refused, naming what the draft lacks, otherwise (S-0219). A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the title, and flai writes it. With --hash, the hash flai edit --show printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. flai check runs with the change in place: if it reports anything the change introduces, every file is put back and the findings are printed (exit 4). --autocommit commits every file the edit touched in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
@@ -1079,11 +1079,11 @@ Refuse a sub-agent's writes, hold the planner to planning and the orchestrator t
 flai guard
 ```
 
-Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, order\_by\_policy, prime, promote\_candidates, release\_evaluate, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, order --by without --apply, prime, promote --candidates, release --evaluate, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, as does anything it cannot read: the guard fails open. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
+Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, order\_by\_policy, prime, promote\_candidates, release\_evaluate, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, order --by without --apply and without a story to place, plan --candidates, prime, promote --candidates or --drafts, release --evaluate, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, as does anything it cannot read: the guard fails open. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
 
 In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, task new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
 
-In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, the session's own calls are held to orchestration.permissions in the system-flow.yaml of the project the hook runs in (S-0218), each off when unset or when the manifest is unreadable. Whatever its permissions it may do what a sub-agent may, call inbox, activity\_log, wait\_for\_events, and thread\_open, and run thread new and issue new and bump. Each permission allows more: plan\_backlog\_epics the MCP tool plan and flai plan on an epic; finalize\_drafts flai edit --no-draft with nothing else to change; promote\_to\_ready item\_move and flai move to ready; order\_ready flai order that writes; answer\_threads, recommend or autonomous, thread\_reply and flai thread reply; accept\_reviews flai accept; publish flai release --pending and flai push. A call a permission would allow is refused while it is off, naming it (it needs orchestration.permissions.&lt;name&gt;); anything else that writes is refused as what the orchestrator never does: other flai tools and commands, git's writes, and the Edit, Write, and NotebookEdit tools. Each refusal is logged under ## Refusals in wip/agents/orchestrator.md, with its time, the call, and the permission it needs; a refusal that cannot be logged is warned of and refused all the same. The orchestrator's sub-agents are held as any sub-agent is.
+In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, the session's own calls are held to orchestration.permissions in the system-flow.yaml of the project the hook runs in (S-0218), each off when unset or when the manifest is unreadable. Whatever its permissions it may do what a sub-agent may, call inbox, activity\_log, wait\_for\_events, and thread\_open, and run thread new and issue new and bump. Each permission allows more: plan\_backlog\_epics the MCP tool plan and flai plan on an epic; finalize\_drafts item\_edit with draft false and flai edit --no-draft, each with nothing else to change; promote\_to\_ready item\_move and flai move of a story to ready; order\_ready flai order --by &lt;policy&gt; --apply; answer\_threads, recommend or autonomous, thread\_reply and flai thread reply; accept\_reviews flai accept; publish flai release --pending and flai push. A call a permission would allow is refused while it is off, naming it (it needs orchestration.permissions.&lt;name&gt;); anything else that writes is refused as what the orchestrator never does: plan for a story, flai order placing a story by hand, other flai tools and commands, git's writes, and the Edit, Write, and NotebookEdit tools. Whether a story it promotes is held, a draft, or over the ready limit is flai's to check as it moves it, not the guard's: the guard reads the call, not the board. Each refusal is logged under ## Refusals in wip/agents/orchestrator.md, with its time, the call, and the permission it needs; a refusal that cannot be logged is warned of and refused all the same. The orchestrator's sub-agents are held as any sub-agent is.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP tools, and, in a planner's or an orchestrator's session alone, before Edit, Write, and NotebookEdit as well.
 
@@ -1542,6 +1542,8 @@ Rules from design/system/workflow.md are enforced: a story needs acceptance crit
 
 A draft story, one an agent wrote (S-0199), is refused to ready until it is finalized: flai edit --no-draft finalizes it, and so does this move with --yes, which finalizes it as it goes to ready.
 
+The orchestrator (FLAI\_ROLE=orchestrate) moves to ready only a story that flai promote --candidates lists, and only while the ready column is under its WIP limit; any other move to ready it makes is refused with the reason (S-0219).
+
 An item also moves back one column: ready to backlog, in-progress to ready, review to in-progress, cancelled to backlog, the last only while its parent is not cancelled (ADR-0055). Done is final.
 
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.
@@ -1617,7 +1619,9 @@ Put a story at a position in its column's pull order, the order list in wip/kanb
 
 Only the ready and backlog columns have an order, and only stories are in it: ready stories come first, then backlog stories in the order they should be refined. A story the list does not name comes after the ones it does, by ID. The position is relative to another story of the same column, or the top or bottom of that column. To change a story's column use flai move.
 
-With --by, it computes the ready column's order by a policy instead and prints it with the figure each story was ordered by: cod, cost of delay value, highest first; wsjf, that value over the forecast duration in hours, highest first; throughput, forecast duration, shortest first; fifo, created, oldest first. A story without the figure goes after those with it, in its current order, and ties keep the current order. It writes nothing unless --apply is given, which writes the computed order to board.md.
+Each placement is recorded in board.md's placed map with who made it and when: --placed-by, else FLAI\_AGENT, else the config author, and always orchestrator when flai serve runs the orchestrator (FLAI\_ROLE=orchestrate). The dashboard's drag runs this command, so it is recorded too. flai move drops a story's record when it takes the story out of its column.
+
+With --by, it computes the ready column's order by a policy instead and prints it with the figure each story was ordered by: cod, cost of delay value, highest first; wsjf, that value over the forecast duration in hours, highest first; throughput, forecast duration, shortest first; fifo, created, oldest first. A story without the figure goes after those with it, in its current order, and ties keep the current order. A ready story placed by anyone but the orchestrator within --keep-placed, a day unless given, keeps its place, and the rest are ordered around it; the order marks each kept story with who placed it and when. --keep-placed 0 keeps none. It writes nothing unless --apply is given, which writes the computed order to board.md.
 
 Examples:
 
@@ -1625,9 +1629,10 @@ Examples:
 flai order S-0061 --top
 flai order S-0059 --before S-0061
 flai order S-0047 --after S-0053
-flai order S-0056 --bottom
+flai order S-0056 --bottom --placed-by alex
 flai order --by wsjf
 flai order --by cod --apply
+flai order --by cod --apply --keep-placed 2h
 ```
 
 Flags:
@@ -1639,6 +1644,8 @@ Flags:
 | `--before` string | place it just before this story of the same column |
 | `--bottom` | place it last in its column |
 | `--by` string | compute the ready column's order by a policy: cod, wsjf, throughput, fifo |
+| `--keep-placed` duration | with --by, a ready story placed by hand this recently keeps its place; 0 for none (default `24h0m0s`) |
+| `--placed-by` string | who placed it (default: FLAI\_AGENT, then the config author) |
 | `--top` | place it first in its column |
 
 ### flai plan
@@ -1646,7 +1653,7 @@ Flags:
 Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai.
 
 ```text
-flai plan <epic-or-story-id>
+flai plan <epic-or-story-id> | plan --candidates [flags]
 ```
 
 Starts the planner for an epic or a story, now, on this host and as you (S-0208, ADR-0075). It runs in the project's main checkout with the project's planning agent: planning.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent. For an epic with no stories it drafts the stories that deliver its outcome; for a story it adds touches, a forecast, and a cost of delay, and drafts its tasks or revisits those it has (S-0255); for an epic with stories it revisits each one not done or cancelled and drafts what the outcome still lacks. It writes work items and threads through flai alone, moves nothing past backlog, finalizes no draft, and asks you on a thread on the item when an input of yours is missing.
@@ -1655,13 +1662,24 @@ The run is recorded where flai serve tracks agents, by item, and its output goes
 
 It is a host action, off until you enable it (flai serve enable plan). It refuses, and says why, while the action is off for the project, for a task or an ID that is neither an epic's nor a story's, for an item that is archived, done, or cancelled, while a planner runs for the item, and when nothing can start it. The Plan button on an epic's or a story's page runs this.
 
+--candidates lists, in ID order and with the reason for each, the epics the planner should plan (S-0219): an epic in the backlog with no story, and an epic not done or cancelled whose stories, archived ones included, are all done or cancelled with at least one done. It leaves out, and lists apart with why, an epic a planner runs for now and one whose newest planner run ended asking a question still awaiting the operator, as flai serve's record of planner runs on this host says. It starts nothing and writes nothing.
+
+The orchestrator (FLAI\_ROLE=orchestrate) asks for the planner on an epic that --candidates lists alone, while orchestration.permissions gives it plan\_backlog\_epics, and its run records orchestrator, in place of asked, as what started it (S-0219).
+
 Examples:
 
 ```bash
 flai serve enable plan
 flai plan E-0016
 flai plan S-0208 --json
+flai plan --candidates --json
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--candidates` | list the epics the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing |
 
 ### flai prime
 
@@ -1705,25 +1723,30 @@ Flags:
 
 ### flai promote
 
-List the backlog stories that could go to ready.
+List the backlog stories that could go to ready, or the drafts and what each lacks.
 
 ```text
-flai promote --candidates [flags]
+flai promote --candidates | --drafts [flags]
 ```
 
-List the backlog stories that could go to ready, ordered by the project's policy, and say why each other backlog story cannot.
+List the backlog stories that could go to ready, ordered by the project's policy, and say why each other backlog story cannot; or, with --drafts, list each draft story in the backlog and what it lacks to be finalized.
 
 A backlog story is a candidate when it is not a draft, meets the definition of ready (a goal, acceptance criteria with a checkbox, and an epic that is not cancelled), would not be held if it were ready (it declares touches that overlap no story in progress or in review, and every story it names in after: is done), and has a forecast duration and a cost of delay value.
 
 The candidates are ordered by orchestration.policy in system-flow.yaml, fifo when it is not set, as flai order --by orders the ready column, and each is printed with the figure it was ordered by. Every other backlog story is printed with each reason it is not a candidate.
 
---limit caps the candidates listed; those beyond it are not listed at all. It writes nothing: moving a candidate to ready is flai move.
+--limit caps the candidates listed; those beyond it are not listed at all.
+
+--drafts lists each draft story in the backlog, in the same policy order, as complete or with each thing it lacks. A draft is complete when it has every section of the project's story template, a goal, acceptance criteria with a checkbox, at least one touch, a forecast duration and delivery, a cost of delay value, and an epic that is open or none. Whether its criteria, touches, and forecast describe the same work is for whoever finalizes it.
+
+It writes nothing: moving a candidate to ready is flai move, and finalizing a draft is flai edit --no-draft.
 
 Examples:
 
 ```bash
 flai promote --candidates
 flai promote --candidates --limit 3 --json
+flai promote --drafts --json
 ```
 
 Flags:
@@ -1731,6 +1754,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--candidates` | list the backlog stories that could go to ready, and why each other one cannot |
+| `--drafts` | list each draft story in the backlog, complete or with what it lacks to be finalized |
 | `--limit` int | list at most this many candidates, 0 for all; those beyond it are not listed |
 
 ### flai push

@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 ---
 
@@ -239,7 +239,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--budget` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--build` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai edit](../users/flai-reference.md#flai-edit), [flai move](../users/flai-reference.md#flai-move), [flai order](../users/flai-reference.md#flai-order), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
-| `--candidates` | [flai promote](../users/flai-reference.md#flai-promote) |
+| `--candidates` | [flai plan](../users/flai-reference.md#flai-plan), [flai promote](../users/flai-reference.md#flai-promote) |
 | `--cat` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--check` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--class` | [flai issue new](../users/flai-reference.md#flai-issue-new) |
@@ -259,6 +259,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--deliver` | [flai release](../users/flai-reference.md#flai-release) |
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--draft` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
+| `--drafts` | [flai promote](../users/flai-reference.md#flai-promote) |
 | `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--epic` | [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--evaluate` | [flai release](../users/flai-reference.md#flai-release) |
@@ -276,6 +277,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--image` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
+| `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
 | `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search), [flai promote](../users/flai-reference.md#flai-promote), [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
@@ -299,6 +301,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--penalty-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--pending` | [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release) |
+| `--placed-by` | [flai order](../users/flai-reference.md#flai-order) |
 | `--port` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--print-body` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--program` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
