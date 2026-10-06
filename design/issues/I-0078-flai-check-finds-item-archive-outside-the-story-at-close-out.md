@@ -3,10 +3,10 @@ id: I-0078
 title: "flai check finds `item.archive` outside the story at close-out"
 class: efficiency
 status: open
-count: 7
+count: 8
 first_reported: 2026-10-05T05:52:49Z
-last_reported: 2026-10-06T10:12:59Z
-updated: 2026-10-06T10:12:59Z
+last_reported: 2026-10-06T11:07:24Z
+updated: 2026-10-06T11:07:24Z
 ---
 
 # I-0078 flai check finds `item.archive` outside the story at close-out
@@ -48,6 +48,11 @@ flai check found outside the story:
 
 ### 2026-10-06T10:12:59Z
 Story: S-0283.
+flai check found outside the story:
+`wip/kanban/stories/S-0250-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md`: S-0250 is cancelled; run flai archive
+
+### 2026-10-06T11:07:24Z
+Story: S-0285.
 flai check found outside the story:
 `wip/kanban/stories/S-0250-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md`: S-0250 is cancelled; run flai archive
 
