@@ -495,6 +495,41 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 	}
 }
 
+// S-0299, I-0093: the story's agent is told before it launches a layer that
+// a write under a .claude/ folder is never a sub-agent's, that it makes such
+// writes itself once the layer is back, and that it leaves them in
+// .flai-cache/ with the cp commands on a thread when the operator may be
+// away; an answered or commit run is not told again.
+func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		for _, w := range []string{
+			"A write to a file in a .claude/ folder is never a sub-agent's: flai guard refuses it unless the operator has turned on auto-approve",
+			"say so in the prompt of every sub-agent whose task changes such a file, and ask it to return the file's whole new content in its final message",
+			"Make those writes yourself once the layer's sub-agents are back, never while a layer runs: permission_prompt opens a thread on S-0104 and holds the call until the operator answers",
+			"write each whole file into the worktree's ignored .flai-cache/ folder instead, open one thread on S-0104 with the exact cp commands that put each in place, and end rather than wait",
+		} {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+		// Told before the agent launches anything: ahead of the review
+		// of each task sub-agent's work.
+		if strings.Index(p, ".claude/ folder") > strings.Index(p, "Review each one's work yourself") {
+			t.Errorf("the .claude/ warning comes after the review of a layer:\n%s", p)
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, ".claude/") {
+			t.Errorf("told about .claude/ writes again:\n%s", p)
+		}
+	}
+}
+
 // S-0197, ADR-0069: at each task the story's agent commits the task, syncs
 // with flai stream sync and resolves what it lists, then runs the task's
 // tests, in that order, never rebasing or merging by hand; and before review
