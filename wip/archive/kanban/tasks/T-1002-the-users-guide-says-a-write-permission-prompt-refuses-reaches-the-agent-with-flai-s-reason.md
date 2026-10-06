@@ -3,16 +3,36 @@ id: T-1002
 type: task
 nature: remediation
 title: The users' guide says a write permission_prompt refuses reaches the agent with flai's reason
-status: backlog
+status: done
 parent: S-0283
 owner: alex
 created: 2026-10-06T06:26:55Z
-updated: 2026-10-06T06:26:55Z
-transitions: []
+updated: 2026-10-06T10:10:36Z
+transitions:
+  - to: ready
+    at: 2026-10-06T10:10:11Z
+    by: agent-S-0283
+  - to: in-progress
+    at: 2026-10-06T10:10:11Z
+    by: agent-S-0283
+  - to: done
+    at: 2026-10-06T10:10:36Z
+    by: agent-S-0283
 stream: S-0283
 tags: [docs]
 touches: [docs/users/flai.md]
 after: [T-1001]
+usage:
+  source: log
+  seconds: 25
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1734
+      cache_read: 302092
+      cache_write: 9638
+      cost: 0.1607
 ---
 # T-1002 The users' guide says a write permission_prompt refuses reaches the agent with flai's reason
 

@@ -3,15 +3,35 @@ id: T-1001
 type: task
 nature: remediation
 title: permission_prompt answers Claude Code with one text block and no structured content, with a test reproducing I-0082
-status: backlog
+status: done
 parent: S-0283
 owner: alex
 created: 2026-10-06T06:26:49Z
-updated: 2026-10-06T06:26:49Z
-transitions: []
+updated: 2026-10-06T10:10:03Z
+transitions:
+  - to: ready
+    at: 2026-10-06T09:57:46Z
+    by: agent-S-0283
+  - to: in-progress
+    at: 2026-10-06T09:57:46Z
+    by: agent-S-0283
+  - to: done
+    at: 2026-10-06T10:10:03Z
+    by: agent-S-0283
 stream: S-0283
 tags: [flai]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/folder.go]
+usage:
+  source: log
+  seconds: 737
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 21125
+      cache_read: 3679586
+      cache_write: 117396
+      cost: 1.9573
 ---
 # T-1001 permission_prompt answers Claude Code with one text block and no structured content, with a test reproducing I-0082
 

@@ -3,26 +3,47 @@ id: S-0283
 type: story
 nature: remediation
 title: flai's permission_prompt returns a result Claude Code calls invalid, so a .claude/ write and a /tmp write are refused at once with no thread
-status: ready
+status: done
 owner: alex
 created: 2026-10-06T03:45:18Z
-updated: 2026-10-06T09:56:49Z
+updated: 2026-10-06T10:31:55Z
 transitions:
   - to: ready
     at: 2026-10-06T06:20:20Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T09:57:09Z
+    by: agent-S-0283
+  - to: review
+    at: 2026-10-06T10:30:14Z
+    by: agent-S-0283
+  - to: done
+    at: 2026-10-06T10:31:55Z
+    by: alex
 tags: []
 topics: [cli]
-touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/folder.go, docs/users/flai.md, design/issues/I-0082-flai-s-permission-prompt-returns-a-result-claude-code-calls-invalid-so-a-claude-write-and-a-tmp-write-are-refused-at-once-with-no-thread.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/folder.go, docs/users/flai.md, design/issues/I-0082-flai-s-permission-prompt-returns-a-result-claude-code-calls-invalid-so-a-claude-write-and-a-tmp-write-are-refused-at-once-with-no-thread.md, design/issues/summary.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2010
+  models:
+    - model: claude-opus-5-5
+      input: 164
+      output: 41931
+      cache_read: 7303654
+      cache_write: 233020
+      cost: 3.8851
+    - model: claude-sonnet-5-5
+      input: 28
+      output: 5594
+      cache_read: 388490
+      cache_write: 101330
+      cost: 0.387
   strategic:
     - kind: planner
       seconds: 345
@@ -65,8 +86,8 @@ finalized:
 This story remediates [I-0082](../../../design/issues/I-0082-flai-s-permission-prompt-returns-a-result-claude-code-calls-invalid-so-a-claude-write-and-a-tmp-write-are-refused-at-once-with-no-thread.md), "flai's permission_prompt returns a result Claude Code calls invalid, so a .claude/ write and a /tmp write are refused at once with no thread". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0082 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0082 is closed with `flai issue close I-0082 --reason` saying what fixed it
+- [x] The cause I-0082 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0082 is closed with `flai issue close I-0082 --reason` saying what fixed it
 
 ## Tasks
 - T-1001 permission_prompt answers Claude Code with one text block and no structured content, with a test reproducing I-0082
