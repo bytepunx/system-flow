@@ -213,15 +213,15 @@ func orQuoted(name string) string {
 }
 
 // askOperator opens a thread on the story showing the change, waits for an
-// answer from the story's owner, the operator (anyone but the agent when it
-// has none), and resolves the thread with what was decided. Another agent's
-// entry is not an answer.
+// answer from the story's owner or the project's owner (ADR-0097; anyone but
+// the agent when neither is named), and resolves the thread with what was
+// decided. The agent's own entry and another agent's are not answers.
 func (s *server) askOperator(ctx context.Context, story *workitem.Item, in PermissionIn, rel string) PermissionOut {
 	th, err := threads.New(s.repo, threads.NewOptions{
 		Title:  fmt.Sprintf("Allow %s %s?", in.ToolName, rel),
 		On:     story.ID,
 		Author: s.agent,
-		Text:   permissionRequest(s.agent, story.ID, story.Owner, in, rel),
+		Text:   permissionRequest(s.agent, story.ID, story.Owner, s.repo.Manifest.Owner, in, rel),
 		Now:    s.now(),
 	})
 	if err != nil {
@@ -231,7 +231,7 @@ func (s *server) askOperator(ctx context.Context, story *workitem.Item, in Permi
 	// Only entries after the opening one can answer: the content shown may
 	// itself hold lines that read as entries.
 	asked := len(th.Entries())
-	answer, ok := s.awaitAnswer(ctx, th.ID, asked, story.Owner)
+	answer, ok := s.awaitAnswer(ctx, th.ID, asked, answerers(story.Owner, s.repo.Manifest.Owner))
 	if !ok {
 		s.settle(th.ID, fmt.Sprintf("refused: no answer before the session ended, so %s was not written", rel))
 		return deny("no answer from the operator before the session ended")
@@ -244,10 +244,22 @@ func (s *server) askOperator(ctx context.Context, story *workitem.Item, in Permi
 	return deny("the operator refused: %s", answer.Text)
 }
 
+// answerers are who may answer a permission thread: the story's owner and the
+// project's owner, those named, each once (I-0081). None means anyone.
+func answerers(owner, projectOwner string) []string {
+	var who []string
+	for _, name := range []string{owner, projectOwner} {
+		if name != "" && !slices.Contains(who, name) {
+			who = append(who, name)
+		}
+	}
+	return who
+}
+
 // awaitAnswer reads the thread until an entry after the first asked ones is
-// by owner (by anyone but the agent when owner is empty), or the session
-// ends.
-func (s *server) awaitAnswer(ctx context.Context, id string, asked int, owner string) (threads.Entry, bool) {
+// by one of who, never the agent (by anyone but the agent when who is
+// empty), or the session ends.
+func (s *server) awaitAnswer(ctx context.Context, id string, asked int, who []string) (threads.Entry, bool) {
 	tick := time.NewTicker(permissionPoll)
 	defer tick.Stop()
 	for {
@@ -263,7 +275,7 @@ func (s *server) awaitAnswer(ctx context.Context, id string, asked int, owner st
 			}
 			entries := th.Entries()
 			for i := asked; i < len(entries); i++ {
-				if a := entries[i].Author; a != s.agent && (owner == "" || a == owner) {
+				if a := entries[i].Author; a != s.agent && (len(who) == 0 || slices.Contains(who, a)) {
 					return entries[i], true
 				}
 			}
@@ -322,13 +334,27 @@ func str(m map[string]any, key string) string {
 	return v
 }
 
+// answeredBy names who may answer, as the request says it: the story's owner,
+// and the project's owner too when the two differ; empty when neither is named.
+func answeredBy(owner, projectOwner string) string {
+	switch {
+	case owner != "" && projectOwner != "" && owner != projectOwner:
+		return fmt.Sprintf("%s, the story's owner, or %s, the project's owner", owner, projectOwner)
+	case owner != "":
+		return owner + ", the story's owner"
+	case projectOwner != "":
+		return projectOwner + ", the project's owner"
+	}
+	return ""
+}
+
 // permissionRequest is the thread's first entry: who asks, why a person must
-// answer, how to, and the change itself.
-func permissionRequest(agent, story, owner string, in PermissionIn, rel string) string {
+// answer, who may and how, and the change itself.
+func permissionRequest(agent, story, owner, projectOwner string, in PermissionIn, rel string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s asks to %s `%s` in %s's worktree. Claude Code refuses writes under .claude/ without a person's approval.\n\n", agent, in.ToolName, rel, story)
-	if owner != "" {
-		fmt.Fprintf(&b, "Reply `allow`, as %s, the story's owner, to let it write. Anything else refuses it, and your words go back to the agent as the reason; a reply by anyone else is not an answer.\n\n", owner)
+	if who := answeredBy(owner, projectOwner); who != "" {
+		fmt.Fprintf(&b, "Reply `allow`, as %s, to let it write. Anything else refuses it, and your words go back to the agent as the reason; a reply by anyone else is not an answer.\n\n", who)
 	} else {
 		b.WriteString("Reply `allow` to let it write. Anything else refuses it, and your words go back to the agent as the reason.\n\n")
 	}

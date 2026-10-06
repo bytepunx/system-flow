@@ -293,6 +293,121 @@ func TestPermissionPromptAsksTheOperatorOnAThread(t *testing.T) {
 	}
 }
 
+// ownedBy gives the story the owner story and the project the owner project,
+// as on S-0218 and S-0222 (I-0081).
+func (f *fixture) ownedBy(t *testing.T, story, project string) {
+	t.Helper()
+	data, err := os.ReadFile(f.story.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(f.story.Path, []byte(strings.Replace(string(data), "\nowner: alex\n", "\nowner: "+story+"\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if f.story, err = f.repo.Get(f.story.ID); err != nil || f.story.Owner != story {
+		t.Fatalf("the story's owner is not %s: %v %+v", story, err, f.story)
+	}
+	f.repo.Manifest.Owner = project
+}
+
+// replyHeld replies on the thread and fails if the prompt decides on it: the
+// reply is not an answer.
+func replyHeld(t *testing.T, f *fixture, id, author string, at time.Duration, got <-chan PermissionOut) {
+	t.Helper()
+	if _, err := threads.Reply(f.repo, id, author, "allow", t0.Add(at)); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case out := <-got:
+		t.Fatalf("a reply by %s was taken as the answer: %+v", author, out)
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+// I-0081: the story's owner was arobson and the operator answered as alex,
+// the project's owner, so the write waited until Claude Code gave up. Either
+// owner's answer now lets it through; another agent's reply still does not.
+func TestPermissionPromptTakesTheProjectOwnersAnswer(t *testing.T) {
+	fastPermissionPoll(t)
+	for _, by := range []string{"alex", "arobson"} {
+		t.Run(by, func(t *testing.T) {
+			f := setup(t)
+			f.ownedBy(t, "arobson", "alex")
+			input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": "{}"}
+			got := make(chan PermissionOut, 1)
+			go func() { got <- f.askPermission(t, context.Background(), "Write", input) }()
+			th := waitForThread(t, f.repo)
+			if want := "Reply `allow`, as arobson, the story's owner, or alex, the project's owner, to let it write."; !strings.Contains(th.Entries()[0].Text, want) {
+				t.Errorf("the request does not name both who may answer, %q:\n%s", want, th.Entries()[0].Text)
+			}
+			replyHeld(t, f, th.ID, "agent-S-0999", time.Minute, got)
+			*f.clock = t0.Add(3 * time.Minute)
+			if _, err := threads.Reply(f.repo, th.ID, by, "allow", t0.Add(2*time.Minute)); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case out := <-got:
+				if out.Behavior != "allow" || !reflect.DeepEqual(out.UpdatedInput, input) {
+					t.Errorf("%s's allow lets the write through: %+v", by, out)
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatalf("no decision after %s answered allow (I-0081)", by)
+			}
+			back, _ := threads.Get(f.repo, th.ID)
+			if last := back.Entries()[len(back.Entries())-1]; back.Open() || !strings.Contains(last.Text, "allowed by "+by) {
+				t.Errorf("the thread is resolved as allowed by %s: %s %+v", by, back.Status, last)
+			}
+		})
+	}
+}
+
+// The asking agent's own entry is never an answer, even under an owner's name.
+func TestPermissionPromptNeverTakesTheAgentsOwnEntry(t *testing.T) {
+	fastPermissionPoll(t)
+	f := setup(t)
+	f.ownedBy(t, "arobson", "alex")
+	s := newServer(Options{Repo: f.repo, Agent: "alex", Now: func() time.Time { return t0.Add(time.Hour) }}, f.repo)
+	got := make(chan PermissionOut, 1)
+	go func() {
+		got <- s.permissionPrompt(context.Background(), PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": "{}"}})
+	}()
+	th := waitForThread(t, f.repo)
+	replyHeld(t, f, th.ID, "alex", time.Minute, got)
+	replyHeld(t, f, th.ID, "agent-S-0999", 2*time.Minute, got)
+	if _, err := threads.Reply(f.repo, th.ID, "arobson", "no, not now", t0.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case out := <-got:
+		if out.Behavior != "deny" || out.Message != "the operator refused: no, not now" {
+			t.Errorf("the story's owner refused: %+v", out)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("no decision after the story's owner answered")
+	}
+}
+
+func TestPermissionRequestNamesWhoMayAnswer(t *testing.T) {
+	for _, c := range []struct {
+		owner, project, says string
+		who                  []string
+	}{
+		{"arobson", "alex", "Reply `allow`, as arobson, the story's owner, or alex, the project's owner, to let it write.", []string{"arobson", "alex"}},
+		{"alex", "alex", "Reply `allow`, as alex, the story's owner, to let it write.", []string{"alex"}},
+		{"arobson", "", "Reply `allow`, as arobson, the story's owner, to let it write.", []string{"arobson"}},
+		{"", "alex", "Reply `allow`, as alex, the project's owner, to let it write.", []string{"alex"}},
+		{"", "", "Reply `allow` to let it write.", nil},
+	} {
+		text := permissionRequest("claude", "S-0001", c.owner, c.project, PermissionIn{ToolName: "Write"}, ".claude/x")
+		if !strings.Contains(text, c.says) {
+			t.Errorf("owners %q and %q: the request does not say %q:\n%s", c.owner, c.project, c.says, text)
+		}
+		if who := answerers(c.owner, c.project); !reflect.DeepEqual(who, c.who) {
+			t.Errorf("owners %q and %q: answerers %q, want %q", c.owner, c.project, who, c.who)
+		}
+	}
+}
+
 func TestPermissionPromptShowsEditsLintClean(t *testing.T) {
 	fastPermissionPoll(t)
 	f := setup(t)
