@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 229
-      cache_read: 1001890
-      cache_write: 73583
-      cost: 0.4707
+      input: 19
+      output: 7691
+      cache_read: 1070626
+      cache_write: 33137
+      cost: 0.5515
 ---
 # T-0954 A running orchestrator is held to changed permissions on its next call, and its prompt says they may change while it runs
 

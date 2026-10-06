@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 414
-      cache_read: 4060443
-      cache_write: 156298
-      cost: 1.8452
+      input: 73
+      output: 30154
+      cache_read: 4197692
+      cache_write: 129924
+      cost: 2.1622
 ---
 # T-0961 The host API's settings.manifest write runs flai manifest set, and settings.get gives the strategic agents' settings with what each means
 

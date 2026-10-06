@@ -3,12 +3,18 @@ id: T-1036
 type: task
 nature: remediation
 title: The story agent's start prompt says, before it launches a sub-agent, that a write under .claude/ is its own and waits on the operator
-status: backlog
+status: in-progress
 parent: S-0299
 owner: alex
 created: 2026-10-06T21:08:13Z
-updated: 2026-10-06T21:08:13Z
-transitions: []
+updated: 2026-10-06T22:32:33Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:32:32Z
+    by: agent-S-0299
+  - to: in-progress
+    at: 2026-10-06T22:32:33Z
+    by: agent-S-0299
 stream: S-0299
 tags: [flai, harness]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]

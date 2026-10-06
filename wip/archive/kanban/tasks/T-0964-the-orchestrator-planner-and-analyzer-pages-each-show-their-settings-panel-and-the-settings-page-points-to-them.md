@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 299
-      cache_read: 2527396
-      cache_write: 97330
-      cost: 1.1486
+      input: 45
+      output: 18769
+      cache_read: 2612886
+      cache_write: 80872
+      cost: 1.3459
 ---
 # T-0964 The orchestrator, planner, and analyzer pages each show their settings panel, and the Settings page points to them
 

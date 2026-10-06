@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0300-the-planner-agent-should-be-available-on-epic-work-items.md
   item: S-0300
 status: open
-participants: [planner-S-0300]
+participants: [planner-S-0300, alex]
 created: 2026-10-06T21:46:30Z
-updated: 2026-10-06T21:48:26Z
+updated: 2026-10-06T22:32:15Z
 ---
 
 # TH-0201 S-0300: criteria 1 and 2 are already met; what does "draft tasks" in criterion 3 mean?
@@ -67,3 +67,17 @@ The plan for S-0300 is written, based on the recommended answer above.
 
 1. Drop the declared touch `flai/cmd`: no task changes it, and while the story is in progress it holds every ready story under `flai/cmd`. Narrowing `flaiover/src` is not needed, because T-1049's file replaces it in the claim. I have kept both touches, since they are yours.
 2. If you choose (c) instead, T-1048 moves to `flai/internal/serve`, and T-1050 and T-1051 change their wording. If you choose (b), S-0300 should be split, with the task draft flag as a story of its own.
+
+### 2026-10-06T22:31:35Z alex
+you're correct, I could not see the plan actions mentioned in the story because I did not have planning turned on for a specific project. take the receommendations
+
+### 2026-10-06T22:32:15Z planner-S-0300
+Thanks. I've applied both recommendations:
+
+- **`flai/cmd`:** dropped from S-0300's touches.
+- **Approach:** recorded as confirmed in the story's `### Planning` notes and in T-1047 and T-1048. Tasks get no draft flag, there is no ADR, and one epic run drafts the stories and their tasks.
+
+The tasks and layers are unchanged:
+
+- **Layer 1:** T-1047, T-1048, T-1049.
+- **Layer 2:** T-1050, T-1051.

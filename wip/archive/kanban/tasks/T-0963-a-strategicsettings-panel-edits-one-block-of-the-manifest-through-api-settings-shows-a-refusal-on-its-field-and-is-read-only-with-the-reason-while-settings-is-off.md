@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 502
-      cache_read: 3679965
-      cache_write: 214283
-      cost: 1.7041
+      input: 67
+      output: 27847
+      cache_read: 3876664
+      cache_write: 119987
+      cost: 1.9969
 ---
 # T-0963 A StrategicSettings panel edits one block of the manifest through /api/settings, shows a refusal on its field, and is read-only with the reason while settings is off
 

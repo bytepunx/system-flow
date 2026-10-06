@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 83
-      output: 381
-      cache_read: 4172050
-      cache_write: 181401
-      cost: 1.905
+      input: 75
+      output: 31131
+      cache_read: 4333778
+      cache_write: 134136
+      cost: 2.2323
 ---
 # T-0952 flai manifest set writes the strategic agents' settings to system-flow.yaml, validating each and refusing with the field and the reason
 

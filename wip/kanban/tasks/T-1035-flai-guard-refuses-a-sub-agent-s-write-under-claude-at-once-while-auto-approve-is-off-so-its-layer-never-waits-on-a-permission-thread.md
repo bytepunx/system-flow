@@ -3,12 +3,18 @@ id: T-1035
 type: task
 nature: remediation
 title: flai guard refuses a sub-agent's write under .claude/ at once while auto-approve is off, so its layer never waits on a permission thread
-status: backlog
+status: in-progress
 parent: S-0299
 owner: alex
 created: 2026-10-06T21:08:01Z
-updated: 2026-10-06T21:08:01Z
-transitions: []
+updated: 2026-10-06T22:32:32Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:32:32Z
+    by: agent-S-0299
+  - to: in-progress
+    at: 2026-10-06T22:32:32Z
+    by: agent-S-0299
 stream: S-0299
 tags: [flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md]

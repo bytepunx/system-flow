@@ -3,14 +3,17 @@ id: S-0299
 type: story
 nature: remediation
 title: A story's sub-agent that writes under .claude/ blocks its layer for thirty minutes on a permission thread nobody answers, and the start prompt does not warn the agent beforehand
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T21:00:33Z
-updated: 2026-10-06T22:12:16Z
+updated: 2026-10-06T22:31:55Z
 transitions:
   - to: ready
     at: 2026-10-06T21:39:22Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T22:31:55Z
+    by: system-flow
 tags: [flai, guard, harness]
 topics: [cli, conventions]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, design/adrs, design/adrs/README.md, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]

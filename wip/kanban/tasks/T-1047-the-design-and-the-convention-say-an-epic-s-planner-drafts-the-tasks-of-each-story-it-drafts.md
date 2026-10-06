@@ -7,7 +7,7 @@ status: backlog
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:46:45Z
-updated: 2026-10-06T21:46:45Z
+updated: 2026-10-06T22:32:06Z
 transitions: []
 stream: S-0300
 tags: [planner, conventions]
@@ -37,4 +37,4 @@ Criterion 3: the planner, asked to plan an epic, writes draft stories and their 
 
 ## Notes
 
-Drafted by the planner on the recommendation in TH-0201. Adjust it to the operator's answer there.
+Drafted by the planner. alex confirmed the approach in TH-0201 on 2026-10-06: the tasks get no draft flag, and no ADR is needed.

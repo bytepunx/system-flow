@@ -1,16 +1,17 @@
 ---
 title: Active streams
-updated: 2026-10-06T22:12:16Z
+updated: 2026-10-06T22:33:44Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0229](S-0229.md) | The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents | in-progress | agent-S-0229 | 2026-10-06T21:48:45Z |
+| [S-0299](S-0299.md) | A story's sub-agent that writes under .claude/ blocks its layer for thirty minutes on a permission thread nobody answers, and the start prompt does not warn the agent beforehand | in-progress | system-flow | 2026-10-06T22:31:55Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 28 | 63.2003 USD | 12806 | 2026-10-06T21:57:12Z |
+| [planner](planner.md) | 29 | 65.1500 USD | 14913 | 2026-10-06T22:32:19Z |
+| [orchestrator](orchestrator.md) | 0 | 0.0000 USD | 0 | none |

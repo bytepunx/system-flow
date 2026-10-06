@@ -3,11 +3,11 @@ id: T-0966
 type: task
 nature: feature
 title: An ADR, the dashboard and manifest design, flai-cli.md, and the operator and user guides describe editing the strategic agents' settings from the dashboard
-status: in-progress
+status: done
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:47:14Z
-updated: 2026-10-06T22:10:14Z
+updated: 2026-10-06T22:19:42Z
 transitions:
   - to: ready
     at: 2026-10-06T22:10:14Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:10:14Z
     by: agent-S-0229
+  - to: done
+    at: 2026-10-06T22:19:42Z
+    by: agent-S-0229
 stream: S-0229
 tags: [flai, dashboard]
-touches: [design/adrs, design/system/flaiover-dashboard.md, design/system/project-manifest.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flaiover.md, docs/users/flai.md]
+touches: [design/adrs, design/system/flaiover-dashboard.md, design/system/project-manifest.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flaiover.md, docs/users/flai.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-0954, T-0964]
+usage:
+  source: log
+  seconds: 568
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 243
+      output: 100895
+      cache_read: 14045672
+      cache_write: 434731
+      cost: 7.2349
 ---
 # T-0966 An ADR, the dashboard and manifest design, flai-cli.md, and the operator and user guides describe editing the strategic agents' settings from the dashboard
 

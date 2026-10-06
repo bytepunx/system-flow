@@ -7,7 +7,7 @@ status: backlog
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:46:54Z
-updated: 2026-10-06T21:46:54Z
+updated: 2026-10-06T22:32:12Z
 transitions: []
 stream: S-0300
 tags: [planner, cli]
@@ -36,4 +36,4 @@ This task waits for nothing and runs alongside the design task: they share no pa
 
 ## Notes
 
-Drafted by the planner on the recommendation in TH-0201. If the operator chooses alternative (c), a story planner run queued for each drafted story, this task changes `flai/internal/serve` instead.
+Drafted by the planner. alex confirmed the approach in TH-0201 on 2026-10-06: one epic run drafts the stories and their tasks, and flai serve queues no story planner runs.
