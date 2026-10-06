@@ -15,14 +15,16 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // flai plan: the planner for an epic or a story, on the operator's word
 // (S-0208).
 func newPlanCmd(a *app) *cobra.Command {
-	return &cobra.Command{
-		Use:   "plan <epic-or-story-id>",
+	var candidates bool
+	c := &cobra.Command{
+		Use:   "plan <epic-or-story-id> | plan --candidates",
 		Short: "Start the planner for an epic or a story: it drafts and enriches the item's stories or tasks through flai",
 		Long: `Starts the planner for an epic or a story, now, on this host and as you
 (S-0208, ADR-0075). It runs in the project's main checkout with the
@@ -47,15 +49,94 @@ refuses, and says why, while the action is off for the project, for a task
 or an ID that is neither an epic's nor a story's, for an item that is
 archived, done, or cancelled, while a planner runs for the item, and when
 nothing can start it. The Plan button on an epic's or a story's page runs
-this.`,
+this.
+
+--candidates lists, in ID order and with the reason for each, the epics the
+planner should plan (S-0219): an epic in the backlog with no story, and an
+epic not done or cancelled whose stories, archived ones included, are all
+done or cancelled with at least one done. It leaves out, and lists apart
+with why, an epic a planner runs for now and one whose newest planner run
+ended asking a question still awaiting the operator, as flai serve's record
+of planner runs on this host says. It starts nothing and writes nothing.`,
 		Example: `  flai serve enable plan
   flai plan E-0016
-  flai plan S-0208 --json`,
-		Args: cobra.ExactArgs(1),
+  flai plan S-0208 --json
+  flai plan --candidates --json`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if candidates {
+				return cobra.NoArgs(cmd, args)
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
+			if candidates {
+				return a.planCandidates()
+			}
 			return a.planNow(workitem.CanonicalID(args[0]))
 		},
 	}
+	c.Flags().BoolVar(&candidates, "candidates", false, "list the epics the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing")
+	return c
+}
+
+// planCandidates prints the epics the planner should plan in the project,
+// leaving out those flai serve's planner runs on this host keep back.
+func (a *app) planCandidates() error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	got, err := repo.PlanCandidates(planHeld(repo, a.serveDir().AgentStates()[mainRootOf(repo)]))
+	if err != nil {
+		return err
+	}
+	if a.jsonOut {
+		return a.printJSON(got)
+	}
+	if len(got.Candidates) == 0 {
+		fmt.Fprintln(a.out, "no epics to plan")
+	} else {
+		fmt.Fprintln(a.out, "epics to plan:")
+	}
+	for _, c := range got.Candidates {
+		fmt.Fprintf(a.out, "  %s  %s\n    - %s\n", c.ID, c.Title, c.Reason)
+	}
+	if len(got.LeftOut) > 0 {
+		fmt.Fprintln(a.out, "left out:")
+	}
+	for _, c := range got.LeftOut {
+		fmt.Fprintf(a.out, "  %s  %s\n    - %s\n", c.ID, c.Title, c.Reason)
+	}
+	return nil
+}
+
+// planHeld is why each epic st's planner runs keep from being a candidate:
+// a planner runs for it now, or its newest planner run ended asking on a
+// thread whose last word is still the planner's. A run that has not ended
+// but whose process is gone is neither: flai serve settles it at its next
+// look.
+func planHeld(repo *workitem.Repo, st serve.AgentState) map[string]string {
+	out := map[string]string{}
+	for id, run := range st.Plans {
+		if run == nil || workitem.TypeOfID(id) != workitem.Epic {
+			continue
+		}
+		if run.Ended == "" && run.Error == "" && run.PID > 0 && serve.Owns(run.PID, run.Start) {
+			out[id] = fmt.Sprintf("a planner runs for it now (pid %d, started %s)", run.PID, run.Started)
+			continue
+		}
+		if run.Outcome != serve.OutcomeAsked || run.Thread == "" {
+			continue
+		}
+		th, err := threads.Get(repo, run.Thread)
+		if err != nil {
+			continue
+		}
+		if e := th.Entries(); th.Open() && len(e) > 0 && e[len(e)-1].Author == run.Agent {
+			out[id] = fmt.Sprintf("its planner asked on %s, which awaits the operator: %s", th.ID, th.Title)
+		}
+	}
+	return out
 }
 
 // planNow starts the planner for item and prints the run, and says on
