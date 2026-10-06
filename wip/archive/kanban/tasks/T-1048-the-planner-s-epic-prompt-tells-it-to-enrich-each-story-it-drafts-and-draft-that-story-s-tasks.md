@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 140
-      cache_read: 719254
-      cache_write: 55171
-      cost: 0.3412
+      input: 17
+      output: 5614
+      cache_read: 762240
+      cache_write: 28924
+      cost: 0.4527
 ---
 # T-1048 The planner's epic prompt tells it to enrich each story it drafts and draft that story's tasks
 

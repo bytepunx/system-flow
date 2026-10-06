@@ -3,12 +3,18 @@ id: T-1129
 type: task
 nature: improvement
 title: A nature filter store kept in localStorage, every nature shown by default
-status: backlog
+status: in-progress
 parent: S-0302
 owner: alex
 created: 2026-10-06T23:20:00Z
-updated: 2026-10-06T23:20:00Z
-transitions: []
+updated: 2026-10-06T23:40:18Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:40:18Z
+    by: agent-S-0302
+  - to: in-progress
+    at: 2026-10-06T23:40:18Z
+    by: agent-S-0302
 stream: S-0302
 tags: [dashboard]
 touches: [flaiover/src/lib/boardnatures.svelte.ts, flaiover/src/lib/boardnatures.svelte.test.ts]

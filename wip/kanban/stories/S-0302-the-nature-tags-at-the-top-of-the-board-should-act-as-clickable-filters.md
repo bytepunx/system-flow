@@ -3,14 +3,17 @@ id: S-0302
 type: story
 nature: improvement
 title: The nature tags at the top of the board should act as clickable filters
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T23:17:17Z
-updated: 2026-10-06T23:32:51Z
+updated: 2026-10-06T23:39:58Z
 transitions:
   - to: ready
     at: 2026-10-06T23:17:18Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T23:39:58Z
+    by: agent-S-0302
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 agent:

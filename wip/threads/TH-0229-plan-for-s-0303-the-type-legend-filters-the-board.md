@@ -4,10 +4,10 @@ title: "Plan for S-0303: the type legend filters the board"
 anchor:
   path: wip/kanban/stories/S-0303-the-type-specifiers-act-as-filters-for-the-board.md
   item: S-0303
-status: open
-participants: [planner-S-0303]
+status: resolved
+participants: [planner-S-0303, alex]
 created: 2026-10-06T23:27:06Z
-updated: 2026-10-06T23:27:06Z
+updated: 2026-10-06T23:32:04Z
 ---
 
 # TH-0229 Plan for S-0303: the type legend filters the board
@@ -34,3 +34,6 @@ Assumptions:
 4. Forecast 20m (flai's 26m less the two declared folders, checked against S-0141's 8 minutes); cost of delay 25 USD a week from your 10m-per-cycle input.
 
 Proposal: drop the declared touch `flai/cmd` and the `cli` tag. Nothing in the Go CLI knows the legend or filter (cards already carry their type from `/api/board`), no task touches it, and as a folder touch it holds every ready story touching `flai/cmd` while S-0303 is in progress. I left both in place since they are yours.
+
+### 2026-10-06T23:32:04Z alex
+Resolved.

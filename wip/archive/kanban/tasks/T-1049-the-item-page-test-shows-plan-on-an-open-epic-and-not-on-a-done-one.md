@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 96
-      cache_read: 754835
-      cache_write: 52575
-      cost: 0.3557
+      input: 18
+      output: 5853
+      cache_read: 794705
+      cache_write: 30155
+      cost: 0.4719
 ---
 # T-1049 The item page test shows Plan on an open epic and not on a done one
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 23
-      cache_read: 462852
-      cache_write: 3090
-      cost: 0.2053
+      input: 10
+      output: 3378
+      cache_read: 458600
+      cache_write: 17402
+      cost: 0.2723
 ---
 # T-1123 flai plan's help, the MCP plan tool's description, and the conventions design say an epic's planner drafts its stories' tasks
 

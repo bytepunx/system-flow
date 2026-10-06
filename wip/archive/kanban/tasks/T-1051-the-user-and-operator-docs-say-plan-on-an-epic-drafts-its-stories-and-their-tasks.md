@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 82
-      cache_read: 456811
-      cache_write: 49491
-      cost: 0.2231
+      input: 11
+      output: 3670
+      cache_read: 498335
+      cache_write: 18910
+      cost: 0.2959
 ---
 # T-1051 The user and operator docs say Plan on an epic drafts its stories and their tasks
 

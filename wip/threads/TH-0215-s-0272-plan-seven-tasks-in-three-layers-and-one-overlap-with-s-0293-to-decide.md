@@ -4,10 +4,10 @@ title: "S-0272 plan: seven tasks in three layers, and one overlap with S-0293 to
 anchor:
   path: wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md
   item: S-0272
-status: open
-participants: [planner-S-0272]
+status: answered
+participants: [planner-S-0272, alex]
 created: 2026-10-06T22:54:30Z
-updated: 2026-10-06T22:54:30Z
+updated: 2026-10-06T23:34:52Z
 ---
 
 # TH-0215 S-0272 plan: seven tasks in three layers, and one overlap with S-0293 to decide
@@ -48,3 +48,6 @@ I've drafted seven tasks for S-0272 in three layers. I've also revisited its tou
 
 1. **Criterion 4 overlaps S-0293**, which classifies every turn, empty wakes among them. TH-0176 proposed moving it there, and the thread was resolved with the criterion still here. So I planned it here: T-1097 and T-1101, about 10 of the 50m. My recommendation is to keep it here, so the saving is measured as soon as this story lands, with S-0293 building on T-1101's parsing. If you would rather move it, say so: I'd propose dropping criterion 4, cancelling T-1097 and T-1101, and taking T-1101 off T-1112's `after`.
 2. **S-0294** (a draft) proposes that serve restart an agent that ended without finishing. That is next to this story's restart on an answer, but it is a separate decision under ADR-0043. I'd keep them apart. No change to either.
+
+### 2026-10-06T23:34:52Z alex
+accept proposals

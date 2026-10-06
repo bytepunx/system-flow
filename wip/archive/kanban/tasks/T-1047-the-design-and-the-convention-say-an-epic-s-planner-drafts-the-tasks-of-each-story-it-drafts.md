@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 189
-      cache_read: 889924
-      cache_write: 59213
-      cost: 0.4182
+      input: 21
+      output: 6880
+      cache_read: 934203
+      cache_write: 35449
+      cost: 0.5548
 ---
 # T-1047 The design and the convention say an epic's planner drafts the tasks of each story it drafts
 

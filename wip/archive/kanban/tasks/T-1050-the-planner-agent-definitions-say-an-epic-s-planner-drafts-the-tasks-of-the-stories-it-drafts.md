@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 70
-      cache_read: 1283344
-      cache_write: 30287
-      cost: 0.5787
+      input: 29
+      output: 9522
+      cache_read: 1292935
+      cache_write: 49061
+      cost: 0.7678
 ---
 # T-1050 The planner agent definitions say an epic's planner drafts the tasks of the stories it drafts
 

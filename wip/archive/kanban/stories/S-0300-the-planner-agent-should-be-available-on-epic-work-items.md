@@ -3,10 +3,10 @@ id: S-0300
 type: story
 nature: improvement
 title: The planner agent should be available on epic work items
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T21:42:35Z
-updated: 2026-10-06T23:29:10Z
+updated: 2026-10-06T23:40:31Z
 transitions:
   - to: ready
     at: 2026-10-06T21:42:36Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:09:18Z
     by: agent-S-0300
+  - to: review
+    at: 2026-10-06T23:39:40Z
+    by: agent-S-0300
+  - to: done
+    at: 2026-10-06T23:40:31Z
+    by: alex
 tags: [dashboard, cli]
 topics: [planner, planning]
-touches: [flaiover/src, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/cmd/plan.go, flai/internal/mcpserver/plan.go, docs/users/flai-reference.md, design/system/conventions.md, design/issues/I-0097-a-story-s-agent-that-runs-flai-stream-open-is-left-with-the-story-in-ready-so-permission-prompt-refuses-its-claude-write-until-it-moves-the-story-itself.md, design/issues/I-0098-flai-serve-replans-a-story-on-its-own-agent-s-touches-edit-while-the-agent-works-it-and-the-planner-s-new-touches-hold-other-ready-stories.md, design/issues/summary.md]
+touches: [flaiover/src, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/cmd/plan.go, flai/internal/mcpserver/plan.go, docs/users/flai-reference.md, design/system/conventions.md, design/issues/I-0097-a-story-s-agent-that-runs-flai-stream-open-is-left-with-the-story-in-ready-so-permission-prompt-refuses-its-claude-write-until-it-moves-the-story-itself.md, design/issues/I-0098-flai-serve-replans-a-story-on-its-own-agent-s-touches-edit-while-the-agent-works-it-and-the-planner-s-new-touches-hold-other-ready-stories.md, design/issues/summary.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,15 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1541
-  estimated: true
+  seconds: 2234
   models:
     - model: claude-opus-5-5
-      input: 164
-      output: 757
-      cache_read: 5817588
-      cache_write: 322608
-      cost: 2.7054
+      input: 214
+      output: 70688
+      cache_read: 9598002
+      cache_write: 364201
+      cost: 5.6998
+    - model: claude-sonnet-5-5
+      input: 36
+      output: 6898
+      cache_read: 550574
+      cache_write: 63473
+      cost: 0.3378
   strategic:
     - kind: planner
       seconds: 3187

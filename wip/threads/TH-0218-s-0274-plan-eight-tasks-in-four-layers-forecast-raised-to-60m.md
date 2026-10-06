@@ -4,10 +4,10 @@ title: "S-0274 plan: eight tasks in four layers, forecast raised to 60m"
 anchor:
   path: wip/kanban/stories/S-0274-opening-a-story-is-one-call-flai-story-start-moves-it-to-in-progress-opens-the-stream-primes-and-answers-the-first-inbox-together.md
   item: S-0274
-status: open
-participants: [planner-S-0274]
+status: resolved
+participants: [planner-S-0274, alex]
 created: 2026-10-06T22:55:26Z
-updated: 2026-10-06T22:55:26Z
+updated: 2026-10-06T23:31:27Z
 ---
 
 # TH-0218 S-0274 plan: eight tasks in four layers, forecast raised to 60m
@@ -48,3 +48,6 @@ Assumptions (say if any is wrong):
 6. The guard needs no change: neither the command nor the tool is a read, so sub-agents stay refused both.
 
 I would not split, merge, or drop anything. T-1117 and T-1118 are kept apart so they can run together.
+
+### 2026-10-06T23:31:27Z alex
+Resolved.
