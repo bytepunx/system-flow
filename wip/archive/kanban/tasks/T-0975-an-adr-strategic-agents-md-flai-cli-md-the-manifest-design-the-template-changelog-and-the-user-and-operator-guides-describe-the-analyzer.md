@@ -3,16 +3,39 @@ id: T-0975
 type: task
 nature: feature
 title: An ADR, strategic-agents.md, flai-cli.md, the manifest design, the template changelog, and the user and operator guides describe the analyzer
-status: backlog
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:48:06Z
-updated: 2026-10-05T05:48:06Z
-transitions: []
+updated: 2026-10-06T20:48:13Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:35:49Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:35:49Z
+    by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:48:12Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:48:13Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-0949, T-0957, T-0960, T-0968, T-0971, T-0972, T-0973]
+usage:
+  source: log
+  seconds: 743
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 293
+      output: 117147
+      cache_read: 18725624
+      cache_write: 456791
+      cost: 8.612
 ---
 # T-0975 An ADR, strategic-agents.md, flai-cli.md, the manifest design, the template changelog, and the user and operator guides describe the analyzer
 

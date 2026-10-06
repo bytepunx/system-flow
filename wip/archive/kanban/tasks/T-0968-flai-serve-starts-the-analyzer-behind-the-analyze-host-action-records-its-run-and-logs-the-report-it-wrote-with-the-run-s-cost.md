@@ -27,15 +27,15 @@ touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go,
 after: [T-0949, T-0957]
 usage:
   source: log
-  seconds: 758
+  seconds: 759
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 159
-      output: 815
-      cache_read: 10644843
-      cache_write: 226274
-      cost: 4.7359
+      input: 169
+      output: 67792
+      cache_read: 10836336
+      cache_write: 264340
+      cost: 4.9837
 ---
 # T-0968 flai serve starts the analyzer behind the analyze host action, records its run, and logs the report it wrote with the run's cost
 

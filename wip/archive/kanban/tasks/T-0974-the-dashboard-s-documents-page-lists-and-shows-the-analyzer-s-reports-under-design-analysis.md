@@ -3,11 +3,11 @@ id: T-0974
 type: task
 nature: feature
 title: The dashboard's documents page lists and shows the analyzer's reports under design/analysis
-status: in-progress
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:53Z
-updated: 2026-10-06T20:28:08Z
+updated: 2026-10-06T20:35:38Z
 transitions:
   - to: ready
     at: 2026-10-06T20:28:08Z
@@ -15,10 +15,27 @@ transitions:
   - to: in-progress
     at: 2026-10-06T20:28:08Z
     by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:35:38Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:35:38Z
+    by: agent-S-0223
 stream: S-0223
 tags: [dashboard]
 touches: ["flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flai/internal/hostapi/docs_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0960]
+usage:
+  source: log
+  seconds: 450
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 6853
+      cache_read: 1095361
+      cache_write: 26720
+      cost: 0.5038
 ---
 # T-0974 The dashboard's documents page lists and shows the analyzer's reports under design/analysis
 

@@ -3,11 +3,11 @@ id: T-0973
 type: task
 nature: feature
 title: "flai guard holds an analyzer session to its report: file edits only under design/analysis, flai reads, threads, and activity_log"
-status: in-progress
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:47Z
-updated: 2026-10-06T20:28:08Z
+updated: 2026-10-06T20:35:38Z
 transitions:
   - to: ready
     at: 2026-10-06T20:28:07Z
@@ -15,10 +15,27 @@ transitions:
   - to: in-progress
     at: 2026-10-06T20:28:08Z
     by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:35:37Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:35:38Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go]
 after: [T-0960]
+usage:
+  source: log
+  seconds: 449
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 18955
+      cache_read: 3029917
+      cache_write: 73911
+      cost: 1.3935
 ---
 # T-0973 flai guard holds an analyzer session to its report: file edits only under design/analysis, flai reads, threads, and activity_log
 

@@ -3,11 +3,11 @@ id: S-0223
 type: story
 nature: feature
 title: The analyzer runs on demand or on a schedule and writes a report under design/analysis
-status: in-progress
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T20:27:48Z
+updated: 2026-10-06T21:00:32Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:35Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-06T20:08:12Z
     by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:55:25Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T21:00:32Z
+    by: alex
 tags: [flai, dashboard]
 topics: [analysis]
-touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs, flai/internal/analysis, ".claude/settings.json", design/README.md, docs/users/conventions.md, docs/users/index.md, design/adrs, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flaiover/src/lib/server/agent.ts]
+touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, ".claude/agents", template, design/analysis, flai/internal/guard, flai/internal/manifest, flai/internal/check, CLAUDE.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/routes/docs, flai/internal/analysis, ".claude/settings.json", design/README.md, docs/users/conventions.md, docs/users/index.md, design/adrs, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/root.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/replan.go, docs/operators/index.md, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]
 after: [S-0206, S-0207, S-0211]
 agent:
   harness: claude-code
@@ -26,15 +32,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1202
+  seconds: 2795
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 376
-      output: 1990
-      cache_read: 18298433
-      cache_write: 653548
-      cost: 8.2566
+      input: 858
+      output: 298762
+      cache_read: 50526898
+      cache_write: 1413713
+      cost: 23.5801
+    - model: claude-sonnet-5-5
+      input: 26
+      output: 6048
+      cache_read: 304665
+      cache_write: 41005
+      cost: 0.224
 cost_of_delay:
   value: 138.36
   by: planner-S-0223
@@ -53,11 +65,11 @@ forecast:
 The analyzer reads the metrics, the design, the code, and the issues, and writes what it finds: bottlenecks (from cumulative flow, time in state, waiting, holds), gaps between `design/system` and the code, and technical and security risks. It writes a report; it does not author stories.
 
 ## Acceptance criteria
-- [ ] An `analyze` host action gates it; `flai analyze [--focus bottlenecks|intent|risk]`, hostapi `analyze.run`, the MCP tool, and a manifest schedule (`analysis.schedule`) start a run; `flai serve` records it as other runs
-- [ ] The report is `design/analysis/<date>-<focus>.md` with front matter (`title`, `updated`, `status`, `focus`, the window), sections per finding with evidence (metric figures, file paths, design sections quoted), severity, and estimated impact (time lost per cycle, or revenue or penalty when the design states them); `design/analysis/README.md` indexes them and the layout tables list the folder
-- [ ] Its prompt primes with `--role analyze` and uses `flai stats --json`, `doc_search`, and the explorer; it edits nothing but its report, and `flai guard` enforces that
-- [ ] Its log entry names the report and the run's cost; the dashboard's documents page shows the reports
-- [ ] `design/system/strategic-agents.md` and the user guide describe it; tests cover a run, the guard, and the schedule
+- [x] An `analyze` host action gates it; `flai analyze [--focus bottlenecks|intent|risk]`, hostapi `analyze.run`, the MCP tool, and a manifest schedule (`analysis.schedule`) start a run; `flai serve` records it as other runs
+- [x] The report is `design/analysis/<date>-<focus>.md` with front matter (`title`, `updated`, `status`, `focus`, the window), sections per finding with evidence (metric figures, file paths, design sections quoted), severity, and estimated impact (time lost per cycle, or revenue or penalty when the design states them); `design/analysis/README.md` indexes them and the layout tables list the folder
+- [x] Its prompt primes with `--role analyze` and uses `flai stats --json`, `doc_search`, and the explorer; it edits nothing but its report, and `flai guard` enforces that
+- [x] Its log entry names the report and the run's cost; the dashboard's documents page shows the reports
+- [x] `design/system/strategic-agents.md` and the user guide describe it; tests cover a run, the guard, and the schedule
 
 ## Tasks
 - T-0949 system-flow.yaml takes analysis.agent and analysis.schedule, and flai check reports a bad one

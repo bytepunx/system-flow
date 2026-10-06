@@ -3,11 +3,11 @@ id: T-0972
 type: task
 nature: feature
 title: flai serve starts the analyzer when analysis.schedule comes round, while the analyze host action is on
-status: in-progress
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:36Z
-updated: 2026-10-06T20:28:07Z
+updated: 2026-10-06T20:35:37Z
 transitions:
   - to: ready
     at: 2026-10-06T20:28:07Z
@@ -15,10 +15,27 @@ transitions:
   - to: in-progress
     at: 2026-10-06T20:28:07Z
     by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:35:37Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:35:37Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/serve.go]
 after: [T-0968]
+usage:
+  source: log
+  seconds: 450
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 8758
+      cache_read: 1399889
+      cache_write: 34149
+      cost: 0.6438
 ---
 # T-0972 flai serve starts the analyzer when analysis.schedule comes round, while the analyze host action is on
 

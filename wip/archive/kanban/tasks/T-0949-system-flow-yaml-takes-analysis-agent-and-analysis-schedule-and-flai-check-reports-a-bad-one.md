@@ -30,11 +30,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 233
-      cache_read: 1047127
-      cache_write: 109965
-      cost: 0.5041
+      input: 31
+      output: 3681
+      cache_read: 1087240
+      cache_write: 81880
+      cost: 0.5264
 ---
 # T-0949 system-flow.yaml takes analysis.agent and analysis.schedule, and flai check reports a bad one
 

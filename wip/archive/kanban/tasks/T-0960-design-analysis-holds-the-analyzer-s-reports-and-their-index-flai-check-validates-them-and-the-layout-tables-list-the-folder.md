@@ -27,15 +27,15 @@ touches: [flai/internal/analysis/analysis.go, flai/internal/analysis/analysis_te
 after: [T-0949]
 usage:
   source: log
-  seconds: 758
+  seconds: 759
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 83
-      output: 394
-      cache_read: 2731641
-      cache_write: 97259
-      cost: 1.2325
+      input: 44
+      output: 17641
+      cache_read: 2819887
+      cache_write: 68788
+      cost: 1.2969
 ---
 # T-0960 design/analysis holds the analyzer's reports and their index, flai check validates them, and the layout tables list the folder
 
