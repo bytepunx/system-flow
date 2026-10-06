@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Repo, useRepo, RepoError, type Ask } from '$lib/server/repo';
+import { AgentError } from '$lib/server/agent';
 import { setToken, tokenMatches } from '$lib/server/auth';
 
 type Handler = (event: never) => Promise<Response>;
@@ -110,6 +111,68 @@ describe('/api/settings (S-0105)', () => {
 		expect(await r.json()).toMatchObject({
 			enable: 'flai serve enable settings --all-projects',
 			hostwide: true
+		});
+	});
+
+	it('writes the strategic settings through settings.manifest as a write (S-0229)', async () => {
+		script['settings.manifest'] = {
+			data: { set: [{ key: 'orchestration.policy', value: 'wsjf' }], unset: [], commit: 'abc123' }
+		};
+		const r = await post({
+			kind: 'manifest',
+			set: { 'orchestration.policy': 'wsjf' },
+			unset: ['planning.schedule']
+		});
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ commit: 'abc123', warnings: [] });
+		const call = asked.find((a) => a.method === 'settings.manifest')!;
+		expect(call.params).toMatchObject({
+			set: { 'orchestration.policy': 'wsjf' },
+			unset: ['planning.schedule']
+		});
+		expect(call.params.request_id).toEqual(expect.any(String));
+		expect(call.params.kind).toBeUndefined();
+	});
+
+	it("passes settings.manifest's refusal through with each field and reason, and Disabled as 403 (S-0229)", async () => {
+		const refused = [
+			{ field: 'orchestration.release.count', reason: 'must be a whole number' },
+			{ field: 'planning.schedule', reason: 'is not a cron expression or daily' }
+		];
+		script['settings.manifest'] = {
+			error: new AgentError(
+				502,
+				'orchestration.release.count: must be a whole number; planning.schedule: is not a cron expression or daily',
+				-32010,
+				{ refused }
+			)
+		};
+		const r = await post({ kind: 'manifest', set: { 'orchestration.release.count': 2.5 } });
+		expect(r.status).toBe(422);
+		expect(await r.json()).toMatchObject({ refused, error: expect.stringContaining('whole') });
+
+		script['settings.manifest'] = {
+			error: new AgentError(502, 'nope: is not a setting the dashboard writes', -32602, {
+				refused: [{ field: 'nope', reason: 'is not a setting the dashboard writes' }]
+			})
+		};
+		const bad = await post({ kind: 'manifest', set: { nope: true } });
+		expect(bad.status).toBe(400);
+		expect(await bad.json()).toMatchObject({ refused: [{ field: 'nope' }] });
+
+		script['settings.manifest'] = {
+			error: new AgentError(
+				502,
+				'the settings host action is off: run flai serve enable settings',
+				-32012,
+				{ action: 'settings', enable: 'flai serve enable settings' }
+			)
+		};
+		const off = await post({ kind: 'manifest', unset: ['planning.schedule'] });
+		expect(off.status).toBe(403);
+		expect(await off.json()).toMatchObject({
+			action: 'settings',
+			enable: 'flai serve enable settings'
 		});
 	});
 

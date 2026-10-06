@@ -21,7 +21,10 @@ export const GET: RequestHandler = () => respond(() => repo().ask<SettingsView>(
 
 /**
  * POST {kind, ...params}: one change, flai's settings.<kind>, gated on the host by the settings
- * action (403 with the command that enables it). A rotated dashboard token is taken here at once:
+ * action (403 with the command that enables it). A refusal keeps what flai said beside its message:
+ * settings.manifest's (S-0229) is a 422, or a 400 for a key or shape the host API refuses, each with
+ * `refused`, every field and why, so that the panel can say it under the field. A rotated
+ * dashboard token is taken here at once:
  * the server checks the new one from now on, and the session that asked gets a cookie with it, so
  * it stays logged in while every other session and agent must log in again. The answer carries
  * the new login link, never the token alone.
