@@ -132,3 +132,46 @@ func TestApplyReadyOrder(t *testing.T) {
 		t.Error("an in-progress story is refused")
 	}
 }
+
+// S-0219: a story placed by hand keeps its position, and the others fill
+// the rest in the policy's order.
+func TestKeepPlaces(t *testing.T) {
+	current := []string{"S-0001", "S-0002", "S-0003", "S-0004", "S-0005"}
+	var ranked []Ranked
+	for i := len(current) - 1; i >= 0; i-- {
+		ranked = append(ranked, Ranked{Position: len(current) - i, ID: current[i]})
+	}
+	hand := Placed{By: "alex", At: "2026-09-15T20:00:00Z"}
+	for _, c := range []struct {
+		kept []string
+		want []string
+	}{
+		{nil, []string{"S-0005", "S-0004", "S-0003", "S-0002", "S-0001"}},
+		{[]string{"S-0002"}, []string{"S-0005", "S-0002", "S-0004", "S-0003", "S-0001"}},
+		{[]string{"S-0001", "S-0005"}, []string{"S-0001", "S-0004", "S-0003", "S-0002", "S-0005"}},
+		{current, current},
+	} {
+		kept := map[string]Placed{}
+		for _, id := range c.kept {
+			kept[id] = hand
+		}
+		got := KeepPlaces(append([]Ranked{}, ranked...), current, kept)
+		var ids []string
+		for i, r := range got {
+			ids = append(ids, r.ID)
+			if r.Position != i+1 {
+				t.Errorf("kept %v: %s is at position %d, want %d", c.kept, r.ID, r.Position, i+1)
+			}
+			if _, want := kept[r.ID]; (r.Kept != nil) != want || (want && *r.Kept != hand) {
+				t.Errorf("kept %v: %s marked %+v", c.kept, r.ID, r.Kept)
+			}
+		}
+		if !reflect.DeepEqual(ids, c.want) {
+			t.Errorf("kept %v: got %v want %v", c.kept, ids, c.want)
+		}
+	}
+	data, _ := json.Marshal(KeepPlaces(ranked[:1], current[4:], map[string]Placed{"S-0005": hand})[0])
+	if want := `{"position":1,"id":"S-0005","title":"","unit":"","kept":{"by":"alex","at":"2026-09-15T20:00:00Z"}}`; string(data) != want {
+		t.Errorf("json:\n got %s\nwant %s", data, want)
+	}
+}

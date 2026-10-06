@@ -2,11 +2,15 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // S-0057: flai order places a story in the pull order, flai board reads the
@@ -215,6 +219,158 @@ func TestOrderByCommand(t *testing.T) {
 		{[]string{"order", "S-0001", "--top", "--apply"}, "give --by too"},
 		{[]string{"order", "--by", "random", "--apply"}, "cod, wsjf, throughput, fifo"},
 		{[]string{"order", "--top"}, "name the story"},
+	} {
+		_, errOut, code := runIn(t, root, c.args...)
+		if code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: code %d, stderr %q, want %q", c.args, code, errOut, c.want)
+		}
+	}
+	if after, _ := os.ReadFile(boardPath); string(after) != string(before) {
+		t.Error("a refused order rewrote board.md")
+	}
+}
+
+// S-0219: flai order records who placed a story and when, flai move out of
+// the column drops the record, and --by --apply keeps the place of a story
+// placed by hand within --keep-placed and orders the others around it.
+func TestOrderKeepsHandPlacements(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "")
+	t.Setenv("FLAI_ROLE", "")
+	root := tempProject(t)
+	now := time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
+	runAt := func(at time.Time, args ...string) string {
+		t.Helper()
+		out, errOut, code := runInAt(t, root, at, args...)
+		if code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+		return out
+	}
+	run := func(args ...string) string { t.Helper(); return runAt(now, args...) }
+	run("epic", "new", "Epic")
+	for i, title := range []string{"One", "Two", "Three", "Four"} {
+		run("story", "new", title, "--epic", "E-0001")
+		id := fmt.Sprintf("S-%04d", i+1)
+		run("edit", id, "--cost-of-delay-value", fmt.Sprint(100*(i+1)))
+		file, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", id+"-*.md"))
+		s, _ := os.ReadFile(file[0])
+		_ = os.WriteFile(file[0], []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
+		run("move", id, "ready")
+	}
+	boardPath := filepath.Join(root, "wip/kanban/board.md")
+	placed := func() map[string]workitem.Placed {
+		t.Helper()
+		repo, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := repo.LoadBoard()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b.Placed
+	}
+	ready := func() (ids []string) {
+		var v struct {
+			Columns map[string][]struct {
+				ID string `json:"id"`
+			} `json:"columns"`
+		}
+		if err := json.Unmarshal([]byte(run("board", "--json")), &v); err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range v.Columns["ready"] {
+			ids = append(ids, c.ID)
+		}
+		return
+	}
+
+	// Two days ago, by hand; an hour ago, through the dashboard; an hour
+	// ago, by the orchestrator, whoever it says it is.
+	runAt(now.Add(-48*time.Hour), "order", "S-0002", "--top", "--placed-by", "alex")
+	var j struct {
+		Placed workitem.Placed `json:"placed"`
+	}
+	t.Setenv("FLAI_AGENT", "flaiover")
+	if err := json.Unmarshal([]byte(runAt(now.Add(-time.Hour), "order", "S-0001", "--after", "S-0002", "--json")), &j); err != nil {
+		t.Fatal(err)
+	}
+	if want := (workitem.Placed{By: "flaiover", At: "2026-09-15T20:00:00Z"}); j.Placed != want {
+		t.Errorf("--json names the placement: got %+v want %+v", j.Placed, want)
+	}
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	t.Setenv("FLAI_AGENT", "system-flow")
+	runAt(now.Add(-time.Hour), "order", "S-0003", "--bottom", "--placed-by", "alex")
+	t.Setenv("FLAI_ROLE", "")
+	t.Setenv("FLAI_AGENT", "")
+	want := map[string]workitem.Placed{
+		"S-0001": {By: "flaiover", At: "2026-09-15T20:00:00Z"},
+		"S-0002": {By: "alex", At: "2026-09-13T21:00:00Z"},
+		"S-0003": {By: "orchestrator", At: "2026-09-15T20:00:00Z"},
+	}
+	if got := placed(); !reflect.DeepEqual(got, want) {
+		t.Errorf("placed: got %+v want %+v", got, want)
+	}
+	if got, want := ready(), []string{"S-0002", "S-0001", "S-0004", "S-0003"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("placed by hand: got %v want %v", got, want)
+	}
+
+	// With no window, cod alone; with the default, S-0001 stays second.
+	var none workitem.ReadyOrder
+	if err := json.Unmarshal([]byte(run("order", "--by", "cod", "--keep-placed", "0", "--json")), &none); err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, r := range none.Stories {
+		ids = append(ids, r.ID)
+		if r.Kept != nil {
+			t.Errorf("--keep-placed 0 keeps nothing, but %s: %+v", r.ID, r.Kept)
+		}
+	}
+	if want := []string{"S-0004", "S-0003", "S-0002", "S-0001"}; !reflect.DeepEqual(ids, want) || none.KeepPlaced != "" {
+		t.Errorf("--keep-placed 0: got %v (keep %q) want %v", ids, none.KeepPlaced, want)
+	}
+	out := run("order", "--by", "cod", "--apply")
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	for i, line := range []string{
+		"ready by cod:",
+		"1 S-0004 400 Four",
+		"2 S-0001 100 One (kept: placed by flaiover at 2026-09-15T20:00:00Z)",
+		"3 S-0003 300 Three",
+		"4 S-0002 200 Two",
+		"board.md's ready order is now this one",
+	} {
+		if i >= len(lines) || strings.Join(strings.Fields(lines[i]), " ") != line {
+			t.Errorf("line %d: want %q in\n%s", i, line, out)
+		}
+	}
+	if got, want := ready(), []string{"S-0004", "S-0001", "S-0003", "S-0002"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("--apply keeps S-0001 and reorders the rest: got %v want %v", got, want)
+	}
+	if got := placed(); !reflect.DeepEqual(got, want) {
+		t.Errorf("--apply records no placement: got %+v", got)
+	}
+	data, _ := os.ReadFile(boardPath)
+	if !strings.Contains(string(data), "placed:\n  S-0001:\n    by: flaiover\n    at: 2026-09-15T20:00:00Z\n") {
+		t.Errorf("board.md front matter:\n%s", data)
+	}
+
+	// A story leaving ready leaves its placement behind.
+	run("move", "S-0001", "in-progress")
+	run("move", "S-0002", "backlog")
+	if got := placed(); !reflect.DeepEqual(got, map[string]workitem.Placed{"S-0003": want["S-0003"]}) {
+		t.Errorf("moved out of ready, S-0001 and S-0002 lose their placements: %+v", got)
+	}
+
+	before, _ := os.ReadFile(boardPath)
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"order", "--by", "cod", "--placed-by", "alex"}, "drop --placed-by"},
+		{[]string{"order", "S-0003", "--top", "--keep-placed", "1h"}, "give --by too"},
+		{[]string{"order", "--by", "cod", "--keep-placed", "-1h"}, "0 for none"},
 	} {
 		_, errOut, code := runIn(t, root, c.args...)
 		if code == 0 || !strings.Contains(errOut, c.want) {

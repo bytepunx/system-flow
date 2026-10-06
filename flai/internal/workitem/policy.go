@@ -46,6 +46,9 @@ type Ranked struct {
 	Text string `json:"text,omitempty"`
 	// Missing names the figure the story lacks, when it does.
 	Missing string `json:"missing,omitempty"`
+	// Kept is the placement by hand the story kept its place by, when it did
+	// (S-0219).
+	Kept *Placed `json:"kept,omitempty"`
 }
 
 // OrderByPolicy orders stories, given in their current order, by a policy.
@@ -164,10 +167,51 @@ func (b *Board) ApplyReadyOrder(items []*Item, ids []string) error {
 	return nil
 }
 
+// DefaultKeepPlaced is how long a story placed by hand keeps its place when
+// the ready column is ordered by a policy: a day (S-0219).
+const DefaultKeepPlaced = 24 * time.Hour
+
+// KeepPlaces puts each story of kept back at its position in current, the
+// column's order before ranked, and fills the other positions with the rest
+// of ranked in its order. Positions are counted again.
+func KeepPlaces(ranked []Ranked, current []string, kept map[string]Placed) []Ranked {
+	if len(kept) == 0 {
+		return ranked
+	}
+	byID := map[string]Ranked{}
+	var rest []Ranked
+	for _, r := range ranked {
+		if _, ok := kept[r.ID]; ok {
+			byID[r.ID] = r
+		} else {
+			rest = append(rest, r)
+		}
+	}
+	out := make([]Ranked, 0, len(ranked))
+	for _, id := range current {
+		if r, ok := byID[id]; ok {
+			p := kept[id]
+			r.Kept = &p
+			out = append(out, r)
+		} else if len(rest) > 0 {
+			out = append(out, rest[0])
+			rest = rest[1:]
+		}
+	}
+	out = append(out, rest...)
+	for i := range out {
+		out[i].Position = i + 1
+	}
+	return out
+}
+
 // ReadyOrder is the ready column's order a policy computed, as flai order
 // --by prints it.
 type ReadyOrder struct {
 	Policy string `json:"policy"`
+	// KeepPlaced is how long a story placed by hand keeps its place, as a
+	// Go duration; empty when none does.
+	KeepPlaced string `json:"keep_placed,omitempty"`
 	// Applied says the order was written to the board.
 	Applied bool     `json:"applied"`
 	Stories []Ranked `json:"stories"`
@@ -176,9 +220,19 @@ type ReadyOrder struct {
 	Order []string `json:"order"`
 }
 
-// ReadyOrderByPolicy orders the ready column, taken in its pull order, by a
-// policy. It returns the board and the items it read, for Apply.
+// ReadyOrderByPolicy orders the ready column by a policy as
+// ReadyOrderKeeping does, keeping the places of stories placed by hand in
+// the last DefaultKeepPlaced.
 func (r *Repo) ReadyOrderByPolicy(policy string) (ReadyOrder, *Board, []*Item, error) {
+	return r.ReadyOrderKeeping(policy, DefaultKeepPlaced, time.Now().UTC())
+}
+
+// ReadyOrderKeeping orders the ready column, taken in its pull order, by a
+// policy, around the stories that someone other than the orchestrator placed
+// by hand within keep of now: those keep their places (S-0219). A keep that
+// is not positive keeps none. It returns the board and the items it read,
+// for Apply.
+func (r *Repo) ReadyOrderKeeping(policy string, keep time.Duration, now time.Time) (ReadyOrder, *Board, []*Item, error) {
 	items, err := r.List(false)
 	if err != nil {
 		return ReadyOrder{}, nil, nil, err
@@ -194,8 +248,13 @@ func (r *Repo) ReadyOrderByPolicy(policy string) (ReadyOrder, *Board, []*Item, e
 		}
 	}
 	var ready []*Item
-	for _, id := range PullSequence(board.Order, items, Ready) {
+	current := PullSequence(board.Order, items, Ready)
+	kept := map[string]Placed{}
+	for _, id := range current {
 		ready = append(ready, byID[id])
+		if p, ok := board.HandPlaced(id, keep, now); ok {
+			kept[id] = p
+		}
 	}
 	ranked, err := OrderByPolicy(ready, policy)
 	if err != nil {
@@ -205,7 +264,11 @@ func (r *Repo) ReadyOrderByPolicy(policy string) (ReadyOrder, *Board, []*Item, e
 	if order == nil {
 		order = []string{}
 	}
-	return ReadyOrder{Policy: policy, Stories: ranked, Order: order}, board, items, nil
+	got := ReadyOrder{Policy: policy, Stories: KeepPlaces(ranked, current, kept), Order: order}
+	if keep > 0 {
+		got.KeepPlaced = keep.String()
+	}
+	return got, board, items, nil
 }
 
 // Apply makes o the board's ready order, through ApplyReadyOrder, and says

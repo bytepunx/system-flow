@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 
@@ -14,13 +16,17 @@ import (
 // BoardFile is wip/kanban/board.md.
 const BoardFile = "board.md"
 
-// Board is the parsed board.md: WIP limits, pull order, and the markdown body.
+// Board is the parsed board.md: WIP limits, pull order, who placed a story
+// in it by hand, and the markdown body.
 type Board struct {
 	Title     string         `yaml:"title"`
 	Updated   string         `yaml:"updated"`
 	Status    string         `yaml:"status"`
 	WIPLimits map[string]int `yaml:"wip_limits"`
 	Order     []string       `yaml:"order"`
+	// Placed is, by story, the last placement flai order made of it
+	// (S-0219). A story's entry goes when it leaves its column.
+	Placed map[string]Placed `yaml:"placed"`
 
 	Body string `yaml:"-"`
 	Path string `yaml:"-"`
@@ -80,6 +86,18 @@ func (b *Board) Save(today string) error {
 			fmt.Fprintf(&sb, "  - %s\n", id)
 		}
 	}
+	if len(b.Placed) > 0 {
+		sb.WriteString("placed:\n")
+		ids := make([]string, 0, len(b.Placed))
+		for id := range b.Placed {
+			ids = append(ids, id)
+		}
+		sort.Slice(ids, func(i, j int) bool { return lessID(ids[i], ids[j]) })
+		for _, id := range ids {
+			p := b.Placed[id]
+			fmt.Fprintf(&sb, "  %s:\n    by: %s\n    at: %s\n", id, Scalar(p.By), p.At)
+		}
+	}
 	sb.WriteString("---\n")
 	sb.WriteString(b.Body)
 	if err := os.MkdirAll(filepath.Dir(b.Path), 0o755); err != nil {
@@ -103,8 +121,10 @@ func (b *Board) SetLimit(column string, n int) error {
 	return nil
 }
 
-// RemoveFromOrder drops id from the pull order.
+// RemoveFromOrder drops id from the pull order, and its placement with it: a
+// story flai move takes out of its column is no longer where it was placed.
 func (b *Board) RemoveFromOrder(id string) {
+	delete(b.Placed, id)
 	out := b.Order[:0]
 	for _, x := range b.Order {
 		if x != id {
@@ -122,6 +142,41 @@ func (b *Board) AppendToOrder(id string) {
 		}
 	}
 	b.Order = append(b.Order, id)
+}
+
+// Placed is who placed a story in the pull order by hand, with flai order or
+// the dashboard's drag, which runs it, and when.
+type Placed struct {
+	By string `yaml:"by" json:"by"`
+	// At is in TimeFormat.
+	At string `yaml:"at" json:"at"`
+}
+
+// RecordPlacement records that by placed id at now, over any earlier
+// placement of it.
+func (b *Board) RecordPlacement(id, by string, now time.Time) {
+	if b.Placed == nil {
+		b.Placed = map[string]Placed{}
+	}
+	b.Placed[id] = Placed{By: by, At: now.UTC().Format(TimeFormat)}
+}
+
+// IsOrchestrator reports whether a placer is the orchestrator, by the name
+// flai serve runs it under (ADR-0087).
+func IsOrchestrator(by string) bool { return by == ActivityOrchestrator }
+
+// HandPlaced is id's placement when someone other than the orchestrator made
+// it within keep of now. There is none when keep is not positive.
+func (b *Board) HandPlaced(id string, keep time.Duration, now time.Time) (Placed, bool) {
+	p, ok := b.Placed[id]
+	if !ok || keep <= 0 || IsOrchestrator(p.By) {
+		return Placed{}, false
+	}
+	at, err := time.Parse(TimeFormat, p.At)
+	if err != nil || at.Before(now.Add(-keep)) {
+		return Placed{}, false
+	}
+	return p, true
 }
 
 func orDefault(s, d string) string {
