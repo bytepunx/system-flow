@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -101,9 +102,22 @@ func ForStory(is *Issue, now time.Time, cycle time.Duration) StoryDraft {
 	if is.Class == "defect" || is.Class == "blocker" {
 		nature = "remediation"
 	}
-	link := fmt.Sprintf("[%s](../../../design/issues/%s)", is.ID, filepath.Base(is.Path))
+	link := fmt.Sprintf("[%s](%s%s/%s)", is.ID, storyToRoot, issuesFromRoot, filepath.Base(is.Path))
+	reports := Reports(is)
 	var b strings.Builder
-	fmt.Fprintf(&b, "## Goal\n\nThis story remediates %s, \"%s\".", link, is.Title)
+	fmt.Fprintf(&b, "## Goal\n\nThis story remediates %s, \"%s\"", link, is.Title)
+	if len(reports) > 0 {
+		var links []string
+		for _, rep := range reports {
+			links = append(links, fmt.Sprintf("[%s](%s%s)", path.Base(rep), storyToRoot, rep))
+		}
+		analyses := "analysis"
+		if len(reports) > 1 {
+			analyses = "analyses"
+		}
+		fmt.Fprintf(&b, ", which the %s in %s found", analyses, joinAnd(links))
+	}
+	b.WriteString(".")
 	if solution := remediation(is); solution != "" {
 		fmt.Fprintf(&b, " The issue recommends this solution:\n\n%s\n", solution)
 	} else {
@@ -112,6 +126,11 @@ func ForStory(is *Issue, now time.Time, cycle time.Duration) StoryDraft {
 	fmt.Fprintf(&b, "\n## Acceptance criteria\n- [ ] The cause %s describes no longer occurs, with a test that reproduces it where one fits\n", is.ID)
 	fmt.Fprintf(&b, "- [ ] %s is closed with `flai issue close %s --reason` saying what fixed it\n", is.ID, is.ID)
 	b.WriteString("\n## Tasks\n\n## Notes\n")
+	if len(reports) == 1 {
+		fmt.Fprintf(&b, "\nThe analyzer found %s: the analysis the goal links gives its evidence.\n", is.ID)
+	} else if len(reports) > 1 {
+		fmt.Fprintf(&b, "\nThe analyzer found %s: the analyses the goal links give its evidence.\n", is.ID)
+	}
 	cod, notes := costOfDelay(is, now, cycle)
 	if notes != "" {
 		fmt.Fprintf(&b, "\n%s\n", notes)
@@ -295,14 +314,61 @@ func LinkStory(is *Issue, story string, now time.Time) error {
 // linkedLineRe is a line LinkStory writes.
 var linkedLineRe = regexp.MustCompile(`(?m)^Story S-\d+ remediates this issue, created from it at \S+\.\n?`)
 
+// reportLinkLineRe is a line linkReport writes, with its newline.
+var reportLinkLineRe = regexp.MustCompile(reportLinkRe.String() + `\n?`)
+
 // remediation is the text of the issue's Remediation section, without the
-// lines naming stories made from it before, which are no solution.
+// lines naming stories made from it before, which are no solution, and
+// without the lines linking the reports that found it, whose links are from
+// the issue's folder: the story's goal links those reports instead (S-0224).
 func remediation(is *Issue) string {
 	start, end, ok := section(is.Body, "## Remediation")
 	if !ok {
 		return ""
 	}
-	return strings.TrimSpace(linkedLineRe.ReplaceAllString(is.Body[start:end], ""))
+	text := linkedLineRe.ReplaceAllString(is.Body[start:end], "")
+	if stripped := reportLinkLineRe.ReplaceAllString(text, ""); stripped != text {
+		text = blankRunRe.ReplaceAllString(stripped, "\n\n")
+	}
+	return strings.TrimSpace(text)
+}
+
+// blankRunRe is more than one blank line, which a stripped line can leave.
+var blankRunRe = regexp.MustCompile(`\n{3,}`)
+
+// The story made from an issue links the issue and its reports from the
+// story's file, in wip/kanban/stories, through the project root.
+const (
+	storyToRoot    = "../../../"
+	issuesFromRoot = "design/" + Folder
+)
+
+// reportLineRe is an instance's line naming its report, capturing its path
+// from the project root.
+var reportLineRe = regexp.MustCompile(`(?m)^Report: (.+)\.$`)
+
+// Reports are the analysis reports the issue names, as paths from the project
+// root, once each in order of first appearance: those its instances' Report
+// lines name, then those its Remediation section links, whose links are from
+// the issue's folder. A path that leaves the project is not a report.
+func Reports(is *Issue) []string {
+	var out []string
+	add := func(p string) {
+		p = path.Clean(p)
+		if p == "." || path.IsAbs(p) || p == ".." || strings.HasPrefix(p, "../") || contains(out, p) {
+			return
+		}
+		out = append(out, p)
+	}
+	if start, end, ok := section(is.Body, "## Instances"); ok {
+		for _, m := range reportLineRe.FindAllStringSubmatch(is.Body[start:end], -1) {
+			add(strings.TrimSpace(m[1]))
+		}
+	}
+	for _, target := range ReportLinks(is) {
+		add(path.Join(issuesFromRoot, target))
+	}
+	return out
 }
 
 // Links reports whether a work item body names the issue by its ID, as a

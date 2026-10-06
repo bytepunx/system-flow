@@ -420,3 +420,121 @@ func TestTheStoryLineSurvivesReading(t *testing.T) {
 		t.Errorf("stories: %v", got)
 	}
 }
+
+// S-0224: the story made from an issue the analyzer filed links the issue and
+// the report that found it, says in its Notes that the analyzer found it, and
+// carries the issue's impact over as cost of delay inputs set by flai. The
+// report's link under the issue's Remediation, which is from the issue's
+// folder, is not carried into the goal as a solution.
+func TestForStoryFromAnAnalyzerIssue(t *testing.T) {
+	r := repo(t)
+	im := Impact{RevenuePerWeek: "1200", PenaltyPerWeek: "0", TimeLostPerCycle: "90m", Evidence: "12 stories waited 18h on average in review."}
+	is, err := New(r, NewOptions{Title: "Review waits a day", Class: "efficiency", Impact: im, Report: report, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, err := Read(is.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := Reports(back); len(got) != 1 || got[0] != report {
+		t.Errorf("reports, the instance's and the link's once: %v", got)
+	}
+	d := ForStory(back, t0.Add(time.Hour), cycle)
+	want := "## Goal\n\nThis story remediates [I-0001](../../../design/issues/I-0001-review-waits-a-day.md), \"Review waits a day\", " +
+		"which the analysis in [2026-10-06-bottlenecks.md](../../../design/analysis/2026-10-06-bottlenecks.md) found. " +
+		"The issue recommends no solution yet: propose one from its instances before building it.\n\n" +
+		"## Acceptance criteria\n- [ ] The cause I-0001 describes no longer occurs, with a test that reproduces it where one fits\n" +
+		"- [ ] I-0001 is closed with `flai issue close I-0001 --reason` saying what fixed it\n\n## Tasks\n\n## Notes\n\n" +
+		"The analyzer found I-0001: the analysis the goal links gives its evidence.\n\n" +
+		"Cost of delay inputs set by flai from I-0001. revenue_per_week 1200, penalty_per_week 0 and time_lost_per_cycle 1h30m carried over from I-0001's Impact section.\n"
+	if d.Body != want {
+		t.Errorf("body:\n got %q\nwant %q", d.Body, want)
+	}
+	if d.Nature != "improvement" || !d.Draft || !Links(d.Body, back) {
+		t.Errorf("a draft improvement that links its issue: %+v", d)
+	}
+	cod := d.CostOfDelay
+	if cod == nil || cod.Inputs == nil {
+		t.Fatalf("no cost of delay:\n%s", d.Body)
+	}
+	in := cod.Inputs
+	if in.RevenuePerWeek == nil || *in.RevenuePerWeek != 1200 || in.PenaltyPerWeek == nil || *in.PenaltyPerWeek != 0 || in.TimeLostPerCycle != "1h30m" {
+		t.Errorf("every figure of the impact carried over: %+v", *in)
+	}
+	if in.By != "flai" || in.At != "2026-09-16T11:00:00Z" || cod.Value != nil || cod.By != "" {
+		t.Errorf("the inputs set by flai when the story was made (ADR-0080): %+v %+v", cod, *in)
+	}
+	lintStory(t, storyLint(t), d)
+}
+
+// S-0224: a duplicate finding bumps the open issue; the story made from it
+// links both reports, in the order they found it, and carries the latest
+// impact, which the bump replaced, beside the figures the bump left.
+func TestForStoryFromABumpedAnalyzerIssue(t *testing.T) {
+	r := repo(t)
+	later := "design/analysis/2026-10-13-bottlenecks.md"
+	if _, _, err := NewOrBump(r, NewOptions{Title: "Review waits a day", Class: "defect", Cost: "1h",
+		Impact: Impact{RevenuePerWeek: "1200", TimeLostPerCycle: "4h", Evidence: "Twelve stories waited."}, Report: report, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	is, outcome, err := NewOrBump(r, NewOptions{Title: "Review waits a day", Class: "defect", Cost: "3h", Note: "Still waiting.",
+		Impact: Impact{TimeLostPerCycle: "6h", Evidence: "Fifteen stories waited."}, Report: later, Now: t0.Add(time.Hour)})
+	if err != nil || outcome != Bumped {
+		t.Fatalf("the duplicate is bumped: %v %s", err, outcome)
+	}
+	if err := LinkStory(is, "S-0301", t0.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	back, err := Read(is.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(Reports(back), " "); got != report+" "+later {
+		t.Errorf("both reports, once each, in order: %s", got)
+	}
+	d := ForStory(back, t0.Add(2*time.Hour), cycle)
+	goal := "## Goal\n\nThis story remediates [I-0001](../../../design/issues/I-0001-review-waits-a-day.md), \"Review waits a day\", " +
+		"which the analyses in [2026-10-06-bottlenecks.md](../../../design/analysis/2026-10-06-bottlenecks.md) and " +
+		"[2026-10-13-bottlenecks.md](../../../design/analysis/2026-10-13-bottlenecks.md) found. " +
+		"The issue recommends no solution yet: propose one from its instances before building it.\n\n## Acceptance criteria\n"
+	if !strings.HasPrefix(d.Body, goal) || d.Nature != "remediation" {
+		t.Errorf("goal links the issue and both reports, and no report link as a solution:\n%s", d.Body)
+	}
+	want := "The analyzer found I-0001: the analyses the goal links give its evidence.\n\n" +
+		"Cost of delay inputs set by flai from I-0001. revenue_per_week 1200 and time_lost_per_cycle 6h carried over from I-0001's Impact section. " +
+		"Its Impact time_lost_per_cycle was taken rather than the 4h derived from its cost and count."
+	if got := notes(d); got != want {
+		t.Errorf("notes:\n got %s\nwant %s", got, want)
+	}
+	in := d.CostOfDelay.Inputs
+	if in.RevenuePerWeek == nil || *in.RevenuePerWeek != 1200 || in.PenaltyPerWeek != nil || in.TimeLostPerCycle != "6h" || in.By != "flai" {
+		t.Errorf("the latest impact wins, the figure it left is kept: %+v", *in)
+	}
+	lintStory(t, storyLint(t), d)
+}
+
+// S-0224: the solution an issue recommends is carried over without the lines
+// linking its reports, wherever they fall in the section, and a report linked
+// only under Remediation is still linked from the goal.
+func TestForStoryLeavesTheReportLinksOutOfTheSolution(t *testing.T) {
+	is := &Issue{ID: "I-0007", Title: "Slow builds", Class: "efficiency", Path: "/x/design/issues/I-0007-slow-builds.md",
+		Body: "\n# I-0007 Slow builds\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nfirst\n\n## Remediation\n\nCache the modules.\n\n" +
+			"Found by the analysis in [a.md](../analysis/a.md).\n\nAnd in CI too.\n\n" +
+			"Story S-0301 remediates this issue, created from it at 2026-09-16T11:00:00Z.\n\n" +
+			"Found by the analysis in [b.md](../analysis/b.md).\n"}
+	d := ForStory(is, t0, cycle)
+	if !strings.Contains(d.Body, "\"Slow builds\", which the analyses in [a.md](../../../design/analysis/a.md) and [b.md](../../../design/analysis/b.md) found. The issue recommends this solution:\n\nCache the modules.\n\nAnd in CI too.\n\n## Acceptance criteria\n") {
+		t.Errorf("the solution without the report links or the earlier story:\n%s", d.Body)
+	}
+	if strings.Contains(d.Body, "Found by") || strings.Contains(d.Body, "(../analysis/") {
+		t.Errorf("a link from the issue's folder was carried over:\n%s", d.Body)
+	}
+	lintStory(t, storyLint(t), d)
+
+	// a Report line that leaves the project names no report
+	is.Body = "\n# I-0007 Slow builds\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nReport: ../elsewhere.md.\nfirst\n\n## Remediation\n"
+	if got := Reports(is); len(got) != 0 {
+		t.Errorf("a path out of the project: %v", got)
+	}
+}
