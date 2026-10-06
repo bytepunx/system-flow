@@ -3,11 +3,14 @@ id: S-0285
 type: story
 nature: improvement
 title: A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T06:03:25Z
-updated: 2026-10-06T06:04:28Z
-transitions: []
+updated: 2026-10-06T06:04:29Z
+transitions:
+  - to: ready
+    at: 2026-10-06T06:04:29Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions]
 touches: [flai/internal/harness, flai/internal/mcpserver, flai/internal/guard, flai/cmd/guard.go, design/conventions/delegation.md, template, ".claude/settings.json", design/system/flai-cli.md, design/system/agent-context.md, docs/users, docs/operators, design/issues/I-0083-a-story-s-agent-waits-for-its-sub-agents-with-wait-for-events-which-cannot-see-them-finish-so-each-wait-runs-to-its-timeout.md, design/issues/summary.md]
@@ -16,12 +19,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h18m
     by: flai
     at: 2026-10-06T06:03:25Z
+finalized:
+  by: alex
+  at: 2026-10-06T06:04:29Z
 ---
 # S-0285 A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout
 
