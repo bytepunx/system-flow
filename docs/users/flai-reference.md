@@ -47,6 +47,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [release](#flai-release) | Compute a release for one item, publish everything accepted since the last release, or say whether a release is due |
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
+| [shared](#flai-shared) | List, check, add, and remove the shared paths, whose overlaps hold no story |
 | [show](#flai-show) | Print one work item with its children and history |
 | [stats](#flai-stats) | Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost |
 | [story](#flai-story) | Create stories (flai show prints one, flai move transitions it) |
@@ -113,6 +114,7 @@ Subcommands:
 - [release](#flai-release): Compute a release for one item, publish everything accepted since the last release, or say whether a release is due
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
+- [shared](#flai-shared): List, check, add, and remove the shared paths, whose overlaps hold no story
 - [show](#flai-show): Print one work item with its children and history
 - [stats](#flai-stats): Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost
 - [story](#flai-story): Create stories (flai show prints one, flai move transitions it)
@@ -1155,7 +1157,9 @@ Refuse a sub-agent's writes, hold the planner to planning and the orchestrator t
 flai guard
 ```
 
-Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, order\_by\_policy, prime, promote\_candidates, release\_evaluate, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, order --by without --apply and without a story to place, plan --candidates, prime, promote --candidates or --drafts, release --evaluate, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, save the wait below, as does anything it cannot read: the guard fails open. An input whose hook\_event\_name is neither SubagentStart nor SubagentStop is a PreToolUse's, named or not. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
+Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, order\_by\_policy, prime, promote\_candidates, release\_evaluate, shared\_paths, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, order --by without --apply and without a story to place, plan --candidates, prime, promote --candidates or --drafts, release --evaluate, shared list and check, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. The story's agent's own calls carry no agent\_id and pass, save the wait below, as does anything it cannot read: the guard fails open. An input whose hook\_event\_name is neither SubagentStart nor SubagentStop is a PreToolUse's, named or not. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
+
+No sub-agent, and no session flai serve starts (FLAI\_STARTED\_BY=flai-serve, FLAI\_ROLE, or FLAI\_STORY set), changes the manifest's shared paths: the MCP tool shared\_paths\_edit and flai shared add and remove are refused, because claims.shared decides which overlaps hold a story (ADR-0096). Only the operator's own session changes them.
 
 In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, task new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
 
@@ -2450,6 +2454,107 @@ Stop flai serve: the host stops it and keeps it stopped until flai serve start.
 
 ```text
 flai serve stop
+```
+
+### flai shared
+
+List, check, add, and remove the shared paths, whose overlaps hold no story.
+
+claims.shared in system-flow.yaml lists the paths many stories change in separate sections or new files. An overlap of two stories' claims that lies wholly inside one of them holds no ready story, and flai check does not report it (ADR-0096).
+
+Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
+
+Examples:
+
+```bash
+flai shared list
+flai shared check docs/users/flai.md flai/cmd S-0295
+flai shared add design/adrs 'docs/users/*.md'
+flai shared remove design/adrs
+```
+
+Subcommands:
+
+- [add](#flai-shared-add): Add patterns to the shared paths
+- [check](#flai-shared-check): Say whether paths, touches entries, or a story's claim lie inside the shared paths
+- [list](#flai-shared-list): Print the shared paths' patterns, one per line
+- [remove](#flai-shared-remove): Remove patterns from the shared paths
+
+#### flai shared add
+
+Add patterns to the shared paths.
+
+```text
+flai shared add <pattern>...
+```
+
+Add patterns to the end of claims.shared in system-flow.yaml, rewriting only that list and keeping the file's other keys and comments. A pattern that is not valid (empty, absolute, with a .. segment, or a malformed glob) or that is in the list already is refused with the reason, and nothing is written. The change is not committed. Prints each pattern added; with --json, {"added": [...], "shared": [...]}, shared being the list after the change. Run flai shared check first to see what a pattern would free.
+
+Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
+
+Examples:
+
+```bash
+flai shared add design/adrs
+flai shared add 'docs/users/*.md' 'design/**/README.md'
+```
+
+#### flai shared check
+
+Say whether paths, touches entries, or a story's claim lie inside the shared paths.
+
+```text
+flai shared check <path-or-story>...
+```
+
+For each path or touches entry, say whether it lies wholly inside a pattern of claims.shared and which one. A component's name or tag is read as its path. An entry whose last segment has an extension, such as flai.md, is a file and lies inside a pattern that matches it; any other is read as a folder, which lies inside only a pattern that covers everything below it. Given a story ID (S-0295, s-295), report each entry of the story's claim, as its hold reads it, the same way: what adding a pattern would free. Nothing is written, and the exit status is 0 whether or not an entry is shared.
+
+With --json, an array with an object for each entry: entry (the argument, or the claim's entry), path (the entry as matched), shared (true or false), pattern (the pattern matched, only when shared), and story (only for a story's claim entries).
+
+Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
+
+Examples:
+
+```bash
+flai shared check docs/users/flai.md design/adrs/0096-x.md flai/cmd
+flai shared check S-0295 --json
+```
+
+#### flai shared list
+
+Print the shared paths' patterns, one per line.
+
+```text
+flai shared list
+```
+
+Print claims.shared's patterns in list order, one per line; with --json, a JSON array of strings, [] when there is none. A pattern that is not valid is printed too, frees nothing, and is warned about on stderr.
+
+Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
+
+Examples:
+
+```bash
+flai shared list
+flai shared list --json
+```
+
+#### flai shared remove
+
+Remove patterns from the shared paths.
+
+```text
+flai shared remove <pattern>...
+```
+
+Remove patterns from claims.shared in system-flow.yaml, rewriting only that list and keeping the file's other keys and comments. Name each pattern as flai shared list prints it; one that is not in the list is refused, and nothing is written. A pattern that is not valid may be removed. The change is not committed. Prints each pattern removed; with --json, {"removed": [...], "shared": [...]}, shared being the list after the change.
+
+Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
+
+Examples:
+
+```bash
+flai shared remove design/adrs
 ```
 
 ### flai show
