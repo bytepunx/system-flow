@@ -1,5 +1,5 @@
 ---
-id: ADR-0102
+id: ADR-0103
 title: "flai new, import, and upgrade follow the template's releases: the newest version tag unless --ref or an edit to system-flow.yaml says otherwise, and upgrade asks when they disagree"
 status: proposed
 date: 2026-10-06
@@ -8,7 +8,7 @@ superseded_by: []
 refines: [ADR-0015]
 ---
 
-# ADR-0102 flai new, import, and upgrade follow the template's releases: the newest version tag unless --ref or an edit to system-flow.yaml says otherwise, and upgrade asks when they disagree
+# ADR-0103 flai new, import, and upgrade follow the template's releases: the newest version tag unless --ref or an edit to system-flow.yaml says otherwise, and upgrade asks when they disagree
 
 ## Context
 

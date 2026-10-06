@@ -9,7 +9,7 @@ topics: [template]
 
 The template is the executable form of the standard. It lives in its own git repository, [bytepunx/system-flow-template](https://github.com/bytepunx/system-flow-template) (private, published 2026-09-17 at 1.0.0), so it can be versioned, forked, and pointed at from `flai` config. The development copy is [./template](../../template) in this monorepo; this repository points `flai` at that local path and publishes it with `flai template push` when a release bumps it (see [Publishing a template](#publishing-a-template)). How to fork, edit, test, and version it is the [template guide](../../docs/contributors/template.md).
 
-Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. Overridable per user in `~/.flai/config.json` and per project in `system-flow.yaml`. `main` follows releases: with no `--ref`, flai applies the template's newest version tag ([Which version is applied](#which-version-is-applied), [ADR-0102](../adrs/0102-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)).
+Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. Overridable per user in `~/.flai/config.json` and per project in `system-flow.yaml`. `main` follows releases: with no `--ref`, flai applies the template's newest version tag ([Which version is applied](#which-version-is-applied), [ADR-0103](../adrs/0103-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)).
 
 ## Structure
 
@@ -120,7 +120,7 @@ Semantic versions in `template.yaml`. Each release is tagged `v<version>` by `fl
 
 ## Which version is applied
 
-`flai new`, `flai import`, and `flai upgrade` follow the template's releases ([ADR-0102](../adrs/0102-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)).
+`flai new`, `flai import`, and `flai upgrade` follow the template's releases ([ADR-0103](../adrs/0103-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)).
 
 - **The ref.** `flai new` and `flai import` take `template.ref` from the config; `flai upgrade` takes it from `system-flow.yaml`. `--ref` wins over both, and `--template` over `template.repo`.
 - **Refs that follow releases.** With no `--ref`, a ref that is empty, the template's default branch (`main`), or a version tag resolves to the newest version tag of a git template: `vX.Y.Z`, the newest in semantic version order, pre-releases excluded. A template with no version tags falls back to the ref. Another branch or a commit is used as given. A local template directory has no tags and is used as it is. The config's default `template.ref` is `main`, so a new project starts at the newest release.
@@ -130,7 +130,7 @@ Semantic versions in `template.yaml`. Each release is tagged `v<version>` by `fl
 
 ## Upgrading a project
 
-`flai upgrade` brings a conforming repo from the version its lock records to the version [Which version is applied](#which-version-is-applied) resolves, at `template.repo` in `system-flow.yaml` or `--template` ([ADR-0015](../adrs/0015-template-lock-file.md), [ADR-0102](../adrs/0102-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)).
+`flai upgrade` brings a conforming repo from the version its lock records to the version [Which version is applied](#which-version-is-applied) resolves, at `template.repo` in `system-flow.yaml` or `--template` ([ADR-0015](../adrs/0015-template-lock-file.md), [ADR-0103](../adrs/0103-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)).
 
 With no `--ref`, it asks the operator which version to apply when `system-flow.yaml` names a different `template.ref` or `template.version` than the lock recorded, because the operator edited it, and that differs from the newest tag. A changed version names the tag `v<version>`. The choices are the version the manifest names, the newest tag, and changing nothing. An edit that equals the newest tag is applied without asking. A recorded tag equal to the lock's is not a pin: the next upgrade takes the newest tag without asking. Without a terminal, or with `--yes`, a run that would ask changes nothing and exits non-zero, naming the choices and the `flai upgrade --ref <tag>` to run. `--dry-run` says which version it would apply and whether it would ask. The version applied, chosen or not, is written to `template.ref` and `template.version` and to the lock.
 
