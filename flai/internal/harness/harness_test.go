@@ -1029,6 +1029,53 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 	}
 }
 
+// S-0222: while publish is on, the orchestrator evaluates the release policy
+// after each acceptance and publishes through release_publish when a
+// threshold or theme is met, or under judgement when it judges the batch
+// coherent and complete, never a batch whole_epics holds back; it logs each
+// release from what release_publish returned, each decision not to publish,
+// and each refusal, which it raises on a thread to the operator. It
+// publishes no other way. No other agent is told any of it.
+func TestTheOrchestratorsPromptSaysHowItPublishes(t *testing.T) {
+	p := Prompt(orchestrateReq(nil))
+	for _, w := range []string{
+		"While publish is on, after each acceptance, yours or one wait_for_events reports as a story moved to done, call the flai MCP tool release_evaluate",
+		// threshold and theme
+		"Under the threshold or theme policy, when the evaluation is met, call the flai MCP tool release_publish with the figure that was met as its reason",
+		// judgement
+		"Under judgement, call release_publish only when you judge the unreleased work coherent and complete, with that reasoning as its reason",
+		// whole_epics
+		"Under any policy, never publish a batch the evaluation holds back under whole_epics, the stories it names in held_by_epic",
+		// the log of a release and of a decision not to publish
+		"Log each release with activity_log: the policy, its figures, the versions and tags, and the items bundled, all as release_publish returned them",
+		"Log a decision not to publish too, with the evaluation's figures",
+		// a refusal: its log and its thread
+		"When release_publish refuses, log the refusal with activity_log",
+		"open a thread to the operator with the flai MCP tool thread_open on the most recently accepted story of the batch, with the refusal's words and what fixes it",
+		"do not try again until that thread is answered or the next acceptance",
+		// off, and no other route
+		"While publish is off, neither evaluate nor publish",
+		"Publish only through release_publish: flai guard refuses you flai release other than --evaluate, flai push, git push, and git tag, whatever your permissions",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	for _, never := range []string{"flai release --pending", "flai push --pending"} {
+		if strings.Contains(p, never) {
+			t.Errorf("the orchestrator's prompt says %q:\n%s", never, p)
+		}
+	}
+	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	for who, o := range others {
+		for _, w := range []string{"release_publish", "release_evaluate", "whole_epics", "held_by_epic"} {
+			if strings.Contains(o, w) {
+				t.Errorf("%s's prompt says %q", who, w)
+			}
+		}
+	}
+}
+
 // S-0218: claude-code runs the orchestrator's session as the project's
 // orchestrator definition, passed with --agents beside the explorer and the
 // verifier, named for the project and the role, and tells it its role alone;
@@ -1185,6 +1232,16 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -`",
 			"open a thread on it with `thread_open` saying what is missing",
 			"Never move a story to done with `item_move`.",
+			"With `publish`, after each acceptance",
+			"call `release_evaluate`",
+			"call `release_publish` with the figure that was met as its reason",
+			"Under `judgement`, publish only when you judge the unreleased work coherent and complete",
+			"never publish a batch the evaluation holds back under `whole_epics` (its `held_by_epic`)",
+			"Log each release with `activity_log`: the policy, its figures, the versions and tags, and the items bundled",
+			"Log a decision not to publish too, with the figures.",
+			"When `release_publish` refuses, log the refusal with `activity_log`, and open a thread to the operator with `thread_open` on the most recently accepted story of the batch",
+			"Without `publish`, neither evaluate nor publish.",
+			"mcp__flai__release_evaluate, mcp__flai__release_publish",
 			"the policy figure that justified it",
 			"ends that attempt: log it with the refusal",
 		} {
