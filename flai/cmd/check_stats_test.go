@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
@@ -214,8 +215,8 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 		Entries: []workitem.ActivityEntry{{At: time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC), Summary: "Read the issues", Seconds: 60, Cost: 0.05}}})
 	out, errOut, code = a("stats")
 	want := "\nstrategic agents (all time):\n" +
-		"  planner: 2 activities, 0.5213 USD, 823 s (on items 0.4213 USD, 723 s; project 0.1000 USD, 100 s), last 2026-10-03T18:00:00Z\n" +
-		"  analyzer: 1 activity, 0.0500 USD, 60 s (on items 0.0000 USD, 0 s; project 0.0500 USD, 60 s), last 2026-10-01T08:00:00Z\n"
+		"  planner: 2 activities, 0.5213 USD, 823 s (on items 0.4213 USD, 723 s; on issues 0.0000 USD, 0 s; project 0.1000 USD, 100 s), last 2026-10-03T18:00:00Z\n" +
+		"  analyzer: 1 activity, 0.0500 USD, 60 s (on items 0.0000 USD, 0 s; on issues 0.0000 USD, 0 s; project 0.0500 USD, 60 s), last 2026-10-01T08:00:00Z\n"
 	if code != 0 || !strings.Contains(out, want) || strings.Contains(out, "orchestrator") {
 		t.Errorf("text: %d %s\n%s", code, errOut, out)
 	}
@@ -257,6 +258,78 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 	}
 	if _, errOut, code := a("stats"); code == 0 || !strings.Contains(errOut, "orchestrator.md") || !strings.Contains(errOut, "activity documents") {
 		t.Errorf("an unreadable document: %d %s", code, errOut)
+	}
+}
+
+// S-0227: flai stats reads the issues and reports the analyzer's usage on
+// each, counted in the kind's issues amount until flai issue story makes a
+// story from it, and then once, as the story's, under items; a project with
+// no design/issues folder reports none.
+func TestStatsReportsTheIssuesStrategicUsageOnce(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_STORY", "")
+	root := tempProject(t)
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+	a := func(args ...string) (string, string, int) { return runInAt(t, root, at, args...) }
+	if out, errOut, code := a("stats", "--json"); code != 0 || !strings.Contains(out, `"strategic_issues": []`) {
+		t.Fatalf("no issues folder: %d %s %s", code, errOut, out)
+	}
+	if _, errOut, code := a("issue", "new", "Review waits a day", "--class", "efficiency"); code != 0 {
+		t.Fatalf("issue new: %s", errOut)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := issues.ChargeStrategic(repo, "I-0001", workitem.ActivityAnalyzer,
+		&usage.Usage{Seconds: 30, Models: []usage.Model{{Model: "claude-opus-5-5", Output: 100, Cost: 0.03}}}); err != nil {
+		t.Fatal(err)
+	}
+	doc := &workitem.Activity{Kind: workitem.ActivityAnalyzer, AccruedCost: 0.05, AccruedSeconds: 60, TasksCompleted: 1, LastRun: "2026-10-01T08:00:00Z"}
+	if err := os.WriteFile(filepath.Join(root, "wip", "agents", "analyzer.md"), []byte(doc.Marshal()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	type report struct {
+		Strategic []struct {
+			Kind                   string
+			Items, Issues, Project metrics.StrategicAmount
+		} `json:"strategic"`
+		StrategicIssues []metrics.StrategicIssue `json:"strategic_issues"`
+	}
+	read := func() report {
+		t.Helper()
+		out, errOut, code := a("stats", "--json")
+		var rep report
+		if code != 0 || json.Unmarshal([]byte(out), &rep) != nil || len(rep.Strategic) != 1 || len(rep.StrategicIssues) != 1 {
+			t.Fatalf("json: %d %s %s", code, errOut, out)
+		}
+		return rep
+	}
+	rep := read()
+	if s := rep.Strategic[0]; s.Items != (metrics.StrategicAmount{}) || s.Issues != (metrics.StrategicAmount{Cost: 0.03, Seconds: 30}) || s.Project != (metrics.StrategicAmount{Cost: 0.02, Seconds: 30}) {
+		t.Errorf("before the story: %+v", s)
+	}
+	if is := rep.StrategicIssues[0]; is.ID != "I-0001" || is.Status != "open" || is.Story != "" || !is.Counted || len(is.Strategic) != 1 || is.Strategic[0].Cost != 0.03 {
+		t.Errorf("the issue before the story: %+v", is)
+	}
+	out, _, _ := a("stats")
+	want := "\nstrategic usage on issues (all time):\n  I-0001 open: analyzer 0.0300 USD, 30 s; counted on the issue  Review waits a day\n"
+	if !strings.Contains(out, want) || !strings.Contains(out, "(on items 0.0000 USD, 0 s; on issues 0.0300 USD, 30 s; project 0.0200 USD, 30 s)") {
+		t.Errorf("text before the story:\n%s", out)
+	}
+
+	if _, errOut, code := a("issue", "story", "I-0001"); code != 0 {
+		t.Fatalf("issue story: %s", errOut)
+	}
+	rep = read()
+	if s := rep.Strategic[0]; s.Items != (metrics.StrategicAmount{Cost: 0.03, Seconds: 30}) || s.Issues != (metrics.StrategicAmount{}) || s.Project != (metrics.StrategicAmount{Cost: 0.02, Seconds: 30}) {
+		t.Errorf("after the story: %+v", s)
+	}
+	if is := rep.StrategicIssues[0]; is.Story != "S-0001" || is.Counted || len(is.Strategic) != 1 {
+		t.Errorf("the issue after the story: %+v", is)
+	}
+	if out, _, _ := a("stats"); !strings.Contains(out, "  I-0001 open: analyzer 0.0300 USD, 30 s; counted on S-0001  Review waits a day\n") {
+		t.Errorf("text after the story:\n%s", out)
 	}
 }
 

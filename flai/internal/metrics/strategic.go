@@ -3,13 +3,14 @@ package metrics
 import (
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // StrategicAgent is a strategic agent's activity document as flai stats
-// reports it: its totals as written, all time, what of them the items carry
-// and the project strategic total (ADR-0095), and its log entries in the
-// window (ADR-0079).
+// reports it: its totals as written, all time, what of them the items carry,
+// what the issues carry that no story does (S-0227), and the project
+// strategic total (ADR-0095), and its log entries in the window (ADR-0079).
 type StrategicAgent struct {
 	Kind       string           `json:"kind"`
 	Cost       float64          `json:"cost"`
@@ -17,8 +18,21 @@ type StrategicAgent struct {
 	Activities int              `json:"activities"`
 	LastRun    string           `json:"last_run"`
 	Items      StrategicAmount  `json:"items"`
+	Issues     StrategicAmount  `json:"issues"`
 	Project    StrategicAmount  `json:"project"`
 	Log        []StrategicEntry `json:"log"`
+}
+
+// StrategicIssue is what strategic agents spent on one issue (S-0227): its
+// entries per kind, the story made from it, "" for none, and whether its
+// usage is counted in the totals, which it is until such a story carries it.
+type StrategicIssue struct {
+	ID        string          `json:"id"`
+	Title     string          `json:"title"`
+	Status    string          `json:"status"`
+	Story     string          `json:"story"`
+	Counted   bool            `json:"counted"`
+	Strategic []ItemStrategic `json:"strategic"`
 }
 
 // StrategicAmount is a cost and a time a strategic agent spent.
@@ -125,16 +139,18 @@ func strategicDays(docs []*workitem.Activity, items []*workitem.Item, per map[st
 }
 
 // strategic reports each activity document, in the order given, with what
-// of its totals the items carry, the rest as the project strategic total,
-// and the entries that ended from start to now.
-func strategic(docs []*workitem.Activity, items []*workitem.Item, start, now time.Time) []StrategicAgent {
+// of its totals the items carry, what the issues carry that no story does,
+// onIssues, the rest as the project strategic total, and the entries that
+// ended from start to now.
+func strategic(docs []*workitem.Activity, items []*workitem.Item, onIssues map[string]StrategicAmount, start, now time.Time) []StrategicAgent {
 	carried := onItems(items)
 	out := make([]StrategicAgent, 0, len(docs))
 	for _, d := range docs {
 		s := StrategicAgent{Kind: d.Kind, Cost: d.AccruedCost, Seconds: d.AccruedSeconds, Activities: d.TasksCompleted, LastRun: d.LastRun, Log: []StrategicEntry{}}
-		on := carried[d.Kind]
+		on, is := carried[d.Kind], onIssues[d.Kind]
 		s.Items = StrategicAmount{Cost: round4(on.Cost), Seconds: on.Seconds}
-		s.Project = StrategicAmount{Cost: max(0, round4(d.AccruedCost-s.Items.Cost)), Seconds: max(0, d.AccruedSeconds-on.Seconds)}
+		s.Issues = StrategicAmount{Cost: round4(is.Cost), Seconds: is.Seconds}
+		s.Project = StrategicAmount{Cost: max(0, round4(d.AccruedCost-s.Items.Cost-s.Issues.Cost)), Seconds: max(0, d.AccruedSeconds-on.Seconds-is.Seconds)}
 		for _, e := range d.Entries {
 			if e.At.Before(start) || e.At.After(now) {
 				continue
@@ -171,4 +187,43 @@ func onItems(items []*workitem.Item) map[string]StrategicAmount {
 		}
 	}
 	return out
+}
+
+// strategicIssues lists, in the order given, the issues that carry strategic
+// usage, and sums per kind what those carry from which no story among the
+// items was made (S-0227). A story made from an issue carries the issue's
+// entries, so it counts them among the items instead; one the items do not
+// hold is no such story.
+func strategicIssues(list []*issues.Issue, items []*workitem.Item) ([]StrategicIssue, map[string]StrategicAmount) {
+	stories := map[string]bool{}
+	for _, it := range items {
+		if it.Type == workitem.Story {
+			stories[workitem.CanonicalID(it.ID)] = true
+		}
+	}
+	out, counted := []StrategicIssue{}, map[string]StrategicAmount{}
+	for _, is := range list {
+		if is.Usage == nil || len(is.Usage.Strategic) == 0 {
+			continue
+		}
+		s := StrategicIssue{ID: is.ID, Title: is.Title, Status: is.Status, Strategic: []ItemStrategic{}}
+		for _, id := range issues.StoriesMade(is) {
+			if stories[id] {
+				s.Story = id
+				break
+			}
+		}
+		s.Counted = s.Story == ""
+		for _, e := range is.Usage.Strategic {
+			s.Strategic = append(s.Strategic, ItemStrategic{Kind: e.Kind, Tokens: e.Tokens(), Cost: round4(e.Cost()), Seconds: e.Seconds, Estimated: e.Estimated})
+			if s.Counted {
+				a := counted[e.Kind]
+				a.Cost += e.Cost()
+				a.Seconds += e.Seconds
+				counted[e.Kind] = a
+			}
+		}
+		out = append(out, s)
+	}
+	return out, counted
 }

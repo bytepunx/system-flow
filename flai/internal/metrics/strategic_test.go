@@ -3,10 +3,12 @@ package metrics
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -45,10 +47,10 @@ func TestStrategicReportsTotalsAndTheWindowsEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := `[{"kind":"planner","cost":0.6213,"seconds":900,"activities":3,"last_run":"2026-08-31T18:00:00Z",` +
-		`"items":{"cost":0,"seconds":0},"project":{"cost":0.6213,"seconds":900},"log":[` +
+		`"items":{"cost":0,"seconds":0},"issues":{"cost":0,"seconds":0},"project":{"cost":0.6213,"seconds":900},"log":[` +
 		`{"at":"2026-08-02T12:00:00Z","seconds":100,"cost":0.1,"estimated":true,"items":[]},` +
 		`{"at":"2026-08-31T18:00:00Z","seconds":723,"cost":0.4213,"items":["E-0016","S-0230"]}]},` +
-		`{"kind":"analyzer","cost":0,"seconds":0,"activities":0,"last_run":"","items":{"cost":0,"seconds":0},"project":{"cost":0,"seconds":0},"log":[]}]`
+		`{"kind":"analyzer","cost":0,"seconds":0,"activities":0,"last_run":"","items":{"cost":0,"seconds":0},"issues":{"cost":0,"seconds":0},"project":{"cost":0,"seconds":0},"log":[]}]`
 	if string(data) != want {
 		t.Errorf("json =\n%s\nwant\n%s", data, want)
 	}
@@ -110,13 +112,107 @@ func TestStrategicSplitsTheTotalsBetweenTheItemsAndTheProject(t *testing.T) {
 	}
 }
 
+// analyzed is an issue on which the analyzer spent cost over seconds, with
+// body below its front matter.
+func analyzed(id, status, body string, seconds int64, cost float64) *issues.Issue {
+	return &issues.Issue{ID: id, Title: "Issue " + id, Status: status, Body: body, Usage: &usage.Usage{Strategic: []usage.Strategic{
+		{Kind: "analyzer", Seconds: seconds, Estimated: true, Models: []usage.Model{{Model: "m", Output: 100, Cost: cost}}},
+	}}}
+}
+
+// S-0227: an issue's strategic usage is counted in its kind's issues amount
+// until a story made from it, one the items hold, carries it; then it is
+// counted once, as the story's, under items. The project total is what
+// neither carries, so the three add up to the document's totals.
+func TestStrategicCountsAnIssuesUsageOnceAcrossItAndItsStory(t *testing.T) {
+	carried := &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: []usage.Strategic{
+		{Kind: "analyzer", Seconds: 20, Estimated: true, Models: []usage.Model{{Model: "m", Output: 100, Cost: 0.02}}},
+	}}
+	items := []*workitem.Item{
+		// the story made from I-0002 carries its entry, and so its epic
+		{ID: "E-0002", Type: workitem.Epic, Status: workitem.InProgress, Created: "2026-08-01T00:00:00Z", Usage: carried.Clone()},
+		{ID: "S-0005", Type: workitem.Story, Parent: "E-0002", Status: workitem.Backlog, Created: "2026-08-20T00:00:00Z", Usage: carried.Clone()},
+		// a story that only names I-0001 carries nothing of it
+		{ID: "S-0006", Type: workitem.Story, Status: workitem.Backlog, Created: "2026-08-20T00:00:00Z", Body: "Remedies I-0001.\n"},
+	}
+	list := []*issues.Issue{
+		analyzed("I-0001", "open", "## Instances\n\n### 2026-08-02T00:00:00Z\n\nStory: S-0006.\n", 30, 0.03),
+		analyzed("I-0002", "open", "## Remediation\n\nStory S-5 remediates this issue, created from it at 2026-08-20T00:00:00Z.\n", 20, 0.02),
+		// the story made from it is not among the items: no story carries it
+		analyzed("I-0003", "closed", "## Remediation\n\nStory S-0099 remediates this issue, created from it at 2026-08-20T00:00:00Z.\n", 10, 0.01),
+		{ID: "I-0004", Title: "Nothing spent", Status: "open"},
+	}
+	docs := []*workitem.Activity{{Kind: workitem.ActivityAnalyzer, AccruedCost: 0.1, AccruedSeconds: 100}}
+	rep := Compute(items, Options{Now: now, Activities: docs, Issues: list})
+	if len(rep.Strategic) != 1 {
+		t.Fatalf("strategic = %+v", rep.Strategic)
+	}
+	a := rep.Strategic[0]
+	if a.Items != (StrategicAmount{Cost: 0.02, Seconds: 20}) || a.Issues != (StrategicAmount{Cost: 0.04, Seconds: 40}) || a.Project != (StrategicAmount{Cost: 0.04, Seconds: 40}) {
+		t.Errorf("analyzer: items %+v issues %+v project %+v", a.Items, a.Issues, a.Project)
+	}
+	if round4(a.Items.Cost+a.Issues.Cost+a.Project.Cost) != a.Cost || a.Items.Seconds+a.Issues.Seconds+a.Project.Seconds != a.Seconds {
+		t.Errorf("items, issues, and project do not add up to the totals: %+v", a)
+	}
+	type listed struct {
+		id, story string
+		counted   bool
+	}
+	want := []listed{{"I-0001", "", true}, {"I-0002", "S-0005", false}, {"I-0003", "", true}}
+	if len(rep.StrategicIssues) != len(want) {
+		t.Fatalf("strategic_issues = %+v", rep.StrategicIssues)
+	}
+	for i, w := range want {
+		if g := rep.StrategicIssues[i]; g.ID != w.id || g.Story != w.story || g.Counted != w.counted {
+			t.Errorf("issue %d = %+v, want %+v", i, g, w)
+		}
+	}
+	data, err := json.Marshal(rep.StrategicIssues[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w := `{"id":"I-0002","title":"Issue I-0002","status":"open","story":"S-0005","counted":false,` +
+		`"strategic":[{"kind":"analyzer","tokens":100,"cost":0.02,"seconds":20,"estimated":true}]}`; string(data) != w {
+		t.Errorf("json =\n%s\nwant\n%s", data, w)
+	}
+	// before the story is made, the issue's entry is counted on it
+	alone := Compute(items[2:], Options{Now: now, Activities: docs, Issues: list})
+	if a := alone.Strategic[0]; a.Items != (StrategicAmount{}) || a.Issues != (StrategicAmount{Cost: 0.06, Seconds: 60}) || a.Project != (StrategicAmount{Cost: 0.04, Seconds: 40}) {
+		t.Errorf("without the story: items %+v issues %+v project %+v", a.Items, a.Issues, a.Project)
+	}
+	if g := alone.StrategicIssues[1]; g.Story != "" || !g.Counted {
+		t.Errorf("I-0002 without its story = %+v", g)
+	}
+}
+
+// S-0227: what strategic agents spent on issues is never in the agents'
+// figures: their totals, per-model figures, and spend over time are the
+// same with the issues as without them.
+func TestStrategicIssuesLeaveTheAgentsFiguresAlone(t *testing.T) {
+	done := &workitem.Item{ID: "S-0001", Type: workitem.Story, Status: workitem.Done, Created: "2026-08-20T00:00:00Z",
+		Transitions: []workitem.Transition{{To: workitem.InProgress, At: "2026-08-21T00:00:00Z"}, {To: workitem.Done, At: "2026-08-22T00:00:00Z"}},
+		Usage:       &usage.Usage{Source: usage.SourceLog, Seconds: 600, Models: []usage.Model{{Model: "m", Output: 1000, Cost: 0.5}}}}
+	list := []*issues.Issue{analyzed("I-0001", "open", "", 30, 0.03)}
+	with := Compute([]*workitem.Item{done}, Options{Now: now, Issues: list})
+	without := Compute([]*workitem.Item{done}, Options{Now: now})
+	if !reflect.DeepEqual(with.Usage, without.Usage) || !reflect.DeepEqual(with.Items, without.Items) {
+		t.Errorf("the issues changed the agents' figures:\n%+v\n%+v", with.Usage, without.Usage)
+	}
+	if m := with.Usage.Models; len(m) != 1 || m[0].Cost != 0.5 || m[0].Tokens != 1000 || with.Usage.Strategic.Items != 0 {
+		t.Errorf("usage = %+v", with.Usage)
+	}
+	if len(with.StrategicIssues) != 1 || len(without.StrategicIssues) != 0 {
+		t.Errorf("strategic_issues = %+v and %+v", with.StrategicIssues, without.StrategicIssues)
+	}
+}
+
 func TestStrategicIsAnEmptyListWithNoDocuments(t *testing.T) {
 	data, err := json.Marshal(Compute(nil, Options{Now: now}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), `"strategic":[]`) {
-		t.Errorf("no documents should report an empty list: %s", data)
+	if !strings.Contains(string(data), `"strategic":[]`) || !strings.Contains(string(data), `"strategic_issues":[]`) {
+		t.Errorf("no documents or issues should report empty lists: %s", data)
 	}
 }
 

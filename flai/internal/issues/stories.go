@@ -348,8 +348,24 @@ func LinkStory(is *Issue, story string, now time.Time) error {
 	return is.Save()
 }
 
-// linkedLineRe is a line LinkStory writes.
-var linkedLineRe = regexp.MustCompile(`(?m)^Story S-\d+ remediates this issue, created from it at \S+\.\n?`)
+// linkedLineRe is a line LinkStory writes, capturing the story's ID.
+var linkedLineRe = regexp.MustCompile(`(?m)^Story (S-\d+) remediates this issue, created from it at \S+\.\n?`)
+
+// StoriesMade are the stories made from the issue, as LinkStory names them
+// in its Remediation section, each once, in the order named (S-0227).
+func StoriesMade(is *Issue) []string {
+	start, end, ok := section(is.Body, "## Remediation")
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, m := range linkedLineRe.FindAllStringSubmatch(is.Body[start:end], -1) {
+		if id := workitem.CanonicalID(m[1]); !contains(out, id) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
 
 // reportLinkLineRe is a line linkReport writes, with its newline.
 var reportLinkLineRe = regexp.MustCompile(reportLinkRe.String() + `\n?`)

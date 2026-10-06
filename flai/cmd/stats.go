@@ -37,7 +37,12 @@ the limit, and each story's touches against the files its commits changed),
 and strategic_days (the strategic agents' cost and time beside delivery).
 What strategic agents spent on items is reported apart from what agents did,
 under usage.strategic and each item's usage.strategic, beside the project's
-usage.cost_per_agent_hour and each item's expected_cost (ADR-0083).
+usage.cost_per_agent_hour and each item's expected_cost (ADR-0083). Each
+strategic agent's totals, under strategic, split into what the items carry,
+what the issues carry that no story does, and the project total (ADR-0095);
+strategic_issues lists each issue that carries strategic usage. An issue's
+usage counts until a story made from it carries it, then counts as the
+story's (S-0227).
 Touches drift needs git; without it flai stats warns and leaves it out.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
@@ -104,6 +109,7 @@ func printSummary(a *app, rep *metrics.Report) {
 		}
 	}
 	printStrategic(a, rep.Strategic)
+	printStrategicIssues(a, rep.StrategicIssues)
 	printStrategicDays(a, rep)
 	printForecasts(a, rep.Forecasts)
 	printCostOfDelay(a, rep)
@@ -248,8 +254,9 @@ func printStrategicDays(a *app, rep *metrics.Report) {
 }
 
 // printStrategic prints each strategic agent's totals as its activity
-// document holds them, all time (ADR-0079), with what of them the items carry
-// and the project strategic total (ADR-0095).
+// document holds them, all time (ADR-0079), with what of them the items
+// carry, what the issues carry that no story does (S-0227), and the project
+// strategic total (ADR-0095).
 func printStrategic(a *app, agents []metrics.StrategicAgent) {
 	if len(agents) == 0 {
 		return
@@ -264,8 +271,29 @@ func printStrategic(a *app, agents []metrics.StrategicAgent) {
 		if s.LastRun != "" {
 			last = ", last " + s.LastRun
 		}
-		fmt.Fprintf(a.out, "  %s: %d %s, %.4f USD, %d s (on items %.4f USD, %d s; project %.4f USD, %d s)%s\n",
-			s.Kind, s.Activities, noun, s.Cost, s.Seconds, s.Items.Cost, s.Items.Seconds, s.Project.Cost, s.Project.Seconds, last)
+		fmt.Fprintf(a.out, "  %s: %d %s, %.4f USD, %d s (on items %.4f USD, %d s; on issues %.4f USD, %d s; project %.4f USD, %d s)%s\n",
+			s.Kind, s.Activities, noun, s.Cost, s.Seconds, s.Items.Cost, s.Items.Seconds, s.Issues.Cost, s.Issues.Seconds, s.Project.Cost, s.Project.Seconds, last)
+	}
+}
+
+// printStrategicIssues prints what strategic agents spent on each issue that
+// carries any, per kind, and whether the totals count it on the issue or on
+// the story made from it (S-0227).
+func printStrategicIssues(a *app, list []metrics.StrategicIssue) {
+	if len(list) == 0 {
+		return
+	}
+	fmt.Fprintln(a.out, "\nstrategic usage on issues (all time):")
+	for _, is := range list {
+		spent := make([]string, 0, len(is.Strategic))
+		for _, s := range is.Strategic {
+			spent = append(spent, fmt.Sprintf("%s %.4f USD, %d s", s.Kind, s.Cost, s.Seconds))
+		}
+		counted := "counted on the issue"
+		if !is.Counted {
+			counted = "counted on " + is.Story
+		}
+		fmt.Fprintf(a.out, "  %s %s: %s; %s  %s\n", is.ID, is.Status, strings.Join(spent, "; "), counted, is.Title)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -27,6 +28,10 @@ type Options struct {
 	// Threads are the threads the items' agents waited on, read by the caller
 	// (S-0205).
 	Threads []*threads.Thread
+	// Issues are the project's issues, whose strategic usage is reported
+	// apart and counted until a story made from one carries it, read by the
+	// caller (S-0227).
+	Issues []*issues.Issue
 	// Projects are the manifest's sub-projects, whose names and tags a touch
 	// may name; WIPLimit is the board's in-progress limit, 0 without one; and
 	// Commits are the files each story's commits changed, by its canonical
@@ -154,6 +159,9 @@ type Report struct {
 	Usage UsageReport `json:"usage"`
 	// Strategic is each strategic agent's activity document (ADR-0079).
 	Strategic []StrategicAgent `json:"strategic"`
+	// StrategicIssues is what strategic agents spent on each issue that
+	// carries any (S-0227).
+	StrategicIssues []StrategicIssue `json:"strategic_issues"`
 	// StrategicDays is the strategic agents' use per day beside delivery
 	// (S-0205).
 	StrategicDays []StrategicDay `json:"strategic_days"`
@@ -252,7 +260,9 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
 	rep.Usage.Strategic = strategicTotals(items, start, opt.Now)
 	rep.Usage.CostPerAgentHour = rate
-	rep.Strategic = strategic(opt.Activities, all, start, opt.Now)
+	var onIssues map[string]StrategicAmount
+	rep.StrategicIssues, onIssues = strategicIssues(opt.Issues, all)
+	rep.Strategic = strategic(opt.Activities, all, onIssues, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)

@@ -598,3 +598,14 @@ func TestCarryStrategicChargesTheStoryAndItsEpic(t *testing.T) {
 		t.Errorf("a missing story is an error naming what was not carried: %v", err)
 	}
 }
+
+func TestStoriesMadeAreTheStoriesLinkStoryNamed(t *testing.T) {
+	is := &Issue{ID: "I-0001", Body: "# I-0001 x\n\n## Description\nStory S-0009 remediates this issue, created from it at 2026-09-16T09:00:00Z.\n\n## Remediation\nFix it. S-0003 is related.\n\nStory S-0009 remediates this issue, created from it at 2026-09-16T09:00:00Z.\n\nStory S-12 remediates this issue, created from it at 2026-09-17T09:00:00Z.\n"}
+	got := StoriesMade(is)
+	if len(got) != 2 || got[0] != "S-0009" || got[1] != "S-0012" {
+		t.Fatalf("StoriesMade = %v, want [S-0009 S-0012]", got)
+	}
+	if got := StoriesMade(&Issue{Body: "# I-0002 y\n\n## Description\nNone.\n"}); got != nil {
+		t.Fatalf("StoriesMade with no Remediation = %v, want nil", got)
+	}
+}

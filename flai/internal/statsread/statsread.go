@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -16,7 +17,7 @@ import (
 
 // Read returns every item, archived ones too, and the options read from the
 // project: the strategic agents' activity documents, the threads, the
-// manifest's projects, the board's in-progress limit, and the files each
+// issues, the manifest's projects, the board's in-progress limit, and the files each
 // story's commits changed. The caller sets the window and grouping. When git
 // cannot be read, Commits stays nil, which leaves claims.drift out, and Read
 // logs a warning saying so on log; any other read that fails stops it.
@@ -31,6 +32,9 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	}
 	if opt.Threads, err = threads.List(repo); err != nil {
 		return nil, opt, fmt.Errorf("cannot read the threads: %w; restore the thread from git or run flai check to see what is wrong", err)
+	}
+	if opt.Issues, err = issues.List(repo); err != nil {
+		return nil, opt, fmt.Errorf("cannot read the issues: %w; restore the issue from git or run flai check to see what is wrong", err)
 	}
 	board, err := repo.LoadBoard()
 	if err != nil {
