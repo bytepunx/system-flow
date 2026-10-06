@@ -6,7 +6,7 @@ title: One in-progress story holds every ready story by overlap, through folder-
 status: ready
 owner: alex
 created: 2026-10-06T11:44:50Z
-updated: 2026-10-06T12:18:09Z
+updated: 2026-10-06T17:58:55Z
 transitions:
   - to: ready
     at: 2026-10-06T11:47:42Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T11:49:48Z
 forecast:
   duration: 2h
-  delivery: 2026-10-06T18:34:00Z
-  basis: "flai forecast's 1h24m (89 s per unit over 21 large improvement stories, size 56), raised to 2h for twelve tasks in seven sequential layers across flai, flaiover, and the template; delivery moved by the same 36m from flai's 17:58Z, 8th in the pull order."
-  by: planner-S-0295
-  at: 2026-10-06T12:18:09Z
+  delivery: 2026-10-06T23:55:00Z
+  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0224, S-0226, S-0223, S-0227, S-0229, S-0284 and S-0278."
+  by: flai
+  at: 2026-10-06T17:58:55Z
 finalized:
   by: alex
   at: 2026-10-06T11:47:30Z

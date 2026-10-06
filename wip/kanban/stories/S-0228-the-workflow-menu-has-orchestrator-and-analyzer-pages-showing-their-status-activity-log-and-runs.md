@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T11:52:17Z
+updated: 2026-10-06T17:58:55Z
 transitions: []
 tags: [dashboard]
 topics: [orchestration, analysis]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:36Z
 forecast:
   duration: 1h
-  delivery: 2026-10-06T19:35:00Z
-  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 3, behind S-0222, S-0224, S-0226, S-0223, S-0227, S-0229, S-0284, S-0278, S-0295, S-0296, S-0212, S-0213, S-0214, S-0215 and S-0216."
+  delivery: 2026-10-07T01:55:00Z
+  basis: "Its own forecast of 1h; 15th in the pull order with an in-progress limit of 3, behind S-0224, S-0226, S-0223, S-0227, S-0229, S-0284, S-0278, S-0295, S-0296, S-0212, S-0213, S-0214, S-0215 and S-0216."
   by: flai
-  at: 2026-10-06T11:52:17Z
+  at: 2026-10-06T17:58:55Z
 ---
 # S-0228 The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
 
