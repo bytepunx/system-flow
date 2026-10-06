@@ -22,9 +22,11 @@ flai serve's start prompt and `delegation.md` already say not to do this, since 
 
 The instruction is not always ignored. S-0219's agent, on the same prompt and the same Claude Code version as S-0282's, launched ten sub-agents in the background and ended its turn after each launch. Claude Code kept the session and began the agent's next turn within seconds of each notice. It never waited on a finished sub-agent.
 
+That way of waiting is safe only for a short sub-agent. Every one of S-0219's finished within about four minutes. S-0220's agent waited the same way twice for a longer one, and Claude Code ended the process ten minutes after the turn ended, with the sub-agent still working ([I-0084](I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md)). Holding `wait_for_events` is slow, but it is what kept S-0282's process alive.
+
 Three things make the wrong choice likely:
 
-- The sentence says what not to do and names a notice, but not how to wait for one. Ending the turn is the way, and the same prompt uses "end" for finishing the story and for stopping with a question open.
+- The sentence says what not to do and names a notice, but not how to wait for one. Ending the turn works for a sub-agent that finishes within ten minutes and loses the session for a longer one, and the same prompt uses "end" for finishing the story and for stopping with a question open.
 - The sentence is conditional on "a sub-agent run in the background", which reads as a choice the agent no longer makes.
 - `wait_for_events` is the only blocking tool the agent has, and its description says "Hold this when idle".
 
@@ -44,10 +46,10 @@ Found in the transcript of S-0218's agent, 2026-10-05T07:09Z to 09:31Z, whose pr
 
 Two changes, both needed. The wording T-0869 added did not hold in two stories, so better wording is not enough without a check in flai.
 
-1. **Say how to wait.** The start prompt in `flai/internal/harness`, `delegation.md` here and in the template, and the `wait_for_events` tool description say what the agent does after it launches a sub-agent with nothing else to do: it ends its turn with no tool call, as S-0219's agent did. They say that the session is kept while a sub-agent runs, and that the sub-agent's notice begins the next turn. They say when `wait_for_events` is right: only for a thread awaiting the designer. The sentence no longer depends on the agent having chosen the background. A launch with `run_in_background: false`, which returns the result as the tool's result, is the other candidate; test both against the Claude Code that flai serve runs, 2.1.290 when this was recorded, and name the one that works.
+1. **Say how to wait.** The start prompt in `flai/internal/harness`, `delegation.md` here and in the template, and the `wait_for_events` tool description say how the agent waits for a sub-agent when it has nothing else to do, in a way that keeps the session alive however long the sub-agent runs. Ending the turn is not that way: it works while the sub-agent finishes within ten minutes, as S-0219's did, and loses the session and the sub-agent's work past that, as in S-0220 (I-0084). The candidate is a launch with `run_in_background: false`, which returns the result as the tool's result; test it against the Claude Code that flai serve runs, 2.1.290 when this was recorded, with a sub-agent that runs longer than ten minutes, and with a layer of several launched in one message. They say when `wait_for_events` is right: only for a thread awaiting the designer. The sentence no longer depends on the agent having chosen the background.
 2. **Make flai catch it.** `flai guard` already runs as a `PreToolUse` hook on the story agent's `mcp__flai__` calls, so flai sees the `wait_for_events` call when it is made. Either of these keeps a mistaken wait short:
    - A Claude Code hook on a sub-agent's stop (`SubagentStop`) tells flai, and a `wait_for_events` held by that session returns at once, saying which sub-agent finished. Confirm first what that hook's input carries.
-   - `flai guard` refuses a `wait_for_events` call made while a sub-agent of the session is running and no thread on the story awaits the designer, and its refusal says to end the turn.
+   - `flai guard` refuses a `wait_for_events` call made while a sub-agent of the session is running and no thread on the story awaits the designer, and its refusal says how to wait instead.
 
 The measure, on a story flai serve works after the change is installed: no wait on a sub-agent outlasts the sub-agent by more than a few seconds.
 
