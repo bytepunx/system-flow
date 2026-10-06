@@ -6,7 +6,7 @@ title: Claude Code ends a headless agent ten minutes after its turn ends, even w
 status: backlog
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-06T11:44:49Z
+updated: 2026-10-06T22:50:34Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-06T11:44:49Z
+finalized:
+  by: alex
+  at: 2026-10-06T22:50:34Z
 ---
 # S-0294 Claude Code ends a headless agent ten minutes after its turn ends, even while its background sub-agent is still working, and flai serve leaves the story in progress with no agent
 
