@@ -54,12 +54,44 @@ type Thread struct {
 	Body string `yaml:"-" json:"-"`
 }
 
-// Entry is one dated contribution parsed from the body.
+// Entry is one dated contribution parsed from the body. Text is the entry as
+// written, its source line included. Recommendation and Source are the marks
+// of ADR-0090: a recommendation awaits the operator's confirmation, and the
+// source is what the entry cites.
 type Entry struct {
-	At     string `json:"at"`
-	Author string `json:"author"`
-	Text   string `json:"text"`
+	At             string  `json:"at"`
+	Author         string  `json:"author"`
+	Text           string  `json:"text"`
+	Recommendation bool    `json:"recommendation"`
+	Source         *Source `json:"source,omitempty"`
 }
+
+// Source is what an entry cites: a repository path, such as an ADR, a design
+// document, or a convention, and optionally a heading in it.
+type Source struct {
+	Path    string `json:"path"`
+	Heading string `json:"heading,omitempty"`
+}
+
+// Marks are the optional marks of a reply: that it is a recommendation, and
+// the source it cites. The zero value is a plain reply.
+type Marks struct {
+	Recommendation bool
+	// Source is a repository path or item ID, validated as an anchor is; an
+	// empty Path cites nothing.
+	Source Source
+}
+
+const (
+	// recommendationMark ends the heading of a recommendation entry.
+	recommendationMark = " (recommendation)"
+	// sourcePrefix starts an entry's last paragraph when it cites a source.
+	sourcePrefix = "Source: "
+	// sourceHeading separates a source's path from its heading.
+	sourceHeading = " § "
+	// confirmPrefix starts the entry Confirm writes.
+	confirmPrefix = "Confirmed the recommendation of "
+)
 
 var (
 	idPattern    = regexp.MustCompile(`^TH-\d{4,}$`)
@@ -180,13 +212,78 @@ func (th *Thread) Entries() []Entry {
 		if i+1 < len(locs) {
 			end = locs[i+1][0]
 		}
-		out = append(out, Entry{
-			At:     th.Body[loc[2]:loc[3]],
-			Author: th.Body[loc[4]:loc[5]],
-			Text:   strings.TrimSpace(th.Body[loc[1]:end]),
-		})
+		e := Entry{At: th.Body[loc[2]:loc[3]], Text: strings.TrimSpace(th.Body[loc[1]:end])}
+		e.Author, e.Recommendation = strings.CutSuffix(th.Body[loc[4]:loc[5]], recommendationMark)
+		e.Source = sourceOf(e.Text)
+		out = append(out, e)
 	}
 	return out
+}
+
+// sourceOf reads the source an entry's text cites in its last paragraph,
+// "Source: <path>" or "Source: <path> § <heading>", or nil.
+func sourceOf(text string) *Source {
+	i := strings.LastIndex(text, "\n\n")
+	if i < 0 {
+		return nil
+	}
+	last := text[i+2:]
+	if !strings.HasPrefix(last, sourcePrefix) || strings.Contains(last, "\n") {
+		return nil
+	}
+	path, heading, _ := strings.Cut(strings.TrimPrefix(last, sourcePrefix), sourceHeading)
+	if path = strings.TrimSpace(path); path == "" {
+		return nil
+	}
+	return &Source{Path: path, Heading: strings.TrimSpace(heading)}
+}
+
+// sourceLine renders a source as an entry's last paragraph.
+func sourceLine(s Source) string {
+	if s.Heading == "" {
+		return sourcePrefix + s.Path
+	}
+	return sourcePrefix + s.Path + sourceHeading + s.Heading
+}
+
+// confirms reports whether an entry is a confirmation Confirm wrote, alone or
+// joined with another entry of its author's in the same second.
+func confirms(e Entry) bool {
+	for _, line := range strings.Split(e.Text, "\n") {
+		if strings.HasPrefix(line, confirmPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// PendingRecommendation is the recommendation awaiting the operator's
+// confirmation, or nil: the newest entry by someone other than the opener,
+// when it is a recommendation, no entry after it confirms it, and the thread
+// is not resolved.
+func (th *Thread) PendingRecommendation() *Entry {
+	if !th.Open() {
+		return nil
+	}
+	es := th.Entries()
+	if len(es) == 0 {
+		return nil
+	}
+	opener := es[0].Author
+	for i := len(es) - 1; i > 0; i-- {
+		e := es[i]
+		if confirms(e) {
+			return nil
+		}
+		if e.Author == opener {
+			continue
+		}
+		if e.Recommendation {
+			return &e
+		}
+		return nil
+	}
+	return nil
 }
 
 // Opener is the author of the first entry, or the first participant.
@@ -367,10 +464,20 @@ func HasHeading(doc, heading string) bool {
 	return false
 }
 
-// Reply appends an entry. The status becomes answered when someone other
-// than the opener replies and open when the opener follows up, so a
+// Reply appends a plain entry. The status becomes answered when someone
+// other than the opener replies and open when the opener follows up, so a
 // resolved thread reopens on any reply.
 func Reply(r *workitem.Repo, id, author, text string, now time.Time) (*Thread, error) {
+	return ReplyWith(r, id, author, text, now, Marks{})
+}
+
+// ReplyWith appends an entry with marks (ADR-0090). A plain reply, with or
+// without a source, sets the status as Reply does. A recommendation leaves
+// the status as it was, so the thread still awaits the operator, who makes it
+// the answer with Confirm; it is refused on a resolved thread and from the
+// thread's opener. A source must exist in the repository, and its heading in
+// it, as an anchor must.
+func ReplyWith(r *workitem.Repo, id, author, text string, now time.Time, marks Marks) (*Thread, error) {
 	if strings.TrimSpace(text) == "" {
 		return nil, fmt.Errorf("a reply needs text")
 	}
@@ -381,14 +488,69 @@ func Reply(r *workitem.Repo, id, author, text string, now time.Time) (*Thread, e
 	if err != nil {
 		return nil, err
 	}
+	if marks.Source.Path != "" {
+		a, err := ResolveAnchor(r, marks.Source.Path, marks.Source.Heading)
+		if err != nil {
+			return nil, fmt.Errorf("the source of a reply on %s: %w", th.ID, err)
+		}
+		marks.Source = Source{Path: a.Path, Heading: a.Heading}
+		text = strings.TrimSpace(text) + "\n\n" + sourceLine(marks.Source)
+	}
+	heading := author
+	if marks.Recommendation {
+		if !th.Open() {
+			return nil, fmt.Errorf("%s is resolved: a recommendation needs a thread that awaits an answer", th.ID)
+		}
+		if author == th.Opener() {
+			return nil, fmt.Errorf("%s opened %s: a recommendation answers someone else's thread", author, th.ID)
+		}
+		heading += recommendationMark
+	}
+	was := th.Marshal()
+	stamp := now.UTC().Format(workitem.TimeFormat)
+	th.Body = appendEntry(th.Body, stamp, heading, text)
+	switch {
+	case marks.Recommendation:
+		// the thread still awaits the operator: the status stays as it was
+	case author == th.Opener():
+		th.Status = "open"
+	default:
+		th.Status = "answered"
+	}
+	if !contains(th.Participants, author) {
+		th.Participants = append(th.Participants, author)
+	}
+	th.Updated = stamp
+	return th, save(r, th, was)
+}
+
+// Confirm makes the pending recommendation the answer (ADR-0090): it appends
+// an entry by author naming the recommendation's time and author, citing its
+// source, and sets the status to answered. It is refused when no
+// recommendation is pending and to the recommendation's own author.
+func Confirm(r *workitem.Repo, id, author string, now time.Time) (*Thread, error) {
+	if strings.TrimSpace(author) == "" {
+		return nil, fmt.Errorf("an author is required")
+	}
+	th, err := Get(r, id)
+	if err != nil {
+		return nil, err
+	}
+	p := th.PendingRecommendation()
+	if p == nil {
+		return nil, fmt.Errorf("%s has no recommendation awaiting confirmation: confirm one that is the newest reply by someone other than the opener", th.ID)
+	}
+	if p.Author == author {
+		return nil, fmt.Errorf("%s made the recommendation on %s and cannot confirm it: the operator confirms it", author, th.ID)
+	}
+	text := fmt.Sprintf("%s%s %s.", confirmPrefix, p.At, p.Author)
+	if p.Source != nil {
+		text += "\n\n" + sourceLine(*p.Source)
+	}
 	was := th.Marshal()
 	stamp := now.UTC().Format(workitem.TimeFormat)
 	th.Body = appendEntry(th.Body, stamp, author, text)
-	if author == th.Opener() {
-		th.Status = "open"
-	} else {
-		th.Status = "answered"
-	}
+	th.Status = "answered"
 	if !contains(th.Participants, author) {
 		th.Participants = append(th.Participants, author)
 	}
@@ -427,9 +589,10 @@ func Resolve(r *workitem.Repo, id, author, reason string, now time.Time) (*Threa
 }
 
 // appendEntry adds a dated entry to the body. Entries are headed by their
-// second and author; one by the same author in the same second as the last
-// joins that entry, as narrative log entries and issue instances do (I-0043):
-// a second identical heading fails the duplicate-heading rule (MD024).
+// second and author, and a recommendation's mark; one with the same heading
+// as the last joins that entry, as narrative log entries and issue instances
+// do (I-0043): a second identical heading fails the duplicate-heading rule
+// (MD024).
 func appendEntry(body, stamp, author, text string) string {
 	body = strings.TrimRight(body, "\n")
 	heading := fmt.Sprintf("### %s %s", stamp, author)
@@ -551,8 +714,9 @@ func contains(list []string, s string) bool {
 }
 
 // View is a thread as flai prints it and the dashboard reads it: the front
-// matter, the path relative to the repository, the entries, and the story
-// the thread belongs to.
+// matter, the path relative to the repository, the entries, the story the
+// thread belongs to, and the recommendation awaiting the operator's
+// confirmation, null when there is none.
 func View(r *workitem.Repo, th *Thread) map[string]any {
 	path := th.Path
 	if rel, err := filepath.Rel(r.MainRoot, th.Path); err == nil {
@@ -562,5 +726,6 @@ func View(r *workitem.Repo, th *Thread) map[string]any {
 		"id": th.ID, "title": th.Title, "anchor": th.Anchor, "status": th.Status,
 		"participants": th.Participants, "created": th.Created, "updated": th.Updated,
 		"path": path, "entries": th.Entries(), "story": StoryOf(r, th),
+		"pending_recommendation": th.PendingRecommendation(),
 	}
 }

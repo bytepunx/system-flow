@@ -252,3 +252,212 @@ func TestAThreadWithAnUnknownFieldIsListedAndKept(t *testing.T) {
 		t.Errorf("a reply dropped the unknown field:\n%s", after)
 	}
 }
+
+// wipLint writes the repository's markdown lint configuration into a test
+// project, so that a refused write fails the test.
+func wipLint(t *testing.T, r *workitem.Repo) {
+	t.Helper()
+	cfg := "default: true\nMD013: false\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD032: false\nMD033: false\nMD041: false\nMD060: false\n"
+	if err := os.WriteFile(filepath.Join(r.Root, ".markdownlint.yaml"), []byte(cfg), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// lintClean fails the test when the thread's file has a lint finding.
+func lintClean(t *testing.T, r *workitem.Repo, th *Thread) {
+	t.Helper()
+	c, err := mdlint.Load(r.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(th.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f := c.Lint(string(data)); len(f) > 0 {
+		t.Fatalf("lint findings %+v in:\n%s", f, data)
+	}
+}
+
+// S-0220, ADR-0090: a recommendation leaves the status as it was, reads back
+// with its marks, and lints clean; an answer citing a source answers.
+func TestARecommendationLeavesTheStatusAndReadsBack(t *testing.T) {
+	r := project(t)
+	wipLint(t, r)
+	if _, err := New(r, NewOptions{Title: "Which shape", On: "design/system/plan.md", Author: "claude", Text: "Left or right?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	at := t0.Add(time.Minute)
+	th, err := ReplyWith(r, "TH-0001", "orchestrator", "Left, as the plan says.", at, Marks{Recommendation: true, Source: Source{Path: "design/system/plan.md", Heading: "Shape"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if th.Status != "open" {
+		t.Errorf("a recommendation leaves the status open: %s", th.Status)
+	}
+	if !strings.Contains(th.Body, "\n### 2026-09-17T21:01:00Z orchestrator (recommendation)\nLeft, as the plan says.\n\nSource: design/system/plan.md § Shape\n") {
+		t.Errorf("on disk:\n%s", th.Body)
+	}
+	lintClean(t, r, th)
+	back, err := Read(th.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := back.Entries()
+	want := Source{Path: "design/system/plan.md", Heading: "Shape"}
+	if len(e) != 2 || !e[1].Recommendation || e[1].Author != "orchestrator" || e[1].Source == nil || *e[1].Source != want || e[0].Recommendation || e[0].Source != nil {
+		t.Fatalf("entries: %+v", e)
+	}
+	if !contains(back.Participants, "orchestrator") || back.Opener() != "claude" {
+		t.Errorf("participants %v, opener %s", back.Participants, back.Opener())
+	}
+	p, ok := View(r, back)["pending_recommendation"].(*Entry)
+	if !ok || p == nil || p.At != "2026-09-17T21:01:00Z" || p.Author != "orchestrator" {
+		t.Fatalf("pending recommendation: %+v", View(r, back)["pending_recommendation"])
+	}
+	// the opener's follow-up leaves the recommendation pending
+	th, err = Reply(r, "TH-0001", "claude", "Also, why?", at.Add(time.Minute))
+	if err != nil || th.Status != "open" || th.PendingRecommendation() == nil {
+		t.Fatalf("follow-up: %v %s %+v", err, th.Status, th.PendingRecommendation())
+	}
+
+	// a second recommendation on an answered thread keeps it answered
+	if _, err := Reply(r, "TH-0001", "alex", "Not sure.", at.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	th, err = ReplyWith(r, "TH-0001", "orchestrator", "Left.", at.Add(3*time.Minute), Marks{Recommendation: true})
+	if err != nil || th.Status != "answered" {
+		t.Fatalf("recommendation on an answered thread: %v %s", err, th.Status)
+	}
+	if p := th.PendingRecommendation(); p == nil || p.Source != nil {
+		t.Errorf("a recommendation without a source is pending: %+v", p)
+	}
+	lintClean(t, r, th)
+
+	// refused, writing nothing: the opener's own, a missing source, a resolved thread
+	was, _ := os.ReadFile(th.Path)
+	if _, err := ReplyWith(r, "TH-0001", "claude", "Right.", at.Add(4*time.Minute), Marks{Recommendation: true}); err == nil || !strings.Contains(err.Error(), "opened") {
+		t.Errorf("the opener's recommendation is refused: %v", err)
+	}
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Right.", at.Add(4*time.Minute), Marks{Source: Source{Path: "design/adrs/0099-none.md"}}); err == nil || !strings.Contains(err.Error(), "source") {
+		t.Errorf("a missing source is refused: %v", err)
+	}
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Right.", at.Add(4*time.Minute), Marks{Source: Source{Path: "design/system/plan.md", Heading: "Nope"}}); err == nil || !strings.Contains(err.Error(), "heading") {
+		t.Errorf("a missing source heading is refused: %v", err)
+	}
+	if got, _ := os.ReadFile(th.Path); string(got) != string(was) {
+		t.Error("a refused reply leaves the thread as it was")
+	}
+	if _, err := Resolve(r, "TH-0001", "claude", "", at.Add(5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Left.", at.Add(6*time.Minute), Marks{Recommendation: true}); err == nil || !strings.Contains(err.Error(), "resolved") {
+		t.Errorf("a recommendation on a resolved thread is refused: %v", err)
+	}
+
+	// an answer that cites a source answers, and reads back its source
+	if _, err := New(r, NewOptions{Title: "Which risk", On: "design/system/plan.md", Author: "claude", Text: "Which?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	th, err = ReplyWith(r, "TH-0002", "orchestrator", "The one in the plan.", at, Marks{Source: Source{Path: "design/system/plan.md"}})
+	if err != nil || th.Status != "answered" {
+		t.Fatalf("an answer with a source: %v %+v", err, th)
+	}
+	e = th.Entries()
+	if e[1].Recommendation || e[1].Source == nil || *e[1].Source != (Source{Path: "design/system/plan.md"}) || th.PendingRecommendation() != nil {
+		t.Errorf("answer entry: %+v", e[1])
+	}
+	lintClean(t, r, th)
+}
+
+// S-0220, ADR-0090: the operator confirms a pending recommendation with one
+// call, which makes it the answer; with none pending, Confirm is refused.
+func TestConfirmMakesTheRecommendationTheAnswer(t *testing.T) {
+	r := project(t)
+	wipLint(t, r)
+	if _, err := New(r, NewOptions{Title: "Which shape", On: "design/system/plan.md", Author: "claude", Text: "Left or right?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Confirm(r, "TH-0001", "alex", t0.Add(time.Minute)); err == nil || !strings.Contains(err.Error(), "no recommendation") {
+		t.Errorf("confirming with none pending is refused: %v", err)
+	}
+	rec := t0.Add(2 * time.Minute)
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Left.", rec, Marks{Recommendation: true, Source: Source{Path: "design/system/plan.md", Heading: "Shape"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Confirm(r, "TH-0001", "orchestrator", t0.Add(3*time.Minute)); err == nil || !strings.Contains(err.Error(), "cannot confirm") {
+		t.Errorf("the recommendation's author cannot confirm it: %v", err)
+	}
+	th, err := Confirm(r, "th-1", "alex", t0.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if th.Status != "answered" || th.PendingRecommendation() != nil || !contains(th.Participants, "alex") {
+		t.Fatalf("confirmed: %s %+v %v", th.Status, th.PendingRecommendation(), th.Participants)
+	}
+	e := th.Entries()
+	last := e[len(e)-1]
+	if len(e) != 3 || last.Author != "alex" || last.Recommendation || last.Text != "Confirmed the recommendation of 2026-09-17T21:02:00Z orchestrator.\n\nSource: design/system/plan.md § Shape" || last.Source == nil {
+		t.Fatalf("confirming entry: %+v", e)
+	}
+	lintClean(t, r, th)
+	if _, err := Confirm(r, "TH-0001", "alex", t0.Add(4*time.Minute)); err == nil {
+		t.Error("a confirmed recommendation is not confirmed twice")
+	}
+
+	// an answer after a recommendation takes its place: nothing is pending
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Right, then.", t0.Add(5*time.Minute), Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	th, err = Reply(r, "TH-0001", "alex", "No: up.", t0.Add(6*time.Minute))
+	if err != nil || th.PendingRecommendation() != nil {
+		t.Fatalf("an answer overrides the recommendation: %v %+v", err, th.PendingRecommendation())
+	}
+	if _, err := Confirm(r, "TH-0001", "alex", t0.Add(7*time.Minute)); err == nil {
+		t.Error("confirming an overridden recommendation is refused")
+	}
+
+	// the opener may confirm a recommendation on their own thread
+	if _, err := New(r, NewOptions{Title: "Which risk", On: "design/system/plan.md", Author: "alex", Text: "Which?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplyWith(r, "TH-0002", "orchestrator", "The first.", rec, Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	th, err = Confirm(r, "TH-0002", "alex", t0.Add(3*time.Minute))
+	if err != nil || th.Status != "answered" || th.PendingRecommendation() != nil {
+		t.Fatalf("the opener confirms: %v %s %+v", err, th.Status, th.PendingRecommendation())
+	}
+}
+
+// ADR-0090: a thread an older flai wrote reads as before, with no marks and
+// nothing pending; an older flai reads a recommendation's mark as part of
+// its author.
+func TestAnOlderThreadReadsAsBefore(t *testing.T) {
+	r := project(t)
+	doc := "---\nid: TH-0001\ntitle: Which shape\nanchor:\n  path: design/system/plan.md\nstatus: answered\nparticipants: [claude, alex]\ncreated: 2026-09-17T21:00:00Z\nupdated: 2026-09-17T21:01:00Z\n---\n\n# TH-0001 Which shape\n\nOn design/system/plan.md.\n\n## Entries\n\n### 2026-09-17T21:00:00Z claude\nLeft or right?\n\n### 2026-09-17T21:01:00Z alex\nLeft.\n\nSee the plan.\n"
+	_ = os.MkdirAll(Dir(r), 0o755)
+	if err := os.WriteFile(filepath.Join(Dir(r), "TH-0001-which-shape.md"), []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	th, err := Get(r, "TH-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := th.Entries()
+	if len(e) != 2 || e[0].Author != "claude" || e[1].Author != "alex" || e[1].Text != "Left.\n\nSee the plan." {
+		t.Fatalf("entries: %+v", e)
+	}
+	for _, x := range e {
+		if x.Recommendation || x.Source != nil {
+			t.Errorf("an older entry has no marks: %+v", x)
+		}
+	}
+	if p := View(r, th)["pending_recommendation"].(*Entry); p != nil || th.Marshal() != doc {
+		t.Errorf("nothing is pending (%+v), and the file round-trips:\n%s", p, th.Marshal())
+	}
+	old := entryHeading.FindStringSubmatch("### 2026-09-17T21:01:00Z orchestrator (recommendation)")
+	if old == nil || old[2] != "orchestrator (recommendation)" {
+		t.Errorf("an older flai's heading pattern reads the mark into the author: %q", old)
+	}
+}
