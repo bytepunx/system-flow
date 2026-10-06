@@ -1545,13 +1545,13 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, h := range settings.Hooks["PreToolUse"] {
-		if h.Matcher != "Edit|Write|NotebookEdit" {
+		if h.Matcher != "Edit|MultiEdit|Write|NotebookEdit" {
 			continue
 		}
-		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
+		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ -n "$FLAI_STORY" ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
 			t.Errorf("the analyzer's file edits are not guarded: %q", c)
 		}
 		return
 	}
-	t.Error("the template's settings have no Edit|Write|NotebookEdit hook")
+	t.Error("the template's settings have no Edit|MultiEdit|Write|NotebookEdit hook")
 }

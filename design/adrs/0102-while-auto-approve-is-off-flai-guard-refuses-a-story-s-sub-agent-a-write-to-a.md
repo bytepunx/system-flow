@@ -31,7 +31,7 @@ While the project's `auto-approve` host action is off, `flai guard` refuses a st
 
 - A sub-agent that reaches for a `.claude/` file loses one turn rather than its layer's time, and the story's agent learns the content from its final message.
 - The only call that waits on the owner for a `.claude/` write is the story's agent's own, made when nothing else of the story is running.
-- The guard now runs before every file write in a story's session, about 18 ms a call.
+- The guard now runs before every file write in a story's session: about 18 ms a call, timed with this repository's `bin/flai` over five runs of an `Edit` hook input while S-0299 was worked.
 - A project whose `.claude/settings.json` predates this keeps the hold until it takes the template's settings.
 - Only Claude Code's sessions are covered, as with ADR-0060 and ADR-0086.
 
