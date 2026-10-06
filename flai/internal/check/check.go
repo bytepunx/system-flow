@@ -18,6 +18,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
@@ -106,6 +107,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.conventions()
 	c.issues()
 	c.experiments()
+	c.analysis()
 	c.threads()
 	c.markdown()
 	c.conflictMarkers()
@@ -800,7 +802,7 @@ func (c *checker) documentation() {
 				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
 			}
 			if d.IsDir() {
-				if (d.Name() == conventions.Folder || d.Name() == issues.Folder || (key == "design" && d.Name() == experiment.Folder)) && filepath.Dir(path) == root {
+				if (d.Name() == conventions.Folder || d.Name() == issues.Folder || (key == "design" && (d.Name() == experiment.Folder || d.Name() == analysis.Folder))) && filepath.Dir(path) == root {
 					return filepath.SkipDir // validated by their own rules
 				}
 				return nil
@@ -1163,6 +1165,53 @@ func (c *checker) experiments() {
 		}
 	}
 }
+
+// analysis validates design/analysis (S-0223): each report's file name and
+// front matter, and that the folder's README.md lists it, as adrIndex keeps
+// the ADRs' index, with no row linking to a report that is not there.
+func (c *checker) analysis() {
+	dir := filepath.Join(c.repo.Root, filepath.FromSlash(analysis.Dir(c.repo.Manifest)))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return // optional until the analyzer writes its first report
+	}
+	index := filepath.Join(dir, analysis.Index)
+	listed, _ := os.ReadFile(index) // without an index, every report is unlisted, and said to be
+	present := map[string]bool{}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".md") || analysis.Skipped(name) {
+			continue
+		}
+		present[name] = true
+		path := filepath.Join(dir, name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			c.add(Error, "analysis.front-matter", path, 1, "%v", err)
+			continue
+		}
+		_, problems := analysis.Validate(name, string(data))
+		for _, p := range problems {
+			line := 1
+			if p.Field != "" {
+				line = keyLine(path, p.Field)
+			}
+			c.add(Error, "analysis.report", path, line, "%s", p.Message)
+		}
+		if !analysis.Lists(string(listed), name) {
+			c.add(Warning, "analysis.index", path, 1, "%s/%s does not list it; add a row linking to %s", analysis.Dir(c.repo.Manifest), analysis.Index, name)
+		}
+	}
+	for i, l := range strings.Split(string(listed), "\n") {
+		for _, m := range analysisLink.FindAllStringSubmatch(l, -1) {
+			if !present[m[1]] {
+				c.add(Warning, "analysis.index", index, i+1, "the row links to %s, which is not there", m[1])
+			}
+		}
+	}
+}
+
+var analysisLink = regexp.MustCompile(`\]\((?:\./)?(\d{4}-\d{2}-\d{2}-[a-z]+\.md)\)`)
 
 // LintFindings are a refused write's markdown lint findings as flai check
 // reports them, for the commands that refuse with check findings.

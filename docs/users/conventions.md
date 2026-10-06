@@ -24,7 +24,8 @@ my-project/
 │   ├── tech/               # every technology in use, with its version
 │   ├── conventions/        # how agents work here, read every session
 │   ├── issues/             # recurring friction, with counts and cost
-│   └── experiments/        # what each experiment story found
+│   ├── experiments/        # what each experiment story found
+│   └── analysis/           # what the analyzer found, one report per run
 ├── docs/                   # outward-facing: one folder per audience
 │   ├── users/
 │   ├── operators/
@@ -210,6 +211,7 @@ A resuming agent reads `index.md`, then each active narrative's current state an
 | Conventions | `design/conventions/`, indexed in its `README.md` | One file per topic, front matter `title`, `updated`, `audience: agent`, `order`, `status`, optionally `topics` (the stories it is for) and `roles` (every agent that reads it: `story`, `explore`, `verify`, `plan`, `orchestrate`, `analyze`; without it, every agent reads it), and a baseline marker | Everything above the marker is the template's; project rules go under `## Project additions` below it. Read in `order` at the start of every session |
 | Issues | `design/issues/I-nnnn-slug.md`, tabulated in `summary.md` | A class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, first and last reported | Record each occurrence as it happens with `flai issue`, which names the story; at a story's acceptance, the operator chooses which issues become backlog stories; remediate the most expensive first |
 | Experiment results | `design/experiments/S-nnnn-slug.md`, named for the experiment story; the folder's `template.md` is the shape | Front matter `title`, `updated`, `status`, `story`; sections Hypothesis, Success measure, What was done, Results, Recommendation (adopt, adapt, or drop) | Written by the experiment story before review; acceptance refuses an experiment without it, and `flai check` validates it |
+| Analysis reports | `design/analysis/<date>-<focus>.md`, the focus `bottlenecks`, `intent`, `risk`, or `all`; indexed in `design/analysis/README.md` | Front matter `title`, `updated`, `status` (`draft` while the analyzer writes it, then `active`), `focus`, and the window, `from` and `to`; one section per finding, with its evidence, severity, and estimated impact | Written by the analyzer alone, one per run; `flai check` validates each and warns of one the index does not list |
 | Threads | `wip/threads/` | A conversation anchored to a document, a heading, or a work item | Opened and answered with `flai thread` or from the dashboard |
 
 Every document under `design/` and `docs/` starts with front matter carrying at least `title`, `updated`, and `status` (`active`, `draft`, or `deprecated`); `README.md` files are indexes and are exempt. Files are lowercase kebab-case, links are relative, diagrams are Mermaid, and dates are ISO 8601 UTC. Every folder a reader might land in has a `README.md` saying what it is for. Full rules: [documentation-standard.md](../../design/system/documentation-standard.md), [conventions.md](../../design/system/conventions.md), [continuous-improvement.md](../../design/system/continuous-improvement.md).

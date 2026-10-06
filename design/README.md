@@ -10,6 +10,7 @@ Internal documentation for the system-flow monorepo. Nothing here is written for
 | `conventions/` | How agents work in this repository, one file per topic, read at the start of every session. | Baseline above the marker comes from the template; project rules below it are edited here. |
 | `issues/` | Recurring friction, defects, blockers, and inefficiencies with counts and cost. | Recorded as they occur; `summary.md` regenerated with every occurrence. |
 | `experiments/` | What each experiment found: hypothesis, success measure, what was done, results, and a recommendation (ADR-0066). | One per `experiment` story, written before it is accepted; kept as the record of what was tried. |
+| `analysis/` | What the analyzer found: one report per run, its focus, the window its metrics cover, and each finding with its evidence, severity, and estimated impact. | Written by the analyzer alone, one per run, and listed in its `README.md`; kept as the record of what was found. |
 
 Rules that apply to everything under `design/`:
 

@@ -8,5 +8,6 @@ Internal documentation for {{ .project_name }}. Outward-facing documentation liv
 | `system/` | The living design of the system as it is right now | Edited whenever a conversation resolves new details, direction, standards, or decisions |
 | `tech/` | Every active technology: version, where used, why | Edited whenever a dependency changes |
 | `experiments/` | What each experiment found: hypothesis, success measure, what was done, results, and a recommendation | One per `experiment` story, written before it is accepted; kept as the record of what was tried |
+| `analysis/` | What the analyzer found: one report per run, its focus, the window its metrics cover, and each finding with its evidence, severity, and estimated impact | Written by the analyzer alone, one per run, and listed in its `README.md`; kept as the record of what was found |
 
 Markdown only, YAML front matter on every file, Mermaid for diagrams. When an ADR changes a decision, update `system/` and `tech/` in the same change.

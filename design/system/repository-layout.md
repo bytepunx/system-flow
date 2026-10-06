@@ -1,6 +1,6 @@
 ---
 title: Repository layout
-updated: 2026-10-02
+updated: 2026-10-06
 status: active
 topics: [all]
 ---
@@ -22,7 +22,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   ├── tech/               # active technology choices with versions
 │   ├── conventions/        # how agents work here, one file per topic, primed every session
 │   ├── issues/             # recurring friction with counts and cost, see continuous-improvement.md
-│   └── experiments/        # what each experiment story found, one results document per story
+│   ├── experiments/        # what each experiment story found, one results document per story
+│   └── analysis/           # what the analyzer found, one report per run
 ├── docs/                   # outward-facing documentation, one subfolder per audience
 │   ├── README.md
 │   ├── users/
@@ -67,6 +68,8 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 `design/issues/` records recurring friction, defects, blockers, and inefficiencies with a count and cost per issue. See [continuous-improvement.md](continuous-improvement.md) and [ADR-0014](../adrs/0014-design-issues.md).
 
 `design/experiments/` records what experiments found: one results document per `experiment` story, `<S-nnnn>-<slug>.md`, named as the story's file is, with front matter `title`, `updated`, `status`, and `story`, and the sections Hypothesis, Success measure, What was done, Results, and Recommendation, which says adopt, adapt, or drop. The template ships the folder's `README.md` and `template.md` to start one from. An experiment story is accepted only with its results document committed on its branch, and `flai check` validates every document in the folder. It is kept apart from `design/system/`, which says how the system is, because an experiment that is dropped does not describe it. See [workflow.md](workflow.md) and [ADR-0066](../adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md).
+
+`design/analysis/` holds the analyzer's reports (S-0223): one per run, `<date>-<focus>.md`, the date the day it ran in UTC as `YYYY-MM-DD` and the focus `bottlenecks`, `intent`, or `risk`, or `all` for a run asked for none. Its front matter has `title`, `updated`, `status` (`draft` while the analyzer writes it, `active` once the run has ended, and `deprecated` when a later report replaces it), `focus`, and the window its metrics cover, `from` and `to`, as dates; it has one section per finding, with its evidence, its severity, and its estimated impact. The template ships the folder's `README.md`, which says what a report holds and indexes the reports, one row each. Only the analyzer writes here, and `flai check` validates every report and warns of one the index does not list and of a row with no report. It is kept apart from `design/system/`, which says how the system is, because a report says what one run found at one time. See [strategic-agents.md](strategic-agents.md).
 
 ### `scripts/`
 
