@@ -6,7 +6,7 @@ title: One in-progress story holds every ready story by overlap, through folder-
 status: backlog
 owner: alex
 created: 2026-10-06T11:44:50Z
-updated: 2026-10-06T11:44:50Z
+updated: 2026-10-06T11:47:30Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5h12m
     by: flai
     at: 2026-10-06T11:44:50Z
+finalized:
+  by: alex
+  at: 2026-10-06T11:47:30Z
 ---
 # S-0295 One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
 
