@@ -57,6 +57,10 @@ type InboxEntry struct {
 	Item   string `json:"item,omitempty"`
 	Path   string `json:"path,omitempty"`
 	At     string `json:"at,omitempty"`
+	// PendingRecommendation is, on a thread, the recommendation awaiting
+	// the designer's confirmation, with its source (ADR-0090): what the
+	// dashboard offers to confirm.
+	PendingRecommendation *threads.Entry `json:"pending_recommendation,omitempty"`
 }
 
 // DesignerInbox is what needs a human (S-0042). It is not the agent's MCP
@@ -280,21 +284,30 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			if err != nil {
 				return nil, failed(err)
 			}
+			// A thread awaits the designer when someone else wrote last, or
+			// when a recommendation on it awaits their confirmation (ADR-0090).
 			for _, th := range all {
 				entries := th.Entries()
-				if !th.Open() || len(entries) == 0 || entries[len(entries)-1].Author == who {
+				if !th.Open() || len(entries) == 0 {
 					continue
 				}
 				last := entries[len(entries)-1]
+				pending := th.PendingRecommendation()
+				if pending == nil && last.Author == who {
+					continue
+				}
 				on := th.Anchor.Item
 				if on == "" {
 					on = th.Anchor.Path
 				}
 				detail := last.Author + " wrote last, on " + on
+				if pending != nil {
+					detail = pending.Author + " recommends an answer to confirm, on " + on
+				}
 				if th.Anchor.Heading != "" {
 					detail += " (" + th.Anchor.Heading + ")"
 				}
-				add(InboxEntry{Key: "thread:" + th.ID, Kind: "thread", Title: th.Title, Detail: detail, Item: th.Anchor.Item, Path: th.Anchor.Path, At: last.At})
+				add(InboxEntry{Key: "thread:" + th.ID, Kind: "thread", Title: th.Title, Detail: detail, Item: th.Anchor.Item, Path: th.Anchor.Path, At: last.At, PendingRecommendation: pending})
 			}
 
 			done = perf.Track(ctx, "repo.list")

@@ -264,7 +264,7 @@ func judgePlan(root, item, agent string, exit *int) (outcome, why, thread string
 		return OutcomeFailed, fmt.Sprintf("ended (%s); the threads on %s could not be read: %v", code, item, err), ""
 	}
 	for _, th := range on {
-		if e := th.Entries(); th.Open() && len(e) > 0 && e[len(e)-1].Author == agent {
+		if awaitsAnswer(th, agent) {
 			return OutcomeAsked, "waiting for an answer to " + th.ID + ": " + th.Title, th.ID
 		}
 	}

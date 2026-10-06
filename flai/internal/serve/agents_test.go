@@ -1102,3 +1102,69 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		refusedFor(t, lab, running, "agent host action is off")
 	})
 }
+
+// S-0220: a recommendation on the question an agent ended asking is no
+// answer until the operator confirms it (ADR-0090): the agent is not started
+// again on it, but on the confirmation; and an answer citing a source, as the
+// orchestrator gives with answer_threads autonomous, starts it again too.
+func TestAnAgentThatEndedAskingIsStartedAgainOnAConfirmationNotARecommendation(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	id := lab.ready("Asks and is recommended")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	agent := lab.run(id).Agent
+	lab.move(id, workitem.InProgress)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// recommended while it still runs: it is waiting all the same
+	if _, err := threads.ReplyWith(lab.repo, th.ID, workitem.ActivityOrchestrator, "Nine.", time.Now(), threads.Marks{Recommendation: true, Source: threads.Source{Path: id}}); err != nil {
+		t.Fatal(err)
+	}
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != th.ID {
+		t.Fatalf("a recommendation leaves the agent waiting: %+v", a)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID {
+		t.Fatalf("it ended asking, with a recommendation pending: %+v", r)
+	}
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	lab.l.look(ctx, false)
+	if lab.run(id).live() {
+		t.Fatal("started again on a recommendation")
+	}
+	if _, err := threads.Confirm(lab.repo, th.ID, "alex", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again on the confirmation", func() bool { return lab.run(id).live() })
+	if r := lab.run(id); r.Answered != th.ID {
+		t.Errorf("started again for the confirmed recommendation: %+v", r)
+	}
+
+	// asked again, it is answered by the orchestrator with a source
+	again, err := threads.New(lab.repo, threads.NewOptions{Title: "Which host?", On: id, Author: agent, Text: "Here or there?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != again.ID {
+		t.Fatalf("it ended asking again: %+v", r)
+	}
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	if _, err := threads.ReplyWith(lab.repo, again.ID, workitem.ActivityOrchestrator, "Here.", time.Now(), threads.Marks{Source: threads.Source{Path: id}}); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again on the orchestrator's answer", func() bool { return lab.run(id).live() })
+	if r := lab.run(id); r.Answered != again.ID {
+		t.Errorf("started again for the orchestrator's answer: %+v", r)
+	}
+	lab.release(id)
+	waitFor(t, "it ends at last", func() bool { return !lab.run(id).live() })
+}

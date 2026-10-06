@@ -898,7 +898,9 @@ func orSomeone(who string) string {
 
 // Activity is what each story's newest agent is doing. One that runs is
 // waiting when it asked a question on its story that nobody has answered
-// yet (an open thread whose last entry is its own) or its story is blocked.
+// yet (an open thread whose last entry is its own, or one it opened with a
+// recommendation awaiting the operator's confirmation) or its story is
+// blocked.
 // One that ended is waiting when it asked, or when the operator queued
 // another for its story in ready (S-0118). A story in ready that a claim
 // holds is waiting with the hold's reason, whether or not it has had an
@@ -971,7 +973,7 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 			if !th.Open() || !run.live() {
 				continue
 			}
-			if e := th.Entries(); len(e) > 0 && e[len(e)-1].Author == run.Agent {
+			if awaitsAnswer(th, run.Agent) {
 				asked[story] = th
 			}
 		}
@@ -1045,26 +1047,39 @@ func inReady(repo *workitem.Repo, story string) bool {
 	return err == nil && it.Status == workitem.Ready
 }
 
-// asking is the open thread on story whose last entry is agent's: a question
-// it asked that nobody has answered yet.
+// asking is the open thread on story that awaits an answer to agent's
+// question: one it asked that nobody has answered yet.
 func asking(repo *workitem.Repo, story, agent string) *threads.Thread {
 	all, err := threads.List(repo)
 	if err != nil {
 		return nil
 	}
 	for _, th := range all {
-		if !th.Open() || threads.StoryOf(repo, th) != story {
-			continue
-		}
-		if e := th.Entries(); len(e) > 0 && e[len(e)-1].Author == agent {
+		if awaitsAnswer(th, agent) && threads.StoryOf(repo, th) == story {
 			return th
 		}
 	}
 	return nil
 }
 
+// awaitsAnswer says whether th is open and awaits an answer to agent's
+// question: its last entry is agent's, or agent opened it and a
+// recommendation on it awaits the operator's confirmation, which is no
+// answer yet (ADR-0090).
+func awaitsAnswer(th *threads.Thread, agent string) bool {
+	if !th.Open() {
+		return false
+	}
+	if e := th.Entries(); len(e) > 0 && e[len(e)-1].Author == agent {
+		return true
+	}
+	return th.PendingRecommendation() != nil && th.Opener() == agent
+}
+
 // answered says whether the question a run ended waiting on has an answer:
-// an entry by someone else after the agent's, or the thread resolved.
+// an entry by someone else after the agent's that is not a recommendation
+// awaiting the operator's confirmation, the confirmation of one, or the
+// thread resolved.
 func answered(repo *workitem.Repo, run *AgentRun) bool {
 	th, err := threads.Get(repo, run.Thread)
 	if err != nil {
@@ -1072,6 +1087,9 @@ func answered(repo *workitem.Repo, run *AgentRun) bool {
 	}
 	if !th.Open() {
 		return true
+	}
+	if th.PendingRecommendation() != nil {
+		return false
 	}
 	e := th.Entries()
 	return len(e) > 0 && e[len(e)-1].Author != run.Agent

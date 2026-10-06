@@ -316,3 +316,73 @@ func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
 		t.Errorf("a thread written while waiting: %v", out)
 	}
 }
+
+// S-0220: a recommendation on a thread the agent opened is no answer to it
+// until the operator confirms it (ADR-0090): the thread awaits someone else
+// in its inbox, and wait_for_work is not woken by it; the confirmation is the
+// answer, and it is.
+func TestARecommendationIsNoAnswerToTheAgentThatAskedUntilConfirmed(t *testing.T) {
+	f := setup(t)
+	f.toReview(t)
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which port?", On: f.story.ID, Author: "claude", Text: "Eight or nine?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1}); quiet["reason"] != "" {
+		t.Fatalf("nothing to do yet: %v", quiet)
+	}
+	done := f.held(t, 3)
+	time.Sleep(150 * time.Millisecond)
+	source := threads.Source{Path: "design/system/plan.md", Heading: "Shape"}
+	if _, err := threads.ReplyWith(f.repo, th.ID, workitem.ActivityOrchestrator, "Nine.", t0.Add(2*time.Minute), threads.Marks{Recommendation: true, Source: source}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case out := <-done:
+		t.Fatalf("a recommendation woke the agent that asked: %v", out)
+	case <-time.After(600 * time.Millisecond):
+	}
+	out, _ := f.call(t, "inbox", map[string]any{"all": true})
+	sum := out["threads"].([]any)[0].(map[string]any)
+	pending, _ := sum["pending_recommendation"].(map[string]any)
+	if out["awaiting_you"].(float64) != 0 || sum["awaiting"] != "other" || sum["last_by"] != workitem.ActivityOrchestrator || pending == nil || pending["recommendation"] != true {
+		t.Fatalf("a pending recommendation awaits the operator, not the agent that asked: %v", out)
+	}
+	if out, _ := f.call(t, "inbox", map[string]any{}); len(out["threads"].([]any)) != 0 {
+		t.Errorf("a thread awaiting the operator's confirmation is not in the asker's default inbox: %v", out)
+	}
+	if _, err := threads.Confirm(f.repo, th.ID, "alex", t0.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	woke := answered(t, done)
+	if ths := woke["threads"].([]any); woke["reason"] != "thread" || len(ths) != 1 || ths[0].(map[string]any)["id"] != th.ID {
+		t.Errorf("the confirmation wakes the agent that asked: %v", woke)
+	}
+	out, _ = f.call(t, "inbox", map[string]any{})
+	if out["awaiting_you"].(float64) != 1 {
+		t.Fatalf("the confirmed recommendation is the answer: %v", out)
+	}
+	if sum := out["threads"].([]any)[0].(map[string]any); sum["awaiting"] != "you" || sum["last_by"] != "alex" || sum["pending_recommendation"] != nil {
+		t.Errorf("confirmed: %v", sum)
+	}
+}
+
+// S-0220: a plain answer citing a source, as the orchestrator gives with
+// answer_threads autonomous, is an answer: the agent that asked goes on.
+func TestAnAnswerWithASourceIsAnAnswerToTheAgentThatAsked(t *testing.T) {
+	f := setup(t)
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which port?", On: f.story.ID, Author: "claude", Text: "Eight or nine?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.ReplyWith(f.repo, th.ID, workitem.ActivityOrchestrator, "Nine.", t0.Add(time.Minute), threads.Marks{Source: threads.Source{Path: "design/system/plan.md"}}); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := f.call(t, "inbox", map[string]any{})
+	if out["awaiting_you"].(float64) != 1 {
+		t.Fatalf("an answer awaits the agent that asked: %v", out)
+	}
+	if sum := out["threads"].([]any)[0].(map[string]any); sum["awaiting"] != "you" || sum["status"] != "answered" || sum["pending_recommendation"] != nil {
+		t.Errorf("answered: %v", sum)
+	}
+}

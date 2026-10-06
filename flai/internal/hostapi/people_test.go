@@ -283,3 +283,48 @@ func TestInboxDesignerLeavesOutAQuestionOnceItsStoryNoLongerNeedsIt(t *testing.T
 		}
 	}
 }
+
+// S-0220: a thread with a recommendation awaiting the designer's
+// confirmation is in their inbox with the recommendation and its source, so
+// that the dashboard can offer to confirm it (ADR-0090); once confirmed, it
+// awaits the agent that asked, not the designer.
+func TestInboxDesignerOffersAPendingRecommendationToConfirm(t *testing.T) {
+	p := people(t)
+	repo, _ := workitem.Open(p.Root)
+	th, err := threads.New(repo, threads.NewOptions{On: "S-0001", Title: "Which crane?", Author: "claude", Text: "Gantry or jib?", Now: t0.Add(41 * time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.ReplyWith(repo, th.ID, workitem.ActivityOrchestrator, "Gantry.", t0.Add(42*time.Minute), threads.Marks{Recommendation: true, Source: threads.Source{Path: "S-0001"}}); err != nil {
+		t.Fatal(err)
+	}
+	find := func() *InboxEntry {
+		var in DesignerInbox
+		if err := call(t, p, "inbox.designer", `{}`, &in); err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range in.Entries {
+			if e.Key == "thread:"+th.ID {
+				return &e
+			}
+		}
+		return nil
+	}
+	e := find()
+	if e == nil {
+		t.Fatal("a thread with a pending recommendation is not in the designer's inbox")
+	}
+	r := e.PendingRecommendation
+	if r == nil || !r.Recommendation || r.Author != workitem.ActivityOrchestrator || !strings.HasPrefix(r.Text, "Gantry.") || r.Source == nil || r.Source.Path != "wip/kanban/stories/S-0001-berths.md" || r.At != "2026-09-20T08:42:00Z" {
+		t.Fatalf("the recommendation and its source: %+v", r)
+	}
+	if e.Detail != "orchestrator recommends an answer to confirm, on S-0001" || e.At != "2026-09-20T08:42:00Z" {
+		t.Errorf("entry: %+v", e)
+	}
+	if _, err := threads.Confirm(repo, th.ID, "olive", t0.Add(43*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if e := find(); e != nil {
+		t.Errorf("a confirmed recommendation still awaits the designer: %+v", e)
+	}
+}

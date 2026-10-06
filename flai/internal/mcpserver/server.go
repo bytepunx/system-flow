@@ -190,7 +190,7 @@ type ThreadSummary struct {
 	Entries   int            `json:"entries"`
 	LastBy    string         `json:"last_by"`
 	LastEntry string         `json:"last_entry" jsonschema:"text of the most recent entry"`
-	Awaiting  string         `json:"awaiting" jsonschema:"'you' when the last entry is not yours, else 'other'"`
+	Awaiting  string         `json:"awaiting" jsonschema:"'you' when the last entry is not yours, else 'other'; 'other' too on a thread you opened while a recommendation on it awaits the operator's confirmation, which is no answer until they confirm it"`
 	// PendingRecommendation is the recommendation awaiting the operator's
 	// confirmation (ADR-0090), nil when there is none.
 	PendingRecommendation *threads.Entry `json:"pending_recommendation" jsonschema:"the recommendation awaiting the operator's confirmation, null when there is none: the thread still awaits the operator until they confirm it or answer otherwise"`
@@ -204,12 +204,19 @@ type ThreadDetail struct {
 	EntryList    []threads.Entry `json:"entry_list"`
 }
 
+// summary is th as this agent sees it. It awaits the agent when the last
+// entry is someone else's, but for the agent that opened it while a
+// recommendation on it awaits the operator's confirmation: that is no answer
+// to its question until the operator confirms it (ADR-0090). Anyone else,
+// the operator and the recommendation's author included, sees it by its last
+// entry.
 func (s *server) summary(th *threads.Thread) ThreadSummary {
 	entries := th.Entries()
 	out := ThreadSummary{ID: th.ID, Title: th.Title, Status: th.Status, Anchor: th.Anchor, Story: threads.StoryOf(s.repo, th), Updated: th.Updated, Entries: len(entries), Awaiting: "other", PendingRecommendation: th.PendingRecommendation()}
 	if n := len(entries); n > 0 {
 		out.LastBy, out.LastEntry = entries[n-1].Author, entries[n-1].Text
-		if out.LastBy != s.agent {
+		asked := out.PendingRecommendation != nil && th.Opener() == s.agent
+		if out.LastBy != s.agent && !asked {
 			out.Awaiting = "you"
 		}
 	}
