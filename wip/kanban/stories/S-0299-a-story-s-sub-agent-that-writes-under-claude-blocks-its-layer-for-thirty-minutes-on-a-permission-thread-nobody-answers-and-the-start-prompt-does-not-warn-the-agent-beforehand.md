@@ -6,7 +6,7 @@ title: A story's sub-agent that writes under .claude/ blocks its layer for thirt
 status: backlog
 owner: alex
 created: 2026-10-06T21:00:33Z
-updated: 2026-10-06T21:00:33Z
+updated: 2026-10-06T21:01:56Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
     by: flai
     at: 2026-10-06T21:00:33Z
+finalized:
+  by: alex
+  at: 2026-10-06T21:01:56Z
 ---
 # S-0299 A story's sub-agent that writes under .claude/ blocks its layer for thirty minutes on a permission thread nobody answers, and the start prompt does not warn the agent beforehand
 
