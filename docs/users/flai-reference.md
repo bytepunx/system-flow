@@ -2485,10 +2485,10 @@ Subcommands:
 Add patterns to the shared paths.
 
 ```text
-flai shared add <pattern>...
+flai shared add <pattern>... [flags]
 ```
 
-Add patterns to the end of claims.shared in system-flow.yaml, rewriting only that list and keeping the file's other keys and comments. A pattern that is not valid (empty, absolute, with a .. segment, or a malformed glob) or that is in the list already is refused with the reason, and nothing is written. The change is not committed. Prints each pattern added; with --json, {"added": [...], "shared": [...]}, shared being the list after the change. Run flai shared check first to see what a pattern would free.
+Add patterns to the end of claims.shared in system-flow.yaml, rewriting only that list and keeping the file's other keys and comments. A pattern that is not valid (empty, absolute, with a .. segment, or a malformed glob) or that is in the list already is refused with the reason, and nothing is written. The change is committed, system-flow.yaml alone, only with --autocommit and unless the project sets dashboard.autocommit: false. Prints each pattern added; with --json, {"added": [...], "shared": [...]}, shared being the list after the change. Run flai shared check first to see what a pattern would free.
 
 Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
 
@@ -2498,6 +2498,13 @@ Examples:
 flai shared add design/adrs
 flai shared add 'docs/users/*.md' 'design/**/README.md'
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit system-flow.yaml on its own, unless dashboard.autocommit is false |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
 
 #### flai shared check
 
@@ -2544,10 +2551,10 @@ flai shared list --json
 Remove patterns from the shared paths.
 
 ```text
-flai shared remove <pattern>...
+flai shared remove <pattern>... [flags]
 ```
 
-Remove patterns from claims.shared in system-flow.yaml, rewriting only that list and keeping the file's other keys and comments. Name each pattern as flai shared list prints it; one that is not in the list is refused, and nothing is written. A pattern that is not valid may be removed. The change is not committed. Prints each pattern removed; with --json, {"removed": [...], "shared": [...]}, shared being the list after the change.
+Remove patterns from claims.shared in system-flow.yaml, rewriting only that list and keeping the file's other keys and comments. Name each pattern as flai shared list prints it; one that is not in the list is refused, and nothing is written. A pattern that is not valid may be removed. The change is committed, system-flow.yaml alone, only with --autocommit and unless the project sets dashboard.autocommit: false. Prints each pattern removed; with --json, {"removed": [...], "shared": [...]}, shared being the list after the change.
 
 Patterns are paths relative to the repository root, separated by /: \* is any characters within one segment, \*\* zero or more whole segments, ? one character, and a plain path covers itself and everything below it.
 
@@ -2556,6 +2563,13 @@ Examples:
 ```bash
 flai shared remove design/adrs
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit system-flow.yaml on its own, unless dashboard.autocommit is false |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
 
 ### flai show
 
