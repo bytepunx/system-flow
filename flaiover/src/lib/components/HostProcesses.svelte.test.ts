@@ -9,7 +9,7 @@ const settle = async () => {
 	for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 	flushSync();
 };
-const settleThrough = async (ms = 20) => {
+const settleThrough = async (ms: number) => {
 	await new Promise((r) => setTimeout(r, ms));
 	flushSync();
 };
@@ -36,7 +36,20 @@ const q = (testid: string) =>
 	document.querySelector<HTMLButtonElement>(`[data-testid="${testid}"]`);
 const text = (testid: string) => q(testid)?.textContent?.replace(/\s+/g, ' ').trim();
 const lastPost = () => JSON.parse(api.mock.calls.at(-1)![1].body);
-const fast = { disconnectTimeoutMs: 5, reconnectPollMs: 5, reconnectGiveUpMs: 50 };
+// Real timers, cut short. Under machine load a 5 ms timer can take far longer, so the give-up is
+// seconds away and the tests wait for their outcome rather than a fixed time (I-0053).
+const fast = { disconnectTimeoutMs: 5, reconnectPollMs: 5, reconnectGiveUpMs: 3000 };
+const eventually = (assert: () => void) =>
+	vi.waitFor(
+		() => {
+			flushSync();
+			assert();
+		},
+		{ timeout: 4000, interval: 5 }
+	);
+// an answer that takes ms to come, as a poll does on a loaded machine
+const slowly = (ms: number, value: unknown) =>
+	new Promise((resolve) => setTimeout(() => resolve(value), ms));
 
 describe('HostProcesses', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -140,9 +153,8 @@ describe('HostProcesses', () => {
 
 		api.mockImplementationOnce(() => new Promise(() => {}));
 		q('host-processes-confirm-stop-yes')!.click();
-		await settleThrough();
+		await eventually(() => expect(text('host-processes-none')).toContain('flai host start serve'));
 		expect(lastPost()).toEqual({ action: 'stop', process: 'serve' });
-		expect(text('host-processes-none')).toContain('flai host start serve');
 		expect(q('host-processes-serve-start')).toBeNull();
 	});
 
@@ -150,16 +162,16 @@ describe('HostProcesses', () => {
 		await open(host(), fast);
 		api.mockImplementationOnce(() => new Promise(() => {}));
 		q('host-processes-serve-restart')!.click();
-		await settleThrough();
-		expect(q('host-processes-reconnecting')).not.toBeNull();
+		await eventually(() => expect(q('host-processes-reconnecting')).not.toBeNull());
 		// the old serve, still answering before it went down, is not taken for the new one
 		api.mockResolvedValueOnce(host());
 		const restarted = host({
 			children: [{ name: 'serve', state: 'running', pid: 4200, version: '1.9.0', restarts: 0 }]
 		});
 		api.mockResolvedValue(restarted);
-		await settleThrough(40);
-		expect(text('host-processes-message')).toBe('serve restarted; reconnected.');
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe('serve restarted; reconnected.')
+		);
 		expect(api.mock.calls.length).toBeGreaterThan(3);
 	});
 
@@ -172,9 +184,10 @@ describe('HostProcesses', () => {
 			host({ children: [{ name: 'serve', state: 'running', pid: 4300, restarts: 1 }] })
 		);
 		q('host-processes-serve-restart')!.click();
-		await settleThrough(40);
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe('serve restarted; reconnected.')
+		);
 		expect(q('host-processes-failed')).toBeNull();
-		expect(text('host-processes-message')).toBe('serve restarted; reconnected.');
 	});
 
 	it('checks for a newer flai as a read', async () => {
@@ -193,9 +206,10 @@ describe('HostProcesses', () => {
 		await settleThrough(2);
 		expect(lastPost()).toEqual({ action: 'upgrade' });
 		api.mockResolvedValue(host({ version: '1.10.0' }));
-		await settleThrough();
-		expect(text('host-processes-message')).toBe(
-			'Upgraded flai 1.9.0 to 1.10.0; serve and MCP restarted.'
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe(
+				'Upgraded flai 1.9.0 to 1.10.0; serve and MCP restarted.'
+			)
 		);
 		expect(text('host-processes-host')).toBe('1.10.0, pid 4100');
 	});
@@ -208,10 +222,29 @@ describe('HostProcesses', () => {
 		api.mockResolvedValueOnce(host());
 		api.mockResolvedValue(host({ version: '1.10.0' }));
 		q('host-processes-upgrade')!.click();
-		await settleThrough(40);
-		expect(text('host-processes-message')).toBe(
-			'Upgraded flai 1.9.0 to 1.10.0; serve and MCP restarted.'
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe(
+				'Upgraded flai 1.9.0 to 1.10.0; serve and MCP restarted.'
+			)
 		);
+	});
+
+	it('waits past an old host whose answer comes slowly, as on a loaded machine', async () => {
+		// I-0053: the old host's answer took longer than the fixed 40 ms the test waited and the
+		// 50 ms give-up, so the test read the page before the new host answered
+		await open(host(), fast);
+		api.mockResolvedValueOnce(
+			answer({ upgrade: { previous: '1.9.0', installed: '1.10.0' }, restarting: true })
+		);
+		api.mockImplementationOnce(() => slowly(80, host()));
+		api.mockResolvedValue(host({ version: '1.10.0' }));
+		q('host-processes-upgrade')!.click();
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe(
+				'Upgraded flai 1.9.0 to 1.10.0; serve and MCP restarted.'
+			)
+		);
+		expect(q('host-processes-failed')).toBeNull();
 	});
 
 	it('says so when the upgrade finds nothing newer, without waiting to reconnect', async () => {
