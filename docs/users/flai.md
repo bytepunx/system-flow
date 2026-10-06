@@ -144,7 +144,7 @@ flai config path
 | Key | Default | Meaning |
 |-----|---------|---------|
 | `template.repo` | `https://github.com/bytepunx/system-flow-template` | Where `flai new`, `flai import`, and `flai upgrade` take the template from when `--template` is not given: a git URL or a local directory |
-| `template.ref` | `main` | The template's branch, tag, or commit, when `--ref` is not given |
+| `template.ref` | `main` | The template's branch, tag, or commit, when `--ref` is not given. `main`, the template's default branch, follows releases: `flai new` and `flai import` take the newest version tag (`vX.Y.Z`), as does an empty ref or a release tag. Another branch or a commit is used as given ([Which template version](#which-template-version)) |
 | `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs |
 | `dashboard.tag` | `latest` | The image's tag |
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
@@ -154,7 +154,7 @@ flai config path
 | `author` | your login name | The default owner of new items and the default `--by` of transitions and acceptances |
 | `worktrees.relative_paths` | `false` | Create story worktrees with relative links (git 2.48 or newer); see [Relative worktree links](#relative-worktree-links-opt-in) |
 
-Point `template.repo` at any fork and `template.ref` at any branch, tag, or commit to use your own template. A local directory path also works, which is how the system-flow repo develops against its own `./template`. Git templates are cloned under `cache_dir`; set `FLAI_CACHE_DIR` before the first run to choose where that default lands (for example inside a repository or a CI workspace). For the dashboard, flags come first, then the `dashboard` section of the project's `system-flow.yaml`, then these keys.
+Point `template.repo` at any fork and `template.ref` at any branch, tag, or commit to use your own template. A local directory path also works, which is how the system-flow repo develops against its own `./template`. Git templates are cloned under `cache_dir`, and a clone of a branch is fetched again each time it is used; set `FLAI_CACHE_DIR` before the first run to choose where that default lands (for example inside a repository or a CI workspace). For the dashboard, flags come first, then the `dashboard` section of the project's `system-flow.yaml`, then these keys.
 
 The same file holds what `flai serve` may do on this host. These keys are not reachable with `flai config set`, and nothing a dashboard can ask for writes them unless you enable the `settings` host action; each has its own command, run in a shell on the host:
 
@@ -221,7 +221,7 @@ flai new my-project --defaults --var "description=Billing platform" --var owner=
 | Flag | Effect |
 |------|--------|
 | `--template <url or dir>` | Use this template instead of the configured one. A local directory works. |
-| `--ref <branch, tag, or commit>` | Template version to use. |
+| `--ref <branch, tag, or commit>` | Template version to use, as given. A release's version finds its tag: `--ref 1.0.60` uses `v1.0.60`. |
 | `--var name=value` | Set a variable. Repeatable. A required variable given empty is refused before anything is written. |
 | `--layout key=name` | Rename a documentation folder, for example `--layout design=architecture`. |
 | `--defaults` | Never prompt. Use defaults for anything not given with `--var`. |
@@ -229,6 +229,20 @@ flai new my-project --defaults --var "description=Billing platform" --var owner=
 | `--no-git` | Do not run `git init`. |
 
 The result has a `system-flow.yaml` recording the template and version, a `CLAUDE.md` for agents, and the `design`, `docs`, and `wip` folders ready to use.
+
+### Which template version
+
+Without `--ref`, a new project is made at the template's newest release: its newest `vX.Y.Z` tag. flai says so, `at v1.0.60, the template's newest release`, and `--json` has `newest_release: true`. This holds while `template.ref` in your config follows releases: while it is empty, the template's default branch (`main`, the default), or a release tag. The template version is recorded as `template.ref` and `template.version` in `system-flow.yaml` and in `system-flow.lock.yaml`, and [`flai upgrade`](#upgrade-to-a-newer-template) starts from it.
+
+The newest release is not always what you get:
+
+- `--ref` is used as given, whether a branch, a tag, or a commit.
+- A `template.ref` naming another branch, or a commit, is used as given, for unreleased template work. Set it with `flai template use <repo> --ref <branch>`.
+- A template with no version tags is used at `template.ref`.
+- A local template directory is used as it is.
+- When flai cannot list the template's tags, as offline, it warns and uses `template.ref` as given.
+
+The design is in [Which version is applied](../../design/system/template.md#which-version-is-applied).
 
 ## Convert an existing repository
 
@@ -239,6 +253,8 @@ flai import               # interactive: folder names, moves, where each markdow
 flai import --yes         # accept every default, leave loose markdown in place
 flai import --yes --commit  # then run its tests, and commit the import if they pass
 ```
+
+`import` chooses the template version as [`flai new`](#which-template-version) does: the newest release unless `--ref` or your config's `template.ref` names a branch or commit. The proposal says `template version: v1.0.60, the newest release` when it is, and `--json` has `template`, with `repo`, `ref`, `version`, and `newest_release`. The version is recorded as `template.ref` and `template.version` in `system-flow.yaml`; `import` writes no lock.
 
 `import` scans the tree and proposes: the three documentation folders (reusing `docs/`, `design/`, or `wip/` if they exist, or names you choose with `--layout`), whole-folder moves for `adr/`, `adrs/`, `architecture/`, `doc/`, and `documentation/`, a list of loose markdown files to place, and the code sub-projects it found by their build files (`go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml`). Applying it creates the structure, renders every template file that does not already exist, performs the moves with `git mv` when the file is tracked, writes `system-flow.yaml` with the sub-projects, and runs `flai check`. Existing files are never overwritten; a conflicting move is reported and the source left in place. A repository that already has `system-flow.yaml` is refused unless `--force`.
 
@@ -252,12 +268,12 @@ The template's `repo_url` is offered as the repository's `origin` remote made a 
 
 ```bash
 flai template show                       # where the template comes from and what it asks for
-flai template update                     # re-fetch a git template into the cache
+flai template update                     # clone the git template into the cache again
 flai template use git@github.com:me/system-flow-template.git --ref my-branch
 flai template use ./template             # a local directory, no fetching
 ```
 
-Git templates are cloned into `~/.flai/cache/templates`. Private repositories work with whatever git credentials you already have.
+Git templates are cloned into `~/.flai/cache/templates`, one clone per repository and ref. A clone of a branch is fetched again each time flai uses it, so it is current; offline, flai warns and uses the clone it has. A clone of a tag or a commit is reused. `flai template update` is needed only to replace a broken clone. Private repositories work with whatever git credentials you already have.
 
 ## Work items
 
@@ -1522,12 +1538,26 @@ What it leaves for you to read:
 ## Upgrade to a newer template
 
 ```bash
-flai upgrade --dry-run      # what would change
-flai upgrade                # interactive: keep, replace, or diff each conflict
+flai upgrade --dry-run      # which version, and what would change
+flai upgrade                # the newest release; interactive: keep, replace, or diff each conflict
+flai upgrade --ref 1.0.60   # a version you choose, recorded in system-flow.yaml
 flai upgrade --keep-all     # scripts and CI: never overwrite a project edit
 flai upgrade --relock       # a project assembled by hand: record the current files at this version
 flai upgrade --var team=billing   # a variable the template added, or a new value for one
 ```
+
+### Which version an upgrade applies
+
+The version a project is at is the one `system-flow.lock.yaml` recorded, or `system-flow.yaml`'s when there is no lock. `flai upgrade` starts by saying which version it applies and why, on one line such as `template v1.0.60 at 1.0.60: the newest release`; `--json` has it in `target`.
+
+- **`--ref`** wins. It names a branch, a tag, or a commit, and a release's version finds its tag: `--ref 1.0.60` applies `v1.0.60`. It is recorded as `template.ref` in `system-flow.yaml` and in the lock.
+- **With no `--ref`**, a git template is taken to its newest release, its newest `vX.Y.Z` tag, when `template.ref` in `system-flow.yaml` follows releases: empty, the template's default branch (`main`), or a release tag. Older projects, which record `main`, and those `flai new` and `flai import` make now, which record a release tag, follow releases with no edit. The version applied is recorded as `template.ref` and `template.version` and in the lock. A recorded tag does not hold a project back: the next upgrade takes the newest release again.
+- **A `template.ref` naming another branch, or a commit**, is used as given, and a branch is fetched again first. So is a template with no version tags. A local template directory is used as it is, and `--template` with no `--ref` takes that template's default branch.
+- **When flai cannot list the template's tags**, as offline, an upgrade with no `--ref` stops and says to check the network or pass `--ref`.
+
+To choose a version by editing `system-flow.yaml`, set `template.ref` to its tag, or `template.version` to its version, and run `flai upgrade`. An edit that names the newest release is applied. One that names another release makes flai ask, in a terminal, which to apply: the version `system-flow.yaml` names, the newest release, or nothing, leaving the project where it is. Without a terminal, or with `--yes`, it changes nothing and exits 1, naming both versions and the `flai upgrade --ref <tag>` that applies each. `--dry-run` says it would ask (`would_ask` in `--json`). A `template.version` that no release tag has is refused, listing the releases. The version applied, chosen or not, is recorded in `system-flow.yaml` and the lock, so you are not asked again; choosing nothing records nothing, and the next upgrade asks again.
+
+### What an upgrade changes
 
 `flai new` writes `system-flow.lock.yaml`, a hash of every file the template rendered. On upgrade each template path is classified: **add** when the project lacks it, **merge** for files with the baseline marker such as `CLAUDE.md` and the conventions (template text above the marker, yours below; `topics` you set on a convention's front matter stay yours, and a convention whose topics you left as the template gave them takes the new template's), **replace** when your copy still matches the lock, **unchanged** when identical, otherwise a **conflict** that you decide. Without a lock every difference is a conflict, which is what `--relock` fixes. A dirty git tree is refused unless `--force`, so an upgrade is one reviewable diff, and the manifest's template version is updated only when no conflict is left undecided. Kept conflicts stay divergent and come back next time; replace them or add your rule below a marker instead.
 

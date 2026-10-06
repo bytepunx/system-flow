@@ -1,6 +1,6 @@
 ---
 title: Template guide
-updated: 2026-10-03
+updated: 2026-10-06
 status: active
 ---
 
@@ -43,13 +43,15 @@ Only `root/` reaches a new repository. Everything beside it belongs to the templ
    | Your machine | `flai template use <url-or-dir> --ref <ref>`, which writes `template.repo` and `template.ref` in `~/.flai/config.json` | `flai new`, `flai import`, `flai template show`, `flai template update`, `flai template push` with no directory |
    | One project | `template.repo` and `template.ref` in its `system-flow.yaml`, written when the project is created | `flai upgrade`, and the item templates for new work items |
 
+   With no `--ref`, a ref left at the template's default branch (`main`), empty, or at a release tag follows the template's releases: `flai new`, `flai import`, and `flai upgrade` use its newest `v<version>` tag ([ADR-0103](../../design/adrs/0103-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)). A fork that wants its branch used as it is names a branch other than its default, or a commit, or has no version tags. Each release a fork tags is taken up by the next `flai upgrade` of its projects that follow releases.
+
 3. Check the manifest parses and the variables are what you expect:
 
    ```bash
    flai template show --template ./my-template
    ```
 
-A git template is cloned once into `<cache_dir>/templates/`, one clone per repository and ref, and reused after that. `flai template update` re-fetches the source in your config. A branch ref therefore goes stale in the cache; pin projects to a tag (`--ref v1.2.0`) so a new version is a new clone. Commands that create work items never fetch: they use the project's template only once it is in the cache, and flai's built-in item templates otherwise.
+A git template is cloned into `<cache_dir>/templates/`, one clone per repository and ref. A clone of a branch is fetched again each time flai uses it, so it does not go stale; offline, flai warns and uses the clone it has. A clone of a tag or a commit is reused. `flai template update` clones the source in your config again, for a clone that is broken. Commands that create work items never fetch: they use the project's template only once it is in the cache, and flai's built-in item templates otherwise.
 
 ## template.yaml
 
@@ -205,7 +207,7 @@ The version is the `version` line of `template.yaml`, with an entry in `CHANGELO
 | A new file, section, or convention rule projects take without editing | Minor |
 | Wording, a fix, a rule clarified | Patch |
 
-In a fork, bump the version and add the changelog entry by hand, then publish. Projects move to it with `flai upgrade`, after pointing `template.ref` at the new tag or passing `--ref`.
+In a fork, bump the version and add the changelog entry by hand, then publish it and tag it `v<version>`: `flai template push --tag` does both, and a template that is its own repository is tagged by hand. The tag is the release. A project whose `template.ref` follows releases moves to it with `flai upgrade` and nothing else, and `flai new` and `flai import` make new projects at it; once a template has version tags, a version on its default branch that is not tagged reaches only a project that names a commit. A project goes to an older release with `flai upgrade --ref <tag>`, or by naming it in `system-flow.yaml` and choosing it when `flai upgrade` asks; the next `flai upgrade` with no `--ref` takes the newest release again ([Upgrade to a newer template](../users/flai.md#upgrade-to-a-newer-template)).
 
 In this monorepo the release tooling does both. `template/` is a component of kind `template` in `system-flow.yaml`; a story tagged `template` that changes it bumps the version by its nature when the next release is computed, per [git.md](../../design/conventions/git.md). Changes to conventions land in `design/system` first, then in `template/root/design/conventions/`, then above the marker in `design/conventions/`, in the same story.
 

@@ -1,6 +1,6 @@
 ---
 title: "Runbook: migrate"
-updated: 2026-10-03
+updated: 2026-10-06
 status: active
 ---
 
@@ -80,7 +80,7 @@ flai check --strict
 git diff --stat            # one reviewable change; commit it
 ```
 
-In a script, `--keep-all` never overwrites a project's edit. A project assembled by hand, with no `system-flow.lock.yaml`, runs `flai upgrade --relock` first. How files are classified is in [the flai guide](../../users/flai.md#upgrade-to-a-newer-template). Updating flai itself does not upgrade a project.
+`flai upgrade` applies the template's newest release, or the one `--ref` names, and records it in `system-flow.yaml` ([ADR-0103](../../../design/adrs/0103-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md)). In a script, pass `--ref <tag>`: when `system-flow.yaml` was edited to name another release, a run without a terminal exits 1 rather than choose, and `--keep-all` never overwrites a project's edit. A project assembled by hand, with no `system-flow.lock.yaml`, runs `flai upgrade --relock` first. How files are classified is in [the flai guide](../../users/flai.md#upgrade-to-a-newer-template). Updating flai itself does not upgrade a project.
 
 ## Work item IDs from three digits to four
 

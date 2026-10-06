@@ -68,7 +68,7 @@ serves it.`,
 	}
 	f := c.Flags()
 	f.StringVar(&o.templateRepo, "template", "", "template git URL or local directory (default: config template.repo)")
-	f.StringVar(&o.ref, "ref", "", "template branch, tag, or commit (default: config template.ref)")
+	f.StringVar(&o.ref, "ref", "", "template branch, tag, or commit; 1.0.60 finds v1.0.60 (default: the newest version tag when config template.ref follows releases, else that ref)")
 	f.StringArrayVar(&o.vars, "var", nil, "set a template variable, name=value (repeatable)")
 	f.StringArrayVar(&o.layout, "layout", nil, "name a layout folder, key=name (repeatable); defaults are proposed from what exists")
 	f.BoolVar(&o.dryRun, "dry-run", false, "print the proposal and change nothing")

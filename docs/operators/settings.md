@@ -28,7 +28,7 @@ Keys `flai config set` reaches:
 | Key | Default | For |
 |-----|---------|-----|
 | `template.repo` | `https://github.com/bytepunx/system-flow-template` | The template `flai new`, `flai import`, and `flai upgrade` use when `--template` is not given |
-| `template.ref` | `main` | The template's branch, tag, or commit when `--ref` is not given |
+| `template.ref` | `main` | The template's branch, tag, or commit when `--ref` is not given; empty, the default branch, or a release tag follows releases: the newest version tag |
 | `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs ([Access to the image](index.md#access-to-the-image)) |
 | `dashboard.tag` | `latest` | The image's tag |
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
@@ -70,8 +70,8 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `owner` | empty | Who the dashboard's writes are recorded as; `designer` when empty ([Who acts when the dashboard writes](index.md#who-acts-when-the-dashboard-writes)) |
 | `repo` | empty | The repository's URL |
 | `template.repo` | set by `flai new` or `flai import` | The template the project came from, which `flai upgrade` fetches |
-| `template.ref` | set by `flai new` or `flai import` | The template's branch, tag, or commit |
-| `template.version` | set by flai | The template version applied, which `flai upgrade` compares against |
+| `template.ref` | set by `flai new`, `flai import`, or `flai upgrade` | The template's branch, tag, or commit last applied; edited by hand, the next `flai upgrade` applies it, asking when it is not the newest release |
+| `template.version` | set by flai | The template version last applied; edited by hand, the next `flai upgrade` applies its `v<version>` tag, asking when it is not the newest release |
 | `template.applied` | set by flai | When it was applied |
 | `layout.<name>` | `design`, `docs`, `wip` | The folder names; `design`, `docs`, and `wip` are required |
 | `projects[].name` | none | A releasable component's name, the prefix of its release tags |

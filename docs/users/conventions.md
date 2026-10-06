@@ -66,7 +66,7 @@ layout:                     # required, all three keys
 projects: []                # releasable components at the root
 ```
 
-You edit `name`, `description`, and `dashboard` by hand. `flai` owns `template`, `projects`, and `agent` and rewrites only those keys. A repository made by `flai new` also records which template version it came from under `template`, with the hash of every rendered file in `system-flow.lock.yaml`, so `flai upgrade` can tell your edits from the template's. Every key: [project-manifest.md](../../design/system/project-manifest.md).
+You edit `name`, `description`, and `dashboard` by hand. `flai` owns `template`, `projects`, and `agent` and rewrites only those keys. To choose a template version, run `flai upgrade --ref <tag>`; a `template.ref` or `template.version` you edit by hand is read as the version you intend, and the next `flai upgrade` asks before applying one that is not the newest. A repository made by `flai new` also records which template version it came from under `template`, with the hash of every rendered file in `system-flow.lock.yaml`, so `flai upgrade` can tell your edits from the template's. Every key: [project-manifest.md](../../design/system/project-manifest.md).
 
 ## Work items
 

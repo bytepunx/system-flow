@@ -1358,7 +1358,7 @@ Flags:
 | `--dry-run` | print the proposal and change nothing |
 | `--force` | proceed even if system-flow.yaml already exists |
 | `--layout` stringArray | name a layout folder, key=name (repeatable); defaults are proposed from what exists |
-| `--ref` string | template branch, tag, or commit (default: config template.ref) |
+| `--ref` string | template branch, tag, or commit; 1.0.60 finds v1.0.60 (default: the newest version tag when config template.ref follows releases, else that ref) |
 | `--template` string | template git URL or local directory (default: config template.repo) |
 | `--trailer` stringArray | trailer line for the import's commit (repeatable, with --commit) |
 | `--var` stringArray | set a template variable, name=value (repeatable) |
@@ -1827,7 +1827,7 @@ Flags:
 | `--force` | overwrite existing files |
 | `--layout` stringArray | rename a layout folder, key=name, e.g. design=architecture (repeatable) |
 | `--no-git` | do not run git init in the new directory |
-| `--ref` string | template branch, tag, or commit (default: config template.ref) |
+| `--ref` string | template branch, tag, or commit; 1.0.60 finds v1.0.60 (default: the newest version tag when config template.ref follows releases, else that ref) |
 | `--template` string | template git URL or local directory (default: config template.repo) |
 | `--var` stringArray | set a template variable, name=value (repeatable) |
 
@@ -3205,7 +3205,11 @@ Bring this project to the latest template version.
 flai upgrade [flags]
 ```
 
-Fetch the template (config, or --template and --ref), compare its version with system-flow.yaml, and apply the difference per ADR-0015: add new files, merge marker files (CLAUDE.md, conventions) above the marker, replace files the project has not changed since they were applied, and report the rest as conflicts. In a terminal each conflict offers keep, replace, or a diff; otherwise --keep-all or --replace-all is required and nothing changes without one. The manifest and lock are updated only when no conflict is left unresolved. A dirty git tree is refused unless --force.
+Fetch the template and apply the difference between the version this project is at and the version chosen, per ADR-0015 and ADR-0103.
+
+The version: --ref names it (1.0.60 matches the tag v1.0.60) and wins over template.ref in system-flow.yaml; it is recorded there and in the lock. With no --ref, a git template is taken to its newest version tag when template.ref follows releases: empty, the default branch such as main, or a version tag. Another branch or a commit is used as given, fetched again; a template with no version tags, a local directory, --template, and --relock use the ref as given. When system-flow.yaml names a template.ref or template.version the lock did not record, because it was edited, and that release is not the newest, a terminal is asked which to apply: the version system-flow.yaml names, the newest, or neither. Without a terminal, or with --yes, nothing changes and the command exits 1 naming the flai upgrade --ref to run for each. The version the project is at is the lock's, or the manifest's when there is no lock. The ref and version applied are written to system-flow.yaml and the lock. --dry-run says which version it would apply, or that it would ask.
+
+The difference: add new files, merge marker files (CLAUDE.md, conventions) above the marker, replace files the project has not changed since they were applied, and report the rest as conflicts. In a terminal each conflict offers keep, replace, or a diff; otherwise --keep-all or --replace-all is required and nothing changes without one. The manifest and lock are updated only when no conflict is left unresolved. A dirty git tree is refused unless --force.
 
 Each template variable is rendered with, in order: --var; the manifest's own field for project\_name, project\_key, description, owner, and repo\_url; the value system-flow.lock.yaml recorded; the template's default, named in the output when taken. A required variable with none of these is named and nothing is changed. --var re-applies the version the project is at.
 
@@ -3214,6 +3218,7 @@ Examples:
 ```bash
 flai upgrade --dry-run
 flai upgrade
+flai upgrade --ref 1.0.60         # a chosen release, recorded in system-flow.yaml
 flai upgrade --keep-all           # scripts and CI: never overwrite edits
 flai upgrade --template ./template --force
 flai upgrade --relock             # hand-assembled project: record the current files at this version
@@ -3227,7 +3232,7 @@ Flags:
 | `--dry-run` | print the plan and change nothing |
 | `--force` | re-apply the same version and allow a dirty tree |
 | `--keep-all` | keep every conflicting project file |
-| `--ref` string | template branch, tag, or commit (default: the manifest's template.ref) |
+| `--ref` string | template branch, tag, or commit to apply, recorded as template.ref; 1.0.60 matches v1.0.60 (default: the newest version tag when the manifest's template.ref follows releases, else that ref) |
 | `--relock` | record the current files at the template's version without changing them |
 | `--replace-all` | replace every conflicting project file with the template's |
 | `--template` string | template git URL or local directory (default: the manifest's template.repo) |
