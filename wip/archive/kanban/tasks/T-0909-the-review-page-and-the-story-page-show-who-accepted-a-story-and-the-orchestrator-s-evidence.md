@@ -24,15 +24,15 @@ touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components
 after: [T-0907]
 usage:
   source: log
-  seconds: 253
+  seconds: 254
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 408
-      cache_read: 2666529
-      cache_write: 87657
-      cost: 1.185
+      input: 53
+      output: 17817
+      cache_read: 2735353
+      cache_write: 76469
+      cost: 1.3522
 ---
 # T-0909 The review page and the story page show who accepted a story, and the orchestrator's evidence
 

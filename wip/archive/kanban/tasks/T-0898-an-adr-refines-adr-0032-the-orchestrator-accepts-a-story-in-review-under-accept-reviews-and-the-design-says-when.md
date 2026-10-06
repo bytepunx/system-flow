@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 223
-      cache_read: 2042978
-      cache_write: 28812
-      cost: 0.8913
+      input: 40
+      output: 13402
+      cache_read: 2057600
+      cache_write: 57522
+      cost: 1.0171
 ---
 # T-0898 An ADR refines ADR-0032: the orchestrator accepts a story in review under accept_reviews, and the design says when
 

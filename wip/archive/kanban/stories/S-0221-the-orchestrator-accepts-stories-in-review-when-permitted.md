@@ -3,11 +3,11 @@ id: S-0221
 type: story
 nature: feature
 title: The orchestrator accepts stories in review when permitted
-status: in-progress
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T11:39:32Z
+updated: 2026-10-06T11:52:17Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:22Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-06T11:15:01Z
     by: agent-S-0221
+  - to: review
+    at: 2026-10-06T11:50:49Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:52:17Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs, flai/cmd/accept.go, flai/internal/guard, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/items, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/accept_orchestrator_test.go, flai/cmd/guard.go, flaiover/src/lib/components/Review.svelte.test.ts, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [S-0218]
@@ -25,15 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1180
-  estimated: true
+  seconds: 2186
   models:
     - model: claude-opus-5-5
-      input: 376
-      output: 2118
-      cache_read: 17874493
-      cache_write: 574036
-      cost: 7.9237
+      input: 574
+      output: 193367
+      cache_read: 29686904
+      cache_write: 829924
+      cost: 14.6752
+    - model: claude-sonnet-5-5
+      input: 30
+      output: 7175
+      cache_read: 506735
+      cache_write: 83768
+      cost: 0.3826
 cost_of_delay:
   value: 88.82
   by: planner-S-0221

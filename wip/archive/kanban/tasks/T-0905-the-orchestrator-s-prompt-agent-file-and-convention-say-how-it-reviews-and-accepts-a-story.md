@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 306
-      cache_read: 2190811
-      cache_write: 82943
-      cost: 0.9782
+      input: 44
+      output: 14709
+      cache_read: 2258212
+      cache_write: 63130
+      cost: 1.1163
 ---
 # T-0905 The orchestrator's prompt, agent file, and convention say how it reviews and accepts a story
 

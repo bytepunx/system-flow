@@ -24,15 +24,15 @@ touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/u
 after: [T-0907]
 usage:
   source: log
-  seconds: 252
+  seconds: 253
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 345
-      cache_read: 2688329
-      cache_write: 119679
-      cost: 1.2081
+      input: 54
+      output: 18165
+      cache_read: 2788796
+      cache_write: 77963
+      cost: 1.3786
 ---
 # T-0911 The CLI design, the dashboard design, and the users' guides describe the orchestrator's acceptance
 

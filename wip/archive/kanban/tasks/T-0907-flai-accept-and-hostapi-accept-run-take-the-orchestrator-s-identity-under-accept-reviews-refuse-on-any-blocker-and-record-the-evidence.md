@@ -28,11 +28,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 124
-      output: 707
-      cache_read: 7055921
-      cache_write: 152316
-      cost: 3.1011
+      input: 138
+      output: 46630
+      cache_read: 7158887
+      cache_write: 200133
+      cost: 3.5389
+    - model: claude-sonnet-5-5
+      input: 7
+      output: 1602
+      cache_read: 113150
+      cache_write: 18705
+      cost: 0.0854
 ---
 # T-0907 flai accept and hostapi accept.run take the orchestrator's identity under accept_reviews, refuse on any blocker, and record the evidence
 

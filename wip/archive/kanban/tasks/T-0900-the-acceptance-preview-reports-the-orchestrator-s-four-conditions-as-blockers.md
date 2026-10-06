@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 225
-      cache_read: 1651926
-      cache_write: 99885
-      cost: 0.7537
+      input: 34
+      output: 11332
+      cache_read: 1739836
+      cache_write: 48639
+      cost: 0.8601
 ---
 # T-0900 The acceptance preview reports the orchestrator's four conditions as blockers
 

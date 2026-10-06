@@ -3,12 +3,18 @@ id: S-0296
 type: story
 nature: remediation
 title: A story waits in review for the operator while nothing else can start, so the board stands idle until a person accepts
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T11:44:51Z
-updated: 2026-10-06T11:45:52Z
-transitions: []
-tags: []
+updated: 2026-10-06T11:50:50Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:49:31Z
+    by: alex
+tags: [flai]
+topics: [orchestration]
+touches: [flai/internal/serve/review_wait_test.go, flai/internal/serve/orchestrate.go, design/system/workflow.md, docs/operators/settings.md, docs/operators/index.md, design/issues/I-0088-a-story-waits-in-review-for-the-operator-while-nothing-else-can-start-so-the-board-stands-idle-until-a-person-accepts.md, design/issues/summary.md]
+after: [S-0221]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -19,6 +25,15 @@ cost_of_delay:
     time_lost_per_cycle: 2h48m
     by: flai
     at: 2026-10-06T11:44:51Z
+  value: 420
+  by: planner-S-0296
+  at: 2026-10-06T11:50:50Z
+forecast:
+  duration: 45m
+  delivery: 2026-10-06T17:12:00Z
+  basis: "flai forecast's 18m (median 116 s per unit over 12 done medium remediation stories, size 9) raised to 45m for a new flai serve test with a stand-in orchestrator accepting under accept_reviews, run with the race detector, beside docs and an issue close; delivery is flai's 16:32Z, 10th in the pull order and after S-0221, plus the 27 extra minutes times a cycle factor of about 1.5"
+  by: planner-S-0296
+  at: 2026-10-06T11:50:50Z
 finalized:
   by: alex
   at: 2026-10-06T11:45:52Z
@@ -36,7 +51,38 @@ S-0221, already in ready, lets the orchestrator accept a story in review when th
 - [ ] I-0088 is closed with `flai issue close I-0088 --reason` saying what fixed it
 
 ## Tasks
+- T-1020 A flai serve test reproduces the idle board behind a story in review and shows the orchestrator's acceptance under accept_reviews clears it
+- T-1021 The workflow design and the operators' guide say that accept_reviews ends the board's wait on the operator, and which stories still wait
+- T-1022 I-0088 is closed with flai issue close, naming the orchestrator's acceptance under accept_reviews and the test that shows it
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0088. time_lost_per_cycle 2h48m: 1h24m per occurrence × 2 occurrences ÷ 1 cycle of 168h (first reported 2026-10-06T10:32:27Z, 0.1 days before this story; under one cycle counts as one).
+
+### Planning
+
+Planned by planner-S-0296 on 2026-10-06. The plan's thread lists the tasks, their layers, the assumptions, and the questions for the operator.
+
+The fix itself is S-0221's: the orchestrator accepts a story in review under `orchestration.permissions.accept_reviews`. This story waits for S-0221 (`after`). What is left here is a test showing the board no longer idles behind a story in review, the design and guides saying so, and closing I-0088.
+
+Touches:
+
+- Declared: none; the story declared no touches, so `flai touches suggest` was started from the paths below.
+- `flai/internal/serve/review_wait_test.go`: from the layout. The hold and orchestrator tests are `hold_test.go` and `orchestrate_test.go` in `flai/internal/serve`, and the launcher is what starts the held story once the review clears.
+- `flai/internal/serve/orchestrate.go`: from the layout. The launcher looks at the orchestrator when items change and every minute; it changes only if the test shows the review noticed late.
+- `design/system/workflow.md`: from the design, which describes acceptance and the review column.
+- `docs/operators/settings.md`: from the design. It lists `accept_reviews`.
+- `docs/operators/index.md` (co-change 27%): it describes the `orchestrate` host action.
+- I-0088's file and `design/issues/summary.md` (co-change 9%): from the layout. `flai issue close` rewrites both.
+- Not taken from `flai touches suggest`: `docs/users/flai.md` (68%), `design/system/flai-cli.md` (67%), `docs/users/flai-reference.md` (46%). This story adds no command or flag; S-0221 documents `flai accept --by orchestrator`.
+
+Forecast: 45m, delivery 2026-10-06T17:12Z.
+
+- `flai forecast` gave 18m: 116 s per unit of size over 12 done medium remediation stories, times size 9 (2 criteria, 7 touches).
+- Raised to 45m. The test sets up a project with a story in review and a held ready story, and has a stand-in orchestrator accept under the permission. It must pass with the race detector, as S-0292's serve test did. The docs and the issue close are small.
+- Delivery is flai's 16:32Z, tenth in the pull order, plus the 27 extra minutes times a cycle factor of about 1.5. It also waits for S-0221. If the operator makes it wait for S-0286 too, as the plan's thread asks, delivery moves to after S-0286, which is still a draft.
+
+Cost of delay: 420 USD/week, from `flai cod`, kept as computed.
+
+- It comes from flai's input from I-0088: 2h48m lost per 168h cycle at 150 USD an hour.
+- The input may undercount the loss. In S-0220's instance, ten held stories and three idle lanes waited 2h45m, against the 1h24m per occurrence the issue records. The input is the operator's to change, so the value is kept.

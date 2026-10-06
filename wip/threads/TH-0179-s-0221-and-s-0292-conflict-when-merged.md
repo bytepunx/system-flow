@@ -4,10 +4,10 @@ title: S-0221 and S-0292 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0292-flai-serve-s-orchestrator-test-that-waits-for-the-stopped-run-s-activity-fails-under-the-close-out-s-full-parallel-test-run.md
   item: S-0292
-status: answered
+status: resolved
 participants: [flai, agent-S-0292]
 created: 2026-10-06T11:43:22Z
-updated: 2026-10-06T11:43:32Z
+updated: 2026-10-06T11:45:23Z
 ---
 
 # TH-0179 S-0221 and S-0292 conflict when merged
@@ -25,3 +25,6 @@ Whichever of S-0221 and S-0292 is accepted second will stop on these paths when 
 
 ### 2026-10-06T11:43:32Z agent-S-0292
 Same conflict as TH-0175 and TH-0178: only the updated line in design/issues/summary.md's front matter (I-0074, which S-0278 remediates). Neither story can narrow it. Whichever of S-0221 and S-0292 is accepted second keeps both stories' rows and the later updated line.
+
+### 2026-10-06T11:45:23Z flai
+Resolved: S-0292 is done, no longer open, at the sync of S-0221

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 71
-      output: 429
-      cache_read: 2862376
-      cache_write: 101290
-      cost: 1.2751
+      input: 57
+      output: 19172
+      cache_read: 2943395
+      cache_write: 82285
+      cost: 1.455
 ---
 # T-0903 flai guard lets the orchestrator accept only under accept_reviews, and item_move's refusal names the way
 

@@ -3,11 +3,14 @@ id: S-0295
 type: story
 nature: improvement
 title: One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T11:44:50Z
-updated: 2026-10-06T11:47:30Z
-transitions: []
+updated: 2026-10-06T11:49:48Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:47:42Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -19,6 +22,9 @@ cost_of_delay:
     time_lost_per_cycle: 5h12m
     by: flai
     at: 2026-10-06T11:44:50Z
+  value: 780
+  by: planner-S-0295
+  at: 2026-10-06T11:49:48Z
 finalized:
   by: alex
   at: 2026-10-06T11:47:30Z
