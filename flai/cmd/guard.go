@@ -27,11 +27,12 @@ the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
 thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any
 of flai's MCP tools but board, doc_get, doc_search, item_get,
-order_by_policy, prime, promote_candidates, release_evaluate, thread_get,
-and who_touches; a flai command other than one that reads (board, check,
-cod, doc search and show, forecast, help, issue list, order --by without
---apply and without a story to place, plan --candidates, prime, promote
---candidates or --drafts, release --evaluate, show, stats, stream diff,
+order_by_policy, prime, promote_candidates, release_evaluate, shared_paths,
+thread_get, and who_touches; a flai command other than one that reads
+(board, check, cod, doc search and show, forecast, help, issue list, order
+--by without --apply and without a story to place, plan --candidates,
+prime, promote --candidates or --drafts, release --evaluate, shared list
+and check, show, stats, stream diff,
 thread list and show, touches suggest, version, or any with --help); and a
 git
 command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files,
@@ -45,6 +46,12 @@ input whose hook_event_name is neither SubagentStart nor SubagentStop is a
 PreToolUse's, named or not. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
 it) gets past it.
+
+No sub-agent, and no session flai serve starts (FLAI_STARTED_BY=flai-serve,
+FLAI_ROLE, or FLAI_STORY set), changes the manifest's shared paths: the MCP
+tool shared_paths_edit and flai shared add and remove are refused, because
+claims.shared decides which overlaps hold a story (ADR-0096). Only the
+operator's own session changes them.
 
 In a planner session, one flai serve starts with FLAI_ROLE=plan, the
 session's own calls are held to planning too (strategic-agents.md): besides
@@ -131,7 +138,7 @@ orchestrator's session alone, before Edit, Write, and NotebookEdit as well.`,
 				a.recordSubAgent(e)
 				return nil
 			}
-			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY")}
+			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe}
 			for _, c := range cmd.Root().Commands() {
 				g.Commands = append(g.Commands, c.Name())
 			}

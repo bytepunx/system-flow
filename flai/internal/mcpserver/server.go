@@ -92,6 +92,7 @@ type server struct {
 	key     string // the manifest's key, else the folder's name
 	agent   string
 	role    string // the caller's role, as FLAI_ROLE says it (S-0219)
+	served  bool   // flai serve started the caller's session, which never changes the shared paths (ADR-0096)
 	now     func() time.Time
 	poll    time.Duration
 	maxWait time.Duration
@@ -126,6 +127,7 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 	// flai serve sets the orchestrator's role in its session, whose flai mcp
 	// inherits it: the orchestrator's writes are held to its criteria (S-0219)
 	s.role = os.Getenv("FLAI_ROLE")
+	s.served = servedSession(s.role)
 	if s.now == nil {
 		s.now = time.Now
 	}

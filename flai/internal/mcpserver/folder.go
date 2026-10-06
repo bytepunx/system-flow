@@ -79,6 +79,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	srv.AddTool(&mcp.Tool{Name: "permission_prompt", Description: permissionPromptDescription, InputSchema: permissionInputSchema}, permissionRoute(p))
 	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches; a ready story whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it. Stories only unless all is set."}, route(p, (*server).board))
 	addOrchestrateTools(srv, p)
+	addSharedTools(srv, p)
 }
 
 // ---- a folder of projects (S-0101) ----

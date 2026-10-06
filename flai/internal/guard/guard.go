@@ -46,6 +46,11 @@
 // reports work items and threads, not sub-agents, so it would run to its
 // timeout. Record keeps each session's running sub-agents, from Claude
 // Code's SubagentStart and SubagentStop hooks.
+//
+// No session flai serve starts, and no sub-agent, changes the manifest's
+// shared paths, with shared_paths_edit or flai shared add or remove
+// (S-0295, ADR-0096): they decide which overlaps hold a story. Only the
+// operator's own session does; listing and checking them are reads.
 package guard
 
 import (
@@ -119,7 +124,7 @@ const MCPPrefix = "mcp__flai__"
 
 // MCPReads are flai's MCP tools a sub-agent may call: they read and use no
 // agent's identity.
-var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "thread_get", "who_touches"}
+var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "thread_get", "who_touches"}
 
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
@@ -134,6 +139,7 @@ var cliReads = map[string][]string{
 	"help":     nil,
 	"issue":    {"list"},
 	"prime":    nil,
+	"shared":   {"list", "check"},
 	"show":     nil,
 	"stats":    nil,
 	"stream":   {"diff"},
@@ -303,6 +309,11 @@ const (
 // ThreadOpener reads it from a project's threads. A thread whose opener it
 // cannot tell, or every thread when Opener is nil, is held as another's.
 //
+// Served says flai serve started the session, as StartedByEnv set to
+// StartedByServe says; a Role or a Story says so too, since only flai serve
+// sets them. A session flai serve started never changes the shared paths
+// (ADR-0096).
+//
 // Story is the story a story's agent's session works, from FLAI_STORY, ""
 // outside one; with Role "" it holds the session's own wait_for_events to
 // the sub-agents Running lists and the threads ThreadOpen tells of. Running
@@ -314,6 +325,7 @@ const (
 type Guard struct {
 	Commands    []string
 	Role        string
+	Served      bool
 	Permissions manifest.Permissions
 	Opener      func(id string) (string, error)
 	Story       string
@@ -362,7 +374,7 @@ type Refusal struct {
 // why a flai command is refused, and the permission that would allow it, or
 // "" when it is not refused, from its command, its subcommand, and the words
 // after flai; git says why a git command other than a read is refused, from
-// its subcommand.
+// its subcommand, and nil refuses none.
 type rules struct {
 	flai func(cmd, sub string, rest []string) (why, needs string)
 	git  func(cmd string) string
@@ -692,6 +704,9 @@ func (g Guard) Check(e Event) string { return g.Decide(e).Why }
 
 // Decide decides on a call: the zero Refusal lets it through.
 func (g Guard) Decide(e Event) Refusal {
+	if r := g.shared(e); r.Why != "" {
+		return r
+	}
 	if e.AgentID == "" {
 		if e.ToolName == MCPPrefix+ReleasePublish && g.Role != RoleOrchestrate && g.Role != RolePlan {
 			return Refusal{Why: "only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes}
@@ -929,7 +944,7 @@ func (g Guard) refuse(words []string, r rules) (why, needs string) {
 			}
 		case "git":
 			cmd, _ := subcommands(rest, map[string]bool{"-C": true, "-c": true, "--git-dir": true, "--work-tree": true, "--namespace": true})
-			if !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) {
+			if r.git == nil || !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) {
 				continue
 			}
 			return r.git(cmd), ""
