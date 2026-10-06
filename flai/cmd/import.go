@@ -95,10 +95,15 @@ func (a *app) runImport(dir string, o importOptions) error {
 		}
 	}
 	ownMakefile := ownMakefileAt(an.Root)
-	src, m, err := a.resolveTemplate(o.templateRepo, o.ref, false)
+	tplRepo, ref, newest, err := a.releaseRef(o.templateRepo, o.ref)
 	if err != nil {
 		return err
 	}
+	src, m, err := a.resolveTemplate(tplRepo, ref, false)
+	if err != nil {
+		return err
+	}
+	tplOut := map[string]any{"repo": src.Repo, "ref": src.Ref, "version": m.Version, "newest_release": newest}
 	interactive := !a.yes && !o.dryRun && a.isTerminal()
 
 	// layout names: flags, then existing folders, then template defaults
@@ -136,10 +141,13 @@ func (a *app) runImport(dir string, o importOptions) error {
 		if tests == nil {
 			tests = []importer.TestCommand{}
 		}
-		return a.printJSON(map[string]any{"analysis": an, "plan": plan, "tests": tests, "tests_from": from})
+		return a.printJSON(map[string]any{"analysis": an, "plan": plan, "tests": tests, "tests_from": from, "template": tplOut})
 	}
 	if !a.jsonOut {
 		a.printProposal(an, plan, src, m)
+		if newest {
+			fmt.Fprintf(a.out, "  template version: %s, the newest release\n", src.Ref)
+		}
 	}
 	if o.dryRun {
 		fmt.Fprintln(a.out, "\ndry run: nothing changed")
@@ -249,7 +257,7 @@ func (a *app) runImport(dir string, o importOptions) error {
 	// 6. served by the host flai, so that the dashboard shows it (S-0120)
 	served := a.serveImported(repo)
 	if a.jsonOut {
-		out := map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck, "serve": served}
+		out := map[string]any{"root": an.Root, "layout": layout, "written": res.Written, "skipped": res.Skipped, "moved": moved, "kept": kept, "projects": plan.Projects, "check": resCheck, "serve": served, "template": tplOut}
 		if committed != nil {
 			out["key"] = repo.Manifest.Key
 			out["name"] = repo.Manifest.Name

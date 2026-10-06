@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
@@ -229,5 +232,190 @@ func TestNewAsksForEachVariableAtATerminal(t *testing.T) {
 	}
 	if n := strings.Count(s, "Repository URL: "); n != 2 {
 		t.Errorf("asked for the URL %d times, want 2 (one refused):\n%s", n, s)
+	}
+}
+
+// releasedTemplate makes a git template, as a file:// URL, with the release
+// tags v1.0.18 and v1.0.60, a newer untagged commit on main (1.0.61), and a
+// branch edge at 2.0.0. Each version's team.txt says which it is.
+func releasedTemplate(t *testing.T) string {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("integration: builds a git template")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	tpl := copyTemplate(t, miniTemplate)
+	gitIn(t, tpl, "init", "-q", "-b", "main")
+	commit := func(version, tag string) {
+		forkVersion(t, tpl, version, "", "v"+version+"\n")
+		gitIn(t, tpl, "add", "-A")
+		gitIn(t, tpl, "commit", "-q", "-m", version)
+		if tag != "" {
+			gitIn(t, tpl, "tag", tag)
+		}
+	}
+	commit("1.0.18", "v1.0.18")
+	commit("1.0.60", "v1.0.60")
+	commit("1.0.61", "")
+	gitIn(t, tpl, "checkout", "-q", "-b", "edge")
+	commit("2.0.0", "")
+	gitIn(t, tpl, "checkout", "-q", "main")
+	return "file://" + tpl
+}
+
+// madeAt checks the project in dest was rendered from version, and that
+// system-flow.yaml and the lock record the repo, the ref, and the version.
+func madeAt(t *testing.T, dest, url, ref, version string) {
+	t.Helper()
+	if b, _ := os.ReadFile(filepath.Join(dest, "team.txt")); string(b) != "v"+version+"\n" {
+		t.Errorf("team.txt = %q, want the render of %s", b, version)
+	}
+	m, err := manifest.Load(filepath.Join(dest, manifest.File))
+	if err != nil || m.Template.Repo != url || m.Template.Ref != ref || m.Template.Version != version {
+		t.Errorf("system-flow.yaml must record %s at %s from %s: %+v %v", ref, version, url, m.Template, err)
+	}
+	lk, err := lock.Load(dest)
+	if err != nil || lk == nil || lk.Template.Repo != url || lk.Template.Ref != ref || lk.Template.Version != version {
+		t.Errorf("the lock must record %s at %s from %s: %+v %v", ref, version, url, lk, err)
+	}
+}
+
+// With no --ref, a new project is made at the template's newest release
+// when the configured ref follows releases; --ref, as a tag or as the
+// version it spells, wins; a configured ref naming another branch is used
+// as given (ADR-0103).
+func TestNewMakesTheProjectAtTheNewestRelease(t *testing.T) {
+	url := releasedTemplate(t)
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "main"); code != 0 {
+		t.Fatalf("template use: %s", errOut)
+	}
+
+	dest := filepath.Join(t.TempDir(), "newest")
+	out, errOut, code := runIn(t, ".", "new", dest, "--defaults", "--no-git")
+	if code != 0 {
+		t.Fatalf("new: %s", errOut)
+	}
+	if !strings.Contains(out, "(1.0.60)") || !strings.Contains(out, "at v1.0.60, the template's newest release") {
+		t.Errorf("new does not say it made the newest release:\n%s", out)
+	}
+	madeAt(t, dest, url, "v1.0.60", "1.0.60")
+
+	// --template with no --ref follows releases too, and --json says so.
+	dest = filepath.Join(t.TempDir(), "json")
+	out, errOut, code = runIn(t, ".", "new", dest, "--template", url, "--defaults", "--no-git", "--json")
+	var res struct {
+		Ref     string `json:"ref"`
+		Version string `json:"version"`
+		Newest  bool   `json:"newest_release"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &res) != nil || res.Ref != "v1.0.60" || res.Version != "1.0.60" || !res.Newest {
+		t.Errorf("new --template --json: %d %+v %s %s", code, res, out, errOut)
+	}
+
+	for _, ref := range []string{"v1.0.18", "1.0.18"} {
+		dest := filepath.Join(t.TempDir(), "old")
+		out, errOut, code := runIn(t, ".", "new", dest, "--ref", ref, "--defaults", "--no-git")
+		if code != 0 {
+			t.Fatalf("new --ref %s: %s", ref, errOut)
+		}
+		if strings.Contains(out, "newest release") {
+			t.Errorf("new --ref %s calls it the newest release:\n%s", ref, out)
+		}
+		madeAt(t, dest, url, "v1.0.18", "1.0.18")
+	}
+
+	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "edge"); code != 0 {
+		t.Fatalf("template use --ref edge: %s", errOut)
+	}
+	dest = filepath.Join(t.TempDir(), "edge")
+	if _, errOut, code := runIn(t, ".", "new", dest, "--defaults", "--no-git"); code != 0 {
+		t.Fatalf("new on edge: %s", errOut)
+	}
+	madeAt(t, dest, url, "edge", "2.0.0")
+}
+
+// A git template with no release tags is used at the configured ref.
+func TestNewWithoutReleaseTagsUsesTheConfiguredRef(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: builds a git template")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	tpl := copyTemplate(t, miniTemplate)
+	forkVersion(t, tpl, "1.2.3", "", "v1.2.3\n")
+	gitIn(t, tpl, "init", "-q", "-b", "main")
+	gitIn(t, tpl, "add", "-A")
+	gitIn(t, tpl, "commit", "-q", "-m", "untagged")
+	url := "file://" + tpl
+	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "main"); code != 0 {
+		t.Fatalf("template use: %s", errOut)
+	}
+	dest := filepath.Join(t.TempDir(), "p")
+	out, errOut, code := runIn(t, ".", "new", dest, "--defaults", "--no-git")
+	if code != 0 || strings.Contains(out, "newest release") {
+		t.Fatalf("new: %d %s %s", code, out, errOut)
+	}
+	madeAt(t, dest, url, "main", "1.2.3")
+}
+
+// staleRunner answers for a cached clone of a branch whose fetch fails, as
+// offline: git is installed, the clone is on main, and fetch errors.
+type staleRunner struct{ calls []string }
+
+func (r *staleRunner) Run(dir, name string, args ...string) (string, error) {
+	r.calls = append(r.calls, name+" "+strings.Join(args, " "))
+	switch {
+	case name == "git" && args[0] == "rev-parse":
+		return "main\n", nil
+	case name == "git" && args[0] == "fetch":
+		return "", fmt.Errorf("fatal: unable to access the remote: network unreachable")
+	}
+	return "", fmt.Errorf("unexpected %s %v", name, args)
+}
+
+func (r *staleRunner) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return r.Run(dir, name, args...)
+}
+
+func (r *staleRunner) LookPath(name string) (string, error) { return "/usr/bin/" + name, nil }
+
+// A cached branch clone that cannot be fetched again is used, with a
+// warning, rather than failing the command (ADR-0103).
+func TestResolveTemplateWarnsAndUsesAStaleClone(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	cache := t.TempDir()
+	t.Setenv(config.CacheEnvVar, cache)
+	repo := "https://example.invalid/template.git"
+	src, err := template.Resolve(repo, "main", cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clone := copyTemplate(t, miniTemplate)
+	if err := os.MkdirAll(filepath.Dir(src.Dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(clone, src.Dir); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut strings.Builder
+	r := &staleRunner{}
+	a := &app{out: &out, errOut: &errOut, runner: r}
+	got, m, err := a.resolveTemplate(repo, "main", false)
+	if err != nil {
+		t.Fatalf("a stale clone must not fail: %v", err)
+	}
+	if got.Dir != src.Dir || m.Version != "9.9.9" {
+		t.Errorf("resolved %+v at %s, want the clone in %s", got, m.Version, src.Dir)
+	}
+	if !strings.Contains(errOut.String(), "using the cached template clone") || !strings.Contains(errOut.String(), "network unreachable") {
+		t.Errorf("no warning naming the failed fetch:\n%s", errOut.String())
+	}
+	if !strings.Contains(strings.Join(r.calls, "\n"), "git fetch") {
+		t.Errorf("the clone was not fetched again: %v", r.calls)
 	}
 }

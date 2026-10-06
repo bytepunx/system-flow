@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -69,7 +70,11 @@ func (a *app) runNew(dir string, o newOptions) error {
 	if err != nil {
 		return err
 	}
-	src, m, err := a.resolveTemplate(o.templateRepo, o.ref, false)
+	repo, ref, newest, err := a.releaseRef(o.templateRepo, o.ref)
+	if err != nil {
+		return err
+	}
+	src, m, err := a.resolveTemplate(repo, ref, false)
 	if err != nil {
 		return err
 	}
@@ -118,11 +123,14 @@ func (a *app) runNew(dir string, o newOptions) error {
 
 	if a.jsonOut {
 		return a.printJSON(map[string]any{
-			"dir": dest, "template": src.Repo, "ref": src.Ref, "version": m.Version,
+			"dir": dest, "template": src.Repo, "ref": src.Ref, "version": m.Version, "newest_release": newest,
 			"written": res.Written, "skipped": res.Skipped, "git_init": gitInit, "vars": vars,
 		})
 	}
 	fmt.Fprintf(a.out, "Created %s from template %s (%s)\n", dest, src.Repo, m.Version)
+	if newest {
+		fmt.Fprintf(a.out, "  at %s, the template's newest release\n", src.Ref)
+	}
 	fmt.Fprintf(a.out, "  %d files written", len(res.Written))
 	if len(res.Skipped) > 0 {
 		fmt.Fprintf(a.out, ", %d existing files kept (use --force to overwrite)", len(res.Skipped))
@@ -135,8 +143,54 @@ func (a *app) runNew(dir string, o newOptions) error {
 	return nil
 }
 
+// releaseRef answers the template repo and ref that flai new and flai import
+// make a project at (ADR-0103). The repo is the one given, else the
+// config's template.repo. A ref given (--ref) is used as given, except that
+// one spelling a release's version, such as 1.0.60, names its tag v1.0.60.
+// With no ref given, the config's template.ref is used unless it follows
+// releases (empty, the default branch, or a release tag) and the template
+// has a release tag: then the newest tag is, and newest says so. A local
+// template directory has no releases and is used as it is. When the
+// template's tags cannot be listed, as offline, flai warns and uses the ref
+// it would have used without them.
+func (a *app) releaseRef(repo, ref string) (string, string, bool, error) {
+	given := ref != ""
+	if repo == "" {
+		cfg, _, err := a.loadConfig()
+		if err != nil {
+			return "", "", false, err
+		}
+		repo = cfg.Template.Repo
+		if !given {
+			ref = cfg.Template.Ref
+		}
+	}
+	if repo == "" || template.IsLocal(repo) {
+		return repo, ref, false, nil
+	}
+	rm, err := template.ListRemote(a.runner, repo)
+	if err != nil {
+		a.logger().Warn("cannot list the template's releases; using the ref as it is", "component", "template", "repo", repo, "ref", ref, "err", err)
+		return repo, ref, false, nil
+	}
+	if given {
+		if t, ok := rm.Match(ref); ok {
+			ref = t.Name
+		}
+		return repo, ref, false, nil
+	}
+	if !rm.FollowsReleases(ref) {
+		return repo, ref, false, nil
+	}
+	if t, ok := rm.Latest(); ok {
+		return repo, t.Name, true, nil
+	}
+	return repo, ref, false, nil
+}
+
 // resolveTemplate picks the source from flags or config, ensures it is
-// available locally, and loads its manifest.
+// available locally, and loads its manifest. A cached clone of a branch
+// that cannot be fetched again, as offline, is used with a warning.
 func (a *app) resolveTemplate(repo, ref string, refresh bool) (template.Source, template.Manifest, error) {
 	cacheDir := config.Default().CacheDir
 	if repo == "" {
@@ -158,7 +212,9 @@ func (a *app) resolveTemplate(repo, ref string, refresh bool) (template.Source, 
 	if !src.Cached() || refresh {
 		a.logger().Info("fetching template", "component", "template", "repo", src.Repo, "ref", src.Ref)
 	}
-	if err := src.Ensure(a.runner, refresh); err != nil {
+	if err := src.Ensure(a.runner, refresh); errors.Is(err, template.ErrStale) {
+		a.logger().Warn("using the cached template clone", "component", "template", "repo", src.Repo, "ref", src.Ref, "err", err)
+	} else if err != nil {
 		return template.Source{}, template.Manifest{}, err
 	}
 	m, err := template.LoadManifest(src.Dir)

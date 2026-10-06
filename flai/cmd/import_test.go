@@ -118,3 +118,68 @@ func TestImportRefusesAnEmptyRequiredVarBeforeMovingAnything(t *testing.T) {
 		t.Error("a refused import wrote the manifest")
 	}
 }
+
+// With no --ref, an import applies the template's newest release when the
+// configured ref follows releases; --ref, as a tag or as the version it
+// spells, wins; a configured ref naming another branch is used as given
+// (ADR-0103). An import writes no lock, so system-flow.yaml is the record.
+func TestImportAppliesTheNewestRelease(t *testing.T) {
+	url := releasedTemplate(t)
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "main"); code != 0 {
+		t.Fatalf("template use: %s", errOut)
+	}
+	importedAt := func(root, ref, version string) {
+		t.Helper()
+		if b, _ := os.ReadFile(filepath.Join(root, "team.txt")); string(b) != "v"+version+"\n" {
+			t.Errorf("team.txt = %q, want the render of %s", b, version)
+		}
+		m, err := manifest.Load(filepath.Join(root, manifest.File))
+		if err != nil || m.Template.Repo != url || m.Template.Ref != ref || m.Template.Version != version {
+			t.Errorf("system-flow.yaml must record %s at %s from %s: %+v %v", ref, version, url, m.Template, err)
+		}
+	}
+
+	root := legacyRepo(t)
+	out, errOut, code := runIn(t, ".", "import", root, "--yes")
+	if code != 0 {
+		t.Fatalf("import: %s\n%s", errOut, out)
+	}
+	if !strings.Contains(out, "template version: v1.0.60, the newest release") {
+		t.Errorf("import does not say it applied the newest release:\n%s", out)
+	}
+	importedAt(root, "v1.0.60", "1.0.60")
+
+	out, errOut, code = runIn(t, ".", "import", legacyRepo(t), "--template", url, "--dry-run", "--json")
+	var v struct {
+		Template struct {
+			Ref     string `json:"ref"`
+			Version string `json:"version"`
+			Newest  bool   `json:"newest_release"`
+		} `json:"template"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &v) != nil || v.Template.Ref != "v1.0.60" || v.Template.Version != "1.0.60" || !v.Template.Newest {
+		t.Errorf("import --dry-run --json: %d %+v %s %s", code, v, out, errOut)
+	}
+
+	for _, ref := range []string{"v1.0.18", "1.0.18"} {
+		root := legacyRepo(t)
+		out, errOut, code := runIn(t, ".", "import", root, "--ref", ref, "--yes")
+		if code != 0 {
+			t.Fatalf("import --ref %s: %s", ref, errOut)
+		}
+		if strings.Contains(out, "newest release") {
+			t.Errorf("import --ref %s calls it the newest release:\n%s", ref, out)
+		}
+		importedAt(root, "v1.0.18", "1.0.18")
+	}
+
+	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "edge"); code != 0 {
+		t.Fatalf("template use --ref edge: %s", errOut)
+	}
+	root = legacyRepo(t)
+	if _, errOut, code := runIn(t, ".", "import", root, "--yes"); code != 0 {
+		t.Fatalf("import on edge: %s", errOut)
+	}
+	importedAt(root, "edge", "2.0.0")
+}
