@@ -7,7 +7,7 @@ count: 3
 cost: 1h44m
 first_reported: 2026-10-06T10:32:27Z
 last_reported: 2026-10-06T11:15:23Z
-updated: 2026-10-06T11:15:23Z
+updated: 2026-10-06T11:44:50Z
 ---
 
 # I-0087 One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
@@ -38,3 +38,5 @@ Not designed yet. Directions to weigh:
 - The planner narrows a folder claim to the files a story will change, where its tasks already name them.
 - A document every story edits is split by section or by command, or is generated, so that two stories change different files.
 - Whether a story in review still needs to hold others is a question for ADR-0046: its branch is finished and synced, and a later story syncs onto main when it is accepted.
+
+Story S-0295 remediates this issue, created from it at 2026-10-06T11:44:50Z.
