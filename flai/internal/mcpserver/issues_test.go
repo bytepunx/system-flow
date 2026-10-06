@@ -109,6 +109,215 @@ func TestIssueStoryReadsAStorysWorktree(t *testing.T) {
 	}
 }
 
+// S-0224: issue_new files an analysis report's finding with its impact and
+// links the report; filed again from another report under the same title it
+// bumps the open issue rather than open a second, and from the same report it
+// changes nothing. issue_story then carries the impact over.
+func TestIssueNewFilesAFindingAndBumpsAnOpenIssueOfTheSameTitle(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	finding := map[string]any{"title": "Review waits a day for the operator", "class": "efficiency", "cost": "30m",
+		"time_lost_per_cycle": "6h", "revenue_per_week": 1200, "evidence": "12 stories waited 18h on average in review",
+		"report": "design/analysis/2026-10-06-bottlenecks.md"}
+	out, failed := f.call(t, "issue_new", finding)
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	want := map[string]any{"id": "I-0001", "title": "Review waits a day for the operator", "count": float64(1), "outcome": "opened",
+		"path": "design/issues/I-0001-review-waits-a-day-for-the-operator.md"}
+	for k, v := range want {
+		if out[k] != v {
+			t.Errorf("issue_new %s = %v, want %v", k, out[k], v)
+		}
+	}
+	is, err := issues.Get(f.repo, "I-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"## Impact\n12 stories waited 18h on average in review\n\n- revenue_per_week: 1200\n- time_lost_per_cycle: 6h\n", "Report: design/analysis/2026-10-06-bottlenecks.md."} {
+		if !strings.Contains(is.Body, want) {
+			t.Errorf("the issue should say %q:\n%s", want, is.Body)
+		}
+	}
+	if links := issues.ReportLinks(is); len(links) != 1 || links[0] != "../analysis/2026-10-06-bottlenecks.md" {
+		t.Errorf("the Remediation section should link the report: %v\n%s", links, is.Body)
+	}
+	if data, err := os.ReadFile(filepath.Join(f.repo.Root, "design/issues/summary.md")); err != nil || !strings.Contains(string(data), "I-0001") {
+		t.Errorf("summary.md should be regenerated with I-0001: %v\n%s", err, data)
+	}
+
+	finding["report"], finding["penalty_per_week"] = "design/analysis/2026-10-13-bottlenecks.md", 300
+	delete(finding, "revenue_per_week")
+	out, failed = f.call(t, "issue_new", finding)
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["id"] != "I-0001" || out["outcome"] != "bumped" || out["count"] != float64(2) {
+		t.Errorf("a finding of an open issue's title should bump it: %v", out)
+	}
+	list, _ := issues.List(f.repo)
+	if len(list) != 1 {
+		t.Fatalf("no second issue should be opened: %d issues", len(list))
+	}
+	is = list[0]
+	for _, want := range []string{"- revenue_per_week: 1200\n- penalty_per_week: 300\n- time_lost_per_cycle: 6h\n", "Report: design/analysis/2026-10-13-bottlenecks.md."} {
+		if !strings.Contains(is.Body, want) {
+			t.Errorf("the bumped issue should say %q:\n%s", want, is.Body)
+		}
+	}
+	if links := issues.ReportLinks(is); len(links) != 2 {
+		t.Errorf("the Remediation section should link both reports: %v", links)
+	}
+
+	out, failed = f.call(t, "issue_new", finding)
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["outcome"] != "already recorded" || out["count"] != float64(2) {
+		t.Errorf("a finding filed again from the same report should change nothing: %v", out)
+	}
+
+	made, failed := f.call(t, "issue_story", map[string]any{"id": "I-0001"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	story, err := f.repo.Get(made["id"].(string))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cod := story.CostOfDelay; cod == nil || cod.Inputs == nil || cod.Inputs.RevenuePerWeek == nil || *cod.Inputs.RevenuePerWeek != 1200 ||
+		cod.Inputs.PenaltyPerWeek == nil || *cod.Inputs.PenaltyPerWeek != 300 || cod.Inputs.TimeLostPerCycle != "6h" {
+		t.Errorf("the story should carry the finding's impact as its cost of delay inputs: %+v", cod)
+	}
+}
+
+// S-0224: issue_bump records a finding the analyzer judged the same as an
+// issue under another title: it links the report and replaces the figures it
+// gives in the Impact section, keeping the others.
+func TestIssueBumpLinksAReportAndUpdatesTheImpact(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	if _, err := issues.New(f.repo, issues.NewOptions{Title: "Releases slip", Class: "defect", Cost: "20m",
+		Impact: issues.Impact{RevenuePerWeek: "100", TimeLostPerCycle: "2h"}, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "issue_bump", map[string]any{"id": "I-1", "cost": "40m", "note": "two releases slipped this cycle",
+		"penalty_per_week": 300, "revenue_per_week": 250.5, "evidence": "v1.4 and v1.5 shipped a week late", "report": "design/analysis/2026-10-06-risk.md"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["id"] != "I-0001" || out["outcome"] != "bumped" || out["count"] != float64(2) || out["path"] != "design/issues/I-0001-releases-slip.md" {
+		t.Errorf("issue_bump: %v", out)
+	}
+	is, err := issues.Get(f.repo, "I-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if is.Count != 2 || is.Cost != "30m" {
+		t.Errorf("count and average cost: %d %s", is.Count, is.Cost)
+	}
+	for _, want := range []string{"v1.4 and v1.5 shipped a week late\n\n- revenue_per_week: 250.5\n- penalty_per_week: 300\n- time_lost_per_cycle: 2h\n", "Report: design/analysis/2026-10-06-risk.md.\ntwo releases slipped this cycle"} {
+		if !strings.Contains(is.Body, want) {
+			t.Errorf("the issue should say %q:\n%s", want, is.Body)
+		}
+	}
+	if links := issues.ReportLinks(is); len(links) != 1 || links[0] != "../analysis/2026-10-06-risk.md" {
+		t.Errorf("the Remediation section should link the report: %v", links)
+	}
+	if _, err := os.Stat(filepath.Join(f.repo.Root, "design/issues/summary.md")); err != nil {
+		t.Errorf("summary.md should be regenerated: %v", err)
+	}
+}
+
+// S-0224: issue_new and issue_bump refuse what flai issue new and bump
+// refuse, with the same errors, and write nothing.
+func TestIssueNewAndBumpRefuseAndWriteNothing(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	for _, c := range []struct {
+		args map[string]any
+		want string
+	}{
+		{map[string]any{"title": "Bad class", "class": "annoyance"}, "--class must be one of defect, blocker, efficiency, impression"},
+		{map[string]any{"title": "Bad amount", "class": "defect", "revenue_per_week": -5}, `impact revenue_per_week "-5" is not an amount of zero or more`},
+		{map[string]any{"title": "Bad duration", "class": "defect", "time_lost_per_cycle": "soon"}, `impact time_lost_per_cycle "soon" is not a duration longer than zero`},
+		{map[string]any{"title": "Bad report", "class": "defect", "report": "notes/risk.md"}, `report "notes/risk.md" is not an analysis report`},
+		{map[string]any{"title": "Bad story", "class": "defect", "story": "T-0001"}, `story "T-0001" is not a story ID`},
+	} {
+		if _, failed := f.call(t, "issue_new", c.args); !strings.Contains(failed, c.want) {
+			t.Errorf("issue_new %v should be refused with %q: %q", c.args, c.want, failed)
+		}
+	}
+	if entries, err := os.ReadDir(filepath.Join(f.repo.Root, "design/issues")); err == nil && len(entries) > 0 {
+		t.Errorf("a refusal should write nothing: %v", entries)
+	}
+
+	is, err := issues.New(f.repo, issues.NewOptions{Title: "Kept as it was", Class: "efficiency", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(is.Path)
+	for _, c := range []struct {
+		args map[string]any
+		want string
+	}{
+		{map[string]any{"id": is.ID, "penalty_per_week": -1}, `impact penalty_per_week "-1" is not an amount of zero or more`},
+		{map[string]any{"id": is.ID, "report": "design/analysis/README.md"}, "is not an analysis report"},
+		{map[string]any{"id": is.ID, "cost": "a while"}, "--cost must be a duration like 20m"},
+		{map[string]any{"id": "I-0009"}, "I-0009 not found"},
+	} {
+		if _, failed := f.call(t, "issue_bump", c.args); !strings.Contains(failed, c.want) {
+			t.Errorf("issue_bump %v should be refused with %q: %q", c.args, c.want, failed)
+		}
+	}
+	if after, _ := os.ReadFile(is.Path); string(after) != string(before) {
+		t.Errorf("a refused bump should leave the issue as it was:\n%s", after)
+	}
+	if err := issues.Close(is, "fixed", t0); err != nil {
+		t.Fatal(err)
+	}
+	closed, _ := os.ReadFile(is.Path)
+	if _, failed := f.call(t, "issue_bump", map[string]any{"id": is.ID}); !strings.Contains(failed, "I-0001 is closed") {
+		t.Errorf("a closed issue should be refused: %q", failed)
+	}
+	if after, _ := os.ReadFile(is.Path); string(after) != string(closed) {
+		t.Errorf("a refused bump of a closed issue should leave it as it was:\n%s", after)
+	}
+	if _, err := os.Stat(filepath.Join(f.repo.Root, "design/issues/summary.md")); err == nil {
+		t.Error("a refusal should not regenerate summary.md")
+	}
+}
+
+// S-0224: the story an occurrence is recorded for defaults to FLAI_STORY, as
+// flai issue new's does, and the issue is written in that story's worktree.
+func TestIssueNewRecordsForTheSessionsStoryInItsWorktree(t *testing.T) {
+	f := setup(t)
+	t.Setenv("FLAI_STORY", f.story.ID)
+	wt := *f.repo
+	wt.Root = f.repo.WorktreePath(f.story.ID)
+	if err := os.MkdirAll(wt.Root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "issue_new", map[string]any{"title": "Fixture was ignored", "class": "defect"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	rel, _ := filepath.Rel(f.repo.Root, wt.Root)
+	if out["story"] != f.story.ID || out["path"] != filepath.ToSlash(rel)+"/design/issues/I-0001-fixture-was-ignored.md" {
+		t.Errorf("issue_new should record for FLAI_STORY in its worktree: %v", out)
+	}
+	is, err := issues.Get(&wt, "I-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := issues.Stories(is); len(got) != 1 || got[0] != f.story.ID {
+		t.Errorf("the instance should name %s: %v", f.story.ID, got)
+	}
+	if _, err := issues.Get(f.repo, "I-0001"); err == nil {
+		t.Error("the issue should not be written in the main checkout")
+	}
+}
+
 func countStories(items []*workitem.Item) int {
 	n := 0
 	for _, it := range items {
