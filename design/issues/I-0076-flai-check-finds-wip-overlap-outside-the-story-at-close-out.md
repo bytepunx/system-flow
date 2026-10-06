@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 8
+count: 9
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-06T22:53:33Z
-updated: 2026-10-06T22:53:33Z
+last_reported: 2026-10-06T23:21:51Z
+updated: 2026-10-06T23:21:51Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -66,6 +66,12 @@ Story: S-0264.
 flai check found outside the story:
 `wip/kanban/stories/S-0299-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md`: S-0299 touches flai/cmd/guard.go, which S-0301 (in progress) also touches as flai/cmd
 `wip/kanban/stories/S-0299-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md`: S-0299 touches flai/cmd/guard_test.go, which S-0301 (in progress) also touches as flai/cmd
+
+### 2026-10-06T23:21:51Z
+Story: S-0261.
+flai check found outside the story:
+`wip/kanban/stories/S-0261-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md`: S-0261 touches docs/operators/settings.md, which S-0301 (in progress) also touches as docs/operators/settings.md
+`wip/kanban/stories/S-0261-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md`: S-0261 touches flai/internal/mcpserver, which S-0300 (in progress) also touches as flai/internal/mcpserver/plan.go
 
 ## Remediation
 
