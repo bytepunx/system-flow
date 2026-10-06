@@ -162,7 +162,7 @@ It records why under a `### Planning` heading in the story's Notes: where each t
 
 Each refusal names the rule broken and says to ask the operator on the item, or put it in the final summary. Other shell commands pass, as a sub-agent's do (ADR-0060). The planner's sub-agents are held as every sub-agent is. With `story new`, the last `--draft` decides: bare, or with a value that parses as true.
 
-Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), or `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), and exits at once otherwise, so a story's session pays one shell test per edit. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
+Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|MultiEdit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), or `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), or when `FLAI_STORY` is set, so that a story's sub-agents write no file in a `.claude/` folder (S-0299, [ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)), and exits at once in the operator's own session. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
 
 ### Checked creation
 
@@ -438,7 +438,7 @@ Thread calls are held by who opened the thread as well (S-0220). On a thread it 
 
 Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry; a lock older than ten seconds is taken as left behind.
 
-`.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, or `analyze` ([The guard](#the-guard)).
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, or `analyze` ([The guard](#the-guard)).
 
 ### The run and how it ends
 
@@ -567,7 +567,7 @@ The analyzer writes its issues through flai alone, never by editing a file under
 
 A file's path is taken from the project's root when it is relative, cleaned, and resolved along the part of it that exists, symbolic links followed, as the folder's is (`inReports`), so that neither `..` nor a link leads out of the folder. A refused edit names the folder. Each refusal says that the analyzer files or bumps an issue for each actionable finding with `flai issue new` and `bump` and edits nothing but its report and the index, and to put what it found, and the stories it would suggest, in its report, or ask the operator with `thread_open`. Other shell commands pass, as a sub-agent's do (ADR-0060), so a file written through the shell is not seen. The analyzer's sub-agents, the explorer among them, are held as every sub-agent is.
 
-`.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` when `FLAI_ROLE` is `analyze`, as for `plan` and `orchestrate` ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `analyze`, as for `plan` and `orchestrate` ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
 
 ### The analysis schedule
 
