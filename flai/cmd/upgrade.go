@@ -315,7 +315,7 @@ func projectVersion(mf manifest.Template, lk *lock.Lock) string {
 // manifestEdited reports whether system-flow.yaml names another template ref
 // or version than the lock recorded, because the operator edited it.
 func manifestEdited(mf manifest.Template, lk *lock.Template) bool {
-	return lk != nil && (mf.Ref != lk.Ref || mf.Version != lk.Version)
+	return lk != nil && (mf.Ref != lk.Ref || lk.Version != "" && mf.Version != lk.Version)
 }
 
 // chooseTarget decides which ref an upgrade with no --ref applies to a git

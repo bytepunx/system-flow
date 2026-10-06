@@ -108,10 +108,10 @@ func TestUpgradeCommand(t *testing.T) {
 	}
 }
 
-// copyTemplate copies a template directory to a temporary one a test may change.
-func copyTemplate(t *testing.T, from string) string {
+// copyTemplate copies the mini template to a temporary directory a test may change.
+func copyTemplate(t *testing.T) string {
 	t.Helper()
-	to := t.TempDir()
+	from, to := miniTemplate, t.TempDir()
 	err := filepath.WalkDir(from, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -155,7 +155,7 @@ func forkVersion(t *testing.T, tpl, version, addVars, body string) {
 // required one with no value is refused before anything changes (I-0040).
 func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	tpl := copyTemplate(t, miniTemplate)
+	tpl := copyTemplate(t)
 	forkVersion(t, tpl, "1.0.0", "  - name: team\n    required: true\n", "team={{ .team }}\n")
 	dest := filepath.Join(t.TempDir(), "proj")
 	if _, errOut, code := runIn(t, ".", "new", dest, "--template", tpl, "--defaults", "--no-git", "--var", "team=core"); code != 0 {
@@ -296,7 +296,7 @@ func gitTemplate(t *testing.T) (tpl, url string, commitVersion func(version, tag
 		t.Skip("git not installed")
 	}
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	tpl = copyTemplate(t, miniTemplate)
+	tpl = copyTemplate(t)
 	forkVersion(t, tpl, "9.9.9", "", "v9.9.9\n")
 	gitIn(t, tpl, "init", "-q", "-b", "main")
 	gitIn(t, tpl, "add", "-A")
@@ -620,6 +620,7 @@ func TestChooseTarget(t *testing.T) {
 	}{
 		{name: "main follows releases", rm: rm, mf: at("main", "1.0.18"), lk: lockAt("main", "1.0.18"), want: newest},
 		{name: "no lock", rm: rm, mf: at("main", "1.0.18"), want: newest},
+		{name: "a lock that recorded no version is no edit", rm: rm, mf: at("main", "1.0.18"), lk: lockAt("main", ""), want: newest},
 		{name: "no ref", rm: rm, mf: at("", "1.0.18"), lk: lockAt("", "1.0.18"), want: newest},
 		{name: "a recorded tag equal to the lock's is no pin", rm: rm, mf: at("v1.0.50", "1.0.50"), lk: lockAt("v1.0.50", "1.0.50"), want: newest},
 		{name: "version edited to the newest", rm: rm, mf: at("main", "1.0.60"), lk: lockAt("main", "1.0.18"),

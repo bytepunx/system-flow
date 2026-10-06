@@ -42,7 +42,7 @@ This refines ADR-0015 and does not supersede it: the lock still records hashes, 
 - To stay on an older version, the operator runs `flai upgrade --ref <tag>` or edits the manifest and chooses it when asked. Holding a project at a version needs a branch, a commit, or answering the prompt; a tag that equals the lock's does not hold it.
 - An upgrade that would ask cannot run unattended. Scripts and CI pass `--ref`.
 - With no `--ref`, `main` means the newest release, not the head of the branch. A project that wants unreleased template work names another branch or a commit.
-- A run against a git template at a branch fetches once per use, which costs a network round trip. Offline it still works, on the clone it has.
+- A run against a git template at a branch fetches once per use, which costs a network round trip. Offline, a cached clone that cannot be fetched is used with a warning, and `flai new` and `flai import` use the configured ref when the tags cannot be listed; `flai upgrade` with no `--ref` stops instead and names `--ref`, since without the tags it cannot tell the newest release from an older clone.
 
 ## Alternatives considered
 

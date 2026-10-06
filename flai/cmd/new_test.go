@@ -246,7 +246,7 @@ func releasedTemplate(t *testing.T) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	tpl := copyTemplate(t, miniTemplate)
+	tpl := copyTemplate(t)
 	gitIn(t, tpl, "init", "-q", "-b", "main")
 	commit := func(version, tag string) {
 		forkVersion(t, tpl, version, "", "v"+version+"\n")
@@ -346,7 +346,7 @@ func TestNewWithoutReleaseTagsUsesTheConfiguredRef(t *testing.T) {
 		t.Skip("git not installed")
 	}
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	tpl := copyTemplate(t, miniTemplate)
+	tpl := copyTemplate(t)
 	forkVersion(t, tpl, "1.2.3", "", "v1.2.3\n")
 	gitIn(t, tpl, "init", "-q", "-b", "main")
 	gitIn(t, tpl, "add", "-A")
@@ -395,7 +395,7 @@ func TestResolveTemplateWarnsAndUsesAStaleClone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	clone := copyTemplate(t, miniTemplate)
+	clone := copyTemplate(t)
 	if err := os.MkdirAll(filepath.Dir(src.Dir), 0o755); err != nil {
 		t.Fatal(err)
 	}
