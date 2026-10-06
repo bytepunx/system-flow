@@ -142,3 +142,49 @@ func TestReleaseEvaluateRefusesToRelease(t *testing.T) {
 		t.Errorf("a refusal changes nothing:\n%s\nvs\n%s", before, after)
 	}
 }
+
+// S-0222: with whole_epics set, S-0001 and S-0002 are held back while E-0001,
+// in review in evaluateProject, is moved back to in-progress; in review, it
+// holds nothing.
+func TestReleaseEvaluateWholeEpics(t *testing.T) {
+	root, remote := evaluateProject(t)
+	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n    whole_epics: true\n")
+	if out, _, _ := runIn(t, root, "release", "--evaluate"); !strings.HasPrefix(out, "release policy threshold: met\n") || strings.Contains(out, "held by epic") {
+		t.Errorf("an epic in review holds nothing: %s", out)
+	}
+	if _, errOut, code := runIn(t, root, "move", "E-0001", "in-progress", "--reason", "S-0003 is still to come"); code != 0 {
+		t.Fatalf("move E-0001 back: %s", errOut)
+	}
+	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n    whole_epics: true\n")
+	before := releaseState(t, root, remote)
+
+	out, errOut, code := runIn(t, root, "release", "--evaluate")
+	if code != 0 || !strings.HasPrefix(out, "release policy threshold: not met\n") {
+		t.Fatalf("a batch held by its epic is not met: %d %s %s", code, out, errOut)
+	}
+	for _, want := range []string{"at or over the threshold of 300 USD/week; whole_epics holds the batch back until its epic is in review or done: E-0001 is ", "with S-0001, S-0002", "held by epic:", "S-0001  E-0001  in-progress  What we found", "S-0002  E-0001  in-progress  Another fix", "pending:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("%q is in the output: %s", want, out)
+		}
+	}
+
+	out, errOut, code = runIn(t, root, "release", "--evaluate", "--json")
+	if code != 0 {
+		t.Fatalf("evaluate --json: %d %s", code, errOut)
+	}
+	var ev release.Evaluation
+	if err := json.Unmarshal([]byte(out), &ev); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if ev.Met || len(ev.HeldByEpic) != 2 || ev.HeldByEpic[0].Epic != "E-0001" || ev.HeldByEpic[0].EpicStatus != "in-progress" || !strings.Contains(out, `"held_by_epic"`) {
+		t.Errorf("the JSON holds the stories with their epic and its status: %s", out)
+	}
+	if after := releaseState(t, root, remote); after != before {
+		t.Errorf("evaluate changes no file, tag, or remote:\n%s\nvs\n%s", before, after)
+	}
+
+	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n")
+	if out, _, _ = runIn(t, root, "release", "--evaluate"); !strings.HasPrefix(out, "release policy threshold: met\n") || strings.Contains(out, "held by epic") {
+		t.Errorf("whole_epics off holds nothing: %s", out)
+	}
+}

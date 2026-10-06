@@ -109,6 +109,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `orchestration.release.count` | unset | For `threshold`: the number of accepted stories not yet released at which a release is due; zero or more |
 | `orchestration.release.epic` | unset | For `theme`: an epic ID such as `E-0001`; a release is due when every story of it is accepted. Give it or `tag`, not both |
 | `orchestration.release.tag` | unset | For `theme`: a tag; a release is due when every story with it is accepted |
+| `orchestration.release.whole_epics` | `false` | For every policy: no release is due while a story accepted and not yet released belongs to an epic in neither `review` nor `done`. `flai release --evaluate` names those stories with their epics; under `judgement` they are what the orchestrator must not publish. A story with no epic is never held |
 | `orchestration.permissions.plan_backlog_epics` | `false` | The orchestrator may start the planner for an epic `flai plan --candidates` lists; the `plan` host action must be on too ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
 | `orchestration.permissions.finalize_drafts` | `false` | The orchestrator may finalize a draft story that `flai promote --drafts` finds complete, and change nothing else of it |
 | `orchestration.permissions.promote_to_ready` | `false` | The orchestrator may move a story `flai promote --candidates` lists to `ready`, while ready is under its WIP limit |

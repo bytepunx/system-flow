@@ -440,6 +440,10 @@ type Release struct {
 	// Tag is, for ReleaseTheme, the tag whose stories, every one accepted,
 	// make a release due.
 	Tag string `yaml:"tag,omitempty" json:"tag,omitempty"`
+	// WholeEpics, under every policy, holds a release back while a story
+	// accepted and not yet released belongs to an epic in neither review nor
+	// done (S-0222). Off when unset.
+	WholeEpics bool `yaml:"whole_epics,omitempty" json:"whole_epics,omitempty"`
 }
 
 // The values of orchestration.release.policy.

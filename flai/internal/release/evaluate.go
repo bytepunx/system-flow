@@ -40,6 +40,20 @@ type Evaluation struct {
 	// NotAccepted are those of them not yet done.
 	Theme       []EvaluatedStory `json:"theme,omitempty"`
 	NotAccepted []string         `json:"not_accepted,omitempty"`
+	// HeldByEpic are, with orchestration.release.whole_epics set, the
+	// pending stories whose epic is in neither review nor done (S-0222).
+	// While any is held the policy is not met, whichever it is; under
+	// judgement they are what the orchestrator must not publish.
+	HeldByEpic []HeldStory `json:"held_by_epic,omitempty"`
+}
+
+// HeldStory is a pending story whole_epics holds back, with its epic and
+// the epic's status; the status is empty when the epic is not found.
+type HeldStory struct {
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	Epic       string `json:"epic"`
+	EpicStatus string `json:"epic_status"`
 }
 
 // EvaluatedStory is one story an Evaluation weighs.
@@ -72,7 +86,9 @@ func EvaluateRepo(r execx.Runner, root string, m manifest.Manifest, repo *workit
 // the pending stories' summed value or their count is at or over a figure
 // the manifest sets; a theme when every story of its epic or tag, cancelled
 // ones aside, is accepted and one at least is not yet released; judgement
-// never, the call being the orchestrator's or the operator's.
+// never, the call being the orchestrator's or the operator's. With
+// whole_epics set, none is met while a pending story's epic is in neither
+// review nor done.
 func Evaluate(m manifest.Manifest, items []*workitem.Item, pending map[string]bool) Evaluation {
 	rel := m.Orchestration.Release
 	ev := Evaluation{Policy: rel.PolicyOrDefault(), Currency: m.Planning.CurrencyCode(), Pending: []EvaluatedStory{}}
@@ -101,7 +117,64 @@ func Evaluate(m manifest.Manifest, items []*workitem.Item, pending map[string]bo
 	default:
 		ev.Reason = fmt.Sprintf("%q is not a release policy, so it is never met; write judgement, threshold, or theme", rel.Policy)
 	}
+	if rel.WholeEpics {
+		ev.holdByEpic(items, pending)
+	}
 	return ev
+}
+
+// holdByEpic sets HeldByEpic to the pending stories whose epic is in neither
+// review nor done, and, when there is one, unmeets the policy and says which
+// epics hold the batch back. A story with no epic is never held; one whose
+// epic is not found is, as nothing says the epic is in review or done.
+func (ev *Evaluation) holdByEpic(items []*workitem.Item, pending map[string]bool) {
+	epics := map[string]*workitem.Item{}
+	for _, it := range items {
+		if it.Type == workitem.Epic {
+			epics[workitem.CanonicalID(it.ID)] = it
+		}
+	}
+	// order is the holding epics as first met; stories, each one's stories.
+	var order []string
+	stories := map[string][]string{}
+	for _, it := range items {
+		if it.Type != workitem.Story || !pending[it.ID] || strings.TrimSpace(it.Parent) == "" {
+			continue
+		}
+		h := HeldStory{ID: it.ID, Title: it.Title, Epic: workitem.CanonicalID(it.Parent)}
+		if e := epics[h.Epic]; e != nil {
+			h.Epic, h.EpicStatus = e.ID, e.Status
+		}
+		if h.EpicStatus == workitem.Review || h.EpicStatus == workitem.Done {
+			continue
+		}
+		ev.HeldByEpic = append(ev.HeldByEpic, h)
+		if _, ok := stories[h.Epic]; !ok {
+			order = append(order, h.Epic)
+		}
+		stories[h.Epic] = append(stories[h.Epic], it.ID)
+	}
+	if len(ev.HeldByEpic) == 0 {
+		return
+	}
+	ev.Met = false
+	status := map[string]string{}
+	for _, h := range ev.HeldByEpic {
+		status[h.Epic] = h.EpicStatus
+	}
+	held := make([]string, 0, len(order))
+	for _, id := range order {
+		state := "is not found"
+		if s := status[id]; s != "" {
+			state = "is " + s
+		}
+		held = append(held, fmt.Sprintf("%s %s, with %s", id, state, strings.Join(stories[id], ", ")))
+	}
+	whose := "its epic is"
+	if len(order) > 1 {
+		whose = "their epics are"
+	}
+	ev.Reason += fmt.Sprintf("; whole_epics holds the batch back until %s in review or done: %s", whose, strings.Join(held, "; "))
 }
 
 func story(it *workitem.Item, pending map[string]bool) EvaluatedStory {

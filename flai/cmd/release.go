@@ -119,8 +119,12 @@ sum, and is named. A theme is met when every story of its epic or its tag,
 archived or not and cancelled ones aside, is accepted and one at least is
 not yet released; the ones not yet accepted are named. Judgement, the
 default, is never met by itself: the call is the orchestrator's or the
-operator's. It tags, bumps, commits, and pushes nothing, and so takes no item
-and none of --apply, --pending, --dry-run, or --deliver.`,
+operator's. With orchestration.release.whole_epics set, no policy is met
+while a story accepted and not yet released belongs to an epic in neither
+review nor done (S-0222); those stories are named with their epics, and
+under judgement they are what must not be published. It tags, bumps,
+commits, and pushes nothing, and so takes no item and none of --apply,
+--pending, --dry-run, or --deliver.`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run
@@ -256,6 +260,20 @@ func (a *app) evaluateRelease(cmd *cobra.Command, args []string) error {
 				state = "not released"
 			}
 			fmt.Fprintf(w, "  %s\t%s\t%s\n", s.ID, state, s.Title)
+		}
+		if err := w.Flush(); err != nil {
+			return err
+		}
+	}
+	if len(ev.HeldByEpic) > 0 {
+		fmt.Fprintln(a.out, "held by epic:")
+		w = tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+		for _, h := range ev.HeldByEpic {
+			state := h.EpicStatus
+			if state == "" {
+				state = "not found"
+			}
+			fmt.Fprintf(w, "  %s\t%s\t%s\t%s\n", h.ID, h.Epic, state, h.Title)
 		}
 		if err := w.Flush(); err != nil {
 			return err

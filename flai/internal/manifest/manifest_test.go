@@ -267,8 +267,14 @@ func TestOrchestration(t *testing.T) {
 	if errs := o.Errors(); len(errs) != 0 {
 		t.Errorf("valid theme: %v", errs)
 	}
-	if o = load(t, "").Orchestration; o.PolicyOrDefault() != OrderFIFO || o.Release.PolicyOrDefault() != ReleaseJudgement || len(o.Errors()) != 0 {
-		t.Errorf("unset: %q, %q, %v", o.PolicyOrDefault(), o.Release.PolicyOrDefault(), o.Errors())
+	if o = load(t, "").Orchestration; o.PolicyOrDefault() != OrderFIFO || o.Release.PolicyOrDefault() != ReleaseJudgement || o.Release.WholeEpics || len(o.Errors()) != 0 {
+		t.Errorf("unset: %q, %q, whole_epics %v, %v", o.PolicyOrDefault(), o.Release.PolicyOrDefault(), o.Release.WholeEpics, o.Errors())
+	}
+	if o = load(t, "orchestration:\n  release:\n    policy: theme\n    tag: cli\n").Orchestration; o.Release.WholeEpics {
+		t.Errorf("whole_epics unset is off: %+v", o.Release)
+	}
+	if o = load(t, "orchestration:\n  release:\n    whole_epics: true\n").Orchestration; !o.Release.WholeEpics || o.Release.PolicyOrDefault() != ReleaseJudgement || len(o.Errors()) != 0 {
+		t.Errorf("whole_epics read, under the default policy: %+v, %v", o.Release, o.Errors())
 	}
 	if len(OrderPolicies) != 4 || len(ReleasePolicies) != 3 {
 		t.Errorf("policies %v, %v", OrderPolicies, ReleasePolicies)
