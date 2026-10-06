@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 7
+count: 8
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-06T22:10:04Z
-updated: 2026-10-06T22:10:04Z
+last_reported: 2026-10-06T22:53:33Z
+updated: 2026-10-06T22:53:33Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -60,6 +60,12 @@ flai check found outside the story:
 Story: S-0227.
 flai check found outside the story:
 `wip/kanban/stories/S-0227-the-analyzer-s-cost-is-recorded-on-the-issues-it-filed-and-the-stories-made-from-them.md`: S-0227 touches design/system/strategic-agents.md, which S-0229 (in progress) also touches as design/system/strategic-agents.md
+
+### 2026-10-06T22:53:33Z
+Story: S-0264.
+flai check found outside the story:
+`wip/kanban/stories/S-0299-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md`: S-0299 touches flai/cmd/guard.go, which S-0301 (in progress) also touches as flai/cmd
+`wip/kanban/stories/S-0299-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md`: S-0299 touches flai/cmd/guard_test.go, which S-0301 (in progress) also touches as flai/cmd
 
 ## Remediation
 
