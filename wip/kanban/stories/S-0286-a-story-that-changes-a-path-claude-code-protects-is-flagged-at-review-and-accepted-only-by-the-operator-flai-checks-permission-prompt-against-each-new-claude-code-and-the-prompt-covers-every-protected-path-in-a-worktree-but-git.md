@@ -6,10 +6,11 @@ title: A story that changes a path Claude Code protects is flagged at review and
 status: backlog
 owner: alex
 created: 2026-10-06T06:32:43Z
-updated: 2026-10-06T06:32:43Z
+updated: 2026-10-06T06:32:52Z
 transitions: []
 tags: [flai, flaiover]
 topics: [cli]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/internal/serve, flai/internal/harness, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators]
 after: [S-0283]
 agent:
   harness: claude-code
