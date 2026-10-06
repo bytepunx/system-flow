@@ -6,7 +6,7 @@ title: A story waits in review for the operator while nothing else can start, so
 status: ready
 owner: alex
 created: 2026-10-06T11:44:51Z
-updated: 2026-10-06T18:11:46Z
+updated: 2026-10-06T18:12:02Z
 transitions:
   - to: ready
     at: 2026-10-06T11:49:31Z
@@ -30,10 +30,10 @@ cost_of_delay:
   at: 2026-10-06T11:50:50Z
 forecast:
   duration: 45m
-  delivery: 2026-10-06T23:47:00Z
-  basis: "Its own forecast of 45m; 8th in the pull order with an in-progress limit of 3, behind S-0226, S-0284, S-0278, S-0223, S-0224, S-0227, S-0295 and S-0229."
+  delivery: 2026-10-06T23:45:00Z
+  basis: "Its own forecast of 45m; 8th in the pull order with an in-progress limit of 3, behind S-0226, S-0295, S-0284, S-0278, S-0223, S-0224, S-0227 and S-0229."
   by: flai
-  at: 2026-10-06T18:11:46Z
+  at: 2026-10-06T18:12:02Z
 finalized:
   by: alex
   at: 2026-10-06T11:45:52Z

@@ -6,7 +6,7 @@ title: Two stories that each record or close an issue always conflict in design/
 status: ready
 owner: alex
 created: 2026-10-05T04:40:47Z
-updated: 2026-10-06T18:11:46Z
+updated: 2026-10-06T18:12:02Z
 transitions:
   - to: ready
     at: 2026-10-06T11:29:58Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-06T11:31:29Z
 forecast:
   duration: 40m
-  delivery: 2026-10-06T19:07:00Z
-  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0226 and S-0284."
+  delivery: 2026-10-06T19:30:00Z
+  basis: "Its own forecast of 40m; 3rd in the pull order with an in-progress limit of 3, behind S-0226, S-0295 and S-0284."
   by: flai
-  at: 2026-10-06T18:11:46Z
+  at: 2026-10-06T18:12:02Z
 finalized:
   by: alex
   at: 2026-10-06T11:29:55Z

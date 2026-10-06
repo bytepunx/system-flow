@@ -6,7 +6,7 @@ title: flaiover's HostProcesses test that waits past the old host after an upgra
 status: backlog
 owner: alex
 created: 2026-10-05T00:03:14Z
-updated: 2026-10-06T18:11:46Z
+updated: 2026-10-06T18:12:02Z
 transitions: []
 tags: [flaiover]
 topics: [testing]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:50:19Z
 forecast:
   duration: 30m
-  delivery: 2026-10-07T06:05:00Z
-  basis: "Its own forecast of 30m; 29th in the pull order with an in-progress limit of 3, behind S-0226, S-0284, S-0278, S-0223, S-0224, S-0227, S-0295, S-0229, S-0296, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254 and S-0261."
+  delivery: 2026-10-07T05:58:00Z
+  basis: "Its own forecast of 30m; 29th in the pull order with an in-progress limit of 3, behind S-0226, S-0295, S-0284, S-0278, S-0223, S-0224, S-0227, S-0229, S-0296, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254 and S-0261."
   by: flai
-  at: 2026-10-06T18:11:46Z
+  at: 2026-10-06T18:12:02Z
 ---
 # S-0264 flaiover's HostProcesses test that waits past the old host after an upgrade fails under machine load
 
