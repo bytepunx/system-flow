@@ -852,13 +852,13 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 		"if a permission is unclear, ask; do not act",
 		"never do the arithmetic yourself",
 		"flai order --by (the flai MCP tool order_by_policy)", "flai promote --candidates (promote_candidates)", "flai release --evaluate (release_evaluate)",
-		"Log each decision when you have made it with the flai MCP tool activity_log, kind orchestrator: what you did, on which items, why, and the policy figure behind it",
+		"Log each action when you have taken it with the flai MCP tool activity_log, kind orchestrator: what you did, to which item, why, and the policy figure that justified it",
 		"Then hold the flai MCP tool wait_for_events, again each time it returns",
 		"Repeat without ending",
 		"write only through flai",
 		"Never edit code or documents, and never work a story yourself",
 		"flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal",
-		"Ask the operator instead with the flai MCP tool thread_open on the item the decision concerns, your recommended answer first",
+		"When a decision needs the operator, ask with the flai MCP tool thread_open on the item it concerns, your recommended answer first",
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
@@ -867,6 +867,38 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 	for _, never := range []string{"flai stream open", "flai move", "worktree", "As the planner", "End with"} {
 		if strings.Contains(p, never) {
 			t.Errorf("the orchestrator's prompt says %q:\n%s", never, p)
+		}
+	}
+}
+
+// S-0219: the orchestrator is told, for each of plan_backlog_epics,
+// finalize_drafts, promote_to_ready, and order_ready, which flai command
+// gives it the work and what it does with it; to log each action with the
+// policy figure that justified it; and that a refusal ends the attempt,
+// which it logs and does not retry until something changes.
+func TestTheOrchestratorsPromptSaysWhatEachPermissionDoes(t *testing.T) {
+	p := Prompt(orchestrateReq(nil))
+	for _, w := range []string{
+		// plan_backlog_epics
+		"While plan_backlog_epics is on, run flai plan --candidates and start the planner with the flai MCP tool plan for each epic it lists, one at a time, and for no other",
+		// finalize_drafts
+		"While finalize_drafts is on, run flai promote --drafts",
+		"finalize a draft it lists as complete, and whose criteria, touches, forecast, and value you judge consistent, with the flai MCP tool item_edit giving only its id and draft false",
+		"for any other draft, open one thread on the story saying what it lacks or what is inconsistent, once, and leave the draft as it is",
+		// promote_to_ready
+		"While promote_to_ready is on, run flai promote --candidates and move its candidates to ready in its order with the flai MCP tool item_move while the ready column's limit has room",
+		"never a draft, and never a held story",
+		// order_ready
+		"While order_ready is on, run flai order --by <policy> --apply, with the policy orchestration.policy names, after each change to the ready column, yours or another's",
+		"it keeps in place a story placed by hand within the last day",
+		"Never place a story by hand yourself",
+		// the figures, the log, and a refusal
+		"the epics to plan from flai plan --candidates", "the drafts complete enough to finalize from flai promote --drafts",
+		"the policy figure that justified it, as flai gave it: the story's value, its value over its duration, its forecast, or the candidate's rank",
+		"A refusal from flai guard or from flai ends that attempt: log it with activity_log, with the refusal, and do not try it again until something it depends on changes",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
 		}
 	}
 }
@@ -999,5 +1031,38 @@ func TestTheTemplatesDefinitionsRead(t *testing.T) {
 		if _, err := definition([]byte(bad)); err == nil {
 			t.Errorf("accepted %q", bad)
 		}
+	}
+}
+
+// The orchestrator's definition, the project's and the template's alike,
+// says what it does with each permission S-0219 gives work to, logs each
+// action with its policy figure, and ends an attempt on a refusal.
+func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	var copies []string
+	for _, p := range []string{filepath.Join(root, ".claude", "agents", "orchestrator.md"), filepath.Join(root, "template", "root", ".claude", "agents", "orchestrator.md")} {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		copies = append(copies, string(data))
+		for _, want := range []string{
+			"With `plan_backlog_epics`, run `flai plan --candidates`",
+			"With `finalize_drafts`, run `flai promote --drafts`",
+			"with `item_edit` giving only its id and `draft: false`",
+			"With `promote_to_ready`, run `flai promote --candidates`",
+			"Never a draft, never a held story.",
+			"With `order_ready`, run `flai order --by <policy> --apply`",
+			"Never place a story by hand yourself.",
+			"the policy figure that justified it",
+			"ends that attempt: log it with the refusal",
+		} {
+			if !strings.Contains(string(data), want) {
+				t.Errorf("%s does not say %q", p, want)
+			}
+		}
+	}
+	if copies[0] != copies[1] {
+		t.Error("the project's and the template's orchestrator.md differ")
 	}
 }

@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-04
+updated: 2026-10-06
 audience: agent
 order: 140
 status: active
@@ -50,7 +50,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 
 ## As the orchestrator
 
-- Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: throughput or cost of delay).
+- Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: `cod`, `wsjf`, `throughput`, or `fifo`).
 - Each of these only while its permission is on:
   - ask the planner to plan
   - finalize a draft
@@ -59,9 +59,14 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
   - answer a thread, or recommend an answer
   - accept a story
   - publish a release.
+- With `plan_backlog_epics`, run `flai plan --candidates` and start the planner (`plan`) for each epic it lists, one at a time.
+- With `finalize_drafts`, run `flai promote --drafts`. Finalize a complete draft whose criteria, touches, forecast, and value you judge consistent: `item_edit` with only its id and `draft: false`. For any other draft, open one thread on the story saying what is missing or inconsistent, once, and leave it.
+- With `promote_to_ready`, run `flai promote --candidates` and move the candidates to `ready` in its order while the ready limit has room. Never a draft, never a held story.
+- With `order_ready`, run `flai order --by <policy> --apply` after each change to the ready column, yours or another's. It keeps a story the operator placed by hand within the last day. Never place a story by hand yourself.
 - `flai guard` refuses a call outside your permissions. Do not work around a refusal.
-- Use flai's commands to order work and to evaluate a release. Do not do the arithmetic yourself.
-- Log every decision with its reason and the policy figure behind it.
+- A refusal from `flai guard` or from flai ends that attempt. Log it with the refusal, and do not retry it until something changes.
+- Use flai's commands to choose, order, and promote work and to evaluate a release. Do not do the arithmetic yourself.
+- Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank).
 - Wait on `wait_for_events` between decisions.
 - Never edit code or documents, and never work a story yourself.
 
