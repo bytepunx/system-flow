@@ -270,8 +270,12 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 // planner writes its stories as drafts, summarises the plan in one thread on
 // the epic, proposes there what it would change in the stories the epic
 // already has, and names in its summary the stories it created and revisited
-// (S-0209). A story's planner drafts its tasks, or revisits the open ones,
-// and names in its summary the tasks it created and revisited (S-0255).
+// (S-0209). It enriches each story it drafts as it would a story, drafts
+// that story's tasks, and those of each draft it revisits that has none, in
+// the story planner's words, names them and their layers in the epic's
+// thread, and names by ID in its summary the tasks it created too (S-0300).
+// A story's planner drafts its tasks, or revisits the open ones, and names
+// in its summary the tasks it created and revisited (S-0255).
 // It enriches a story from flai touches suggest, flai forecast, and flai cod,
 // and records why under a ### Planning heading in the story's Notes (S-0210).
 // It names files, not folders, in touches, keeping a folder only where files
@@ -288,17 +292,28 @@ func planPrompt(r Request) string {
 		"Run flai forecast %[1]s and flai cod %[1]s. "+
 		"Review each figure, adjust it where you have a reason and state the reason, and write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches. "+
 		"In the story's Notes, under a ### Planning heading that is yours to rewrite, record where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted, and leave the rest of the Notes as it was", story)
+	// The story's planner and the epic's say the same about drafting a
+	// story's tasks, in the same words (S-0300).
+	draftTasks := "draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for), so that they form layers as work-management.md says, and create each in the backlog with the flai MCP tool item_new, type task and parent the story, or flai task new"
+	taskRules := "Tasks carry no topics: when a task reaches a topic the story lacks, add the topic to the story. " +
+		"Make each task you write pass flai check --strict and the markdown lint: flai refuses one that does not, so fix what the refusal names and write it again."
 	work := fmt.Sprintf("It is a story: enrich it with %[1]s. "+
-		"If it has no tasks, draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for), so that they form layers as work-management.md says, and create each in the backlog with the flai MCP tool item_new, type task and parent the story, or flai task new. "+
+		"If it has no tasks, %[3]s. "+
 		"If it has tasks, revisit each one not done or cancelled against the story's outcome: re-enrich its touches and after with item_edit, create the tasks the outcome still lacks, and propose in the plan's thread any task you would split, merge, or drop. "+
 		"Never cancel a task, or rewrite the title, Work, or Done when of a task you did not write, without asking on that thread. "+
-		"Tasks carry no topics: when a task reaches a topic the story lacks, add the topic to the story. "+
-		"Make each task you write pass flai check --strict and the markdown lint: flai refuses one that does not, so fix what the refusal names and write it again.\n\n"+
-		"Open one thread on %[2]s that summarises the plan. In the plan's thread, name the tasks, their order and layers, and the assumptions you made.", enrich, r.Item)
+		"%[4]s\n\n"+
+		"Open one thread on %[2]s that summarises the plan. In the plan's thread, name the tasks, their order and layers, and the assumptions you made.", enrich, r.Item, draftTasks, taskRules)
 	summary := "End with a one-line summary that names by ID the tasks you created and the tasks you revisited"
 	if kind == workitem.Epic {
-		work = fmt.Sprintf("It is an epic. If it has no stories, draft the stories that deliver its outcome, each with a goal, acceptance criteria as checkboxes, a nature, tags, topics, touches, and after, and create each with draft true in the backlog (item_new's draft, or flai story new --draft). If it has stories, revisit each one not done or cancelled against the epic's outcome, and enrich it again as you would a story: %[1]s. Size stories as work-management.md says, and make each one you write pass flai check --strict.\n\nOpen one thread on %[2]s that summarises the plan: the stories, their order (their after), and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item)
-		summary = "End with a one-line summary that names the stories you created and the stories you revisited"
+		work = fmt.Sprintf("It is an epic. If it has no stories, draft the stories that deliver its outcome, each with a goal, acceptance criteria as checkboxes, a nature, tags, topics, touches, and after, and create each with draft true in the backlog (item_new's draft, or flai story new --draft). "+
+			"If it has stories, revisit each one not done or cancelled against the epic's outcome. "+
+			"Enrich each story you draft, and again each one you revisit, as you would a story, S-nnnn being its ID: %[1]s. "+
+			"Size stories as work-management.md says, and make each one you write pass flai check --strict.\n\n"+
+			"For each story you draft, and each one you revisit that is a draft with no tasks, %[3]s. "+
+			"A task carries no draft flag: it is a draft because its story is one. "+
+			"%[4]s\n\n"+
+			"Open one thread on %[2]s that summarises the plan: the stories, their order (their after), each story's tasks and their layers, and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item, draftTasks, taskRules)
+		summary = "End with a one-line summary that names by ID the stories and tasks you created and the stories you revisited"
 	}
 	return fmt.Sprintf(`You are %[1]s, the planner, started by flai serve on this host because the operator asked for %[2]s to be planned, in the project at %[3]s.
 

@@ -709,16 +709,21 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 		{"E-0016", "epic", []string{
 			"If it has no stories, draft the stories that deliver its outcome",
 			"create each with draft true in the backlog (item_new's draft, or flai story new --draft)",
-			"If it has stories, revisit each one not done or cancelled against the epic's outcome, and enrich it again as you would a story: its predicted touches, a forecast, and a cost of delay value",
+			"If it has stories, revisit each one not done or cancelled against the epic's outcome.",
+			// S-0300: each story it drafts is enriched as a story's planner would
+			"Enrich each story you draft, and again each one you revisit, as you would a story, S-nnnn being its ID: its predicted touches, a forecast, and a cost of delay value",
 			"Run flai touches suggest S-nnnn, adding", "Run flai forecast S-nnnn and flai cod S-nnnn", "under a ### Planning heading",
 			// S-0295: file-level touches, a folder kept only for files no task can name yet
 			"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet",
 			"make each one you write pass flai check --strict",
+			// S-0300: and its tasks drafted, in layers, with no draft flag of their own
+			"For each story you draft, and each one you revisit that is a draft with no tasks, draft the tasks that deliver its outcome",
+			"A task carries no draft flag: it is a draft because its story is one",
 			// S-0209: one thread holds the plan and what the planner proposes
-			"Open one thread on E-0016 that summarises the plan: the stories, their order (their after), and the assumptions you made",
+			"Open one thread on E-0016 that summarises the plan: the stories, their order (their after), each story's tasks and their layers, and the assumptions you made",
 			"In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only",
 			"never cancel a finalized story or rewrite its words without asking",
-			"End with a one-line summary that names the stories you created and the stories you revisited: flai serve logs",
+			"End with a one-line summary that names by ID the stories and tasks you created and the stories you revisited: flai serve logs",
 		}},
 		{"S-0208", "story", []string{
 			"It is a story: enrich it with its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs",
@@ -756,29 +761,39 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 // S-0255: a story's planner drafts its tasks into the backlog in layers, or
 // revisits the open ones without cancelling or rewriting them unasked, sums
 // up the plan in one thread, and names the tasks it created and revisited in
-// the summary flai serve logs; an epic's planner is told none of it.
+// the summary flai serve logs. An epic's planner drafts the tasks of each
+// story it drafts in the same words (S-0300), but is told nothing of
+// revisiting a story's tasks or of the story's own thread and summary.
 func TestAStorysPlannerDraftsAndRevisitsItsTasks(t *testing.T) {
-	task := []string{
-		"If it has no tasks, draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for)",
+	shared := []string{
+		"draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for)",
 		"so that they form layers as work-management.md says",
 		"create each in the backlog with the flai MCP tool item_new, type task and parent the story, or flai task new",
+		"Tasks carry no topics: when a task reaches a topic the story lacks, add the topic to the story",
+		"Make each task you write pass flai check --strict and the markdown lint: flai refuses one that does not, so fix what the refusal names",
+	}
+	storyOnly := []string{
+		"If it has no tasks, draft the tasks that deliver its outcome",
 		"If it has tasks, revisit each one not done or cancelled against the story's outcome: re-enrich its touches and after with item_edit, create the tasks the outcome still lacks",
 		"propose in the plan's thread any task you would split, merge, or drop",
 		"Never cancel a task, or rewrite the title, Work, or Done when of a task you did not write, without asking on that thread",
-		"Tasks carry no topics: when a task reaches a topic the story lacks, add the topic to the story",
-		"Make each task you write pass flai check --strict and the markdown lint: flai refuses one that does not, so fix what the refusal names",
 		"Open one thread on S-0255 that summarises the plan",
 		"In the plan's thread, name the tasks, their order and layers, and the assumptions you made",
 		"End with a one-line summary that names by ID the tasks you created and the tasks you revisited",
 	}
 	p := Prompt(planReq("S-0255", nil))
-	for _, w := range task {
+	for _, w := range append(slices.Clone(shared), storyOnly...) {
 		if !strings.Contains(p, w) {
 			t.Errorf("a story's planner prompt lacks %q:\n%s", w, p)
 		}
 	}
 	e := Prompt(planReq("E-0016", nil))
-	for _, w := range task {
+	for _, w := range shared {
+		if !strings.Contains(e, w) {
+			t.Errorf("an epic's planner is not told %q:\n%s", w, e)
+		}
+	}
+	for _, w := range storyOnly {
 		if strings.Contains(e, w) {
 			t.Errorf("an epic's planner is told %q:\n%s", w, e)
 		}
