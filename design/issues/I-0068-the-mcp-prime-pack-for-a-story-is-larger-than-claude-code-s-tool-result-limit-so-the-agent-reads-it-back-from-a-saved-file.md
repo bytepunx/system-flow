@@ -3,11 +3,11 @@ id: I-0068
 title: The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
 class: efficiency
 status: open
-count: 8
+count: 9
 cost: 3m
 first_reported: 2026-10-03T21:21:24Z
-last_reported: 2026-10-06T20:16:01Z
-updated: 2026-10-06T20:16:01Z
+last_reported: 2026-10-06T23:06:46Z
+updated: 2026-10-06T23:06:46Z
 ---
 
 # I-0068 The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
@@ -48,6 +48,10 @@ S-0226's MCP prime pack was 183,880 characters; read back from the saved file wi
 ### 2026-10-06T20:16:01Z
 Story: S-0296.
 S-0296's MCP prime pack was 171,622 characters and Claude Code saved it to a file; the conventions were read back from it with jq.
+
+### 2026-10-06T23:06:46Z
+Story: S-0261.
+S-0261's MCP prime pack was 189,726 characters; Claude Code saved it to a file and the agent read it back with jq
 
 ## Remediation
 
