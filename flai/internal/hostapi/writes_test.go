@@ -87,7 +87,19 @@ var good = map[string]struct {
 	// S-0295: the shared paths, changed under the settings action and checked by anyone
 	"settings.shared":       {`{"action":"add","pattern":" --docs/users/*.md ",` + rid + `}`, "shared add --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --json -- --docs/users/*.md", ""},
 	"settings.shared_check": {`{"paths":["docs/users/flai.md"," --help "],"story":"S-0001"}`, "shared check --json -- docs/users/flai.md --help S-0001", ""},
+	// S-0229: the strategic agents' settings, through flai manifest set under the settings action
+	"settings.manifest": {manifestSave, "manifest set --autocommit --trailer=" + Trailer + " --unset=analysis.schedule --json -- " + manifestSaveArgs, ""},
 }
+
+// manifestSave is a save of the strategic agents' settings: a value of every
+// shape, and a key to remove; manifestSaveArgs is what it must become, the
+// keys in order, the number without an exponent, the agent as compact JSON.
+const (
+	manifestSave = `{"set":{"planning.schedule":"0 6 * * 1-5","orchestration.release.value":1e6,"orchestration.permissions.promote_to_ready":true,` +
+		`"orchestration.release.count":3,"planning.agent":{"model":"claude-sonnet-5","harness":"claude-code","config":{"effort":"medium"}}},"unset":["analysis.schedule"],` + rid + `}`
+	manifestSaveArgs = `orchestration.permissions.promote_to_ready=true orchestration.release.count=3 orchestration.release.value=1000000 ` +
+		`planning.agent={"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}} planning.schedule=0 6 * * 1-5`
+)
 
 // refused is, per method, params that must never reach a command line.
 var refused = map[string][]string{
@@ -184,6 +196,11 @@ var refused = map[string][]string{
 	"settings.dashboard_token": {`"--force"`, `{}`},
 	"settings.shared": {`{"action":"--add","pattern":"x",` + rid + `}`, `{"pattern":"x",` + rid + `}`, `{"action":"add","pattern":"  ",` + rid + `}`,
 		`{"action":"remove","pattern":"a\nb",` + rid + `}`, `{"action":"add","pattern":["x"],` + rid + `}`, `{"action":"add","pattern":"x"}`},
+	"settings.manifest": {`{` + rid + `}`, `{"set":{},"unset":[],` + rid + `}`, `{"set":"planning.replan=agent",` + rid + `}`, `{"set":{"planning.replan":"agent"}}`,
+		`{"set":{"--autocommit":true},` + rid + `}`, `{"set":{"planning.currency":"EUR"},` + rid + `}`, `{"unset":["--json"],` + rid + `}`, `{"unset":[" planning.replan"],` + rid + `}`,
+		`{"set":{"planning.replan":["agent"]},` + rid + `}`, `{"set":{"planning.replan":{"x":1}},` + rid + `}`, `{"set":{"planning.replan":null},` + rid + `}`,
+		`{"set":{"planning.schedule":"0 6 * * *\n--unset=x"},` + rid + `}`, `{"set":{"planning.agent":"claude-sonnet-5"},` + rid + `}`,
+		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"modle":"claude-sonnet-5"}},` + rid + `}`},
 	"settings.shared_check": {`{}`, `{"paths":[]}`, `{"paths":[" "]}`, `{"paths":["a\u0000b"]}`, `{"paths":["S-0001"]}`, `{"paths":"docs"}`,
 		`{"story":"T-0001"}`, `{"story":"--help"}`, `{"story":"S-0001 --json"}`},
 }
@@ -814,6 +831,82 @@ func TestSettingsSharedCheckAsksFlaiSharedCheck(t *testing.T) {
 	}
 	if sp := specs()["settings.shared_check"]; !sp.reads || sp.action != "" {
 		t.Errorf("settings.shared_check is a read under no host action: %+v", sp)
+	}
+}
+
+// S-0229: settings.manifest saves the strategic agents' settings through
+// flai manifest set, under this project's settings action, journalled as the
+// command it ran. A key outside the catalog is refused before anything runs,
+// and flai's refusal of a value is Refused; either carries each field and
+// reason in Data. With the action off nothing runs and the refusal says what
+// enables it.
+func TestSettingsManifestSavesThroughFlaiManifestSet(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := true
+	host := Host{Enabled: func(a, root string) bool { return on && a == ActionSettings && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{}
+	m := writeMethods(rec.run, time.Now, host)["settings.manifest"]
+	call := func(params string, ran Ran) (any, *channel.Error) {
+		rec.ran = ran
+		return m(context.Background(), p, json.RawMessage(params))
+	}
+	refusedData := func(e *channel.Error) string {
+		data, _ := json.Marshal(e.Data)
+		return string(data)
+	}
+
+	answer := `{"set":[{"key":"orchestration.policy","value":"wsjf"}],"unset":[],"commit":"abc1234"}`
+	res, e := call(`{"set":{"orchestration.policy":"wsjf"},"request_id":"req-00000081"}`, Ran{Stdout: []byte(answer)})
+	if e != nil || string(res.(Written).Data) != answer {
+		t.Fatalf("a save answers flai's change: %+v %+v", res, e)
+	}
+
+	why := `-1 is not an amount of zero or more`
+	_, e = call(`{"set":{"orchestration.release.value":-1},"request_id":"req-00000082"}`, Ran{Exit: 1,
+		Stdout: []byte(`{"refused":[{"field":"orchestration.release.value","reason":"` + why + `"}]}`),
+		Events: []map[string]any{{"level": "FATAL", "msg": "command failed", "err": "rule: orchestration.release.value: " + why}}})
+	if e == nil || e.Code != Refused || refusedData(e) != `{"refused":[{"field":"orchestration.release.value","reason":"`+why+`"}]}` || !strings.Contains(e.Message, why) {
+		t.Errorf("flai's refusal reaches the caller with the field and the reason: %+v", e)
+	}
+
+	_, e = call(`{"set":{"orchestration.policy":"wsjf","planning.currency":"EUR"},"unset":["orchestration.permissions.self_destruct"],"request_id":"req-00000083"}`, Ran{Stdout: []byte(`{}`)})
+	if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "planning.currency: is not a setting") ||
+		!strings.Contains(refusedData(e), `{"field":"orchestration.permissions.self_destruct","reason":"is not a setting the dashboard writes`) ||
+		!strings.Contains(refusedData(e), `{"field":"planning.currency","reason":"is not a setting the dashboard writes`) {
+		t.Errorf("keys outside the catalog are refused, each with its field and reason: %+v", e)
+	}
+
+	on = false
+	_, e = call(`{"set":{"orchestration.policy":"cod"},"request_id":"req-00000084"}`, Ran{Stdout: []byte(`{}`)})
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings") || e.Data.(map[string]any)["enable"] != "flai serve enable settings" {
+		t.Errorf("with the settings action off it is read-only, and says what enables it: %+v", e)
+	}
+
+	ran := []string{
+		"manifest set --autocommit --trailer=" + Trailer + " --json -- orchestration.policy=wsjf",
+		"manifest set --autocommit --trailer=" + Trailer + " --json -- orchestration.release.value=-1",
+	}
+	if len(rec.runs) != len(ran) {
+		t.Fatalf("ran %d commands, want %d: %+v", len(rec.runs), len(ran), rec.runs)
+	}
+	for i, want := range ran {
+		if got := strings.Join(rec.runs[i].Args, " "); got != want || rec.runs[i].Dir != p.Root {
+			t.Errorf("run %d: %q in %s, want %q in %s", i, got, rec.runs[i].Dir, want, p.Root)
+		}
+	}
+	want := []struct{ outcome, detail string }{
+		{"done", "flai manifest set --autocommit -- orchestration.policy=wsjf"},
+		{"failed", "orchestration.release.value: " + why},
+		{"disabled", ""},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.manifest" || got.Outcome != w.outcome || got.Detail != w.detail {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
 	}
 }
 

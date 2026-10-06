@@ -1,9 +1,12 @@
 package hostapi
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -144,6 +147,119 @@ func sharedCheck(_ channel.Project, raw json.RawMessage) ([]string, string, *cha
 	return args, "", nil
 }
 
+// manifestChange is what settings.manifest is asked: the strategic agents'
+// settings to write, each key's value as JSON, and the keys to remove so
+// that their defaults apply (S-0229).
+type manifestChange struct {
+	Set   map[string]json.RawMessage `json:"set"`
+	Unset []string                   `json:"unset"`
+}
+
+// manifestEdit is settings.manifest's command line: flai manifest set with
+// --unset for each key to remove and key=value for each to write, committed
+// with the dashboard's trailer. Each key must be one flai manifest set writes
+// and each value a boolean, a number, or a line of text, or for an agent an
+// agent object; whether the value suits its key is flai's to say. A refusal
+// here names each field and why in Data, as flai's own refusal does.
+func manifestEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[manifestChange](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if len(in.Set) == 0 && len(in.Unset) == 0 {
+		return nil, "", bad("nothing to change: give set, the keys to write with their values, unset, the keys to remove, or both")
+	}
+	var problems []manifest.Problem
+	refuse := func(key, reason string) { problems = append(problems, manifest.Problem{Field: key, Reason: reason}) }
+	inCatalog := func(key string) (manifest.Setting, bool) {
+		s, ok := manifest.SettingFor(key)
+		if !ok {
+			refuse(key, "is not a setting the dashboard writes; give one of the keys settings.get lists under strategic")
+		}
+		return s, ok
+	}
+	args := []string{"manifest", "set", "--autocommit", "--trailer=" + Trailer}
+	for _, key := range in.Unset {
+		if _, ok := inCatalog(key); ok {
+			args = append(args, "--unset="+key)
+		}
+	}
+	keys := make([]string, 0, len(in.Set))
+	for k := range in.Set {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var assignments []string
+	for _, key := range keys {
+		s, ok := inCatalog(key)
+		if !ok {
+			continue
+		}
+		v, reason := settingArg(s, in.Set[key])
+		if reason != "" {
+			refuse(key, reason)
+			continue
+		}
+		assignments = append(assignments, key+"="+v)
+	}
+	if len(problems) > 0 {
+		return nil, "", &channel.Error{Code: channel.CodeInvalidParams,
+			Message: (&manifest.RefusedError{Problems: problems}).Error(),
+			Data:    map[string]any{"refused": problems}}
+	}
+	if len(assignments) > 0 {
+		args = append(append(args, "--"), assignments...)
+	}
+	return args, "", nil
+}
+
+// settingArg is a setting's value as flai manifest set reads it from its
+// command line: true or false, a number written out in digits, a line of
+// text as it stands, or an agent as compact JSON; or why the value is not
+// one of these.
+func settingArg(s manifest.Setting, raw json.RawMessage) (string, string) {
+	if s.Kind == manifest.KindAgent {
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.DisallowUnknownFields()
+		var a manifest.Agent
+		if !bytes.HasPrefix(bytes.TrimSpace(raw), []byte("{")) || dec.Decode(&a) != nil {
+			return "", `is an agent, an object such as {"harness":"claude-code","model":"claude-sonnet-5"} with harness, model, config, and roles only; {} unsets it`
+		}
+		if err := a.Validate(); err != nil {
+			return "", err.Error()
+		}
+		out, err := json.Marshal(a)
+		if err != nil {
+			return "", err.Error()
+		}
+		return string(out), ""
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	var v any
+	if dec.Decode(&v) != nil {
+		return "", "is not a value"
+	}
+	switch v := v.(type) {
+	case bool:
+		return strconv.FormatBool(v), ""
+	case json.Number:
+		f, err := v.Float64()
+		if err != nil {
+			return "", fmt.Sprintf("%s is not a number flai can write", v)
+		}
+		return strconv.FormatFloat(f, 'f', -1, 64), ""
+	case string:
+		if strings.ContainsAny(v, "\x00\n\r") {
+			return "", "holds a line break or NUL; give one line"
+		}
+		return v, ""
+	case nil:
+		return "", "is null; give a value, or name the key in unset so that its default applies"
+	}
+	return "", fmt.Sprintf("is a %s setting, given as a boolean, a number, or text, not a list or an object", s.Kind)
+}
+
 func settingsSpecs() map[string]spec {
 	project := func(what string, b func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error)) spec {
 		return spec{action: ActionSettings, describe: settingsDone(what), say: sayArgs(b), build: b}
@@ -225,6 +341,15 @@ func settingsSpecs() map[string]spec {
 		// shared check --json answers. It changes nothing, so like
 		// settings.get it needs no host action.
 		"settings.shared_check": {reads: true, build: sharedCheck},
+
+		// settings.manifest: the strategic agents' settings in the project's
+		// system-flow.yaml (S-0229), written by flai manifest set with
+		// --autocommit, which checks the manifest as it would be as flai check
+		// does. flai exits 1 refusing a value, with {"refused": [{field,
+		// reason}]} on standard output: it is answered as Refused, with that
+		// in Data, so that the panel can say what is wrong beside each field.
+		"settings.manifest": {action: ActionSettings, exits: map[int]int{1: Refused}, describe: settingsDone("the project's strategic agents' settings changed"),
+			say: sayArgs(manifestEdit), build: manifestEdit},
 
 		// settings.agent: the agent's name and command, kept for every
 		// project. command null removes the command (and with it the name,

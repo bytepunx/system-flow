@@ -2133,7 +2133,7 @@ func outcome(ran Ran, err error, exits map[int]int) (any, *channel.Error) {
 					data = inner
 				}
 			}
-			msg := strings.TrimPrefix(strings.TrimPrefix(fatal, "conflict: "), "refused: ")
+			msg := strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(fatal, "conflict: "), "refused: "), "rule: ")
 			return nil, &channel.Error{Code: code, Message: msg, Data: data}
 		}
 		if strings.HasPrefix(fatal, "rule:") {

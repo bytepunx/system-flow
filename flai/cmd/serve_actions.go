@@ -800,6 +800,7 @@ func (a *app) hostSettings(root string) any {
 		out["shared"] = nonNil(repo.Manifest.Claims.Shared)
 		out["manifest_checks"] = repo.Manifest.Checks
 		out["planning"] = planningTriggers(repo.Manifest.Planning, cfg.ActionEnabled(hostapi.ActionPlan, root), a.now())
+		out["strategic"] = strategicSettings(repo.Manifest, cfg.ActionEnabled(hostapi.ActionSettings, root))
 		if st, running := readMCPState(repo, a.now()); running {
 			out["mcp"] = map[string]any{"running": true, "url": st.URL, "pid": st.PID}
 		} else {
@@ -831,6 +832,17 @@ func planningTriggers(p manifest.Planning, plan bool, now time.Time) map[string]
 		out["next"] = sched.Next(now).UTC().Format(time.RFC3339)
 	}
 	return out
+}
+
+// strategicSettings are the strategic agents' settings for their panels
+// (S-0229): each key flai manifest set writes, with its value as the
+// manifest has it and whether it is set, its default, kind, values, meaning,
+// and for a permission its risk; editable, whether the settings host action
+// is on for the project, which settings.manifest needs; and enable, the
+// command that turns it on, run in a shell on the host.
+func strategicSettings(m manifest.Manifest, editable bool) map[string]any {
+	return map[string]any{"editable": editable, "enable": hostapi.EnableCommand(hostapi.ActionSettings),
+		"settings": m.SettingValues()}
 }
 
 // servedView is what the settings page shows of the projects flai serve

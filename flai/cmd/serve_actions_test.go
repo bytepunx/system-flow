@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -630,6 +631,137 @@ func TestSettingsShowThePlanningTriggers(t *testing.T) {
 	}
 	if strings.Contains(got, `"next"`) {
 		t.Errorf("a schedule flai cannot read has no next run: %s", got)
+	}
+}
+
+// S-0229: settings.get gives the strategic agents' settings, each with its
+// value as the manifest has it or unset, its default, and what it means,
+// with whether the settings action lets the dashboard change them and what
+// turns it on; settings.manifest changes them through flai manifest set only
+// with that action on, and flai's refusal reaches the caller as Refused with
+// the field and the reason, the manifest left as it was.
+func TestSettingsShowAndSaveTheStrategicAgentsSettings(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	file := filepath.Join(root, manifest.File)
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture := "orchestration:\n  policy: wsjf\n  permissions:\n    promote_to_ready: true\n  release:\n    policy: threshold\n    value: 500\nplanning:\n  agent:\n    model: claude-sonnet-5\n"
+	if err := os.WriteFile(file, append(data, fixture...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	inProcess(t)
+	type setting struct {
+		Key     string          `json:"key"`
+		Kind    string          `json:"kind"`
+		Values  []string        `json:"values"`
+		Default string          `json:"default"`
+		Meaning string          `json:"meaning"`
+		Risk    string          `json:"risk"`
+		Whole   bool            `json:"whole"`
+		Value   json.RawMessage `json:"value"`
+		Set     bool            `json:"set"`
+	}
+	type strategic struct {
+		Editable bool      `json:"editable"`
+		Enable   string    `json:"enable"`
+		Settings []setting `json:"settings"`
+	}
+	read := func() (strategic, map[string]setting) {
+		t.Helper()
+		out, _, code := runIn(t, root, "hostapi", "settings.get", `{}`)
+		var got struct {
+			Host struct {
+				Strategic strategic `json:"strategic"`
+			} `json:"host"`
+		}
+		if err := json.Unmarshal([]byte(out), &got); code != 0 || err != nil {
+			t.Fatalf("settings.get: %d %v %s", code, err, out)
+		}
+		byKey := map[string]setting{}
+		for _, s := range got.Host.Strategic.Settings {
+			byKey[s.Key] = s
+		}
+		return got.Host.Strategic, byKey
+	}
+
+	st, byKey := read()
+	if st.Editable || st.Enable != "flai serve enable settings" || len(st.Settings) != len(manifest.Settings()) {
+		t.Errorf("strategic: editable %v, enable %q, %d settings, want false, flai serve enable settings, %d", st.Editable, st.Enable, len(st.Settings), len(manifest.Settings()))
+	}
+	for _, c := range []struct {
+		key, kind, value, def string
+		set                   bool
+	}{
+		{"orchestration.permissions.promote_to_ready", "boolean", `true`, "false", true},
+		{"orchestration.permissions.accept_reviews", "boolean", ``, "false", false},
+		{"orchestration.permissions.answer_threads", "choice", ``, "off", false},
+		{"orchestration.policy", "choice", `"wsjf"`, "fifo", true},
+		{"orchestration.release.policy", "choice", `"threshold"`, "judgement", true},
+		{"orchestration.release.value", "number", `500`, "", true},
+		{"orchestration.release.count", "number", ``, "", false},
+		{"planning.agent", "agent", `{"model":"claude-sonnet-5"}`, "", true},
+		{"planning.replan", "choice", ``, "deterministic", false},
+		{"analysis.schedule", "cron", ``, "", false},
+	} {
+		s, ok := byKey[c.key]
+		if !ok || s.Kind != c.kind || string(s.Value) != c.value || s.Default != c.def || s.Set != c.set || s.Meaning == "" {
+			t.Errorf("%s: %+v (value %s), want kind %s, value %q, default %q, set %v, and a meaning", c.key, s, s.Value, c.kind, c.value, c.def, c.set)
+		}
+	}
+	if s := byKey["orchestration.permissions.promote_to_ready"]; s.Risk == "" || !reflect.DeepEqual(s.Values, []string{"true", "false"}) {
+		t.Errorf("a permission says its risk and its values: %+v", s)
+	}
+	if s := byKey["orchestration.release.count"]; !s.Whole {
+		t.Errorf("a count is a whole number: %+v", s)
+	}
+	if s := byKey["orchestration.policy"]; !reflect.DeepEqual(s.Values, manifest.OrderPolicies) {
+		t.Errorf("a choice lists its values: %+v", s)
+	}
+
+	save := func(params string) (string, int) {
+		t.Helper()
+		out, _, code := runIn(t, root, "hostapi", "settings.manifest", params)
+		return out, code
+	}
+	written := func() string {
+		t.Helper()
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	before := written()
+	if out, code := save(`{"set":{"planning.replan":"agent"},"request_id":"req-00000091"}`); code == 0 || !strings.Contains(out, "-32012") || !strings.Contains(out, "flai serve enable settings") {
+		t.Errorf("with the settings action off: %d %s", code, out)
+	}
+	runIn(t, root, "serve", "enable", "settings")
+	if out, code := save(`{"set":{"planning.replan":"agent","orchestration.release.value":-1},"request_id":"req-00000092"}`); code == 0 || !strings.Contains(out, "-32010") ||
+		!strings.Contains(out, `"field":"orchestration.release.value"`) || !strings.Contains(out, `"reason":"`) {
+		t.Errorf("flai's refusal reaches the caller with the field and the reason: %d %s", code, out)
+	}
+	if got := written(); got != before {
+		t.Errorf("a refused save wrote the manifest:\n%s", got)
+	}
+
+	if out, code := save(`{"set":{"planning.replan":"agent"},"unset":["orchestration.policy"],"request_id":"req-00000093"}`); code != 0 || !strings.Contains(out, `{"key":"planning.replan","value":"agent"}`) {
+		t.Fatalf("a save: %d %s", code, out)
+	}
+	st, byKey = read()
+	if !st.Editable {
+		t.Error("with the settings action on, strategic says editable")
+	}
+	if s := byKey["planning.replan"]; string(s.Value) != `"agent"` || !s.Set {
+		t.Errorf("planning.replan after the save: %+v (value %s)", s, s.Value)
+	}
+	if s := byKey["orchestration.policy"]; s.Set || len(s.Value) != 0 || s.Default != "fifo" {
+		t.Errorf("orchestration.policy after it was unset: %+v (value %s)", s, s.Value)
+	}
+	if js, _, _ := runIn(t, root, "serve", "journal"); !strings.Contains(js, "flai manifest set --autocommit --unset=orchestration.policy -- planning.replan=agent") {
+		t.Errorf("the journal names the change as the command it ran:\n%s", js)
 	}
 }
 
