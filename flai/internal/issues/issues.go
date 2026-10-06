@@ -217,28 +217,49 @@ func NextID(r *workitem.Repo, run execx.Runner) string {
 var fileIDPattern = regexp.MustCompile(`^I-(\d+)-.*\.md$`)
 
 // NewOptions describe an issue to record. Story is the story the first
-// instance belongs to, or empty for none. Runner reads the other worktrees
-// and branches for the next number; nil is execx.System.
+// instance belongs to, or empty for none. Impact, when given, is written as
+// its Impact section. Report is the analysis report under design/analysis
+// that found it, or empty for none: the instance names it and the
+// Remediation section links it (S-0224). Runner reads the other worktrees and
+// branches for the next number; nil is execx.System.
 type NewOptions struct {
 	Title, Class, Cost, Note, Story string
+	Impact                          Impact
+	Report                          string
 	Now                             time.Time
 	Runner                          execx.Runner
 }
 
-// New creates an issue file with count 1.
-func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
+// check refuses what New would refuse, before anything is written, and
+// returns the story and the report, normalised, or empty for none.
+func (opt NewOptions) check(r *workitem.Repo) (story, report string, err error) {
 	if strings.TrimSpace(opt.Title) == "" {
-		return nil, fmt.Errorf("a title is required")
+		return "", "", fmt.Errorf("a title is required")
 	}
 	if !contains(Classes, opt.Class) {
-		return nil, fmt.Errorf("--class must be one of %s", strings.Join(Classes, ", "))
+		return "", "", fmt.Errorf("--class must be one of %s", strings.Join(Classes, ", "))
 	}
 	if opt.Cost != "" {
 		if _, err := time.ParseDuration(opt.Cost); err != nil {
-			return nil, fmt.Errorf("--cost must be a duration like 20m: %w", err)
+			return "", "", fmt.Errorf("--cost must be a duration like 20m: %w", err)
 		}
 	}
-	story, err := storyID(opt.Story)
+	if story, err = storyID(opt.Story); err != nil {
+		return "", "", err
+	}
+	if err := opt.Impact.Validate(); err != nil {
+		return "", "", err
+	}
+	if report, err = reportPath(r, opt.Report); err != nil {
+		return "", "", err
+	}
+	return story, report, nil
+}
+
+// New creates an issue file with count 1. Anything it refuses leaves nothing
+// written.
+func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
+	story, report, err := opt.check(r)
 	if err != nil {
 		return nil, err
 	}
@@ -251,31 +272,70 @@ func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 	is := &Issue{ID: id, Title: opt.Title, Class: opt.Class, Status: "open", Count: 1, Cost: normalise(opt.Cost),
 		FirstReported: now, LastReported: now, Updated: now,
 		Path: filepath.Join(Dir(r), id+"-"+template.Slug(opt.Title)+".md"),
-		Body: fmt.Sprintf("\n# %s %s\n\n## Description\n%s\n\n## Instances\n\n### %s\n%s%s\n\n## Remediation\n", id, opt.Title, opt.Title, now, storyLine(story), note)}
+		Body: fmt.Sprintf("\n# %s %s\n\n## Description\n%s\n\n## Instances\n\n### %s\n%s%s%s\n\n## Remediation\n", id, opt.Title, opt.Title, now, storyLine(story), reportLine(report), note)}
+	if !opt.Impact.IsZero() {
+		is.Body = setImpact(is.Body, opt.Impact)
+	}
+	if report != "" {
+		linkReport(is, r.Root, report)
+	}
 	if err := is.Validate(); err != nil {
 		return nil, err
 	}
 	return is, is.Save()
 }
 
+// BumpOptions describe another occurrence of an issue. Story is the story it
+// belongs to, or empty for none; Cost its wall-clock cost, or empty. Impact
+// replaces the Impact lines it gives and keeps the others. Report is the
+// analysis report under design/analysis that found it, or empty for none: the
+// instance names it and the Remediation section links it, once (S-0224).
+type BumpOptions struct {
+	Story, Cost, Note string
+	Impact            Impact
+	Report            string
+	Now               time.Time
+}
+
 // Bump records another occurrence: count, last_reported, averaged cost, and
 // a new instance in the body naming the story it belongs to, if any.
 func Bump(is *Issue, story, cost, note string, now time.Time) error {
+	return BumpWith(nil, is, BumpOptions{Story: story, Cost: cost, Note: note, Now: now})
+}
+
+// BumpWith records another occurrence as Bump does, and with it the impact
+// and the report opt gives. r is the project the issue is in; it may be nil
+// when opt names no report. Anything it refuses leaves the issue as it was.
+func BumpWith(r *workitem.Repo, is *Issue, opt BumpOptions) error {
 	if is.Status != "open" {
 		return fmt.Errorf("%s is closed; reopen it by editing status, or record a new issue", is.ID)
 	}
-	story, err := storyID(story)
+	story, err := storyID(opt.Story)
 	if err != nil {
 		return err
 	}
-	ts := now.UTC().Format(workitem.TimeFormat)
-	if cost != "" {
-		d, err := time.ParseDuration(cost)
-		if err != nil {
+	var d time.Duration
+	if opt.Cost != "" {
+		if d, err = time.ParseDuration(opt.Cost); err != nil {
 			return fmt.Errorf("--cost must be a duration like 20m: %w", err)
 		}
+	}
+	if err := opt.Impact.Validate(); err != nil {
+		return err
+	}
+	var report string
+	if strings.TrimSpace(opt.Report) != "" {
+		if r == nil {
+			return fmt.Errorf("no project given to find report %q in", opt.Report)
+		}
+		if report, err = reportPath(r, opt.Report); err != nil {
+			return err
+		}
+	}
+	ts := opt.Now.UTC().Format(workitem.TimeFormat)
+	if opt.Cost != "" {
 		if is.Cost == "" {
-			is.Cost = normalise(cost)
+			is.Cost = normalise(opt.Cost)
 		} else {
 			old, _ := time.ParseDuration(is.Cost)
 			avg := (old*time.Duration(is.Count) + d) / time.Duration(is.Count+1)
@@ -284,10 +344,17 @@ func Bump(is *Issue, story, cost, note string, now time.Time) error {
 	}
 	is.Count++
 	is.LastReported, is.Updated = ts, ts
-	if strings.TrimSpace(note) == "" {
+	note := strings.TrimSpace(opt.Note)
+	if note == "" {
 		note = "Occurred again."
 	}
-	is.Body = insertInstance(is.Body, ts, story, strings.TrimSpace(note))
+	is.Body = insertInstance(is.Body, ts, story, reportLine(report)+note)
+	if !opt.Impact.IsZero() {
+		is.Body = setImpact(is.Body, opt.Impact)
+	}
+	if report != "" {
+		linkReport(is, r.Root, report)
+	}
 	return is.Save()
 }
 
@@ -306,14 +373,19 @@ func Close(is *Issue, reason string, now time.Time) error {
 }
 
 // insertInstance adds an occurrence at the end of the Instances section,
-// its story line first. Instances are headed by their timestamp, to the
-// second. Two recorded in the same second share the heading, as narrative log
-// entries do (I-0011): a second identical heading fails the duplicate-heading
-// rule. The joined note names its story unless that instance already does.
+// before the section after it, Impact or Remediation, its story line first.
+// Instances are headed by their timestamp, to the second. Two recorded in the
+// same second share the heading, as narrative log entries do (I-0011): a
+// second identical heading fails the duplicate-heading rule. The joined note
+// names its story unless that instance already does.
 func insertInstance(body, ts, story, note string) string {
 	head, tail := strings.TrimRight(body, "\n"), ""
-	if idx := strings.Index(body, "\n## Remediation"); idx >= 0 {
-		head, tail = strings.TrimRight(body[:idx], "\n"), body[idx+1:]
+	if _, end, ok := section(body, "## Instances"); ok && end < len(body) {
+		head, tail = strings.TrimRight(body[:end], "\n"), body[end:]
+	} else if !ok {
+		if idx := strings.Index(body, "\n## Remediation"); idx >= 0 {
+			head, tail = strings.TrimRight(body[:idx], "\n"), body[idx+1:]
+		}
 	}
 	entry := fmt.Sprintf("### %s\n%s%s\n\n", ts, storyLine(story), note)
 	if last := strings.LastIndex(head, "\n### "); last >= 0 {

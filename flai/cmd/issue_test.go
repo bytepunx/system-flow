@@ -415,3 +415,94 @@ func TestIssueNewNumbersPastEveryStorysIssues(t *testing.T) {
 		t.Errorf("issue new in a third story's worktree should be I-0004: %d %q %s", code, out, errOut)
 	}
 }
+
+// S-0224: the analyzer files a finding with its impact and the report that
+// found it; with --report an open issue of the same title is bumped, not
+// duplicated, and --json says which; bump with --report links a report and
+// updates the impact; anything bad is refused with nothing written.
+func TestIssueNewAndBumpWithImpactAndReport(t *testing.T) {
+	root := issueProject(t)
+	report := "design/analysis/2026-10-06-bottlenecks.md"
+	issueFiles := func() []string {
+		m, _ := filepath.Glob(filepath.Join(root, "design", "issues", "I-*.md"))
+		return m
+	}
+	filed := func(args ...string) map[string]any {
+		t.Helper()
+		out, errOut, code := runIn(t, root, append([]string{"issue", "new"}, args...)...)
+		var got map[string]any
+		if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+			t.Fatalf("issue new %v: %d %s %s", args, code, out, errOut)
+		}
+		return got
+	}
+	got := filed("Review waits a day", "--class", "efficiency", "--revenue-per-week", "1200", "--time-lost-per-cycle", "240m",
+		"--evidence", "Twelve stories waited 18h on average.", "--report", report, "--story", "S-0224", "--json")
+	if got["id"] != "I-0001" || got["outcome"] != "opened" || !strings.HasSuffix(got["path"].(string), "I-0001-review-waits-a-day.md") {
+		t.Errorf("new --report --json: %v", got)
+	}
+	data := string(readIssueFile(t, root, "I-0001-review-waits-a-day.md"))
+	for _, want := range []string{"Story: S-0224.\nReport: " + report + ".\nFirst occurrence.\n",
+		"## Impact\nTwelve stories waited 18h on average.\n\n- revenue_per_week: 1200\n- time_lost_per_cycle: 4h\n\n## Remediation\n",
+		"Found by the analysis in [2026-10-06-bottlenecks.md](../analysis/2026-10-06-bottlenecks.md).\n"} {
+		if !strings.Contains(data, want) {
+			t.Errorf("the issue should hold %q:\n%s", want, data)
+		}
+	}
+
+	got = filed("Review waits a day", "--class", "efficiency", "--penalty-per-week", "300", "--report", "design/analysis/2026-10-13-all.md", "--json")
+	if got["id"] != "I-0001" || got["outcome"] != "bumped" || got["count"].(float64) != 2 || len(issueFiles()) != 1 {
+		t.Errorf("the same title with --report is bumped: %v %v", got, issueFiles())
+	}
+	out, errOut, code := runIn(t, root, "issue", "new", "Review waits a day", "--class", "efficiency", "--report", "design/analysis/2026-10-13-all.md")
+	if code != 0 || out != "I-0001 Review waits a day\n  design/issues/I-0001-review-waits-a-day.md\n  already recorded from this report; nothing changed\n" {
+		t.Errorf("the same report again: %d %q %s", code, out, errOut)
+	}
+	out, errOut, code = runIn(t, root, "issue", "new", "Review waits a day", "--class", "efficiency")
+	if code != 0 || !strings.HasPrefix(out, "I-0002 Review waits a day\n") || strings.Contains(out, "opened") {
+		t.Errorf("without --report the same title is a new issue, said as before: %d %q %s", code, out, errOut)
+	}
+
+	out, errOut, code = runIn(t, root, "issue", "bump", "I-0002", "--report", report, "--time-lost-per-cycle", "2h", "--evidence", "Seen in the same report.")
+	if code != 0 || out != "I-0002 count 2, avg cost -\n" {
+		t.Errorf("bump with --report: %d %q %s", code, out, errOut)
+	}
+	data = string(readIssueFile(t, root, "I-0002-review-waits-a-day.md"))
+	for _, want := range []string{"Report: " + report + ".\nOccurred again.\n\n## Impact\nSeen in the same report.\n\n- time_lost_per_cycle: 2h\n\n## Remediation\n",
+		"](../analysis/2026-10-06-bottlenecks.md).\n"} {
+		if !strings.Contains(data, want) {
+			t.Errorf("bump with --report should link the report and add the impact, %q:\n%s", want, data)
+		}
+	}
+
+	before := map[string]string{}
+	for _, f := range append(issueFiles(), filepath.Join(root, "design", "issues", "summary.md")) {
+		b, _ := os.ReadFile(f)
+		before[f] = string(b)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"issue", "new", "Bad", "--class", "defect", "--revenue-per-week", "lots"}, "not an amount of zero or more"},
+		{[]string{"issue", "new", "Bad", "--class", "defect", "--penalty-per-week", "-1"}, "not an amount of zero or more"},
+		{[]string{"issue", "new", "Bad", "--class", "defect", "--time-lost-per-cycle", "0"}, "not a duration longer than zero"},
+		{[]string{"issue", "new", "Bad", "--class", "defect", "--report", "design/issues/summary.md"}, "not an analysis report"},
+		{[]string{"issue", "new", "Review waits a day", "--class", "efficiency", "--report", report, "--time-lost-per-cycle", "soon"}, "not a duration"},
+		{[]string{"issue", "bump", "I-0001", "--penalty-per-week", "x"}, "not an amount"},
+		{[]string{"issue", "bump", "I-0001", "--time-lost-per-cycle", "-4h"}, "not a duration longer than zero"},
+		{[]string{"issue", "bump", "I-0001", "--report", "design/analysis/notes.txt"}, "not an analysis report"},
+	} {
+		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v should be refused with %q: %d %s", c.args, c.want, code, errOut)
+		}
+	}
+	if len(issueFiles()) != 2 {
+		t.Errorf("a refusal wrote an issue: %v", issueFiles())
+	}
+	for f, b := range before {
+		if after, _ := os.ReadFile(f); string(after) != b {
+			t.Errorf("a refusal changed %s:\n%s", f, after)
+		}
+	}
+}

@@ -93,3 +93,43 @@ func RecordOnce(r *workitem.Repo, opt NewOptions) (*Issue, Outcome, error) {
 	}
 	return is, Bumped, nil
 }
+
+// NewOrBump records a finding. Without opt.Report it is New, Opened. With
+// it, the finding of an analysis report (S-0224), it bumps the open issue
+// titled opt.Title, when one is, with the report, impact, story, cost, and
+// note opt gives, rather than open a second, and leaves it as it is when an
+// instance of it names that report already, so that filing a report's
+// findings again does not count them twice. It does not regenerate
+// summary.md. Anything it refuses leaves nothing written.
+func NewOrBump(r *workitem.Repo, opt NewOptions) (*Issue, Outcome, error) {
+	if strings.TrimSpace(opt.Report) == "" {
+		is, err := New(r, opt)
+		if err != nil {
+			return nil, "", err
+		}
+		return is, Opened, nil
+	}
+	_, report, err := opt.check(r)
+	if err != nil {
+		return nil, "", err
+	}
+	list, err := List(r)
+	if err != nil {
+		return nil, "", fmt.Errorf("read the issues in %s: %w", Dir(r), err)
+	}
+	is := FindOpenByTitle(list, opt.Title)
+	if is == nil {
+		is, err := New(r, opt)
+		if err != nil {
+			return nil, "", err
+		}
+		return is, Opened, nil
+	}
+	if hasReport(is, report) {
+		return is, Already, nil
+	}
+	if err := BumpWith(r, is, BumpOptions{Story: opt.Story, Cost: opt.Cost, Note: opt.Note, Impact: opt.Impact, Report: report, Now: opt.Now}); err != nil {
+		return nil, "", err
+	}
+	return is, Bumped, nil
+}

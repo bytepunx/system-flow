@@ -74,23 +74,60 @@ func (a *app) refreshSummary() ([]*issues.Issue, error) {
 	return issues.WriteSummary(repo, a.now())
 }
 
+// issueImpactFlags adds the flags that give an issue's Impact section, and
+// the report that found it, to issue new and bump (S-0224).
+func issueImpactFlags(c *cobra.Command, im *issues.Impact, report *string) {
+	c.Flags().StringVar(&im.RevenuePerWeek, "revenue-per-week", "", "Impact: the revenue lost each week it stays open, an amount of zero or more in planning.currency")
+	c.Flags().StringVar(&im.PenaltyPerWeek, "penalty-per-week", "", "Impact: the penalty paid each week it stays open, an amount of zero or more in planning.currency")
+	c.Flags().StringVar(&im.TimeLostPerCycle, "time-lost-per-cycle", "", "Impact: the time it loses each planning cycle, a duration longer than zero, e.g. 4h")
+	c.Flags().StringVar(&im.Evidence, "evidence", "", "Impact: the evidence for the figures, in any words")
+	c.Flags().StringVar(report, "report", "", "the analysis report under design/analysis that found it, from the project root; the instance names it and the Remediation section links it")
+}
+
+// issueFiled is an issue as flai issue new --report --json gives it: with
+// whether it was opened, bumped, or already recorded from the report.
+type issueFiled struct {
+	*issues.Issue
+	Outcome issues.Outcome `json:"outcome"`
+}
+
 func newIssueNewCmd(a *app) *cobra.Command {
-	var class, cost, note, story string
+	var class, cost, note, story, report string
+	var impact issues.Impact
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
-		Short: "Record a new issue (count 1)",
+		Short: "Record a new issue (count 1), or a report's finding",
 		Long: `Record a new issue with count 1. Its number is one past the highest issue
 on main, in any story worktree, and on any story branch, so stories worked
-in parallel do not take the same number.`,
+in parallel do not take the same number.
+
+--revenue-per-week, --penalty-per-week, and --time-lost-per-cycle give what
+it costs while it stays open, and --evidence the words behind them: the issue
+gets an Impact section, one "- key: value" line per figure after the
+evidence, which flai issue story carries over as the cost of delay inputs of
+the story it makes. An amount is a number of zero or more, a duration a Go
+duration longer than zero; anything else is refused and nothing is written.
+
+--report names the analysis report under design/analysis that found it (the
+analyzer's finding). The instance says "Report: <path>." and the Remediation
+section links the report. With --report an open issue of the same title is
+bumped, with the report, impact, and note, rather than a second one opened,
+and left as it is when an instance already names that report; the output
+says which happened, and --json gives it as outcome: opened, bumped, or
+already recorded. A path that is not a markdown file under design/analysis is
+refused and nothing is written.`,
 		Example: `  flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
-  flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"`,
+  flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"
+  flai issue new "Review waits a day for the operator" --class efficiency --time-lost-per-cycle 6h \
+    --evidence "12 stories waited 18h on average in review" --report design/analysis/2026-10-06-bottlenecks.md --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			is, err := issues.New(repo, issues.NewOptions{Title: args[0], Class: class, Cost: cost, Note: note, Story: a.issueStory(repo, story), Now: a.now(), Runner: a.runner})
+			is, outcome, err := issues.NewOrBump(repo, issues.NewOptions{Title: args[0], Class: class, Cost: cost, Note: note, Story: a.issueStory(repo, story),
+				Impact: impact, Report: report, Now: a.now(), Runner: a.runner})
 			if err != nil {
 				return err
 			}
@@ -98,9 +135,22 @@ in parallel do not take the same number.`,
 				return err
 			}
 			if a.jsonOut {
-				return a.printJSON(is)
+				if report == "" {
+					return a.printJSON(is)
+				}
+				return a.printJSON(issueFiled{Issue: is, Outcome: outcome})
 			}
 			fmt.Fprintf(a.out, "%s %s\n  %s\n", is.ID, is.Title, relPath(repo.Root, is.Path))
+			if report != "" {
+				switch outcome {
+				case issues.Bumped:
+					fmt.Fprintf(a.out, "  bumped the open issue of this title, count %d\n", is.Count)
+				case issues.Already:
+					fmt.Fprintln(a.out, "  already recorded from this report; nothing changed")
+				default:
+					fmt.Fprintln(a.out, "  opened")
+				}
+			}
 			return nil
 		},
 	}
@@ -108,16 +158,30 @@ in parallel do not take the same number.`,
 	c.Flags().StringVar(&cost, "cost", "", "wall-clock cost of this occurrence, e.g. 20m")
 	c.Flags().StringVar(&note, "note", "", "what happened, recorded as the first instance")
 	c.Flags().StringVar(&story, "story", "", storyHelp)
+	issueImpactFlags(c, &impact, &report)
 	_ = c.MarkFlagRequired("class")
 	return c
 }
 
 func newIssueBumpCmd(a *app) *cobra.Command {
-	var cost, note, story string
+	var cost, note, story, report string
+	var impact issues.Impact
 	c := &cobra.Command{
 		Use:   "bump <id>",
 		Short: "Record another occurrence of an issue",
-		Args:  cobra.ExactArgs(1),
+		Long: `Record another occurrence of an issue: its count, last reported, average
+cost, and an instance naming the story it belongs to.
+
+--revenue-per-week, --penalty-per-week, and --time-lost-per-cycle replace
+those figures in the issue's Impact section, which is added when it has none,
+and keep the others; --evidence adds the words behind them. --report links
+the analysis report under design/analysis that found it, as flai issue new
+--report does, for a finding the analyzer judged the same as this issue under
+another title. A bad amount, duration, or report path is refused and nothing
+is written.`,
+		Example: `  flai issue bump I-0007 --cost 10m --note "again in the release dry run"
+  flai issue bump I-0007 --report design/analysis/2026-10-06-risk.md --penalty-per-week 300 --evidence "two releases slipped"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
@@ -127,7 +191,7 @@ func newIssueBumpCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := issues.Bump(is, a.issueStory(repo, story), cost, note, a.now()); err != nil {
+			if err := issues.BumpWith(repo, is, issues.BumpOptions{Story: a.issueStory(repo, story), Cost: cost, Note: note, Impact: impact, Report: report, Now: a.now()}); err != nil {
 				return err
 			}
 			if _, err := issues.WriteSummary(repo, a.now()); err != nil {
@@ -143,6 +207,7 @@ func newIssueBumpCmd(a *app) *cobra.Command {
 	c.Flags().StringVar(&cost, "cost", "", "wall-clock cost of this occurrence; the average is updated")
 	c.Flags().StringVar(&note, "note", "", "what happened this time")
 	c.Flags().StringVar(&story, "story", "", storyHelp)
+	issueImpactFlags(c, &impact, &report)
 	return c
 }
 

@@ -1370,7 +1370,7 @@ Subcommands:
 - [bump](#flai-issue-bump): Record another occurrence of an issue
 - [close](#flai-issue-close): Close an issue with a reason
 - [list](#flai-issue-list): List issues without touching files
-- [new](#flai-issue-new): Record a new issue (count 1)
+- [new](#flai-issue-new): Record a new issue (count 1), or a report's finding
 - [story](#flai-issue-story): Make a backlog story that remediates an open issue
 - [summary](#flai-issue-summary): Regenerate summary.md and print the open issues table
 
@@ -1382,13 +1382,29 @@ Record another occurrence of an issue.
 flai issue bump <id> [flags]
 ```
 
+Record another occurrence of an issue: its count, last reported, average cost, and an instance naming the story it belongs to.
+
+--revenue-per-week, --penalty-per-week, and --time-lost-per-cycle replace those figures in the issue's Impact section, which is added when it has none, and keep the others; --evidence adds the words behind them. --report links the analysis report under design/analysis that found it, as flai issue new --report does, for a finding the analyzer judged the same as this issue under another title. A bad amount, duration, or report path is refused and nothing is written.
+
+Examples:
+
+```bash
+flai issue bump I-0007 --cost 10m --note "again in the release dry run"
+flai issue bump I-0007 --report design/analysis/2026-10-06-risk.md --penalty-per-week 300 --evidence "two releases slipped"
+```
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
 | `--cost` string | wall-clock cost of this occurrence; the average is updated |
+| `--evidence` string | Impact: the evidence for the figures, in any words |
 | `--note` string | what happened this time |
+| `--penalty-per-week` string | Impact: the penalty paid each week it stays open, an amount of zero or more in planning.currency |
+| `--report` string | the analysis report under design/analysis that found it, from the project root; the instance names it and the Remediation section links it |
+| `--revenue-per-week` string | Impact: the revenue lost each week it stays open, an amount of zero or more in planning.currency |
 | `--story` string | the story this occurrence belongs to (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+| `--time-lost-per-cycle` string | Impact: the time it loses each planning cycle, a duration longer than zero, e.g. 4h |
 
 #### flai issue close
 
@@ -1423,7 +1439,7 @@ Flags:
 
 #### flai issue new
 
-Record a new issue (count 1).
+Record a new issue (count 1), or a report's finding.
 
 ```text
 flai issue new "<title>" [flags]
@@ -1431,11 +1447,17 @@ flai issue new "<title>" [flags]
 
 Record a new issue with count 1. Its number is one past the highest issue on main, in any story worktree, and on any story branch, so stories worked in parallel do not take the same number.
 
+--revenue-per-week, --penalty-per-week, and --time-lost-per-cycle give what it costs while it stays open, and --evidence the words behind them: the issue gets an Impact section, one "- key: value" line per figure after the evidence, which flai issue story carries over as the cost of delay inputs of the story it makes. An amount is a number of zero or more, a duration a Go duration longer than zero; anything else is refused and nothing is written.
+
+--report names the analysis report under design/analysis that found it (the analyzer's finding). The instance says "Report: &lt;path&gt;." and the Remediation section links the report. With --report an open issue of the same title is bumped, with the report, impact, and note, rather than a second one opened, and left as it is when an instance already names that report; the output says which happened, and --json gives it as outcome: opened, bumped, or already recorded. A path that is not a markdown file under design/analysis is refused and nothing is written.
+
 Examples:
 
 ```bash
 flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
 flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"
+flai issue new "Review waits a day for the operator" --class efficiency --time-lost-per-cycle 6h \
+  --evidence "12 stories waited 18h on average in review" --report design/analysis/2026-10-06-bottlenecks.md --json
 ```
 
 Flags:
@@ -1444,8 +1466,13 @@ Flags:
 |------|---------|
 | `--class` string | one of defect, blocker, efficiency, impression |
 | `--cost` string | wall-clock cost of this occurrence, e.g. 20m |
+| `--evidence` string | Impact: the evidence for the figures, in any words |
 | `--note` string | what happened, recorded as the first instance |
+| `--penalty-per-week` string | Impact: the penalty paid each week it stays open, an amount of zero or more in planning.currency |
+| `--report` string | the analysis report under design/analysis that found it, from the project root; the instance names it and the Remediation section links it |
+| `--revenue-per-week` string | Impact: the revenue lost each week it stays open, an amount of zero or more in planning.currency |
 | `--story` string | the story this occurrence belongs to (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+| `--time-lost-per-cycle` string | Impact: the time it loses each planning cycle, a duration longer than zero, e.g. 4h |
 
 #### flai issue story
 
