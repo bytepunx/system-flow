@@ -1137,7 +1137,7 @@ planning:
   schedule: "0 6 * * 1-5"    # five-field cron in UTC, or daily for 00:00 UTC; unset, no schedule
 ```
 
-`never` does nothing when work ahead completes or the order changes, and `agent` does what `deterministic` does, then runs the planner for each story whose delivery moved. You set both keys by hand; [project-manifest.md](../../design/system/project-manifest.md) has them, and `flai check` reports a value flai cannot read.
+`never` does nothing when work ahead completes or the order changes, and `agent` does what `deterministic` does, then runs the planner for each story whose delivery moved. You set both keys with `flai manifest set`, on the dashboard's Planner page, or by hand ([Changing the strategic agents' settings](#changing-the-strategic-agents-settings)); [project-manifest.md](../../design/system/project-manifest.md) has them, and `flai check` reports a value flai cannot read.
 
 flai serve sees the edits made with `flai edit`, `flai touches`, the dashboard, and the MCP tool `item_edit`; a hand edit of a file is not seen. It runs one planner at a time per project. A story queued more than once runs once, with every trigger, and one whose planner already runs, such as one you asked for, waits its turn. A queued story that can no longer be planned, such as one accepted meanwhile, is dropped. flai serve acts only on what happens while it runs with `plan` on: what passed while it was down, or while `plan` was off, is not acted on.
 
@@ -1161,7 +1161,7 @@ The Settings page of the dashboard turns it on and off too, while `settings` is 
 
 Its agent is `orchestration.agent` in `system-flow.yaml`, laid over the project's `agent` as `planning.agent` is for the planner. With `claude-code` it runs as the project's `.claude/agents/orchestrator.md`. A command you set with `flai serve agent set` gets `FLAI_ROLE=orchestrate` and no story. The run does not count against the in-progress limit. Its output is in `serve/agents/<key>-orchestrator-<time>.log` beside flai serve's state.
 
-What it may do is yours to give, one permission at a time, under `orchestration.permissions`. Each is off until you set it:
+What it may do is yours to give, one permission at a time, under `orchestration.permissions`, with `flai manifest set`, on the dashboard's Orchestrator page, or by hand ([Changing the strategic agents' settings](#changing-the-strategic-agents-settings)). Each is off until you set it:
 
 ```yaml
 orchestration:
@@ -1184,7 +1184,7 @@ orchestration:
 | `accept_reviews` | Accept a story in review with `flai accept --by orchestrator`, once its verifier passed and nothing blocks it ([When the orchestrator accepts](#when-the-orchestrator-accepts)) |
 | `publish` | Publish what is accepted and not yet released, through the MCP tool `release_publish` alone, when the release policy allows it. The `push` host action must be on too ([When the orchestrator publishes](#when-the-orchestrator-publishes)) |
 
-Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, or to `done` as it accepts it, changing anything of an item but its draft flag, placing a story by hand in the pull order, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal.
+Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. Its prompt tells it that you may change its permissions, its policy, and the release policy while it runs, to read them again before each decision, and that the guard's verdict holds when it differs from what it read. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, or to `done` as it accepts it, changing anything of an item but its draft flag, placing a story by hand in the pull order, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal.
 
 flai holds it to the four permissions above itself too, so a call the guard does not see is held all the same (S-0219). In the orchestrator's session, `flai plan` and the MCP tool `plan` refuse an epic `flai plan --candidates` does not list; `flai edit --no-draft` and `item_edit` refuse a draft that is not complete, naming what it lacks; `flai move` and `item_move` refuse a story that is not a candidate, with the candidates' reasons, and any story while ready is at its WIP limit; and `flai order --by --apply` is refused without `order_ready`. flai holds it to `accept_reviews` the same way ([When the orchestrator accepts](#when-the-orchestrator-accepts)). A refusal ends that attempt: it logs it and does not try again until something changes. A planner it starts records `orchestrator` as what started it, in its run and its entry in `wip/agents/planner.md`. It never places a story by hand, and its policy order keeps a story you placed in the last day where you put it ([ADR-0088](../../design/adrs/0088-board-md-records-who-placed-a-story-by-hand-and-when-and-a-policy-s-order-keeps.md)). `flai check` reports a permission it does not know, or an `answer_threads` that is none of its three values.
 
@@ -1240,6 +1240,38 @@ Its report is `design/analysis/<date>-<focus>.md`, the date in UTC and the focus
 `flai guard` holds it to its report: it may read, run flai's reads, `flai stats` among them, open and answer threads, and log its activity, and it may use Claude Code's `Edit` and `Write` only on a file under `design/analysis/`, a path that leads out of the folder by `..` or a link included. It may record and bump issues with `flai issue new` and `bump`, or the MCP tools `issue_new` and `issue_bump`, and list them. It may not create, edit, or move a work item, make a story from an issue (`flai issue story` or `issue_story`), close an issue, edit a file under `design/issues/` by hand, start the planner or another analyzer, commit, or run any other flai command that writes. That holds only while `.claude/settings.json` runs the guard on `Edit|Write|NotebookEdit` for an analyzer's session, as the template's does. When it needs an input that is yours, it asks in a thread on its report and waits for your answer.
 
 When it ends, `flai serve` records how: `worked` when it wrote a report, `failed` when it exited with an error or wrote no report. It logs the run in `wip/agents/analyzer.md`: a summary that names the report, or says none was written, what started it (`asked`, or `schedule 0 6 * * 1`), and what it cost. The entry names the issues that name the report, and its cost is split evenly between them; when none does, it stays in the analyzer's project total ([What the analyzer's run costs](../../design/system/strategic-agents.md#what-the-analyzers-run-costs-s-0227)). Its output is in `serve/agents/<key>-analyzer-<time>.log` beside flai serve's state, and `flai hostapi agent.status` shows the newest run as `analyzer`, with its focus and report. [The analyzer](../../design/system/strategic-agents.md#the-analyzer) has the whole of it.
+
+#### Changing the strategic agents' settings
+
+`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, and the planner's and the analyzer's agents and schedules (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
+
+```bash
+flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
+flai manifest set orchestration.release.policy=threshold orchestration.release.value=500
+flai manifest set planning.agent='{"model":"claude-sonnet-5"}' --unset planning.schedule
+flai manifest set analysis.schedule=daily --autocommit --json
+```
+
+| Keys | Values |
+|------|--------|
+| `orchestration.permissions.plan_backlog_epics`, `finalize_drafts`, `promote_to_ready`, `order_ready`, `accept_reviews`, `publish` | `true` or `false`; `false` by default |
+| `orchestration.permissions.answer_threads` | `off`, `recommend`, or `autonomous`; `off` by default |
+| `orchestration.policy` | `cod`, `wsjf`, `throughput`, or `fifo`; `fifo` by default |
+| `orchestration.release.policy` | `judgement`, `threshold`, or `theme`; `judgement` by default |
+| `orchestration.release.value`, `count` | A number of zero or more; `count` a whole one |
+| `orchestration.release.epic`, `tag` | An epic ID, or a tag |
+| `orchestration.release.whole_epics` | `true` or `false`; `false` by default |
+| `planning.agent`, `analysis.agent` | An agent as JSON, such as `{"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}`, written whole; `{}` removes it, and the agent is the project's |
+| `planning.replan` | `never`, `deterministic`, or `agent`; `deterministic` by default |
+| `planning.schedule`, `analysis.schedule` | A five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`; none by default |
+| `planning.hour_rate` | A number of zero or more, in the project's currency |
+| `planning.cycle`, `planning.default_duration` | A Go duration longer than zero, such as `168h`; `168h` and `1h` by default |
+
+`flai manifest set --help` lists the keys with their kinds, and [project-manifest.md](../../design/system/project-manifest.md) says what each does. `--unset <key>` removes a key, so that its default applies. Everything else in the file, its order, and its comments are kept. `planning.currency` is not among the keys: changing it would re-denominate every amount on the items, which flai does not convert, so you edit it by hand. Neither is `orchestration.agent`.
+
+flai checks the whole manifest as it would be after the change, as `flai check` does. A key it does not write, a value not of its key's kind, or anything wrong with the result is refused, each with its field and the reason, such as `orchestration.release.value: -1 is not an amount of zero or more; write …`. Nothing is written, and the exit status is 1. A problem elsewhere in the manifest is refused too, so fix it by hand first. With `--json` a refusal is `{"refused": [{"field": ..., "reason": ...}]}`, and a change `{"set": [...], "unset": [...]}`, with `commit` when it was committed.
+
+`--autocommit` commits `system-flow.yaml` on its own, as `chore: change the manifest's settings: <keys>`, unless the project sets `dashboard.autocommit: false`; `--trailer` adds a trailer line. Without it the change is left for you to commit. A running orchestrator is not restarted: a permission you change holds from its next call.
 
 #### What they did: activity documents
 

@@ -25,7 +25,7 @@ The header is the same on every page.
 
   | Group | Pages |
   |-------|-------|
-  | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity, Planner |
+  | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity, Planner, Orchestrator, Analyzer |
   | Status | Charts, ADRs, Docs, Search |
   | Host | Updates (the [Host](#host) page), Settings |
 
@@ -156,15 +156,78 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 ## Planner
 
-Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost. Find it last in the Workflow group.
+Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost, and below that its settings. Find it in the Workflow group, after Activity.
 
 - **The plan host action** says whether `flai serve` starts the planner here. While it is off, the page gives the command that turns it on, to run on the host in the project: `flai serve enable plan`.
 - **Running now** shows the planner run under way, if there is one: the epic or story it plans, the agent, when it started, and why (`asked`, or what changed to start it again). Its stream window shows what it is saying and doing, as the Activity page does for a story's agent.
 - **Activity** is the planner's activity document, `wip/agents/planner.md`. It shows the totals (what the planner has cost, how long it has worked, how many activities it has logged, and when it last ran), then each activity, newest first, with what it did, why it started, the items it changed, how long it took, and what it cost.
 - **Runs** lists the newest planner run for each epic or story it has planned, newest first. Each shows when it started and ended, how it went, and what it cost: the activities logged while it ran. A run that failed says why.
 - **Plan an epic or a story** takes an ID, such as `E-0016` or `S-0259`, and starts the planner for it, as **Plan** on the item's page and the card's menu do. The page says what flai answered: the run it started, or why it refused, such as a planner already running for the item. While the plan host action is off, the form is disabled and says so.
+- **The planner's settings** are the `planning` keys of `system-flow.yaml` but `currency`, edited here as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says:
 
-The page follows the planner as it works: it reads itself again when the planner's document or a work item changes, and when a planner run starts or ends.
+  | Setting | What it does |
+  |---------|--------------|
+  | `agent` | The planner's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's. Its harness, model, and options; empty, the planner runs on the project's agent |
+  | `replan` | What flai serve does when a story is accepted or cancelled or the pull order changes: `never` nothing, `deterministic`, the default, plays the board out again and moves forecast deliveries, and `agent` does that and queues the planner for each story whose delivery moved |
+  | `schedule` | When flai serve runs the planner over the ready column, a five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`; unset, there is no schedule |
+  | `hour_rate` | What an hour of work costs, in the project's currency, which prices a cost of delay's time lost; unset means unknown, not free |
+  | `cycle` | The period a cost of delay's time lost is counted over; `168h`, a week, by default |
+  | `default_duration` | The work a story is forecast to take when there is too little history to forecast it from; `1h` by default |
+
+  `agent` and `schedule` start planner sessions you pay for without asking each time, and `replan` set to `agent` does too. The currency is set by hand in `system-flow.yaml`, since changing it would re-denominate every amount on the items.
+
+The page follows the planner as it works: it reads itself again when the planner's document or a work item changes, and when a planner run starts or ends. It reads its settings again after a save and when `system-flow.yaml` changes, never on a timer, so a form you are typing in is not refilled under you.
+
+## Orchestrator
+
+Orchestrator holds the settings of the agent that keeps the project's work moving: what it may do without you, how it orders the ready column, and when a release is due. Find it in the Workflow group, after Planner. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)); its run and stream are on the [Activity](#activity) page. Its status, decisions, and runs will be shown here too.
+
+Its settings are the `orchestration` keys of `system-flow.yaml` but `agent`, edited as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says. **Permissions** are what it may do without you. Each is off until you turn it on, and a change holds from the orchestrator's next step: it is not restarted, and it reads its permissions again before each decision. Beside each the page says what it allows and what can go wrong:
+
+| Permission | Lets the orchestrator | Risk |
+|------------|-----------------------|------|
+| `plan_backlog_epics` | Ask the planner to draft stories for an epic in the backlog | The planner runs, and spends, on an epic you may not mean to start yet, and its drafts fill the backlog |
+| `finalize_drafts` | Finalize a draft story, as `flai edit --no-draft` does | A story the planner drafted becomes one that can be promoted without your having read it |
+| `promote_to_ready` | Move a story to ready | Agents may pull, work, and spend on a story you have not chosen to start |
+| `order_ready` | Write the order of the ready column by its policy | It replaces the order you set on the board, so the next story pulled is the policy's choice, not yours |
+| `answer_threads` | Answer threads: `off` leaves them to you, `recommend` replies with a recommendation for you, and `autonomous` answers them itself | With `autonomous`, agents act on answers you did not give; with `recommend`, the decision stays yours |
+| `accept_reviews` | Accept a story in review, as `flai accept` does | Work is merged to the main branch without your review, and a story accepted wrongly has to be undone by hand |
+| `publish` | Release and push accepted work, as `flai release --pending` and `flai push` do | A release reaches everyone who pulls or installs the project, and a published release cannot be taken back |
+
+Below them are its policies:
+
+| Setting | What it does |
+|---------|--------------|
+| `policy` | How the ready column is ordered: `cod` by cost of delay, `wsjf` by cost of delay over forecast duration, `throughput` shortest first, and `fifo`, the default, leaves your order alone |
+| `release` `policy` | When accepted stories not yet released are due a release: `judgement`, the default, leaves it to you, `threshold` at a value or a count of unreleased work, and `theme` when every story of an epic or a tag is accepted |
+| `release` `value` | Under `threshold`, the unreleased cost of delay per week, in the project's currency, at which a release is due |
+| `release` `count` | Under `threshold`, the number of accepted stories not yet released at which a release is due |
+| `release` `epic` | Under `theme`, the epic, such as `E-0001`, whose stories, every one accepted, make a release due |
+| `release` `tag` | Under `theme`, the tag whose stories, every one accepted, make a release due |
+| `release` `whole_epics` | Under every policy, holds a release back while a story accepted and not yet released belongs to an epic in neither review nor done |
+
+The orchestrator's own agent is set by hand in `system-flow.yaml`, under `orchestration.agent`.
+
+## Analyzer
+
+Analyzer holds the settings of the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)). Find it last in the Workflow group. Its runs, its activity, and a button to start it will be shown here too; its reports are on the [Docs](#docs) page.
+
+Its settings are the `analysis` keys of `system-flow.yaml`, edited as the next section says:
+
+| Setting | What it does |
+|---------|--------------|
+| `agent` | The analyzer's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's |
+| `schedule` | When flai serve runs the analyzer, a five-field cron expression in UTC, such as `0 6 * * 1`, or `daily`; unset, it runs only when you ask. Each scheduled run is a session you pay for |
+
+### Editing a strategic agent's settings
+
+The Planner, Orchestrator, and Analyzer pages edit their agents' settings the same way. Each setting shows its value, or while it is unset its default, and what it does.
+
+- **Read-only until the operator allows it.** The settings change `system-flow.yaml`, so they can be changed here only while the operator has turned on the `settings` host action for the project. Until then every field is disabled, and the page says why and gives the command to run on the host, in the project: `flai serve enable settings`.
+- **Save** writes only the settings you changed, through flai on the host, and commits `system-flow.yaml` with the dashboard's trailer; the page then says the commit. A field you empty is removed from the file, so its default applies. For an agent, give its harness, its model, and its options, one `key=value` a line; empty all three to remove it. Its sub-agents' roles are kept as they are.
+- **A refusal.** flai checks the whole `system-flow.yaml` as it would be after your change, as `flai check` does. When it finds something wrong, nothing is saved, what you typed stays, and the reason is said under each field it is about, such as a release value below zero or a schedule that never comes round. A problem elsewhere in the file is said at the top of the panel: it blocks every save until it is fixed by hand.
+
+The same settings are changed in a shell with `flai manifest set` ([Changing the strategic agents' settings](flai.md#changing-the-strategic-agents-settings)).
 
 ## Charts
 
@@ -266,13 +329,13 @@ Settings shows how flai on the host is set up for this project:
 - the project's shared paths;
 - the MCP server.
 
-It changes nothing until the operator runs `flai serve enable settings` on the host. Each section says so and names the command. After that, this project's own settings can be changed here: its host actions, its default agent, its shared paths, and its MCP token. The settings the host keeps for every project also need `flai serve enable settings --all-projects`.
+It changes nothing until the operator runs `flai serve enable settings` on the host. Each section says so and names the command. After that, this project's own settings can be changed here: its host actions, its default agent, its shared paths, and its MCP token. The same switch lets the [Planner](#planner), [Orchestrator](#orchestrator), and [Analyzer](#analyzer) pages change their agents' settings. The settings the host keeps for every project also need `flai serve enable settings --all-projects`.
 
 Shared paths lists the patterns in `claims.shared` in the project's `system-flow.yaml`: an overlap of two stories' claims inside one holds no ready story ([Shared paths](flai.md#shared-paths)). With the `settings` host action on, you can add a pattern or remove one. In a pattern, `*` matches within a folder, `**` across folders, and a plain path covers everything under it. flai commits each change. When flai refuses a pattern, because it is not valid or is listed already, the reason is shown beside the field. Check, which works even while settings are read-only, takes a path or a story's ID. For a path, or for each entry of the story's claim, it says which shared pattern the entry lies inside, or that none does. The section is missing while the host's flai is older than the one that brought shared paths.
 
 Projects lists every project `flai serve` serves, with its key, name, and folder, and whether it is connected and since when, the last error, or why it cannot be served. A project below an import folder is served as soon as `flai serve` next looks, and joins the switcher without a reload. One it does not serve is listed under "Below the import folders or the folder flai serve was started in, not served" with why: you removed it, its `system-flow.yaml` has no key, or its key is served already for another folder. **Remove** asks first, then stops serving the project, as `flai serve project remove` does, and the switcher drops it without a reload; none of its files is touched. A registered project is unregistered, and the page says how to serve it again on the host. A project served because it is below an import folder, or below the folder `flai serve` was started in, says which folder serves it; removing it puts it on `flai serve`'s list of removed projects, and it moves to the not-served list as removed (S-0123). **Serve** on a removed project takes it off that list, as `flai serve project add` does, and the switcher gains it without a reload. On any other project not served, Serve asks `flai serve` to register it and shows the answer; for no key or a key served already that is a refusal saying what to fix. Removing the folder under Import folders stops every project below it at once. Serve and Remove need `flai serve enable settings` for the project served or removed, and each says so, with the command, where it is off.
 
-Planning again, for this project, is read-only: you set it by hand in `system-flow.yaml`, under `planning` (`replan`, `schedule`). It shows whether edits to a planned story start the planner, which is whether the `plan` host action is on, since replanning and the schedule act only while it is; what happens when work ahead completes or the pull order changes, `never`, `deterministic`, or `agent`, marked when it is the default, with what that means; and the schedule in UTC with its next run, or none. A value flai cannot read is shown with its error. [Running the planner](flai.md#running-the-planner) says what each does.
+Planning again, for this project, is read-only here: `replan` and `schedule`, like the other planning settings, are edited on the [Planner](#planner) page, which the section links to. It shows whether edits to a planned story start the planner, which is whether the `plan` host action is on, since replanning and the schedule act only while it is; what happens when work ahead completes or the pull order changes, `never`, `deterministic`, or `agent`, marked when it is the default, with what that means; and the schedule in UTC with its next run, or none. A value flai cannot read is shown with its error. [Running the planner](flai.md#running-the-planner) says what each does.
 
 Commands are written one argument a line, and are run exactly as written, with no shell in between. Each section says whether the change was saved, or why flai refused it. Rotating the dashboard token keeps you logged in and shows the new login link once. Everyone else is logged out.
 
