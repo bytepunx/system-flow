@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-05T07:09:06Z
+updated: 2026-10-06T02:57:19Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:36Z
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-10-05T04:44:17Z
 forecast:
   duration: 35m
-  delivery: 2026-10-05T12:09:00Z
-  basis: "Its own forecast of 35m; 7th in the pull order with an in-progress limit of 3, behind S-0218, S-0219, S-0220, S-0221, S-0222 and S-0224."
+  delivery: 2026-10-06T05:27:00Z
+  basis: "Its own forecast of 35m; 6th in the pull order with an in-progress limit of 3, behind S-0219, S-0220, S-0221, S-0222 and S-0224."
   by: flai
-  at: 2026-10-05T07:09:06Z
+  at: 2026-10-06T02:57:19Z
 ---
 # S-0226 The orchestrator's cost is recorded on the story or epic each decision concerned
 

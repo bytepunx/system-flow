@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-05T07:09:06Z
+updated: 2026-10-06T02:57:19Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:35Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:49:29Z
 forecast:
   duration: 2h
-  delivery: 2026-10-05T14:51:00Z
-  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0218, S-0219, S-0220, S-0221, S-0222, S-0224 and S-0226."
+  delivery: 2026-10-06T08:10:00Z
+  basis: "Its own forecast of 2h; 7th in the pull order with an in-progress limit of 3, behind S-0219, S-0220, S-0221, S-0222, S-0224 and S-0226."
   by: flai
-  at: 2026-10-05T07:09:06Z
+  at: 2026-10-06T02:57:19Z
 ---
 # S-0223 The analyzer runs on demand or on a schedule and writes a report under design/analysis
 
