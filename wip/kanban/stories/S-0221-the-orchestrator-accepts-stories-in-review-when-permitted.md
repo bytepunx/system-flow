@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T03:45:18Z
+updated: 2026-10-06T05:58:56Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:22Z
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-05T04:47:12Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-06T06:01:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0282 and S-0220."
+  delivery: 2026-10-06T08:15:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0220."
   by: flai
-  at: 2026-10-06T03:45:18Z
+  at: 2026-10-06T05:58:56Z
 ---
 # S-0221 The orchestrator accepts stories in review when permitted
 
