@@ -3,11 +3,11 @@ id: I-0058
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
 class: efficiency
 status: open
-count: 5
+count: 6
 cost: 3m
 first_reported: 2026-10-02T17:23:40Z
-last_reported: 2026-10-06T11:24:31Z
-updated: 2026-10-06T11:24:31Z
+last_reported: 2026-10-06T22:01:45Z
+updated: 2026-10-06T22:01:45Z
 ---
 
 # I-0058 flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
@@ -35,5 +35,9 @@ T-1004's task sub-agent had a Bash heredoc refused: a Go comment inside it read 
 ### 2026-10-06T11:24:31Z
 Story: S-0221.
 T-0903's task sub-agent wrote a Go test through a bash heredoc whose comment named flai accept --by; the guard refused it, and it wrote the file with Edit instead. The orchestrator's acceptance (ADR-0093) passes its evidence through a heredoc too, so a Verdict line naming a flai write would be refused the same way.
+
+### 2026-10-06T22:01:45Z
+Story: S-0227.
+T-0942's task sub-agent edited design/system/strategic-agents.md through a shell script; the guard refused it because the script's text held the words of a flai issue command. It redid the edits with the Edit tool.
 
 ## Remediation

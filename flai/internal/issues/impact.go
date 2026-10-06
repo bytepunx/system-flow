@@ -192,6 +192,29 @@ func ReportLinks(is *Issue) []string {
 	return out
 }
 
+// NamingReport is the IDs of the issues, open or closed, that name the
+// analysis report, a path from the project root, as Reports gives them, in
+// ID order; nil for an empty report. An analyzer run's end is charged to them
+// (S-0227).
+func NamingReport(r *workitem.Repo, report string) ([]string, error) {
+	report = strings.TrimSpace(report)
+	if report == "" {
+		return nil, nil
+	}
+	report = path.Clean(filepath.ToSlash(report))
+	list, err := List(r)
+	if err != nil {
+		return nil, fmt.Errorf("issues naming report %s: %w", report, err)
+	}
+	var ids []string
+	for _, is := range list {
+		if contains(Reports(is), report) {
+			ids = append(ids, is.ID)
+		}
+	}
+	return ids, nil
+}
+
 // linkReport adds a line linking the report, a path from the project root
 // root, to the issue's Remediation section, as its last paragraph, adding the
 // section when it has none. A report it links already is not linked again.

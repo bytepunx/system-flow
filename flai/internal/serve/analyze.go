@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -34,8 +35,9 @@ import (
 // the run once its process is gone, and logs its activity in
 // wip/agents/analyzer.md, naming the report it wrote, the newest file under
 // design/analysis changed since it started, beside the run's seconds and
-// cost. It is no story's agent: the in-progress limit does not count it, and
-// it holds no story back.
+// cost, and naming the issues that name the report, which share the cost
+// (S-0227). It is no story's agent: the in-progress limit does not count it,
+// and it holds no story back.
 
 // Analyze starts the analyzer in project e, looking for focus, one of
 // harness.Focuses, or for all of them when focus is empty, and returns its
@@ -161,9 +163,12 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 // was seen, and the report it wrote: failed on a failed exit, and on an exit
 // that left no report; worked otherwise, an exit nobody saw included. It
 // logs the run's activity in the analyzer's activity document, with what
-// started it (ADR-0084) and a summary that names the report, or says there
-// is none. A report that cannot be looked for, and an activity that cannot
-// be logged, are warned of, and the run stays recorded as it ended.
+// started it (ADR-0084), a summary that names the report, or says there is
+// none, and as its items the issues that name the report, so that its cost
+// is split evenly between them (S-0227). A report, or issues naming it, that
+// cannot be looked for, and an activity that cannot be logged, are warned
+// of: the activity is logged naming no issue, and the run stays recorded as
+// it ended.
 func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -190,8 +195,19 @@ func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 		args = append(args, "exit", *exit)
 	}
 	l.log("analyzer ended", args...)
+	var named []string
+	if report != "" {
+		repo, err := workitem.Open(l.entry.Root)
+		if err == nil {
+			named, err = issues.NamingReport(repo, report)
+		}
+		if err != nil {
+			named = nil
+			l.warn("issues naming the analyzer's report not looked for", "report", report, "err", err)
+		}
+	}
 	say := func(final string) string { return reportSaid(final, report, dir) }
-	if _, err := logRunEndSaying(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityAnalyzer, run.Trigger, say, nil); err != nil {
+	if _, err := logRunEndSaying(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityAnalyzer, run.Trigger, say, named); err != nil {
 		l.warn("analyzer activity not logged", "err", err)
 	}
 }

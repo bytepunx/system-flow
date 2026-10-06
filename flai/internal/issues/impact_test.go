@@ -205,3 +205,41 @@ func TestBumpAddsAnImpactSection(t *testing.T) {
 		t.Error("a report with no project to find it in should be refused")
 	}
 }
+
+// S-0227: the issues naming a report are those whose instances name it and
+// those whose Remediation links it alone, open or closed, in ID order; an
+// issue naming another report is not one of them.
+func TestNamingReportFindsTheIssuesThatNameIt(t *testing.T) {
+	r := repo(t)
+	if ids, err := NamingReport(r, report); err != nil || ids != nil {
+		t.Errorf("with no issues: %v (%v), want none", ids, err)
+	}
+	other := "design/analysis/2026-10-13-risk.md"
+	if _, err := New(r, NewOptions{Title: "Another report", Class: "defect", Report: other, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	linked, err := New(r, NewOptions{Title: "Linked only", Class: "defect", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	linkReport(linked, r.Root, report)
+	if err := Close(linked, "fixed", t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := linked.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(r, NewOptions{Title: "By instance", Class: "defect", Report: report, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	ids, err := NamingReport(r, report)
+	if err != nil || strings.Join(ids, " ") != "I-0002 I-0003" {
+		t.Errorf("issues naming %s: %v (%v), want I-0002 I-0003", report, ids, err)
+	}
+	if ids, err := NamingReport(r, "design/analysis/2026-10-20-intent.md"); err != nil || ids != nil {
+		t.Errorf("a report no issue names: %v (%v), want none", ids, err)
+	}
+	if ids, err := NamingReport(r, ""); err != nil || ids != nil {
+		t.Errorf("no report: %v (%v), want none", ids, err)
+	}
+}

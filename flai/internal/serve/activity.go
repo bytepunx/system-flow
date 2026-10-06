@@ -29,7 +29,8 @@ import (
 // charged to each and every item above it (S-0226, ADR-0095); an analyzer's
 // is split evenly between the issues its entry names and charged to each
 // (S-0227). An analyzer run's end names the report the run wrote, or says it
-// wrote none (S-0223).
+// wrote none (S-0223), and names the issues that name the report, so its
+// cost is split between them (S-0227).
 
 // ActivityLogs are the logs flai serve keeps of the runs of the strategic
 // agent kind in the project named key, oldest first.

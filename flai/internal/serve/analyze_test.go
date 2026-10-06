@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -231,6 +233,75 @@ func TestAnAnalyzerRunThatEndsLogsItsReportAndItsCost(t *testing.T) {
 	doc, _ = lab.repo.Activity(workitem.ActivityAnalyzer)
 	if e := doc.Entries[2]; e.Summary != "Nothing to say. (no report written under design/analysis)" || e.Cost != 0.5 || e.Seconds != 61 {
 		t.Errorf("activity = %+v, want it to say it wrote no report, with its cost and seconds", e)
+	}
+}
+
+// S-0227: an analyzer run's end names the issues that name the report it
+// wrote, and its cost is split evenly between them, under each one's
+// analyzer entry; an issue naming another report takes no share. A run whose
+// report no issue names names no issue and charges none.
+func TestAnAnalyzerRunIsChargedToTheIssuesNamingItsReport(t *testing.T) {
+	lab := analyzeLab(t)
+	report := "design/analysis/2026-10-06-risk.md"
+	var ids []string
+	for _, f := range []struct{ title, report string }{
+		{"Slow review", report}, {"Old finding", "design/analysis/2026-10-01-intent.md"}, {"Flaky test", report},
+	} {
+		is, err := issues.New(lab.repo, issues.NewOptions{Title: f.title, Class: "defect", Report: f.report, Now: runStart})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, is.ID)
+	}
+	analyzed := func(id string) *usage.Strategic {
+		is, err := issues.Get(lab.repo, id)
+		if err != nil || is.Usage == nil {
+			return nil
+		}
+		for i, s := range is.Usage.Strategic {
+			if s.Kind == workitem.ActivityAnalyzer {
+				return &is.Usage.Strategic[i]
+			}
+		}
+		return nil
+	}
+	lab.analyzerRuns("2026-10-06-risk.md", "Wrote "+report+".", runStart)
+	if !lab.analyzeHere("risk") {
+		t.Fatalf("not started: %+v", lab.state().Analyzer)
+	}
+	waitFor(t, "its cost charged", func() bool { return analyzed(ids[2]) != nil })
+	doc, _ := lab.repo.Activity(workitem.ActivityAnalyzer)
+	if len(doc.Entries) != 1 {
+		t.Fatalf("activity = %+v, want one entry", doc.Entries)
+	}
+	if e := doc.Entries[0]; strings.Join(e.Items, " ") != ids[0]+" "+ids[2] || e.Cost != 0.5 || e.Seconds != 61 {
+		t.Errorf("activity = %+v, want it to name %s and %s, with its 0.5 USD and 61 s", e, ids[0], ids[2])
+	}
+	// 2 input, 300 output, and 2000 cache read tokens, and 61 seconds, in
+	// two shares, the remainder to the first named
+	for i, w := range map[int]int64{0: 31, 2: 30} {
+		if s := analyzed(ids[i]); s == nil || s.Tokens() != 1+150+1000 || s.Seconds != w || s.Cost() != 0.25 {
+			t.Errorf("%s's analyzer usage = %+v, want 1151 tokens over %d s, 0.25 USD", ids[i], s, w)
+		}
+	}
+	if s := analyzed(ids[1]); s != nil {
+		t.Errorf("%s, naming another report, was charged %+v", ids[1], s)
+	}
+	// a report no issue names: the entry names none, and no issue is charged
+	lab.analyzerRuns("2026-10-06-all.md", "Done.", runStart.Add(time.Hour))
+	if !lab.analyzeHere("") {
+		t.Fatalf("not started: %+v", lab.state().Analyzer)
+	}
+	waitFor(t, "its activity logged", func() bool {
+		doc, err := lab.repo.Activity(workitem.ActivityAnalyzer)
+		return err == nil && len(doc.Entries) == 2
+	})
+	doc, _ = lab.repo.Activity(workitem.ActivityAnalyzer)
+	if e := doc.Entries[1]; len(e.Items) != 0 || e.Cost != 0.5 {
+		t.Errorf("activity = %+v, want its cost and no item", e)
+	}
+	if s := analyzed(ids[0]); s == nil || s.Seconds != 31 || s.Cost() != 0.25 {
+		t.Errorf("%s's analyzer usage = %+v, want the first run's share alone", ids[0], s)
 	}
 }
 
