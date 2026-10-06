@@ -15,6 +15,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [accept](#flai-accept) | Accept an item: merge its branch, move to done, archive, commit |
 | [adr](#flai-adr) | Record architecture decisions |
 | [agent](#flai-agent) | The project's default agent: the harness, model, and options every new story gets |
+| [analyze](#flai-analyze) | Start the analyzer for the project: it looks for bottlenecks, intent, or risk and writes one report under design/analysis |
 | [archive](#flai-archive) | Move done and cancelled items and their narratives to wip/archive |
 | [block](#flai-block) | Open a blocked interval on an item |
 | [board](#flai-board) | Print the kanban board |
@@ -29,7 +30,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
-| [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
+| [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
@@ -82,6 +83,7 @@ Subcommands:
 - [accept](#flai-accept): Accept an item: merge its branch, move to done, archive, commit
 - [adr](#flai-adr): Record architecture decisions
 - [agent](#flai-agent): The project's default agent: the harness, model, and options every new story gets
+- [analyze](#flai-analyze): Start the analyzer for the project: it looks for bottlenecks, intent, or risk and writes one report under design/analysis
 - [archive](#flai-archive): Move done and cancelled items and their narratives to wip/archive
 - [block](#flai-block): Open a blocked interval on an item
 - [board](#flai-board): Print the kanban board
@@ -96,7 +98,7 @@ Subcommands:
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
-- [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
+- [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
@@ -323,6 +325,34 @@ Flags:
 | `--trailer` stringArray | a trailer line for the commit (repeatable) |
 | `--unset` stringArray | remove an option by key (repeatable) |
 | `--unset-role` stringArray | remove a sub-agent role (repeatable) |
+
+### flai analyze
+
+Start the analyzer for the project: it looks for bottlenecks, intent, or risk and writes one report under design/analysis.
+
+```text
+flai analyze [flags]
+```
+
+Starts the analyzer for the project, now, on this host and as you (S-0223). It runs in the project's main checkout with the project's analysis agent: analysis.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent. It reads the metrics, the design, the code, and the issues, looks for what --focus names, or for all of it without one: bottlenecks in the flow, gaps between design/system and the code (intent), and technical and security risks (risk). It writes one report under design/analysis, edits nothing else, and authors no stories.
+
+The run is recorded where flai serve tracks agents, as the analyzer's, the newest alone, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked or failed) and logs the report it wrote and what the run cost in wip/agents/analyzer.md. It is no story's agent: the in-progress limit does not count it, and it holds no story back. One analyzer runs for a project at a time.
+
+It is a host action, off until you enable it (flai serve enable analyze). It refuses, and says why, while the action is off for the project, for a focus other than bottlenecks, intent, or risk, while an analyzer runs for the project, naming it, and when nothing can start it. The Analyze button on the dashboard runs this, and analysis.schedule in system-flow.yaml starts it on a schedule while flai serve runs.
+
+Examples:
+
+```bash
+flai serve enable analyze
+flai analyze
+flai analyze --focus risk --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--focus` string | what to look for: bottlenecks, intent, or risk; all three when not given |
 
 ### flai archive
 
@@ -1151,7 +1181,7 @@ flai forecast S-0210 --json
 
 ### flai guard
 
-Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook.
+Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook.
 
 ```text
 flai guard
@@ -1165,9 +1195,13 @@ In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's 
 
 In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, the session's own calls are held to orchestration.permissions in the system-flow.yaml of the project the hook runs in (S-0218), each off when unset or when the manifest is unreadable. Whatever its permissions it may do what a sub-agent may, call inbox, activity\_log, wait\_for\_events, and thread\_open, and run thread new and issue new and bump. Each permission allows more: plan\_backlog\_epics the MCP tool plan and flai plan on an epic; finalize\_drafts item\_edit with draft false and flai edit --no-draft, each with nothing else to change; promote\_to\_ready item\_move and flai move of a story to ready; order\_ready flai order --by &lt;policy&gt; --apply; answer\_threads a reply on a thread another opened, with thread\_reply or flai thread reply, as a recommendation (recommendation true, --recommend) while it is recommend, and also as an answer citing a source (source, --source) while it is autonomous, so that an answer it cannot source goes to the operator as a recommendation (S-0220); accept\_reviews flai accept and flai move &lt;story&gt; done, each only with --by orchestrator, so that it accepts as itself and as nobody else (S-0221, ADR-0093); publish the MCP tool release\_publish alone, while flai release other than --evaluate, flai push, git push, and git tag are refused whatever its permissions (S-0222, ADR-0094). On a thread it opened it follows up and resolves, but never recommends or answers; it never resolves another's thread, never confirms a recommendation, and never names another author with --by. A call a permission would allow is refused while it is off, naming it (it needs orchestration.permissions.&lt;name&gt;); anything else that writes is refused as what the orchestrator never does: plan for a story, flai order placing a story by hand, item\_move to done, whose refusal names flai accept --by orchestrator, other flai tools and commands, git's writes, and the Edit, Write, and NotebookEdit tools. Whether a story it promotes is held, a draft, or over the ready limit is flai's to check as it moves it, not the guard's: the guard reads the call, not the board. Each refusal is logged under ## Refusals in wip/agents/orchestrator.md, with its time, the call, and the permission it needs; a refusal that cannot be logged is warned of and refused all the same. The orchestrator's sub-agents are held as any sub-agent is.
 
+In an analyzer session, one flai serve starts with FLAI\_ROLE=analyze, the session's own calls are held to reads and its report (S-0223): besides what a sub-agent may do, flai stats among it, the MCP tools inbox, activity\_log, thread\_open, thread\_reply, and wait\_for\_events; and Edit, Write, and NotebookEdit on a file under the manifest's design folder's analysis/ (its report and the folder's README.md), resolved from the project's root with .. and symbolic links followed, so that neither leads out of the folder. An edit anywhere else is refused naming the folder, as is every edit when the project is unreadable. item\_new, item\_edit, and item\_move are refused as the analyzer authors no stories; every other flai tool and command that writes, issue new and bump among them, and git's writes are refused too. The analyzer's sub-agents are held as any sub-agent is.
+
+No sub-agent, planner, orchestrator, or analyzer starts the analyzer: the MCP tool analyze and flai analyze are refused to each, as the MCP tool plan is.
+
 Given a SubagentStart or SubagentStop hook's input, as hook\_event\_name says, it records the sub-agent (its agent\_id and agent\_type, and when it started) as running in the hook's session, or no longer, in .flai-cache/guard/&lt;session\_id&gt;.json in the project's main checkout, under a lock, since a layer's sub-agents start at once. It refuses neither and says nothing; a record it cannot write is warned of. In a story's agent's session, one flai serve starts with FLAI\_STORY and no FLAI\_ROLE, it refuses the agent's own wait\_for\_events while the session's record lists a sub-agent running and no unresolved thread is on the story or one of its tasks (S-0285): wait\_for\_events reports work items and threads, not sub-agents, so it would run to its timeout. The refusal names the running sub-agents and says to wait for one by launching it with the Agent tool's run\_in\_background set to false, which returns its result as the tool's result. With a thread on the story open, the agent waits on the designer, and the call passes and returns on the answer. A project, record, or threads it cannot read let the call through.
 
-The template's .claude/settings.json runs it before Bash and flai's MCP tools, on SubagentStart and SubagentStop, and, in a planner's or an orchestrator's session alone, before Edit, Write, and NotebookEdit as well.
+The template's .claude/settings.json runs it before Bash and flai's MCP tools, on SubagentStart and SubagentStop, and, in a planner's, an orchestrator's, or an analyzer's session alone, before Edit, Write, and NotebookEdit as well.
 
 Examples:
 

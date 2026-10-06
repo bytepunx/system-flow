@@ -73,6 +73,9 @@ type Options struct {
 	// Plans starts the planner for an epic or a story on the host for the
 	// tool plan (S-0208); without it the tool says how to on the host.
 	Plans PlanStart
+	// Analyses starts the analyzer for the project on the host for the tool
+	// analyze (S-0223); without it the tool says how to on the host.
+	Analyses AnalyzeStart
 	// Activities logs a strategic agent's activity for the tool activity_log
 	// (S-0206); without it the tool says it cannot.
 	Activities ActivityLog
@@ -102,6 +105,8 @@ type server struct {
 	closing <-chan struct{}
 	agents  AgentStart
 	plans   PlanStart // starts the planner (S-0208)
+	// analyses starts the analyzer (S-0223)
+	analyses AnalyzeStart
 	// activities logs a strategic agent's activity (S-0206)
 	activities ActivityLog
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
@@ -117,7 +122,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, logger: opt.Logger}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, logger: opt.Logger}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
