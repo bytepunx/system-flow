@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.55 - 2026-10-06
+
+- S-0220 The orchestrator answers threads, or recommends an answer, as its permission allows (patch): `strategic-agents.md`'s section "As the orchestrator" says what it does with the threads awaiting the operator under `answer_threads`, whose value it reads afresh each time. With `off` it leaves them alone. With `recommend` it replies to each with `thread_reply`, `recommendation: true`, and a `source`, the ADR, design section, or convention its answer rests on. With `autonomous` it answers with a `source` when one settles the question, and posts a recommendation instead, escalating to the operator, when none does or the question asks for the operator's judgement: a decision not yet recorded, a change of scope, or money. It never resolves a thread it did not open, answers one it opened, or confirms a recommendation. `.claude/agents/orchestrator.md` says the same. The commands need a flai that has them.
+
 ## 1.0.54 - 2026-10-06
 
 - S-0282 Acceptance criteria are ticked through flai once verified (patch): `work-management.md` says to tick each criterion as soon as you have verified it, with `flai criteria tick <story> <n>` or the MCP tool `criteria_tick` and the numbers `flai criteria list` prints, never by editing the item's file, and that the move to `review` warns of an unticked one. `delegation.md` says a task sub-agent names in its final message the criteria its task meets, a verifier says which criteria the diff meets and which it does not, and the story's agent ticks them after its review. The commands need a flai that has them.

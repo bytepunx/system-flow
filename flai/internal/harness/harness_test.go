@@ -932,6 +932,52 @@ func TestTheOrchestratorsPromptSaysWhatEachPermissionDoes(t *testing.T) {
 	}
 }
 
+// S-0220: the orchestrator is told what to do with the threads awaiting the
+// operator under each value of answer_threads, which it reads afresh since
+// the operator may change it while it runs: nothing while it is off, a
+// sourced recommendation while it is recommend, and while it is autonomous
+// a sourced answer, or a recommendation escalating to the operator when no
+// source settles the question or it asks for the operator's judgement. It
+// never resolves a thread it did not open, answers its own, or confirms a
+// recommendation. No other agent is told any of it.
+func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
+	rules := map[string][]string{
+		"each value": {
+			"Reply on threads only as answer_threads says, and read it in system-flow.yaml in the main checkout each time before you act on threads: the operator may change it while you run",
+			"Take from inbox the threads awaiting the operator, those whose status is open and whose last entry is by a story's agent, leaving out the threads you opened and those whose pending_recommendation is not null",
+			"thread_reply logs the reply and its source in your decision log",
+			"Never resolve a thread you did not open, never answer a thread you opened, and never confirm a recommendation: the operator does",
+		},
+		"off": {"While answer_threads is off, leave them alone"},
+		"recommend": {
+			"While it is recommend, reply to each with the flai MCP tool thread_reply, recommendation true, and a source: the ADR, design section, or convention your answer rests on, as <path> or <path>#<heading>, read with doc_get first",
+		},
+		"autonomous": {
+			"While it is autonomous, answer with thread_reply and a source when a source settles the question",
+			"post a recommendation instead, citing what it draws on, which escalates it to the operator, when no source settles it, or when it asks for the operator's judgement: a decision not yet recorded, a change of scope, or money, such as a cost of delay input, an estimate, or spend",
+		},
+	}
+	p := Prompt(orchestrateReq(nil))
+	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	for value, ws := range rules {
+		for _, w := range ws {
+			if !strings.Contains(p, w) {
+				t.Errorf("the orchestrator's prompt lacks, for %s, %q:\n%s", value, w, p)
+			}
+			for who, o := range others {
+				if strings.Contains(o, w) {
+					t.Errorf("%s's prompt says %q", who, w)
+				}
+			}
+		}
+	}
+	for who, o := range others {
+		if strings.Contains(o, "answer_threads") || strings.Contains(o, "pending_recommendation") {
+			t.Errorf("%s's prompt names answer_threads or pending_recommendation:\n%s", who, o)
+		}
+	}
+}
+
 // S-0218: claude-code runs the orchestrator's session as the project's
 // orchestrator definition, passed with --agents beside the explorer and the
 // verifier, named for the project and the role, and tells it its role alone;

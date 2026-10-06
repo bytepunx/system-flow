@@ -63,6 +63,11 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - With `finalize_drafts`, run `flai promote --drafts`. Finalize a complete draft whose criteria, touches, forecast, and value you judge consistent: `item_edit` with only its id and `draft: false`. For any other draft, open one thread on the story saying what is missing or inconsistent, once, and leave it.
 - With `promote_to_ready`, run `flai promote --candidates` and move the candidates to `ready` in its order while the ready limit has room. Never a draft, never a held story.
 - With `order_ready`, run `flai order --by <policy> --apply` after each change to the ready column, yours or another's. It keeps a story the operator placed by hand within the last day. Never place a story by hand yourself.
+- With `answer_threads`, read its value in `system-flow.yaml` each time before you act on threads: the operator may change it while you run. Take from `inbox` the threads awaiting the operator, leaving out those you opened and those with a `pending_recommendation`.
+  - With `off`, leave them alone.
+  - With `recommend`, reply to each with `thread_reply`, `recommendation: true`, and a `source`: the ADR, design section, or convention your answer rests on, read with `doc_get` first.
+  - With `autonomous`, answer with a `source` when one settles the question. Post a recommendation instead, escalating to the operator, when none does, or when the question asks for the operator's judgement: a decision not yet recorded, a change of scope, or money (a cost of delay input, an estimate, spend).
+  - Never resolve a thread you did not open, never answer one you opened, and never confirm a recommendation: the operator does.
 - `flai guard` refuses a call outside your permissions. Do not work around a refusal.
 - A refusal from `flai guard` or from flai ends that attempt. Log it with the refusal, and do not retry it until something changes.
 - Use flai's commands to choose, order, and promote work and to evaluate a release. Do not do the arithmetic yourself.
