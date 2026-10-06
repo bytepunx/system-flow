@@ -29,7 +29,7 @@ func TestTheOrchestratorAcceptsAStoryItCanVouchFor(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("%v: %s", err, out)
 	}
-	if res.Status != workitem.Done || !res.Merged || res.Verified != head || res.Evidence == nil || res.Evidence.Verdict != "pass, tests and lint clean" || res.Evidence.Text != evidence {
+	if res.Status != workitem.Done || !res.Merged || res.By != "orchestrator" || res.Verified != head || res.Evidence == nil || res.Evidence.Verdict != "pass, tests and lint clean" || res.Evidence.Text != evidence {
 		t.Errorf("--json must carry the acceptance, the commit verified, and the evidence: %+v", res)
 	}
 
