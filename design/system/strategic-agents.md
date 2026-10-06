@@ -355,6 +355,28 @@ flai enforces only what it can tell. The guard holds its thread calls ([Its perm
 
 Each reply is logged in its decision log by `thread_reply` itself, not by the orchestrator calling `activity_log`: an entry in `wip/agents/orchestrator.md` saying `Answered TH-nnnn` or `Recommended an answer on TH-nnnn`, `citing <path> § <heading>` or `citing no source`, with the thread's story as its item. A reply posted whose log entry fails is reported as an error naming both, so the orchestrator logs it with `activity_log`.
 
+### Accepting a story (S-0221)
+
+With `orchestration.permissions.accept_reviews` on, the orchestrator accepts a story in review through `flai accept <S-nnnn> --by orchestrator`, the same flow as the operator's: merge, done, archive, commit, and never a release ([ADR-0093](../adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md), refining [ADR-0032](../adrs/0032-accepting-a-story-merges-it-publishing-is-a-deliberate-batched-step-over.md)). For each story in review it:
+
+1. Hands the story's worktree to its verifier, which runs the close-out's tests, lint, and `flai check --strict`, and matches each acceptance criterion to the files the branch changes that meet it.
+2. Runs `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run`, with the commit the verifier checked, and reads the blockers.
+3. With no blocker and every criterion matched, runs `flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence <file>`, and logs the acceptance with `activity_log`, naming the story and the commit.
+4. Otherwise leaves the story in review, opens a thread on it saying what is missing, each blocker and each criterion it could not check against the diff, and logs that decision.
+
+The acceptance preview adds four blockers for an acceptance by the orchestrator, beside those it reports for any acceptance, and `flai accept` refuses on any blocker before anything is merged:
+
+| Condition | Blocker when |
+|-----------|--------------|
+| The verifier passed at the branch head | `--verified` is missing, or names a commit that is not the story branch's head |
+| Every criterion is ticked | A criterion under `## Acceptance criteria` is unticked; each is named |
+| The diff stays within the touches | A file the branch changes is under none of the story's touches, read as a claim reads them; each is named |
+| No thread is open | A thread on the story or one of its tasks is not resolved; each is named |
+
+The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`, naming the changed files that meet criterion `<n>`. flai refuses an orchestrator's acceptance without evidence, and one whose evidence names no changed file for a criterion. It writes the evidence, with the verified commit, under `### Accepted by the orchestrator` in the story's `## Notes`, in the acceptance commit, and returns it in `--json`. The done transition is recorded `by: orchestrator`, and the dashboard's review and story pages name who accepted.
+
+flai holds the permission itself, as well as the guard: `flai accept --by orchestrator`, and `accept.run` given `by: orchestrator`, are refused while `accept_reviews` is off, naming it, and under `FLAI_ROLE=orchestrate` an acceptance with any other `--by` is refused. `item_move` refuses the orchestrator a move to done as it refuses every agent, and names `flai accept --by orchestrator` and the permission.
+
 ### Its permissions and the guard
 
 `orchestration.permissions` in `system-flow.yaml` says what the orchestrator may do without the operator. Each is off when unset. `flai check` reports an unknown key or a bad value as `manifest.orchestration`, so that a misspelt permission is not silently off ([project-manifest.md](project-manifest.md)).
@@ -369,10 +391,10 @@ Each reply is logged in its decision log by `thread_reply` itself, not by the or
 | `promote_to_ready` | `item_move` and `flai move` to `ready`; flai then moves only a candidate, while the ready column has room |
 | `order_ready` | `flai order --by <policy> --apply` |
 | `answer_threads` | On another's thread, `thread_reply` and `flai thread reply` as a recommendation (`recommendation: true`, `--recommend`) while it is `recommend` or `autonomous`, and as an answer citing a source (`source`, `--source`) while it is `autonomous` |
-| `accept_reviews` | `flai accept` |
+| `accept_reviews` | `flai accept` and `flai move <story> done`, each only with `--by orchestrator`; flai then accepts only with no blocker and evidence for every criterion ([Accepting a story](#accepting-a-story-s-0221)) |
 | `publish` | `flai release --pending` and `flai push` |
 
-A call a permission would allow is refused while that permission is off, and the refusal names it: `the orchestrator cannot <call>: it needs orchestration.permissions.<name>, which is off`. Every other write is refused whatever the permissions, saying that the orchestrator never does it, and why: `Edit`, `Write`, and `NotebookEdit`; every other flai MCP tool, `item_new` among them; `item_edit` that changes anything but the draft flag; `plan` on anything but an epic; `item_move` and `flai move` to any state but `ready`; `flai edit` that changes anything but the draft flag; `flai order` that places a story by hand, which is the operator's (S-0219); `flai release` without `--pending`; every other flai command that writes; and git's writes. Each refusal ends by telling it to ask the operator with `thread_open` on the item. Other shell commands pass, as a sub-agent's do (ADR-0060).
+A call a permission would allow is refused while that permission is off, and the refusal names it: `the orchestrator cannot <call>: it needs orchestration.permissions.<name>, which is off`. Every other write is refused whatever the permissions, saying that the orchestrator never does it, and why: `Edit`, `Write`, and `NotebookEdit`; every other flai MCP tool, `item_new` among them; `item_edit` that changes anything but the draft flag; `plan` on anything but an epic; `item_move` to any state but `ready`; `flai move` to any state but `ready`, and `done` but under `accept_reviews` with `--by orchestrator`; `flai edit` that changes anything but the draft flag; `flai order` that places a story by hand, which is the operator's (S-0219); `flai release` without `--pending`; every other flai command that writes; and git's writes. Each refusal ends by telling it to ask the operator with `thread_open` on the item. Other shell commands pass, as a sub-agent's do (ADR-0060).
 
 Thread calls are held by who opened the thread as well (S-0220). On a thread it opened, the orchestrator follows up and resolves whatever its permissions, but never recommends or answers its own question. On another's, it replies only as `answer_threads` allows, and never resolves it. It never confirms a recommendation, which is the operator's alone, and never writes as another (`--by`). The guard reads who opened a thread from the thread itself, and takes a thread it cannot read as another's ([Answering threads](#answering-threads-s-0220)). The MCP tool `plan` and `flai plan`, asked by the orchestrator, are also checked in flai (`orchestratorPlans`): the item must be an epic `flai plan --candidates` lists, and `plan_backlog_epics` on ([What it does with each permission](#what-it-does-with-each-permission-s-0219)). The orchestrator is journalled as who asked. The `plan` host action must be on as well, since the planner is started as `serve.Plan` starts any. Every other agent `flai serve` started is still refused the tool.
 
