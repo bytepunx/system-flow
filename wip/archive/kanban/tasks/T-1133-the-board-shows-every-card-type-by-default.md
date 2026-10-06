@@ -3,15 +3,41 @@ id: T-1133
 type: task
 nature: improvement
 title: The board shows every card type by default
-status: backlog
+status: done
 parent: S-0303
 owner: alex
 created: 2026-10-06T23:25:59Z
-updated: 2026-10-06T23:25:59Z
-transitions: []
+updated: 2026-10-06T23:50:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:48:02Z
+    by: agent-S-0303
+  - to: in-progress
+    at: 2026-10-06T23:48:02Z
+    by: agent-S-0303
+  - to: done
+    at: 2026-10-06T23:50:44Z
+    by: agent-S-0303
 stream: S-0303
 tags: [dashboard]
 touches: [flaiover/src/lib/boardtypes.svelte.ts, flaiover/src/lib/boardtypes.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts]
+usage:
+  source: log
+  seconds: 162
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 7036
+      cache_read: 674015
+      cache_write: 39313
+      cost: 0.5284
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 3496
+      cache_read: 194943
+      cache_write: 44058
+      cost: 0.1841
 ---
 # T-1133 The board shows every card type by default
 

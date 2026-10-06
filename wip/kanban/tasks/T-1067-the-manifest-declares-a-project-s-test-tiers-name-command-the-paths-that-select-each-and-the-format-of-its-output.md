@@ -3,12 +3,18 @@ id: T-1067
 type: task
 nature: improvement
 title: "The manifest declares a project's test tiers: name, command, the paths that select each, and the format of its output"
-status: backlog
+status: in-progress
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:51:37Z
-updated: 2026-10-06T22:51:37Z
-transitions: []
+updated: 2026-10-06T23:52:59Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:52:58Z
+    by: agent-S-0273
+  - to: in-progress
+    at: 2026-10-06T23:52:59Z
+    by: agent-S-0273
 stream: S-0273
 tags: [manifest, cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/system/project-manifest.md, docs/operators/settings.md]

@@ -3,10 +3,10 @@ id: S-0303
 type: story
 nature: improvement
 title: The type specifiers act as filters for the board
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T23:23:11Z
-updated: 2026-10-06T23:46:52Z
+updated: 2026-10-06T23:57:14Z
 transitions:
   - to: ready
     at: 2026-10-06T23:23:12Z
@@ -14,17 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:46:52Z
     by: agent-S-0303
+  - to: review
+    at: 2026-10-06T23:56:30Z
+    by: agent-S-0303
+  - to: done
+    at: 2026-10-06T23:57:14Z
+    by: alex
 tags: [dashboard, cli]
-touches: [flaiover/src, flai/cmd, flaiover/src/lib/boardtypes.svelte.ts, flaiover/src/lib/boardtypes.svelte.test.ts, flaiover/src/lib/cardcolour.ts, flaiover/src/lib/components/BoardLegend.svelte, flaiover/src/lib/components/BoardLegend.svelte.test.ts, flaiover/src/lib/components/BoardTypes.svelte, flaiover/src/lib/components/BoardTypes.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
+touches: [flaiover/src, flaiover/src/lib/boardtypes.svelte.ts, flaiover/src/lib/boardtypes.svelte.test.ts, flaiover/src/lib/cardcolour.ts, flaiover/src/lib/components/BoardLegend.svelte, flaiover/src/lib/components/BoardLegend.svelte.test.ts, flaiover/src/lib/components/BoardTypes.svelte, flaiover/src/lib/components/BoardTypes.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 606
+  models:
+    - model: claude-opus-5-5
+      input: 144
+      output: 49147
+      cache_read: 4708317
+      cache_write: 274621
+      cost: 3.6911
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 3496
+      cache_read: 194943
+      cache_write: 44058
+      cost: 0.1841
   strategic:
     - kind: planner
       seconds: 237
@@ -64,11 +82,11 @@ forecast:
 The type legend at the top of the board acts as a filter for card types on the board. When toggled on, their coloring changes from the default to a highlighted version. When toggled off, their coloring reverts to its original. Toggled on types are shown on the board while toggled off types are hidden. This replaces the checkbox set that currently provides this filtering.
 
 ## Acceptance criteria
-- [ ] The type legend provides a border around each type so that it's clearer that it's a clickable entity (in the same way nature's have a border)
-- [ ] When a type is clicked, this toggles whether that type is shown or hidden
-- [ ] When a type is "on" and that type of card should be shown, change its coloring to a highlighted version of the default
-- [ ] Store a user's toggle selections in the browser's local storage so that navigating away from the page does not reset their selections
-- [ ] by default, all types are selected
+- [x] The type legend provides a border around each type so that it's clearer that it's a clickable entity (in the same way nature's have a border)
+- [x] When a type is clicked, this toggles whether that type is shown or hidden
+- [x] When a type is "on" and that type of card should be shown, change its coloring to a highlighted version of the default
+- [x] Store a user's toggle selections in the browser's local storage so that navigating away from the page does not reset their selections
+- [x] by default, all types are selected
 
 ## Tasks
 - T-1133 The board shows every card type by default

@@ -3,15 +3,35 @@ id: T-1134
 type: task
 nature: improvement
 title: The legend's type entries are bordered toggles that show or hide their cards
-status: backlog
+status: done
 parent: S-0303
 owner: alex
 created: 2026-10-06T23:26:05Z
-updated: 2026-10-06T23:26:05Z
-transitions: []
+updated: 2026-10-06T23:50:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:48:02Z
+    by: agent-S-0303
+  - to: in-progress
+    at: 2026-10-06T23:48:03Z
+    by: agent-S-0303
+  - to: done
+    at: 2026-10-06T23:50:44Z
+    by: agent-S-0303
 stream: S-0303
 tags: [dashboard]
 touches: [flaiover/src/lib/components/BoardLegend.svelte, flaiover/src/lib/components/BoardLegend.svelte.test.ts, flaiover/src/lib/cardcolour.ts]
+usage:
+  source: log
+  seconds: 161
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 6287
+      cache_read: 602263
+      cache_write: 35128
+      cost: 0.4721
 ---
 # T-1134 The legend's type entries are bordered toggles that show or hide their cards
 

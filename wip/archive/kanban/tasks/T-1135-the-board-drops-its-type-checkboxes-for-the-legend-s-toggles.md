@@ -3,16 +3,36 @@ id: T-1135
 type: task
 nature: improvement
 title: The board drops its type checkboxes for the legend's toggles
-status: backlog
+status: done
 parent: S-0303
 owner: alex
 created: 2026-10-06T23:26:13Z
-updated: 2026-10-06T23:26:13Z
-transitions: []
+updated: 2026-10-06T23:54:21Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:50:45Z
+    by: agent-S-0303
+  - to: in-progress
+    at: 2026-10-06T23:50:46Z
+    by: agent-S-0303
+  - to: done
+    at: 2026-10-06T23:54:21Z
+    by: agent-S-0303
 stream: S-0303
 tags: [dashboard]
 touches: [flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/lib/components/BoardTypes.svelte, flaiover/src/lib/components/BoardTypes.svelte.test.ts]
 after: [T-1133, T-1134]
+usage:
+  source: log
+  seconds: 215
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 8657
+      cache_read: 829377
+      cache_write: 48375
+      cost: 0.6502
 ---
 # T-1135 The board drops its type checkboxes for the legend's toggles
 

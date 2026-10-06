@@ -7,11 +7,11 @@ status: backlog
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:51:58Z
-updated: 2026-10-06T22:51:58Z
+updated: 2026-10-06T23:52:58Z
 transitions: []
 stream: S-0273
 tags: [cli, testing]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, system-flow.yaml, scripts/flai-test.sh, scripts/test.sh]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, system-flow.yaml, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh]
 after: [T-1067, T-1068]
 ---
 # T-1069 flai test runs the manifest's tiers for paths or packages, or every tier with --all, and prints pass or the first findings as text and --json
