@@ -3,11 +3,11 @@ id: I-0074
 title: Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
 class: efficiency
 status: open
-count: 4
+count: 5
 cost: 3m
 first_reported: 2026-10-05T03:22:09Z
-last_reported: 2026-10-06T11:36:35Z
-updated: 2026-10-06T11:36:35Z
+last_reported: 2026-10-06T11:45:29Z
+updated: 2026-10-06T11:45:29Z
 ---
 
 # I-0074 Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
@@ -32,6 +32,10 @@ S-0257 closed I-0069 and S-0262 closed I-0072, so flai stream sync's trial merge
 ### 2026-10-06T11:36:35Z
 Story: S-0292.
 S-0292 closed I-0090 and S-0221 bumped I-0058; both rewrote design/issues/summary.md's updated line, so flai stream sync S-0292's trial merge reported a conflict with story/S-0221 and opened TH-0175.
+
+### 2026-10-06T11:45:29Z
+Story: S-0221.
+The sync before review stopped on design/issues/summary.md (I-0058's row and the updated line) and then on I-0078, which S-0292's close-out and S-0221's had both bumped to 9; merged by hand to 10 with both instances.
 
 ## Remediation
 
