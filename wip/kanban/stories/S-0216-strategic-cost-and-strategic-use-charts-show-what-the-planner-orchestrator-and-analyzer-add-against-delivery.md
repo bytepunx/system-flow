@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-06T02:59:44Z
+updated: 2026-10-06T02:59:58Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:57Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T05:50:17Z
 forecast:
   duration: 40m
-  delivery: 2026-10-06T13:05:00Z
-  basis: "Its own forecast of 40m; 15th in the pull order with an in-progress limit of 3, behind S-0219, S-0220, S-0221, S-0222, S-0224, S-0226, S-0223, S-0227, S-0282, S-0229, S-0212, S-0213, S-0214 and S-0215."
+  delivery: 2026-10-06T13:10:00Z
+  basis: "Its own forecast of 40m; 15th in the pull order with an in-progress limit of 3, behind S-0282, S-0219, S-0220, S-0221, S-0222, S-0224, S-0226, S-0223, S-0227, S-0229, S-0212, S-0213, S-0214 and S-0215."
   by: flai
-  at: 2026-10-06T02:59:44Z
+  at: 2026-10-06T02:59:58Z
 ---
 # S-0216 Strategic Cost and Strategic Use charts show what the planner, orchestrator, and analyzer add against delivery
 

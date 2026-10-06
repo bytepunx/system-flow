@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T02:59:44Z
+updated: 2026-10-06T02:59:58Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:41Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:09Z
 forecast:
   duration: 50m
-  delivery: 2026-10-06T09:22:00Z
-  basis: "Its own forecast of 50m; 8th in the pull order with an in-progress limit of 3, behind S-0219, S-0220, S-0221, S-0222, S-0224, S-0226 and S-0223."
+  delivery: 2026-10-06T09:27:00Z
+  basis: "Its own forecast of 50m; 9th in the pull order with an in-progress limit of 3, behind S-0282, S-0219, S-0220, S-0221, S-0222, S-0224, S-0226 and S-0223."
   by: flai
-  at: 2026-10-06T02:59:44Z
+  at: 2026-10-06T02:59:58Z
 ---
 # S-0227 The analyzer's cost is recorded on the issues it filed and the stories made from them
 
