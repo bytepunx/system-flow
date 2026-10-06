@@ -143,8 +143,8 @@ func TestTheSettingsRunTheGuardOnTheStrategicAgentsEdits(t *testing.T) {
 		if c := commands["Bash|mcp__flai__.*"]; !strings.Contains(c, " guard 2>&1") || strings.Contains(c, "FLAI_ROLE") {
 			t.Errorf("%s: Bash and flai's MCP tools are not guarded in every session: %q", path, c)
 		}
-		if c := commands["Edit|Write|NotebookEdit"]; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || exit 0; `) || !strings.Contains(c, " guard 2>&1") {
-			t.Errorf("%s: a planner's or the orchestrator's file edits are not guarded, or a story's are: %q", path, c)
+		if c := commands["Edit|Write|NotebookEdit"]; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || exit 0; `) || !strings.Contains(c, " guard 2>&1") {
+			t.Errorf("%s: a strategic agent's file edits are not guarded, or a story's are: %q", path, c)
 		}
 		if len(commands) != 2 {
 			t.Errorf("%s: hooks %v", path, commands)

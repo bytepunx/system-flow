@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$FLAI_ROLE\" = plan ] || [ \"$FLAI_ROLE\" = orchestrate ] || exit 0; out=$(\"$CLAUDE_PROJECT_DIR\"/scripts/flai.sh guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
+            "command": "[ \"$FLAI_ROLE\" = plan ] || [ \"$FLAI_ROLE\" = orchestrate ] || [ \"$FLAI_ROLE\" = analyze ] || exit 0; out=$(\"$CLAUDE_PROJECT_DIR\"/scripts/flai.sh guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
           }
         ]
       }
