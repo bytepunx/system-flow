@@ -3,22 +3,53 @@ id: S-0285
 type: story
 nature: improvement
 title: A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout
-status: ready
+status: done
 owner: alex
 created: 2026-10-06T06:03:25Z
-updated: 2026-10-06T07:01:55Z
+updated: 2026-10-06T11:14:34Z
 transitions:
   - to: ready
     at: 2026-10-06T06:04:29Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T10:32:15Z
+    by: agent-S-0285
+  - to: review
+    at: 2026-10-06T11:13:34Z
+    by: agent-S-0285
+  - to: done
+    at: 2026-10-06T11:14:34Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions]
-touches: [flai/internal/harness, flai/internal/mcpserver, flai/internal/guard, flai/cmd/guard.go, design/conventions/delegation.md, template, ".claude/settings.json", design/system/flai-cli.md, design/system/agent-context.md, docs/users, docs/operators, design/issues/I-0083-a-story-s-agent-waits-for-its-sub-agents-with-wait-for-events-which-cannot-see-them-finish-so-each-wait-runs-to-its-timeout.md, design/issues/summary.md]
+touches: [flai/internal/harness, flai/internal/mcpserver, flai/internal/guard, flai/cmd/guard.go, design/conventions/delegation.md, template, ".claude/settings.json", design/system/flai-cli.md, design/system/agent-context.md, docs/users, docs/operators, design/issues, design/adrs, flai/cmd/guard_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2506
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 226
+      output: 7482
+      cache_read: 1696688
+      cache_write: 96375
+      cost: 0.3278
+    - model: claude-opus-5-5
+      input: 362
+      output: 141460
+      cache_read: 19192058
+      cache_write: 563111
+      cost: 10.1928
+    - model: claude-sonnet-5-5
+      input: 30
+      output: 7303
+      cache_read: 480789
+      cache_write: 147725
+      cost: 0.5386
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h18m
@@ -44,15 +75,22 @@ Two changes, both needed. The wording T-0869 added did not hold in two stories, 
 The measure, on a story flai serve works after the change is installed: no wait on a sub-agent outlasts the sub-agent by more than a few seconds.
 
 ## Acceptance criteria
-- [ ] The story's narrative records what was tested against the Claude Code that flai serve runs: whether a launch with `run_in_background: false` returns the sub-agent's result as the tool's result when the sub-agent runs longer than ten minutes and when several are launched in one message, how long a `claude -p` session that ends its turn with a sub-agent out is kept, and what a sub-agent stop hook's input carries
-- [ ] flai serve's start prompt, `delegation.md` here and in the template, and the `wait_for_events` tool description say how a story's agent waits for a sub-agent, in the way the test found to work, and say that `wait_for_events` is for a thread awaiting the designer; a test holds the prompt and the tool description to it
-- [ ] flai keeps a story's agent from waiting past its sub-agent's finish with `wait_for_events`: a held call returns within seconds of the sub-agent stopping and names it, or the call is refused with what to do instead; a test covers the way chosen
-- [ ] A `wait_for_events` held for a thread awaiting the designer while a sub-agent runs still returns on the thread's answer, with a test
-- [ ] The design, the user and operator docs, and the template, with a template release, describe the change and any hook it adds to `.claude/settings.json`
-- [ ] The way the prompt names keeps the session alive for a sub-agent that runs longer than ten minutes, so that the first remediation of I-0084 is made; I-0084 stays open for its second, which is the operator's to decide
-- [ ] I-0083 is closed with `flai issue close I-0083 --reason` saying what fixed it
+- [x] The story's narrative records what was tested against the Claude Code that flai serve runs: whether a launch with `run_in_background: false` returns the sub-agent's result as the tool's result when the sub-agent runs longer than ten minutes and when several are launched in one message, how long a `claude -p` session that ends its turn with a sub-agent out is kept, and what a sub-agent stop hook's input carries
+- [x] flai serve's start prompt, `delegation.md` here and in the template, and the `wait_for_events` tool description say how a story's agent waits for a sub-agent, in the way the test found to work, and say that `wait_for_events` is for a thread awaiting the designer; a test holds the prompt and the tool description to it
+- [x] flai keeps a story's agent from waiting past its sub-agent's finish with `wait_for_events`: a held call returns within seconds of the sub-agent stopping and names it, or the call is refused with what to do instead; a test covers the way chosen
+- [x] A `wait_for_events` held for a thread awaiting the designer while a sub-agent runs still returns on the thread's answer, with a test
+- [x] The design, the user and operator docs, and the template, with a template release, describe the change and any hook it adds to `.claude/settings.json`
+- [x] The way the prompt names keeps the session alive for a sub-agent that runs longer than ten minutes, so that the first remediation of I-0084 is made; I-0084 stays open for its second, which is the operator's to decide
+- [x] I-0083 is closed with `flai issue close I-0083 --reason` saying what fixed it
 
 ## Tasks
+- T-1004 flai guard refuses a story agent's wait_for_events while a sub-agent of its session runs and no thread on the story is open
+- T-1005 The wait_for_events description says it is for a thread awaiting the designer, not a sub-agent
+- T-1006 flai serve's start prompt says how a story's agent waits for its sub-agents
+- T-1007 delegation.md and the template's hooks say how to wait for a sub-agent, in a template release
+- T-1008 The design, an ADR, and the user and operator docs describe the guard rule and how to wait
+- T-1009 This repository's .claude/settings.json runs the guard on sub-agent start and stop
+- T-1010 Record the experiments, close I-0083, and note I-0084's first remediation
 
 ## Notes
 
