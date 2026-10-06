@@ -7,7 +7,7 @@ status: backlog
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-06T23:33:06Z
+updated: 2026-10-06T23:33:22Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -30,10 +30,10 @@ cost_of_delay:
   at: 2026-10-05T05:46:07Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-07T04:23:00Z
-  basis: "Its own forecast of 1h45m; 10th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0273, S-0228, S-0269, S-0270, S-0271, S-0303, S-0212 and S-0213."
+  delivery: 2026-10-07T04:24:00Z
+  basis: "Its own forecast of 1h45m; 10th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0273, S-0303, S-0228, S-0269, S-0270, S-0271, S-0212 and S-0213."
   by: flai
-  at: 2026-10-06T23:33:06Z
+  at: 2026-10-06T23:33:22Z
 ---
 # S-0214 Charts show parallelism, holds, and touches drift
 
