@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-06T02:57:19Z
+updated: 2026-10-06T02:59:44Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:16Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T04:48:56Z
 forecast:
   duration: 1h40m
-  delivery: 2026-10-06T05:29:00Z
+  delivery: 2026-10-06T05:32:00Z
   basis: "Its own forecast of 1h40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-06T02:57:19Z
+  at: 2026-10-06T02:59:44Z
 ---
 # S-0219 The orchestrator moves and orders work by its policy within its permissions
 

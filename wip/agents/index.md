@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-06T02:57:19Z
+updated: 2026-10-06T02:59:44Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0219](S-0219.md) | The orchestrator moves and orders work by its policy within its permissions | ready | agent-S-0219 | 2026-10-06T02:57:37Z |
 
 ## Strategic agents
 
