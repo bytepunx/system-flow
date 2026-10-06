@@ -3,11 +3,11 @@ id: T-0940
 type: task
 nature: improvement
 title: An issue reads and writes usage with a strategic entry per kind, and front-matter-fields.txt lists the key
-status: in-progress
+status: done
 parent: S-0227
 owner: alex
 created: 2026-10-05T05:45:28Z
-updated: 2026-10-06T21:31:15Z
+updated: 2026-10-06T21:35:10Z
 transitions:
   - to: ready
     at: 2026-10-06T21:31:14Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T21:31:15Z
     by: agent-S-0227
+  - to: done
+    at: 2026-10-06T21:35:10Z
+    by: agent-S-0227
 stream: S-0227
 tags: [flai]
-touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/internal/workitem/front-matter-fields.txt]
+touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/usage.go]
+usage:
+  source: log
+  seconds: 235
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 12397
+      cache_read: 1747269
+      cache_write: 51246
+      cost: 0.9037
 ---
 # T-0940 An issue reads and writes usage with a strategic entry per kind, and front-matter-fields.txt lists the key
 

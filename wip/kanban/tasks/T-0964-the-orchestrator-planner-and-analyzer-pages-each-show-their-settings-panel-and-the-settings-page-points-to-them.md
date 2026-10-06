@@ -3,16 +3,36 @@ id: T-0964
 type: task
 nature: feature
 title: The orchestrator, planner, and analyzer pages each show their settings panel, and the Settings page points to them
-status: backlog
+status: done
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:47:02Z
-updated: 2026-10-05T05:47:02Z
-transitions: []
+updated: 2026-10-06T22:10:14Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:03:49Z
+    by: agent-S-0229
+  - to: in-progress
+    at: 2026-10-06T22:03:49Z
+    by: agent-S-0229
+  - to: done
+    at: 2026-10-06T22:10:14Z
+    by: agent-S-0229
 stream: S-0229
 tags: [dashboard]
-touches: [flaiover/src/routes/workflow/orchestrator, flaiover/src/routes/workflow/analyzer, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
+touches: [flaiover/src/routes/workflow/orchestrator, flaiover/src/routes/workflow/analyzer, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SiteMenu.svelte, flaiover/src/lib/components/SiteMenu.svelte.test.ts]
 after: [T-0963]
+usage:
+  source: log
+  seconds: 385
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 299
+      cache_read: 2527396
+      cache_write: 97330
+      cost: 1.1486
 ---
 # T-0964 The orchestrator, planner, and analyzer pages each show their settings panel, and the Settings page points to them
 

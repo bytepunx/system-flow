@@ -3,16 +3,36 @@ id: T-0961
 type: task
 nature: feature
 title: The host API's settings.manifest write runs flai manifest set, and settings.get gives the strategic agents' settings with what each means
-status: backlog
+status: done
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:46:42Z
-updated: 2026-10-05T05:46:42Z
-transitions: []
+updated: 2026-10-06T21:48:35Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:41:10Z
+    by: agent-S-0229
+  - to: in-progress
+    at: 2026-10-06T21:41:10Z
+    by: agent-S-0229
+  - to: done
+    at: 2026-10-06T21:48:35Z
+    by: agent-S-0229
 stream: S-0229
 tags: [flai]
-touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/server/agent.ts]
+touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/server/agent.ts]
 after: [T-0952]
+usage:
+  source: log
+  seconds: 445
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 414
+      cache_read: 4060443
+      cache_write: 156298
+      cost: 1.8452
 ---
 # T-0961 The host API's settings.manifest write runs flai manifest set, and settings.get gives the strategic agents' settings with what each means
 

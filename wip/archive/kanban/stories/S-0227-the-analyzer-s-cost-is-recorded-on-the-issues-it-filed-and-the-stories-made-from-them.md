@@ -3,11 +3,11 @@ id: S-0227
 type: story
 nature: improvement
 title: The analyzer's cost is recorded on the issues it filed and the stories made from them
-status: in-progress
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T21:30:11Z
+updated: 2026-10-06T22:12:16Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:41Z
@@ -15,15 +15,37 @@ transitions:
   - to: in-progress
     at: 2026-10-06T21:30:11Z
     by: agent-S-0227
+  - to: review
+    at: 2026-10-06T22:11:05Z
+    by: agent-S-0227
+  - to: done
+    at: 2026-10-06T22:12:16Z
+    by: alex
 tags: [flai]
 topics: [analysis, planning]
-touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/issues, flai/internal/metrics, design/system/continuous-improvement.md, design/adrs, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/issues, flai/internal/metrics, design/system/continuous-improvement.md, design/adrs, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, flai/internal/statsread/statsread.go, flai/cmd/activity.go, flai/cmd/activity_test.go, design/system/strategic-agents.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0096-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md, flai/cmd/check.go, flai/cmd/check_test.go]
 after: [S-0223, S-0226]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2482
+  models:
+    - model: claude-opus-5-5
+      input: 448
+      output: 170491
+      cache_read: 24028625
+      cache_write: 704747
+      cost: 12.4284
+    - model: claude-sonnet-5-5
+      input: 28
+      output: 7313
+      cache_read: 407394
+      cache_write: 77170
+      cost: 0.3476
 cost_of_delay:
   value: 54.15
   by: planner-S-0227
@@ -44,10 +66,10 @@ S-0225 charges a planner activity's usage to the item it planned (ADR-0083), and
 Its cost should land on the issues it filed or bumped. It should then travel with an issue to the draft story that the issue step makes from it, so that the cost of a remediation includes the cost of finding it.
 
 ## Acceptance criteria
-- [ ] An issue carries `usage` with a `strategic` entry per kind, in the shape ADR-0083 gives items. An ADR extends ADR-0083 to issues, and `front-matter-fields.txt` lists the key
-- [ ] An analyzer activity's usage is charged when the activity ends, apportioned as ADR-0083 apportions a planner's. It goes under the `analyzer` entry of the issues its `activity_log` call named, split evenly between them. An activity that names no issue is charged to the project total that S-0226 adds
-- [ ] The story the issue step makes from an issue carries the issue's strategic usage as its own `strategic` entry, summed up to its epic. `flai stats` counts it once in totals: the issue's until a story is made from it, the story's after
-- [ ] `flai stats` reports analyzer usage per issue and in totals, apart from the agents' figures. `design/system/metrics.md` and `design/system/continuous-improvement.md` describe it. Tests pin the charge, the split, and the carry-over
+- [x] An issue carries `usage` with a `strategic` entry per kind, in the shape ADR-0083 gives items. An ADR extends ADR-0083 to issues, and `front-matter-fields.txt` lists the key
+- [x] An analyzer activity's usage is charged when the activity ends, apportioned as ADR-0083 apportions a planner's. It goes under the `analyzer` entry of the issues its `activity_log` call named, split evenly between them. An activity that names no issue is charged to the project total that S-0226 adds
+- [x] The story the issue step makes from an issue carries the issue's strategic usage as its own `strategic` entry, summed up to its epic. `flai stats` counts it once in totals: the issue's until a story is made from it, the story's after
+- [x] `flai stats` reports analyzer usage per issue and in totals, apart from the agents' figures. `design/system/metrics.md` and `design/system/continuous-improvement.md` describe it. Tests pin the charge, the split, and the carry-over
 
 ## Tasks
 - T-0935 An ADR extends ADR-0083 to issues and to the story the issue step makes from one
@@ -55,6 +77,7 @@ Its cost should land on the issues it filed or bumped. It should then travel wit
 - T-0942 An analyzer activity's apportioned usage is charged evenly to the issues it named, or to the project total
 - T-0944 The story the issue step makes from an issue carries the issue's strategic usage, summed up to its epic
 - T-0948 flai stats reports analyzer usage per issue and in totals, counted once across an issue and its story
+- T-1052 The close-out's issue for findings outside the story quotes a finding's code spans so the markdown lint passes
 
 ## Notes
 

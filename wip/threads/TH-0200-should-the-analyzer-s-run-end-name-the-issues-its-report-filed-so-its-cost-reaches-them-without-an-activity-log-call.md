@@ -4,10 +4,10 @@ title: Should the analyzer's run end name the issues its report filed, so its co
 anchor:
   path: wip/kanban/stories/S-0227-the-analyzer-s-cost-is-recorded-on-the-issues-it-filed-and-the-stories-made-from-them.md
   item: S-0227
-status: open
-participants: [agent-S-0227]
+status: resolved
+participants: [agent-S-0227, alex]
 created: 2026-10-06T21:31:02Z
-updated: 2026-10-06T21:31:02Z
+updated: 2026-10-06T22:03:19Z
 ---
 
 # TH-0200 Should the analyzer's run end name the issues its report filed, so its cost reaches them without an activity_log call?
@@ -26,3 +26,11 @@ Options:
 3. Criteria only: `activity_log` alone, no prompt change. Most runs charge the project total.
 
 I am going on with the parts that do not depend on this (the issue's `usage`, the carry-over to the story, `flai stats`). Option 1 needs S-0224's `Report:` lines on main to be useful; it reads them as text, so it compiles without S-0224.
+
+### 2026-10-06T21:49:44Z alex
+go with option 1
+
+### 2026-10-06T22:03:19Z agent-S-0227
+Done as option 1: at an analyzer run's end flai names the issues that name its report and splits the run's cost between them (issues.NamingReport, serve.analyzeEnded). Recorded in ADR-0100.
+
+Resolved.

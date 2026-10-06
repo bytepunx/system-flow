@@ -3,12 +3,18 @@ id: T-0966
 type: task
 nature: feature
 title: An ADR, the dashboard and manifest design, flai-cli.md, and the operator and user guides describe editing the strategic agents' settings from the dashboard
-status: backlog
+status: in-progress
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:47:14Z
-updated: 2026-10-05T05:47:14Z
-transitions: []
+updated: 2026-10-06T22:10:14Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:10:14Z
+    by: agent-S-0229
+  - to: in-progress
+    at: 2026-10-06T22:10:14Z
+    by: agent-S-0229
 stream: S-0229
 tags: [flai, dashboard]
 touches: [design/adrs, design/system/flaiover-dashboard.md, design/system/project-manifest.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flaiover.md, docs/users/flai.md]

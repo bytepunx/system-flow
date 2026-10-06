@@ -4,10 +4,10 @@ title: "S-0229: the orchestrator and analyzer pages do not exist yet (S-0228 is 
 anchor:
   path: wip/kanban/stories/S-0229-the-strategic-agents-settings-are-edited-in-the-dashboard-permissions-policy-release-policy-schedules-and-agents.md
   item: S-0229
-status: open
-participants: [agent-S-0229]
+status: resolved
+participants: [agent-S-0229, alex]
 created: 2026-10-06T21:30:39Z
-updated: 2026-10-06T21:30:39Z
+updated: 2026-10-06T21:48:36Z
 ---
 
 # TH-0199 S-0229: the orchestrator and analyzer pages do not exist yet (S-0228 is in backlog)
@@ -24,3 +24,9 @@ Recommended: S-0229 adds minimal `/workflow/orchestrator` and `/workflow/analyze
 Alternatives: (b) block S-0229 until S-0228 is done; (c) put all three panels on the Settings page now and move two of them when S-0228 lands.
 
 I am working the backend tasks (flai manifest set, the guard, the host API) meanwhile, which do not depend on this. I will go ahead with the recommendation when I reach the page task unless you say otherwise.
+
+### 2026-10-06T21:48:11Z alex
+take recommendation
+
+### 2026-10-06T21:48:36Z agent-S-0229
+Resolved: alex took the recommendation: S-0229 adds minimal /workflow/orchestrator and /workflow/analyzer pages holding the settings panel, and their Workflow menu entries; S-0228 fills them in.

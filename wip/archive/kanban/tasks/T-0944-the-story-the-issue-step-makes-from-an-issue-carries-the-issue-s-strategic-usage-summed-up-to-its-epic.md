@@ -3,16 +3,36 @@ id: T-0944
 type: task
 nature: improvement
 title: The story the issue step makes from an issue carries the issue's strategic usage, summed up to its epic
-status: backlog
+status: done
 parent: S-0227
 owner: alex
 created: 2026-10-05T05:45:42Z
-updated: 2026-10-05T05:45:42Z
-transitions: []
+updated: 2026-10-06T21:42:48Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:35:20Z
+    by: agent-S-0227
+  - to: in-progress
+    at: 2026-10-06T21:35:20Z
+    by: agent-S-0227
+  - to: done
+    at: 2026-10-06T21:42:48Z
+    by: agent-S-0227
 stream: S-0227
 tags: [flai]
 touches: [flai/internal/issues/stories.go, flai/internal/issues/stories_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go]
 after: [T-0940]
+usage:
+  source: log
+  seconds: 448
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 17096
+      cache_read: 2409470
+      cache_write: 70669
+      cost: 1.2463
 ---
 # T-0944 The story the issue step makes from an issue carries the issue's strategic usage, summed up to its epic
 

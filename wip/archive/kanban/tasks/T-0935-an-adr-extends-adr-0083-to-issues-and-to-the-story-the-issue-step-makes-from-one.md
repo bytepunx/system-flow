@@ -3,16 +3,36 @@ id: T-0935
 type: task
 nature: improvement
 title: An ADR extends ADR-0083 to issues and to the story the issue step makes from one
-status: backlog
+status: done
 parent: S-0227
 owner: alex
 created: 2026-10-05T05:45:19Z
-updated: 2026-10-06T21:31:13Z
-transitions: []
+updated: 2026-10-06T22:02:59Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:01:46Z
+    by: agent-S-0227
+  - to: in-progress
+    at: 2026-10-06T22:01:46Z
+    by: agent-S-0227
+  - to: done
+    at: 2026-10-06T22:02:59Z
+    by: agent-S-0227
 stream: S-0227
 tags: [flai]
-touches: [design/adrs, design/system/continuous-improvement.md]
+touches: [design/adrs, design/system/continuous-improvement.md, design/system/strategic-agents.md, design/system/metrics.md, docs/users/flai.md]
 after: [T-0942]
+usage:
+  source: log
+  seconds: 73
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 12510
+      cache_read: 1763138
+      cache_write: 51712
+      cost: 0.912
 ---
 # T-0935 An ADR extends ADR-0083 to issues and to the story the issue step makes from one
 

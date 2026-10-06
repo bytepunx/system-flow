@@ -3,11 +3,11 @@ id: T-0954
 type: task
 nature: feature
 title: A running orchestrator is held to changed permissions on its next call, and its prompt says they may change while it runs
-status: in-progress
+status: done
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:46:25Z
-updated: 2026-10-06T21:30:48Z
+updated: 2026-10-06T21:41:10Z
 transitions:
   - to: ready
     at: 2026-10-06T21:30:48Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T21:30:48Z
     by: agent-S-0229
+  - to: done
+    at: 2026-10-06T21:41:10Z
+    by: agent-S-0229
 stream: S-0229
 tags: [flai]
 touches: [flai/cmd/guard_permissions_change_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 622
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 229
+      cache_read: 1001890
+      cache_write: 73583
+      cost: 0.4707
 ---
 # T-0954 A running orchestrator is held to changed permissions on its next call, and its prompt says they may change while it runs
 

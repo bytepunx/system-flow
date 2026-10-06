@@ -3,16 +3,36 @@ id: T-0963
 type: task
 nature: feature
 title: A StrategicSettings panel edits one block of the manifest through /api/settings, shows a refusal on its field, and is read-only with the reason while settings is off
-status: backlog
+status: done
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:46:51Z
-updated: 2026-10-05T05:46:51Z
-transitions: []
+updated: 2026-10-06T22:03:49Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:48:36Z
+    by: agent-S-0229
+  - to: in-progress
+    at: 2026-10-06T21:48:36Z
+    by: agent-S-0229
+  - to: done
+    at: 2026-10-06T22:03:49Z
+    by: agent-S-0229
 stream: S-0229
 tags: [dashboard]
 touches: [flaiover/src/lib/settings.ts, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts]
 after: [T-0961]
+usage:
+  source: log
+  seconds: 913
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 502
+      cache_read: 3679965
+      cache_write: 214283
+      cost: 1.7041
 ---
 # T-0963 A StrategicSettings panel edits one block of the manifest through /api/settings, shows a refusal on its field, and is read-only with the reason while settings is off
 

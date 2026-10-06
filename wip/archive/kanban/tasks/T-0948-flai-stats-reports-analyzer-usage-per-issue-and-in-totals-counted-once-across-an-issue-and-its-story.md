@@ -3,16 +3,36 @@ id: T-0948
 type: task
 nature: improvement
 title: flai stats reports analyzer usage per issue and in totals, counted once across an issue and its story
-status: backlog
+status: done
 parent: S-0227
 owner: alex
 created: 2026-10-05T05:45:50Z
-updated: 2026-10-05T05:45:50Z
-transitions: []
+updated: 2026-10-06T21:56:50Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:42:48Z
+    by: agent-S-0227
+  - to: in-progress
+    at: 2026-10-06T21:42:48Z
+    by: agent-S-0227
+  - to: done
+    at: 2026-10-06T21:56:50Z
+    by: agent-S-0227
 stream: S-0227
 tags: [flai]
-touches: [flai/internal/metrics, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/metrics, flai/internal/statsread/statsread.go, flai/internal/issues/stories.go, flai/internal/issues/stories_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-0944]
+usage:
+  source: log
+  seconds: 842
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 39545
+      cache_read: 5573425
+      cache_write: 163466
+      cost: 2.8828
 ---
 # T-0948 flai stats reports analyzer usage per issue and in totals, counted once across an issue and its story
 
