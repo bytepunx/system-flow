@@ -43,14 +43,14 @@ But the conventions alone encode to 71,213 bytes for a story's agent and 40,988 
 - Every part carries `part` and `parts`. A pack that fits one part is one part, `parts: 1`, and reads as the whole pack did.
 - A part ends before the convention or item that would take it over 40,000 bytes; nothing is split that fits a part of its own. A convention or item too large for any part is split at line boundaries into chunks, each carrying `chunk` and `chunks`, and each chunk starts a part.
 - `part` defaults to 1. A part past `parts` is refused with the number of parts.
-- `flai prime --part N --json` prints the same part. `flai prime` without `--part` prints the whole pack, as before, for a terminal or a file.
+- `flai prime --part N` prints the same part, as JSON: `--part` implies `--json`. `flai prime` without `--part` prints the whole pack, as before, for a terminal or a file.
 
 40,000 bytes is Claude Code's 50,000 characters, less a fifth for the result's envelope and for a harness that counts differently. Bytes are never fewer than the characters Claude Code counts, and 40,000 bytes of this JSON is about 13k tokens, well under the 25,000-token cap. The limit is a constant in `flai/internal/context`, `PartLimit`, beside `DefaultBudget`.
 
 ## Consequences
 
 - No pack a story's agent, a sub-agent, or a strategic agent gets is saved to a file. Each measured story pack, 161 to 198 KB of JSON, takes at least five calls where one failed.
-- An agent that reads part 1 and stops has the header, the conventions that fit, and `parts` telling it what remains. The tool's description, the agent's start prompt, `session-start.md`, and the design say to read every part.
+- An agent that reads part 1 and stops has the header, the conventions that fit, and `parts` telling it what remains. The tool's description, `flai prime --help`, the design, and the user guides say to read every part.
 - The parts are cut fresh on each call. A pack that changes between two calls, because a document changed, can repeat or skip an element at the boundary; the next prime is right again.
 - `flai/internal/context` gains `PartLimit` and a way to cut a pack into parts. `flai/internal/mcpserver` gains `part` on `prime`. `flai prime` gains `--part`.
 - The budget and the briefs are unchanged, so a pack over its budget is still over it; paging only makes it readable. Narrowing the conventions' topics stays the remedy ADR-0049 names for a pack whose conventions fill the budget.
