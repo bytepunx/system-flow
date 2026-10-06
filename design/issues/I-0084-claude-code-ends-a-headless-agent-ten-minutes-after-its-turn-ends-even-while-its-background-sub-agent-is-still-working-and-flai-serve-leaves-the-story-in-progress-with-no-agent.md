@@ -30,8 +30,6 @@ Found afterwards in the first session's transcript and flai serve's log: it ende
 
 ## Remediation
 
-## Remediation
-
 Two separate things went wrong, and each has its own fix.
 
 1. **The agent has no safe way to wait.** The prompt and `delegation.md` name one that keeps the session alive for a sub-agent of any length: a launch with `run_in_background: false`, once tested against a sub-agent that runs longer than ten minutes. This is the first change I-0083 recommends, and one story can make it for both issues.
