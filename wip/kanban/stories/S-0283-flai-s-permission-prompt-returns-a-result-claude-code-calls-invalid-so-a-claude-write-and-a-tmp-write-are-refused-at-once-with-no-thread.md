@@ -6,7 +6,7 @@ title: flai's permission_prompt returns a result Claude Code calls invalid, so a
 status: ready
 owner: alex
 created: 2026-10-06T03:45:18Z
-updated: 2026-10-06T06:32:05Z
+updated: 2026-10-06T06:32:06Z
 transitions:
   - to: ready
     at: 2026-10-06T06:20:20Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T06:27:36Z
 forecast:
   duration: 25m
-  delivery: 2026-10-06T11:09:00Z
-  basis: "flai forecast's 16m (median 116 s per unit over 10 done medium-band remediation stories on claude-opus-5-5, times size 8) raised by 9m for confirming the cause over the wire and tracing S-0219's no-thread refusal before the fix, which the criteria do not count; delivery 10th in the pull order, shifted by the same 9m"
-  by: planner-S-0283
-  at: 2026-10-06T06:27:36Z
+  delivery: 2026-10-06T07:25:00Z
+  basis: "Its own forecast of 25m; 1st in the pull order with an in-progress limit of 3, behind S-0220."
+  by: flai
+  at: 2026-10-06T06:32:06Z
 finalized:
   by: alex
   at: 2026-10-06T06:19:28Z
