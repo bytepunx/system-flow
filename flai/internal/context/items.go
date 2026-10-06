@@ -19,6 +19,10 @@ type Item struct {
 	Size    int      `json:"size"`            // bytes of Text
 	Whole   int      `json:"whole,omitempty"` // bytes of the whole document, for a brief
 	Text    string   `json:"text"`            // what is loaded, or the brief
+	// Chunk and Chunks number an item too large for any part of a pack,
+	// which Parts splits into chunks of its text (ADR-0104); zero otherwise.
+	Chunk  int `json:"chunk,omitempty"`
+	Chunks int `json:"chunks,omitempty"`
 }
 
 // Items is what the selection prints: what is named, then the briefs of

@@ -12,6 +12,12 @@ import (
 // (ADR-0049).
 const DefaultBudget = 80 * 1024
 
+// PartLimit is the most bytes of JSON one part of a pack encodes to: a
+// fifth under the 50,000 characters over which Claude Code saves a tool
+// result to a file instead of showing it, for the result's envelope and a
+// harness that counts differently (ADR-0104).
+const PartLimit = 40000
+
 // ParseSize reads a budget: a whole number of bytes, or one followed by K,
 // KB, or KiB (1024 bytes), or M, MB, or MiB, in any case, with or without a
 // space before the unit.

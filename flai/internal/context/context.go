@@ -42,7 +42,11 @@ type Convention struct {
 	LeftOut []Piece  `json:"left_out"`
 	Text    string   `json:"text"` // the file with what is left out taken out
 	Size    int      `json:"size"` // bytes of Text
-	title   string   // the level-1 heading, dropped from left-out labels
+	// Chunk and Chunks number a convention too large for any part of a pack,
+	// which Parts splits into chunks of its text (ADR-0104); zero otherwise.
+	Chunk  int    `json:"chunk,omitempty"`
+	Chunks int    `json:"chunks,omitempty"`
+	title  string // the level-1 heading, dropped from left-out labels
 }
 
 // Size is how much a pack prints, its header included.
@@ -65,6 +69,8 @@ type Pack struct {
 	Item        string              `json:"item,omitempty"`  // the epic or story the planner plans
 	Title       string              `json:"title"`           // the story's or the item's
 	Role        string              `json:"role,omitempty"`  // a sub-agent's role (ADR-0059) or a strategic agent's (E-0016); empty for the story's agent
+	PartNumber  int                 `json:"part,omitempty"`  // which part of the pack this is, on a part Parts cut (ADR-0104); zero on the whole pack
+	PartCount   int                 `json:"parts,omitempty"` // how many parts Parts cut the pack into; zero on the whole pack
 	Goal        string              `json:"goal,omitempty"`  // a role pack's story goal and acceptance criteria`
 	Topics      []topics.StoryTopic `json:"topics"`
 	Budget      int                 `json:"budget"`             // bytes the pack is fitted to
