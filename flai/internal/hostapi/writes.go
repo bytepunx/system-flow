@@ -472,7 +472,23 @@ func owner(p channel.Project) string {
 	return "designer"
 }
 
+// orchestratorAccepts refuses the orchestrator's acceptance of id in p while
+// the project's orchestration.permissions.accept_reviews is off, as flai
+// accept does, so that the dashboard is told why before anything runs
+// (ADR-0093).
+func orchestratorAccepts(p channel.Project, id string) *channel.Error {
+	m, err := manifest.Load(filepath.Join(p.Root, manifest.File))
+	if err != nil {
+		return &channel.Error{Code: Rule, Message: fmt.Sprintf("cannot read the project's manifest to check orchestration.permissions.%s, so the orchestrator does not accept %s: %v", manifest.PermitAcceptReviews, id, err)}
+	}
+	if err := (&workitem.Repo{Manifest: m}).OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", id); err != nil {
+		return &channel.Error{Code: Rule, Message: err.Error()}
+	}
+	return nil
+}
+
 var (
+	commitName = regexp.MustCompile(`^[0-9a-f]{4,64}$`)
 	anyItemID  = regexp.MustCompile(`^[EST]-\d{1,6}$`)
 	issueID    = regexp.MustCompile(`^I-\d{1,6}$`)
 	threadID   = regexp.MustCompile(`^(?i:TH-)?\d{1,6}$|^TH-\d{1,6}$`)
@@ -1087,10 +1103,16 @@ func itemSpecs() map[string]spec {
 			return args, "", nil
 		}},
 
+		// accept.run is the operator's acceptance, or with by: orchestrator
+		// the orchestrator's, with the commit its verifier passed and its
+		// evidence (ADR-0093).
 		"accept.run": {progress: true, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
 				IncludeUncommitted bool   `json:"include_uncommitted"`
+				By                 string `json:"by"`
+				Verified           string `json:"verified"`
+				Evidence           string `json:"evidence"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -1100,11 +1122,32 @@ func itemSpecs() map[string]spec {
 			}
 			// Acceptance merges and archives only; it releases nothing (S-0087).
 			// Publishing what has accumulated is a step of its own (publish.run).
-			args := []string{"accept", in.ID, "--by=" + owner(p)}
+			args, stdin := []string{"accept", in.ID, "--by=" + owner(p)}, ""
+			switch {
+			case workitem.IsOrchestrator(in.By):
+				if e := orchestratorAccepts(p, in.ID); e != nil {
+					return nil, "", e
+				}
+				// flai refuses a missing commit or evidence, naming what to give
+				args = []string{"accept", in.ID, "--by=" + workitem.ActivityOrchestrator}
+				if in.Verified != "" {
+					if !commitName.MatchString(in.Verified) {
+						return nil, "", bad("verified is the commit the orchestrator's verifier passed, in hex: %q is not one", in.Verified)
+					}
+					args = append(args, "--verified="+in.Verified)
+				}
+				if strings.TrimSpace(in.Evidence) != "" {
+					args, stdin = append(args, "--evidence=-"), in.Evidence
+				}
+			case in.By != "":
+				return nil, "", bad("by is %s for the orchestrator's acceptance, or left out for the operator's", workitem.ActivityOrchestrator)
+			case in.Verified != "" || in.Evidence != "":
+				return nil, "", bad("verified and evidence are the orchestrator's acceptance: give them with by %s", workitem.ActivityOrchestrator)
+			}
 			if in.IncludeUncommitted {
 				args = append(args, "--yes")
 			}
-			return args, "", nil
+			return args, stdin, nil
 		}},
 
 		"stream.log": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {

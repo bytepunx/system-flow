@@ -150,11 +150,15 @@ Acceptance computes no release, creates no tag, and pushes nothing (S-0087): tha
 
 flai move &lt;story&gt; done from review runs exactly this. An item that is already done but was never archived (an older flai, a hand edit) is completed from step 0 without a second transition. --dry-run changes nothing.
 
+--by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless orchestration.permissions.accept\_reviews is on; under FLAI\_ROLE=orchestrate no other acceptance is allowed. It is refused, before anything is merged, unless --verified names the story branch's head, every acceptance criterion is ticked, every file the branch changes is under the story's touches, no thread on the story or its tasks is open, and --evidence, a Verdict: line and one item "- &lt;n&gt;: &lt;files&gt;" per criterion, names a changed file for each of them. The evidence is written, with the commit, under ### Accepted by the orchestrator in the story's Notes. With --dry-run the evidence is optional.
+
 Examples:
 
 ```bash
 flai accept S-031 --by alex
 flai accept S-031 --by alex --dry-run
+flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
+flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
 ```
 
 Flags:
@@ -163,7 +167,9 @@ Flags:
 |------|---------|
 | `--by` string | who accepted (default: config author) |
 | `--dry-run` | show what would block acceptance and change nothing |
+| `--evidence` string | with --by orchestrator: file holding its evidence, a Verdict: line and - &lt;n&gt;: &lt;files&gt; per criterion (- reads standard input) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
+| `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
 
 ### flai adr
 
@@ -1153,7 +1159,7 @@ Reads a Claude Code PreToolUse hook's input on standard input and refuses the ca
 
 In a planner session, one flai serve starts with FLAI\_ROLE=plan, the session's own calls are held to planning too (strategic-agents.md): besides what a sub-agent may do, the MCP tools inbox, item\_new, item\_edit, thread\_open, thread\_reply, activity\_log, wait\_for\_events, and item\_move to backlog; the commands story new, epic new, task new, edit (but not --no-draft), touches, thread new and reply, issue new and bump, and move to backlog. A story the planner creates is a draft for the operator to finalize: item\_new of a story needs draft true, and story new needs --draft. It refuses the planner every other flai tool and command, git's writes, and the Edit, Write, and NotebookEdit tools. The planner's sub-agents are held as any sub-agent is.
 
-In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, the session's own calls are held to orchestration.permissions in the system-flow.yaml of the project the hook runs in (S-0218), each off when unset or when the manifest is unreadable. Whatever its permissions it may do what a sub-agent may, call inbox, activity\_log, wait\_for\_events, and thread\_open, and run thread new and issue new and bump. Each permission allows more: plan\_backlog\_epics the MCP tool plan and flai plan on an epic; finalize\_drafts item\_edit with draft false and flai edit --no-draft, each with nothing else to change; promote\_to\_ready item\_move and flai move of a story to ready; order\_ready flai order --by &lt;policy&gt; --apply; answer\_threads a reply on a thread another opened, with thread\_reply or flai thread reply, as a recommendation (recommendation true, --recommend) while it is recommend, and also as an answer citing a source (source, --source) while it is autonomous, so that an answer it cannot source goes to the operator as a recommendation (S-0220); accept\_reviews flai accept; publish flai release --pending and flai push. On a thread it opened it follows up and resolves, but never recommends or answers; it never resolves another's thread, never confirms a recommendation, and never names another author with --by. A call a permission would allow is refused while it is off, naming it (it needs orchestration.permissions.&lt;name&gt;); anything else that writes is refused as what the orchestrator never does: plan for a story, flai order placing a story by hand, other flai tools and commands, git's writes, and the Edit, Write, and NotebookEdit tools. Whether a story it promotes is held, a draft, or over the ready limit is flai's to check as it moves it, not the guard's: the guard reads the call, not the board. Each refusal is logged under ## Refusals in wip/agents/orchestrator.md, with its time, the call, and the permission it needs; a refusal that cannot be logged is warned of and refused all the same. The orchestrator's sub-agents are held as any sub-agent is.
+In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, the session's own calls are held to orchestration.permissions in the system-flow.yaml of the project the hook runs in (S-0218), each off when unset or when the manifest is unreadable. Whatever its permissions it may do what a sub-agent may, call inbox, activity\_log, wait\_for\_events, and thread\_open, and run thread new and issue new and bump. Each permission allows more: plan\_backlog\_epics the MCP tool plan and flai plan on an epic; finalize\_drafts item\_edit with draft false and flai edit --no-draft, each with nothing else to change; promote\_to\_ready item\_move and flai move of a story to ready; order\_ready flai order --by &lt;policy&gt; --apply; answer\_threads a reply on a thread another opened, with thread\_reply or flai thread reply, as a recommendation (recommendation true, --recommend) while it is recommend, and also as an answer citing a source (source, --source) while it is autonomous, so that an answer it cannot source goes to the operator as a recommendation (S-0220); accept\_reviews flai accept and flai move &lt;story&gt; done, each only with --by orchestrator, so that it accepts as itself and as nobody else (S-0221, ADR-0093); publish flai release --pending and flai push. On a thread it opened it follows up and resolves, but never recommends or answers; it never resolves another's thread, never confirms a recommendation, and never names another author with --by. A call a permission would allow is refused while it is off, naming it (it needs orchestration.permissions.&lt;name&gt;); anything else that writes is refused as what the orchestrator never does: plan for a story, flai order placing a story by hand, item\_move to done, whose refusal names flai accept --by orchestrator, other flai tools and commands, git's writes, and the Edit, Write, and NotebookEdit tools. Whether a story it promotes is held, a draft, or over the ready limit is flai's to check as it moves it, not the guard's: the guard reads the call, not the board. Each refusal is logged under ## Refusals in wip/agents/orchestrator.md, with its time, the call, and the permission it needs; a refusal that cannot be logged is warned of and refused all the same. The orchestrator's sub-agents are held as any sub-agent is.
 
 Given a SubagentStart or SubagentStop hook's input, as hook\_event\_name says, it records the sub-agent (its agent\_id and agent\_type, and when it started) as running in the hook's session, or no longer, in .flai-cache/guard/&lt;session\_id&gt;.json in the project's main checkout, under a lock, since a layer's sub-agents start at once. It refuses neither and says nothing; a record it cannot write is warned of. In a story's agent's session, one flai serve starts with FLAI\_STORY and no FLAI\_ROLE, it refuses the agent's own wait\_for\_events while the session's record lists a sub-agent running and no unresolved thread is on the story or one of its tasks (S-0285): wait\_for\_events reports work items and threads, not sub-agents, so it would run to its timeout. The refusal names the running sub-agents and says to wait for one by launching it with the Agent tool's run\_in\_background set to false, which returns its result as the tool's result. With a thread on the story open, the agent waits on the designer, and the call passes and returns on the answer. A project, record, or threads it cannot read let the call through.
 
@@ -1642,8 +1648,10 @@ Flags:
 |------|---------|
 | `--by` string | who made the change (default: FLAI\_AGENT when set, else the config author) |
 | `--dry-run` | for a move to cancelled: list what would be cancelled with it and change nothing |
+| `--evidence` string | with --by orchestrator: file holding its evidence, a Verdict: line and - &lt;n&gt;: &lt;files&gt; per criterion (- reads standard input) |
 | `--reason` string | why (required for cancelled and review → in-progress) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
+| `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
 
 ### flai new
 

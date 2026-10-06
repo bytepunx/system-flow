@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -129,7 +130,7 @@ var refused = map[string][]string{
 	"item.template":     {`{"type":"task"}`},
 	"issue.list":        {`{"story":"--all"}`, `{"story":"T-0001"}`, `{"story":"S-1 --all"}`, `[]`},
 	"issue.story":       {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","epic":"S-0001",` + rid + `}`, `{"id":"I-0001","epic":"--json",` + rid + `}`, `{"id":"I-0001"}`},
-	"accept.run":        {`{"id":"S-1 --no-push",` + rid + `}`},
+	"accept.run":        {`{"id":"S-1 --no-push",` + rid + `}`, `{"id":"S-0001","by":"alex",` + rid + `}`, `{"id":"S-0001","verified":"abc1234",` + rid + `}`, `{"id":"S-0001","evidence":"Verdict: pass",` + rid + `}`},
 	"stream.log":        {`{"id":"S-0001","entry":"  ",` + rid + `}`},
 	"stream.answer":     {`{"id":"../../etc","question":"q","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"  ","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"q","answer":"  ",` + rid + `}`},
 	"thread.new":        {`{"on":"../secret.md","title":"t","text":"x",` + rid + `}`, `{"on":"--by=eve","title":"t","text":"x",` + rid + `}`, `{"on":"S-0001","title":"","text":"x",` + rid + `}`, `{"on":"src/main.go","title":"t","text":"x",` + rid + `}`},
@@ -420,6 +421,43 @@ func TestAcceptanceSendsEachStepAsProgress(t *testing.T) {
 	_, _ = writeMethods(rec.run, time.Now, Host{})["item.move"](ctx, p, json.RawMessage(good["item.move"].params))
 	if len(steps) != 0 {
 		t.Errorf("a move sent progress: %v", steps)
+	}
+}
+
+// S-0221, ADR-0093: accept.run given by: orchestrator is the orchestrator's
+// acceptance. It is refused, running nothing, while the project's
+// accept_reviews is off, naming the permission; with it on, the commit and
+// the evidence reach flai as a flag and on standard input.
+func TestAcceptRunByTheOrchestratorNeedsAcceptReviews(t *testing.T) {
+	p := withDocs(t)
+	call := func(params string) (*recorder, *channel.Error) {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"S-0001"}`)}}
+		_, e := writeMethods(rec.run, time.Now, Host{})["accept.run"](context.Background(), p, json.RawMessage(params))
+		return rec, e
+	}
+	params := `{"id":"S-0001","by":"orchestrator","verified":"abc1234","evidence":"Verdict: pass\n- 1: x.go",` + rid + `}`
+	rec, e := call(params)
+	if e == nil || e.Code != Rule || len(rec.runs) != 0 {
+		t.Fatalf("with accept_reviews off the orchestrator's acceptance is a rule and runs nothing: %+v, ran %d", e, len(rec.runs))
+	}
+	if want := "the orchestrator accepts a story only with orchestration.permissions.accept_reviews, which is off: ask the operator with thread_open on S-0001"; e.Message != want {
+		t.Errorf("the refusal must name the permission:\n got %q\nwant %q", e.Message, want)
+	}
+
+	path := filepath.Join(p.Root, "system-flow.yaml")
+	m, _ := os.ReadFile(path)
+	if err := os.WriteFile(path, append(m, "orchestration:\n  permissions:\n    accept_reviews: true\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rec, e = call(params)
+	if e != nil || len(rec.runs) != 1 {
+		t.Fatalf("with accept_reviews on: %+v, ran %d", e, len(rec.runs))
+	}
+	if got, want := strings.Join(rec.runs[0].Args, " "), "accept S-0001 --by=orchestrator --verified=abc1234 --evidence=- --json"; got != want || rec.runs[0].Stdin != "Verdict: pass\n- 1: x.go" {
+		t.Errorf("ran %q with stdin %q, want %q with the evidence", got, rec.runs[0].Stdin, want)
+	}
+	if rec, e = call(`{"id":"S-0001","by":"orchestrator","verified":"--force",` + rid + `}`); e == nil || e.Code != channel.CodeInvalidParams || len(rec.runs) != 0 {
+		t.Errorf("a verified commit that is not hex is refused: %+v", e)
 	}
 }
 

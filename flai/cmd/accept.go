@@ -2,10 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -16,6 +22,11 @@ type acceptOptions struct {
 	by       string
 	trailers []string
 	dryRun   bool
+	// verified and evidence are the orchestrator's (ADR-0093): the commit its
+	// verifier passed, and the file holding its evidence, "-" for stdin.
+	verified string
+	evidence string
+	stdin    func() io.Reader // the command's standard input, for --evidence -
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -42,9 +53,21 @@ release --pending.
 
 flai move <story> done from review runs exactly this. An item that is already
 done but was never archived (an older flai, a hand edit) is completed from
-step 0 without a second transition. --dry-run changes nothing.`,
+step 0 without a second transition. --dry-run changes nothing.
+
+--by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless
+orchestration.permissions.accept_reviews is on; under FLAI_ROLE=orchestrate no
+other acceptance is allowed. It is refused, before anything is merged, unless
+--verified names the story branch's head, every acceptance criterion is
+ticked, every file the branch changes is under the story's touches, no thread
+on the story or its tasks is open, and --evidence, a Verdict: line and one
+item "- <n>: <files>" per criterion, names a changed file for each of them.
+The evidence is written, with the commit, under ### Accepted by the
+orchestrator in the story's Notes. With --dry-run the evidence is optional.`,
 		Example: `  flai accept S-031 --by alex
-  flai accept S-031 --by alex --dry-run`,
+  flai accept S-031 --by alex --dry-run
+  flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
+  flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -73,13 +96,23 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 		c.Flags().StringVar(&o.by, "by", "", "who accepted (default: config author)")
 	}
 	c.Flags().StringArrayVar(&o.trailers, "trailer", nil, "line appended to the commit message (repeatable)")
+	c.Flags().StringVar(&o.verified, "verified", "", "with --by orchestrator: the commit its verifier passed, the story branch's head")
+	c.Flags().StringVar(&o.evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion (- reads standard input)")
+	o.stdin = c.InOrStdin
 }
 
 // acceptItem runs the acceptance flow for a story or an epic.
 func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*preview.Acceptance, error) {
-	res, err := preview.Accept(a.runner, repo, it, orDefault(o.by, a.author()), a.now(), a.logger())
+	opts, err := a.acceptance(repo, it, o)
 	if err != nil {
 		return nil, err
+	}
+	res, err := preview.AcceptWith(a.runner, repo, it, orDefault(o.by, a.author()), a.now(), a.logger(), opts)
+	if err != nil {
+		return nil, err
+	}
+	if opts.Orchestrator && res.Resumed {
+		return nil, fmt.Errorf("rule: %s is done but was never archived; the orchestrator accepts only a story in review, so the operator completes this acceptance with flai accept %s", it.ID, it.ID)
 	}
 	res.DryRun = o.dryRun
 	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun {
@@ -130,6 +163,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {
 				return nil, err
 			}
+		}
+		// the orchestrator's evidence goes into the acceptance commit with
+		// the story (ADR-0093)
+		if opts.Orchestrator {
+			it.Body = withNotesSection(it.Body, orchestratorNotes(res, a.now()))
 		}
 		if err := repo.Save(it); err != nil {
 			return nil, err
@@ -199,6 +237,109 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	return res, nil
 }
 
+// acceptance is what o adds to the acceptance preview of it, after refusing
+// what o may not ask: under FLAI_ROLE=orchestrate an acceptance as anyone but
+// the orchestrator, --verified or --evidence for anyone else, the
+// orchestrator's acceptance while orchestration.permissions.accept_reviews is
+// off, and its real run without evidence or with evidence that cannot be read
+// (ADR-0093).
+func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, error) {
+	orchestrator := workitem.IsOrchestrator(o.by)
+	switch {
+	case os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate && !orchestrator:
+		given := "no --by"
+		if o.by != "" {
+			given = "--by " + o.by
+		}
+		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator accepts a story only as itself, so give --by %s, not %s (ADR-0093)", workitem.ActivityOrchestrator, given)
+	case !orchestrator && (o.verified != "" || o.evidence != ""):
+		return preview.AcceptOptions{}, fmt.Errorf("rule: --verified and --evidence are the orchestrator's acceptance: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
+	case !orchestrator:
+		return preview.AcceptOptions{}, nil
+	}
+	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
+		return preview.AcceptOptions{}, fmt.Errorf("rule: %w", err)
+	}
+	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified}
+	if o.evidence == "" {
+		if o.dryRun {
+			return opts, nil
+		}
+		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one - <n>: <files> item per criterion (ADR-0093)", it.ID)
+	}
+	text, err := a.readEvidence(o)
+	if err != nil {
+		return preview.AcceptOptions{}, err
+	}
+	if opts.Evidence, err = preview.ParseEvidence(text); err != nil {
+		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator's evidence for %s cannot be read as ADR-0093 asks: %w", it.ID, err)
+	}
+	return opts, nil
+}
+
+// readEvidence is the text of the orchestrator's evidence: --evidence's file,
+// or standard input for "-". A heading in it is refused, since the text goes
+// under a heading of its own in the story's Notes.
+func (a *app) readEvidence(o acceptOptions) (string, error) {
+	var data []byte
+	var err error
+	if o.evidence == "-" {
+		data, err = io.ReadAll(o.stdin())
+	} else {
+		path := o.evidence
+		if !filepath.IsAbs(path) && a.cwd != "" {
+			path = filepath.Join(a.cwd, path)
+		}
+		data, err = os.ReadFile(path)
+	}
+	if err != nil {
+		return "", fmt.Errorf("read the orchestrator's evidence from %s: %w; give a readable file, or - for standard input", o.evidence, err)
+	}
+	text := strings.TrimSpace(string(data))
+	for i, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, "#") {
+			return "", fmt.Errorf("rule: line %d of the orchestrator's evidence is a heading (%s): write a Verdict: line and - <n>: <files> items without headings, since flai puts the evidence under ### Accepted by the orchestrator in the story's Notes", i+1, line)
+		}
+	}
+	return text, nil
+}
+
+// orchestratorNotes is what the orchestrator's acceptance writes under the
+// story's Notes (ADR-0093): the commit its verifier passed, when, and its
+// evidence as given.
+func orchestratorNotes(res *preview.Acceptance, now time.Time) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "### Accepted by the orchestrator\n\n- Verified: %s\n- At: %s\n", res.Verified, now.UTC().Format(time.RFC3339))
+	if res.Evidence != nil {
+		fmt.Fprintf(&b, "\n%s\n", res.Evidence.Text)
+	}
+	return b.String()
+}
+
+// withNotesSection is body with section appended to the end of its "## Notes"
+// section, which is added at the end of body when it has none.
+func withNotesSection(body, section string) string {
+	const notes = "## Notes"
+	start := -1
+	if strings.HasPrefix(body, notes+"\n") {
+		start = 0
+	} else if i := strings.Index(body, "\n"+notes+"\n"); i >= 0 {
+		start = i + 1
+	}
+	if start < 0 {
+		return strings.TrimRight(body, "\n") + "\n\n" + notes + "\n\n" + section
+	}
+	end := len(body)
+	if i := strings.Index(body[start+len(notes):], "\n## "); i >= 0 {
+		end = start + len(notes) + i + 1
+	}
+	head, tail := strings.TrimRight(body[:end], "\n"), body[end:]
+	if tail != "" {
+		return head + "\n\n" + section + "\n" + tail
+	}
+	return head + "\n\n" + section
+}
+
 // followAccepted moves and saves the epic of story, accepted from from, the
 // way its acceptance takes it, and says where it went; nil when it stays.
 func (a *app) followAccepted(repo *workitem.Repo, story *workitem.Item, from, by string) (*workitem.Followed, error) {
@@ -261,6 +402,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}
 	fmt.Fprintln(a.out, "; nothing released yet, run flai release --pending to publish")
+	if res.Evidence != nil {
+		fmt.Fprintf(a.out, "accepted by the orchestrator at %s; its evidence is under ### Accepted by the orchestrator in the Notes of %s\n", short(res.Verified), res.ID)
+	}
 	if e := res.Epic; e != nil {
 		fmt.Fprintf(a.out, "%s followed it from %s to %s", e.ID, e.From, e.To)
 		if e.To == workitem.Done {

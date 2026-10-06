@@ -265,6 +265,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--epic` | [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--evaluate` | [flai release](../users/flai-reference.md#flai-release) |
+| `--evidence` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--force` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--forecast-basis` | [flai edit](../users/flai-reference.md#flai-edit) |
@@ -347,6 +348,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--unset-role` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit) |
 | `--var` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `-v`, `--verbose` | every command ([global flags](../users/flai-reference.md#flai)) |
+| `--verified` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `--version` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--wait` | [flai checks tail](../users/flai-reference.md#flai-checks-tail) |
 | `--write` | [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage) |
