@@ -3,11 +3,11 @@ id: I-0063
 title: flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
 class: efficiency
 status: open
-count: 3
-cost: 10m
+count: 4
+cost: 8m
 first_reported: 2026-10-03T07:58:20Z
-last_reported: 2026-10-03T19:25:07Z
-updated: 2026-10-03T19:25:07Z
+last_reported: 2026-10-06T22:11:05Z
+updated: 2026-10-06T22:11:05Z
 ---
 
 # I-0063 flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
@@ -36,5 +36,9 @@ Issue IDs collide the same way. S-0201's flai issue new, run in the main checkou
 ### 2026-10-03T19:25:07Z
 Story: S-0204.
 S-0204 and S-0206 each took ADR-0079 from their own worktrees; S-0204 renumbered its ADR to 0080 after stream sync's trial merge showed the design/adrs/README.md conflict.
+
+### 2026-10-06T22:11:05Z
+Story: S-0229.
+flai adr new in S-0229's worktree numbered ADR-0100, which story/S-0227 already holds; renumbered to 0101 by hand (file, id, heading, README row).
 
 ## Remediation
