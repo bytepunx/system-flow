@@ -30,7 +30,7 @@ A thread entry carries two optional marks, and a pending recommendation becomes 
 
 - The file says what the orchestrator did, in a form the operator reads without flai: the heading says recommendation, and the last line names the source.
 - An older flai reads a recommendation as a plain entry whose author is `orchestrator (recommendation)`, and the source line as part of its text. The status is in the front matter, so its inbox and lists are unchanged; code that compares the last entry's author to an agent's name, such as whether the orchestrator wrote last, sees another author until it is upgraded.
-- A plain entry whose last paragraph is one line starting `Source: ` now reads as citing that source, whoever wrote it.
+- A plain entry whose last paragraph is one line starting with `Source:` and a space now reads as citing that source, whoever wrote it.
 - Two recommendations by one author in one second join under one heading, as plain entries do, and the joined entry cites the later source.
 - The CLI, MCP, host API, guard, metrics, and dashboard build on these marks in later tasks of S-0220.
 

@@ -71,6 +71,9 @@ type ItemMetrics struct {
 	// progress, and WaitReview the time it spent in review (S-0205).
 	WaitThreads *float64 `json:"wait_threads_seconds,omitempty"`
 	WaitReview  *float64 `json:"wait_review_seconds,omitempty"`
+	// WaitThreadsOrchestrator is the part of WaitThreads whose waits the
+	// orchestrator ended (S-0220).
+	WaitThreadsOrchestrator *float64 `json:"wait_threads_orchestrator_seconds,omitempty"`
 	// HeldSeconds is the time a story spent held in ready (S-0205).
 	HeldSeconds *float64 `json:"held_seconds,omitempty"`
 	// Usage is what agents spent on it, when it carries any (S-0143), and
@@ -202,7 +205,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	for _, it := range items {
 		m := Derive(it, opt.Now)
 		m.ExpectedCost = ExpectedCostOf(it, rate)
-		m.WaitThreads = waitInProgress(it, waits[workitem.CanonicalID(it.ID)], opt.Now)
+		deriveWaitThreads(&m, it, waits[workitem.CanonicalID(it.ID)], opt.Now)
 		m.HeldSeconds = held[it.ID]
 		perItem[it.ID] = m
 		rep.Items = append(rep.Items, m)
@@ -252,7 +255,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Strategic = strategic(opt.Activities, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
-	rep.Waiting = waiting(items, perItem, start, opt.Now)
+	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)
 	rep.Claims = claims(items, all, start, opt)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate

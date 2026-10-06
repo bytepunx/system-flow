@@ -246,9 +246,9 @@ func sourceLine(s Source) string {
 	return sourcePrefix + s.Path + sourceHeading + s.Heading
 }
 
-// confirms reports whether an entry is a confirmation Confirm wrote, alone or
-// joined with another entry of its author's in the same second.
-func confirms(e Entry) bool {
+// Confirms reports whether the entry is a confirmation Confirm wrote, alone
+// or joined with another entry of its author's in the same second.
+func (e Entry) Confirms() bool {
 	for _, line := range strings.Split(e.Text, "\n") {
 		if strings.HasPrefix(line, confirmPrefix) {
 			return true
@@ -272,7 +272,7 @@ func (th *Thread) PendingRecommendation() *Entry {
 	opener := es[0].Author
 	for i := len(es) - 1; i > 0; i-- {
 		e := es[i]
-		if confirms(e) {
+		if e.Confirms() {
 			return nil
 		}
 		if e.Author == opener {

@@ -16,11 +16,11 @@ type Waiting struct {
 
 // WaitWeek is the waiting of the items completed in one ISO week.
 type WaitWeek struct {
-	Week    string    `json:"week"`
-	Start   string    `json:"start"`
-	Items   int       `json:"items"`
-	Threads WaitTotal `json:"threads"`
-	Review  WaitTotal `json:"review"`
+	Week    string          `json:"week"`
+	Start   string          `json:"start"`
+	Items   int             `json:"items"`
+	Threads ThreadWaitTotal `json:"threads"`
+	Review  WaitTotal       `json:"review"`
 }
 
 // WaitTotal is the seconds waited over a week's items and their mean, absent
@@ -30,8 +30,41 @@ type WaitTotal struct {
 	Mean  *float64 `json:"mean_seconds,omitempty"`
 }
 
+// ThreadWaitTotal is the seconds waited on threads over a week's items, and
+// the waits among them the orchestrator ended and those the operator's
+// confirmation of a recommendation ended (S-0220).
+type ThreadWaitTotal struct {
+	WaitTotal
+	Orchestrator WaitCount `json:"orchestrator"`
+	Confirmed    WaitCount `json:"confirmed"`
+}
+
+// WaitCount is how many of a week's thread waits one kind of entry ended,
+// and the seconds of their part in the items' thread waits.
+type WaitCount struct {
+	Count int     `json:"count"`
+	Total float64 `json:"total_seconds"`
+}
+
 // span is the time from one moment up to another.
 type span struct{ from, to time.Time }
+
+// ender is who ended a thread's wait (S-0220); the zero value is anyone but
+// the orchestrator without confirming a recommendation, or nobody yet.
+type ender int
+
+const (
+	// byOrchestrator is an entry of the orchestrator's.
+	byOrchestrator ender = iota + 1
+	// byConfirmation is an entry confirming a recommendation (ADR-0090).
+	byConfirmation
+)
+
+// wait is a thread's wait and who ended it.
+type wait struct {
+	span
+	by ender
+}
 
 // deriveWaitReview sets the seconds the item spent in review, from the time
 // in state already derived, when it was ever there.
@@ -45,14 +78,14 @@ func deriveWaitReview(m *ItemMetrics, it *workitem.Item) {
 
 // threadWaits is the waits of the threads anchored to each item, or to one of
 // its tasks, by the item's canonical ID.
-func threadWaits(all []*workitem.Item, ths []*threads.Thread, now time.Time) map[string][]span {
+func threadWaits(all []*workitem.Item, ths []*threads.Thread, now time.Time) map[string][]wait {
 	parent := map[string]string{}
 	for _, it := range all {
 		if it.Type == workitem.Task && it.Parent != "" {
 			parent[workitem.CanonicalID(it.ID)] = workitem.CanonicalID(it.Parent)
 		}
 	}
-	out := map[string][]span{}
+	out := map[string][]wait{}
 	for _, th := range ths {
 		if th.Anchor.Item == "" {
 			continue
@@ -71,10 +104,12 @@ func threadWaits(all []*workitem.Item, ths []*threads.Thread, now time.Time) map
 }
 
 // threadWait is the time from the thread's first entry, or its creation
-// without entries, to the first later entry by another author; without one,
-// to updated once resolved and to now while open. It is false when the
-// thread's start cannot be read.
-func threadWait(th *threads.Thread, now time.Time) (span, bool) {
+// without entries, to the first later entry by another author that is not a
+// recommendation; without one, to updated once resolved and to now while
+// open. It is ended by the orchestrator when that entry is the
+// orchestrator's, and by a confirmation when it confirms a recommendation.
+// It is false when the thread's start cannot be read.
+func threadWait(th *threads.Thread, now time.Time) (wait, bool) {
 	entries := th.Entries()
 	at, opener := th.Created, ""
 	if len(entries) > 0 {
@@ -82,29 +117,60 @@ func threadWait(th *threads.Thread, now time.Time) (span, bool) {
 	}
 	from, err := time.Parse(workitem.TimeFormat, at)
 	if err != nil {
-		return span{}, false
+		return wait{}, false
 	}
-	to := now
+	w := wait{span: span{from, now}}
 	if th.Status == "resolved" {
-		to, _ = time.Parse(workitem.TimeFormat, th.Updated)
+		w.to, _ = time.Parse(workitem.TimeFormat, th.Updated)
 	}
 	for _, e := range entries[min(1, len(entries)):] {
-		if e.Author != opener {
-			to, _ = time.Parse(workitem.TimeFormat, e.At)
-			break
+		if e.Author == opener || e.Recommendation {
+			continue
 		}
+		w.to, _ = time.Parse(workitem.TimeFormat, e.At)
+		switch {
+		case workitem.IsOrchestrator(e.Author):
+			w.by = byOrchestrator
+		case e.Confirms():
+			w.by = byConfirmation
+		}
+		break
 	}
-	return span{from, to}, true
+	return w, true
 }
 
-// waitInProgress is the seconds of the union of the waits that fall in the
-// item's in-progress intervals, nil without waits.
-func waitInProgress(it *workitem.Item, waits []span, now time.Time) *float64 {
+// deriveWaitThreads sets the seconds the item's agent waited on its threads
+// while it was in progress, and the part of them the orchestrator ended,
+// both absent without threads.
+func deriveWaitThreads(m *ItemMetrics, it *workitem.Item, waits []wait, now time.Time) {
 	if waits == nil {
-		return nil
+		return
 	}
+	all := make([]span, len(waits))
+	for i, w := range waits {
+		all[i] = w.span
+	}
+	total := inProgressSeconds(it, all, now)
+	orchestrator := inProgressSeconds(it, endedBy(waits, byOrchestrator), now)
+	m.WaitThreads, m.WaitThreadsOrchestrator = &total, &orchestrator
+}
+
+// endedBy is the spans of the waits by ended.
+func endedBy(waits []wait, by ender) []span {
+	var out []span
+	for _, w := range waits {
+		if w.by == by {
+			out = append(out, w.span)
+		}
+	}
+	return out
+}
+
+// inProgressSeconds is the seconds of the union of the spans that fall in
+// the item's in-progress intervals.
+func inProgressSeconds(it *workitem.Item, spans []span, now time.Time) float64 {
 	var total float64
-	for _, w := range union(waits) {
+	for _, w := range union(spans) {
 		for _, p := range inProgress(it, now) {
 			from, to := laterOf(w.from, p.from), earlierOf(w.to, p.to)
 			if to.After(from) {
@@ -112,7 +178,20 @@ func waitInProgress(it *workitem.Item, waits []span, now time.Time) *float64 {
 			}
 		}
 	}
-	return &total
+	return total
+}
+
+// add counts the item's waits by ended that have a part in its in-progress
+// intervals, and adds the seconds of the union of those waits that fall in
+// them.
+func (c *WaitCount) add(it *workitem.Item, waits []wait, by ender, now time.Time) {
+	spans := endedBy(waits, by)
+	for _, s := range spans {
+		if inProgressSeconds(it, []span{s}, now) > 0 {
+			c.Count++
+		}
+	}
+	c.Total += inProgressSeconds(it, spans, now)
 }
 
 // union merges overlapping spans into disjoint ones, in order.
@@ -150,8 +229,8 @@ func inProgress(it *workitem.Item, now time.Time) []span {
 
 // waiting lays out the waits of the items done in the window by the ISO week
 // they were completed in, from the one that holds the window's start to this
-// one.
-func waiting(items []*workitem.Item, per map[string]ItemMetrics, start, now time.Time) Waiting {
+// one, with the thread waits of each item by its canonical ID.
+func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, start, now time.Time) Waiting {
 	out := Waiting{Weeks: []WaitWeek{}}
 	at := map[string]int{}
 	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
@@ -170,6 +249,9 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, start, now time
 		m := per[it.ID]
 		b.Threads.Total += orZero(m.WaitThreads)
 		b.Review.Total += orZero(m.WaitReview)
+		ws := waits[workitem.CanonicalID(it.ID)]
+		b.Threads.Orchestrator.add(it, ws, byOrchestrator, now)
+		b.Threads.Confirmed.add(it, ws, byConfirmation, now)
 	}
 	for i := range out.Weeks {
 		b := &out.Weeks[i]

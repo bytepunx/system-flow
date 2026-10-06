@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-04
+updated: 2026-10-06
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -167,15 +167,17 @@ Each day point has `date`; each amount is rounded to two decimals once summed. I
 
 ### Waiting
 
-The time a story's agent waited for someone else: on its threads while it was in progress, and in review.
+The time a story's agent waited for someone else: on its threads while it was in progress, and in review. The orchestrator's replies (S-0220) are told apart from the rest ([ADR-0091](../adrs/0091-a-recommendation-ends-no-thread-wait-and-flai-stats-reports-the-waits-the.md)): a recommendation ends no wait, and the waits that the orchestrator's answers and the operator's confirmations of a recommendation ended are counted apart.
 
 | Value | Definition |
 |-------|------------|
-| A thread's wait | From its first entry to the first later entry by another author. A thread nobody else answered waits until `updated` once resolved, and until now while open |
-| `items[].wait_threads_seconds` | The seconds of the union of the waits of the threads anchored to the item or one of its tasks that fall in its `in-progress` intervals. Absent with no such thread |
+| A thread's wait | From its first entry to the first later entry by another author that is not a recommendation ([ADR-0090](../adrs/0090-a-thread-entry-is-marked-a-recommendation-in-its-heading-and-cites-its-source.md)). A thread nobody else answered waits until `updated` once resolved, and until now while open; one whose only replies are recommendations waits on in the same way, until the operator confirms one or someone answers |
+| Who ended a wait | The orchestrator, when the entry that ended it is by `orchestrator`, the author name of the orchestrator's run (ADR-0087); confirmed, when that entry confirms a recommendation, a line of it starting with the words `Confirmed the recommendation of` and a space; anyone else otherwise |
+| `items[].wait_threads_seconds` | The seconds of the union of the waits of the threads anchored to the item or one of its tasks that fall in its `in-progress` intervals, whoever ended them. Absent with no such thread |
+| `items[].wait_threads_orchestrator_seconds` | The same over only the waits the orchestrator ended: the seconds of their union that fall in the item's `in-progress` intervals. Time in which such a wait overlaps one someone else ended counts here, so it is never more than `wait_threads_seconds`. Present, 0 or more, whenever `wait_threads_seconds` is |
 | `items[].wait_review_seconds` | The seconds it spent in `review`, the open interval up to now. Absent if it was never in review |
 
-`waiting.weeks[]` has `week`, `start`, `items` (those completed in the week), and `threads` and `review`, each with `total_seconds`, their sum over those items, and `mean_seconds`, the sum over `items`.
+`waiting.weeks[]` has `week`, `start`, `items` (those completed in the week), and `threads` and `review`, each with `total_seconds`, their sum over those items, and `mean_seconds`, the sum over `items`. `threads` also has `orchestrator` and `confirmed`, present in every week, each with `count`, the number of the waits of those items that the orchestrator, or a confirmation, ended and that have some part in the item's `in-progress` intervals, and `total_seconds`, the sum over those items of the seconds of the union of those waits that fall in the item's `in-progress` intervals; for `orchestrator` that is the sum of `wait_threads_orchestrator_seconds`. Each part is a union of its own waits, so with overlapping waits the parts can add up to more than `threads.total_seconds`; each is at most it.
 
 ### Claims and touches
 

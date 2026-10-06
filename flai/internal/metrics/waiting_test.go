@@ -124,6 +124,10 @@ func TestWaitPerItemIsThreadsInProgressAndTimeInReview(t *testing.T) {
 				t.Errorf("%s [threads, review][%d] = %v, want %v", m.ID, k, deref(got), deref(w[k]))
 			}
 		}
+		// S-0220: no orchestrator entry, so no part of the wait is its
+		if o := m.WaitThreadsOrchestrator; (o == nil) != (w[0] == nil) || (o != nil && *o != 0) {
+			t.Errorf("%s orchestrator's part = %v, want 0 beside a thread wait", m.ID, deref(o))
+		}
 	}
 	data, err := json.Marshal(rep.Items[1])
 	if err != nil {
@@ -149,13 +153,113 @@ func TestWaitingByTheWeek(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	none := `"orchestrator":{"count":0,"total_seconds":0},"confirmed":{"count":0,"total_seconds":0}`
 	want := `{"weeks":[` +
-		`{"week":"2026-W34","start":"2026-08-17","items":0,"threads":{"total_seconds":0},"review":{"total_seconds":0}},` +
+		`{"week":"2026-W34","start":"2026-08-17","items":0,"threads":{"total_seconds":0,` + none + `},"review":{"total_seconds":0}},` +
 		`{"week":"2026-W35","start":"2026-08-24","items":6,` +
-		`"threads":{"total_seconds":36000,"mean_seconds":6000},"review":{"total_seconds":32400,"mean_seconds":5400}},` +
+		`"threads":{"total_seconds":36000,"mean_seconds":6000,` + none + `},"review":{"total_seconds":32400,"mean_seconds":5400}},` +
 		`{"week":"2026-W36","start":"2026-08-31","items":2,` +
-		`"threads":{"total_seconds":7200,"mean_seconds":3600},"review":{"total_seconds":0,"mean_seconds":0}}]}`
+		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0}}]}`
 	if string(data) != want {
 		t.Errorf("waiting =\n%s\nwant\n%s", data, want)
+	}
+}
+
+// threadOf is a thread on an item whose entries are the triples of time,
+// heading author, and text given.
+func threadOf(item, status, created, updated string, entries ...string) *threads.Thread {
+	th := &threads.Thread{Anchor: threads.Anchor{Path: "wip/kanban/x.md", Item: item}, Status: status, Created: created, Updated: updated}
+	th.Body = "\n# TH-0001 A question\n\n## Entries\n"
+	for i := 0; i < len(entries); i += 3 {
+		th.Body += "\n### " + entries[i] + " " + entries[i+1] + "\n" + entries[i+2] + "\n"
+	}
+	return th
+}
+
+// orchestratedItems are two stories done in the week of 24 August 2026.
+func orchestratedItems() []*workitem.Item {
+	ip, done := workitem.InProgress, workitem.Done
+	item := func(id, started, completed string) *workitem.Item {
+		return &workitem.Item{ID: id, Type: workitem.Story, Status: done, Created: "2026-08-20T00:00:00Z",
+			Transitions: []workitem.Transition{{To: ip, At: started}, {To: done, At: completed}}}
+	}
+	return []*workitem.Item{
+		item("S-0021", "2026-08-25T00:00:00Z", "2026-08-26T00:00:00Z"),
+		item("S-0022", "2026-08-27T00:00:00Z", "2026-08-27T06:00:00Z"),
+	}
+}
+
+// orchestratedThreads are threads the orchestrator answered, recommended an
+// answer on that the operator confirmed or answered otherwise, and
+// recommended an answer on that awaits the operator.
+func orchestratedThreads() []*threads.Thread {
+	const asked, source = "Which way?", "Source: design/system/workflow.md"
+	return []*threads.Thread{
+		// answered by the orchestrator citing a source: an hour
+		threadOf("S-0021", "answered", "2026-08-25T02:00:00Z", "2026-08-25T03:00:00Z",
+			"2026-08-25T02:00:00Z", "agent", asked,
+			"2026-08-25T03:00:00Z", "orchestrator", "This way.\n\n"+source),
+		// overlapping the one before, answered by the orchestrator: the
+		// union of the two is an hour and a half
+		threadOf("S-0021", "answered", "2026-08-25T02:30:00Z", "2026-08-25T03:30:00Z",
+			"2026-08-25T02:30:00Z", "agent", asked,
+			"2026-08-25T03:30:00Z", "orchestrator", "That way.\n\n"+source),
+		// recommended at 05:00, which ends no wait, and confirmed at 07:00
+		threadOf("S-0021", "answered", "2026-08-25T04:00:00Z", "2026-08-25T07:00:00Z",
+			"2026-08-25T04:00:00Z", "agent", asked,
+			"2026-08-25T05:00:00Z", "orchestrator (recommendation)", "This way.\n\n"+source,
+			"2026-08-25T07:00:00Z", "alex", "Confirmed the recommendation of 2026-08-25T05:00:00Z orchestrator.\n\n"+source),
+		// recommended, and answered otherwise by the operator: two hours by
+		// someone else
+		threadOf("S-0021", "answered", "2026-08-25T08:00:00Z", "2026-08-25T10:00:00Z",
+			"2026-08-25T08:00:00Z", "agent", asked,
+			"2026-08-25T09:00:00Z", "orchestrator (recommendation)", "This way.",
+			"2026-08-25T10:00:00Z", "alex", "No, that way."),
+		// answered by the orchestrator after the story was done: no part in
+		// progress, so not counted
+		threadOf("S-0021", "answered", "2026-08-26T01:00:00Z", "2026-08-26T02:00:00Z",
+			"2026-08-26T01:00:00Z", "agent", asked,
+			"2026-08-26T02:00:00Z", "orchestrator", "This way.\n\n"+source),
+		// escalated as a recommendation that still awaits the operator: it
+		// waits until now, five and a half hours of it in progress
+		threadOf("S-0022", "open", "2026-08-27T00:30:00Z", "2026-08-27T01:00:00Z",
+			"2026-08-27T00:30:00Z", "agent", asked,
+			"2026-08-27T01:00:00Z", "orchestrator (recommendation)", "Perhaps this way."),
+	}
+}
+
+// S-0220: a recommendation ends no wait; the orchestrator's answer ends one
+// counted under orchestrator, the union of such waits being its part of the
+// item's; the operator's confirmation of a recommendation ends one counted
+// under confirmed; and waits with no part in progress are not counted.
+func TestWaitsTheOrchestratorEndedAreCountedApart(t *testing.T) {
+	rep := Compute(orchestratedItems(), Options{Now: now, Since: tenDays, Threads: orchestratedThreads()})
+	want := map[string][2]float64{ // threads, the orchestrator's part
+		"S-0021": {23400, 5400},
+		"S-0022": {19800, 0},
+	}
+	for _, m := range rep.Items {
+		w := want[m.ID]
+		if m.WaitThreads == nil || *m.WaitThreads != w[0] || m.WaitThreadsOrchestrator == nil || *m.WaitThreadsOrchestrator != w[1] {
+			t.Errorf("%s threads, orchestrator's = %v, %v, want %v", m.ID, deref(m.WaitThreads), deref(m.WaitThreadsOrchestrator), w)
+		}
+	}
+	data, err := json.Marshal(rep.Items[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key := `"wait_threads_orchestrator_seconds":5400`; !strings.Contains(string(data), key) {
+		t.Errorf("S-0021 json lacks %s: %s", key, data)
+	}
+	data, err = json.Marshal(rep.Waiting.Weeks[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	week := `{"week":"2026-W35","start":"2026-08-24","items":2,` +
+		`"threads":{"total_seconds":43200,"mean_seconds":21600,` +
+		`"orchestrator":{"count":2,"total_seconds":5400},"confirmed":{"count":1,"total_seconds":10800}},` +
+		`"review":{"total_seconds":0,"mean_seconds":0}}`
+	if string(data) != week {
+		t.Errorf("week =\n%s\nwant\n%s", data, week)
 	}
 }
