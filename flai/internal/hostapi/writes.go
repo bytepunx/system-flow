@@ -990,6 +990,47 @@ func itemSpecs() map[string]spec {
 			return []string{"edit", in.ID, "--no-draft", "--by=" + owner(p), "--autocommit", "--trailer=" + Trailer}, "", nil
 		}},
 
+		// item.criteria: the designer ticks or unticks an item's acceptance
+		// criteria by number from its page (S-0282). flai criteria tick or
+		// untick changes those boxes and no other byte, as the owner, committed;
+		// the hash is what item.show gave, so a change made meanwhile is a
+		// conflict rather than overwritten. One call ticks or unticks, since
+		// they are two commands of flai's.
+		"item.criteria": {exits: map[int]int{3: Conflict, 4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID     string `json:"id"`
+				Hash   string `json:"hash"`
+				Tick   []int  `json:"tick"`
+				Untick []int  `json:"untick"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needID(in.ID); e != nil {
+				return nil, "", e
+			}
+			if !contentHash.MatchString(in.Hash) {
+				return nil, "", bad("hash is required: the one item.show gave for the criteria ticked")
+			}
+			verb, ns := "tick", in.Tick
+			switch {
+			case len(in.Tick) > 0 && len(in.Untick) > 0:
+				return nil, "", bad("tick or untick in one call, not both")
+			case len(in.Untick) > 0:
+				verb, ns = "untick", in.Untick
+			case len(in.Tick) == 0:
+				return nil, "", bad("name the criteria to tick or untick by their numbers")
+			}
+			words := make([]string, len(ns))
+			for i, n := range ns {
+				if n < 1 {
+					return nil, "", bad("criteria are numbered from 1: %d is not one", n)
+				}
+				words[i] = strconv.Itoa(n)
+			}
+			return []string{"criteria", verb, in.ID, strings.Join(words, ","), "--hash=" + in.Hash, "--by=" + owner(p), "--autocommit", "--trailer=" + Trailer}, "", nil
+		}},
+
 		"item.template": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				Type string `json:"type"`

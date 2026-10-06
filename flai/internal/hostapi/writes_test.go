@@ -33,6 +33,7 @@ var good = map[string]struct {
 	"item.new":          {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
 	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
 	"item.finalize":     {`{"id":"S-0001",` + rid + `}`, "edit S-0001 --no-draft --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
+	"item.criteria":     {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1,3],` + rid + `}`, "criteria tick S-0001 1,3 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
 	"issue.list":        {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
 	"issue.story":       {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
 	"item.edit":         {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
@@ -90,6 +91,20 @@ var refused = map[string][]string{
 	"board.limit":   {`{"column":"backlog","limit":3,` + rid + `}`, `{"column":"--json","limit":3,` + rid + `}`, `{"column":"ready","limit":-1,` + rid + `}`, `{"column":"ready","limit":100,` + rid + `}`, `{"column":"ready",` + rid + `}`},
 	"item.unblock":  {`{"id":"--json",` + rid + `}`},
 	"item.finalize": {`{"id":"--help",` + rid + `}`, `{"id":"E-0001",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001 --draft",` + rid + `}`, `{"id":"S-0001"}`},
+	"item.criteria": {
+		`{"id":"S-0001","tick":[1],` + rid + `}`,
+		`{"id":"S-0001","hash":"--autocommit","tick":[1],` + rid + `}`,
+		`{"id":"--help","hash":"` + strings.Repeat("a", 64) + `","tick":[1],` + rid + `}`,
+		`{"id":"S-0001 --by=eve","hash":"` + strings.Repeat("a", 64) + `","tick":[1],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `",` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[],"untick":[],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[0],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","untick":[2,-1],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1],"untick":[2],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":["--json"],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1.5],` + rid + `}`,
+		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1]}`,
+	},
 	"item.edit": {
 		`{"id":"S-0001","title":"no hash",` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `",` + rid + `}`,
@@ -1317,6 +1332,53 @@ func TestItemFinalizeFinalizesADraftAndRefusesWhatIsNot(t *testing.T) {
 	refusal := Ran{Exit: 4, Stdout: []byte(`{"refused":{"findings":[{"rule":"item.front-matter"}]}}`), Events: []map[string]any{{"level": "FATAL", "err": "refused: flai check has 1 finding(s)"}}}
 	if _, e, _ := finalize(refusal, `{"id":"S-0007",`+rid+`}`); e == nil || e.Code != Refused {
 		t.Errorf("a refusal of flai check: %+v", e)
+	}
+}
+
+// S-0282: item.criteria runs flai criteria tick or untick as the owner,
+// committed, with the hash the dashboard read; ticking and unticking at once
+// is refused, since they are two commands of flai's; a change made meanwhile
+// is a conflict and what flai refuses is a refusal, each with flai's data.
+func TestItemCriteriaTicksOrUnticksAsTheOwner(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	hash := strings.Repeat("b", 64)
+	criteria := func(ran Ran, params string) (any, *channel.Error, string) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, Host{})["item.criteria"](context.Background(), p, json.RawMessage(params))
+		if len(rec.runs) == 0 {
+			return res, e, ""
+		}
+		return res, e, strings.Join(rec.runs[0].Args, " ")
+	}
+	done := Ran{Stdout: []byte(`{"id":"S-0007","committed":true,"criteria":[{"n":1,"text":"x","ticked":true}]}`)}
+	res, e, args := criteria(done, `{"id":"S-0007","hash":"`+hash+`","tick":[2],`+rid+`}`)
+	if e != nil || args != "criteria tick S-0007 2 --hash="+hash+" --by=designer --autocommit --trailer="+Trailer+" --json" {
+		t.Errorf("tick: %+v %s", e, args)
+	}
+	if w, ok := res.(Written); !ok || !strings.Contains(string(w.Data), `"criteria":[{"n":1`) {
+		t.Errorf("the answer: %#v", res)
+	}
+	if _, e, args := criteria(done, `{"id":"S-0007","hash":"`+hash+`","untick":[4,1],`+rid+`}`); e != nil || args != "criteria untick S-0007 4,1 --hash="+hash+" --by=designer --autocommit --trailer="+Trailer+" --json" {
+		t.Errorf("untick: %+v %s", e, args)
+	}
+	if _, e, args := criteria(done, `{"id":"S-0007","hash":"`+hash+`","tick":[1],"untick":[1],`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || e.Message != "tick or untick in one call, not both" || args != "" {
+		t.Errorf("both: %+v %s", e, args)
+	}
+	if _, e, args := criteria(done, `{"id":"S-0007","hash":"`+hash+`","tick":[0],`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || args != "" {
+		t.Errorf("criterion 0: %+v %s", e, args)
+	}
+	conflict := Ran{Exit: 3, Stdout: []byte(`{"conflict":{"hash":"h2","current":"## Goal\n"}}`), Events: []map[string]any{{"level": "FATAL", "err": "conflict: S-0007 changed"}}}
+	if _, e, _ := criteria(conflict, `{"id":"S-0007","hash":"`+hash+`","tick":[1],`+rid+`}`); e == nil || e.Code != Conflict || e.Data.(map[string]any)["hash"] != "h2" {
+		t.Errorf("a conflict: %+v", e)
+	}
+	refusal := Ran{Exit: 4, Stdout: []byte(`{"refused":{"reason":"archived"}}`), Events: []map[string]any{{"level": "FATAL", "err": "refused: S-0007 is archived"}}}
+	if _, e, _ := criteria(refusal, `{"id":"S-0007","hash":"`+hash+`","tick":[1],`+rid+`}`); e == nil || e.Code != Refused {
+		t.Errorf("a refusal: %+v", e)
+	}
+	// a number there is not is flai's rule, said in its words
+	rule := Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "err": "rule: S-0007 has 3 criteria: there is no 9"}}}
+	if _, e, _ := criteria(rule, `{"id":"S-0007","hash":"`+hash+`","tick":[9],`+rid+`}`); e == nil || e.Code != Rule || e.Message != "S-0007 has 3 criteria: there is no 9" {
+		t.Errorf("a number there is not: %+v", e)
 	}
 }
 
