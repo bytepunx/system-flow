@@ -3,14 +3,32 @@ package workitem
 import (
 	"fmt"
 	"strings"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
+
+// OrchestratorPermits says why the orchestrator may not do what, on item, or
+// nil when it may: the project's orchestration.permissions gives it
+// permission. flai holds the orchestrator to its permissions itself, as flai
+// guard does before the call, so that a call the guard does not see is held
+// all the same (S-0219).
+func (r *Repo) OrchestratorPermits(permission, what, item string) error {
+	if r.Manifest.Orchestration.Permissions.Allows(permission) {
+		return nil
+	}
+	return fmt.Errorf("the orchestrator %s only with orchestration.permissions.%s, which is off: ask the operator with thread_open on %s", what, permission, item)
+}
 
 // Promotable says why the orchestrator may not move it to ready, or nil when
 // it may (S-0219): it is a story among the promotion candidates, as flai
 // promote --candidates lists them, and the ready column is under its WIP
-// limit, a limit of 0 or none being no limit. A story that is not a
-// candidate is refused with every reason the candidates give for it.
+// limit, a limit of 0 or none being no limit, while the project gives it
+// promote_to_ready. A story that is not a candidate is refused with every
+// reason the candidates give for it.
 func (r *Repo) Promotable(it *Item) error {
+	if err := r.OrchestratorPermits(manifest.PermitPromoteToReady, "moves a story to ready", it.ID); err != nil {
+		return err
+	}
 	if it.Type != Story {
 		return fmt.Errorf("%s is %s: the orchestrator moves a story to ready, a candidate of flai promote --candidates, and no other item", it.ID, articled(it.Type))
 	}

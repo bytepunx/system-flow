@@ -52,6 +52,10 @@ func TestTheOrchestratorMovesOnlyACandidateToReady(t *testing.T) {
 	run("task", "new", "Piece", "--story", "S-0004")
 
 	t.Setenv("FLAI_ROLE", "orchestrate")
+	if _, errOut, code := runIn(t, root, "move", "S-0004", "ready"); code == 0 || !strings.Contains(errOut, "rule: the orchestrator moves a story to ready only with orchestration.permissions.promote_to_ready, which is off") {
+		t.Errorf("a candidate without promote_to_ready: exit %d %s", code, errOut)
+	}
+	permitOrchestrator(t, root, "promote_to_ready")
 	const notCandidate = " is not a candidate to go to ready (flai promote --candidates): "
 	for _, c := range []struct {
 		args []string
@@ -81,5 +85,23 @@ func TestTheOrchestratorMovesOnlyACandidateToReady(t *testing.T) {
 	t.Setenv("FLAI_ROLE", "")
 	if out := run("move", "S-0002", "ready"); !strings.Contains(out, "S-0002 → ready") {
 		t.Errorf("a held story outside the orchestrator's shell, as before: %s", out)
+	}
+}
+
+// permitOrchestrator gives the orchestrator the permissions on in the
+// project at root's manifest, and no other.
+func permitOrchestrator(t *testing.T, root string, on ...string) {
+	t.Helper()
+	manifest := filepath.Join(root, "system-flow.yaml")
+	m, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := "orchestration:\n  permissions:\n"
+	for _, p := range on {
+		block += "    " + p + ": true\n"
+	}
+	if err := os.WriteFile(manifest, append(m, block...), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

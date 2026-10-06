@@ -202,9 +202,13 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 // finalizes says why the orchestrator may not make change ch to item id, a
 // draft false, or nil when it may (S-0219): the change finalizes the draft
 // and does nothing else, and the draft check (flai promote --drafts) finds
-// the story complete. The finalized block then names the orchestrator, as
-// any edit's names who made it.
+// the story complete, while the project gives it finalize_drafts. The
+// finalized block then names the orchestrator, as any edit's names who made
+// it.
 func (s *server) finalizes(id string, ch itemedit.Change) error {
+	if err := s.repo.OrchestratorPermits(manifest.PermitFinalizeDrafts, "finalizes a draft", id); err != nil {
+		return err
+	}
 	if ch != (itemedit.Change{Draft: ch.Draft}) {
 		return fmt.Errorf("%s: the orchestrator finalizes a draft with draft false and nothing else; it changes nothing else of an item", id)
 	}

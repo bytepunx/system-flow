@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -306,9 +307,13 @@ the item changed.`,
 
 // orchestratorFinalizes says why the orchestrator may not make change ch to
 // item id in repo, a --no-draft, or nil when it may (S-0219): the change
-// finalizes the draft and does nothing else, and the draft check (flai
-// promote --drafts) finds the story complete.
+// finalizes the draft and does nothing else, the draft check (flai promote
+// --drafts) finds the story complete, and the project gives it
+// finalize_drafts.
 func orchestratorFinalizes(repo *workitem.Repo, id string, ch itemedit.Change) error {
+	if err := repo.OrchestratorPermits(manifest.PermitFinalizeDrafts, "finalizes a draft", id); err != nil {
+		return err
+	}
 	if ch != (itemedit.Change{Draft: ch.Draft}) {
 		return fmt.Errorf("%s: the orchestrator finalizes a draft with --no-draft and nothing else; it changes nothing else of an item", id)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -142,6 +143,11 @@ func orderBy(a *app, policy string, apply bool, keep time.Duration) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
+	}
+	if apply && os.Getenv("FLAI_ROLE") == conventions.RoleOrchestrate {
+		if err := repo.OrchestratorPermits(manifest.PermitOrderReady, "orders the ready column", "wip/kanban/board.md"); err != nil {
+			return fmt.Errorf("rule: %w", err)
+		}
 	}
 	got, board, items, err := repo.ReadyOrderKeeping(policy, keep, a.now())
 	if err != nil {

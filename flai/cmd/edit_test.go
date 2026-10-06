@@ -342,6 +342,10 @@ func TestTheOrchestratorFinalizesOnlyACompleteDraft(t *testing.T) {
 	run("edit", "S-0001", "--cost-of-delay-value", "300", "--forecast-duration", "2h", "--forecast-delivery", "2026-09-20T12:00:00Z")
 
 	t.Setenv("FLAI_ROLE", "orchestrate")
+	if _, errOut, code := runIn(t, root, "edit", "S-0001", "--no-draft"); code == 0 || !strings.Contains(errOut, "rule: the orchestrator finalizes a draft only with orchestration.permissions.finalize_drafts, which is off") {
+		t.Errorf("a complete draft without finalize_drafts: exit %d %s", code, errOut)
+	}
+	permitOrchestrator(t, root, "finalize_drafts")
 	if _, errOut, code := runIn(t, root, "edit", "S-0002", "--no-draft"); code == 0 || !strings.Contains(errOut, "rule: S-0002 is not complete, so the orchestrator does not finalize it (flai promote --drafts): no goal; no acceptance criteria with a checkbox; no touches; no forecast duration; no forecast delivery; no cost of delay value") {
 		t.Errorf("an incomplete draft: exit %d %s", code, errOut)
 	}

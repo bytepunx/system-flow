@@ -460,6 +460,10 @@ func TestTheOrchestratorFinalizesACompleteDraftOnlyWithFinalizeDrafts(t *testing
 			if out := o.passes(bash("flai promote --drafts")); !strings.Contains(out, "S-0002  complete") {
 				t.Errorf("flai promote --drafts, which reads: %s", out)
 			}
+			// flai, past the guard, holds the orchestrator to the permission too
+			if _, errOut, code := runIn(t, o.root, "edit", "S-0002", "--no-draft"); code == 0 || !strings.Contains(errOut, "only with orchestration.permissions.finalize_drafts, which is off") {
+				t.Errorf("flai edit --no-draft past the guard: exit %d %s", code, errOut)
+			}
 			if !reflect.DeepEqual(treeOf(t, o.root), before) {
 				t.Error("flai promote --drafts changed the board")
 			}
@@ -516,6 +520,10 @@ func TestTheOrchestratorPromotesACandidateOnlyWithPromoteToReady(t *testing.T) {
 			if out := o.passes(bash("flai promote --candidates")); !strings.Contains(out, "S-0004") {
 				t.Errorf("flai promote --candidates, which reads: %s", out)
 			}
+			// flai, past the guard, holds the orchestrator to the permission too
+			if _, errOut, code := runIn(t, o.root, "move", "S-0004", "ready"); code == 0 || !strings.Contains(errOut, "only with orchestration.permissions.promote_to_ready, which is off") {
+				t.Errorf("flai move past the guard: exit %d %s", code, errOut)
+			}
 			if !reflect.DeepEqual(treeOf(t, o.root), before) {
 				t.Error("flai promote --candidates changed the board")
 			}
@@ -567,6 +575,10 @@ func TestTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
 		before := treeOf(t, o.root)
 		if out := o.passes(bash("flai order --by cod")); !strings.Contains(out, "ready by cod:") || strings.Contains(out, "is now this one") {
 			t.Errorf("flai order --by cod, which reads:\n%s", out)
+		}
+		// flai, past the guard, holds the orchestrator to the permission too
+		if _, errOut, code := runIn(t, o.root, "order", "--by", "cod", "--apply"); code == 0 || !strings.Contains(errOut, "only with orchestration.permissions.order_ready, which is off") {
+			t.Errorf("flai order --apply past the guard: exit %d %s", code, errOut)
 		}
 		if !reflect.DeepEqual(treeOf(t, o.root), before) {
 			t.Error("flai order --by cod changed the board")

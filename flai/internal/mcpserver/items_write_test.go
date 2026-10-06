@@ -588,6 +588,10 @@ func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
 	f, story := orchestrated(t)
 	complete := story("Complete", true, true, "docs")
 	incomplete := story("Incomplete", true, false)
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": complete, "draft": false}); !strings.Contains(failed, "the orchestrator finalizes a draft only with orchestration.permissions.finalize_drafts, which is off") {
+		t.Errorf("without finalize_drafts: %q", failed)
+	}
+	f.repo.Manifest.Orchestration.Permissions.FinalizeDrafts = true
 	if _, failed := f.call(t, "item_edit", map[string]any{"id": complete, "draft": false, "title": "Renamed"}); !strings.Contains(failed, complete+": the orchestrator finalizes a draft with draft false and nothing else") {
 		t.Errorf("with another change: %q", failed)
 	}
@@ -619,6 +623,10 @@ func TestTheOrchestratorPromotesACandidateWhileReadyHasRoom(t *testing.T) {
 	held := story("Held", false, true, "flai/internal/mcpserver/x")
 	drafted := story("Drafted", true, true, "docs/c")
 	unplanned := story("Unplanned", false, false, "docs/d")
+	if _, failed := f.call(t, "item_move", map[string]any{"id": candidate, "to": "ready"}); !strings.Contains(failed, "the orchestrator moves a story to ready only with orchestration.permissions.promote_to_ready, which is off") {
+		t.Errorf("without promote_to_ready: %q", failed)
+	}
+	f.repo.Manifest.Orchestration.Permissions.PromoteToReady = true
 	for id, want := range map[string]string{
 		held:      held + " is not a candidate to go to ready (flai promote --candidates): held (overlap)",
 		drafted:   drafted + " is not a candidate to go to ready (flai promote --candidates): draft: finalize it first",
