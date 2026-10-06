@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T22:46:26Z
+updated: 2026-10-06T22:48:41Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, code]
@@ -17,7 +17,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   value: 213
   by: planner-E-0017
@@ -28,6 +27,9 @@ forecast:
   basis: "Its own forecast of 1h; 29th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269, S-0270, S-0271 and S-0272."
   by: flai
   at: 2026-10-06T22:46:26Z
+finalized:
+  by: alex
+  at: 2026-10-06T22:48:41Z
 ---
 # S-0273 flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings
 
