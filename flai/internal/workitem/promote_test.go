@@ -59,7 +59,7 @@ func TestPromotionCandidates(t *testing.T) {
 		"S-0010": {"no forecast duration"},
 		"S-0009": {"no forecast duration"},
 		"S-0008": {"held (after): waits for S-0001 (in progress); starts when S-0001 is done"},
-		"S-0007": {"held (overlap): touches flai/cmd/move.go, inside flai/cmd which S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"},
+		"S-0007": {"held (overlap): touches flai/cmd/move.go, inside flai/cmd which S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
 		"S-0006": {"its epic E-0002 is cancelled"},
 		"S-0005": {"no goal", "no acceptance criteria with a checkbox"},
 		"S-0004": {"draft: finalize it first"},

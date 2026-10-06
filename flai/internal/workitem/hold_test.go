@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,13 +71,16 @@ func TestHoldsByOverlapAndByEmptyClaims(t *testing.T) {
 		{"nothing open", nil, claimed("S-0009", Ready, "flai"), "", ""},
 		{"inside an open story's path",
 			[]*Item{claimed("S-0001", InProgress, "flai/cmd")}, claimed("S-0009", Ready, "flai/cmd/serve"),
-			HoldOverlap, "held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"},
-		{"the same path, in review",
+			HoldOverlap, "held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
+		{"the same path, in progress",
+			[]*Item{claimed("S-0001", InProgress, "docs")}, claimed("S-0009", Ready, "docs/"),
+			HoldOverlap, "held (overlap): touches docs, which S-0001 (in progress) touches too; starts when S-0001 moves to review, is cancelled, or is sent back"},
+		{"the same path, in review, holds nothing",
 			[]*Item{claimed("S-0001", Review, "docs")}, claimed("S-0009", Ready, "docs/"),
-			HoldOverlap, "held (overlap): touches docs, which S-0001 (in review) touches too; starts when S-0001 is accepted, cancelled, or sent back"},
+			"", ""},
 		{"around an open story's path",
 			[]*Item{claimed("S-0001", InProgress, "flai/cmd")}, claimed("S-0009", Ready, "cli"),
-			HoldOverlap, "held (overlap): touches flai, which holds flai/cmd that S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"},
+			HoldOverlap, "held (overlap): touches flai, which holds flai/cmd that S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
 		{"a sibling path is not held",
 			[]*Item{claimed("S-0001", InProgress, "flai")}, claimed("S-0009", Ready, "flaiover", "docs"),
 			"", ""},
@@ -85,16 +89,25 @@ func TestHoldsByOverlapAndByEmptyClaims(t *testing.T) {
 			"", ""},
 		{"an open task widens the open story's claim",
 			[]*Item{claimed("S-0001", InProgress, "docs"), claimTask("T-0001", "S-0001", InProgress, "dashboard")}, claimed("S-0009", Ready, "flaiover/src"),
-			HoldOverlap, "held (overlap): touches flaiover/src, inside flaiover which S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"},
+			HoldOverlap, "held (overlap): touches flaiover/src, inside flaiover which S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
 		{"held by two",
+			[]*Item{claimed("S-0002", InProgress, "docs"), claimed("S-0001", InProgress, "flai")}, claimed("S-0009", Ready, "flai/cmd", "docs/users"),
+			HoldOverlap, "held (overlap): touches flai/cmd, inside flai which S-0001 (in progress) touches; touches docs/users, inside docs which S-0002 (in progress) touches; starts when S-0001 and S-0002 move to review, are cancelled, or are sent back"},
+		{"held by the one in progress, not the one in review",
 			[]*Item{claimed("S-0002", Review, "docs"), claimed("S-0001", InProgress, "flai")}, claimed("S-0009", Ready, "flai/cmd", "docs/users"),
-			HoldOverlap, "held (overlap): touches flai/cmd, inside flai which S-0001 (in progress) touches; touches docs/users, inside docs which S-0002 (in review) touches; starts when S-0001 and S-0002 are accepted, cancelled, or sent back"},
+			HoldOverlap, "held (overlap): touches flai/cmd, inside flai which S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
 		{"a ready story with no touches",
-			[]*Item{claimed("S-0001", InProgress, "flai"), claimed("S-0002", Review, "docs")}, claimed("S-0009", Ready),
-			HoldNoTouches, "held (no-touches): declares no touches, so it may change what S-0001 (in progress) and S-0002 (in review) change; starts when it declares touches that overlap no open story's, or when S-0001 and S-0002 are accepted, cancelled, or sent back"},
+			[]*Item{claimed("S-0001", InProgress, "flai"), claimed("S-0003", InProgress, "docs"), claimed("S-0002", Review, "docs")}, claimed("S-0009", Ready),
+			HoldNoTouches, "held (no-touches): declares no touches, so it may change what S-0001 (in progress) and S-0003 (in progress) change; starts when it declares touches that overlap no story's in progress, or when S-0001 and S-0003 move to review, are cancelled, or are sent back"},
+		{"a ready story with no touches and only a story in review",
+			[]*Item{claimed("S-0002", Review, "docs")}, claimed("S-0009", Ready),
+			"", ""},
 		{"an open story with no touches",
 			[]*Item{claimed("S-0001", InProgress)}, claimed("S-0009", Ready, "flai"),
-			HoldNoTouches, "held (no-touches): S-0001 (in progress) declares no touches, so it may change anything; starts when S-0001 is accepted, cancelled, or sent back"},
+			HoldNoTouches, "held (no-touches): S-0001 (in progress) declares no touches, so it may change anything; starts when S-0001 moves to review, is cancelled, or is sent back"},
+		{"a story in review with no touches holds nothing",
+			[]*Item{claimed("S-0001", Review)}, claimed("S-0009", Ready, "flai"),
+			"", ""},
 		{"no touches and nothing open", nil, claimed("S-0009", Ready), "", ""},
 	}
 	for _, c := range cases {
@@ -154,6 +167,40 @@ func TestBoardMarksHeldStories(t *testing.T) {
 	items[2].Touches = []string{"flai/cmd/board.go"}
 	if first := NewBoardView(items, board, time.Now(), false, nil, holdProjects).FirstPullable(); first != nil {
 		t.Errorf("every ready story is held, yet %s is pullable", first.ID)
+	}
+}
+
+// I-0087, ADR-0096: S-0220 waited in review for 2h45m with a claim that
+// overlapped all ten ready stories, and no agent ran. A story in review holds
+// nothing, so the first ready story in pull order is offered; the same story
+// in progress still holds every one of them. Its claim stays whole for flai
+// check, the trial merge at sync, and the notice at acceptance.
+func TestStoryInReviewHoldsNoReadyStory(t *testing.T) {
+	open := claimed("S-0220", Review, "flai/internal/harness", "flai/internal/serve", "flai/internal/mcpserver", "flaiover/src/routes")
+	under := []string{"flai/internal/harness", "flai/internal/serve", "flai/internal/mcpserver", "flaiover/src/routes", "flai"}
+	items := []*Item{open}
+	board := &Board{}
+	for i := range 10 {
+		id := fmt.Sprintf("S-%04d", 230+i)
+		items = append(items, claimed(id, Ready, under[i%len(under)]))
+		board.Order = append(board.Order, id)
+	}
+	ready := NewBoardView(items, board, time.Now(), false, nil, holdProjects).ReadyInPullOrder()
+	for _, c := range ready {
+		if c.Held != nil {
+			t.Errorf("%s is held by a story in review: %s", c.ID, c.Held.Reason)
+		}
+	}
+	if first := FirstClear(ready); first == nil || first.ID != "S-0230" {
+		t.Errorf("first clear = %+v, want S-0230", first)
+	}
+	if got := strings.Join(NewHolds(items, holdProjects).Claim(open), ","); got != strings.Join(open.Touches, ",") {
+		t.Errorf("the claim of a story in review = %s, want its touches", got)
+	}
+
+	open.Status = InProgress
+	if first := FirstClear(NewBoardView(items, board, time.Now(), false, nil, holdProjects).ReadyInPullOrder()); first != nil {
+		t.Errorf("S-0220 in progress overlaps every ready story, yet %s is clear", first.ID)
 	}
 }
 
@@ -218,7 +265,7 @@ func TestHoldsByAfterAndOverlap(t *testing.T) {
 	open := claimed("S-0001", InProgress, "flai")
 	ready := waiting("S-0001")
 	h := NewHolds([]*Item{open, ready}, holdProjects).Of(ready)
-	want := "held (after): waits for S-0001 (in progress); starts when S-0001 is done; also held (overlap): touches flai/cmd, inside flai which S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"
+	want := "held (after): waits for S-0001 (in progress); starts when S-0001 is done; also held (overlap): touches flai/cmd, inside flai which S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"
 	if h == nil || h.Code != HoldAfter || h.Reason != want {
 		t.Errorf("hold = %+v\nwant reason %s", h, want)
 	}

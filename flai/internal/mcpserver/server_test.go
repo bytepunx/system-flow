@@ -534,9 +534,9 @@ func TestBoardAndInboxMarkHeldStories(t *testing.T) {
 	free := f.readyStory(t, "Elsewhere", t0)
 	bare := f.readyStory(t, "Declares nothing", t0, []string{}...)
 	want := map[string]string{
-		held.ID: "held (overlap): touches flai/internal, which holds flai/internal/mcpserver that " + f.story.ID + " (in progress) touches; starts when " + f.story.ID + " is accepted, cancelled, or sent back",
+		held.ID: "held (overlap): touches flai/internal, which holds flai/internal/mcpserver that " + f.story.ID + " (in progress) touches; starts when " + f.story.ID + " moves to review, is cancelled, or is sent back",
 		free.ID: "",
-		bare.ID: "held (no-touches): declares no touches, so it may change what " + f.story.ID + " (in progress) changes; starts when it declares touches that overlap no open story's, or when " + f.story.ID + " is accepted, cancelled, or sent back",
+		bare.ID: "held (no-touches): declares no touches, so it may change what " + f.story.ID + " (in progress) changes; starts when it declares touches that overlap no story's in progress, or when " + f.story.ID + " moves to review, is cancelled, or is sent back",
 	}
 	check := func(what string, cards []any) {
 		t.Helper()

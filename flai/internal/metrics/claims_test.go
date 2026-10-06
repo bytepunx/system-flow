@@ -42,12 +42,12 @@ func TestHeldSecondsReplayTheHoldRules(t *testing.T) {
 		want     map[string]*float64
 	}{
 		{
-			name: "overlap while the other is in progress and in review, archived since",
+			name: "overlap while the other is in progress, not in review, archived since",
 			items: []*workitem.Item{
 				archived(claimItem("S-0001", s, day, []string{"flai"}, ip, "2026-08-31T00:00:00Z", rv, "2026-08-31T06:00:00Z", done, "2026-08-31T08:00:00Z")),
 				claimItem("S-0002", s, day, []string{"flai/internal"}, rd, "2026-08-30T12:00:00Z", ip, "2026-08-31T10:00:00Z", done, "2026-08-31T12:00:00Z"),
 			},
-			want: map[string]*float64{"S-0001": nil, "S-0002": val(8 * 3600)},
+			want: map[string]*float64{"S-0001": nil, "S-0002": val(6 * 3600)},
 		},
 		{
 			name: "after until the story it names is done, archived since",
@@ -58,12 +58,12 @@ func TestHeldSecondsReplayTheHoldRules(t *testing.T) {
 			want: map[string]*float64{"S-0002": val(42 * 3600)},
 		},
 		{
-			name: "no touches while another is open",
+			name: "no touches while another is in progress",
 			items: []*workitem.Item{
 				claimItem("S-0001", s, day, []string{"a"}, ip, "2026-08-30T06:00:00Z", rv, "2026-08-30T18:00:00Z", done, "2026-08-31T00:00:00Z"),
 				claimItem("S-0002", s, day, nil, rd, "2026-08-30T03:00:00Z", ip, "2026-08-31T03:00:00Z"),
 			},
-			want: map[string]*float64{"S-0002": val(18 * 3600)},
+			want: map[string]*float64{"S-0002": val(12 * 3600)},
 		},
 		{
 			name: "never held",

@@ -209,15 +209,23 @@ func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
 	}
 }
 
-// S-0128: a ready story whose claim overlaps an open story's is passed over
-// for the next clear one; when every ready story is held it waits, says so,
-// and offers the held one as soon as it is clear. The fixture's story, in
-// review, touches flai/internal/mcpserver.
+// S-0128: a ready story whose claim overlaps that of a story in progress is
+// passed over for the next clear one; when every ready story is held it
+// waits, says so, and offers the held one as soon as it is clear. Another
+// agent's story, in progress, touches flai/internal/mcpserver.
 func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
 	f := setup(t)
 	f.toReview(t)
+	theirs := f.readyStory(t, "Theirs", t0, "flai/internal/mcpserver")
+	if _, err := f.repo.Transition(theirs, workitem.InProgress, "gemini", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.repo.OpenStream(theirs, workitem.StreamOptions{Agent: "gemini", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
 	held := f.readyStory(t, "Held", t0, "flai/internal")
 	clear := f.readyStory(t, "Clear", t0)
+	f.limitInProgress(t, 3)
 	if out := answered(t, f.held(t, 1)); out["reason"] != "pull" || storyOf(out) != clear.ID {
 		t.Fatalf("the clear story: %v", out)
 	}
@@ -228,26 +236,45 @@ func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
 	if _, err := f.repo.OpenStream(c, workitem.StreamOptions{Agent: "codex", Now: t0}); err != nil {
 		t.Fatal(err)
 	}
-	f.limitInProgress(t, 3)
 	quiet := answered(t, f.held(t, 1))
 	ready := quiet["ready"].([]any)
 	if quiet["timed_out"] != true || quiet["waiting_for"] != "held" || quiet["can_pull"] != true || len(ready) != 1 {
 		t.Fatalf("every ready story held: %v", quiet)
 	}
-	if h, _ := ready[0].(map[string]any)["held"].(map[string]any); h["code"] != "overlap" || !strings.Contains(h["reason"].(string), "starts when "+f.story.ID+" is accepted, cancelled, or sent back") {
+	if h, _ := ready[0].(map[string]any)["held"].(map[string]any); h["code"] != "overlap" || !strings.Contains(h["reason"].(string), "starts when "+theirs.ID+" moves to review, is cancelled, or is sent back") {
 		t.Errorf("held: %v", ready[0])
 	}
 
-	// the open story's claim narrows: the held story is clear, and offered
+	// the story in progress narrows its claim: the held story is clear, and offered
 	done := f.held(t, 3)
 	time.Sleep(150 * time.Millisecond)
-	s, _ := f.repo.Get(f.story.ID)
+	s, _ := f.repo.Get(theirs.ID)
 	s.Touches = []string{"design/system"}
 	if err := f.repo.Save(s); err != nil {
 		t.Fatal(err)
 	}
 	if out := answered(t, done); out["reason"] != "pull" || storyOf(out) != held.ID {
 		t.Errorf("once clear: %v", out)
+	}
+}
+
+// S-0295, I-0087, ADR-0096: a story in review holds nothing. A ready story
+// whose claim overlaps only that of the fixture's story, in review and
+// touching flai/internal/mcpserver, is not held, and wait_for_work offers it
+// first.
+func TestWaitForWorkOffersAStoryOverlappingOnlyOneInReview(t *testing.T) {
+	f := setup(t)
+	f.toReview(t)
+	over := f.readyStory(t, "Over", t0, "flai/internal")
+	f.readyStory(t, "Behind", t0.Add(time.Second))
+	out := answered(t, f.held(t, 1))
+	if out["reason"] != "pull" || storyOf(out) != over.ID {
+		t.Fatalf("the story overlapping one in review: %v", out)
+	}
+	for _, c := range out["ready"].([]any) {
+		if card := c.(map[string]any); card["held"] != nil {
+			t.Errorf("%v is held with only a story in review open", card["id"])
+		}
 	}
 }
 

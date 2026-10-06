@@ -40,7 +40,7 @@ func heldProject(t *testing.T) string {
 	return root
 }
 
-const heldWhy = "held (overlap): touches flai, which holds flai/cmd that S-0001 (in progress) touches; starts when S-0001 is accepted, cancelled, or sent back"
+const heldWhy = "held (overlap): touches flai, which holds flai/cmd that S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"
 
 // S-0128: moving a held story to in-progress warns, and moves it.
 func TestMovingAHeldStoryWarns(t *testing.T) {

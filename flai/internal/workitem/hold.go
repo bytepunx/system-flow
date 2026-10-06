@@ -10,9 +10,11 @@ import (
 
 // Holds on ready stories (S-0128, ADR-0046). A story's claim is its touches
 // and those of its tasks that are not done or cancelled. A ready story whose
-// claim overlaps the claim of a story in progress or in review is held, and
-// so is one that names in after: a story that is not done (S-0130): flai
-// serve does not start its agent and wait_for_work does not offer it. The
+// claim overlaps the claim of a story in progress is held, and so is one that
+// names in after: a story that is not done (S-0130): flai serve does not start
+// its agent and wait_for_work does not offer it. A story in review holds
+// nothing (S-0295, ADR-0096): its branch is finished and synced, and the
+// notice at acceptance tells an overlapping story what changed. The
 // operator's own moves only warn.
 
 // Hold reason codes.
@@ -43,12 +45,13 @@ type Holds struct {
 
 type openClaim struct {
 	id    string
-	label string // how the reason names its state: in progress, in review
+	label string // how the reason names its state: in progress, its agent started
 	paths []string
 }
 
-// NewHolds reads the open stories' claims from items; projects are the
-// manifest's sub-projects, whose names and tags a claim reads as their paths.
+// NewHolds reads from items the claims of the stories in progress, the only
+// stories that hold (ADR-0096); projects are the manifest's sub-projects,
+// whose names and tags a claim reads as their paths.
 func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}}
 	for _, it := range items {
@@ -60,14 +63,8 @@ func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 		}
 	}
 	for _, it := range items {
-		if it.Archived || it.Type != Story {
-			continue
-		}
-		switch it.Status {
-		case InProgress:
+		if !it.Archived && it.Type == Story && it.Status == InProgress {
 			h.Open(it, "in progress")
-		case Review:
-			h.Open(it, "in review")
 		}
 	}
 	return h
@@ -222,7 +219,7 @@ func (h *Holds) overlap(story *Item) *Hold {
 		for _, o := range others {
 			named = append(named, o.id+" ("+o.label+")")
 		}
-		return &Hold{Code: HoldNoTouches, Reason: fmt.Sprintf("held (no-touches): declares no touches, so it may change what %s %s; starts when it declares touches that overlap no open story's, or when %s", and(named), oneOrMany(len(others), "changes", "change"), clears(others))}
+		return &Hold{Code: HoldNoTouches, Reason: fmt.Sprintf("held (no-touches): declares no touches, so it may change what %s %s; starts when it declares touches that overlap no story's in progress, or when %s", and(named), oneOrMany(len(others), "changes", "change"), clears(others))}
 	}
 	var code string
 	var parts []string
@@ -266,13 +263,16 @@ func holdBy(claim []string, o openClaim) (part, code string) {
 	return "", ""
 }
 
-// clears says what ends a hold by these stories.
+// clears says what ends a hold by these stories: each leaving in progress.
 func clears(by []openClaim) string {
 	ids := make([]string, len(by))
 	for i, o := range by {
 		ids[i] = o.id
 	}
-	return fmt.Sprintf("%s %s accepted, cancelled, or sent back", and(ids), oneOrMany(len(ids), "is", "are"))
+	if len(ids) == 1 {
+		return ids[0] + " moves to review, is cancelled, or is sent back"
+	}
+	return and(ids) + " move to review, are cancelled, or are sent back"
 }
 
 // PathsOverlap says whether two touches entries cover a common path: equal,

@@ -150,7 +150,7 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 		if _, err := start(lab, id); err != nil {
 			t.Fatal(err)
 		}
-		hold := "held (overlap): touches flai/cmd, which holds flai/cmd/prime.go that " + open + " (in progress) touches; starts when " + open + " is accepted, cancelled, or sent back"
+		hold := "held (overlap): touches flai/cmd, which holds flai/cmd/prime.go that " + open + " (in progress) touches; starts when " + open + " moves to review, is cancelled, or is sent back"
 		waitFor(t, "it ran", func() bool {
 			data, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
 			return strings.Contains(string(data), "agent: builder-"+id)
