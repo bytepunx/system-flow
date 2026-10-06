@@ -3,16 +3,36 @@ id: T-1025
 type: task
 nature: improvement
 title: The manifest carries the shared paths as glob patterns, validated, with a matcher and an edit function the CLI, HTTP, and MCP share
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:15:09Z
-updated: 2026-10-06T12:15:09Z
-transitions: []
+updated: 2026-10-06T18:37:33Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:26:32Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:26:32Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:37:33Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/shared.go, flai/internal/manifest/shared_test.go, flai/go.mod, flai/go.sum, design/tech/go-libraries.md, system-flow.yaml, template/root/system-flow.yaml.tmpl]
 after: [T-1023]
+usage:
+  source: log
+  seconds: 661
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 21704
+      cache_read: 2924386
+      cache_write: 85802
+      cost: 1.4909
 ---
 # T-1025 The manifest carries the shared paths as glob patterns, validated, with a matcher and an edit function the CLI, HTTP, and MCP share
 

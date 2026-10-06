@@ -3,16 +3,36 @@ id: T-1032
 type: task
 nature: feature
 title: The dashboard's project settings list the shared paths, add and remove patterns, and check a path against them
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:16:27Z
-updated: 2026-10-06T12:16:41Z
-transitions: []
+updated: 2026-10-06T19:14:47Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:09:05Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T19:09:06Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T19:14:47Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flaiover]
-touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/server/agent.ts]
+touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts]
 after: [T-1031]
+usage:
+  source: log
+  seconds: 341
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 26325
+      cache_read: 3547004
+      cache_write: 104070
+      cost: 1.8083
 ---
 # T-1032 The dashboard's project settings list the shared paths, add and remove patterns, and check a path against them
 

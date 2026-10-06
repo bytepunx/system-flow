@@ -3,16 +3,36 @@ id: T-1033
 type: task
 nature: improvement
 title: The users' and operators' guides and the dashboard design describe the new hold rules, the shared paths, and how to edit them
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:16:47Z
-updated: 2026-10-06T12:16:47Z
-transitions: []
+updated: 2026-10-06T19:19:04Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:14:48Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T19:14:48Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T19:19:04Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai, flaiover]
-touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, template/CHANGELOG.md]
+touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/system/agent-coordination.md, template/CHANGELOG.md, flai/internal/hostapi/settings.go]
 after: [T-1026, T-1028, T-1029, T-1030, T-1031, T-1032]
+usage:
+  source: log
+  seconds: 256
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 109
+      output: 45162
+      cache_read: 6085168
+      cache_write: 178541
+      cost: 3.1023
 ---
 # T-1033 The users' and operators' guides and the dashboard design describe the new hold rules, the shared paths, and how to edit them
 

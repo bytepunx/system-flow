@@ -3,16 +3,36 @@ id: T-1028
 type: task
 nature: feature
 title: flai shared lists, adds, removes, and checks the shared paths from the CLI
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:15:45Z
-updated: 2026-10-06T12:16:56Z
-transitions: []
+updated: 2026-10-06T18:54:37Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:37:34Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:37:34Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:54:37Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
-touches: [flai/cmd/shared.go, flai/cmd/shared_test.go, flai/cmd/root.go]
+touches: [flai/cmd/shared.go, flai/cmd/shared_test.go, flai/cmd/root.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1025]
+usage:
+  source: log
+  seconds: 1023
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 21484
+      cache_read: 2894723
+      cache_write: 84932
+      cost: 1.4758
 ---
 # T-1028 flai shared lists, adds, removes, and checks the shared paths from the CLI
 

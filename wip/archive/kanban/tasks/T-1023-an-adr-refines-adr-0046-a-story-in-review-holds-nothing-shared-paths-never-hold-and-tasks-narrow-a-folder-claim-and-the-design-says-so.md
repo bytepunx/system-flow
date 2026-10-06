@@ -3,15 +3,35 @@ id: T-1023
 type: task
 nature: improvement
 title: "An ADR refines ADR-0046: a story in review holds nothing, shared paths never hold, and tasks narrow a folder claim, and the design says so"
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:14:29Z
-updated: 2026-10-06T12:14:29Z
-transitions: []
+updated: 2026-10-06T18:26:24Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:20:01Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:20:01Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:26:24Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
 touches: [design/adrs, design/system/workflow.md, design/system/project-manifest.md, design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 383
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 81
+      output: 33819
+      cache_read: 4556854
+      cache_write: 133700
+      cost: 2.3232
 ---
 # T-1023 An ADR refines ADR-0046: a story in review holds nothing, shared paths never hold, and tasks narrow a folder claim, and the design says so
 

@@ -3,16 +3,36 @@ id: T-1026
 type: task
 nature: improvement
 title: The planner and the story's agent are told to declare file-level touches and to narrow a folder touch once tasks name its files
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:15:15Z
-updated: 2026-10-06T12:15:38Z
-transitions: []
+updated: 2026-10-06T18:37:33Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:26:33Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:26:33Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:37:33Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai, template]
-touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/CHANGELOG.md]
+touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/CHANGELOG.md, template/template.yaml]
 after: [T-1023]
+usage:
+  source: log
+  seconds: 660
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 16926
+      cache_read: 2280695
+      cache_write: 66916
+      cost: 1.1627
 ---
 # T-1026 The planner and the story's agent are told to declare file-level touches and to narrow a folder touch once tasks name its files
 

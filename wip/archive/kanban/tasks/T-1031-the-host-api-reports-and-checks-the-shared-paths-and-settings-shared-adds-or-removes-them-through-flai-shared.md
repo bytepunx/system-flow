@@ -3,16 +3,36 @@ id: T-1031
 type: task
 nature: feature
 title: The host API reports and checks the shared paths, and settings.shared adds or removes them through flai shared
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:16:17Z
-updated: 2026-10-06T12:16:36Z
-transitions: []
+updated: 2026-10-06T19:09:05Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:54:38Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:54:38Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T19:09:05Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
-touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
+touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/shared.go, flai/cmd/shared_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1028]
+usage:
+  source: log
+  seconds: 867
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 149
+      output: 62020
+      cache_read: 8356697
+      cache_write: 245188
+      cost: 4.2604
 ---
 # T-1031 The host API reports and checks the shared paths, and settings.shared adds or removes them through flai shared
 

@@ -3,16 +3,36 @@ id: T-1030
 type: task
 nature: improvement
 title: An overlap wholly inside a shared path neither holds a ready story nor counts as a wip.overlap or a grown claim
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:16:01Z
-updated: 2026-10-06T12:16:01Z
-transitions: []
+updated: 2026-10-06T19:09:05Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:54:37Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:54:38Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T19:09:05Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/workitem/boardview.go]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/cmd/board.go, flai/internal/hostapi/hostapi.go, flai/internal/mcpserver/server.go, flai/internal/serve/agents.go]
 after: [T-1025, T-1027]
+usage:
+  source: log
+  seconds: 867
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 115
+      output: 47588
+      cache_read: 6412024
+      cache_write: 188131
+      cost: 3.269
 ---
 # T-1030 An overlap wholly inside a shared path neither holds a ready story nor counts as a wip.overlap or a grown claim
 

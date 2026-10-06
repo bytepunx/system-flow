@@ -3,16 +3,36 @@ id: T-1024
 type: task
 nature: improvement
 title: "A story in review no longer holds a ready story; only one in progress does"
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:14:38Z
-updated: 2026-10-06T12:15:34Z
-transitions: []
+updated: 2026-10-06T18:37:32Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:26:31Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:26:32Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:37:32Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/serve/hold_test.go, flai/internal/mcpserver/work_test.go]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/serve/hold_test.go, flai/internal/mcpserver/work_test.go, flai/internal/workitem/promote_test.go, flai/internal/serve/start_test.go, flai/internal/mcpserver/server_test.go, flai/cmd/hold_test.go, flai/internal/metrics/claims_test.go]
 after: [T-1023]
+usage:
+  source: log
+  seconds: 660
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 20626
+      cache_read: 2779197
+      cache_write: 81543
+      cost: 1.4169
 ---
 # T-1024 A story in review no longer holds a ready story; only one in progress does
 

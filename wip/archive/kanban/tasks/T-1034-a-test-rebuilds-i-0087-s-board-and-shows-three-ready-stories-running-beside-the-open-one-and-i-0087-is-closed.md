@@ -3,16 +3,36 @@ id: T-1034
 type: task
 nature: remediation
 title: A test rebuilds I-0087's board and shows three ready stories running beside the open one, and I-0087 is closed
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:17:02Z
-updated: 2026-10-06T12:17:02Z
-transitions: []
+updated: 2026-10-06T19:23:12Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:19:05Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T19:19:05Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T19:23:12Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
 touches: [flai/internal/workitem/hold_i0087_test.go, design/issues/I-0087-one-in-progress-story-holds-every-ready-story-by-overlap-through-folder-wide-touches-and-docs-users-flai-md-so-the-board-runs-one-story-at-a-time-under-a-limit-of-three.md, design/issues/summary.md]
 after: [T-1033]
+usage:
+  source: log
+  seconds: 247
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 17529
+      cache_read: 2361895
+      cache_write: 69299
+      cost: 1.2041
 ---
 # T-1034 A test rebuilds I-0087's board and shows three ready stories running beside the open one, and I-0087 is closed
 

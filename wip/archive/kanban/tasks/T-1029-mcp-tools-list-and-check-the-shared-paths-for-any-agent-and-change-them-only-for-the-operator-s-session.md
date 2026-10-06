@@ -3,16 +3,36 @@ id: T-1029
 type: task
 nature: feature
 title: MCP tools list and check the shared paths for any agent, and change them only for the operator's session
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:15:55Z
-updated: 2026-10-06T12:15:55Z
-transitions: []
+updated: 2026-10-06T18:54:37Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:37:34Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:37:35Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:54:37Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
-touches: [flai/internal/mcpserver/shared.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/server.go, flai/internal/guard]
+touches: [flai/internal/mcpserver/shared.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/guard, flai/cmd/guard.go]
 after: [T-1025]
+usage:
+  source: log
+  seconds: 1022
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 126
+      output: 52397
+      cache_read: 7059980
+      cache_write: 207142
+      cost: 3.5993
 ---
 # T-1029 MCP tools list and check the shared paths for any agent, and change them only for the operator's session
 

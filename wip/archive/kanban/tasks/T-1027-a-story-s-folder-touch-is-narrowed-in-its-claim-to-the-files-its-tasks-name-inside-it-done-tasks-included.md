@@ -3,16 +3,36 @@ id: T-1027
 type: task
 nature: improvement
 title: A story's folder touch is narrowed in its claim to the files its tasks name inside it, done tasks included
-status: backlog
+status: done
 parent: S-0295
 owner: alex
 created: 2026-10-06T12:15:27Z
-updated: 2026-10-06T12:15:27Z
-transitions: []
+updated: 2026-10-06T18:54:36Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:37:33Z
+    by: agent-S-0295
+  - to: in-progress
+    at: 2026-10-06T18:37:34Z
+    by: agent-S-0295
+  - to: done
+    at: 2026-10-06T18:54:36Z
+    by: agent-S-0295
 stream: S-0295
 tags: [flai]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/cmd/stream_sync_test.go, flai/internal/itemedit/claim_test.go]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go]
 after: [T-1024]
+usage:
+  source: log
+  seconds: 1022
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 18875
+      cache_read: 2543247
+      cache_write: 74620
+      cost: 1.2966
 ---
 # T-1027 A story's folder touch is narrowed in its claim to the files its tasks name inside it, done tasks included
 
