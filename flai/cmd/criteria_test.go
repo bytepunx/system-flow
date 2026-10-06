@@ -86,9 +86,12 @@ func TestCriteriaTickAndUntick(t *testing.T) {
 }
 
 // below is a file from its heading on, which a write leaves as it was but
-// for what it changes.
+// for what it changes; a file with no heading is below it whole.
 func below(file string) string {
-	return file[strings.Index(file, "\n# "):]
+	if _, rest, ok := strings.Cut(file, "\n# "); ok {
+		return "\n# " + rest
+	}
+	return file
 }
 
 // S-0282: what the caller gets wrong is a rule, and nothing is written; a
