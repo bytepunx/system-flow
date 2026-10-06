@@ -1,0 +1,36 @@
+---
+id: I-0087
+title: One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
+class: efficiency
+status: open
+count: 2
+cost: 2h15m
+first_reported: 2026-10-06T10:32:27Z
+last_reported: 2026-10-06T10:32:27Z
+updated: 2026-10-06T10:32:27Z
+---
+
+# I-0087 One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
+
+## Description
+
+A ready story is held while its `touches` overlap an in-progress story's, so that two agents do not edit the same file (ADR-0046). The in-progress limit is three. On 2026-10-06 the board still ran one story at a time, because every ready story overlapped the one in progress.
+
+Two things made the overlap total. Stories claim whole folders, such as `flai/internal/mcpserver`, and a folder claim holds every file in it. And one document, `docs/users/flai.md`, is changed by almost every flai story. A story in review keeps its claim, so the hold lasts until the operator accepts it.
+
+## Instances
+
+### 2026-10-06T10:32:27Z
+Story: S-0283.
+While S-0283 was in progress and in review, 09:57Z to 10:32Z, all nine ready stories were held by overlap with it and two of three in-progress slots stayed empty: seven by a claim on the folder flai/internal/mcpserver, which holds permission.go, two by docs/users/flai.md, one by permission.go itself. The cost is the time the two empty slots could have been working.
+
+Story: S-0220.
+While S-0220 was in progress and in review, 05:58Z to 09:57Z, all ten ready stories were held by overlap with it, through flai/internal/harness, flai/internal/serve, flai/internal/mcpserver, and flaiover/src/routes. Nothing else ran for four hours, 2h45m of them with S-0220 waiting in review and no agent running at all.
+
+## Remediation
+
+Not designed yet. Directions to weigh:
+
+- The planner narrows a folder claim to the files a story will change, where its tasks already name them.
+- A document every story edits is split by section or by command, or is generated, so that two stories change different files.
+- Whether a story in review still needs to hold others is a question for ADR-0046: its branch is finished and synced, and a later story syncs onto main when it is accepted.
