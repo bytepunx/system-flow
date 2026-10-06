@@ -6,7 +6,7 @@ title: flai's permission_prompt returns a result Claude Code calls invalid, so a
 status: backlog
 owner: alex
 created: 2026-10-06T03:45:18Z
-updated: 2026-10-06T03:45:18Z
+updated: 2026-10-06T06:19:28Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-06T03:45:18Z
+finalized:
+  by: alex
+  at: 2026-10-06T06:19:28Z
 ---
 # S-0283 flai's permission_prompt returns a result Claude Code calls invalid, so a .claude/ write and a /tmp write are refused at once with no thread
 
