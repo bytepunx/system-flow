@@ -21,7 +21,10 @@ import (
 // branch changed outside the story's claim, so that it is widened. A conflict is a thread
 // flai writes, one per pair of stories: a thread whose last entry is flai's
 // awaits every agent and the designer, so both stories' agents see it in
-// the MCP inbox and the designer in the dashboard's.
+// the MCP inbox and the designer in the dashboard's. The generated files,
+// design/issues/summary.md today, are left out of a pair's conflicts: the
+// rebase writes them again when it stops on them alone, so a pair whose only
+// conflict is one merges cleanly as far as the check is concerned (ADR-0098).
 
 // branchCheck is how another open story's branch merges with this one.
 type branchCheck struct {
@@ -43,7 +46,9 @@ type syncChecks struct {
 
 // checkSync lists the paths story's branch changed since base outside its
 // claim, and trial-merges the branch with the branch of every other story
-// in progress or in review that has one, in ID order.
+// in progress or in review that has one, in ID order. A pair's conflicts
+// leave out the generated files, so a pair that conflicts in them alone is
+// clean (ADR-0098).
 func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item, base string) (syncChecks, error) {
 	out := syncChecks{Branches: []branchCheck{}, Outside: []string{}}
 	items, err := repo.List(false)
@@ -72,14 +77,29 @@ func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item, base string) 
 		a.logger().Warn("git is too old to trial-merge story branches, skipping", "component", "git", "git", have, "needs", gitver.MergeTree.String())
 		return out, nil
 	}
+	generated := generatedPaths(repo)
 	for _, o := range others {
 		conflicts, err := a.trialMerge(repo.MainRoot, storyBranch(story.ID), storyBranch(o.ID))
 		if err != nil {
 			return out, fmt.Errorf("trial merge of %s with %s: %w", storyBranch(story.ID), storyBranch(o.ID), err)
 		}
+		conflicts = withoutGenerated(conflicts, generated)
 		out.Branches = append(out.Branches, branchCheck{Story: o.ID, Status: o.Status, Branch: storyBranch(o.ID), Clean: len(conflicts) == 0, Conflicts: conflicts})
 	}
 	return out, nil
+}
+
+// withoutGenerated is conflicts less the generated files, which sync and
+// acceptance write again when a rebase stops on them alone, so no agent
+// settles them (ADR-0098).
+func withoutGenerated(conflicts, generated []string) []string {
+	out := []string{}
+	for _, p := range conflicts {
+		if !coveredBy(p, generated) {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // outsideClaim is the paths story's branch changed since it left base that

@@ -628,6 +628,87 @@ func TestSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
 	}
 }
 
+// trialSync syncs S-0002 from its worktree wt and returns the sync's text
+// output, its --json branches, and the conflict threads open on the project
+// at root.
+func trialSync(t *testing.T, root, wt string) (string, []branchCheck, []*threads.Thread) {
+	t.Helper()
+	out, errOut, code := runInAt(t, wt, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("sync: %d %s %s", code, out, errOut)
+	}
+	js, errOut, code := runInAt(t, wt, issueClock.Add(5*time.Hour), "--json", "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("sync --json: %d %s %s", code, js, errOut)
+	}
+	var res struct {
+		Branches []branchCheck `json:"branches"`
+	}
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, err := threads.List(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var open []*threads.Thread
+	for _, th := range all {
+		if th.Open() && conflictTitlePattern.MatchString(th.Title) {
+			open = append(open, th)
+		}
+	}
+	return out, res.Branches, open
+}
+
+// I-0074: two open stories that each record an issue conflict in
+// design/issues/summary.md alone, which the trial merge reported, opening a
+// thread for the pair. The file is generated, so the pair is clean
+// (ADR-0098).
+func TestSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
+	root, b := openIssueStories(t, nil)
+	// git itself reports the pair as conflicting in the summary
+	if raw, err := (&app{runner: execx.System{}}).trialMerge(root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "design/issues/summary.md" {
+		t.Fatalf("git's trial merge: %v %q", err, raw)
+	}
+
+	out, branches, open := trialSync(t, root, b)
+	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") || strings.Contains(out, "conflicts with") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(branches) != 1 || branches[0].Story != "S-0001" || !branches[0].Clean || branches[0].Conflicts == nil || len(branches[0].Conflicts) != 0 || branches[0].Thread != "" {
+		t.Errorf("branches: %+v", branches)
+	}
+	if len(open) != 0 {
+		t.Errorf("a conflict thread was opened: %+v", open)
+	}
+}
+
+// When the pair conflicts in another file as well, the trial merge reports
+// that file alone, in the sync's output and in the pair's thread.
+func TestSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary(t *testing.T) {
+	root, b := openIssueStories(t, map[string][2]string{"docs/guide.md": {"A's line\n", "B's line\n"}})
+
+	out, branches, open := trialSync(t, root, b)
+	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/guide.md; see TH-0001\n") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "docs/guide.md" || branches[0].Thread != "TH-0001" {
+		t.Errorf("branches: %+v", branches)
+	}
+	if len(open) != 1 {
+		t.Fatalf("conflict threads: %+v", open)
+	}
+	for _, e := range open[0].Entries() {
+		if !strings.Contains(e.Text, "- `docs/guide.md`\n") || strings.Contains(e.Text, "summary.md") {
+			t.Errorf("thread entry: %s", e.Text)
+		}
+	}
+}
+
 // The generated files are one list, the issue summary alone today, named as
 // git names them (ADR-0098).
 func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
@@ -644,12 +725,22 @@ func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
 // issues an hour and two after it.
 var issueClock = time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
 
-// issueStories makes S-0001 and S-0002, each of whose branches records an
-// issue at its own time, and so rewrites design/issues/summary.md's updated
-// line and rows where the other does, and merges S-0001 into main as its
-// acceptance would (I-0074). Each story commits its side of files with its
-// issue. It returns the main checkout and S-0002's worktree.
+// issueStories makes the two stories of openIssueStories and merges S-0001
+// into main as its acceptance would (I-0074). It returns the main checkout
+// and S-0002's worktree.
 func issueStories(t *testing.T, files map[string][2]string) (root, b string) {
+	t.Helper()
+	root, b = openIssueStories(t, files)
+	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
+	return root, b
+}
+
+// openIssueStories makes S-0001 and S-0002 in progress, each of whose
+// branches records an issue at its own time, and so rewrites
+// design/issues/summary.md's updated line and rows where the other does.
+// Each story commits its side of files with its issue. It returns the main
+// checkout and S-0002's worktree.
+func openIssueStories(t *testing.T, files map[string][2]string) (root, b string) {
 	t.Helper()
 	root = syncProject(t)
 	if _, errOut, code := runInAt(t, root, issueClock, "issue", "summary"); code != 0 {
@@ -657,8 +748,8 @@ func issueStories(t *testing.T, files map[string][2]string) (root, b string) {
 	}
 	gitIn(t, root, "add", "design")
 	gitIn(t, root, "commit", "-q", "-m", "docs: issue summary")
-	a := openSyncStory(t, root, 1, "design docs")
-	b = openSyncStory(t, root, 2, "design docs")
+	a := openSyncStory(t, root, 1, "design,docs")
+	b = openSyncStory(t, root, 2, "design,docs")
 	side := func(i int) map[string]string {
 		m := map[string]string{}
 		for p, c := range files {
@@ -668,7 +759,6 @@ func issueStories(t *testing.T, files map[string][2]string) (root, b string) {
 	}
 	recordIssueIn(t, a, issueClock.Add(time.Hour), "A's issue", side(0))
 	recordIssueIn(t, b, issueClock.Add(2*time.Hour), "B's issue", side(1))
-	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
 	return root, b
 }
 
