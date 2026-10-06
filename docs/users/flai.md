@@ -1118,12 +1118,12 @@ orchestration:
 | `promote_to_ready` | Move the stories `flai promote --candidates` lists to `ready`, in its order, while the ready column is under its WIP limit |
 | `order_ready` | Order the ready column by `orchestration.policy` with `flai order --by <policy> --apply`, after each change to it. A story you placed by hand in the last day keeps its place |
 | `answer_threads` | Reply on threads: `recommend` replies with a recommendation for you to decide on, `autonomous` with an answer of its own. `off`, the default, leaves threads to you |
-| `accept_reviews` | Accept a story in review with `flai accept` |
+| `accept_reviews` | Accept a story in review with `flai accept --by orchestrator`, once its verifier passed and nothing blocks it ([When the orchestrator accepts](#when-the-orchestrator-accepts)) |
 | `publish` | Release and push accepted work with `flai release --pending` and `flai push` |
 
-Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, changing anything of an item but its draft flag, placing a story by hand in the pull order, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal.
+Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, or to `done` as it accepts it, changing anything of an item but its draft flag, placing a story by hand in the pull order, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal.
 
-flai holds it to the four permissions above itself too, so a call the guard does not see is held all the same (S-0219). In the orchestrator's session, `flai plan` and the MCP tool `plan` refuse an epic `flai plan --candidates` does not list; `flai edit --no-draft` and `item_edit` refuse a draft that is not complete, naming what it lacks; `flai move` and `item_move` refuse a story that is not a candidate, with the candidates' reasons, and any story while ready is at its WIP limit; and `flai order --by --apply` is refused without `order_ready`. A refusal ends that attempt: it logs it and does not try again until something changes. A planner it starts records `orchestrator` as what started it, in its run and its entry in `wip/agents/planner.md`. It never places a story by hand, and its policy order keeps a story you placed in the last day where you put it ([ADR-0088](../../design/adrs/0088-board-md-records-who-placed-a-story-by-hand-and-when-and-a-policy-s-order-keeps.md)). `flai check` reports a permission it does not know, or an `answer_threads` that is none of its three values.
+flai holds it to the four permissions above itself too, so a call the guard does not see is held all the same (S-0219). In the orchestrator's session, `flai plan` and the MCP tool `plan` refuse an epic `flai plan --candidates` does not list; `flai edit --no-draft` and `item_edit` refuse a draft that is not complete, naming what it lacks; `flai move` and `item_move` refuse a story that is not a candidate, with the candidates' reasons, and any story while ready is at its WIP limit; and `flai order --by --apply` is refused without `order_ready`. flai holds it to `accept_reviews` the same way ([When the orchestrator accepts](#when-the-orchestrator-accepts)). A refusal ends that attempt: it logs it and does not try again until something changes. A planner it starts records `orchestrator` as what started it, in its run and its entry in `wip/agents/planner.md`. It never places a story by hand, and its policy order keeps a story you placed in the last day where you put it ([ADR-0088](../../design/adrs/0088-board-md-records-who-placed-a-story-by-hand-and-when-and-a-policy-s-order-keeps.md)). `flai check` reports a permission it does not know, or an `answer_threads` that is none of its three values.
 
 Where to see what it did:
 
@@ -1265,6 +1265,48 @@ flai push --pending --publish   # also publish the template when those commits m
 An accepted item that no plan can cover is named with the reason (`left out:`) instead of being skipped silently: one touching two components with no tag saying which it delivers to, for example. Tag it, or its epic, and it is planned next time.
 
 A story that is `done` but was never accepted (an older flai, a hand edit) is flagged by `flai check` as `story.unaccepted`, and `flai accept` completes it.
+
+### When the orchestrator accepts
+
+With `orchestration.permissions.accept_reviews` on ([Running the orchestrator](#running-the-orchestrator)), the orchestrator accepts stories in review itself ([ADR-0093](../../design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md)). It runs the same flow as you: merge, done, archive, commit. It never publishes. For each story in review it has its verifier run the tests, the lint, and `flai check --strict` in the story's worktree and match each acceptance criterion to the changed files that meet it. It then previews the acceptance and accepts only when nothing blocks it. Otherwise it leaves the story in review and opens a thread on it saying what is missing.
+
+```bash
+flai accept S-0031 --by orchestrator --verified 4f1c2a9 --dry-run
+flai accept S-0031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md   # --evidence - reads standard input
+```
+
+`--verified` is the commit the verifier passed, which must be the story branch's head. `--evidence` is required, except with `--dry-run`. It is markdown without headings: one `Verdict:` line from the verifier's report, and one item per acceptance criterion naming the changed files that meet it. Quote the files in backticks to add a note after them; otherwise separate them with commas.
+
+```markdown
+Verdict: pass, tests and lint clean
+- 1: `flai/cmd/accept.go`, `flai/internal/preview/accept.go`
+- 2: `docs/users/flai.md` (the new section)
+```
+
+The preview adds these blockers to an acceptance by the orchestrator, and `flai accept` refuses on any of them before it merges anything. `--json` lists them in `orchestrator_blockers` as `{code, message}`, and each is in `blockers` too.
+
+| Code | Blocks when |
+|------|-------------|
+| `unverified` | `--verified` is missing, names no commit, or is not the story branch's head. A commit added after the verifier's run blocks until it verifies again |
+| `criterion_unticked` | An acceptance criterion is unticked |
+| `outside_touches` | The branch changes a file under none of the story's touches. The `wip` folder, `design/issues`, and an experiment's results never count |
+| `thread_open` | A thread on the story or one of its tasks is not resolved |
+| `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes |
+| `not_story` | The item is an epic, which is yours to accept |
+
+`--by orchestrator` is refused while `accept_reviews` is off, and the refusal names it. `--verified` and `--evidence` are refused with any other `--by`. In the orchestrator's session (`FLAI_ROLE=orchestrate`), an acceptance with any other `--by`, or none, is refused by flai and by `flai guard`. The MCP tool `item_move` still refuses it a move to done, and names `flai accept --by orchestrator`. `flai move S-0031 done` takes the same flags as `flai accept`.
+
+What it leaves for you to read:
+
+| What | Where |
+|------|-------|
+| Who accepted | The story's done transition, `by: orchestrator` |
+| The commit verified, when, and the evidence | The story's `## Notes`, under `### Accepted by the orchestrator`, with `- Verified: <commit>` and `- At: <time>`, in the acceptance commit and so in the archive |
+| The same, for a script | `--json`: `by`, `verified`, and `evidence` (`verdict`, `criteria` as `{n, files}`, `text`). The text output adds a line naming the commit and where the evidence is |
+| The decision | `wip/agents/orchestrator.md`, under `## Log` |
+| On the dashboard | The story's page says who accepted it and links the evidence ([flaiover.md](flaiover.md#reviewing-a-story)) |
+
+[Accepting a story](../../design/system/strategic-agents.md#accepting-a-story-s-0221) has the whole of it.
 
 The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to gets the delivery-type bump: feature story minor, remediation or improvement patch. An epic, accepted with its last story or by hand, gets none of its own: its stories carry theirs ([ADR-0078](../../design/adrs/0078-an-accepted-epic-contributes-no-release-bump-of-its-own-its-stories-carry-theirs.md)), and `flai release <epic>` says so. It is found from the item's tags (a project name or one of its `tags` aliases), then its epic's tags, and only among the components the item's commits touched: when the tags name several, the one with the most touched files delivers, the earlier tag breaking a tie, and a tag naming a component no commit touched never delivers, so that component gets no release at all. `--deliver` overrides all of that. With no tag deciding, the only touched component delivers, and several ask you for a tag or `--deliver`. `flai check` warns about that earlier (`story.component-tag`): an open story whose touches reach two or more components while no tag of its own or its epic's names one of them, with the `flai edit --tag` that fixes it. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. A research or experiment story releases nothing either, whatever it touched: its findings or results are merged like any acceptance, and if its commits changed a component's files the plan says that component lands on main without a release. Publishing pushes the acceptance commit whether or not a release was cut.
 

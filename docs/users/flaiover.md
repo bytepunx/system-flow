@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 ---
 
@@ -126,7 +126,9 @@ A story in review has a review page: open it from the card in the review column,
 - Issues: the open issues that no open story is already working. The issues this story recorded or bumped come first, checked. Every other open issue follows, unchecked. Each issue's ID opens its document. When there are none, the section is not shown.
 - The threads on the story, where you can ask before deciding.
 
-**Accept** runs the acceptance as you, the project's owner, and shows each step as it completes: the branch merged, the story moved to done, the archive, the commit. Nothing is tagged or pushed by acceptance: the page says the accepted work stays local until it is published, from **Publish** on the board or with `flai release --pending` on the host. If flai refuses or fails, for example a rebase that stops on a conflict or an unticked criterion, the page shows flai's message word for word, and the story is still in review.
+**Accept** runs the acceptance as you, the project's owner, and shows each step as it completes: the branch merged, the story moved to done, the archive, the commit. Nothing is tagged or pushed by acceptance: the page says the accepted work stays local until it is published, from **Publish** on the board or with `flai release --pending` on the host. If flai refuses or fails, for example a rebase that stops on a conflict or an unticked criterion, the page shows flai's message word for word, and the story is still in review. Once accepted, the page says who accepted it: `S-0031 is accepted by alex.`
+
+**Who accepted.** A done story's page says who accepted it and on which day, under its type and status: `Accepted by alex on 2026-10-06`. With `accept_reviews` on, the orchestrator accepts stories in review itself ([When the orchestrator accepts](flai.md#when-the-orchestrator-accepts), [ADR-0093](../../design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md)). A story it accepted says `Accepted by orchestrator`, and the line links to its evidence: the section `Accepted by the orchestrator` in the story's Notes, with the commit its verifier passed, when, the verdict, and the files that meet each criterion. The history lists each move with who made it, as before.
 
 With any issue checked, the button reads **Accept and Create Stories**. It accepts first. Only if the acceptance succeeds does it make one backlog story for each checked issue, as `flai issue story` does. Each story is committed on its own. The page names each story it made. If some could not be made, it names each issue that failed and what flai said. If the acceptance fails, no story is made. Uncheck every box to accept without making stories.
 
