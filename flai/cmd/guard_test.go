@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -199,40 +201,84 @@ func TestGuardRefusesASubAgentsWriteUnderClaudeWhileAutoApproveIsOff(t *testing.
 	}
 }
 
-// S-0208, TH-0096, S-0218: this repository's settings and the template's run
-// the guard before Bash and flai's MCP tools in every session, and before
-// Edit, Write, and NotebookEdit in a planner or orchestrator session alone.
-func TestTheSettingsRunTheGuardOnTheStrategicAgentsEdits(t *testing.T) {
+// S-0208, TH-0096, S-0218, S-0299: this repository's settings and the
+// template's run the guard before Bash and flai's MCP tools in every session,
+// and before Edit, MultiEdit, Write, and NotebookEdit in a planner's, an
+// orchestrator's, an analyzer's, or a story's agent's session alone, so that
+// a story's sub-agent's write in a .claude/ folder meets the guard's refusal
+// (I-0093) while the operator's own session edits unguarded.
+func TestTheSettingsRunTheGuardOnEditsInStrategicAndStorySessions(t *testing.T) {
 	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var settings struct {
-			Hooks map[string][]struct {
-				Matcher string `json:"matcher"`
-				Hooks   []struct {
-					Command string `json:"command"`
-				} `json:"hooks"`
+		checkGuardHooks(t, path, data)
+	}
+}
+
+// editGuardCondition is how the settings' file-edit hook begins: it goes on
+// to run the guard only in a session flai serve starts with one of these.
+const editGuardCondition = `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ -n "$FLAI_STORY" ] || exit 0; `
+
+// checkGuardHooks checks the PreToolUse hooks of the settings data read from
+// path, and runs its file-edit hook's condition in a shell in each kind of
+// session to see which go on to the guard.
+func checkGuardHooks(t *testing.T, path string, data []byte) {
+	t.Helper()
+	var settings struct {
+		Hooks map[string][]struct {
+			Matcher string `json:"matcher"`
+			Hooks   []struct {
+				Command string `json:"command"`
 			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+	commands := map[string]string{}
+	for _, h := range settings.Hooks["PreToolUse"] {
+		if len(h.Hooks) == 1 {
+			commands[h.Matcher] = h.Hooks[0].Command
 		}
-		if err := json.Unmarshal(data, &settings); err != nil {
-			t.Fatalf("%s: %v", path, err)
+	}
+	if c := commands["Bash|mcp__flai__.*"]; !strings.Contains(c, " guard 2>&1") || strings.Contains(c, "FLAI_ROLE") {
+		t.Errorf("%s: Bash and flai's MCP tools are not guarded in every session: %q", path, c)
+	}
+	if len(commands) != 2 {
+		t.Errorf("%s: hooks %v", path, commands)
+	}
+	c := commands["Edit|MultiEdit|Write|NotebookEdit"]
+	if !strings.HasPrefix(c, editGuardCondition) || !strings.Contains(c, " guard 2>&1") {
+		t.Errorf("%s: file edits are not guarded in a strategic agent's or a story's session, or are in the operator's: %q", path, c)
+		return
+	}
+	// The condition alone, with exit 3 standing for the guard: a session it
+	// lets through exits 3, one it stops exits 0.
+	for _, s := range []struct {
+		env  []string
+		want int
+	}{
+		{nil, 0},
+		{[]string{"FLAI_STARTED_BY=flai-serve"}, 0},
+		{[]string{"FLAI_STORY="}, 0},
+		{[]string{"FLAI_ROLE=plan"}, 3},
+		{[]string{"FLAI_ROLE=orchestrate"}, 3},
+		{[]string{"FLAI_ROLE=analyze"}, 3},
+		{[]string{"FLAI_STARTED_BY=flai-serve", "FLAI_STORY=S-0299"}, 3},
+	} {
+		sh := exec.Command("sh", "-c", c[:len(editGuardCondition)]+"exit 3")
+		sh.Env = append([]string{"PATH=" + os.Getenv("PATH")}, s.env...)
+		code := 0
+		var exit *exec.ExitError
+		if err := sh.Run(); errors.As(err, &exit) {
+			code = exit.ExitCode()
+		} else if err != nil {
+			t.Fatal(err)
 		}
-		commands := map[string]string{}
-		for _, h := range settings.Hooks["PreToolUse"] {
-			if len(h.Hooks) == 1 {
-				commands[h.Matcher] = h.Hooks[0].Command
-			}
-		}
-		if c := commands["Bash|mcp__flai__.*"]; !strings.Contains(c, " guard 2>&1") || strings.Contains(c, "FLAI_ROLE") {
-			t.Errorf("%s: Bash and flai's MCP tools are not guarded in every session: %q", path, c)
-		}
-		if c := commands["Edit|Write|NotebookEdit"]; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || exit 0; `) || !strings.Contains(c, " guard 2>&1") {
-			t.Errorf("%s: a strategic agent's file edits are not guarded, or a story's are: %q", path, c)
-		}
-		if len(commands) != 2 {
-			t.Errorf("%s: hooks %v", path, commands)
+		if code != s.want {
+			t.Errorf("%s: with %v the edit hook exits %d before the guard, want %d", path, s.env, code, s.want)
 		}
 	}
 }

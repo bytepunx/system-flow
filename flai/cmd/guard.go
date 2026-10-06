@@ -154,8 +154,11 @@ threads it cannot read let the call through.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP
 tools, on SubagentStart and SubagentStop, and, in a planner's, an
-orchestrator's, or an analyzer's session alone, before Edit, Write, and
-NotebookEdit as well.`,
+orchestrator's, an analyzer's, or a story's agent's session alone (FLAI_ROLE
+plan, orchestrate, or analyze, or FLAI_STORY set), before Edit, MultiEdit,
+Write, and NotebookEdit as well, so that a story's sub-agent's write in a
+.claude/ folder meets the refusal above (S-0299). In the operator's own
+session, where none of those is set, a file edit does not run it.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

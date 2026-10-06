@@ -11,11 +11,11 @@
         ]
       },
       {
-        "matcher": "Edit|Write|NotebookEdit",
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$FLAI_ROLE\" = plan ] || [ \"$FLAI_ROLE\" = orchestrate ] || [ \"$FLAI_ROLE\" = analyze ] || exit 0; out=$(flai guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
+            "command": "[ \"$FLAI_ROLE\" = plan ] || [ \"$FLAI_ROLE\" = orchestrate ] || [ \"$FLAI_ROLE\" = analyze ] || [ -n \"$FLAI_STORY\" ] || exit 0; out=$(flai guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
           }
         ]
       }
