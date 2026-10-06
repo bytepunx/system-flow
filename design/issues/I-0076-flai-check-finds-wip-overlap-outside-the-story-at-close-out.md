@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 5
+count: 6
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-05T04:38:00Z
-updated: 2026-10-05T04:40:48Z
+last_reported: 2026-10-06T20:18:53Z
+updated: 2026-10-06T20:18:53Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -49,6 +49,12 @@ flai check found outside the story:
 `wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches design/issues, which S-0262 (in progress) also touches as design/issues
 `wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches design/system/flai-cli.md, which S-0262 (in progress) also touches as design/system/flai-cli.md
 `wip/kanban/stories/S-0257-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md`: S-0257 touches docs/users/flai.md, which S-0262 (in progress) also touches as docs/users/flai.md
+
+### 2026-10-06T20:18:53Z
+Story: S-0296.
+flai check found outside the story:
+`wip/kanban/stories/S-0223-the-analyzer-runs-on-demand-or-on-a-schedule-and-writes-a-report-under-design-analysis.md`: S-0223 touches docs/operators/settings.md, which S-0296 (in progress) also touches as docs/operators/settings.md
+`wip/kanban/stories/S-0223-the-analyzer-runs-on-demand-or-on-a-schedule-and-writes-a-report-under-design-analysis.md`: S-0223 touches flai/internal/serve, which S-0296 (in progress) also touches as flai/internal/serve/review_wait_test.go
 
 ## Remediation
 
