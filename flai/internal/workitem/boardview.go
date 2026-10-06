@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // BoardCard is one item on the board as flai board --json and the MCP board
@@ -55,17 +53,20 @@ type BoardView struct {
 }
 
 // NewBoardView lays the active items out by column. Stories only unless all.
-// A ready story whose claim overlaps an open story's is marked held (S-0128);
-// projects are the manifest's sub-projects, whose names a claim reads as paths.
+// A ready story that holds judges held is marked so (S-0128): Repo.Holds of
+// the same items, which reads the manifest's sub-projects and shared paths
+// (ADR-0096); nil judges with neither.
 // A story with tasks carries its task plan in counts (S-0176).
 // Acceptance archives a story the moment it merges (S-0087); pendingPublish
 // names the stories a release has not yet covered, so a done, archived story
 // still on the done column until it is published, instead of vanishing the
 // instant it is accepted, before anyone has had the chance to see it there;
 // the view lists them as unpublished too.
-func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool, projects []manifest.Project) BoardView {
+func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool, holds *Holds) BoardView {
 	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}}
-	holds := NewHolds(items, projects)
+	if holds == nil {
+		holds = NewHolds(items, nil)
+	}
 	for id, ok := range pendingPublish {
 		if ok {
 			v.Unpublished = append(v.Unpublished, id)

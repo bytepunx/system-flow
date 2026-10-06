@@ -77,7 +77,8 @@ func WatchClaim(repo *workitem.Repo, id string) *ClaimWatch {
 // claim gained, in ID order. Only the paths gained count, so an overlap the
 // hold or an earlier write already allowed is not reported again: a folder
 // narrowed to files inside it, as its tasks name them (ADR-0096), gains
-// none. Only a story in progress is compared, and only with stories in
+// none, and a path whose overlap lies wholly inside a shared path of the
+// manifest counts as no overlap. Only a story in progress is compared, and only with stories in
 // progress: a story not yet started is held at pull time instead (ADR-0046).
 // A story whose claim is empty is not reported: the hold names it, and every
 // write would.
@@ -99,7 +100,7 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the items to compare the claim of %s: %w", w.story, err)
 	}
-	holds := workitem.NewHolds(items, w.repo.Manifest.Projects)
+	holds := w.repo.Holds(items)
 	var story *workitem.Item
 	for _, it := range items {
 		if it.Type == workitem.Story && it.ID == w.story {
@@ -126,7 +127,7 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 		claim := holds.Claim(it)
 		var paths []string
 		for _, p := range gained {
-			if coveredBy(p, claim) {
+			if coveredBy(holds, p, claim) {
 				paths = append(paths, p)
 			}
 		}
@@ -158,10 +159,11 @@ func (w *ClaimWatch) held(p string) bool {
 	}
 }
 
-// coveredBy says whether path overlaps an entry of claim.
-func coveredBy(path string, claim []string) bool {
+// coveredBy says whether path overlaps an entry of claim outside the shared
+// paths holds reads (ADR-0096).
+func coveredBy(holds *workitem.Holds, path string, claim []string) bool {
 	for _, c := range claim {
-		if workitem.PathsOverlap(path, c) {
+		if holds.Overlaps(path, c) {
 			return true
 		}
 	}

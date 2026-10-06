@@ -262,7 +262,7 @@ func TestBoardMarksHeldStories(t *testing.T) {
 		claimed("S-0004", Backlog, "flai"),
 	}
 	board := &Board{Order: []string{"S-0002", "S-0003"}}
-	v := NewBoardView(items, board, time.Now(), false, nil, holdProjects)
+	v := NewBoardView(items, board, time.Now(), false, nil, NewHolds(items, holdProjects))
 	ready := v.ReadyInPullOrder()
 	if len(ready) != 2 || ready[0].Held == nil || ready[0].Held.Code != HoldOverlap || ready[1].Held != nil {
 		t.Fatalf("ready = %+v", ready)
@@ -276,7 +276,7 @@ func TestBoardMarksHeldStories(t *testing.T) {
 		}
 	}
 	items[2].Touches = []string{"flai/cmd/board.go"}
-	if first := NewBoardView(items, board, time.Now(), false, nil, holdProjects).FirstPullable(); first != nil {
+	if first := NewBoardView(items, board, time.Now(), false, nil, NewHolds(items, holdProjects)).FirstPullable(); first != nil {
 		t.Errorf("every ready story is held, yet %s is pullable", first.ID)
 	}
 }
@@ -296,7 +296,7 @@ func TestStoryInReviewHoldsNoReadyStory(t *testing.T) {
 		items = append(items, claimed(id, Ready, under[i%len(under)]))
 		board.Order = append(board.Order, id)
 	}
-	ready := NewBoardView(items, board, time.Now(), false, nil, holdProjects).ReadyInPullOrder()
+	ready := NewBoardView(items, board, time.Now(), false, nil, NewHolds(items, holdProjects)).ReadyInPullOrder()
 	for _, c := range ready {
 		if c.Held != nil {
 			t.Errorf("%s is held by a story in review: %s", c.ID, c.Held.Reason)
@@ -310,8 +310,132 @@ func TestStoryInReviewHoldsNoReadyStory(t *testing.T) {
 	}
 
 	open.Status = InProgress
-	if first := FirstClear(NewBoardView(items, board, time.Now(), false, nil, holdProjects).ReadyInPullOrder()); first != nil {
+	if first := FirstClear(NewBoardView(items, board, time.Now(), false, nil, NewHolds(items, holdProjects)).ReadyInPullOrder()); first != nil {
 		t.Errorf("S-0220 in progress overlaps every ready story, yet %s is clear", first.ID)
+	}
+}
+
+// i0087Shared is the shared paths the I-0087 holds went through.
+var i0087Shared = manifest.Claims{Shared: []string{"docs/users/flai.md", "design/adrs"}}
+
+// I-0087, ADR-0096: S-0283, in progress, held S-0278 through
+// docs/users/flai.md, and S-0285 held S-0278 through design/adrs and through
+// docs/users, which its tasks narrow to docs/users/flai.md. With those paths
+// shared, neither holds it; S-0284 is still held by S-0283 through
+// permission.go, which both change and nothing shares. With the list empty,
+// each holds as before.
+func TestSharedPathsHoldNoReadyStory(t *testing.T) {
+	s0278 := claimed("S-0278", Ready, "flai/cmd/stream_sync.go", "flai/internal/issues/issues.go", "design/adrs", "docs/users/flai.md", "docs/users/flai-reference.md")
+	s0284 := claimed("S-0284", Ready, "flai/internal/mcpserver/permission.go", "design/adrs", "docs/users/flai.md")
+	s0283 := []*Item{
+		claimed("S-0283", InProgress, "flai/internal/mcpserver", "docs/users/flai.md"),
+		claimTask("T-1001", "S-0283", InProgress, "flai/internal/mcpserver/permission.go", "flai/internal/mcpserver/permission_test.go"),
+		claimTask("T-1002", "S-0283", Ready, "docs/users/flai.md"),
+	}
+	s0285 := []*Item{
+		claimed("S-0285", InProgress, "flai/internal/harness", "flai/internal/mcpserver", "flai/internal/guard", "docs/users", "docs/operators", "design/adrs"),
+		claimTask("T-1004", "S-0285", Done, "flai/internal/guard/guard.go", "flai/internal/mcpserver/events.go"),
+		claimTask("T-1008", "S-0285", InProgress, "docs/users/flai.md", "docs/operators/serve.md", "design/adrs/0095-x.md"),
+	}
+	cases := []struct {
+		name          string
+		open          []*Item
+		ready         *Item
+		empty, inside string // the reason with the list empty, and with it set; "" when not held
+	}{
+		{"S-0283 through docs/users/flai.md", s0283, s0278,
+			"held (overlap): touches docs/users/flai.md, which S-0283 (in progress) touches too; starts when S-0283 moves to review, is cancelled, or is sent back",
+			""},
+		{"S-0283 through permission.go, which is not shared", s0283, s0284,
+			"held (overlap): touches flai/internal/mcpserver/permission.go, which S-0283 (in progress) touches too; starts when S-0283 moves to review, is cancelled, or is sent back",
+			"held (overlap): touches flai/internal/mcpserver/permission.go, which S-0283 (in progress) touches too; starts when S-0283 moves to review, is cancelled, or is sent back"},
+		{"S-0285 through design/adrs", s0285, s0278,
+			"held (overlap): touches design/adrs, which holds design/adrs/0095-x.md that S-0285 (in progress) touches; starts when S-0285 moves to review, is cancelled, or is sent back",
+			""},
+		{"S-0285 through design/adrs, by narrowing not through mcpserver", s0285, s0284,
+			"held (overlap): touches design/adrs, which holds design/adrs/0095-x.md that S-0285 (in progress) touches; starts when S-0285 moves to review, is cancelled, or is sent back",
+			""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			items := append(append([]*Item{}, c.open...), c.ready)
+			for _, k := range []struct {
+				claims manifest.Claims
+				want   string
+			}{{manifest.Claims{}, c.empty}, {i0087Shared, c.inside}} {
+				h := NewHolds(items, holdProjects).WithShared(k.claims).Of(c.ready)
+				switch {
+				case k.want == "" && h != nil:
+					t.Errorf("shared %v: held: %s", k.claims.Shared, h.Reason)
+				case k.want != "" && (h == nil || h.Reason != k.want):
+					t.Errorf("shared %v: hold = %+v\nwant reason %s", k.claims.Shared, h, k.want)
+				}
+			}
+		})
+	}
+
+	// the board, which wait_for_work reads, offers S-0278 and not S-0284
+	items := append(append([]*Item{}, s0283...), s0284, s0278)
+	board := &Board{Order: []string{"S-0284", "S-0278"}}
+	if first := NewBoardView(items, board, time.Now(), false, nil, NewHolds(items, holdProjects).WithShared(i0087Shared)).FirstPullable(); first == nil || first.ID != "S-0278" {
+		t.Errorf("first pullable = %+v, want S-0278", first)
+	}
+	if first := NewBoardView(items, board, time.Now(), false, nil, NewHolds(items, holdProjects)).FirstPullable(); first != nil {
+		t.Errorf("with no shared paths, %s is pullable", first.ID)
+	}
+}
+
+// ADR-0096: the narrower entry of an overlapping pair decides, and a folder
+// only partly inside a shared path still holds.
+func TestOverlapsOutsideTheSharedPaths(t *testing.T) {
+	h := NewHolds(nil, nil).WithShared(manifest.Claims{Shared: []string{"docs/users/flai.md", "design/adrs", "design/issues/*.md", "../bad"}})
+	for _, c := range []struct {
+		a, b string
+		want bool
+	}{
+		{"docs/users/flai.md", "docs/users/flai.md", false},
+		{"docs/users", "docs/users/flai.md", false},   // the narrower is the shared file
+		{"docs", "docs/users/flai.md", false},         // at any depth
+		{"docs/users", "docs/users/other.md", true},   // the narrower is not shared
+		{"design", "design/adrs", false},              // the narrower is the shared folder
+		{"design/adrs/0096.md", "design", false},      // either order
+		{"design", "design/issues", true},             // a folder only partly inside *.md
+		{"design/issues/summary.md", "design", false}, // a file inside *.md
+		{"flai/cmd", "flai/cmd/x.go", true},
+		{"flai/cmd", "docs", false}, // no overlap at all
+		{"bad", "bad/x.md", true},   // a pattern that is not valid frees nothing
+	} {
+		if got := h.Overlaps(c.a, c.b); got != c.want {
+			t.Errorf("Overlaps(%s, %s) = %v, want %v", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+// ADR-0096: a repository's holds read the shared paths from system-flow.yaml
+// as it is now, so an edit made after it was opened, as flai mcp keeps it open
+// while flai shared changes the list, frees a story without a restart.
+func TestRepoHoldsReadTheSharedPathsAgain(t *testing.T) {
+	r := newProject(t)
+	items := []*Item{claimed("S-0001", InProgress, "docs/users/flai.md"), claimed("S-0002", Ready, "docs/users/flai.md")}
+	if r.Holds(items).Of(items[1]) == nil {
+		t.Fatal("with no shared paths, S-0001 should hold S-0002")
+	}
+	file := filepath.Join(r.Root, manifest.File)
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, append(data, "claims:\n  shared: [docs/users/flai.md]\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if h := r.Holds(items).Of(items[1]); h != nil {
+		t.Errorf("shared after the repo was opened, yet held: %s", h.Reason)
+	}
+	if err := os.Remove(file); err != nil {
+		t.Fatal(err)
+	}
+	if r.Holds(items).Of(items[1]) == nil {
+		t.Error("with the manifest unreadable, the list it was opened with (none) should apply")
 	}
 }
 

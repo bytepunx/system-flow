@@ -223,6 +223,74 @@ func TestTouchesOverlap(t *testing.T) {
 	}
 }
 
+// ADR-0096: an overlap whose narrower entry lies wholly inside a shared path
+// is no wip.overlap, one outside every shared path still is, and a pattern
+// that is not valid is a manifest.claims error on its own line. The list is
+// read as the file has it when check runs, not as the repo was opened.
+func TestTouchesOverlapInsideASharedPath(t *testing.T) {
+	root := t.TempDir()
+	base := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	mf := filepath.Join(root, "system-flow.yaml")
+	_ = os.WriteFile(mf, []byte(base), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	s1 := mustItem(t, repo, workitem.Story, "One", e.ID)
+	s2 := mustItem(t, repo, workitem.Story, "Two", e.ID)
+	s1.Touches = []string{"docs/users/flai.md", "design/adrs/0096-x.md", "flai/cmd/x.go"}
+	s2.Touches = []string{"docs/users", "design", "flai/cmd"}
+	for _, s := range []*workitem.Item{s1, s2} {
+		s.Status = workitem.InProgress
+		if err := repo.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	overlaps := func() []string {
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, f := range res.Findings {
+			if f.Rule == "wip.overlap" {
+				got = append(got, f.Message)
+			}
+		}
+		return got
+	}
+	if got := overlaps(); len(got) != 3 {
+		t.Fatalf("with no shared paths, want 3 overlaps, got %q", got)
+	}
+
+	shared := base + "claims:\n  shared:\n    - docs/users/flai.md\n    - design/adrs\n    - ../outside\n"
+	if err := os.WriteFile(mf, []byte(shared), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want := "S-0001 touches flai/cmd/x.go, which S-0002 (in progress) also touches as flai/cmd"
+	if got := overlaps(); len(got) != 1 || got[0] != want {
+		t.Errorf("with docs/users/flai.md and design/adrs shared, overlaps = %q\nwant only %s", got, want)
+	}
+
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var claims []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "manifest.claims" {
+			claims = append(claims, f)
+		}
+	}
+	if len(claims) != 1 || claims[0].Level != Error || claims[0].Path != "system-flow.yaml" || claims[0].Line != 12 || !strings.Contains(claims[0].Message, `"../outside" has a .. segment`) {
+		t.Errorf("manifest.claims findings = %+v, want one error on line 12 naming ../outside", claims)
+	}
+}
+
 // S-0130, ADR-0046: an after: entry that names no story, the story itself,
 // or something other than a story is an error, and so is a cycle, once.
 func TestAfterRules(t *testing.T) {

@@ -91,6 +91,46 @@ func TestGrownReachesOnlyStoriesInProgressThroughWhatTheClaimGained(t *testing.T
 	}
 }
 
+// ADR-0096: a gained path whose overlap with another story in progress lies
+// wholly inside a shared path tells nobody, the narrower entry deciding: the
+// gained folder docs/users meets docs/users/flai.md, which is shared. One
+// outside every shared path is still told. The list is read as the manifest
+// has it at the write, not as the repo was opened.
+func TestGrownIsSilentInsideASharedPath(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		shared string
+		want   []string
+	}{
+		{"none shared", "", []string{"docs/users", "flai/cmd/x.go"}},
+		{"docs/users/flai.md shared", "claims:\n  shared:\n    - docs/users/flai.md\n", []string{"flai/cmd/x.go"}},
+		{"docs shared", "claims:\n  shared: [docs]\n", []string{"flai/cmd/x.go"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			at := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+			repo, story := claimRepo(t, at)
+			mine := story("Mine", workitem.InProgress, "design")
+			theirs := story("Theirs", workitem.InProgress, "docs/users/flai.md", "flai/cmd")
+			mf := filepath.Join(repo.Root, "system-flow.yaml")
+			data, _ := os.ReadFile(mf)
+			if err := os.WriteFile(mf, append(data, c.shared...), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			w := WatchClaim(repo, mine.ID)
+			if _, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Reach", Parent: mine.ID, Owner: "alex", Touches: []string{"docs/users", "flai/cmd/x.go"}, Now: at}); err != nil {
+				t.Fatal(err)
+			}
+			got, err := w.Grown("claude", at)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := []Overlapping{{Story: theirs.ID, Title: "Theirs", Paths: c.want}}; !reflect.DeepEqual(got, want) {
+				t.Errorf("reached:\n got %+v\nwant %+v", got, want)
+			}
+		})
+	}
+}
+
 // ADR-0096: a task that names a file inside its story's folder touch narrows
 // the claim to it. That gains the claim nothing, so it reaches no story, even
 // one in progress that touches the same file; a task that names a path outside

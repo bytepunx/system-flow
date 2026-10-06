@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -15,8 +16,10 @@ import (
 // names in after: a story that is not done (S-0130): flai serve does not start
 // its agent and wait_for_work does not offer it. A story in review holds
 // nothing (S-0295, ADR-0096): its branch is finished and synced, and the
-// notice at acceptance tells an overlapping story what changed. The
-// operator's own moves only warn.
+// notice at acceptance tells an overlapping story what changed. An overlap
+// that lies wholly inside a pattern of the manifest's claims.shared holds
+// nothing either (ADR-0096): many stories change those paths in separate
+// sections or new files. The operator's own moves only warn.
 
 // Hold reason codes.
 const (
@@ -36,6 +39,7 @@ type Hold struct {
 // repository.
 type Holds struct {
 	projects []manifest.Project
+	shared   manifest.Claims    // an overlap wholly inside these holds nothing
 	tasks    map[string][]*Item // tasks by story, cancelled ones left out
 	open     []openClaim
 	stories  map[string]*Item // every story given, archived ones included
@@ -71,10 +75,11 @@ func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 	return h
 }
 
-// Holds judges ready stories against items, as NewHolds does, and finds a
-// story named in after: in the archive when items do not hold it.
+// Holds judges ready stories against items, as NewHolds does, with the
+// manifest's shared paths as SharedClaims reads them, and finds a story named
+// in after: in the archive when items do not hold it.
 func (r *Repo) Holds(items []*Item) *Holds {
-	h := NewHolds(items, r.Manifest.Projects)
+	h := NewHolds(items, r.Manifest.Projects).WithShared(r.SharedClaims())
 	h.lookup = func(id string) *Item {
 		if it, err := r.Get(id); err == nil && it.Type == Story {
 			return it
@@ -82,6 +87,42 @@ func (r *Repo) Holds(items []*Item) *Holds {
 		return nil
 	}
 	return h
+}
+
+// SharedClaims is the manifest's claims as system-flow.yaml has them now,
+// read again rather than taken from the manifest r was opened with: flai mcp
+// keeps one Repo for as long as it runs, and flai shared or shared_paths_edit
+// may have changed the list since. The manifest r was opened with gives them
+// when the file cannot be read.
+func (r *Repo) SharedClaims() manifest.Claims {
+	m, err := manifest.Load(filepath.Join(r.Root, manifest.File))
+	if err != nil {
+		return r.Manifest.Claims
+	}
+	return m.Claims
+}
+
+// WithShared has h treat an overlap wholly inside a pattern of claims as no
+// overlap (ADR-0096), and returns h.
+func (h *Holds) WithShared(claims manifest.Claims) *Holds {
+	h.shared = claims
+	return h
+}
+
+// Overlaps says whether paths a and b, such as entries of two claims, overlap
+// where it counts: they cover a common path, as PathsOverlap says, and the
+// narrower of the two, the deeper one or either when they are equal, does not
+// lie wholly inside a shared path (ADR-0096).
+func (h *Holds) Overlaps(a, b string) bool {
+	if !PathsOverlap(a, b) {
+		return false
+	}
+	narrower := b // overlapping, one is the other or lies below it
+	if len(strings.TrimSuffix(a, "/")) > len(strings.TrimSuffix(b, "/")) {
+		narrower = a
+	}
+	_, shared := h.shared.Covers(narrower)
+	return !shared
 }
 
 // Open counts story as open from now on, named with label: flai serve's
@@ -270,7 +311,7 @@ func (h *Holds) overlap(story *Item) *Hold {
 	var parts []string
 	var by []openClaim
 	for _, o := range others {
-		part, c := holdBy(claim, o)
+		part, c := h.holdBy(claim, o)
 		if part == "" {
 			continue
 		}
@@ -286,8 +327,9 @@ func (h *Holds) overlap(story *Item) *Hold {
 	return &Hold{Code: code, Reason: fmt.Sprintf("held (%s): %s; starts when %s", code, strings.Join(parts, "; "), clears(by))}
 }
 
-// holdBy says how claim overlaps o's, if it does, naming the first pair.
-func holdBy(claim []string, o openClaim) (part, code string) {
+// holdBy says how claim overlaps o's, if it does, naming the first pair that
+// holds: a pair whose overlap lies wholly inside a shared path does not.
+func (h *Holds) holdBy(claim []string, o openClaim) (part, code string) {
 	who := o.id + " (" + o.label + ")"
 	if len(o.paths) == 0 {
 		return who + " declares no touches, so it may change anything", HoldNoTouches
@@ -295,7 +337,7 @@ func holdBy(claim []string, o openClaim) (part, code string) {
 	for _, mine := range claim {
 		for _, theirs := range o.paths {
 			switch {
-			case !PathsOverlap(mine, theirs):
+			case !h.Overlaps(mine, theirs):
 			case mine == theirs:
 				return fmt.Sprintf("touches %s, which %s touches too", mine, who), HoldOverlap
 			case strings.HasPrefix(mine, theirs+"/"):

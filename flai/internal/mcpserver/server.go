@@ -335,7 +335,7 @@ func (s *server) boardViewOf(ctx context.Context, items []*workitem.Item, all bo
 		ids = release.PendingIDs(execx.Timed(ctx, s.runner), s.repo.Root, s.repo.Manifest, s.repo)
 		done()
 	}
-	return workitem.NewBoardView(items, board, s.now(), all, ids, s.repo.Manifest.Projects), nil
+	return workitem.NewBoardView(items, board, s.now(), all, ids, s.repo.Holds(items)), nil
 }
 
 // BoardIn selects what the board shows.

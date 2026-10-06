@@ -375,7 +375,8 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 	}
 	// Pull order and the counts never look at done or archived items, so
 	// which ones stay visible there (S-0087) makes no difference here.
-	view := workitem.NewBoardView(items, board, time.Now(), false, nil, repo.Manifest.Projects)
+	holds = repo.Holds(items)
+	view := workitem.NewBoardView(items, board, time.Now(), false, nil, holds)
 	for _, c := range view.ReadyInPullOrder() {
 		if it := byID[c.ID]; it != nil && c.Type == workitem.Story && !c.Blocked {
 			ready = append(ready, readyStory{ID: c.ID, Agent: it.Agent, Entered: it.EnteredAt(), item: it})
@@ -385,7 +386,7 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 	if limit, ok := view.WIPLimits[workitem.InProgress]; ok && limit > 0 {
 		free = max(0, limit-view.Counts[workitem.InProgress])
 	}
-	return ready, repo.Holds(items), free, view.ReviewHold(), nil
+	return ready, holds, free, view.ReviewHold(), nil
 }
 
 // agentStarted is how a hold names a story in ready whose agent has been

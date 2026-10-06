@@ -310,7 +310,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			pending := release.PendingIDs(execx.Timed(ctx, execx.System{}), repo.Root, repo.Manifest, repo)
 			done()
 			defer perf.Track(ctx, "board.view")()
-			return workitem.NewBoardView(items, board, now(), in.All, pending, repo.Manifest.Projects), nil
+			return workitem.NewBoardView(items, board, now(), in.All, pending, repo.Holds(items)), nil
 		},
 
 		// items.list: by type and state; the archive and the bodies on request.

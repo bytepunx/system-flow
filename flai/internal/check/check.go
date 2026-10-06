@@ -216,6 +216,7 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.orchestration", mf, keyLine(mf, "orchestration"), "%s", msg)
 	}
+	c.sharedPatterns()
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
 			c.add(Warning, "layout.lock", filepath.Join(c.repo.Root, "system-flow.yaml"), keyLine(filepath.Join(c.repo.Root, "system-flow.yaml"), "template"), "template %s is recorded but there is no system-flow.lock.yaml; run flai upgrade --relock", m.Template.Version)
@@ -243,6 +244,25 @@ func (c *checker) layout() {
 		}
 	}
 	c.cacheIgnored()
+}
+
+// sharedPatterns reports each pattern of claims.shared that is not valid, on
+// its line of the manifest: it frees nothing (ADR-0096).
+func (c *checker) sharedPatterns() {
+	errs := c.repo.SharedClaims().Errors() // as the file has them, like the lines
+	if len(errs) == 0 {
+		return
+	}
+	mf := filepath.Join(c.repo.Root, manifest.File)
+	data, _ := os.ReadFile(mf) // without it, each is reported on line 1
+	lines := manifest.SharedLines(data)
+	for _, e := range errs {
+		line := 1
+		if e.Index < len(lines) {
+			line = lines[e.Index]
+		}
+		c.add(Error, "manifest.claims", mf, line, "%s; until it is fixed it frees nothing", e)
+	}
 }
 
 // cacheIgnored refuses a repository whose .flai-cache (dashboard token,
@@ -466,8 +486,10 @@ func storyBranchExists(mainRoot, id string) bool {
 }
 
 // overlap warns when two in-progress items declare touches that cover the
-// same path (ADR-0019); it is advisory, humans and agents coordinate.
+// same path (ADR-0019); it is advisory, humans and agents coordinate. An
+// overlap that lies wholly inside a shared path is not reported (ADR-0096).
 func (c *checker) overlap() {
+	holds := workitem.NewHolds(nil, c.repo.Manifest.Projects).WithShared(c.repo.SharedClaims())
 	type owner struct {
 		it   *workitem.Item
 		path string
@@ -487,7 +509,7 @@ func (c *checker) overlap() {
 			if a.it.ID == b.it.ID || a.it.Parent == b.it.ID || b.it.Parent == a.it.ID {
 				continue
 			}
-			if workitem.PathsOverlap(a.path, b.path) {
+			if holds.Overlaps(a.path, b.path) {
 				c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, a.path, b.it.ID, b.path)
 			}
 		}
@@ -495,7 +517,9 @@ func (c *checker) overlap() {
 }
 
 // componentTag warns on an open story that a release could not plan: its
-// touches, and its open tasks', reach two or more components, and no tag of
+// claim, its touches with each folder narrowed to the touches its tasks name
+// inside it, done ones included, and its open tasks' touches outside them
+// (ADR-0096), reaches two or more components, and no tag of
 // its own or its epic's names one of them, so nothing says which it delivers
 // to (I-0024). Research and experiments cut no release (ADR-0025,
 // ADR-0066), so neither is warned.

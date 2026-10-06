@@ -30,7 +30,7 @@ func newBoardCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo), repo.Manifest.Projects)
+			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo), repo.Holds(items))
 			columns, counts, breaches := view.Columns, view.Counts, view.Breaches
 			if a.jsonOut {
 				return a.printJSON(view)
