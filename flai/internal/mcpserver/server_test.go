@@ -304,6 +304,44 @@ func TestDesignerReplyReachesAWaitingAgent(t *testing.T) {
 	}
 }
 
+// S-0285 (I-0083): wait_for_events does not see a sub-agent finish, so its
+// description says what it is for (a thread awaiting the designer) and how a
+// story's agent waits for a sub-agent instead, in a project and across a
+// folder alike.
+func TestWaitForEventsSaysItDoesNotSeeASubAgentFinish(t *testing.T) {
+	root := t.TempDir()
+	makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	for name, cs := range map[string]*mcp.ClientSession{"a project": setup(t).cs, "a folder": folderSetup(t, root).cs} {
+		res, err := cs.ListTools(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var desc string
+		for _, tool := range res.Tools {
+			if tool.Name == "wait_for_events" {
+				desc = tool.Description
+			}
+		}
+		if desc == "" {
+			t.Fatalf("%s: no wait_for_events", name)
+		}
+		for _, want := range []string{
+			"the designer's answer on a thread awaiting them",
+			"It does not see a sub-agent finish",
+			"run_in_background set to false",
+			"returns the sub-agent's result as the tool's result",
+			"flai guard refuses a story's agent this call while a sub-agent of its session runs and no thread on its story is open",
+		} {
+			if !strings.Contains(desc, want) {
+				t.Errorf("%s: wait_for_events's description lacks %q: %s", name, want, desc)
+			}
+		}
+		if strings.Contains(desc, "Hold this when idle to react to the designer within a second") {
+			t.Errorf("%s: the old sentence, which reads as for any wait, is still there: %s", name, desc)
+		}
+	}
+}
+
 // A story with no tasks moves to ready and in-progress through item_move and
 // is refused at review: the pulling agent writes the tasks (ADR-0021).
 func TestStoryWithoutTasksMovesUntilReview(t *testing.T) {
