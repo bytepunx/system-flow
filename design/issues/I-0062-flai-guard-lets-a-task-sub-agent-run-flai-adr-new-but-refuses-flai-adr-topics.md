@@ -7,7 +7,7 @@ count: 3
 cost: 4m
 first_reported: 2026-10-03T07:27:30Z
 last_reported: 2026-10-06T06:06:28Z
-updated: 2026-10-06T06:06:28Z
+updated: 2026-10-06T09:56:50Z
 ---
 
 # I-0062 flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
@@ -30,3 +30,5 @@ Story: S-0220.
 T-0894: the guard refused the task sub-agent's flai adr new, even with --print-body, so the story's agent created ADR-0090 and set its topics; the sub-agent had already cited ADR-0090 by guessing the number.
 
 ## Remediation
+
+Story S-0287 remediates this issue, created from it at 2026-10-06T09:56:50Z.
