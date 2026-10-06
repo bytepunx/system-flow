@@ -7,12 +7,16 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0300
+  - S-0302
   - S-0228
-  - S-0261
   - S-0269
   - S-0270
   - S-0271
+  - S-0303
+placed:
+  S-0302:
+    by: flaiover
+    at: 2026-10-06T23:17:58Z
 ---
 
 # Board

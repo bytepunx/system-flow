@@ -3,11 +3,11 @@ id: T-1065
 type: task
 nature: remediation
 title: flai new and flai import default to the template's newest version tag and record it as the project's template.ref
-status: in-progress
+status: done
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:35Z
-updated: 2026-10-06T23:00:25Z
+updated: 2026-10-06T23:11:46Z
 transitions:
   - to: ready
     at: 2026-10-06T23:00:25Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:00:25Z
     by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:11:46Z
+    by: agent-S-0301
 stream: S-0301
 tags: [cli, template]
 touches: [flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go]
 after: [T-1060, T-1062]
+usage:
+  source: log
+  seconds: 681
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 338
+      cache_read: 3194807
+      cache_write: 100340
+      cost: 1.4482
 ---
 # T-1065 flai new and flai import default to the template's newest version tag and record it as the project's template.ref
 

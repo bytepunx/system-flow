@@ -3,16 +3,36 @@ id: T-1051
 type: task
 nature: improvement
 title: The user and operator docs say Plan on an epic drafts its stories and their tasks
-status: backlog
+status: done
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:47:28Z
-updated: 2026-10-06T21:47:28Z
-transitions: []
+updated: 2026-10-06T23:08:40Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:07:14Z
+    by: agent-S-0300
+  - to: in-progress
+    at: 2026-10-06T23:07:15Z
+    by: agent-S-0300
+  - to: done
+    at: 2026-10-06T23:08:40Z
+    by: agent-S-0300
 stream: S-0300
 tags: [planner, docs]
 touches: [docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-1047]
+usage:
+  source: log
+  seconds: 85
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 82
+      cache_read: 456811
+      cache_write: 49491
+      cost: 0.2228
 ---
 # T-1051 The user and operator docs say Plan on an epic drafts its stories and their tasks
 

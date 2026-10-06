@@ -23,7 +23,7 @@ tags: [design, template]
 touches: [design/adrs, design/adrs/README.md, design/system/template.md, design/system/project-manifest.md]
 usage:
   source: log
-  seconds: 333
+  seconds: 334
   estimated: true
   models:
     - model: claude-opus-5-5
@@ -31,7 +31,7 @@ usage:
       output: 267
       cache_read: 1683293
       cache_write: 70014
-      cost: 0.7722
+      cost: 0.7706
 ---
 # T-1062 An ADR and the template design say which template ref flai new, flai import, and flai upgrade take, and when upgrade asks
 

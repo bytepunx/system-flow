@@ -3,16 +3,36 @@ id: T-0989
 type: task
 nature: improvement
 title: The design and the guides say how the prime pack fits a tool result
-status: backlog
+status: done
 parent: S-0261
 owner: alex
 created: 2026-10-05T05:52:26Z
-updated: 2026-10-05T05:52:26Z
-transitions: []
+updated: 2026-10-06T23:13:31Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:07:03Z
+    by: agent-S-0261
+  - to: in-progress
+    at: 2026-10-06T23:07:04Z
+    by: agent-S-0261
+  - to: done
+    at: 2026-10-06T23:13:31Z
+    by: agent-S-0261
 stream: S-0261
 tags: [flai, docs]
 touches: [design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-0986]
+usage:
+  source: log
+  seconds: 387
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 13659
+      cache_read: 1134912
+      cache_write: 47222
+      cost: 0.7905
 ---
 # T-0989 The design and the guides say how the prime pack fits a tool result
 

@@ -3,16 +3,36 @@ id: T-1066
 type: task
 nature: remediation
 title: The flai docs and the CLI design say flai new, import, and upgrade take the newest template tag and when upgrade asks
-status: backlog
+status: done
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:45Z
-updated: 2026-10-06T22:50:45Z
-transitions: []
+updated: 2026-10-06T23:16:21Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:11:46Z
+    by: agent-S-0301
+  - to: in-progress
+    at: 2026-10-06T23:11:46Z
+    by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:16:21Z
+    by: agent-S-0301
 stream: S-0301
 tags: [docs, template]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/template.md, design/system/flai-cli.md]
 after: [T-1064, T-1065]
+usage:
+  source: log
+  seconds: 275
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 472
+      cache_read: 4548586
+      cache_write: 115425
+      cost: 2.0498
 ---
 # T-1066 The flai docs and the CLI design say flai new, import, and upgrade take the newest template tag and when upgrade asks
 

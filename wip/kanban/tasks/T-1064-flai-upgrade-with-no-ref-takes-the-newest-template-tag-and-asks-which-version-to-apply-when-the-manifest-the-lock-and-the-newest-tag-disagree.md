@@ -3,11 +3,11 @@ id: T-1064
 type: task
 nature: remediation
 title: flai upgrade with no --ref takes the newest template tag and asks which version to apply when the manifest, the lock, and the newest tag disagree
-status: in-progress
+status: done
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:26Z
-updated: 2026-10-06T23:00:24Z
+updated: 2026-10-06T23:11:45Z
 transitions:
   - to: ready
     at: 2026-10-06T23:00:24Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:00:24Z
     by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:11:45Z
+    by: agent-S-0301
 stream: S-0301
 tags: [cli, template]
 touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go]
 after: [T-1057, T-1060, T-1062]
+usage:
+  source: log
+  seconds: 681
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 486
+      cache_read: 4686516
+      cache_write: 138874
+      cost: 2.1208
 ---
 # T-1064 flai upgrade with no --ref takes the newest template tag and asks which version to apply when the manifest, the lock, and the newest tag disagree
 

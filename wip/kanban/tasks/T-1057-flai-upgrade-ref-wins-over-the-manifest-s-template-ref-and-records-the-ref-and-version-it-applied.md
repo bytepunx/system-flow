@@ -31,7 +31,7 @@ usage:
       output: 164
       cache_read: 1229238
       cache_write: 74283
-      cost: 0.5741
+      cost: 0.5729
 ---
 # T-1057 flai upgrade --ref wins over the manifest's template.ref and records the ref and version it applied
 

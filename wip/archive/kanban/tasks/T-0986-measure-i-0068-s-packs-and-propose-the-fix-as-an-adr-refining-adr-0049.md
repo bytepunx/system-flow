@@ -3,15 +3,35 @@ id: T-0986
 type: task
 nature: research
 title: Measure I-0068's packs and propose the fix as an ADR refining ADR-0049
-status: backlog
+status: done
 parent: S-0261
 owner: alex
 created: 2026-10-05T05:52:07Z
-updated: 2026-10-05T05:52:07Z
-transitions: []
+updated: 2026-10-06T23:06:46Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:06:23Z
+    by: agent-S-0261
+  - to: in-progress
+    at: 2026-10-06T23:06:24Z
+    by: agent-S-0261
+  - to: done
+    at: 2026-10-06T23:06:46Z
+    by: agent-S-0261
 stream: S-0261
 tags: [flai, docs]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 22
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 4261
+      cache_read: 354050
+      cache_write: 14731
+      cost: 0.2466
 ---
 # T-0986 Measure I-0068's packs and propose the fix as an ADR refining ADR-0049
 

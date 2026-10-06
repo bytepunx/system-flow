@@ -3,16 +3,36 @@ id: T-0988
 type: task
 nature: improvement
 title: MCP prime and flai prime return the fitted pack, and this repository's largest packs fit a tool result
-status: backlog
+status: done
 parent: S-0261
 owner: alex
 created: 2026-10-05T05:52:22Z
-updated: 2026-10-05T05:52:22Z
-transitions: []
+updated: 2026-10-06T23:18:24Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:18:23Z
+    by: agent-S-0261
+  - to: in-progress
+    at: 2026-10-06T23:18:23Z
+    by: agent-S-0261
+  - to: done
+    at: 2026-10-06T23:18:24Z
+    by: agent-S-0261
 stream: S-0261
 tags: [flai]
 touches: [flai/internal/mcpserver, flai/cmd/prime.go, flai/cmd/prime_test.go]
 after: [T-0987]
+usage:
+  source: log
+  seconds: 1
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 16493
+      cache_read: 1370312
+      cache_write: 57016
+      cost: 0.9544
 ---
 # T-0988 MCP prime and flai prime return the fitted pack, and this repository's largest packs fit a tool result
 

@@ -3,16 +3,33 @@ id: T-1050
 type: task
 nature: improvement
 title: The planner agent definitions say an epic's planner drafts the tasks of the stories it drafts
-status: backlog
+status: in-progress
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:47:23Z
-updated: 2026-10-06T21:47:23Z
-transitions: []
+updated: 2026-10-06T23:07:14Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:07:14Z
+    by: agent-S-0300
+  - to: in-progress
+    at: 2026-10-06T23:07:14Z
+    by: agent-S-0300
 stream: S-0300
 tags: [planner, conventions]
 touches: [".claude/agents/planner.md", template/root/.claude/agents/planner.md]
 after: [T-1047]
+usage:
+  source: log
+  seconds: 86
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 13
+      cache_read: 159505
+      cache_write: 5446
+      cost: 0.0726
 ---
 # T-1050 The planner agent definitions say an epic's planner drafts the tasks of the stories it drafts
 

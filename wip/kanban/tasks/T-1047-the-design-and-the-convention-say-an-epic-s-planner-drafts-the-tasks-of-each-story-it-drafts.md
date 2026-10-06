@@ -3,11 +3,11 @@ id: T-1047
 type: task
 nature: improvement
 title: The design and the convention say an epic's planner drafts the tasks of each story it drafts
-status: in-progress
+status: done
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:46:45Z
-updated: 2026-10-06T23:03:10Z
+updated: 2026-10-06T23:07:07Z
 transitions:
   - to: ready
     at: 2026-10-06T23:03:09Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:03:10Z
     by: agent-S-0300
+  - to: done
+    at: 2026-10-06T23:07:07Z
+    by: agent-S-0300
 stream: S-0300
 tags: [planner, conventions]
-touches: [design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
+touches: [design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
+usage:
+  source: log
+  seconds: 237
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 189
+      cache_read: 889924
+      cache_write: 59213
+      cost: 0.4177
 ---
 # T-1047 The design and the convention say an epic's planner drafts the tasks of each story it drafts
 

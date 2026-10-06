@@ -6,7 +6,7 @@ title: flai upgrade consistently pulls an old template no matter what
 status: in-progress
 owner: alex
 created: 2026-10-06T22:46:13Z
-updated: 2026-10-06T23:00:51Z
+updated: 2026-10-06T23:23:59Z
 transitions:
   - to: ready
     at: 2026-10-06T22:46:14Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0301
 tags: [cli]
 topics: [template]
-touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go, flai/internal/template, design/adrs, design/system/template.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/template.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
+touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go, flai/internal/template, design/adrs, design/system/template.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/template.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md, docs/operators/runbooks/migrate.md, docs/operators/settings.md, docs/users/conventions.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,15 +24,15 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 611
+  seconds: 1583
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 200
-      output: 1075
-      cache_read: 7533156
-      cache_write: 337775
-      cost: 3.4667
+      input: 436
+      output: 2478
+      cache_read: 20480602
+      cache_write: 707883
+      cost: 9.3125
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -64,10 +64,10 @@ If there is no ref passed and the operator either set a different version in sys
 In another project, the template defaulted to 1.0.18 (not 1.0.60 which was the latest at the time of this writing). When I change the version manually in system-flow.yaml, it reverts (possibly due to the version in the lock file). But even when providing a version reference to the tag 1.0.60, I still see it revert to 1.0.18.
 
 ## Acceptance criteria
-- [ ] flai correctly updates system-flow files to reflect the new version supplied in the --ref argument before completing the upgrade
-- [ ] flai defaults to the latest available version of the template when creating a new project or upgrading an existing project not created with flai
-- [ ] flai assumes that `flai upgrade` should find and use the latest available tag, update the system-flow files, and then perform the upgrade
-- [ ] if there is a conflict, flai's CLI must prompt the operator with the version they intend before proceeding rather than reverting to the version found in the lock file.
+- [x] flai correctly updates system-flow files to reflect the new version supplied in the --ref argument before completing the upgrade
+- [x] flai defaults to the latest available version of the template when creating a new project or upgrading an existing project not created with flai
+- [x] flai assumes that `flai upgrade` should find and use the latest available tag, update the system-flow files, and then perform the upgrade
+- [x] if there is a conflict, flai's CLI must prompt the operator with the version they intend before proceeding rather than reverting to the version found in the lock file.
 
 ## Tasks
 - T-1057 flai upgrade --ref wins over the manifest's template.ref and records the ref and version it applied

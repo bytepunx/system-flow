@@ -3,13 +3,22 @@ id: S-0261
 type: story
 nature: improvement
 title: The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
-status: ready
+status: done
 owner: alex
 created: 2026-10-04T20:34:55Z
-updated: 2026-10-06T23:03:32Z
+updated: 2026-10-06T23:24:47Z
 transitions:
   - to: ready
     at: 2026-10-06T22:47:33Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-06T23:06:23Z
+    by: agent-S-0261
+  - to: review
+    at: 2026-10-06T23:23:01Z
+    by: agent-S-0261
+  - to: done
+    at: 2026-10-06T23:24:47Z
     by: alex
 tags: []
 topics: [cli, conventions]
@@ -19,6 +28,22 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1243
+  models:
+    - model: claude-opus-5-5
+      input: 236
+      output: 100725
+      cache_read: 8368854
+      cache_write: 348212
+      cost: 5.829
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 3423
+      cache_read: 202430
+      cache_write: 40793
+      cost: 0.1767
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -44,8 +69,8 @@ finalized:
 This story remediates [I-0068](../../../design/issues/I-0068-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md), "The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0068 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0068 is closed with `flai issue close I-0068 --reason` saying what fixed it
+- [x] The cause I-0068 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0068 is closed with `flai issue close I-0068 --reason` saying what fixed it
 
 ## Tasks
 - T-0986 Measure I-0068's packs and propose the fix as an ADR refining ADR-0049

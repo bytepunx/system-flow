@@ -3,11 +3,14 @@ id: S-0303
 type: story
 nature: improvement
 title: The type specifiers act as filters for the board
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T23:23:11Z
-updated: 2026-10-06T23:23:11Z
-transitions: []
+updated: 2026-10-06T23:23:12Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:23:12Z
+    by: alex
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 agent:

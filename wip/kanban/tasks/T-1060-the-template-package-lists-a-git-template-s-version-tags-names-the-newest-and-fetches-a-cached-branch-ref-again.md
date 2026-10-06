@@ -31,7 +31,7 @@ usage:
       output: 249
       cache_read: 1728410
       cache_write: 71324
-      cost: 0.7927
+      cost: 0.791
 ---
 # T-1060 The template package lists a git template's version tags, names the newest, and fetches a cached branch ref again
 

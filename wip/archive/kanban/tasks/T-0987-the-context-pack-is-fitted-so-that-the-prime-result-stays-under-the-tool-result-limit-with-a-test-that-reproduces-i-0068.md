@@ -3,16 +3,36 @@ id: T-0987
 type: task
 nature: improvement
 title: The context pack is fitted so that the prime result stays under the tool result limit, with a test that reproduces I-0068
-status: backlog
+status: done
 parent: S-0261
 owner: alex
 created: 2026-10-05T05:52:15Z
-updated: 2026-10-05T05:52:15Z
-transitions: []
+updated: 2026-10-06T23:13:31Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:07:03Z
+    by: agent-S-0261
+  - to: in-progress
+    at: 2026-10-06T23:07:03Z
+    by: agent-S-0261
+  - to: done
+    at: 2026-10-06T23:13:31Z
+    by: agent-S-0261
 stream: S-0261
 tags: [flai]
 touches: [flai/internal/context]
 after: [T-0986]
+usage:
+  source: log
+  seconds: 388
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 17628
+      cache_read: 1464627
+      cache_write: 60940
+      cost: 1.0201
 ---
 # T-0987 The context pack is fitted so that the prime result stays under the tool result limit, with a test that reproduces I-0068
 
