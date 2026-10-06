@@ -25,7 +25,7 @@ import (
 type Acceptance struct {
 	ID       string   `json:"id"`
 	Status   string   `json:"status"`
-	By       string   `json:"by,omitempty"` // who accepts it, as its done transition records
+	By       string   `json:"by,omitempty"` // who accepted it, as its done transition records; set by the real run
 	DryRun   bool     `json:"dry_run,omitempty"`
 	Resumed  bool     `json:"resumed,omitempty"` // the item was already done but never archived
 	Branch   string   `json:"branch,omitempty"`
@@ -76,7 +76,7 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	if it.Type == workitem.Task {
 		return nil, fmt.Errorf("%s is a task; accept its story instead", it.ID)
 	}
-	res := &Acceptance{ID: it.ID, Status: it.Status, By: by, DryRun: true}
+	res := &Acceptance{ID: it.ID, Status: it.Status, DryRun: true}
 	switch {
 	case it.Status == workitem.Done && !it.Archived:
 		// Done without acceptance: finish the job rather than refuse it.

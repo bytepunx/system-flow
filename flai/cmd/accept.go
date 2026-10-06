@@ -115,6 +115,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, fmt.Errorf("rule: %s is done but was never archived; the orchestrator accepts only a story in review, so the operator completes this acceptance with flai accept %s", it.ID, it.ID)
 	}
 	res.DryRun = o.dryRun
+	if !o.dryRun {
+		res.By = orDefault(o.by, a.author())
+	}
 	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun {
 		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
 	}
