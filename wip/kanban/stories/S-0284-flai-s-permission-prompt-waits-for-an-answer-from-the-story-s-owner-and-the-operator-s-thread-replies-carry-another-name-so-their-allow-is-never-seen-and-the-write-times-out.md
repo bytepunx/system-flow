@@ -6,7 +6,7 @@ title: flai's permission_prompt waits for an answer from the story's owner, and 
 status: ready
 owner: alex
 created: 2026-10-06T03:45:19Z
-updated: 2026-10-06T18:11:07Z
+updated: 2026-10-06T18:11:21Z
 transitions:
   - to: ready
     at: 2026-10-06T06:20:07Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-06T06:23:46Z
 forecast:
   duration: 30m
-  delivery: 2026-10-06T21:05:00Z
-  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 3, behind S-0226, S-0223, S-0224 and S-0227."
+  delivery: 2026-10-06T19:06:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 3, behind S-0226."
   by: flai
-  at: 2026-10-06T18:11:07Z
+  at: 2026-10-06T18:11:21Z
 finalized:
   by: alex
   at: 2026-10-06T06:18:57Z
