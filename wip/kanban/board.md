@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0296
-  - S-0284
   - S-0278
   - S-0223
   - S-0224
@@ -21,9 +20,6 @@ placed:
   S-0278:
     by: flaiover
     at: 2026-10-06T18:11:35Z
-  S-0284:
-    by: flaiover
-    at: 2026-10-06T18:11:18Z
   S-0296:
     by: flaiover
     at: 2026-10-06T18:12:39Z

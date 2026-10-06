@@ -3,16 +3,36 @@ id: T-0999
 type: task
 nature: remediation
 title: The design and the user guide say the story's owner or the project's owner answers a permission thread
-status: backlog
+status: done
 parent: S-0284
 owner: alex
 created: 2026-10-06T06:24:19Z
-updated: 2026-10-06T06:24:19Z
-transitions: []
+updated: 2026-10-06T19:40:45Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:38:26Z
+    by: agent-S-0284
+  - to: in-progress
+    at: 2026-10-06T19:38:26Z
+    by: agent-S-0284
+  - to: done
+    at: 2026-10-06T19:40:45Z
+    by: agent-S-0284
 stream: S-0284
 tags: [docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-0997]
+usage:
+  source: log
+  seconds: 139
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 5958
+      cache_read: 654919
+      cache_write: 35259
+      cost: 0.4765
 ---
 # T-0999 The design and the user guide say the story's owner or the project's owner answers a permission thread
 

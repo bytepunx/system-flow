@@ -3,22 +3,53 @@ id: S-0284
 type: story
 nature: remediation
 title: flai's permission_prompt waits for an answer from the story's owner, and the operator's thread replies carry another name, so their allow is never seen and the write times out
-status: ready
+status: done
 owner: alex
 created: 2026-10-06T03:45:19Z
-updated: 2026-10-06T19:35:23Z
+updated: 2026-10-06T19:45:24Z
 transitions:
   - to: ready
     at: 2026-10-06T06:20:07Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T19:35:46Z
+    by: agent-S-0284
+  - to: review
+    at: 2026-10-06T19:44:34Z
+    by: agent-S-0284
+  - to: done
+    at: 2026-10-06T19:45:24Z
+    by: alex
 tags: []
 topics: [cli]
-touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, design/adrs, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0081-flai-s-permission-prompt-waits-for-an-answer-from-the-story-s-owner-and-the-operator-s-thread-replies-carry-another-name-so-their-allow-is-never-seen-and-the-write-times-out.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, design/adrs, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0081-flai-s-permission-prompt-waits-for-an-answer-from-the-story-s-owner-and-the-operator-s-thread-replies-carry-another-name-so-their-allow-is-never-seen-and-the-write-times-out.md, design/issues/summary.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 561
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 250
+      output: 6971
+      cache_read: 1794209
+      cache_write: 79620
+      cost: 0.3141
+    - model: claude-opus-5-5
+      input: 116
+      output: 34363
+      cache_read: 3776979
+      cache_write: 203340
+      cost: 2.748
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 2575
+      cache_read: 187443
+      cache_write: 42217
+      cost: 0.1688
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -44,8 +75,8 @@ finalized:
 This story remediates [I-0081](../../../design/issues/I-0081-flai-s-permission-prompt-waits-for-an-answer-from-the-story-s-owner-and-the-operator-s-thread-replies-carry-another-name-so-their-allow-is-never-seen-and-the-write-times-out.md), "flai's permission_prompt waits for an answer from the story's owner, and the operator's thread replies carry another name, so their allow is never seen and the write times out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0081 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0081 is closed with `flai issue close I-0081 --reason` saying what fixed it
+- [x] The cause I-0081 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0081 is closed with `flai issue close I-0081 --reason` saying what fixed it
 
 ## Tasks
 - T-0997 An ADR refining ADR-0086 lets the project's owner answer a permission thread as well as the story's owner

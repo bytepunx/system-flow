@@ -3,15 +3,41 @@ id: T-0997
 type: task
 nature: remediation
 title: An ADR refining ADR-0086 lets the project's owner answer a permission thread as well as the story's owner
-status: backlog
+status: done
 parent: S-0284
 owner: alex
 created: 2026-10-06T06:24:05Z
-updated: 2026-10-06T06:24:05Z
-transitions: []
+updated: 2026-10-06T19:38:25Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:37:58Z
+    by: agent-S-0284
+  - to: in-progress
+    at: 2026-10-06T19:37:58Z
+    by: agent-S-0284
+  - to: done
+    at: 2026-10-06T19:38:25Z
+    by: agent-S-0284
 stream: S-0284
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 27
+  estimated: true
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 250
+      output: 6971
+      cache_read: 1794209
+      cache_write: 79620
+      cost: 0.3141
+    - model: claude-opus-5-5
+      input: 10
+      output: 2915
+      cache_read: 320400
+      cache_write: 17249
+      cost: 0.2331
 ---
 # T-0997 An ADR refining ADR-0086 lets the project's owner answer a permission thread as well as the story's owner
 

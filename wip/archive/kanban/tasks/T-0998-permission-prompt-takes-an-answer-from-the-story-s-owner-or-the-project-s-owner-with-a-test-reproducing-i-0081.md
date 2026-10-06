@@ -3,16 +3,36 @@ id: T-0998
 type: task
 nature: remediation
 title: permission_prompt takes an answer from the story's owner or the project's owner, with a test reproducing I-0081
-status: backlog
+status: done
 parent: S-0284
 owner: alex
 created: 2026-10-06T06:24:14Z
-updated: 2026-10-06T06:24:14Z
-transitions: []
+updated: 2026-10-06T19:40:44Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:38:25Z
+    by: agent-S-0284
+  - to: in-progress
+    at: 2026-10-06T19:38:25Z
+    by: agent-S-0284
+  - to: done
+    at: 2026-10-06T19:40:44Z
+    by: agent-S-0284
 stream: S-0284
 tags: [flai]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go]
 after: [T-0997]
+usage:
+  source: log
+  seconds: 139
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 6755
+      cache_read: 742506
+      cache_write: 39974
+      cost: 0.5402
 ---
 # T-0998 permission_prompt takes an answer from the story's owner or the project's owner, with a test reproducing I-0081
 
