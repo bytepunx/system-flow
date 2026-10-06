@@ -3,16 +3,36 @@ id: T-1014
 type: task
 nature: improvement
 title: The design, the user guide, and flai stream sync's help say that sync and acceptance regenerate design/issues/summary.md instead of stopping on it
-status: backlog
+status: done
 parent: S-0278
 owner: alex
 created: 2026-10-06T11:32:30Z
-updated: 2026-10-06T11:32:30Z
-transitions: []
+updated: 2026-10-06T20:03:26Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:59:54Z
+    by: agent-S-0278
+  - to: in-progress
+    at: 2026-10-06T19:59:54Z
+    by: agent-S-0278
+  - to: done
+    at: 2026-10-06T20:03:26Z
+    by: agent-S-0278
 stream: S-0278
 tags: [flai, docs]
 touches: [flai/cmd/stream.go, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-1012, T-1013]
+usage:
+  source: log
+  seconds: 212
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 317
+      cache_read: 1736971
+      cache_write: 69946
+      cost: 0.7854
 ---
 # T-1014 The design, the user guide, and flai stream sync's help say that sync and acceptance regenerate design/issues/summary.md instead of stopping on it
 

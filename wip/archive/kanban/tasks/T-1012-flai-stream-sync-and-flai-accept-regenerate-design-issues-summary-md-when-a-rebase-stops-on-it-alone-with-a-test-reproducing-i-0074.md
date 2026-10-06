@@ -3,16 +3,36 @@ id: T-1012
 type: task
 nature: improvement
 title: flai stream sync and flai accept regenerate design/issues/summary.md when a rebase stops on it alone, with a test reproducing I-0074
-status: backlog
+status: done
 parent: S-0278
 owner: alex
 created: 2026-10-06T11:32:15Z
-updated: 2026-10-06T11:32:42Z
-transitions: []
+updated: 2026-10-06T19:56:21Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:47:35Z
+    by: agent-S-0278
+  - to: in-progress
+    at: 2026-10-06T19:47:35Z
+    by: agent-S-0278
+  - to: done
+    at: 2026-10-06T19:56:21Z
+    by: agent-S-0278
 stream: S-0278
 tags: [flai]
 touches: [flai/cmd/branch.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/cmd/stream_sync_test.go]
 after: [T-1011]
+usage:
+  source: log
+  seconds: 526
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 100
+      output: 545
+      cache_read: 3799779
+      cache_write: 121353
+      cost: 1.7042
 ---
 # T-1012 flai stream sync and flai accept regenerate design/issues/summary.md when a rebase stops on it alone, with a test reproducing I-0074
 

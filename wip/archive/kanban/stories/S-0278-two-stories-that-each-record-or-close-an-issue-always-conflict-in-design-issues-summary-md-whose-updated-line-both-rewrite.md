@@ -3,21 +3,41 @@ id: S-0278
 type: story
 nature: improvement
 title: Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
-status: ready
+status: done
 owner: alex
 created: 2026-10-05T04:40:47Z
-updated: 2026-10-06T19:45:24Z
+updated: 2026-10-06T20:07:39Z
 transitions:
   - to: ready
     at: 2026-10-06T11:29:58Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T19:46:01Z
+    by: agent-S-0278
+  - to: review
+    at: 2026-10-06T20:07:26Z
+    by: agent-S-0278
+  - to: done
+    at: 2026-10-06T20:07:39Z
+    by: alex
 tags: []
-touches: [flai/cmd/branch.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0074-two-stories-that-each-record-or-close-an-issue-always-conflict-in-design-issues-summary-md-whose-updated-line-both-rewrite.md, design/issues/summary.md]
+touches: [flai/cmd/branch.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0074-two-stories-that-each-record-or-close-an-issue-always-conflict-in-design-issues-summary-md-whose-updated-line-both-rewrite.md, design/issues/summary.md, design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md, design/issues/I-0089-design-issues-summary-md-is-generated-and-committed-so-a-story-branch-that-records-an-issue-conflicts-with-any-issue-recorded-on-main-meanwhile.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1076
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 244
+      output: 1380
+      cache_read: 8691028
+      cache_write: 355355
+      cost: 3.9319
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -43,8 +63,8 @@ finalized:
 This story remediates [I-0074](../../../design/issues/I-0074-two-stories-that-each-record-or-close-an-issue-always-conflict-in-design-issues-summary-md-whose-updated-line-both-rewrite.md), "Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0074 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0074 is closed with `flai issue close I-0074 --reason` saying what fixed it
+- [x] The cause I-0074 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0074 is closed with `flai issue close I-0074 --reason` saying what fixed it
 
 ## Tasks
 - T-1011 Choose how flai keeps design/issues/summary.md from stopping a sync, from I-0074's instances, and record it in an ADR

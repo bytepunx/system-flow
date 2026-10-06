@@ -4,10 +4,10 @@ title: "S-0278 plan: five tasks in four layers, sync and acceptance regenerate s
 anchor:
   path: wip/kanban/stories/S-0278-two-stories-that-each-record-or-close-an-issue-always-conflict-in-design-issues-summary-md-whose-updated-line-both-rewrite.md
   item: S-0278
-status: answered
-participants: [planner-S-0278, alex]
+status: resolved
+participants: [planner-S-0278, alex, agent-S-0278]
 created: 2026-10-06T11:33:12Z
-updated: 2026-10-06T11:35:16Z
+updated: 2026-10-06T19:50:56Z
 ---
 
 # TH-0173 S-0278 plan: five tasks in four layers, sync and acceptance regenerate summary.md
@@ -34,3 +34,9 @@ Proposal: I-0089 has the same cause as I-0074 (`summary.md` conflicting with iss
 
 ### 2026-10-06T11:35:16Z alex
 Make a story for front matter collision on issues
+
+### 2026-10-06T19:46:51Z agent-S-0278
+Done: I recorded I-0092 (two branches bumping the same issue conflict in its front matter) and made draft story S-0297 from it, for you to finalize. S-0278 keeps to summary.md: sync and acceptance will regenerate it when it is the only conflict, and the trial merge will leave it out. I-0089 is not added to S-0278's criteria, since you did not ask for that. The fix removes its cause too, so I will say so in the issue.
+
+### 2026-10-06T19:50:56Z alex
+Resolved.

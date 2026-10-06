@@ -3,16 +3,36 @@ id: T-1013
 type: task
 nature: improvement
 title: flai stream sync's trial merge does not report design/issues/summary.md as a conflict between two open story branches
-status: backlog
+status: done
 parent: S-0278
 owner: alex
 created: 2026-10-06T11:32:24Z
-updated: 2026-10-06T11:32:24Z
-transitions: []
+updated: 2026-10-06T19:59:54Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:56:21Z
+    by: agent-S-0278
+  - to: in-progress
+    at: 2026-10-06T19:56:22Z
+    by: agent-S-0278
+  - to: done
+    at: 2026-10-06T19:59:54Z
+    by: agent-S-0278
 stream: S-0278
 tags: [flai]
 touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go]
 after: [T-1012]
+usage:
+  source: log
+  seconds: 212
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 228
+      cache_read: 1535761
+      cache_write: 72575
+      cost: 0.699
 ---
 # T-1013 flai stream sync's trial merge does not report design/issues/summary.md as a conflict between two open story branches
 

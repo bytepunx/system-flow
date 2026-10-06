@@ -3,15 +3,35 @@ id: T-1011
 type: task
 nature: research
 title: Choose how flai keeps design/issues/summary.md from stopping a sync, from I-0074's instances, and record it in an ADR
-status: backlog
+status: done
 parent: S-0278
 owner: alex
 created: 2026-10-06T11:31:58Z
-updated: 2026-10-06T11:32:05Z
-transitions: []
+updated: 2026-10-06T19:47:35Z
+transitions:
+  - to: ready
+    at: 2026-10-06T19:46:57Z
+    by: agent-S-0278
+  - to: in-progress
+    at: 2026-10-06T19:46:57Z
+    by: agent-S-0278
+  - to: done
+    at: 2026-10-06T19:47:35Z
+    by: agent-S-0278
 stream: S-0278
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 38
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 35
+      cache_read: 396581
+      cache_write: 5017
+      cost: 0.1745
 ---
 # T-1011 Choose how flai keeps design/issues/summary.md from stopping a sync, from I-0074's instances, and record it in an ADR
 
