@@ -21,9 +21,9 @@ import (
 // its output when there is one, then writes what it was given to
 // orchestrator-<pid>.txt, so that once given has read it, the run's usage is
 // in its log and a stop cannot come before it (I-0090). It then waits while
-// held until released, marks its exit, as it
-// would have ended, when asked to stop, and exits with the code in
-// exit-orchestrator when there is one. The orchestrate action is off.
+// held until released, marks its exit, as it would have ended, when asked to
+// stop, and exits with the code in exit-orchestrator when there is one. The
+// orchestrate action is off.
 type orchestrateLab struct {
 	*agentLab
 	orch  *orchestrator
