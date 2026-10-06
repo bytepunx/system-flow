@@ -17,9 +17,11 @@ import (
 
 // orchestrateLab is an agentLab whose command is an orchestrator stub, with
 // the project's orchestrator on the lab's launcher and a clock of its own,
-// later than the launcher's by shift. The stub writes what it was given to
-// orchestrator-<pid>.txt, prints stream-orchestrator as its output when
-// there is one, waits while held until released, marks its exit, as it
+// later than the launcher's by shift. The stub prints stream-orchestrator as
+// its output when there is one, then writes what it was given to
+// orchestrator-<pid>.txt, so that once given has read it, the run's usage is
+// in its log and a stop cannot come before it (I-0090). It then waits while
+// held until released, marks its exit, as it
 // would have ended, when asked to stop, and exits with the code in
 // exit-orchestrator when there is one. The orchestrate action is off.
 type orchestrateLab struct {
@@ -35,8 +37,8 @@ func newOrchestrateLab(t *testing.T) *orchestrateLab {
 	stub := filepath.Join(d, "orch-agent")
 	script := "#!/bin/sh\n" +
 		"trap 'touch \"" + d + "/ended-$$\"; exit 143' TERM\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: ${FLAI_STORY-unset}\"; echo \"role: $FLAI_ROLE\"; echo \"item: ${FLAI_ITEM-unset}\"; echo \"session: $FLAI_SESSION\"; echo \"by: $FLAI_STARTED_BY\"; } > \"" + d + "/orchestrator-$$.txt\"\n" +
 		"[ -f \"" + d + "/stream-orchestrator\" ] && cat \"" + d + "/stream-orchestrator\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: ${FLAI_STORY-unset}\"; echo \"role: $FLAI_ROLE\"; echo \"item: ${FLAI_ITEM-unset}\"; echo \"session: $FLAI_SESSION\"; echo \"by: $FLAI_STARTED_BY\"; } > \"" + d + "/orchestrator-$$.txt\"\n" +
 		"while [ -f \"" + d + "/hold\" ] && [ ! -f \"" + d + "/release-orchestrator\" ]; do sleep 0.05; done\n" +
 		"touch \"" + d + "/ended-$$\"\n" +
 		"[ -f \"" + d + "/exit-orchestrator\" ] && exit \"$(cat \"" + d + "/exit-orchestrator\")\"\n" +
@@ -218,7 +220,7 @@ func TestTheOrchestratorIsStoppedWhenTheActionIsTurnedOff(t *testing.T) {
 					}
 				}()
 			}
-			lab.given(run.PID) // it runs and has set its trap
+			lab.given(run.PID) // it runs, has set its trap, and has printed its usage
 			lab.cfg.Orchestrate = false
 			lab.look()
 			if Alive(run.PID) {
