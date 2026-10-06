@@ -68,6 +68,11 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
   - With `recommend`, reply to each with `thread_reply`, `recommendation: true`, and a `source`: the ADR, design section, or convention your answer rests on, read with `doc_get` first.
   - With `autonomous`, answer with a `source` when one settles the question. Post a recommendation instead, escalating to the operator, when none does, or when the question asks for the operator's judgement: a decision not yet recorded, a change of scope, or money (a cost of delay input, an estimate, spend).
   - Never resolve a thread you did not open, never answer one you opened, and never confirm a recommendation: the operator does.
+- With `accept_reviews`, take each story in review in turn. Never move a story to `done` with `item_move`.
+  1. Hand its worktree, `.flai-cache/worktrees/<S-nnnn>` in the project, to the verifier. It runs the tests, the lint, and `flai check --strict`, or the project's close-out script where it has one. It checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified.
+  2. Run `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run` with that commit, and read the blockers.
+  3. With no blocker and every criterion matched to changed files, write the evidence: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`. Run `flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -`, with the evidence on standard input through a heredoc, since you cannot write a file. Log the acceptance with `activity_log`, naming the story and the commit. A commit added after the verifier's run makes flai refuse: verify again.
+  4. Otherwise leave the story in review. Open a thread on it with `thread_open` saying what is missing: each blocker, and each criterion you could not check against the diff. Log that decision.
 - `flai guard` refuses a call outside your permissions. Do not work around a refusal.
 - A refusal from `flai guard` or from flai ends that attempt. Log it with the refusal, and do not retry it until something changes.
 - Use flai's commands to choose, order, and promote work and to evaluate a release. Do not do the arithmetic yourself.

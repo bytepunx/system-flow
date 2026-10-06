@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.58 - 2026-10-06
+
+- S-0221 The orchestrator accepts a story in review when `accept_reviews` allows it (patch): `strategic-agents.md`'s section "As the orchestrator" says how. It hands the story's worktree to its verifier, which runs the tests, the lint, and `flai check --strict`, matches each acceptance criterion to the changed files that meet it, and names the commit it verified. It runs `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run` and reads the blockers. With none, and every criterion matched, it runs `flai accept` with `--verified` and `--evidence -`, a `Verdict:` line and one `- <n>: <files>` item per criterion on standard input, and logs the acceptance with `activity_log`, naming the story and the commit. Otherwise it leaves the story in review, opens a thread on it saying what is missing, and logs that decision. It never moves a story to `done` with `item_move`. `.claude/agents/orchestrator.md` says the same. The commands need a flai that has them.
+
 ## 1.0.57 - 2026-10-06
 
 - S-0285 A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout (patch).

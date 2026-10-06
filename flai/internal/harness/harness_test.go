@@ -903,7 +903,8 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
 		}
 	}
-	for _, never := range []string{"flai stream open", "flai move", "worktree", "As the planner", "End with"} {
+	// it names a story's worktree only to hand it to the verifier (S-0221)
+	for _, never := range []string{"flai stream open", "flai stream sync", "flai move", "Work it in the worktree", "As the planner", "End with"} {
 		if strings.Contains(p, never) {
 			t.Errorf("the orchestrator's prompt says %q:\n%s", never, p)
 		}
@@ -984,6 +985,46 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 	for who, o := range others {
 		if strings.Contains(o, "answer_threads") || strings.Contains(o, "pending_recommendation") {
 			t.Errorf("%s's prompt names answer_threads or pending_recommendation:\n%s", who, o)
+		}
+	}
+}
+
+// S-0221: while accept_reviews is on, the orchestrator hands a story in
+// review's worktree to its verifier, reads flai accept --dry-run's blockers
+// at the commit verified, and accepts with --verified and evidence for every
+// criterion, passed on standard input since it cannot write a file, logging
+// the acceptance; otherwise it leaves the story in review and says on a
+// thread what is missing. It never moves a story to done with item_move. No
+// other agent is told any of it (ADR-0093).
+func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
+	p := Prompt(orchestrateReq(nil))
+	for _, w := range []string{
+		"While accept_reviews is on, take each story in review in turn",
+		// the verifier
+		"Hand its worktree, /p/flow/.flai-cache/worktrees/<S-nnnn>, to the verifier with the Agent tool",
+		"it runs the tests, the lint, and flai check --strict, or the project's close-out script where it has one",
+		"checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified",
+		// the preview
+		"Run flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run with that commit, and read the blockers",
+		// the acceptance and its evidence
+		"With no blocker and every criterion matched to changed files, write the evidence, a Verdict: line from the verifier's report and one list item per criterion, - <n>: <files>",
+		"run flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -, passing the evidence on standard input with a heredoc in the shell, since you cannot write a file",
+		"then log the acceptance with activity_log, naming the story and the commit",
+		// what is missing
+		"Otherwise leave the story in review, open a thread on it with the flai MCP tool thread_open saying what is missing, each blocker and each criterion you could not check against the diff, and log that decision",
+		"A commit added after the verifier's run makes flai refuse: verify again",
+		"Never move a story to done with item_move, and never accept a story while accept_reviews is off",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	for who, o := range others {
+		for _, w := range []string{"accept_reviews", "--by orchestrator", "--verified", "--evidence"} {
+			if strings.Contains(o, w) {
+				t.Errorf("%s's prompt says %q", who, w)
+			}
 		}
 	}
 }
