@@ -114,57 +114,6 @@ func TestTheMCPServerStartsThePlannerUnderThePlanAction(t *testing.T) {
 	}
 }
 
-// S-0218: of the agents flai serve starts, the orchestrator may have the
-// planner draft an epic in the backlog, while the project gives it
-// plan_backlog_epics, and nothing else; the journal names it.
-func TestTheOrchestratorAsksForThePlannerOnABacklogEpic(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_STARTED_BY", "flai-serve")
-	t.Setenv("FLAI_ROLE", "orchestrate")
-	root := tempProject(t)
-	runIn(t, root, "epic", "new", "Backlog epic")
-	runIn(t, root, "epic", "new", "Dropped epic")
-	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
-	runIn(t, root, "move", "E-0002", "cancelled", "--reason", "dropped")
-	runIn(t, root, "serve", "enable", "plan")
-	runIn(t, root, "serve", "agent", "set", "--", "true")
-	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC) }}
-	ctx := context.Background()
-	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-o"); err == nil || !strings.Contains(err.Error(), "only with orchestration.permissions.plan_backlog_epics, which is off") {
-		t.Errorf("permission off: %v", err)
-	}
-	manifest := filepath.Join(root, "system-flow.yaml")
-	data, _ := os.ReadFile(manifest)
-	if err := os.WriteFile(manifest, append(data, "orchestration:\n  permissions:\n    plan_backlog_epics: true\n"...), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	for item, want := range map[string]string{
-		"S-0001": "on a backlog epic alone, and S-0001 is not an epic",
-		"T-0001": "T-0001 is not an epic",
-		"E-0002": "on a backlog epic alone, and E-0002 is cancelled",
-	} {
-		if _, err := a.mcpPlan(ctx, root, item, "agent-o"); err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("%s: %v", item, err)
-		}
-	}
-	if _, stderr, code := runIn(t, root, "plan", "E-0002"); code == 0 || !strings.Contains(stderr, "E-0002 is cancelled") {
-		t.Errorf("flai plan in the orchestrator's shell, on a cancelled epic: exit %d %s", code, stderr)
-	}
-	got, err := a.mcpPlan(ctx, root, "E-0001", "agent-o")
-	if err != nil || got.Item != "E-0001" || got.Agent != "planner-E-0001" || got.PID == 0 {
-		t.Fatalf("a backlog epic: %+v %v", got, err)
-	}
-	t.Setenv("FLAI_ROLE", "plan")
-	if _, err := a.mcpPlan(ctx, root, "E-0001", "planner-S-0001"); err == nil || !strings.Contains(err.Error(), "an agent flai serve started does not start the planner") {
-		t.Errorf("another agent flai serve started: %v", err)
-	}
-	js, _, _ := runIn(t, root, "serve", "journal", "--json")
-	if !strings.Contains(js, `"by": "orchestrator (agent-o)"`) || !strings.Contains(js, "orchestrator (agent-o) asked to plan E-0001: started true as planner-E-0001") {
-		t.Errorf("the journal does not name the orchestrator: %s", js)
-	}
-}
-
 func TestOrchestratorBy(t *testing.T) {
 	for by, want := range map[string]string{"": "orchestrator", "orchestrator-t": "orchestrator-t", "system-flow": "orchestrator (system-flow)"} {
 		if got := orchestratorBy(by); got != want {

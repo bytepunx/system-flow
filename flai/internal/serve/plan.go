@@ -38,6 +38,10 @@ var planned = regexp.MustCompile(`^[ES]-\d{3,}$`)
 // (ADR-0084).
 const triggerAsked = "asked"
 
+// TriggerOrchestrator is the trigger of a planner run the orchestrator asked
+// for (S-0219).
+const TriggerOrchestrator = "orchestrator"
+
 // Plan starts the planner for item, an epic or a story, in project e, and
 // returns its run as recorded. It is refused while the plan host action is
 // off for the project, for an ID that is not an epic's or a story's, for an
@@ -49,9 +53,18 @@ func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, erro
 	return planFor(ctx, o, e, item, triggerAsked)
 }
 
+// PlanForOrchestrator is Plan for a run the orchestrator asked for: its
+// trigger is orchestrator in place of asked, so that the run and its entry
+// in the planner's activity document say who asked (S-0219). It is refused
+// as Plan is; whether the orchestrator may ask for item is its caller's to
+// judge.
+func PlanForOrchestrator(ctx context.Context, o Options, e Entry, item string) (*AgentRun, error) {
+	return planFor(ctx, o, e, item, TriggerOrchestrator)
+}
+
 // planFor is Plan for a run started by trigger, what the run records and its
-// activity entry says started it (ADR-0084): asked for the operator's, the
-// replanner's triggers otherwise. It is refused as Plan is.
+// activity entry says started it (ADR-0084): asked for the operator's,
+// orchestrator for the orchestrator's, the replanner's triggers otherwise. It is refused as Plan is.
 func planFor(ctx context.Context, o Options, e Entry, item, trigger string) (*AgentRun, error) {
 	ps, err := planCheck(o, e, item)
 	if err != nil {

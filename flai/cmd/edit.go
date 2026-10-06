@@ -4,13 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // flai edit changes a work item after it was made (S-0085).
@@ -48,7 +51,10 @@ story, and a cycle.
 Planning data (S-0199). --draft makes a backlog story a draft and
 --no-draft finalizes one, which may then go to ready; finalizing records who
 finalized it (--by) and when, in its finalized block, and --draft again
-removes that block (S-0201). A cost of delay, on a
+removes that block (S-0201). The orchestrator (FLAI_ROLE=orchestrate)
+finalizes with --no-draft alone, and only a draft that flai promote --drafts
+finds complete; it is refused, naming what the draft lacks, otherwise
+(S-0219). A cost of delay, on a
 story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as
 amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and
 a value per week (--cost-of-delay-value). A story's forecast has a duration
@@ -189,6 +195,11 @@ the item changed.`,
 			if ch == (itemedit.Change{}) {
 				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, --draft, --no-draft, a cost of delay or forecast flag, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
+			if noDraft && os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
+				if err := orchestratorFinalizes(repo, args[0], ch); err != nil {
+					return fmt.Errorf("rule: %w", err)
+				}
+			}
 			by := a.writer()
 			if byFlag != "" {
 				by = byFlag
@@ -291,6 +302,28 @@ the item changed.`,
 	f.BoolVar(&autocommit, "autocommit", false, "commit every file the edit touched, unless dashboard.autocommit is false")
 	f.StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	return c
+}
+
+// orchestratorFinalizes says why the orchestrator may not make change ch to
+// item id in repo, a --no-draft, or nil when it may (S-0219): the change
+// finalizes the draft and does nothing else, and the draft check (flai
+// promote --drafts) finds the story complete.
+func orchestratorFinalizes(repo *workitem.Repo, id string, ch itemedit.Change) error {
+	if ch != (itemedit.Change{Draft: ch.Draft}) {
+		return fmt.Errorf("%s: the orchestrator finalizes a draft with --no-draft and nothing else; it changes nothing else of an item", id)
+	}
+	it, err := repo.Get(id)
+	if err != nil {
+		return err
+	}
+	lacks, err := repo.Finalizable(it)
+	if err != nil {
+		return err
+	}
+	if len(lacks) > 0 {
+		return fmt.Errorf("%s is not complete, so the orchestrator does not finalize it (flai promote --drafts): %s", it.ID, strings.Join(lacks, "; "))
+	}
+	return nil
 }
 
 // planningChange puts the draft, cost of delay, and forecast flags given on

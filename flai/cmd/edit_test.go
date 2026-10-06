@@ -309,3 +309,57 @@ func TestTaskAfterIsSetByTaskNewAndEdit(t *testing.T) {
 		t.Errorf("a story's after at creation: %v", matches)
 	}
 }
+
+// S-0219: in the orchestrator's shell flai edit --no-draft finalizes only a
+// draft that flai promote --drafts finds complete, with nothing else
+// changed, and names the orchestrator as who finalized it; an incomplete one
+// is refused naming what it lacks. Outside it --no-draft is as it was.
+func TestTheOrchestratorFinalizesOnlyACompleteDraft(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "orchestrator")
+	t.Setenv("FLAI_ROLE", "")
+	root := tempProject(t)
+	run := func(args ...string) string {
+		t.Helper()
+		out, errOut, code := runIn(t, root, args...)
+		if code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+		return out
+	}
+	run("epic", "new", "Epic")
+	run("story", "new", "Complete", "--epic", "E-0001", "--touches", "flai", "--draft")
+	run("story", "new", "Incomplete", "--epic", "E-0001", "--draft")
+	run("story", "new", "Also incomplete", "--epic", "E-0001", "--draft")
+	stories, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", "S-000*.md"))
+	complete := stories[0]
+	s := read(t, complete)
+	s = strings.Replace(s, "## Goal\n", "## Goal\n\nDo it.\n", 1)
+	s = strings.Replace(s, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] it works\n", 1)
+	if err := os.WriteFile(complete, []byte(s), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("edit", "S-0001", "--cost-of-delay-value", "300", "--forecast-duration", "2h", "--forecast-delivery", "2026-09-20T12:00:00Z")
+
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	if _, errOut, code := runIn(t, root, "edit", "S-0002", "--no-draft"); code == 0 || !strings.Contains(errOut, "rule: S-0002 is not complete, so the orchestrator does not finalize it (flai promote --drafts): no goal; no acceptance criteria with a checkbox; no touches; no forecast duration; no forecast delivery; no cost of delay value") {
+		t.Errorf("an incomplete draft: exit %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "edit", "S-0001", "--no-draft", "--title", "Renamed"); code == 0 || !strings.Contains(errOut, "rule: S-0001: the orchestrator finalizes a draft with --no-draft and nothing else") {
+		t.Errorf("with another change: exit %d %s", code, errOut)
+	}
+	if item := read(t, complete); !strings.Contains(item, "\ndraft: true\n") || strings.Contains(item, "finalized:") {
+		t.Fatalf("a refused edit finalized the story:\n%s", item)
+	}
+	if out := run("edit", "S-0001", "--no-draft"); !strings.Contains(out, "S-0001: changed draft") {
+		t.Errorf("a complete draft: %s", out)
+	}
+	if item := read(t, complete); strings.Contains(item, "\ndraft: true\n") || !strings.Contains(item, "finalized:\n  by: orchestrator\n") {
+		t.Errorf("finalized by the orchestrator:\n%s", item)
+	}
+
+	t.Setenv("FLAI_ROLE", "")
+	if out := run("edit", "S-0003", "--no-draft"); !strings.Contains(out, "S-0003: changed draft") {
+		t.Errorf("an incomplete draft outside the orchestrator's shell, as before: %s", out)
+	}
+}

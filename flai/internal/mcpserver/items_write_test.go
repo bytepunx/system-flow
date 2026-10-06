@@ -551,3 +551,101 @@ func TestAnOldOverlapNoticeReportsAsBefore(t *testing.T) {
 		t.Errorf("the change: %v", c)
 	}
 }
+
+// orchestrated is a server whose caller is the orchestrator, as flai serve
+// starts it, and a maker of stories in its backlog under the fixture's epic:
+// each with a goal, a criterion, and the touches given, a draft when draft
+// is true, and with a forecast and a cost of delay when planned is true.
+func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned bool, touches ...string) string) {
+	t.Helper()
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	f := setupWith(t, func(o *Options) { o.Agent = "orchestrator" })
+	story := func(title string, draft, planned bool, touches ...string) string {
+		t.Helper()
+		args := map[string]any{"type": "story", "title": title, "parent": f.story.Parent, "draft": draft, "body": "## Goal\n\nx\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"}
+		if len(touches) > 0 {
+			args["touches"] = touches
+		}
+		out, failed := f.call(t, "item_new", args)
+		if failed != "" {
+			t.Fatalf("%s: %s", title, failed)
+		}
+		id := out["id"].(string)
+		if planned {
+			if _, failed := f.call(t, "item_edit", map[string]any{"id": id, "cost_of_delay": map[string]any{"value": 300}, "forecast": map[string]any{"duration": "2h", "delivery": "2026-09-20T12:00:00Z"}}); failed != "" {
+				t.Fatalf("%s planned: %s", title, failed)
+			}
+		}
+		return id
+	}
+	return f, story
+}
+
+// S-0219: the orchestrator finalizes a draft with item_edit's draft false and
+// nothing else, and only a complete one, which then names it as who
+// finalized it; an incomplete one is refused naming what it lacks.
+func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
+	f, story := orchestrated(t)
+	complete := story("Complete", true, true, "docs")
+	incomplete := story("Incomplete", true, false)
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": complete, "draft": false, "title": "Renamed"}); !strings.Contains(failed, complete+": the orchestrator finalizes a draft with draft false and nothing else") {
+		t.Errorf("with another change: %q", failed)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": incomplete, "draft": false}); !strings.Contains(failed, incomplete+" is not complete, so the orchestrator does not finalize it (flai promote --drafts): no touches; no forecast duration; no forecast delivery; no cost of delay value") {
+		t.Errorf("an incomplete draft: %q", failed)
+	}
+	for _, id := range []string{complete, incomplete} {
+		if it, _ := f.repo.Get(id); !it.Draft || it.Finalized != nil {
+			t.Errorf("%s finalized by a refused call: %+v", id, it.Finalized)
+		}
+	}
+	ed, failed := f.call(t, "item_edit", map[string]any{"id": complete, "draft": false})
+	if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "draft" {
+		t.Fatalf("a complete draft: %v %s", ed, failed)
+	}
+	it, _ := f.repo.Get(complete)
+	if it.Draft || it.Finalized == nil || it.Finalized.By != "orchestrator" || it.Finalized.At != f.clock.UTC().Format(workitem.TimeFormat) {
+		t.Errorf("finalized = %+v, want the orchestrator, now", it.Finalized)
+	}
+}
+
+// S-0219: the orchestrator moves to ready only a story flai promote
+// --candidates lists, and only while ready is under its WIP limit; a held
+// story, a draft, and any other item are refused with the reason.
+func TestTheOrchestratorPromotesACandidateWhileReadyHasRoom(t *testing.T) {
+	f, story := orchestrated(t)
+	candidate := story("Candidate", false, true, "docs/a")
+	next := story("Next", false, true, "docs/b")
+	held := story("Held", false, true, "flai/internal/mcpserver/x")
+	drafted := story("Drafted", true, true, "docs/c")
+	unplanned := story("Unplanned", false, false, "docs/d")
+	for id, want := range map[string]string{
+		held:      held + " is not a candidate to go to ready (flai promote --candidates): held (overlap)",
+		drafted:   drafted + " is not a candidate to go to ready (flai promote --candidates): draft: finalize it first",
+		unplanned: unplanned + " is not a candidate to go to ready (flai promote --candidates): no forecast duration; no cost of delay value",
+		f.task.ID: f.task.ID + " is a task: the orchestrator moves a story to ready",
+	} {
+		if _, failed := f.call(t, "item_move", map[string]any{"id": id, "to": "ready"}); !strings.Contains(failed, want) {
+			t.Errorf("%s: %q, want %q", id, failed, want)
+		}
+	}
+	if out, failed := f.call(t, "item_move", map[string]any{"id": candidate, "to": "ready"}); failed != "" || out["status"] != "ready" {
+		t.Fatalf("a candidate: %v %s", out, failed)
+	}
+	b, err := f.repo.LoadBoard()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := b.SetLimit(workitem.Ready, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Save("2026-09-18"); err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"id": next, "to": "ready"}); !strings.Contains(failed, "the ready column is at its WIP limit (1 of 1): the orchestrator moves no story to ready until one leaves it") {
+		t.Errorf("a candidate with ready full: %q", failed)
+	}
+	if it, _ := f.repo.Get(next); it.Status != workitem.Backlog {
+		t.Errorf("%s moved: %s", next, it.Status)
+	}
+}

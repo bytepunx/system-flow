@@ -128,8 +128,8 @@ type AgentRun struct {
 	// Answered is the question this run was started again for.
 	Answered string `json:"answered,omitempty"`
 	// Trigger is what started a planner run (ADR-0084): asked, for the
-	// operator's asking, and otherwise the replanner's triggers, separated by
-	// semicolons. It is empty on a story's agent's run and on planner runs
+	// operator's asking, orchestrator, for the orchestrator's (S-0219), and
+	// otherwise the replanner's triggers, separated by semicolons. It is empty on a story's agent's run and on planner runs
 	// before S-0211.
 	Trigger string `json:"trigger,omitempty"`
 	// Outcome is set once it has ended; Why says what went wrong, and Thread

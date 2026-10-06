@@ -107,7 +107,7 @@ type ItemEditIn struct {
 	Body       *string         `json:"body,omitempty" jsonschema:"replaces everything below the heading"`
 	// Draft, CostOfDelay, and Forecast are the item's planning data (S-0199),
 	// each block stamped with this agent as who set it.
-	Draft            *bool          `json:"draft,omitempty" jsonschema:"a story's: true makes a story in the backlog a draft; false is refused, since finalizing a draft is the operator's"`
+	Draft            *bool          `json:"draft,omitempty" jsonschema:"a story's: true makes a story in the backlog a draft; false is refused, since finalizing a draft is the operator's, but to the orchestrator, which finalizes a complete draft with false alone"`
 	CostOfDelay      *CostOfDelayIn `json:"cost_of_delay,omitempty" jsonschema:"a story's or epic's cost of delay: only the keys given change; with clear_cost_of_delay it replaces the cost of delay"`
 	ClearCostOfDelay bool           `json:"clear_cost_of_delay,omitempty" jsonschema:"removes the cost of delay; to remove one amount, give this and cost_of_delay with the keys to keep"`
 	Forecast         *ForecastIn    `json:"forecast,omitempty" jsonschema:"a story's forecast: only the keys given change; with clear_forecast it replaces the forecast"`
@@ -170,15 +170,19 @@ type ItemEditOut struct {
 }
 
 func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEditIn) (*mcp.CallToolResult, ItemEditOut, error) {
-	if in.Draft != nil && !*in.Draft {
-		// finalizing is the operator's: no agent may until the orchestrator's
-		// permission to finalize exists (S-0218)
-		return nil, ItemEditOut{}, fmt.Errorf("%s: draft false would finalize it, which is the operator's: say in a thread or your narrative that it is ready to be finalized", in.ID)
-	}
 	ch := itemedit.Change{Title: in.Title, Nature: in.Nature, Tags: in.Tags, Topics: in.Topics, Touches: in.Touches, After: in.After, Parent: in.Parent, Body: in.Body, Agent: in.Agent, ClearAgent: in.ClearAgent,
 		Draft: in.Draft, CostOfDelay: in.CostOfDelay.edit(), ClearCostOfDelay: in.ClearCostOfDelay, Forecast: in.Forecast.edit(), ClearForecast: in.ClearForecast}
 	if ch == (itemedit.Change{}) {
 		return nil, ItemEditOut{}, errors.New("nothing to change: give title, nature, tags, topics, touches, after, parent, agent, clear_agent, body, draft, cost_of_delay, clear_cost_of_delay, forecast, or clear_forecast")
+	}
+	if in.Draft != nil && !*in.Draft {
+		if !s.orchestrator() {
+			// finalizing is the operator's, and the orchestrator's (S-0219)
+			return nil, ItemEditOut{}, fmt.Errorf("%s: draft false would finalize it, which is the operator's: say in a thread or your narrative that it is ready to be finalized", in.ID)
+		}
+		if err := s.finalizes(in.ID, ch); err != nil {
+			return nil, ItemEditOut{}, err
+		}
 	}
 	var watch *itemedit.ClaimWatch
 	if in.Touches != nil {
@@ -193,6 +197,29 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 		changed = []string{}
 	}
 	return nil, ItemEditOut{ID: res.ID, Changed: changed, Unchanged: res.Unchanged, Hash: res.Hash, Overlaps: s.grown(watch, res.ID)}, nil
+}
+
+// finalizes says why the orchestrator may not make change ch to item id, a
+// draft false, or nil when it may (S-0219): the change finalizes the draft
+// and does nothing else, and the draft check (flai promote --drafts) finds
+// the story complete. The finalized block then names the orchestrator, as
+// any edit's names who made it.
+func (s *server) finalizes(id string, ch itemedit.Change) error {
+	if ch != (itemedit.Change{Draft: ch.Draft}) {
+		return fmt.Errorf("%s: the orchestrator finalizes a draft with draft false and nothing else; it changes nothing else of an item", id)
+	}
+	it, err := s.repo.Get(id)
+	if err != nil {
+		return err
+	}
+	lacks, err := s.repo.Finalizable(it)
+	if err != nil {
+		return err
+	}
+	if len(lacks) > 0 {
+		return fmt.Errorf("%s is not complete, so the orchestrator does not finalize it (flai promote --drafts): %s", it.ID, strings.Join(lacks, "; "))
+	}
+	return nil
 }
 
 // refusal is err with, when flai check refused the change, the findings in

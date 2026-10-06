@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
@@ -85,6 +86,7 @@ type server struct {
 	repo    *workitem.Repo
 	key     string // the manifest's key, else the folder's name
 	agent   string
+	role    string // the caller's role, as FLAI_ROLE says it (S-0219)
 	now     func() time.Time
 	poll    time.Duration
 	maxWait time.Duration
@@ -115,6 +117,9 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 	if s.agent == "" {
 		s.agent = "agent"
 	}
+	// flai serve sets the orchestrator's role in its session, whose flai mcp
+	// inherits it: the orchestrator's writes are held to its criteria (S-0219)
+	s.role = os.Getenv("FLAI_ROLE")
 	if s.now == nil {
 		s.now = time.Now
 	}
@@ -526,11 +531,18 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	if in.To == workitem.Done && it.Type != workitem.Task {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is %s: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready", it.ID, articled(it.Type))
 	}
+	if in.To == workitem.Ready && s.orchestrator() {
+		// the orchestrator promotes a candidate alone, while ready has room,
+		// as flai move holds it (S-0219)
+		if err := s.repo.Promotable(it); err != nil {
+			return nil, ItemMoveOut{}, err
+		}
+	}
 	if in.To == workitem.Ready && it.Type == workitem.Story && it.Draft {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is a draft: finalizing it, which lets it go to ready, is the operator's; say in a thread or your narrative that it is ready to be finalized", it.ID)
 	}
-	// finalize is false: no agent finalizes a draft until the orchestrator's
-	// permission to finalize exists (S-0218)
+	// finalize is false: a move finalizes no draft; the orchestrator
+	// finalizes a complete one with item_edit (S-0219)
 	res, err := s.repo.TransitionAll(it, in.To, s.agent, in.Reason, s.now(), false)
 	if err != nil {
 		return nil, ItemMoveOut{}, err
@@ -541,6 +553,9 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	}
 	return nil, ItemMoveOut{ID: it.ID, Status: it.Status, Warnings: warnings, Cancelled: res.Cancelled, Followed: res.Followed}, nil
 }
+
+// orchestrator says whether the caller is the orchestrator (S-0219).
+func (s *server) orchestrator() bool { return s.role == guard.RoleOrchestrate }
 
 func articled(typ string) string {
 	if typ == workitem.Epic {

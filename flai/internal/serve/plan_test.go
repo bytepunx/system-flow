@@ -163,6 +163,55 @@ func TestAPlannerRunThatEndsIsRecordedAndItsActivityLogged(t *testing.T) {
 	}
 }
 
+// S-0219: a planner run the orchestrator asked for records orchestrator, in
+// place of asked, as what started it, and its activity entry says so.
+func TestAPlannerRunTheOrchestratorAskedForSaysSo(t *testing.T) {
+	lab := planLab(t)
+	lab.hold()
+	id := lab.epic.ID
+	run, err := PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Trigger != TriggerOrchestrator || run.Agent != "planner-"+id {
+		t.Errorf("run = %+v, want the trigger orchestrator", run)
+	}
+	if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"trigger": "orchestrator"`) {
+		t.Errorf("serve/agents.json does not record the run as the orchestrator's (%v):\n%s", err, data)
+	}
+	_, err = PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+	var no *Refused
+	if !errors.As(err, &no) || !strings.Contains(no.Why, "the planner is already running for "+id) {
+		t.Errorf("refused as Plan is: %v", err)
+	}
+	lab.release(id)
+
+	// the run that ends logs its activity with the orchestrator as its trigger
+	story := lab.backlog("Planned", nil)
+	stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal("Enriched "+story+".", 2000, 0.25)}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+story), []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.release(story)
+	lab.l.mu.Lock()
+	started := lab.l.plan(context.Background(), lab.cfg, story, nil, TriggerOrchestrator)
+	lab.l.mu.Unlock()
+	if !started {
+		t.Fatalf("not started: %+v", lab.planRun(story))
+	}
+	waitFor(t, "its activity logged", func() bool {
+		doc, err := lab.repo.Activity(workitem.ActivityPlanner)
+		return err == nil && len(doc.Entries) == 1
+	})
+	doc, _ := lab.repo.Activity(workitem.ActivityPlanner)
+	if e := doc.Entries[0]; e.Trigger != "orchestrator" || e.Summary != "Enriched "+story+"." {
+		t.Errorf("activity = %+v, want the orchestrator as its trigger", e)
+	}
+	if data, _ := os.ReadFile(doc.Path); !strings.Contains(string(data), "\n- Trigger: orchestrator\n") {
+		t.Errorf("the entry does not say the orchestrator asked:\n%s", data)
+	}
+}
+
 // S-0209: a planner run's activity names its item, then what it created
 // under the item, then what it changed there, and not what it left alone or
 // what is under another item.

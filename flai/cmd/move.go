@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -27,6 +28,11 @@ sending review back needs --reason. WIP limit breaches warn.
 A draft story, one an agent wrote (S-0199), is refused to ready until it is
 finalized: flai edit --no-draft finalizes it, and so does this move with
 --yes, which finalizes it as it goes to ready.
+
+The orchestrator (FLAI_ROLE=orchestrate) moves to ready only a story that
+flai promote --candidates lists, and only while the ready column is under its
+WIP limit; any other move to ready it makes is refused with the reason
+(S-0219).
 
 An item also moves back one column: ready to backlog, in-progress to ready,
 review to in-progress, cancelled to backlog, the last only while its parent
@@ -79,6 +85,12 @@ computes no release; see flai release --pending.`,
 			}
 			if dryRun {
 				return fmt.Errorf("--dry-run previews a cancellation or an acceptance; other moves have nothing to preview")
+			}
+			// the orchestrator promotes a candidate alone, while ready has room (S-0219)
+			if args[1] == workitem.Ready && os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
+				if err := repo.Promotable(it); err != nil {
+					return fmt.Errorf("rule: %w", err)
+				}
 			}
 			draft := it.Draft
 			// --yes is the operator's say that a draft story is finished (S-0199)

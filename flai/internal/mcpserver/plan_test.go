@@ -55,6 +55,28 @@ func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
 	}
 }
 
+// S-0219: the tool tells the orchestrator which epics it may ask for, and
+// that its run records it as who asked.
+func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
+	f := setup(t)
+	res, err := f.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range res.Tools {
+		if tool.Name != "plan" {
+			continue
+		}
+		for _, want := range []string{"an epic that flai plan --candidates lists", "plan_backlog_epics is on", "records orchestrator, in place of asked"} {
+			if !strings.Contains(tool.Description, want) {
+				t.Errorf("plan's description lacks %q: %s", want, tool.Description)
+			}
+		}
+		return
+	}
+	t.Fatal("no plan tool")
+}
+
 func TestAServerThatCannotStartThePlannerSaysHow(t *testing.T) {
 	f := setup(t)
 	if _, failed := f.call(t, "plan", map[string]any{"id": "e-16"}); !strings.Contains(failed, "this flai mcp cannot start the planner; on the host run flai plan E-0016") {
