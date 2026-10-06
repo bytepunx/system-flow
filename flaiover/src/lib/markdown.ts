@@ -5,8 +5,15 @@ import MarkdownIt from 'markdown-it';
 import anchor from 'markdown-it-anchor';
 import taskLists from 'markdown-it-task-lists';
 
+/** The id a heading gets, markdown-it-anchor's own rule: what a link to a document's heading ends with. */
+export const slug = (heading: string): string =>
+	encodeURIComponent(heading.trim().toLowerCase().replace(/\s+/g, '-'));
+
 const md = new MarkdownIt({ html: true, linkify: true, typographer: false });
-md.use(anchor, { permalink: anchor.permalink.headerLink({ safariReaderFix: true }) });
+md.use(anchor, {
+	slugify: slug,
+	permalink: anchor.permalink.headerLink({ safariReaderFix: true })
+});
 md.use(taskLists, { enabled: false, label: true });
 
 // Fenced mermaid blocks become <pre class="mermaid"> for the client renderer;

@@ -4,13 +4,22 @@
 	// without it, every thread of the project, each linking to its anchor, and no
 	// new thread, which needs an anchor (the threads page, S-0173).
 	import { api } from '$lib/api';
-	import { render } from '$lib/markdown';
+	import { render, slug } from '$lib/markdown';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import { follow } from '$lib/events';
 	import type { StoryActivity } from '$lib/activity';
 
-	type Entry = { at: string; author: string; text: string; operator?: boolean };
+	type Source = { path: string; heading?: string };
+	type Entry = {
+		at: string;
+		author: string;
+		text: string;
+		operator?: boolean;
+		/** A recommendation the operator confirms to make it the answer, and what it cites (ADR-0090). */
+		recommendation?: boolean;
+		source?: Source | null;
+	};
 	type Thread = {
 		id: string;
 		title: string;
@@ -19,6 +28,8 @@
 		participants: string[];
 		updated: string;
 		entries: Entry[];
+		/** The recommendation awaiting the operator's confirmation, if any (ADR-0090). */
+		pending_recommendation?: Entry | null;
 	};
 
 	let {
@@ -144,6 +155,11 @@
 		if (!t) return;
 		if (await post(`/api/threads/${id}/reply`, { text: t })) replies[id] = '';
 	}
+	// flai ends an entry that cites a source with a `Source: <path> § <heading>` paragraph; it is
+	// shown as a link to the document and heading instead (ADR-0090).
+	const body = (e: Entry) => (e.source ? e.text.replace(/\n\nSource: [^\n]*$/, '') : e.text);
+	const sourceHref = (s: Source) =>
+		resolve('/docs/[...path]', { path: s.path }) + (s.heading ? `#${slug(s.heading)}` : '');
 	const badge: Record<Thread['status'], string> = {
 		open: 'bg-warn-soft text-warn  ',
 		answered: 'bg-info-soft text-info  ',
@@ -281,6 +297,10 @@
 						<div class="text-xs text-muted">
 							<span class="font-mono">{e.at}</span>
 							{e.author}
+							{#if e.recommendation}<span
+									class="ml-1 rounded border border-info px-1.5 py-0.5 text-[10px] text-info uppercase"
+									data-recommendation>recommendation</span
+								>{/if}
 						</div>
 						<!-- Entries are markdown, as they are in the thread's file (S-0126). Authors write
 						     repository paths, so relative links resolve from the root. -->
@@ -290,8 +310,18 @@
 								: 'border-line bg-raised'}"
 						>
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -- repository markdown, rendered client side as every document is -->
-							{@html render(e.text, '')}
+							{@html render(body(e), '')}
 						</div>
+						{#if e.source}
+							<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the heading added to it -->
+							<p class="mt-0.5 text-xs text-muted" data-source>
+								Source:
+								<a class="underline" href={sourceHref(e.source)}
+									>{e.source.path}{e.source.heading ? ` § ${e.source.heading}` : ''}</a
+								>
+							</p>
+							<!-- eslint-enable svelte/no-navigation-without-resolve -->
+						{/if}
 					</li>
 				{/each}
 			</ol>
@@ -312,6 +342,22 @@
 					</span>
 					{agent?.run.agent || 'the agent'} is working on your reply
 				</p>
+			{/if}
+			{#if t.pending_recommendation}
+				<!-- A recommendation is no answer until the operator confirms it (ADR-0090). -->
+				<div class="mt-2 flex items-center gap-2 text-xs" data-pending={t.id}>
+					<span class="text-muted"
+						>{t.pending_recommendation.author}'s recommendation awaits your confirmation</span
+					>
+					{#if writable}
+						<button
+							type="button"
+							class="rounded bg-primary px-2 py-1 text-on-primary"
+							data-confirm={t.id}
+							onclick={() => post(`/api/threads/${t.id}/confirm`, {})}>Confirm</button
+						>
+					{/if}
+				</div>
 			{/if}
 			{#if writable}
 				<form

@@ -452,4 +452,110 @@ describe('Threads', () => {
 		// still answerable here
 		expect(document.querySelector('article form input')).not.toBeNull();
 	});
+	// ADR-0090: a recommendation is marked, names its source, and is the answer once confirmed.
+	describe('a pending recommendation', () => {
+		const rec = {
+			at: '2026-09-26T07:05:00Z',
+			author: 'orchestrator',
+			text: 'Use port 8080.\n\nSource: design/system/overview.md § Delivery sequence',
+			recommendation: true,
+			source: { path: 'design/system/overview.md', heading: 'Delivery sequence' }
+		};
+		const pending = {
+			...thread('Which port?'),
+			entries: [...thread('Which port?').entries, rec],
+			pending_recommendation: rec
+		};
+		const confirmButton = () => document.querySelector<HTMLButtonElement>('button[data-confirm]');
+
+		it('marks the entry, links its source to the document and heading, and offers Confirm', async () => {
+			api.mockResolvedValue({ ok: true, json: async () => [pending] });
+			c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+			await settle();
+
+			const [question, recommended] = [
+				...document.querySelectorAll('article > ol > li')
+			] as HTMLElement[];
+			expect(question.querySelector('[data-recommendation]')).toBeNull();
+			expect(recommended.querySelector('[data-recommendation]')!.textContent).toBe(
+				'recommendation'
+			);
+			expect(recommended.querySelector('.prose')!.textContent!.trim()).toBe('Use port 8080.');
+			const source = recommended.querySelector('[data-source] a')!;
+			expect(source.getAttribute('href')).toBe('/docs/design/system/overview.md#delivery-sequence');
+			expect(source.textContent).toBe('design/system/overview.md § Delivery sequence');
+			expect(document.querySelector('[data-pending]')!.textContent).toContain(
+				"orchestrator's recommendation awaits your confirmation"
+			);
+			expect(confirmButton()!.textContent).toBe('Confirm');
+		});
+
+		it('confirms with one action, and the thread shows answered without a reload', async () => {
+			let list: unknown[] = [pending];
+			api.mockImplementation(async (path: string, init?: { method?: string }) => {
+				if (init?.method === 'POST') {
+					list = [
+						{
+							...pending,
+							status: 'answered',
+							pending_recommendation: null,
+							entries: [
+								...pending.entries,
+								{
+									at: '2026-09-26T07:10:00Z',
+									author: 'alex',
+									text: 'Confirmed the recommendation of 2026-09-26T07:05:00Z orchestrator.',
+									operator: true
+								}
+							]
+						}
+					];
+					return { ok: true, json: async () => ({ id: 'TH-0001', status: 'answered' }) };
+				}
+				return { ok: true, json: async () => list };
+			});
+			c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+			await settle();
+			confirmButton()!.click();
+			await settle();
+
+			expect(api).toHaveBeenCalledWith(
+				'/api/threads/TH-0001/confirm',
+				expect.objectContaining({ method: 'POST' })
+			);
+			expect(document.querySelector('article header')!.textContent).toContain('answered');
+			expect(document.querySelector('[data-pending]')).toBeNull();
+			expect(confirmButton()).toBeNull();
+		});
+
+		it('offers no Confirm on a read-only dashboard, and still marks the recommendation', async () => {
+			api.mockResolvedValue({ ok: true, json: async () => [pending] });
+			c = mount(Threads, { target: document.body, props: { on: 'S-0001', writable: false } });
+			await settle();
+
+			expect(confirmButton()).toBeNull();
+			expect(document.querySelector('[data-recommendation]')).not.toBeNull();
+			expect(document.querySelector('[data-source] a')).not.toBeNull();
+		});
+
+		it('says why flai refused a confirmation', async () => {
+			api.mockImplementation(async (_path: string, init?: { method?: string }) =>
+				init?.method === 'POST'
+					? {
+							ok: false,
+							statusText: 'Bad Request',
+							json: async () => ({ error: 'TH-0001 has no recommendation awaiting confirmation' })
+						}
+					: { ok: true, json: async () => [pending] }
+			);
+			c = mount(Threads, { target: document.body, props: { on: 'S-0001' } });
+			await settle();
+			confirmButton()!.click();
+			await settle();
+
+			expect(document.querySelector('section')!.textContent).toContain(
+				'refused: TH-0001 has no recommendation awaiting confirmation'
+			);
+		});
+	});
 });

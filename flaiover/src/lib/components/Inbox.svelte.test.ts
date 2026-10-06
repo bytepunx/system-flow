@@ -135,6 +135,90 @@ describe('inbox and activity views', () => {
 		expect(document.body.textContent).toContain('no open question matching that');
 	});
 
+	// ADR-0090: a thread whose recommendation awaits the designer is confirmed in place.
+	const RECOMMENDATION_BOX: Inbox = {
+		total: 1,
+		counts: { thread: 1, question: 0, review: 0, blocked: 0, overlap: 0 },
+		notes: [],
+		entries: [
+			{
+				key: 'thread:TH-0009',
+				kind: 'thread',
+				title: 'Which port?',
+				detail: 'orchestrator recommends an answer to confirm, on S-0042',
+				href: '/items/S-0042?thread=TH-0009',
+				item: 'S-0042',
+				recommendation: {
+					author: 'orchestrator',
+					at: '2026-10-01T09:00:00Z',
+					text: 'Use 8080.',
+					source: { path: 'design/system/overview.md', heading: 'Delivery sequence' }
+				}
+			}
+		]
+	};
+	const confirmButton = () => document.querySelector<HTMLButtonElement>('button[data-confirm]');
+
+	it('shows a pending recommendation with its text and source, linking to the thread', () => {
+		c = mount(InboxView, {
+			target: document.body,
+			props: { inbox: RECOMMENDATION_BOX, writable: true }
+		});
+		flushSync();
+		const rec = document.querySelector('[data-recommendation="thread:TH-0009"]')!;
+		expect(rec.textContent).toContain('recommendation');
+		expect(rec.textContent).toContain('orchestrator');
+		expect(rec.textContent).toContain('Use 8080.');
+		const source = rec.querySelector('[data-source] a')!;
+		expect(source.getAttribute('href')).toBe('/docs/design/system/overview.md#delivery-sequence');
+		expect(source.textContent).toBe('design/system/overview.md § Delivery sequence');
+		expect(document.querySelector('a')!.getAttribute('href')).toBe('/items/S-0042?thread=TH-0009');
+		expect(confirmButton()!.textContent).toBe('Confirm');
+	});
+
+	it('offers no Confirm on a read-only dashboard', () => {
+		c = mount(InboxView, {
+			target: document.body,
+			props: { inbox: RECOMMENDATION_BOX, writable: false }
+		});
+		flushSync();
+		expect(document.querySelector('[data-recommendation]')).not.toBeNull();
+		expect(confirmButton()).toBeNull();
+	});
+
+	it('confirms in place, posting to the thread and refreshing the inbox', async () => {
+		api.mockResolvedValueOnce(json({ id: 'TH-0009', status: 'answered' }));
+		api.mockResolvedValueOnce(json({ total: 0, counts: BOX.counts, entries: [], notes: [] }));
+		c = mount(InboxView, {
+			target: document.body,
+			props: { inbox: RECOMMENDATION_BOX, writable: true }
+		});
+		flushSync();
+		confirmButton()!.click();
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+		expect(api).toHaveBeenCalledWith(
+			'/api/threads/TH-0009/confirm',
+			expect.objectContaining({ method: 'POST' })
+		);
+		expect(api).toHaveBeenLastCalledWith('/api/inbox');
+	});
+
+	it('shows what flai said when confirming is refused', async () => {
+		api.mockResolvedValueOnce(json({ error: 'TH-0009 has no recommendation awaiting' }, 400));
+		c = mount(InboxView, {
+			target: document.body,
+			props: { inbox: RECOMMENDATION_BOX, writable: true }
+		});
+		flushSync();
+		confirmButton()!.click();
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+		flushSync();
+		expect(document.querySelector('[role="alert"]')!.textContent).toBe(
+			'TH-0009 has no recommendation awaiting'
+		);
+		expect(confirmButton()!.disabled).toBe(false);
+	});
+
 	it('says so when nothing needs the designer', () => {
 		c = mount(InboxView, {
 			target: document.body,

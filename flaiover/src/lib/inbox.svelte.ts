@@ -13,6 +13,13 @@ export type InboxEntry = {
 	href: string;
 	at?: string;
 	item?: string;
+	/** On a thread, the recommendation awaiting the designer's confirmation (ADR-0090). */
+	recommendation?: {
+		author: string;
+		at: string;
+		text: string;
+		source?: { path: string; heading?: string };
+	};
 };
 export type Inbox = {
 	total: number;

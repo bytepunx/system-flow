@@ -14,6 +14,15 @@ export type InboxEntry = {
 	// The story or item this entry is about, when it has one: a question
 	// entry needs it to answer in place (S-0090), not just to link out.
 	item?: string;
+	// On a thread, the recommendation awaiting the designer's confirmation, so it can be confirmed
+	// in place (ADR-0090): its text without the source line, and the source apart.
+	recommendation?: Recommendation;
+};
+export type Recommendation = {
+	author: string;
+	at: string;
+	text: string;
+	source?: { path: string; heading?: string };
 };
 export type Inbox = {
 	total: number;
@@ -22,7 +31,17 @@ export type Inbox = {
 	notes: string[];
 };
 
-type FlaiEntry = Omit<InboxEntry, 'href'> & { path?: string };
+type FlaiEntry = Omit<InboxEntry, 'href' | 'recommendation'> & {
+	path?: string;
+	pending_recommendation?: Omit<Recommendation, 'source'> & {
+		source?: Recommendation['source'] | null;
+	};
+};
+
+/** An entry's text without the `Source:` paragraph flai ends it with when it cites one. */
+export function withoutSource(text: string): string {
+	return text.replace(/\n\nSource: [^\n]*$/, '').trim();
+}
 
 // A work item's file or a narrative, live or archived, names its item: wip/kanban/stories/S-0001-a.md, wip/agents/S-0001.md.
 const itemPath =
@@ -68,12 +87,20 @@ export async function inbox(repo: Repo): Promise<Inbox> {
 		total: got.total,
 		counts: got.counts,
 		notes: got.notes ?? [],
-		entries: (got.entries ?? []).map(({ path, ...e }) => ({
+		entries: (got.entries ?? []).map(({ path, pending_recommendation: p, ...e }) => ({
 			...e,
 			detail: e.detail || undefined,
 			at: e.at || undefined,
 			item: e.item || undefined,
-			href: hrefFor({ kind: e.kind, key: e.key, item: e.item, path })
+			href: hrefFor({ kind: e.kind, key: e.key, item: e.item, path }),
+			...(p && {
+				recommendation: {
+					author: p.author,
+					at: p.at,
+					text: withoutSource(p.text),
+					...(p.source?.path && { source: p.source })
+				}
+			})
 		}))
 	};
 }

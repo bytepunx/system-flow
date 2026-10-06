@@ -3,7 +3,7 @@ import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { Repo } from './repo';
+import { Repo, type Ask } from './repo';
 import { flaiAsk, shell } from './testing';
 import { activity } from './activity';
 import { hrefFor, inbox } from './inbox';
@@ -214,5 +214,70 @@ describe.skipIf(!existsSync(bin))('activity and inbox on a project', () => {
 		// leaving one out regardless is flai's own guarantee (internal/workitem,
 		// internal/hostapi), not retested here through the real binary.
 		expect(box.entries.filter((e) => e.kind === 'question')).toEqual([]);
+	});
+});
+
+// ADR-0090: a thread whose recommendation awaits the designer carries it, to confirm in place.
+describe('a pending recommendation in the inbox', () => {
+	const entry = {
+		key: 'thread:TH-0009',
+		kind: 'thread',
+		title: 'Which port?',
+		detail: 'orchestrator recommends an answer to confirm, on S-0042',
+		item: 'S-0042',
+		path: 'wip/kanban/stories/S-0042-a.md',
+		at: '2026-10-01T09:00:00Z'
+	};
+	const asking =
+		(entries: unknown[]): Ask =>
+		async () =>
+			({ total: entries.length, counts: { thread: entries.length }, entries, notes: [] }) as never;
+
+	it('carries its author, time, text without the source line, and source', async () => {
+		const box = await inbox(
+			new Repo(
+				'/nowhere',
+				asking([
+					{
+						...entry,
+						pending_recommendation: {
+							at: '2026-10-01T09:00:00Z',
+							author: 'orchestrator',
+							text: 'Use 8080.\n\nSource: design/system/overview.md § Ports',
+							recommendation: true,
+							source: { path: 'design/system/overview.md', heading: 'Ports' }
+						}
+					}
+				])
+			)
+		);
+		expect(box.entries[0]).toMatchObject({
+			href: '/items/S-0042?thread=TH-0009',
+			recommendation: {
+				author: 'orchestrator',
+				at: '2026-10-01T09:00:00Z',
+				text: 'Use 8080.',
+				source: { path: 'design/system/overview.md', heading: 'Ports' }
+			}
+		});
+		expect(box.entries[0]).not.toHaveProperty('pending_recommendation');
+	});
+
+	it('is absent from a thread with none, and a recommendation without a source has none', async () => {
+		const box = await inbox(
+			new Repo(
+				'/nowhere',
+				asking([
+					entry,
+					{
+						...entry,
+						key: 'thread:TH-0010',
+						pending_recommendation: { at: 'x', author: 'a', text: 'Yes.', source: null }
+					}
+				])
+			)
+		);
+		expect(box.entries[0]).not.toHaveProperty('recommendation');
+		expect(box.entries[1].recommendation).toEqual({ author: 'a', at: 'x', text: 'Yes.' });
 	});
 });
