@@ -2,12 +2,12 @@
 id: I-0081
 title: flai's permission_prompt waits for an answer from the story's owner, and the operator's thread replies carry another name, so their allow is never seen and the write times out
 class: defect
-status: open
+status: closed
 count: 2
 cost: 45m
 first_reported: 2026-10-05T07:45:13Z
 last_reported: 2026-10-06T12:38:18Z
-updated: 2026-10-06T12:38:18Z
+updated: 2026-10-06T19:40:50Z
 ---
 
 # I-0081 flai's permission_prompt waits for an answer from the story's owner, and the operator's thread replies carry another name, so their allow is never seen and the write times out
@@ -28,3 +28,4 @@ T-0895's sub-agent Edit on .claude/agents/orchestrator.md and then template/root
 ## Remediation
 
 Story S-0284 remediates this issue, created from it at 2026-10-06T03:45:19Z.
+Closed 2026-10-06T19:40:50Z: S-0284: permission_prompt takes an answer from the story's owner or the project's owner, the manifest's owner, and never the asking agent's own entry (ADR-0097, refining ADR-0086); TestPermissionPromptTakesTheProjectOwnersAnswer reproduces S-0218's case, story owner arobson and the operator answering allow as alex
