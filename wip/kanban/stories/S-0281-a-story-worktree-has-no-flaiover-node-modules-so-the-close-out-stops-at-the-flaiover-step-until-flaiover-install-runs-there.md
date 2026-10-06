@@ -6,7 +6,7 @@ title: A story worktree has no flaiover/node_modules, so the close-out stops at 
 status: backlog
 owner: alex
 created: 2026-10-05T07:09:06Z
-updated: 2026-10-05T07:09:06Z
+updated: 2026-10-06T22:49:26Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-05T07:09:06Z
+finalized:
+  by: alex
+  at: 2026-10-06T22:49:26Z
 ---
 # S-0281 A story worktree has no flaiover/node_modules, so the close-out stops at the flaiover step until flaiover-install runs there
 
