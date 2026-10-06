@@ -6,7 +6,7 @@ title: One in-progress story holds every ready story by overlap, through folder-
 status: ready
 owner: alex
 created: 2026-10-06T11:44:50Z
-updated: 2026-10-06T18:12:02Z
+updated: 2026-10-06T18:18:14Z
 transitions:
   - to: ready
     at: 2026-10-06T11:47:42Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T11:49:48Z
 forecast:
   duration: 2h
-  delivery: 2026-10-06T20:58:00Z
-  basis: "Its own forecast of 2h; 1st in the pull order with an in-progress limit of 3, behind S-0226."
+  delivery: 2026-10-06T20:48:00Z
+  basis: "Its own forecast of 2h; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-06T18:12:02Z
+  at: 2026-10-06T18:18:14Z
 finalized:
   by: alex
   at: 2026-10-06T11:47:30Z

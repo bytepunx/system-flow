@@ -7,6 +7,7 @@ updated: 2026-10-06T18:18:14Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0295](S-0295.md) | One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three | ready | agent-S-0295 | 2026-10-06T18:18:27Z |
 
 ## Strategic agents
 
