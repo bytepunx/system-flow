@@ -175,6 +175,57 @@ func TestDocGet(t *testing.T) {
 	}
 }
 
+// TestDocsAnalysisReports: the analyzer's reports under design/analysis are
+// in the tree beside the folder's README, as any design folder is, and a
+// report is served with its focus and window (S-0223).
+func TestDocsAnalysisReports(t *testing.T) {
+	p := withDocs(t)
+	report := "---\ntitle: Bottlenecks in September\nupdated: 2026-10-06T08:00:00Z\nstatus: active\nfocus: bottlenecks\nfrom: 2026-09-01\nto: 2026-09-30\n---\n\n# Bottlenecks in September\n"
+	for rel, content := range map[string]string{
+		"design/analysis/README.md":                 "---\ntitle: analysis\n---\n\n# analysis\n",
+		"design/analysis/2026-10-06-bottlenecks.md": report,
+		"design/experiments/S-0001-first.md":        "---\ntitle: First experiment\n---\n",
+		"design/analysis/.draft/2026-10-07-risk.md": "---\ntitle: hidden\n---\n",
+	} {
+		full := filepath.Join(p.Root, rel)
+		_ = os.MkdirAll(filepath.Dir(full), 0o755)
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var roots []*DocNode
+	if err := call(t, p, "docs.tree", `{}`, &roots); err != nil {
+		t.Fatal(err)
+	}
+	analysis, experiments := find(roots, "design/analysis"), find(roots, "design/experiments")
+	if analysis == nil || analysis.Kind != "dir" || experiments == nil || experiments.Kind != "dir" {
+		t.Fatalf("analysis %+v, experiments %+v", analysis, experiments)
+	}
+	var names []string
+	for _, n := range analysis.Children {
+		names = append(names, n.Name)
+	}
+	if strings.Join(names, ",") != "2026-10-06-bottlenecks.md,README.md" {
+		t.Errorf("design/analysis lists %v", names)
+	}
+	if n := find(roots, "design/analysis/2026-10-06-bottlenecks.md"); n == nil || n.Kind != "file" || n.Title != "Bottlenecks in September" {
+		t.Errorf("the report: %+v", n)
+	}
+	if n := find(roots, "design/analysis/README.md"); n == nil || n.Title != "analysis" {
+		t.Errorf("the README: %+v", n)
+	}
+	var d Doc
+	if err := call(t, p, "doc.get", `{"path":"design/analysis/2026-10-06-bottlenecks.md"}`, &d); err != nil {
+		t.Fatal(err)
+	}
+	fm := d.FrontMatter
+	if fm["title"] != "Bottlenecks in September" || fm["status"] != "active" || fm["focus"] != "bottlenecks" ||
+		fm["from"] != "2026-09-01" || fm["to"] != "2026-09-30" || fm["updated"] != "2026-10-06T08:00:00Z" ||
+		!strings.HasPrefix(d.Body, "\n# Bottlenecks in September") {
+		t.Errorf("the report served: %+v", d)
+	}
+}
+
 func TestAdrsList(t *testing.T) {
 	var list []Adr
 	if err := call(t, withDocs(t), "adrs.list", `{}`, &list); err != nil {

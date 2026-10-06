@@ -206,7 +206,7 @@ These charts need a flai on the host as new as the dashboard. With an older one 
 
 ## Docs
 
-Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text, and the threads on the document below it. When a story in progress or in review says it touches the document, the page names the story: an edit here may collide with that story's branch. When the dashboard can write, an **Edit** link opens the editor.
+Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. The analyzer's reports are there, in `design/analysis/`, one per run beside the folder's README, as experiments' results are in `design/experiments/`; a report's front matter names its focus and the window its figures cover, `from` and `to`. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text, and the threads on the document below it. When a story in progress or in review says it touches the document, the page names the story: an edit here may collide with that story's branch. When the dashboard can write, an **Edit** link opens the editor.
 
 ### Editing documents
 
