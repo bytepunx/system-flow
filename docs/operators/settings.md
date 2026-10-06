@@ -109,10 +109,10 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `orchestration.release.count` | unset | For `threshold`: the number of accepted stories not yet released at which a release is due; zero or more |
 | `orchestration.release.epic` | unset | For `theme`: an epic ID such as `E-0001`; a release is due when every story of it is accepted. Give it or `tag`, not both |
 | `orchestration.release.tag` | unset | For `theme`: a tag; a release is due when every story with it is accepted |
-| `orchestration.permissions.plan_backlog_epics` | `false` | The orchestrator may ask the planner to draft the stories of an epic in the backlog; the `plan` host action must be on too ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
-| `orchestration.permissions.finalize_drafts` | `false` | The orchestrator may finalize a draft story, `flai edit --no-draft` |
-| `orchestration.permissions.promote_to_ready` | `false` | The orchestrator may move a story to `ready` |
-| `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order: `flai order --by <policy> --apply`, or `flai order` placing a story |
+| `orchestration.permissions.plan_backlog_epics` | `false` | The orchestrator may start the planner for an epic `flai plan --candidates` lists; the `plan` host action must be on too ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
+| `orchestration.permissions.finalize_drafts` | `false` | The orchestrator may finalize a draft story that `flai promote --drafts` finds complete, and change nothing else of it |
+| `orchestration.permissions.promote_to_ready` | `false` | The orchestrator may move a story `flai promote --candidates` lists to `ready`, while ready is under its WIP limit |
+| `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order, `flai order --by <policy> --apply`, which keeps a story placed by hand in the last day; it never places a story by hand |
 | `orchestration.permissions.answer_threads` | `off` | How the orchestrator replies on threads: `off` never; `recommend` with a recommendation for the operator; `autonomous` with an answer of its own. `flai guard` lets it reply with either of the last two; its prompt says which |
 | `orchestration.permissions.accept_reviews` | `false` | The orchestrator may accept a story in review, `flai accept` |
 | `orchestration.permissions.publish` | `false` | The orchestrator may release and push accepted work, `flai release --pending` and `flai push` |

@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 ---
 
@@ -341,7 +341,7 @@ flai edit S-0005 --no-draft                            # finalize it where it is
 flai move S-0005 ready --yes                           # or finalize it as it moves to ready
 ```
 
-`flai move S-0005 ready` without `--yes` is refused with "finalize it first". Agents cannot finalize: over MCP, `item_move` refuses a draft to ready and `item_edit` refuses `draft: false`, so an agent tells you in a thread or its narrative that a story is ready to be finalized. `flai check` warns (`story.draft`) on a draft that reached ready some other way.
+`flai move S-0005 ready` without `--yes` is refused with "finalize it first". Agents cannot finalize: over MCP, `item_move` refuses a draft to ready and `item_edit` refuses `draft: false`, so an agent tells you in a thread or its narrative that a story is ready to be finalized. The orchestrator is the one exception, and only while you give it `finalize_drafts` ([Running the orchestrator](#running-the-orchestrator)). `flai check` warns (`story.draft`) on a draft that reached ready some other way.
 
 Finalizing records who did it and when, in the story's `finalized` block, so the story still says it was a draft once the flag is gone ([ADR-0077](../../design/adrs/0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md)). `flai edit --no-draft` records you (`--by`, else `FLAI_AGENT`, else your config author); a finalizing move records the move's `--by` and time. `flai show` prints `finalized by alex at 2026-10-03T10:00:00Z`. `flai edit --draft` makes the story a draft again and removes the block. The dashboard's **Finalize** button, on a draft story's page and in its edit form, does the same as `flai edit --no-draft` ([The item page](flaiover.md#the-item-page)).
 
@@ -473,9 +473,12 @@ flai order S-0061 --top                # first in its column
 flai order S-0059 --before S-0061      # just above another story of the same column
 flai order S-0047 --after S-0053
 flai order S-0056 --bottom
+flai order S-0056 --top --placed-by alex   # record the placement as alex's
 ```
 
 Only ready and backlog stories can be placed, and only relative to a story in the same column; `flai move` changes the column. A story you move to `ready` joins the end of the ready stories. Backlog stories you have never placed stay out of the list and come last, by ID. The dashboard's board does the same thing when you drag a card up or down within a column.
+
+Each placement is recorded in `board.md`, under `placed`, with who made it and when ([ADR-0088](../../design/adrs/0088-board-md-records-who-placed-a-story-by-hand-and-when-and-a-policy-s-order-keeps.md)). Who is `--placed-by`, else `FLAI_AGENT`, else your config author; a drag on the dashboard is recorded as `flaiover`. The record goes when the story leaves its column. A policy's order keeps a story placed by anyone but the orchestrator in the last day where it was put ([Ordering by a policy](#ordering-by-a-policy)), so a story you drag holds against the orchestrator for a day.
 
 #### Ordering by a policy
 
@@ -484,8 +487,11 @@ flai can work out the ready column's order from the stories' planning data ([Dra
 ```bash
 flai order --by wsjf                   # the ready column by a policy, with each story's figure; writes nothing
 flai order --by cod --apply            # the same, written to board.md
+flai order --by cod --keep-placed 2h   # keep only the stories placed by hand in the last two hours
 flai promote --candidates              # backlog stories that could go to ready, and why the others cannot
 flai promote --candidates --limit 3
+flai promote --drafts                  # draft stories, and what each lacks to be finalized
+flai plan --candidates                 # epics the planner should plan, and why
 ```
 
 These, and `flai release --evaluate` ([Accept and release](#accept-and-release)), are the orchestrator's arithmetic. They live in flai so that you and the dashboard get the same answer the orchestrator does, with no agent running; the orchestrator itself makes only the judgement calls.
@@ -499,7 +505,9 @@ These, and `flai release --evaluate` ([Accept and release](#accept-and-release))
 | `throughput` | The forecast duration | Shortest |
 | `fifo` | When the story was created | Oldest |
 
-A story without the figure its policy needs, such as a story with no forecast under `throughput`, goes after the stories that have it, in its current order, and the listing says what it lacks. Stories whose figures tie keep their current order. Without `--apply` nothing is written. With it, the order becomes `board.md`'s ready order, as if you had dragged each story into place; nothing is committed. `--by` orders the whole column, so it takes no story and none of `--before`, `--after`, `--top`, or `--bottom`.
+A story without the figure its policy needs, such as a story with no forecast under `throughput`, goes after the stories that have it, in its current order, and the listing says what it lacks. Stories whose figures tie keep their current order. Without `--apply` nothing is written. With it, the order becomes `board.md`'s ready order, as if you had dragged each story into place, but records no placement; nothing is committed. `--by` orders the whole column, so it takes no story and none of `--before`, `--after`, `--top`, `--bottom`, or `--placed-by`.
+
+A ready story placed by hand, by anyone but the orchestrator, within `--keep-placed` keeps its position, and the policy orders the other stories around it. The window is a day unless you give one; `--keep-placed 0` keeps none. The listing marks each kept story `(kept: placed by alex at 2026-10-06T09:00:00Z)`.
 
 `flai promote --candidates` lists the backlog stories that could go to ready, ordered by the project's `orchestration.policy` (`fifo` when it is not set), each with its figure. A backlog story is a candidate when:
 
@@ -510,7 +518,11 @@ A story without the figure its policy needs, such as a story with no forecast un
 
 Every other backlog story is listed with each reason it is not a candidate. `--limit` caps the candidates listed; those beyond it are left out. It writes nothing: move a candidate to ready with `flai move`.
 
-Each has a `--json` form. The dashboard reads the same answers through `flai serve` (`order.by`, `promote.candidates`), and agents through the MCP tools `order_by_policy` and `promote_candidates` ([Serving agents over MCP](#serving-agents-over-mcp)). A sub-agent and the planner may run `flai order --by` without `--apply`, and `flai promote --candidates`, as reads.
+`flai promote --drafts` lists each draft story in the backlog, in the same policy order, as `complete` or `incomplete` with each thing it lacks. A draft is complete when it has every section of the project's story template, a goal, acceptance criteria with a checkbox, at least one touch, a forecast duration and delivery, a cost of delay value, and an epic that is open, or none. Whether its criteria, touches, and forecast describe the same work is for whoever finalizes it. It writes nothing.
+
+`flai plan --candidates` lists, in ID order, the epics the planner should plan, each with why: an epic in the backlog with no stories, for the planner to draft them, and an epic not done or cancelled whose stories are all done or cancelled with at least one done, for the planner to draft what its outcome still lacks. It lists apart an epic whose planner runs now, or whose planner asked you a question you have not answered yet. It starts nothing.
+
+Each has a `--json` form. The dashboard reads the same answers through `flai serve` (`order.by`, `promote.candidates`), and agents through the MCP tools `order_by_policy` and `promote_candidates` ([Serving agents over MCP](#serving-agents-over-mcp)). `flai promote --drafts` and `flai plan --candidates` have no MCP tool or `flai serve` read; the orchestrator runs them in its shell. A sub-agent, the planner, and the orchestrator may run `flai order --by` without `--apply`, `flai promote --candidates` and `--drafts`, and `flai plan --candidates`, as reads.
 
 ### Story branches
 
@@ -1049,11 +1061,11 @@ flai serve sees the edits made with `flai edit`, `flai touches`, the dashboard, 
 
 What it costs: `deterministic` uses no agent, but each forecast it moves takes about a second, because flai checks the project before and after each write, as `flai edit` does. `agent` and a schedule start planner sessions you pay for without asking each time, so both are off until you set them.
 
-To see it, the dashboard's Settings page shows, for the project, whether edits start the planner, the replan policy, and the schedule with its next run ([Settings](flaiover.md#settings)). Each planner run's entry in `wip/agents/planner.md` has a `- Trigger:` line saying what started it: `asked` when you asked, otherwise such as `edited goal, touches by alex`, `accepted S-0210`, `cancelled S-0213`, `reordered`, or `schedule daily`, joined by semicolons when several came together. [Planning again](../../design/system/strategic-agents.md#planning-again) has the whole of it.
+To see it, the dashboard's Settings page shows, for the project, whether edits start the planner, the replan policy, and the schedule with its next run ([Settings](flaiover.md#settings)). Each planner run's entry in `wip/agents/planner.md` has a `- Trigger:` line saying what started it: `asked` when you asked, `orchestrator` when the orchestrator did, otherwise such as `edited goal, touches by alex`, `accepted S-0210`, `cancelled S-0213`, `reordered`, or `schedule daily`, joined by semicolons when several came together. [Planning again](../../design/system/strategic-agents.md#planning-again) has the whole of it.
 
 #### Running the orchestrator
 
-The orchestrator keeps the project's work moving ([ADR-0087](../../design/adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md)). It asks the planner to plan a backlog epic, finalizes drafts, promotes stories to ready, orders the ready column, answers threads, accepts stories, and publishes releases, but each only while you give it the permission. It takes every figure from flai: the order from `flai order --by` ([Ordering by a policy](#ordering-by-a-policy)), the stories that could go to ready from `flai promote --candidates`, and whether a release is due from `flai release --evaluate` ([Whether a release is due](#whether-a-release-is-due)). It never edits a file and never works a story.
+The orchestrator keeps the project's work moving ([ADR-0087](../../design/adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md)). It asks the planner to plan an epic, finalizes drafts, promotes stories to ready, orders the ready column, answers threads, accepts stories, and publishes releases, but each only while you give it the permission. It takes every figure from flai: the epics to plan from `flai plan --candidates`, the drafts complete enough to finalize from `flai promote --drafts`, the order from `flai order --by` ([Ordering by a policy](#ordering-by-a-policy)), the stories that could go to ready from `flai promote --candidates`, and whether a release is due from `flai release --evaluate` ([Whether a release is due](#whether-a-release-is-due)). It never edits a file and never works a story.
 
 It runs behind a host action that is off until you turn it on:
 
@@ -1082,21 +1094,23 @@ orchestration:
 
 | Permission | It may |
 |------------|--------|
-| `plan_backlog_epics` | Ask for the planner on an epic in the backlog, with the MCP tool `plan` or `flai plan`. The `plan` host action must be on too |
-| `finalize_drafts` | Finalize a draft story with `flai edit --no-draft`, and change nothing else with it |
-| `promote_to_ready` | Move a story to `ready` |
-| `order_ready` | Write the ready column's order with `flai order` |
+| `plan_backlog_epics` | Ask for the planner, one epic at a time, on each epic `flai plan --candidates` lists, with the MCP tool `plan`. The `plan` host action must be on too |
+| `finalize_drafts` | Finalize a draft that `flai promote --drafts` finds complete and it judges consistent, with `item_edit` giving only `draft: false`, or `flai edit --no-draft`, and change nothing else with it. On any other draft it opens one thread saying what is missing |
+| `promote_to_ready` | Move the stories `flai promote --candidates` lists to `ready`, in its order, while the ready column is under its WIP limit |
+| `order_ready` | Order the ready column by `orchestration.policy` with `flai order --by <policy> --apply`, after each change to it. A story you placed by hand in the last day keeps its place |
 | `answer_threads` | Reply on threads: `recommend` replies with a recommendation for you to decide on, `autonomous` with an answer of its own. `off`, the default, leaves threads to you |
 | `accept_reviews` | Accept a story in review with `flai accept` |
 | `publish` | Release and push accepted work with `flai release --pending` and `flai push` |
 
-Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal. `flai check` reports a permission it does not know, or an `answer_threads` that is none of its three values.
+Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, changing anything of an item but its draft flag, placing a story by hand in the pull order, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal.
+
+flai holds it to the four permissions above itself too, so a call the guard does not see is held all the same (S-0219). In the orchestrator's session, `flai plan` and the MCP tool `plan` refuse an epic `flai plan --candidates` does not list; `flai edit --no-draft` and `item_edit` refuse a draft that is not complete, naming what it lacks; `flai move` and `item_move` refuse a story that is not a candidate, with the candidates' reasons, and any story while ready is at its WIP limit; and `flai order --by --apply` is refused without `order_ready`. A refusal ends that attempt: it logs it and does not try again until something changes. A planner it starts records `orchestrator` as what started it, in its run and its entry in `wip/agents/planner.md`. It never places a story by hand, and its policy order keeps a story you placed in the last day where you put it ([ADR-0088](../../design/adrs/0088-board-md-records-who-placed-a-story-by-hand-and-when-and-a-policy-s-order-keeps.md)). `flai check` reports a permission it does not know, or an `answer_threads` that is none of its three values.
 
 Where to see what it did:
 
 | What | Where |
 |------|-------|
-| Each decision: what it did, on which items, why, and the policy figure behind it | `wip/agents/orchestrator.md`, under `## Log`, one entry per decision, with its seconds and cost. A run that ends logs the time since the last decision as one more entry; a run you stopped says `stopped: orchestrate turned off` |
+| Each decision: what it did, on which items, why, and the policy figure behind it, such as a story's cost of delay value, its value over its duration, its forecast, or a candidate's rank | `wip/agents/orchestrator.md`, under `## Log`, one entry per decision, with its seconds and cost. A run that ends logs the time since the last decision as one more entry; a run you stopped says `stopped: orchestrate turned off` |
 | Each call the guard refused it: when, the call, and the permission it needs, or `none` | `wip/agents/orchestrator.md`, under `## Refusals` |
 | Its runs, starts, failures, and stops | `flai serve journal`, and the dashboard's Activity page, which shows the run and what it is saying |
 
@@ -1119,7 +1133,7 @@ An agent `flai serve` starts with `claude-code` is told to keep its own context 
 | `.claude/agents/explorer.md` | Finds and reads: `Read`, `Grep`, `Glob`, and flai's read tools. No shell. Runs `haiku`. |
 | `.claude/agents/verifier.md` | The explorer's tools and `Bash`, to run the project's tests, lint, and checks. Told not to edit. Runs `sonnet`. |
 | `.claude/agents/planner.md` | The planner, which `flai plan` runs as its session's own agent, not a sub-agent ([Running the planner](#running-the-planner)). Writes through flai only: no `Edit` or `Write`. |
-| `.claude/settings.json` | Runs `flai guard` before every shell command and flai tool call, and, in a planner's session alone, before `Edit`, `Write`, and `NotebookEdit`. |
+| `.claude/settings.json` | Runs `flai guard` before every shell command and flai tool call, and, in a planner's or the orchestrator's session alone, before `Edit`, `Write`, and `NotebookEdit`. |
 
 A story that changes one of these files ships it from its own branch: its agent edits the file with `Edit` or `Write`, and you allow the write on a thread ([Writes under .claude/](#writes-under-claude)).
 

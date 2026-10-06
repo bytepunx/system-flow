@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 ---
 
@@ -235,6 +235,17 @@ flai serve disable orchestrate   # stops the run
 ```
 
 **Understand what enabling it means.** The orchestrator is one agent session that does not end, with the orchestrator's agent (`orchestration.agent` in `system-flow.yaml` over `agent`), so it spends while it waits and decides. It does not count against the in-progress limit. What it may do is what `orchestration.permissions` in `system-flow.yaml` turns on, each off by default: with none on, it reads, logs, and asks you on threads. `flai guard` refuses it every call outside them, names the permission the call needs, and logs the refusal; that holds only while `.claude/settings.json` runs the guard, on `Edit|Write|NotebookEdit` too for an orchestrator's session, as the template's does, and `flai` on `PATH` has the orchestrator's rules. A project whose `.claude/agents/` has no `orchestrator.md` cannot start it on `claude-code`: `flai upgrade` adds it. The permissions and what each allows are in [Running the orchestrator](../users/flai.md#running-the-orchestrator).
+
+**Understand what each permission means** (S-0219). Four of them let it move and order work without you. Each acts on what one flai command prints, and flai, not only the guard, refuses the orchestrator what the permission does not cover:
+
+| Permission | Turning it on lets the orchestrator | It never |
+|------------|-------------------------------------|----------|
+| `plan_backlog_epics` | Start the planner, one at a time, for each epic `flai plan --candidates` lists: a backlog epic with no stories, or an open epic whose stories are all done or cancelled. Each run is an agent session you pay for, recorded with the trigger `orchestrator`. The `plan` host action must be on too | Plans a story, an epic the candidates do not list, or one whose planner runs or awaits your answer |
+| `finalize_drafts` | Finalize a draft story that `flai promote --drafts` finds complete and it judges consistent; the story's `finalized` block names the orchestrator | Changes anything else of an item, or finalizes a draft that lacks a section, a goal, a criterion, a touch, a forecast, or a cost of delay value. It opens one thread on such a draft instead |
+| `promote_to_ready` | Move the stories `flai promote --candidates` lists to `ready`, in policy order, while the ready column is under its WIP limit. With the `agent` host action on, `flai serve` then starts their agents | Moves a draft, a held story, a story without a forecast or a cost of delay value, or any story while ready is full |
+| `order_ready` | Rewrite the ready column's order by `orchestration.policy`, `flai order --by <policy> --apply`, after each change to it | Places a story by hand. A story you placed in the last day, by `flai order` or a drag, keeps its place ([ADR-0088](../../design/adrs/0088-board-md-records-who-placed-a-story-by-hand-and-when-and-a-policy-s-order-keeps.md)) |
+
+Whatever you turn on, it never edits a file, commits, works a story, or moves a story anywhere but `ready`. It logs each action in `wip/agents/orchestrator.md` with the figure flai gave behind it. A refusal ends that attempt: it is logged and not retried until something changes, and it asks you on a thread when it needs you.
 
 **Where to look.** The run is kept in `serve/agents.json` under `orchestrator`, its output in `serve/agents/<key>-orchestrator-<time>.log`, and its decisions and the guard's refusals in `wip/agents/orchestrator.md`. `flai hostapi agent.status` shows the run as `orchestrator`, and the dashboard's Activity page shows it with its stream.
 
