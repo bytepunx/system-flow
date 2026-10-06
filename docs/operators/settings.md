@@ -136,7 +136,9 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `wip_limits` | the front matter of `wip/kanban/board.md` | as the template sets them | The WIP limit of each column; flai serve starts agents only while `in-progress` has room ([design/system/workflow.md](../../design/system/workflow.md)) |
 | `order` | the front matter of `wip/kanban/board.md` | empty | The pull order of `ready` and `backlog` stories; drag cards on the board or run `flai order` |
 | `mcpServers.flai` | `.mcp.json` | `flai mcp` on stdio | How an agent on the host reaches flai's MCP server ([MCP over HTTP](index.md#mcp-over-http)) |
-| `hooks.PreToolUse` | `.claude/settings.json` | `flai guard` before `Bash` and `mcp__flai__.*`, and before `Edit\|Write\|NotebookEdit` when `FLAI_ROLE` is `plan` or `orchestrate` | Refuses a Claude Code sub-agent's writes to work items, threads, and history ([Sub-agents](../users/flai.md#sub-agents)), holds the planner to planning ([Running the planner](../users/flai.md#running-the-planner)), and holds the orchestrator to `orchestration.permissions` ([Running the orchestrator](../users/flai.md#running-the-orchestrator)) |
+| `hooks.PreToolUse` | `.claude/settings.json` | `flai guard` before `Bash` and `mcp__flai__.*`, and before `Edit\|Write\|NotebookEdit` when `FLAI_ROLE` is `plan` or `orchestrate` | Refuses a Claude Code sub-agent's writes to work items, threads, and history ([Sub-agents](../users/flai.md#sub-agents)), holds the planner to planning ([Running the planner](../users/flai.md#running-the-planner)), and holds the orchestrator to `orchestration.permissions` ([Running the orchestrator](../users/flai.md#running-the-orchestrator)), and refuses a story's agent `wait_for_events` while a sub-agent of its session runs and no thread on its story is open ([Sub-agents](../users/flai.md#sub-agents)) |
+| `hooks.SubagentStart` | `.claude/settings.json` | `flai guard` when `FLAI_STORY` is set, its output discarded and its exit ignored | Records a story's agent's sub-agent as running, in `.flai-cache/guard/<session_id>.json` in the main checkout, for the refusal of `wait_for_events` ([Sub-agents](../users/flai.md#sub-agents), S-0285) |
+| `hooks.SubagentStop` | `.claude/settings.json` | `flai guard` when `FLAI_STORY` is set, its output discarded and its exit ignored | Records that the sub-agent no longer runs; the record is removed when none does |
 
 ## Environment variables
 
@@ -166,7 +168,7 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | Variable | Set by | Holds |
 |----------|--------|-------|
 | `FLAI_HOST_URL`, `FLAI_HOST_TOKEN` | `flai host`, for `flai serve` and the MCP servers; never passed on to an agent `flai serve` starts | The host's address and the token its API takes; `flai serve` uses them only when the host's token is the one beside its own config |
-| `FLAI_STORY` | `flai serve`, for an agent it starts for a story | The story the agent is to work |
+| `FLAI_STORY` | `flai serve`, for an agent it starts for a story | The story the agent is to work; with no `FLAI_ROLE`, `flai guard` reads it to refuse the agent's own `wait_for_events` while a sub-agent of its session runs and no thread on the story is open, and the `SubagentStart` and `SubagentStop` hooks run only when it is set |
 | `FLAI_ROLE` | `flai serve`, for the planner it starts (`flai plan`) and the orchestrator it runs (the `orchestrate` host action) | `plan` or `orchestrate`; `flai guard` reads it to hold the session to planning, or to the orchestrator's permissions |
 | `FLAI_ITEM` | `flai serve`, for the planner it starts | The epic or story the planner plans |
 | `FLAI_STARTED_BY` | `flai serve` | `flai-serve` |

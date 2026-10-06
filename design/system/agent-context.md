@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-03
+updated: 2026-10-06
 status: active
 topics: [cli, conventions]
 ---
@@ -230,6 +230,21 @@ A probe on 2026-10-01 with Claude Code 2.1.286, started as `flai serve` starts i
 - Sub-agents run in the background by default, and every event of theirs in the stream-json log carries `parent_tool_use_id`.
 - A Bash pattern in a sub-agent's `disallowedTools` (`Bash(touch:*)`) removes `Bash` from it whole; a `hooks` block in a sub-agent's definition did not fire.
 - A `PreToolUse` hook in the project's `.claude/settings.json` fires for a sub-agent's calls with `agent_type` and `agent_id` in its input, and for the session's agent without them. With `flai guard` as that hook, a `general-purpose` sub-agent's `item_move`, `git commit`, and `flai move` were refused and its `item_get` and `echo` ran.
+
+### Waiting for a sub-agent
+
+A story's agent must wait for the sub-agents it starts, and it waited for background ones in two ways that both failed. Holding `wait_for_events` ran each wait to its timeout, because the tool reports work items, threads, and narratives, and a sub-agent writes none of them; the sub-agent's finished notice came only when the call returned ([I-0083](../issues/I-0083-a-story-s-agent-waits-for-its-sub-agents-with-wait-for-events-which-cannot-see-them-finish-so-each-wait-runs-to-its-timeout.md)). Ending the turn worked for a short sub-agent, but `claude -p` ends the process ten minutes after the turn ends, with the sub-agent still running ([I-0084](../issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md)). The start prompt already said not to poll `wait_for_events`, and agents did so anyway.
+
+S-0285 measured on Claude Code 2.1.290, headless as `flai serve` runs it: a launch with the Agent tool's `run_in_background` set to false returned an 11-minute sub-agent's result as the tool's result, with the session alive throughout; three such launches in one message ran together, and the agent went on once all three had returned; a turn ended with a background sub-agent out ended the process 10m01s later, the sub-agent cut off and no `SubagentStop` fired. The `SubagentStart` and `SubagentStop` hooks' inputs carry `session_id`, `agent_id`, and `agent_type`.
+
+[ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md) settles it:
+
+- **How to wait.** The start prompt, `delegation.md`, and the `wait_for_events` description say to launch every sub-agent with `run_in_background` set to false, a layer's in one message, so that each result comes back as the tool's result however long it runs; never to end the turn while a sub-agent runs in the background; and that `wait_for_events` is for a thread awaiting the designer.
+- **What flai records.** The template's `.claude/settings.json` also runs `flai guard` as a `SubagentStart` and a `SubagentStop` hook, behind `[ -n "$FLAI_STORY" ] || exit 0`, so only in a story's agent's session. It keeps the session's running sub-agents in `.flai-cache/guard/<session_id>.json` in the project's main checkout, under a lock, since a layer's sub-agents start at once. These hooks never refuse and print nothing.
+- **What flai refuses.** As the `PreToolUse` hook, it refuses the story's agent's own `wait_for_events` (no `agent_id`, `FLAI_STORY` set, no `FLAI_ROLE`) while the record lists a running sub-agent and no unresolved thread is on the story or one of its tasks. The refusal names the running sub-agents and says how to wait. A wait with such a thread open passes and returns on the designer's answer.
+- **It fails open.** A record, a project, or threads it cannot read let the call through, as the guard does elsewhere.
+
+The planner, the orchestrator, and an interactive session are not affected. A session that ended with a sub-agent out leaves it in its record, since no `SubagentStop` fires; that costs nothing for the wait the rule allows. Whether `flai serve` restarts a story's agent that ended without finishing stays open on I-0084. This repository runs the hooks as `scripts/flai.sh guard`.
 
 ### Questions
 
