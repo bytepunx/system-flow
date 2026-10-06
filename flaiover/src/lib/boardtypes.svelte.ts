@@ -1,11 +1,11 @@
-// Which work item types the board shows (S-0141): a checkbox each for epics, stories, and tasks,
-// stories alone until the user changes it. Like the theme, the choice is a per-browser
-// convenience kept in localStorage, so it lasts across reloads and navigation.
+// Which work item types the board shows: the legend's type entries toggle each one (S-0303, was
+// a checkbox each, S-0141), every type shown until the user changes it. Like the theme, the choice
+// is a per-browser convenience kept in localStorage, so it lasts across reloads and navigation.
 export type ItemType = 'epic' | 'story' | 'task';
 export type Shown = Record<ItemType, boolean>;
 export const itemTypes: ItemType[] = ['epic', 'story', 'task'];
 const KEY = 'flaiover-board-types';
-const defaults: Shown = { epic: false, story: true, task: false };
+const defaults: Shown = { epic: true, story: true, task: true };
 
 /** The stored choice, with the default for anything missing or not a boolean. */
 export function parseShown(raw: string | null): Shown {
@@ -40,6 +40,11 @@ export class BoardTypes {
 		} catch {
 			/* private windows: the choice lasts for the page */
 		}
+	}
+
+	/** Flip one type, shown to hidden or back, and remember the whole choice. */
+	toggle(type: ItemType): void {
+		this.set(type, !this.shown[type]);
 	}
 }
 
