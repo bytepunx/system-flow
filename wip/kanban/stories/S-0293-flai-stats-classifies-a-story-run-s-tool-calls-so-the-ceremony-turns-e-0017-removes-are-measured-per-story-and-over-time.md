@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-06T11:37:08Z
-updated: 2026-10-06T23:17:59Z
+updated: 2026-10-06T23:24:47Z
 transitions: []
 tags: [cli, metrics]
 topics: [automation, conventions]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-06T11:37:27Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T11:12:00Z
-  basis: "Its own forecast of 40m; 39th in the pull order with an in-progress limit of 3, behind S-0261, S-0300, S-0301, S-0302, S-0228, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290 and S-0291."
+  delivery: 2026-10-07T10:57:00Z
+  basis: "Its own forecast of 40m; 40th in the pull order with an in-progress limit of 3, behind S-0300, S-0301, S-0302, S-0228, S-0269, S-0270, S-0271, S-0303, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290 and S-0291."
   by: flai
-  at: 2026-10-06T23:17:59Z
+  at: 2026-10-06T23:24:47Z
 ---
 # S-0293 flai stats classifies a story run's tool calls, so the ceremony turns E-0017 removes are measured per story and over time
 

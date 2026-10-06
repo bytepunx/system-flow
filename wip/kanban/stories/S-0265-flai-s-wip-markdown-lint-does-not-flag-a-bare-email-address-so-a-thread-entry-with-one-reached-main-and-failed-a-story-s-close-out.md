@@ -6,7 +6,7 @@ title: flai's wip markdown lint does not flag a bare email address, so a thread 
 status: backlog
 owner: alex
 created: 2026-10-05T00:03:14Z
-updated: 2026-10-06T23:17:59Z
+updated: 2026-10-06T23:24:47Z
 transitions: []
 tags: []
 topics: [cli]
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-10-05T05:49:47Z
 forecast:
   duration: 25m
-  delivery: 2026-10-07T08:40:00Z
-  basis: "Its own forecast of 25m; 24th in the pull order with an in-progress limit of 3, behind S-0261, S-0300, S-0301, S-0302, S-0228, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251 and S-0254."
+  delivery: 2026-10-07T08:25:00Z
+  basis: "Its own forecast of 25m; 25th in the pull order with an in-progress limit of 3, behind S-0300, S-0301, S-0302, S-0228, S-0269, S-0270, S-0271, S-0303, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251 and S-0254."
   by: flai
-  at: 2026-10-06T23:17:59Z
+  at: 2026-10-06T23:24:47Z
 ---
 # S-0265 flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
 

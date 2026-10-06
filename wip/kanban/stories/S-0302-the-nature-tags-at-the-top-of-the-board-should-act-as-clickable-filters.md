@@ -6,7 +6,7 @@ title: The nature tags at the top of the board should act as clickable filters
 status: ready
 owner: alex
 created: 2026-10-06T23:17:17Z
-updated: 2026-10-06T23:20:39Z
+updated: 2026-10-06T23:24:47Z
 transitions:
   - to: ready
     at: 2026-10-06T23:17:18Z
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-10-06T23:20:39Z
 forecast:
   duration: 20m
-  delivery: 2026-10-07T00:28:00Z
-  basis: "flai forecast's 10m (median 94 s per size unit over 7 small improvement stories on claude-opus-5-5, size 6) doubled for new theme tokens in two themes with contrast tests, a store, two components, and docs; S-0141, the type filter it mirrors, took 7.5 minutes for less."
-  by: planner-S-0302
-  at: 2026-10-06T23:20:39Z
+  delivery: 2026-10-06T23:46:00Z
+  basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 3, behind S-0300 and S-0301."
+  by: flai
+  at: 2026-10-06T23:24:47Z
 ---
 # S-0302 The nature tags at the top of the board should act as clickable filters
 

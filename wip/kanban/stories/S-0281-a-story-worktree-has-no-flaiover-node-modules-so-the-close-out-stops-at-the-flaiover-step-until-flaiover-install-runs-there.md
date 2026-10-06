@@ -6,7 +6,7 @@ title: A story worktree has no flaiover/node_modules, so the close-out stops at 
 status: backlog
 owner: alex
 created: 2026-10-05T07:09:06Z
-updated: 2026-10-06T23:17:59Z
+updated: 2026-10-06T23:24:47Z
 transitions: []
 tags: []
 touches: [scripts/flaiover-install.sh, scripts/flaiover-test.sh, scripts/flaiover-unit.sh, scripts/README.md, design/system/devex.md, docs/operators/index.md, design/issues/I-0080-a-story-worktree-has-no-flaiover-node-modules-so-the-close-out-stops-at-the-flaiover-step-until-flaiover-install-runs-there.md, design/issues/summary.md]
@@ -25,10 +25,10 @@ cost_of_delay:
   at: 2026-10-06T22:53:49Z
 forecast:
   duration: 30m
-  delivery: 2026-10-07T10:31:00Z
-  basis: "Its own forecast of 30m; 32nd in the pull order with an in-progress limit of 3, behind S-0261, S-0300, S-0301, S-0302, S-0228, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279 and S-0280."
+  delivery: 2026-10-07T10:16:00Z
+  basis: "Its own forecast of 30m; 33rd in the pull order with an in-progress limit of 3, behind S-0300, S-0301, S-0302, S-0228, S-0269, S-0270, S-0271, S-0303, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279 and S-0280."
   by: flai
-  at: 2026-10-06T23:17:59Z
+  at: 2026-10-06T23:24:47Z
 finalized:
   by: alex
   at: 2026-10-06T22:49:26Z
