@@ -3,10 +3,10 @@ id: S-0299
 type: story
 nature: remediation
 title: A story's sub-agent that writes under .claude/ blocks its layer for thirty minutes on a permission thread nobody answers, and the start prompt does not warn the agent beforehand
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T21:00:33Z
-updated: 2026-10-06T22:53:23Z
+updated: 2026-10-06T23:03:32Z
 transitions:
   - to: ready
     at: 2026-10-06T21:39:22Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:31:55Z
     by: system-flow
+  - to: review
+    at: 2026-10-06T23:02:25Z
+    by: agent-S-0299
+  - to: done
+    at: 2026-10-06T23:03:32Z
+    by: alex
 tags: [flai, guard, harness]
 topics: [cli, conventions]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/operators/settings.md, design/adrs, design/adrs/README.md, ".claude/settings.json", template/root/.claude/settings.json, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/operators/settings.md, design/adrs, design/adrs/README.md, ".claude/settings.json", template/root/.claude/settings.json, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, docs/operators/index.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,15 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1274
-  estimated: true
+  seconds: 1847
   models:
     - model: claude-opus-5-5
-      input: 240
-      output: 1311
-      cache_read: 8957932
-      cache_write: 385075
-      cost: 4.099
+      input: 300
+      output: 99116
+      cache_read: 13724381
+      cache_write: 445681
+      cost: 7.5178
+    - model: claude-sonnet-5-5
+      input: 54
+      output: 13048
+      cache_read: 1417114
+      cache_write: 132457
+      cost: 0.7452
   strategic:
     - kind: planner
       seconds: 443

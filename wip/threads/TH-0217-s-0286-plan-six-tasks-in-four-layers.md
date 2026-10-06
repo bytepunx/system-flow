@@ -4,10 +4,10 @@ title: "S-0286 plan: six tasks in four layers"
 anchor:
   path: wip/kanban/stories/S-0286-a-story-that-changes-a-path-claude-code-protects-is-flagged-at-review-and-accepted-only-by-the-operator-flai-checks-permission-prompt-against-each-new-claude-code-and-the-prompt-covers-every-protected-path-in-a-worktree-but-git.md
   item: S-0286
-status: open
-participants: [planner-S-0286]
+status: resolved
+participants: [planner-S-0286, alex]
 created: 2026-10-06T22:55:25Z
-updated: 2026-10-06T22:55:25Z
+updated: 2026-10-06T22:59:24Z
 ---
 
 # TH-0217 S-0286 plan: six tasks in four layers
@@ -46,3 +46,6 @@ Assumptions:
 - I kept the declared folder touches `flai/internal/serve`, `flai/internal/harness`, and `docs/operators`. The tasks name their files, and ADR-0096 narrows the claim to them. `design/adrs` stays a folder because the ADR's number is not known yet.
 
 I have nothing to propose splitting or dropping.
+
+### 2026-10-06T22:59:24Z alex
+Resolved.

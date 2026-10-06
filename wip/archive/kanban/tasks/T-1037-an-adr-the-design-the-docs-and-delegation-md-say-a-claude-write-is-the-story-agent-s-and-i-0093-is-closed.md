@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 348
-      cache_read: 3140946
-      cache_write: 103070
-      cost: 1.4232
+      input: 70
+      output: 23148
+      cache_read: 3205245
+      cache_write: 104086
+      cost: 1.7557
 ---
 # T-1037 An ADR, the design, the docs, and delegation.md say a .claude/ write is the story agent's, and I-0093 is closed
 

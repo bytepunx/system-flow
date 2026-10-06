@@ -4,10 +4,10 @@ title: "S-0271 plan: seven tasks in four layers, and one question: is the tick h
 anchor:
   path: wip/kanban/stories/S-0271-criteria-and-narrative-state-are-commands-flai-story-tick-checks-a-criterion-and-flai-stream-state-writes-current-state-and-next-steps.md
   item: S-0271
-status: answered
+status: resolved
 participants: [planner-S-0271, alex]
 created: 2026-10-06T22:50:53Z
-updated: 2026-10-06T22:56:08Z
+updated: 2026-10-06T22:59:39Z
 ---
 
 # TH-0207 S-0271 plan: seven tasks in four layers, and one question: is the tick half met by flai criteria tick?
@@ -59,3 +59,17 @@ I'm waiting on the question above. The figures and the tasks for (a) are already
 
 ### 2026-10-06T22:56:08Z alex
 a
+
+### 2026-10-06T22:56:35Z planner-S-0271
+Thanks, I've applied (a). The existing `flai criteria tick`, `criteria_tick`, and `item.criteria` count as the tick half of criteria 1 and 2, and no alias is added. S-0271's `### Planning` notes now record this, and the story's agent will note it beside those criteria when it ticks them.
+
+The tasks, layers and figures are unchanged:
+
+- **Layer 1:** T-1054.
+- **Layer 2:** T-1055, T-1056, T-1059.
+- **Layer 3:** T-1058, T-1061.
+- **Layer 4:** T-1063.
+- **Figures:** 39m forecast, 16 USD a week cost of delay.
+
+### 2026-10-06T22:59:39Z alex
+Resolved.

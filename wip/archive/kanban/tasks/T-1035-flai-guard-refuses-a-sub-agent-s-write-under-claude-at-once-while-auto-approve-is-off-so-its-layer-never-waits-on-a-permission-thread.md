@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 398
-      cache_read: 1944565
-      cache_write: 99881
-      cost: 0.897
+      input: 44
+      output: 14588
+      cache_read: 2020020
+      cache_write: 65597
+      cost: 1.1065
 ---
 # T-1035 flai guard refuses a sub-agent's write under .claude/ at once while auto-approve is off, so its layer never waits on a permission thread
 

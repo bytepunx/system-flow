@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 109
-      cache_read: 1092713
-      cache_write: 56306
-      cost: 0.5041
+      input: 25
+      output: 8199
+      cache_read: 1135290
+      cache_write: 36867
+      cost: 0.6219
 ---
 # T-1053 The settings run flai guard before a story session's Edit, MultiEdit, Write, and NotebookEdit, so its refusal reaches a story's sub-agents
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 166
-      cache_read: 479473
-      cache_write: 46181
-      cost: 0.2307
+      input: 11
+      output: 3751
+      cache_read: 519375
+      cache_write: 16866
+      cost: 0.2845
 ---
 # T-1036 The story agent's start prompt says, before it launches a sub-agent, that a write under .claude/ is its own and waits on the operator
 

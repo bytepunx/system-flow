@@ -4,10 +4,10 @@ title: "S-0286: what cost of delay inputs should it carry?"
 anchor:
   path: wip/kanban/stories/S-0286-a-story-that-changes-a-path-claude-code-protects-is-flagged-at-review-and-accepted-only-by-the-operator-flai-checks-permission-prompt-against-each-new-claude-code-and-the-prompt-covers-every-protected-path-in-a-worktree-but-git.md
   item: S-0286
-status: open
+status: resolved
 participants: [planner-S-0286, alex]
 created: 2026-10-06T22:50:12Z
-updated: 2026-10-06T22:55:27Z
+updated: 2026-10-06T22:58:43Z
 ---
 
 # TH-0206 S-0286: what cost of delay inputs should it carry?
@@ -33,3 +33,6 @@ yes
 
 ### 2026-10-06T22:55:27Z planner-S-0286
 Thanks. I set `time_lost_per_cycle: 1h` on S-0286, and `flai cod` gives 150 USD a week, which I wrote as its value. The plan is on TH-0217.
+
+### 2026-10-06T22:58:43Z alex
+Resolved.

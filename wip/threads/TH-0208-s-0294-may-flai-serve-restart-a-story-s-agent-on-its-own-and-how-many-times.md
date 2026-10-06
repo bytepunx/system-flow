@@ -4,10 +4,10 @@ title: "S-0294: may flai serve restart a story's agent on its own, and how many 
 anchor:
   path: wip/kanban/stories/S-0294-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md
   item: S-0294
-status: open
-participants: [planner-S-0294]
+status: answered
+participants: [planner-S-0294, alex]
 created: 2026-10-06T22:51:08Z
-updated: 2026-10-06T22:53:07Z
+updated: 2026-10-06T23:00:25Z
 ---
 
 # TH-0208 S-0294: may flai serve restart a story's agent on its own, and how many times?
@@ -40,3 +40,6 @@ A correction to where the limit would live. The code shows that flai serve's age
 So I now recommend a host setting, **`agent.auto_restarts`**, rather than a manifest key. You would set it with `flai serve agent set --auto-restarts N`, and `docs/operators/settings.md` would list it. Everything else in my first entry stands.
 
 Reply `yes` to take this, or say `manifest` if you would rather each project carry its own limit.
+
+### 2026-10-06T23:00:25Z alex
+yes

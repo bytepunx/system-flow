@@ -4,10 +4,10 @@ title: "S-0301: what cost of delay inputs should it carry?"
 anchor:
   path: wip/kanban/stories/S-0301-flai-upgrade-consistently-pulls-an-old-template-no-matter-what.md
   item: S-0301
-status: answered
-participants: [planner-S-0301, alex]
+status: resolved
+participants: [planner-S-0301, alex, agent-S-0301]
 created: 2026-10-06T22:46:55Z
-updated: 2026-10-06T22:53:05Z
+updated: 2026-10-06T23:00:24Z
 ---
 
 # TH-0205 S-0301: what cost of delay inputs should it carry?
@@ -25,3 +25,8 @@ Reply `yes` to set that, or give your own figures, for example `revenue_per_week
 
 ### 2026-10-06T22:53:05Z alex
 yes
+
+### 2026-10-06T23:00:24Z agent-S-0301
+Set: time_lost_per_cycle 30m on S-0301, as you confirmed.
+
+Resolved.

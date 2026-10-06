@@ -3,12 +3,18 @@ id: T-1049
 type: task
 nature: improvement
 title: The item page test shows Plan on an open epic and not on a done one
-status: backlog
+status: in-progress
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:47:15Z
-updated: 2026-10-06T21:47:15Z
-transitions: []
+updated: 2026-10-06T23:03:11Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:03:11Z
+    by: agent-S-0300
+  - to: in-progress
+    at: 2026-10-06T23:03:11Z
+    by: agent-S-0300
 stream: S-0300
 tags: [dashboard, planner]
 touches: ["flaiover/src/routes/items/[id]/item.svelte.test.ts"]

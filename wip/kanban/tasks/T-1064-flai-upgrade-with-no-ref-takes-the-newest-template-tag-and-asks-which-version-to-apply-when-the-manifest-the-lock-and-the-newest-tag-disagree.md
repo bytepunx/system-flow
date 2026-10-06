@@ -3,12 +3,18 @@ id: T-1064
 type: task
 nature: remediation
 title: flai upgrade with no --ref takes the newest template tag and asks which version to apply when the manifest, the lock, and the newest tag disagree
-status: backlog
+status: in-progress
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:26Z
-updated: 2026-10-06T22:50:55Z
-transitions: []
+updated: 2026-10-06T23:00:24Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:00:24Z
+    by: agent-S-0301
+  - to: in-progress
+    at: 2026-10-06T23:00:24Z
+    by: agent-S-0301
 stream: S-0301
 tags: [cli, template]
 touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go]

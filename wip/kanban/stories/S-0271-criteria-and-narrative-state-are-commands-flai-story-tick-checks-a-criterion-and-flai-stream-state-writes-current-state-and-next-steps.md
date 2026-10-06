@@ -7,7 +7,7 @@ status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-06T22:56:13Z
+updated: 2026-10-06T22:57:00Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:17Z
@@ -66,7 +66,7 @@ The ticking half of the story already exists. ADR-0089 (S-0282) added:
 - the MCP tool `criteria_tick` (`flai/internal/mcpserver/criteria.go`);
 - the host method `item.criteria` (`flai/internal/hostapi/writes.go`), through which the dashboard's item page ticks.
 
-So the new work here is `flai stream state` and the check rule. TH-0207 asks whether that ticking meets the tick half of criteria 1 and 2 (recommended), or whether to add `flai story tick` as an alias. The story's words are left as the operator wrote them.
+alex answered TH-0207 on 2026-10-06 with option (a): that ticking meets the tick half of criteria 1 and 2. No `flai story tick`, `item_tick`, or `item.tick` is added. When the story's agent ticks those two criteria, it records in these Notes that the existing names deliver them. So the new work here is `flai stream state` and the check rule. The story's words are left as the operator wrote them.
 
 Tasks, in four layers:
 
@@ -90,8 +90,8 @@ All the touches are files, none is a folder. `flai touches suggest S-0271` lists
   - Their `template/root` copies and `template/CHANGELOG.md`: declared (design).
 - `design/system/agent-narrative.md`, `flai-cli.md`, `docs/users/flai.md`, and `flai-reference.md`: declared (co-change and criterion 3).
 - `docs/operators/settings.md`: layout, added. `scripts/flai-reference.sh` regenerates its flag index, which gains `--current` and `--next`.
-- Left out: `flai/cmd/criteria.go` and the flaiover item page, where ticking already exists. A task adds `criteria.go` back if TH-0207 is answered with the alias.
+- Left out: `flai/cmd/criteria.go` and the flaiover item page. Ticking already exists there, and TH-0207 adds no alias.
 
-Forecast: flai's 39m stands. It is the median of 83 s per unit over 25 done large improvement stories, times size 28 (3 criteria and 25 touches, up from 22 with the six touches added). Seven small tasks, each modelled on an existing sibling (`stream log`, `criteria_tick`, `stream.log`), fit that rate. The delivery, 2026-10-07T01:03Z, is flai's, with the story 6th in the pull order.
+Forecast: flai's 39m stands. It is the median of 83 s per unit over 25 done large improvement stories, times size 28 (3 criteria and 25 touches, up from 22 with the six touches added). Seven small tasks, each modelled on an existing sibling (`stream log`, `criteria_tick`, `stream.log`), fit that rate. The delivery is flai's, and it replans it as the board moves. It was 2026-10-07T02:01Z after S-0264 was accepted.
 
 Cost of delay: 16 USD a week stands, against flai's 77.75. flai shares E-0017's 900 USD a week by forecast duration. The epic's planner shared it by the turns each story removes, and the operator resolved that plan (TH-0176). This story removes the 111 narrative edits. The 119 `sed` ticks came before `criteria_tick` existed, so they are not counted.

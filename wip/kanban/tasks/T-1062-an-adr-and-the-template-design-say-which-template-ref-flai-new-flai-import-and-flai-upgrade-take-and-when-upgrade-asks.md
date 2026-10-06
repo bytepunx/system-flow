@@ -3,11 +3,11 @@ id: T-1062
 type: task
 nature: remediation
 title: An ADR and the template design say which template ref flai new, flai import, and flai upgrade take, and when upgrade asks
-status: in-progress
+status: done
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:14Z
-updated: 2026-10-06T22:54:36Z
+updated: 2026-10-06T23:00:10Z
 transitions:
   - to: ready
     at: 2026-10-06T22:54:35Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:54:36Z
     by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:00:10Z
+    by: agent-S-0301
 stream: S-0301
 tags: [design, template]
 touches: [design/adrs, design/adrs/README.md, design/system/template.md, design/system/project-manifest.md]
+usage:
+  source: log
+  seconds: 333
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 267
+      cache_read: 1683293
+      cache_write: 70014
+      cost: 0.7722
 ---
 # T-1062 An ADR and the template design say which template ref flai new, flai import, and flai upgrade take, and when upgrade asks
 

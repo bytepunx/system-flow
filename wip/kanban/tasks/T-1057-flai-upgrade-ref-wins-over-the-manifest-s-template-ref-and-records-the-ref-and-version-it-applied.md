@@ -3,11 +3,11 @@ id: T-1057
 type: task
 nature: remediation
 title: flai upgrade --ref wins over the manifest's template.ref and records the ref and version it applied
-status: in-progress
+status: done
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:49:54Z
-updated: 2026-10-06T22:54:34Z
+updated: 2026-10-06T23:00:09Z
 transitions:
   - to: ready
     at: 2026-10-06T22:54:33Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:54:34Z
     by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:00:09Z
+    by: agent-S-0301
 stream: S-0301
 tags: [cli, template]
 touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go]
+usage:
+  source: log
+  seconds: 335
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 164
+      cache_read: 1229238
+      cache_write: 74283
+      cost: 0.5741
 ---
 # T-1057 flai upgrade --ref wins over the manifest's template.ref and records the ref and version it applied
 

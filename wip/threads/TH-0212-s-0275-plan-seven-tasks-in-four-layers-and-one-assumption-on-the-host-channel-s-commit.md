@@ -4,10 +4,10 @@ title: "S-0275 plan: seven tasks in four layers, and one assumption on the host 
 anchor:
   path: wip/kanban/stories/S-0275-issue-and-adr-handling-from-the-worktree-is-one-call-each-bump-close-and-adr-new-number-from-the-whole-repository-and-commit-on-the-story-branch.md
   item: S-0275
-status: open
-participants: [planner-S-0275]
+status: resolved
+participants: [planner-S-0275, alex]
 created: 2026-10-06T22:54:17Z
-updated: 2026-10-06T22:54:17Z
+updated: 2026-10-06T23:02:00Z
 ---
 
 # TH-0212 S-0275 plan: seven tasks in four layers, and one assumption on the host channel's commit
@@ -46,3 +46,6 @@ The assumptions I made:
 5. ADR numbering from the whole repository is S-0245's work, and this story already waits for it.
 
 I would not split, merge, or drop anything.
+
+### 2026-10-06T23:02:00Z alex
+Resolved.

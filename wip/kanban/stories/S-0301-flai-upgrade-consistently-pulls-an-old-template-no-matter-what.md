@@ -6,7 +6,7 @@ title: flai upgrade consistently pulls an old template no matter what
 status: in-progress
 owner: alex
 created: 2026-10-06T22:46:13Z
-updated: 2026-10-06T22:54:09Z
+updated: 2026-10-06T23:00:51Z
 transitions:
   - to: ready
     at: 2026-10-06T22:46:14Z
@@ -16,12 +16,31 @@ transitions:
     by: agent-S-0301
 tags: [cli]
 topics: [template]
-touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go, flai/internal/template, design/adrs, design/system/template.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/template.md]
+touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go, flai/internal/template, design/adrs, design/system/template.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/template.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 611
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 200
+      output: 1075
+      cache_read: 7533156
+      cache_write: 337775
+      cost: 3.4667
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 30m
+    by: agent-S-0301
+    at: 2026-10-06T23:00:20Z
+  value: 75
+  by: planner-S-0301
+  at: 2026-10-06T23:00:51Z
 forecast:
   duration: 2h30m
   delivery: 2026-10-07T01:30:00Z
@@ -66,42 +85,54 @@ In another project, the template defaulted to 1.0.18 (not 1.0.60 which was the l
 
 ### Planning
 
-Planned by planner-S-0301 on 2026-10-06. The plan thread is on S-0301.
+Planned by planner-S-0301 on 2026-10-06. The plan thread, TH-0209, was resolved by alex. The cost of delay thread, TH-0205, was answered by alex.
 
 **Diagnosis.** The code shows two causes.
 
-- `flai/cmd/upgrade.go`, lines 54 to 56, replaces `--ref` with the manifest's `template.ref` whenever `--template` is not given, so `--ref 1.0.60` is thrown away.
-- `template.Source.Ensure` clones each repo@ref once into the cache and never fetches it again. A project on `main`, the config's default, keeps rendering whatever `main` was on the first clone, here 1.0.18. Editing `template.version` in `system-flow.yaml` then reads as "older than the template", and the upgrade "reverts" to the cached version.
+- `flai/cmd/upgrade.go`, lines 54 to 56, replaced `--ref` with the manifest's `template.ref` whenever `--template` was not given, so `--ref 1.0.60` was thrown away.
+- `template.Source.Ensure` cloned each repo@ref once into the cache and never fetched it again. A project on `main`, the config's default, kept rendering whatever `main` was on the first clone, here 1.0.18. Editing `template.version` in `system-flow.yaml` then read as "older than the template", and the upgrade "reverted" to the cached version.
 
-No code lists the template's tags today.
+No code listed the template's tags.
+
+**Tasks.** The planner drafted six tasks in three layers:
+
+- Layer 1: T-1057, T-1060 and T-1062.
+- Layer 2: T-1064 and T-1065.
+- Layer 3: T-1066.
+
+agent-S-0301 pulled the story while it was being planned. It cancelled its own four tasks, T-1078, T-1081, T-1084 and T-1086, as duplicates, and changed two assumptions in TH-0209. First, upgrade asks only when `system-flow.yaml` differs from both the lock and the newest tag. Second, the config default stays `main`, and a ref that is empty, the default branch, or a version tag follows releases.
 
 **Touches.**
 
-- **Declared:** `flai/cmd`. It is kept, as the planner keeps every declared touch. It is a folder touch, and under ADR-0096 the tasks' file touches below it replace it in the story's claim. The plan thread proposes dropping it.
+- **Declared:** `flai/cmd`. The planner kept it and proposed dropping it in TH-0209, and agent-S-0301 narrowed it to the files the tasks name.
 - **Layout:** read from the code.
-  - `flai/cmd/upgrade.go` and `upgrade_test.go`: the bug and the prompt.
+  - `flai/cmd/upgrade.go` and `upgrade_test.go`.
   - `flai/cmd/new.go` (`resolveTemplate`) and `new_test.go`.
   - `flai/cmd/import.go` and `import_test.go`.
   - `flai/internal/template/source.go`, plus the new `tags.go`, `tags_test.go` and `source_test.go`.
-  - `flai/internal/config/config.go` and `config_test.go`: the default `template.ref` is `main`.
+  - `flai/internal/config/config.go` and `config_test.go`. agent-S-0301 dropped these when it kept the default `main`.
 - **Design:**
-  - `design/system/template.md`, "Upgrading a project", which today says that upgrade never prompts.
-  - `design/system/project-manifest.md`: `template.ref`.
-  - `design/system/flai-cli.md`: the rows for `flai new` and `flai upgrade`.
+  - `design/system/template.md`, "Upgrading a project".
+  - `design/system/project-manifest.md`.
+  - `design/system/flai-cli.md`.
   - `docs/users/flai.md`, "Upgrade to a newer template".
   - `docs/users/flai-reference.md`, which `scripts/flai-reference.sh` regenerates.
-  - `docs/contributors/template.md`, which warns that a branch ref goes stale.
-  - A new ADR and `design/adrs/README.md`.
-- **Co-change:** `flai touches suggest` ranks by co-change with `flai/cmd` as a whole. Its top hits, `docs/users/flai.md`, `design/system/flai-cli.md` and `docs/users/flai-reference.md`, are taken. The rest are other commands' files that this story does not reach.
-- **Folder touches kept:**
-  - `flai/cmd`, as declared.
-  - `design/adrs`, because the ADR's number is not known until `flai adr new` runs. It is in `claims.shared`, so it holds no ready story.
+  - `docs/contributors/template.md`.
+  - A new ADR.
+- **Co-change:** `flai touches suggest` ranked by co-change with `flai/cmd`. Its top hits, `docs/users/flai.md`, `design/system/flai-cli.md` and `docs/users/flai-reference.md`, were taken. The rest were other commands' files that this story does not reach.
+- **Folder touches:**
+  - `design/adrs`, because the ADR's number was not known until `flai adr new` ran. It is in `claims.shared`, so it holds no ready story.
+  - `flai/internal/template` stands as agent-S-0301 widened it while it worked.
 
 **Forecast.** The duration is 2h30m and delivery is 2026-10-07T01:30Z, adjusted from flai's 12m.
 
 - flai sized the story from one declared touch and four criteria, which gave size 5 in the small band.
 - The plan is six tasks in three layers, with new code for tag listing, a cache refetch and an interactive prompt, plus an ADR and docs.
 - Six-task stories here have been forecast at 1h30m to 1h45m. Git-backed test fixtures for tags add margin.
-- Delivery counts from the pull at 22:50Z.
+- Delivery counts from the pull at 22:50Z. Layer 1 was done by 23:00Z, which is on track.
 
-**Cost of delay.** The story has no inputs and no epic, so `flai cod` refuses. The inputs are the operator's, asked for on the plan's cost of delay thread, with `time_lost_per_cycle: 30m` recommended. The value is written once they are answered.
+**Cost of delay.** The value is 75 USD a week, as `flai cod` gives it. It is not adjusted.
+
+- The input, `time_lost_per_cycle: 30m`, is the operator's, confirmed in TH-0205 and recorded by agent-S-0301.
+- At 150 USD an hour and one 168h cycle a week, that comes to 75.
+- No revenue or penalty applies: the story removes operator toil on every downstream upgrade.

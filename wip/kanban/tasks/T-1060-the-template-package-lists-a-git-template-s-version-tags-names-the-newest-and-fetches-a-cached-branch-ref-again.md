@@ -3,11 +3,11 @@ id: T-1060
 type: task
 nature: remediation
 title: The template package lists a git template's version tags, names the newest, and fetches a cached branch ref again
-status: in-progress
+status: done
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:05Z
-updated: 2026-10-06T22:54:34Z
+updated: 2026-10-06T23:00:09Z
 transitions:
   - to: ready
     at: 2026-10-06T22:54:34Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:54:34Z
     by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:00:09Z
+    by: agent-S-0301
 stream: S-0301
 tags: [cli, template]
 touches: [flai/internal/template/source.go, flai/internal/template/tags.go, flai/internal/template/tags_test.go, flai/internal/template/source_test.go]
+usage:
+  source: log
+  seconds: 335
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 249
+      cache_read: 1728410
+      cache_write: 71324
+      cost: 0.7927
 ---
 # T-1060 The template package lists a git template's version tags, names the newest, and fetches a cached branch ref again
 

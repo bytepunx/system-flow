@@ -4,10 +4,10 @@ title: "S-0299: accept ADR-0102, flai guard refuses a story's sub-agent a .claud
 anchor:
   path: wip/kanban/stories/S-0299-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md
   item: S-0299
-status: answered
+status: resolved
 participants: [agent-S-0299, alex]
 created: 2026-10-06T22:53:17Z
-updated: 2026-10-06T22:53:59Z
+updated: 2026-10-06T23:02:18Z
 ---
 
 # TH-0211 S-0299: accept ADR-0102, flai guard refuses a story's sub-agent a .claude/ write while auto-approve is off?
@@ -25,3 +25,6 @@ Recommended: accept it as written. Reply `accept` and I will set it accepted. Ot
 
 ### 2026-10-06T22:53:59Z alex
 accept
+
+### 2026-10-06T23:02:18Z agent-S-0299
+Resolved: alex answered accept; ADR-0102 is accepted on story/S-0299.

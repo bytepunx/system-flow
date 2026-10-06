@@ -4,10 +4,10 @@ title: "S-0281 plan: two tasks in two layers, with the fix in the flaiover scrip
 anchor:
   path: wip/kanban/stories/S-0281-a-story-worktree-has-no-flaiover-node-modules-so-the-close-out-stops-at-the-flaiover-step-until-flaiover-install-runs-there.md
   item: S-0281
-status: open
-participants: [planner-S-0281]
+status: resolved
+participants: [planner-S-0281, alex]
 created: 2026-10-06T22:54:17Z
-updated: 2026-10-06T22:54:17Z
+updated: 2026-10-06T23:02:40Z
 ---
 
 # TH-0213 S-0281 plan: two tasks in two layers, with the fix in the flaiover scripts
@@ -38,3 +38,6 @@ The plan for S-0281 is two tasks, one per layer.
    - I-0080 has had a second occurrence since then (S-0295). If you want the cost to count both, raise `time_lost_per_cycle` to 10m. I left the inputs as they are, since they are yours.
 
 I have planned what needs no answer, so nothing waits on this thread. Reply `ok` to keep the plan, or say what to change.
+
+### 2026-10-06T23:02:40Z alex
+Resolved.

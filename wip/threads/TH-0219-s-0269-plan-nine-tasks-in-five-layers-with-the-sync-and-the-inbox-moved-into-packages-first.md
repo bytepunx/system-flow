@@ -4,10 +4,10 @@ title: "S-0269 plan: nine tasks in five layers, with the sync and the inbox move
 anchor:
   path: wip/kanban/stories/S-0269-one-command-closes-a-task-flai-task-done-commits-syncs-moves-logs-widens-touches-checks-and-answers-the-inbox.md
   item: S-0269
-status: open
-participants: [planner-S-0269]
+status: resolved
+participants: [planner-S-0269, alex]
 created: 2026-10-06T22:55:40Z
-updated: 2026-10-06T22:55:40Z
+updated: 2026-10-06T22:58:22Z
 ---
 
 # TH-0219 S-0269 plan: nine tasks in five layers, with the sync and the inbox moved into packages first
@@ -50,3 +50,6 @@ The story's figures:
 - **Cost of delay:** 427 USD a week, unchanged.
 
 The story's `### Planning` notes give the reasons. I'd split, merge or drop nothing.
+
+### 2026-10-06T22:58:22Z alex
+Resolved.

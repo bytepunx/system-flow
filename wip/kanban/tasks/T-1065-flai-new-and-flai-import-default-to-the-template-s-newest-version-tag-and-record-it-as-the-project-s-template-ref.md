@@ -3,12 +3,18 @@ id: T-1065
 type: task
 nature: remediation
 title: flai new and flai import default to the template's newest version tag and record it as the project's template.ref
-status: backlog
+status: in-progress
 parent: S-0301
 owner: alex
 created: 2026-10-06T22:50:35Z
-updated: 2026-10-06T22:54:07Z
-transitions: []
+updated: 2026-10-06T23:00:25Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:00:25Z
+    by: agent-S-0301
+  - to: in-progress
+    at: 2026-10-06T23:00:25Z
+    by: agent-S-0301
 stream: S-0301
 tags: [cli, template]
 touches: [flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go]

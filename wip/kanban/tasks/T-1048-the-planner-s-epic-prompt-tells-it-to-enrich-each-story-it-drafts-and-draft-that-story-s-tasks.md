@@ -3,12 +3,18 @@ id: T-1048
 type: task
 nature: improvement
 title: The planner's epic prompt tells it to enrich each story it drafts and draft that story's tasks
-status: backlog
+status: in-progress
 parent: S-0300
 owner: alex
 created: 2026-10-06T21:46:54Z
-updated: 2026-10-06T22:32:12Z
-transitions: []
+updated: 2026-10-06T23:03:10Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:03:10Z
+    by: agent-S-0300
+  - to: in-progress
+    at: 2026-10-06T23:03:10Z
+    by: agent-S-0300
 stream: S-0300
 tags: [planner, cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
