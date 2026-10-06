@@ -6,7 +6,7 @@ title: The type specifiers act as filters for the board
 status: ready
 owner: alex
 created: 2026-10-06T23:23:11Z
-updated: 2026-10-06T23:26:54Z
+updated: 2026-10-06T23:30:03Z
 transitions:
   - to: ready
     at: 2026-10-06T23:23:12Z
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-10-06T23:26:54Z
 forecast:
   duration: 20m
-  delivery: 2026-10-07T01:42:00Z
-  basis: flai forecast's 26m (84 s per unit of size times 18) less the two declared folder touches that add no work, checked against S-0141, the checkbox story this reworks, which took 8 minutes in progress.
-  by: planner-S-0303
-  at: 2026-10-06T23:26:54Z
+  delivery: 2026-10-07T01:30:00Z
+  basis: "Its own forecast of 20m; 6th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270 and S-0271."
+  by: flai
+  at: 2026-10-06T23:30:03Z
 ---
 # S-0303 The type specifiers act as filters for the board
 
