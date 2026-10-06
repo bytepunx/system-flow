@@ -3,16 +3,36 @@ id: T-0901
 type: task
 nature: feature
 title: A fixture-board test runs the orchestrator's calls for each of its four permissions, on and off, through the guard and flai
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:47:33Z
-updated: 2026-10-05T04:47:33Z
-transitions: []
+updated: 2026-10-06T03:37:02Z
+transitions:
+  - to: ready
+    at: 2026-10-06T03:16:31Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T03:16:32Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:26:46Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai]
-touches: [flai/cmd/orchestrate_permissions_test.go, flai/cmd/testdata/orchestrate]
+touches: [flai/cmd/orchestrate_permissions_test.go]
 after: [T-0893, T-0896]
+usage:
+  source: log
+  seconds: 614
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 117
+      output: 43660
+      cache_read: 6623737
+      cache_write: 152759
+      cost: 3.0652
 ---
 # T-0901 A fixture-board test runs the orchestrator's calls for each of its four permissions, on and off, through the guard and flai
 

@@ -3,16 +3,36 @@ id: T-0893
 type: task
 nature: feature
 title: flai guard passes the orchestrator's plan, finalize, promote, and order calls only while their permission is on, and its new reads always
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:46:49Z
-updated: 2026-10-05T04:47:11Z
-transitions: []
+updated: 2026-10-06T03:11:59Z
+transitions:
+  - to: ready
+    at: 2026-10-06T03:07:05Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T03:07:05Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:11:59Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/orchestrate_test.go, flai/cmd/guard.go]
 after: [T-0884, T-0888, T-0890]
+usage:
+  source: log
+  seconds: 294
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 14024
+      cache_read: 2127637
+      cache_write: 49068
+      cost: 0.9846
 ---
 # T-0893 flai guard passes the orchestrator's plan, finalize, promote, and order calls only while their permission is on, and its new reads always
 

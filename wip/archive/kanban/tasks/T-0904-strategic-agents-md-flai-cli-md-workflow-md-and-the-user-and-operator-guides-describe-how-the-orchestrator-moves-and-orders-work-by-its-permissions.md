@@ -3,16 +3,36 @@ id: T-0904
 type: task
 nature: feature
 title: strategic-agents.md, flai-cli.md, workflow.md, and the user and operator guides describe how the orchestrator moves and orders work by its permissions
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:47:42Z
-updated: 2026-10-05T04:47:42Z
-transitions: []
+updated: 2026-10-06T03:33:36Z
+transitions:
+  - to: ready
+    at: 2026-10-06T03:26:50Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T03:26:51Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:33:36Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai, docs]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators]
 after: [T-0899, T-0901]
+usage:
+  source: log
+  seconds: 405
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 172
+      output: 63779
+      cache_read: 9675881
+      cache_write: 223149
+      cost: 4.4777
 ---
 # T-0904 strategic-agents.md, flai-cli.md, workflow.md, and the user and operator guides describe how the orchestrator moves and orders work by its permissions
 

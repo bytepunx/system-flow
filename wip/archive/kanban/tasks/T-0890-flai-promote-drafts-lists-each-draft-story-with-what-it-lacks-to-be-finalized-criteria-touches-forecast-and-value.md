@@ -3,15 +3,35 @@ id: T-0890
 type: task
 nature: feature
 title: "flai promote --drafts lists each draft story with what it lacks to be finalized: criteria, touches, forecast, and value"
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:46:38Z
-updated: 2026-10-05T04:46:38Z
-transitions: []
+updated: 2026-10-06T03:03:30Z
+transitions:
+  - to: ready
+    at: 2026-10-06T02:58:12Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T02:58:12Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:03:30Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai]
 touches: [flai/internal/workitem/finalizable.go, flai/internal/workitem/finalizable_test.go, flai/cmd/promote.go, flai/cmd/promote_drafts_test.go]
+usage:
+  source: log
+  seconds: 318
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 13993
+      cache_read: 2122891
+      cache_write: 48959
+      cost: 0.9824
 ---
 # T-0890 flai promote --drafts lists each draft story with what it lacks to be finalized: criteria, touches, forecast, and value
 

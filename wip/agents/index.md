@@ -1,16 +1,15 @@
 ---
 title: Active streams
-updated: 2026-10-06T02:59:58Z
+updated: 2026-10-06T03:45:18Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0219](S-0219.md) | The orchestrator moves and orders work by its policy within its permissions | ready | agent-S-0219 | 2026-10-06T02:57:37Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 19 | 43.3046 USD | 9092 | 2026-10-05T06:11:30Z |
+| [planner](planner.md) | 20 | 44.1138 USD | 9165 | 2026-10-06T03:16:02Z |

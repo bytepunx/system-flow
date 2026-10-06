@@ -3,16 +3,36 @@ id: T-0899
 type: task
 nature: feature
 title: The orchestrator's prompt and definition say how it plans, finalizes, promotes, and orders by its permissions, logging each action with its policy figure
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:47:25Z
-updated: 2026-10-05T04:47:48Z
-transitions: []
+updated: 2026-10-06T03:31:16Z
+transitions:
+  - to: ready
+    at: 2026-10-06T03:15:09Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T03:15:09Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:31:16Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai, template]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-0893, T-0896]
+usage:
+  source: log
+  seconds: 967
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 128
+      output: 47496
+      cache_read: 7205670
+      cache_write: 166180
+      cost: 3.3345
 ---
 # T-0899 The orchestrator's prompt and definition say how it plans, finalizes, promotes, and orders by its permissions, logging each action with its policy figure
 

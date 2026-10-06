@@ -3,16 +3,36 @@ id: T-0896
 type: task
 nature: feature
 title: The orchestrator can start the planner for an epic, finalize a complete draft, and promote only a candidate story to ready while the ready limit has room
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:47:01Z
-updated: 2026-10-05T04:47:14Z
-transitions: []
+updated: 2026-10-06T03:14:52Z
+transitions:
+  - to: ready
+    at: 2026-10-06T03:03:31Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T03:03:31Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:14:52Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai]
-touches: [flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/server.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/cmd/move.go, flai/cmd/move_orchestrate_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go]
+touches: [flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/agents.go, flai/cmd/move.go, flai/cmd/move_orchestrate_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/plan.go, flai/cmd/plan_test.go, flai/cmd/plan_orchestrate_test.go, flai/internal/workitem/promotable.go]
 after: [T-0890]
+usage:
+  source: log
+  seconds: 681
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 191
+      output: 71034
+      cache_read: 10776529
+      cache_write: 248533
+      cost: 4.987
 ---
 # T-0896 The orchestrator can start the planner for an epic, finalize a complete draft, and promote only a candidate story to ready while the ready limit has room
 

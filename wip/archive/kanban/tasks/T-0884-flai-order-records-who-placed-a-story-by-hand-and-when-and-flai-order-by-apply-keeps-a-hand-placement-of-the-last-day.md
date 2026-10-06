@@ -3,15 +3,41 @@ id: T-0884
 type: task
 nature: feature
 title: flai order records who placed a story by hand and when, and flai order --by --apply keeps a hand placement of the last day
-status: backlog
+status: done
 parent: S-0219
 owner: alex
 created: 2026-10-05T04:46:19Z
-updated: 2026-10-05T04:46:19Z
-transitions: []
+updated: 2026-10-06T03:07:00Z
+transitions:
+  - to: ready
+    at: 2026-10-06T02:58:11Z
+    by: agent-S-0219
+  - to: in-progress
+    at: 2026-10-06T02:58:11Z
+    by: agent-S-0219
+  - to: done
+    at: 2026-10-06T03:07:00Z
+    by: agent-S-0219
 stream: S-0219
 tags: [flai]
 touches: [flai/internal/workitem/board.go, flai/internal/workitem/board_placed_test.go, flai/internal/workitem/policy.go, flai/internal/workitem/policy_test.go, flai/cmd/order.go, flai/cmd/order_test.go, design/adrs]
+usage:
+  source: log
+  seconds: 529
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 103
+      output: 38478
+      cache_read: 5837462
+      cache_write: 134626
+      cost: 2.7014
+    - model: claude-sonnet-5-5
+      input: 20
+      output: 4791
+      cache_read: 181306
+      cache_write: 60933
+      cost: 0.2365
 ---
 # T-0884 flai order records who placed a story by hand and when, and flai order --by --apply keeps a hand placement of the last day
 

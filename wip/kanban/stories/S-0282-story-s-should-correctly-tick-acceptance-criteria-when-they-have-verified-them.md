@@ -3,11 +3,14 @@ id: S-0282
 type: story
 nature: remediation
 title: Story's should correctly tick acceptance criteria when they have verified them
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T02:59:32Z
-updated: 2026-10-06T02:59:32Z
-transitions: []
+updated: 2026-10-06T02:59:33Z
+transitions:
+  - to: ready
+    at: 2026-10-06T02:59:33Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd]
 agent:
