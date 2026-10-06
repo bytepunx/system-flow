@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 61
-      output: 338
-      cache_read: 3194807
-      cache_write: 100340
-      cost: 1.4482
+      input: 59
+      output: 25055
+      cache_read: 3270218
+      cache_write: 86956
+      cost: 1.677
 ---
 # T-1065 flai new and flai import default to the template's newest version tag and record it as the project's template.ref
 

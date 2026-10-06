@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 249
-      cache_read: 1728410
-      cache_write: 71324
-      cost: 0.791
+      input: 32
+      output: 13685
+      cache_read: 1786145
+      cache_write: 47494
+      cost: 0.9159
 ---
 # T-1060 The template package lists a git template's version tags, names the newest, and fetches a cached branch ref again
 

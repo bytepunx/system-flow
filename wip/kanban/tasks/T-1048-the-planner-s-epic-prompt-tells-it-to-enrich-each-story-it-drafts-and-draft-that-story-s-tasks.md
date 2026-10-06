@@ -31,7 +31,7 @@ usage:
       output: 140
       cache_read: 719254
       cache_write: 55171
-      cost: 0.3408
+      cost: 0.3412
 ---
 # T-1048 The planner's epic prompt tells it to enrich each story it drafts and draft that story's tasks
 

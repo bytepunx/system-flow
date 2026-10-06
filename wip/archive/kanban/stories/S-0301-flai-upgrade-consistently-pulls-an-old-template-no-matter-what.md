@@ -3,10 +3,10 @@ id: S-0301
 type: story
 nature: remediation
 title: flai upgrade consistently pulls an old template no matter what
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T22:46:13Z
-updated: 2026-10-06T23:23:59Z
+updated: 2026-10-06T23:30:03Z
 transitions:
   - to: ready
     at: 2026-10-06T22:46:14Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:50:14Z
     by: agent-S-0301
+  - to: review
+    at: 2026-10-06T23:29:09Z
+    by: agent-S-0301
+  - to: done
+    at: 2026-10-06T23:30:03Z
+    by: alex
 tags: [cli]
 topics: [template]
 touches: [flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, flai/cmd/new.go, flai/cmd/new_test.go, flai/cmd/import.go, flai/cmd/import_test.go, flai/internal/template, design/adrs, design/system/template.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/template.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md, docs/operators/runbooks/migrate.md, docs/operators/settings.md, docs/users/conventions.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
@@ -24,15 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1583
-  estimated: true
+  seconds: 2361
   models:
     - model: claude-opus-5-5
-      input: 436
-      output: 2478
-      cache_read: 20480602
-      cache_write: 707883
-      cost: 9.3125
+      input: 510
+      output: 218193
+      cache_read: 28478893
+      cache_write: 757263
+      cost: 14.604
+    - model: claude-sonnet-5-5
+      input: 40
+      output: 12254
+      cache_read: 823140
+      cache_write: 107287
+      cost: 0.5555
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m

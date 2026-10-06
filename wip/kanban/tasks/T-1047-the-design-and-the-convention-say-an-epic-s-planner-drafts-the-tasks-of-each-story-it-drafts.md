@@ -31,7 +31,7 @@ usage:
       output: 189
       cache_read: 889924
       cache_write: 59213
-      cost: 0.4177
+      cost: 0.4182
 ---
 # T-1047 The design and the convention say an epic's planner drafts the tasks of each story it drafts
 

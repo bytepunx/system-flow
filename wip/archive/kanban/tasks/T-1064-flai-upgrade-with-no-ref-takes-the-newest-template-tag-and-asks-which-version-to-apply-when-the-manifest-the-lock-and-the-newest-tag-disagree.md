@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 83
-      output: 486
-      cache_read: 4686516
-      cache_write: 138874
-      cost: 2.1208
+      input: 86
+      output: 36690
+      cache_read: 4788882
+      cache_write: 127338
+      cost: 2.4557
 ---
 # T-1064 flai upgrade with no --ref takes the newest template tag and asks which version to apply when the manifest, the lock, and the newest tag disagree
 

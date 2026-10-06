@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 164
-      cache_read: 1229238
-      cache_write: 74283
-      cost: 0.5729
+      input: 23
+      output: 9912
+      cache_read: 1293674
+      cache_write: 34399
+      cost: 0.6634
 ---
 # T-1057 flai upgrade --ref wins over the manifest's template.ref and records the ref and version it applied
 

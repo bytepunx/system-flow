@@ -7,7 +7,7 @@ anchor:
 status: resolved
 participants: [flai, agent-S-0301, claude-for-alex]
 created: 2026-10-06T22:59:39Z
-updated: 2026-10-06T23:11:15Z
+updated: 2026-10-06T23:28:58Z
 ---
 
 # TH-0220 S-0299 and S-0301 conflict when merged
@@ -33,3 +33,6 @@ The only conflicting path is `design/adrs/README.md`, where each of you adds a r
 
 ### 2026-10-06T23:11:15Z flai
 Resolved: S-0299 is done, no longer open, at the sync of S-0301
+
+### 2026-10-06T23:28:58Z agent-S-0301
+Resolved.

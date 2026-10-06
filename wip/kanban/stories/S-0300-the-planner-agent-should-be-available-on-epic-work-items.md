@@ -6,7 +6,7 @@ title: The planner agent should be available on epic work items
 status: in-progress
 owner: alex
 created: 2026-10-06T21:42:35Z
-updated: 2026-10-06T23:10:45Z
+updated: 2026-10-06T23:29:10Z
 transitions:
   - to: ready
     at: 2026-10-06T21:42:36Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0300
 tags: [dashboard, cli]
 topics: [planner, planning]
-touches: [flaiover/src, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/cmd/plan.go, flai/internal/mcpserver/plan.go, docs/users/flai-reference.md, design/system/conventions.md]
+touches: [flaiover/src, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/cmd/plan.go, flai/internal/mcpserver/plan.go, docs/users/flai-reference.md, design/system/conventions.md, design/issues/I-0097-a-story-s-agent-that-runs-flai-stream-open-is-left-with-the-story-in-ready-so-permission-prompt-refuses-its-claude-write-until-it-moves-the-story-itself.md, design/issues/I-0098-flai-serve-replans-a-story-on-its-own-agent-s-touches-edit-while-the-agent-works-it-and-the-planner-s-new-touches-hold-other-ready-stories.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,15 +24,15 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 366
+  seconds: 1541
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 621
-      cache_read: 3511220
-      cache_write: 277464
-      cost: 1.6673
+      input: 164
+      output: 757
+      cache_read: 5817588
+      cache_write: 322608
+      cost: 2.7054
   strategic:
     - kind: planner
       seconds: 3187
@@ -74,7 +74,7 @@ The epic page and the epic context menu should provide interfaces for invoking t
 ## Acceptance criteria
 - [x] The epic page has a plan button that invokes the planner for the epic
 - [x] The epic item's context menu has a plan option
-- [ ] The planner agent is capable of writing draft stories and draft tasks for the epic
+- [x] The planner agent is capable of writing draft stories and draft tasks for the epic
 
 ## Tasks
 - T-1047 The design and the convention say an epic's planner drafts the tasks of each story it drafts

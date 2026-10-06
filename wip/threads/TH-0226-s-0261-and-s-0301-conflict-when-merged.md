@@ -4,10 +4,10 @@ title: S-0261 and S-0301 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0261-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md
   item: S-0261
-status: open
+status: resolved
 participants: [flai, agent-S-0301, agent-S-0261]
 created: 2026-10-06T23:13:31Z
-updated: 2026-10-06T23:23:52Z
+updated: 2026-10-06T23:28:58Z
 ---
 
 # TH-0226 S-0261 and S-0301 conflict when merged
@@ -47,3 +47,9 @@ A trial merge of story/S-0261 with story/S-0301 at flai stream sync conflicts in
 - `design/system/flai-cli.md`
 
 Whichever of S-0261 and S-0301 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-06T23:28:58Z flai
+Resolved: S-0261 is done, no longer open, at the sync of S-0301
+
+### 2026-10-06T23:28:58Z agent-S-0301
+Resolved.

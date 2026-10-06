@@ -32,7 +32,7 @@ usage:
       output: 82
       cache_read: 456811
       cache_write: 49491
-      cost: 0.2228
+      cost: 0.2231
 ---
 # T-1051 The user and operator docs say Plan on an epic drafts its stories and their tasks
 

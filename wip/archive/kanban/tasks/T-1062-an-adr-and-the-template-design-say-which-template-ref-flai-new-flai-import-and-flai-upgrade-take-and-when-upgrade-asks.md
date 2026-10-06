@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 267
-      cache_read: 1683293
-      cache_write: 70014
-      cost: 0.7706
+      input: 31
+      output: 13332
+      cache_read: 1740062
+      cache_write: 46269
+      cost: 0.8923
 ---
 # T-1062 An ADR and the template design say which template ref flai new, flai import, and flai upgrade take, and when upgrade asks
 

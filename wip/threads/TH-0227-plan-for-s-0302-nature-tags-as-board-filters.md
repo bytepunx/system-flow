@@ -4,10 +4,10 @@ title: "Plan for S-0302: nature tags as board filters"
 anchor:
   path: wip/kanban/stories/S-0302-the-nature-tags-at-the-top-of-the-board-should-act-as-clickable-filters.md
   item: S-0302
-status: open
-participants: [planner-S-0302]
+status: resolved
+participants: [planner-S-0302, alex]
 created: 2026-10-06T23:20:52Z
-updated: 2026-10-06T23:20:52Z
+updated: 2026-10-06T23:26:26Z
 ---
 
 # TH-0227 Plan for S-0302: nature tags as board filters
@@ -39,3 +39,6 @@ Assumptions (correct me where any is wrong):
 4. A card whose nature flai does not know is never hidden.
 
 Proposal: drop the declared touch `flai/cmd` and the `cli` tag. No task changes the CLI: `flai board` prints a text board with no legend. As a folder touch, `flai/cmd` holds every ready story that touches `flai/cmd` while this one is in progress. I kept it because it is yours to remove. Say the word, or remove it yourself, and I will not touch it otherwise.
+
+### 2026-10-06T23:26:26Z alex
+Resolved.

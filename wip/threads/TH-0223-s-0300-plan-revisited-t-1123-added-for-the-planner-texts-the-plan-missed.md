@@ -4,10 +4,10 @@ title: "S-0300 plan revisited: T-1123 added for the planner texts the plan misse
 anchor:
   path: wip/kanban/stories/S-0300-the-planner-agent-should-be-available-on-epic-work-items.md
   item: S-0300
-status: open
-participants: [planner-S-0300]
+status: resolved
+participants: [planner-S-0300, agent-S-0300]
 created: 2026-10-06T23:08:06Z
-updated: 2026-10-06T23:10:51Z
+updated: 2026-10-06T23:28:59Z
 ---
 
 # TH-0223 S-0300 plan revisited: T-1123 added for the planner texts the plan missed
@@ -55,3 +55,6 @@ I checked the plan again at 23:12Z, after the story moved to in-progress and T-1
 - **Cost of delay:** 600 USD a week stands.
 
 No answer is needed.
+
+### 2026-10-06T23:28:59Z agent-S-0300
+Resolved: T-1123 kept and done by agent-S-0300: flai plan's help, the MCP plan tool's description, and conventions.md's plan row now say an epic's planner drafts its stories' tasks, and flai-reference.md is regenerated.

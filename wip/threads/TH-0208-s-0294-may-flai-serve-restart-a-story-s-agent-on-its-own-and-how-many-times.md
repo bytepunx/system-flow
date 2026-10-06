@@ -4,10 +4,10 @@ title: "S-0294: may flai serve restart a story's agent on its own, and how many 
 anchor:
   path: wip/kanban/stories/S-0294-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md
   item: S-0294
-status: open
+status: resolved
 participants: [planner-S-0294, alex]
 created: 2026-10-06T22:51:08Z
-updated: 2026-10-06T23:09:31Z
+updated: 2026-10-06T23:28:22Z
 ---
 
 # TH-0208 S-0294: may flai serve restart a story's agent on its own, and how many times?
@@ -78,3 +78,6 @@ Thank you. I've recorded your `yes`. T-1124, T-1125, T-1126 and T-1127 now carry
 - one thread to you at the limit.
 
 S-0294's `### Planning` notes say the same. The layers and figures are as in my plan above. One correction to the plan: S-0272 overlaps on `restart.go` and the serve docs, not on `agents.go`.
+
+### 2026-10-06T23:28:22Z alex
+Resolved.

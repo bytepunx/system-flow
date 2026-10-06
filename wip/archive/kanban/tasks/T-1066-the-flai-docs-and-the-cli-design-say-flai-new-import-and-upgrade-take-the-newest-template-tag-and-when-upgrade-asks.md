@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 472
-      cache_read: 4548586
-      cache_write: 115425
-      cost: 2.0498
+      input: 83
+      output: 35463
+      cache_read: 4628738
+      cache_write: 123080
+      cost: 2.3736
 ---
 # T-1066 The flai docs and the CLI design say flai new, import, and upgrade take the newest template tag and when upgrade asks
 

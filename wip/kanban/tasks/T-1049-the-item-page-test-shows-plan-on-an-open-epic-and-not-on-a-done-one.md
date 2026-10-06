@@ -31,7 +31,7 @@ usage:
       output: 96
       cache_read: 754835
       cache_write: 52575
-      cost: 0.3553
+      cost: 0.3557
 ---
 # T-1049 The item page test shows Plan on an open epic and not on a done one
 

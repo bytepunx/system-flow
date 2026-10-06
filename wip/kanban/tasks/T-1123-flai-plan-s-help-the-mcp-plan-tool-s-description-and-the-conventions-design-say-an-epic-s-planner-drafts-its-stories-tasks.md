@@ -3,16 +3,36 @@ id: T-1123
 type: task
 nature: improvement
 title: flai plan's help, the MCP plan tool's description, and the conventions design say an epic's planner drafts its stories' tasks
-status: backlog
+status: done
 parent: S-0300
 owner: alex
 created: 2026-10-06T23:07:16Z
-updated: 2026-10-06T23:07:16Z
-transitions: []
+updated: 2026-10-06T23:28:14Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:27:12Z
+    by: agent-S-0300
+  - to: in-progress
+    at: 2026-10-06T23:27:12Z
+    by: agent-S-0300
+  - to: done
+    at: 2026-10-06T23:28:14Z
+    by: agent-S-0300
 stream: S-0300
 tags: [planner, cli, docs]
 touches: [flai/cmd/plan.go, flai/internal/mcpserver/plan.go, docs/users/flai-reference.md, design/system/conventions.md]
 after: [T-1047]
+usage:
+  source: log
+  seconds: 62
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 23
+      cache_read: 462852
+      cache_write: 3090
+      cost: 0.2053
 ---
 # T-1123 flai plan's help, the MCP plan tool's description, and the conventions design say an epic's planner drafts its stories' tasks
 
