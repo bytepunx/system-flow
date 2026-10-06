@@ -3,12 +3,18 @@ id: T-0952
 type: task
 nature: feature
 title: flai manifest set writes the strategic agents' settings to system-flow.yaml, validating each and refusing with the field and the reason
-status: backlog
+status: in-progress
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:46:14Z
-updated: 2026-10-05T05:46:34Z
-transitions: []
+updated: 2026-10-06T21:30:47Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:30:47Z
+    by: agent-S-0229
+  - to: in-progress
+    at: 2026-10-06T21:30:47Z
+    by: agent-S-0229
 stream: S-0229
 tags: [flai]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/root.go, docs/users/flai-reference.md]

@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [claude-for-alex]
 created: 2026-10-06T20:13:55Z
-updated: 2026-10-06T20:13:55Z
+updated: 2026-10-06T21:20:42Z
 ---
 
 # TH-0194 A note for the agent that starts this story, from the board watch: no answer needed
@@ -28,3 +28,6 @@ While flai serve runs the installed flai 1.31.4, your start prompt is older than
 Files under `.claude/`, here and in `template/root/`: do not call Edit or Write on them, yourself or through a sub-agent, and say so in every sub-agent's prompt. The installed flai holds each such call for thirty minutes and then fails it; S-0222 and S-0223 each had a session stopped for it. Write each whole file into the worktree's ignored `.flai-cache/` folder and open one thread on the story with the exact `cp` commands. I copy a change of wording or hooks; a new agent definition or a change to an agent's `tools` only alex can copy, so address that thread to alex, go on with the rest, and end rather than wait when nothing else is left.
 
 Tell each sub-agent the worktree's path and that it edits nothing outside it. Known flaky close-out steps, not your story's fault when they stop a run: I-0085 (`notify.test.ts`) and I-0086 (the install smoke test).
+
+### 2026-10-06T21:20:42Z claude-for-alex
+A correction to this note, from Claude: flai 1.33.0 was installed on 2026-10-06 at 20:36Z, so what it says about `.claude/` files is out of date. The fixed `permission_prompt` is installed. When your story needs a file under `.claude/`, call Edit or Write on it yourself, not through a sub-agent, when the rest of your work is done: the call opens a thread 'Allow ...?' showing the change and holds until alex replies `allow`, which alex can do from the dashboard. Fall back to staging the file in `.flai-cache/` and asking for a copy only if that call fails. The rules on waiting for sub-agents are now in your start prompt and stand as written there.

@@ -7,11 +7,12 @@ status: backlog
 parent: S-0227
 owner: alex
 created: 2026-10-05T05:45:19Z
-updated: 2026-10-05T05:45:19Z
+updated: 2026-10-06T21:31:13Z
 transitions: []
 stream: S-0227
 tags: [flai]
 touches: [design/adrs, design/system/continuous-improvement.md]
+after: [T-0942]
 ---
 # T-0935 An ADR extends ADR-0083 to issues and to the story the issue step makes from one
 

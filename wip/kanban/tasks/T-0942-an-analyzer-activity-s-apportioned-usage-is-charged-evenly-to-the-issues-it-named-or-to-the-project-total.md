@@ -7,11 +7,11 @@ status: backlog
 parent: S-0227
 owner: alex
 created: 2026-10-05T05:45:35Z
-updated: 2026-10-05T05:45:35Z
+updated: 2026-10-06T21:31:12Z
 transitions: []
 stream: S-0227
 tags: [flai]
-touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/flai-cli.md]
+touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, design/system/flai-cli.md, design/system/strategic-agents.md]
 after: [T-0940]
 ---
 # T-0942 An analyzer activity's apportioned usage is charged evenly to the issues it named, or to the project total

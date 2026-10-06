@@ -3,16 +3,36 @@ id: T-0930
 type: task
 nature: feature
 title: The analyzer's prompt and definition file each actionable finding as an issue and its report links each issue, and flai guard lets it
-status: backlog
+status: done
 parent: S-0224
 owner: alex
 created: 2026-10-05T05:45:11Z
-updated: 2026-10-05T05:45:28Z
-transitions: []
+updated: 2026-10-06T21:25:30Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:14:04Z
+    by: agent-S-0224
+  - to: in-progress
+    at: 2026-10-06T21:14:04Z
+    by: agent-S-0224
+  - to: done
+    at: 2026-10-06T21:25:30Z
+    by: agent-S-0224
 stream: S-0224
 tags: [flai, template]
-touches: [flai/internal/harness, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, ".claude/agents/analyzer.md", template/root/.claude/agents/analyzer.md, template/CHANGELOG.md]
+touches: [flai/internal/harness, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, ".claude/agents/analyzer.md", template/root/.claude/agents/analyzer.md, template/CHANGELOG.md, template/template.yaml, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md]
 after: [T-0918, T-0925]
+usage:
+  source: log
+  seconds: 686
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 132
+      output: 60629
+      cache_read: 5981554
+      cache_write: 240721
+      cost: 3.7734
 ---
 # T-0930 The analyzer's prompt and definition file each actionable finding as an issue and its report links each issue, and flai guard lets it
 

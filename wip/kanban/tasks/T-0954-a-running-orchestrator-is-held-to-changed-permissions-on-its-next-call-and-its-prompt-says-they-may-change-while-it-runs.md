@@ -3,12 +3,18 @@ id: T-0954
 type: task
 nature: feature
 title: A running orchestrator is held to changed permissions on its next call, and its prompt says they may change while it runs
-status: backlog
+status: in-progress
 parent: S-0229
 owner: alex
 created: 2026-10-05T05:46:25Z
-updated: 2026-10-05T05:46:25Z
-transitions: []
+updated: 2026-10-06T21:30:48Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:30:48Z
+    by: agent-S-0229
+  - to: in-progress
+    at: 2026-10-06T21:30:48Z
+    by: agent-S-0229
 stream: S-0229
 tags: [flai]
 touches: [flai/cmd/guard_permissions_change_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]

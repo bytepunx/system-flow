@@ -3,15 +3,35 @@ id: T-0918
 type: task
 nature: feature
 title: flai issue new and bump write an issue's impact and link the analyzer's report
-status: backlog
+status: done
 parent: S-0224
 owner: alex
 created: 2026-10-05T05:44:49Z
-updated: 2026-10-05T05:44:49Z
-transitions: []
+updated: 2026-10-06T21:09:04Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:01:32Z
+    by: agent-S-0224
+  - to: in-progress
+    at: 2026-10-06T21:01:33Z
+    by: agent-S-0224
+  - to: done
+    at: 2026-10-06T21:09:04Z
+    by: agent-S-0224
 stream: S-0224
 tags: [flai]
-touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go]
+touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go, flai/internal/issues/impact.go, flai/internal/issues/impact_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 451
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 31914
+      cache_read: 3148634
+      cache_write: 126713
+      cost: 1.9863
 ---
 # T-0918 flai issue new and bump write an issue's impact and link the analyzer's report
 

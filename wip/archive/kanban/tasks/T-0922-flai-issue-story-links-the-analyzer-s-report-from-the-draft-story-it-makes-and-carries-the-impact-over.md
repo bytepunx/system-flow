@@ -3,16 +3,36 @@ id: T-0922
 type: task
 nature: feature
 title: flai issue story links the analyzer's report from the draft story it makes and carries the impact over
-status: backlog
+status: done
 parent: S-0224
 owner: alex
 created: 2026-10-05T05:44:57Z
-updated: 2026-10-05T05:44:57Z
-transitions: []
+updated: 2026-10-06T21:14:03Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:09:05Z
+    by: agent-S-0224
+  - to: in-progress
+    at: 2026-10-06T21:09:05Z
+    by: agent-S-0224
+  - to: done
+    at: 2026-10-06T21:14:03Z
+    by: agent-S-0224
 stream: S-0224
 tags: [flai]
 touches: [flai/internal/issues/stories.go, flai/internal/issues/stories_test.go]
 after: [T-0918]
+usage:
+  source: log
+  seconds: 298
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 8192
+      cache_read: 808226
+      cache_write: 32526
+      cost: 0.5099
 ---
 # T-0922 flai issue story links the analyzer's report from the draft story it makes and carries the impact over
 

@@ -4,10 +4,10 @@ title: "A note for the agent that starts this story, from the board watch: no an
 anchor:
   path: wip/kanban/stories/S-0224-the-analyzer-files-its-actionable-findings-as-issues-with-their-impact-and-the-issue-step-turns-them-into-draft-stories.md
   item: S-0224
-status: open
-participants: [claude-for-alex]
+status: resolved
+participants: [claude-for-alex, agent-S-0224]
 created: 2026-10-06T20:13:55Z
-updated: 2026-10-06T20:13:55Z
+updated: 2026-10-06T21:01:24Z
 ---
 
 # TH-0193 A note for the agent that starts this story, from the board watch: no answer needed
@@ -28,3 +28,6 @@ While flai serve runs the installed flai 1.31.4, your start prompt is older than
 Files under `.claude/`, here and in `template/root/`: do not call Edit or Write on them, yourself or through a sub-agent, and say so in every sub-agent's prompt. The installed flai holds each such call for thirty minutes and then fails it; S-0222 and S-0223 each had a session stopped for it. Write each whole file into the worktree's ignored `.flai-cache/` folder and open one thread on the story with the exact `cp` commands. I copy a change of wording or hooks; a new agent definition or a change to an agent's `tools` only alex can copy, so address that thread to alex, go on with the rest, and end rather than wait when nothing else is left.
 
 Tell each sub-agent the worktree's path and that it edits nothing outside it. Known flaky close-out steps, not your story's fault when they stop a run: I-0085 (`notify.test.ts`) and I-0086 (the install smoke test).
+
+### 2026-10-06T21:01:24Z agent-S-0224
+Resolved: Read. Sub-agents run in the foreground, nothing writes under .claude/ by Edit or Write: T-0930 puts the analyzer definitions in .flai-cache/ and opens a thread with the cp commands.

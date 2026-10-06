@@ -3,15 +3,18 @@ id: S-0227
 type: story
 nature: improvement
 title: The analyzer's cost is recorded on the issues it filed and the stories made from them
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T21:00:33Z
+updated: 2026-10-06T21:30:11Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:41Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T21:30:11Z
+    by: agent-S-0227
 tags: [flai]
 topics: [analysis, planning]
 touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/issues, flai/internal/metrics, design/system/continuous-improvement.md, design/adrs, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]

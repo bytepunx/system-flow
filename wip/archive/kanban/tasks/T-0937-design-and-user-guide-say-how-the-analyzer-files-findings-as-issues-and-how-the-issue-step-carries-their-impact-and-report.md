@@ -3,16 +3,36 @@ id: T-0937
 type: task
 nature: feature
 title: Design and user guide say how the analyzer files findings as issues and how the issue step carries their impact and report
-status: backlog
+status: done
 parent: S-0224
 owner: alex
 created: 2026-10-05T05:45:21Z
-updated: 2026-10-05T05:45:21Z
-transitions: []
+updated: 2026-10-06T21:24:49Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:20:04Z
+    by: agent-S-0224
+  - to: in-progress
+    at: 2026-10-06T21:20:05Z
+    by: agent-S-0224
+  - to: done
+    at: 2026-10-06T21:24:49Z
+    by: agent-S-0224
 stream: S-0224
 tags: [flai, docs]
-touches: [design/system/continuous-improvement.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/system/continuous-improvement.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/operators/index.md, template/CHANGELOG.md]
 after: [T-0922, T-0930]
+usage:
+  source: log
+  seconds: 284
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 91
+      output: 41961
+      cache_read: 4139792
+      cache_write: 166601
+      cost: 2.6116
 ---
 # T-0937 Design and user guide say how the analyzer files findings as issues and how the issue step carries their impact and report
 

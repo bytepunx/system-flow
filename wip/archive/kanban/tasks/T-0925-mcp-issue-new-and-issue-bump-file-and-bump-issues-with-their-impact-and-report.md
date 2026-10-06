@@ -3,16 +3,36 @@ id: T-0925
 type: task
 nature: feature
 title: MCP issue_new and issue_bump file and bump issues with their impact and report
-status: backlog
+status: done
 parent: S-0224
 owner: alex
 created: 2026-10-05T05:45:02Z
-updated: 2026-10-05T05:45:02Z
-transitions: []
+updated: 2026-10-06T21:14:03Z
+transitions:
+  - to: ready
+    at: 2026-10-06T21:09:05Z
+    by: agent-S-0224
+  - to: in-progress
+    at: 2026-10-06T21:09:06Z
+    by: agent-S-0224
+  - to: done
+    at: 2026-10-06T21:14:03Z
+    by: agent-S-0224
 stream: S-0224
 tags: [flai]
-touches: [flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/folder.go]
+touches: [flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go]
 after: [T-0918]
+usage:
+  source: log
+  seconds: 297
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 16000
+      cache_read: 1578514
+      cache_write: 63526
+      cost: 0.9958
 ---
 # T-0925 MCP issue_new and issue_bump file and bump issues with their impact and report
 

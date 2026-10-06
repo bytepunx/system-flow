@@ -6,10 +6,7 @@ wip_limits:
   ready: 10
   in-progress: 3
   review: 5
-order:
-  - S-0224
-  - S-0227
-  - S-0229
+order: []
 ---
 
 # Board

@@ -3,24 +3,49 @@ id: S-0224
 type: story
 nature: feature
 title: The analyzer files its actionable findings as issues with their impact, and the issue step turns them into draft stories
-status: ready
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T21:00:33Z
+updated: 2026-10-06T21:31:43Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:39Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T21:01:11Z
+    by: agent-S-0224
+  - to: review
+    at: 2026-10-06T21:29:51Z
+    by: agent-S-0224
+  - to: done
+    at: 2026-10-06T21:31:43Z
+    by: alex
 tags: [flai]
 topics: [template]
-touches: [flai/internal/issues, flai/internal/harness, ".claude/agents/analyzer.md", design/system/continuous-improvement.md, flai/internal/mcpserver, template/root/.claude/agents/analyzer.md, design/system/strategic-agents.md, docs/users/flai.md, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai-reference.md, template/CHANGELOG.md]
+touches: [flai/internal/issues, flai/internal/harness, ".claude/agents/analyzer.md", design/system/continuous-improvement.md, flai/internal/mcpserver, template/root/.claude/agents/analyzer.md, design/system/strategic-agents.md, docs/users/flai.md, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/guard, design/system/flai-cli.md, docs/users/flai-reference.md, template/CHANGELOG.md, docs/operators/settings.md, flai/cmd/guard.go, flai/cmd/guard_test.go, template/template.yaml, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/operators/index.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [S-0223, S-0203]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1764
+  models:
+    - model: claude-opus-5-5
+      input: 378
+      output: 174014
+      cache_read: 17168020
+      cache_write: 690908
+      cost: 10.8304
+    - model: claude-sonnet-5-5
+      input: 32
+      output: 6942
+      cache_read: 816446
+      cache_write: 77087
+      cost: 0.4255
 cost_of_delay:
   value: 76.01
   by: planner-S-0224
@@ -39,10 +64,10 @@ forecast:
 The analyzer's report is for reading; its actionable findings become issues so that the continuous-improvement flow (S-0198, the draft story from an issue) turns them into stories with cost of delay already in place, and the analyzer never authors stories itself.
 
 ## Acceptance criteria
-- [ ] For each actionable finding the analyzer files an issue (`flai issue new`, class from the finding: `defect`, `efficiency`, `impression` for risks without a measured instance) with an `## Impact` section giving time lost per cycle, or revenue or penalty, and the evidence, deduplicated against open issues by linking the report to an existing issue and bumping it instead
-- [ ] The story the issue step creates from such an issue carries the impact as cost of delay inputs and links the report
-- [ ] The report links each issue it filed; the issue's Remediation section links the report
-- [ ] Tests cover a new issue, a bumped duplicate, and the inputs carried over
+- [x] For each actionable finding the analyzer files an issue (`flai issue new`, class from the finding: `defect`, `efficiency`, `impression` for risks without a measured instance) with an `## Impact` section giving time lost per cycle, or revenue or penalty, and the evidence, deduplicated against open issues by linking the report to an existing issue and bumping it instead
+- [x] The story the issue step creates from such an issue carries the impact as cost of delay inputs and links the report
+- [x] The report links each issue it filed; the issue's Remediation section links the report
+- [x] Tests cover a new issue, a bumped duplicate, and the inputs carried over
 
 ## Tasks
 - T-0918 flai issue new and bump write an issue's impact and link the analyzer's report

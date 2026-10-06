@@ -1,16 +1,17 @@
 ---
 title: Active streams
-updated: 2026-10-06T21:01:56Z
+updated: 2026-10-06T21:31:43Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0224](S-0224.md) | The analyzer files its actionable findings as issues with their impact, and the issue step turns them into draft stories | in-progress | agent-S-0224 | 2026-10-06T21:00:50Z |
+| [S-0227](S-0227.md) | The analyzer's cost is recorded on the issues it filed and the stories made from them | in-progress | agent-S-0227 | 2026-10-06T21:30:11Z |
+| [S-0229](S-0229.md) | The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents | in-progress | agent-S-0229 | 2026-10-06T21:30:11Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 26 | 55.6782 USD | 11549 | 2026-10-06T12:18:33Z |
+| [planner](planner.md) | 27 | 57.7043 USD | 11992 | 2026-10-06T21:09:35Z |
