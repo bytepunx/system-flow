@@ -122,7 +122,7 @@ A convention also says which agents read it ([ADR-0059](../adrs/0059-a-story-s-a
 | `story` | The agent working a story | `flai prime --story S-nnnn` |
 | `explore` | The explorer, which finds and reads for the story's agent | `flai prime --story S-nnnn --role explore` |
 | `verify` | The verifier, which also runs the project's checks | `flai prime --story S-nnnn --role verify` |
-| `plan` | The planner, which drafts an epic's stories or enriches a story | `flai prime --role plan --epic E-nnnn` or `--story S-nnnn` |
+| `plan` | The planner, which drafts an epic's stories and their tasks or enriches a story | `flai prime --role plan --epic E-nnnn` or `--story S-nnnn` |
 | `orchestrate` | The orchestrator, which keeps work moving within the operator's permissions | `flai prime --role orchestrate` |
 | `analyze` | The analyzer, which reads the metrics, design, and code and files issues | `flai prime --role analyze` |
 

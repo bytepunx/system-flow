@@ -31,11 +31,13 @@ func newPlanCmd(a *app) *cobra.Command {
 project's planning agent: planning.agent in system-flow.yaml over the
 project's agent, started with the harnesses and the command you set with
 flai serve agent. For an epic with no stories it drafts the stories that
-deliver its outcome; for a story it adds touches, a forecast, and a cost of
-delay, and drafts its tasks or revisits those it has (S-0255); for an epic
-with stories it revisits each one not done or cancelled and drafts what the
-outcome still lacks. It writes work items and threads
-through flai alone, moves nothing past backlog, finalizes no draft, and
+deliver its outcome, enriches each one, and drafts each one's tasks
+(S-0300); for a story it adds touches, a forecast, and a cost of delay, and
+drafts its tasks or revisits those it has (S-0255); for an epic with
+stories it revisits each one not done or cancelled, drafts what the outcome
+still lacks, and drafts the tasks of each story it adds and of each draft
+it revisits that has none. It writes work items and threads through flai
+alone, moves nothing past backlog, finalizes no draft, and
 asks you on a thread on the item when an input of yours is missing.
 
 The run is recorded where flai serve tracks agents, by item, and its output
