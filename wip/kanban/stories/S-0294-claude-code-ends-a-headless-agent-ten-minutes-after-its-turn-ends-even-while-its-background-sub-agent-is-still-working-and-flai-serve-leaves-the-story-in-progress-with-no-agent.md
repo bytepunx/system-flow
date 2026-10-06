@@ -6,7 +6,7 @@ title: Claude Code ends a headless agent ten minutes after its turn ends, even w
 status: backlog
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-06T22:56:13Z
+updated: 2026-10-06T23:03:32Z
 transitions: []
 tags: [cli, serve]
 topics: [automation]
@@ -22,7 +22,7 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 328
+      seconds: 614
       estimated: true
       models:
         - model: claude-haiku-4-5-20251001
@@ -32,11 +32,11 @@ usage:
           cache_write: 173470
           cost: 0.7745
         - model: claude-opus-5-5
-          input: 829
-          output: 59561
-          cache_read: 40813838
-          cache_write: 658779
-          cost: 23.5617
+          input: 996
+          output: 69209
+          cache_read: 50650550
+          cache_write: 711112
+          cost: 27.9391
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-10-06T22:53:45Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T11:05:00Z
-  basis: "Its own forecast of 40m; 41st in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0228, S-0261, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290, S-0291 and S-0293."
+  delivery: 2026-10-07T11:04:00Z
+  basis: "Its own forecast of 40m; 41st in the pull order with an in-progress limit of 3, behind S-0301, S-0300, S-0228, S-0261, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290, S-0291 and S-0293."
   by: flai
-  at: 2026-10-06T22:56:13Z
+  at: 2026-10-06T23:03:32Z
 finalized:
   by: alex
   at: 2026-10-06T22:50:34Z

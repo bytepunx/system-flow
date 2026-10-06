@@ -6,7 +6,7 @@ title: The planner agent should be available on epic work items
 status: ready
 owner: alex
 created: 2026-10-06T21:42:35Z
-updated: 2026-10-06T22:56:13Z
+updated: 2026-10-06T23:03:32Z
 transitions:
   - to: ready
     at: 2026-10-06T21:42:36Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T21:47:59Z
 forecast:
   duration: 40m
-  delivery: 2026-10-06T23:39:00Z
-  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, behind S-0299 and S-0301."
+  delivery: 2026-10-06T23:46:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, behind S-0301."
   by: flai
-  at: 2026-10-06T22:56:13Z
+  at: 2026-10-06T23:03:32Z
 ---
 # S-0300 The planner agent should be available on epic work items
 
