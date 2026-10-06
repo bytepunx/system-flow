@@ -2,12 +2,12 @@
 id: I-0068
 title: The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
 class: efficiency
-status: open
+status: closed
 count: 9
 cost: 3m
 first_reported: 2026-10-03T21:21:24Z
 last_reported: 2026-10-06T23:06:46Z
-updated: 2026-10-06T23:06:46Z
+updated: 2026-10-06T23:18:24Z
 ---
 
 # I-0068 The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
@@ -56,3 +56,4 @@ S-0261's MCP prime pack was 189,726 characters; Claude Code saved it to a file a
 ## Remediation
 
 Story S-0261 remediates this issue, created from it at 2026-10-04T20:34:55Z.
+Closed 2026-10-06T23:18:24Z: S-0261, ADR-0104: the MCP prime tool returns the context pack in parts of at most 40,000 bytes of JSON (context.PartLimit, a fifth under the 50,000 characters over which Claude Code saves a tool result to a file), and the agent reads every part; flai prime takes --part N. Reproduced and checked by TestAPackOverTheToolResultLimitIsCutIntoPartsThatFit (flai/internal/context) and TestPrimeComesInPartsOnThisRepository (flai/internal/mcpserver), which prime S-0205, S-0210, S-0211, S-0261, and the planner's pack for S-0261: each was over 160 KB as one result and now comes in 5 or 6 parts of at most 39,994 bytes.
