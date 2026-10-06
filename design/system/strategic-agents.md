@@ -450,7 +450,13 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 | `failed` | it exited with a code other than 0, or could not be started |
 | `worked` | otherwise, an exit nobody saw included |
 
-It then logs the run's activity since the last entry in `wip/agents/orchestrator.md` with `serve.LogRunEnd`: the run's final reply as the summary, or `stopped: orchestrate turned off`, and the seconds and cost measured from the log. Each decision the orchestrator logs with `activity_log` during the run covers its own span, so the end logs only what came after the last one. Nothing is charged to work items.
+It then logs the run's activity since the last entry in `wip/agents/orchestrator.md` with `serve.LogRunEnd`: the run's final reply as the summary, or `stopped: orchestrate turned off`, and the seconds and cost measured from the log. Each decision the orchestrator logs with `activity_log` during the run covers its own span, so the end logs only what came after the last one.
+
+### What it costs on the items (S-0226)
+
+Each orchestrator activity is charged to the work items its entry names, when it is logged, through `activity_log`, through `thread_reply`'s own entry, or as the run ends ([ADR-0095](../adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md)). The usage apportioned to its span, the same share its entry's cost is, as for the planner ([The run and how it ended](#the-run-and-how-it-ended)), is split evenly between the epics, stories, and tasks it names that exist, archived ones included, each once; a thread, an issue, or anything else named takes no share. Tokens and seconds are split in whole numbers, the remainder to the first items named, and cost by the count, so that the shares add up to the entry. Each share goes under the `orchestrator` entry of `usage.strategic` on its item and on every item above it, up to its epic, at once ([work-hierarchy.md](work-hierarchy.md)). A charge that fails leaves the entry logged and is warned of.
+
+An activity that names no work item charges no item: its cost is the orchestrator's project strategic total. That total, for every kind, is what the kind's activity document accrued that no item carries: its `accrued_cost` and `accrued_seconds` less that kind's `strategic` figures on the items with no parent, which carry every charge made below them. It is worked out by `flai stats`, which reports it per kind beside what the items carry ([metrics.md](metrics.md#strategic-agents-s-0206)), not written anywhere, so that the items and the project total always add up to the document. It also holds the planner's activities with no planned item, those logged before S-0225, and the analyzer's.
 
 Every start, end, failure, and stop is a journal entry with action `orchestrate` and method `serve.orchestrate`. `agent.status` carries the run as `orchestrator`, null before the first; `agent.stream` with `orchestrator: true` reads its log as it reads a story's agent's (`OrchestratorStream`). When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: orchestrate`.
 
@@ -460,4 +466,4 @@ The Activity page lists the orchestrator's run and its stream. The Settings page
 
 ## The analyzer
 
-It primes with its role and has its activity document; `activity_log` takes its kind. No host action, guard rule, definition, or command starts it yet. When one does, it follows the planner's and the orchestrator's shape: a host action, a role in `FLAI_ROLE`, a definition in `.claude/agents/`, and guard rules of its own.
+It primes with its role and has its activity document; `activity_log` takes its kind. Its activities charge no item: their cost is its project strategic total ([What it costs on the items](#what-it-costs-on-the-items-s-0226)) until S-0227 charges them to the issues it files. No host action, guard rule, definition, or command starts it yet. When one does, it follows the planner's and the orchestrator's shape: a host action, a role in `FLAI_ROLE`, a definition in `.claude/agents/`, and guard rules of its own.
