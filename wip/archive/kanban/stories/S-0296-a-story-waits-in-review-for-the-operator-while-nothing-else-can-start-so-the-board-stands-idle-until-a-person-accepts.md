@@ -3,23 +3,54 @@ id: S-0296
 type: story
 nature: remediation
 title: A story waits in review for the operator while nothing else can start, so the board stands idle until a person accepts
-status: ready
+status: done
 owner: alex
 created: 2026-10-06T11:44:51Z
-updated: 2026-10-06T20:07:39Z
+updated: 2026-10-06T20:20:49Z
 transitions:
   - to: ready
     at: 2026-10-06T11:49:31Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T20:08:18Z
+    by: agent-S-0296
+  - to: review
+    at: 2026-10-06T20:20:02Z
+    by: agent-S-0296
+  - to: done
+    at: 2026-10-06T20:20:49Z
+    by: alex
 tags: [flai]
 topics: [orchestration]
-touches: [flai/internal/serve/review_wait_test.go, flai/internal/serve/orchestrate.go, design/system/workflow.md, docs/operators/settings.md, docs/operators/index.md, design/issues/I-0088-a-story-waits-in-review-for-the-operator-while-nothing-else-can-start-so-the-board-stands-idle-until-a-person-accepts.md, design/issues/summary.md]
+touches: [flai/internal/serve/review_wait_test.go, design/system/workflow.md, docs/operators/settings.md, docs/operators/index.md, design/issues/I-0088-a-story-waits-in-review-for-the-operator-while-nothing-else-can-start-so-the-board-stands-idle-until-a-person-accepts.md, design/issues/summary.md, design/issues/I-0068-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 after: [S-0221, S-0286]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 729
+  models:
+    - model: claude-haiku-4-5-20251001
+      input: 162
+      output: 6379
+      cache_read: 883045
+      cache_write: 68474
+      cost: 0.206
+    - model: claude-opus-5-5
+      input: 176
+      output: 56591
+      cache_read: 8706824
+      cache_write: 333793
+      cost: 5.01
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 3563
+      cache_read: 205015
+      cache_write: 50356
+      cost: 0.2026
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h48m
@@ -47,8 +78,8 @@ This story remediates [I-0088](../../../design/issues/I-0088-a-story-waits-in-re
 S-0221, already in ready, lets the orchestrator accept a story in review when the operator turns that permission on. S-0286 keeps the operator's acceptance for a story that changes a path Claude Code protects. Between them, the wait would remain only for those stories and for the ones the operator chooses to review. Until S-0221 is built, an agent in the operator's session can run the acceptance on the operator's word.
 
 ## Acceptance criteria
-- [ ] The cause I-0088 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0088 is closed with `flai issue close I-0088 --reason` saying what fixed it
+- [x] The cause I-0088 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0088 is closed with `flai issue close I-0088 --reason` saying what fixed it
 
 ## Tasks
 - T-1020 A flai serve test reproduces the idle board behind a story in review and shows the orchestrator's acceptance under accept_reviews clears it
@@ -56,6 +87,12 @@ S-0221, already in ready, lets the orchestrator accept a story in review when th
 - T-1022 I-0088 is closed with flai issue close, naming the orchestrator's acceptance under accept_reviews and the test that shows it
 
 ## Notes
+
+### Delivery
+
+- Criterion 1 is verified by `TestTheOrchestratorsAcceptanceEndsTheBoardsWaitOnTheOperator` in `flai/internal/serve/review_wait_test.go`. In this project the cause stops only once the operator turns on the `orchestrate` host action and `orchestration.permissions.accept_reviews`; `system-flow.yaml` has neither yet.
+- S-0295 (ADR-0096) had already removed the overlap hold of a story in review, so the test reproduces what still waits: a story naming it in `after:`, and every ready story while review is full.
+- S-0286's operator-only acceptance of a story that changes a protected path is not built; the docs leave it out and I-0088's close reason says it is still to come.
 
 Cost of delay inputs set by flai from I-0088. time_lost_per_cycle 2h48m: 1h24m per occurrence × 2 occurrences ÷ 1 cycle of 168h (first reported 2026-10-06T10:32:27Z, 0.1 days before this story; under one cycle counts as one).
 

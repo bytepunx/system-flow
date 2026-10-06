@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 317
-      cache_read: 1736971
-      cache_write: 69946
-      cost: 0.7854
+      input: 47
+      output: 15210
+      cache_read: 1785585
+      cache_write: 66155
+      cost: 1.0636
 ---
 # T-1014 The design, the user guide, and flai stream sync's help say that sync and acceptance regenerate design/issues/summary.md instead of stopping on it
 

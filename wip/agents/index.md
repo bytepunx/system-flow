@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-06T20:07:39Z
+updated: 2026-10-06T20:20:49Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0223](S-0223.md) | The analyzer runs on demand or on a schedule and writes a report under design/analysis | in-progress | agent-S-0223 | 2026-10-06T20:07:58Z |
 
 ## Strategic agents
 

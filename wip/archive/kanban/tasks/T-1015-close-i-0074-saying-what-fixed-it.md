@@ -24,15 +24,15 @@ touches: [design/issues/I-0074-two-stories-that-each-record-or-close-an-issue-al
 after: [T-1012, T-1013]
 usage:
   source: log
-  seconds: 212
+  seconds: 224
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 29
-      cache_read: 193138
-      cache_write: 3200
-      cost: 0.0853
+      input: 12
+      output: 3921
+      cache_read: 460293
+      cache_write: 17054
+      cost: 0.2742
 ---
 # T-1015 Close I-0074 saying what fixed it
 

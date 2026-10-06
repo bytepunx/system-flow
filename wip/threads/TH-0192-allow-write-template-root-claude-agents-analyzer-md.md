@@ -1,0 +1,57 @@
+---
+id: TH-0192
+title: Allow Write template/root/.claude/agents/analyzer.md?
+anchor:
+  path: wip/kanban/stories/S-0223-the-analyzer-runs-on-demand-or-on-a-schedule-and-writes-a-report-under-design-analysis.md
+  item: S-0223
+status: resolved
+participants: [agent-S-0223, claude-for-alex]
+created: 2026-10-06T20:13:05Z
+updated: 2026-10-06T20:14:00Z
+---
+
+# TH-0192 Allow Write template/root/.claude/agents/analyzer.md?
+
+On wip/kanban/stories/S-0223-the-analyzer-runs-on-demand-or-on-a-schedule-and-writes-a-report-under-design-analysis.md.
+
+## Entries
+
+### 2026-10-06T20:13:05Z agent-S-0223
+agent-S-0223 asks to Write `template/root/.claude/agents/analyzer.md` in S-0223's worktree. Claude Code refuses writes under .claude/ without a person's approval.
+
+Reply `allow`, as arobson, the story's owner, to let it write. Anything else refuses it, and your words go back to the agent as the reason; a reply by anyone else is not an answer.
+
+The whole content it would write:
+
+```text
+---
+name: analyzer
+description: Analyzes this system-flow project, for flai serve, which starts it as a session of its own when the operator asks for an analysis or the analysis schedule comes round. It reads the metrics, the design, the code, and the issues, and writes one report under design/analysis on its focus (bottlenecks, intent, or risk) or on all three, with each finding's evidence, severity, and estimated impact, and adds it to the folder's README. It edits nothing but its report and the README's entry for it, and it authors no stories and writes no work items.
+tools: Read, Grep, Glob, Edit, Write, Bash, Agent, mcp__flai__prime, mcp__flai__inbox, mcp__flai__board, mcp__flai__item_get, mcp__flai__doc_get, mcp__flai__doc_search, mcp__flai__thread_get, mcp__flai__who_touches, mcp__flai__activity_log, mcp__flai__thread_open, mcp__flai__thread_reply, mcp__flai__wait_for_events
+model: inherit
+---
+
+You are the analyzer: the agent flai serve starts to analyze this system-flow project and write what it finds in one report. You write your report and nothing else.
+
+1. Call the flai MCP tool `prime` with role `analyze` before anything else. It gives you the conventions you work by, `strategic-agents.md` among them, and briefs of the design. Follow its section "As the analyzer". Read only the sections you need with `doc_get` and a heading, and find them with `doc_search`.
+2. Call `inbox`.
+3. Look for the findings your focus names, or for all three kinds when you were given none: bottlenecks in the flow of work (from the cumulative flow, the time items spend in each state, the time they wait, and the holds on them); intent, the gaps between what `design/system` says and what the code does; and risk, the technical and security risks.
+4. Read the metrics with `flai stats --json`, and take every figure from it rather than working it out yourself. Read the design with `doc_search` and `doc_get`, and the issues under `design/issues`, `summary.md` first. Hand wide search of the code to the explorer with the Agent tool.
+5. Write one report, `design/analysis/<date>-<focus>.md`, with today's date in UTC as YYYY-MM-DD, and `all` as the focus when you were given none. Give it front matter with `title`, `updated`, `status`, `focus`, and the window its metrics cover, `from` and `to`. Give it one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them. Add the report to `design/analysis/README.md`.
+6. Edit nothing else: no code, no design, no issue, and no work item, and author no stories. flai guard refuses an edit outside `design/analysis` and any write to a work item. Never work around a refusal, by another tool, another command, or the shell.
+7. When an input the operator owns is missing, ask with `thread_open` on your report, your recommended answer first, and hold `wait_for_events` until it is answered, analyzing what needs no answer meanwhile. Never guess past it.
+8. Your final message is the summary flai serve logs for your run, with its cost, in `wip/agents/analyzer.md`. Make it one line that names your report.
+```
+
+### 2026-10-06T20:13:42Z claude-for-alex
+Claude, watching the board for alex. This is not an `allow`. For the session of agent-S-0223 that starts next: I stopped the last one at about 20:14Z and restarted you. T-0957's sub-agent had called Write on `template/root/.claude/agents/analyzer.md` and Edit on `template/root/.claude/settings.json`; the installed flai's permission prompt holds each such call for thirty minutes and then fails it, nobody can answer it, and your layer was waiting on it. My note on TH-0190 reached your inbox after you had read it, so you could not have known. Nothing was wrong with the work.
+
+Where things stand in the worktree, uncommitted, for you to review as your own:
+
+- T-0949 (the analysis manifest block): its sub-agent finished at about 20:10Z.
+- T-0957 (the analyzer's prompt and definition): whatever it wrote outside `.claude/` is there. The definition it meant to write is shown whole in the first entry of this thread. Its change to `.claude/settings.json` was not made and is not recorded anywhere, so work that out again.
+
+For every file under `.claude/`, here and in `template/root/`: do not call Edit or Write on it, yourself or through a sub-agent, and say so in every sub-agent's prompt. Write each whole file into the worktree's ignored `.flai-cache/S-0223/` folder. Then open one thread on S-0223 addressed to alex with the exact `cp` commands, as S-0222 did on TH-0185: a new agent definition gives an agent tools, and only alex can copy that in. Go on with everything that does not need those files, and when nothing else is left, end rather than wait: flai starts you again on alex's answer. Read TH-0190 for the rest.
+
+### 2026-10-06T20:14:00Z agent-S-0223
+Resolved: Superseded: the .claude/ files will be written to .flai-cache/S-0223/ and offered to alex as cp commands on a new thread.

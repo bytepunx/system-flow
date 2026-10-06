@@ -3,15 +3,38 @@ id: T-0949
 type: task
 nature: feature
 title: system-flow.yaml takes analysis.agent and analysis.schedule, and flai check reports a bad one
-status: backlog
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:46:03Z
-updated: 2026-10-05T05:46:03Z
-transitions: []
+updated: 2026-10-06T20:14:59Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:08:34Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:08:34Z
+    by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:14:59Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:14:59Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/analysis_test.go]
+usage:
+  source: log
+  seconds: 308
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 129
+      cache_read: 519455
+      cache_write: 68030
+      cost: 0.2557
 ---
 # T-0949 system-flow.yaml takes analysis.agent and analysis.schedule, and flai check reports a bad one
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 100
-      output: 545
-      cache_read: 3799779
-      cache_write: 121353
-      cost: 1.7042
+      input: 102
+      output: 33006
+      cache_read: 3874814
+      cache_write: 143559
+      cost: 2.3082
 ---
 # T-1012 flai stream sync and flai accept regenerate design/issues/summary.md when a rebase stops on it alone, with a test reproducing I-0074
 

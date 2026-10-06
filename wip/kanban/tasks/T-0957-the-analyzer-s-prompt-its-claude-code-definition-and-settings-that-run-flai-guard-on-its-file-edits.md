@@ -3,15 +3,32 @@ id: T-0957
 type: task
 nature: feature
 title: The analyzer's prompt, its claude-code definition, and settings that run flai guard on its file edits
-status: backlog
+status: in-progress
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:46:27Z
-updated: 2026-10-05T05:46:27Z
-transitions: []
+updated: 2026-10-06T20:08:35Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:08:35Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:08:35Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/adapters.go, ".claude/agents/analyzer.md", ".claude/settings.json", template/root/.claude/agents/analyzer.md, template/root/.claude/settings.json]
+usage:
+  source: log
+  seconds: 307
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 267
+      cache_read: 1873509
+      cache_write: 106720
+      cost: 0.8619
 ---
 # T-0957 The analyzer's prompt, its claude-code definition, and settings that run flai guard on its file edits
 

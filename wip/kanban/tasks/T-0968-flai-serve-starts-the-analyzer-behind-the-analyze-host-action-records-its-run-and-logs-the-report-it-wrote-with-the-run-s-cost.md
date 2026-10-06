@@ -3,12 +3,18 @@ id: T-0968
 type: task
 nature: feature
 title: flai serve starts the analyzer behind the analyze host action, records its run, and logs the report it wrote with the run's cost
-status: backlog
+status: in-progress
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:21Z
-updated: 2026-10-05T05:47:21Z
-transitions: []
+updated: 2026-10-06T20:15:10Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:15:10Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:15:10Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]

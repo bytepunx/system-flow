@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 42
-      output: 228
-      cache_read: 1535761
-      cache_write: 72575
-      cost: 0.699
+      output: 13538
+      cache_read: 1589339
+      cache_write: 58884
+      cost: 0.9467
 ---
 # T-1013 flai stream sync's trial merge does not report design/issues/summary.md as a conflict between two open story branches
 

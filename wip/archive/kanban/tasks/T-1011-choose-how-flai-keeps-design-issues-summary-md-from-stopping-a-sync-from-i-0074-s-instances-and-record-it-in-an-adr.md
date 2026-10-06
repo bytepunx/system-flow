@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 35
-      cache_read: 396581
-      cache_write: 5017
-      cost: 0.1745
+      input: 10
+      output: 3380
+      cache_read: 396852
+      cache_write: 14703
+      cost: 0.2364
 ---
 # T-1011 Choose how flai keeps design/issues/summary.md from stopping a sync, from I-0074's instances, and record it in an ADR
 
