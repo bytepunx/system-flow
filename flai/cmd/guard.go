@@ -28,9 +28,10 @@ of flai's MCP tools but board, doc_get, doc_search, item_get,
 order_by_policy, prime, promote_candidates, release_evaluate, thread_get,
 and who_touches; a flai command other than one that reads (board, check,
 cod, doc search and show, forecast, help, issue list, order --by without
---apply, prime, promote --candidates, release --evaluate, show, stats,
-stream diff, thread list and show, touches suggest, version, or any with
---help); and a git
+--apply and without a story to place, plan --candidates, prime, promote
+--candidates or --drafts, release --evaluate, show, stats, stream diff,
+thread list and show, touches suggest, version, or any with --help); and a
+git
 command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files,
 ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A
 refusal prints why on standard error and exits 2, which Claude Code hands
@@ -60,15 +61,19 @@ runs in (S-0218), each off when unset or when the manifest is unreadable.
 Whatever its permissions it may do what a sub-agent may, call inbox,
 activity_log, wait_for_events, and thread_open, and run thread new and
 issue new and bump. Each permission allows more: plan_backlog_epics the
-MCP tool plan and flai plan on an epic; finalize_drafts flai edit
---no-draft with nothing else to change; promote_to_ready item_move and
-flai move to ready; order_ready flai order that writes; answer_threads,
-recommend or autonomous, thread_reply and flai thread reply;
-accept_reviews flai accept; publish flai release --pending and flai push.
-A call a permission would allow is refused while it is off, naming it
-(it needs orchestration.permissions.<name>); anything else that writes is
-refused as what the orchestrator never does: other flai tools and
-commands, git's writes, and the Edit, Write, and NotebookEdit tools. Each
+MCP tool plan and flai plan on an epic; finalize_drafts item_edit with
+draft false and flai edit --no-draft, each with nothing else to change;
+promote_to_ready item_move and flai move of a story to ready; order_ready
+flai order --by <policy> --apply; answer_threads, recommend or
+autonomous, thread_reply and flai thread reply; accept_reviews flai
+accept; publish flai release --pending and flai push. A call a permission
+would allow is refused while it is off, naming it (it needs
+orchestration.permissions.<name>); anything else that writes is refused
+as what the orchestrator never does: plan for a story, flai order placing
+a story by hand, other flai tools and commands, git's writes, and the
+Edit, Write, and NotebookEdit tools. Whether a story it promotes is held,
+a draft, or over the ready limit is flai's to check as it moves it, not
+the guard's: the guard reads the call, not the board. Each
 refusal is logged under ## Refusals in wip/agents/orchestrator.md, with
 its time, the call, and the permission it needs; a refusal that cannot be
 logged is warned of and refused all the same. The orchestrator's

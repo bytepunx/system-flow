@@ -21,13 +21,18 @@
 // is held to the permissions the operator gives it in the manifest's
 // orchestration.permissions (S-0218): its own calls may read, open threads,
 // record issues, and log its activities, and do each of the rest only while
-// the permission that allows it is on. A refusal names that permission; a
-// call no permission allows, such as an edit of a file or a commit, it never
-// makes. Its sub-agents are held as every sub-agent is.
+// the permission that allows it is on (S-0219 maps planning an epic,
+// finalizing a draft, promoting a story to ready, and ordering the ready
+// column by a policy). A refusal names that permission; a call no permission
+// allows, such as an edit of a file, a commit, or a story placed by hand in
+// the pull order, it never makes. Its sub-agents are held as every sub-agent
+// is.
 package guard
 
 import (
+	"encoding/json"
 	"fmt"
+	"maps"
 	"path"
 	"regexp"
 	"slices"
@@ -40,23 +45,44 @@ import (
 // Event is the part of a Claude Code PreToolUse hook's input the guard
 // reads.
 type Event struct {
-	ToolName string `json:"tool_name"`
-	// ToolInput holds Bash's command; item_move's item and the state it
-	// moves the item to, and plan's item; item_new's type and whether it
-	// makes a story a draft; and the file Edit or Write changes.
-	ToolInput struct {
-		Command  string `json:"command"`
-		ID       string `json:"id"`
-		To       string `json:"to"`
-		Type     string `json:"type"`
-		Draft    bool   `json:"draft"`
-		FilePath string `json:"file_path"`
-	} `json:"tool_input"`
+	ToolName  string `json:"tool_name"`
+	ToolInput Input  `json:"tool_input"`
 	// AgentID is set only when a sub-agent makes the call; AgentType names
 	// the sub-agent's definition. A session started with --agent may carry
 	// an agent type of its own, so the ID is what marks a sub-agent.
 	AgentID   string `json:"agent_id"`
 	AgentType string `json:"agent_type"`
+}
+
+// Input is the part of a tool call's input the guard reads: Bash's command;
+// item_move's item and the state it moves the item to, and plan's item;
+// item_new's type and whether it makes a story a draft, and item_edit's
+// draft; and the file Edit or Write changes. Fields are the names of every
+// field the input gives, whatever the guard reads of it, so that an
+// item_edit that finalizes a draft is told from one that changes more, and
+// a draft false given from one left out.
+type Input struct {
+	Command  string   `json:"command"`
+	ID       string   `json:"id"`
+	To       string   `json:"to"`
+	Type     string   `json:"type"`
+	Draft    bool     `json:"draft"`
+	FilePath string   `json:"file_path"`
+	Fields   []string `json:"-"`
+}
+
+// UnmarshalJSON decodes a tool call's input and the names of its fields.
+func (in *Input) UnmarshalJSON(data []byte) error {
+	type input Input
+	if err := json.Unmarshal(data, (*input)(in)); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	in.Fields = slices.Sorted(maps.Keys(fields))
+	return nil
 }
 
 // MCPPrefix starts the name of each of flai's MCP tools as Claude Code
@@ -88,18 +114,29 @@ var cliReads = map[string][]string{
 }
 
 // flagReads are the flai commands a sub-agent may run only in the form that
-// reads (S-0217): with the flag that makes them read, and without any flag
-// that makes them write. flai order --by computes an order and --apply
-// writes it; flai order without --by places a story, and flai release
-// without --evaluate releases.
+// reads (S-0217, S-0219): with one of the flags that make them read, without
+// any flag that makes them write, and in the form form allows when it is
+// set. flai order --by computes an order and --apply writes it; flai order
+// that names a story places it; flai release without --evaluate releases;
+// and flai plan without --candidates starts the planner, which with it takes
+// no item.
 var flagReads = map[string]struct {
-	with    string
+	with    []string
 	without []string
+	form    func(words []string) bool
 }{
-	"order":   {with: "--by", without: []string{"--apply"}},
-	"promote": {with: "--candidates"},
-	"release": {with: "--evaluate"},
+	"order":   {with: []string{"--by"}, without: []string{"--apply"}, form: ordersByPolicy},
+	"plan":    {with: []string{"--candidates"}},
+	"promote": {with: []string{"--candidates", "--drafts"}},
+	"release": {with: []string{"--evaluate"}},
 }
+
+// orderValues are the flags of flai order, flai's own among them, that take
+// a value; placements are those that place one story by hand.
+var (
+	orderValues = map[string]bool{"--after": true, "--before": true, "--by": true, "--config": true, "--keep-placed": true, "--placed-by": true}
+	placements  = []string{"--after", "--before", "--bottom", "--placed-by", "--top"}
+)
 
 // gitReads are the git commands a sub-agent may run.
 var gitReads = []string{"blame", "cat-file", "describe", "diff", "grep", "log", "ls-files", "ls-tree", "merge-base", "rev-list", "rev-parse", "shortlog", "show", "status"}
@@ -171,12 +208,20 @@ var (
 	finalizeFlags  = []string{"--json", "--verbose", "--yes", "-v", "-y"}
 )
 
+// finalizeFields are the fields item_edit's input may give when it only
+// finalizes a draft.
+var finalizeFields = []string{"draft", "hash", "id", "project"}
+
 // askOperator ends each of the orchestrator's refusals.
 const askOperator = "Ask the operator with thread_open on the item if it needs doing (strategic-agents.md, ADR-0060)."
 
 // plansEpics says why the orchestrator asks for the planner on an epic
 // alone.
-const plansEpics = "it asks for the planner on a backlog epic alone"
+const plansEpics = "it asks for the planner on an epic alone, one flai plan --candidates lists"
+
+// byHand says why the orchestrator never places a story by hand in the pull
+// order (S-0219).
+const byHand = "it orders the ready column by its policy, with flai order --by <policy> --apply, and never places a story by hand, which is the operator's"
 
 // Guard decides on the calls of one flai: Commands are the names of its
 // commands, so that a word flai on a command line counts as running flai
@@ -291,7 +336,10 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 		}
 		return "", "it moves an item to ready and no further"
 	case "order":
-		return manifest.PermitOrderReady, ""
+		if ordersByPolicy(rest) {
+			return manifest.PermitOrderReady, ""
+		}
+		return "", byHand
 	case "accept":
 		return manifest.PermitAcceptReviews, ""
 	case "push":
@@ -307,6 +355,22 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 		}
 	}
 	return "", "of flai's commands that write, it runs only thread new, issue new and bump, and those its permissions allow"
+}
+
+// ordersByPolicy says whether the words after flai, of flai order, order the
+// ready column by a policy rather than place one story by hand: with --by,
+// and with neither a story nor a flag that places one.
+func ordersByPolicy(words []string) bool {
+	return given(words, "--by") && len(positionals(words, orderValues)) == 1 &&
+		!slices.ContainsFunc(placements, func(f string) bool { return named(words, f) })
+}
+
+// finalizesDraft says whether item_edit's input finalizes a draft and
+// changes nothing else: it gives draft false, and no field but the item, its
+// hash, and its project besides.
+func finalizesDraft(in Input) bool {
+	return !in.Draft && slices.Contains(in.Fields, "draft") &&
+		!slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(finalizeFields, f) })
 }
 
 // isEpic says whether id is an epic's, in any zero padding.
@@ -342,7 +406,9 @@ func finalizesOnly(words []string) bool {
 // flai only reads.
 func reads(cmd, sub string, rest []string) bool {
 	if f, ok := flagReads[cmd]; ok {
-		return given(rest, f.with) && !slices.ContainsFunc(f.without, func(w string) bool { return named(rest, w) })
+		return slices.ContainsFunc(f.with, func(w string) bool { return given(rest, w) }) &&
+			!slices.ContainsFunc(f.without, func(w string) bool { return named(rest, w) }) &&
+			(f.form == nil || f.form(rest))
 	}
 	subs, ok := cliReads[cmd]
 	return ok && (subs == nil || slices.Contains(subs, sub))
@@ -442,6 +508,13 @@ func (g Guard) orchestrate(e Event) Refusal {
 				needs = manifest.PermitPlanBacklogEpics
 			} else {
 				never = plansEpics
+			}
+		case tool == "item_edit":
+			what = "edit " + in.ID
+			if finalizesDraft(in) {
+				what, needs = "finalize "+in.ID, manifest.PermitFinalizeDrafts
+			} else {
+				never = "it edits an item only to finalize a draft, with item_edit draft false and nothing else"
 			}
 		case tool == "item_move":
 			what = fmt.Sprintf("move %s to %s", in.ID, in.To)

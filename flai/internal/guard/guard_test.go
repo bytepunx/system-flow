@@ -435,7 +435,7 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		{manifest.PermitPlanBacklogEpics, manifest.Permissions{PlanBacklogEpics: true}, []Event{itemOf("plan", "E-0016", ""), itemOf("plan", "e-16", ""), bash("", "flai plan E-0016"), bash("", "scripts/flai.sh --config c.json plan E-1 --json")}},
 		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{bash("", "flai edit S-0001 --no-draft"), bash("", "flai edit --by orchestrator S-0001 --no-draft=true --hash=abc --json")}},
 		{manifest.PermitPromoteToReady, manifest.Permissions{PromoteToReady: true}, []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move --reason 'top of the backlog' S-0001 ready")}},
-		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply"), bash("", "flai order S-0001 --top")}},
+		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply")}},
 		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerRecommend}, []Event{itemOf("thread_reply", "", ""), bash("", "flai thread reply TH-0001 'I recommend S-0002'")}},
 		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerAutonomous}, []Event{itemOf("thread_reply", "", "")}},
 		{manifest.PermitAcceptReviews, manifest.Permissions{AcceptReviews: true}, []Event{bash("", "flai accept S-0001")}},
