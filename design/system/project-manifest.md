@@ -17,8 +17,8 @@ key: sf                                      # short key, used in generated IDs 
 description: Agentic lean project management system
 template:
   repo: https://github.com/bytepunx/system-flow-template
-  ref: main                                  # branch, tag, or commit
-  version: 0.1.0                             # template version applied, from template.yaml
+  ref: main                                  # the ref last applied: branch, tag, or commit; main or a version tag follows releases (ADR-0102)
+  version: 0.1.0                             # template version last applied, from template.yaml
   applied: 2026-09-15T16:00:00Z
 layout:                                      # folder names, defaults shown, renameable at import
   design: design
@@ -97,7 +97,8 @@ Rules:
 
 - `flai` refuses to run project commands in a directory tree with no `system-flow.yaml` above the current directory, except `flai new` and `flai import`.
 - `layout` is the only place folder names live. Everything else resolves through it. Subfolders such as `design/conventions` are fixed names under their layout folder.
-- `template.version` is the version `flai upgrade` compares against; `system-flow.lock.yaml` beside the manifest records the hash of every rendered file so upgrade can tell project edits from baseline (ADR-0015), the `topics` the template gave each marker file so upgrade keeps a project's own (S-0134), and under `vars` the value of every template variable the project was last rendered with, so upgrade renders a fork's own variables again (S-0185).
+- `template.ref` and `template.version` are the ref and version last applied ([ADR-0102](../adrs/0102-flai-new-import-and-upgrade-follow-the-template-s-releases-the-newest-version.md), [template.md](template.md#which-version-is-applied)). A `ref` that is empty, `main`, or a version tag follows releases: with no `--ref`, `flai upgrade` applies the template's newest version tag. Another branch or a commit is used as given. `flai upgrade --ref` writes its ref here. Editing `ref` or `version` here, so that it differs from the lock and from the newest tag, makes the next `flai upgrade` ask which version to apply: the one named here, the newest, or none; a changed `version` names the tag `v<version>`. The version a project is at is the lock's, not this one, unless there is no lock.
+- `system-flow.lock.yaml` beside the manifest records the hash of every rendered file so upgrade can tell project edits from baseline (ADR-0015), the `topics` the template gave each marker file so upgrade keeps a project's own (S-0134), and under `vars` the value of every template variable the project was last rendered with, so upgrade renders a fork's own variables again (S-0185).
 - `name`, `key`, `description`, `owner`, and `repo` are read back by `flai upgrade` as the template variables `project_name`, `project_key`, `description`, `owner`, and `repo_url`, ahead of the values the lock recorded, so an edit to them here reaches the next upgrade. `flai upgrade --var` refuses them and names the key to edit ([template.md](template.md#upgrading-a-project)).
 - `projects` are the components `flai release` versions, one item at a time or, since S-0087, batched by `flai release --pending`: code kinds get `<name>/vX.Y.Z` tags, kind `template` gets its version file bumped. `flai accept` versions nothing. `tags` are aliases a story or epic tag may use to say which component it delivers to.
 - `dashboard.notify_url`, when set, makes the dashboard's server POST `{ project, entry: { key, kind, title, href, at } }` to that URL for each inbox entry that appears after it started: one attempt, a short timeout, a warning in the log on failure. The token and file contents are never sent. Unset by default.
