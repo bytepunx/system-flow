@@ -27,19 +27,38 @@ func fastPermissionPoll(t *testing.T) {
 }
 
 // askPermission calls permission_prompt as Claude Code does and decodes the
-// decision from the first text content, which is what Claude Code reads.
+// decision it answers.
 func (f *fixture) askPermission(t *testing.T, ctx context.Context, tool string, input map[string]any) PermissionOut {
 	t.Helper()
-	res, err := f.cs.CallTool(ctx, &mcp.CallToolParams{Name: "permission_prompt", Arguments: map[string]any{"tool_name": tool, "input": input, "tool_use_id": "toolu_1"}})
+	return decision(t, callPermission(t, ctx, f.cs, map[string]any{"tool_name": tool, "input": input, "tool_use_id": "toolu_1"}))
+}
+
+func callPermission(t *testing.T, ctx context.Context, cs *mcp.ClientSession, args any) *mcp.CallToolResult {
+	t.Helper()
+	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "permission_prompt", Arguments: args})
 	if err != nil {
 		t.Fatalf("permission_prompt: %v", err)
 	}
-	if res.IsError || len(res.Content) == 0 {
+	return res
+}
+
+// decision decodes the result as Claude Code reads it, failing unless it is
+// what Claude Code accepts (I-0082): a single text block holding a JSON
+// object, with no structured content beside it and no tool error.
+func decision(t *testing.T, res *mcp.CallToolResult) PermissionOut {
+	t.Helper()
+	if res.IsError {
 		t.Fatalf("permission_prompt should answer a decision, not fail: %+v", res)
+	}
+	if res.StructuredContent != nil {
+		t.Errorf("the result carries structured content, which Claude Code calls an invalid result: %+v", res.StructuredContent)
+	}
+	if len(res.Content) != 1 {
+		t.Fatalf("the result has %d content blocks, want a single text block: %+v", len(res.Content), res.Content)
 	}
 	text, ok := res.Content[0].(*mcp.TextContent)
 	if !ok {
-		t.Fatalf("the first content is not text: %T", res.Content[0])
+		t.Fatalf("the content is not text: %T", res.Content[0])
 	}
 	var keys map[string]any
 	if err := json.Unmarshal([]byte(text.Text), &keys); err != nil {
@@ -50,9 +69,53 @@ func (f *fixture) askPermission(t *testing.T, ctx context.Context, tool string, 
 			t.Errorf("the decision carries %q, which Claude Code does not read: %s", k, text.Text)
 		}
 	}
+	if _, ok := keys["behavior"]; !ok {
+		t.Errorf("the decision has no behavior: %s", text.Text)
+	}
 	var out PermissionOut
 	_ = json.Unmarshal([]byte(text.Text), &out)
 	return out
+}
+
+// I-0082: Claude Code refuses any answer but a single text block, so the
+// tool declares no output schema and answers no structured content, whether
+// it allows, refuses at once, or refuses a request it cannot read.
+func TestPermissionPromptAnswersOneTextBlockAsClaudeCodeRequires(t *testing.T) {
+	f := setupWith(t, func(o *Options) { o.AutoApprove = func(string) bool { return true } })
+	ctx := context.Background()
+	tools, err := f.cs.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listed bool
+	for _, tool := range tools.Tools {
+		if tool.Name == "permission_prompt" {
+			listed = true
+			if tool.OutputSchema != nil {
+				t.Errorf("permission_prompt declares an output schema, so it answers structured content: %+v", tool.OutputSchema)
+			}
+		}
+	}
+	if !listed {
+		t.Fatal("permission_prompt is not listed")
+	}
+	input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": "{}"}
+	for _, c := range []struct {
+		name     string
+		args     any
+		behavior string
+		message  string
+	}{
+		{"an allow", map[string]any{"tool_name": "Write", "input": input}, "allow", ""},
+		{"a refusal at once", map[string]any{"tool_name": "Bash", "input": map[string]any{"command": "ls"}}, "deny", "Bash is not an Edit"},
+		{"arguments it cannot read", map[string]any{"tool_name": 5}, "deny", "not a permission request"},
+	} {
+		out := decision(t, callPermission(t, ctx, f.cs, c.args))
+		if out.Behavior != c.behavior || !strings.Contains(out.Message, c.message) {
+			t.Errorf("%s: %+v, want %s saying %q", c.name, out, c.behavior, c.message)
+		}
+	}
+	noThreads(t, f.repo)
 }
 
 // projectLint is the project's markdownlint configuration, so that the
@@ -246,10 +309,7 @@ func TestPermissionPromptShowsEditsLintClean(t *testing.T) {
 	} {
 		ctx, cancel := context.WithCancel(context.Background())
 		got := make(chan PermissionOut, 1)
-		go func() {
-			_, out, _ := s.permissionPrompt(ctx, nil, PermissionIn{ToolName: c.tool, Input: c.input})
-			got <- out
-		}()
+		go func() { got <- s.permissionPrompt(ctx, PermissionIn{ToolName: c.tool, Input: c.input}) }()
 		var th *threads.Thread
 		deadline := time.Now().Add(3 * time.Second)
 		for th == nil && time.Now().Before(deadline) {
@@ -296,19 +356,16 @@ func TestPermissionPromptInAFolderFindsTheProjectByThePath(t *testing.T) {
 	}
 	f := folderSetup(t, root)
 	path := filepath.Join(beta.WorktreePath(story.ID), ".claude", "settings.json")
-	res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "permission_prompt", Arguments: map[string]any{"tool_name": "Bash", "input": map[string]any{"command": "ls"}}})
-	if err != nil || res.IsError {
-		t.Fatalf("permission_prompt: %v %+v", err, res)
-	}
-	if text := res.Content[0].(*mcp.TextContent).Text; !strings.Contains(text, `"behavior":"deny"`) || !strings.Contains(text, "name one with project") {
-		t.Errorf("without a path to go by, the refusal says to name the project: %s", text)
+	res := callPermission(t, context.Background(), f.cs, map[string]any{"tool_name": "Bash", "input": map[string]any{"command": "ls"}})
+	if out := decision(t, res); out.Behavior != "deny" || !strings.Contains(out.Message, "name one with project") {
+		t.Errorf("without a path to go by, the refusal says to name the project: %+v", out)
 	}
 	fastPermissionPoll(t)
 	got := make(chan string, 1)
 	go func() {
 		res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "permission_prompt", Arguments: map[string]any{"tool_name": "Write", "input": map[string]any{"file_path": path, "content": "{}"}}})
-		if err != nil || res.IsError {
-			got <- "failed"
+		if err != nil || res.IsError || res.StructuredContent != nil || len(res.Content) != 1 {
+			got <- "not a single text block"
 			return
 		}
 		got <- res.Content[0].(*mcp.TextContent).Text

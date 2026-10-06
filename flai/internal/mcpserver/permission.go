@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -48,7 +49,8 @@ type PermissionIn struct {
 
 func (in PermissionIn) project() string { return in.Project }
 
-// PermissionOut is the decision, as Claude Code reads it from the text content.
+// PermissionOut is the decision, sent to Claude Code as the JSON text of the
+// result's single text block.
 type PermissionOut struct {
 	Behavior     string         `json:"behavior"`
 	UpdatedInput map[string]any `json:"updatedInput,omitempty"`
@@ -77,24 +79,40 @@ func deny(format string, args ...any) PermissionOut {
 }
 
 // permissionRoute serves permission_prompt for the project whose worktrees
-// hold the path, when the request names none: Claude Code never does.
-func permissionRoute(p projects) mcp.ToolHandlerFor[PermissionIn, PermissionOut] {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in PermissionIn) (*mcp.CallToolResult, PermissionOut, error) {
+// hold the path, when the request names none: Claude Code never does. It is a
+// raw handler because Claude Code accepts only a single text block (I-0082):
+// a typed one declares an output schema and answers structured content too.
+func permissionRoute(p projects) mcp.ToolHandler {
+	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var in PermissionIn
+		if err := json.Unmarshal(req.Params.Arguments, &in); err != nil {
+			return permissionResult(deny("the arguments are not a permission request, an object with tool_name a string and input an object (%v): %s", err, permissionScope))
+		}
 		if in.Project == "" {
 			if path, ok := permissionPath(in); ok {
 				for _, s := range p.all() {
 					if within(s.worktrees(), path) {
-						return s.permissionPrompt(ctx, req, in)
+						return permissionResult(s.permissionPrompt(ctx, in))
 					}
 				}
 			}
 		}
 		s, err := p.pick(in.project())
 		if err != nil {
-			return nil, deny("%v", err), nil
+			return permissionResult(deny("%v", err))
 		}
-		return s.permissionPrompt(ctx, req, in)
+		return permissionResult(s.permissionPrompt(ctx, in))
 	}
+}
+
+// permissionResult is the decision as Claude Code reads it: its JSON as the
+// only content, a text block, with no structured content.
+func permissionResult(out PermissionOut) (*mcp.CallToolResult, error) {
+	text, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("encode the permission decision %+v: %w", out, err)
+	}
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(text)}}}, nil
 }
 
 // permissionPath is the cleaned absolute path a request writes, if it is a
@@ -123,17 +141,18 @@ func within(dir, path string) bool {
 
 func (s *server) worktrees() string { return filepath.Join(s.repo.CacheDir(), "worktrees") }
 
-func (s *server) permissionPrompt(ctx context.Context, _ *mcp.CallToolRequest, in PermissionIn) (*mcp.CallToolResult, PermissionOut, error) {
+// permissionPrompt decides a request for this project.
+func (s *server) permissionPrompt(ctx context.Context, in PermissionIn) PermissionOut {
 	path, ok := permissionPath(in)
 	if !ok {
 		why := fmt.Sprintf("%s is not an Edit, Write, MultiEdit, or NotebookEdit", orQuoted(in.ToolName))
 		if slices.Contains([]string{"Edit", "Write", "MultiEdit", "NotebookEdit"}, in.ToolName) {
 			why = fmt.Sprintf("the %s names no absolute path", in.ToolName)
 		}
-		return nil, deny("%s: %s", why, permissionScope), nil
+		return deny("%s: %s", why, permissionScope)
 	}
 	if !within(s.worktrees(), path) {
-		return nil, deny("%s is not inside a story's worktree under %s: %s", path, s.worktrees(), permissionScope), nil
+		return deny("%s is not inside a story's worktree under %s: %s", path, s.worktrees(), permissionScope)
 	}
 	rel, _ := filepath.Rel(s.worktrees(), path)
 	parts := strings.Split(filepath.ToSlash(rel), "/")
@@ -141,29 +160,29 @@ func (s *server) permissionPrompt(ctx context.Context, _ *mcp.CallToolRequest, i
 	notStory := deny("%s is not a story's worktree: %s", filepath.Join(s.worktrees(), id), permissionScope)
 	it, err := s.repo.Get(id)
 	if err != nil {
-		return nil, notStory, nil //nolint:nilerr // no such item is a refusal for Claude Code, not a tool error
+		return notStory // no such item is a refusal for Claude Code, not a tool error
 	}
 	if it.Type != workitem.Story || filepath.Clean(s.repo.WorktreePath(it.ID)) != filepath.Join(s.worktrees(), id) {
-		return nil, notStory, nil
+		return notStory
 	}
 	if it.Status != workitem.InProgress {
-		return nil, deny("%s is %s, not in progress: %s", it.ID, it.Status, permissionScope), nil
+		return deny("%s is %s, not in progress: %s", it.ID, it.Status, permissionScope)
 	}
 	inTree := parts[1:]
 	if len(inTree) < 2 || !slices.Contains(inTree[:len(inTree)-1], ".claude") {
-		return nil, deny("%s is not in a .claude/ folder of %s's worktree: %s", path, it.ID, permissionScope), nil
+		return deny("%s is not in a .claude/ folder of %s's worktree: %s", path, it.ID, permissionScope)
 	}
 	if escapes(s.repo.WorktreePath(it.ID), path) {
-		return nil, deny("%s leaves %s's worktree through a symbolic link: %s", path, it.ID, permissionScope), nil
+		return deny("%s leaves %s's worktree through a symbolic link: %s", path, it.ID, permissionScope)
 	}
 	shown := strings.Join(inTree, "/")
 	if s.autoApprove != nil && s.autoApprove(projectRoot(s.repo)) {
 		if s.logger != nil {
 			s.logger.Info("permission allowed without asking", "component", "mcp", "agent", s.agent, "tool", in.ToolName, "path", path, "story", it.ID)
 		}
-		return nil, allow(in.Input), nil
+		return allow(in.Input)
 	}
-	return nil, s.askOperator(ctx, it, in, shown), nil
+	return s.askOperator(ctx, it, in, shown)
 }
 
 // escapes reports whether the deepest existing folder of path, symbolic
