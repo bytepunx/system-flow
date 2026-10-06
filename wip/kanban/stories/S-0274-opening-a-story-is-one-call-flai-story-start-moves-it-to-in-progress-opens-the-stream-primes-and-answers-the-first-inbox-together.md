@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T22:46:26Z
+updated: 2026-10-06T22:48:57Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
@@ -18,7 +18,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   value: 64
   by: planner-E-0017
@@ -29,6 +28,9 @@ forecast:
   basis: "Its own forecast of 35m; 30th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269, S-0270, S-0271, S-0272 and S-0273."
   by: flai
   at: 2026-10-06T22:46:26Z
+finalized:
+  by: alex
+  at: 2026-10-06T22:48:57Z
 ---
 # S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together
 
