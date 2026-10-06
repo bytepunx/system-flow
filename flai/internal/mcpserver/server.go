@@ -581,6 +581,11 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	if err != nil {
 		return nil, ItemMoveOut{}, err
 	}
+	if in.To == workitem.Done && it.Type == workitem.Story && s.orchestrator() {
+		// the orchestrator accepts through flai, which checks what an
+		// acceptance needs and records its evidence (ADR-0093)
+		return nil, ItemMoveOut{}, fmt.Errorf("%s is a story: moving it to done is acceptance, which item_move never makes; the orchestrator accepts a story with flai accept %s --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093)", it.ID, it.ID)
+	}
 	if in.To == workitem.Done && it.Type != workitem.Task {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is %s: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready", it.ID, articled(it.Type))
 	}

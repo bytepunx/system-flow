@@ -23,7 +23,9 @@
 // record issues, and log its activities, and do each of the rest only while
 // the permission that allows it is on (S-0219 maps planning an epic,
 // finalizing a draft, promoting a story to ready, and ordering the ready
-// column by a policy). A refusal names that permission; a call no permission
+// column by a policy). With accept_reviews it accepts a story in review, with
+// flai accept or flai move to done, only as itself, --by orchestrator
+// (S-0221, ADR-0093). A refusal names that permission; a call no permission
 // allows, such as an edit of a file, a commit, or a story placed by hand in
 // the pull order, it never makes. Its sub-agents are held as every sub-agent
 // is.
@@ -248,6 +250,18 @@ const plansEpics = "it asks for the planner on an epic alone, one flai plan --ca
 // order (S-0219).
 const byHand = "it orders the ready column by its policy, with flai order --by <policy> --apply, and never places a story by hand, which is the operator's"
 
+// movesTo says why the orchestrator moves an item nowhere but to ready, and
+// a story to done only as it accepts it (S-0221).
+const movesTo = "it moves an item to ready and no further, but a story it accepts, to done with --by orchestrator while orchestration.permissions.accept_reviews is on (ADR-0093)"
+
+// acceptsAsSelf says why the orchestrator accepts a story only as itself,
+// whatever accept_reviews lets it do (S-0221).
+const acceptsAsSelf = "it accepts a story only as itself, so give --by orchestrator: orchestration.permissions.accept_reviews lets it accept as nobody else (ADR-0093)"
+
+// acceptsWithFlai says why the orchestrator never moves an item to done with
+// item_move (S-0221).
+const acceptsWithFlai = "item_move never moves an item to done; it accepts a story with flai accept <id> --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093)"
+
 // threadValues are the flags of flai thread reply, resolve, and confirm,
 // flai's own among them, that take a value.
 var threadValues = map[string]bool{"--by": true, "--config": true, "--reason": true, "--source": true}
@@ -386,6 +400,8 @@ func (g Guard) orchestration() rules {
 				return nevers(never), ""
 			case needs != "" && !g.Permissions.Allows(needs):
 				return off(needs), needs
+			case needs == manifest.PermitAcceptReviews && !workitem.IsOrchestrator(value(rest, "--by")):
+				return acceptsAsSelf, needs
 			}
 			return "", ""
 		},
@@ -415,10 +431,16 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 		}
 		return "", "it edits an item only to finalize a draft, with flai edit --no-draft and nothing else"
 	case "move":
-		if args := positionals(rest, moveValues); len(args) > 2 && args[2] == Ready {
+		args := positionals(rest, moveValues)
+		switch {
+		case len(args) > 2 && args[2] == Ready:
 			return manifest.PermitPromoteToReady, ""
+		case len(args) > 2 && args[2] == workitem.Done && isStory(args[1]):
+			// the done transition of a story it accepts (ADR-0093); the
+			// orchestration rules hold it to --by orchestrator
+			return manifest.PermitAcceptReviews, ""
 		}
-		return "", "it moves an item to ready and no further"
+		return "", movesTo
 	case "order":
 		if ordersByPolicy(rest) {
 			return manifest.PermitOrderReady, ""
@@ -557,8 +579,14 @@ func finalizesDraft(in Input) bool {
 }
 
 // isEpic says whether id is an epic's, in any zero padding.
-func isEpic(id string) bool {
-	n, ok := strings.CutPrefix(strings.ToUpper(id), "E-")
+func isEpic(id string) bool { return isOf(id, "E-") }
+
+// isStory says whether id is a story's, in any zero padding.
+func isStory(id string) bool { return isOf(id, "S-") }
+
+// isOf says whether id is a number after prefix, in either case.
+func isOf(id, prefix string) bool {
+	n, ok := strings.CutPrefix(strings.ToUpper(id), prefix)
 	_, err := strconv.Atoi(n)
 	return ok && err == nil
 }
@@ -748,9 +776,12 @@ func (g Guard) orchestrate(e Event) Refusal {
 			}
 		case tool == "item_move":
 			what = fmt.Sprintf("move %s to %s", in.ID, in.To)
-			if in.To == Ready {
+			switch in.To {
+			case Ready:
 				needs = manifest.PermitPromoteToReady
-			} else {
+			case workitem.Done:
+				never = acceptsWithFlai
+			default:
 				never = "it moves an item to ready and no further"
 			}
 		default:

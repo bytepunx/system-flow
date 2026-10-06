@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -135,5 +136,30 @@ func TestReleaseEvaluateWeighsWhatIsPending(t *testing.T) {
 	if out, failed := f.call(t, "release_evaluate", map[string]any{}); failed != "" || out["policy"] != "threshold" || out["met"] != false || out["count_threshold"] != 1.0 ||
 		!strings.Contains(out["reason"].(string), "no accepted story is waiting for a release") {
 		t.Errorf("a threshold is not met by nothing pending: %v %s", out, failed)
+	}
+}
+
+// S-0221: item_move refuses the orchestrator a move of a story to done, as it
+// refuses every agent, and names the way it accepts one: flai accept with
+// --by orchestrator, while accept_reviews is on (ADR-0093). An epic's
+// refusal, and the story's agent's, are as before.
+func TestItemMoveToDoneNamesTheOrchestratorsWay(t *testing.T) {
+	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	f := setupWith(t, func(o *Options) { o.Agent = workitem.ActivityOrchestrator })
+	_, failed := f.call(t, "item_move", map[string]any{"id": f.story.ID, "to": workitem.Done})
+	want := "flai accept " + f.story.ID + " --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093)"
+	if !strings.Contains(failed, want) || !strings.Contains(failed, "item_move never makes") {
+		t.Errorf("orchestrator: %q, want it to name %q", failed, want)
+	}
+	if story, _ := f.repo.Get(f.story.ID); story.Status != workitem.InProgress {
+		t.Errorf("the refused move must change nothing: %s", story.Status)
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"id": f.story.Parent, "to": workitem.Done}); !strings.Contains(failed, "only the operator") {
+		t.Errorf("orchestrator, epic: %q", failed)
+	}
+	t.Setenv("FLAI_ROLE", "")
+	agent := setup(t)
+	if _, failed := agent.call(t, "item_move", map[string]any{"id": agent.story.ID, "to": workitem.Done}); !strings.Contains(failed, "only the operator") || strings.Contains(failed, "flai accept "+agent.story.ID) {
+		t.Errorf("story's agent: %q", failed)
 	}
 }

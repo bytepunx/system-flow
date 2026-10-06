@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -467,7 +468,7 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply")}},
 		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerRecommend}, []Event{recommendation(itemOf("thread_reply", "TH-0001", "")), bash("", "flai thread reply --recommend TH-0001 'I recommend S-0002'")}},
 		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerAutonomous}, []Event{recommendation(itemOf("thread_reply", "TH-0001", ""))}},
-		{manifest.PermitAcceptReviews, manifest.Permissions{AcceptReviews: true}, []Event{bash("", "flai accept S-0001")}},
+		{manifest.PermitAcceptReviews, manifest.Permissions{AcceptReviews: true}, []Event{bash("", "flai accept S-0001 --by orchestrator --verified abc --evidence -"), bash("", "flai move S-0001 done --by orchestrator")}},
 		{manifest.PermitPublish, manifest.Permissions{Publish: true}, []Event{bash("", "flai release --pending"), bash("", "flai push --pending"), bash("", "flai accept --help; flai push")}},
 	} {
 		needs := "orchestration.permissions." + c.permit
@@ -483,6 +484,64 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 					t.Errorf("%s off: %s %q %s: %+v", c.permit, e.ToolName, e.ToolInput.Command, e.ToolInput.ID, r)
 				}
 			}
+		}
+	}
+}
+
+// S-0221: with accept_reviews on, the orchestrator accepts a story, with flai
+// accept or flai move to done, only as itself; without it, it does not
+// accept at all; and item_move to done names flai accept as the way.
+func TestTheOrchestratorAcceptsOnlyAsItself(t *testing.T) {
+	on, off := orchestrator(manifest.Permissions{AcceptReviews: true}), orchestrator(except(manifest.PermitAcceptReviews))
+	needs := "orchestration.permissions." + manifest.PermitAcceptReviews
+	for _, c := range []string{
+		"flai accept S-0001 --by orchestrator --verified abc --evidence -",
+		"flai accept --by=orchestrator S-0001 --verified=abc --evidence=evidence.md",
+		"flai accept S-0001 --by alex --by orchestrator --dry-run",
+		"flai move S-0001 done --by orchestrator",
+		"scripts/flai.sh --config c.json move --by=orchestrator s-1 done",
+	} {
+		if r := on.Decide(bash("", c)); r.Why != "" {
+			t.Errorf("on %q refused: %+v", c, r)
+		}
+		r := off.Decide(bash("", c))
+		if !strings.Contains(r.Why, "it needs "+needs+", which is off") || r.Needs != needs {
+			t.Errorf("off %q: %+v", c, r)
+		}
+	}
+	for _, c := range []string{
+		"flai accept S-0001 --verified abc --evidence -",
+		"flai accept S-0001 --by alex --verified abc --evidence -",
+		"flai accept S-0001 --by orchestrator --by=alex",
+		"flai accept S-0001 --by=",
+		"flai move S-0001 done",
+		"flai move S-0001 done --by alex",
+	} {
+		r := on.Decide(bash("", c))
+		if r.Why != fmt.Sprintf("the orchestrator cannot run %q: %s. %s", c, acceptsAsSelf, askOperator) || r.Needs != needs || r.Call != c {
+			t.Errorf("on %q: %+v", c, r)
+		}
+	}
+	for _, c := range []string{"flai move E-0001 done --by orchestrator", "flai move T-0001 done --by orchestrator", "flai move S-0001 review --by orchestrator"} {
+		if r := on.Decide(bash("", c)); !strings.Contains(r.Why, "the orchestrator never does it, whatever its permissions: "+movesTo) || r.Needs != "" {
+			t.Errorf("on %q: %+v", c, r)
+		}
+	}
+	for _, gr := range []Guard{on, orchestrator(allOn)} {
+		r := gr.Decide(itemOf("item_move", "S-0001", "done"))
+		if !strings.Contains(r.Why, "the orchestrator cannot move S-0001 to done: the orchestrator never does it, whatever its permissions: item_move never moves an item to done; it accepts a story with flai accept <id> --by orchestrator --verified <commit> --evidence <file>, while "+needs+" is on") || r.Needs != "" {
+			t.Errorf("item_move done: %+v", r)
+		}
+	}
+	for _, c := range []string{"flai accept S-0001 --by orchestrator --verified abc --evidence -", "flai move S-0001 done --by orchestrator"} {
+		if why := planGuard.Check(bash("", c)); !strings.HasPrefix(why, "the planner cannot run ") {
+			t.Errorf("planner %q: %q", c, why)
+		}
+		if why := orchestrator(allOn).Check(bash("verifier", c)); !strings.Contains(why, "a sub-agent (verifier) cannot run") {
+			t.Errorf("sub-agent %q: %q", c, why)
+		}
+		if why := g.Check(bash("", c)); why != "" {
+			t.Errorf("story's agent %q refused: %s", c, why)
 		}
 	}
 }

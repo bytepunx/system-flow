@@ -73,14 +73,17 @@ another opened, with thread_reply or flai thread reply, as a recommendation
 (recommendation true, --recommend) while it is recommend, and also as an
 answer citing a source (source, --source) while it is autonomous, so that an
 answer it cannot source goes to the operator as a recommendation (S-0220);
-accept_reviews flai accept; publish flai release --pending and flai push.
+accept_reviews flai accept and flai move <story> done, each only with --by
+orchestrator, so that it accepts as itself and as nobody else (S-0221,
+ADR-0093); publish flai release --pending and flai push.
 On a thread it opened it follows up and resolves, but never recommends or
 answers; it never resolves another's thread, never confirms a
 recommendation, and never names another author with --by. A call a permission
 would allow is refused while it is off, naming it (it needs
 orchestration.permissions.<name>); anything else that writes is refused
 as what the orchestrator never does: plan for a story, flai order placing
-a story by hand, other flai tools and commands, git's writes, and the
+a story by hand, item_move to done, whose refusal names flai accept --by
+orchestrator, other flai tools and commands, git's writes, and the
 Edit, Write, and NotebookEdit tools. Whether a story it promotes is held,
 a draft, or over the ready limit is flai's to check as it moves it, not
 the guard's: the guard reads the call, not the board. Each
