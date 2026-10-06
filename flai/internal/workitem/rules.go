@@ -100,6 +100,13 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 				return nil, fmt.Errorf("rule: %s", r.UncommittedRule(it.ID, dirty, "it goes to review"))
 			}
 		}
+		// The operator reads the ticks as what the agent verified (S-0282), so
+		// an unticked box warns here and refuses only at done.
+		if it.Type == Story {
+			if open := uncheckedCount(it.Body); open > 0 {
+				warnings = append(warnings, fmt.Sprintf("%s goes to review with unticked acceptance criteria (%d of %d): tick each one verified with flai criteria tick %s <n>, and say in its notes why any other is left unticked", it.ID, open, CriteriaCount(it.Body), it.ID))
+			}
+		}
 	case Done:
 		for _, c := range children {
 			if !c.Closed() {
@@ -232,6 +239,12 @@ func hasCriteria(body string) bool {
 
 func hasUnchecked(body string) bool {
 	return unchecked.MatchString(criteriaSection(body))
+}
+
+// uncheckedCount is the number of unticked checkbox lines in a body's
+// "## Acceptance criteria" section; CriteriaCount counts them all.
+func uncheckedCount(body string) int {
+	return len(unchecked.FindAllString(criteriaSection(body), -1))
 }
 
 // appendNote adds a line under "## Notes", creating the section if missing.
