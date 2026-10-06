@@ -6,7 +6,7 @@ title: The planner agent should be available on epic work items
 status: ready
 owner: alex
 created: 2026-10-06T21:42:35Z
-updated: 2026-10-06T21:48:16Z
+updated: 2026-10-06T22:12:16Z
 transitions:
   - to: ready
     at: 2026-10-06T21:42:36Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T21:47:59Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T00:30:00Z
-  basis: "flai forecast's 24m (84 s per unit over 24 large improvement stories, size 17) raised to 40m for five tasks, two kept-identical copies, a .claude/ permission wait, and both test suites at close-out; delivery after S-0229 and S-0299, which hold it on flai/internal/harness/harness.go"
-  by: planner-S-0300
-  at: 2026-10-06T21:47:59Z
+  delivery: 2026-10-06T22:55:00Z
+  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0229 and S-0299."
+  by: flai
+  at: 2026-10-06T22:12:16Z
 ---
 # S-0300 The planner agent should be available on epic work items
 
