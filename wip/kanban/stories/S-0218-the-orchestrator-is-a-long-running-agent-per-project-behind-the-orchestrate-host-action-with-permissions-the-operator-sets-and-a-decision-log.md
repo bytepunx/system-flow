@@ -3,24 +3,49 @@ id: S-0218
 type: story
 nature: feature
 title: The orchestrator is a long-running agent per project behind the orchestrate host action, with permissions the operator sets and a decision log
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-05T07:09:06Z
+updated: 2026-10-06T02:57:06Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:14Z
     by: alex
+  - to: in-progress
+    at: 2026-10-05T07:09:32Z
+    by: agent-S-0218
+  - to: review
+    at: 2026-10-06T01:36:54Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-06T02:56:42Z
+    by: alex
 tags: [flai, dashboard]
 topics: [orchestration]
-touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/config, ".claude/agents", template, flai/internal/manifest, flai/internal/guard, flai/cmd, flaiover/src/routes/activity, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators, docs/users/flai.md, ".claude/settings.json", flai/internal/check/check.go, flai/internal/check/orchestration_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flaiover/src/lib/activity.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai-reference.md]
+touches: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/internal/mcpserver, flai/internal/config, ".claude/agents", template, flai/internal/manifest, flai/internal/guard, flai/cmd, flaiover/src/routes/activity, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators, docs/users/flai.md, ".claude/settings.json", flai/internal/check/check.go, flai/internal/check/orchestration_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flaiover/src/lib/activity.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai-reference.md, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/AgentStream.svelte, flaiover/src/lib/events.ts, flaiover/src/routes/api/agent-stream]
 after: [S-0206, S-0207, S-0217]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 9205
+  models:
+    - model: claude-opus-5-5
+      input: 766
+      output: 307007
+      cache_read: 43883148
+      cache_write: 1159036
+      cost: 21.5758
+    - model: claude-sonnet-5
+      input: 124
+      output: 27284
+      cache_read: 4352027
+      cache_write: 276500
+      cost: 1.8347
 cost_of_delay:
   value: 102.04
   by: planner-S-0218
@@ -39,12 +64,12 @@ forecast:
 The orchestrator is an agentic operator: it keeps work moving between backlog, ready, and the agents, answers threads, and decides releases, each only as far as the operator permits. It runs for a project as long as `orchestrate` is enabled, waiting on events between decisions, and every decision is logged with its reason.
 
 ## Acceptance criteria
-- [ ] An `orchestrate` host action, off by default, starts one orchestrator run per project (`orchestration.agent` gives harness, model, config); `flai serve` restarts it when it ends and the action is still on, and stops it when the action is turned off
-- [ ] Permissions live in the manifest under `orchestration.permissions`, each off by default: `plan_backlog_epics` (ask the planner to draft stories for backlog epics), `finalize_drafts`, `promote_to_ready`, `order_ready`, `answer_threads` (`recommend` or `autonomous`), `accept_reviews`, `publish`; and `orchestration.policy` (`throughput` or `cost_of_delay`)
-- [ ] `flai guard` enforces the permissions on the orchestrator's calls: a call outside them is refused with the permission that would allow it, and the refusal is logged
-- [ ] Its prompt: prime with `--role orchestrate`, read the board and inbox, act within permissions using the deterministic commands, log each decision with `activity_log` (what, why, which policy figure), then `wait_for_events` and repeat
-- [ ] Each decision and refusal is in the orchestrator's activity document and visible in the dashboard
-- [ ] `design/system/strategic-agents.md`, `flai-cli.md`, and the operator guide describe it; tests cover start and stop with the action, a permitted and a refused call
+- [X] An `orchestrate` host action, off by default, starts one orchestrator run per project (`orchestration.agent` gives harness, model, config); `flai serve` restarts it when it ends and the action is still on, and stops it when the action is turned off
+- [X] Permissions live in the manifest under `orchestration.permissions`, each off by default: `plan_backlog_epics` (ask the planner to draft stories for backlog epics), `finalize_drafts`, `promote_to_ready`, `order_ready`, `answer_threads` (`recommend` or `autonomous`), `accept_reviews`, `publish`; and `orchestration.policy` (`throughput` or `cost_of_delay`)
+- [X] `flai guard` enforces the permissions on the orchestrator's calls: a call outside them is refused with the permission that would allow it, and the refusal is logged
+- [X] Its prompt: prime with `--role orchestrate`, read the board and inbox, act within permissions using the deterministic commands, log each decision with `activity_log` (what, why, which policy figure), then `wait_for_events` and repeat
+- [X] Each decision and refusal is in the orchestrator's activity document and visible in the dashboard
+- [X] `design/system/strategic-agents.md`, `flai-cli.md`, and the operator guide describe it; tests cover start and stop with the action, a permitted and a refused call
 
 ## Tasks
 - T-0881 system-flow.yaml takes orchestration.permissions and orchestration.agent, and flai check reports a bad one
@@ -72,3 +97,4 @@ Forecast: 1h40m, against flai's 1h15m (132 s per unit over 14 large feature stor
 Cost of delay: 102.04 USD a week, flai's figure, kept. The story has no inputs of its own, so it takes its share of E-0016's 1500 USD a week, 1h40m of 24h30m forecast over the epic's 17 open stories without inputs. It replaces planner-E-0016's 121.95, which was worked out over more open stories and a 2h30m duration.
 
 Plan: three layers. T-0881 and T-0882 wait for nothing; T-0883 waits for both and T-0887 for T-0881; T-0889 waits for T-0883 and T-0892 for the four code tasks. The plan's thread on this story gives the assumptions.
+- 2026-10-06T02:56:42Z: moved to in-progress: unchecked boxes
