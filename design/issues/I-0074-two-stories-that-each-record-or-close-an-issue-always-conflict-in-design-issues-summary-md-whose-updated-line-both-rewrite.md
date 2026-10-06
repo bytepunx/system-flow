@@ -2,12 +2,12 @@
 id: I-0074
 title: Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
 class: efficiency
-status: open
+status: closed
 count: 5
 cost: 3m
 first_reported: 2026-10-05T03:22:09Z
 last_reported: 2026-10-06T11:45:29Z
-updated: 2026-10-06T11:45:29Z
+updated: 2026-10-06T20:03:27Z
 ---
 
 # I-0074 Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
@@ -40,3 +40,4 @@ The sync before review stopped on design/issues/summary.md (I-0058's row and the
 ## Remediation
 
 Story S-0278 remediates this issue, created from it at 2026-10-05T04:40:47Z.
+Closed 2026-10-06T20:03:27Z: S-0278 (ADR-0098): flai stream sync and flai accept regenerate design/issues/summary.md and continue the rebase when it is the only conflict, and the trial merge between open story branches leaves it out, so no thread is opened over it. Two branches bumping the same issue is I-0092.

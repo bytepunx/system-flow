@@ -25,3 +25,5 @@ S-0220's agent met a conflict in design/issues/summary.md at two syncs, 06:07Z a
 ## Remediation
 
 Directions to weigh: `flai stream sync` and `flai accept` regenerate `summary.md` themselves when it is the only conflict, since it is derived from the issue files; or the file is not committed and is generated where it is read.
+
+S-0278 built the first direction ([ADR-0098](../adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)) for I-0074, which has the same cause. The operator chooses at its acceptance whether that closes this issue too.
