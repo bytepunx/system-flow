@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -40,6 +41,9 @@ type Issue struct {
 	FirstReported string `yaml:"first_reported" json:"first_reported"`
 	LastReported  string `yaml:"last_reported" json:"last_reported"`
 	Updated       string `yaml:"updated" json:"updated"`
+	// Usage is what strategic agents spent on the issue: its Strategic
+	// entries alone (S-0227).
+	Usage *usage.Usage `yaml:"usage" json:"usage,omitempty"`
 
 	// Unknown is the front matter this flai does not know, kept for writing
 	// back (S-0181).
@@ -120,6 +124,7 @@ func (is *Issue) Validate() error {
 			errs = append(errs, fmt.Sprintf("%s %q is not a UTC timestamp", name, v))
 		}
 	}
+	errs = append(errs, usageErrors(is.Usage)...)
 	if len(errs) > 0 {
 		sort.Strings(errs)
 		return fmt.Errorf("%s", strings.Join(errs, "; "))
@@ -142,6 +147,7 @@ func (is *Issue) Marshal() string {
 	fmt.Fprintf(&b, "first_reported: %s\n", is.FirstReported)
 	fmt.Fprintf(&b, "last_reported: %s\n", is.LastReported)
 	fmt.Fprintf(&b, "updated: %s\n", is.Updated)
+	b.WriteString(usageBlock(is.Usage))
 	workitem.WriteFields(&b, is.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(is.Body)

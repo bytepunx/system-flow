@@ -29,16 +29,23 @@ func usageBlock(u *usage.Usage) string {
 		b.WriteString("  estimated: true\n")
 	}
 	modelsBlock(&b, "  ", u.Models)
-	if len(u.Strategic) > 0 {
-		b.WriteString("  strategic:\n")
-		for _, s := range u.Strategic {
-			fmt.Fprintf(&b, "    - kind: %s\n", Scalar(s.Kind))
-			fmt.Fprintf(&b, "      seconds: %d\n", s.Seconds)
-			fmt.Fprintf(&b, "      estimated: %t\n", s.Estimated)
-			modelsBlock(&b, "      ", s.Models)
-		}
-	}
+	StrategicBlock(&b, u.Strategic)
 	return b.String()
+}
+
+// StrategicBlock writes a usage's strategic key and its entries, nested
+// under usage; nothing when there are none.
+func StrategicBlock(b *strings.Builder, entries []usage.Strategic) {
+	if len(entries) == 0 {
+		return
+	}
+	b.WriteString("  strategic:\n")
+	for _, s := range entries {
+		fmt.Fprintf(b, "    - kind: %s\n", Scalar(s.Kind))
+		fmt.Fprintf(b, "      seconds: %d\n", s.Seconds)
+		fmt.Fprintf(b, "      estimated: %t\n", s.Estimated)
+		modelsBlock(b, "      ", s.Models)
+	}
 }
 
 // modelsBlock writes a models key and its list, indented by indent.
@@ -68,8 +75,15 @@ func usageErrors(u *usage.Usage) []string {
 		errs = append(errs, "usage.seconds is negative")
 	}
 	errs = append(errs, modelErrors("usage", u.Models)...)
+	return append(errs, StrategicErrors(u.Strategic, "an item")...)
+}
+
+// StrategicErrors are what is wrong with a usage's strategic entries, on
+// what is charged, such as "an item" or "an issue".
+func StrategicErrors(entries []usage.Strategic, on string) []string {
+	var errs []string
 	kinds := map[string]bool{}
-	for i, s := range u.Strategic {
+	for i, s := range entries {
 		at := fmt.Sprintf("usage.strategic[%d]", i)
 		switch {
 		case !IsActivityKind(s.Kind):
@@ -82,7 +96,7 @@ func usageErrors(u *usage.Usage) []string {
 			errs = append(errs, at+".seconds is negative")
 		}
 		if !s.Estimated {
-			errs = append(errs, at+".estimated must be true: a strategic agent's spending on an item is apportioned")
+			errs = append(errs, at+".estimated must be true: a strategic agent's spending on "+on+" is apportioned")
 		}
 		errs = append(errs, modelErrors(at, s.Models)...)
 	}
