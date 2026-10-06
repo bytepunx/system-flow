@@ -83,8 +83,9 @@ func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item, base string) 
 }
 
 // outsideClaim is the paths story's branch changed since it left base that
-// no entry of its claim (ADR-0046: its touches and its open tasks', a
-// component as its path) covers. The wip folder is flai's and is left out.
+// no entry of its claim (ADR-0046, ADR-0096: its touches, a folder narrowed
+// to its tasks' touches inside it, and its open tasks', a component as its
+// path) covers. The wip folder is flai's and is left out.
 func (a *app) outsideClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item, base string) ([]string, error) {
 	diff, err := a.runner.Run(repo.MainRoot, "git", "diff", "--name-only", base+"..."+storyBranch(story.ID))
 	if err != nil {

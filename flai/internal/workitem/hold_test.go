@@ -25,7 +25,8 @@ func claimTask(id, parent, status string, touches ...string) *Item {
 }
 
 // S-0128: a claim is the story's touches and its open tasks', a component's
-// name or tag read as its path, without duplicates.
+// name or tag read as its path, without duplicates; a done task's touch
+// outside the story's is not claimed (ADR-0096).
 func TestClaimTakesOpenTasksAndReadsComponentsAsPaths(t *testing.T) {
 	s := claimed("S-0001", InProgress, "cli", "docs/")
 	items := []*Item{s,
@@ -38,6 +39,116 @@ func TestClaimTakesOpenTasksAndReadsComponentsAsPaths(t *testing.T) {
 	got := strings.Join(NewHolds(items, holdProjects).Claim(s), ",")
 	if got != "flai,docs,flaiover/src" {
 		t.Errorf("claim = %s, want flai,docs,flaiover/src", got)
+	}
+}
+
+// ADR-0096: a story's folder touch is narrowed to the touches its tasks name
+// inside it, done ones included and cancelled ones not; a folder no task names
+// inside, or one a task names whole, stays whole; a done task's touch outside
+// every story touch is not added, an open one's is.
+func TestClaimNarrowsAFolderToItsTasksTouches(t *testing.T) {
+	cases := []struct {
+		name    string
+		touches []string
+		tasks   []*Item
+		want    string
+	}{
+		{"no task names inside",
+			[]string{"flai/internal/mcpserver", "docs/users/flai.md"},
+			[]*Item{claimTask("T-0001", "S-0001", InProgress, "design/system/x.md")},
+			"flai/internal/mcpserver,docs/users/flai.md,design/system/x.md"},
+		{"an open task narrows",
+			[]string{"flai/internal/mcpserver"},
+			[]*Item{claimTask("T-0001", "S-0001", InProgress, "flai/internal/mcpserver/permission.go")},
+			"flai/internal/mcpserver/permission.go"},
+		{"a done task's files stay claimed",
+			[]string{"flai/internal/mcpserver"},
+			[]*Item{
+				claimTask("T-0001", "S-0001", Done, "flai/internal/mcpserver/permission.go"),
+				claimTask("T-0002", "S-0001", Ready, "flai/internal/mcpserver/tools.go"),
+			},
+			"flai/internal/mcpserver/permission.go,flai/internal/mcpserver/tools.go"},
+		{"a cancelled task's do not",
+			[]string{"flai/internal/mcpserver"},
+			[]*Item{
+				claimTask("T-0001", "S-0001", Cancelled, "flai/internal/mcpserver/permission.go"),
+				claimTask("T-0002", "S-0001", Done, "flai/internal/mcpserver/tools.go"),
+			},
+			"flai/internal/mcpserver/tools.go"},
+		{"a folder only a cancelled task named inside stays whole",
+			[]string{"flai/internal/mcpserver"},
+			[]*Item{claimTask("T-0001", "S-0001", Cancelled, "flai/internal/mcpserver/permission.go")},
+			"flai/internal/mcpserver"},
+		{"a task that names the folder itself keeps it whole",
+			[]string{"flai/internal/mcpserver"},
+			[]*Item{
+				claimTask("T-0001", "S-0001", InProgress, "flai/internal/mcpserver/permission.go"),
+				claimTask("T-0002", "S-0001", Done, "flai/internal/mcpserver/"),
+			},
+			"flai/internal/mcpserver"},
+		{"a task that names a folder around it keeps it whole",
+			[]string{"flai/internal/mcpserver"},
+			[]*Item{
+				claimTask("T-0001", "S-0001", InProgress, "flai/internal/mcpserver/permission.go"),
+				claimTask("T-0002", "S-0001", Done, "cli"),
+			},
+			"flai/internal/mcpserver"},
+		{"a component narrows as its path",
+			[]string{"cli", "docs"},
+			[]*Item{claimTask("T-0001", "S-0001", Done, "flai/cmd/x.go", "docs/users/flai.md")},
+			"flai/cmd/x.go,docs/users/flai.md"},
+		{"a done task's touch outside is not added, an open one's is",
+			[]string{"flai/cmd"},
+			[]*Item{
+				claimTask("T-0001", "S-0001", Done, "flai/cmd/x.go", "design/adrs/0096.md"),
+				claimTask("T-0002", "S-0001", InProgress, "flai/cmd/y.go", "docs/users/flai.md"),
+			},
+			"flai/cmd/x.go,flai/cmd/y.go,docs/users/flai.md"},
+		{"one folder narrows, another stays whole",
+			[]string{"flai/internal/mcpserver", "docs/users"},
+			[]*Item{claimTask("T-0001", "S-0001", InProgress, "flai/internal/mcpserver/permission.go")},
+			"flai/internal/mcpserver/permission.go,docs/users"},
+		{"no story touches: the open tasks' alone",
+			nil,
+			[]*Item{claimTask("T-0001", "S-0001", InProgress, "flai/cmd"), claimTask("T-0002", "S-0001", Done, "docs")},
+			"flai/cmd"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := claimed("S-0001", InProgress, c.touches...)
+			got := strings.Join(NewHolds(append([]*Item{s}, c.tasks...), holdProjects).Claim(s), ",")
+			if got != c.want {
+				t.Errorf("claim = %s\nwant    %s", got, c.want)
+			}
+		})
+	}
+}
+
+// I-0087, ADR-0096: S-0283 claimed flai/internal/mcpserver and held every
+// ready story under it, though its one task named only permission.go. Its
+// claim narrowed to that file, it holds a story touching plan.go no longer,
+// and still holds one touching permission.go.
+func TestNarrowedClaimHoldsOnlyTheFilesItsTasksName(t *testing.T) {
+	open := claimed("S-0283", InProgress, "flai/internal/mcpserver")
+	task := claimTask("T-0001", "S-0283", InProgress, "flai/internal/mcpserver/permission.go")
+	plan := claimed("S-0290", Ready, "flai/internal/mcpserver/plan.go")
+	perm := claimed("S-0291", Ready, "flai/internal/mcpserver/permission.go")
+	h := NewHolds([]*Item{open, task, plan, perm}, holdProjects)
+	if got := h.Of(plan); got != nil {
+		t.Errorf("plan.go is held: %s", got.Reason)
+	}
+	want := "held (overlap): touches flai/internal/mcpserver/permission.go, which S-0283 (in progress) touches too; starts when S-0283 moves to review, is cancelled, or is sent back"
+	if got := h.Of(perm); got == nil || got.Reason != want {
+		t.Errorf("permission.go: hold = %+v\nwant reason %s", got, want)
+	}
+
+	task.Status = Done // the branch changed it, so it stays claimed
+	if got := NewHolds([]*Item{open, task, plan, perm}, holdProjects).Of(perm); got == nil {
+		t.Error("a done task's file no longer holds")
+	}
+	task.Status = Cancelled // nothing names inside: the folder is whole again
+	if got := NewHolds([]*Item{open, task, plan, perm}, holdProjects).Of(plan); got == nil {
+		t.Error("with its only task cancelled, the folder holds plan.go no longer")
 	}
 }
 

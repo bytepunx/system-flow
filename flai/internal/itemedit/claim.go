@@ -3,6 +3,7 @@ package itemedit
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -74,10 +75,12 @@ func WatchClaim(repo *workitem.Repo, id string) *ClaimWatch {
 // Grown compares the watched story's claim, as the write left it, with each
 // other story in progress, and returns those whose claim covers a path the
 // claim gained, in ID order. Only the paths gained count, so an overlap the
-// hold or an earlier write already allowed is not reported again. Only a
-// story in progress is compared, and only with stories in progress: a story
-// not yet started is held at pull time instead (ADR-0046). A story whose claim
-// is empty is not reported: the hold names it, and every write would.
+// hold or an earlier write already allowed is not reported again: a folder
+// narrowed to files inside it, as its tasks name them (ADR-0096), gains
+// none. Only a story in progress is compared, and only with stories in
+// progress: a story not yet started is held at pull time instead (ADR-0046).
+// A story whose claim is empty is not reported: the hold names it, and every
+// write would.
 //
 // Each overlap is recorded twice in the overlap notices, once for each story,
 // stamped with by and now, for inbox and wait_for_events to report. Now is
@@ -108,7 +111,7 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 	}
 	var gained []string
 	for _, p := range holds.Claim(story) {
-		if !w.before[p] {
+		if !w.held(p) {
 			gained = append(gained, p)
 		}
 	}
@@ -138,6 +141,21 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 		RecordOverlap(w.repo, Overlap{At: at, By: by, ID: o.Story, Title: o.Title, Grew: story.ID, Reached: o.Story, Paths: o.Paths})
 	}
 	return out, nil
+}
+
+// held says whether the claim before the write held p: p itself or a folder
+// around it.
+func (w *ClaimWatch) held(p string) bool {
+	for {
+		if w.before[p] {
+			return true
+		}
+		i := strings.LastIndex(p, "/")
+		if i < 0 {
+			return false
+		}
+		p = p[:i]
+	}
 }
 
 // coveredBy says whether path overlaps an entry of claim.

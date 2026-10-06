@@ -336,6 +336,58 @@ func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 	}
 }
 
+// ADR-0096: once a task names a file in the story's folder touch, the claim
+// is narrowed to it, so a file the branch changed elsewhere in the folder is
+// reported; a done task's file stays claimed, and widening the task's touches
+// clears the report.
+func TestSyncListsPathsChangedOutsideANarrowedClaim(t *testing.T) {
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	if _, errOut, code := runIn(t, root, "task", "new", "Write the guide", "--story", "S-0001", "--touches", "docs/guide.md"); code != 0 {
+		t.Fatal(errOut)
+	}
+	commitIn(t, wt, "docs/guide.md", "inside the task's touches\n")
+	commitIn(t, wt, "docs/other.md", "in the story's folder, outside the narrowed claim\n")
+	outside := func() string {
+		t.Helper()
+		out, errOut, code := runIn(t, wt, "--json", "stream", "sync", "S-0001")
+		if code != 0 {
+			t.Fatalf("sync: %d %s %s", code, out, errOut)
+		}
+		var res struct {
+			Outside []string `json:"outside_touches"`
+		}
+		if err := json.Unmarshal([]byte(out), &res); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+		return strings.Join(res.Outside, ",")
+	}
+
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("sync: %d %s %s", code, out, errOut)
+	}
+	if want := "story/S-0001 changed 1 path outside S-0001's touches: docs/other.md"; !strings.Contains(out, want) {
+		t.Errorf("sync output lacks %q:\n%s", want, out)
+	}
+	for _, st := range []string{"ready", "in-progress", "done"} {
+		if _, errOut, code := runIn(t, root, "move", "T-0001", st); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	if got := outside(); got != "docs/other.md" {
+		t.Errorf("with the task done, outside_touches = %q, want docs/other.md", got)
+	}
+
+	// widened in the task's touches, as the ADR tells the agent, nothing is outside
+	if _, errOut, code := runIn(t, root, "touches", "T-0001", "docs/guide.md", "docs/other.md"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if got := outside(); got != "" {
+		t.Errorf("widened, still outside: %s", got)
+	}
+}
+
 // ADR-0069: sync never stashes; it refuses a worktree with uncommitted
 // changes, touching nothing, and names each path.
 func TestSyncRefusesUncommittedChanges(t *testing.T) {

@@ -8,8 +8,9 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
-// Holds on ready stories (S-0128, ADR-0046). A story's claim is its touches
-// and those of its tasks that are not done or cancelled. A ready story whose
+// Holds on ready stories (S-0128, ADR-0046). A story's claim is its touches,
+// each folder among them narrowed to the touches its tasks name inside it,
+// and the touches of its open tasks outside them (ADR-0096). A ready story whose
 // claim overlaps the claim of a story in progress is held, and so is one that
 // names in after: a story that is not done (S-0130): flai serve does not start
 // its agent and wait_for_work does not offer it. A story in review holds
@@ -35,7 +36,7 @@ type Hold struct {
 // repository.
 type Holds struct {
 	projects []manifest.Project
-	tasks    map[string][]*Item // open tasks by story
+	tasks    map[string][]*Item // tasks by story, cancelled ones left out
 	open     []openClaim
 	stories  map[string]*Item // every story given, archived ones included
 	// lookup finds a story named in after: that was not given, such as an
@@ -55,7 +56,7 @@ type openClaim struct {
 func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}}
 	for _, it := range items {
-		if !it.Archived && it.Type == Task && !it.Closed() {
+		if !it.Archived && it.Type == Task && it.Status != Cancelled {
 			h.tasks[it.Parent] = append(h.tasks[it.Parent], it)
 		}
 		if it.Type == Story {
@@ -91,26 +92,70 @@ func (h *Holds) Open(story *Item, label string) {
 	sort.SliceStable(h.open, func(i, j int) bool { return h.open[i].id < h.open[j].id })
 }
 
-// Claim is what story claims: its touches and those of its open tasks, each
-// a sub-project's path when it names the sub-project or one of its tags,
-// without duplicates.
+// Claim is what story claims (ADR-0096), each entry read as a path first, a
+// sub-project's when it names the sub-project or one of its tags, without
+// duplicates. A story touch that holds touches of its tasks, done or open, is
+// replaced by them; one that no task names inside, or that a task names whole,
+// stays whole; and a touch of an open task outside every story touch is added.
+// A done task's touch counts only where it narrows: the branch changed it.
 func (h *Holds) Claim(story *Item) []string {
 	var out []string
 	seen := map[string]bool{}
-	add := func(entries []string) {
-		for _, e := range entries {
+	add := func(p string) {
+		if p != "" && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	var mine, theirs, open []string // the story's touches, its tasks', its open tasks'
+	for _, e := range story.Touches {
+		mine = append(mine, h.path(e))
+	}
+	for _, t := range h.tasks[story.ID] {
+		for _, e := range t.Touches {
 			p := h.path(e)
-			if p != "" && !seen[p] {
-				seen[p] = true
-				out = append(out, p)
+			theirs = append(theirs, p)
+			if !t.Closed() {
+				open = append(open, p)
 			}
 		}
 	}
-	add(story.Touches)
-	for _, t := range h.tasks[story.ID] {
-		add(t.Touches)
+	for _, s := range mine {
+		var inside []string
+		whole := false
+		for _, p := range theirs {
+			switch {
+			case p == "" || !PathsOverlap(p, s):
+			case strings.HasPrefix(p, s+"/"):
+				inside = append(inside, p)
+			default:
+				whole = true // the task names the touch itself, or a folder around it
+			}
+		}
+		if whole || len(inside) == 0 {
+			add(s)
+			continue
+		}
+		for _, p := range inside {
+			add(p)
+		}
+	}
+	for _, p := range open {
+		if !within(p, mine) {
+			add(p)
+		}
 	}
 	return out
+}
+
+// within says whether p is one of entries or lies below one.
+func within(p string, entries []string) bool {
+	for _, e := range entries {
+		if e != "" && (p == e || strings.HasPrefix(p, e+"/")) {
+			return true
+		}
+	}
+	return false
 }
 
 // path is a touches entry as it is compared: a component's name or tag
