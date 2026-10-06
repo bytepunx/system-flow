@@ -6,7 +6,7 @@ title: The MCP prime pack for a story is larger than Claude Code's tool result l
 status: ready
 owner: alex
 created: 2026-10-04T20:34:55Z
-updated: 2026-10-06T22:47:33Z
+updated: 2026-10-06T22:56:13Z
 transitions:
   - to: ready
     at: 2026-10-06T22:47:33Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T05:51:39Z
 forecast:
   duration: 1h
-  delivery: 2026-10-07T06:42:00Z
-  basis: "Its own forecast of 1h; 22nd in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251 and S-0254."
+  delivery: 2026-10-07T00:39:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300 and S-0228."
   by: flai
-  at: 2026-10-06T22:46:26Z
+  at: 2026-10-06T22:56:13Z
 finalized:
   by: alex
   at: 2026-10-06T22:47:30Z

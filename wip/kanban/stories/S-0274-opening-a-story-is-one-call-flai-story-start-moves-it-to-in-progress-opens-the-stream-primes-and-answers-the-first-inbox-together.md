@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T22:54:57Z
+updated: 2026-10-06T22:56:13Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions, template]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:17Z
 forecast:
   duration: 60m
-  delivery: 2026-10-07T10:01:00Z
-  basis: "flai's 49m (83 s per unit over 25 done large improvement stories, times size 35), raised 11m because stream open and the inbox must first be moved out of package cmd and the MCP handler; S-0217, which composed commands across the CLI, MCP, and the host channel, took 68m. Delivery is flai's 09:50Z, 28th in the pull order, plus the 11m."
-  by: planner-S-0274
-  at: 2026-10-06T22:54:57Z
+  delivery: 2026-10-07T09:54:00Z
+  basis: "Its own forecast of 1h; 28th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0228, S-0261, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272 and S-0273."
+  by: flai
+  at: 2026-10-06T22:56:13Z
 finalized:
   by: alex
   at: 2026-10-06T22:48:57Z

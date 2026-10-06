@@ -7,7 +7,7 @@ status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:29Z
-updated: 2026-10-06T22:54:07Z
+updated: 2026-10-06T22:56:13Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:06Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:18Z
 forecast:
   duration: 90m
-  delivery: 2026-10-07T10:05:00Z
-  basis: "flai forecast's 50m (83 s per unit over 25 done large improvement stories, size 36) raised to 90m for seven tasks in four layers, at least two full close-out runs across the flai and flaiover tiers, and the operator's approval of the .claude verifier edit; delivered 90m after S-0273's forecast delivery of 2026-10-07T08:35Z, since it waits for S-0273"
-  by: planner-S-0270
-  at: 2026-10-06T22:54:07Z
+  delivery: 2026-10-07T02:11:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0228, S-0261 and S-0269."
+  by: flai
+  at: 2026-10-06T22:56:13Z
 finalized:
   by: alex
   at: 2026-10-06T22:48:02Z

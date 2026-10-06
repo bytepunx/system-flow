@@ -7,7 +7,7 @@ status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:28Z
-updated: 2026-10-06T22:55:04Z
+updated: 2026-10-06T22:56:13Z
 transitions:
   - to: ready
     at: 2026-10-06T22:47:57Z
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:15Z
 forecast:
   duration: 80m
-  delivery: 2026-10-07T01:04:00Z
-  basis: "flai's 38m (83 s per unit of size over 25 done large improvements, times 27) raised to 80m: the sync and the inbox must first move out of cmd and mcpserver into packages, over nine tasks in five layers; S-0217, a smaller composition across the same three surfaces, took 68m. Delivery is flai's 00:22Z plus the added 42m."
-  by: planner-S-0269
-  at: 2026-10-06T22:55:04Z
+  delivery: 2026-10-07T01:36:00Z
+  basis: "Its own forecast of 1h20m; 4th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0228 and S-0261."
+  by: flai
+  at: 2026-10-06T22:56:13Z
 finalized:
   by: alex
   at: 2026-10-06T22:47:53Z

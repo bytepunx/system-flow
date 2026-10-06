@@ -7,7 +7,7 @@ status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-06T22:51:12Z
+updated: 2026-10-06T22:56:13Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:17Z
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:20Z
 forecast:
   duration: 39m
-  delivery: 2026-10-07T01:03:00Z
-  basis: "flai forecast: median 83 s per unit over 25 done large improvement stories on claude-opus-5-5, times size 28 (3 criteria, 25 touches); 6th in the pull order with an in-progress limit of 3."
-  by: planner-S-0271
-  at: 2026-10-06T22:51:12Z
+  delivery: 2026-10-07T02:01:00Z
+  basis: "Its own forecast of 39m; 6th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0228, S-0261, S-0269 and S-0270."
+  by: flai
+  at: 2026-10-06T22:56:13Z
 finalized:
   by: alex
   at: 2026-10-06T22:48:13Z

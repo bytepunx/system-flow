@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:31Z
-updated: 2026-10-06T22:54:14Z
+updated: 2026-10-06T22:56:13Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, conventions, metrics, template]
@@ -23,10 +23,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:16Z
 forecast:
   duration: 50m
-  delivery: 2026-10-07T08:45:00Z
-  basis: "flai's 39m (83 s per unit over 25 done large improvement stories, times size 28), raised to 50m for seven tasks in three layers, an ADR, and an end-to-end test across serve and the MCP server; S-0285, on the same tool and prompt, took 42m with less."
-  by: planner-S-0272
-  at: 2026-10-06T22:54:14Z
+  delivery: 2026-10-07T08:54:00Z
+  basis: "Its own forecast of 50m; 26th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0228, S-0261, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254 and S-0265."
+  by: flai
+  at: 2026-10-06T22:56:13Z
 finalized:
   by: alex
   at: 2026-10-06T22:48:30Z
