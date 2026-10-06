@@ -14,7 +14,7 @@ updated: 2026-10-06T21:01:06Z
 
 ## Description
 
-`dashboard.upgrade` replaces the running flaiover container with one on the new image. It stops the old container and at once runs the new one under the same name. The old container is started with `--rm`, so Docker removes it when it stops, but the removal had not finished when the new `docker run` asked for the name, and Docker refused it. The upgrade then reports failure with the dashboard down.
+`dashboard.upgrade` replaces the running flaiover container with one on the new image. It stops the old container and at once runs the new one under the same name. Docker refused the new one: the name was still held by the old container. The likely reason, not confirmed, is that the old container runs with `--rm`, as the new one does, and Docker had not finished removing it when the new `docker run` asked for the name. The upgrade then reports failure with the dashboard down.
 
 flai host's own watch recovered it: it found the dashboard gone and started it about a minute later. To the operator, in the dashboard, the page they had just used to upgrade stopped answering.
 
