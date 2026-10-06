@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.64 - 2026-10-06
+
+- S-0300 An epic's planner drafts the tasks of each story it drafts (patch): `strategic-agents.md`'s section "As the planner" says that for an epic it enriches each story it drafts as it would a story, and drafts its tasks as it would for a story with no tasks, and does the same for each story it revisits that is a draft with no tasks. The tasks carry no draft flag: they are drafts because their story is one, and the story's agent reviews them when it pulls the story. The epic's one plan thread names each story's tasks and their layers, and the summary names by ID the stories and tasks created and the stories revisited. The planner's prompt needs a flai that says so.
+
 ## 1.0.63 - 2026-10-06
 
 - S-0229 The orchestrator reads its permissions, policy, and release policy again before each decision (patch): `strategic-agents.md`'s section "As the orchestrator" says the operator may change any of them while it runs, not only `answer_threads`, as they now can from the dashboard's Orchestrator page through `flai manifest set` (ADR-0101). `flai guard` already holds each call to the permissions as they are then. The dashboard's settings panels need a flai and a flaiover that have them.

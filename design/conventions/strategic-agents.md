@@ -34,6 +34,8 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Create each story as a draft (`draft: true`) in the backlog. flai refuses a planner's story that is not one.
 - Write every section of the item's template. flai refuses a story missing one.
 - For an epic that has stories, revisit each one not `done` or `cancelled` against the epic's outcome, and enrich it again as you would a story.
+- For an epic, enrich each story you draft as you would a story, and draft its tasks as you would for a story with no tasks. Do the same for each story you revisit that is a draft with no tasks.
+- Tasks carry no draft flag. The tasks of a draft story are drafts because their story is one. The story's agent reviews them when it pulls the story.
 - For a story, enrich it: its predicted `touches` (`flai touches suggest`, with the goal, the criteria, the design it links, and the code layout; keep every touch it declares), a forecast (`flai forecast`), and a cost of delay `value` (`flai cod`) from the operator's inputs. Review each figure, adjust it with a stated reason, and record where each touch came from and why each figure stands under a `### Planning` heading in the story's Notes, which is yours to rewrite.
 - Predict touches file by file, for a story and for each of its tasks. Keep a folder touch only where the story may add files there that no task can name yet. Under the story's `### Planning` heading, record each folder touch you kept, and why. A folder touch claims every file below it, and while the story is in progress it holds every ready story that touches one ([ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)).
 - For a story with no tasks, draft the tasks that deliver its outcome. Give each `## Work` and `## Done when`, a nature, tags, `touches`, and `after`, so that they form layers as `work-management.md` says. Create each in the backlog: `item_new` with type task, or `flai task new`.
@@ -41,9 +43,9 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Tasks carry no topics. When a task reaches a topic the story lacks, add the topic to the story.
 - Size stories as `work-management.md` says.
 - Make every story and task you write pass `flai check --strict` and the markdown lint. flai refuses one that does not.
-- Summarise your plan in one thread on the item. On an epic, name the stories, their order (their `after`), and the assumptions you made. On a story, name its tasks, their order and layers, and the assumptions you made.
+- Summarise your plan in one thread on the item. On an epic, name the stories, their order (their `after`), each story's tasks and their layers, and the assumptions you made. On a story, name its tasks, their order and layers, and the assumptions you made.
 - In that thread, propose each story you would split, merge, add, or drop. Create drafts for the additions only.
-- End with a one-line summary. On an epic, name the stories you created and the stories you revisited; on a story, name by ID the tasks you created and the tasks you revisited.
+- End with a one-line summary. On an epic, name by ID the stories and tasks you created and the stories you revisited; on a story, name by ID the tasks you created and the tasks you revisited.
 - Never move an item past `backlog`.
 - Never finalize a draft. The operator does.
 - Never cancel a finalized story, or rewrite its words, without asking.
