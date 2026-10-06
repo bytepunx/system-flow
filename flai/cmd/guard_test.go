@@ -61,6 +61,51 @@ func TestGuardHoldsThePlannerToPlanning(t *testing.T) {
 	}
 }
 
+// S-0223: in a session flai serve starts with FLAI_ROLE=analyze, flai guard
+// holds the analyzer's own calls to reads and its report, under the
+// manifest's design folder's analysis/, whatever the folder is called.
+func TestGuardHoldsTheAnalyzerToItsReport(t *testing.T) {
+	t.Setenv("FLAI_ROLE", "analyze")
+	root := tempProject(t)
+	manifest := filepath.Join(root, "system-flow.yaml")
+	data, _ := os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, []byte(strings.Replace(string(data), "design: design", "design: plans", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	edit := func(tool, file string) string {
+		in, _ := json.Marshal(map[string]any{"tool_name": tool, "tool_input": map[string]string{"file_path": file, "content": ""}})
+		return string(in)
+	}
+	for _, c := range []struct {
+		in   string
+		code int
+		err  string
+	}{
+		{edit("Write", filepath.Join(root, "plans", "analysis", "2026-10-06-all.md")), 0, ""},
+		{edit("Edit", filepath.Join(root, "plans", "analysis", "README.md")), 0, ""},
+		{edit("Write", filepath.Join(root, "design", "analysis", "2026-10-06-all.md")), 2, "the analyzer cannot use Write on " + filepath.Join(root, "design", "analysis", "2026-10-06-all.md") + ": it edits only its report and the index, under plans/analysis/"},
+		{edit("Edit", root+"/plans/analysis/../system/overview.md"), 2, "under plans/analysis/"},
+		{`{"tool_name":"mcp__flai__item_new","tool_input":{"type":"story","draft":true}}`, 2, "the analyzer cannot call item_new: the analyzer authors no stories"},
+		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"backlog"}}`, 2, "the analyzer cannot call item_move: the analyzer authors no stories"},
+		{`{"tool_name":"mcp__flai__activity_log","tool_input":{"kind":"analyzer"}}`, 0, ""},
+		{`{"tool_name":"mcp__flai__thread_open","tool_input":{"on":"S-1"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai stats --json"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai issue new x"}}`, 2, `the analyzer cannot run "flai issue new x"`},
+		{`{"tool_name":"mcp__flai__analyze","tool_input":{}}`, 2, "the analyzer cannot call analyze"},
+		{`{"tool_name":"mcp__flai__item_new","tool_input":{"type":"story"},"agent_type":"explorer","agent_id":"a1"}`, 2, "a sub-agent (explorer) cannot call item_new"},
+	} {
+		_, errOut, code := runStdin(t, root, c.in, "guard")
+		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
+			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+	// outside a project it may edit no file
+	_, errOut, code := runStdin(t, t.TempDir(), edit("Write", filepath.Join(root, "plans", "analysis", "2026-10-06-all.md")), "guard")
+	if code != 2 || !strings.Contains(errOut, "under the design folder's analysis/") || !strings.Contains(errOut, "the analyzer may edit no file") {
+		t.Errorf("no project: code %d, stderr %q", code, errOut)
+	}
+}
+
 // S-0218: in a session flai serve starts with FLAI_ROLE=orchestrate, flai
 // guard holds the orchestrator's own calls to the permissions in the
 // project's manifest, and logs each refusal in wip/agents/orchestrator.md.

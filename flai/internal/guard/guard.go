@@ -32,6 +32,16 @@
 // git tag, whatever its permissions (S-0222); no other session calls
 // release_publish. Its sub-agents are held as every sub-agent is.
 //
+// An analyzer session, one flai serve starts with the role analyze, is held
+// to its report (S-0223): its own calls may read, flai stats among them, log
+// its activities, and open and reply to threads, and may edit, with Edit,
+// Write, or NotebookEdit, only a file under the manifest's design folder's
+// analysis/, its report and the folder's README.md that lists it. It
+// authors no stories: item_new, item_edit, and item_move are refused it, as
+// is every other write through flai and git's. It files no issues until
+// S-0224 lets it. Its sub-agents, the explorer it hands search to among
+// them, are held as every sub-agent is.
+//
 // Its calls on threads are held by who opened the thread and by
 // answer_threads (S-0220): on a thread it opened it follows up and resolves,
 // but never recommends or answers its own question; on another's it replies
@@ -54,10 +64,12 @@
 package guard
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"maps"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -89,9 +101,10 @@ type Event struct {
 // thread of thread_reply and thread_resolve; item_new's type and whether it
 // makes a story a draft, and item_edit's draft; whether thread_reply is a
 // recommendation and the source it cites; and the file Edit or Write
-// changes. Fields are the names of every field the input gives, whatever the
-// guard reads of it, so that an item_edit that finalizes a draft is told
-// from one that changes more, and a draft false given from one left out.
+// changes, or the notebook NotebookEdit does. Fields are the names of every
+// field the input gives, whatever the guard reads of it, so that an
+// item_edit that finalizes a draft is told from one that changes more, and a
+// draft false given from one left out.
 type Input struct {
 	Command        string   `json:"command"`
 	ID             string   `json:"id"`
@@ -101,6 +114,7 @@ type Input struct {
 	Recommendation bool     `json:"recommendation"`
 	Source         string   `json:"source"`
 	FilePath       string   `json:"file_path"`
+	NotebookPath   string   `json:"notebook_path"`
 	Fields         []string `json:"-"`
 }
 
@@ -199,7 +213,8 @@ var cliPlans = map[string][]string{
 	"touches": nil,
 }
 
-// fileEdits are the tools that change files, which the planner never uses.
+// fileEdits are the tools that change files, which the planner never uses,
+// and the analyzer only on its report (S-0223).
 var fileEdits = []string{"Edit", "NotebookEdit", "Write"}
 
 // moveValues are the flags of flai move, flai's own among them, that take
@@ -247,6 +262,38 @@ const publishesThrough = "it publishes through release_publish alone, while orch
 // orchestratorPublishes says why a session other than the orchestrator's
 // never calls release_publish (S-0222, ADR-0067).
 const orchestratorPublishes = "it is the orchestrator's alone, while orchestration.permissions.publish is on; other sessions publish only when the operator asks, with flai push --pending (ADR-0067)"
+
+// RoleAnalyze is the analyzer's role, as flai serve sets it in FLAI_ROLE
+// (S-0223).
+const RoleAnalyze = "analyze"
+
+// MCPAnalyzes are flai's MCP tools the analyzer may call besides MCPReads.
+// It files no issues: issue_story and flai issue new and bump wait for
+// S-0224.
+var MCPAnalyzes = []string{"activity_log", "inbox", "thread_open", "thread_reply", "wait_for_events"}
+
+// itemWrites are flai's MCP tools that write a work item, which the analyzer
+// never calls.
+var itemWrites = []string{"item_edit", "item_move", "item_new"}
+
+// analyzer ends each of the analyzer's refusals: the rule the call breaks
+// and what to do instead.
+const analyzer = "it reads the project and its metrics and edits nothing but its report under the design folder's analysis/ and the folder's README.md (strategic-agents.md, ADR-0060). Put what it found, and the stories it would suggest, in its report, or ask the operator with thread_open."
+
+// authorsNoStories says why the analyzer never writes a work item.
+const authorsNoStories = "the analyzer authors no stories; the stories its findings call for are the planner's and the operator's to write"
+
+// analyzing are the analyzer's rules: flai's reads, flai stats among them,
+// and git's reads.
+var analyzing = rules{
+	flai: func(cmd, sub string, rest []string) (string, string) {
+		if reads(cmd, sub, rest) {
+			return "", ""
+		}
+		return "of flai's commands it runs only those that read, flai stats among them", ""
+	},
+	git: func(string) string { return "it runs only git's reads" },
+}
 
 // flaiValues are flai's own flags that take a value.
 var flaiValues = map[string]bool{"--config": true}
@@ -304,10 +351,15 @@ const (
 // only when a command of its follows. Role is the session's role, from
 // FLAI_ROLE: RolePlan holds the session's own calls to planning,
 // RoleOrchestrate holds them to Permissions, the project's
-// orchestration.permissions, and any other leaves them alone. Opener says
+// orchestration.permissions, RoleAnalyze to its report, and any other leaves
+// them alone. Opener says
 // who opened the thread with an ID, for the orchestrator's calls on threads;
 // ThreadOpener reads it from a project's threads. A thread whose opener it
 // cannot tell, or every thread when Opener is nil, is held as another's.
+// RoleAnalyze holds them to reads and the analyzer's report (S-0223): Root
+// is the project's root and Reports its reports folder, relative to Root and
+// slash separated, as analysis.Dir gives it; with either "" no file may be
+// edited.
 //
 // Served says flai serve started the session, as StartedByEnv set to
 // StartedByServe says; a Role or a Story says so too, since only flai serve
@@ -328,6 +380,8 @@ type Guard struct {
 	Served      bool
 	Permissions manifest.Permissions
 	Opener      func(id string) (string, error)
+	Root        string
+	Reports     string
 	Story       string
 	Running     func() ([]SubAgent, error)
 	ThreadOpen  func() (bool, error)
@@ -708,12 +762,14 @@ func (g Guard) Decide(e Event) Refusal {
 		return r
 	}
 	if e.AgentID == "" {
-		if e.ToolName == MCPPrefix+ReleasePublish && g.Role != RoleOrchestrate && g.Role != RolePlan {
+		if e.ToolName == MCPPrefix+ReleasePublish && g.Role != RoleOrchestrate && g.Role != RolePlan && g.Role != RoleAnalyze {
 			return Refusal{Why: "only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes}
 		}
 		switch g.Role {
 		case RolePlan:
 			return Refusal{Why: g.plan(e)}
+		case RoleAnalyze:
+			return Refusal{Why: g.analyze(e)}
 		case RoleOrchestrate:
 			return g.orchestrate(e)
 		case "":
@@ -899,6 +955,76 @@ func (g Guard) plan(e Event) string {
 		}
 	}
 	return ""
+}
+
+// analyze says why the analyzer's own call is refused, or "" when it is not
+// (S-0223).
+func (g Guard) analyze(e Event) string {
+	if slices.Contains(fileEdits, e.ToolName) {
+		file := e.ToolInput.FilePath
+		if file == "" {
+			file = e.ToolInput.NotebookPath
+		}
+		if g.inReports(file) {
+			return ""
+		}
+		folder := "the design folder's analysis/"
+		if g.Reports != "" {
+			folder = strings.TrimSuffix(g.Reports, "/") + "/"
+		}
+		return fmt.Sprintf("the analyzer cannot use %s on %s: it edits only its report and the index, under %s; %s", e.ToolName, cmp.Or(file, "no file"), folder, analyzer)
+	}
+	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
+		switch {
+		case slices.Contains(MCPReads, tool), slices.Contains(MCPAnalyzes, tool):
+			return ""
+		case slices.Contains(itemWrites, tool):
+			return fmt.Sprintf("the analyzer cannot call %s: %s; %s", tool, authorsNoStories, analyzer)
+		}
+		return fmt.Sprintf("the analyzer cannot call %s: %s", tool, analyzer)
+	}
+	if e.ToolName != "Bash" {
+		return ""
+	}
+	for _, words := range commands(e.ToolInput.Command) {
+		if why, _ := g.refuse(words, analyzing); why != "" {
+			return fmt.Sprintf("the analyzer cannot run %q: %s; %s", strings.Join(words, " "), why, analyzer)
+		}
+	}
+	return ""
+}
+
+// inReports says whether file, as Edit, Write, or NotebookEdit names it, is
+// under the reports folder: taken from Root when it is relative, cleaned, and
+// with the symbolic links along the part of it that exists resolved, as the
+// folder's are, so that neither .. nor a link leads out of it.
+func (g Guard) inReports(file string) bool {
+	if g.Root == "" || g.Reports == "" || file == "" {
+		return false
+	}
+	if !filepath.IsAbs(file) {
+		file = filepath.Join(g.Root, file)
+	}
+	dir := resolved(filepath.Join(g.Root, filepath.FromSlash(g.Reports)))
+	rel, err := filepath.Rel(dir, resolved(filepath.Clean(file)))
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// resolved is p, clean and absolute, with the symbolic links of the longest
+// part of it that exists resolved and the rest joined on as it stands.
+func resolved(p string) string {
+	rest := ""
+	for {
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			return filepath.Join(r, rest)
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return filepath.Join(p, rest)
+		}
+		rest = filepath.Join(filepath.Base(p), rest)
+		p = parent
+	}
 }
 
 var (

@@ -1,7 +1,10 @@
 package guard
 
 import (
+	"cmp"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -591,7 +594,7 @@ func TestTheOrchestratorPublishesOnlyThroughReleasePublish(t *testing.T) {
 	if why := planGuard.Check(publish); !strings.HasPrefix(why, "the planner cannot call release_publish: ") || !strings.Contains(why, "publishes") {
 		t.Errorf("planner: %q", why)
 	}
-	for _, role := range []string{"", "analyze", "story"} {
+	for _, role := range []string{"", "verify", "story"} {
 		gr := Guard{Commands: g.Commands, Role: role, Story: "S-0001"}
 		if why := gr.Check(publish); why != "only the orchestrator calls release_publish: "+orchestratorPublishes {
 			t.Errorf("role %q: %q", role, why)
@@ -715,10 +718,10 @@ func TestTheOrchestratorsSubAgentIsHeldAsASubAgent(t *testing.T) {
 	}
 }
 
-// Without the role plan or orchestrate the guard decides as it did before
-// the planner.
+// Without the role plan, orchestrate, or analyze the guard decides as it
+// did before the planner.
 func TestOtherRolesAreDecidedAsBefore(t *testing.T) {
-	for _, role := range []string{"", "analyze", "story"} {
+	for _, role := range []string{"", "verify", "story"} {
 		gr := Guard{Commands: g.Commands, Role: role}
 		for _, e := range []Event{{ToolName: "Edit"}, {ToolName: "Write"}, mcp("item_move", "review"), bash("", "flai accept S-1 && git commit -m x"), {ToolName: "Edit", AgentID: "a1", AgentType: "verifier"}} {
 			if why := gr.Check(e); why != "" {
@@ -740,6 +743,197 @@ func TestCommands(t *testing.T) {
 	for i := range want {
 		if strings.Join(got[i], "|") != strings.Join(want[i], "|") {
 			t.Errorf("%d: got %q want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// analyzerIn is a guard in an analyzer session in a project at root, whose
+// reports folder is design/analysis (S-0223).
+func analyzerIn(root string) Guard {
+	return Guard{Commands: append(append([]string{}, g.Commands...), "analyze", "plan"), Role: RoleAnalyze, Root: root, Reports: "design/analysis"}
+}
+
+// fileEdit is the analyzer's own call of tool, Edit, Write, or
+// NotebookEdit, on file.
+func fileEdit(tool, file string) Event {
+	e := Event{ToolName: tool}
+	if tool == "NotebookEdit" {
+		e.ToolInput.NotebookPath = file
+	} else {
+		e.ToolInput.FilePath = file
+	}
+	return e
+}
+
+// S-0223: the analyzer edits its report and the folder's index, under the
+// design folder's analysis/, and no other file, however the path is put:
+// with .., outside the root, or through a symbolic link out of the folder.
+func TestTheAnalyzerEditsOnlyItsReport(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"design/analysis", "design/system"} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(filepath.Join(root, "design", "system"), filepath.Join(root, "design", "analysis", "out")); err != nil {
+		t.Fatal(err)
+	}
+	an := analyzerIn(root)
+	in := func(p string) string { return filepath.Join(root, filepath.FromSlash(p)) }
+	for _, e := range []Event{
+		fileEdit("Write", in("design/analysis/2026-10-06-all.md")),
+		fileEdit("Edit", in("design/analysis/README.md")),
+		fileEdit("Write", "design/analysis/2026-10-06-risk.md"),
+		fileEdit("Write", in("design/analysis/notes/2026-10-06-intent.md")),
+		fileEdit("NotebookEdit", in("design/analysis/figures.ipynb")),
+		fileEdit("Write", root+"/design/system/../analysis/2026-10-07-all.md"),
+	} {
+		if why := an.Check(e); why != "" {
+			t.Errorf("%s %s refused: %s", e.ToolName, e.ToolInput.FilePath+e.ToolInput.NotebookPath, why)
+		}
+	}
+	for _, e := range []Event{
+		fileEdit("Write", in("design/system/overview.md")),
+		fileEdit("Edit", root+"/design/analysis/../system/overview.md"),
+		fileEdit("Write", "design/analysis/../../flai/main.go"),
+		fileEdit("Write", in("design/analysis")),
+		fileEdit("Write", in("design/analysisx/2026-10-06-all.md")),
+		fileEdit("Write", in("design/analysis/out/overview.md")),
+		fileEdit("Edit", "/etc/hosts"),
+		fileEdit("NotebookEdit", in("flai/x.ipynb")),
+		fileEdit("Write", ""),
+	} {
+		file := cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath, "no file")
+		why := an.Check(e)
+		if !strings.HasPrefix(why, "the analyzer cannot use "+e.ToolName+" on "+file+": it edits only its report and the index, under design/analysis/; ") || !strings.Contains(why, "strategic-agents.md") {
+			t.Errorf("%s %s: %q", e.ToolName, file, why)
+		}
+	}
+	// a project it cannot read leaves it no folder to write
+	for _, gr := range []Guard{{Role: RoleAnalyze}, {Role: RoleAnalyze, Root: root}} {
+		if why := gr.Check(fileEdit("Write", in("design/analysis/2026-10-06-all.md"))); !strings.Contains(why, "under the design folder's analysis/;") {
+			t.Errorf("no reports folder: %q", why)
+		}
+	}
+}
+
+// S-0223: the analyzer reads, flai stats among its reads, logs its
+// activities, and opens and replies to threads; it authors no stories and
+// files no issues, and writes nothing else through flai or git.
+func TestTheAnalyzerReadsAndAuthorsNoStories(t *testing.T) {
+	an := analyzerIn(t.TempDir())
+	allowed := []Event{{ToolName: "Read"}, {ToolName: "Grep"}, {ToolName: "Glob"}, {ToolName: "Agent"}}
+	for _, tool := range append(append([]string{}, MCPReads...), MCPAnalyzes...) {
+		allowed = append(allowed, itemOf(tool, "", ""))
+	}
+	for _, c := range []string{
+		"flai stats --json",
+		"scripts/flai.sh --config c.json stats --json --since 2026-09-01",
+		"flai doc search 'cycle time' && flai doc show design/system/metrics.md --heading 'Flow'",
+		"flai board --json; flai show S-0001; flai issue list --json; flai forecast S-0001",
+		"flai thread list && flai thread show TH-0001",
+		"flai analyze --help",
+		"git log --oneline -20 && git diff main --stat",
+		"ls design/analysis",
+	} {
+		allowed = append(allowed, bash("", c))
+	}
+	for _, e := range allowed {
+		if why := an.Check(e); why != "" {
+			t.Errorf("%s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+		}
+	}
+	for _, e := range []Event{itemNew("story", true), itemNew("task", false), itemOf("item_edit", "S-0001", ""), itemOf("item_move", "S-0001", "backlog"), itemOf("item_move", "S-0001", "ready")} {
+		tool := strings.TrimPrefix(e.ToolName, MCPPrefix)
+		why := an.Check(e)
+		if !strings.HasPrefix(why, "the analyzer cannot call "+tool+": the analyzer authors no stories; ") || !strings.Contains(why, "in its report") {
+			t.Errorf("%s: %q", tool, why)
+		}
+	}
+	for _, tool := range []string{"analyze", "plan", "release_publish", "issue_story", "thread_resolve", "criteria_tick", "wait_for_work", "agent_start"} {
+		if why := an.Check(itemOf(tool, "S-0001", "")); !strings.HasPrefix(why, "the analyzer cannot call "+tool+": it reads the project") {
+			t.Errorf("%s: %q", tool, why)
+		}
+	}
+	for _, c := range []string{
+		"flai story new --epic E-0001 --draft 'T'",
+		"flai task new --story S-0001 'T'",
+		"flai edit S-0001 --touches flai/cmd",
+		"flai move S-0001 backlog",
+		"flai issue new 'friction'",
+		"flai issue bump I-0001",
+		"flai thread new --on S-0001 'q' 'text'",
+		"flai analyze --focus risk",
+		"flai plan E-0001",
+		"flai accept S-0001",
+		"flai order --by wsjf --apply",
+		"flai release --pending",
+		"git commit -m report",
+		"git push",
+		"bash -c 'flai stats --json && git add design/analysis'",
+	} {
+		if why := an.Check(bash("", c)); !strings.HasPrefix(why, "the analyzer cannot run ") || !strings.Contains(why, "ask the operator with thread_open") {
+			t.Errorf("%q: %q", c, why)
+		}
+	}
+	if why := an.Check(bash("", "flai stats --json; flai issue new x")); !strings.Contains(why, `"flai issue new x": of flai's commands it runs only those that read, flai stats among them`) {
+		t.Errorf("issue new: %q", why)
+	}
+}
+
+// S-0223: the analyzer's sub-agents, the explorer it hands search to among
+// them, are held as every sub-agent is.
+func TestTheAnalyzersSubAgentIsHeldAsASubAgent(t *testing.T) {
+	an := analyzerIn(t.TempDir())
+	for _, tool := range []string{"item_new", "activity_log", "thread_open", "thread_reply", "inbox", "analyze"} {
+		e := itemOf(tool, "", "")
+		e.AgentID, e.AgentType = "a1", "explorer"
+		if why := an.Check(e); !strings.Contains(why, "a sub-agent (explorer) cannot call "+tool) {
+			t.Errorf("%s: %q", tool, why)
+		}
+	}
+	if why := an.Check(bash("explorer", "flai stats --json && git log -5")); why != "" {
+		t.Errorf("a sub-agent's reads refused: %s", why)
+	}
+	if why := an.Check(bash("explorer", "flai issue new x")); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
+		t.Errorf("a sub-agent's issue: %q", why)
+	}
+}
+
+// S-0223: the MCP tool analyze and flai analyze start the analyzer, which
+// no sub-agent and no strategic agent, the analyzer included, does; the
+// story's agent and the operator's own session may.
+func TestOnlyTheOperatorsSessionStartsTheAnalyzer(t *testing.T) {
+	commands := append(append([]string{}, g.Commands...), "analyze")
+	call := itemOf("analyze", "", "")
+	sub := call
+	sub.AgentID, sub.AgentType = "a1", "explorer"
+	planner, orchestrating := planGuard, orchestrator(allOn)
+	planner.Commands, orchestrating.Commands = commands, append(orchestrating.Commands, "analyze")
+	for _, c := range []struct {
+		name string
+		gr   Guard
+		e    Event
+		want string
+	}{
+		{"sub-agent", Guard{Commands: commands}, sub, "a sub-agent (explorer) cannot call analyze"},
+		{"sub-agent", Guard{Commands: commands}, bash("explorer", "flai analyze --focus risk"), "a sub-agent (explorer) cannot run"},
+		{"planner", planner, call, "the planner cannot call analyze"},
+		{"planner", planner, bash("", "flai analyze"), `the planner cannot run "flai analyze"`},
+		{"orchestrator", orchestrating, call, "the orchestrator cannot call analyze: the orchestrator never does it, whatever its permissions"},
+		{"orchestrator", orchestrating, bash("", "flai analyze --focus intent"), `the orchestrator cannot run "flai analyze --focus intent": the orchestrator never does it`},
+		{"analyzer", analyzerIn(t.TempDir()), call, "the analyzer cannot call analyze"},
+		{"analyzer", analyzerIn(t.TempDir()), bash("", "flai analyze"), `the analyzer cannot run "flai analyze"`},
+	} {
+		if why := c.gr.Check(c.e); !strings.Contains(why, c.want) {
+			t.Errorf("%s %s %q: %q", c.name, c.e.ToolName, c.e.ToolInput.Command, why)
+		}
+	}
+	for _, gr := range []Guard{{Commands: commands}, {Commands: commands, Story: "S-0001"}} {
+		for _, e := range []Event{call, bash("", "flai analyze --focus risk")} {
+			if why := gr.Check(e); why != "" {
+				t.Errorf("story %q %s refused: %s", gr.Story, e.ToolName, why)
+			}
 		}
 	}
 }

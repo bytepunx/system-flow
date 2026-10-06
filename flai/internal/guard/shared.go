@@ -96,6 +96,8 @@ func (g Guard) who() string {
 		return "the planner"
 	case g.Role == RoleOrchestrate:
 		return "the orchestrator"
+	case g.Role == RoleAnalyze:
+		return "the analyzer"
 	case g.Role != "":
 		return "a session flai serve started with the role " + g.Role
 	case g.Story != "":

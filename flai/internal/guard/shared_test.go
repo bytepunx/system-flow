@@ -25,7 +25,8 @@ func TestTheSharedPathsAreTheOperatorsToChange(t *testing.T) {
 		{"planner", Guard{Commands: commands, Role: RolePlan}, false, "the planner cannot", "thread_open"},
 		{"planner's sub-agent", Guard{Commands: commands, Role: RolePlan}, true, "a sub-agent (verifier) cannot", "final message"},
 		{"orchestrator", Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}, false, "the orchestrator cannot", "thread_open"},
-		{"analyzer", Guard{Commands: commands, Role: "analyze"}, false, "a session flai serve started with the role analyze cannot", "thread_open"},
+		{"analyzer", Guard{Commands: commands, Role: RoleAnalyze}, false, "the analyzer cannot", "thread_open"},
+		{"session flai serve started with another role", Guard{Commands: commands, Role: "verify"}, false, "a session flai serve started with the role verify cannot", "thread_open"},
 		{"session flai serve started", Guard{Commands: commands, Served: true}, false, "a session flai serve started cannot", "thread_open"},
 		{"operator's sub-agent", Guard{Commands: commands}, true, "a sub-agent (verifier) cannot", "final message"},
 	}

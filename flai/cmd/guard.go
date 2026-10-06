@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -21,7 +22,7 @@ const exitGuardRefused = 2
 func newGuardCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "guard",
-		Short: "Refuse a sub-agent's writes, hold the planner to planning and the orchestrator to its permissions, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
+		Short: "Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
@@ -101,6 +102,23 @@ its time, the call, and the permission it needs; a refusal that cannot be
 logged is warned of and refused all the same. The orchestrator's
 sub-agents are held as any sub-agent is.
 
+In an analyzer session, one flai serve starts with FLAI_ROLE=analyze, the
+session's own calls are held to reads and its report (S-0223): besides what
+a sub-agent may do, flai stats among it, the MCP tools inbox, activity_log,
+thread_open, thread_reply, and wait_for_events; and Edit, Write, and
+NotebookEdit on a file under the manifest's design folder's analysis/ (its
+report and the folder's README.md), resolved from the project's root with
+.. and symbolic links followed, so that neither leads out of the folder.
+An edit anywhere else is refused naming the folder, as is every edit when
+the project is unreadable. item_new, item_edit, and item_move are refused
+as the analyzer authors no stories; every other flai tool and command that
+writes, issue new and bump among them, and git's writes are refused too.
+The analyzer's sub-agents are held as any sub-agent is.
+
+No sub-agent, planner, orchestrator, or analyzer starts the analyzer: the
+MCP tool analyze and flai analyze are refused to each, as the MCP tool plan
+is.
+
 Given a SubagentStart or SubagentStop hook's input, as hook_event_name
 says, it records the sub-agent (its agent_id and agent_type, and when it
 started) as running in the hook's session, or no longer, in
@@ -119,8 +137,9 @@ and the call passes and returns on the answer. A project, record, or
 threads it cannot read let the call through.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP
-tools, on SubagentStart and SubagentStop, and, in a planner's or an
-orchestrator's session alone, before Edit, Write, and NotebookEdit as well.`,
+tools, on SubagentStart and SubagentStop, and, in a planner's, an
+orchestrator's, or an analyzer's session alone, before Edit, Write, and
+NotebookEdit as well.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -149,6 +168,13 @@ orchestrator's session alone, before Edit, Write, and NotebookEdit as well.`,
 				} else {
 					g.Permissions = repo.Manifest.Orchestration.Permissions
 					g.Opener = guard.ThreadOpener(repo)
+				}
+			}
+			if g.Role == guard.RoleAnalyze && e.AgentID == "" {
+				if p, err := a.guardProject(); err != nil {
+					a.logger().Warn("project unreadable, the analyzer may edit no file", "component", "guard", "err", err.Error())
+				} else {
+					g.Root, g.Reports = p.Root, analysis.Dir(p.Manifest)
 				}
 			}
 			if g.Role == "" && g.Story != "" && e.AgentID == "" {
