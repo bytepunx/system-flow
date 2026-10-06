@@ -354,7 +354,9 @@ The story is a draft: the operator finalizes it before it can be ready. When
 the issue gives them, it carries the issue's cost of delay inputs, set by
 flai: time_lost_per_cycle from the issue's cost and count over the planning
 cycles since it was first reported, and the figures its Impact section gives,
-which take precedence; its Notes say how each was set. The issue's
+which take precedence; its Notes say how each was set. What strategic agents
+spent on the issue, its usage's strategic entries, is charged to the story
+and its epic, and its Notes say so; the issue keeps its own. The issue's
 Remediation section then names the story. flai check runs with the story in
 place and refuses it, leaving nothing, if it reports anything the story
 introduces (exit 4). A closed issue, or one an open story already links, is
@@ -399,6 +401,10 @@ Nothing is pushed.`,
 				Owner: orDefault(owner, a.author()), Body: draft.Body, Now: now,
 				Draft: draft.Draft, CostOfDelay: draft.CostOfDelay,
 			}, Autocommit: autocommit, Trailers: trailers, Then: func(it *workitem.Item) ([]string, error) {
+				// the charge changes the story and its epic, both committed with it
+				if _, err := issues.CarryStrategic(repo, it.ID, draft.Strategic); err != nil {
+					return nil, fmt.Errorf("carrying %s's strategic usage to it: %w", is.ID, err)
+				}
 				if err := issues.LinkStory(is, it.ID, now); err != nil {
 					return nil, fmt.Errorf("naming it in %s's Remediation section: %w", is.ID, err)
 				}

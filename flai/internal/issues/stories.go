@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -88,11 +89,14 @@ func RecordedBy(list []*Issue, story string) []*Issue {
 // body that goes below the story's "# S-nnnn Title" heading, and its planning
 // data. Draft is always true: such a story is an agent's draft until the
 // operator finalizes it (S-0203). CostOfDelay is nil when the issue gives no
-// inputs.
+// inputs. Strategic is a copy of what strategic agents spent on the issue,
+// for CarryStrategic to charge to the story once it is made (S-0227); nil
+// when the issue has no usage.
 type StoryDraft struct {
 	Title, Nature, Body string
 	Draft               bool
 	CostOfDelay         *workitem.CostOfDelay
+	Strategic           []usage.Strategic
 }
 
 // ForStory drafts the story that remediates the issue, made at now in a
@@ -135,7 +139,40 @@ func ForStory(is *Issue, now time.Time, cycle time.Duration) StoryDraft {
 	if notes != "" {
 		fmt.Fprintf(&b, "\n%s\n", notes)
 	}
-	return StoryDraft{Title: is.Title, Nature: nature, Body: b.String(), Draft: true, CostOfDelay: cod}
+	var strategic []usage.Strategic
+	if is.Usage != nil && len(is.Usage.Strategic) > 0 {
+		strategic = is.Usage.Clone().Strategic
+		var spent []string
+		for _, s := range strategic {
+			spent = append(spent, fmt.Sprintf("%s %s, %s USD", s.Kind, normalise((time.Duration(s.Seconds)*time.Second).String()), strconv.FormatFloat(s.Cost(), 'f', 4, 64)))
+		}
+		fmt.Fprintf(&b, "\nStrategic usage carried over from %s: %s.\n", is.ID, strings.Join(spent, "; "))
+	}
+	return StoryDraft{Title: is.Title, Nature: nature, Body: b.String(), Draft: true, CostOfDelay: cod, Strategic: strategic}
+}
+
+// CarryStrategic charges each strategic entry carried from an issue to the
+// story with id, and so to its epic, as ADR-0083 charges a planner's
+// (S-0227). It returns the IDs of the items it changed; on an error, it says
+// which kinds were not carried.
+func CarryStrategic(r *workitem.Repo, id string, entries []usage.Strategic) ([]string, error) {
+	var changed []string
+	for i, s := range entries {
+		ids, err := r.ChargeStrategic(id, s.Kind, &usage.Usage{Seconds: s.Seconds, Models: s.Models})
+		for _, c := range ids {
+			if !contains(changed, c) {
+				changed = append(changed, c)
+			}
+		}
+		if err != nil {
+			var left []string
+			for _, l := range entries[i:] {
+				left = append(left, l.Kind)
+			}
+			return changed, fmt.Errorf("charging the %s's usage to %s and each item above it: %w; what the %s spent is not carried in full", s.Kind, id, err, joinAnd(left))
+		}
+	}
+	return changed, nil
 }
 
 // costOfDelay is the cost of delay inputs the issue gives, the inputs set by

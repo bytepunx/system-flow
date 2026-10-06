@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -75,6 +76,53 @@ func TestIssueStoryMakesAStoryFromAnOpenIssue(t *testing.T) {
 	}
 	if list, _ := f.repo.List(false); countStories(list) != 2 {
 		t.Errorf("a refusal should make no story: %d stories", countStories(list))
+	}
+}
+
+// S-0227: issue_story charges what an analyzer spent on the issue to the
+// story and its epic, as the CLI does, and the issue keeps it; a story made
+// from an issue with no usage has none.
+func TestIssueStoryCarriesTheIssuesStrategicUsage(t *testing.T) {
+	f := setup(t)
+	epic := f.story.Parent
+	for _, title := range []string{"Review waits a day", "Fixture was ignored"} {
+		if _, err := issues.New(f.repo, issues.NewOptions{Title: title, Class: "efficiency", Now: t0}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	models := []usage.Model{{Model: "claude-opus-5-5", Input: 1, Output: 200, CacheRead: 5000, CacheWrite: 300, Cost: 0.42}}
+	if _, err := issues.ChargeStrategic(f.repo, "I-0001", workitem.ActivityAnalyzer, &usage.Usage{Seconds: 723, Models: models}); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "issue_story", map[string]any{"id": "I-0001", "epic": epic})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	id, _ := out["id"].(string)
+	for _, of := range []string{id, epic} {
+		it, err := f.repo.Get(of)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if u := it.Usage; u == nil || len(u.Strategic) != 1 || u.Strategic[0].Kind != workitem.ActivityAnalyzer || u.Strategic[0].Seconds != 723 || !u.Strategic[0].Estimated ||
+			len(u.Strategic[0].Models) != 1 || u.Strategic[0].Models[0] != models[0] {
+			t.Errorf("%s should carry the issue's analyzer entry: %+v", of, it.Usage)
+		}
+	}
+	is, err := issues.Get(f.repo, "I-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u := is.Usage; u == nil || len(u.Strategic) != 1 || u.Strategic[0].Seconds != 723 || u.Strategic[0].Cost() != 0.42 {
+		t.Errorf("the issue should keep its entry: %+v", is.Usage)
+	}
+
+	out, failed = f.call(t, "issue_story", map[string]any{"id": "I-0002"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if story, err := f.repo.Get(out["id"].(string)); err != nil || story.Usage != nil {
+		t.Errorf("a story made from an issue with no usage has none: %v %+v", err, story)
 	}
 }
 

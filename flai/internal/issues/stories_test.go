@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -536,5 +537,64 @@ func TestForStoryLeavesTheReportLinksOutOfTheSolution(t *testing.T) {
 	is.Body = "\n# I-0007 Slow builds\n\n## Instances\n\n### 2026-09-16T10:00:00Z\nReport: ../elsewhere.md.\nfirst\n\n## Remediation\n"
 	if got := Reports(is); len(got) != 0 {
 		t.Errorf("a path out of the project: %v", got)
+	}
+}
+
+// S-0227: the story made from an issue carries a copy of what strategic
+// agents spent on it, and its Notes say so; an issue with no usage gives
+// neither.
+func TestForStoryCarriesTheIssuesStrategicUsage(t *testing.T) {
+	is := costIssue("", 1, 0, "")
+	is.Usage = &usage.Usage{Strategic: []usage.Strategic{
+		{Kind: workitem.ActivityPlanner, Seconds: 60, Estimated: true, Models: analyzed(60, 0.01).Models},
+		{Kind: workitem.ActivityAnalyzer, Seconds: 723, Estimated: true, Models: analyzed(723, 0.42).Models},
+	}}
+	d := ForStory(is, t0, cycle)
+	if len(d.Strategic) != 2 || d.Strategic[1].Kind != workitem.ActivityAnalyzer || d.Strategic[1].Seconds != 723 || !d.Strategic[1].Estimated || d.Strategic[1].Cost() != 0.42 || d.Strategic[0].Kind != workitem.ActivityPlanner {
+		t.Errorf("the draft carries the issue's entries: %+v", d.Strategic)
+	}
+	is.Usage.Strategic[1].Models[0].Cost = 9
+	if d.Strategic[1].Cost() != 0.42 {
+		t.Error("the draft's entries are a copy, not the issue's")
+	}
+	if want := "\n\nStrategic usage carried over from " + is.ID + ": planner 1m, 0.0100 USD; analyzer 12m3s, 0.4200 USD.\n"; !strings.HasSuffix(d.Body, want) {
+		t.Errorf("Notes end with %q:\n%s", want, d.Body)
+	}
+	lintStory(t, storyLint(t), d)
+
+	none := ForStory(costIssue("", 1, 0, ""), t0, cycle)
+	if none.Strategic != nil || strings.Contains(none.Body, "Strategic usage") {
+		t.Errorf("an issue with no usage carries none: %+v", none)
+	}
+}
+
+// S-0227: CarryStrategic charges each entry to the story and its epic, and
+// says which kinds it did not carry when the story is not there.
+func TestCarryStrategicChargesTheStoryAndItsEpic(t *testing.T) {
+	r := repo(t)
+	epic, err := r.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Upkeep", Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := r.Create(workitem.NewOptions{Type: workitem.Story, Title: "Fix it", Nature: "remediation", Parent: epic.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := []usage.Strategic{{Kind: workitem.ActivityAnalyzer, Seconds: 723, Estimated: true, Models: analyzed(723, 0.42).Models}}
+	changed, err := CarryStrategic(r, story.ID, entries)
+	if err != nil || strings.Join(changed, " ") != story.ID+" "+epic.ID {
+		t.Fatalf("changed %v, want the story then its epic: %v", changed, err)
+	}
+	for _, id := range []string{story.ID, epic.ID} {
+		it, err := r.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if it.Usage == nil || len(it.Usage.Strategic) != 1 || it.Usage.Strategic[0].Seconds != 723 || it.Usage.Strategic[0].Cost() != 0.42 || !it.Usage.Strategic[0].Estimated {
+			t.Errorf("%s carries the analyzer's entry: %+v", id, it.Usage)
+		}
+	}
+	if _, err := CarryStrategic(r, "S-0099", entries); err == nil || !strings.Contains(err.Error(), "what the analyzer spent is not carried in full") {
+		t.Errorf("a missing story is an error naming what was not carried: %v", err)
 	}
 }

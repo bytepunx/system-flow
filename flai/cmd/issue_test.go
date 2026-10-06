@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func TestIssueRecordingStoryOrder(t *testing.T) {
@@ -245,6 +249,65 @@ func TestIssueStoryAutocommit(t *testing.T) {
 	}
 	if st := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); st != "" {
 		t.Errorf("nothing should be left uncommitted in the main checkout: %q", st)
+	}
+}
+
+// S-0227: the story made from an issue an analyzer was charged to carries
+// the analyzer's entry, as do its epic, and with --autocommit both are
+// committed with it; the issue keeps its entry. A story made from an issue
+// with no usage has none.
+func TestIssueStoryCarriesTheIssuesStrategicUsage(t *testing.T) {
+	root := bodyProject(t)
+	t.Setenv("FLAI_STORY", "")
+	for _, title := range []string{"Review waits a day", "Fixture was ignored"} {
+		if _, errOut, code := runIn(t, root, "issue", "new", title, "--class", "efficiency"); code != 0 {
+			t.Fatalf("issue new: %s", errOut)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	models := []usage.Model{{Model: "claude-opus-5-5", Input: 1, Output: 200, CacheRead: 5000, CacheWrite: 300, Cost: 0.42}}
+	if _, err := issues.ChargeStrategic(repo, "I-0001", workitem.ActivityAnalyzer, &usage.Usage{Seconds: 723, Models: models}); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "the issues")
+
+	if _, errOut, code := runIn(t, root, "issue", "story", "I-0001", "--epic", "E-0001", "--autocommit"); code != 0 {
+		t.Fatalf("issue story: %s", errOut)
+	}
+	if st := strings.TrimSpace(gitIn(t, root, "status", "--porcelain")); st != "" {
+		t.Errorf("the charged story and epic should be committed with the story: %q", st)
+	}
+	for _, id := range []string{"S-0001", "E-0001"} {
+		it, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if u := it.Usage; u == nil || len(u.Strategic) != 1 || u.Strategic[0].Kind != workitem.ActivityAnalyzer || u.Strategic[0].Seconds != 723 || !u.Strategic[0].Estimated ||
+			len(u.Strategic[0].Models) != 1 || u.Strategic[0].Models[0] != models[0] {
+			t.Errorf("%s should carry the issue's analyzer entry: %+v", id, it.Usage)
+		}
+	}
+	if story, _ := repo.Get("S-0001"); !strings.Contains(story.Body, "Strategic usage carried over from I-0001: analyzer 12m3s, 0.4200 USD.") {
+		t.Errorf("the story's Notes should say what it carries:\n%s", story.Body)
+	}
+	is, err := issues.Get(repo, "I-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u := is.Usage; u == nil || len(u.Strategic) != 1 || u.Strategic[0].Seconds != 723 || u.Strategic[0].Cost() != 0.42 {
+		t.Errorf("the issue should keep its entry: %+v", is.Usage)
+	}
+
+	if _, errOut, code := runIn(t, root, "issue", "story", "I-0002"); code != 0 {
+		t.Fatalf("issue story I-0002: %s", errOut)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, "wip", "kanban", "stories", "S-0002-fixture-was-ignored.md"))
+	if strings.Contains(string(data), "usage") || strings.Contains(string(data), "Strategic usage") {
+		t.Errorf("a story made from an issue with no usage has none:\n%s", data)
 	}
 }
 

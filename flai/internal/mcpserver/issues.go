@@ -16,7 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const issueStoryDescription = "Make a backlog story that remediates an open issue (S-0198), as flai issue story makes one: it takes the issue's title; its nature is remediation for a defect or a blocker, improvement otherwise; its goal links the issue and carries the issue's recommended solution. That link is what ties the issue to the story. The story is a draft (S-0203): the operator finalizes it before it can be ready. When the issue gives them, it carries the issue's cost of delay inputs, set by flai: time_lost_per_cycle from the issue's cost and count over the planning cycles since it was first reported, and the figures its Impact section gives, which take precedence; its Notes say how each was set. The issue's Remediation section then names the story. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces. A closed issue, or one an open story already links (named), is refused and nothing changes. epic is the story's epic (optional); story reads the issue from that story's worktree, where the issues it recorded are until it is accepted, and the story is named in the issue there, for that story to commit; the new story is made in wip/ as always. Nothing is committed."
+const issueStoryDescription = "Make a backlog story that remediates an open issue (S-0198), as flai issue story makes one: it takes the issue's title; its nature is remediation for a defect or a blocker, improvement otherwise; its goal links the issue and carries the issue's recommended solution. That link is what ties the issue to the story. The story is a draft (S-0203): the operator finalizes it before it can be ready. When the issue gives them, it carries the issue's cost of delay inputs, set by flai: time_lost_per_cycle from the issue's cost and count over the planning cycles since it was first reported, and the figures its Impact section gives, which take precedence; its Notes say how each was set. What strategic agents spent on the issue, its usage's strategic entries, is charged to the story and its epic (S-0227), and its Notes say so; the issue keeps its own. The issue's Remediation section then names the story. flai check runs with the story in place and refuses it, leaving nothing, if it reports anything the story introduces. A closed issue, or one an open story already links (named), is refused and nothing changes. epic is the story's epic (optional); story reads the issue from that story's worktree, where the issues it recorded are until it is accepted, and the story is named in the issue there, for that story to commit; the new story is made in wip/ as always. Nothing is committed."
 
 // IssueStoryIn makes a story from an issue (S-0198).
 type IssueStoryIn struct {
@@ -67,6 +67,9 @@ func (s *server) issueStory(ctx context.Context, _ *mcp.CallToolRequest, in Issu
 		Type: workitem.Story, Title: draft.Title, Nature: draft.Nature, Parent: in.Epic,
 		Owner: owner, Body: draft.Body, Now: now, Draft: draft.Draft, CostOfDelay: draft.CostOfDelay,
 	}, Then: func(it *workitem.Item) ([]string, error) {
+		if _, err := issues.CarryStrategic(s.repo, it.ID, draft.Strategic); err != nil {
+			return nil, fmt.Errorf("carrying %s's strategic usage to it: %w", is.ID, err)
+		}
 		if err := issues.LinkStory(is, it.ID, now); err != nil {
 			return nil, fmt.Errorf("naming it in %s's Remediation section: %w", is.ID, err)
 		}
