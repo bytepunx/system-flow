@@ -6,7 +6,7 @@ title: flai's permission_prompt returns a result Claude Code calls invalid, so a
 status: ready
 owner: alex
 created: 2026-10-06T03:45:18Z
-updated: 2026-10-06T06:32:06Z
+updated: 2026-10-06T09:56:49Z
 transitions:
   - to: ready
     at: 2026-10-06T06:20:20Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T06:27:36Z
 forecast:
   duration: 25m
-  delivery: 2026-10-06T07:25:00Z
-  basis: "Its own forecast of 25m; 1st in the pull order with an in-progress limit of 3, behind S-0220."
+  delivery: 2026-10-06T10:50:00Z
+  basis: "Its own forecast of 25m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-06T06:32:06Z
+  at: 2026-10-06T09:56:49Z
 finalized:
   by: alex
   at: 2026-10-06T06:19:28Z
