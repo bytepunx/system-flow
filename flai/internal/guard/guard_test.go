@@ -469,7 +469,7 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerRecommend}, []Event{recommendation(itemOf("thread_reply", "TH-0001", "")), bash("", "flai thread reply --recommend TH-0001 'I recommend S-0002'")}},
 		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerAutonomous}, []Event{recommendation(itemOf("thread_reply", "TH-0001", ""))}},
 		{manifest.PermitAcceptReviews, manifest.Permissions{AcceptReviews: true}, []Event{bash("", "flai accept S-0001 --by orchestrator --verified abc --evidence -"), bash("", "flai move S-0001 done --by orchestrator")}},
-		{manifest.PermitPublish, manifest.Permissions{Publish: true}, []Event{bash("", "flai release --pending"), bash("", "flai push --pending"), bash("", "flai accept --help; flai push")}},
+		{manifest.PermitPublish, manifest.Permissions{Publish: true}, []Event{itemOf(ReleasePublish, "", "")}},
 	} {
 		needs := "orchestration.permissions." + c.permit
 		for _, e := range c.calls {
@@ -542,6 +542,66 @@ func TestTheOrchestratorAcceptsOnlyAsItself(t *testing.T) {
 		}
 		if why := g.Check(bash("", c)); why != "" {
 			t.Errorf("story's agent %q refused: %s", c, why)
+		}
+	}
+}
+
+// S-0222: the orchestrator publishes through release_publish alone, while
+// publish is on; its other routes to the remote it never takes, whatever its
+// permissions, and no other session calls release_publish.
+func TestTheOrchestratorPublishesOnlyThroughReleasePublish(t *testing.T) {
+	on, off := orchestrator(manifest.Permissions{Publish: true}), orchestrator(except(manifest.PermitPublish))
+	needs := "orchestration.permissions." + manifest.PermitPublish
+	publish := itemOf(ReleasePublish, "", "")
+	for _, gr := range []Guard{on, orchestrator(allOn)} {
+		if r := gr.Decide(publish); r.Why != "" {
+			t.Errorf("on: release_publish refused: %+v", r)
+		}
+	}
+	if r := off.Decide(publish); r.Why != "the orchestrator cannot publish a release: it needs "+needs+", which is off. "+askOperator || r.Needs != needs || r.Call != ReleasePublish {
+		t.Errorf("off: release_publish: %+v", r)
+	}
+	for _, c := range []string{
+		"flai release --pending",
+		"flai release --dry-run",
+		"flai release S-0001 --apply",
+		"flai release --evaluate=false --pending",
+		"flai release --evaluate; flai release --pending",
+		"flai push",
+		"flai push --pending",
+		"scripts/flai.sh --config c.json push --pending",
+		"git push",
+		"git push origin v1.2.3",
+		"git -C /w tag v1.2.3",
+		"git tag -a v1.2.3 -m release",
+		"bash -c 'git push --tags'",
+	} {
+		for _, gr := range []Guard{on, orchestrator(allOn)} {
+			r := gr.Decide(bash("", c))
+			if r.Why != fmt.Sprintf("the orchestrator cannot run %q: %s. %s", r.Call, nevers(publishesThrough), askOperator) || r.Needs != "" {
+				t.Errorf("%q: %+v", c, r)
+			}
+		}
+	}
+	for _, c := range []string{"flai release --evaluate", "flai --config c.json release --evaluate --json"} {
+		if r := on.Decide(bash("", c)); r.Why != "" {
+			t.Errorf("%q refused: %+v", c, r)
+		}
+	}
+	if why := planGuard.Check(publish); !strings.HasPrefix(why, "the planner cannot call release_publish: ") || !strings.Contains(why, "publishes") {
+		t.Errorf("planner: %q", why)
+	}
+	for _, role := range []string{"", "analyze", "story"} {
+		gr := Guard{Commands: g.Commands, Role: role, Story: "S-0001"}
+		if why := gr.Check(publish); why != "only the orchestrator calls release_publish: "+orchestratorPublishes {
+			t.Errorf("role %q: %q", role, why)
+		}
+	}
+	sub := itemOf(ReleasePublish, "", "")
+	sub.AgentID, sub.AgentType = "a1", "explorer"
+	for _, gr := range []Guard{g, planGuard, orchestrator(allOn)} {
+		if why := gr.Check(sub); !strings.Contains(why, "a sub-agent (explorer) cannot call release_publish") {
+			t.Errorf("sub-agent under role %q: %q", gr.Role, why)
 		}
 	}
 }

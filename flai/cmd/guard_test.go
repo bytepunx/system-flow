@@ -103,7 +103,7 @@ func TestGuardHoldsTheOrchestratorToItsPermissions(t *testing.T) {
 	if err := os.WriteFile(doc.Path, []byte("not an activity document\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, errOut, code := runStdin(t, root, `{"tool_name":"Bash","tool_input":{"command":"flai push"}}`, "guard")
+	_, errOut, code := runStdin(t, root, `{"tool_name":"mcp__flai__release_publish","tool_input":{"reason":"r"}}`, "guard")
 	if code != 2 || !strings.Contains(errOut, "it needs orchestration.permissions.publish") || !strings.Contains(errOut, "refusal not logged") {
 		t.Errorf("unlogged refusal: code %d, stderr %q", code, errOut)
 	}

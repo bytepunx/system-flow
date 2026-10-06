@@ -27,8 +27,10 @@
 // flai accept or flai move to done, only as itself, --by orchestrator
 // (S-0221, ADR-0093). A refusal names that permission; a call no permission
 // allows, such as an edit of a file, a commit, or a story placed by hand in
-// the pull order, it never makes. Its sub-agents are held as every sub-agent
-// is.
+// the pull order, it never makes. With publish it publishes through
+// release_publish alone, and never with flai release, flai push, git push, or
+// git tag, whatever its permissions (S-0222); no other session calls
+// release_publish. Its sub-agents are held as every sub-agent is.
 //
 // Its calls on threads are held by who opened the thread and by
 // answer_threads (S-0220): on a thread it opened it follows up and resolves,
@@ -224,6 +226,22 @@ var cliOrchestrates = map[string][]string{
 	"thread": {"new"},
 }
 
+// ReleasePublish is the MCP tool through which the orchestrator alone
+// publishes, while orchestration.permissions.publish is on (S-0222).
+const ReleasePublish = "release_publish"
+
+// gitPublishes are the git commands that reach the remote, which the
+// orchestrator leaves to release_publish.
+var gitPublishes = []string{"push", "tag"}
+
+// publishesThrough says why the orchestrator never publishes but through
+// release_publish (S-0222).
+const publishesThrough = "it publishes through release_publish alone, while orchestration.permissions.publish is on, and reaches the remote no other way"
+
+// orchestratorPublishes says why a session other than the orchestrator's
+// never calls release_publish (S-0222, ADR-0067).
+const orchestratorPublishes = "it is the orchestrator's alone, while orchestration.permissions.publish is on; other sessions publish only when the operator asks, with flai push --pending (ADR-0067)"
+
 // flaiValues are flai's own flags that take a value.
 var flaiValues = map[string]bool{"--config": true}
 
@@ -343,10 +361,11 @@ type Refusal struct {
 // rules are what one kind of caller may run on a command line: flai says
 // why a flai command is refused, and the permission that would allow it, or
 // "" when it is not refused, from its command, its subcommand, and the words
-// after flai; git says why a git command other than a read is refused.
+// after flai; git says why a git command other than a read is refused, from
+// its subcommand.
 type rules struct {
 	flai func(cmd, sub string, rest []string) (why, needs string)
-	git  string
+	git  func(cmd string) string
 }
 
 // subAgent are a sub-agent's rules: flai's reads and git's.
@@ -357,7 +376,9 @@ var subAgent = rules{
 		}
 		return "flai commands that change work items, threads, narratives, or releases are the story's agent's", ""
 	},
-	git: "git commands that change the worktree, the index, branches, or history are the story's agent's",
+	git: func(string) string {
+		return "git commands that change the worktree, the index, branches, or history are the story's agent's"
+	},
 }
 
 // planning are the planner's rules: flai's reads and its planning commands,
@@ -382,7 +403,7 @@ var planning = rules{
 		}
 		return "of flai's commands that write, it runs only story new with --draft, epic new, task new, edit, touches, thread new and reply, issue new and bump, and move to backlog", ""
 	},
-	git: "it runs only git's reads",
+	git: func(string) string { return "it runs only git's reads" },
 }
 
 // orchestration are the orchestrator's rules under its permissions: flai's
@@ -405,7 +426,12 @@ func (g Guard) orchestration() rules {
 			}
 			return "", ""
 		},
-		git: nevers("it runs only git's reads"),
+		git: func(cmd string) string {
+			if slices.Contains(gitPublishes, cmd) {
+				return nevers(publishesThrough)
+			}
+			return nevers("it runs only git's reads")
+		},
 	}
 }
 
@@ -448,13 +474,9 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 		return "", byHand
 	case "accept":
 		return manifest.PermitAcceptReviews, ""
-	case "push":
-		return manifest.PermitPublish, ""
-	case "release":
-		if given(rest, "--pending") {
-			return manifest.PermitPublish, ""
-		}
-		return "", "it releases with flai release --pending alone"
+	case "push", "release":
+		// flai release --evaluate is a read, let through above
+		return "", publishesThrough
 	}
 	return "", "of flai's commands that write, it runs only thread new, issue new and bump, and those its permissions allow"
 }
@@ -671,6 +693,9 @@ func (g Guard) Check(e Event) string { return g.Decide(e).Why }
 // Decide decides on a call: the zero Refusal lets it through.
 func (g Guard) Decide(e Event) Refusal {
 	if e.AgentID == "" {
+		if e.ToolName == MCPPrefix+ReleasePublish && g.Role != RoleOrchestrate && g.Role != RolePlan {
+			return Refusal{Why: "only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes}
+		}
 		switch g.Role {
 		case RolePlan:
 			return Refusal{Why: g.plan(e)}
@@ -784,6 +809,8 @@ func (g Guard) orchestrate(e Event) Refusal {
 			default:
 				never = "it moves an item to ready and no further"
 			}
+		case tool == ReleasePublish:
+			what, needs = "publish a release", manifest.PermitPublish
 		default:
 			never = "of flai's tools that write, it calls only thread_open and activity_log, thread_reply and thread_resolve as the thread allows, and those its permissions allow"
 		}
@@ -905,7 +932,7 @@ func (g Guard) refuse(words []string, r rules) (why, needs string) {
 			if !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) {
 				continue
 			}
-			return r.git, ""
+			return r.git(cmd), ""
 		}
 	}
 	return "", ""
