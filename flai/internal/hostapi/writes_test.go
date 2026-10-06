@@ -200,7 +200,7 @@ var refused = map[string][]string{
 		`{"set":{"--autocommit":true},` + rid + `}`, `{"set":{"planning.currency":"EUR"},` + rid + `}`, `{"unset":["--json"],` + rid + `}`, `{"unset":[" planning.replan"],` + rid + `}`,
 		`{"set":{"planning.replan":["agent"]},` + rid + `}`, `{"set":{"planning.replan":{"x":1}},` + rid + `}`, `{"set":{"planning.replan":null},` + rid + `}`,
 		`{"set":{"planning.schedule":"0 6 * * *\n--unset=x"},` + rid + `}`, `{"set":{"planning.agent":"claude-sonnet-5"},` + rid + `}`,
-		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"modle":"claude-sonnet-5"}},` + rid + `}`},
+		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"modelname":"claude-sonnet-5"}},` + rid + `}`},
 	"settings.shared_check": {`{}`, `{"paths":[]}`, `{"paths":[" "]}`, `{"paths":["a\u0000b"]}`, `{"paths":["S-0001"]}`, `{"paths":"docs"}`,
 		`{"story":"T-0001"}`, `{"story":"--help"}`, `{"story":"S-0001 --json"}`},
 }

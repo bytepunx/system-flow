@@ -132,7 +132,7 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"cron", []Assignment{{"analysis.schedule", "* * *"}}, nil, "analysis.schedule", "has 3 fields, not five"},
 		{"agent", []Assignment{{"planning.agent", `{"harness":"Bad Harness"}`}}, nil, "planning.agent", "is not a name such as claude-code"},
 		{"not an agent", []Assignment{{"analysis.agent", "claude"}}, nil, "analysis.agent", "is not an agent"},
-		{"agent with an unknown field", []Assignment{{"analysis.agent", `{"modle":"x"}`}}, nil, "analysis.agent", "is not an agent"},
+		{"agent with an unknown field", []Assignment{{"analysis.agent", `{"modelname":"x"}`}}, nil, "analysis.agent", "is not an agent"},
 		{"text", []Assignment{{"orchestration.release.policy", "theme"}, {"orchestration.release.epic", "epic-7"}}, nil, "orchestration.release.epic", "is not an epic ID"},
 		{"empty", []Assignment{{"planning.cycle", " "}}, nil, "planning.cycle", "is empty"},
 		{"unknown key", []Assignment{{"planning.colour", "blue"}}, nil, "planning.colour", "is not a setting flai manifest set writes"},
