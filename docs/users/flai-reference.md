@@ -338,7 +338,7 @@ Starts the analyzer for the project, now, on this host and as you (S-0223). It r
 
 The run is recorded where flai serve tracks agents, as the analyzer's, the newest alone, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked or failed) and logs the report it wrote and what the run cost in wip/agents/analyzer.md. It is no story's agent: the in-progress limit does not count it, and it holds no story back. One analyzer runs for a project at a time.
 
-It is a host action, off until you enable it (flai serve enable analyze). It refuses, and says why, while the action is off for the project, for a focus other than bottlenecks, intent, or risk, while an analyzer runs for the project, naming it, and when nothing can start it. The Analyze button on the dashboard runs this, and analysis.schedule in system-flow.yaml starts it on a schedule while flai serve runs.
+It is a host action, off until you enable it (flai serve enable analyze). It refuses, and says why, while the action is off for the project, for a focus other than bottlenecks, intent, or risk, while an analyzer runs for the project, naming it, and when nothing can start it. The host API's analyze.run runs this, and analysis.schedule in system-flow.yaml starts it on a schedule while flai serve runs.
 
 Examples:
 

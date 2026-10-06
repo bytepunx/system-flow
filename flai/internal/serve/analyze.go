@@ -22,7 +22,7 @@ import (
 // The analyzer, started for a project on the operator's word or on a
 // schedule (S-0223).
 //
-// flai analyze, the Analyze button through analyze.run, which runs it, the
+// flai analyze, the host API's analyze.run, which runs it, the
 // MCP tool analyze, and analysis.schedule all start it through Analyze: in
 // the project's main checkout, with the project's analysis agent
 // (analysis.agent over agent) and the harness's analyzer request, as

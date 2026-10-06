@@ -1282,7 +1282,7 @@ func TestTheAnalyzersPromptAsksForOneReport(t *testing.T) {
 			"Read the issues under design/issues, design/issues/summary.md first",
 			"Hand wide search of the code to the explorer with the Agent tool",
 			"Write one report, design/analysis/<date>-" + focus + ".md, where <date> is today's date in UTC as YYYY-MM-DD",
-			"front matter with title, updated, status, focus " + focus + ", and the window its metrics cover, from and to, as dates",
+			"front matter with title, updated, status draft while you write it and active once it is done, focus " + focus + ", and the window its metrics cover, from and to, as dates",
 			"one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them",
 			"Add the report to design/analysis/README.md",
 			"Edit nothing else: no code, no design, no issue, and no work item, and author no stories",

@@ -43,9 +43,9 @@ story back. One analyzer runs for a project at a time.
 It is a host action, off until you enable it (flai serve enable analyze).
 It refuses, and says why, while the action is off for the project, for a
 focus other than bottlenecks, intent, or risk, while an analyzer runs for
-the project, naming it, and when nothing can start it. The Analyze button
-on the dashboard runs this, and analysis.schedule in system-flow.yaml
-starts it on a schedule while flai serve runs.`,
+the project, naming it, and when nothing can start it. The host API's
+analyze.run runs this, and analysis.schedule in system-flow.yaml starts it
+on a schedule while flai serve runs.`,
 		Example: `  flai serve enable analyze
   flai analyze
   flai analyze --focus risk --json`,
