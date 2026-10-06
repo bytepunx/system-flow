@@ -3,11 +3,14 @@ id: S-0261
 type: story
 nature: improvement
 title: The MCP prime pack for a story is larger than Claude Code's tool result limit, so the agent reads it back from a saved file
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-04T20:34:55Z
-updated: 2026-10-06T22:47:30Z
-transitions: []
+updated: 2026-10-06T22:47:33Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:47:33Z
+    by: alex
 tags: []
 topics: [cli, conventions]
 touches: [flai/internal/context, flai/internal/mcpserver, flai/cmd/prime.go, flai/cmd/prime_test.go, design/adrs, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0068-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md, design/issues/summary.md]

@@ -3,11 +3,14 @@ id: E-0017
 type: epic
 nature: improvement
 title: Story-loop work whose outcome the repository determines moves from the agent into flai, reached from the CLI, the host channel, and MCP
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-05T01:35:27Z
-updated: 2026-10-06T11:37:08Z
-transitions: []
+updated: 2026-10-06T22:47:57Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:47:57Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
 touches: [flai, design/conventions, template]
@@ -44,3 +47,4 @@ Drafted with the epic; finalize and order them on the board. Not in the epic bec
 ## Notes
 
 Found by the operator's review of the S-0248 agent log and a classification of every main-agent tool call in the logs under `~/.flai/serve/agents/` on 2026-10-04.
+- 2026-10-06T22:47:57Z: moved to ready: follows S-0269, which moved to ready

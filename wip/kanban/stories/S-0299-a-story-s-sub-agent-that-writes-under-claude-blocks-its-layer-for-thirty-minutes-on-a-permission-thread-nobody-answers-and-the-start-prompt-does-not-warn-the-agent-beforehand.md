@@ -6,7 +6,7 @@ title: A story's sub-agent that writes under .claude/ blocks its layer for thirt
 status: in-progress
 owner: alex
 created: 2026-10-06T21:00:33Z
-updated: 2026-10-06T22:31:55Z
+updated: 2026-10-06T22:53:23Z
 transitions:
   - to: ready
     at: 2026-10-06T21:39:22Z
@@ -16,16 +16,23 @@ transitions:
     by: system-flow
 tags: [flai, guard, harness]
 topics: [cli, conventions]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, design/adrs, design/adrs/README.md, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/operators/settings.md, design/adrs, design/adrs/README.md, ".claude/settings.json", template/root/.claude/settings.json, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1274
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 240
+      output: 1311
+      cache_read: 8957932
+      cache_write: 385075
+      cost: 4.099
   strategic:
     - kind: planner
       seconds: 443
@@ -68,13 +75,14 @@ finalized:
 This story remediates [I-0093](../../../design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md), "A story's sub-agent that writes under .claude/ blocks its layer for thirty minutes on a permission thread nobody answers, and the start prompt does not warn the agent beforehand". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0093 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0093 is closed with `flai issue close I-0093 --reason` saying what fixed it
+- [x] The cause I-0093 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0093 is closed with `flai issue close I-0093 --reason` saying what fixed it
 
 ## Tasks
 - T-1035 flai guard refuses a sub-agent's write under .claude/ at once while auto-approve is off, so its layer never waits on a permission thread
 - T-1036 The story agent's start prompt says, before it launches a sub-agent, that a write under .claude/ is its own and waits on the operator
 - T-1037 An ADR, the design, the docs, and delegation.md say a .claude/ write is the story agent's, and I-0093 is closed
+- T-1053 The settings run flai guard before a story session's Edit, MultiEdit, Write, and NotebookEdit, so its refusal reaches a story's sub-agents
 
 ## Notes
 

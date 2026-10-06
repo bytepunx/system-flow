@@ -3,11 +3,11 @@ id: T-1036
 type: task
 nature: remediation
 title: The story agent's start prompt says, before it launches a sub-agent, that a write under .claude/ is its own and waits on the operator
-status: in-progress
+status: done
 parent: S-0299
 owner: alex
 created: 2026-10-06T21:08:13Z
-updated: 2026-10-06T22:32:33Z
+updated: 2026-10-06T22:37:56Z
 transitions:
   - to: ready
     at: 2026-10-06T22:32:32Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T22:32:33Z
     by: agent-S-0299
+  - to: done
+    at: 2026-10-06T22:37:56Z
+    by: agent-S-0299
 stream: S-0299
 tags: [flai, harness]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 323
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 166
+      cache_read: 479473
+      cache_write: 46181
+      cost: 0.2307
 ---
 # T-1036 The story agent's start prompt says, before it launches a sub-agent, that a write under .claude/ is its own and waits on the operator
 

@@ -4,10 +4,10 @@ title: "S-0298 plan: nine tasks in five layers, and two questions on scope (MCP 
 anchor:
   path: wip/kanban/stories/S-0298-the-host-updates-tab-allows-an-operator-to-rollback-to-a-previous-version.md
   item: S-0298
-status: open
+status: resolved
 participants: [planner-S-0298, alex]
 created: 2026-10-06T21:47:10Z
-updated: 2026-10-06T21:56:45Z
+updated: 2026-10-06T22:52:52Z
 ---
 
 # TH-0202 S-0298 plan: nine tasks in five layers, and two questions on scope (MCP deploy, dashboard pin)
@@ -62,3 +62,6 @@ Thank you. Both answers are now in the tasks:
 - T-1046: the docs say the same.
 
 The tasks, layers and figures are otherwise unchanged.
+
+### 2026-10-06T22:52:52Z alex
+Resolved.

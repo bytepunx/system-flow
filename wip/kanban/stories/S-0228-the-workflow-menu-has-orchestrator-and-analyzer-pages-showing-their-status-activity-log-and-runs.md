@@ -3,12 +3,15 @@ id: S-0228
 type: story
 nature: feature
 title: The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T22:46:26Z
-transitions: []
+updated: 2026-10-06T22:46:46Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:46:46Z
+    by: alex
 tags: [dashboard]
 topics: [orchestration, analysis]
 touches: [flaiover/src/routes, flaiover/src/lib/components, flaiover/src/routes/api, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/sitemenu.ts, flai/internal/hostapi, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/planner.ts, flaiover/src/lib/planner.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/activity.ts, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/users/flai-reference.md]

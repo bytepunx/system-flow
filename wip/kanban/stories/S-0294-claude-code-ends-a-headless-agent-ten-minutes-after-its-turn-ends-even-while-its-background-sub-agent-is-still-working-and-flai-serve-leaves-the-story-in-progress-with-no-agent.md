@@ -6,19 +6,51 @@ title: Claude Code ends a headless agent ten minutes after its turn ends, even w
 status: backlog
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-06T22:50:34Z
+updated: 2026-10-06T22:53:45Z
 transitions: []
-tags: []
+tags: [cli, serve]
+topics: [automation]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/adrs, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 328
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 507
+          output: 4242
+          cache_read: 3640961
+          cache_write: 173470
+          cost: 0.7745
+        - model: claude-opus-5-5
+          input: 829
+          output: 59561
+          cache_read: 40813838
+          cache_write: 658779
+          cost: 23.5617
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-06T11:44:49Z
+  value: 50
+  by: planner-S-0294
+  at: 2026-10-06T22:53:45Z
+forecast:
+  duration: 40m
+  delivery: 2026-10-07T10:30:00Z
+  basis: "flai forecast gave 20m (64 s per unit over 13 done large remediation stories, times size 18), raised to 40m for an ADR refining ADR-0043, a new host setting, and a launcher change tested across five conditions; S-0285 on the same issue took 42m. 41st in the pull order with an in-progress limit of 3."
+  by: planner-S-0294
+  at: 2026-10-06T22:53:45Z
 finalized:
   by: alex
   at: 2026-10-06T22:50:34Z

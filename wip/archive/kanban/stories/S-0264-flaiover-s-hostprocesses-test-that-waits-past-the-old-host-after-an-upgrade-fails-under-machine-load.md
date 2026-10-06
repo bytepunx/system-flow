@@ -3,19 +3,47 @@ id: S-0264
 type: story
 nature: remediation
 title: flaiover's HostProcesses test that waits past the old host after an upgrade fails under machine load
-status: backlog
+status: done
 owner: alex
 created: 2026-10-05T00:03:14Z
-updated: 2026-10-06T22:47:39Z
-transitions: []
+updated: 2026-10-06T22:56:13Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:47:41Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-06T22:47:49Z
+    by: agent-S-0264
+  - to: review
+    at: 2026-10-06T22:55:31Z
+    by: agent-S-0264
+  - to: done
+    at: 2026-10-06T22:56:13Z
+    by: alex
 tags: [flaiover]
 topics: [testing]
-touches: [flaiover/src/lib/components/HostProcesses.svelte.test.ts, design/issues/I-0053-flaiover-s-hostprocesses-test-that-waits-past-the-old-host-after-an-upgrade-fails-under-machine-load.md, design/issues/summary.md]
+touches: [flaiover/src/lib/components/HostProcesses.svelte.test.ts, design/issues/I-0053-flaiover-s-hostprocesses-test-that-waits-past-the-old-host-after-an-upgrade-fails-under-machine-load.md, design/issues/summary.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 473
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 17242
+      cache_read: 2247907
+      cache_write: 95678
+      cost: 1.5601
+    - model: claude-sonnet-5-5
+      input: 12
+      output: 3120
+      cache_read: 155514
+      cache_write: 44175
+      cost: 0.1728
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -41,8 +69,8 @@ finalized:
 This story remediates [I-0053](../../../design/issues/I-0053-flaiover-s-hostprocesses-test-that-waits-past-the-old-host-after-an-upgrade-fails-under-machine-load.md), "flaiover's HostProcesses test that waits past the old host after an upgrade fails under machine load". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0053 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0053 is closed with `flai issue close I-0053 --reason` saying what fixed it
+- [x] The cause I-0053 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0053 is closed with `flai issue close I-0053 --reason` saying what fixed it
 
 ## Tasks
 - T-0977 HostProcesses' reconnect tests wait for the outcome rather than a fixed 40 ms, with a test that reproduces a slow poll

@@ -7,11 +7,11 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T22:48:57Z
+updated: 2026-10-06T22:54:57Z
 transitions: []
 tags: [cli, mcp]
-topics: [automation, mcp, hostapi, conventions]
-touches: [flai/cmd/items.go, flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/move.go, flai/cmd/stream.go, flai/cmd/prime.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+topics: [automation, mcp, hostapi, conventions, template]
+touches: [flai/cmd/items.go, flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/move.go, flai/cmd/stream.go, flai/cmd/prime.go, flai/cmd/branch.go, flai/internal/storygit/open.go, flai/internal/storygit/open_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/inbox.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0261]
 agent:
   harness: claude-code
@@ -23,11 +23,11 @@ cost_of_delay:
   by: planner-E-0017
   at: 2026-10-06T11:36:17Z
 forecast:
-  duration: 35m
-  delivery: 2026-10-07T08:26:00Z
-  basis: "Its own forecast of 35m; 30th in the pull order with an in-progress limit of 3, behind S-0299, S-0301, S-0300, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269, S-0270, S-0271, S-0272 and S-0273."
-  by: flai
-  at: 2026-10-06T22:46:26Z
+  duration: 60m
+  delivery: 2026-10-07T10:01:00Z
+  basis: "flai's 49m (83 s per unit over 25 done large improvement stories, times size 35), raised 11m because stream open and the inbox must first be moved out of package cmd and the MCP handler; S-0217, which composed commands across the CLI, MCP, and the host channel, took 68m. Delivery is flai's 09:50Z, 28th in the pull order, plus the 11m."
+  by: planner-S-0274
+  at: 2026-10-06T22:54:57Z
 finalized:
   by: alex
   at: 2026-10-06T22:48:57Z
@@ -44,6 +44,14 @@ A story agent's first minute is four turns: `flai move S-nnnn in-progress`, `fla
 - [ ] The harness prompt, `design/conventions/session-start.md`, the template's copies, `design/system/flai-cli.md`, and the user guide begin the loop with it
 
 ## Tasks
+- T-1091 Opening a story's branch and worktree is a storygit function that the CLI and the MCP server can both call
+- T-1099 The inbox is an exported mcpserver function over the agent's on-disk cursor, so the CLI can answer it as MCP does
+- T-1103 Package storystart moves a ready story to in-progress, opens its stream, and builds its prime pack in one function
+- T-1109 flai story start S-nnnn answers the worktree, the branch, the prime pack, and the inbox in one result, as text and --json
+- T-1111 The MCP tool story_start starts a story and answers its worktree, branch, pack, and inbox, and the server's instructions pull with it
+- T-1115 The host channel's write method story.start runs flai story start --json and answers its result
+- T-1117 The story agent's start prompt, session-start.md, work-management.md, CLAUDE.md, and the template's copies begin the loop with flai story start
+- T-1118 flai-cli.md, the user guide, and the reference describe flai story start, story_start, and story.start
 
 ## Notes
 
@@ -51,17 +59,27 @@ Depends on S-0261 for the prime pack to fit the harness's tool result limit when
 
 ### Planning
 
-Touches, none declared before. `flai touches suggest S-0274` was seeded with `flai/cmd/prime.go` and `flai/cmd/stream.go`, which 21 commits changed:
+The 20 touches planner-E-0017 declared are all kept. `flai touches suggest S-0274`, run from them, ranks nothing above 19% (`design/system/flaiover-dashboard.md`, `docs/operators/index.md`), and none of it is reached by the command. Where each touch comes from:
 
-- `flai/cmd/items.go`, `flai/cmd/story_start.go`, `flai/cmd/story_start_test.go`: layout. The story command is built in `items.go`; the subcommand and its tests are new files.
-- `flai/cmd/move.go`, `flai/cmd/stream.go`, `flai/cmd/prime.go`: layout. Moving, opening the stream, and priming live here as command code, which must become callable together.
-- `flai/internal/mcpserver/folder.go`, `server.go`: co-change (`folder.go` 5 of 21, `server.go` 4 of 21). `inbox` and the tools are registered here.
-- `flai/internal/hostapi/writes.go`, `writes_test.go`: layout. `story.start` is a write method.
-- `flai/internal/harness/harness.go`, `harness_test.go`: design (criterion 3).
-- `design/conventions/session-start.md`, `work-management.md`, their `template/root` copies, and `template/CHANGELOG.md`: design. `work-management.md` lists the order of steps for pulling a story.
-- `design/system/flai-cli.md`, `docs/users/flai.md`, `flai-reference.md`: co-change (8, 7, and 4 of 21).
-- Left out: `flai/internal/context` and `flai/internal/conventions`, co-changed with prime (5 and 4 of 21). They build the pack, which this story reuses as it is, and S-0261 changes its size.
+- `flai/cmd/items.go`, `flai/cmd/story_start.go`, `flai/cmd/story_start_test.go`: layout. The `story` command is built in `newItemCmd` in `items.go`, and the subcommand and its tests are new files (T-1109).
+- `flai/cmd/move.go`, `flai/cmd/prime.go`: layout. T-1109 shares `flai move`'s refusal wording and prints the pack through `printPack`.
+- `flai/cmd/stream.go`, `flai/cmd/branch.go`, `flai/internal/storygit/open.go`, `open_test.go`: layout. Branch and worktree opening is `(*app).openStoryBranch` in `branch.go`, which the MCP server cannot call. T-1091 moves it into `storygit`. `branch.go` and the two `storygit` files are added by this plan.
+- `flai/internal/storystart/start.go`, `start_test.go`: layout, added by this plan. This is a new package for the composition the three entry points share (T-1103). It cannot live in `cmd`, which MCP cannot import, or in `mcpserver`, which `cmd` would then need for more than the inbox.
+- `flai/internal/mcpserver/server.go`, `folder.go`: co-change and layout. The tools and the server's instructions are here (T-1099, T-1111).
+- `flai/internal/mcpserver/inbox.go`, `inbox_test.go`, `cursor.go`: layout, added by this plan. The inbox is computed only in `(*server).inbox`, over a per-agent cursor file in `cursor.go`. T-1099 exports it, so that `flai story start` advances the same cursor.
+- `flai/internal/mcpserver/story_start.go`, `story_start_test.go`: layout, added by this plan. These are the tool's handler and its tests (T-1111).
+- `flai/internal/hostapi/writes.go`, `writes_test.go`: layout. `story.start` is a write method that runs the CLI, as `item.move` does (T-1115).
+- `flai/internal/harness/harness.go`, `harness_test.go`: design (criterion 3, T-1117).
+- `design/conventions/session-start.md`, `work-management.md`, their `template/root` copies, and `template/CHANGELOG.md`: design (criterion 3, T-1117).
+- `CLAUDE.md`, `template/root/CLAUDE.md.tmpl`: layout, added by this plan. The start prompt says to follow `CLAUDE.md`, whose "Prime your session" step 3 pulls with `flai stream open` (T-1117).
+- `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`: co-change and criterion 3 (T-1118).
+- No folder touches.
+- Left out:
+  - `flai/internal/context` and `flai/internal/conventions`: `ctxpack.ForStory` is reused as it is.
+  - `flai/internal/workitem`: its transition and holds are called, not changed.
+  - `flai/internal/guard`: `story start` and `story_start` are not in its read lists, so sub-agents stay refused them.
+  - `design/system/dashboard-host-channel.md`: it lists no method by name.
 
-Forecast: flai gave 35m (89 s per unit over 21 done large improvement stories, times size 23), and it stands: the four steps exist and are composed here. The delivery, 2026-10-07T01:51Z, is flai's. It comes after S-0261's, which this story waits for.
+Forecast: 60m, against flai's 49m (83 s per unit of size over 25 done large improvement stories, times size 35 with the widened touches). I raised it because the steps do not compose as they stand: stream open must first leave package `cmd` and the inbox the MCP handler. S-0217, which composed commands across the CLI, MCP, and the host channel, took 68m. The delivery is flai's 2026-10-07T09:50Z plus the added 11m. It comes after S-0261, which this story waits for.
 
-Cost of delay: 64 USD a week, against flai's 92.11. This is E-0017's 900 USD a week shared by the turns each story removes. This one removes about 432: three of four start turns in each of 108 runs, plus the read-back of an overflowed prime.
+Cost of delay: 64 USD a week, against flai's 72.75. The value is planner-E-0017's and stands. It shares E-0017's 900 USD a week by the turns each story removes, not by forecast duration. This story removes about 432: three of four start turns in each of 108 runs, plus the read-back of an overflowed prime. The longer forecast changes neither figure.

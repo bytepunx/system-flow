@@ -3,16 +3,36 @@ id: T-1037
 type: task
 nature: remediation
 title: An ADR, the design, the docs, and delegation.md say a .claude/ write is the story agent's, and I-0093 is closed
-status: backlog
+status: done
 parent: S-0299
 owner: alex
 created: 2026-10-06T21:08:27Z
-updated: 2026-10-06T21:08:27Z
-transitions: []
+updated: 2026-10-06T22:53:04Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:39:18Z
+    by: agent-S-0299
+  - to: in-progress
+    at: 2026-10-06T22:39:18Z
+    by: agent-S-0299
+  - to: done
+    at: 2026-10-06T22:53:04Z
+    by: agent-S-0299
 stream: S-0299
 tags: [docs, adr]
-touches: [design/adrs, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, design/conventions/delegation.md, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, design/conventions/delegation.md, design/system/strategic-agents.md, design/issues/I-0093-a-story-s-sub-agent-that-writes-under-claude-blocks-its-layer-for-thirty-minutes-on-a-permission-thread-nobody-answers-and-the-start-prompt-does-not-warn-the-agent-beforehand.md, design/issues/summary.md]
 after: [T-1035, T-1036]
+usage:
+  source: log
+  seconds: 826
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 348
+      cache_read: 3140946
+      cache_write: 103070
+      cost: 1.4232
 ---
 # T-1037 An ADR, the design, the docs, and delegation.md say a .claude/ write is the story agent's, and I-0093 is closed
 

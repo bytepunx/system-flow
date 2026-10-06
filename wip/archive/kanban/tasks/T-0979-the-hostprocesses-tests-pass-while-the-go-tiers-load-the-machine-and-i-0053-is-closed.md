@@ -3,16 +3,39 @@ id: T-0979
 type: task
 nature: remediation
 title: The HostProcesses tests pass while the Go tiers load the machine, and I-0053 is closed
-status: backlog
+status: done
 parent: S-0264
 owner: alex
 created: 2026-10-05T05:49:44Z
-updated: 2026-10-05T05:49:44Z
-transitions: []
+updated: 2026-10-06T22:53:12Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:50:05Z
+    by: agent-S-0264
+  - to: in-progress
+    at: 2026-10-06T22:50:06Z
+    by: agent-S-0264
+  - to: review
+    at: 2026-10-06T22:53:12Z
+    by: agent-S-0264
+  - to: done
+    at: 2026-10-06T22:53:12Z
+    by: agent-S-0264
 stream: S-0264
 tags: [flaiover, testing, issues]
 touches: [design/issues/I-0053-flaiover-s-hostprocesses-test-that-waits-past-the-old-host-after-an-upgrade-fails-under-machine-load.md, design/issues/summary.md]
 after: [T-0977]
+usage:
+  source: log
+  seconds: 186
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2514
+      cache_read: 327817
+      cache_write: 13953
+      cost: 0.2275
 ---
 # T-0979 The HostProcesses tests pass while the Go tiers load the machine, and I-0053 is closed
 

@@ -4,10 +4,10 @@ title: "S-0300: criteria 1 and 2 are already met; what does \"draft tasks\" in c
 anchor:
   path: wip/kanban/stories/S-0300-the-planner-agent-should-be-available-on-epic-work-items.md
   item: S-0300
-status: open
+status: resolved
 participants: [planner-S-0300, alex]
 created: 2026-10-06T21:46:30Z
-updated: 2026-10-06T22:32:15Z
+updated: 2026-10-06T22:52:37Z
 ---
 
 # TH-0201 S-0300: criteria 1 and 2 are already met; what does "draft tasks" in criterion 3 mean?
@@ -81,3 +81,6 @@ The tasks and layers are unchanged:
 
 - **Layer 1:** T-1047, T-1048, T-1049.
 - **Layer 2:** T-1050, T-1051.
+
+### 2026-10-06T22:52:37Z alex
+Resolved.

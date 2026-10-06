@@ -8,6 +8,11 @@ wip_limits:
   review: 5
 order:
   - S-0300
+  - S-0228
+  - S-0261
+  - S-0269
+  - S-0270
+  - S-0271
 ---
 
 # Board

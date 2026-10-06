@@ -3,15 +3,44 @@ id: T-0977
 type: task
 nature: remediation
 title: HostProcesses' reconnect tests wait for the outcome rather than a fixed 40 ms, with a test that reproduces a slow poll
-status: backlog
+status: done
 parent: S-0264
 owner: alex
 created: 2026-10-05T05:49:37Z
-updated: 2026-10-05T05:49:37Z
-transitions: []
+updated: 2026-10-06T22:50:05Z
+transitions:
+  - to: ready
+    at: 2026-10-06T22:48:36Z
+    by: agent-S-0264
+  - to: in-progress
+    at: 2026-10-06T22:48:36Z
+    by: agent-S-0264
+  - to: review
+    at: 2026-10-06T22:50:05Z
+    by: agent-S-0264
+  - to: done
+    at: 2026-10-06T22:50:05Z
+    by: agent-S-0264
 stream: S-0264
 tags: [flaiover, testing]
 touches: [flaiover/src/lib/components/HostProcesses.svelte.test.ts]
+usage:
+  source: log
+  seconds: 89
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 4397
+      cache_read: 573226
+      cache_write: 24398
+      cost: 0.3978
+    - model: claude-sonnet-5-5
+      input: 12
+      output: 3120
+      cache_read: 155514
+      cache_write: 44175
+      cost: 0.1728
 ---
 # T-0977 HostProcesses' reconnect tests wait for the outcome rather than a fixed 40 ms, with a test that reproduces a slow poll
 
