@@ -122,6 +122,37 @@ func (u *Usage) Clone() *Usage {
 	return &c
 }
 
+// Split is u in n shares that add up to it, in order: its seconds and each
+// model's tokens in whole numbers, the remainder going to the first shares,
+// and each model's cost over n (ADR-0095). Each share keeps u's source and
+// estimate and leaves its Strategic out; n below one gives none.
+func (u *Usage) Split(n int) []*Usage {
+	if u == nil || n < 1 {
+		return nil
+	}
+	shares := make([]*Usage, n)
+	for i := range shares {
+		s := &Usage{Source: u.Source, Seconds: part(u.Seconds, i, n), Estimated: u.Estimated, Models: make([]Model, len(u.Models))}
+		for j, m := range u.Models {
+			s.Models[j] = Model{
+				Model: m.Model, Input: part(m.Input, i, n), Output: part(m.Output, i, n),
+				CacheRead: part(m.CacheRead, i, n), CacheWrite: part(m.CacheWrite, i, n), Cost: m.Cost / float64(n),
+			}
+		}
+		shares[i] = s
+	}
+	return shares
+}
+
+// part is share i of v in n whole shares, the remainder going to the first.
+func part(v int64, i, n int) int64 {
+	q, r := v/int64(n), v%int64(n)
+	if int64(i) < r {
+		q++
+	}
+	return q
+}
+
 // Tokens is every token every model read or wrote.
 func (u *Usage) Tokens() int64 {
 	if u == nil {

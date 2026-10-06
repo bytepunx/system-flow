@@ -320,6 +320,13 @@ func (lab *activityLab) planRun(item, name string) {
 // nothing.
 func (lab *activityLab) strategic(id string) *usage.Strategic {
 	lab.t.Helper()
+	return lab.strategicOf(id, workitem.ActivityPlanner)
+}
+
+// strategicOf is what the strategic agent kind spent on id, as its usage
+// says; nil when nothing.
+func (lab *activityLab) strategicOf(id, kind string) *usage.Strategic {
+	lab.t.Helper()
 	it, err := lab.repo.Get(id)
 	if err != nil {
 		lab.t.Fatal(err)
@@ -328,7 +335,7 @@ func (lab *activityLab) strategic(id string) *usage.Strategic {
 		return nil
 	}
 	for i, s := range it.Usage.Strategic {
-		if s.Kind == workitem.ActivityPlanner {
+		if s.Kind == kind {
 			return &it.Usage.Strategic[i]
 		}
 	}
@@ -482,5 +489,112 @@ func TestAnActivityEndsNoLaterThanItsRun(t *testing.T) {
 	}
 	if e := got.Entry; e.Seconds != 61 || !e.Estimated || !e.At.Equal(runStart.Add(3*time.Hour)) {
 		t.Errorf("entry = %+v, want 61 s to the second after the run's last event, ending when reported", e)
+	}
+}
+
+// orchestrated makes two epics, a story under each, and a task under the
+// first story, and archives the second story; it returns their IDs.
+func (lab *activityLab) orchestrated() (epic, story, task, otherEpic, archived string) {
+	lab.t.Helper()
+	epic, story = lab.planned()
+	otherEpic, archived = lab.planned()
+	tk, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Task", Parent: story, Owner: "alex", Now: runStart})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	it, err := lab.repo.Get(archived)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	dir := lab.repo.ItemDir(workitem.Story, true)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.Rename(it.Path, filepath.Join(dir, filepath.Base(it.Path))); err != nil {
+		lab.t.Fatal(err)
+	}
+	return epic, story, tk.ID, otherEpic, archived
+}
+
+// ADR-0095: an orchestrator activity's usage is split evenly between the
+// work items it named that exist, archived ones included, each once, and
+// each share is summed up to its epic; a thread, an issue, and an ID no item
+// has take no share, and a story named with its own task carries both
+// shares.
+func TestAnOrchestratorActivityIsChargedEvenlyToTheWorkItemsItNamed(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story, task, otherEpic, archived := lab.orchestrated()
+	lab.log("t-orchestrator-20261003T100000Z.log",
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 999),
+		streamFinal("Accepted the stories.", 2000, 0.5))
+	named := []string{task, archived, "TH-0186", "I-0007", "S-0099", story, strings.ToLower(task)}
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator, named)
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if strings.Join(got.Entry.Items, ",") != strings.Join(named, ",") {
+		t.Errorf("entry's items = %v, want all it named", got.Entry.Items)
+	}
+	if want := []string{task, archived, story}; strings.Join(got.Shared, ",") != strings.Join(want, ",") {
+		t.Errorf("shared = %v, want %v, the work items named that exist, once each, in order", got.Shared, want)
+	}
+	if want := []string{task, story, epic, archived, otherEpic}; strings.Join(got.Charged, ",") != strings.Join(want, ",") {
+		t.Errorf("charged = %v, want %v", got.Charged, want)
+	}
+	if got.Planned != "" {
+		t.Errorf("planned = %q, want none for the orchestrator", got.Planned)
+	}
+	// 2 input, 300 output, and 2000 cache read tokens, and 61 seconds, in
+	// three shares, the remainder to the first named
+	if got.Entry.Seconds != 61 {
+		t.Fatalf("entry's seconds = %d, want 61 to the second after the run's last event", got.Entry.Seconds)
+	}
+	secs := []int64{21, 20, 20}
+	shareCost := toTheCentsHundredth(0.5 / 3)
+	want := map[string]struct {
+		tokens, seconds int64
+		cost            float64
+	}{
+		task:      {1 + 100 + 667, secs[0], shareCost},
+		archived:  {1 + 100 + 667, secs[1], shareCost},
+		otherEpic: {1 + 100 + 667, secs[1], shareCost},
+		story:     {(1 + 100 + 667) + (0 + 100 + 666), secs[0] + secs[2], toTheCentsHundredth(shareCost + 0.5/3)},
+		epic:      {(1 + 100 + 667) + (0 + 100 + 666), secs[0] + secs[2], toTheCentsHundredth(shareCost + 0.5/3)},
+	}
+	for id, w := range want {
+		s := lab.strategicOf(id, workitem.ActivityOrchestrator)
+		if s == nil || s.Tokens() != w.tokens || s.Seconds != w.seconds || s.Cost() != w.cost || !s.Estimated {
+			t.Errorf("%s's orchestrator usage = %+v, want %d tokens over %d s, %v USD, estimated", id, s, w.tokens, w.seconds, w.cost)
+		}
+		if p := lab.strategic(id); p != nil {
+			t.Errorf("%s's planner usage = %+v, want none", id, p)
+		}
+	}
+}
+
+// ADR-0095: an orchestrator activity that names no work item charges no
+// item; its cost is left to the orchestrator's project strategic total.
+func TestAnOrchestratorActivityNamingNoWorkItemChargesNothing(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story := lab.planned()
+	lab.log("t-orchestrator-20261003T100000Z.log",
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 999),
+		streamFinal("Answered a thread.", 2000, 0.5))
+	got, err := LogActivity(lab.dir, lab.root, "t", workitem.ActivityOrchestrator, "Answered TH-0186", []string{"TH-0186", "S-0099", "design/system/metrics.md"}, runStart.Add(30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Entry.Cost == 0 {
+		t.Fatalf("entry = %+v, want a cost to leave uncharged", got.Entry)
+	}
+	if got.Shared != nil || got.Charged != nil || got.Planned != "" {
+		t.Errorf("charged %v, %v, %q, want nothing", got.Shared, got.Charged, got.Planned)
+	}
+	for _, id := range []string{story, epic} {
+		if u := lab.usageOf(id); u != nil {
+			t.Errorf("%s's usage = %+v, want none", id, u)
+		}
 	}
 }

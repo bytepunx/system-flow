@@ -1,6 +1,8 @@
 package usage
 
 import (
+	"math"
+	"reflect"
 	"testing"
 )
 
@@ -109,5 +111,49 @@ func TestWithStrategicKeepsAnItemsStrategic(t *testing.T) {
 	}
 	if WithStrategic(sum, agents(1)) != sum || WithStrategic(nil, nil) != nil {
 		t.Error("with no strategic to keep, it is not the usage given")
+	}
+}
+
+// ADR-0095: an orchestrator activity's usage is split evenly between the
+// items it named, in whole tokens and seconds that add up to the whole, the
+// remainder to the first items named, and its cost over the count.
+func TestSplitAddsUpToTheWhole(t *testing.T) {
+	u := agents(100, Model{Model: "a", Input: 10, Output: 7, CacheRead: 2, CacheWrite: 3, Cost: 1}, Model{Model: "b", Output: 1, Cost: 0.01})
+	u.Estimated = true
+	shares := u.Split(3)
+	if len(shares) != 3 {
+		t.Fatalf("shares = %d, want 3", len(shares))
+	}
+	var seconds int64
+	sum := &Usage{}
+	for i, s := range shares {
+		if s.Source != SourceLog || !s.Estimated || s.Strategic != nil || len(s.Models) != 2 {
+			t.Errorf("share %d = %+v, want u's source and estimate, both models, no strategic", i, s)
+		}
+		if s.Models[0].Cost != 1.0/3 || s.Models[1].Cost != 0.01/3 {
+			t.Errorf("share %d's costs = %v, %v, want each model's over 3", i, s.Models[0].Cost, s.Models[1].Cost)
+		}
+		seconds += s.Seconds
+		sum.Add(s)
+	}
+	want := []Model{{Model: "a", Input: 4, Output: 3, CacheRead: 1, CacheWrite: 1}, {Model: "a", Input: 3, Output: 2, CacheRead: 1, CacheWrite: 1}, {Model: "a", Input: 3, Output: 2, CacheRead: 0, CacheWrite: 1}}
+	for i, w := range want {
+		got := shares[i].Models[0]
+		got.Cost = 0
+		if got != w {
+			t.Errorf("share %d of a = %+v, want %+v, the remainder to the first", i, got, w)
+		}
+	}
+	if s := []int64{shares[0].Seconds, shares[1].Seconds, shares[2].Seconds}; s[0] != 34 || s[1] != 33 || s[2] != 33 {
+		t.Errorf("seconds = %v, want 34, 33, 33", s)
+	}
+	if seconds != u.Seconds || sum.Tokens() != u.Tokens() || math.Abs(sum.Cost()-u.Cost()) > 1e-12 {
+		t.Errorf("shares add up to %ds, %d tokens, $%v; want %ds, %d tokens, $%v", seconds, sum.Tokens(), sum.Cost(), u.Seconds, u.Tokens(), u.Cost())
+	}
+	if one := u.Split(1); len(one) != 1 || !reflect.DeepEqual(one[0], u) {
+		t.Errorf("one share = %+v, want u", one)
+	}
+	if u.Split(0) != nil || (*Usage)(nil).Split(2) != nil {
+		t.Error("no shares, or a share of nothing, is not none")
 	}
 }

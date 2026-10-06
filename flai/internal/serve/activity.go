@@ -1,8 +1,10 @@
 package serve
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -20,7 +22,9 @@ import (
 // apportioned to that span as a task's is to its intervals (ADR-0051), so a
 // session resumed in a later run is charged only its share. A planner's
 // activity is also charged, that same share, to the item its run was started
-// for and every item above it, under usage.strategic (S-0225, ADR-0083).
+// for and every item above it, under usage.strategic (S-0225, ADR-0083); an
+// orchestrator's is split evenly between the work items its entry names and
+// charged to each and every item above it (S-0226, ADR-0095).
 
 // ActivityLogs are the logs flai serve keeps of the runs of the strategic
 // agent kind in the project named key, oldest first.
@@ -41,18 +45,22 @@ type Logged struct {
 	Entry    workitem.ActivityEntry `json:"entry"`
 	Activity *workitem.Activity     `json:"activity"`
 	Logs     []string               `json:"logs"`
-	// Planned is the item a planner's activity was charged to, and Charged
-	// the items whose usage the charge changed, that item's first and then
-	// upward; both empty when nothing was charged (ADR-0083).
+	// Planned is the item a planner's activity was charged to (ADR-0083),
+	// and Shared the work items an orchestrator's activity named that each
+	// took a share of it (ADR-0095). Charged are the items whose usage the
+	// charge changed, each item charged first and then upward, each once.
+	// All are empty when nothing was charged.
 	Planned string   `json:"planned,omitempty"`
+	Shared  []string `json:"shared,omitempty"`
 	Charged []string `json:"charged,omitempty"`
 }
 
 // LogActivity logs an activity of the strategic agent kind in the project at
 // root, named key, that ended at end, measured from the kind's logs, and
-// charges a planner's to the item it planned. An activity outside any run
-// flai serve logged, such as a planner a person runs by hand, is logged with
-// no seconds and no cost, so that it is still recorded, and charges nothing.
+// charges a planner's to the item it planned and an orchestrator's to the
+// work items it names. An activity outside any run flai serve logged, such
+// as a planner a person runs by hand, is logged with no seconds and no cost,
+// so that it is still recorded, and charges nothing.
 // When the charge fails the activity is logged all the same, and is returned
 // with the error.
 func LogActivity(d Dir, root, key, kind, summary string, items []string, end time.Time) (*Logged, error) {
@@ -89,9 +97,8 @@ func LogActivity(d Dir, root, key, kind, summary string, items []string, end tim
 // LogRunEnd logs the newest run of the strategic agent kind in the project
 // at root, named key, as having ended: the time in it since the last entry
 // is one activity, with the run's final text as its summary and items as
-// the items it names (S-0209), and a planner's is charged to the item it
-// planned, as LogActivity's is. It logs nothing, and returns nil, when
-// nothing was spent in that time.
+// the items it names (S-0209), and is charged as LogActivity's is. It logs
+// nothing, and returns nil, when nothing was spent in that time.
 func LogRunEnd(d Dir, root, key, kind string, items []string) (*Logged, error) {
 	return logRunEnd(d, root, key, kind, "", "", items)
 }
@@ -214,24 +221,36 @@ func (m *activityMeasure) spent(s usage.Span) *usage.Usage {
 	return m.rec.Tasks(map[string][]usage.Span{id: {s}}, m.rates)[id]
 }
 
-// charge charges u, what a planner's activity in run spent, to the item the
-// run was started for, as serve/agents.json records it under plans, and to
-// every item above it (ADR-0083), with the entry's seconds, so that the
-// items and the activity document are two views of one spend. It charges
-// nothing for another kind, for a u that spent nothing, and for a run no
-// item's newest planner run is, such as one a person ran by hand. It notes
-// what it charged on logged.
+// charge charges u, what an activity in run spent, with the entry's
+// seconds, so that the items and the activity document are two views of one
+// spend: a planner's to the item it planned, an orchestrator's to the work
+// items its entry names. It charges nothing for another kind and for a u
+// that spent nothing. It notes what it charged on logged.
 func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) error {
-	if m.kind != workitem.ActivityPlanner || u == nil || len(u.Models) == 0 {
-		return nil
-	}
-	item := m.planned(run)
-	if item == "" {
+	if u == nil || len(u.Models) == 0 {
 		return nil
 	}
 	c := u.Clone()
 	c.Seconds = logged.Entry.Seconds
-	changed, err := m.repo.ChargeStrategic(item, m.kind, c)
+	switch m.kind {
+	case workitem.ActivityPlanner:
+		return m.chargePlanned(logged, run, c)
+	case workitem.ActivityOrchestrator:
+		return m.chargeNamed(logged, c)
+	}
+	return nil
+}
+
+// chargePlanned charges u to the item run was started for, as
+// serve/agents.json records it under plans, and to every item above it
+// (ADR-0083). It charges nothing for a run no item's newest planner run is,
+// such as one a person ran by hand.
+func (m *activityMeasure) chargePlanned(logged *Logged, run usage.Run, u *usage.Usage) error {
+	item := m.planned(run)
+	if item == "" {
+		return nil
+	}
+	changed, err := m.repo.ChargeStrategic(item, m.kind, u)
 	if len(changed) > 0 {
 		logged.Planned, logged.Charged = item, changed
 	}
@@ -239,6 +258,63 @@ func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) 
 		return fmt.Errorf("the %s's activity was logged, but its cost could not be charged to %s: %w", m.kind, item, err)
 	}
 	return nil
+}
+
+// chargeNamed splits u evenly between the work items the entry names and
+// charges each share to its item and every item above it (ADR-0095). It
+// charges nothing when the entry names no work item. A share that cannot be
+// charged is left out, the others charged all the same.
+func (m *activityMeasure) chargeNamed(logged *Logged, u *usage.Usage) error {
+	items := m.workItems(logged.Entry.Items)
+	if len(items) == 0 {
+		return nil
+	}
+	var errs []error
+	for i, share := range u.Split(len(items)) {
+		changed, err := m.repo.ChargeStrategic(items[i], m.kind, share)
+		if len(changed) > 0 {
+			logged.Shared = append(logged.Shared, items[i])
+			for _, id := range changed {
+				if !slices.Contains(logged.Charged, id) {
+					logged.Charged = append(logged.Charged, id)
+				}
+			}
+		}
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", items[i], err))
+		}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("the %s's activity was logged, but not all its cost could be charged to the items it named: %w", m.kind, err)
+	}
+	return nil
+}
+
+// workItems are the epics, stories, and tasks named that exist, archived
+// ones included, each once by its own ID, in the order first named. Anything
+// else named, such as a thread, an issue, or an ID no item has, is left out.
+// An item that cannot be read is kept, so that its share's charge fails and
+// says why.
+func (m *activityMeasure) workItems(named []string) []string {
+	var items []string
+	for _, id := range named {
+		if workitem.TypeOfID(workitem.CanonicalID(id)) == "" {
+			continue
+		}
+		it, err := m.repo.Get(id)
+		switch {
+		case errors.Is(err, workitem.ErrNotFound):
+			continue
+		case err != nil:
+			id = workitem.CanonicalID(id)
+		default:
+			id = it.ID
+		}
+		if !slices.Contains(items, id) {
+			items = append(items, id)
+		}
+	}
+	return items
 }
 
 // planned is the item whose newest planner run kept its log in run's, or ""

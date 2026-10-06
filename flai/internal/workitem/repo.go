@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -178,8 +179,12 @@ func idCandidates(id string) []string {
 	return out
 }
 
+// ErrNotFound means no item has the ID, in kanban or archive.
+var ErrNotFound = errors.New("not found")
+
 // Get finds one item by ID in kanban or archive. IDs may be given in short
-// form (S-32) or with any zero padding; the item's own ID is returned.
+// form (S-32) or with any zero padding; the item's own ID is returned. An ID
+// no item has is ErrNotFound.
 func (r *Repo) Get(id string) (*Item, error) {
 	typ := TypeOfID(CanonicalID(id))
 	if typ == "" {
@@ -203,7 +208,7 @@ func (r *Repo) Get(id string) (*Item, error) {
 			return it, nil
 		}
 	}
-	return nil, fmt.Errorf("%s not found", id)
+	return nil, fmt.Errorf("%s %w", id, ErrNotFound)
 }
 
 // Children returns items whose parent is id, from the given list.

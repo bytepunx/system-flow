@@ -17,8 +17,9 @@ func TestAStrategicAgentLogsAnActivityThroughTheServer(t *testing.T) {
 		o.Activities = func(_ context.Context, root, kind, summary string, items []string, by string) (ActivityLogged, error) {
 			got = append(got, call{root, kind, summary, strings.Join(items, ","), by})
 			return ActivityLogged{
-				Entry:    ActivityEntry{At: "2026-10-03T10:01:30Z", Summary: summary, Items: items, Seconds: 90, Cost: 0.6173, Estimated: true},
-				Activity: ActivityTotals{Kind: kind, AccruedCost: 1.6173, AccruedSeconds: 390, TasksCompleted: 2, LastRun: "2026-10-03T10:01:30Z"},
+				Entry:     ActivityEntry{At: "2026-10-03T10:01:30Z", Summary: summary, Items: items, Seconds: 90, Cost: 0.6173, Estimated: true},
+				Activity:  ActivityTotals{Kind: kind, AccruedCost: 1.6173, AccruedSeconds: 390, TasksCompleted: 2, LastRun: "2026-10-03T10:01:30Z"},
+				ChargedTo: items, Charge: "charged evenly to S-0001, S-0002 and the items above them",
 			}, nil
 		}
 	})
@@ -33,6 +34,10 @@ func TestAStrategicAgentLogsAnActivityThroughTheServer(t *testing.T) {
 	}
 	if totals["kind"] != "orchestrator" || totals["accrued_cost"] != 1.6173 || totals["accrued_seconds"] != float64(390) || totals["tasks_completed"] != float64(2) || totals["last_run"] != "2026-10-03T10:01:30Z" {
 		t.Errorf("totals: %v", totals)
+	}
+	// ADR-0095: the result says what the cost was charged to
+	if to, _ := out["charged_to"].([]any); len(to) != 2 || to[0] != "S-0001" || out["charge"] != "charged evenly to S-0001, S-0002 and the items above them" {
+		t.Errorf("charged: %v, %v", out["charged_to"], out["charge"])
 	}
 	want := call{projectRoot(f.repo), "orchestrator", "Ordered the board", "S-0001,S-0002", "claude"}
 	if len(got) != 1 || got[0] != want {
