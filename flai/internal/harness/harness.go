@@ -265,6 +265,8 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 // and names in its summary the tasks it created and revisited (S-0255).
 // It enriches a story from flai touches suggest, flai forecast, and flai cod,
 // and records why under a ### Planning heading in the story's Notes (S-0210).
+// It names files, not folders, in touches, keeping a folder only where files
+// no task can name yet may be added, and says why there (S-0295, ADR-0096).
 func planPrompt(r Request) string {
 	kind := workitem.TypeOfID(r.Item)
 	story := r.Item
@@ -273,6 +275,7 @@ func planPrompt(r Request) string {
 	}
 	enrich := fmt.Sprintf("its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs. "+
 		"Run flai touches suggest %[1]s, adding the paths its goal, criteria, and linked design name when it declares no touches, and predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares. "+
+		"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one; record each folder touch you kept, and why, under the story's ### Planning heading. "+
 		"Run flai forecast %[1]s and flai cod %[1]s. "+
 		"Review each figure, adjust it where you have a reason and state the reason, and write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches. "+
 		"In the story's Notes, under a ### Planning heading that is yours to rewrite, record where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted, and leave the rest of the Notes as it was", story)

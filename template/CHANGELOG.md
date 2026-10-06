@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.59 - 2026-10-06
+
+- S-0295 The planner and the story's agent name files, not folders, in touches (patch): `strategic-agents.md`'s section "As the planner" says to predict a story's touches and its tasks' file by file, to keep a folder touch only where the story may add files there that no task can name yet, and to record each folder touch kept, and why, under the story's `### Planning` heading. `work-management.md` says to name files in touches wherever you can, to narrow a story's folder touch to the files its tasks name with `flai touches`, or leave it for flai, which replaces it in the story's claim with its tasks' touches inside it (ADR-0096), and never to ask for a path to be added to the shared paths (`claims.shared`) to escape a hold, since that list is the operator's. The narrowing and the shared paths need a flai that has them.
+
 ## 1.0.58 - 2026-10-06
 
 - S-0221 The orchestrator accepts a story in review when `accept_reviews` allows it (patch): `strategic-agents.md`'s section "As the orchestrator" says how. It hands the story's worktree to its verifier, which runs the tests, the lint, and `flai check --strict`, matches each acceptance criterion to the changed files that meet it, and names the commit it verified. It runs `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run` and reads the blockers. With none, and every criterion matched, it runs `flai accept` with `--verified` and `--evidence -`, a `Verdict:` line and one `- <n>: <files>` item per criterion on standard input, and logs the acceptance with `activity_log`, naming the story and the commit. Otherwise it leaves the story in review, opens a thread on it saying what is missing, and logs that decision. It never moves a story to `done` with `item_move`. `.claude/agents/orchestrator.md` says the same. The commands need a flai that has them.
