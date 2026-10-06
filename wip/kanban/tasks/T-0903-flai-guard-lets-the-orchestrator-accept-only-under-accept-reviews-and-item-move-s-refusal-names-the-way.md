@@ -3,16 +3,36 @@ id: T-0903
 type: task
 nature: feature
 title: flai guard lets the orchestrator accept only under accept_reviews, and item_move's refusal names the way
-status: backlog
+status: done
 parent: S-0221
 owner: alex
 created: 2026-10-05T04:47:37Z
-updated: 2026-10-05T04:47:37Z
-transitions: []
+updated: 2026-10-06T11:24:16Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:18:32Z
+    by: agent-S-0221
+  - to: in-progress
+    at: 2026-10-06T11:18:33Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:24:16Z
+    by: agent-S-0221
 stream: S-0221
 tags: [flai]
 touches: [flai/internal/guard, flai/cmd/guard.go, flai/internal/mcpserver]
 after: [T-0898]
+usage:
+  source: log
+  seconds: 343
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 429
+      cache_read: 2862376
+      cache_write: 101290
+      cost: 1.2751
 ---
 # T-0903 flai guard lets the orchestrator accept only under accept_reviews, and item_move's refusal names the way
 

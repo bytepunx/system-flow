@@ -3,16 +3,36 @@ id: T-0907
 type: task
 nature: feature
 title: flai accept and hostapi accept.run take the orchestrator's identity under accept_reviews, refuse on any blocker, and record the evidence
-status: backlog
+status: done
 parent: S-0221
 owner: alex
 created: 2026-10-05T04:47:55Z
-updated: 2026-10-05T04:47:55Z
-transitions: []
+updated: 2026-10-06T11:34:17Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:24:27Z
+    by: agent-S-0221
+  - to: in-progress
+    at: 2026-10-06T11:24:28Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:34:17Z
+    by: agent-S-0221
 stream: S-0221
 tags: [flai]
-touches: [flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/hostapi]
+touches: [flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/hostapi, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-0900, T-0903]
+usage:
+  source: log
+  seconds: 589
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 707
+      cache_read: 7055921
+      cache_write: 152316
+      cost: 3.1011
 ---
 # T-0907 flai accept and hostapi accept.run take the orchestrator's identity under accept_reviews, refuse on any blocker, and record the evidence
 

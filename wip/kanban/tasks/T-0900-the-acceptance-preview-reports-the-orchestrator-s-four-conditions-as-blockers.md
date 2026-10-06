@@ -3,16 +3,36 @@ id: T-0900
 type: task
 nature: feature
 title: The acceptance preview reports the orchestrator's four conditions as blockers
-status: backlog
+status: done
 parent: S-0221
 owner: alex
 created: 2026-10-05T04:47:29Z
-updated: 2026-10-05T04:48:02Z
-transitions: []
+updated: 2026-10-06T11:24:16Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:18:32Z
+    by: agent-S-0221
+  - to: in-progress
+    at: 2026-10-06T11:18:32Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:24:16Z
+    by: agent-S-0221
 stream: S-0221
 tags: [flai]
 touches: [flai/internal/preview]
 after: [T-0898]
+usage:
+  source: log
+  seconds: 344
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 225
+      cache_read: 1651926
+      cache_write: 99885
+      cost: 0.7537
 ---
 # T-0900 The acceptance preview reports the orchestrator's four conditions as blockers
 

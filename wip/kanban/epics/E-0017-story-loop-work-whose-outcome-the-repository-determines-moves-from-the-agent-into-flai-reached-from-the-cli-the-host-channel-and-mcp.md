@@ -6,11 +6,16 @@ title: Story-loop work whose outcome the repository determines moves from the ag
 status: backlog
 owner: alex
 created: 2026-10-05T01:35:27Z
-updated: 2026-10-05T01:35:33Z
+updated: 2026-10-06T11:37:08Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
 touches: [flai, design/conventions, template]
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 6h
+    by: planner-E-0017
+    at: 2026-10-06T11:34:11Z
 ---
 # E-0017 Story-loop work whose outcome the repository determines moves from the agent into flai, reached from the CLI, the host channel, and MCP
 
@@ -34,6 +39,7 @@ Drafted with the epic; finalize and order them on the board. Not in the epic bec
 - S-0273 flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings
 - S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together
 - S-0275 Issue and ADR handling from the worktree is one call each: bump, close, and adr new number from the whole repository and commit on the story branch
+- S-0293 flai stats classifies a story run's tool calls, so the ceremony turns E-0017 removes are measured per story and over time
 
 ## Notes
 

@@ -7,9 +7,11 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-05T01:35:51Z
+updated: 2026-10-06T11:36:39Z
 transitions: []
-tags: []
+tags: [cli, mcp]
+topics: [automation, mcp, hostapi, conventions]
+touches: [flai/cmd/items.go, flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/move.go, flai/cmd/stream.go, flai/cmd/prime.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0261]
 agent:
   harness: claude-code
@@ -17,6 +19,16 @@ agent:
   config:
     effort: high
 draft: true
+cost_of_delay:
+  value: 64
+  by: planner-E-0017
+  at: 2026-10-06T11:36:17Z
+forecast:
+  duration: 35m
+  delivery: 2026-10-07T01:51:00Z
+  basis: "flai's 35m (89 s per unit over 21 done large improvement stories, size 23) stands: it composes move, stream open, prime, and inbox, which exist; 36th in the pull order, after S-0261."
+  by: planner-E-0017
+  at: 2026-10-06T11:34:01Z
 ---
 # S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together
 
@@ -34,3 +46,20 @@ A story agent's first minute is four turns: `flai move S-nnnn in-progress`, `fla
 ## Notes
 
 Depends on S-0261 for the prime pack to fit the harness's tool result limit when returned inline.
+
+### Planning
+
+Touches, none declared before. `flai touches suggest S-0274` was seeded with `flai/cmd/prime.go` and `flai/cmd/stream.go`, which 21 commits changed:
+
+- `flai/cmd/items.go`, `flai/cmd/story_start.go`, `flai/cmd/story_start_test.go`: layout. The story command is built in `items.go`; the subcommand and its tests are new files.
+- `flai/cmd/move.go`, `flai/cmd/stream.go`, `flai/cmd/prime.go`: layout. Moving, opening the stream, and priming live here as command code, which must become callable together.
+- `flai/internal/mcpserver/folder.go`, `server.go`: co-change (`folder.go` 5 of 21, `server.go` 4 of 21). `inbox` and the tools are registered here.
+- `flai/internal/hostapi/writes.go`, `writes_test.go`: layout. `story.start` is a write method.
+- `flai/internal/harness/harness.go`, `harness_test.go`: design (criterion 3).
+- `design/conventions/session-start.md`, `work-management.md`, their `template/root` copies, and `template/CHANGELOG.md`: design. `work-management.md` lists the order of steps for pulling a story.
+- `design/system/flai-cli.md`, `docs/users/flai.md`, `flai-reference.md`: co-change (8, 7, and 4 of 21).
+- Left out: `flai/internal/context` and `flai/internal/conventions`, co-changed with prime (5 and 4 of 21). They build the pack, which this story reuses as it is, and S-0261 changes its size.
+
+Forecast: flai gave 35m (89 s per unit over 21 done large improvement stories, times size 23), and it stands: the four steps exist and are composed here. The delivery, 2026-10-07T01:51Z, is flai's. It comes after S-0261's, which this story waits for.
+
+Cost of delay: 64 USD a week, against flai's 92.11. This is E-0017's 900 USD a week shared by the turns each story removes. This one removes about 432: three of four start turns in each of 108 runs, plus the read-back of an overflowed prime.

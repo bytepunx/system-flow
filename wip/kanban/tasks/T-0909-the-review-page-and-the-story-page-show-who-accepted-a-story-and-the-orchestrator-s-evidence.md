@@ -3,16 +3,36 @@ id: T-0909
 type: task
 nature: feature
 title: The review page and the story page show who accepted a story, and the orchestrator's evidence
-status: backlog
+status: done
 parent: S-0221
 owner: alex
 created: 2026-10-05T04:48:07Z
-updated: 2026-10-05T04:48:07Z
-transitions: []
+updated: 2026-10-06T11:39:32Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:35:18Z
+    by: agent-S-0221
+  - to: in-progress
+    at: 2026-10-06T11:35:18Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:39:32Z
+    by: agent-S-0221
 stream: S-0221
 tags: [dashboard]
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/routes/items]
 after: [T-0907]
+usage:
+  source: log
+  seconds: 253
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 408
+      cache_read: 2666529
+      cache_write: 87657
+      cost: 1.185
 ---
 # T-0909 The review page and the story page show who accepted a story, and the orchestrator's evidence
 

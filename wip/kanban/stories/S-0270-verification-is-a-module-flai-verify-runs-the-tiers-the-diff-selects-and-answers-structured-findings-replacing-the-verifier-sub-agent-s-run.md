@@ -7,9 +7,11 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:29Z
-updated: 2026-10-05T01:35:52Z
+updated: 2026-10-06T11:36:35Z
 transitions: []
-tags: []
+tags: [cli, mcp, dashboard]
+topics: [automation, mcp, hostapi, code]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/serve/checks.go, flai/internal/serve/checks_config.go, scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, flai/internal/mcpserver/folder.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/review.ts, design/adrs, design/system/flai-cli.md, design/system/devex.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
 after: [S-0273]
 agent:
   harness: claude-code
@@ -17,6 +19,16 @@ agent:
   config:
     effort: high
 draft: true
+cost_of_delay:
+  value: 43
+  by: planner-E-0017
+  at: 2026-10-06T11:36:18Z
+forecast:
+  duration: 70m
+  delivery: 2026-10-07T03:11:00Z
+  basis: "flai's 54m (size 36) raised to 70m for the dashboard panel and the operator's copy of the verifier definition under .claude; delivery counts from S-0273's, which it waits for, not from its 32nd place in the pull order."
+  by: planner-E-0017
+  at: 2026-10-06T11:33:58Z
 ---
 # S-0270 Verification is a module: flai verify runs the tiers the diff selects and answers structured findings, replacing the verifier sub-agent's run
 
@@ -36,3 +48,21 @@ Before review a story agent starts a Sonnet verifier sub-agent to run the close-
 ## Notes
 
 Companion to S-0266 (verifier exit status) and S-0267 (duplicate tier), which stay worth doing until this lands.
+
+### Planning
+
+Touches, none declared before. `flai touches suggest S-0270` was seeded with `scripts/close-out.sh` and `flai/cmd/checks.go`, which 7 commits changed:
+
+- `flai/cmd/verify.go`, `flai/cmd/verify_test.go`, `flai/cmd/root.go`: layout. A new command.
+- `flai/internal/verify`: layout. The tier runner S-0273 adds, extended with the close-out's steps.
+- `flai/internal/serve/checks.go`, `checks_config.go`: layout. `flai checks` already runs a review's steps with state and duration per step. Its runner may be shared rather than duplicated.
+- `scripts/close-out.sh`, `scripts/README.md`, `template/root/scripts/close-out.sh`, `template/root/scripts/README.md`: co-change (4, 4, and 3 of 7) and criterion 3.
+- `flai/internal/mcpserver/folder.go`, `flai/internal/hostapi/hostapi.go`, `writes.go`, `writes_test.go`: layout. The `verify` tool and the `verify.run` method.
+- `flaiover/src/lib/components/Review.svelte`, `flaiover/src/lib/review.ts`, `docs/users/flaiover.md`: layout. The review panel already shows checks, and criterion 2 shows the last result there.
+- `flai/internal/harness/harness.go`, `harness_test.go`, `.claude/agents/verifier.md`, `template/root/.claude/agents/verifier.md`, `design/conventions/delegation.md`, `work-management.md`, their `template/root` copies, and `template/CHANGELOG.md`: design (criterion 4). The close-out rule in `work-management.md` names the script. `.claude/` writes need the operator to paste them, so the story's agent will ask on a thread.
+- `design/adrs`: design. Moving the verifier's run into flai changes ADR-0059's hand-off.
+- `design/system/flai-cli.md`, `devex.md`, `docs/users/flai.md`, `flai-reference.md`: criterion 5.
+
+Forecast: flai gave 54m (89 s per unit over 21 done large improvement stories, times size 36). I raised it to 70m for the dashboard panel and the operator's copy of the verifier definition. flai's delivery, 2026-10-07T01:07Z, counts from 32nd place in the pull order and ignores `after`. S-0270 waits for S-0273, so I set the delivery to S-0273's, 2026-10-07T02:01Z, plus 70m: 2026-10-07T03:11Z.
+
+Cost of delay: 43 USD a week, against flai's 184.21. This is E-0017's 900 USD a week shared by the turns each story removes. The evidence is 88 verifier minutes, about 290 turns at the mean of 18 s a turn. Most of the test-log reading this story replaces is S-0273's.

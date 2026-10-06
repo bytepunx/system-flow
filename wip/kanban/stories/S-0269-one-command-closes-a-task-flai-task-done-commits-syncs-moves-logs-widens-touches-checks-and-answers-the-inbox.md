@@ -7,15 +7,27 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:28Z
-updated: 2026-10-05T01:35:28Z
+updated: 2026-10-06T11:36:33Z
 transitions: []
-tags: []
+tags: [cli, mcp]
+topics: [automation, mcp, hostapi, conventions]
+touches: [flai/cmd/items.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, design/conventions/git.md, template/root/design/conventions/work-management.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 draft: true
+cost_of_delay:
+  value: 427
+  by: planner-E-0017
+  at: 2026-10-06T11:36:15Z
+forecast:
+  duration: 55m
+  delivery: 2026-10-07T01:00:00Z
+  basis: "flai's 41m (89 s per unit over 21 done large improvement stories, size 27) raised to 55m because the seven steps live in command code that must become callable and a refused sync needs a git fixture, as S-0217's three composed commands took 68m; 31st in the pull order."
+  by: planner-E-0017
+  at: 2026-10-06T11:33:57Z
 ---
 # S-0269 One command closes a task: flai task done commits, syncs, moves, logs, widens touches, checks, and answers the inbox
 
@@ -34,3 +46,21 @@ Closing a task today is a run of six to nine single-purpose model turns: tick it
 ## Notes
 
 From the epic's log classification: flai move 719 turns, flai check 540, stream sync 486, stream log 417, git commit 405, inbox 336, touches 217, criteria ticks 119.
+
+### Planning
+
+Touches, none declared before. `flai touches suggest S-0269` was seeded with `flai/cmd/stream_sync.go`, `flai/cmd/move.go`, and `flai/internal/mcpserver`, which 96 commits changed:
+
+- `flai/cmd/items.go`, `flai/cmd/task_done.go`, `flai/cmd/task_done_test.go`: layout. The task command is built in `items.go`; the subcommand and its tests are new files.
+- `flai/cmd/stream.go`, `stream_sync.go`, `move.go`, `touches.go`, `check.go`: layout. The steps live here as command code, which must become callable from one command.
+- `flai/internal/mcpserver/folder.go`, `server.go`: layout. Tools are registered in `folder.go`, and the server's instructions in `server.go` name the task transition.
+- `flai/internal/hostapi/writes.go`, `writes_test.go`: co-change (9 and 8 of 96). `task.done` is a write method.
+- `flai/internal/harness/harness.go`, `harness_test.go`: design. The story agent's prompt names each step's command.
+- `design/conventions/work-management.md`, `git.md`, their `template/root` copies, and `template/CHANGELOG.md`: design (criterion 3).
+- `design/adrs`: design. One call in place of ADR-0069's per-task cycle is a decision to record.
+- `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`: co-change (30, 36, and 19 of 96) and criterion 3.
+- Left out: `docs/operators/settings.md`, `flai/cmd/edit.go`, and `flai/internal/itemedit`, co-changed in 10 to 15% but not reached by the command.
+
+Forecast: flai gave 41m (89 s per unit of size over 21 done large improvement stories, times size 27). I raised it to 55m because the steps live in command code that must become callable, and a refused sync needs a git fixture. S-0217, which composed three commands across the CLI, MCP, and the host channel, took 68m. The delivery is flai's, 2026-10-07T00:46Z, moved by the added 14m.
+
+Cost of delay: 427 USD a week, against flai's 144.74. flai shares E-0017's 900 USD a week (the operator's 6h a cycle, TH-0171) by forecast duration. I shared it by the turns each story removes in the epic's evidence instead. This one removes about 2,900 of about 6,100, the most of any story.

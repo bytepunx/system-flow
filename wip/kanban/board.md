@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0221
   - S-0222
   - S-0224
   - S-0226
@@ -15,6 +14,7 @@ order:
   - S-0227
   - S-0229
   - S-0284
+  - S-0278
 ---
 
 # Board

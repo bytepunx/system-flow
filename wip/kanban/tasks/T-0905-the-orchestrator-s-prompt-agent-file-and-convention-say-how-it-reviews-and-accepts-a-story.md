@@ -3,16 +3,36 @@ id: T-0905
 type: task
 nature: feature
 title: The orchestrator's prompt, agent file, and convention say how it reviews and accepts a story
-status: backlog
+status: done
 parent: S-0221
 owner: alex
 created: 2026-10-05T04:47:45Z
-updated: 2026-10-05T04:47:45Z
-transitions: []
+updated: 2026-10-06T11:24:16Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:18:33Z
+    by: agent-S-0221
+  - to: in-progress
+    at: 2026-10-06T11:18:33Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:24:16Z
+    by: agent-S-0221
 stream: S-0221
 tags: [flai, template]
 touches: [flai/internal/harness, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-0898]
+usage:
+  source: log
+  seconds: 343
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 65
+      output: 306
+      cache_read: 2190811
+      cache_write: 82943
+      cost: 0.9782
 ---
 # T-0905 The orchestrator's prompt, agent file, and convention say how it reviews and accepts a story
 

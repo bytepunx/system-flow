@@ -3,15 +3,35 @@ id: T-0898
 type: task
 nature: feature
 title: "An ADR refines ADR-0032: the orchestrator accepts a story in review under accept_reviews, and the design says when"
-status: backlog
+status: done
 parent: S-0221
 owner: alex
 created: 2026-10-05T04:47:21Z
-updated: 2026-10-05T04:47:21Z
-transitions: []
+updated: 2026-10-06T11:18:01Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:16:19Z
+    by: agent-S-0221
+  - to: in-progress
+    at: 2026-10-06T11:16:20Z
+    by: agent-S-0221
+  - to: done
+    at: 2026-10-06T11:18:01Z
+    by: agent-S-0221
 stream: S-0221
 tags: [flai]
 touches: [design/adrs, design/system/workflow.md, design/system/strategic-agents.md]
+usage:
+  source: log
+  seconds: 101
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 223
+      cache_read: 2042978
+      cache_write: 28812
+      cost: 0.8913
 ---
 # T-0898 An ADR refines ADR-0032: the orchestrator accepts a story in review under accept_reviews, and the design says when
 

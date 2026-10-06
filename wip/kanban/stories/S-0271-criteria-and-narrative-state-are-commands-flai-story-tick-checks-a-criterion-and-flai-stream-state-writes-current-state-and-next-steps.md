@@ -7,15 +7,27 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-05T01:35:30Z
+updated: 2026-10-06T11:36:37Z
 transitions: []
-tags: []
+tags: [cli, mcp]
+topics: [automation, mcp, hostapi, conventions]
+touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/workitem/narrative.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/tooling.md, design/conventions/work-management.md, design/conventions/session-start.md, template/root/design/conventions/tooling.md, template/root/design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 draft: true
+cost_of_delay:
+  value: 16
+  by: planner-E-0017
+  at: 2026-10-06T11:36:20Z
+forecast:
+  duration: 33m
+  delivery: 2026-10-07T00:39:00Z
+  basis: "flai's 33m (89 s per unit over 21 done large improvement stories, size 22) stands; narrowed to flai stream state as proposed on the plan thread it would be smaller; 33rd in the pull order."
+  by: planner-E-0017
+  at: 2026-10-06T11:33:58Z
 ---
 # S-0271 Criteria and narrative state are commands: flai story tick checks a criterion and flai stream state writes Current state and Next steps
 
@@ -33,3 +45,21 @@ Agents tick acceptance criteria with `sed -i` on the story file (119 turns acros
 ## Notes
 
 From the epic's log classification. `flai task done` (its sibling story) may take `--tick <n>` once this exists.
+
+### Planning
+
+Ticking already exists, so this story's new work is `flai stream state`. ADR-0089 added `flai criteria tick` and `untick` (`flai/cmd/criteria.go`), the MCP tool `criteria_tick` (`flai/internal/mcpserver/criteria.go`), and the host method `item.criteria` (`flai/internal/hostapi/writes.go`). The dashboard's item page ticks through `flaiover/src/routes/api/items/[id]/criteria`. The harness prompt and `work-management.md` already send the agent to them. The plan thread proposes narrowing the goal and criteria to `flai stream state`. The words are left as the operator wrote them.
+
+Touches, none declared before. `flai touches suggest S-0271` was seeded with `flai/cmd/criteria.go` and `flai/cmd/stream.go`, which 10 commits changed. They are predicted for `flai stream state`:
+
+- `flai/cmd/stream.go`, `flai/cmd/stream_state_test.go`: layout. The stream command and a new test.
+- `flai/internal/workitem/narrative.go`: co-change (3 of 10). Narrative sections are parsed here.
+- `flai/internal/mcpserver/folder.go`, `flai/internal/hostapi/writes.go`, `writes_test.go`: layout. The `stream_state` tool and the `stream.state` method.
+- `flai/internal/harness/harness.go`, `harness_test.go`: design (criterion 3).
+- `design/conventions/tooling.md`, `work-management.md`, `session-start.md`, their `template/root` copies, and `template/CHANGELOG.md`: design. `tooling.md` says the summary sections are edited by hand. The other two say when to rewrite `## Current state` and `## Next steps`.
+- `design/system/agent-narrative.md`, `flai-cli.md`, `docs/users/flai.md`, `flai-reference.md`: co-change (2, 5, 3, and 2 of 10) and criterion 3.
+- Left out: `flai/cmd/criteria.go` and the flaiover item page, whose ticking already exists. Add them back if the operator keeps `flai story tick` as an alias.
+
+Forecast: flai gave 33m (89 s per unit over 21 done large improvement stories, times size 22), and it stands. Narrowed to `flai stream state` it would be smaller. The delivery, 2026-10-07T00:39Z, is flai's.
+
+Cost of delay: 16 USD a week, against flai's 86.84. This is E-0017's 900 USD a week shared by the turns each story removes. This one removes the 111 narrative edits. The 119 `sed` ticks were made before `criteria_tick` existed, so they are not counted.

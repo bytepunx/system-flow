@@ -7,15 +7,27 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:31Z
-updated: 2026-10-05T01:35:31Z
+updated: 2026-10-06T11:36:38Z
 transitions: []
-tags: []
+tags: [cli, mcp]
+topics: [automation, mcp, conventions]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/adrs, design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 draft: true
+cost_of_delay:
+  value: 96
+  by: planner-E-0017
+  at: 2026-10-06T11:36:16Z
+forecast:
+  duration: 50m
+  delivery: 2026-10-07T01:30:00Z
+  basis: "flai's 38m (size 25) raised to 50m for an end-to-end restart test through flai serve and a metrics change that design/system/metrics.md allows only with an ADR; 34th in the pull order."
+  by: planner-E-0017
+  at: 2026-10-06T11:33:59Z
 ---
 # S-0272 An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand
 
@@ -34,3 +46,20 @@ draft: true
 ## Notes
 
 From the epic's log classification: MCP wait_for_events 650 turns, 1,235 minutes, 38 stories.
+
+### Planning
+
+Touches, none declared before. `flai touches suggest S-0272` was seeded with `flai/internal/serve` and `flai/internal/mcpserver`, which 145 commits changed:
+
+- `flai/internal/mcpserver/server.go`, `server_test.go`: layout. `wait_for_events` and the server's instructions are defined here; S-0285 last changed its description.
+- `flai/internal/serve/restart.go`, `flai/internal/serve/restart_test.go`: layout (criterion 2). The restart on an answered thread lives in `restart.go`, and it has no test file of its own yet.
+- `flai/internal/harness/harness.go`, `harness_test.go`: layout. The story prompt says today to hold `wait_for_events` until the thread is answered, and also that flai starts the agent again if it ends.
+- `flai/internal/usage/log.go`, `flai/internal/metrics/waiting.go`, `waiting_test.go`, `flai/cmd/stats.go`, `flai/cmd/check_stats_test.go`, `design/system/metrics.md`: design (criterion 4). Empty wakes come from the run logs `usage` reads, and waits are computed in `waiting.go`.
+- `design/adrs`: design. `metrics.md` is the contract with the dashboard and changes only with an ADR.
+- `design/conventions/work-management.md`, `delegation.md`, their `template/root` copies, and `template/CHANGELOG.md`: layout. These two conventions name `wait_for_events` for a story's agent.
+- `design/system/flai-cli.md`, `docs/users/flai.md`, `flai-reference.md`: co-change (34, 35, and 23 of 145). There is no `design/system/flai-serve.md`; serve is described in `flai-cli.md`'s `flai serve` section.
+- Left out: `flai/internal/guard`. S-0285's refusal of `wait_for_events` while a sub-agent runs is untouched by an `end` answer. Also left out: `flai/cmd/serve_actions.go` and `flai/internal/hostapi`, co-changed but not reached.
+
+Forecast: flai gave 38m (89 s per unit over 21 done large improvement stories, times size 25). I raised it to 50m for an end-to-end restart test through serve and a metrics change that needs an ADR. S-0285, on the same tool and prompt, took 42m without either. The delivery is flai's, 2026-10-07T01:18Z, moved by the added 12m.
+
+Cost of delay: 96 USD a week, against flai's 131.58. This is E-0017's 900 USD a week shared by the turns each story removes. This one removes the 650 empty wakes.

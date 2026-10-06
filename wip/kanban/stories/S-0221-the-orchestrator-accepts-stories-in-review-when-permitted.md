@@ -3,23 +3,37 @@ id: S-0221
 type: story
 nature: feature
 title: The orchestrator accepts stories in review when permitted
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T11:14:34Z
+updated: 2026-10-06T11:39:32Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:22Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T11:15:01Z
+    by: agent-S-0221
 tags: [flai]
-touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs, flai/cmd/accept.go, flai/internal/guard, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/items, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/accept_orchestrator_test.go, flai/cmd/guard.go, flaiover/src/lib/components/Review.svelte.test.ts, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md]
+touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs, flai/cmd/accept.go, flai/internal/guard, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/items, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/accept_orchestrator_test.go, flai/cmd/guard.go, flaiover/src/lib/components/Review.svelte.test.ts, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [S-0218]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1180
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 376
+      output: 2118
+      cache_read: 17874493
+      cache_write: 574036
+      cost: 7.9237
 cost_of_delay:
   value: 88.82
   by: planner-S-0221
@@ -38,11 +52,11 @@ forecast:
 ADR-0032 and `item_move` make acceptance the operator's alone. With `accept_reviews` on, the orchestrator accepts a story in review when the verifier's run passed, every criterion is ticked, the diff stays within the story's touches, and no thread on it is open; otherwise it leaves it with a thread saying what is missing.
 
 ## Acceptance criteria
-- [ ] An ADR refines ADR-0032: acceptance by the orchestrator under `accept_reviews`, with the conditions above, recorded as `by: orchestrator`
-- [ ] The hostapi `accept.run` and `flai accept` take the orchestrator's identity when the permission is on; `flai guard` refuses otherwise
-- [ ] Before accepting it runs the acceptance preview and refuses on any blocker, and it never accepts a story whose criteria it cannot check against the diff
-- [ ] Each acceptance is logged with the evidence; the review page shows who accepted
-- [ ] Tests cover an acceptance, a refusal on an open thread, and the permission off
+- [x] An ADR refines ADR-0032: acceptance by the orchestrator under `accept_reviews`, with the conditions above, recorded as `by: orchestrator`
+- [x] The hostapi `accept.run` and `flai accept` take the orchestrator's identity when the permission is on; `flai guard` refuses otherwise
+- [x] Before accepting it runs the acceptance preview and refuses on any blocker, and it never accepts a story whose criteria it cannot check against the diff
+- [x] Each acceptance is logged with the evidence; the review page shows who accepted
+- [x] Tests cover an acceptance, a refusal on an open thread, and the permission off
 
 ## Tasks
 - T-0898 An ADR refines ADR-0032: the orchestrator accepts a story in review under accept_reviews, and the design says when
