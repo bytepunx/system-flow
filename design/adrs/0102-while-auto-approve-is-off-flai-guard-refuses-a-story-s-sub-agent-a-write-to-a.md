@@ -1,7 +1,7 @@
 ---
 id: ADR-0102
 title: "While auto-approve is off, flai guard refuses a story's sub-agent a write to a file in a .claude/ folder at once, and the story's agent makes that write itself"
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: []
 superseded_by: []
