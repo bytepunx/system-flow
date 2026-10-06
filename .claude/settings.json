@@ -19,6 +19,26 @@
           }
         ]
       }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$FLAI_STORY\" ] || exit 0; \"$CLAUDE_PROJECT_DIR\"/scripts/flai.sh guard >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$FLAI_STORY\" ] || exit 0; \"$CLAUDE_PROJECT_DIR\"/scripts/flai.sh guard >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
     ]
   }
 }
