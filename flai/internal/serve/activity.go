@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -24,9 +26,10 @@ import (
 // activity is also charged, that same share, to the item its run was started
 // for and every item above it, under usage.strategic (S-0225, ADR-0083); an
 // orchestrator's is split evenly between the work items its entry names and
-// charged to each and every item above it (S-0226, ADR-0095). An analyzer
-// run's activity names the report the run wrote, or says it wrote none, and
-// charges no item (S-0223).
+// charged to each and every item above it (S-0226, ADR-0095); an analyzer's
+// is split evenly between the issues its entry names and charged to each
+// (S-0227). An analyzer run's end names the report the run wrote, or says it
+// wrote none (S-0223).
 
 // ActivityLogs are the logs flai serve keeps of the runs of the strategic
 // agent kind in the project named key, oldest first.
@@ -48,10 +51,11 @@ type Logged struct {
 	Activity *workitem.Activity     `json:"activity"`
 	Logs     []string               `json:"logs"`
 	// Planned is the item a planner's activity was charged to (ADR-0083),
-	// and Shared the work items an orchestrator's activity named that each
-	// took a share of it (ADR-0095). Charged are the items whose usage the
-	// charge changed, each item charged first and then upward, each once.
-	// All are empty when nothing was charged.
+	// and Shared the work items an orchestrator's activity named, or the
+	// issues an analyzer's named, that each took a share of it (ADR-0095,
+	// S-0227). Charged are the items or issues whose usage the charge
+	// changed, each item charged first and then upward, each once. All are
+	// empty when nothing was charged.
 	Planned string   `json:"planned,omitempty"`
 	Shared  []string `json:"shared,omitempty"`
 	Charged []string `json:"charged,omitempty"`
@@ -59,10 +63,11 @@ type Logged struct {
 
 // LogActivity logs an activity of the strategic agent kind in the project at
 // root, named key, that ended at end, measured from the kind's logs, and
-// charges a planner's to the item it planned and an orchestrator's to the
-// work items it names. An activity outside any run flai serve logged, such
-// as a planner a person runs by hand, is logged with no seconds and no cost,
-// so that it is still recorded, and charges nothing.
+// charges a planner's to the item it planned, an orchestrator's to the work
+// items it names, and an analyzer's to the issues it names. An activity
+// outside any run flai serve logged, such as a planner a person runs by
+// hand, is logged with no seconds and no cost, so that it is still recorded,
+// and charges nothing.
 // When the charge fails the activity is logged all the same, and is returned
 // with the error.
 func LogActivity(d Dir, root, key, kind, summary string, items []string, end time.Time) (*Logged, error) {
@@ -235,8 +240,9 @@ func (m *activityMeasure) spent(s usage.Span) *usage.Usage {
 // charge charges u, what an activity in run spent, with the entry's
 // seconds, so that the items and the activity document are two views of one
 // spend: a planner's to the item it planned, an orchestrator's to the work
-// items its entry names. It charges nothing for another kind and for a u
-// that spent nothing. It notes what it charged on logged.
+// items its entry names, an analyzer's to the issues its entry names. It
+// charges nothing for a u that spent nothing. It notes what it charged on
+// logged.
 func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) error {
 	if u == nil || len(u.Models) == 0 {
 		return nil
@@ -248,6 +254,8 @@ func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) 
 		return m.chargePlanned(logged, run, c)
 	case workitem.ActivityOrchestrator:
 		return m.chargeNamed(logged, c)
+	case workitem.ActivityAnalyzer:
+		return m.chargeIssues(logged, c)
 	}
 	return nil
 }
@@ -326,6 +334,58 @@ func (m *activityMeasure) workItems(named []string) []string {
 		}
 	}
 	return items
+}
+
+// chargeIssues splits u evenly between the issues the entry names and
+// charges each share to its issue, under its usage.strategic (S-0227). It
+// charges nothing when the entry names no issue, and no work item the entry
+// names. A share that cannot be charged is left out, the others charged all
+// the same.
+func (m *activityMeasure) chargeIssues(logged *Logged, u *usage.Usage) error {
+	ids := m.issues(logged.Entry.Items)
+	if len(ids) == 0 {
+		return nil
+	}
+	var errs []error
+	for i, share := range u.Split(len(ids)) {
+		is, err := issues.ChargeStrategic(m.repo, ids[i], m.kind, share)
+		if is != nil {
+			logged.Shared = append(logged.Shared, is.ID)
+			logged.Charged = append(logged.Charged, is.ID)
+		}
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("the %s's activity was logged, but not all its cost could be charged to the issues it named: %w", m.kind, err)
+	}
+	return nil
+}
+
+// issueID is an issue's ID as workitem.CanonicalID writes it.
+var issueID = regexp.MustCompile(`^I-\d+$`)
+
+// issues are the issues named that exist, each once by its own ID, in the
+// order first named. Anything else named, such as a work item, a thread, or
+// an ID no issue has, is left out, as is an issue that cannot be read, since
+// the issues package does not tell it from one that does not exist.
+func (m *activityMeasure) issues(named []string) []string {
+	var ids []string
+	for _, id := range named {
+		id = workitem.CanonicalID(id)
+		if !issueID.MatchString(id) {
+			continue
+		}
+		is, err := issues.Get(m.repo, id)
+		if err != nil {
+			continue
+		}
+		if !slices.Contains(ids, is.ID) {
+			ids = append(ids, is.ID)
+		}
+	}
+	return ids
 }
 
 // planned is the item whose newest planner run kept its log in run's, or ""

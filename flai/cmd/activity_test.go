@@ -95,9 +95,9 @@ func TestTheMCPServerLogsAStrategicAgentsActivity(t *testing.T) {
 	}
 }
 
-// ADR-0083, ADR-0095: activity_log says what an activity's cost was charged
-// to: the item a planner planned, the items an orchestrator named, or the
-// kind's project strategic total.
+// ADR-0083, ADR-0095, S-0227: activity_log says what an activity's cost was
+// charged to: the item a planner planned, the items an orchestrator named,
+// the issues an analyzer named, or the kind's project strategic total.
 func TestActivityLogSaysWhatTheCostWasChargedTo(t *testing.T) {
 	logged := func(kind string, cost float64, planned string, shared ...string) *serve.Logged {
 		return &serve.Logged{Entry: workitem.ActivityEntry{Cost: cost}, Activity: &workitem.Activity{Kind: kind}, Planned: planned, Shared: shared}
@@ -114,6 +114,9 @@ func TestActivityLogSaysWhatTheCostWasChargedTo(t *testing.T) {
 		{"named", logged("orchestrator", 1, "", "T-0001", "S-0002"), nil, "T-0001,S-0002", "charged evenly to T-0001, S-0002 and the items above them"},
 		{"none named", logged("orchestrator", 1, ""), nil, "", "charged to no item: left in the orchestrator's project strategic total"},
 		{"analyzer", logged("analyzer", 1, ""), nil, "", "charged to no item: left in the analyzer's project strategic total"},
+		{"one issue", logged("analyzer", 1, "", "I-0001"), nil, "I-0001", "charged to I-0001, the issue it named"},
+		{"issues", logged("analyzer", 1, "", "I-0001", "I-0002"), nil, "I-0001,I-0002", "charged evenly to I-0001, I-0002, the issues it named"},
+		{"issue failed", logged("analyzer", 1, "", "I-0001"), errors.New("I-0002: locked"), "I-0001", "charged to I-0001, the issue it named; I-0002: locked; what was not charged is left in the project strategic total"},
 		{"nothing spent", logged("orchestrator", 0, ""), nil, "", ""},
 		{"failed", logged("orchestrator", 1, "", "T-0001"), errors.New("S-0002: locked"), "T-0001", "charged to T-0001 and the items above it; S-0002: locked; what was not charged is left in the project strategic total"},
 		{"failed, nothing spent", logged("planner", 0, ""), errors.New("locked"), "", "locked; what was not charged is left in the project strategic total"},

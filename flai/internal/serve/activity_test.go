@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -596,5 +597,138 @@ func TestAnOrchestratorActivityNamingNoWorkItemChargesNothing(t *testing.T) {
 		if u := lab.usageOf(id); u != nil {
 			t.Errorf("%s's usage = %+v, want none", id, u)
 		}
+	}
+}
+
+// filed records an open issue for each title, as the analyzer files a
+// finding, and returns their IDs.
+func (lab *activityLab) filed(titles ...string) []string {
+	lab.t.Helper()
+	var ids []string
+	for _, title := range titles {
+		is, err := issues.New(lab.repo, issues.NewOptions{Title: title, Class: "defect", Now: runStart})
+		if err != nil {
+			lab.t.Fatal(err)
+		}
+		ids = append(ids, is.ID)
+	}
+	return ids
+}
+
+// issueUsage is the issue's usage as it stands.
+func (lab *activityLab) issueUsage(id string) *usage.Usage {
+	lab.t.Helper()
+	is, err := issues.Get(lab.repo, id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return is.Usage
+}
+
+// analyzed is what the analyzer spent on the issue, as its usage says; nil
+// when nothing.
+func (lab *activityLab) analyzed(id string) *usage.Strategic {
+	lab.t.Helper()
+	u := lab.issueUsage(id)
+	if u == nil {
+		return nil
+	}
+	for i, s := range u.Strategic {
+		if s.Kind == workitem.ActivityAnalyzer {
+			return &u.Strategic[i]
+		}
+	}
+	return nil
+}
+
+// analyzerRun logs an analyzer run of two calls a minute apart that spent
+// 0.5 USD over 2 input, 300 output, and 2000 cache read tokens.
+func (lab *activityLab) analyzerRun() {
+	lab.log("t-analyzer-20261003T100000Z.log",
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 999),
+		streamFinal("Wrote design/analysis/2026-10-03-all.md.", 2000, 0.5))
+}
+
+// S-0227: an analyzer activity's usage is split evenly between the issues
+// it named, each once at whatever padding, and charged to each under its
+// analyzer entry; the work items and the thread it named take no share.
+func TestAnAnalyzerActivityIsChargedEvenlyToTheIssuesItNamed(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story := lab.planned()
+	ids := lab.filed("Slow review", "Flaky test")
+	lab.analyzerRun()
+	named := []string{story, "I-1", "TH-0001", epic, "i-0002", ids[0]}
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityAnalyzer, named)
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if strings.Join(got.Shared, ",") != strings.Join(ids, ",") || strings.Join(got.Charged, ",") != strings.Join(ids, ",") || got.Planned != "" {
+		t.Errorf("shared %v, charged %v, planned %q; want %v, the issues named, once each, in order", got.Shared, got.Charged, got.Planned, ids)
+	}
+	if got.Entry.Seconds != 61 || got.Entry.Cost != 0.5 {
+		t.Fatalf("entry = %+v, want 61 s and 0.5 USD", got.Entry)
+	}
+	// 2 input, 300 output, and 2000 cache read tokens, and 61 seconds, in
+	// two shares, the remainder to the first named
+	for i, w := range []struct{ tokens, seconds int64 }{{1 + 150 + 1000, 31}, {1 + 150 + 1000, 30}} {
+		s := lab.analyzed(ids[i])
+		if s == nil || s.Tokens() != w.tokens || s.Seconds != w.seconds || s.Cost() != 0.25 || !s.Estimated {
+			t.Errorf("%s's analyzer usage = %+v, want %d tokens over %d s, 0.25 USD, estimated", ids[i], s, w.tokens, w.seconds)
+		}
+		if u := lab.issueUsage(ids[i]); len(u.Strategic) != 1 || !u.Empty() {
+			t.Errorf("%s's usage = %+v, want the analyzer's entry alone", ids[i], u)
+		}
+	}
+	for _, id := range []string{story, epic} {
+		if u := lab.usageOf(id); u != nil {
+			t.Errorf("%s's usage = %+v, want none", id, u)
+		}
+	}
+}
+
+// S-0227, ADR-0095: an analyzer activity that names no issue charges no
+// issue and no work item; its cost is left to the analyzer's project
+// strategic total.
+func TestAnAnalyzerActivityNamingNoIssueChargesNothing(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story := lab.planned()
+	ids := lab.filed("Slow review")
+	lab.analyzerRun()
+	got, err := LogActivity(lab.dir, lab.root, "t", workitem.ActivityAnalyzer, "Read the metrics", []string{story, epic, "I-0009", "design/analysis/2026-10-03-all.md"}, runStart.Add(30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Entry.Cost == 0 {
+		t.Fatalf("entry = %+v, want a cost to leave uncharged", got.Entry)
+	}
+	if got.Shared != nil || got.Charged != nil || got.Planned != "" {
+		t.Errorf("charged %v, %v, %q, want nothing", got.Shared, got.Charged, got.Planned)
+	}
+	if u := lab.issueUsage(ids[0]); u != nil {
+		t.Errorf("%s's usage = %+v, want none", ids[0], u)
+	}
+	for _, id := range []string{story, epic} {
+		if u := lab.usageOf(id); u != nil {
+			t.Errorf("%s's usage = %+v, want none", id, u)
+		}
+	}
+}
+
+// S-0227: an ID no issue has takes no share, so the issue named beside it
+// is charged the whole.
+func TestAnUnknownIssueTakesNoShareOfAnAnalyzerActivity(t *testing.T) {
+	lab := newActivityLab(t)
+	ids := lab.filed("Slow review")
+	lab.analyzerRun()
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityAnalyzer, []string{"I-0042", ids[0]})
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if strings.Join(got.Shared, ",") != ids[0] || strings.Join(got.Charged, ",") != ids[0] {
+		t.Errorf("shared %v, charged %v, want %s alone", got.Shared, got.Charged, ids[0])
+	}
+	if s := lab.analyzed(ids[0]); s == nil || s.Tokens() != 2+300+2000 || s.Seconds != 61 || s.Cost() != 0.5 {
+		t.Errorf("%s's analyzer usage = %+v, want the whole 2302 tokens over 61 s, 0.5 USD", ids[0], s)
 	}
 }
