@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 topics: [cli, template]
 ---
@@ -80,6 +80,11 @@ orchestration:                               # optional (S-0217): how the ready 
     answer_threads: recommend                # off, recommend, or autonomous; default off
   agent:                                     # optional (S-0218): the orchestrator's agent, over agent above
     model: claude-sonnet-5
+claims:                                      # optional (S-0295): how stories' touches claim paths
+  shared:                                    # glob patterns of paths whose overlaps hold no story; flai shared edits them
+    - docs/users/flai.md
+    - design/adrs
+    - design/issues
 flai:                                        # optional (S-0181): what the project asks of the flai that reads it
   minimum: 1.27.0                            # the oldest flai release that may read it; publishing a flai release that changes the front-matter fields raises it
 ```
@@ -115,5 +120,11 @@ Rules:
 
 - `orchestration.agent` is the orchestrator's agent (S-0218): the same shape as `agent`, merged over it as `planning.agent` is (`Manifest.OrchestrationAgent`), so it names only what the orchestrator runs differently. Unset, the orchestrator runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-orchestrator).
 - `flai check` reports each thing wrong with `orchestration` as a `manifest.orchestration` error on its line: a policy or release policy outside its list, a threshold with neither figure or a negative one, a theme with neither or both of `epic` and `tag`, a key under `permissions` that names no permission, an `answer_threads` that is not `off`, `recommend`, or `autonomous`, and an `agent` that is not valid, under the name `orchestration.agent`. The operator sets every `orchestration` key by hand; no flai command changes them.
+- `claims.shared` lists the paths that many stories change in separate sections or new files, as glob patterns (S-0295, [ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)). An overlap whose narrower entry lies wholly inside a pattern holds no ready story, is not a `wip.overlap`, and is not told as a grown claim; the trial merge at sync and the notice at acceptance still report it ([workflow.md](workflow.md#branches-and-collisions-adr-0019)).
+  - Patterns are relative to the repository root and separated by `/`. `*` matches any characters within one segment, `**` zero or more whole segments, and `?` one character within a segment. A pattern with no glob character matches the path and everything below it, so `design/adrs` and `design/adrs/**` mean the same. A folder entry lies inside a pattern only when the whole folder does: `docs/users` is inside `docs/users/**` but not inside `docs/users/*.md`.
+  - `flai check` reports an empty pattern, an absolute path, a `..` segment, or a malformed glob as an error on its line. A pattern that is not valid frees nothing.
+  - Unset, the list is empty and every overlap holds. A project made from the template starts with `adrs` and `issues` under its design layout folder, `design/adrs` and `design/issues` by default. This project's list adds `docs/users/flai.md`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`, and `template/CHANGELOG.md`.
+  - `flai shared list`, `check`, `add`, and `remove` read and change it ([flai-cli.md](flai-cli.md#commands)), as do the host API's `settings.get`, `settings.shared_check`, and `settings.shared`, the dashboard's project settings, and the MCP tools `shared_paths` and `shared_paths_edit`. Add and remove rewrite only this key, keeping the file's other keys and comments. Only the operator's own session may change it: `flai guard` refuses every session flai serve starts.
+  - A flai older than S-0295 ignores the key, as the manifest is decoded leniently, and holds every overlap. The key is not a front-matter field, so it raises no `flai.minimum`.
 - `flai.minimum` is the oldest flai release, `X.Y.Z`, that may read the project (S-0181): one that knows every front-matter field its items, threads, and issues carry. `manifest.Load` refuses the manifest for a flai below it, so every command, `flai serve` (which leaves the project unserved and says why), and `flai mcp` stop before reading any item, with `manifest.TooOldError`: the version needed, the running one, and the upgrade (`flai host upgrade`, or `flai self-upgrade` where no flai host runs). A dev build (`dev`) is never below it, and one that is not a release version is a load error. Publishing a flai release raises it to that release when `flai/internal/workitem/front-matter-fields.txt` changed since the previous `flai/v*` tag (`release.RaiseMinimum`, in the publish commit, which warns that the host's flai must be upgraded once the release's binaries are built), so a release that adds a front-matter field raises it. A fields file the previous tag did not have raises nothing. A flai older than S-0181 does not know the key and ignores it, as the manifest is decoded leniently; what keeps such a flai reading is that it is told it is behind ([flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)). Unset, any flai reads the project.
-- The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent`, `flai.minimum`) and preserves comments where the YAML library allows it.
+- The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent`, `claims.shared`, `flai.minimum`) and preserves comments where the YAML library allows it.
