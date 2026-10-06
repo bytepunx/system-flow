@@ -57,6 +57,8 @@ type Manifest struct {
 	// Orchestration is the policy that orders the ready column and the
 	// policy that says when to release (S-0217).
 	Orchestration Orchestration `yaml:"orchestration,omitempty" json:"orchestration,omitzero"`
+	// Analysis is the analyzer's agent and schedule (S-0223).
+	Analysis Analysis `yaml:"analysis,omitempty" json:"analysis,omitzero"`
 	// Claims is how stories' touches claim paths: the shared paths whose
 	// overlaps hold no story (S-0295, ADR-0096). A pattern that is not valid
 	// does not stop the load; Claims.Errors names it, and it frees nothing.
@@ -225,14 +227,19 @@ func (p Planning) ReplanPolicy() (string, error) {
 
 // PlanSchedule is planning.schedule parsed: nil when it is empty.
 func (p Planning) PlanSchedule() (*cron.Schedule, error) {
-	s := strings.TrimSpace(p.Schedule)
+	return parseSchedule("planning", p.Schedule)
+}
+
+// parseSchedule is the schedule key under block parsed: nil when it is empty.
+func parseSchedule(block, spec string) (*cron.Schedule, error) {
+	s := strings.TrimSpace(spec)
 	if s == "" {
 		return nil, nil
 	}
 	sched, err := cron.Parse(s)
 	if err != nil {
 		// cron's refusals begin with the schedule quoted: name the key.
-		return nil, fmt.Errorf("planning.%w", err)
+		return nil, fmt.Errorf("%s.%w", block, err)
 	}
 	return &sched, nil
 }
@@ -267,6 +274,39 @@ func (p Planning) Errors() []string {
 // default (ADR-0037, ADR-0065). Nil when neither sets anything.
 func (m Manifest) PlanningAgent() *Agent {
 	return m.Agent.With(m.Planning.Agent)
+}
+
+// Analysis is the project's say about the analyzer: the agent it runs as
+// and when flai serve runs it (S-0223).
+type Analysis struct {
+	// Agent is the analyzer's agent over the project's: what it sets wins,
+	// and what it leaves out is the project's agent's.
+	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Schedule is when flai serve runs the analyzer: a five-field cron
+	// expression in UTC or daily; empty means no schedule.
+	Schedule string `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+}
+
+// AnalysisSchedule is analysis.schedule parsed: nil when it is empty.
+func (a Analysis) AnalysisSchedule() (*cron.Schedule, error) {
+	return parseSchedule("analysis", a.Schedule)
+}
+
+// Errors are what is wrong with the analysis settings, one sentence each;
+// none when they are valid.
+func (a Analysis) Errors() []string {
+	var errs []string
+	if _, err := a.AnalysisSchedule(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	return append(errs, a.Agent.problems("analysis.agent")...)
+}
+
+// AnalysisAgent is the agent the analyzer is started with: analysis.agent
+// merged over the project's agent, as PlanningAgent is. Nil when neither
+// sets anything.
+func (m Manifest) AnalysisAgent() *Agent {
+	return m.Agent.With(m.Analysis.Agent)
 }
 
 // Orchestration is the project's say about the order of the ready column and

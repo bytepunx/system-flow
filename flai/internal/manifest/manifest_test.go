@@ -495,6 +495,117 @@ func TestPlanningAgent(t *testing.T) {
 	}
 }
 
+// S-0223: analysis.schedule reads from the manifest as planning.schedule
+// does; unset, there is no schedule and no analysis.agent, and a schedule
+// that does not parse, or never comes round, is an error naming the key.
+func TestAnalysisSchedule(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nanalysis:\n  schedule: \"0 6 * * 1\"\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := m.Analysis.AnalysisSchedule()
+	if err != nil || s == nil || s.String() != "0 6 * * 1" {
+		t.Fatalf("schedule %v, %v", s, err)
+	}
+	at := time.Date(2026, 10, 4, 9, 10, 0, 0, time.UTC) // a Sunday
+	if next := s.Next(at); !next.Equal(time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)) {
+		t.Errorf("next after %v: %v", at, next)
+	}
+	if errs := m.Analysis.Errors(); len(errs) != 0 {
+		t.Errorf("valid analysis: %v", errs)
+	}
+	if ps, err := m.Planning.PlanSchedule(); err != nil || ps != nil {
+		t.Errorf("analysis.schedule reached the planner: %v, %v", ps, err)
+	}
+
+	var unset Analysis
+	if s, err := unset.AnalysisSchedule(); err != nil || s != nil || unset.Agent != nil || len(unset.Errors()) != 0 {
+		t.Errorf("unset: schedule %v, %v, agent %v, %v", s, err, unset.Agent, unset.Errors())
+	}
+	if s, err := (Analysis{Schedule: "  "}).AnalysisSchedule(); err != nil || s != nil {
+		t.Errorf("blank schedule %v, %v", s, err)
+	}
+	s, err = (Analysis{Schedule: "daily"}).AnalysisSchedule()
+	if err != nil || s == nil || s.String() != "daily" {
+		t.Fatalf("daily: %v, %v", s, err)
+	}
+
+	for _, c := range []struct {
+		a    Analysis
+		want string
+	}{
+		{Analysis{Schedule: "61 * * * *"}, `analysis.schedule "61 * * * *": the minute "61" is outside 0-59`},
+		{Analysis{Schedule: "weekly"}, `analysis.schedule "weekly" has 1 fields, not five`},
+		{Analysis{Schedule: "0 0 31 2 *"}, `analysis.schedule "0 0 31 2 *" never comes round`},
+	} {
+		got := c.a.Errors()
+		if len(got) != 1 || !strings.Contains(got[0], c.want) {
+			t.Errorf("%+v: got %q, want one error saying %q", c.a, got, c.want)
+		}
+		if s, err := c.a.AnalysisSchedule(); err == nil || s != nil {
+			t.Errorf("%+v: a bad schedule is accepted: %v", c.a, s)
+		}
+	}
+}
+
+// S-0223: analysis.agent reads as agent does, is checked as agent is under
+// its own name, and the analyzer's agent is it merged over the project's
+// agent, field by field, config key by key, and role by role.
+func TestAnalysisAgent(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  config:\n    effort: high\n    max_budget_usd: \"10\"\n  roles:\n    explore:\n      model: haiku\n" +
+		"analysis:\n  schedule: daily\n  agent:\n    model: claude-sonnet-5\n    config:\n      effort: medium\n    roles:\n      verify:\n        model: sonnet\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := m.Analysis.Errors(); len(errs) != 0 {
+		t.Errorf("valid analysis.agent: %v", errs)
+	}
+	got := m.AnalysisAgent()
+	if s := got.String(); s != "claude-code, claude-sonnet-5, effort=medium, max_budget_usd=10; explore: haiku; verify: sonnet" {
+		t.Errorf("analyzer's agent: %s", s)
+	}
+	if m.Agent.Model != "claude-opus-5-5" || m.Agent.Config["effort"] != "high" || len(m.Agent.Roles) != 1 {
+		t.Errorf("the project's agent was changed by the merge: %+v", m.Agent)
+	}
+	if a := m.PlanningAgent(); !a.Same(m.Agent) {
+		t.Errorf("analysis.agent reached the planner: %v", a)
+	}
+	if a := (Manifest{Agent: m.Agent}).AnalysisAgent(); !a.Same(m.Agent) {
+		t.Errorf("no analysis.agent: %v", a)
+	}
+	if a := (Manifest{Analysis: Analysis{Agent: m.Analysis.Agent}}).AnalysisAgent(); !a.Same(m.Analysis.Agent) {
+		t.Errorf("no project agent: %v", a)
+	}
+	if a := (Manifest{}).AnalysisAgent(); a != nil {
+		t.Errorf("neither: %v", a)
+	}
+	for _, c := range []struct {
+		a    *Agent
+		want string
+	}{
+		{&Agent{Harness: "Claude Code"}, `analysis.agent harness "Claude Code" is not a name such as claude-code`},
+		{&Agent{Model: "has space"}, `analysis.agent model "has space" is not a model ID`},
+		{&Agent{Config: map[string]string{"k": "two\nlines"}}, "analysis.agent config k spans lines"},
+		{&Agent{Roles: map[string]Role{"verify": {}}}, "analysis.agent role verify sets nothing"},
+		{&Agent{Roles: map[string]Role{"verify": {Model: "has space"}}}, `analysis.agent role verify model "has space"`},
+	} {
+		if got := strings.Join((Analysis{Agent: c.a}).Errors(), "; "); !strings.Contains(got, c.want) {
+			t.Errorf("%+v: got %q, want %q", c.a, got, c.want)
+		}
+	}
+}
+
 // S-0181: a flai below the manifest's minimum says so, naming the version
 // needed and the upgrade, before anything else is read; a dev build and a
 // release at or above it read the project.

@@ -216,6 +216,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.orchestration", mf, keyLine(mf, "orchestration"), "%s", msg)
 	}
+	for _, msg := range m.Analysis.Errors() {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.analysis", mf, keyLine(mf, "analysis"), "%s", msg)
+	}
 	c.sharedPatterns()
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
