@@ -76,7 +76,7 @@ What the planner and the orchestrator spent on an item, and the analyzer through
 
 An item with `usage` that carries only `strategic` has `items[].usage` with `tokens`, `cost`, and `seconds` 0 and `models: []`.
 
-Since S-0227 an analyzer activity is split evenly between the issues it named and charged to each, under the issue's own `usage.strategic`, in the shape an item's has. When `flai issue story` makes a story from an issue, the story carries the issue's entries, and so does its epic; the issue keeps them. `flai stats` counts each spend once in its totals:
+Since S-0227 ([ADR-0100](../adrs/0100-an-analyzer-activity-s-usage-is-charged-evenly-to-the-issues-it-names-under.md)) an analyzer activity is split evenly between the issues it named and charged to each, under the issue's own `usage.strategic`, in the shape an item's has. When `flai issue story` makes a story from an issue, the story carries the issue's entries, and so does its epic; the issue keeps them. `flai stats` counts each spend once in its totals:
 
 - An issue's usage counts while no story was made from it.
 - Once a story was made from it, the story's entry counts, under the items, and the issue's does not.

@@ -31,6 +31,18 @@ cost: 5m                   # average wall-clock per occurrence, Go duration
 first_reported: 2026-09-15T17:00:00Z
 last_reported: 2026-09-15T20:10:00Z
 updated: 2026-09-15T20:10:00Z
+usage:                     # optional: what strategic agents spent on it
+  strategic:
+    - kind: analyzer
+      seconds: 61
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1200
+          output: 900
+          cache_read: 40000
+          cache_write: 3000
+          cost: 0.25
 ---
 
 # I-0001 golangci-lint on the host is v1 but the config is v2
@@ -66,6 +78,8 @@ Story S-0009 remediates this issue, created from it at 2026-09-16T09:00:00Z.
 
 An issue names the analysis reports that found it (S-0224). `--report design/analysis/<file>.md`, on `flai issue new` or `bump`, puts a `Report: <path>.` line in the instance it records and adds `Found by the analysis in [<file>](../analysis/<file>).` to `## Remediation`, once per report, adding the section when the issue has none. The path is from the project root and must be a markdown file under `design/analysis/` other than its `README.md`; any other is refused and nothing is written. The report need not be written yet, since the analyzer files its issues while it writes it.
 
+`usage` is optional and carries `strategic` alone: one entry per strategic agent kind, in the shape an item's has ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)), and no agents' figures of its own (S-0227, [ADR-0100](../adrs/0100-an-analyzer-activity-s-usage-is-charged-evenly-to-the-issues-it-names-under.md)). flai writes it; an issue without it has no `usage` key. An analyzer activity's usage is split evenly between the issues it names and added under each one's `analyzer` entry: at the end of an analyzer run, the issues, open or closed, that name the report it wrote, by an instance's `Report:` line or a Remediation link; through `activity_log`, the issues the call names. An activity that names no issue is left in the analyzer's project strategic total ([strategic-agents.md](strategic-agents.md#what-the-analyzers-run-costs-s-0227)).
+
 | Class | Meaning |
 |-------|---------|
 | `defect` | Something is wrong and produced a wrong result |
@@ -92,6 +106,7 @@ The file is generated and committed, so two stories that each record or close an
   - `time_lost_per_cycle` is the issue's `cost` × `count` ÷ the cycles of `planning.cycle` (default `168h`) since `first_reported`, to a tenth and at least one, rounded to the minute (to the second under a minute). A `cost` that is not a duration longer than zero, or a `first_reported` that is not a timestamp (counted as one cycle), is said in the Notes.
   - `revenue_per_week`, `penalty_per_week`, and `time_lost_per_cycle` from the issue's `## Impact`, as the analyzer's `flai issue new` and `bump` wrote them, a bump's figure in place of the one it replaced. An Impact time lost takes precedence over the derived one. A value that does not parse is left out.
   - With no inputs, the story has no `cost_of_delay`. Its `## Notes` say how each input was set and what was left out.
+- It carries the issue's strategic usage (S-0227): each of the issue's `usage.strategic` entries is charged to the story under its kind, and to every item above it, up to its epic, as a planner's charge is summed, and its Notes say what was carried. The issue keeps its own entries. `flai stats` counts them once: on the issue until a story is made from it, as the line below names it, then on the story ([metrics.md](metrics.md#strategic-usage)). A story that merely links the issue carries nothing.
 - The issue's `## Remediation` then gets a last paragraph, `Story S-nnnn remediates this issue, created from it at <ts>.`, and its `updated` is set; the section is added when the issue has none. The story is named by ID, because its file moves to `wip/archive/` on acceptance. With `--autocommit` the issue is committed with the story and its epic, so the dashboard's acceptance flow leaves nothing uncommitted; with `--story` the issue is in that story's worktree and is that story's to commit. MCP `issue_story` commits neither.
 - `flai check` warns with `issues.no-story` about an open issue first reported longer ago than `issues.story_after` in `system-flow.yaml` (a Go duration, `168h` when unset, `0` turns it off) that no open story links. Age, rather than the recording story, finds the issues from before instances named their story.
 - Remediation is a story with nature `remediation` or `improvement` that closes the issue.
