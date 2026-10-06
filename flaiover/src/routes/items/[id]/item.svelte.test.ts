@@ -644,6 +644,28 @@ describe('the item page (S-0154)', () => {
 			expect(button()).toBeNull();
 		});
 
+		// S-0300: an epic's page plans the epic, and only while the epic is open
+		it("is on an open epic's page and asks the planner for the epic, but not on a done or archived epic's", async () => {
+			await show({ ...epic, status: 'in-progress' });
+			expect(button()!.textContent).toBe('Plan');
+			button()!.click();
+			await settle();
+			expect(
+				api.mock.calls.some(
+					([u, init]) => u === '/api/items/E-0016/plan' && init?.method === 'POST'
+				)
+			).toBe(true);
+			again();
+			for (const item of [
+				{ ...epic, status: 'done' },
+				{ ...epic, status: 'in-progress', archived: true }
+			]) {
+				await show(item);
+				expect(button()).toBeNull();
+				again();
+			}
+		});
+
 		it("says in the page's notice why flai refused", async () => {
 			await show(epic);
 			button()!.click();
