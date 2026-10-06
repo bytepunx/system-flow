@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -43,12 +44,69 @@ func TestStrategicReportsTotalsAndTheWindowsEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `[{"kind":"planner","cost":0.6213,"seconds":900,"activities":3,"last_run":"2026-08-31T18:00:00Z","log":[` +
+	want := `[{"kind":"planner","cost":0.6213,"seconds":900,"activities":3,"last_run":"2026-08-31T18:00:00Z",` +
+		`"items":{"cost":0,"seconds":0},"project":{"cost":0.6213,"seconds":900},"log":[` +
 		`{"at":"2026-08-02T12:00:00Z","seconds":100,"cost":0.1,"estimated":true,"items":[]},` +
 		`{"at":"2026-08-31T18:00:00Z","seconds":723,"cost":0.4213,"items":["E-0016","S-0230"]}]},` +
-		`{"kind":"analyzer","cost":0,"seconds":0,"activities":0,"last_run":"","log":[]}]`
+		`{"kind":"analyzer","cost":0,"seconds":0,"activities":0,"last_run":"","items":{"cost":0,"seconds":0},"project":{"cost":0,"seconds":0},"log":[]}]`
 	if string(data) != want {
 		t.Errorf("json =\n%s\nwant\n%s", data, want)
+	}
+}
+
+// ADR-0095: what the items carry of each kind is the sum over the items at
+// the top of the hierarchy, archived ones included, since each charge is on
+// its item and every item above it; the rest of the document's totals is the
+// project strategic total, never below zero.
+func TestStrategicSplitsTheTotalsBetweenTheItemsAndTheProject(t *testing.T) {
+	charged := func(id, typ, parent string, archived bool, s ...usage.Strategic) *workitem.Item {
+		return &workitem.Item{ID: id, Type: typ, Parent: parent, Status: workitem.InProgress, Created: "2026-08-01T00:00:00Z", Archived: archived,
+			Usage: &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: s}}
+	}
+	use := func(kind string, seconds int64, costs ...float64) usage.Strategic {
+		s := usage.Strategic{Kind: kind, Seconds: seconds, Estimated: true}
+		for i, c := range costs {
+			s.Models = append(s.Models, usage.Model{Model: fmt.Sprintf("m%d", i), Output: 10, Cost: c})
+		}
+		return s
+	}
+	items := []*workitem.Item{
+		// an orchestrator activity named T-0001 ($0.1, 10 s) and another
+		// S-0001 ($0.2, 20 s): each charge is on its item and every item
+		// above it
+		charged("E-0001", workitem.Epic, "", false, use("orchestrator", 30, 0.25, 0.05)),
+		charged("S-0001", workitem.Story, "E-0001", false, use("orchestrator", 30, 0.3)),
+		charged("T-0001", workitem.Task, "S-0001", false, use("orchestrator", 10, 0.1)),
+		// a story with no epic, archived, planned and decided on
+		charged("S-0002", workitem.Story, "", true, use("planner", 40, 0.4), use("orchestrator", 5, 0.05)),
+		// a task whose story is not among the items is at the top
+		charged("T-0002", workitem.Task, "S-0099", false, use("orchestrator", 1, 0.01)),
+		{ID: "S-0003", Type: workitem.Story, Status: workitem.Backlog, Created: "2026-08-01T00:00:00Z"},
+	}
+	docs := []*workitem.Activity{
+		{Kind: workitem.ActivityPlanner, AccruedCost: 0.3, AccruedSeconds: 30},
+		{Kind: workitem.ActivityOrchestrator, AccruedCost: 0.5, AccruedSeconds: 50},
+		{Kind: workitem.ActivityAnalyzer, AccruedCost: 0.05, AccruedSeconds: 60},
+	}
+	rep := Compute(items, Options{Now: now, Activities: docs})
+	type split struct{ items, project StrategicAmount }
+	want := map[string]split{
+		// the items carry more than the document holds: the project is none
+		"planner":      {StrategicAmount{Cost: 0.4, Seconds: 40}, StrategicAmount{}},
+		"orchestrator": {StrategicAmount{Cost: 0.36, Seconds: 36}, StrategicAmount{Cost: 0.14, Seconds: 14}},
+		// no charges: all of it is the project's
+		"analyzer": {StrategicAmount{}, StrategicAmount{Cost: 0.05, Seconds: 60}},
+	}
+	if len(rep.Strategic) != len(docs) {
+		t.Fatalf("strategic = %+v", rep.Strategic)
+	}
+	for _, s := range rep.Strategic {
+		if w := want[s.Kind]; s.Items != w.items || s.Project != w.project {
+			t.Errorf("%s: items %+v project %+v, want %+v %+v", s.Kind, s.Items, s.Project, w.items, w.project)
+		}
+	}
+	if o := rep.Strategic[1]; round4(o.Items.Cost+o.Project.Cost) != o.Cost || o.Items.Seconds+o.Project.Seconds != o.Seconds {
+		t.Errorf("the orchestrator's items and project do not add up to its totals: %+v", o)
 	}
 }
 

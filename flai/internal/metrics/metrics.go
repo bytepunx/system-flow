@@ -252,7 +252,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
 	rep.Usage.Strategic = strategicTotals(items, start, opt.Now)
 	rep.Usage.CostPerAgentHour = rate
-	rep.Strategic = strategic(opt.Activities, start, opt.Now)
+	rep.Strategic = strategic(opt.Activities, all, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)

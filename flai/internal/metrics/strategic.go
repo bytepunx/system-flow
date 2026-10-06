@@ -7,7 +7,8 @@ import (
 )
 
 // StrategicAgent is a strategic agent's activity document as flai stats
-// reports it: its totals as written, all time, and its log entries in the
+// reports it: its totals as written, all time, what of them the items carry
+// and the project strategic total (ADR-0095), and its log entries in the
 // window (ADR-0079).
 type StrategicAgent struct {
 	Kind       string           `json:"kind"`
@@ -15,7 +16,15 @@ type StrategicAgent struct {
 	Seconds    int64            `json:"seconds"`
 	Activities int              `json:"activities"`
 	LastRun    string           `json:"last_run"`
+	Items      StrategicAmount  `json:"items"`
+	Project    StrategicAmount  `json:"project"`
 	Log        []StrategicEntry `json:"log"`
+}
+
+// StrategicAmount is a cost and a time a strategic agent spent.
+type StrategicAmount struct {
+	Cost    float64 `json:"cost"`
+	Seconds int64   `json:"seconds"`
 }
 
 // StrategicEntry is one activity logged in the window.
@@ -115,12 +124,17 @@ func strategicDays(docs []*workitem.Activity, items []*workitem.Item, per map[st
 	return out
 }
 
-// strategic reports each activity document, in the order given, with the
-// entries that ended from start to now.
-func strategic(docs []*workitem.Activity, start, now time.Time) []StrategicAgent {
+// strategic reports each activity document, in the order given, with what
+// of its totals the items carry, the rest as the project strategic total,
+// and the entries that ended from start to now.
+func strategic(docs []*workitem.Activity, items []*workitem.Item, start, now time.Time) []StrategicAgent {
+	carried := onItems(items)
 	out := make([]StrategicAgent, 0, len(docs))
 	for _, d := range docs {
 		s := StrategicAgent{Kind: d.Kind, Cost: d.AccruedCost, Seconds: d.AccruedSeconds, Activities: d.TasksCompleted, LastRun: d.LastRun, Log: []StrategicEntry{}}
+		on := carried[d.Kind]
+		s.Items = StrategicAmount{Cost: round4(on.Cost), Seconds: on.Seconds}
+		s.Project = StrategicAmount{Cost: max(0, round4(d.AccruedCost-s.Items.Cost)), Seconds: max(0, d.AccruedSeconds-on.Seconds)}
 		for _, e := range d.Entries {
 			if e.At.Before(start) || e.At.After(now) {
 				continue
@@ -132,6 +146,29 @@ func strategic(docs []*workitem.Activity, start, now time.Time) []StrategicAgent
 			s.Log = append(s.Log, StrategicEntry{At: e.At.UTC().Format(workitem.TimeFormat), Seconds: e.Seconds, Cost: e.Cost, Estimated: e.Estimated, Items: items})
 		}
 		out = append(out, s)
+	}
+	return out
+}
+
+// onItems is what the items carry of each strategic agent kind's spending:
+// the sum over the items at the top of the hierarchy, those with no parent
+// among them, which carry every charge made below them (ADR-0095).
+func onItems(items []*workitem.Item) map[string]StrategicAmount {
+	ids := map[string]bool{}
+	for _, it := range items {
+		ids[workitem.CanonicalID(it.ID)] = true
+	}
+	out := map[string]StrategicAmount{}
+	for _, it := range items {
+		if it.Usage == nil || (it.Parent != "" && ids[workitem.CanonicalID(it.Parent)]) {
+			continue
+		}
+		for _, s := range it.Usage.Strategic {
+			a := out[s.Kind]
+			a.Cost += s.Cost()
+			a.Seconds += s.Seconds
+			out[s.Kind] = a
+		}
 	}
 	return out
 }

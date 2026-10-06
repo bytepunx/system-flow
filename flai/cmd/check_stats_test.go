@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -188,6 +189,22 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// a story the planner planned carries what its run spent on it, and the
+	// rest of the planner's totals is its project total (ADR-0095)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planned, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Planned", Owner: "t", Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	planned.Usage = &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: []usage.Strategic{
+		{Kind: "planner", Seconds: 723, Estimated: true, Models: []usage.Model{{Model: "claude-opus-5-5", Output: 1000, Cost: 0.4213}}},
+	}}
+	if err := repo.Save(planned); err != nil {
+		t.Fatal(err)
+	}
 	write(&workitem.Activity{Kind: workitem.ActivityPlanner, AccruedCost: 0.5213, AccruedSeconds: 823, TasksCompleted: 2, LastRun: "2026-10-03T18:00:00Z",
 		Entries: []workitem.ActivityEntry{
 			{At: time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), Summary: "Long ago", Seconds: 100, Cost: 0.1},
@@ -196,7 +213,9 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 	write(&workitem.Activity{Kind: workitem.ActivityAnalyzer, AccruedCost: 0.05, AccruedSeconds: 60, TasksCompleted: 1, LastRun: "2026-10-01T08:00:00Z",
 		Entries: []workitem.ActivityEntry{{At: time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC), Summary: "Read the issues", Seconds: 60, Cost: 0.05}}})
 	out, errOut, code = a("stats")
-	want := "\nstrategic agents (all time):\n  planner: 2 activities, 0.5213 USD, 823 s, last 2026-10-03T18:00:00Z\n  analyzer: 1 activity, 0.0500 USD, 60 s, last 2026-10-01T08:00:00Z\n"
+	want := "\nstrategic agents (all time):\n" +
+		"  planner: 2 activities, 0.5213 USD, 823 s (on items 0.4213 USD, 723 s; project 0.1000 USD, 100 s), last 2026-10-03T18:00:00Z\n" +
+		"  analyzer: 1 activity, 0.0500 USD, 60 s (on items 0.0000 USD, 0 s; project 0.0500 USD, 60 s), last 2026-10-01T08:00:00Z\n"
 	if code != 0 || !strings.Contains(out, want) || strings.Contains(out, "orchestrator") {
 		t.Errorf("text: %d %s\n%s", code, errOut, out)
 	}
@@ -207,7 +226,15 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 			Cost       float64 `json:"cost"`
 			Seconds    int64   `json:"seconds"`
 			Activities int     `json:"activities"`
-			Log        []struct {
+			Items      struct {
+				Cost    float64 `json:"cost"`
+				Seconds int64   `json:"seconds"`
+			} `json:"items"`
+			Project struct {
+				Cost    float64 `json:"cost"`
+				Seconds int64   `json:"seconds"`
+			} `json:"project"`
+			Log []struct {
 				At        string   `json:"at"`
 				Estimated bool     `json:"estimated"`
 				Items     []string `json:"items"`
@@ -220,6 +247,10 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 	if s := rep.Strategic; len(s) != 2 || s[0].Kind != "planner" || s[0].Seconds != 823 || len(s[0].Log) != 1 || s[0].Log[0].At != "2026-10-03T18:00:00Z" ||
 		!s[0].Log[0].Estimated || len(s[0].Log[0].Items) != 2 || s[1].Kind != "analyzer" || s[1].Activities != 1 || len(s[1].Log) != 1 {
 		t.Errorf("strategic = %+v", s)
+	}
+	if s := rep.Strategic; len(s) == 2 && (s[0].Items.Cost != 0.4213 || s[0].Items.Seconds != 723 || s[0].Project.Cost != 0.1 || s[0].Project.Seconds != 100 ||
+		s[1].Items.Cost != 0 || s[1].Project.Cost != 0.05 || s[1].Project.Seconds != 60) {
+		t.Errorf("items and project = %+v", s)
 	}
 	if err := os.WriteFile(filepath.Join(root, "wip", "agents", "orchestrator.md"), []byte("---\nkind: orchestrator\nmood: busy\n---\n"), 0o644); err != nil {
 		t.Fatal(err)

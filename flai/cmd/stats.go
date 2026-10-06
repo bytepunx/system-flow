@@ -248,7 +248,8 @@ func printStrategicDays(a *app, rep *metrics.Report) {
 }
 
 // printStrategic prints each strategic agent's totals as its activity
-// document holds them, all time (ADR-0079).
+// document holds them, all time (ADR-0079), with what of them the items carry
+// and the project strategic total (ADR-0095).
 func printStrategic(a *app, agents []metrics.StrategicAgent) {
 	if len(agents) == 0 {
 		return
@@ -263,7 +264,8 @@ func printStrategic(a *app, agents []metrics.StrategicAgent) {
 		if s.LastRun != "" {
 			last = ", last " + s.LastRun
 		}
-		fmt.Fprintf(a.out, "  %s: %d %s, %.4f USD, %d s%s\n", s.Kind, s.Activities, noun, s.Cost, s.Seconds, last)
+		fmt.Fprintf(a.out, "  %s: %d %s, %.4f USD, %d s (on items %.4f USD, %d s; project %.4f USD, %d s)%s\n",
+			s.Kind, s.Activities, noun, s.Cost, s.Seconds, s.Items.Cost, s.Items.Seconds, s.Project.Cost, s.Project.Seconds, last)
 	}
 }
 

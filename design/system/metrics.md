@@ -67,7 +67,7 @@ Aggregates cover the items of the report's type that entered `done` in the windo
 
 ### Strategic usage
 
-What the planner, and later the orchestrator and the analyzer, spent on an item is charged to it and to the items above it when the activity is logged ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)). An entry's tokens and cost are those of its `models`, as an agent model's are.
+What the planner, the orchestrator, and later the analyzer, spent on an item is charged to it and to the items above it when the activity is logged: a planner activity to the item it planned ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)), an orchestrator activity split evenly between the work items it named ([ADR-0095](../adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md)). An entry's tokens and cost are those of its `models`, as an agent model's are.
 
 | Value | Definition |
 |-------|------------|
@@ -114,9 +114,9 @@ Each type over the window, and each point of its series, also has `strategic`: `
 
 ## Strategic agents (S-0206)
 
-What the planner, the orchestrator, and the analyzer spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). A planner activity's cost is also charged to the item it planned and the items above it, under their `usage.strategic` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [Strategic usage](#strategic-usage)): the activity documents and the items are two views of one spend, and nothing adds them together.
+What the planner, the orchestrator, and the analyzer spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). A planner activity's cost is also charged to the item it planned and the items above it, and an orchestrator activity's split evenly between the work items it named and charged to each and the items above it, under their `usage.strategic` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [ADR-0095](../adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md), [Strategic usage](#strategic-usage)): the activity documents and the items are two views of one spend, never added together. What of a document's totals no item carries is its kind's project strategic total: the activities that named no work item, the planner's with no planned item, those logged before their kind was charged to items, the analyzer's for now, and any charge that failed. Each entry splits its totals between `items` and `project`, so that the two add up to the document's, to a hundredth of a cent; the project total is worked out here, not written anywhere.
 
-`flai stats --json` carries them under `strategic`, a list with one entry per document that exists, in the order planner, orchestrator, analyzer, and an empty list when none does. The totals are the document's front matter as written, over all time, not the window's; only `log` is windowed. `flai stats` prints the totals, one line per agent, and nothing when there are no documents. An unreadable document stops `flai stats` with its path and what is wrong, as an unreadable item does.
+`flai stats --json` carries them under `strategic`, a list with one entry per document that exists, in the order planner, orchestrator, analyzer, and an empty list when none does. The totals are the document's front matter as written, over all time, not the window's; only `log` is windowed. `flai stats` prints the totals, one line per agent with what the items carry and the project total beside them, and nothing when there are no documents. An unreadable document stops `flai stats` with its path and what is wrong, as an unreadable item does.
 
 | Field | Source | Precision |
 |-------|--------|-----------|
@@ -125,6 +125,8 @@ What the planner, the orchestrator, and the analyzer spent, from their activity 
 | `seconds` | `accrued_seconds`, wall-clock | Whole seconds |
 | `activities` | `tasks_completed`, the number of activities logged | |
 | `last_run` | `last_run`, when the newest activity ended; `""` before the first | UTC, to the second |
+| `items.cost`, `items.seconds` | What the items carry of the kind: the sum, over the items at the top of the hierarchy, those with no parent or a parent that does not exist, archived ones included, of the cost of their `usage.strategic` entry of the kind, its models' costs summed, and of its `seconds`. Each charge is on its item and every item above it, so the items at the top carry every charge once. Zeros when no item carries the kind | Four decimals; whole seconds |
+| `project.cost`, `project.seconds` | The kind's project strategic total: `cost` less `items.cost`, and `seconds` less `items.seconds`, never below zero. Zero below zero, when the items carry more than the document holds, as when a document is restored from an older commit | Four decimals; whole seconds |
 | `log` | The log entries that ended in the window, from its start to the report's now, both included, oldest first | |
 | `log[].at` | When the activity ended, the entry's heading | UTC, to the second |
 | `log[].seconds` | The entry's wall-clock seconds | Whole seconds |
