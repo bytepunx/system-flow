@@ -6,7 +6,7 @@ title: A story waits in review for the operator while nothing else can start, so
 status: backlog
 owner: alex
 created: 2026-10-06T11:44:51Z
-updated: 2026-10-06T11:44:51Z
+updated: 2026-10-06T11:45:52Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h48m
     by: flai
     at: 2026-10-06T11:44:51Z
+finalized:
+  by: alex
+  at: 2026-10-06T11:45:52Z
 ---
 # S-0296 A story waits in review for the operator while nothing else can start, so the board stands idle until a person accepts
 
