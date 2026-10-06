@@ -3,16 +3,36 @@ id: T-1131
 type: task
 nature: improvement
 title: The board hides the cards of a nature toggled off
-status: backlog
+status: done
 parent: S-0302
 owner: alex
 created: 2026-10-06T23:20:13Z
-updated: 2026-10-06T23:20:13Z
-transitions: []
+updated: 2026-10-06T23:44:17Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:42:09Z
+    by: agent-S-0302
+  - to: in-progress
+    at: 2026-10-06T23:42:09Z
+    by: agent-S-0302
+  - to: done
+    at: 2026-10-06T23:44:17Z
+    by: agent-S-0302
 stream: S-0302
 tags: [dashboard]
 touches: [flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts]
 after: [T-1129]
+usage:
+  source: log
+  seconds: 128
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 7258
+      cache_read: 573197
+      cache_write: 44604
+      cost: 0.5417
 ---
 # T-1131 The board hides the cards of a nature toggled off
 

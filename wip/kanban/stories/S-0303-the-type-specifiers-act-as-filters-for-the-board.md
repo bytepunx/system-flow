@@ -3,14 +3,17 @@ id: S-0303
 type: story
 nature: improvement
 title: The type specifiers act as filters for the board
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T23:23:11Z
-updated: 2026-10-06T23:40:32Z
+updated: 2026-10-06T23:46:52Z
 transitions:
   - to: ready
     at: 2026-10-06T23:23:12Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T23:46:52Z
+    by: agent-S-0303
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd, flaiover/src/lib/boardtypes.svelte.ts, flaiover/src/lib/boardtypes.svelte.test.ts, flaiover/src/lib/cardcolour.ts, flaiover/src/lib/components/BoardLegend.svelte, flaiover/src/lib/components/BoardLegend.svelte.test.ts, flaiover/src/lib/components/BoardTypes.svelte, flaiover/src/lib/components/BoardTypes.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
 agent:

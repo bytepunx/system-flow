@@ -3,11 +3,11 @@ id: T-1128
 type: task
 nature: improvement
 title: Brighter nature tints for the shown state, in both themes
-status: in-progress
+status: done
 parent: S-0302
 owner: alex
 created: 2026-10-06T23:19:53Z
-updated: 2026-10-06T23:40:18Z
+updated: 2026-10-06T23:42:07Z
 transitions:
   - to: ready
     at: 2026-10-06T23:40:17Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:40:18Z
     by: agent-S-0302
+  - to: done
+    at: 2026-10-06T23:42:07Z
+    by: agent-S-0302
 stream: S-0302
 tags: [dashboard]
 touches: [flaiover/src/routes/layout.css, flaiover/src/lib/cardcolour.ts, flaiover/src/lib/theme.test.ts]
+usage:
+  source: log
+  seconds: 109
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 6759
+      cache_read: 533830
+      cache_write: 41540
+      cost: 0.5045
 ---
 # T-1128 Brighter nature tints for the shown state, in both themes
 

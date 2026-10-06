@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-06T23:40:32Z
+updated: 2026-10-06T23:47:21Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0302](S-0302.md) | The nature tags at the top of the board should act as clickable filters | in-progress | agent-S-0302 | 2026-10-06T23:39:58Z |
+| [S-0303](S-0303.md) | The type specifiers act as filters for the board | in-progress | agent-S-0303 | 2026-10-06T23:46:53Z |
 
 ## Strategic agents
 

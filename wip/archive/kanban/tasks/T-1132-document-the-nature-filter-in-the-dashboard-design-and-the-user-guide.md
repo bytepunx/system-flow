@@ -3,16 +3,36 @@ id: T-1132
 type: task
 nature: improvement
 title: Document the nature filter in the dashboard design and the user guide
-status: backlog
+status: done
 parent: S-0302
 owner: alex
 created: 2026-10-06T23:20:19Z
-updated: 2026-10-06T23:20:19Z
-transitions: []
+updated: 2026-10-06T23:44:32Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:44:18Z
+    by: agent-S-0302
+  - to: in-progress
+    at: 2026-10-06T23:44:18Z
+    by: agent-S-0302
+  - to: done
+    at: 2026-10-06T23:44:32Z
+    by: agent-S-0302
 stream: S-0302
 tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-1130, T-1131]
+usage:
+  source: log
+  seconds: 14
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 2728
+      cache_read: 215477
+      cache_write: 16767
+      cost: 0.2036
 ---
 # T-1132 Document the nature filter in the dashboard design and the user guide
 
