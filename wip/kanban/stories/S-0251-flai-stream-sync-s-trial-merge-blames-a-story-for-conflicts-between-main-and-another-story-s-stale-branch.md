@@ -6,7 +6,7 @@ title: flai stream sync's trial merge blames a story for conflicts between main 
 status: backlog
 owner: alex
 created: 2026-10-03T18:33:16Z
-updated: 2026-10-06T23:30:03Z
+updated: 2026-10-06T23:32:51Z
 transitions: []
 tags: []
 topics: [cli]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-05T05:52:47Z
 forecast:
   duration: 30m
-  delivery: 2026-10-07T07:25:00Z
-  basis: "Its own forecast of 30m; 23rd in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270, S-0271, S-0303, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245 and S-0246."
+  delivery: 2026-10-07T08:09:00Z
+  basis: "Its own forecast of 30m; 24th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270, S-0271, S-0273, S-0303, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245 and S-0246."
   by: flai
-  at: 2026-10-06T23:30:03Z
+  at: 2026-10-06T23:32:51Z
 ---
 # S-0251 flai stream sync's trial merge blames a story for conflicts between main and another story's stale branch
 

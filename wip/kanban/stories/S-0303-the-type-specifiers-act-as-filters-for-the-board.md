@@ -6,7 +6,7 @@ title: The type specifiers act as filters for the board
 status: ready
 owner: alex
 created: 2026-10-06T23:23:11Z
-updated: 2026-10-06T23:30:03Z
+updated: 2026-10-06T23:32:51Z
 transitions:
   - to: ready
     at: 2026-10-06T23:23:12Z
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-10-06T23:26:54Z
 forecast:
   duration: 20m
-  delivery: 2026-10-07T01:30:00Z
-  basis: "Its own forecast of 20m; 6th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270 and S-0271."
+  delivery: 2026-10-07T01:34:00Z
+  basis: "Its own forecast of 20m; 7th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270, S-0271 and S-0273."
   by: flai
-  at: 2026-10-06T23:30:03Z
+  at: 2026-10-06T23:32:51Z
 ---
 # S-0303 The type specifiers act as filters for the board
 

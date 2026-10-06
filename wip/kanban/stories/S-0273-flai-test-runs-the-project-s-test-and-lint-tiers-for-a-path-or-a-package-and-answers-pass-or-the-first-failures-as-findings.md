@@ -3,12 +3,15 @@ id: S-0273
 type: story
 nature: improvement
 title: flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings
-status: backlog
+status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T23:30:03Z
-transitions: []
+updated: 2026-10-06T23:32:51Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:32:45Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, code, conventions, template]
 touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, system-flow.yaml, template/root/system-flow.yaml.tmpl, scripts/flai-test.sh, scripts/test.sh, scripts/README.md, Makefile, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/system/devex.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -23,10 +26,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:16Z
 forecast:
   duration: 75m
-  delivery: 2026-10-07T09:07:00Z
-  basis: "Its own forecast of 1h15m; 27th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270, S-0271, S-0303, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265 and S-0272."
+  delivery: 2026-10-07T02:30:00Z
+  basis: "Its own forecast of 1h15m; 6th in the pull order with an in-progress limit of 3, behind S-0300, S-0302, S-0228, S-0269, S-0270 and S-0271."
   by: flai
-  at: 2026-10-06T23:30:03Z
+  at: 2026-10-06T23:32:51Z
 finalized:
   by: alex
   at: 2026-10-06T22:48:41Z
