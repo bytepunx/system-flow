@@ -40,12 +40,18 @@
 	--t-dot-failed: #d32f2f;
 	/* Board cards: a pastel tint per nature and a colour per type (S-0055). Telling them
 	   apart by colour alone is waived, the card says both in text; reading the text on
-	   them is not, and theme.test.ts checks it. */
+	   them is not, and theme.test.ts checks it. Each -shown tint is its pastel's hue lit
+	   up, and lights a legend tag whose nature the board shows (S-0302). */
 	--t-nature-feature: #e9f1fa;
 	--t-nature-improvement: #eaf5e8;
 	--t-nature-remediation: #fdeedd;
 	--t-nature-research: #f0ecfa;
 	--t-nature-experiment: #fae9f1;
+	--t-nature-feature-shown: #bcd6f2;
+	--t-nature-improvement-shown: #c2e6bc;
+	--t-nature-remediation-shown: #f9d0a4;
+	--t-nature-research-shown: #d8cdf4;
+	--t-nature-experiment-shown: #f4c8dc;
 	--t-type-epic: #8f7fd6;
 	--t-type-story: #4fb0c8;
 	--t-type-task: #b3a392;
@@ -83,6 +89,11 @@
 	--t-nature-remediation: #322517;
 	--t-nature-research: #262035;
 	--t-nature-experiment: #321d2d;
+	--t-nature-feature-shown: #1a3458;
+	--t-nature-improvement-shown: #163b1d;
+	--t-nature-remediation-shown: #472d0f;
+	--t-nature-research-shown: #33265e;
+	--t-nature-experiment-shown: #4c2142;
 	--t-type-epic: #a99be0;
 	--t-type-story: #7cc4d6;
 	--t-type-task: #c9bcae;
@@ -120,6 +131,11 @@
 	--color-nature-remediation: var(--t-nature-remediation);
 	--color-nature-research: var(--t-nature-research);
 	--color-nature-experiment: var(--t-nature-experiment);
+	--color-nature-feature-shown: var(--t-nature-feature-shown);
+	--color-nature-improvement-shown: var(--t-nature-improvement-shown);
+	--color-nature-remediation-shown: var(--t-nature-remediation-shown);
+	--color-nature-research-shown: var(--t-nature-research-shown);
+	--color-nature-experiment-shown: var(--t-nature-experiment-shown);
 	--color-type-epic: var(--t-type-epic);
 	--color-type-story: var(--t-type-story);
 	--color-type-task: var(--t-type-task);

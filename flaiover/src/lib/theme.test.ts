@@ -64,6 +64,11 @@ const cardPairs: [string, string][] = natures.flatMap((n): [string, string][] =>
 	['muted', `nature-${n}`],
 	['danger', `nature-${n}`]
 ]);
+// The legend's nature tags (S-0302): a shown nature's tag is its pastel's hue lit up, with ink text.
+const shownPairs: [string, string][] = natures.flatMap((n): [string, string][] => [
+	['ink', `nature-${n}-shown`],
+	['muted', `nature-${n}-shown`]
+]);
 
 describe.each([
 	['light', light],
@@ -88,6 +93,7 @@ describe.each([
 			'danger',
 			'info',
 			...natures.map((n) => `nature-${n}`),
+			...natures.map((n) => `nature-${n}-shown`),
 			...types.map((t) => `type-${t}`)
 		]) {
 			expect(t[k], k).toMatch(/^#[0-9a-f]{6}$/);
@@ -102,6 +108,13 @@ describe.each([
 	it('gives every nature and every type a colour of its own', () => {
 		expect(new Set(natures.map((n) => t[`nature-${n}`])).size).toBe(natures.length);
 		expect(new Set(types.map((k) => t[`type-${k}`])).size).toBe(types.length);
+	});
+	it.each(shownPairs)('%s on %s reads at AA (4.5:1) on a legend tag', (fg, bg) => {
+		expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(4.5);
+	});
+	it('lights every shown nature in a colour of its own, unlike its default tint', () => {
+		expect(new Set(natures.map((n) => t[`nature-${n}-shown`])).size).toBe(natures.length);
+		for (const n of natures) expect(t[`nature-${n}-shown`], n).not.toBe(t[`nature-${n}`]);
 	});
 	it.each(controlPairs)('%s against %s clears 3:1 for controls', (fg, bg) => {
 		expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(3);

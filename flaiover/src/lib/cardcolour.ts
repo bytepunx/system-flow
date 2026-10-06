@@ -11,6 +11,15 @@ export const natureTint: Record<string, string> = {
 	experiment: 'bg-nature-experiment'
 };
 
+/** The legend reads this to light a nature tag whose nature is shown (S-0302). */
+export const natureShownTint: Record<string, string> = {
+	feature: 'bg-nature-feature-shown',
+	improvement: 'bg-nature-improvement-shown',
+	remediation: 'bg-nature-remediation-shown',
+	research: 'bg-nature-research-shown',
+	experiment: 'bg-nature-experiment-shown'
+};
+
 export const typeStripe: Record<string, string> = {
 	epic: 'border-l-type-epic',
 	story: 'border-l-type-story',
