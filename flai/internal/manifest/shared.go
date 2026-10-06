@@ -30,6 +30,7 @@ type PatternError struct {
 	Reason string
 }
 
+// Error names the pattern and why it is not valid.
 func (e PatternError) Error() string {
 	return fmt.Sprintf("claims.shared pattern %q %s", e.Pattern, e.Reason)
 }
