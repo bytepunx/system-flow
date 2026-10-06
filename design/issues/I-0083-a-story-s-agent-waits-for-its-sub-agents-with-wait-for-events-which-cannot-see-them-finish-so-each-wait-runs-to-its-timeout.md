@@ -2,12 +2,12 @@
 id: I-0083
 title: A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 39m
 first_reported: 2026-10-06T06:02:33Z
 last_reported: 2026-10-06T06:02:38Z
-updated: 2026-10-06T06:03:25Z
+updated: 2026-10-06T10:54:40Z
 ---
 
 # I-0083 A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout
@@ -54,3 +54,4 @@ Two changes, both needed. The wording T-0869 added did not hold in two stories, 
 The measure, on a story flai serve works after the change is installed: no wait on a sub-agent outlasts the sub-agent by more than a few seconds.
 
 Story S-0285 remediates this issue, created from it at 2026-10-06T06:03:25Z.
+Closed 2026-10-06T10:54:40Z: S-0285: flai serve's start prompt, delegation.md, and the wait_for_events description say to launch sub-agents with run_in_background false, which returns the result as the tool's result however long the sub-agent runs (measured on Claude Code 2.1.290), and that wait_for_events is for a thread awaiting the designer; flai guard records a session's running sub-agents from SubagentStart and SubagentStop and refuses a story agent's wait_for_events while one runs and no thread on its story is open (ADR-0092)

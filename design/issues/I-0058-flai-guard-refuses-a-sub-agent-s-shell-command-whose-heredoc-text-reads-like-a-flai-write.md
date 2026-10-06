@@ -3,11 +3,11 @@ id: I-0058
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 3m
 first_reported: 2026-10-02T17:23:40Z
-last_reported: 2026-10-06T04:56:08Z
-updated: 2026-10-06T04:56:08Z
+last_reported: 2026-10-06T10:54:30Z
+updated: 2026-10-06T10:54:30Z
 ---
 
 # I-0058 flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
@@ -27,5 +27,9 @@ T-0791's task sub-agent was refused a python heredoc editing guard_test.go: the 
 ### 2026-10-06T04:56:08Z
 Story: S-0282.
 T-0996's task sub-agent had a Bash heredoc refused because a '#' comment line inside it read as a flai command; it worked around it with direct edits.
+
+### 2026-10-06T10:54:30Z
+Story: S-0285.
+T-1004's task sub-agent had a Bash heredoc refused: a Go comment inside it read 'flai guard records'. It wrote the file with the Edit tool instead.
 
 ## Remediation
