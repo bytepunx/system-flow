@@ -3,15 +3,41 @@ id: T-0878
 type: task
 nature: improvement
 title: An ADR extends ADR-0083 to the orchestrator's items and a project strategic total
-status: backlog
+status: done
 parent: S-0226
 owner: alex
 created: 2026-10-05T04:44:31Z
-updated: 2026-10-05T04:44:31Z
-transitions: []
+updated: 2026-10-06T18:02:21Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:01:00Z
+    by: agent-S-0226
+  - to: in-progress
+    at: 2026-10-06T18:01:00Z
+    by: agent-S-0226
+  - to: done
+    at: 2026-10-06T18:02:21Z
+    by: agent-S-0226
 stream: S-0226
 tags: [flai, docs]
 touches: [design/adrs, design/system/strategic-agents.md, design/system/work-hierarchy.md]
+usage:
+  source: log
+  seconds: 81
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 9310
+      cache_read: 1259017
+      cache_write: 41337
+      cost: 0.7065
+    - model: claude-sonnet-5-5
+      input: 46
+      output: 7528
+      cache_read: 875782
+      cache_write: 84846
+      cost: 0.4626
 ---
 # T-0878 An ADR extends ADR-0083 to the orchestrator's items and a project strategic total
 

@@ -3,18 +3,27 @@ id: S-0226
 type: story
 nature: improvement
 title: The orchestrator's cost is recorded on the story or epic each decision concerned
-status: ready
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T17:58:55Z
+updated: 2026-10-06T18:18:14Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:36Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T17:59:21Z
+    by: agent-S-0226
+  - to: review
+    at: 2026-10-06T18:17:57Z
+    by: agent-S-0226
+  - to: done
+    at: 2026-10-06T18:18:14Z
+    by: alex
 tags: [flai]
 topics: [orchestration, planning]
-touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/mcpserver, design/system/strategic-agents.md, flai/internal/metrics, design/adrs, flai/cmd/activity.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, design/system/metrics.md, flai/internal/mcpserver, design/system/strategic-agents.md, flai/internal/metrics, design/adrs, flai/cmd/activity.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/activity_test.go, design/issues/I-0068-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md, design/issues/summary.md]
 after: [S-0218]
 agent:
   harness: claude-code
@@ -22,9 +31,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1149
+  models:
+    - model: claude-opus-5-5
+      input: 244
+      output: 88646
+      cache_read: 11988447
+      cache_write: 393615
+      cost: 6.7273
+    - model: claude-sonnet-5-5
+      input: 50
+      output: 8155
+      cache_read: 948763
+      cache_write: 91916
+      cost: 0.5012
   strategic:
     - kind: planner
       seconds: 145
@@ -62,9 +83,9 @@ ADR-0051 records what story agents spend on the items they work. S-0225 charges 
 The orchestrator works for the whole project, not for one item. Each of its activities should be charged to the items that decision concerned, or to a project total when it concerned none, so that none of its cost is lost.
 
 ## Acceptance criteria
-- [ ] An orchestrator activity's usage is charged when the activity is logged, through `activity_log` or as its run ends. The usage is apportioned to the activity's span as ADR-0083 apportions a planner's. It goes under the `orchestrator` entry of the items the activity named, split evenly between them, and is summed up the hierarchy as ADR-0083 sums it
-- [ ] An activity that names no item is charged to a project strategic total. `flai stats` reports that total per kind beside the per-item figures, so that the per-kind totals equal the activity document's totals
-- [ ] An ADR extends ADR-0083 to the orchestrator and the project total. `design/system/metrics.md` and `design/system/strategic-agents.md` say how the charge works. Tests pin the split, the roll-up, and the project total
+- [x] An orchestrator activity's usage is charged when the activity is logged, through `activity_log` or as its run ends. The usage is apportioned to the activity's span as ADR-0083 apportions a planner's. It goes under the `orchestrator` entry of the items the activity named, split evenly between them, and is summed up the hierarchy as ADR-0083 sums it
+- [x] An activity that names no item is charged to a project strategic total. `flai stats` reports that total per kind beside the per-item figures, so that the per-kind totals equal the activity document's totals
+- [x] An ADR extends ADR-0083 to the orchestrator and the project total. `design/system/metrics.md` and `design/system/strategic-agents.md` say how the charge works. Tests pin the split, the roll-up, and the project total
 
 ## Tasks
 - T-0878 An ADR extends ADR-0083 to the orchestrator's items and a project strategic total

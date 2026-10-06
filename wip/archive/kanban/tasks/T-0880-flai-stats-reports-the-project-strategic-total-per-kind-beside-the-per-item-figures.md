@@ -3,16 +3,36 @@ id: T-0880
 type: task
 nature: improvement
 title: flai stats reports the project strategic total per kind beside the per-item figures
-status: backlog
+status: done
 parent: S-0226
 owner: alex
 created: 2026-10-05T04:44:53Z
-updated: 2026-10-05T04:44:53Z
-transitions: []
+updated: 2026-10-06T18:11:56Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:02:22Z
+    by: agent-S-0226
+  - to: in-progress
+    at: 2026-10-06T18:02:22Z
+    by: agent-S-0226
+  - to: done
+    at: 2026-10-06T18:11:56Z
+    by: agent-S-0226
 stream: S-0226
 tags: [flai]
 touches: [flai/internal/metrics, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-0878]
+usage:
+  source: log
+  seconds: 574
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 20381
+      cache_read: 2756377
+      cache_write: 90500
+      cost: 1.5467
 ---
 # T-0880 flai stats reports the project strategic total per kind beside the per-item figures
 

@@ -3,16 +3,36 @@ id: T-0879
 type: task
 nature: improvement
 title: An orchestrator activity's apportioned usage is charged evenly to the items it named and the items above them
-status: backlog
+status: done
 parent: S-0226
 owner: alex
 created: 2026-10-05T04:44:41Z
-updated: 2026-10-05T04:44:41Z
-transitions: []
+updated: 2026-10-06T18:11:55Z
+transitions:
+  - to: ready
+    at: 2026-10-06T18:02:21Z
+    by: agent-S-0226
+  - to: in-progress
+    at: 2026-10-06T18:02:22Z
+    by: agent-S-0226
+  - to: done
+    at: 2026-10-06T18:11:55Z
+    by: agent-S-0226
 stream: S-0226
 tags: [flai]
 touches: [flai/internal/usage, flai/internal/serve, flai/internal/workitem, flai/internal/mcpserver, flai/cmd/activity.go, design/system/flai-cli.md]
 after: [T-0878]
+usage:
+  source: log
+  seconds: 573
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 32100
+      cache_read: 4341168
+      cache_write: 142533
+      cost: 2.4361
 ---
 # T-0879 An orchestrator activity's apportioned usage is charged evenly to the items it named and the items above them
 
