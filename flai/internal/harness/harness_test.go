@@ -509,7 +509,7 @@ func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 			"A write to a file in a .claude/ folder is never a sub-agent's: flai guard refuses it unless the operator has turned on auto-approve",
 			"say so in the prompt of every sub-agent whose task changes such a file, and ask it to return the file's whole new content in its final message",
 			"Make those writes yourself once the layer's sub-agents are back, never while a layer runs: permission_prompt opens a thread on S-0104 and holds the call until the operator answers",
-			"write each whole file into the worktree's ignored .flai-cache/ folder instead, open one thread on S-0104 with the exact cp commands that put each in place, and end rather than wait",
+			"write each whole file into the worktree's ignored .flai-cache/ folder instead, on a path with no .claude folder along it, open one thread on S-0104 with the exact cp commands that put each in place, and end rather than wait",
 		} {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
