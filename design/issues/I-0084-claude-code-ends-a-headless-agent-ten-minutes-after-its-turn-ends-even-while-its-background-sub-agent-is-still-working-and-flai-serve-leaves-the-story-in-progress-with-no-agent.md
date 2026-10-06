@@ -7,7 +7,7 @@ count: 2
 cost: 10m
 first_reported: 2026-10-06T07:00:22Z
 last_reported: 2026-10-06T07:00:22Z
-updated: 2026-10-06T07:00:22Z
+updated: 2026-10-06T11:44:49Z
 ---
 
 # I-0084 Claude Code ends a headless agent ten minutes after its turn ends, even while its background sub-agent is still working, and flai serve leaves the story in progress with no agent
@@ -36,3 +36,5 @@ Two separate things went wrong, and each has its own fix.
 2. **A story whose agent ended without finishing waits for a person.** flai serve could restart such an agent itself: once, or a small number of times, when the run ended with the story still in progress, no thread awaiting the operator, and no block on the story; and tell the operator when the limit is reached. Whether flai serve restarts on its own is the operator's decision, since ADR-0043 gave the restart to a person.
 
 S-0285 made the first remediation ([ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md)). It measured the ten minutes again on 2.1.290: a turn ended at 10:34:48Z with a background sub-agent out, and the process exited at 10:44:49Z with the sub-agent cut off. It also measured the remedy: a launch with `run_in_background` false returned an 11-minute sub-agent's result as the tool's result, and three launched in one message ran together. The start prompt and `delegation.md` now name that way and say never to end the turn on a background sub-agent. The second remediation is still open.
+
+Story S-0294 remediates this issue, created from it at 2026-10-06T11:44:49Z.
