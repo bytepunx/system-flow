@@ -134,13 +134,23 @@ rebase --abort in the worktree, which puts the branch back as it was before
 the sync). It exits non-zero; with --json it prints uncommitted, conflicts,
 rebase_in_progress, continue, and abort, with ok false.
 
+A stop whose only conflicting path is a generated file, which today is
+design/issues/summary.md alone, does not wait for you (ADR-0098). Sync writes
+the file again from the issue files in the worktree at that stop, git adds
+it, and continues the rebase, until the rebase finishes or stops on another
+path. A stop where other paths conflict too is left for you, and lists them
+all, summary.md included; once the others are resolved, flai issue summary
+run in the worktree writes it. flai accept syncs the same way. A rebase
+already in progress is never continued for you.
+
 After a clean rebase it trial-merges the branch with the branch of every other
 story in progress or in review (git merge-tree --write-tree, git 2.38 or
 newer), writing nothing to any worktree, and lists each branch it conflicts
-with and the conflicting paths. Each conflicting pair of stories has one
-thread, written by flai on the story that synced, which both stories' agents
-and the designer see in their inboxes; a sync that finds the pair merging
-cleanly again resolves it. It also lists the paths the branch changed since
+with and the conflicting paths. Generated files are left out, so a pair whose
+only conflict is summary.md counts as clean. Each conflicting pair of stories
+has one thread, written by flai on the story that synced, which both stories'
+agents and the designer see in their inboxes; a sync that finds the pair
+merging cleanly again resolves it. It also lists the paths the branch changed since
 the main branch that the story's touches, and its open tasks', do not cover,
 so that they are widened with flai touches.`,
 		Args: cobra.ExactArgs(1),

@@ -1,6 +1,6 @@
 ---
 title: Continuous improvement
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 topics: [cli, conventions]
 ---
@@ -68,6 +68,8 @@ Story S-0009 remediates this issue, created from it at 2026-09-16T09:00:00Z.
 ## Summary
 
 `summary.md` is a table of open issues: ID, class, title, count, average cost per occurrence, total cost (count times average), last reported. Sorted by total cost descending so the most expensive friction is first. Every `flai issue` command regenerates it; `flai check` warns when it is stale, and `flai prime` prints it after the conventions when anything is open.
+
+The file is generated and committed, so two stories that each record or close an issue both change it, and git cannot merge them ([I-0074](../issues/I-0074-two-stories-that-each-record-or-close-an-issue-always-conflict-in-design-issues-summary-md-whose-updated-line-both-rewrite.md)). Sync and acceptance regenerate it rather than merge it ([ADR-0098](../adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)). When the rebase `flai stream sync` or `flai accept` runs stops on `summary.md` alone, flai writes it again from the issue files in the worktree, stages it, and continues; its `updated:` line is then the time of the sync. When other paths conflict too, the rebase stops for the agent as for any conflict, `summary.md` among the paths, and `flai issue summary` in the worktree writes it once the others are resolved. The trial merge between open story branches leaves the file out, so no conflict thread is opened over it. Two branches that bump the same issue still conflict in that issue's file, whose count and instances both sides add to (I-0092).
 
 ## Cadence
 
