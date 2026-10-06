@@ -116,7 +116,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order, `flai order --by <policy> --apply`, which keeps a story placed by hand in the last day; it never places a story by hand |
 | `orchestration.permissions.answer_threads` | `off` | How the orchestrator replies on threads: `off` never; `recommend` with a recommendation for the operator; `autonomous` with an answer of its own. `flai guard` lets it reply with either of the last two; its prompt says which |
 | `orchestration.permissions.accept_reviews` | `false` | The orchestrator may accept a story in review, `flai accept` |
-| `orchestration.permissions.publish` | `false` | The orchestrator may release and push accepted work, `flai release --pending` and `flai push` |
+| `orchestration.permissions.publish` | `false` | The orchestrator may publish what is accepted and not yet released, through the MCP tool `release_publish` alone, when `orchestration.release` allows it; the `push` host action must be on too ([When the orchestrator publishes](../users/flai.md#when-the-orchestrator-publishes)) |
 | `orchestration.agent.harness` | `agent.harness` | The orchestrator's harness, over the project's `agent` |
 | `orchestration.agent.model` | `agent.model` | The orchestrator's model |
 | `orchestration.agent.config.<name>` | `agent.config` | The orchestrator's options for its harness, merged key by key over `agent.config` |

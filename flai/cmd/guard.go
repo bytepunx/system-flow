@@ -75,7 +75,9 @@ answer citing a source (source, --source) while it is autonomous, so that an
 answer it cannot source goes to the operator as a recommendation (S-0220);
 accept_reviews flai accept and flai move <story> done, each only with --by
 orchestrator, so that it accepts as itself and as nobody else (S-0221,
-ADR-0093); publish flai release --pending and flai push.
+ADR-0093); publish the MCP tool release_publish alone, while flai
+release other than --evaluate, flai push, git push, and git tag are refused
+whatever its permissions (S-0222, ADR-0094).
 On a thread it opened it follows up and resolves, but never recommends or
 answers; it never resolves another's thread, never confirms a
 recommendation, and never names another author with --by. A call a permission

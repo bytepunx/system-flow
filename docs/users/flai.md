@@ -793,6 +793,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `order_by_policy` | The ready column's order by `policy` (`cod`, `wsjf`, `throughput`, or `fifo`; the project's `orchestration.policy` when left out), as `flai order --by <policy> --json` prints it, with each story's figure. It never writes the order ([Ordering by a policy](#ordering-by-a-policy)) |
 | `promote_candidates` | The backlog stories that could go to ready and why each other one cannot, as `flai promote --candidates --json` prints them; `limit` caps the candidates. It writes nothing ([Ordering by a policy](#ordering-by-a-policy)) |
 | `release_evaluate` | Whether the release policy is met, with its figures, as `flai release --evaluate --json` prints it. It releases nothing ([Whether a release is due](#whether-a-release-is-due)) |
+| `release_publish` | For the orchestrator alone, while you give it `publish`: publish what is accepted and not yet released, as the board's Publish does, when the release policy allows it, with a one-sentence `reason`. It refuses, changing nothing, when the policy is not met, when `whole_epics` holds the batch back, under `judgement` without a reason, and while the `push` host action is off. Returns the versions, tags, and items released ([When the orchestrator publishes](#when-the-orchestrator-publishes)) |
 | `agent_start`, `agent_restart` | Start a story's agent on the host, as `flai serve agent start` and `restart` do, so that your own agent can give a story begun on another host an agent here ([ADR-0064](../../design/adrs/0064-a-story-in-ready-or-in-progress-with-no-agent-run-on-this-host-is-started-here.md)). Only while the operator has turned on the `agent` host action for the project, as for the dashboard's buttons; otherwise, and whenever flai would refuse the command, the tool's error says why. Each call is journalled with the agent that made it. A sub-agent cannot call them, and nor can an agent `flai serve` started: starting agents is your word, not a story's agent's |
 | `plan` | Start the planner for an epic or a story on the host, as `flai plan` does ([Running the planner](#running-the-planner)). Only while the operator has turned on the `plan` host action for the project; otherwise, and whenever flai would refuse the command, the tool's error says why. Returns the run: its agent, PID, log, and session. Each call is journalled with the agent that made it. A sub-agent, the planner, and an agent `flai serve` started cannot call it: planning is the operator's to ask for. The orchestrator alone may, for an epic in the backlog, while you give it `plan_backlog_epics` ([Running the orchestrator](#running-the-orchestrator)) |
 | `activity_log` | For the planner, the orchestrator, and the analyzer: log an activity that just ended, with `kind`, a one-line `summary`, and the `items` it touched. flai measures its seconds and cost from the agent's run log and appends it to `wip/agents/<kind>.md`. Returns the entry and the document's totals. A sub-agent cannot call it. Nothing is committed ([What they did: activity documents](#what-they-did-activity-documents)) |
@@ -1119,7 +1120,7 @@ orchestration:
 | `order_ready` | Order the ready column by `orchestration.policy` with `flai order --by <policy> --apply`, after each change to it. A story you placed by hand in the last day keeps its place |
 | `answer_threads` | Reply on threads: `recommend` replies with a recommendation for you to decide on, `autonomous` with an answer of its own. `off`, the default, leaves threads to you |
 | `accept_reviews` | Accept a story in review with `flai accept --by orchestrator`, once its verifier passed and nothing blocks it ([When the orchestrator accepts](#when-the-orchestrator-accepts)) |
-| `publish` | Release and push accepted work with `flai release --pending` and `flai push` |
+| `publish` | Publish what is accepted and not yet released, through the MCP tool `release_publish` alone, when the release policy allows it. The `push` host action must be on too ([When the orchestrator publishes](#when-the-orchestrator-publishes)) |
 
 Without any, it reads the board and the inbox, opens threads, records issues, and logs. `flai guard` holds it to its permissions, reading them from `system-flow.yaml` at each call, so a change applies at its next call with no restart. A call that a permission would allow is refused while that permission is off, and the refusal names it: `it needs orchestration.permissions.publish, which is off`. Anything else that writes is refused whatever you give it: editing files, committing, moving a story anywhere but `ready`, or to `done` as it accepts it, changing anything of an item but its draft flag, placing a story by hand in the pull order, and every other flai command that writes. Either way it is told to ask you on a thread rather than work around the refusal.
 
@@ -1326,6 +1327,34 @@ flai release --evaluate --json
 | `judgement` | Never, by itself: whether to release is the orchestrator's call, or yours. This is the default. |
 
 It tags, bumps, commits, and pushes nothing; publishing is still `flai release --pending`. So it takes no item and refuses `--apply`, `--pending`, `--dry-run`, and `--deliver`. The dashboard reads the same answer through `flai serve` (`release.evaluate`), and agents through the MCP tool `release_evaluate`. A sub-agent and the planner may run it as a read.
+
+With `orchestration.release.whole_epics` set, no policy is met while a story waiting belongs to an epic in neither review nor done. Those stories are listed under `held by epic:` with their epics and the epics' status, and in `held_by_epic` with `--json`. Under `judgement` they are what the orchestrator must not publish. A story with no epic is never held.
+
+### When the orchestrator publishes
+
+With `orchestration.permissions.publish` on ([Running the orchestrator](#running-the-orchestrator)), the orchestrator publishes for you, by the release policy ([ADR-0094](../../design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md)). Turning the permission on is your asking: agents still publish only when you ask. After each acceptance, its own or another's, it evaluates the policy. Under `threshold` or `theme` it publishes when the policy is met. Under `judgement` it publishes when it judges the unreleased work coherent and complete, and says why. Under every policy it never publishes a batch `whole_epics` holds back. Each release publishes everything accepted and not yet released, as the board's Publish does.
+
+It publishes only through the MCP tool `release_publish`, which runs the board's `flai release --pending` on the host, never forced. `flai guard` refuses it `flai release` other than `--evaluate`, `flai push`, `git push`, and `git tag`, whatever its permissions. `release_publish` refuses, changing nothing:
+
+| When | It says |
+|------|---------|
+| Nothing is accepted and not yet released | That there is nothing to publish |
+| `whole_epics` holds the batch back | Each story held, its epic, and the epic's status |
+| Under `threshold` or `theme`, the policy is not met | The policy and its figures |
+| Under `judgement`, it gives no reason | That the call needs its reason |
+| The `push` host action is off | That `publish.run` needs it, and `flai serve enable push` |
+| The remote has release tags this clone lacks, or its branch moved | flai's own message, beginning `conflict:`, with what to run |
+
+What it leaves for you to read:
+
+| What | Where |
+|------|-------|
+| The run | `flai serve journal`: method `mcp.release_publish`, by `orchestrator`, with the policy and its reason before the outcome |
+| Each release | `wip/agents/orchestrator.md`, under `## Log`: the policy, its figures, the versions and tags, and the items bundled |
+| Each decision not to publish | The same log, with the evaluation's figures |
+| Each refusal | The same log, and a thread to you on the most recently accepted story of the batch, with the refusal and what fixes it. It does not try again until you answer the thread or the next story is accepted |
+
+[Publishing a release](../../design/system/strategic-agents.md#publishing-a-release-s-0222) has the whole of it.
 
 ## Upgrade to a newer template
 
