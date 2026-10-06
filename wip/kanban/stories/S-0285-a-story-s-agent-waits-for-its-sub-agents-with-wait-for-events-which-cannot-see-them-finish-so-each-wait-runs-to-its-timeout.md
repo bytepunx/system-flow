@@ -6,9 +6,9 @@ title: A story's agent waits for its sub-agents with wait_for_events, which cann
 status: backlog
 owner: alex
 created: 2026-10-06T06:03:25Z
-updated: 2026-10-06T06:04:20Z
+updated: 2026-10-06T06:04:28Z
 transitions: []
-tags: [flai]
+tags: [flai, template]
 topics: [cli, conventions]
 touches: [flai/internal/harness, flai/internal/mcpserver, flai/internal/guard, flai/cmd/guard.go, design/conventions/delegation.md, template, ".claude/settings.json", design/system/flai-cli.md, design/system/agent-context.md, docs/users, docs/operators, design/issues/I-0083-a-story-s-agent-waits-for-its-sub-agents-with-wait-for-events-which-cannot-see-them-finish-so-each-wait-runs-to-its-timeout.md, design/issues/summary.md]
 agent:
