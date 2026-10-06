@@ -50,9 +50,14 @@ nothing is changed. --var re-applies the version the project is at.`,
 				return err
 			}
 			mf := repo.Manifest
-			sourceChanged := tplRepo != ""
+			// The manifest records the repo when --template names another,
+			// and the ref when that or --ref chose what was applied.
+			fields := templateFields{repo: tplRepo != "", ref: tplRepo != "" || ref != ""}
 			if tplRepo == "" {
-				tplRepo, ref = mf.Template.Repo, mf.Template.Ref
+				tplRepo = mf.Template.Repo
+				if ref == "" {
+					ref = mf.Template.Ref
+				}
 			}
 			src, m, err := a.resolveTemplate(tplRepo, ref, false)
 			if err != nil {
@@ -95,7 +100,7 @@ nothing is changed. --var re-applies the version the project is at.`,
 				if err := lock.Save(repo.Root, l); err != nil {
 					return err
 				}
-				if err := writeTemplateFields(filepath.Join(repo.Root, manifest.File), src, sourceChanged, m.Version, a.now()); err != nil {
+				if err := writeTemplateFields(filepath.Join(repo.Root, manifest.File), src, fields, m.Version, a.now()); err != nil {
 					return err
 				}
 				fmt.Fprintf(a.out, "relocked %d files at template %s\n", len(l.Files), m.Version)
@@ -159,7 +164,7 @@ nothing is changed. --var re-applies the version the project is at.`,
 			if err := lock.Save(repo.Root, nl); err != nil {
 				return err
 			}
-			if err := writeTemplateFields(filepath.Join(repo.Root, manifest.File), src, sourceChanged, m.Version, a.now()); err != nil {
+			if err := writeTemplateFields(filepath.Join(repo.Root, manifest.File), src, fields, m.Version, a.now()); err != nil {
 				return err
 			}
 			kept := 0
@@ -180,7 +185,7 @@ nothing is changed. --var re-applies the version the project is at.`,
 	}
 	f := c.Flags()
 	f.StringVar(&tplRepo, "template", "", "template git URL or local directory (default: the manifest's template.repo)")
-	f.StringVar(&ref, "ref", "", "template branch, tag, or commit (default: the manifest's template.ref)")
+	f.StringVar(&ref, "ref", "", "template branch, tag, or commit, recorded as template.ref (default: the manifest's template.ref)")
 	f.BoolVar(&dryRun, "dry-run", false, "print the plan and change nothing")
 	f.BoolVar(&force, "force", false, "re-apply the same version and allow a dirty tree")
 	f.BoolVar(&keepAll, "keep-all", false, "keep every conflicting project file")
@@ -288,10 +293,13 @@ func upgradeVars(m template.Manifest, mf manifest.Manifest, lk *lock.Lock, given
 	return vars, defaulted, nil
 }
 
+// templateFields names the manifest's template fields an upgrade rewrites
+// besides version and applied.
+type templateFields struct{ repo, ref bool }
+
 // writeTemplateFields updates template.version and applied in the manifest
-// in place, and repo and ref only when the operator pointed at a different
-// source, touching nothing else.
-func writeTemplateFields(path string, src template.Source, sourceChanged bool, version string, now time.Time) error {
+// in place, and repo and ref when fields names them, touching nothing else.
+func writeTemplateFields(path string, src template.Source, fields templateFields, version string, now time.Time) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -306,9 +314,9 @@ func writeTemplateFields(path string, src template.Source, sourceChanged bool, v
 		switch {
 		case strings.HasPrefix(l, "template:"):
 			inTemplate = true
-		case inTemplate && strings.HasPrefix(l, "  repo:") && sourceChanged:
+		case inTemplate && strings.HasPrefix(l, "  repo:") && fields.repo:
 			lines[i] = fmt.Sprintf("  repo: %q", repo)
-		case inTemplate && strings.HasPrefix(l, "  ref:") && sourceChanged:
+		case inTemplate && strings.HasPrefix(l, "  ref:") && fields.ref:
 			lines[i] = fmt.Sprintf("  ref: %q", src.Ref)
 		case inTemplate && strings.HasPrefix(l, "  version:"):
 			lines[i] = fmt.Sprintf("  version: %q", version)

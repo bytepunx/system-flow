@@ -250,6 +250,69 @@ func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 	}
 }
 
+// --ref given alone wins over the manifest's template.ref: the upgrade renders
+// the tag it names and records that ref and its version in system-flow.yaml
+// and the lock, and --relock with --ref records it the same way.
+func TestUpgradeRefWinsOverTheManifestsRef(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_CACHE_DIR", t.TempDir())
+	tpl := copyTemplate(t, miniTemplate)
+	forkVersion(t, tpl, "9.9.9", "", "v9\n")
+	gitIn(t, tpl, "init", "-q", "-b", "main")
+	gitIn(t, tpl, "add", "-A")
+	gitIn(t, tpl, "commit", "-q", "-m", "9.9.9")
+	url := "file://" + tpl
+	dest := filepath.Join(t.TempDir(), "proj")
+	if _, errOut, code := runIn(t, ".", "new", dest, "--template", url, "--ref", "main", "--defaults", "--no-git"); code != 0 {
+		t.Fatalf("new: %s", errOut)
+	}
+	commitVersion := func(version, tag string) {
+		forkVersion(t, tpl, version, "", "v"+version+"\n")
+		gitIn(t, tpl, "commit", "-q", "-am", version)
+		if tag != "" {
+			gitIn(t, tpl, "tag", tag)
+		}
+	}
+	commitVersion("10.0.0", "v10.0.0")
+	commitVersion("11.0.0", "")
+	recorded := func(ref, version string) {
+		t.Helper()
+		mf, _ := os.ReadFile(filepath.Join(dest, "system-flow.yaml"))
+		for _, want := range []string{`repo: "` + url + `"`, `ref: "` + ref + `"`, `version: "` + version + `"`} {
+			if !strings.Contains(string(mf), want) {
+				t.Errorf("system-flow.yaml lacks %s:\n%s", want, mf)
+			}
+		}
+		lk, err := lock.Load(dest)
+		if err != nil || lk == nil || lk.Template.Ref != ref || lk.Template.Version != version || lk.Template.Repo != url {
+			t.Errorf("lock must record %s at %s from %s: %+v %v", ref, version, url, lk, err)
+		}
+	}
+
+	out, errOut, code := runIn(t, dest, "upgrade", "--ref", "v10.0.0")
+	if code != 0 || !strings.Contains(out, "upgraded to template 10.0.0") {
+		t.Fatalf("upgrade --ref v10.0.0: %d %s %s", code, out, errOut)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dest, "team.txt")); string(b) != "v10.0.0\n" {
+		t.Errorf("team.txt = %q, want the tagged render", b)
+	}
+	recorded("v10.0.0", "10.0.0")
+
+	// A --ref naming the version the project is at changes nothing.
+	if out, _, code := runIn(t, dest, "upgrade", "--ref", "v10.0.0"); code != 0 || !strings.Contains(out, "already at template 10.0.0") {
+		t.Errorf("same version by --ref: %d %s", code, out)
+	}
+
+	gitIn(t, tpl, "tag", "v11.0.0")
+	if out, errOut, code := runIn(t, dest, "upgrade", "--relock", "--ref", "v11.0.0"); code != 0 || !strings.Contains(out, "relocked") {
+		t.Fatalf("relock --ref v11.0.0: %d %s %s", code, out, errOut)
+	}
+	recorded("v11.0.0", "11.0.0")
+}
+
 // A required variable recorded empty takes the default a newer template
 // gives it, and the values the lock records survive any characters.
 func TestUpgradeVarsAndTheLockRoundTrip(t *testing.T) {
