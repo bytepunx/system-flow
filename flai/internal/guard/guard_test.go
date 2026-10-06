@@ -818,8 +818,8 @@ func TestTheAnalyzerEditsOnlyItsReport(t *testing.T) {
 }
 
 // S-0223: the analyzer reads, flai stats among its reads, logs its
-// activities, and opens and replies to threads; it authors no stories and
-// files no issues, and writes nothing else through flai or git.
+// activities, and opens and replies to threads; it authors no stories, and
+// writes nothing else through flai or git but the issues S-0224 lets it file.
 func TestTheAnalyzerReadsAndAuthorsNoStories(t *testing.T) {
 	an := analyzerIn(t.TempDir())
 	allowed := []Event{{ToolName: "Read"}, {ToolName: "Grep"}, {ToolName: "Glob"}, {ToolName: "Agent"}}
@@ -850,7 +850,7 @@ func TestTheAnalyzerReadsAndAuthorsNoStories(t *testing.T) {
 			t.Errorf("%s: %q", tool, why)
 		}
 	}
-	for _, tool := range []string{"analyze", "plan", "release_publish", "issue_story", "thread_resolve", "criteria_tick", "wait_for_work", "agent_start"} {
+	for _, tool := range []string{"analyze", "plan", "release_publish", "thread_resolve", "criteria_tick", "wait_for_work", "agent_start"} {
 		if why := an.Check(itemOf(tool, "S-0001", "")); !strings.HasPrefix(why, "the analyzer cannot call "+tool+": it reads the project") {
 			t.Errorf("%s: %q", tool, why)
 		}
@@ -860,8 +860,8 @@ func TestTheAnalyzerReadsAndAuthorsNoStories(t *testing.T) {
 		"flai task new --story S-0001 'T'",
 		"flai edit S-0001 --touches flai/cmd",
 		"flai move S-0001 backlog",
-		"flai issue new 'friction'",
-		"flai issue bump I-0001",
+		"flai issue close I-0001 --reason fixed",
+		"flai issue summary",
 		"flai thread new --on S-0001 'q' 'text'",
 		"flai analyze --focus risk",
 		"flai plan E-0001",
@@ -876,8 +876,71 @@ func TestTheAnalyzerReadsAndAuthorsNoStories(t *testing.T) {
 			t.Errorf("%q: %q", c, why)
 		}
 	}
-	if why := an.Check(bash("", "flai stats --json; flai issue new x")); !strings.Contains(why, `"flai issue new x": of flai's commands it runs only those that read, flai stats among them`) {
-		t.Errorf("issue new: %q", why)
+	if why := an.Check(bash("", "flai stats --json; flai issue close I-0001 --reason x")); !strings.Contains(why, `"flai issue close I-0001 --reason x": of flai's commands it runs only those that read, flai stats among them, and issue new and bump`) {
+		t.Errorf("issue close: %q", why)
+	}
+}
+
+// S-0224: the analyzer files an issue for each actionable finding and bumps
+// the open one that records it, with flai issue new, bump, and list or the
+// MCP tools issue_new and issue_bump, but makes no story of it: issue_story,
+// flai issue story, and flai story, epic, and task are refused it as authoring
+// stories, and the issue files themselves are flai's to write, never its
+// Edit's or Write's. Its sub-agents file none.
+func TestTheAnalyzerFilesIssuesButAuthorsNoStories(t *testing.T) {
+	root := t.TempDir()
+	an := analyzerIn(root)
+	report := "design/analysis/2026-10-06-bottlenecks.md"
+	allowed := []Event{itemOf("issue_new", "", ""), itemOf("issue_bump", "I-0001", "")}
+	for _, c := range []string{
+		"flai issue list --json",
+		"flai issue new 'Review waits a day for the operator' --class efficiency --time-lost-per-cycle 6h --evidence '12 stories waited 18h in review' --report " + report + " --json",
+		"flai issue new 'Secrets in the release log' --class impression --penalty-per-week 300 --evidence 'release.sh echoes the token' --report " + report,
+		"flai issue bump I-0001 --report " + report + " --revenue-per-week 1200 --evidence 'two releases slipped' --json",
+		"scripts/flai.sh --config c.json issue bump I-0002 --report " + report,
+		"flai issue list --json && flai issue new 'x' --class defect --report " + report,
+	} {
+		allowed = append(allowed, bash("", c))
+	}
+	for _, e := range allowed {
+		if why := an.Check(e); why != "" {
+			t.Errorf("%s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+		}
+	}
+	for _, e := range []Event{itemOf("issue_story", "I-0001", ""), itemNew("story", true), itemOf("item_edit", "S-0001", "")} {
+		tool := strings.TrimPrefix(e.ToolName, MCPPrefix)
+		if why := an.Check(e); !strings.HasPrefix(why, "the analyzer cannot call "+tool+": the analyzer authors no stories; ") || !strings.Contains(why, "flai issue new and bump") {
+			t.Errorf("%s: %q", tool, why)
+		}
+	}
+	for _, c := range []string{
+		"flai issue story I-0001",
+		"flai issue new 'x' --class defect --report " + report + " && flai issue story I-0001 --json",
+		"flai story new --epic E-0001 --draft 'T'",
+		"flai epic new 'T'",
+		"flai task new --story S-0001 'T'",
+		"bash -c 'flai issue story I-0001'",
+	} {
+		if why := an.Check(bash("", c)); !strings.HasPrefix(why, "the analyzer cannot run ") || !strings.Contains(why, ": the analyzer authors no stories; ") {
+			t.Errorf("%q: %q", c, why)
+		}
+	}
+	if why := an.Check(bash("", "flai issue close I-0001 --reason done")); !strings.Contains(why, "it runs only those that read, flai stats among them, and issue new and bump") {
+		t.Errorf("issue close: %q", why)
+	}
+	for _, file := range []string{"design/issues/I-0001-review-waits.md", "design/issues/summary.md", filepath.Join(root, "design", "issues", "I-0002-x.md")} {
+		if why := an.Check(fileEdit("Write", file)); !strings.HasPrefix(why, "the analyzer cannot use Write on "+file+": it edits only its report") {
+			t.Errorf("Write %s: %q", file, why)
+		}
+	}
+	for _, e := range []Event{itemOf("issue_new", "", ""), itemOf("issue_bump", "I-0001", "")} {
+		e.AgentID, e.AgentType = "a1", "explorer"
+		if why := an.Check(e); !strings.Contains(why, "a sub-agent (explorer) cannot call") {
+			t.Errorf("a sub-agent's %s: %q", e.ToolName, why)
+		}
+	}
+	if why := an.Check(bash("explorer", "flai issue bump I-0001 --report "+report)); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
+		t.Errorf("a sub-agent's issue bump: %q", why)
 	}
 }
 

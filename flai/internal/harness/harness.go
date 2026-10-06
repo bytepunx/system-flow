@@ -382,7 +382,10 @@ var lookFor = map[string]string{
 // the code to the explorer; write one report, design/analysis/<date>-<focus>.md,
 // with its front matter and one section per finding with its evidence,
 // severity, and estimated impact, and add it to design/analysis/README.md;
-// edit nothing else and author no stories, which flai guard enforces; and
+// file each actionable finding as an issue with its class, impact, evidence,
+// and the report, bumping the open issue that already records it, and link
+// each issue from its finding (S-0224); edit nothing else and author no
+// stories, flai issue story among them, which flai guard enforces; and
 // end with a one-line summary that names the report, which flai serve logs
 // as the run's activity, as the planner's is (ADR-0079).
 func analyzePrompt(r Request) string {
@@ -403,7 +406,9 @@ Read the metrics with flai stats --json, and take every figure from it rather th
 
 Write one report, %[5]s, where <date> is today's date in UTC as YYYY-MM-DD. Give it front matter with title, updated, status draft while you write it and active once it is done, focus %[2]s, and the window its metrics cover, from and to, as dates. Give it one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them. Add the report to design/analysis/README.md.
 
-Edit nothing else: no code, no design, no issue, and no work item, and author no stories. flai guard refuses an edit outside design/analysis and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
+File each actionable finding as an issue, and make no story of it. List the open issues with flai issue list --json, or read design/issues/summary.md. When one already records the finding, under whatever title, bump it with flai issue bump <id> --report %[5]s and the finding's impact (or the flai MCP tool issue_bump). Otherwise file one with flai issue new "<title>" --class <class> --report %[5]s --json (or the flai MCP tool issue_new): the class from the finding, defect, efficiency, or impression for a risk with no measured instance; its impact as --time-lost-per-cycle (a duration such as 4h), or --revenue-per-week or --penalty-per-week (an amount in planning.currency), the figures you gave the finding; and --evidence, the evidence behind them. With --report, flai bumps an open issue of the same title rather than opening a second, and its outcome says which it did; either way the issue's Remediation section links your report. Link each issue you filed or bumped from its finding in the report, as [I-nnnn](../issues/<file>), the file name of the path flai returns. Never run flai issue story or flai issue close: the stories a finding calls for are the planner's and the operator's to write.
+
+Edit nothing else: no code, no design, no issue, and no work item, and author no stories; the issues you file and bump, flai writes. flai guard refuses an edit outside design/analysis and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
 
 When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on your report, your recommended answer first, analyze what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
 

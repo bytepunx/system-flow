@@ -1268,8 +1268,11 @@ func analyzeReq(focus string, a *manifest.Agent) Request {
 // with none: primed with its role, reading flai stats --json, the design with
 // doc_search and doc_get, and the issues, handing search of the code to the
 // explorer; the report's path, front matter, and findings with their evidence,
-// severity, and impact; its entry in the README; nothing else edited and no
-// story authored; and a summary that names the report, for the run's log.
+// severity, and impact; its entry in the README; each actionable finding filed
+// as an issue, or the open one that records it bumped, with its class,
+// impact, evidence, and the report, and linked from the report (S-0224);
+// nothing else edited and no story authored; and a summary that names the
+// report, for the run's log.
 func TestTheAnalyzersPromptAsksForOneReport(t *testing.T) {
 	common := func(focus string) []string {
 		return []string{
@@ -1285,7 +1288,18 @@ func TestTheAnalyzersPromptAsksForOneReport(t *testing.T) {
 			"front matter with title, updated, status draft while you write it and active once it is done, focus " + focus + ", and the window its metrics cover, from and to, as dates",
 			"one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them",
 			"Add the report to design/analysis/README.md",
-			"Edit nothing else: no code, no design, no issue, and no work item, and author no stories",
+			"File each actionable finding as an issue, and make no story of it",
+			"List the open issues with flai issue list --json, or read design/issues/summary.md",
+			"When one already records the finding, under whatever title, bump it with flai issue bump <id> --report design/analysis/<date>-" + focus + ".md and the finding's impact (or the flai MCP tool issue_bump)",
+			`Otherwise file one with flai issue new "<title>" --class <class> --report design/analysis/<date>-` + focus + ".md --json (or the flai MCP tool issue_new)",
+			"the class from the finding, defect, efficiency, or impression for a risk with no measured instance",
+			"its impact as --time-lost-per-cycle (a duration such as 4h), or --revenue-per-week or --penalty-per-week (an amount in planning.currency)",
+			"--evidence, the evidence behind them",
+			"flai bumps an open issue of the same title rather than opening a second",
+			"the issue's Remediation section links your report",
+			"Link each issue you filed or bumped from its finding in the report, as [I-nnnn](../issues/<file>), the file name of the path flai returns",
+			"Never run flai issue story or flai issue close",
+			"Edit nothing else: no code, no design, no issue, and no work item, and author no stories; the issues you file and bump, flai writes",
 			"flai guard refuses an edit outside design/analysis and any write to a work item: never work around a refusal",
 			"ask with the flai MCP tool thread_open on your report, your recommended answer first",
 			"hold the flai MCP tool wait_for_events",
@@ -1422,7 +1436,10 @@ func TestClaudeCodeStartsTheAnalyzer(t *testing.T) {
 
 // S-0223: the template's analyzer definition has the reads, its report's
 // edits, the shell, the explorer, and flai's reads, activity log, threads,
-// and events, and no item write; the template's settings run flai guard on
+// and events, and no item write; S-0224 gives it issue_new and issue_bump,
+// and has it file each actionable finding as an issue, bump the open one
+// that records it, and link each from its report, but make no story of one,
+// so it has no issue_story; the template's settings run flai guard on
 // the analyzer's file edits as they do on the planner's and the
 // orchestrator's.
 func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
@@ -1438,18 +1455,24 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 	tools, _ := def["tools"].([]string)
 	for _, want := range []string{"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent",
 		"mcp__flai__prime", "mcp__flai__inbox", "mcp__flai__board", "mcp__flai__item_get", "mcp__flai__doc_get", "mcp__flai__doc_search",
-		"mcp__flai__thread_get", "mcp__flai__who_touches", "mcp__flai__activity_log", "mcp__flai__thread_open", "mcp__flai__thread_reply", "mcp__flai__wait_for_events"} {
+		"mcp__flai__thread_get", "mcp__flai__who_touches", "mcp__flai__activity_log", "mcp__flai__thread_open", "mcp__flai__thread_reply", "mcp__flai__wait_for_events",
+		"mcp__flai__issue_new", "mcp__flai__issue_bump"} {
 		if !slices.Contains(tools, want) {
 			t.Errorf("analyzer.md lacks the tool %s: %v", want, tools)
 		}
 	}
-	for _, never := range []string{"mcp__flai__item_new", "mcp__flai__item_edit", "mcp__flai__item_move", "mcp__flai__plan", "NotebookEdit"} {
+	for _, never := range []string{"mcp__flai__item_new", "mcp__flai__item_edit", "mcp__flai__item_move", "mcp__flai__issue_story", "mcp__flai__plan", "NotebookEdit"} {
 		if slices.Contains(tools, never) {
 			t.Errorf("analyzer.md has the tool %s", never)
 		}
 	}
 	prompt, _ := def["prompt"].(string)
-	for _, want := range []string{"role `analyze`", "`flai stats --json`", "`design/analysis/<date>-<focus>.md`", "`design/analysis/README.md`", "author no stories"} {
+	for _, want := range []string{"role `analyze`", "`flai stats --json`", "`design/analysis/<date>-<focus>.md`", "`design/analysis/README.md`", "author no stories",
+		// S-0224: each actionable finding filed as an issue, a duplicate bumped, and each linked from the report
+		"File each actionable finding as an issue, and make no story of it", "`flai issue list --json`",
+		"bump it with `flai issue bump <id> --report <your report>`", "`flai issue new \"<title>\" --class <class> --report <your report> --json`",
+		"`impression` for a risk with no measured instance", "`--time-lost-per-cycle`", "`--revenue-per-week` or `--penalty-per-week`", "`--evidence`",
+		"`[I-nnnn](../issues/<file>)`", "Never run `flai issue story` or `flai issue close`"} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("analyzer.md does not say %q", want)
 		}

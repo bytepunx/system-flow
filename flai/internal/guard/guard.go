@@ -36,11 +36,14 @@
 // to its report (S-0223): its own calls may read, flai stats among them, log
 // its activities, and open and reply to threads, and may edit, with Edit,
 // Write, or NotebookEdit, only a file under the manifest's design folder's
-// analysis/, its report and the folder's README.md that lists it. It
-// authors no stories: item_new, item_edit, and item_move are refused it, as
-// is every other write through flai and git's. It files no issues until
-// S-0224 lets it. Its sub-agents, the explorer it hands search to among
-// them, are held as every sub-agent is.
+// analysis/, its report and the folder's README.md that lists it. It files
+// and bumps an issue for each actionable finding (S-0224), with flai issue
+// new and bump or the MCP tools issue_new and issue_bump, which write the
+// issue through flai, never through a file edit. It authors no stories:
+// item_new, item_edit, item_move, issue_story, and flai issue story, story,
+// epic, and task are refused it, as is every other write through flai, flai
+// issue close among them, and git's. Its sub-agents, the explorer it hands
+// search to among them, are held as every sub-agent is.
 //
 // Its calls on threads are held by who opened the thread and by
 // answer_threads (S-0220): on a thread it opened it follows up and resolves,
@@ -267,30 +270,52 @@ const orchestratorPublishes = "it is the orchestrator's alone, while orchestrati
 // (S-0223).
 const RoleAnalyze = "analyze"
 
-// MCPAnalyzes are flai's MCP tools the analyzer may call besides MCPReads.
-// It files no issues: issue_story and flai issue new and bump wait for
-// S-0224.
-var MCPAnalyzes = []string{"activity_log", "inbox", "thread_open", "thread_reply", "wait_for_events"}
+// MCPAnalyzes are flai's MCP tools the analyzer may call besides MCPReads:
+// issue_new and issue_bump file and bump an issue for a finding of its
+// report (S-0224).
+var MCPAnalyzes = []string{"activity_log", "inbox", "issue_bump", "issue_new", "thread_open", "thread_reply", "wait_for_events"}
 
-// itemWrites are flai's MCP tools that write a work item, which the analyzer
-// never calls.
-var itemWrites = []string{"item_edit", "item_move", "item_new"}
+// itemWrites are flai's MCP tools that write a work item, issue_story's
+// draft story among them, which the analyzer never calls.
+var itemWrites = []string{"issue_story", "item_edit", "item_move", "item_new"}
+
+// cliAnalyzes are the flai commands the analyzer may run besides cliReads,
+// each with the subcommands it may run: it files and bumps the issues its
+// findings call for (S-0224).
+var cliAnalyzes = map[string][]string{
+	"issue": {"new", "bump"},
+}
+
+// cliAuthors are the flai commands that author a work item, with the
+// subcommands that do, nil for every one; the analyzer runs none of them.
+var cliAuthors = map[string][]string{
+	"epic":  nil,
+	"issue": {"story"},
+	"story": nil,
+	"task":  nil,
+}
 
 // analyzer ends each of the analyzer's refusals: the rule the call breaks
 // and what to do instead.
-const analyzer = "it reads the project and its metrics and edits nothing but its report under the design folder's analysis/ and the folder's README.md (strategic-agents.md, ADR-0060). Put what it found, and the stories it would suggest, in its report, or ask the operator with thread_open."
+const analyzer = "it reads the project and its metrics, files or bumps an issue for each actionable finding with flai issue new and bump, and edits nothing but its report under the design folder's analysis/ and the folder's README.md (strategic-agents.md, ADR-0060). Put what it found, and the stories it would suggest, in its report, or ask the operator with thread_open."
 
 // authorsNoStories says why the analyzer never writes a work item.
-const authorsNoStories = "the analyzer authors no stories; the stories its findings call for are the planner's and the operator's to write"
+const authorsNoStories = "the analyzer authors no stories; the stories its findings call for are the planner's and the operator's to write, flai issue story among them"
 
 // analyzing are the analyzer's rules: flai's reads, flai stats among them,
-// and git's reads.
+// issue new and bump, and git's reads.
 var analyzing = rules{
 	flai: func(cmd, sub string, rest []string) (string, string) {
 		if reads(cmd, sub, rest) {
 			return "", ""
 		}
-		return "of flai's commands it runs only those that read, flai stats among them", ""
+		if subs, ok := cliAnalyzes[cmd]; ok && slices.Contains(subs, sub) {
+			return "", ""
+		}
+		if subs, ok := cliAuthors[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
+			return authorsNoStories, ""
+		}
+		return "of flai's commands it runs only those that read, flai stats among them, and issue new and bump", ""
 	},
 	git: func(string) string { return "it runs only git's reads" },
 }

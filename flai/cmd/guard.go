@@ -110,10 +110,13 @@ NotebookEdit on a file under the manifest's design folder's analysis/ (its
 report and the folder's README.md), resolved from the project's root with
 .. and symbolic links followed, so that neither leads out of the folder.
 An edit anywhere else is refused naming the folder, as is every edit when
-the project is unreadable. item_new, item_edit, and item_move are refused
-as the analyzer authors no stories; every other flai tool and command that
-writes, issue new and bump among them, and git's writes are refused too.
-The analyzer's sub-agents are held as any sub-agent is.
+the project is unreadable. It may also file and bump the issues its
+findings call for (S-0224): flai issue new and bump, and the MCP tools
+issue_new and issue_bump. item_new, item_edit, item_move, issue_story, and
+flai issue story, story, epic, and task are refused as the analyzer authors
+no stories; every other flai tool and command that writes, flai issue close
+among them, and git's writes are refused too. The analyzer's sub-agents are
+held as any sub-agent is.
 
 No sub-agent, planner, orchestrator, or analyzer starts the analyzer: the
 MCP tool analyze and flai analyze are refused to each, as the MCP tool plan

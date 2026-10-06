@@ -63,7 +63,8 @@ func TestGuardHoldsThePlannerToPlanning(t *testing.T) {
 
 // S-0223: in a session flai serve starts with FLAI_ROLE=analyze, flai guard
 // holds the analyzer's own calls to reads and its report, under the
-// manifest's design folder's analysis/, whatever the folder is called.
+// manifest's design folder's analysis/, whatever the folder is called, and
+// to filing and bumping issues but making no story of one (S-0224).
 func TestGuardHoldsTheAnalyzerToItsReport(t *testing.T) {
 	t.Setenv("FLAI_ROLE", "analyze")
 	root := tempProject(t)
@@ -90,7 +91,11 @@ func TestGuardHoldsTheAnalyzerToItsReport(t *testing.T) {
 		{`{"tool_name":"mcp__flai__activity_log","tool_input":{"kind":"analyzer"}}`, 0, ""},
 		{`{"tool_name":"mcp__flai__thread_open","tool_input":{"on":"S-1"}}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"flai stats --json"}}`, 0, ""},
-		{`{"tool_name":"Bash","tool_input":{"command":"flai issue new x"}}`, 2, `the analyzer cannot run "flai issue new x"`},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai issue new x --class defect --report plans/analysis/2026-10-06-all.md"}}`, 0, ""},
+		{`{"tool_name":"mcp__flai__issue_bump","tool_input":{"id":"I-1","report":"plans/analysis/2026-10-06-all.md"}}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai issue story I-1"}}`, 2, `the analyzer cannot run "flai issue story I-1": the analyzer authors no stories`},
+		{`{"tool_name":"mcp__flai__issue_story","tool_input":{"id":"I-1"}}`, 2, "the analyzer cannot call issue_story: the analyzer authors no stories"},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai issue close I-1 --reason x"}}`, 2, `the analyzer cannot run "flai issue close I-1 --reason x"`},
 		{`{"tool_name":"mcp__flai__analyze","tool_input":{}}`, 2, "the analyzer cannot call analyze"},
 		{`{"tool_name":"mcp__flai__item_new","tool_input":{"type":"story"},"agent_type":"explorer","agent_id":"a1"}`, 2, "a sub-agent (explorer) cannot call item_new"},
 	} {
