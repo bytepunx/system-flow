@@ -7,7 +7,7 @@ count: 2
 cost: 1h24m
 first_reported: 2026-10-06T10:32:27Z
 last_reported: 2026-10-06T10:32:27Z
-updated: 2026-10-06T10:32:27Z
+updated: 2026-10-06T11:44:51Z
 ---
 
 # I-0088 A story waits in review for the operator while nothing else can start, so the board stands idle until a person accepts
@@ -28,3 +28,5 @@ S-0283 moved to review at 10:30:28Z and the operator, at the dashboard, accepted
 ## Remediation
 
 S-0221, already in ready, lets the orchestrator accept a story in review when the operator turns that permission on. S-0286 keeps the operator's acceptance for a story that changes a path Claude Code protects. Between them, the wait would remain only for those stories and for the ones the operator chooses to review. Until S-0221 is built, an agent in the operator's session can run the acceptance on the operator's word.
+
+Story S-0296 remediates this issue, created from it at 2026-10-06T11:44:51Z.
