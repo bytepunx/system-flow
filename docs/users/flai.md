@@ -513,7 +513,7 @@ A ready story placed by hand, by anyone but the orchestrator, within `--keep-pla
 
 - it is not a draft;
 - it meets the definition of ready: a goal, acceptance criteria with a checkbox, and an epic that is not cancelled;
-- it would not be held if it were ready ([Waiting for another story](#waiting-for-another-story)): it declares touches whenever a story is in progress or in review, they overlap none of those stories' touches, and every story it names in `after:` is done;
+- it would not be held if it were ready ([Touches](#touches), [Waiting for another story](#waiting-for-another-story)): it declares touches whenever a story is in progress, its claim overlaps no claim of a story in progress outside the shared paths, and every story it names in `after:` is done;
 - it has a forecast duration and a cost of delay value.
 
 Every other backlog story is listed with each reason it is not a candidate. `--limit` caps the candidates listed; those beyond it are left out. It writes nothing: move a candidate to ready with `flai move`.
@@ -570,7 +570,7 @@ widen them so that stories that overlap wait: flai touches S-0131 flai/cmd docs 
 ```
 
 - **Conflicts.** Sync merges the two branches in git's object store only (`git merge-tree --write-tree`, git 2.38 or newer; an older git skips it with a warning), so nothing changes in either worktree. For each pair that conflicts, flai opens one thread on the story that synced, titled `S-0130 and S-0131 conflict when merged`, listing the paths. It shows in both stories' agents' MCP `inbox` and in the designer's inbox on the dashboard. Settle it between the two stories: one narrows its change, or names the other in `after:` and waits. A later sync with the same paths adds nothing, new paths add an entry, and flai resolves the thread once the two merge cleanly or the other story is no longer open.
-- **Outside the touches.** Sync lists the files the branch changed since main that the story's touches, and its open tasks', do not cover (see [Touches](#touches)), and prints the `flai touches` command that widens them. Touches that are too narrow let a story that overlaps start beside it.
+- **Outside the touches.** Sync lists the files the branch changed since main that the story's claim does not cover: its touches, each folder among them narrowed to the files its tasks name inside it, and its open tasks' touches (see [Touches](#touches)). It prints the `flai touches` command that widens them; when a task changed a file it did not name, widen that task's touches. Touches that are too narrow let a story that overlaps start beside it.
 - Neither check fails the sync. `--json` adds `branches` (each with `story`, `status`, `branch`, `clean`, `conflicts`, and `thread`), `outside_touches`, and `trial_merge_skipped` when git is too old.
 
 #### Relative worktree links (opt-in)
@@ -597,11 +597,17 @@ flai touches T-0121 flai/internal/workitem
 flai touches T-0121 --clear
 ```
 
-`touches` is the list of paths or components a story or task is changing. Write each path from the repository's root; one that starts with a dot, such as `.claude/agents` or `.github/workflows`, is taken like any other. flai drops a trailing slash and a repeat, and refuses an entry with a comma, a leading dash, a leading slash, a `..` segment, or a control character, writing nothing, whichever way you set it: `flai touches`, `--touches` on `new` and `flai edit`, MCP's `item_new` and `item_edit`, or the dashboard. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path, the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
+`touches` is the list of paths or components a story or task is changing. Write each path from the repository's root; one that starts with a dot, such as `.claude/agents` or `.github/workflows`, is taken like any other. flai drops a trailing slash and a repeat, and refuses an entry with a comma, a leading dash, a leading slash, a `..` segment, or a control character, writing nothing, whichever way you set it: `flai touches`, `--touches` on `new` and `flai edit`, MCP's `item_new` and `item_edit`, or the dashboard. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path outside the [shared paths](#shared-paths), the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
 
-It is also a claim that decides what starts ([ADR-0046](../../design/adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). A story's claim is its `touches` and those of its tasks that are not done or cancelled; a sub-project's name or tag (`cli`, `flai`) means its path. A ready story is *held* while its claim overlaps the claim of a story in progress or in review: the same path, or one inside the other (`flai/cmd` and `flai/cmd/serve`, not `flai` and `flaiover`). A story with no touches may change anything, so it is held while any story is open, and while it is open itself it holds every ready story. Declare touches when you create a story; the agent that pulls it may widen them. `flai touches` leaves an edit notice when it changes them, as `flai edit` does, so agents connected over MCP hear of it and `flai serve` may plan the story again ([Running the planner](#running-the-planner)).
+It is also a claim that decides what starts ([ADR-0046](../../design/adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md), refined by [ADR-0096](../../design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)). A sub-project's name or tag (`cli`, `flai`) means its path. A story's claim is worked out from its touches and its tasks':
 
-A claim grows after its story starts, as its tasks are written. When `flai task new`, `flai edit --touches`, `flai touches`, or MCP's `item_new` and `item_edit` add paths to the claim of a story in progress that another story in progress claims, flai says so (S-0244): `overlaps S-0198 <title> (in progress) on docs/users/flai.md: both stories are told; coordinate with its agent before you change them`. `--json` and the MCP result list them in `overlaps`, and both stories' agents are told as an `overlapped` change. The write stands, and `flai check` still only warns.
+- A story touch that is a folder holding touches of the story's tasks is replaced by those touches. Done tasks count, because the branch changed their files; cancelled tasks do not. So `flai/internal/mcpserver` on the story narrows to `flai/internal/mcpserver/permission.go` once a task names that file.
+- A story touch that no task names inside stays whole.
+- A touch of an open task outside every story touch is added.
+
+A ready story is *held* while its claim overlaps the claim of a story in progress: the same path, or one inside the other (`flai/cmd` and `flai/cmd/serve`, not `flai` and `flaiover`). An overlap that lies wholly inside a shared path does not hold ([Shared paths](#shared-paths)). A story in review holds nothing: its branch is finished and synced, and when it is accepted, the notice tells each overlapping story what changed. A story with no touches may change anything, so it is held while any story is in progress, and while it is in progress itself it holds every ready story. Declare touches when you create a story, a file where you can name one and a folder only where files no task can name yet may be added; the agent that pulls it may widen them, or narrow a folder to the files its tasks name. `flai touches` leaves an edit notice when it changes them, as `flai edit` does, so agents connected over MCP hear of it and `flai serve` may plan the story again ([Running the planner](#running-the-planner)).
+
+A claim grows after its story starts, as its tasks are written. When `flai task new`, `flai edit --touches`, `flai touches`, or MCP's `item_new` and `item_edit` add paths to the claim of a story in progress that another story in progress claims, flai says so (S-0244): `overlaps S-0198 <title> (in progress) on docs/users/flai.md: both stories are told; coordinate with its agent before you change them`. `--json` and the MCP result list them in `overlaps`, and both stories' agents are told as an `overlapped` change. An overlap inside the shared paths is not told. The write stands, and `flai check` still only warns.
 
 A held story is not started by `flai serve` and not offered by `wait_for_work`. The next ready story that is not held goes ahead of it, and it keeps its place and goes first once it is clear. The board says why:
 
@@ -609,12 +615,50 @@ A held story is not started by `flai serve` and not offered by `wait_for_work`. 
 ready
   S-0130 Serve the board faster                         feature          2m HELD
          touches flai/cmd/serve
-         held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0128 (in progress) touches; starts when S-0128 is accepted, cancelled, or sent back
+         held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0128 (in progress) touches; starts when S-0128 moves to review, is cancelled, or is sent back
 ```
 
 You can still start it yourself: `flai move S-0130 in-progress` and `flai serve agent start S-0130` (**Start agent** on its page) warn and go ahead. An agent you start this way is told that you started it and what it went past, the hold, a full in-progress limit, or a full review, and the journal says the same.
 
 An agent that ended asking you a question is started again when you answer, in its own session, while its story is in progress or in review. When the orchestrator recommends an answer, the agent waits on: it starts again when you confirm the recommendation (`flai thread confirm`) or answer otherwise. If you send the story back to ready before answering, it waits for its hold and the limit like any other ready story once you answer.
+
+### Shared paths
+
+```bash
+flai shared list                                  # the patterns, one a line
+flai shared check docs/users/flai.md flai/cmd     # whether each lies inside a pattern, and which
+flai shared check S-0295                          # each entry of a story's claim, as its hold reads it
+flai shared add 'docs/users/*.md' --autocommit    # commits system-flow.yaml on its own
+flai shared remove design/adrs
+```
+
+A few paths are changed by almost every story, each in a section of its own or in a new file, such as the users' guide or the ADR folder. An overlap there is seldom a conflict, so it should not hold a story. `claims.shared` in `system-flow.yaml` lists them as glob patterns ([ADR-0096](../../design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)):
+
+```yaml
+claims:
+  shared:
+    - docs/users/flai.md
+    - design/adrs
+```
+
+A pattern is a path from the repository's root, separated by `/`. `*` matches any characters within one segment, `**` zero or more whole segments, and `?` one character. A path with none of them covers itself and everything below it, so `design/adrs` and `design/adrs/**` mean the same. A project made from the template starts with `design/adrs` and `design/issues`, under its design folder.
+
+When two claims overlap, flai takes the narrower entry of the pair, the deeper one. The pair does not hold when that entry lies wholly inside a pattern. A file lies inside a pattern that matches it. A folder lies inside only when all of it does: `docs/users` lies inside `docs/users/**`, but not inside `docs/users/*.md`, since the folder may hold other files. Such an overlap holds no ready story, is not a `wip.overlap`, and is not told as a grown claim. The trial merge at `flai stream sync` and the notice at acceptance still report it, so a real conflict on a shared path is caught, after both stories have started. flai reads the list again each time it needs it, so a change takes effect at once in a running `flai mcp` or `flai serve`.
+
+`flai shared check` changes nothing and exits 0 whether or not an entry is shared. It reads a component's name or tag as its path. An entry whose last segment has an extension, such as `flai.md`, is a file; any other is a folder. Given a story's ID, it reports each entry of the story's claim, which tells you what a pattern would free before you add it:
+
+```text
+S-0295 docs/users/flai.md: shared, inside docs/users/flai.md
+S-0295 flai/internal/workitem/hold.go: not shared
+```
+
+`flai shared add` and `remove` rewrite only `claims.shared` and keep the file's other keys and comments. A pattern that is not valid (empty, absolute, with a `..` segment, or a malformed glob), one to add that is listed already, or one to remove that is not listed is refused with the reason, and nothing is written. Each prints what it changed. Nothing is committed unless you give `--autocommit` and the project leaves `dashboard.autocommit` on; `--trailer` adds lines to the commit. `flai check` reports a pattern that is not valid as `manifest.claims` on its line, and the pattern frees nothing until it is fixed.
+
+With `--json`, `list` prints an array of patterns; `add` and `remove` print `{"added": [...], "shared": [...]}` or `{"removed": [...], "shared": [...]}`, `shared` being the list after the change; and `check` prints an array of `{entry, path, shared, pattern, story}`, with `pattern` only when the entry is shared and `story` only for a story's claim.
+
+The dashboard's settings page ([flaiover.md](flaiover.md#settings)) and the MCP tools `shared_paths` and `shared_paths_edit` ([Serving agents over MCP](#serving-agents-over-mcp)) read and change the same list.
+
+The list decides what holds, so an agent that could add to it could free its own story. Only your own session changes it. `flai guard` refuses `flai shared add` and `remove`, and `shared_paths_edit`, to every sub-agent and to every session `flai serve` starts: a story's agent, the planner, the orchestrator, and the analyzer. The refusal tells the agent to ask you on a thread. The dashboard changes it while you have the `settings` host action on. Listing and checking are open to every agent.
 
 ### Waiting for another story
 
@@ -779,7 +823,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 
 | Tool | What it does |
 |------|--------------|
-| `inbox` | (Since S-0181 `flai_outdated`, on every call while it is true: the flai serving the agent is older than the newest flai release in the project's history, with `running`, `newest`, and the `upgrade` command.) (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what. Since S-0132 it reports `overlapped`: a story was accepted, `cause`, that changed paths this story claims, `to`. Since S-0244 `cause` may be a story in progress whose claim and this story's grew to overlap on `to`: coordinate with its agent.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's, but `other` on a thread it opened while a recommendation on it awaits your confirmation; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull`, false while the in-progress limit is full or review is at or over its limit, and `pull_hold` saying which, and `held` with why on a story an open story's claim holds, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once. `unpublished`: the IDs of accepted items no release has covered yet, as information; publishing them is the operator's, or an agent's the operator asks (S-0195, ADR-0067) |
+| `inbox` | (Since S-0181 `flai_outdated`, on every call while it is true: the flai serving the agent is older than the newest flai release in the project's history, with `running`, `newest`, and the `upgrade` command.) (Since S-0085 `changes` also reports `edited`: someone changed an item's title, fields, or body with `flai edit` or from the dashboard, and `to` names what. Since S-0132 it reports `overlapped`: a story was accepted, `cause`, that changed paths this story claims, `to`. Since S-0244 `cause` may be a story in progress whose claim and this story's grew to overlap on `to`: coordinate with its agent.) Threads awaiting the agent (`awaiting: you` when the last entry is not the agent's, but `other` on a thread it opened while a recommendation on it awaits your confirmation; `story` filters, `all` includes the rest), `ready`: the stories ready to pull, in pull order, with `can_pull`, false while the in-progress limit is full or review is at or over its limit, and `pull_hold` saying which, and `held` with why on a story the claim of a story in progress holds, and `changes`: what others did to work items since this agent last looked (moved, blocked, unblocked, pull order changed), each reported once. `unpublished`: the IDs of accepted items no release has covered yet, as information; publishing them is the operator's, or an agent's the operator asks (S-0195, ADR-0067) |
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why, a story with tasks with their counts in `tasks`; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
@@ -790,6 +834,8 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |
 | `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed; with `role` (`explore` or `verify`), the smaller pack for a sub-agent ([Sub-agents](#sub-agents)); with `role` `plan` and `epic` or `story`, or `role` `orchestrate` or `analyze`, a strategic agent's pack ([The planner, the orchestrator, and the analyzer](#the-planner-the-orchestrator-and-the-analyzer)) ([Prime a session](#prime-a-session)) |
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
+| `shared_paths` | The shared paths, `claims.shared` in `system-flow.yaml`, as `shared`, and as `invalid` each pattern that is not valid, with the reason. Given `paths` (paths or touches entries) or `story` (a story's ID, whose claim is checked entry by entry), `entries` says of each whether it lies inside a pattern and which, as `flai shared check` does. A read, open to every agent ([Shared paths](#shared-paths)) |
+| `shared_paths_edit` | Remove the patterns in `remove`, then add those in `add`, as `flai shared remove` and `add` do, and return `added`, `removed`, and `shared`, the list after the change. Nothing is committed. Yours alone: `flai guard` refuses it to every sub-agent and every session `flai serve` starts, and tells the agent to ask you on a thread ([Shared paths](#shared-paths)) |
 | `order_by_policy` | The ready column's order by `policy` (`cod`, `wsjf`, `throughput`, or `fifo`; the project's `orchestration.policy` when left out), as `flai order --by <policy> --json` prints it, with each story's figure. It never writes the order ([Ordering by a policy](#ordering-by-a-policy)) |
 | `promote_candidates` | The backlog stories that could go to ready and why each other one cannot, as `flai promote --candidates --json` prints them; `limit` caps the candidates. It writes nothing ([Ordering by a policy](#ordering-by-a-policy)) |
 | `release_evaluate` | Whether the release policy is met, with its figures, as `flai release --evaluate --json` prints it. It releases nothing ([Whether a release is due](#whether-a-release-is-due)) |
@@ -1233,7 +1279,7 @@ Acceptance is one step, and for a story it is the only way to reach done: `flai 
 
 Accepting an epic's last open story accepts the epic too (S-0200, [the workflow](../../design/system/workflow.md#an-epic-follows-its-stories)): the epic moves to done after the story and is archived with it and with its cancelled stories, in the one acceptance commit, `chore: [S-0031] accept and archive, with E-0002`. `--dry-run` says `would also move E-0002 <title> from review to done, following S-0031, and archive it`, and anything that would stop the epic is a blocker before anything is merged. `--json` has the epic's move in `epic`. An epic accepted this way counts toward the next publish as one you accept yourself.
 
-Acceptance then tells the stories still in progress or in review what it changed under them. For each one whose `touches`, with those of its open tasks, cover a path the merge brought into the main branch, it records which paths those are. A story with no touches is told of every path. The command prints `told S-0040 it overlaps: flai/cmd/accept.go`, `--json` lists them in `overlaps`, and the story's agent sees it in its MCP `inbox` as an `overlapped` change. Acceptance from the dashboard does the same.
+Acceptance then tells the stories still in progress or in review what it changed under them. For each one whose claim ([Touches](#touches)) covers a path the merge brought into the main branch, shared paths included, it records which paths those are. A story with no touches is told of every path. The command prints `told S-0040 it overlaps: flai/cmd/accept.go`, `--json` lists them in `overlaps`, and the story's agent sees it in its MCP `inbox` as an `overlapped` change. Acceptance from the dashboard does the same.
 
 Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review; an experiment story is refused until its results document is committed on its branch, and the refusal names the document to write, `design/experiments/<S-nnnn>-<slug>.md` (ADR-0066). Start it from `design/experiments/template.md`: front matter `title`, `updated`, `status`, and `story`, and the sections Hypothesis, Success measure, What was done, Results, and Recommendation, which says adopt, adapt, or drop; `flai check` validates it. With it, an experiment is accepted like a research story, and publishing gives no component a bump on its account, whatever it touched.
 

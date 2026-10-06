@@ -3,6 +3,7 @@
 ## 1.0.59 - 2026-10-06
 
 - S-0295 The planner and the story's agent name files, not folders, in touches (patch): `strategic-agents.md`'s section "As the planner" says to predict a story's touches and its tasks' file by file, to keep a folder touch only where the story may add files there that no task can name yet, and to record each folder touch kept, and why, under the story's `### Planning` heading. `work-management.md` says to name files in touches wherever you can, to narrow a story's folder touch to the files its tasks name with `flai touches`, or leave it for flai, which replaces it in the story's claim with its tasks' touches inside it (ADR-0096), and never to ask for a path to be added to the shared paths (`claims.shared`) to escape a hold, since that list is the operator's. The narrowing and the shared paths need a flai that has them.
+- S-0295 A new project lists its shared paths in the manifest (patch): `system-flow.yaml` carries `claims.shared`, the glob patterns of paths that many stories change in separate sections or new files, starting with `<design>/adrs` and `<design>/issues` under the design layout folder. An overlap of two stories' claims that lies wholly inside a pattern holds no ready story and is no `wip.overlap` (ADR-0096). `flai shared` lists, checks, adds, and removes the patterns; only the operator's own session changes them. An older flai ignores the key and holds as before, so it needs a flai that has it.
 
 ## 1.0.58 - 2026-10-06
 

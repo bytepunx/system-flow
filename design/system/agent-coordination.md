@@ -1,6 +1,6 @@
 ---
 title: Coordinating stories that run in parallel
-updated: 2026-10-01
+updated: 2026-10-06
 status: active
 topics: [cli, dashboard]
 ---
@@ -112,6 +112,8 @@ The September 2026 preprints are not peer reviewed; only their central ideas are
 - `flai stream sync` trial-merges open branches and reports paths changed outside the claim. Acceptance tells overlapping open stories what changed.
 
 The stories that build it are under E-0009. Until they are accepted, flai behaves as described in "What flai does today".
+
+[ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md) (S-0295, 2026-10-06) refines this decision: a story in review holds nothing, an overlap inside the manifest's shared paths never holds, and a story's tasks narrow its folder touches in its claim. [workflow.md](workflow.md#branches-and-collisions-adr-0019) says how the hold works now.
 
 ## Within a story
 

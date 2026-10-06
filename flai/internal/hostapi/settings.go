@@ -213,8 +213,8 @@ func settingsSpecs() map[string]spec {
 
 		// settings.shared: one pattern added to or removed from the project's
 		// shared paths, claims.shared in its manifest (S-0295, ADR-0096), by
-		// flai shared add or remove, which leave the change uncommitted. flai
-		// exits 1 refusing a pattern that is not valid, one to add that is
+		// flai shared add or remove with --autocommit, which commits
+		// system-flow.yaml on its own. flai exits 1 refusing a pattern that is not valid, one to add that is
 		// listed already, or one to remove that is not, and with a manifest it
 		// cannot read or write: each is answered as a rule, with its reason.
 		"settings.shared": {action: ActionSettings, exits: map[int]int{1: Rule}, describe: settingsDone("the project's shared paths changed"),

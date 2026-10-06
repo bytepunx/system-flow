@@ -256,7 +256,7 @@ Whatever you turn on, it never edits a file, commits, works a story, or moves a 
 Everything above is changed in a shell on the host, and stays that way until you turn on `settings` ([ADR-0039](../../design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md)). With it on, the dashboard's **Settings** page changes the same things through flai:
 
 ```bash
-flai serve enable settings                  # this project: its host actions, its default agent, its MCP token
+flai serve enable settings                  # this project: its host actions, its default agent, its shared paths, its MCP token
 flai serve enable settings --all-projects   # also what the host keeps for every project
 flai serve disable settings                 # only a shell turns it off
 ```
