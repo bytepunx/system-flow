@@ -1,6 +1,6 @@
 ---
 title: Go libraries
-updated: 2026-09-29
+updated: 2026-10-06
 status: active
 topics: [go]
 ---
@@ -24,6 +24,7 @@ Deliberately not used:
 - `go-git`: cloning with branches, submodules, and credentials is more reliable by shelling out to the user's `git`. See [ADR 0010](../adrs/0010-shell-out-to-git-and-docker.md).
 - Docker SDK: same reasoning, `docker` on `PATH` is required and invoked as a subprocess.
 - Markdown parsers: `flai` only needs front matter and headings, a small hand-written splitter is enough.
+- Glob libraries (`bmatcuk/doublestar`): the patterns of `claims.shared` (S-0295, [ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)) are matched a segment at a time with `path.Match`, and `**` is handled by hand in a few lines of `internal/manifest/shared.go`. The library would add a dependency for the one thing the standard library lacks, and the rule that a folder lies inside a pattern only when everything below it does would still be flai's own.
 - Prompt and terminal UI libraries (`charmbracelet/huh`, `bubbletea`, `lipgloss`): removed in S-0160. See below.
 
 ## Prompts (S-0160)

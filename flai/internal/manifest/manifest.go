@@ -57,6 +57,10 @@ type Manifest struct {
 	// Orchestration is the policy that orders the ready column and the
 	// policy that says when to release (S-0217).
 	Orchestration Orchestration `yaml:"orchestration,omitempty" json:"orchestration,omitzero"`
+	// Claims is how stories' touches claim paths: the shared paths whose
+	// overlaps hold no story (S-0295, ADR-0096). A pattern that is not valid
+	// does not stop the load; Claims.Errors names it, and it frees nothing.
+	Claims Claims `yaml:"claims,omitempty" json:"claims,omitzero"`
 	// Flai is what the project asks of the flai that reads it (S-0181).
 	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
 }

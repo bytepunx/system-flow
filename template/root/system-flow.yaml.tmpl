@@ -19,3 +19,7 @@ dashboard:
   tag: latest
   port: 4242
   bind: 0.0.0.0 # 127.0.0.1 to keep the dashboard on this host only
+claims:
+  shared: # paths many stories change in their own sections or new files: an overlap inside one holds no story; flai shared edits them
+    - {{ .layout.design }}/adrs
+    - {{ .layout.design }}/issues
