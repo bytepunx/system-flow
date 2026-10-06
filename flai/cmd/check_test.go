@@ -262,6 +262,16 @@ func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
 	}
 }
 
+// S-0227: a finding that quotes a code span is written without backticks,
+// so the issue it is recorded in passes the markdown lint (MD038).
+func TestFindingTextLeavesNoCodeSpanOpen(t *testing.T) {
+	got := findingText("MD038/no-space-in-code Spaces inside code span elements\n  [Context: \"`rule: `\"]")
+	want := `MD038/no-space-in-code Spaces inside code span elements [Context: "'rule: '"]`
+	if got != want {
+		t.Errorf("findingText = %q, want %q", got, want)
+	}
+}
+
 // S-0249: --record-issues needs --story, and a run with nothing outside the
 // story writes nothing under design/issues.
 func TestCheckRecordIssuesNeedsStoryAndWritesOnlyWhatIsOutside(t *testing.T) {

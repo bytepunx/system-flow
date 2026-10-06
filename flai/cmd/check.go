@@ -171,7 +171,7 @@ func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string
 		if !f.Outside {
 			continue
 		}
-		line := strings.Join(strings.Fields(f.Message), " ")
+		line := findingText(f.Message)
 		if f.Path != "" {
 			line = "`" + projectPath(repo, f.Path) + "`: " + line
 		}
@@ -202,6 +202,14 @@ func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string
 		}
 	}
 	return out, nil
+}
+
+// findingText is a finding's message as one line of an issue's markdown:
+// its whitespace collapsed, and its backticks made quotes, since a message
+// that quotes a code span, such as a markdown finding's context, would
+// otherwise open one the markdown lint refuses.
+func findingText(message string) string {
+	return strings.ReplaceAll(strings.Join(strings.Fields(message), " "), "`", "'")
 }
 
 // projectPath is p as the project names it, from its main checkout where
