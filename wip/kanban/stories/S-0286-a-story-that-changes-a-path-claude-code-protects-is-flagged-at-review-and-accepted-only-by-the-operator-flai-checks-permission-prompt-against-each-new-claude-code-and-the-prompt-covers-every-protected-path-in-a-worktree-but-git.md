@@ -6,7 +6,7 @@ title: A story that changes a path Claude Code protects is flagged at review and
 status: backlog
 owner: alex
 created: 2026-10-06T06:32:43Z
-updated: 2026-10-06T06:32:52Z
+updated: 2026-10-06T22:49:46Z
 transitions: []
 tags: [flai, flaiover]
 topics: [cli]
@@ -17,7 +17,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-06T22:49:46Z
 ---
 # S-0286 A story that changes a path Claude Code protects is flagged at review and accepted only by the operator, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a worktree but .git
 
