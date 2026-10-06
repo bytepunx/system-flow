@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.54 - 2026-10-06
+
+- S-0282 Acceptance criteria are ticked through flai once verified (patch): `work-management.md` says to tick each criterion as soon as you have verified it, with `flai criteria tick <story> <n>` or the MCP tool `criteria_tick` and the numbers `flai criteria list` prints, never by editing the item's file, and that the move to `review` warns of an unticked one. `delegation.md` says a task sub-agent names in its final message the criteria its task meets, a verifier says which criteria the diff meets and which it does not, and the story's agent ticks them after its review. The commands need a flai that has them.
+
 ## 1.0.53 - 2026-10-06
 
 - S-0219 The orchestrator plans, finalizes, promotes, and orders by its permissions (patch): `strategic-agents.md`'s section "As the orchestrator" says what it does with each. With `plan_backlog_epics` it runs `flai plan --candidates` and starts the planner (`plan`) for each epic listed, one at a time. With `finalize_drafts` it runs `flai promote --drafts`, finalizes a complete draft whose criteria, touches, forecast, and value it judges consistent, and opens one thread on any other saying what is missing or inconsistent. With `promote_to_ready` it moves `flai promote --candidates`'s candidates to `ready` in their order while the ready limit has room, never a draft or a held story. With `order_ready` it runs `flai order --by <policy> --apply` after each change to the ready column, which keeps a story placed by hand within the last day. It logs every action with `activity_log` and the policy figure that justified it, and a refusal from `flai guard` or from flai ends that attempt, which it logs and does not retry until something changes. `.claude/agents/orchestrator.md`, the orchestrator's definition, says the same. The commands need a flai that has them.

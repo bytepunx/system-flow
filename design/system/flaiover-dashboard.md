@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-05
+updated: 2026-10-06
 status: active
 topics: [dashboard]
 ---
@@ -103,6 +103,7 @@ A banner an action leaves on the page until the next action is dismissible (S-01
 | `/mcp`, any method | 410 with a JSON-RPC error that says where MCP lives now: flai serves it on the host, over stdio and over HTTP ([ADR-0030](../adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md), S-0076). No token is needed, because the answer says nothing about the project. The dashboard served MCP here from S-0043 until then (ADR-0024, superseded) |
 | `POST /api/items/:id/block` `{ reason }`, `POST /api/items/:id/unblock` | flai block and unblock |
 | `POST /api/items/:id/finalize` | flai's `item.finalize` (S-0201): finalizes a draft story as the designer, recorded in its `finalized` block. A story that is not a draft is 400 with flai's reason, and an ID that is not a story is 400 |
+| `POST /api/items/:id/criteria` `{ hash, tick? \| untick? }` | flai's `item.criteria` (S-0282, [ADR-0089](../adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md)), `flai criteria tick` or `untick <id> <n>,... --hash --by <designer> --autocommit`: ticks or unticks the criteria named by number, from 1 as `flai criteria list` numbers them, as the designer, committed. One call ticks or unticks, not both. A stale hash is 409, an archived or closed item or what flai check finds 422, a number with no box or a body of another shape 400. Answers flai's edit result with `criteria`, `[{ n, text, ticked }]`, as they now are. The story page has no checkbox for it yet |
 | `GET /api/items/:id/plan`, `POST /api/items/:id/plan` | S-0208, [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md). `GET` answers `{ plan_enabled, run }`: whether the `plan` host action is on, from `project.info`'s `host_actions.plan`, and the item's newest planner run from `agent.status`'s `plans`, or `null`, both asked of flai each time; a flai that cannot be asked reads as the action off and no run. `POST` is flai's `plan.run` `{ id }`, which runs `flai plan <id> --json` and answers the run (`item`, `agent`, `harness`, `command`, `pid`, `log`, `session`, `started`). With the action off it is 403 naming `flai serve enable plan`; a task, an item done, cancelled, or archived, and a planner already running for the item are 400 with flai's reason |
 | `POST /api/streams/:id/log` `{ entry }` | flai stream log |
 | `POST /api/streams/:id/answer` `{ question, answer }` | flai stream answer: `question` must read exactly as the inbox entry's own title. Removes it from Open questions, records it with `answer` under Decisions |

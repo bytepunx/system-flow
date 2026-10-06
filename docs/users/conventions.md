@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-10-03
+updated: 2026-10-06
 status: active
 ---
 
@@ -114,7 +114,7 @@ stateDiagram-v2
 
 Blocked is not a state. A blocked item keeps its column and carries a timestamped interval with a reason, so blocked time is measured apart from the time the item spends in its column.
 
-A story needs acceptance criteria, as at least one checkbox, to be `ready`. It needs no tasks until it is `in-progress`: the agent that starts it writes them. It cannot go to `review` without at least one task or with anything uncommitted in its worktree, or to `done` while a criterion is unchecked or a task is still open. Stories and epics always pass through `review`; tasks may go straight from `in-progress` to `done`, because acceptance happens at story level.
+A story needs acceptance criteria, as at least one checkbox, to be `ready`. It needs no tasks until it is `in-progress`: the agent that starts it writes them. It cannot go to `review` without at least one task or with anything uncommitted in its worktree, and going there with a criterion unticked is warned of; it cannot go to `done` while a criterion is unticked or a task is still open. An agent ticks each criterion once it has verified it with `flai criteria tick <story> <n>` (MCP `criteria_tick`), never by editing the file ([ADR-0089](../../design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md)). Stories and epics always pass through `review`; tasks may go straight from `in-progress` to `done`, because acceptance happens at story level.
 
 ### Files
 
@@ -156,7 +156,7 @@ The body has fixed headings, so agents and the dashboard can find things:
 
 A parent lists each child by ID in its `## Stories` or `## Tasks`. Full schema: [work-hierarchy.md](../../design/system/work-hierarchy.md).
 
-Use `flai` to create and move items rather than writing front matter yourself: it allocates the ID, writes valid YAML, keeps the parent's list and the transitions true, and refuses a move the rules forbid. Hand edits to the body (goal, criteria, notes) are always fine. The walkthrough below writes items by hand only to show what the files are.
+Use `flai` to create and move items rather than writing front matter yourself: it allocates the ID, writes valid YAML, keeps the parent's list and the transitions true, and refuses a move the rules forbid. Hand edits to the body (goal, criteria, notes) are always fine; an agent ticks a criterion with `flai criteria tick`. The walkthrough below writes items by hand only to show what the files are.
 
 ## How work flows
 

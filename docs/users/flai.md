@@ -742,6 +742,19 @@ Agents connected over MCP are told of an edit someone else made, as a change of 
 
 They are also told when an accepted story changed paths their own story claims, as a change of kind `overlapped` on their story. `cause` is the accepted story and `to` lists the paths. The agent syncs its story and runs its tests again before it goes on. See acceptance, below. Since S-0244 an `overlapped` change whose `cause` is a story in progress, not an accepted one, means a write grew the two stories' claims to overlap on `to` ([Touches](#touches)): the agent agrees with that story's agent on a thread before it changes those paths, and narrows its touches if it can.
 
+### Ticking acceptance criteria
+
+```bash
+flai criteria list S-0282                     # the criteria, numbered, ticked or not
+flai criteria tick S-0282 1 3                 # tick the first and the third
+flai criteria tick S-0282 1,3 --autocommit    # the same, committed
+flai criteria untick S-0282 2
+```
+
+A story's acceptance criteria are the checkboxes under its `## Acceptance criteria` heading. `flai criteria` names them by number, from 1, in the order they appear, as `list` prints them. `tick` and `untick` change those boxes and nothing else in the file, with the checks `flai edit` makes: a closed or archived item is refused (exit 4), a change made meanwhile is a conflict with `--hash` (exit 3), and a number with no box is refused and nothing is written. Agents connected over MCP are told the criteria changed.
+
+The story's agent ticks a criterion once it has verified it, never by editing the file, and leaves one it cannot verify unticked with the reason in the story's notes. A task sub-agent says which criteria its task meets; the story's agent ticks them after its review. `flai move` to review warns when a criterion is unticked, and the move to done refuses one ([ADR-0089](../../design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md)). The MCP tool `criteria_tick` and the dashboard's `POST /api/items/<id>/criteria` make the same change.
+
 ### Serving agents over MCP
 
 ```bash
@@ -766,6 +779,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
 | `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it, or that gives a `body`, is checked as `flai story new --body-stdin` is: a finding the item introduces, such as a missing section or a markdown lint rule, refuses it and leaves nothing), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. `draft` makes a story a draft, and `draft: false` is refused. `cost_of_delay` and `forecast` set the keys given; `clear_cost_of_delay` and `clear_forecast` remove them, and to remove one amount the agent clears the cost of delay and gives the keys to keep. Neither commits: the agent commits with its work |
+| `criteria_tick` | Tick and untick a story's acceptance criteria by number, `tick` and `untick` naming them as `flai criteria list` does, with the `hash` from `item_get`; returns the criteria after. Nothing is committed. Sub-agents, the planner, and the orchestrator are refused it ([Ticking acceptance criteria](#ticking-acceptance-criteria)) |
 | `issue_story` | Make a backlog story from an open issue, as `flai issue story` does: a draft carrying the issue's cost of delay inputs, named in the issue's Remediation section. `id` is the issue, `epic` puts the story under an epic, and `story` reads the issue from that story's worktree. Returns the story's `id`, `title`, `nature`, `path`, `draft`, and the `issue`. A closed issue, or one an open story already links, is refused, naming that story. Nothing is committed ([Record recurring friction](#record-recurring-friction)) |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |

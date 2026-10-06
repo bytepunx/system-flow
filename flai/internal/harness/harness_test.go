@@ -526,6 +526,35 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 	}
 }
 
+// S-0282, ADR-0089: every run working a story is told to tick each acceptance
+// criterion through flai once it has verified it, never by editing the
+// story's file; a full run is also told to ask each task sub-agent which
+// criteria its task meets and to tick them after its review.
+func TestThePromptSaysHowCriteriaAreTicked(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	answered := r
+	answered.Answered = "TH-0001"
+	for _, p := range []string{Prompt(r), Prompt(answered)} {
+		for _, w := range []string{
+			"Tick each acceptance criterion with flai criteria tick S-0104 <n> (or the flai MCP tool criteria_tick) as soon as you have verified it, never by editing S-0104's file",
+			"leave one you cannot verify here unticked and say why in S-0104's notes",
+		} {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+	}
+	p := Prompt(r)
+	for _, w := range []string{
+		"ask each to name in its final message the acceptance criteria its task meets, by their numbers in flai criteria list S-0104",
+		"and move the task, then tick the criteria your review verified it meets",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
+	}
+}
+
 // S-0189: a story whose agent gives its roles a model starts claude-code
 // with --agents: the project's definition of each role's sub-agent, with the
 // role's model over the definition's; what claude-code cannot run is

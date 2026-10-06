@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-05
+updated: 2026-10-06
 audience: agent
 order: 130
 status: active
@@ -34,7 +34,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - move a task you have just written to ready and in-progress in one command, `flai move T-nnnn ready && flai move T-nnnn in-progress`, since `flai move` refuses a task straight from `backlog` to `in-progress`
 - Before moving a story to `review`:
   - commit what is outstanding, run `flai stream sync` again and resolve what it reports, as `git.md` says, and have one fresh verifier run the whole suite, the lint, and `flai check` in the worktree through the project's close-out script where it has one
-  - and check the diff against the story's acceptance criteria and these conventions
+  - and check the diff against the story's acceptance criteria and these conventions, saying which criteria, by number, the diff meets and which it does not
   - tell that verifier to run the close-out once, in one command without a pipe or a file, and to read its last line, which names the outcome and the step it stopped at; name any step you already know will stop, and why, so that it reports that stop and checks the steps after it rather than running the close-out again
   - if an issue is found, fix it, commit, and run a fresh verifier to confirm the fixes
   - a verifier's passing run is the story's run before review; do not repeat it.
@@ -57,7 +57,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Name the task's ID in each task sub-agent's description, the Agent tool's `description`, so that flai measures the task by its sub-agent's calls rather than by the time it was in progress. An explorer or verifier started for one task names that task too; one started for the story as a whole names none.
 - A layer's tasks share the story's worktree when their `touches` have no path in common. Give each task its own worktree from the story's branch (`git worktree add -b task/T-nnnn <path> <story branch>`), and merge it back yourself, when one builds or tests what another changes, so that a half-done edit cannot fail a sibling's tests.
 - A task's `touches` are a guess made before its code is read. Before you commit a task's work, compare the files it changed with its `touches`. When it changed a path another task of the layer touches, review both together, and redo the later one where their edits met.
-- Review each one's work as your own before you accept it: read its diff against the task's `## Done when`, run the tests for what it changed, and fix or finish what falls short yourself. Then commit it and move the task.
+- Review each one's work as your own before you accept it: read its diff against the task's `## Done when`, run the tests for what it changed, and fix or finish what falls short yourself. Then commit it and move the task. Tick each acceptance criterion the sub-agent named once your review has verified it (`work-management.md`).
 - Only you commit, sync the stream, move items, keep the narrative, and talk to the designer. Record in the narrative what each task sub-agent did, and the interference it reported.
 
 ## As an explorer or a verifier
@@ -79,7 +79,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - When a build or test fails in a path your task does not touch, another task's edit may be half done: do not fix it. Wait a minute and run it again, and say in your final message what failed, when, and for how long.
 - Do not commit, stage, or otherwise write to git. Do not move, create, or edit work items, write to threads, read the inbox, wait for events or work, or sync the stream; the guard refuses them, and you do not work around it.
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
-- Your final message is all the story's agent sees. Lead with done or not done, then the files you changed, the tests you ran and their results, the decisions a reader could have made differently, and what is left.
+- Your final message is all the story's agent sees. Lead with done or not done, then the files you changed, the story's acceptance criteria your task's work meets, by their numbers in `flai criteria list`, the tests you ran and their results, the decisions a reader could have made differently, and what is left. You do not tick them; the story's agent does after its review.
 
 ## When in doubt
 
