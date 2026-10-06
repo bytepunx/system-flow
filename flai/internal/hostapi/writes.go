@@ -1173,10 +1173,14 @@ func itemSpecs() map[string]spec {
 			return append(args, "--", text(in.Title), strings.TrimSpace(in.Text)), "", nil
 		}),
 
+		// thread.reply takes a recommendation's marks (ADR-0090): recommend,
+		// and source, <path> or <path>#<heading>, which flai checks exist.
 		"thread.reply": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
-				ID   string `json:"id"`
-				Text string `json:"text"`
+				ID        string `json:"id"`
+				Text      string `json:"text"`
+				Recommend bool   `json:"recommend"`
+				Source    string `json:"source"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -1187,7 +1191,29 @@ func itemSpecs() map[string]spec {
 			if strings.TrimSpace(in.Text) == "" {
 				return nil, "", bad("text is required")
 			}
-			return []string{"thread", "reply", in.ID, "--by=" + owner(p), "--", strings.TrimSpace(in.Text)}, "", nil
+			args := []string{"thread", "reply", in.ID, "--by=" + owner(p)}
+			if in.Recommend {
+				args = append(args, "--recommend")
+			}
+			if text(in.Source) != "" {
+				args = append(args, "--source="+text(in.Source))
+			}
+			return append(args, "--", strings.TrimSpace(in.Text)), "", nil
+		}),
+
+		// thread.confirm makes a thread's pending recommendation the answer,
+		// as the owner (ADR-0090).
+		"thread.confirm": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if !threadID.MatchString(in.ID) {
+				return nil, "", bad("%q is not a thread", in.ID)
+			}
+			return []string{"thread", "confirm", in.ID, "--by=" + owner(p)}, "", nil
 		}),
 
 		"thread.resolve": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {

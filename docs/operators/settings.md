@@ -238,7 +238,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--bucket` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--budget` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--build` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
-| `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai move](../users/flai-reference.md#flai-move), [flai order](../users/flai-reference.md#flai-order), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
+| `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai move](../users/flai-reference.md#flai-move), [flai order](../users/flai-reference.md#flai-order), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread confirm](../users/flai-reference.md#flai-thread-confirm), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--candidates` | [flai plan](../users/flai-reference.md#flai-plan), [flai promote](../users/flai-reference.md#flai-promote) |
 | `--cat` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--check` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
@@ -308,6 +308,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--reason` | [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
+| `--recommend` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--record-issues` | [flai check](../users/flai-reference.md#flai-check) |
 | `--ref` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai template show](../users/flai-reference.md#flai-template-show), [flai template use](../users/flai-reference.md#flai-template-use), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--refines` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
@@ -325,6 +326,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--rotate` | [flai dashboard token](../users/flai-reference.md#flai-dashboard-token), [flai mcp token](../users/flai-reference.md#flai-mcp-token) |
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--since` | [flai stats](../users/flai-reference.md#flai-stats) |
+| `--source` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--story` | [flai check](../users/flai-reference.md#flai-check), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |

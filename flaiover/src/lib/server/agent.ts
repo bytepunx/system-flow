@@ -80,6 +80,7 @@ export const REQUIRED_METHODS = [
 	'thread.new',
 	'thread.reply',
 	'thread.resolve',
+	'thread.confirm',
 	'doc.show',
 	'doc.save',
 	'adr.new',

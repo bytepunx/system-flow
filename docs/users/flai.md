@@ -711,10 +711,15 @@ flai thread list                                       # unresolved threads
 flai thread list --on S-0038 --all
 flai thread show TH-0001
 flai thread reply TH-0001 "Answer"
+flai thread reply TH-0001 --source "design/system/overview.md#Principles" "Answer"   # cite what it rests on
+flai thread reply TH-0001 --recommend --source design/system/overview.md "Answer"
+flai thread confirm TH-0001                            # make the recommendation the answer
 flai thread resolve TH-0001 --reason "settled in ADR-0021"
 ```
 
 A thread is one file under `wip/threads/`, anchored to a document, a heading in it, or a work item, with dated entries by author. The author is `--by`, else `FLAI_AGENT`, else the config author. A reply from anyone but the opener marks the thread `answered`; the opener's follow-up makes it `open` again; `resolve` closes it. Unresolved threads on a story or its tasks are mirrored into the story narrative under `## Open questions`, so an agent sees them without the dashboard. `flai check` validates threads: the anchor must exist, a named heading must still be in the document, and open threads on archived items are flagged.
+
+A reply can cite a source with `--source <path>` or `--source <path>#<heading>`: a file in the repository, or an item ID, and a heading in it. Both must exist, or the reply is refused. The source is the entry's last line, `Source: <path> § <heading>`. A reply with `--recommend` is a recommendation (ADR-0090). Its heading ends `(recommendation)`, and the thread keeps its status, so it still awaits you. `flai thread show` marks it and says it awaits you. `flai thread confirm` makes it the answer: it adds an entry by you that names the recommendation and cites its source, and marks the thread `answered`. To answer otherwise, reply as usual. Confirm is refused when no recommendation is pending, and to the one who made it. The orchestrator replies this way when `orchestration.permissions.answer_threads` lets it.
 
 ### Changing an item after it was made
 

@@ -2749,11 +2749,30 @@ Threads between the designer and agents, anchored to documents and items (wip/th
 
 Subcommands:
 
+- [confirm](#flai-thread-confirm): Make the pending recommendation the answer: an entry citing its source, and the thread answered
 - [list](#flai-thread-list): List threads; unresolved by default
 - [new](#flai-thread-new): Open a thread on a document, a heading in it, or a work item
-- [reply](#flai-thread-reply): Add an entry; answered when someone other than the opener replies
+- [reply](#flai-thread-reply): Add an entry; answered when someone other than the opener replies, unless it is a recommendation
 - [resolve](#flai-thread-resolve): Close a thread
 - [show](#flai-thread-show): Print a thread with its entries
+
+#### flai thread confirm
+
+Make the pending recommendation the answer: an entry citing its source, and the thread answered.
+
+```text
+flai thread confirm <id> [flags]
+```
+
+Makes the thread's pending recommendation the answer (ADR-0090). It adds an entry by you, "Confirmed the recommendation of &lt;time&gt; &lt;author&gt;.", citing the recommendation's source, and marks the thread answered.
+
+A recommendation is pending while the thread is not resolved and it is the newest entry by someone other than the opener. Confirm is refused when none is pending, and to the recommendation's own author.
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--by` string | who confirms it (default: FLAI\_AGENT, then config author) |
 
 #### flai thread list
 
@@ -2795,10 +2814,23 @@ Flags:
 
 #### flai thread reply
 
-Add an entry; answered when someone other than the opener replies.
+Add an entry; answered when someone other than the opener replies, unless it is a recommendation.
 
 ```text
 flai thread reply <id> "<text>" [flags]
+```
+
+Adds an entry to a thread. A reply from anyone but the opener marks the thread answered, and one from the opener marks it open.
+
+With --recommend the entry is a recommendation (ADR-0090): its heading says (recommendation), the status stays as it was, and the thread awaits the operator, who makes it the answer with flai thread confirm or answers otherwise. A recommendation is refused on a resolved thread and from the thread's opener.
+
+--source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: &lt;path&gt; § &lt;heading&gt;.
+
+Examples:
+
+```bash
+flai thread reply TH-0012 "Nine metres."
+flai thread reply TH-0012 --recommend --source "design/system/overview.md#Delivery sequence" "Build the CLI first, as the delivery sequence says."
 ```
 
 Flags:
@@ -2806,6 +2838,8 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--by` string | author (default: FLAI\_AGENT, then config author) |
+| `--recommend` | post a recommendation: the status stays and the thread awaits the operator's confirmation (ADR-0090) |
+| `--source` string | what the reply rests on, &lt;path&gt;[#&lt;heading&gt;]: a file in the repository and a heading in it |
 
 #### flai thread resolve
 

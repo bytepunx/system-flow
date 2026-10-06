@@ -191,7 +191,10 @@ type ThreadSummary struct {
 	LastBy    string         `json:"last_by"`
 	LastEntry string         `json:"last_entry" jsonschema:"text of the most recent entry"`
 	Awaiting  string         `json:"awaiting" jsonschema:"'you' when the last entry is not yours, else 'other'"`
-	Project   string         `json:"project,omitempty" jsonschema:"the project the thread is in, when the server serves more than one"`
+	// PendingRecommendation is the recommendation awaiting the operator's
+	// confirmation (ADR-0090), nil when there is none.
+	PendingRecommendation *threads.Entry `json:"pending_recommendation" jsonschema:"the recommendation awaiting the operator's confirmation, null when there is none: the thread still awaits the operator until they confirm it or answer otherwise"`
+	Project               string         `json:"project,omitempty" jsonschema:"the project the thread is in, when the server serves more than one"`
 }
 
 // ThreadDetail is a thread with its entries.
@@ -203,7 +206,7 @@ type ThreadDetail struct {
 
 func (s *server) summary(th *threads.Thread) ThreadSummary {
 	entries := th.Entries()
-	out := ThreadSummary{ID: th.ID, Title: th.Title, Status: th.Status, Anchor: th.Anchor, Story: threads.StoryOf(s.repo, th), Updated: th.Updated, Entries: len(entries), Awaiting: "other"}
+	out := ThreadSummary{ID: th.ID, Title: th.Title, Status: th.Status, Anchor: th.Anchor, Story: threads.StoryOf(s.repo, th), Updated: th.Updated, Entries: len(entries), Awaiting: "other", PendingRecommendation: th.PendingRecommendation()}
 	if n := len(entries); n > 0 {
 		out.LastBy, out.LastEntry = entries[n-1].Author, entries[n-1].Text
 		if out.LastBy != s.agent {
@@ -370,17 +373,60 @@ func (s *server) threadOpen(_ context.Context, _ *mcp.CallToolRequest, in Thread
 
 // ThreadReplyIn replies to a thread.
 type ThreadReplyIn struct {
-	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
-	ID      string `json:"id"`
-	Text    string `json:"text"`
+	Project        string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID             string `json:"id"`
+	Text           string `json:"text"`
+	Recommendation bool   `json:"recommendation,omitempty" jsonschema:"the reply is a recommendation: the thread keeps its status and awaits the operator, who confirms it to make it the answer; refused on a resolved thread and on a thread you opened"`
+	Source         string `json:"source,omitempty" jsonschema:"what the reply rests on: a repository path, such as an ADR, a design document, or a convention, or <path>#<heading> for a heading in it; both must exist. Written as the entry's last line, Source: <path> § <heading>"`
 }
 
-func (s *server) threadReply(_ context.Context, _ *mcp.CallToolRequest, in ThreadReplyIn) (*mcp.CallToolResult, ThreadDetail, error) {
-	th, err := threads.Reply(s.repo, in.ID, s.agent, in.Text, s.now())
+func (s *server) threadReply(ctx context.Context, _ *mcp.CallToolRequest, in ThreadReplyIn) (*mcp.CallToolResult, ThreadDetail, error) {
+	source, err := threads.ParseSource(in.Source)
 	if err != nil {
 		return nil, ThreadDetail{}, err
 	}
-	return nil, s.detail(th), s.mirror(th)
+	marks := threads.Marks{Recommendation: in.Recommendation, Source: source}
+	th, err := threads.ReplyWith(s.repo, in.ID, s.agent, in.Text, s.now(), marks)
+	if err != nil {
+		return nil, ThreadDetail{}, err
+	}
+	if err := s.mirror(th); err != nil {
+		return nil, ThreadDetail{}, err
+	}
+	if err := s.logReply(ctx, th, marks.Recommendation); err != nil {
+		return nil, ThreadDetail{}, fmt.Errorf("the reply on %s is posted, but the orchestrator's decision log did not take it: %w; log it with activity_log", th.ID, err)
+	}
+	return nil, s.detail(th), nil
+}
+
+// logReply records the orchestrator's reply in its decision log, its activity
+// document (S-0218): the thread, whether the reply recommends or answers, and
+// the source it cites, with the thread's story as its item, so that the log
+// never depends on the orchestrator calling activity_log. Any other caller's
+// reply, or a server that cannot log activities, logs nothing.
+func (s *server) logReply(ctx context.Context, th *threads.Thread, recommendation bool) error {
+	if !s.orchestrator() || s.activities == nil {
+		return nil
+	}
+	summary := "Answered " + th.ID
+	if recommendation {
+		summary = "Recommended an answer on " + th.ID
+	}
+	entries := th.Entries()
+	if src := entries[len(entries)-1].Source; src != nil {
+		summary += ", citing " + src.Path
+		if src.Heading != "" {
+			summary += " § " + src.Heading
+		}
+	} else {
+		summary += ", citing no source"
+	}
+	items := []string{}
+	if story := threads.StoryOf(s.repo, th); story != "" {
+		items = append(items, story)
+	}
+	_, err := s.activities(ctx, projectRoot(s.repo), workitem.ActivityOrchestrator, summary, items, s.agent)
+	return err
 }
 
 // ThreadResolveIn resolves a thread.

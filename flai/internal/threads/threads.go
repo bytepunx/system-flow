@@ -73,6 +73,22 @@ type Source struct {
 	Heading string `json:"heading,omitempty"`
 }
 
+// ParseSource reads a reply's source as flai thread reply --source and the
+// MCP tool thread_reply take it: a repository path or item ID, optionally
+// followed by # and a heading in it. An empty value cites nothing. It checks
+// the form only; ReplyWith checks that the path and heading exist.
+func ParseSource(v string) (Source, error) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return Source{}, nil
+	}
+	path, heading, _ := strings.Cut(v, "#")
+	if path = strings.TrimSpace(path); path == "" {
+		return Source{}, fmt.Errorf("source %q names no file: give <path> or <path>#<heading>, such as design/system/overview.md#Delivery sequence", v)
+	}
+	return Source{Path: path, Heading: strings.TrimSpace(heading)}, nil
+}
+
 // Marks are the optional marks of a reply: that it is a recommendation, and
 // the source it cites. The zero value is a plain reply.
 type Marks struct {

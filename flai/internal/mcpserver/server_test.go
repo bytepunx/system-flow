@@ -760,3 +760,90 @@ func TestAnOverlapSummaryBoundsItsPaths(t *testing.T) {
 		t.Errorf("summary: %s", s)
 	}
 }
+
+// S-0220, ADR-0090: thread_reply posts a recommendation citing a source,
+// which leaves the thread's status as it was and shows as pending in
+// thread_get and the inbox; a source that names no file, or a heading not in
+// it, is refused. A caller that is not the orchestrator logs nothing.
+func TestAThreadReplyRecommendsCitingASource(t *testing.T) {
+	logged := 0
+	f := setupWith(t, func(o *Options) {
+		o.Activities = func(context.Context, string, string, string, []string, string) (ActivityLogged, error) {
+			logged++
+			return ActivityLogged{}, nil
+		}
+	})
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which first?", On: f.story.ID, Author: "alex", Text: "The CLI or the dashboard?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for source, want := range map[string]string{
+		"#Shape":                     "names no file",
+		"design/system/nope.md":      "design/system/nope.md does not exist",
+		"design/system/plan.md#Nope": `heading "Nope" is not in design/system/plan.md`,
+	} {
+		if _, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "The CLI.", "recommendation": true, "source": source}); !strings.Contains(failed, want) {
+			t.Errorf("source %q: %q, want it refused with %q", source, failed, want)
+		}
+	}
+	out, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "The CLI, as the plan says.", "recommendation": true, "source": "design/system/plan.md#Shape"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	entries := out["entry_list"].([]any)
+	last := entries[len(entries)-1].(map[string]any)
+	pending, _ := out["pending_recommendation"].(map[string]any)
+	if out["status"] != "open" || last["recommendation"] != true || last["author"] != "claude" || pending["author"] != "claude" {
+		t.Errorf("a recommendation leaves the thread open and pending: %v", out)
+	}
+	if src, _ := last["source"].(map[string]any); src["path"] != "design/system/plan.md" || src["heading"] != "Shape" {
+		t.Errorf("source: %v", last["source"])
+	}
+	inbox, _ := f.call(t, "inbox", map[string]any{"all": true})
+	if sum := inbox["threads"].([]any)[0].(map[string]any); sum["status"] != "open" || sum["pending_recommendation"] == nil {
+		t.Errorf("the inbox carries the pending recommendation: %v", sum)
+	}
+	if back, _ := threads.Get(f.repo, th.ID); back.Status != "open" {
+		t.Errorf("status on disk: %s", back.Status)
+	}
+	if logged != 0 {
+		t.Errorf("a story's agent's reply was logged %d times; only the orchestrator's is", logged)
+	}
+}
+
+// S-0220: the orchestrator's thread_reply is logged in its activity
+// document, saying whether it recommended or answered and what it cited,
+// with the thread's story as its item.
+func TestTheOrchestratorsThreadRepliesAreLoggedWithTheirSource(t *testing.T) {
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	type call struct{ kind, summary, items, by string }
+	var got []call
+	f := setupWith(t, func(o *Options) {
+		o.Agent = "orchestrator"
+		o.Activities = func(_ context.Context, _, kind, summary string, items []string, by string) (ActivityLogged, error) {
+			got = append(got, call{kind, summary, strings.Join(items, ","), by})
+			return ActivityLogged{}, nil
+		}
+	})
+	onStory, err := threads.New(f.repo, threads.NewOptions{Title: "Which first?", On: f.story.ID, Author: "alex", Text: "The CLI or the dashboard?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onDoc, err := threads.New(f.repo, threads.NewOptions{Title: "Is the shape final?", On: "design/system/plan.md", Author: "alex", Text: "Asking.", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out, failed := f.call(t, "thread_reply", map[string]any{"id": onStory.ID, "text": "The CLI.", "recommendation": true, "source": "design/system/plan.md#Shape"}); failed != "" || out["status"] != "open" {
+		t.Fatalf("recommend: %v %s", out, failed)
+	}
+	if out, failed := f.call(t, "thread_reply", map[string]any{"id": onDoc.ID, "text": "Yes.", "source": "design/system/plan.md"}); failed != "" || out["status"] != "answered" {
+		t.Fatalf("answer: %v %s", out, failed)
+	}
+	want := []call{
+		{"orchestrator", "Recommended an answer on " + onStory.ID + ", citing design/system/plan.md § Shape", f.story.ID, "orchestrator"},
+		{"orchestrator", "Answered " + onDoc.ID + ", citing design/system/plan.md", "", "orchestrator"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("logged\n  %+v\nwant\n  %+v", got, want)
+	}
+}

@@ -26,7 +26,7 @@ func newThreadCmd(a *app) *cobra.Command {
 		Use:   "thread",
 		Short: "Threads between the designer and agents, anchored to documents and items (wip/threads)",
 	}
-	c.AddCommand(newThreadNewCmd(a), newThreadReplyCmd(a), newThreadResolveCmd(a), newThreadListCmd(a), newThreadShowCmd(a))
+	c.AddCommand(newThreadNewCmd(a), newThreadReplyCmd(a), newThreadConfirmCmd(a), newThreadResolveCmd(a), newThreadListCmd(a), newThreadShowCmd(a))
 	return c
 }
 
@@ -72,17 +72,66 @@ func newThreadNewCmd(a *app) *cobra.Command {
 }
 
 func newThreadReplyCmd(a *app) *cobra.Command {
-	var by string
+	var by, source string
+	var recommend bool
 	c := &cobra.Command{
 		Use:   "reply <id> \"<text>\"",
-		Short: "Add an entry; answered when someone other than the opener replies",
-		Args:  cobra.ExactArgs(2),
+		Short: "Add an entry; answered when someone other than the opener replies, unless it is a recommendation",
+		Long: `Adds an entry to a thread. A reply from anyone but the opener marks the thread answered, and one from the opener marks it open.
+
+With --recommend the entry is a recommendation (ADR-0090): its heading says (recommendation), the status stays as it was, and the thread awaits the operator, who makes it the answer with flai thread confirm or answers otherwise. A recommendation is refused on a resolved thread and from the thread's opener.
+
+--source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: <path> § <heading>.`,
+		Example: `  flai thread reply TH-0012 "Nine metres."
+  flai thread reply TH-0012 --recommend --source "design/system/overview.md#Delivery sequence" "Build the CLI first, as the delivery sequence says."`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			th, err := threads.Reply(repo, args[0], a.threadAuthor(by), args[1], a.now())
+			src, err := threads.ParseSource(source)
+			if err != nil {
+				return err
+			}
+			th, err := threads.ReplyWith(repo, args[0], a.threadAuthor(by), args[1], a.now(), threads.Marks{Recommendation: recommend, Source: src})
+			if err != nil {
+				return err
+			}
+			if err := a.afterThread(repo, th); err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(threadJSON(repo, th))
+			}
+			fmt.Fprintf(a.out, "%s is %s (%d entries)\n", th.ID, th.Status, len(th.Entries()))
+			if recommend {
+				fmt.Fprintf(a.out, "  the recommendation awaits the operator: flai thread confirm %s\n", th.ID)
+			}
+			return nil
+		},
+	}
+	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
+	c.Flags().BoolVar(&recommend, "recommend", false, "post a recommendation: the status stays and the thread awaits the operator's confirmation (ADR-0090)")
+	c.Flags().StringVar(&source, "source", "", "what the reply rests on, <path>[#<heading>]: a file in the repository and a heading in it")
+	return c
+}
+
+func newThreadConfirmCmd(a *app) *cobra.Command {
+	var by string
+	c := &cobra.Command{
+		Use:   "confirm <id>",
+		Short: "Make the pending recommendation the answer: an entry citing its source, and the thread answered",
+		Long: `Makes the thread's pending recommendation the answer (ADR-0090). It adds an entry by you, "Confirmed the recommendation of <time> <author>.", citing the recommendation's source, and marks the thread answered.
+
+A recommendation is pending while the thread is not resolved and it is the newest entry by someone other than the opener. Confirm is refused when none is pending, and to the recommendation's own author.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			th, err := threads.Confirm(repo, args[0], a.threadAuthor(by), a.now())
 			if err != nil {
 				return err
 			}
@@ -96,7 +145,7 @@ func newThreadReplyCmd(a *app) *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
+	c.Flags().StringVar(&by, "by", "", "who confirms it (default: FLAI_AGENT, then config author)")
 	return c
 }
 
@@ -197,8 +246,15 @@ func newThreadShowCmd(a *app) *cobra.Command {
 				return a.printJSON(threadJSON(repo, th))
 			}
 			fmt.Fprintf(a.out, "%s %s\n  %s · on %s · %s\n", th.ID, th.Title, th.Status, describeAnchor(th.Anchor), strings.Join(th.Participants, ", "))
+			if p := th.PendingRecommendation(); p != nil {
+				fmt.Fprintf(a.out, "  the recommendation of %s %s awaits the operator: flai thread confirm %s\n", p.At, p.Author, th.ID)
+			}
 			for _, e := range th.Entries() {
-				fmt.Fprintf(a.out, "\n%s %s\n%s\n", e.At, e.Author, e.Text)
+				mark := ""
+				if e.Recommendation {
+					mark = " (recommendation)"
+				}
+				fmt.Fprintf(a.out, "\n%s %s%s\n%s\n", e.At, e.Author, mark, e.Text)
 			}
 			return nil
 		},
