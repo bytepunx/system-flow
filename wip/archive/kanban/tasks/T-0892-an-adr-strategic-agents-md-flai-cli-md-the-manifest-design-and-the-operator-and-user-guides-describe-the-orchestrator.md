@@ -3,16 +3,39 @@ id: T-0892
 type: task
 nature: feature
 title: An ADR, strategic-agents.md, flai-cli.md, the manifest design, and the operator and user guides describe the orchestrator
-status: backlog
+status: done
 parent: S-0218
 owner: alex
 created: 2026-10-05T04:46:48Z
-updated: 2026-10-05T04:46:48Z
-transitions: []
+updated: 2026-10-05T08:15:57Z
+transitions:
+  - to: ready
+    at: 2026-10-05T07:59:00Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-05T07:59:00Z
+    by: agent-S-0218
+  - to: review
+    at: 2026-10-05T08:15:57Z
+    by: agent-S-0218
+  - to: done
+    at: 2026-10-05T08:15:57Z
+    by: agent-S-0218
 stream: S-0218
 tags: [flai]
 touches: [design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-0881, T-0882, T-0883, T-0887]
+usage:
+  source: log
+  seconds: 1017
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 158
+      output: 64963
+      cache_read: 9260076
+      cache_write: 235320
+      cost: 4.4688
 ---
 # T-0892 An ADR, strategic-agents.md, flai-cli.md, the manifest design, and the operator and user guides describe the orchestrator
 

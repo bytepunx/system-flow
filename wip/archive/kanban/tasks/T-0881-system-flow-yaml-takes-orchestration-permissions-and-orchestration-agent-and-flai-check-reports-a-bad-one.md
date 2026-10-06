@@ -3,15 +3,38 @@ id: T-0881
 type: task
 nature: feature
 title: system-flow.yaml takes orchestration.permissions and orchestration.agent, and flai check reports a bad one
-status: backlog
+status: done
 parent: S-0218
 owner: alex
 created: 2026-10-05T04:45:42Z
-updated: 2026-10-05T04:47:01Z
-transitions: []
+updated: 2026-10-05T07:12:47Z
+transitions:
+  - to: ready
+    at: 2026-10-05T07:09:53Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-05T07:09:54Z
+    by: agent-S-0218
+  - to: review
+    at: 2026-10-05T07:12:47Z
+    by: agent-S-0218
+  - to: done
+    at: 2026-10-05T07:12:47Z
+    by: agent-S-0218
 stream: S-0218
 tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/orchestration_test.go]
+usage:
+  source: log
+  seconds: 173
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 10690
+      cache_read: 1523744
+      cache_write: 38722
+      cost: 0.7353
 ---
 # T-0881 system-flow.yaml takes orchestration.permissions and orchestration.agent, and flai check reports a bad one
 

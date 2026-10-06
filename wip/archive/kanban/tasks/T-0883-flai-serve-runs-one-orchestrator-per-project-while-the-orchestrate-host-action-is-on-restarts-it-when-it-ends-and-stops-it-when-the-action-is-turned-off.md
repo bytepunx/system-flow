@@ -3,16 +3,39 @@ id: T-0883
 type: task
 nature: feature
 title: flai serve runs one orchestrator per project while the orchestrate host action is on, restarts it when it ends, and stops it when the action is turned off
-status: backlog
+status: done
 parent: S-0218
 owner: alex
 created: 2026-10-05T04:46:09Z
-updated: 2026-10-05T04:47:16Z
-transitions: []
+updated: 2026-10-05T07:58:59Z
+transitions:
+  - to: ready
+    at: 2026-10-05T07:47:04Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-05T07:47:05Z
+    by: agent-S-0218
+  - to: review
+    at: 2026-10-05T07:58:59Z
+    by: agent-S-0218
+  - to: done
+    at: 2026-10-05T07:58:59Z
+    by: agent-S-0218
 stream: S-0218
 tags: [flai]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/serve/projects.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
 after: [T-0881, T-0882]
+usage:
+  source: log
+  seconds: 714
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 132
+      output: 54519
+      cache_read: 7771400
+      cache_write: 197490
+      cost: 3.7504
 ---
 # T-0883 flai serve runs one orchestrator per project while the orchestrate host action is on, restarts it when it ends, and stops it when the action is turned off
 

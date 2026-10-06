@@ -3,16 +3,39 @@ id: T-0889
 type: task
 nature: feature
 title: The dashboard shows the orchestrator's run on the Activity page and the orchestrate action on the Settings page
-status: backlog
+status: done
 parent: S-0218
 owner: alex
 created: 2026-10-05T04:46:38Z
-updated: 2026-10-05T04:47:21Z
-transitions: []
+updated: 2026-10-05T08:15:57Z
+transitions:
+  - to: ready
+    at: 2026-10-05T07:58:59Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-05T07:59:00Z
+    by: agent-S-0218
+  - to: review
+    at: 2026-10-05T08:15:56Z
+    by: agent-S-0218
+  - to: done
+    at: 2026-10-05T08:15:57Z
+    by: agent-S-0218
 stream: S-0218
 tags: [dashboard]
 touches: [flaiover/src/lib/activity.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/routes/activity/activity.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0883]
+usage:
+  source: log
+  seconds: 1016
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 97
+      output: 40012
+      cache_read: 5703547
+      cache_write: 144941
+      cost: 2.7525
 ---
 # T-0889 The dashboard shows the orchestrator's run on the Activity page and the orchestrate action on the Settings page
 

@@ -3,16 +3,39 @@ id: T-0887
 type: task
 nature: feature
 title: flai guard holds an orchestrator session to its permissions, names the permission a refused call needs, and logs the refusal in orchestrator.md
-status: backlog
+status: done
 parent: S-0218
 owner: alex
 created: 2026-10-05T04:46:28Z
-updated: 2026-10-05T04:46:28Z
-transitions: []
+updated: 2026-10-05T07:47:04Z
+transitions:
+  - to: ready
+    at: 2026-10-05T07:12:47Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-05T07:12:48Z
+    by: agent-S-0218
+  - to: review
+    at: 2026-10-05T07:47:04Z
+    by: agent-S-0218
+  - to: done
+    at: 2026-10-05T07:47:04Z
+    by: agent-S-0218
 stream: S-0218
 tags: [flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/plan.go, flai/cmd/plan_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go]
 after: [T-0881]
+usage:
+  source: log
+  seconds: 2056
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 136
+      output: 55910
+      cache_read: 7969676
+      cache_write: 202528
+      cost: 3.8461
 ---
 # T-0887 flai guard holds an orchestrator session to its permissions, names the permission a refused call needs, and logs the refusal in orchestrator.md
 

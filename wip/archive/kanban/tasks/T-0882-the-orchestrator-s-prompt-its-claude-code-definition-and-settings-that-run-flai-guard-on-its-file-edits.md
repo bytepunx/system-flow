@@ -3,15 +3,41 @@ id: T-0882
 type: task
 nature: feature
 title: The orchestrator's prompt, its claude-code definition, and settings that run flai guard on its file edits
-status: backlog
+status: done
 parent: S-0218
 owner: alex
 created: 2026-10-05T04:45:56Z
-updated: 2026-10-05T04:47:09Z
-transitions: []
+updated: 2026-10-06T01:27:31Z
+transitions:
+  - to: ready
+    at: 2026-10-05T07:09:54Z
+    by: agent-S-0218
+  - to: in-progress
+    at: 2026-10-05T07:09:54Z
+    by: agent-S-0218
+  - to: done
+    at: 2026-10-06T01:27:31Z
+    by: agent-S-0218
 stream: S-0218
 tags: [flai, template]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/adapters.go, ".claude/agents/orchestrator.md", ".claude/settings.json", template/root/.claude/agents/orchestrator.md, template/root/.claude/settings.json, template/CHANGELOG.md, template/template.yaml]
+usage:
+  source: log
+  seconds: 8590
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 178
+      output: 70670
+      cache_read: 10110061
+      cache_write: 270176
+      cost: 4.9994
+    - model: claude-sonnet-5
+      input: 64
+      output: 15194
+      cache_read: 2237492
+      cache_write: 121513
+      cost: 0.9033
 ---
 # T-0882 The orchestrator's prompt, its claude-code definition, and settings that run flai guard on its file edits
 

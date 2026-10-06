@@ -3,11 +3,11 @@ id: S-0218
 type: story
 nature: feature
 title: The orchestrator is a long-running agent per project behind the orchestrate host action, with permissions the operator sets and a decision log
-status: in-progress
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:16Z
-updated: 2026-10-06T02:57:06Z
+updated: 2026-10-06T02:57:18Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:14Z
@@ -20,6 +20,12 @@ transitions:
     by: agent-S-0218
   - to: in-progress
     at: 2026-10-06T02:56:42Z
+    by: alex
+  - to: review
+    at: 2026-10-06T02:57:13Z
+    by: alex
+  - to: done
+    at: 2026-10-06T02:57:18Z
     by: alex
 tags: [flai, dashboard]
 topics: [orchestration]
