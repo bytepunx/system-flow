@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.57 - 2026-10-06
+
+- S-0285 A story's agent waits for its sub-agents with wait_for_events, which cannot see them finish, so each wait runs to its timeout (patch).
+
 ## 1.0.56 - 2026-10-06
 
 - S-0285 A story's agent waits for its sub-agents in the foreground, and flai guard refuses it wait_for_events while one runs (patch): `delegation.md` says to launch each sub-agent in the foreground, a layer's in one message, so that each result comes back as the tool's result however long the sub-agent runs (in Claude Code, the Agent tool's `run_in_background` set to false); never to end the turn while a sub-agent runs in the background, since a headless Claude Code session ends ten minutes after its turn ends, and the sub-agent with it; and never to wait for a sub-agent with `wait_for_events`, which reports work items and threads, not sub-agents, and is for a thread awaiting the designer; `flai guard` refuses it to a story's agent while a sub-agent of its session runs and no thread on the story or one of its tasks is open. `.claude/settings.json` runs `flai guard` on `SubagentStart` and `SubagentStop` in a story's agent's session (`FLAI_STORY` set), silently and never refusing, to record the session's running sub-agents. The commands need a flai that has them.
