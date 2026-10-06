@@ -36,6 +36,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
 | [issue](#flai-issue) | Record recurring friction in design/issues with counts and cost |
 | [license](#flai-license) | Print the license flai is distributed under |
+| [manifest](#flai-manifest) | Change the strategic agents' settings in system-flow.yaml |
 | [mcp](#flai-mcp) | Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start |
 | [migrate](#flai-migrate) | One-off migrations of a repository to the current standard |
 | [move](#flai-move) | Transition a work item, enforcing the workflow rules |
@@ -104,6 +105,7 @@ Subcommands:
 - [import](#flai-import): Bring an existing repository under the system-flow standard
 - [issue](#flai-issue): Record recurring friction in design/issues with counts and cost
 - [license](#flai-license): Print the license flai is distributed under
+- [manifest](#flai-manifest): Change the strategic agents' settings in system-flow.yaml
 - [mcp](#flai-mcp): Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start
 - [migrate](#flai-migrate): One-off migrations of a repository to the current standard
 - [move](#flai-move): Transition a work item, enforcing the workflow rules
@@ -1526,6 +1528,81 @@ Examples:
 flai license
 flai license --json
 ```
+
+### flai manifest
+
+Change the strategic agents' settings in system-flow.yaml.
+
+The strategic agents' settings live in system-flow.yaml: what the orchestrator may do (orchestration.permissions), how it orders the ready column and when a release is due (orchestration.policy, orchestration.release), and the planner's and the analyzer's agents and schedules (planning, analysis). flai manifest set writes them, checked as flai check checks them; the dashboard's settings panels run it.
+
+Examples:
+
+```bash
+flai manifest set orchestration.permissions.promote_to_ready=true
+flai manifest set planning.replan=agent planning.schedule='0 6 * * 1-5'
+```
+
+Subcommands:
+
+- [set](#flai-manifest-set): Write the strategic agents' settings, each checked, or refuse with the field and the reason
+
+#### flai manifest set
+
+Write the strategic agents' settings, each checked, or refuse with the field and the reason.
+
+```text
+flai manifest set <key>=<value>... [flags]
+```
+
+Write each key=value into its block of system-flow.yaml, and remove each --unset key so that its default applies, keeping every other key, the order, and the comments. The keys:
+
+```text
+orchestration.permissions.plan_backlog_epics (boolean; default false)
+orchestration.permissions.finalize_drafts (boolean; default false)
+orchestration.permissions.promote_to_ready (boolean; default false)
+orchestration.permissions.order_ready (boolean; default false)
+orchestration.permissions.answer_threads (choice: off, recommend, autonomous; default off)
+orchestration.permissions.accept_reviews (boolean; default false)
+orchestration.permissions.publish (boolean; default false)
+orchestration.policy (choice: cod, wsjf, throughput, fifo; default fifo)
+orchestration.release.policy (choice: judgement, threshold, theme; default judgement)
+orchestration.release.value (number)
+orchestration.release.count (number, whole)
+orchestration.release.epic (text)
+orchestration.release.tag (text)
+orchestration.release.whole_epics (boolean; default false)
+planning.agent (agent)
+planning.replan (choice: never, deterministic, agent; default deterministic)
+planning.schedule (cron)
+planning.hour_rate (number)
+planning.cycle (duration; default 168h)
+planning.default_duration (duration; default 1h)
+analysis.agent (agent)
+analysis.schedule (cron)
+```
+
+A boolean is true or false; a number is written as digits, a count a whole one; a duration is a Go duration such as 168h; a cron expression has five fields in UTC, or is daily; an agent is JSON, such as {"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}, and {} unsets it. planning.currency is not among them: changing it re-denominates every amount on the items, so it is edited by hand.
+
+The manifest is checked whole, as it would be after the change, as flai check checks it. A key outside the list, a value not of its key's kind, or a problem the result would have is refused with the field and the reason, such as orchestration.release.value: -1 is not an amount of zero or more, and nothing is written; the exit status is 1, as for a workflow rule's refusal. With --json a refusal is {"refused": [{"field": ..., "reason": ...}]} on standard output, and a change {"set": [{"key": ..., "value": ...}], "unset": [...]}, with "commit" when it was committed.
+
+The change is committed, system-flow.yaml alone, only with --autocommit and unless the project sets dashboard.autocommit: false.
+
+Examples:
+
+```bash
+flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
+flai manifest set orchestration.release.policy=threshold orchestration.release.value=500
+flai manifest set planning.agent='{"model":"claude-sonnet-5"}' --unset planning.schedule
+flai manifest set analysis.schedule=daily --autocommit --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit system-flow.yaml on its own, unless dashboard.autocommit is false |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
+| `--unset` stringArray | remove a key, so that its default applies (repeatable) |
 
 ### flai mcp
 
