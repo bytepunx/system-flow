@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T23:40:32Z
+updated: 2026-10-06T23:47:21Z
 transitions:
   - to: ready
     at: 2026-10-06T22:46:46Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:36Z
 forecast:
   duration: 1h
-  delivery: 2026-10-07T01:20:00Z
-  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0302, S-0303 and S-0273."
+  delivery: 2026-10-07T01:07:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0303 and S-0273."
   by: flai
-  at: 2026-10-06T23:40:32Z
+  at: 2026-10-06T23:47:21Z
 ---
 # S-0228 The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
 

@@ -6,7 +6,7 @@ title: Claude Code ends a headless agent ten minutes after its turn ends, even w
 status: backlog
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-06T23:40:32Z
+updated: 2026-10-06T23:47:21Z
 transitions: []
 tags: [cli, serve]
 topics: [automation]
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-10-06T22:53:45Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T10:45:00Z
-  basis: "Its own forecast of 40m; 40th in the pull order with an in-progress limit of 3, behind S-0302, S-0303, S-0273, S-0228, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290, S-0291 and S-0293."
+  delivery: 2026-10-07T10:52:00Z
+  basis: "Its own forecast of 40m; 39th in the pull order with an in-progress limit of 3, behind S-0303, S-0273, S-0228, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290, S-0291 and S-0293."
   by: flai
-  at: 2026-10-06T23:40:32Z
+  at: 2026-10-06T23:47:21Z
 finalized:
   by: alex
   at: 2026-10-06T22:50:34Z
