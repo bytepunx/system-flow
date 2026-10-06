@@ -5,7 +5,10 @@ import { SITE_MENU, groupBadges, locate } from './sitemenu';
 describe('the site menu (S-0172)', () => {
 	it('has Workflow, Status, and Host, with their pages in order', () => {
 		expect(SITE_MENU.map((g) => [g.label, g.pages.map((p) => p.label)])).toEqual([
-			['Workflow', ['Overview', 'Board', 'Inbox', 'Threads', 'Activity', 'Planner']],
+			[
+				'Workflow',
+				['Overview', 'Board', 'Inbox', 'Threads', 'Activity', 'Planner', 'Orchestrator', 'Analyzer']
+			],
 			['Status', ['Charts', 'ADRs', 'Docs', 'Search']],
 			['Host', ['Updates', 'Settings', 'License']]
 		]);
@@ -16,6 +19,8 @@ describe('the site menu (S-0172)', () => {
 		expect(locate('/inbox')).toEqual({ group: 'workflow', page: 'inbox' });
 		expect(locate('/threads')).toEqual({ group: 'workflow', page: 'threads' });
 		expect(locate('/workflow/planner')).toEqual({ group: 'workflow', page: 'planner' });
+		expect(locate('/workflow/orchestrator')).toEqual({ group: 'workflow', page: 'orchestrator' });
+		expect(locate('/workflow/analyzer')).toEqual({ group: 'workflow', page: 'analyzer' });
 		expect(locate('/charts/cycle-time')).toEqual({ group: 'status', page: 'charts' });
 		expect(locate('/docs/design/system/overview.md')).toEqual({ group: 'status', page: 'docs' });
 		expect(locate('/host')).toEqual({ group: 'host', page: 'updates' });

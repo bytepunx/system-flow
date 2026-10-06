@@ -4,6 +4,7 @@
 	// project until it is on everywhere, each section shows what is set and the command that allows
 	// changing it. Commands are written one argument a line: they are run as they stand, never
 	// through a shell, so nothing is quoted or split.
+	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { agentFrom, configText, parseConfig } from '$lib/agent';
 	import { projectState } from '$lib/project.svelte';
@@ -430,7 +431,10 @@
 			<section data-testid="section-planning">
 				<h2 class="mb-2 font-medium">Planning again, for this project</h2>
 				<p class="text-xs text-muted">
-					Read-only: set by hand in system-flow.yaml, under planning (replan, schedule).
+					Read-only here: the planning keys in system-flow.yaml are edited on the
+					<a class="underline" href={resolve('/workflow/planner')} data-testid="planning-edit-link"
+						>Planner page</a
+					>.
 				</p>
 				<ul class="mt-2 space-y-2">
 					<li data-testid="planning-edits">

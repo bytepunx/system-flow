@@ -20,6 +20,8 @@
 		threads: resolve('/threads'),
 		activity: resolve('/activity'),
 		planner: resolve('/workflow/planner'),
+		orchestrator: resolve('/workflow/orchestrator'),
+		analyzer: resolve('/workflow/analyzer'),
 		charts: resolve('/charts/[kind]', { kind: 'cycle-time' }),
 		adrs: resolve('/adrs'),
 		docs: resolve('/docs/[...path]', { path: '' }),

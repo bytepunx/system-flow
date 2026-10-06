@@ -25,6 +25,8 @@ export type PageKey =
 	| 'threads'
 	| 'activity'
 	| 'planner'
+	| 'orchestrator'
+	| 'analyzer'
 	| 'charts'
 	| 'adrs'
 	| 'docs'
@@ -45,7 +47,11 @@ export const SITE_MENU: MenuGroup[] = [
 			{ key: 'threads', label: 'Threads', path: '/threads' },
 			{ key: 'activity', label: 'Activity', path: '/activity' },
 			// What the planner is doing and has done, and where it is asked to plan (S-0259).
-			{ key: 'planner', label: 'Planner', path: '/workflow/planner' }
+			{ key: 'planner', label: 'Planner', path: '/workflow/planner' },
+			// The orchestrator's and the analyzer's settings (S-0229); their status, activity, and
+			// runs come with S-0228.
+			{ key: 'orchestrator', label: 'Orchestrator', path: '/workflow/orchestrator' },
+			{ key: 'analyzer', label: 'Analyzer', path: '/workflow/analyzer' }
 		],
 		also: ['/items', '/review', '/new']
 	},

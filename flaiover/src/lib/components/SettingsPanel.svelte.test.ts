@@ -5,6 +5,7 @@ import type { PlanningTriggers, SettingsView } from '$lib/settings';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+vi.mock('$app/paths', () => ({ resolve: (route: string) => route }));
 
 // The switcher's list, which Serve asks again until the new project is in it (S-0122).
 const switcher = vi.hoisted(() => ({
@@ -587,9 +588,9 @@ describe('SettingsPanel (S-0105)', () => {
 				})
 			);
 			await show();
-			expect(text('section-planning')).toContain(
-				'system-flow.yaml, under planning (replan, schedule)'
-			);
+			// S-0229: the keys are edited on the Planner page, not by hand
+			expect(text('section-planning')).toContain('edited on the Planner page');
+			expect(q('planning-edit-link')!.getAttribute('href')).toBe('/workflow/planner');
 			expect(text('planning-edits')).toContain('Edits to a planned story start the planner: on');
 			expect(text('planning-edits')).toContain('The plan host action is on for this project');
 			expect(text('planning-replan')).toContain('deterministic (default)');
