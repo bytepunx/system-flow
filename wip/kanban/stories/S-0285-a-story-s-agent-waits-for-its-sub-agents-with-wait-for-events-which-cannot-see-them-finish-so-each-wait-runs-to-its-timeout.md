@@ -6,7 +6,7 @@ title: A story's agent waits for its sub-agents with wait_for_events, which cann
 status: ready
 owner: alex
 created: 2026-10-06T06:03:25Z
-updated: 2026-10-06T07:01:11Z
+updated: 2026-10-06T07:01:55Z
 transitions:
   - to: ready
     at: 2026-10-06T06:04:29Z
@@ -62,7 +62,7 @@ Written on the operator's word (alex, 2026-10-06), from the examination of S-028
 
 The evidence is in the Claude Code transcripts of the agents of S-0218, S-0219, S-0220, and S-0282 on this host, under `~/.claude/projects/`, and their narratives. S-0219's run waited by ending its turn and lost nothing, because its sub-agents were short.
 
-Corrected on 2026-10-06T07:05Z: the goal first named ending the turn as the way to wait. S-0220 showed that Claude Code ends the process ten minutes after the turn ends, sub-agent or not (I-0084), so the goal and the first criterion now ask for a way that holds for a long sub-agent.
+Corrected on 2026-10-06, at about 07:00Z: the goal first named ending the turn as the way to wait. S-0220 showed that Claude Code ends the process ten minutes after the turn ends, sub-agent or not (I-0084), so the goal and the first criterion now ask for a way that holds for a long sub-agent.
 
 The story's own agent runs on the installed flai, whose prompt is the old one, so it cannot measure the fix on itself. The measure in the goal is the operator's to read on a later story.
 
