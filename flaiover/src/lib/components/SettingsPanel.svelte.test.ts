@@ -389,6 +389,183 @@ describe('SettingsPanel (S-0105)', () => {
 		});
 	});
 
+	// S-0295, ADR-0096: the shared paths, changed under the settings action and checked by anyone.
+	describe('shared paths', () => {
+		const shared = (here: boolean, patterns = ['docs/users/*.md', 'design/adrs']) => {
+			const v = view(here, false);
+			v.host!.shared = patterns;
+			return v;
+		};
+		const type = (id: string, value: string) => {
+			q<HTMLInputElement>(id)!.value = value;
+			q<HTMLInputElement>(id)!.dispatchEvent(new Event('input', { bubbles: true }));
+			flushSync();
+		};
+		const removeOf = (pattern: string) =>
+			q(`shared-${pattern}`)!.querySelector<HTMLButtonElement>('[data-testid="remove-shared"]');
+
+		it('lists the patterns read-only while settings is off, with no add field or remove button', async () => {
+			backend(shared(false));
+			await show();
+			expect(q('shared-docs/users/*.md')!.textContent).toContain('docs/users/*.md');
+			expect(q('shared-design/adrs')!.textContent).toContain('design/adrs');
+			expect(removeOf('design/adrs')).toBeNull();
+			expect(q('new-shared')).toBeNull();
+			expect(q('add-shared')).toBeNull();
+			expect(q('section-shared')!.querySelector('[data-testid="gate"]')!.textContent).toContain(
+				'flai serve enable settings'
+			);
+			expect(q('section-shared')!.textContent).toContain(
+				'An overlap inside a shared path holds no ready story'
+			);
+			// the check changes nothing, so it stays
+			expect(q('shared-check-text')).not.toBeNull();
+		});
+
+		it('says when there are none, and leaves the section out when flai does not say', async () => {
+			backend(shared(true, []));
+			await show();
+			expect(q('shared-none')!.textContent).toContain('None');
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+			backend(view(true, false));
+			await show();
+			expect(q('section-shared')).toBeNull();
+		});
+
+		it('adds a pattern, explaining the glob dialect beside the field, and clears the field', async () => {
+			const sent = backend(shared(true), {
+				shared: [200, { added: ['flai/cmd/**/*.go'], shared: [], warnings: [] }]
+			});
+			await show();
+			expect(q('section-shared')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'* within a folder, ** across folders, and a plain path covers everything under it'
+			);
+			type('new-shared', ' flai/cmd/**/*.go ');
+			q<HTMLButtonElement>('add-shared')!.click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'shared', action: 'add', pattern: 'flai/cmd/**/*.go' }]);
+			expect(q('said-shared')!.textContent).toContain('added flai/cmd/**/*.go');
+			expect(q<HTMLInputElement>('new-shared')!.value).toBe('');
+		});
+
+		it('removes a pattern', async () => {
+			const sent = backend(shared(true), {
+				shared: [200, { removed: ['design/adrs'], shared: ['docs/users/*.md'], warnings: [] }]
+			});
+			await show();
+			expect(removeOf('design/adrs')!.getAttribute('aria-label')).toBe('Remove design/adrs');
+			removeOf('design/adrs')!.click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'shared', action: 'remove', pattern: 'design/adrs' }]);
+			expect(q('said-shared')!.textContent).toContain('removed design/adrs');
+		});
+
+		it('shows flai’s refusal of a pattern inline, without the manifest’s path, and keeps the field', async () => {
+			backend(shared(true), {
+				shared: [
+					400,
+					{
+						error:
+							'/home/me/git/sf/system-flow.yaml: cannot add "design/adrs" to claims.shared: it is in the list already; nothing to add'
+					}
+				]
+			});
+			await show();
+			type('new-shared', 'design/adrs');
+			q<HTMLButtonElement>('add-shared')!.click();
+			await settle();
+			const said = q('said-shared')!;
+			expect(said.getAttribute('role')).toBe('alert');
+			expect(said.textContent!.trim()).toBe(
+				'cannot add "design/adrs" to claims.shared: it is in the list already; nothing to add'
+			);
+			expect(q<HTMLInputElement>('new-shared')!.value).toBe('design/adrs');
+		});
+
+		it('checks a typed path, with settings off, and says which pattern matched or that none did', async () => {
+			const sent = backend(shared(false), {
+				shared_check: [
+					200,
+					{
+						entries: [
+							{
+								entry: 'docs/users/flai.md',
+								path: 'docs/users/flai.md',
+								shared: true,
+								pattern: 'docs/users/*.md'
+							}
+						],
+						warnings: []
+					}
+				]
+			});
+			await show();
+			type('shared-check-text', ' docs/users/flai.md ');
+			q<HTMLButtonElement>('shared-check')!.click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'shared_check', paths: ['docs/users/flai.md'] }]);
+			expect(q('checked-docs/users/flai.md')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'docs/users/flai.md: shared, inside docs/users/*.md'
+			);
+
+			backend(shared(false), {
+				shared_check: [
+					200,
+					{
+						entries: [{ entry: 'flai/cmd/', path: 'flai/cmd', shared: false }],
+						warnings: []
+					}
+				]
+			});
+			type('shared-check-text', 'flai/cmd/');
+			q<HTMLButtonElement>('shared-check')!.click();
+			await settle();
+			expect(q('checked-flai/cmd/')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'flai/cmd/ (as flai/cmd): not shared: no pattern matches it'
+			);
+		});
+
+		it('checks a story’s claim entry by entry, and says flai’s refusal of one it cannot find', async () => {
+			const sent = backend(shared(true), {
+				shared_check: [
+					200,
+					{
+						entries: [
+							{
+								entry: 'design/adrs',
+								path: 'design/adrs',
+								shared: true,
+								pattern: 'design/adrs',
+								story: 'S-0001'
+							},
+							{ entry: 'flai/cmd', path: 'flai/cmd', shared: false, story: 'S-0001' }
+						],
+						warnings: []
+					}
+				]
+			});
+			await show();
+			type('shared-check-text', 'S-0001');
+			q<HTMLButtonElement>('shared-check')!.click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'shared_check', story: 'S-0001' }]);
+			expect(q('shared-checked')!.textContent).toContain("S-0001's claim:");
+			expect(q('checked-design/adrs')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'shared, inside design/adrs'
+			);
+			expect(q('checked-flai/cmd')!.textContent).toContain('not shared');
+
+			backend(shared(true), { shared_check: [404, { error: 'no story S-0999' }] });
+			type('shared-check-text', 'S-0999');
+			q<HTMLButtonElement>('shared-check')!.click();
+			await settle();
+			expect(q('shared-checked')!.getAttribute('role')).toBe('alert');
+			expect(q('shared-checked')!.textContent).toContain('no story S-0999');
+		});
+	});
+
 	// S-0211, ADR-0084: when flai serve plans again on its own, read-only, from the manifest and the
 	// plan host action.
 	describe('planning triggers', () => {

@@ -75,6 +75,27 @@ describe('/api/settings (S-0105)', () => {
 		]);
 	});
 
+	it('changes the shared paths as a write, and checks them as a read with no request ID (S-0295)', async () => {
+		script['settings.shared'] = { data: { added: ['design/adrs'], shared: ['design/adrs'] } };
+		script['settings.shared_check'] = {
+			data: [{ entry: 'design/adrs', path: 'design/adrs', shared: true, pattern: 'design/adrs' }]
+		};
+		const added = await post({ kind: 'shared', action: 'add', pattern: 'design/adrs' });
+		expect(added.status).toBe(200);
+		expect(await added.json()).toMatchObject({ added: ['design/adrs'], shared: ['design/adrs'] });
+		const checked = await post({ kind: 'shared_check', story: 'S-0001' });
+		expect(checked.status).toBe(200);
+		expect(await checked.json()).toMatchObject({
+			entries: [{ entry: 'design/adrs', shared: true, pattern: 'design/adrs' }],
+			warnings: []
+		});
+		const write = asked.find((a) => a.method === 'settings.shared')!;
+		expect(write.params).toMatchObject({ action: 'add', pattern: 'design/adrs' });
+		expect(write.params.request_id).toEqual(expect.any(String));
+		const read = asked.find((a) => a.method === 'settings.shared_check')!;
+		expect(read.params).toEqual({ story: 'S-0001' });
+	});
+
 	it('refuses a kind that is not a setting, and says what the host must enable', async () => {
 		expect((await post({ kind: 'config', key: 'x' })).status).toBe(400);
 		expect(asked.some((a) => a.method.startsWith('settings.'))).toBe(false);

@@ -1,7 +1,14 @@
 import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import { authDisabled, isSecure, sessionCookie, setToken } from '$lib/server/auth';
-import { SETTINGS_KINDS, type SettingsKind, type SettingsView } from '$lib/settings';
+import {
+	SETTINGS_KINDS,
+	SETTINGS_READS,
+	type SettingsKind,
+	type SettingsRead,
+	type SettingsView,
+	type SharedCheck
+} from '$lib/settings';
 import type { RequestHandler } from './$types';
 
 /**
@@ -21,14 +28,21 @@ export const GET: RequestHandler = () => respond(() => repo().ask<SettingsView>(
  */
 export const POST: RequestHandler = async ({ request, url }) => {
 	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-	const kind = body.kind as SettingsKind;
+	const kind = body.kind as SettingsKind | SettingsRead;
 	let cookie: string | null = null;
 	const res = await respond(async () => {
-		if (!SETTINGS_KINDS.includes(kind)) {
-			throw new RepoError(400, `kind must be one of ${SETTINGS_KINDS.join(', ')}`);
-		}
 		const params = { ...body };
 		delete params.kind;
+		if (SETTINGS_READS.includes(kind as SettingsRead)) {
+			const { data, warnings } = await repo().run<SharedCheck[]>(`settings.${kind}`, params);
+			return { entries: data ?? [], warnings };
+		}
+		if (!SETTINGS_KINDS.includes(kind as SettingsKind)) {
+			throw new RepoError(
+				400,
+				`kind must be one of ${[...SETTINGS_KINDS, ...SETTINGS_READS].join(', ')}`
+			);
+		}
 		const timeoutMs = kind === 'mcp_token' || kind === 'dashboard_token' ? 60000 : 30000;
 		const { data, warnings } = await repo().write<Record<string, unknown>>(
 			`settings.${kind}`,

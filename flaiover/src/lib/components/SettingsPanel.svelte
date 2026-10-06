@@ -13,9 +13,12 @@
 		health,
 		lines,
 		replanMeans,
+		sharedQuery,
+		sharedRefusal,
 		type ServedProject,
 		type SettingsKind,
-		type SettingsView
+		type SettingsView,
+		type SharedCheck
 	} from '$lib/settings';
 	import AgentFields from './AgentFields.svelte';
 
@@ -41,6 +44,16 @@
 	let newFolder = $state('');
 	/** The root of the project whose Remove is waiting for a yes. */
 	let confirming = $state<string | null>(null);
+	let newShared = $state('');
+	let checkText = $state('');
+	let checking = $state(false);
+	/** What the last check of the shared paths answered, for the story or path it asked about. */
+	let checked = $state<{
+		story?: string;
+		entries?: SharedCheck[];
+		warnings?: string[];
+		error?: string;
+	} | null>(null);
 
 	function fill(v: SettingsView) {
 		const h = v.host;
@@ -167,6 +180,41 @@
 		await load();
 	}
 
+	// The shared paths (S-0295, ADR-0096): one pattern added or removed through flai shared, which
+	// commits it; flai's refusal is said without the manifest's path it begins with.
+	async function editShared(action: 'add' | 'remove', pattern: string) {
+		const body = await change('shared', 'shared', { action, pattern });
+		if (!body) {
+			said.shared = { ok: false, text: sharedRefusal(said.shared?.text ?? '') };
+			return false;
+		}
+		const done = (action === 'add' ? body.added : body.removed) ?? [pattern];
+		said.shared = {
+			ok: true,
+			text: `${action === 'add' ? 'added' : 'removed'} ${done.join(', ')}`
+		};
+		return true;
+	}
+	// A check changes nothing, so it needs no host action: it is offered with settings off too.
+	async function checkShared() {
+		const query = sharedQuery(checkText);
+		const story = 'story' in query ? query.story : undefined;
+		checking = true;
+		try {
+			const r = await api('/api/settings', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ kind: 'shared_check', ...query })
+			});
+			const body = await r.json().catch(() => ({}));
+			checked = r.ok
+				? { story, entries: body.entries ?? [], warnings: body.warnings ?? [] }
+				: { story, error: body.error ?? r.statusText };
+		} finally {
+			checking = false;
+		}
+	}
+
 	async function rotate(section: string, kind: 'mcp_token' | 'dashboard_token') {
 		const body = await change(section, kind, {});
 		if (!body) return;
@@ -277,6 +325,105 @@
 			>
 			{@render result('default')}
 		</section>
+
+		{#if h.shared}
+			<section data-testid="section-shared">
+				<h2 class="mb-2 font-medium">Shared paths, for this project</h2>
+				{@render gate('shared')}
+				<p class="text-xs text-muted">
+					An overlap inside a shared path holds no ready story. Stored in system-flow.yaml, under
+					claims.shared, and committed.
+				</p>
+				<ul class="mt-2 space-y-1">
+					{#each h.shared as pattern, i (i)}
+						<li class="flex items-center gap-2" data-testid="shared-{pattern}">
+							<code class="text-xs">{pattern}</code>
+							{#if can('shared').ok}
+								<button
+									class="rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+									disabled={busy !== null}
+									aria-label="Remove {pattern}"
+									data-testid="remove-shared"
+									onclick={() => editShared('remove', pattern)}>Remove</button
+								>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+				{#if h.shared.length === 0}
+					<p class="text-xs text-muted" data-testid="shared-none">
+						None: every overlap holds a ready story.
+					</p>
+				{/if}
+				{#if can('shared').ok}
+					<div class="mt-2 flex items-end gap-2">
+						<label class="flex-1">
+							<span class="mb-1 block text-xs text-muted"
+								>pattern: <code>*</code> within a folder, <code>**</code> across folders, and a plain
+								path covers everything under it</span
+							>
+							<input
+								class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+								bind:value={newShared}
+								placeholder="docs/users/*.md"
+								data-testid="new-shared"
+							/>
+						</label>
+						<button
+							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+							disabled={busy !== null || !newShared.trim()}
+							data-testid="add-shared"
+							onclick={async () => {
+								if (await editShared('add', newShared.trim())) newShared = '';
+							}}>Add pattern</button
+						>
+					</div>
+				{/if}
+				{@render result('shared')}
+				<div class="mt-3 flex items-end gap-2">
+					<label class="flex-1">
+						<span class="mb-1 block text-xs text-muted"
+							>check a path, or a story's ID for each entry of its claim</span
+						>
+						<input
+							class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+							bind:value={checkText}
+							placeholder="docs/users/flai.md or S-0001"
+							data-testid="shared-check-text"
+						/>
+					</label>
+					<button
+						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={checking || !checkText.trim()}
+						data-testid="shared-check"
+						onclick={checkShared}>Check</button
+					>
+				</div>
+				{#if checked?.error}
+					<p class="text-xs text-danger" role="alert" data-testid="shared-checked">
+						{checked.error}
+					</p>
+				{:else if checked}
+					<div class="mt-1 text-xs" role="status" data-testid="shared-checked">
+						{#if checked.story}<p>{checked.story}'s claim:</p>{/if}
+						<ul class="space-y-1">
+							{#each checked.entries ?? [] as e, i (i)}
+								<li data-testid="checked-{e.entry}">
+									<code>{e.entry}</code>{e.path !== e.entry ? ` (as ${e.path})` : ''}:
+									{#if e.shared}
+										<span class="text-good">shared, inside <code>{e.pattern}</code></span>
+									{:else}
+										<span class="text-muted">not shared: no pattern matches it</span>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+						{#if checked.entries?.length === 0}<p class="text-muted">Nothing to check.</p>{/if}
+						{#each checked.warnings ?? [] as w, i (i)}<p class="text-muted">{w}</p>{/each}
+					</div>
+				{/if}
+			</section>
+		{/if}
 
 		{#if h.planning}
 			{@const p = h.planning}

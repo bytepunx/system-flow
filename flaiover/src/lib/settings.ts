@@ -12,9 +12,14 @@ export const SETTINGS_KINDS = [
 	'serve',
 	'unserve',
 	'mcp_token',
-	'dashboard_token'
+	'dashboard_token',
+	'shared'
 ] as const;
 export type SettingsKind = (typeof SETTINGS_KINDS)[number];
+
+/** Settings questions that change nothing: asked of flai with no host action and no request ID. */
+export const SETTINGS_READS = ['shared_check'] as const;
+export type SettingsRead = (typeof SETTINGS_READS)[number];
 
 /** Settings kept in the host's configuration for every project: they need settings on everywhere. */
 export const HOSTWIDE: readonly SettingsKind[] = [
@@ -119,6 +124,8 @@ export type SettingsView = {
 		projects?: ProjectsView;
 		mcp?: { running: boolean; url?: string; pid?: number };
 		planning?: PlanningTriggers;
+		/** The project's shared paths, claims.shared in its manifest (S-0295, ADR-0096), as globs. */
+		shared?: string[];
 		error?: string;
 	};
 };
@@ -134,6 +141,34 @@ export function argv(text: string): string[] {
 		.split('\n')
 		.map((l) => l.replace(/\r$/, ''))
 		.filter((l) => l.trim() !== '');
+}
+
+/**
+ * One entry flai shared check reports (S-0295): a path given, or an entry of a story's claim, and
+ * the first shared path's pattern it lies wholly inside, if any.
+ */
+export type SharedCheck = {
+	entry: string;
+	/** The entry as it is matched: a component read as its path, without ./ or a trailing /. */
+	path: string;
+	shared: boolean;
+	pattern?: string;
+	/** The story whose claim the entry is, when a story was checked. */
+	story?: string;
+};
+
+/** What settings.shared_check is asked for the text typed: a story's claim for its ID, else a path. */
+export function sharedQuery(text: string): { story: string } | { paths: string[] } {
+	const t = text.trim();
+	return /^[Ss]-\d+$/.test(t) ? { story: t } : { paths: [t] };
+}
+
+/**
+ * flai's refusal of a shared path without the manifest's absolute path it begins with, which says
+ * nothing on the page: `/…/system-flow.yaml: cannot add "x" to claims.shared: …` reads from cannot.
+ */
+export function sharedRefusal(text: string): string {
+	return text.replace(/^\S*system-flow\.yaml: /, '');
 }
 
 /** What a served project's state says, in a few words. */
