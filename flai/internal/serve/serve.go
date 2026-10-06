@@ -317,7 +317,8 @@ func Run(ctx context.Context, o Options) error {
 			// An agent starting or ending changes no file: the dashboard is told
 			// so that a story page shows it at once (S-0154), a planner's
 			// item page, with the item in place of the story (S-0208), and
-			// the orchestrator's run, with its role (S-0218).
+			// the orchestrator's run, with its role (S-0218), and the
+			// analyzer's, with its (S-0223).
 			starter.changed = func(run *AgentRun) {
 				about := map[string]string{"project": e.Key, "story": run.Story}
 				switch {
@@ -325,6 +326,8 @@ func Run(ctx context.Context, o Options) error {
 					about = map[string]string{"project": e.Key, "item": run.Item}
 				case run.orchestrates():
 					about = map[string]string{"project": e.Key, "role": conventions.RoleOrchestrate}
+				case run.analyzes():
+					about = map[string]string{"project": e.Key, "role": conventions.RoleAnalyze}
 				}
 				r.client.Notify(AgentChanged, about)
 			}

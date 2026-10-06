@@ -50,7 +50,7 @@ func (lab *agentLab) plan(id string) (*AgentRun, error) {
 func (lab *agentLab) planHere(id string) bool {
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.plan(context.Background(), lab.cfg, id, nil, triggerAsked)
+	return lab.l.plan(context.Background(), lab.cfg, id, nil, TriggerAsked)
 }
 
 func (lab *agentLab) planRun(id string) *AgentRun { return lab.state().Plans[id] }

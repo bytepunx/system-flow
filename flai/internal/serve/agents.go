@@ -68,8 +68,11 @@ type AgentConfig struct {
 	// Orchestrate is whether the orchestrate host action is enabled for the
 	// project: flai serve runs its orchestrator while it is (S-0218).
 	Orchestrate bool
-	Command     []string
-	Name        string // FLAI_AGENT is this and the story's ID; "agent" when empty
+	// Analyze is whether the analyze host action is enabled for the project:
+	// the operator may have the analyzer started for it (S-0223).
+	Analyze bool
+	Command []string
+	Name    string // FLAI_AGENT is this and the story's ID; "agent" when empty
 	// Harnesses are the program and arguments each harness runs with on this
 	// host, the command among them when one is set (S-0104).
 	Harnesses map[string]harness.Host
@@ -101,13 +104,14 @@ const (
 )
 
 // AgentRun is one agent flai serve started, or failed to: a story's agent,
-// the planner for an item (S-0208), or the project's orchestrator (S-0218).
+// the planner for an item (S-0208), the project's orchestrator (S-0218), or
+// its analyzer (S-0223).
 type AgentRun struct {
 	Story string `json:"story"`
 	// Item is the epic or story a planner run plans; empty on a story's
 	// agent's run, whose story is Story, and Story is empty on a planner's.
-	// Both are empty on the orchestrator's run, which works the whole
-	// project.
+	// Both are empty on the orchestrator's run and the analyzer's, which
+	// work the whole project.
 	Item    string `json:"item,omitempty"`
 	Harness string `json:"harness,omitempty"`
 	Model   string `json:"model,omitempty"`
@@ -130,8 +134,17 @@ type AgentRun struct {
 	// Trigger is what started a planner run (ADR-0084): asked, for the
 	// operator's asking, orchestrator, for the orchestrator's (S-0219), and
 	// otherwise the replanner's triggers, separated by semicolons. It is empty on a story's agent's run and on planner runs
-	// before S-0211.
+	// before S-0211. An analyzer run's is what its starter said (S-0223).
 	Trigger string `json:"trigger,omitempty"`
+	// Focus is what an analyzer run looks for (S-0223): one of
+	// harness.Focuses, or harness.AllFocus when it was asked for none. It is
+	// set on the analyzer's runs alone, and tells them from the
+	// orchestrator's.
+	Focus string `json:"focus,omitempty"`
+	// Report is the report an analyzer run wrote, relative to the project's
+	// root, once it has ended: the newest file under design/analysis changed
+	// since it started; empty when it wrote none (S-0223).
+	Report string `json:"report,omitempty"`
 	// Outcome is set once it has ended; Why says what went wrong, and Thread
 	// is the question it ended waiting on.
 	Outcome string `json:"outcome,omitempty"`
@@ -168,8 +181,13 @@ func agentChanged(run *AgentRun, now *manifest.Agent) bool {
 	return run.StoryAgent != nil && !run.StoryAgent.Same(now)
 }
 
-// orchestrates is the orchestrator's run: one for no story and no item.
-func (r *AgentRun) orchestrates() bool { return r.Story == "" && r.Item == "" }
+// orchestrates is the orchestrator's run: one for no story and no item, with
+// no focus.
+func (r *AgentRun) orchestrates() bool { return r.Story == "" && r.Item == "" && r.Focus == "" }
+
+// analyzes is the analyzer's run: one for no story and no item, with a focus
+// (S-0223).
+func (r *AgentRun) analyzes() bool { return r.Story == "" && r.Item == "" && r.Focus != "" }
 
 // live is a run that has not ended.
 func (r *AgentRun) live() bool { return r != nil && r.Ended == "" && r.Error == "" && r.PID > 0 }
@@ -195,13 +213,19 @@ type AgentState struct {
 	// Orchestrator is the project's newest orchestrator run (S-0218). It is
 	// no story's run either.
 	Orchestrator *AgentRun `json:"orchestrator,omitempty"`
+	// Analyzer is the project's newest analyzer run (S-0223), no story's
+	// run either.
+	Analyzer *AgentRun `json:"analyzer,omitempty"`
 }
 
 // of is the newest run recorded for what r is for: its item's planner run,
-// the orchestrator's, or its story's agent's run.
+// the orchestrator's, the analyzer's, or its story's agent's run.
 func (s *AgentState) of(r *AgentRun) *AgentRun {
 	if r.orchestrates() {
 		return s.Orchestrator
+	}
+	if r.analyzes() {
+		return s.Analyzer
 	}
 	if r.Item != "" {
 		return s.Plans[r.Item]
@@ -210,10 +234,15 @@ func (s *AgentState) of(r *AgentRun) *AgentRun {
 }
 
 // put records a run as its story's newest, and keeps Running and Last true,
-// a planner run as its item's newest, or the orchestrator's as the newest.
+// a planner run as its item's newest, or the orchestrator's or the
+// analyzer's as the newest.
 func (s *AgentState) put(r *AgentRun) {
 	if r.orchestrates() {
 		s.Orchestrator = r
+		return
+	}
+	if r.analyzes() {
+		s.Analyzer = r
 		return
 	}
 	if r.Item != "" {
@@ -587,7 +616,8 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 // on the operator's word and handed them over (S-0115, S-0116). A process
 // that has the run's PID and is not the one started for it, after a reboot,
 // is gone too (S-0170). A planner's run is settled the same way, and its
-// activity logged (S-0208), and so is the orchestrator's (S-0218).
+// activity logged (S-0208), and so are the orchestrator's (S-0218) and the
+// analyzer's (S-0223).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
@@ -609,6 +639,9 @@ func (l *launcher) settleOrphans() {
 	}
 	if run := st.Orchestrator; run.live() && !l.waiting[run.PID] && !run.running() {
 		l.orchestrateEnded(run, nil)
+	}
+	if run := st.Analyzer; run.live() && !l.waiting[run.PID] && !run.running() {
+		l.analyzeEnded(run, nil)
 	}
 }
 
@@ -643,8 +676,8 @@ func asked(run *AgentRun) bool {
 // finds its own config, and a flai serve it runs does not reach the
 // operator's host. Nor does it carry what marks the session of whoever
 // started it, such as an agent that ran flai plan (S-0208): each run sets
-// FLAI_STORY, or FLAI_ROLE and FLAI_ITEM, for itself, and has the other
-// unset.
+// FLAI_STORY, or FLAI_ROLE with FLAI_ITEM or FLAI_FOCUS (S-0223), for
+// itself, and has the others unset.
 func agentEnv(env []string) []string {
 	return slices.DeleteFunc(slices.Clone(env), func(kv string) bool {
 		name, _, _ := strings.Cut(kv, "=")
@@ -653,7 +686,7 @@ func agentEnv(env []string) []string {
 }
 
 // runMarks are the variables that say what a run is for.
-var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM"}
+var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS"}
 
 // start starts an agent for story, or starts again the one that ended asking
 // in after, and says whether it did.

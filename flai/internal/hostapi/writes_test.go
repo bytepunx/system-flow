@@ -70,6 +70,7 @@ var good = map[string]struct {
 	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
 	"agent.stop":    {`{"id":"S-0001",` + rid + `}`, "serve agent stop S-0001 --json", ""},
 	"plan.run":      {`{"id":"E-0001",` + rid + `}`, "plan E-0001 --json", ""},
+	"analyze.run":   {`{"focus":"risk",` + rid + `}`, "analyze --focus=risk --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
@@ -165,6 +166,7 @@ var refused = map[string][]string{
 	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.stop":    {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"plan.run":      {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001 --json",` + rid + `}`, `{"id":"E-0001"}`},
+	"analyze.run":   {`{"focus":"--help",` + rid + `}`, `{"focus":"all",` + rid + `}`, `{"focus":["risk"],` + rid + `}`, `{"focus":"risk"}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -933,6 +935,51 @@ func TestPlanRunNeedsThePlanAction(t *testing.T) {
 	}
 	if !DashboardSees(ActionPlan) {
 		t.Error("the dashboard is not told of the plan action, so it cannot offer Plan")
+	}
+}
+
+// S-0223: analyze.run starts the analyzer, with a focus or none, only while
+// the operator has enabled the analyze action for the project, says what
+// enables it when not, refuses a focus the analyzer does not take before flai
+// runs, and journals the start as what it started.
+func TestAnalyzeRunNeedsTheAnalyzeAction(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := false
+	host := Host{Enabled: func(action, root string) bool { return on && action == ActionAnalyze && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"focus":"all","agent":"analyzer","harness":"command","command":"analyze-it","pid":42,"log":"/l","session":"s","started":"2026-10-06T10:00:00Z","trigger":"asked"}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	_, e := m["analyze.run"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000001"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, `the host action "analyze" is not enabled`) || !strings.Contains(e.Message, "flai serve enable analyze") {
+		t.Fatalf("off: %+v", e)
+	}
+	on = true
+	if _, e := m["analyze.run"](context.Background(), p, json.RawMessage(`{"focus":"velocity","request_id":"req-00000002"}`)); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, `the analyzer takes the focus bottlenecks, intent, risk, or none for all of them, and "velocity" is none of them`) {
+		t.Fatalf("a bad focus: %+v", e)
+	}
+	if len(rec.runs) != 0 {
+		t.Fatalf("a refused analysis ran %+v", rec.runs)
+	}
+	if _, e := m["analyze.run"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000003"}`)); e != nil {
+		t.Fatalf("on: %+v", e)
+	}
+	if _, e := m["analyze.run"](context.Background(), p, json.RawMessage(`{"focus":"intent","request_id":"req-00000004"}`)); e != nil {
+		t.Fatalf("on, with a focus: %+v", e)
+	}
+	if len(rec.runs) != 2 || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "analyze --json" || strings.Join(rec.runs[1].Args, " ") != "analyze --focus=intent --json" {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+	if len(journal) != 3 || journal[0].Outcome != "disabled" || journal[0].Action != ActionAnalyze || journal[0].Method != "analyze.run" {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if j := journal[1]; j.Outcome != "done" || j.Action != ActionAnalyze || j.Detail != "started analyze-it to analyze, focus all, as analyzer (pid 42)" {
+		t.Errorf("started: %+v", j)
+	}
+	if !DashboardSees(ActionAnalyze) {
+		t.Error("the dashboard is not told of the analyze action, so it cannot offer Analyze")
+	}
+	if on, ok := enabledActions(Host{}, p.Root)[ActionAnalyze]; !ok || on {
+		t.Errorf("project.info names analyze, off by default: %v %v", on, ok)
 	}
 }
 

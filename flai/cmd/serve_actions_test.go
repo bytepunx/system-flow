@@ -76,7 +76,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, auto-approve, auto-publish, checks, dashboard, host, orchestrate, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, checks, dashboard, host, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -232,6 +232,58 @@ func TestServeOrchestrateAction(t *testing.T) {
 	}
 	runIn(t, root, "serve", "disable", "orchestrate")
 	if (&app{}).agentConfig(root).Orchestrate {
+		t.Error("disabled, flai serve is still told it is on")
+	}
+}
+
+// S-0223: analyze is off until the operator enables it, flai serve is told
+// whether it is on, and agent.status carries the project's newest analyzer
+// run, with its focus, trigger, outcome, report, and log, null before the
+// first, apart from the orchestrator's.
+func TestServeAnalyzeAction(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	root := tempProject(t)
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "analyze: off everywhere") || !strings.Contains(out, "analysis.agent") || !strings.Contains(out, "design/analysis") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if (&app{}).agentConfig(root).Analyze {
+		t.Error("analyze is on by default")
+	}
+	status := func() string {
+		t.Helper()
+		got, err := json.Marshal((&app{}).host().Agent(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(got)
+	}
+	if got := status(); !strings.Contains(got, `"analyzer":null`) {
+		t.Errorf("agent.status before any run: %s", got)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "enable", "analyze"); code != 0 || !strings.Contains(out, "analyze enabled for t") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if !(&app{}).agentConfig(root).Analyze {
+		t.Error("enabled, flai serve is not told")
+	}
+	run := `{"` + root + `":{"analyzer":{"story":"","harness":"command","command":"run-agent","agent":"analyzer","pid":42,"started":"2026-10-06T10:00:00Z","ended":"2026-10-06T10:05:00Z","log":"/l/t-analyzer-20261006T100000Z.log","trigger":"asked","focus":"risk","report":"design/analysis/2026-10-06-risk.md","outcome":"worked"}}}`
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(run), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := status()
+	for _, want := range []string{`"analyzer":{"story":"","harness":"command","command":"run-agent","agent":"analyzer","pid":42,"started":"2026-10-06T10:00:00Z","ended":"2026-10-06T10:05:00Z"`,
+		`"log":"/l/t-analyzer-20261006T100000Z.log"`, `"trigger":"asked","focus":"risk","report":"design/analysis/2026-10-06-risk.md","outcome":"worked"`, `"orchestrator":null`, `"running":null`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("agent.status with a run lacks %s: %s", want, got)
+		}
+	}
+	runIn(t, root, "serve", "disable", "analyze")
+	if (&app{}).agentConfig(root).Analyze {
 		t.Error("disabled, flai serve is still told it is on")
 	}
 }

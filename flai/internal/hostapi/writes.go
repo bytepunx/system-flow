@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -327,6 +328,11 @@ const ActionPlan = "plan"
 // off. No method asks for it; flai serve sees it at every look.
 const ActionOrchestrate = "orchestrate"
 
+// ActionAnalyze is the host action that starts the analyzer for a project,
+// with a focus or none, on the operator's word (S-0223): analyze.run, and
+// flai analyze in a shell. One analyzer runs per project at a time.
+const ActionAnalyze = "analyze"
+
 // Actions are the host actions there are, with what each lets a dashboard
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
@@ -340,6 +346,7 @@ var Actions = map[string]string{
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
 	ActionOrchestrate: "run the orchestrator, with the project's orchestration agent (orchestration.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for as long as this is on: started again when it ends, a minute after a failure, and stopped when this is turned off; it keeps work moving through flai only as far as orchestration.permissions in system-flow.yaml allow, each off by default, and logs each decision in wip/agents/orchestrator.md",
+	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you press Analyze or run flai analyze, looking for bottlenecks, intent, or risk, or all three; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 }
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):
@@ -1593,7 +1600,41 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"plan", in.ID}, "", nil
 		}},
+		// analyze.run: the analyzer for the project, with a focus or none,
+		// on the operator's word (S-0223); flai analyze judges whether it
+		// may, and says why not.
+		"analyze.run": {action: ActionAnalyze, describe: describeAnalyze, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Focus string `json:"focus"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if in.Focus == "" {
+				return []string{"analyze"}, "", nil
+			}
+			if !slices.Contains(harness.Focuses, in.Focus) {
+				return nil, "", bad("the analyzer takes the focus %s, or none for all of them, and %q is none of them", strings.Join(harness.Focuses, ", "), in.Focus)
+			}
+			return []string{"analyze", "--focus=" + in.Focus}, "", nil
+		}},
 	}
+}
+
+// describeAnalyze reads flai analyze's --json shape for the journal.
+func describeAnalyze(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Focus   string `json:"focus"`
+		Agent   string `json:"agent"`
+		Command string `json:"command"`
+		PID     int    `json:"pid"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	return "done", fmt.Sprintf("started %s to analyze, focus %s, as %s (pid %d)", said.Command, said.Focus, said.Agent, said.PID)
 }
 
 // describePlan reads flai plan's --json shape for the journal.

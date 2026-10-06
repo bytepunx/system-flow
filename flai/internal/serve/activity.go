@@ -24,7 +24,9 @@ import (
 // activity is also charged, that same share, to the item its run was started
 // for and every item above it, under usage.strategic (S-0225, ADR-0083); an
 // orchestrator's is split evenly between the work items its entry names and
-// charged to each and every item above it (S-0226, ADR-0095).
+// charged to each and every item above it (S-0226, ADR-0095). An analyzer
+// run's activity names the report the run wrote, or says it wrote none, and
+// charges no item (S-0223).
 
 // ActivityLogs are the logs flai serve keeps of the runs of the strategic
 // agent kind in the project named key, oldest first.
@@ -107,6 +109,18 @@ func LogRunEnd(d Dir, root, key, kind string, items []string) (*Logged, error) {
 // (ADR-0084), empty for none, and its summary in place of the run's final
 // text, such as why it was stopped (S-0218), empty for that text.
 func logRunEnd(d Dir, root, key, kind, trigger, summary string, items []string) (*Logged, error) {
+	return logRunEndSaying(d, root, key, kind, trigger, func(final string) string {
+		if summary != "" {
+			return summary
+		}
+		return final
+	}, items)
+}
+
+// logRunEndSaying is logRunEnd with the entry's summary made by say from the
+// first line of the run's final text, "run ended" when it has none: the
+// analyzer's names the report the run wrote, or says it wrote none (S-0223).
+func logRunEndSaying(d Dir, root, key, kind, trigger string, say func(final string) string, items []string) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
 	if err != nil {
 		return nil, err
@@ -123,11 +137,8 @@ func logRunEnd(d Dir, root, key, kind, trigger, summary string, items []string) 
 	if u == nil || len(u.Models) == 0 {
 		return nil, nil
 	}
-	if summary == "" {
-		summary = firstLine(run.Result, "run ended")
-	}
 	logged, err := m.append(workitem.ActivityEntry{
-		At: s.To, Summary: summary, Trigger: trigger, Items: items,
+		At: s.To, Summary: say(firstLine(run.Result, "run ended")), Trigger: trigger, Items: items,
 		Seconds: seconds(s), Cost: u.Cost(), Estimated: u.Estimated,
 	})
 	if err != nil {

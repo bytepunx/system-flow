@@ -34,9 +34,9 @@ import (
 // story's.
 var planned = regexp.MustCompile(`^[ES]-\d{3,}$`)
 
-// triggerAsked is the trigger of a planner run the operator asked for
-// (ADR-0084).
-const triggerAsked = "asked"
+// TriggerAsked is the trigger of a planner run the operator asked for
+// (ADR-0084), and of an analyzer run they asked for (S-0223).
+const TriggerAsked = "asked"
 
 // TriggerOrchestrator is the trigger of a planner run the orchestrator asked
 // for (S-0219).
@@ -50,7 +50,7 @@ const TriggerOrchestrator = "orchestrator"
 // the serving flai settles the run once the process is gone. The run's
 // trigger is asked (ADR-0084).
 func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, error) {
-	return planFor(ctx, o, e, item, triggerAsked)
+	return planFor(ctx, o, e, item, TriggerAsked)
 }
 
 // PlanForOrchestrator is Plan for a run the orchestrator asked for: its

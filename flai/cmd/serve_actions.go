@@ -51,9 +51,10 @@ func (a *app) host() hostapi.Host {
 			if plans == nil {
 				plans = map[string]*serve.AgentRun{}
 			}
-			// the newest orchestrator run, null before the first (S-0218)
+			// the newest orchestrator run, null before the first (S-0218), and
+			// the newest analyzer run, its focus and report among it (S-0223)
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
-				"orchestrator": st.Orchestrator}
+				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer}
 		},
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
@@ -469,6 +470,7 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Enabled:     cfg.ActionEnabled(hostapi.ActionAgent, root),
 		Plan:        cfg.ActionEnabled(hostapi.ActionPlan, root),
 		Orchestrate: cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
+		Analyze:     cfg.ActionEnabled(hostapi.ActionAnalyze, root),
 		Command:     cfg.Agent.Command,
 		Harnesses:   hosts,
 		Name:        cfg.Agent.Name,

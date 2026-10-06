@@ -138,7 +138,9 @@ export const REQUIRED_METHODS = [
 	'issue.list',
 	'issue.story',
 	// S-0208: the planner for an epic or a story, gated by the plan host action
-	'plan.run'
+	'plan.run',
+	// S-0223: the analyzer for the project, with a focus or none, gated by the analyze host action
+	'analyze.run'
 ];
 
 export type AgentStatus = {
