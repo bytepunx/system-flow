@@ -6,7 +6,7 @@ title: A story's sub-agent that writes under .claude/ blocks its layer for thirt
 status: backlog
 owner: alex
 created: 2026-10-06T21:00:33Z
-updated: 2026-10-06T21:08:57Z
+updated: 2026-10-06T21:31:43Z
 transitions: []
 tags: [flai, guard, harness]
 topics: [cli, conventions]
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-10-06T21:07:32Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T08:34:00Z
-  basis: "flai forecast's 18m (64 s a unit of size over 13 large remediation stories, size 16) raised to the 39m median of the four closest stories, S-0257, S-0283, S-0285, and S-0266, which changed permission_prompt, the guard, or the start prompt in 34 to 43 minutes; delivery moved 22m later to match."
-  by: planner-S-0299
-  at: 2026-10-06T21:07:32Z
+  delivery: 2026-10-07T08:46:00Z
+  basis: "Its own forecast of 40m; 44th in the pull order with an in-progress limit of 3, behind S-0227, S-0229, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269, S-0270, S-0271, S-0272, S-0273, S-0274, S-0275, S-0277, S-0279, S-0280, S-0281, S-0286, S-0287, S-0288, S-0289, S-0290, S-0291, S-0293, S-0294, S-0297 and S-0298."
+  by: flai
+  at: 2026-10-06T21:31:43Z
 finalized:
   by: alex
   at: 2026-10-06T21:01:56Z

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-06T21:00:33Z
+updated: 2026-10-06T21:31:43Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:20Z
 forecast:
   duration: 33m
-  delivery: 2026-10-07T06:03:00Z
-  basis: "Its own forecast of 33m; 28th in the pull order with an in-progress limit of 3, behind S-0224, S-0227, S-0229, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269 and S-0270."
+  delivery: 2026-10-07T06:12:00Z
+  basis: "Its own forecast of 33m; 25th in the pull order with an in-progress limit of 3, behind S-0227, S-0229, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269 and S-0270."
   by: flai
-  at: 2026-10-06T21:00:33Z
+  at: 2026-10-06T21:31:43Z
 ---
 # S-0271 Criteria and narrative state are commands: flai story tick checks a criterion and flai stream state writes Current state and Next steps
 
