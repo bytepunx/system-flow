@@ -6,7 +6,7 @@ title: Two stories that each record or close an issue always conflict in design/
 status: ready
 owner: alex
 created: 2026-10-05T04:40:47Z
-updated: 2026-10-06T11:32:57Z
+updated: 2026-10-06T11:44:49Z
 transitions:
   - to: ready
     at: 2026-10-06T11:29:58Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-06T11:31:29Z
 forecast:
   duration: 40m
-  delivery: 2026-10-06T16:05:00Z
-  basis: "flai forecast's 26m (89 s per unit of size over 21 large improvement stories, size 17) raised to 40m for the design decision and a two-branch git integration test, in line with S-0253 (35m) and S-0197 (31m), the nearest done sync and merge stories; 8th in the pull order."
-  by: planner-S-0278
-  at: 2026-10-06T11:31:29Z
+  delivery: 2026-10-06T16:11:00Z
+  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 3, behind S-0221, S-0222, S-0224, S-0226, S-0223, S-0227, S-0229 and S-0284."
+  by: flai
+  at: 2026-10-06T11:44:49Z
 finalized:
   by: alex
   at: 2026-10-06T11:29:55Z

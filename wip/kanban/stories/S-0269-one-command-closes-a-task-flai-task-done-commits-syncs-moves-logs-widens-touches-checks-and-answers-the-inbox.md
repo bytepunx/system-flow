@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:28Z
-updated: 2026-10-06T11:36:33Z
+updated: 2026-10-06T11:44:49Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:15Z
 forecast:
   duration: 55m
-  delivery: 2026-10-07T01:00:00Z
-  basis: "flai's 41m (89 s per unit over 21 done large improvement stories, size 27) raised to 55m because the seven steps live in command code that must become callable and a refused sync needs a git fixture, as S-0217's three composed commands took 68m; 31st in the pull order."
-  by: planner-E-0017
-  at: 2026-10-06T11:33:57Z
+  delivery: 2026-10-07T01:06:00Z
+  basis: "Its own forecast of 55m; 31st in the pull order with an in-progress limit of 3, behind S-0221, S-0222, S-0224, S-0226, S-0223, S-0227, S-0229, S-0284, S-0278, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264 and S-0265."
+  by: flai
+  at: 2026-10-06T11:44:49Z
 ---
 # S-0269 One command closes a task: flai task done commits, syncs, moves, logs, widens touches, checks, and answers the inbox
 

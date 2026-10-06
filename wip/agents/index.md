@@ -7,7 +7,7 @@ updated: 2026-10-06T11:44:49Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0221](S-0221.md) | The orchestrator accepts stories in review when permitted | in-progress | agent-S-0221 | 2026-10-06T11:39:51Z |
+| [S-0221](S-0221.md) | The orchestrator accepts stories in review when permitted | in-progress | agent-S-0221 | 2026-10-06T11:44:56Z |
 
 ## Strategic agents
 

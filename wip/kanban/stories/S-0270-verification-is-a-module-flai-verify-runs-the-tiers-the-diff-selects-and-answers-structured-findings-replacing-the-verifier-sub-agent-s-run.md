@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:29Z
-updated: 2026-10-06T11:36:35Z
+updated: 2026-10-06T11:44:49Z
 transitions: []
 tags: [cli, mcp, dashboard]
 topics: [automation, mcp, hostapi, code]
@@ -25,10 +25,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:18Z
 forecast:
   duration: 70m
-  delivery: 2026-10-07T03:11:00Z
-  basis: "flai's 54m (size 36) raised to 70m for the dashboard panel and the operator's copy of the verifier definition under .claude; delivery counts from S-0273's, which it waits for, not from its 32nd place in the pull order."
-  by: planner-E-0017
-  at: 2026-10-06T11:33:58Z
+  delivery: 2026-10-07T01:29:00Z
+  basis: "Its own forecast of 1h10m; 32nd in the pull order with an in-progress limit of 3, behind S-0221, S-0222, S-0224, S-0226, S-0223, S-0227, S-0229, S-0284, S-0278, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265 and S-0269."
+  by: flai
+  at: 2026-10-06T11:44:49Z
 ---
 # S-0270 Verification is a module: flai verify runs the tiers the diff selects and answers structured findings, replacing the verifier sub-agent's run
 
