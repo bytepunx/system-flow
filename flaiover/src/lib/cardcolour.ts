@@ -33,6 +33,13 @@ export const typeSwatch: Record<string, string> = {
 	task: 'bg-type-task'
 };
 
+/** The legend's colouring for a type the board shows (S-0303): a tint of the type's own colour with a border in it. */
+export const typeHighlight: Record<string, string> = {
+	epic: 'border-type-epic bg-type-epic/20',
+	story: 'border-type-story bg-type-story/20',
+	task: 'border-type-task bg-type-task/20'
+};
+
 /** A nature the schema does not know keeps the plain card. */
 export function tintFor(nature: string): string {
 	return natureTint[nature] ?? 'bg-ground';
