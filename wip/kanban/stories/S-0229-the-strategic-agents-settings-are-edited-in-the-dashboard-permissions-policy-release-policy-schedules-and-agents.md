@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T18:10:45Z
+updated: 2026-10-06T18:11:31Z
 transitions:
   - to: ready
     at: 2026-10-05T06:14:02Z
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:18Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-06T23:07:00Z
-  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 3, behind S-0226, S-0223, S-0224 and S-0227."
+  delivery: 2026-10-06T23:08:00Z
+  basis: "Its own forecast of 1h15m; 6th in the pull order with an in-progress limit of 3, behind S-0226, S-0284, S-0223, S-0224, S-0227 and S-0278."
   by: flai
-  at: 2026-10-06T18:10:45Z
+  at: 2026-10-06T18:11:31Z
 ---
 # S-0229 The strategic agents' settings are edited in the dashboard: permissions, policy, release policy, schedules, and agents
 
