@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { GATHER_MS } from '$lib/events';
 import { resetForTests } from '$lib/project.svelte';
-import { boardTypes } from '$lib/boardtypes.svelte';
+import { BoardTypes, boardTypes, itemTypes } from '$lib/boardtypes.svelte';
 import { BoardNatures, boardNatures, natures } from '$lib/boardnatures.svelte';
 
 const api = vi.fn();
@@ -258,6 +258,8 @@ describe("each lane's counts by type (S-0256)", () => {
 		api.mockReset();
 		vi.unstubAllGlobals();
 		document.body.innerHTML = '';
+		for (const t of itemTypes) boardTypes.set(t, true);
+		localStorage.clear();
 	});
 
 	it('shows each count below its title, with the long form as its title and name', async () => {
@@ -288,8 +290,8 @@ describe("each lane's counts by type (S-0256)", () => {
 	});
 });
 
-// S-0302: the legend's nature tags filter the board. A lane shows a card only when its type is
-// ticked and its nature toggled on; hiding a nature changes no WIP count and no count by type.
+// S-0302: the legend's nature tags filter the board. A lane shows a card only when its type and
+// its nature are toggled on; hiding a nature changes no WIP count and no count by type.
 describe('the nature filter (S-0302)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	const card = (id: string, type: string, nature: string) => ({
@@ -372,11 +374,112 @@ describe('the nature filter (S-0302)', () => {
 		expect(shown()).toEqual(['E-0001', 'E-0002', 'S-0001', 'S-0002', 'T-0001']);
 	});
 
-	it('combines with the type checkboxes', async () => {
+	it('combines with the type toggles', async () => {
 		boardTypes.set('story', false);
 		boardTypes.set('task', false);
 		boardNatures.set('feature', false);
 		await open();
 		expect(shown()).toEqual(['E-0002']);
+	});
+});
+
+// S-0303: the legend's type entries filter the board, every type shown until the user hides one,
+// and the board has no type checkboxes of its own (they were S-0141's). Hiding a type changes no
+// WIP count and no count by type.
+describe('the type filter (S-0303)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, type: string) => ({
+		id,
+		type,
+		title: id,
+		nature: 'feature',
+		status: 'in-progress',
+		blocked: false,
+		age_seconds: 0,
+		archived: false
+	});
+	const withCards = {
+		...board,
+		wip_limits: { 'in-progress': 3 },
+		columns: {
+			'in-progress': [
+				card('E-0001', 'epic'),
+				card('S-0001', 'story'),
+				card('T-0001', 'task'),
+				card('T-0002', 'task')
+			]
+		}
+	};
+	const shown = () =>
+		[...document.querySelectorAll('[data-lane="in-progress"] [data-card]')].map((e) =>
+			e.getAttribute('data-card')
+		);
+	const heading = () =>
+		document.querySelector('[data-lane="in-progress"] h2')!.textContent!.replace(/\s+/g, ' ');
+	const laneCounts = () =>
+		document.querySelector<HTMLElement>('[data-lane="in-progress"] [data-testid="lane-counts"]')!
+			.title;
+	const typeButton = (type: string) =>
+		document.querySelector<HTMLButtonElement>(
+			`[data-testid="legend"] button[data-type="${type}"]`
+		)!;
+	const open = async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+	};
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('EventSource', FakeEventSource);
+		// the stores as they start from nothing stored
+		localStorage.clear();
+		boardTypes.shown = new BoardTypes().shown;
+		boardNatures.shown = new BoardNatures().shown;
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board') return answer(withCards);
+			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
+			return answer({ enabled: false });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+		for (const t of itemTypes) boardTypes.set(t, true);
+		localStorage.clear();
+	});
+
+	it('opens with every type shown and every type pressed in the legend', async () => {
+		await open();
+		expect(shown()).toEqual(['E-0001', 'S-0001', 'T-0001', 'T-0002']);
+		expect(itemTypes.map((t) => typeButton(t).getAttribute('aria-pressed'))).toEqual([
+			'true',
+			'true',
+			'true'
+		]);
+	});
+
+	it("hides a type's cards when it is clicked in the legend and shows them when clicked again", async () => {
+		await open();
+		const before = { heading: heading(), counts: laneCounts() };
+		expect(before.heading).toContain('1/3');
+		expect(before.counts).toBe('1 epic, 1 story, 2 tasks');
+		typeButton('task').click();
+		flushSync();
+		expect(shown()).toEqual(['E-0001', 'S-0001']);
+		expect(typeButton('task').getAttribute('aria-pressed')).toBe('false');
+		expect({ heading: heading(), counts: laneCounts() }).toEqual(before);
+		typeButton('task').click();
+		flushSync();
+		expect(shown()).toEqual(['E-0001', 'S-0001', 'T-0001', 'T-0002']);
+		expect(typeButton('task').getAttribute('aria-pressed')).toBe('true');
+		expect({ heading: heading(), counts: laneCounts() }).toEqual(before);
+	});
+
+	it('has no type checkboxes', async () => {
+		await open();
+		expect(document.querySelector('[data-testid="board-types"]')).toBeNull();
+		expect(document.querySelector('input[type="checkbox"][data-type]')).toBeNull();
 	});
 });

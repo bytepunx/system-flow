@@ -14,7 +14,6 @@
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
-	import BoardTypes from '$lib/components/BoardTypes.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import { boardNatures } from '$lib/boardnatures.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
@@ -160,10 +159,10 @@
 		const column = board?.columns[state] ?? [];
 		return state === 'done' ? doneLane(column, publishRemote) : column;
 	};
-	// The types ticked above the board (S-0141) and the natures toggled on in its legend (S-0302):
-	// a lane shows a card only when both let it. Neither hides anything from the WIP counts or
-	// reordering, which count stories regardless, nor from the lane's counts by type (S-0256), which
-	// count every card it holds.
+	// The types (S-0141, S-0303) and the natures (S-0302) toggled on in its legend: a lane shows a
+	// card only when both let it. Neither hides anything from the WIP counts or reordering, which
+	// count stories regardless, nor from the lane's counts by type (S-0256), which count every card
+	// it holds.
 	const cards = (state: string) =>
 		held(state).filter(
 			(c) => boardTypes.shown[c.type as ItemType] && boardNatures.isShown(c.nature)
@@ -533,7 +532,6 @@
 
 <div class="mb-3 flex flex-wrap items-center gap-4">
 	<h1 class="text-2xl font-semibold">Board</h1>
-	<BoardTypes />
 	{#if board?.writable}
 		<!-- Creating is a write through flai (S-0059): no flai, no action. -->
 		<a
