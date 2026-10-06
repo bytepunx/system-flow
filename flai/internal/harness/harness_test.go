@@ -451,8 +451,10 @@ func TestThePromptSaysToBatchIndependentCalls(t *testing.T) {
 
 // S-0176: the story's agent plans its tasks in layers as it writes them,
 // records why in Decisions, and hands each task to a task sub-agent, a layer
-// at once when its tasks are long, whose work it reviews and commits itself;
-// an answered or commit run is not told again.
+// at once when its tasks are long, whose work it reviews and commits itself,
+// launching each in the foreground and never waiting for one by ending its
+// turn or with wait_for_events (S-0285); an answered or commit run is not told
+// again.
 func TestThePromptAsksForThePlan(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
@@ -467,13 +469,21 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"Work the plan layer by layer, handing each task to a task sub-agent",
 			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits, syncs, or writes through flai",
 			"Name the task's ID in each task sub-agent's description, so that flai measures the task by its calls",
-			"Wait for a sub-agent run in the background through the harness's notice that it has finished, not by polling the flai MCP tool wait_for_events, which reports work items and threads, not sub-agents",
+			// S-0285: a sub-agent is launched in the foreground, the
+			// session is not left to end under a running one, and
+			// wait_for_events is for a thread awaiting the designer.
+			"Launch every sub-agent with the Agent tool's run_in_background set to false, a layer's in one message, so that each result comes back as the tool's result however long the sub-agent runs",
+			"Never end your turn while a sub-agent runs in the background: Claude Code ends this session ten minutes after the turn ends, and the sub-agent with it",
+			"Never wait for a sub-agent with the flai MCP tool wait_for_events either, which reports work items and threads, not sub-agents, and which flai guard refuses while one runs: wait_for_events is for a thread awaiting the designer",
 			"Review each one's work yourself, fix what falls short, commit it, sync and test as above, and move the task",
 			"only you commit, sync the stream, move items, and talk to the designer",
 		} {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
 			}
+		}
+		if strings.Contains(p, "through the harness's notice that it has finished") {
+			t.Errorf("still told to wait for a background sub-agent's notice (S-0285):\n%s", p)
 		}
 	}
 	answered, commit := r, r
