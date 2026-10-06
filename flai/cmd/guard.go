@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -47,6 +48,18 @@ input whose hook_event_name is neither SubagentStart nor SubagentStop is a
 PreToolUse's, named or not. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
 it) gets past it.
+
+A sub-agent's Edit, MultiEdit, Write, or NotebookEdit of a file in a
+.claude/ folder, one with a folder named .claude along its path, is refused
+unless the operator enabled the project's auto-approve host action (flai
+serve enable auto-approve) (S-0299): Claude Code asks a person before each
+such write, and flai's MCP tool permission_prompt asks the operator on a
+thread, which would hold the call, and the sub-agent's layer with it, until
+they answer. The refusal names the sub-agent and the file and tells it to
+put the file's whole new content in its final message, for the story's
+agent to write. A configuration or project it cannot read counts
+auto-approve as off. The story's agent's own writes, and every write
+outside a .claude/ folder, pass.
 
 No sub-agent, and no session flai serve starts (FLAI_STARTED_BY=flai-serve,
 FLAI_ROLE, or FLAI_STORY set), changes the manifest's shared paths: the MCP
@@ -180,6 +193,9 @@ NotebookEdit as well.`,
 					g.Root, g.Reports = p.Root, analysis.Dir(p.Manifest)
 				}
 			}
+			if _, ok := guard.ClaudeWrite(e); ok && e.AgentID != "" {
+				g.AutoApprove = a.guardAutoApprove()
+			}
 			if g.Role == "" && g.Story != "" && e.AgentID == "" {
 				a.holdWaits(&g, e.SessionID)
 			}
@@ -209,6 +225,25 @@ func (a *app) guardProject() (*workitem.Repo, error) {
 		}
 	}
 	return workitem.Open(start)
+}
+
+// guardAutoApprove reports whether the operator enabled auto-approve for the
+// project the hook runs in, by its main checkout's root, as flai mcp reads it
+// for permission_prompt (S-0299). A project or configuration it cannot read
+// is warned of and enables nothing, so a sub-agent's write in a .claude/
+// folder is refused.
+func (a *app) guardAutoApprove() bool {
+	repo, err := a.guardProject()
+	if err != nil {
+		a.logger().Warn("project unreadable, auto-approve is taken as off", "component", "guard", "err", err.Error())
+		return false
+	}
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		a.logger().Warn("configuration unreadable, auto-approve is taken as off", "component", "guard", "err", err.Error())
+		return false
+	}
+	return cfg.ActionEnabled(hostapi.ActionAutoApprove, mainRootOf(repo))
 }
 
 // recordSubAgent notes in the project's .flai-cache/guard that e's

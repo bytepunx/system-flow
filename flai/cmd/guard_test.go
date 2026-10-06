@@ -164,6 +164,41 @@ func TestGuardHoldsTheOrchestratorToItsPermissions(t *testing.T) {
 	}
 }
 
+// I-0093, S-0299: flai guard refuses a sub-agent's write in a .claude/ folder
+// with exit 2 while the project's auto-approve is off, so that it never waits
+// on permission_prompt's thread, and lets it through once the operator
+// enables auto-approve for the project; the story's agent's own write, and a
+// sub-agent's outside a .claude/ folder, pass either way.
+func TestGuardRefusesASubAgentsWriteUnderClaudeWhileAutoApproveIsOff(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_STORY", "S-0001")
+	root := tempProject(t)
+	file := filepath.Join(root, "template", "root", ".claude", "agents", "analyzer.md")
+	write := func(agent, file string) string {
+		e := map[string]any{"tool_name": "Write", "tool_input": map[string]string{"file_path": file, "content": "x"}}
+		if agent != "" {
+			e["agent_id"], e["agent_type"] = "a1", agent
+		}
+		in, _ := json.Marshal(e)
+		return string(in)
+	}
+	_, errOut, code := runStdin(t, root, write("general-purpose", file), "guard")
+	if code != 2 || !strings.Contains(errOut, "a sub-agent (general-purpose) cannot use Write on "+file) || !strings.Contains(errOut, "whole new content in your final message") {
+		t.Errorf("auto-approve off: code %d, stderr %q", code, errOut)
+	}
+	for _, in := range []string{write("", file), write("general-purpose", filepath.Join(root, "flai", "x.go"))} {
+		if _, errOut, code := runStdin(t, root, in, "guard"); code != 0 || errOut != "" {
+			t.Errorf("%s: code %d, stderr %q", in, code, errOut)
+		}
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-approve"); code != 0 {
+		t.Fatalf("enable: %s", errOut)
+	}
+	if _, errOut, code := runStdin(t, root, write("general-purpose", file), "guard"); code != 0 || errOut != "" {
+		t.Errorf("auto-approve on: code %d, stderr %q", code, errOut)
+	}
+}
+
 // S-0208, TH-0096, S-0218: this repository's settings and the template's run
 // the guard before Bash and flai's MCP tools in every session, and before
 // Edit, Write, and NotebookEdit in a planner or orchestrator session alone.

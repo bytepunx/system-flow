@@ -52,6 +52,49 @@ func TestASubAgentReadsFlaiOverMCP(t *testing.T) {
 	}
 }
 
+// I-0093, S-0299: a task sub-agent's Write and Edit under .claude/ went to
+// permission_prompt, which held them, and the layer, on a thread the absent
+// owner never answered. While auto-approve is off the guard refuses them at
+// once, naming the file and the final-message route; the story's agent's own
+// writes, and a sub-agent's outside a .claude/ folder, pass as before.
+func TestASubAgentWritesNoFileUnderClaudeWhileAutoApproveIsOff(t *testing.T) {
+	wt := "/home/op/proj/.flai-cache/worktrees/S-0223"
+	sub := func(tool, file string) Event {
+		e := fileEdit(tool, file)
+		e.AgentID, e.AgentType = "a1", "general-purpose"
+		return e
+	}
+	claude := []Event{
+		sub("Write", wt+"/template/root/.claude/agents/analyzer.md"),
+		sub("Edit", wt+"/.claude/settings.json"),
+		sub("MultiEdit", ".claude/hooks/x.sh"),
+		sub("NotebookEdit", wt+"/.claude/n.ipynb"),
+	}
+	for _, e := range claude {
+		file := cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
+		why := g.Check(e)
+		for _, want := range []string{"a sub-agent (general-purpose) cannot use " + e.ToolName + " on " + file, "operator's approval on a thread", "whole new content in your final message"} {
+			if !strings.Contains(why, want) {
+				t.Errorf("%s %s: %q lacks %q", e.ToolName, file, why, want)
+			}
+		}
+		if why := (Guard{Commands: g.Commands, AutoApprove: true}).Check(e); why != "" {
+			t.Errorf("auto-approve on, %s %s refused: %s", e.ToolName, file, why)
+		}
+	}
+	own := fileEdit("Write", wt+"/.claude/settings.json")
+	for _, gr := range []Guard{g, {Commands: g.Commands, Story: "S-0223", Served: true}} {
+		if why := gr.Check(own); why != "" {
+			t.Errorf("the story's agent's own write refused: %s", why)
+		}
+	}
+	for _, file := range []string{wt + "/flai/cmd/guard.go", wt + "/foo.claude/x.md", wt + "/docs/.claude.md", wt + "/.claude"} {
+		if why := g.Check(sub("Write", file)); why != "" {
+			t.Errorf("%s refused: %s", file, why)
+		}
+	}
+}
+
 func TestASubAgentRunsChecksButNotWrites(t *testing.T) {
 	allowed := []string{
 		"make test",

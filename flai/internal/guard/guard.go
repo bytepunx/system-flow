@@ -9,6 +9,14 @@
 // carelessly, not one that sets out to hide a command (a backslash inside a
 // name, a command held in a variable).
 //
+// A sub-agent does not write a file in a .claude/ folder, with Edit,
+// MultiEdit, Write, or NotebookEdit, unless the operator enabled the
+// project's auto-approve host action (S-0299): Claude Code asks for each such
+// write, and flai's permission_prompt asks the operator on a thread, which
+// would hold the call, and the sub-agent's layer with it, until they answer.
+// The sub-agent puts the file's content in its final message instead, for
+// the story's agent to write.
+//
 // A planner session, one flai serve starts with the role plan, is held to
 // planning (strategic-agents.md): its own calls, which carry no agent ID,
 // may read, write work items and threads through flai, and move an item to
@@ -220,6 +228,10 @@ var cliPlans = map[string][]string{
 // and the analyzer only on its report (S-0223).
 var fileEdits = []string{"Edit", "NotebookEdit", "Write"}
 
+// fileWrites are the tools a sub-agent writes a file with, none of which it
+// may point at a file in a .claude/ folder while auto-approve is off.
+var fileWrites = []string{"Edit", "MultiEdit", "NotebookEdit", "Write"}
+
 // moveValues are the flags of flai move, flai's own among them, that take
 // a value.
 var moveValues = map[string]bool{"--by": true, "--config": true, "--reason": true}
@@ -399,6 +411,10 @@ const (
 // unresolved thread is on Story or one of its tasks, as StoryThreadOpen
 // reads it. A nil Running lists no sub-agent and a nil ThreadOpen no open
 // thread; an error from either lets the wait through.
+//
+// AutoApprove says the operator enabled the project's auto-approve host
+// action; while it is off a sub-agent's write of a file in a .claude/ folder
+// is refused (S-0299).
 type Guard struct {
 	Commands    []string
 	Role        string
@@ -410,6 +426,7 @@ type Guard struct {
 	Story       string
 	Running     func() ([]SubAgent, error)
 	ThreadOpen  func() (bool, error)
+	AutoApprove bool
 }
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
@@ -806,6 +823,9 @@ func (g Guard) Decide(e Event) Refusal {
 	if who == "" {
 		who = "unnamed"
 	}
+	if file, ok := ClaudeWrite(e); ok && !g.AutoApprove {
+		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a file in a .claude/ folder is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086). Put the file's whole new content in your final message; the story's agent writes it.", who, e.ToolName, file)}
+	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
 		if slices.Contains(MCPReads, tool) {
 			return Refusal{}
@@ -821,6 +841,22 @@ func (g Guard) Decide(e Event) Refusal {
 		}
 	}
 	return Refusal{}
+}
+
+// ClaudeWrite says whether e writes a file in a .claude/ folder, one whose
+// path has a folder named .claude along it, and which file (S-0299): Claude
+// Code asks a person before any such write, so that a sub-agent's would wait
+// on a thread for the operator.
+func ClaudeWrite(e Event) (string, bool) {
+	if !slices.Contains(fileWrites, e.ToolName) {
+		return "", false
+	}
+	file := cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
+	if file == "" {
+		return "", false
+	}
+	dir := filepath.ToSlash(filepath.Dir(filepath.Clean(file)))
+	return file, slices.Contains(strings.Split(dir, "/"), ".claude")
 }
 
 // waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why
