@@ -2,12 +2,12 @@
 id: I-0087
 title: One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
 class: efficiency
-status: open
+status: closed
 count: 3
 cost: 1h44m
 first_reported: 2026-10-06T10:32:27Z
 last_reported: 2026-10-06T11:15:23Z
-updated: 2026-10-06T11:44:50Z
+updated: 2026-10-06T19:22:47Z
 ---
 
 # I-0087 One in-progress story holds every ready story by overlap, through folder-wide touches and docs/users/flai.md, so the board runs one story at a time under a limit of three
@@ -40,3 +40,4 @@ Not designed yet. Directions to weigh:
 - Whether a story in review still needs to hold others is a question for ADR-0046: its branch is finished and synced, and a later story syncs onto main when it is accepted.
 
 Story S-0295 remediates this issue, created from it at 2026-10-06T11:44:50Z.
+Closed 2026-10-06T19:22:47Z: S-0295, ADR-0096: only a story in progress holds a ready story (one in review holds nothing); a story's folder touch is narrowed in its claim to the files its tasks name; an overlap wholly inside the manifest's claims.shared patterns holds nothing. flai/internal/workitem/hold_i0087_test.go rebuilds the board of 2026-10-06 and shows the ready stories clear, and each rule's revert holding one again.
