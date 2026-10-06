@@ -534,6 +534,56 @@ func TestHostActionsAreOffUntilEnabledAndJournalled(t *testing.T) {
 	}
 }
 
+// S-0222: Publisher publishes as publish.run does, for the orchestrator's
+// release_publish: nothing runs while the push action is off, the same
+// command line runs while it is on, exit 3 is a conflict with flai's words,
+// and the journal names who asked and why, apart from the operator's runs.
+func TestPublisherPublishesAsPublishRunDoes(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	var journal []Entry
+	on := false
+	at := time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
+	rec := &recorder{}
+	pb := Publisher{Run: rec.run, Now: func() time.Time { return at }, Host: Host{
+		Enabled: func(action, root string) bool { return on && action == ActionPush && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}}
+	publish := func(ran Ran) (Written, *channel.Error) {
+		rec.ran = ran
+		return pb.Publish(context.Background(), p, "mcp.release_publish", "orchestrator (claude)", "threshold: the count, 2, is at or over 2")
+	}
+
+	_, e := publish(Ran{Stdout: []byte(`{"pushed":true}`)})
+	if e == nil || e.Code != Disabled || len(rec.runs) != 0 || !strings.Contains(e.Message, "flai serve enable push") {
+		t.Fatalf("with push off nothing runs, and it says what enables it: %+v, ran %d", e, len(rec.runs))
+	}
+	if len(journal) != 1 || journal[0] != (Entry{At: "2026-10-06T09:00:00Z", Action: ActionPush, Method: "mcp.release_publish", Project: p.Key, Root: p.Root, By: "orchestrator (claude)", Outcome: "disabled", Detail: "threshold: the count, 2, is at or over 2"}) {
+		t.Errorf("the refusal is journalled with who asked and why: %+v", journal)
+	}
+
+	on, journal = true, nil
+	w, e := publish(Ran{Stdout: []byte(`{"pushed":true,"tags":["cli/v1.1.0"],"plans":[]}`)})
+	if e != nil || len(rec.runs) != 1 || strings.Join(rec.runs[0].Args, " ") != good["publish.run"].args || rec.runs[0].Dir != p.Root || !strings.Contains(string(w.Data), "cli/v1.1.0") {
+		t.Fatalf("publish.run's command line, in the project: %+v %+v %s", e, rec.runs, w.Data)
+	}
+	_, e = publish(Ran{Exit: 3, Events: []map[string]any{{"level": "FATAL", "err": "conflict: refusing to publish: origin has cli/v1.4.0 (here cli/v1.0.0)"}}})
+	if e == nil || e.Code != Conflict || e.Message != "refusing to publish: origin has cli/v1.4.0 (here cli/v1.0.0)" {
+		t.Errorf("exit 3 is a conflict with flai's words: %+v", e)
+	}
+	want := []Entry{
+		{At: "2026-10-06T09:00:00Z", Action: ActionPush, Method: "mcp.release_publish", Project: p.Key, Root: p.Root, By: "orchestrator (claude)", Outcome: "done", Detail: "threshold: the count, 2, is at or over 2: pushed with tags cli/v1.1.0"},
+		{At: "2026-10-06T09:00:00Z", Action: ActionPush, Method: "mcp.release_publish", Project: p.Key, Root: p.Root, By: "orchestrator (claude)", Outcome: "failed", Detail: "threshold: the count, 2, is at or over 2: refusing to publish: origin has cli/v1.4.0 (here cli/v1.0.0)"},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i := range want {
+		if journal[i] != want[i] {
+			t.Errorf("entry %d:\n got %+v\nwant %+v", i, journal[i], want[i])
+		}
+	}
+}
+
 // Nothing a dashboard can ask for changes the host's settings unless the
 // operator turned on the settings action in a shell (ADR-0029, S-0105), and
 // nothing it can ask for turns that action on or off, or reads the journal

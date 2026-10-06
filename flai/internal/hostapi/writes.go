@@ -1387,12 +1387,13 @@ func itemSpecs() map[string]spec {
 		// the dashboard sends accepted work to the remote (ADR-0067): flai
 		// release --pending as the operator, applying, tagging, and pushing
 		// everything accepted and unreleased. Never forced; when the remote has
-		// moved it refuses (exit 3) and says to fetch and merge.
-		"publish.run": {action: ActionPush, exits: map[int]int{3: Conflict}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// moved it refuses (exit 3) and says to fetch and merge. Publisher runs
+		// the same for the orchestrator's release_publish (S-0222).
+		"publish.run": {action: ActionPush, exits: publishExits, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
 			}
-			return []string{"release", "--pending"}, "", nil
+			return slices.Clone(publishArgs), "", nil
 		}},
 
 		// dashboard.status: a read of what flai dashboard status already
@@ -1854,9 +1855,7 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			if sp.action != "" && !host.enabled(sp.action, entry.Root) {
 				entry.Action, entry.Outcome = sp.action, "disabled"
 				host.record(entry)
-				return nil, &channel.Error{Code: Disabled,
-					Message: fmt.Sprintf("the host action %q is not enabled for %s. On the host, in the project, run: %s", sp.action, which, EnableCommand(sp.action)),
-					Data:    map[string]any{"action": sp.action, "enable": EnableCommand(sp.action)}}
+				return nil, notEnabled(sp.action, which)
 			}
 			if sp.hostwide && !host.enabledEverywhere(sp.action) {
 				entry.Action, entry.Outcome = sp.action, "disabled"
@@ -1937,6 +1936,70 @@ func (h Host) record(e Entry) {
 	if h.Record != nil {
 		h.Record(e)
 	}
+}
+
+// notEnabled refuses a host action the operator has not enabled for which,
+// a project, and says what enables it.
+func notEnabled(action, which string) *channel.Error {
+	return &channel.Error{Code: Disabled,
+		Message: fmt.Sprintf("the host action %q is not enabled for %s. On the host, in the project, run: %s", action, which, EnableCommand(action)),
+		Data:    map[string]any{"action": action, "enable": EnableCommand(action)}}
+}
+
+// publishArgs is publish.run's command line, before --json: flai release
+// --pending, never forced. publishExits are its exit codes that carry a
+// payload: 3 is a remote with newer release tags (S-0174) or one that moved
+// (ADR-0067), a conflict.
+var (
+	publishArgs  = []string{"release", "--pending"}
+	publishExits = map[int]int{3: Conflict}
+)
+
+// Publisher publishes as publish.run does, for a caller that is not a
+// dashboard: the orchestrator's MCP tool release_publish (S-0222). It runs
+// the same flai release --pending under the same push host action, reads its
+// answer the same way, and journals the run as publish.run's are, with who
+// asked as its By and why in its Detail, so that a release the orchestrator
+// cut is told apart from the operator's.
+type Publisher struct {
+	// Run runs flai; nil runs this executable (ExecRunner).
+	Run Runner
+	// Now is the journal's clock; nil is time.Now.
+	Now  func() time.Time
+	Host Host
+}
+
+// Publish runs flai release --pending in p's folder on by's word, for the
+// reason why, and journals it under method. While the push host action is
+// off it runs nothing and refuses with Disabled; when flai refuses with exit
+// 3 the refusal is a Conflict with flai's message, as publish.run's is.
+func (pb Publisher) Publish(ctx context.Context, p channel.Project, method, by, why string) (Written, *channel.Error) {
+	run, now := pb.Run, pb.Now
+	if run == nil {
+		run = ExecRunner
+	}
+	if now == nil {
+		now = time.Now
+	}
+	entry := Entry{At: now().UTC().Format(time.RFC3339), Action: ActionPush, Method: method, Project: p.Key, Root: p.Root, By: by}
+	if !pb.Host.enabled(ActionPush, p.Root) {
+		entry.Outcome, entry.Detail = "disabled", why
+		pb.Host.record(entry)
+		return Written{}, notEnabled(ActionPush, "this project")
+	}
+	done := perf.Track(ctx, perf.Exec("flai", publishArgs))
+	ran, err := run(ctx, Run{Dir: p.Root, Args: withJSON(publishArgs)})
+	done()
+	res, e := outcome(ran, err, publishExits)
+	entry.Outcome, entry.Detail = describe(res, e)
+	if why != "" {
+		entry.Detail = why + ": " + entry.Detail
+	}
+	pb.Host.record(entry)
+	if e != nil {
+		return Written{}, e
+	}
+	return res.(Written), nil
 }
 
 // describe says in a line what became of a host action, for the journal:

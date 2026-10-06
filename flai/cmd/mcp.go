@@ -47,7 +47,7 @@ configuration looks like, and flai mcp token prints its bearer token.`,
 				return err
 			}
 			agent := mcpAgent(agentFlag)
-			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove}
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher()}
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
 				if opt.Folder, err = a.workingDir(); err != nil {
@@ -75,6 +75,13 @@ func mcpAgent(flag string) string {
 	}
 	agent, _ := agentIdentity()
 	return agent
+}
+
+// mcpPublisher publishes for the orchestrator's release_publish as the
+// dashboard's publish.run does, under the push host action, read from the
+// configuration at each call and journalled beside flai serve's (S-0222).
+func (a *app) mcpPublisher() *hostapi.Publisher {
+	return &hostapi.Publisher{Host: a.host()}
 }
 
 // mcpAutoApprove reports whether the operator enabled auto-approve for the

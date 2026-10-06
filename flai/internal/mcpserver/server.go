@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
@@ -80,6 +81,10 @@ type Options struct {
 	// story's worktree without asking the operator on a thread when it
 	// returns true (S-0257); nil asks every time.
 	AutoApprove AutoApprove
+	// Publish publishes as publish.run does, under the push host action, for
+	// the orchestrator's tool release_publish (S-0222); without it the tool
+	// says it cannot.
+	Publish *hostapi.Publisher
 }
 
 type server struct {
@@ -101,7 +106,8 @@ type server struct {
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
 	// autoApprove lets permission_prompt allow without asking (S-0257)
 	autoApprove AutoApprove
-	logger      *slog.Logger // nil logs nothing
+	publish     *hostapi.Publisher // publishes for release_publish (S-0222)
+	logger      *slog.Logger       // nil logs nothing
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -110,7 +116,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, logger: opt.Logger}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, logger: opt.Logger}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
