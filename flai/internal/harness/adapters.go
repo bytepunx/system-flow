@@ -45,10 +45,11 @@ var claudeCodeTakes = map[string]option{
 // MCP server, flai's permission_prompt as its permission handler
 // (PermissionPromptTool), and the operator's arguments last, so the handler
 // applies with the default host arguments and with the operator's own. A
-// planner's session runs as the project's planner definition (S-0208), and
-// an orchestrator's as its orchestrator definition (S-0218), each with flai
-// guard on its file edits and the same handler, which denies anything
-// outside a story's worktree.
+// planner's session runs as the project's planner definition (S-0208), an
+// orchestrator's as its orchestrator definition (S-0218), and an analyzer's
+// as its analyzer definition (S-0223), each with flai guard on its file
+// edits and the same handler, which denies anything outside a story's
+// worktree.
 func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
@@ -86,10 +87,11 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
-	// <key> plan <item>, <key> orchestrate, or <key> <story>
+	// <key> plan <item>, <key> orchestrate, <key> analyze [<focus>], or
+	// <key> <story>
 	subject := r.Story
 	if r.Role != "" {
-		subject = strings.TrimSpace(r.Role + " " + r.Item)
+		subject = strings.Join(strings.Fields(r.Role+" "+r.Item+" "+r.Focus), " ")
 	}
 	argv := []string{host.Program, "-p", Prompt(r), "--output-format", "stream-json", "--verbose",
 		"--mcp-config", string(mcp), "--strict-mcp-config", "--name", strings.TrimSpace(r.Project + " " + subject)}
@@ -126,17 +128,18 @@ var claudeCodeRoles = map[string]string{manifest.RoleExplore: "explorer", manife
 
 // claudeCodeStrategic are the definitions, in the project's .claude/agents/,
 // that a strategic agent's session runs as, by its role: the planner's
-// (S-0208) and the orchestrator's (S-0218). roleEnv refuses any other role
-// before they are looked up.
-var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", conventions.RoleOrchestrate: "orchestrator"}
+// (S-0208), the orchestrator's (S-0218), and the analyzer's (S-0223).
+// roleEnv refuses any other role before they are looked up.
+var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", conventions.RoleOrchestrate: "orchestrator", conventions.RoleAnalyze: "analyzer"}
 
 // subAgents is the --agents JSON that runs each of the agent's roles on its
 // own model (S-0189): the project's definition of the role's sub-agent, its
 // front matter and its prompt, with the role's model over the definition's.
 // A session's --agents outranks the project's definitions, so the file stays
-// the source of everything but the model. For a strategic agent, the planner
-// or the orchestrator, it holds that agent's definition as well, with the
-// agent's model when it names one, whatever its roles (S-0208, S-0218).
+// the source of everything but the model. For a strategic agent, the
+// planner, the orchestrator, or the analyzer, it holds that agent's
+// definition as well, with the agent's model when it names one, whatever
+// its roles (S-0208, S-0218, S-0223).
 // Empty when nothing is to be passed. A role sub-agents cannot run, because
 // it names another harness or config, or has no definition, refuses the
 // start, as a strategic agent with no definition does.
@@ -255,7 +258,9 @@ func definition(data []byte) (map[string]any, error) {
 // its question was answered, it has FLAI_ANSWERED, the thread's ID; started
 // to commit what a story's worktree holds, FLAI_COMMIT, the worktree (S-0140).
 // Started as the planner, it has FLAI_ROLE and FLAI_ITEM, and {story} is
-// empty (S-0208); started as the orchestrator, FLAI_ROLE alone (S-0218).
+// empty (S-0208); started as the orchestrator, FLAI_ROLE alone (S-0218);
+// started as the analyzer, FLAI_ROLE, and FLAI_FOCUS when it was asked for
+// one (S-0223), since the command has no prompt to say it.
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -305,5 +310,8 @@ func (command) Start(r Request, host Host) (Start, error) {
 		env = append(env, "FLAI_COMMIT="+r.Commit)
 	}
 	env = append(env, role...)
+	if r.Focus != "" {
+		env = append(env, "FLAI_FOCUS="+r.Focus)
+	}
 	return Start{Harness: Command, Argv: argv, Env: env}, nil
 }

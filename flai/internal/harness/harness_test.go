@@ -838,10 +838,11 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	missing.Root = t.TempDir()
 	bad := map[string]Request{"runs as the agent planner, and its definition could not be read": missing}
 	for want, mod := range map[string]func(*Request){
-		`flai cannot start an agent in role "analyze"`: func(r *Request) { r.Role = "analyze" },
-		"was given story S-0104 to work":               func(r *Request) { r.Story = "S-0104" },
-		`"T-0784" is neither`:                          func(r *Request) { r.Item = "T-0784" },
-		`"" is neither`:                                func(r *Request) { r.Item = "" },
+		`flai cannot start an agent in role "review"`: func(r *Request) { r.Role = "review" },
+		"was given story S-0104 to work":              func(r *Request) { r.Story = "S-0104" },
+		`"T-0784" is neither`:                         func(r *Request) { r.Item = "T-0784" },
+		`"" is neither`:                               func(r *Request) { r.Item = "" },
+		"only the analyzer takes a focus":             func(r *Request) { r.Focus = "risk" },
 	} {
 		x := planReq("E-0016", nil)
 		x.Root = root
@@ -1187,7 +1188,7 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 
 // The template's own definitions read as --agents takes them.
 func TestTheTemplatesDefinitionsRead(t *testing.T) {
-	for _, def := range []string{"explorer", "verifier", "planner", "orchestrator"} {
+	for _, def := range []string{"explorer", "verifier", "planner", "orchestrator", "analyzer"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", ".claude", "agents", def+".md"))
 		if err != nil {
 			t.Fatal(err)
@@ -1257,4 +1258,225 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 	if copies[0] != copies[1] {
 		t.Error("the project's and the template's orchestrator.md differ")
 	}
+}
+
+func analyzeReq(focus string, a *manifest.Agent) Request {
+	return Request{Role: "analyze", Focus: focus, Root: "/p/flow", Project: "flow", Agent: a, Name: "analyzer", Flai: "/usr/local/bin/flai"}
+}
+
+// S-0223: the analyzer is asked for one report on its focus, or on all three
+// with none: primed with its role, reading flai stats --json, the design with
+// doc_search and doc_get, and the issues, handing search of the code to the
+// explorer; the report's path, front matter, and findings with their evidence,
+// severity, and impact; its entry in the README; nothing else edited and no
+// story authored; and a summary that names the report, for the run's log.
+func TestTheAnalyzersPromptAsksForOneReport(t *testing.T) {
+	common := func(focus string) []string {
+		return []string{
+			"You are analyzer, the analyzer, started by flai serve on this host because the operator asked for an analysis, focus " + focus + ", of the project at /p/flow",
+			"as design/conventions/strategic-agents.md says under As the analyzer",
+			"flai prime --role analyze (or the flai MCP tool prime with role analyze)",
+			"Call the flai MCP tool inbox",
+			"Read the metrics with flai stats --json, and take every figure from it",
+			"doc_search, which finds sections by their words, and doc_get and its heading", "a brief is not the document",
+			"Read the issues under design/issues, design/issues/summary.md first",
+			"Hand wide search of the code to the explorer with the Agent tool",
+			"Write one report, design/analysis/<date>-" + focus + ".md, where <date> is today's date in UTC as YYYY-MM-DD",
+			"front matter with title, updated, status, focus " + focus + ", and the window its metrics cover, from and to, as dates",
+			"one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them",
+			"Add the report to design/analysis/README.md",
+			"Edit nothing else: no code, no design, no issue, and no work item, and author no stories",
+			"flai guard refuses an edit outside design/analysis and any write to a work item: never work around a refusal",
+			"ask with the flai MCP tool thread_open on your report, your recommended answer first",
+			"hold the flai MCP tool wait_for_events",
+			"End with a one-line summary that names the report, design/analysis/<date>-" + focus + ".md with its date",
+			"logs the run's activity in wip/agents/analyzer.md with it",
+		}
+	}
+	finding := map[string]string{
+		"bottlenecks": "bottlenecks in the flow of work, from the cumulative flow, the time items spend in each state, the time they wait, and the holds on them",
+		"intent":      "gaps between what design/system says and what the code does",
+		"risk":        "technical and security risks",
+	}
+	for _, focus := range append([]string{""}, Focuses...) {
+		p := Prompt(analyzeReq(focus, nil))
+		want := append(common(focus), "Look for "+finding[focus], ", and for nothing else.")
+		if focus == "" {
+			want = append(common(AllFocus), "Look for three kinds of finding: ")
+		}
+		for _, w := range want {
+			if !strings.Contains(p, w) {
+				t.Errorf("focus %q: the analyzer's prompt lacks %q:\n%s", focus, w, p)
+			}
+		}
+		for f, w := range finding {
+			if looks := strings.Contains(p, w); looks != (focus == "" || focus == f) {
+				t.Errorf("focus %q: the prompt looks for %s: %v\n%s", focus, f, looks, p)
+			}
+		}
+		for _, never := range []string{"flai stream open", "flai move", "worktree", "item_new", "item_edit", "As the planner", "As the orchestrator", "publish"} {
+			if strings.Contains(p, never) {
+				t.Errorf("focus %q: the analyzer's prompt says %q:\n%s", focus, never, p)
+			}
+		}
+	}
+}
+
+// S-0223: claude-code runs the analyzer's session as the project's analyzer
+// definition, beside the explorer, named for the project, the role, and the
+// focus, and tells it its role alone in its environment; the operator's
+// command is told the role and the focus. An analyzer given a story, an
+// item, or a focus it does not take is refused, as is a focus for a story.
+func TestClaudeCodeStartsTheAnalyzer(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, def := range map[string]string{
+		"analyzer": "---\nname: analyzer\ndescription: Writes a report.\ntools: Read, Write\nmodel: inherit\n---\n\nYou are the analyzer.\n",
+		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := analyzeReq("risk", &manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5", Roles: map[string]manifest.Role{"explore": {Model: "claude-haiku-4-5"}}})
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := st.Argv[2]; !strings.Contains(p, "the analyzer, started by flai serve") || !strings.Contains(p, "design/analysis/<date>-risk.md") {
+		t.Errorf("prompt: %s", p)
+	}
+	for flag, want := range map[string]string{"--agent": "analyzer", "--model": "claude-opus-5-5", "--name": "flow analyze risk", "--permission-prompt-tool": PermissionPromptTool} {
+		if got := after(st.Argv, flag); got != want {
+			t.Errorf("%s = %q, want %q (%q)", flag, got, want, st.Argv)
+		}
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	if len(agents) != 2 || agents["analyzer"]["model"] != "claude-opus-5-5" || agents["explorer"]["model"] != "claude-haiku-4-5" {
+		t.Errorf("--agents %v", agents)
+	}
+	if want := []string{"FLAI_ROLE=analyze"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+
+	// with no focus: all of them, and the definition alone
+	plain := analyzeReq("", nil)
+	plain.Root = root
+	st, err = (claudeCode{}).Start(plain, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := after(st.Argv, "--name"); got != "flow analyze" || !strings.Contains(st.Argv[2], "design/analysis/<date>-all.md") {
+		t.Errorf("--name %q, prompt %s", got, st.Argv[2])
+	}
+	if want := []string{"FLAI_ROLE=analyze"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+
+	missing := analyzeReq("", nil)
+	missing.Root = t.TempDir()
+	if _, err := (claudeCode{}).Start(missing, Host{}); err == nil || !strings.Contains(err.Error(), "the analyzer's session runs as the agent analyzer, and its definition could not be read") {
+		t.Errorf("a project with no analyzer.md: %v", err)
+	}
+	for want, mod := range map[string]func(*Request){
+		"the analyzer was given story S-0104 to work": func(r *Request) { r.Story = "S-0104" },
+		"the analyzer was given E-0016":               func(r *Request) { r.Item = "E-0016" },
+		`the analyzer takes the focus bottlenecks, intent, risk, or none for all of them, and "all" is none of them`: func(r *Request) { r.Focus = "all" },
+	} {
+		x := analyzeReq("", nil)
+		x.Root = root
+		mod(&x)
+		for name, ad := range map[string]Adapter{ClaudeCode: claudeCode{}, Command: command{}} {
+			if _, err := ad.Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("%s %+v: %v, want %q", name, x, err, want)
+			}
+		}
+	}
+	story := req(nil)
+	story.Focus = "risk"
+	if _, err := (command{}).Start(story, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), "only the analyzer takes a focus") {
+		t.Errorf("a story's agent with a focus: %v", err)
+	}
+
+	// the operator's command is told the role and the focus, with no prompt
+	cmd, err := (command{}).Start(analyzeReq("intent", nil), Host{Program: "run-agent", Args: []string{"{story}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(cmd.Env, "FLAI_ROLE=analyze") || !slices.Contains(cmd.Env, "FLAI_FOCUS=intent") || slices.ContainsFunc(cmd.Env, func(e string) bool {
+		return strings.HasPrefix(e, "FLAI_ITEM=") || strings.HasPrefix(e, "FLAI_STORY=")
+	}) {
+		t.Errorf("command env: %q", cmd.Env)
+	}
+	if cmd, _ := (command{}).Start(analyzeReq("", nil), Host{Program: "run-agent"}); slices.ContainsFunc(cmd.Env, func(e string) bool { return strings.HasPrefix(e, "FLAI_FOCUS=") }) {
+		t.Errorf("command env with no focus: %q", cmd.Env)
+	}
+}
+
+// S-0223: the template's analyzer definition has the reads, its report's
+// edits, the shell, the explorer, and flai's reads, activity log, threads,
+// and events, and no item write; the template's settings run flai guard on
+// the analyzer's file edits as they do on the planner's and the
+// orchestrator's.
+func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "template", "root", ".claude")
+	data, err := os.ReadFile(filepath.Join(root, "agents", "analyzer.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	def, err := definition(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools, _ := def["tools"].([]string)
+	for _, want := range []string{"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent",
+		"mcp__flai__prime", "mcp__flai__inbox", "mcp__flai__board", "mcp__flai__item_get", "mcp__flai__doc_get", "mcp__flai__doc_search",
+		"mcp__flai__thread_get", "mcp__flai__who_touches", "mcp__flai__activity_log", "mcp__flai__thread_open", "mcp__flai__thread_reply", "mcp__flai__wait_for_events"} {
+		if !slices.Contains(tools, want) {
+			t.Errorf("analyzer.md lacks the tool %s: %v", want, tools)
+		}
+	}
+	for _, never := range []string{"mcp__flai__item_new", "mcp__flai__item_edit", "mcp__flai__item_move", "mcp__flai__plan", "NotebookEdit"} {
+		if slices.Contains(tools, never) {
+			t.Errorf("analyzer.md has the tool %s", never)
+		}
+	}
+	prompt, _ := def["prompt"].(string)
+	for _, want := range []string{"role `analyze`", "`flai stats --json`", "`design/analysis/<date>-<focus>.md`", "`design/analysis/README.md`", "author no stories"} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("analyzer.md does not say %q", want)
+		}
+	}
+	data, err = os.ReadFile(filepath.Join(root, "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var settings struct {
+		Hooks map[string][]struct {
+			Matcher string `json:"matcher"`
+			Hooks   []struct {
+				Command string `json:"command"`
+			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range settings.Hooks["PreToolUse"] {
+		if h.Matcher != "Edit|Write|NotebookEdit" {
+			continue
+		}
+		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
+			t.Errorf("the analyzer's file edits are not guarded: %q", c)
+		}
+		return
+	}
+	t.Error("the template's settings have no Edit|Write|NotebookEdit hook")
 }

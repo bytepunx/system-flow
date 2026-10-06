@@ -14,6 +14,7 @@ package harness
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -27,21 +28,26 @@ const Command = "command"
 
 // Request is what an agent is started for: a story, or, for the planner, an
 // epic or a story to plan (S-0208), or, for the orchestrator, the whole
-// project (S-0218).
+// project (S-0218), or, for the analyzer, the whole project with a focus
+// or none (S-0223).
 type Request struct {
 	Story   string          // the story's ID, checked by the caller; empty for a strategic agent
 	Root    string          // the project's directory, where it runs
 	Project string          // the project's key, for a session's name
-	Agent   *manifest.Agent // the story's agent, the planner's, or the orchestrator's; nil when it has none
+	Agent   *manifest.Agent // the story's agent, or the strategic agent's; nil when it has none
 	Name    string          // FLAI_AGENT the session works under
 	Flai    string          // this flai's executable, the agent's MCP server
 	// Role is conventions.RolePlan when the agent is the planner,
-	// conventions.RoleOrchestrate when it is the orchestrator, and empty
-	// when it works a story.
+	// conventions.RoleOrchestrate when it is the orchestrator,
+	// conventions.RoleAnalyze when it is the analyzer, and empty when it
+	// works a story.
 	Role string
 	// Item is the epic or story the planner plans, checked by the caller;
-	// empty when the agent works a story or orchestrates.
+	// empty when the agent works a story, orchestrates, or analyzes.
 	Item string
+	// Focus is what the analyzer looks for, one of Focuses; empty for all
+	// of them, and for any other agent.
+	Focus string
 	// Session names the harness's session, so that it can be resumed; a
 	// harness that has no sessions ignores it.
 	Session string
@@ -211,15 +217,18 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // operator started past a hold or a full limit is told what it went past
 // (S-0182). Every agent working a story is told how its issues are recorded
 // and that the operator chooses at acceptance which become stories (S-0198).
-// The planner is asked to plan its item instead (planPrompt), and the
-// orchestrator to keep the project's work moving (orchestratePrompt). Only
-// the claude-code adapter sends a prompt.
+// The planner is asked to plan its item instead (planPrompt), the
+// orchestrator to keep the project's work moving (orchestratePrompt), and
+// the analyzer to write a report (analyzePrompt). Only the claude-code
+// adapter sends a prompt.
 func Prompt(r Request) string {
 	switch r.Role {
 	case conventions.RolePlan:
 		return planPrompt(r)
 	case conventions.RoleOrchestrate:
 		return orchestratePrompt(r)
+	case conventions.RoleAnalyze:
+		return analyzePrompt(r)
 	}
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
@@ -350,18 +359,81 @@ Log each action when you have taken it with the flai MCP tool activity_log, kind
 Work in the main checkout and write only through flai: the flai MCP tools, or the flai CLI. Never edit code or documents, and never work a story yourself. flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal, by another tool, another command, or the shell. A refusal from flai guard or from flai ends that attempt: log it with activity_log, with the refusal, and do not try it again until something it depends on changes. When a decision needs the operator, ask with the flai MCP tool thread_open on the item it concerns, your recommended answer first, and do what needs no answer meanwhile.`, r.Name, r.Root)
 }
 
+// Focuses are what the analyzer can be asked to look for (S-0223):
+// bottlenecks in the flow, gaps between the design and the code (intent),
+// and technical and security risks. A run asked for none looks for all
+// three, and its report's focus is AllFocus.
+var Focuses = []string{"bottlenecks", "intent", "risk"}
+
+// AllFocus is the focus of a report from a run asked for no focus.
+const AllFocus = "all"
+
+// lookFor is the findings the analyzer looks for under each focus.
+var lookFor = map[string]string{
+	"bottlenecks": "bottlenecks in the flow of work, from the cumulative flow, the time items spend in each state, the time they wait, and the holds on them",
+	"intent":      "gaps between what design/system says and what the code does: a design section the code does not meet, and code the design does not describe",
+	"risk":        "technical and security risks in the code and in how it is built, tested, and released",
+}
+
+// analyzePrompt is what the analyzer is asked to do (S-0223): look for the
+// findings its focus names, or all three kinds with none, as
+// strategic-agents.md says; read the metrics from flai stats --json, the
+// design with doc_search and doc_get, and the issues, handing wide search of
+// the code to the explorer; write one report, design/analysis/<date>-<focus>.md,
+// with its front matter and one section per finding with its evidence,
+// severity, and estimated impact, and add it to design/analysis/README.md;
+// edit nothing else and author no stories, which flai guard enforces; and
+// end with a one-line summary that names the report, which flai serve logs
+// as the run's activity, as the planner's is (ADR-0079).
+func analyzePrompt(r Request) string {
+	focus := r.Focus
+	look := "Look for " + lookFor[focus] + ", and for nothing else."
+	if focus == "" {
+		focus = AllFocus
+		look = fmt.Sprintf("Look for three kinds of finding: %s; %s; and %s.", lookFor["bottlenecks"], lookFor["intent"], lookFor["risk"])
+	}
+	report := "design/analysis/<date>-" + focus + ".md"
+	return fmt.Sprintf(`You are %[1]s, the analyzer, started by flai serve on this host because the operator asked for an analysis, focus %[2]s, of the project at %[3]s.
+
+Analyze the project, and do nothing else, as design/conventions/strategic-agents.md says under As the analyzer. Prime your session with flai prime --role analyze (or the flai MCP tool prime with role analyze), which prints the conventions you work by and briefs the design your role's topic selects. Call the flai MCP tool inbox.
+
+%[4]s
+
+Read the metrics with flai stats --json, and take every figure from it rather than working it out yourself. Read the design with the flai MCP tools doc_search, which finds sections by their words, and doc_get and its heading: a brief is not the document, so read the section a finding rests on before relying on it. Read the issues under design/issues, design/issues/summary.md first. Hand wide search of the code to the explorer with the Agent tool.
+
+Write one report, %[5]s, where <date> is today's date in UTC as YYYY-MM-DD. Give it front matter with title, updated, status, focus %[2]s, and the window its metrics cover, from and to, as dates. Give it one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them. Add the report to design/analysis/README.md.
+
+Edit nothing else: no code, no design, no issue, and no work item, and author no stories. flai guard refuses an edit outside design/analysis and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
+
+When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on your report, your recommended answer first, analyze what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
+
+End with a one-line summary that names the report, %[5]s with its date: flai serve logs the run's activity in wip/agents/analyzer.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, focus, r.Root, look, report)
+}
+
 // roleEnv tells a strategic agent's session its role, which flai guard reads
 // to hold it to its work: the planner's its item as well (S-0208), the
-// orchestrator's nothing more, since it works the whole project (S-0218).
-// Nothing for an agent working a story. A role flai does not start, a
-// strategic agent with a story of its own, a planner with no epic or story
-// to plan, and an orchestrator given an item are refused.
+// orchestrator's and the analyzer's nothing more, since each works the whole
+// project (S-0218, S-0223). Nothing for an agent working a story. A role
+// flai does not start, a strategic agent with a story of its own, a planner
+// with no epic or story to plan, an orchestrator or an analyzer given an
+// item, an analyzer with a focus it does not take, and a focus for any
+// other agent are refused.
 func roleEnv(r Request) ([]string, error) {
 	switch {
-	case r.Role == "":
+	case r.Role == "" && r.Focus == "":
 		return nil, nil
-	case r.Role != conventions.RolePlan && r.Role != conventions.RoleOrchestrate:
-		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate)
+	case r.Role != conventions.RoleAnalyze && r.Focus != "":
+		return nil, fmt.Errorf("only the analyzer takes a focus; start this agent without %q", r.Focus)
+	case r.Role != conventions.RolePlan && r.Role != conventions.RoleOrchestrate && r.Role != conventions.RoleAnalyze:
+		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, the analyzer, role %s, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze)
+	case r.Role == conventions.RoleAnalyze && r.Story != "":
+		return nil, fmt.Errorf("the analyzer was given story %s to work; it works no story of its own, so start it with none", r.Story)
+	case r.Role == conventions.RoleAnalyze && r.Item != "":
+		return nil, fmt.Errorf("the analyzer was given %s; it analyzes the whole project, so start it with no item", r.Item)
+	case r.Role == conventions.RoleAnalyze && r.Focus != "" && !slices.Contains(Focuses, r.Focus):
+		return nil, fmt.Errorf("the analyzer takes the focus %s, or none for all of them, and %q is none of them", strings.Join(Focuses, ", "), r.Focus)
+	case r.Role == conventions.RoleAnalyze:
+		return []string{"FLAI_ROLE=" + r.Role}, nil
 	case r.Role == conventions.RoleOrchestrate && r.Story != "":
 		return nil, fmt.Errorf("the orchestrator was given story %s to work; it works no story of its own, so start it with none", r.Story)
 	case r.Role == conventions.RoleOrchestrate && r.Item != "":
