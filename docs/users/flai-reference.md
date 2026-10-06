@@ -1921,6 +1921,8 @@ List design/conventions in read order (README first, then by order) so an agent,
 
 --role plan, orchestrate, or analyze prints the pack for a strategic agent, one that works above a story: the planner (plan), with --epic E-nnnn or --story S-nnnn, and the orchestrator (orchestrate) and the analyzer (analyze), for the whole project, with neither. Its topics are the role's, planning, orchestration, or analysis, with the planner's item's as well; it holds the conventions whose roles are empty or list the role, with the sections its topics leave out taken out, and no README; the open issues; for the planner, what the item names, whole, as a story's pack loads it (a story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech, and ADRs its topics select and the ADRs one step reaches; and a catalog of the rest. Its budget is the story's agent's, and --budget sets it.
 
+--part N prints part N of the pack as the MCP prime tool returns it, as JSON: parts of at most 40,000 bytes each, every one carrying part and parts (ADR-0104). --part implies --json; without it the whole pack prints.
+
 Examples:
 
 ```bash
@@ -1931,6 +1933,7 @@ flai prime --story S-0136
 flai prime --story S-0136 --json
 flai prime --story S-0136 --budget 120KB
 flai prime --story S-0136 --role verify
+flai prime --story S-0136 --part 2
 flai prime --role plan --epic E-0016
 flai prime --role orchestrate --json
 ```
@@ -1942,6 +1945,7 @@ Flags:
 | `--budget` string | the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify) |
 | `--cat` | print file contents instead of paths |
 | `--epic` string | with --role plan, print the planner's pack for this epic |
+| `--part` int | print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104) |
 | `--role` string | print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent |
 | `--story` string | print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest |
 

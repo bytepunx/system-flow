@@ -748,24 +748,38 @@ type PrimeIn struct {
 	Epic    string `json:"epic,omitempty" jsonschema:"with role plan, the epic the planner plans, such as E-0016, instead of a story"`
 	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB, and half that with role explore or verify"`
 	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); plan, orchestrate, or analyze: the pack for a strategic agent, the planner for an epic or a story, or the orchestrator or the analyzer for the whole project; empty for the story's agent's own pack"`
+	Part    int    `json:"part,omitempty" jsonschema:"which part of the pack to return, from 1; default 1. Read every part, up to the parts the result gives (ADR-0104)"`
 }
 
+// prime returns one part of the pack (ADR-0104), part 1 unless in names
+// another, so that no result is over ctxpack.PartLimit bytes of JSON.
 func (s *server) prime(_ context.Context, _ *mcp.CallToolRequest, in PrimeIn) (*mcp.CallToolResult, *ctxpack.Pack, error) {
+	pack, err := s.pack(in)
+	if err != nil {
+		return nil, nil, err
+	}
+	part := in.Part
+	if part == 0 {
+		part = 1
+	}
+	pack, err = pack.Part(part, ctxpack.PartLimit)
+	return nil, pack, err
+}
+
+// pack is the whole pack in names: a strategic agent's, a sub-agent's, or
+// the story's agent's.
+func (s *server) pack(in PrimeIn) (*ctxpack.Pack, error) {
 	switch {
 	case in.Epic != "" && in.Role != conventions.RolePlan:
-		return nil, nil, fmt.Errorf("prime: epic primes the planner for an epic; give role plan too")
+		return nil, fmt.Errorf("prime: epic primes the planner for an epic; give role plan too")
 	case slices.Contains(conventions.StrategicRoles, in.Role):
-		pack, err := ctxpack.ForStrategic(s.repo, in.Role, in.Epic, in.Story, in.Budget)
-		return nil, pack, err
+		return ctxpack.ForStrategic(s.repo, in.Role, in.Epic, in.Story, in.Budget)
 	case in.Story == "":
-		return nil, nil, fmt.Errorf("prime: give story, or role %s", strings.Join(conventions.StrategicRoles, ", "))
+		return nil, fmt.Errorf("prime: give story, or role %s", strings.Join(conventions.StrategicRoles, ", "))
+	case in.Role != "":
+		return ctxpack.ForRole(s.repo, in.Story, in.Role, in.Budget)
 	}
-	if in.Role != "" {
-		pack, err := ctxpack.ForRole(s.repo, in.Story, in.Role, in.Budget)
-		return nil, pack, err
-	}
-	pack, err := ctxpack.ForStory(s.repo, in.Story, in.Budget)
-	return nil, pack, err
+	return ctxpack.ForStory(s.repo, in.Story, in.Budget)
 }
 
 func (s *server) readResource(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {

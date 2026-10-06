@@ -315,6 +315,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--open` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--owner` | [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--part` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--penalty-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--pending` | [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release) |
 | `--placed-by` | [flai order](../users/flai-reference.md#flai-order) |

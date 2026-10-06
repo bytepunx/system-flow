@@ -2,6 +2,9 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +13,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -50,6 +54,89 @@ func TestPrimeReturnsTheStorysContextPack(t *testing.T) {
 
 // Every story in this repository gets a pack the tool's output schema accepts.
 func TestPrimeOnThisRepository(t *testing.T) {
+	f := thisRepository(t)
+	items, err := f.repo.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, it := range items {
+		if it.Type != workitem.Story {
+			continue
+		}
+		n++
+		if out, failed := f.call(t, "prime", map[string]any{"story": it.ID}); failed != "" || out["story"] != it.ID {
+			t.Errorf("%s: %s", it.ID, failed)
+		}
+	}
+	if n == 0 {
+		t.Skip("no open story in the monorepo")
+	}
+}
+
+// I-0068, ADR-0104: Claude Code saves a tool result over 50,000 characters
+// to a file instead of showing it, and this repository's packs encode to
+// more than that whole. The prime tool returns them in parts, each at most
+// ctxpack.PartLimit bytes as the server sends it, and refuses a part past
+// the last.
+func TestPrimeComesInPartsOnThisRepository(t *testing.T) {
+	f := thisRepository(t)
+	const resultLimit = 50000 // what Claude Code shows of a tool result
+	for _, c := range []struct {
+		in    map[string]any
+		whole func() (*ctxpack.Pack, error)
+	}{
+		{map[string]any{"story": "S-0205"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0205", "") }},
+		{map[string]any{"story": "S-0210"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0210", "") }},
+		{map[string]any{"story": "S-0211"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0211", "") }},
+		{map[string]any{"story": "S-0261"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0261", "") }},
+		{map[string]any{"role": "plan", "story": "S-0261"}, func() (*ctxpack.Pack, error) {
+			return ctxpack.ForStrategic(f.repo, "plan", "", "S-0261", "")
+		}},
+	} {
+		whole, err := c.whole()
+		if err != nil {
+			t.Errorf("%v: %v", c.in, err)
+			continue
+		}
+		if data, _ := json.Marshal(whole); len(data) <= resultLimit {
+			t.Errorf("%v: the whole pack is %d bytes, not over the %d a tool result shows; this test no longer shows I-0068's cause", c.in, len(data), resultLimit)
+		}
+		parts := 0
+		for n := 1; n == 1 || n <= parts; n++ {
+			in := maps.Clone(c.in)
+			if n > 1 {
+				in["part"] = n
+			}
+			out, text, failed := f.callText(t, "prime", in)
+			if failed != "" {
+				t.Fatalf("%v part %d: %s", c.in, n, failed)
+			}
+			if n == 1 {
+				p, _ := out["parts"].(float64)
+				if parts = int(p); parts < 2 {
+					t.Errorf("%v: part 1 says %v parts, want more than 1", c.in, out["parts"])
+				}
+			}
+			if out["part"] != float64(n) || out["parts"] != float64(parts) {
+				t.Errorf("%v part %d: says part %v of %v", c.in, n, out["part"], out["parts"])
+			}
+			if len(text) > ctxpack.PartLimit {
+				t.Errorf("%v part %d: %d bytes as sent, over %d", c.in, n, len(text), ctxpack.PartLimit)
+			}
+		}
+		in := maps.Clone(c.in)
+		in["part"] = parts + 1
+		if _, _, failed := f.callText(t, "prime", in); !strings.Contains(failed, fmt.Sprintf("give part 1 to %d", parts)) {
+			t.Errorf("%v part %d: %q, want it refused", c.in, parts+1, failed)
+		}
+	}
+}
+
+// thisRepository is a session with the prime tool on this monorepo, or
+// skips the test without it.
+func thisRepository(t *testing.T) *fixture {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("integration: reads the monorepo")
 	}
@@ -58,10 +145,6 @@ func TestPrimeOnThisRepository(t *testing.T) {
 		t.Skip("monorepo not present")
 	}
 	repo, err := workitem.Open(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	items, err := repo.List(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,20 +159,28 @@ func TestPrimeOnThisRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = cs.Close() })
-	f := &fixture{repo: repo, cs: cs}
-	n := 0
-	for _, it := range items {
-		if it.Type != workitem.Story {
-			continue
-		}
-		n++
-		if out, failed := f.call(t, "prime", map[string]any{"story": it.ID}); failed != "" || out["story"] != it.ID {
-			t.Errorf("%s: %s", it.ID, failed)
+	return &fixture{repo: repo, cs: cs}
+}
+
+// callText calls a tool as call does and also returns the text of its
+// result as the server sent it, what an agent's client shows.
+func (f *fixture) callText(t *testing.T, name string, args any) (out map[string]any, text, failed string) {
+	t.Helper()
+	res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		t.Fatalf("%s: protocol error: %v", name, err)
+	}
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			text += tc.Text
 		}
 	}
-	if n == 0 {
-		t.Skip("no open story in the monorepo")
+	if res.IsError {
+		return nil, "", text
 	}
+	data, _ := json.Marshal(res.StructuredContent)
+	_ = json.Unmarshal(data, &out)
+	return out, text, ""
 }
 
 // S-0175, ADR-0059, ADR-0068: prime with a role returns a sub-agent's pack,

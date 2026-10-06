@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ func newPrimeCmd(a *app) *cobra.Command {
 		budget string
 		role   string
 		epic   string
+		part   int
 	)
 	c := &cobra.Command{
 		Use:   "prime",
@@ -79,7 +81,11 @@ sections its topics leave out taken out, and no README; the open issues;
 for the planner, what the item names, whole, as a story's pack loads it (a
 story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech,
 and ADRs its topics select and the ADRs one step reaches; and a catalog of
-the rest. Its budget is the story's agent's, and --budget sets it.`,
+the rest. Its budget is the story's agent's, and --budget sets it.
+
+--part N prints part N of the pack as the MCP prime tool returns it, as
+JSON: parts of at most 40,000 bytes each, every one carrying part and parts
+(ADR-0104). --part implies --json; without it the whole pack prints.`,
 		Example: `  flai prime
   flai prime --cat
   flai prime --json
@@ -87,6 +93,7 @@ the rest. Its budget is the story's agent's, and --budget sets it.`,
   flai prime --story S-0136 --json
   flai prime --story S-0136 --budget 120KB
   flai prime --story S-0136 --role verify
+  flai prime --story S-0136 --part 2
   flai prime --role plan --epic E-0016
   flai prime --role orchestrate --json`,
 		Args: cobra.NoArgs,
@@ -115,17 +122,23 @@ the rest. Its budget is the story's agent's, and --budget sets it.`,
 			}
 			strategic := slices.Contains(conventions.StrategicRoles, role)
 			switch {
+			case cmd.Flags().Changed("part") && cat:
+				return fmt.Errorf("--part prints a part of a context pack; --cat prints the conventions, give one of them")
+			case cmd.Flags().Changed("part") && part < 1:
+				return fmt.Errorf("--part %d: parts count from 1", part)
+			case cmd.Flags().Changed("part") && story == "" && !strategic:
+				return fmt.Errorf("--part prints a part of a context pack; give --story, or --role %s", strings.Join(conventions.StrategicRoles, ", "))
 			case epic != "" && role != conventions.RolePlan:
 				return fmt.Errorf("--epic primes the planner for an epic; give --role plan too")
 			case strategic:
-				return a.primeStrategic(repo, role, epic, story, budget)
+				return a.primeStrategic(repo, role, epic, story, budget, part)
 			case budget != "" && story == "":
 				return fmt.Errorf("--budget sizes a story's context pack; give --story too")
 			case role != "" && story == "":
 				return fmt.Errorf("--role %s primes a sub-agent working a story; give --story too, or give a strategic role: %s", role, strings.Join(conventions.StrategicRoles, ", "))
 			}
 			if story != "" {
-				return a.primeStory(repo, story, role, budget)
+				return a.primeStory(repo, story, role, budget, part)
 			}
 			list, _ := issues.List(repo)
 			table := issues.SummaryTable(list)
@@ -164,13 +177,14 @@ the rest. Its budget is the story's agent's, and --budget sets it.`,
 	c.Flags().StringVar(&budget, "budget", "", "the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify)")
 	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent")
 	c.Flags().StringVar(&epic, "epic", "", "with --role plan, print the planner's pack for this epic")
+	c.Flags().IntVar(&part, "part", 0, "print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104)")
 	return c
 }
 
 // primeStory prints the context pack for a story (ADR-0047, ADR-0049), as
 // ctxpack.ForStory builds it, or for a sub-agent in a role (ADR-0059), as
-// ctxpack.ForRole does.
-func (a *app) primeStory(repo *workitem.Repo, id, role, budget string) error {
+// ctxpack.ForRole does; with part, only that part of it (ADR-0104).
+func (a *app) primeStory(repo *workitem.Repo, id, role, budget string, part int) error {
 	var pack *ctxpack.Pack
 	var err error
 	if role != "" {
@@ -181,26 +195,56 @@ func (a *app) primeStory(repo *workitem.Repo, id, role, budget string) error {
 	if err != nil {
 		return err
 	}
-	return a.printPack(pack)
+	return a.printPack(pack, part)
 }
 
 // primeStrategic prints the pack for a strategic agent in role, for the
 // planner's epic or story or, with neither, the whole project, as
-// ctxpack.ForStrategic builds it.
-func (a *app) primeStrategic(repo *workitem.Repo, role, epic, story, budget string) error {
+// ctxpack.ForStrategic builds it; with part, only that part of it.
+func (a *app) primeStrategic(repo *workitem.Repo, role, epic, story, budget string, part int) error {
 	pack, err := ctxpack.ForStrategic(repo, role, epic, story, budget)
 	if err != nil {
 		return err
 	}
-	return a.printPack(pack)
+	return a.printPack(pack, part)
 }
 
-// printPack prints a context pack, as JSON with --json.
-func (a *app) printPack(pack *ctxpack.Pack) error {
+// printPack prints a context pack, as JSON with --json; given a part, it
+// prints that part as JSON, as the MCP prime tool returns it.
+func (a *app) printPack(pack *ctxpack.Pack, part int) error {
+	if part != 0 {
+		p, err := pack.Part(part, ctxpack.PartLimit)
+		if err != nil {
+			return err
+		}
+		data, err := toolJSON(p)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(a.out, "%s\n", data)
+		return err
+	}
 	if a.jsonOut {
 		return a.printJSON(pack)
 	}
 	fmt.Fprint(a.out, pack.Header())
 	fmt.Fprint(a.out, pack.Body())
 	return nil
+}
+
+// toolJSON encodes v as the MCP go-sdk encodes a tool's structured output
+// into the text of its result: json.Marshal, then, for an object, decoded
+// and marshalled again after the output schema's defaults are applied, which
+// sorts its keys. The pack's schema sets no defaults, so the second marshal
+// changes the order of the keys only, never the size.
+func toolJSON(v any) ([]byte, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var decoded any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return nil, err
+	}
+	return json.Marshal(decoded)
 }

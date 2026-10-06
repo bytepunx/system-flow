@@ -1,12 +1,19 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func TestPrime(t *testing.T) {
@@ -37,6 +44,63 @@ func TestPrime(t *testing.T) {
 	_, errOut, code = runIn(t, tempProject(t), "prime")
 	if code == 0 || !strings.Contains(errOut, "no conventions folder") {
 		t.Errorf("missing folder should fail: %d %s", code, errOut)
+	}
+}
+
+// ADR-0104: --part prints a part of the pack as JSON, the text the MCP
+// prime tool returns for it; it is refused with --cat and past the last part.
+func TestPrimePart(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	dir := "../internal/metrics/testdata/good"
+	out, errOut, code := runIn(t, dir, "prime", "--story", "S-4", "--part", "1")
+	if code != 0 {
+		t.Fatalf("prime --part 1: %s", errOut)
+	}
+	var v struct {
+		Story string `json:"story"`
+		Part  int    `json:"part"`
+		Parts int    `json:"parts"`
+	}
+	if err := json.Unmarshal([]byte(out), &v); err != nil || v.Story != "S-004" || v.Part != 1 || v.Parts != 1 {
+		t.Errorf("json: %v %+v %s", err, v, out)
+	}
+
+	repo, err := workitem.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ct, st := mcp.NewInMemoryTransports()
+	if _, err := mcpserver.New(mcpserver.Options{Repo: repo, Agent: "claude", Version: "test", MaxWait: time.Second}).Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, nil).Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cs.Close() }()
+	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "prime", Arguments: map[string]any{"story": "S-4", "part": 1}})
+	if err != nil || res.IsError || len(res.Content) != 1 {
+		t.Fatalf("prime tool: %v %+v", err, res)
+	}
+	if text := res.Content[0].(*mcp.TextContent).Text; out != text+"\n" {
+		t.Errorf("--part 1 is not the tool's text:\n%s\n---\n%s", out, text)
+	}
+
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"prime", "--story", "S-4", "--part", "1", "--cat"}, "--cat prints the conventions"},
+		{[]string{"prime", "--cat", "--part", "1"}, "--cat prints the conventions"},
+		{[]string{"prime", "--story", "S-4", "--part", "2"}, "part 2 of a pack in 1 part; give part 1"},
+		{[]string{"prime", "--story", "S-4", "--part", "0"}, "parts count from 1"},
+		{[]string{"prime", "--part", "1"}, "give --story"},
+	} {
+		if _, errOut, code := runIn(t, dir, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: %d %q, want %q", c.args, code, errOut, c.want)
+		}
 	}
 }
 
