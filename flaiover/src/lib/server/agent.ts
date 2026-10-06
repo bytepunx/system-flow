@@ -121,6 +121,9 @@ export const REQUIRED_METHODS = [
 	'settings.unserve',
 	'settings.mcp_token',
 	'settings.dashboard_token',
+	// S-0295: the shared paths, changed under the settings action and checked by anyone
+	'settings.shared',
+	'settings.shared_check',
 	// S-0116: a new agent for a story whose agent dropped or failed, gated by the agent host action
 	'agent.restart',
 	// S-0115: a ready story's agent now, gated by the agent host action

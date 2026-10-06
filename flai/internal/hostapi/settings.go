@@ -19,12 +19,16 @@ import (
 // off. What the host's configuration keeps for every project (the agent's
 // command, the harnesses, the checks, the import folders, the dashboard
 // token) needs it on for every project; what belongs to one project (its host
-// actions, its default agent, its MCP token) needs it on for that project.
+// actions, its default agent, its shared paths, its MCP token) needs it on for
+// that project.
 
 var (
-	agentName    = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
-	checkName    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$`)
-	harnessName  = regexp.MustCompile(`^[a-z][a-z0-9._-]{0,63}$`)
+	agentName   = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
+	checkName   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$`)
+	harnessName = regexp.MustCompile(`^[a-z][a-z0-9._-]{0,63}$`)
+	// itemLike is an entry flai shared check reads as a work item's ID, not
+	// a path.
+	itemLike     = regexp.MustCompile(`^[EeSsTt]-\d+$`)
 	settingsDone = func(what string) func(any, *channel.Error) (string, string) {
 		return func(_ any, err *channel.Error) (string, string) {
 			if err != nil {
@@ -80,6 +84,64 @@ func served(what, verb string) spec {
 			in, _ := decode[servedProject](raw)
 			return in.Key, in.Root
 		}}
+}
+
+// sharedEdit is settings.shared's command line: flai shared add or remove
+// with the one pattern given.
+func sharedEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[struct {
+		Action  string `json:"action"`
+		Pattern string `json:"pattern"`
+	}](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if in.Action != "add" && in.Action != "remove" {
+		return nil, "", bad("action is add or remove, not %q", in.Action)
+	}
+	pattern := strings.TrimSpace(in.Pattern)
+	if pattern == "" {
+		return nil, "", bad("give the pattern to %s, a path relative to the repository root, such as design/adrs", in.Action)
+	}
+	if e := argList("the pattern", []string{pattern}, false); e != nil {
+		return nil, "", e
+	}
+	return []string{"shared", in.Action, "--autocommit", "--trailer=" + Trailer, "--", pattern}, "", nil
+}
+
+// sharedCheck is settings.shared_check's command line: flai shared check
+// with each path given, then the story.
+func sharedCheck(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[struct {
+		Paths []string `json:"paths"`
+		Story string   `json:"story"`
+	}](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if len(in.Paths) == 0 && in.Story == "" {
+		return nil, "", bad("give paths, the paths or touches entries to check, story, a story's ID whose claim to check, or both")
+	}
+	args := []string{"shared", "check", "--"}
+	for _, p := range in.Paths {
+		p = strings.TrimSpace(p)
+		switch {
+		case p == "":
+			return nil, "", bad("an empty entry in paths names no path; give a path or a touches entry, such as docs/users/flai.md")
+		case strings.ContainsAny(p, "\x00\n\r"):
+			return nil, "", bad("%q in paths holds a line break or NUL", p)
+		case itemLike.MatchString(p):
+			return nil, "", bad("%q in paths is a work item's ID, not a path; give a story's ID as story", p)
+		}
+		args = append(args, p)
+	}
+	if in.Story != "" {
+		if e := needStory(in.Story); e != nil {
+			return nil, "", e
+		}
+		args = append(args, in.Story)
+	}
+	return args, "", nil
 }
 
 func settingsSpecs() map[string]spec {
@@ -148,6 +210,21 @@ func settingsSpecs() map[string]spec {
 			roles, e := roleArgs(in.Agent)
 			return append(args, roles...), "", e
 		}),
+
+		// settings.shared: one pattern added to or removed from the project's
+		// shared paths, claims.shared in its manifest (S-0295, ADR-0096), by
+		// flai shared add or remove, which leave the change uncommitted. flai
+		// exits 1 refusing a pattern that is not valid, one to add that is
+		// listed already, or one to remove that is not, and with a manifest it
+		// cannot read or write: each is answered as a rule, with its reason.
+		"settings.shared": {action: ActionSettings, exits: map[int]int{1: Rule}, describe: settingsDone("the project's shared paths changed"),
+			say: sayArgs(sharedEdit), build: sharedEdit},
+
+		// settings.shared_check: whether paths or touches entries, and the
+		// entries of a story's claim, lie inside the shared paths, as flai
+		// shared check --json answers. It changes nothing, so like
+		// settings.get it needs no host action.
+		"settings.shared_check": {reads: true, build: sharedCheck},
 
 		// settings.agent: the agent's name and command, kept for every
 		// project. command null removes the command (and with it the name,

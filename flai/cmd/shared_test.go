@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -230,5 +231,36 @@ func TestSharedHelpGivesTheDialect(t *testing.T) {
 				t.Errorf("flai %v --help does not say %q", args, want)
 			}
 		}
+	}
+}
+
+// S-0295: with --autocommit, an edit of the shared paths is committed,
+// system-flow.yaml alone, with its trailers; without it, nothing is.
+func TestSharedAddAutocommitsTheManifestAlone(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := sharedProject(t)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "config", "user.email", "t@t")
+	gitIn(t, root, "config", "user.name", "t")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "start")
+	_ = os.WriteFile(filepath.Join(root, "notes.txt"), []byte("not mine\n"), 0o644)
+
+	sharedRun(t, root, "shared", "add", "design/adrs")
+	if st := gitIn(t, root, "status", "--porcelain", "--", manifest.File); !strings.Contains(st, manifest.File) {
+		t.Fatalf("without --autocommit the manifest stays uncommitted: %q", st)
+	}
+	sharedRun(t, root, "shared", "add", "--autocommit", "--trailer", "Co-Authored-By: someone <s@s>", "design/issues")
+	if st := gitIn(t, root, "status", "--porcelain", "--", manifest.File); st != "" {
+		t.Errorf("the manifest is committed: %q", st)
+	}
+	msg := gitIn(t, root, "log", "-1", "--format=%B")
+	if !strings.Contains(msg, "chore: add to the shared paths: design/issues") || !strings.Contains(msg, "Co-Authored-By: someone <s@s>") {
+		t.Errorf("commit message: %q", msg)
+	}
+	if files := gitIn(t, root, "show", "--name-only", "--format=", "HEAD"); strings.TrimSpace(files) != manifest.File {
+		t.Errorf("the commit holds the manifest alone: %q", files)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -431,6 +432,104 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	}
 	if strings.Contains(string(got), `"token"`) || strings.Contains(string(got), "4242") || strings.Contains(string(got), "/p/harbour/k") {
 		t.Errorf("no token in the settings: %s", got)
+	}
+}
+
+// S-0295, ADR-0096: settings.get carries the shared paths as the manifest
+// has them now; settings.shared changes them through flai shared under the
+// settings action, its refusal a rule with flai's reason; and
+// settings.shared_check answers what flai shared check does, for anyone.
+func TestSettingsSharedThroughTheHostAPI(t *testing.T) {
+	root := sharedProject(t)
+	inProcess(t)
+	hostapiCall := func(method, params string) (string, int) {
+		t.Helper()
+		out, _, code := runIn(t, root, "hostapi", method, params)
+		return out, code
+	}
+	shared := func() string {
+		t.Helper()
+		out, code := hostapiCall("settings.get", `{}`)
+		var got struct {
+			Host struct {
+				Shared json.RawMessage `json:"shared"`
+			} `json:"host"`
+		}
+		if err := json.Unmarshal([]byte(out), &got); code != 0 || err != nil {
+			t.Fatalf("settings.get: %d %v %s", code, err, out)
+		}
+		return string(got.Host.Shared)
+	}
+	if got := shared(); got != `[]` {
+		t.Errorf("settings.get with no shared paths: %s, want []", got)
+	}
+
+	before := readManifestShared(t, root)
+	if out, code := hostapiCall("settings.shared", `{"action":"add","pattern":"design/adrs","request_id":"req-00000051"}`); code == 0 || !strings.Contains(out, "flai serve enable settings") || !strings.Contains(out, "-32012") {
+		t.Errorf("with the settings action off: %d %s", code, out)
+	}
+	if got := readManifestShared(t, root); !reflect.DeepEqual(got, before) {
+		t.Errorf("a refused change wrote the manifest: %v", got)
+	}
+
+	runIn(t, root, "serve", "enable", "settings")
+	for i, c := range []struct{ params, want string }{
+		{`{"action":"add","pattern":"design/adrs"`, `"data":{"added":["design/adrs"],"shared":["design/adrs"]}`},
+		{`{"action":"add","pattern":"docs/users/*.md"`, `"data":{"added":["docs/users/*.md"],"shared":["design/adrs","docs/users/*.md"]}`},
+		{`{"action":"add","pattern":"template"`, `"data":{"added":["template"],"shared":["design/adrs","docs/users/*.md","template"]}`},
+		{`{"action":"remove","pattern":"template"`, `"data":{"removed":["template"],"shared":["design/adrs","docs/users/*.md"]}`},
+	} {
+		out, code := hostapiCall("settings.shared", c.params+`,"request_id":"req-0000006`+strconv.Itoa(i)+`"}`)
+		if code != 0 || !strings.Contains(out, c.want) {
+			t.Errorf("settings.shared %s: %d %s, want %s", c.params, code, out, c.want)
+		}
+	}
+	if got := shared(); got != `["design/adrs","docs/users/*.md"]` {
+		t.Errorf("settings.get after the changes: %s", got)
+	}
+
+	for i, c := range []struct{ params, why string }{
+		{`{"action":"add","pattern":"design/adrs"`, "in the list already"},
+		{`{"action":"add","pattern":"/design"`, "absolute"},
+		{`{"action":"remove","pattern":"docs"`, "not in the list"},
+	} {
+		out, code := hostapiCall("settings.shared", c.params+`,"request_id":"req-0000007`+strconv.Itoa(i)+`"}`)
+		if code == 0 || !strings.Contains(out, "-32011") || !strings.Contains(out, c.why) {
+			t.Errorf("settings.shared %s: %d %s, want a rule saying %q", c.params, code, out, c.why)
+		}
+	}
+	if got := readManifestShared(t, root); !reflect.DeepEqual(got, []string{"design/adrs", "docs/users/*.md"}) {
+		t.Errorf("the refusals changed the manifest: %v", got)
+	}
+
+	// a read for anyone: with the settings action off again it still answers
+	runIn(t, root, "serve", "disable", "settings")
+	out, code := hostapiCall("settings.shared_check", `{"paths":["design/adrs/0001-x.md","docs/users","cli"],"story":"S-0001"}`)
+	var got struct {
+		Data []sharedCheck `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); code != 0 || err != nil {
+		t.Fatalf("settings.shared_check: %d %v %s", code, err, out)
+	}
+	want := []sharedCheck{
+		{Entry: "design/adrs/0001-x.md", Path: "design/adrs/0001-x.md", Shared: true, Pattern: "design/adrs"},
+		{Entry: "docs/users", Path: "docs/users"},
+		{Entry: "cli", Path: "flai"},
+		{Entry: "docs/users/flai.md", Path: "docs/users/flai.md", Shared: true, Pattern: "docs/users/*.md", Story: "S-0001"},
+		{Entry: "flai", Path: "flai", Story: "S-0001"},
+		{Entry: "design/adrs", Path: "design/adrs", Shared: true, Pattern: "design/adrs", Story: "S-0001"},
+		{Entry: "template/CHANGELOG.md", Path: "template/CHANGELOG.md", Story: "S-0001"},
+	}
+	if !reflect.DeepEqual(got.Data, want) {
+		t.Errorf("settings.shared_check =\n%+v\nwant\n%+v", got.Data, want)
+	}
+	if out, code := hostapiCall("settings.shared_check", `{"story":"S-0099"}`); code == 0 || !strings.Contains(out, "-32004") {
+		t.Errorf("a story that is not there: %d %s", code, out)
+	}
+
+	js, _, _ := runIn(t, root, "serve", "journal")
+	if !strings.Contains(js, "flai shared add --autocommit -- design/adrs") || !strings.Contains(js, "flai shared remove --autocommit -- template") || strings.Contains(js, "shared_check") {
+		t.Errorf("the journal names each change and no check:\n%s", js)
 	}
 }
 

@@ -75,14 +75,17 @@ printed too, frees nothing, and is warned about on stderr.
 }
 
 func newSharedAddCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var autocommit bool
+	var trailers []string
+	c := &cobra.Command{
 		Use:   "add <pattern>...",
 		Short: "Add patterns to the shared paths",
 		Long: `Add patterns to the end of claims.shared in system-flow.yaml, rewriting only that
 list and keeping the file's other keys and comments. A pattern that is not
 valid (empty, absolute, with a .. segment, or a malformed glob) or that is in
 the list already is refused with the reason, and nothing is written. The change
-is not committed. Prints each pattern added; with --json, {"added": [...],
+is committed, system-flow.yaml alone, only with --autocommit and unless the
+project sets dashboard.autocommit: false. Prints each pattern added; with --json, {"added": [...],
 "shared": [...]}, shared being the list after the change. Run flai shared check
 first to see what a pattern would free.
 
@@ -91,34 +94,49 @@ first to see what a pattern would free.
   flai shared add 'docs/users/*.md' 'design/**/README.md'`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.editShared(args, manifest.AddShared)
+			return a.editShared(args, manifest.AddShared, autocommit, "chore: add to the shared paths", trailers)
 		},
 	}
+	sharedCommitFlags(c, &autocommit, &trailers)
+	return c
 }
 
 func newSharedRemoveCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var autocommit bool
+	var trailers []string
+	c := &cobra.Command{
 		Use:   "remove <pattern>...",
 		Short: "Remove patterns from the shared paths",
 		Long: `Remove patterns from claims.shared in system-flow.yaml, rewriting only that list
 and keeping the file's other keys and comments. Name each pattern as flai
 shared list prints it; one that is not in the list is refused, and nothing is
-written. A pattern that is not valid may be removed. The change is not
-committed. Prints each pattern removed; with --json, {"removed": [...],
+written. A pattern that is not valid may be removed. The change is committed,
+system-flow.yaml alone, only with --autocommit and unless the project sets
+dashboard.autocommit: false. Prints each pattern removed; with --json, {"removed": [...],
 "shared": [...]}, shared being the list after the change.
 
 ` + sharedDialect,
 		Example: `  flai shared remove design/adrs`,
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.editShared(args, manifest.RemoveShared)
+			return a.editShared(args, manifest.RemoveShared, autocommit, "chore: remove from the shared paths", trailers)
 		},
 	}
+	sharedCommitFlags(c, &autocommit, &trailers)
+	return c
 }
 
-// editShared changes claims.shared in the project's manifest with edit and
-// says what changed.
-func (a *app) editShared(patterns []string, edit func(string, ...string) (manifest.Change, error)) error {
+// sharedCommitFlags registers the flags that commit an edit of the shared
+// paths, as flai agent set's do.
+func sharedCommitFlags(c *cobra.Command, autocommit *bool, trailers *[]string) {
+	c.Flags().BoolVar(autocommit, "autocommit", false, "commit system-flow.yaml on its own, unless dashboard.autocommit is false")
+	c.Flags().StringArrayVar(trailers, "trailer", nil, "a trailer line for the commit (repeatable)")
+}
+
+// editShared changes claims.shared in the project's manifest with edit,
+// commits it when autocommit asks and the project allows, and says what
+// changed.
+func (a *app) editShared(patterns []string, edit func(string, ...string) (manifest.Change, error), autocommit bool, msg string, trailers []string) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
@@ -127,6 +145,7 @@ func (a *app) editShared(patterns []string, edit func(string, ...string) (manife
 	if err != nil {
 		return err
 	}
+	a.commitManifest(repo, autocommit, msg+": "+strings.Join(append(ch.Added, ch.Removed...), ", "), trailers)
 	if a.jsonOut {
 		return a.printJSON(ch)
 	}

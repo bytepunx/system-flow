@@ -794,6 +794,8 @@ func (a *app) hostSettings(root string) any {
 	}
 	if repo, err := workitem.Open(root); err == nil {
 		out["default_agent"] = repo.Manifest.Agent
+		// the shared paths as the manifest has them now (S-0295, ADR-0096)
+		out["shared"] = nonNil(repo.Manifest.Claims.Shared)
 		out["manifest_checks"] = repo.Manifest.Checks
 		out["planning"] = planningTriggers(repo.Manifest.Planning, cfg.ActionEnabled(hostapi.ActionPlan, root), a.now())
 		if st, running := readMCPState(repo, a.now()); running {

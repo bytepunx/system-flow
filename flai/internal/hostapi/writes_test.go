@@ -83,6 +83,9 @@ var good = map[string]struct {
 	"settings.unserve":         {`{"root":"/home/me/git/blog",` + rid + `}`, "serve project remove --json -- /home/me/git/blog", ""},
 	"settings.mcp_token":       {`{` + rid + `}`, "mcp token --rotate --json", ""},
 	"settings.dashboard_token": {`{` + rid + `}`, "dashboard token --rotate --no-restart --json", ""},
+	// S-0295: the shared paths, changed under the settings action and checked by anyone
+	"settings.shared":       {`{"action":"add","pattern":" --docs/users/*.md ",` + rid + `}`, "shared add --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --json -- --docs/users/*.md", ""},
+	"settings.shared_check": {`{"paths":["docs/users/flai.md"," --help "],"story":"S-0001"}`, "shared check --json -- docs/users/flai.md --help S-0001", ""},
 }
 
 // refused is, per method, params that must never reach a command line.
@@ -177,6 +180,10 @@ var refused = map[string][]string{
 	"settings.unserve":         {`{"key":"blog",` + rid + `}`, `{"root":"/a\nb",` + rid + `}`, `{"root":"/a","key":"a b",` + rid + `}`},
 	"settings.mcp_token":       {`"--force"`, `{}`},
 	"settings.dashboard_token": {`"--force"`, `{}`},
+	"settings.shared": {`{"action":"--add","pattern":"x",` + rid + `}`, `{"pattern":"x",` + rid + `}`, `{"action":"add","pattern":"  ",` + rid + `}`,
+		`{"action":"remove","pattern":"a\nb",` + rid + `}`, `{"action":"add","pattern":["x"],` + rid + `}`, `{"action":"add","pattern":"x"}`},
+	"settings.shared_check": {`{}`, `{"paths":[]}`, `{"paths":[" "]}`, `{"paths":["a\u0000b"]}`, `{"paths":["S-0001"]}`, `{"paths":"docs"}`,
+		`{"story":"T-0001"}`, `{"story":"--help"}`, `{"story":"S-0001 --json"}`},
 }
 
 type recorder struct {
@@ -610,7 +617,8 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 		if host && !now && sp.action != ActionSettings {
 			t.Errorf("%s runs flai %s without the settings action", name, strings.Join(args[:2], " "))
 		}
-		if strings.HasPrefix(name, "settings.") && sp.action != ActionSettings {
+		// a read changes nothing, so, as settings.get, it needs no action (S-0295: settings.shared_check)
+		if strings.HasPrefix(name, "settings.") && !sp.reads && sp.action != ActionSettings {
 			t.Errorf("%s is not gated by the settings action", name)
 		}
 	}
@@ -714,6 +722,96 @@ func TestSettingsNeedTheShellsConsent(t *testing.T) {
 	}
 	if len(journal) != 2 || journal[0].Outcome != "done" || journal[0].Action != ActionSettings || journal[0].Detail != "flai serve enable push" || journal[1].Outcome != "disabled" {
 		t.Errorf("journal: %+v", journal)
+	}
+}
+
+// S-0295, ADR-0096: settings.shared adds or removes one pattern through flai
+// shared, under this project's settings action, and is journalled as the
+// command it ran; flai's refusal of a pattern is a rule with flai's reason;
+// with the action off nothing runs and the refusal says what enables it.
+func TestSettingsSharedAddsAndRemovesThroughFlaiShared(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := true
+	host := Host{Enabled: func(a, root string) bool { return on && a == ActionSettings && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{}
+	m := writeMethods(rec.run, time.Now, host)["settings.shared"]
+	call := func(params string, ran Ran) (any, *channel.Error) {
+		rec.ran = ran
+		return m(context.Background(), p, json.RawMessage(params))
+	}
+
+	res, e := call(`{"action":"add","pattern":"design/adrs","request_id":"req-00000041"}`, Ran{Stdout: []byte(`{"added":["design/adrs"],"shared":["design/adrs"]}`)})
+	if e != nil || string(res.(Written).Data) != `{"added":["design/adrs"],"shared":["design/adrs"]}` {
+		t.Fatalf("add answers flai's change: %+v %+v", res, e)
+	}
+	res, e = call(`{"action":"remove","pattern":"design/adrs","request_id":"req-00000042"}`, Ran{Stdout: []byte(`{"removed":["design/adrs"],"shared":[]}`)})
+	if e != nil || string(res.(Written).Data) != `{"removed":["design/adrs"],"shared":[]}` {
+		t.Fatalf("remove answers flai's change: %+v %+v", res, e)
+	}
+	why := `/p/system-flow.yaml: cannot add "design/adrs" to claims.shared: it is in the list already; nothing to add`
+	_, e = call(`{"action":"add","pattern":"design/adrs","request_id":"req-00000043"}`, Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "msg": "command failed", "err": why}}})
+	if e == nil || e.Code != Rule || e.Message != why {
+		t.Errorf("flai's refusal is a rule with its reason: %+v", e)
+	}
+	ran := []string{"shared add --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --json -- design/adrs", "shared remove --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --json -- design/adrs", "shared add --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --json -- design/adrs"}
+	if len(rec.runs) != len(ran) {
+		t.Fatalf("ran %d commands, want %d", len(rec.runs), len(ran))
+	}
+	for i, want := range ran {
+		if got := strings.Join(rec.runs[i].Args, " "); got != want || rec.runs[i].Dir != p.Root {
+			t.Errorf("run %d: %q in %s, want %q in %s", i, got, rec.runs[i].Dir, want, p.Root)
+		}
+	}
+
+	on = false
+	_, e = call(`{"action":"add","pattern":"docs/users/*.md","request_id":"req-00000044"}`, Ran{Stdout: []byte(`{}`)})
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings") || len(rec.runs) != len(ran) {
+		t.Errorf("with the settings action off nothing runs, and it says what enables it: %+v, ran %d", e, len(rec.runs))
+	}
+
+	want := []struct{ outcome, detail string }{
+		{"done", "flai shared add --autocommit -- design/adrs"},
+		{"done", "flai shared remove --autocommit -- design/adrs"},
+		{"failed", why},
+		{"disabled", ""},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.shared" || got.Outcome != w.outcome || got.Detail != w.detail {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
+
+// S-0295, ADR-0096: settings.shared_check answers what flai shared check
+// --json answers, for paths, a story, or both; it is a read, so it needs
+// neither a host action nor a request ID, and is not journalled.
+func TestSettingsSharedCheckAsksFlaiSharedCheck(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	answer := `[{"entry":"docs/users/flai.md","path":"docs/users/flai.md","shared":true,"pattern":"docs/users/*.md"},{"entry":"flai/cmd","path":"flai/cmd","shared":false},` +
+		`{"entry":"design/adrs","path":"design/adrs","shared":true,"pattern":"design/adrs","story":"S-0001"}]`
+	rec := &recorder{ran: Ran{Stdout: []byte(answer)}}
+	m := writeMethods(rec.run, time.Now, Host{Record: func(e Entry) { journal = append(journal, e) }})["settings.shared_check"]
+	for _, c := range []struct{ params, args string }{
+		{`{"paths":["docs/users/flai.md","flai/cmd"],"story":"S-0001"}`, "shared check --json -- docs/users/flai.md flai/cmd S-0001"},
+		{`{"paths":["docs/users/flai.md"]}`, "shared check --json -- docs/users/flai.md"},
+		{`{"story":"S-0001"}`, "shared check --json -- S-0001"},
+	} {
+		rec.runs = nil
+		res, e := m(context.Background(), p, json.RawMessage(c.params))
+		if e != nil || len(rec.runs) != 1 || strings.Join(rec.runs[0].Args, " ") != c.args || string(res.(Written).Data) != answer {
+			t.Errorf("%s: ran %+v, answered %+v %+v; want %q", c.params, rec.runs, res, e, c.args)
+		}
+	}
+	if len(journal) != 0 {
+		t.Errorf("a check is journalled: %+v", journal)
+	}
+	if sp := specs()["settings.shared_check"]; !sp.reads || sp.action != "" {
+		t.Errorf("settings.shared_check is a read under no host action: %+v", sp)
 	}
 }
 
