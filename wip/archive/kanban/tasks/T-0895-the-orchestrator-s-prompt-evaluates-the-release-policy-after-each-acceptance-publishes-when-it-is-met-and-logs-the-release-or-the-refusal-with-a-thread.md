@@ -3,16 +3,36 @@ id: T-0895
 type: task
 nature: feature
 title: The orchestrator's prompt evaluates the release policy after each acceptance, publishes when it is met, and logs the release or the refusal with a thread
-status: backlog
+status: done
 parent: S-0222
 owner: alex
 created: 2026-10-05T04:46:53Z
-updated: 2026-10-05T04:47:05Z
-transitions: []
+updated: 2026-10-06T12:33:46Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:58:46Z
+    by: agent-S-0222
+  - to: in-progress
+    at: 2026-10-06T11:58:46Z
+    by: agent-S-0222
+  - to: done
+    at: 2026-10-06T12:33:46Z
+    by: agent-S-0222
 stream: S-0222
 tags: [flai]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md]
 after: [T-0886]
+usage:
+  source: log
+  seconds: 2092
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 2757
+      cache_read: 1088064
+      cache_write: 137235
+      cost: 0.7775
 ---
 # T-0895 The orchestrator's prompt evaluates the release policy after each acceptance, publishes when it is met, and logs the release or the refusal with a thread
 

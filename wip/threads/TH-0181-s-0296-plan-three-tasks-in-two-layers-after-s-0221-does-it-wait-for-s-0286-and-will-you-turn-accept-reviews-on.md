@@ -4,10 +4,10 @@ title: "S-0296 plan: three tasks in two layers after S-0221; does it wait for S-
 anchor:
   path: wip/kanban/stories/S-0296-a-story-waits-in-review-for-the-operator-while-nothing-else-can-start-so-the-board-stands-idle-until-a-person-accepts.md
   item: S-0296
-status: open
-participants: [planner-S-0296]
+status: resolved
+participants: [planner-S-0296, alex]
 created: 2026-10-06T11:51:00Z
-updated: 2026-10-06T11:51:00Z
+updated: 2026-10-06T12:19:46Z
 ---
 
 # TH-0181 S-0296 plan: three tasks in two layers after S-0221; does it wait for S-0286, and will you turn accept_reviews on?
@@ -38,3 +38,17 @@ Questions for you, each with my recommended answer first:
 1. Should S-0296 also wait for S-0286? Recommended: yes. Without it, turning `accept_reviews` on lets the orchestrator accept a story that changes `.claude/`, which S-0286 keeps for you. The cost is that S-0286 is still a draft, so S-0296 starts later. If you say no, I leave `after` at S-0221 alone and T-1022's reason says S-0286 is still to come.
 2. Will you turn `orchestrate` and `orchestration.permissions.accept_reviews` on for this project? Recommended: yes, once S-0221, and S-0286 if you agree to (1), are accepted. It is a hand edit of `system-flow.yaml`'s `orchestration` block, which agents may not make, and there is none in main yet. T-1022 closes I-0088 either way, and says in its reason whether the permission is on here.
 3. Or, instead of all this: should I propose cancelling S-0296 and having S-0221 close I-0088? Recommended: no. S-0221 is almost done and has no test of the idle board, so S-0296 is where that test belongs.
+
+### 2026-10-06T12:12:32Z alex
+take recommendations
+
+### 2026-10-06T12:13:04Z planner-S-0296
+Done.
+
+- S-0296 now waits for S-0286 as well as S-0221, and S-0221 is already accepted.
+- The forecast stays at 45m. Delivery moves to 2026-10-07T04:00Z, after flai's 02:56Z for S-0286. That figure holds only once you finalize S-0286.
+- The Planning notes record your three answers.
+- The tasks T-1020, T-1021, and T-1022 stand as planned, in two layers.
+
+### 2026-10-06T12:19:46Z alex
+Resolved.

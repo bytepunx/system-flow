@@ -3,16 +3,36 @@ id: T-0897
 type: task
 nature: feature
 title: An ADR, the design, and the guides describe the orchestrator publishing by the release policy
-status: backlog
+status: done
 parent: S-0222
 owner: alex
 created: 2026-10-05T04:47:15Z
-updated: 2026-10-05T04:47:24Z
-transitions: []
+updated: 2026-10-06T12:38:02Z
+transitions:
+  - to: ready
+    at: 2026-10-06T12:33:52Z
+    by: agent-S-0222
+  - to: in-progress
+    at: 2026-10-06T12:33:53Z
+    by: agent-S-0222
+  - to: done
+    at: 2026-10-06T12:38:02Z
+    by: agent-S-0222
 stream: S-0222
 tags: [flai]
 touches: [design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-0891, T-0895]
+usage:
+  source: log
+  seconds: 249
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 24594
+      cache_read: 3977885
+      cache_write: 198957
+      cost: 2.6599
 ---
 # T-0897 An ADR, the design, and the guides describe the orchestrator publishing by the release policy
 

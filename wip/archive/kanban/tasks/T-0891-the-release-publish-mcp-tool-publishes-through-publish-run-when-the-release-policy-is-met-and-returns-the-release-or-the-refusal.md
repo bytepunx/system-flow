@@ -3,16 +3,36 @@ id: T-0891
 type: task
 nature: feature
 title: The release_publish MCP tool publishes through publish.run when the release policy is met, and returns the release or the refusal
-status: backlog
+status: done
 parent: S-0222
 owner: alex
 created: 2026-10-05T04:46:40Z
-updated: 2026-10-05T04:46:40Z
-transitions: []
+updated: 2026-10-06T12:33:46Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:58:45Z
+    by: agent-S-0222
+  - to: in-progress
+    at: 2026-10-06T11:58:45Z
+    by: agent-S-0222
+  - to: done
+    at: 2026-10-06T12:33:46Z
+    by: agent-S-0222
 stream: S-0222
 tags: [flai]
 touches: [flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
 after: [T-0885]
+usage:
+  source: log
+  seconds: 2093
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 3148
+      cache_read: 6674289
+      cache_write: 215080
+      cost: 4.3636
 ---
 # T-0891 The release_publish MCP tool publishes through publish.run when the release policy is met, and returns the release or the refusal
 

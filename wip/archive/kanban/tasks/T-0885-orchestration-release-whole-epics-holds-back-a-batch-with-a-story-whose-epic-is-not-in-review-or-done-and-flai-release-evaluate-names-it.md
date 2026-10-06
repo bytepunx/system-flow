@@ -3,15 +3,35 @@ id: T-0885
 type: task
 nature: feature
 title: orchestration.release.whole_epics holds back a batch with a story whose epic is not in review or done, and flai release --evaluate names it
-status: backlog
+status: done
 parent: S-0222
 owner: alex
 created: 2026-10-05T04:46:20Z
-updated: 2026-10-05T04:46:20Z
-transitions: []
+updated: 2026-10-06T11:58:34Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:53:20Z
+    by: agent-S-0222
+  - to: in-progress
+    at: 2026-10-06T11:53:20Z
+    by: agent-S-0222
+  - to: done
+    at: 2026-10-06T11:58:34Z
+    by: agent-S-0222
 stream: S-0222
 tags: [flai]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release.go, design/system/project-manifest.md, docs/operators/settings.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 314
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 323
+      cache_read: 1983987
+      cache_write: 96448
+      cost: 1.3173
 ---
 # T-0885 orchestration.release.whole_epics holds back a batch with a story whose epic is not in review or done, and flai release --evaluate names it
 

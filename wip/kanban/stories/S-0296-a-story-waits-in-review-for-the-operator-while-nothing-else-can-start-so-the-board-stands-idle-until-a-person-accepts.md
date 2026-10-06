@@ -6,7 +6,7 @@ title: A story waits in review for the operator while nothing else can start, so
 status: ready
 owner: alex
 created: 2026-10-06T11:44:51Z
-updated: 2026-10-06T11:52:17Z
+updated: 2026-10-06T12:12:58Z
 transitions:
   - to: ready
     at: 2026-10-06T11:49:31Z
@@ -14,7 +14,7 @@ transitions:
 tags: [flai]
 topics: [orchestration]
 touches: [flai/internal/serve/review_wait_test.go, flai/internal/serve/orchestrate.go, design/system/workflow.md, docs/operators/settings.md, docs/operators/index.md, design/issues/I-0088-a-story-waits-in-review-for-the-operator-while-nothing-else-can-start-so-the-board-stands-idle-until-a-person-accepts.md, design/issues/summary.md]
-after: [S-0221]
+after: [S-0221, S-0286]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -30,10 +30,10 @@ cost_of_delay:
   at: 2026-10-06T11:50:50Z
 forecast:
   duration: 45m
-  delivery: 2026-10-06T17:03:00Z
-  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0222, S-0224, S-0226, S-0223, S-0227, S-0229, S-0284, S-0278 and S-0295."
-  by: flai
-  at: 2026-10-06T11:52:17Z
+  delivery: 2026-10-07T04:00:00Z
+  basis: "flai forecast's 18m (median 116 s per unit over 12 done medium remediation stories, size 9) raised to 45m for a new flai serve test with a stand-in orchestrator accepting under accept_reviews, run with the race detector; delivery waits for S-0286, which flai forecasts done at 2026-10-07T02:56Z, 43rd in the pull order, plus 45m times a cycle factor of about 1.5 and a margin, while S-0286 is still a draft"
+  by: planner-S-0296
+  at: 2026-10-06T12:12:58Z
 finalized:
   by: alex
   at: 2026-10-06T11:45:52Z
@@ -61,9 +61,13 @@ Cost of delay inputs set by flai from I-0088. time_lost_per_cycle 2h48m: 1h24m p
 
 ### Planning
 
-Planned by planner-S-0296 on 2026-10-06. The plan's thread lists the tasks, their layers, the assumptions, and the questions for the operator.
+Planned by planner-S-0296 on 2026-10-06. The plan's thread, TH-0181, lists the tasks, their layers, and the assumptions. The operator took its recommendations on 2026-10-06:
 
-The fix itself is S-0221's: the orchestrator accepts a story in review under `orchestration.permissions.accept_reviews`. This story waits for S-0221 (`after`). What is left here is a test showing the board no longer idles behind a story in review, the design and guides saying so, and closing I-0088.
+- The story waits for S-0286 as well as S-0221.
+- The operator turns `orchestrate` and `orchestration.permissions.accept_reviews` on for this project once both are accepted.
+- The story is kept, not folded into S-0221.
+
+The fix itself is S-0221's, accepted on 2026-10-06: the orchestrator accepts a story in review under `orchestration.permissions.accept_reviews`. S-0286 keeps the operator's acceptance for a story that changes a path Claude Code protects, so that the permission can be left on. What is left here is a test showing the board no longer idles behind a story in review, the design and guides saying so, and closing I-0088.
 
 Touches:
 
@@ -76,11 +80,11 @@ Touches:
 - I-0088's file and `design/issues/summary.md` (co-change 9%): from the layout. `flai issue close` rewrites both.
 - Not taken from `flai touches suggest`: `docs/users/flai.md` (68%), `design/system/flai-cli.md` (67%), `docs/users/flai-reference.md` (46%). This story adds no command or flag; S-0221 documents `flai accept --by orchestrator`.
 
-Forecast: 45m, delivery 2026-10-06T17:12Z.
+Forecast: 45m, delivery 2026-10-07T04:00Z.
 
 - `flai forecast` gave 18m: 116 s per unit of size over 12 done medium remediation stories, times size 9 (2 criteria, 7 touches).
 - Raised to 45m. The test sets up a project with a story in review and a held ready story, and has a stand-in orchestrator accept under the permission. It must pass with the race detector, as S-0292's serve test did. The docs and the issue close are small.
-- Delivery is flai's 16:32Z, tenth in the pull order, plus the 27 extra minutes times a cycle factor of about 1.5. It also waits for S-0221. If the operator makes it wait for S-0286 too, as the plan's thread asks, delivery moves to after S-0286, which is still a draft.
+- Delivery is not flai's 16:34Z, which leaves out the wait for S-0286. flai forecasts S-0286 done at 2026-10-07T02:56Z, 43rd in the pull order. Add 45m times a cycle factor of about 1.5, plus a margin, and delivery is 04:00Z. S-0286 is still a draft, so delivery holds only once the operator finalizes it.
 
 Cost of delay: 420 USD/week, from `flai cod`, kept as computed.
 

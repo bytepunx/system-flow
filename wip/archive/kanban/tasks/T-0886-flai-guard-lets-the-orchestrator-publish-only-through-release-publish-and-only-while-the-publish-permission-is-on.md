@@ -3,15 +3,35 @@ id: T-0886
 type: task
 nature: feature
 title: flai guard lets the orchestrator publish only through release_publish, and only while the publish permission is on
-status: backlog
+status: done
 parent: S-0222
 owner: alex
 created: 2026-10-05T04:46:25Z
-updated: 2026-10-05T04:46:25Z
-transitions: []
+updated: 2026-10-06T11:58:34Z
+transitions:
+  - to: ready
+    at: 2026-10-06T11:53:20Z
+    by: agent-S-0222
+  - to: in-progress
+    at: 2026-10-06T11:53:21Z
+    by: agent-S-0222
+  - to: done
+    at: 2026-10-06T11:58:34Z
+    by: agent-S-0222
 stream: S-0222
 tags: [flai]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go]
+usage:
+  source: log
+  seconds: 313
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 172
+      cache_read: 1162657
+      cache_write: 83352
+      cost: 0.789
 ---
 # T-0886 flai guard lets the orchestrator publish only through release_publish, and only while the publish permission is on
 

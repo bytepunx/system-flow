@@ -3,24 +3,50 @@ id: S-0222
 type: story
 nature: feature
 title: "The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold"
-status: ready
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T11:52:17Z
+updated: 2026-10-06T17:58:54Z
 transitions:
   - to: ready
     at: 2026-10-05T04:41:24Z
     by: alex
+  - to: in-progress
+    at: 2026-10-06T11:52:45Z
+    by: agent-S-0222
+  - to: review
+    at: 2026-10-06T17:57:34Z
+    by: agent-S-0222
+  - to: done
+    at: 2026-10-06T17:58:54Z
+    by: alex
 tags: [flai]
 topics: [orchestration, release]
-touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md, flai/internal/guard, flai/internal/manifest, design/system/project-manifest.md, docs/operators/settings.md, flai/internal/mcpserver, flai/cmd/release.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
+touches: [flai/internal/harness, flai/internal/hostapi, flai/internal/release, design/system/strategic-agents.md, flai/internal/guard, flai/internal/manifest, design/system/project-manifest.md, docs/operators/settings.md, flai/internal/mcpserver, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/guard.go, design/issues/I-0081-flai-s-permission-prompt-waits-for-an-answer-from-the-story-s-owner-and-the-operator-s-thread-replies-carry-another-name-so-their-allow-is-never-seen-and-the-write-times-out.md, design/issues/summary.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 after: [S-0218, S-0174]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 3017
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 416
+      output: 43730
+      cache_read: 18398861
+      cache_write: 910654
+      cost: 12.2526
+    - model: claude-sonnet-5-5
+      input: 12
+      output: 3442
+      cache_read: 156278
+      cache_write: 45376
+      cost: 0.1791
 cost_of_delay:
   value: 76.53
   by: planner-S-0222
@@ -39,10 +65,10 @@ forecast:
 With `publish` on, the orchestrator cuts releases when the project's release policy says so: a cost of delay or count threshold, a theme (an epic or tag whose stories are all accepted), or its own judgement when the policy is `judgement`.
 
 ## Acceptance criteria
-- [ ] After each acceptance it runs `flai release --evaluate`; when the policy is met it publishes through `publish.run` (which requires the `push` host action too) and logs the release with the figures and the items bundled
-- [ ] Under `judgement`, it publishes when it judges the unreleased work coherent and complete, and logs the reasoning; it never publishes a batch with a story whose epic is not in review or done when `orchestration.release.whole_epics` is set
-- [ ] When publishing is refused (S-0174's tag check, a moved remote) it logs the refusal and opens a thread to the operator
-- [ ] Tests cover each policy met and not met, and the refusal
+- [x] After each acceptance it runs `flai release --evaluate`; when the policy is met it publishes through `publish.run` (which requires the `push` host action too) and logs the release with the figures and the items bundled
+- [x] Under `judgement`, it publishes when it judges the unreleased work coherent and complete, and logs the reasoning; it never publishes a batch with a story whose epic is not in review or done when `orchestration.release.whole_epics` is set
+- [x] When publishing is refused (S-0174's tag check, a moved remote) it logs the refusal and opens a thread to the operator
+- [x] Tests cover each policy met and not met, and the refusal
 
 ## Tasks
 - T-0885 orchestration.release.whole_epics holds back a batch with a story whose epic is not in review or done, and flai release --evaluate names it
