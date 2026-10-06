@@ -5,6 +5,7 @@ import { flushSync, mount, unmount } from 'svelte';
 import { GATHER_MS } from '$lib/events';
 import { resetForTests } from '$lib/project.svelte';
 import { boardTypes } from '$lib/boardtypes.svelte';
+import { BoardNatures, boardNatures, natures } from '$lib/boardnatures.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -284,5 +285,98 @@ describe("each lane's counts by type (S-0256)", () => {
 			long: '0 epics, 0 stories, 0 tasks',
 			name: '0 epics, 0 stories, 0 tasks'
 		});
+	});
+});
+
+// S-0302: the legend's nature tags filter the board. A lane shows a card only when its type is
+// ticked and its nature toggled on; hiding a nature changes no WIP count and no count by type.
+describe('the nature filter (S-0302)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, type: string, nature: string) => ({
+		id,
+		type,
+		title: id,
+		nature,
+		status: 'in-progress',
+		blocked: false,
+		age_seconds: 0,
+		archived: false
+	});
+	const withCards = {
+		...board,
+		wip_limits: { 'in-progress': 3 },
+		columns: {
+			'in-progress': [
+				card('E-0001', 'epic', 'feature'),
+				card('E-0002', 'epic', 'improvement'),
+				card('S-0001', 'story', 'feature'),
+				card('S-0002', 'story', 'remediation'),
+				card('T-0001', 'task', 'feature')
+			]
+		}
+	};
+	const shown = () =>
+		[...document.querySelectorAll('[data-lane="in-progress"] [data-card]')].map((e) =>
+			e.getAttribute('data-card')
+		);
+	const heading = () =>
+		document.querySelector('[data-lane="in-progress"] h2')!.textContent!.replace(/\s+/g, ' ');
+	const laneCounts = () =>
+		document.querySelector<HTMLElement>('[data-lane="in-progress"] [data-testid="lane-counts"]')!
+			.title;
+	const open = async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+	};
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('EventSource', FakeEventSource);
+		// the store as it starts from nothing stored, and every type ticked
+		localStorage.clear();
+		boardNatures.shown = new BoardNatures().shown;
+		for (const t of ['epic', 'story', 'task'] as const) boardTypes.set(t, true);
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board') return answer(withCards);
+			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
+			return answer({ enabled: false });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+		for (const n of natures) boardNatures.set(n, true);
+		for (const t of ['epic', 'story', 'task'] as const) boardTypes.set(t, true);
+		localStorage.clear();
+	});
+
+	it("shows every nature's cards when nothing is stored", async () => {
+		expect(natures.every((n) => boardNatures.shown[n])).toBe(true);
+		await open();
+		expect(shown()).toEqual(['E-0001', 'E-0002', 'S-0001', 'S-0002', 'T-0001']);
+	});
+
+	it("hides a nature's cards and leaves the lane's WIP count and counts as they were", async () => {
+		await open();
+		const before = { heading: heading(), counts: laneCounts() };
+		expect(before.heading).toContain('2/3');
+		expect(before.counts).toBe('2 epics, 2 stories, 1 task');
+		boardNatures.set('feature', false);
+		flushSync();
+		expect(shown()).toEqual(['E-0002', 'S-0002']);
+		expect({ heading: heading(), counts: laneCounts() }).toEqual(before);
+		boardNatures.set('feature', true);
+		flushSync();
+		expect(shown()).toEqual(['E-0001', 'E-0002', 'S-0001', 'S-0002', 'T-0001']);
+	});
+
+	it('combines with the type checkboxes', async () => {
+		boardTypes.set('story', false);
+		boardTypes.set('task', false);
+		boardNatures.set('feature', false);
+		await open();
+		expect(shown()).toEqual(['E-0002']);
 	});
 });

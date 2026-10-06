@@ -16,6 +16,7 @@
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import BoardTypes from '$lib/components/BoardTypes.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
+	import { boardNatures } from '$lib/boardnatures.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import { anyRunning, storyActivity, type HostAgent, type PlanRun } from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
@@ -159,9 +160,14 @@
 		const column = board?.columns[state] ?? [];
 		return state === 'done' ? doneLane(column, publishRemote) : column;
 	};
-	// The types ticked above the board (S-0141); WIP counts and reordering count stories regardless,
-	// and the lane's counts by type (S-0256) every card it holds.
-	const cards = (state: string) => held(state).filter((c) => boardTypes.shown[c.type as ItemType]);
+	// The types ticked above the board (S-0141) and the natures toggled on in its legend (S-0302):
+	// a lane shows a card only when both let it. Neither hides anything from the WIP counts or
+	// reordering, which count stories regardless, nor from the lane's counts by type (S-0256), which
+	// count every card it holds.
+	const cards = (state: string) =>
+		held(state).filter(
+			(c) => boardTypes.shown[c.type as ItemType] && boardNatures.isShown(c.nature)
+		);
 	const count = (state: string) =>
 		(board?.columns[state] ?? []).filter((c) => c.type === 'story').length;
 
