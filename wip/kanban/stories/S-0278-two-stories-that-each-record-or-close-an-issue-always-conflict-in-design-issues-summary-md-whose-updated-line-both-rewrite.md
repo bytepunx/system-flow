@@ -6,7 +6,7 @@ title: Two stories that each record or close an issue always conflict in design/
 status: backlog
 owner: alex
 created: 2026-10-05T04:40:47Z
-updated: 2026-10-05T04:40:47Z
+updated: 2026-10-06T11:29:55Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
     by: flai
     at: 2026-10-05T04:40:47Z
+finalized:
+  by: alex
+  at: 2026-10-06T11:29:55Z
 ---
 # S-0278 Two stories that each record or close an issue always conflict in design/issues/summary.md, whose updated line both rewrite
 
