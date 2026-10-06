@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:17Z
-updated: 2026-10-06T11:44:49Z
+updated: 2026-10-06T11:52:17Z
 transitions:
   - to: ready
     at: 2026-10-05T06:13:39Z
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:32Z
 forecast:
   duration: 40m
-  delivery: 2026-10-06T12:46:00Z
-  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0221 and S-0222."
+  delivery: 2026-10-06T12:53:00Z
+  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0222."
   by: flai
-  at: 2026-10-06T11:44:49Z
+  at: 2026-10-06T11:52:17Z
 ---
 # S-0224 The analyzer files its actionable findings as issues with their impact, and the issue step turns them into draft stories
 

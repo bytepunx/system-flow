@@ -7,6 +7,7 @@ updated: 2026-10-06T11:52:17Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0222](S-0222.md) | The orchestrator publishes by the release policy: judgement, theme, or cost of delay threshold | ready | system-flow | 2026-10-06T11:52:29Z |
 
 ## Strategic agents
 

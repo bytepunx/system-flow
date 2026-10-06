@@ -6,7 +6,7 @@ title: A story waits in review for the operator while nothing else can start, so
 status: ready
 owner: alex
 created: 2026-10-06T11:44:51Z
-updated: 2026-10-06T11:50:50Z
+updated: 2026-10-06T11:52:17Z
 transitions:
   - to: ready
     at: 2026-10-06T11:49:31Z
@@ -30,10 +30,10 @@ cost_of_delay:
   at: 2026-10-06T11:50:50Z
 forecast:
   duration: 45m
-  delivery: 2026-10-06T17:12:00Z
-  basis: "flai forecast's 18m (median 116 s per unit over 12 done medium remediation stories, size 9) raised to 45m for a new flai serve test with a stand-in orchestrator accepting under accept_reviews, run with the race detector, beside docs and an issue close; delivery is flai's 16:32Z, 10th in the pull order and after S-0221, plus the 27 extra minutes times a cycle factor of about 1.5"
-  by: planner-S-0296
-  at: 2026-10-06T11:50:50Z
+  delivery: 2026-10-06T17:03:00Z
+  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0222, S-0224, S-0226, S-0223, S-0227, S-0229, S-0284, S-0278 and S-0295."
+  by: flai
+  at: 2026-10-06T11:52:17Z
 finalized:
   by: alex
   at: 2026-10-06T11:45:52Z
