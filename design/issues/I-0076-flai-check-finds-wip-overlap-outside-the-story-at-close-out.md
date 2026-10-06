@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 6
+count: 7
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-06T20:18:53Z
-updated: 2026-10-06T20:18:53Z
+last_reported: 2026-10-06T22:10:04Z
+updated: 2026-10-06T22:10:04Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -55,6 +55,11 @@ Story: S-0296.
 flai check found outside the story:
 `wip/kanban/stories/S-0223-the-analyzer-runs-on-demand-or-on-a-schedule-and-writes-a-report-under-design-analysis.md`: S-0223 touches docs/operators/settings.md, which S-0296 (in progress) also touches as docs/operators/settings.md
 `wip/kanban/stories/S-0223-the-analyzer-runs-on-demand-or-on-a-schedule-and-writes-a-report-under-design-analysis.md`: S-0223 touches flai/internal/serve, which S-0296 (in progress) also touches as flai/internal/serve/review_wait_test.go
+
+### 2026-10-06T22:10:04Z
+Story: S-0227.
+flai check found outside the story:
+`wip/kanban/stories/S-0227-the-analyzer-s-cost-is-recorded-on-the-issues-it-filed-and-the-stories-made-from-them.md`: S-0227 touches design/system/strategic-agents.md, which S-0229 (in progress) also touches as design/system/strategic-agents.md
 
 ## Remediation
 
