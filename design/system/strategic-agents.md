@@ -370,7 +370,7 @@ The acceptance preview adds four blockers for an acceptance by the orchestrator,
 |-----------|--------------|
 | The verifier passed at the branch head | `--verified` is missing, or names a commit that is not the story branch's head |
 | Every criterion is ticked | A criterion under `## Acceptance criteria` is unticked; each is named |
-| The diff stays within the touches | A file the branch changes is under none of the story's touches, read as a claim reads them; each is named |
+| The diff stays within the touches | A file the branch changes is under none of the story's touches, read as a claim reads them; each is named. The workflow's own records are the story's whatever it touches: the `wip` folder, the issues under `design/issues`, and an experiment's results |
 | No thread is open | A thread on the story or one of its tasks is not resolved; each is named |
 
 The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`, naming the changed files that meet criterion `<n>`. flai refuses an orchestrator's acceptance without evidence, and one whose evidence names no changed file for a criterion. It writes the evidence, with the verified commit, under `### Accepted by the orchestrator` in the story's `## Notes`, in the acceptance commit, and returns it in `--json`. The done transition is recorded `by: orchestrator`, and the dashboard's review and story pages name who accepted.

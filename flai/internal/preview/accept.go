@@ -45,6 +45,14 @@ type Acceptance struct {
 	// Epic is the walk the story's epic takes with it: done, and archived
 	// with it, when the story is the epic's last open one (S-0200).
 	Epic *workitem.Followed `json:"epic,omitempty"`
+	// OrchestratorBlockers are the conditions of an acceptance by the
+	// orchestrator that fail (ADR-0093), each also in Blockers.
+	OrchestratorBlockers []Blocker `json:"orchestrator_blockers,omitempty"`
+	// Verified is the commit the orchestrator's verifier passed, resolved to
+	// its full name, when it names one.
+	Verified string `json:"verified,omitempty"`
+	// Evidence is the orchestrator's evidence, when given.
+	Evidence *Evidence `json:"evidence,omitempty"`
 }
 
 // Accept is what accepting a story or an epic would do, worked out before
@@ -54,6 +62,13 @@ type Acceptance struct {
 // transitions are made by; log takes a warning about a worktree git cannot
 // open.
 func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger) (*Acceptance, error) {
+	return AcceptWith(r, repo, it, by, now, log, AcceptOptions{})
+}
+
+// AcceptWith is Accept with what the acceptance adds: under
+// opts.Orchestrator, a blocker for each condition of ADR-0093 that fails,
+// beside every blocker Accept reports.
+func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
 	useGit := storygit.InWorkTree(r, repo.MainRoot)
@@ -131,6 +146,13 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read %s for merge conflict markers: %v", res.Branch, err))
 		} else if b != "" {
 			res.Blockers = append(res.Blockers, b)
+		}
+	}
+	if opts.Orchestrator {
+		res.Evidence = opts.Evidence
+		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts)
+		for _, b := range res.OrchestratorBlockers {
+			res.Blockers = append(res.Blockers, b.Message)
 		}
 	}
 	return res, nil
