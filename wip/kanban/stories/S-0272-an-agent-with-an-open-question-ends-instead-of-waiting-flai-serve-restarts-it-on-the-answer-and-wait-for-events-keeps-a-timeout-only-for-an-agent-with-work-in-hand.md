@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:31Z
-updated: 2026-10-06T19:45:24Z
+updated: 2026-10-06T20:07:39Z
 transitions: []
 tags: [cli, mcp]
 topics: [automation, mcp, conventions]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-06T11:36:16Z
 forecast:
   duration: 50m
-  delivery: 2026-10-07T08:43:00Z
-  basis: "Its own forecast of 50m; 32nd in the pull order with an in-progress limit of 3, behind S-0296, S-0278, S-0223, S-0224, S-0227, S-0229, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269, S-0270 and S-0271."
+  delivery: 2026-10-07T09:08:00Z
+  basis: "Its own forecast of 50m; 31st in the pull order with an in-progress limit of 3, behind S-0296, S-0223, S-0224, S-0227, S-0229, S-0212, S-0213, S-0214, S-0215, S-0216, S-0228, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0261, S-0264, S-0265, S-0269, S-0270 and S-0271."
   by: flai
-  at: 2026-10-06T19:45:24Z
+  at: 2026-10-06T20:07:39Z
 ---
 # S-0272 An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand
 
