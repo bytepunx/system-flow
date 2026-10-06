@@ -64,9 +64,15 @@ issue new and bump. Each permission allows more: plan_backlog_epics the
 MCP tool plan and flai plan on an epic; finalize_drafts item_edit with
 draft false and flai edit --no-draft, each with nothing else to change;
 promote_to_ready item_move and flai move of a story to ready; order_ready
-flai order --by <policy> --apply; answer_threads, recommend or
-autonomous, thread_reply and flai thread reply; accept_reviews flai
-accept; publish flai release --pending and flai push. A call a permission
+flai order --by <policy> --apply; answer_threads a reply on a thread
+another opened, with thread_reply or flai thread reply, as a recommendation
+(recommendation true, --recommend) while it is recommend, and also as an
+answer citing a source (source, --source) while it is autonomous, so that an
+answer it cannot source goes to the operator as a recommendation (S-0220);
+accept_reviews flai accept; publish flai release --pending and flai push.
+On a thread it opened it follows up and resolves, but never recommends or
+answers; it never resolves another's thread, never confirms a
+recommendation, and never names another author with --by. A call a permission
 would allow is refused while it is off, naming it (it needs
 orchestration.permissions.<name>); anything else that writes is refused
 as what the orchestrator never does: plan for a story, flai order placing
@@ -105,6 +111,7 @@ Write, and NotebookEdit as well.`,
 					a.logger().Warn("project unreadable, the orchestrator's permissions are taken as off", "component", "guard", "err", err.Error())
 				} else {
 					g.Permissions = repo.Manifest.Orchestration.Permissions
+					g.Opener = guard.ThreadOpener(repo)
 				}
 			}
 			r := g.Decide(e)

@@ -77,7 +77,7 @@ func TestGuardHoldsTheOrchestratorToItsPermissions(t *testing.T) {
 		err  string
 	}{
 		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"ready"}}`, 0, ""},
-		{`{"tool_name":"mcp__flai__thread_reply","tool_input":{"thread":"TH-1","text":"I recommend S-2"}}`, 0, ""},
+		{`{"tool_name":"mcp__flai__thread_reply","tool_input":{"id":"TH-1","text":"I recommend S-2","recommendation":true}}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"flai order --by wsjf && flai thread new --on S-1 'q' 'text'"}}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"flai accept S-1"}}`, 2, `the orchestrator cannot run "flai accept S-1": it needs orchestration.permissions.accept_reviews, which is off. Ask the operator with thread_open on the item`},
 		{`{"tool_name":"Write","tool_input":{"file_path":"x.go","content":""}}`, 2, "the orchestrator cannot use Write: the orchestrator never does it"},

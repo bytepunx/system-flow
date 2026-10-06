@@ -465,8 +465,8 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{bash("", "flai edit S-0001 --no-draft"), bash("", "flai edit --by orchestrator S-0001 --no-draft=true --hash=abc --json")}},
 		{manifest.PermitPromoteToReady, manifest.Permissions{PromoteToReady: true}, []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move --reason 'top of the backlog' S-0001 ready")}},
 		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply")}},
-		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerRecommend}, []Event{itemOf("thread_reply", "", ""), bash("", "flai thread reply TH-0001 'I recommend S-0002'")}},
-		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerAutonomous}, []Event{itemOf("thread_reply", "", "")}},
+		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerRecommend}, []Event{recommendation(itemOf("thread_reply", "TH-0001", "")), bash("", "flai thread reply --recommend TH-0001 'I recommend S-0002'")}},
+		{manifest.PermitAnswerThreads, manifest.Permissions{AnswerThreads: manifest.AnswerAutonomous}, []Event{recommendation(itemOf("thread_reply", "TH-0001", ""))}},
 		{manifest.PermitAcceptReviews, manifest.Permissions{AcceptReviews: true}, []Event{bash("", "flai accept S-0001")}},
 		{manifest.PermitPublish, manifest.Permissions{Publish: true}, []Event{bash("", "flai release --pending"), bash("", "flai push --pending"), bash("", "flai accept --help; flai push")}},
 	} {

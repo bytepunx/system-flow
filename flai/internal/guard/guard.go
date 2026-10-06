@@ -27,6 +27,14 @@
 // allows, such as an edit of a file, a commit, or a story placed by hand in
 // the pull order, it never makes. Its sub-agents are held as every sub-agent
 // is.
+//
+// Its calls on threads are held by who opened the thread and by
+// answer_threads (S-0220): on a thread it opened it follows up and resolves,
+// but never recommends or answers its own question; on another's it replies
+// only while answer_threads is on, as a recommendation for the operator to
+// confirm, or, while it is autonomous, as an answer that cites its source,
+// and it never resolves one. Confirming a recommendation is the operator's
+// alone (ADR-0090).
 package guard
 
 import (
@@ -40,6 +48,8 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Event is the part of a Claude Code PreToolUse hook's input the guard
@@ -55,20 +65,23 @@ type Event struct {
 }
 
 // Input is the part of a tool call's input the guard reads: Bash's command;
-// item_move's item and the state it moves the item to, and plan's item;
-// item_new's type and whether it makes a story a draft, and item_edit's
-// draft; and the file Edit or Write changes. Fields are the names of every
-// field the input gives, whatever the guard reads of it, so that an
-// item_edit that finalizes a draft is told from one that changes more, and
-// a draft false given from one left out.
+// item_move's item and the state it moves the item to, plan's item, and the
+// thread of thread_reply and thread_resolve; item_new's type and whether it
+// makes a story a draft, and item_edit's draft; whether thread_reply is a
+// recommendation and the source it cites; and the file Edit or Write
+// changes. Fields are the names of every field the input gives, whatever the
+// guard reads of it, so that an item_edit that finalizes a draft is told
+// from one that changes more, and a draft false given from one left out.
 type Input struct {
-	Command  string   `json:"command"`
-	ID       string   `json:"id"`
-	To       string   `json:"to"`
-	Type     string   `json:"type"`
-	Draft    bool     `json:"draft"`
-	FilePath string   `json:"file_path"`
-	Fields   []string `json:"-"`
+	Command        string   `json:"command"`
+	ID             string   `json:"id"`
+	To             string   `json:"to"`
+	Type           string   `json:"type"`
+	Draft          bool     `json:"draft"`
+	Recommendation bool     `json:"recommendation"`
+	Source         string   `json:"source"`
+	FilePath       string   `json:"file_path"`
+	Fields         []string `json:"-"`
 }
 
 // UnmarshalJSON decodes a tool call's input and the names of its fields.
@@ -224,16 +237,45 @@ const plansEpics = "it asks for the planner on an epic alone, one flai plan --ca
 // order (S-0219).
 const byHand = "it orders the ready column by its policy, with flai order --by <policy> --apply, and never places a story by hand, which is the operator's"
 
+// threadValues are the flags of flai thread reply, resolve, and confirm,
+// flai's own among them, that take a value.
+var threadValues = map[string]bool{"--by": true, "--config": true, "--reason": true, "--source": true}
+
+// Why the orchestrator never makes a thread call, whatever its permissions
+// (S-0220).
+const (
+	confirms     = "confirming a recommendation is the operator's alone (ADR-0090)"
+	writesAsSelf = "it writes to a thread as itself, so give no --by naming another"
+	resolvesOwn  = "it resolves only a thread it opened; one another opened is for its opener or the operator to resolve"
+	answersOwn   = "on a thread it opened it only follows up, with neither recommendation nor source: it never recommends or answers its own question"
+)
+
 // Guard decides on the calls of one flai: Commands are the names of its
 // commands, so that a word flai on a command line counts as running flai
 // only when a command of its follows. Role is the session's role, from
 // FLAI_ROLE: RolePlan holds the session's own calls to planning,
 // RoleOrchestrate holds them to Permissions, the project's
-// orchestration.permissions, and any other leaves them alone.
+// orchestration.permissions, and any other leaves them alone. Opener says
+// who opened the thread with an ID, for the orchestrator's calls on threads;
+// ThreadOpener reads it from a project's threads. A thread whose opener it
+// cannot tell, or every thread when Opener is nil, is held as another's.
 type Guard struct {
 	Commands    []string
 	Role        string
 	Permissions manifest.Permissions
+	Opener      func(id string) (string, error)
+}
+
+// ThreadOpener says who opened the thread with an ID in r's wip/threads, in
+// the main checkout, where every flai that writes to a thread reads it.
+func ThreadOpener(r *workitem.Repo) func(id string) (string, error) {
+	return func(id string) (string, error) {
+		th, err := threads.Get(r, id)
+		if err != nil {
+			return "", err
+		}
+		return th.Opener(), nil
+	}
 }
 
 // Refusal is the guard's decision on a call: Why it is refused, "" when it
@@ -297,16 +339,19 @@ var planning = rules{
 func (g Guard) orchestration() rules {
 	return rules{
 		flai: func(cmd, sub string, rest []string) (string, string) {
+			if cmd == "thread" && slices.Contains([]string{"reply", "resolve", "confirm"}, sub) {
+				return g.thread(cliThread(sub, rest))
+			}
 			needs, never := orchestrated(cmd, sub, rest)
 			switch {
 			case never != "":
-				return never, ""
+				return nevers(never), ""
 			case needs != "" && !g.Permissions.Allows(needs):
-				return "it needs " + needs, needs
+				return off(needs), needs
 			}
 			return "", ""
 		},
-		git: "it runs only git's reads",
+		git: nevers("it runs only git's reads"),
 	}
 }
 
@@ -350,12 +395,111 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 			return manifest.PermitPublish, ""
 		}
 		return "", "it releases with flai release --pending alone"
-	case "thread":
-		if sub == "reply" {
-			return manifest.PermitAnswerThreads, ""
-		}
 	}
 	return "", "of flai's commands that write, it runs only thread new, issue new and bump, and those its permissions allow"
+}
+
+// threadCall is one of the orchestrator's calls on a thread: verb is reply,
+// resolve, or confirm, and id the thread; for a reply, whether it is a
+// recommendation and whether it cites a source; and by the author the call
+// names in place of the orchestrator, "" when it names none.
+type threadCall struct {
+	verb, id, by            string
+	recommendation, sourced bool
+}
+
+// cliThread is the thread call the words after flai make, of flai thread
+// with its subcommand sub.
+func cliThread(sub string, rest []string) threadCall {
+	c := threadCall{verb: sub, by: value(rest, "--by"), recommendation: given(rest, "--recommend"), sourced: cites(value(rest, "--source"))}
+	if args := positionals(rest, threadValues); len(args) > 2 {
+		c.id = args[2]
+	}
+	return c
+}
+
+// cites says whether a reply's source names a file, as flai reads it.
+func cites(source string) bool {
+	s, err := threads.ParseSource(source)
+	return err == nil && s.Path != ""
+}
+
+// value is the value words give flag last, as --flag value or --flag=value;
+// "" when they give none.
+func value(words []string, flag string) string {
+	v := ""
+	for i, w := range words {
+		if w == flag && i+1 < len(words) {
+			v = words[i+1]
+		} else if s, ok := strings.CutPrefix(w, flag+"="); ok {
+			v = s
+		}
+	}
+	return v
+}
+
+// thread says why the orchestrator may not make a call on a thread, and the
+// permission that would allow it; both "" when it may (S-0220). It never
+// confirms a recommendation, writes as another, or resolves a thread it did
+// not open. On a thread it opened it follows up and resolves, whatever its
+// permissions, but never recommends or answers. On another's, while
+// answer_threads is off it does not reply; recommend lets it reply with a
+// recommendation; and autonomous lets it answer too, citing a source, so
+// that an answer it cannot source goes to the operator as a recommendation.
+func (g Guard) thread(c threadCall) (why, needs string) {
+	switch {
+	case c.verb == "confirm":
+		return nevers(confirms), ""
+	case c.by != "" && c.by != workitem.ActivityOrchestrator:
+		return nevers(writesAsSelf), ""
+	}
+	own := g.opened(c.id)
+	switch {
+	case c.verb == "resolve" && !own:
+		return nevers(resolvesOwn), ""
+	case own && (c.recommendation || c.sourced):
+		return nevers(answersOwn), ""
+	case own:
+		return "", ""
+	}
+	mode, answers := g.Permissions.AnswerMode(), manifest.PermitAnswerThreads
+	switch {
+	case !g.Permissions.Allows(answers):
+		return off(answers), answers
+	case c.recommendation, mode == manifest.AnswerAutonomous && c.sourced:
+		return "", ""
+	case mode == manifest.AnswerAutonomous:
+		return "it answers another's thread only citing what the answer rests on, so give source <path> or <path>#<heading> (--source on the command line), or post it as a recommendation for the operator to confirm with recommendation true (--recommend)", ""
+	case c.sourced:
+		return fmt.Sprintf("orchestration.permissions.%s is %s, so it replies to another's thread only as a recommendation for the operator to confirm: give recommendation true (--recommend); %s would let it answer citing its source", answers, mode, manifest.AnswerAutonomous), answers
+	}
+	return fmt.Sprintf("orchestration.permissions.%s is %s, so it replies to another's thread only as a recommendation for the operator to confirm: give recommendation true (--recommend); %s would let it answer only citing a source", answers, mode, manifest.AnswerAutonomous), ""
+}
+
+// opened says whether the orchestrator opened the thread with id, as Opener
+// tells; a thread Opener cannot tell of is another's.
+func (g Guard) opened(id string) bool {
+	if g.Opener == nil || id == "" {
+		return false
+	}
+	who, err := g.Opener(id)
+	return err == nil && who == workitem.ActivityOrchestrator
+}
+
+// threadDoes is what a thread call does, said after "the orchestrator
+// cannot".
+func threadDoes(c threadCall) string {
+	id := c.id
+	if id == "" {
+		id = "a thread"
+	}
+	switch {
+	case c.verb != "reply":
+		return c.verb + " " + id
+	case c.recommendation:
+		return "recommend an answer to " + id
+	}
+	return "reply to " + id
 }
 
 // ordersByPolicy says whether the words after flai, of flai order, order the
@@ -494,7 +638,7 @@ func (g Guard) Decide(e Event) Refusal {
 func (g Guard) orchestrate(e Event) Refusal {
 	if slices.Contains(fileEdits, e.ToolName) {
 		call := strings.TrimSpace(e.ToolName + " " + e.ToolInput.FilePath)
-		return refusedOrchestrator(call, "use "+e.ToolName, "it acts through flai and never edits a file", "")
+		return refusedOrchestrator(call, "use "+e.ToolName, nevers("it acts through flai and never edits a file"), "")
 	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
 		in := e.ToolInput
@@ -503,6 +647,19 @@ func (g Guard) orchestrate(e Event) Refusal {
 		switch {
 		case slices.Contains(MCPReads, tool), slices.Contains(MCPOrchestrates, tool):
 			return Refusal{}
+		case tool == "thread_reply", tool == "thread_resolve":
+			c := threadCall{verb: strings.TrimPrefix(tool, "thread_"), id: in.ID, recommendation: in.Recommendation, sourced: cites(in.Source)}
+			why, permit := g.thread(c)
+			if why == "" {
+				return Refusal{}
+			}
+			if c.recommendation {
+				call += " recommendation"
+			}
+			if c.sourced {
+				call += " source " + strings.TrimSpace(in.Source)
+			}
+			return refusedOrchestrator(call, threadDoes(c), why, permit)
 		case tool == "plan":
 			what = "plan " + in.ID
 			if isEpic(in.ID) {
@@ -524,15 +681,16 @@ func (g Guard) orchestrate(e Event) Refusal {
 			} else {
 				never = "it moves an item to ready and no further"
 			}
-		case tool == "thread_reply":
-			needs = manifest.PermitAnswerThreads
 		default:
-			never = "of flai's tools that write, it calls only thread_open and activity_log, and those its permissions allow"
+			never = "of flai's tools that write, it calls only thread_open and activity_log, thread_reply and thread_resolve as the thread allows, and those its permissions allow"
 		}
-		if never == "" && g.Permissions.Allows(needs) {
-			return Refusal{}
+		switch {
+		case never != "":
+			return refusedOrchestrator(call, what, nevers(never), "")
+		case !g.Permissions.Allows(needs):
+			return refusedOrchestrator(call, what, off(needs), needs)
 		}
-		return refusedOrchestrator(call, what, never, needs)
+		return Refusal{}
 	}
 	if e.ToolName != "Bash" {
 		return Refusal{}
@@ -547,18 +705,26 @@ func (g Guard) orchestrate(e Event) Refusal {
 	return Refusal{}
 }
 
-// refusedOrchestrator is the orchestrator's refusal of call, said as what:
-// for want of the permission needs, or, when needs is "", because it never
-// makes the call, for why.
+// refusedOrchestrator is the orchestrator's refusal of call, said as what,
+// for why; needs is the permission that would allow it, "" when none would.
 func refusedOrchestrator(call, what, why, needs string) Refusal {
-	r := Refusal{Call: call}
+	r := Refusal{Call: call, Why: fmt.Sprintf("the orchestrator cannot %s: %s. %s", what, why, askOperator)}
 	if needs != "" {
 		r.Needs = "orchestration.permissions." + needs
-		r.Why = fmt.Sprintf("the orchestrator cannot %s: it needs %s, which is off. %s", what, r.Needs, askOperator)
-		return r
 	}
-	r.Why = fmt.Sprintf("the orchestrator cannot %s: the orchestrator never does it, whatever its permissions: %s. %s", what, why, askOperator)
 	return r
+}
+
+// off says the orchestrator is refused a call for want of the permission
+// needs.
+func off(needs string) string {
+	return "it needs orchestration.permissions." + needs + ", which is off"
+}
+
+// nevers says the orchestrator never makes a call, whatever its
+// permissions, for why.
+func nevers(why string) string {
+	return "the orchestrator never does it, whatever its permissions: " + why
 }
 
 // plan says why the planner's own call is refused, or "" when it is not.
