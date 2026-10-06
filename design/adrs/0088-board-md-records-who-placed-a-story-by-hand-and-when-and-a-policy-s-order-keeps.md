@@ -5,6 +5,7 @@ status: accepted
 date: 2026-10-06
 supersedes: []
 superseded_by: []
+topics: [orchestration, board, cli]
 ---
 
 # ADR-0088 board.md records who placed a story by hand and when, and a policy's order keeps a placement of the last day
