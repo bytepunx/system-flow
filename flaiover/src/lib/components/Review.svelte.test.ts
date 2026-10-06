@@ -238,6 +238,35 @@ describe('Review', () => {
 		expect(button('Accept')).toBeUndefined();
 	});
 
+	// ADR-0093: the message names who accepted, from the acceptance's by, and the commit the
+	// orchestrator's verifier passed; an older flai names neither, and the message stays as it was.
+	it('names who accepted, and the verified commit when there is one', async () => {
+		const accepted = async (result: Record<string, unknown>) => {
+			backend({ accept: () => ndjson([{ event: 'done', result }]) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Accept').click();
+			await settle();
+			const text = document.querySelector('[data-testid="accepted"]')!.textContent!;
+			unmount(c);
+			c = undefined;
+			document.body.innerHTML = '';
+			return text.replace(/\s+/g, ' ').trim();
+		};
+		expect(
+			await accepted({
+				id: 'S-0041',
+				status: 'done',
+				by: 'orchestrator',
+				verified: '0123456789abcdef0123456789abcdef01234567'
+			})
+		).toBe('S-0041 is accepted by orchestrator at 0123456789ab.');
+		expect(await accepted({ id: 'S-0041', status: 'done', by: 'alex' })).toBe(
+			'S-0041 is accepted by alex.'
+		);
+		expect(await accepted({ id: 'S-0041', status: 'done' })).toBe('S-0041 is accepted.');
+	});
+
 	it('shows flai’s failure verbatim and that the story is still in review', async () => {
 		const message = 'rebase of story/S-0041 onto main stopped with conflicts in docs/users/flai.md';
 		backend({

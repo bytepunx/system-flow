@@ -103,6 +103,18 @@
 	// The inputs changed after the planner set the value (ADR-0080), so it is to be worked out again.
 	const valueStale = $derived(costOfDelayStale(item?.cost_of_delay));
 	const forecast = $derived(forecastLines(item?.forecast));
+	// Who accepted a done story and on which day, from its last transition to done (ADR-0093). The
+	// orchestrator's acceptance writes its evidence under ### Accepted by the orchestrator in the
+	// story's Notes, which the line links to by the heading's anchor when the body has it.
+	const accepted = $derived.by(() => {
+		if (item?.type !== 'story' || item.status !== 'done') return null;
+		const t = [...item.transitions].reverse().find((t) => t.to === 'done');
+		if (!t) return null;
+		const evidence =
+			t.by === 'orchestrator' &&
+			item.body.split('\n').some((l) => l.trim() === '### Accepted by the orchestrator');
+		return { by: t.by, on: t.at.slice(0, 10), evidence };
+	});
 	const expected = $derived(expectedCostLine(expectedCost));
 	// What strategic agents such as the planner spent on the item, apart from its agents (ADR-0083).
 	const strategic = $derived(strategicLines(item?.usage));
@@ -373,6 +385,16 @@
 						href={resolve('/items/[id]', { id: item.parent })}>{item.parent}</a
 					>{/if}
 			</p>
+			{#if accepted}
+				<p class="mt-1 text-sm text-muted" data-testid="item-accepted">
+					Accepted by {accepted.by} on {accepted.on}{#if accepted.evidence}, with
+						<a
+							class="underline"
+							href="#accepted-by-the-orchestrator"
+							data-testid="item-accepted-evidence">its evidence</a
+						> in the Notes{/if}.
+				</p>
+			{/if}
 			{#if notice}<DismissibleNotice
 					class="mt-2 rounded border border-line-strong bg-raised p-2 text-sm"
 					testid="item-notice"

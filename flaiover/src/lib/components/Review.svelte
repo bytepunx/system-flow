@@ -81,7 +81,9 @@
 	let running = $state(false);
 	let progress = $state<Progress[]>([]);
 	let warnings = $state<string[]>([]);
-	let result = $state<{ tags?: string[] } | null>(null);
+	// by is who accepted, as the done transition records; verified is the commit the orchestrator's
+	// verifier passed (ADR-0093). An older flai sends neither.
+	let result = $state<{ tags?: string[]; by?: string; verified?: string } | null>(null);
 	let failure = $state<string | null>(null);
 
 	let sendingBack = $state(false);
@@ -434,7 +436,11 @@
 
 	{#if result}
 		<div class="mb-4 rounded border border-good bg-good-soft p-3 text-sm text-good" role="status">
-			<p class="font-medium">{item.id} is accepted.</p>
+			<p class="font-medium" data-testid="accepted">
+				{item.id} is accepted{result.by ? ` by ${result.by}` : ''}{result.verified
+					? ` at ${result.verified.slice(0, 12)}`
+					: ''}.
+			</p>
 			{#if result.tags?.length}<p>Released: {result.tags.join(', ')}</p>{:else}<p>
 					Nothing was released.
 				</p>{/if}

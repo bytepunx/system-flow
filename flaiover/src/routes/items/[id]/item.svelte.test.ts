@@ -711,6 +711,58 @@ describe('the item page (S-0154)', () => {
 		expect(shown()).toBeNull();
 	});
 
+	// ADR-0093: a done story says who accepted it and on which day, from its last transition to
+	// done; the orchestrator's acceptance links to the evidence it wrote in the story's Notes.
+	describe('who accepted a done story (ADR-0093)', () => {
+		const done = (by: string, notes = '') => ({
+			...story,
+			status: 'done',
+			transitions: [
+				...story.transitions,
+				{ to: 'review', at: '2026-10-05T22:00:00Z', by: 'agent-S-0154' },
+				{ to: 'done', at: '2026-10-06T09:30:00Z', by }
+			],
+			body: story.body + notes
+		});
+		const line = () =>
+			document
+				.querySelector('[data-testid="item-accepted"]')
+				?.textContent!.replace(/\s+/g, ' ')
+				.trim();
+		const link = () =>
+			document.querySelector<HTMLAnchorElement>('[data-testid="item-accepted-evidence"]');
+		const notes =
+			'\n## Notes\n\n### Accepted by the orchestrator\n\n- Verified: 0123456789abcdef0123456789abcdef01234567\n- At: 2026-10-06T09:30:00Z\n\nVerdict: pass, tests and lint clean\n- 1: `flai/cmd/accept.go`\n';
+
+		it('names the orchestrator and links to its evidence in the Notes', async () => {
+			serve(done('orchestrator', notes));
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(line()).toBe(
+				'Accepted by orchestrator on 2026-10-06, with its evidence in the Notes.'
+			);
+			expect(link()!.getAttribute('href')).toBe('#accepted-by-the-orchestrator');
+			// the link lands on the heading the body renders
+			expect(document.getElementById('accepted-by-the-orchestrator')!.textContent).toContain(
+				'Accepted by the orchestrator'
+			);
+		});
+
+		it('names the operator with no evidence link, and says nothing of a story that is not done', async () => {
+			serve(done('alex'));
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(line()).toBe('Accepted by alex on 2026-10-06.');
+			expect(link()).toBeNull();
+			unmount(c);
+			document.body.innerHTML = '';
+			serve(story);
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(line()).toBeUndefined();
+		});
+	});
+
 	it('stops following the project once it is left', async () => {
 		serve(story);
 		c = mount(ItemPage, { target: document.body });
