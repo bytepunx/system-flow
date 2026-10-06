@@ -330,7 +330,8 @@ const ActionOrchestrate = "orchestrate"
 
 // ActionAnalyze is the host action that starts the analyzer for a project,
 // with a focus or none, on the operator's word (S-0223): analyze.run, and
-// flai analyze in a shell. One analyzer runs per project at a time.
+// flai analyze in a shell; and on analysis.schedule, which flai serve starts
+// for all three focuses. One analyzer runs per project at a time.
 const ActionAnalyze = "analyze"
 
 // Actions are the host actions there are, with what each lets a dashboard
@@ -346,7 +347,7 @@ var Actions = map[string]string{
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
 	ActionOrchestrate: "run the orchestrator, with the project's orchestration agent (orchestration.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for as long as this is on: started again when it ends, a minute after a failure, and stopped when this is turned off; it keeps work moving through flai only as far as orchestration.permissions in system-flow.yaml allow, each off by default, and logs each decision in wip/agents/orchestrator.md",
-	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you press Analyze or run flai analyze, looking for bottlenecks, intent, or risk, or all three; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
+	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you press Analyze or run flai analyze, looking for bottlenecks, intent, or risk, or all three, and for all three each time analysis.schedule in system-flow.yaml comes round; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 }
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):

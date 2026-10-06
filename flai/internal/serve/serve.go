@@ -335,12 +335,16 @@ func Run(ctx context.Context, o Options) error {
 			// changes, when an agent ends and its queue can move on, and every
 			// minute, which is when the schedule is seen to come round (S-0211).
 			// So does the orchestrator, which starts its run again when it
-			// ends and stops it once the action is off (S-0218).
+			// ends and stops it once the action is off (S-0218), and the
+			// analysis scheduler, which sees analysis.schedule come round as
+			// the replanner sees planning.schedule (S-0223).
 			replanner := newReplanner(o, e, starter)
 			orch := newOrchestrator(o, e, starter)
+			analyst := newAnalysisScheduler(o, e, starter)
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			replanner.look(cctx)
 			orch.look(cctx)
+			analyst.look(cctx)
 			go func() {
 				for {
 					select {
@@ -354,6 +358,7 @@ func Run(ctx context.Context, o Options) error {
 					}
 					replanner.look(cctx)
 					orch.look(cctx)
+					analyst.look(cctx)
 				}
 			}()
 			go func() {
@@ -366,6 +371,7 @@ func Run(ctx context.Context, o Options) error {
 						starter.look(cctx, false)
 						replanner.look(cctx)
 						orch.look(cctx)
+						analyst.look(cctx)
 					}
 				})
 				r.client.Run(cctx)

@@ -86,11 +86,9 @@ type replanner struct {
 	since time.Time
 	seen  map[string]time.Time
 	order []string // the pull order as last seen
-	// spec is planning.schedule as last seen, and mark when the schedule last
-	// came round or was set.
-	spec  string
-	mark  time.Time
-	queue []queued
+	// cadence follows planning.schedule.
+	cadence cadence
+	queue   []queued
 	// started is the item of the planner run this replanner last started.
 	started string
 	said    map[string]bool // the manifest's refusals warned of
@@ -101,12 +99,12 @@ type replanner struct {
 // it.
 func newReplanner(o Options, e Entry, starter *launcher) *replanner {
 	now := o.Now().UTC()
-	r := &replanner{o: o, e: e, starter: starter, since: now.Truncate(time.Second), seen: map[string]time.Time{}, mark: now, said: map[string]bool{}}
+	r := &replanner{o: o, e: e, starter: starter, since: now.Truncate(time.Second), seen: map[string]time.Time{}, cadence: cadence{mark: now}, said: map[string]bool{}}
 	if repo, err := workitem.Open(e.Root); err == nil {
 		if board, err := repo.LoadBoard(); err == nil {
 			r.order = slices.Clone(board.Order)
 		}
-		r.spec = strings.TrimSpace(repo.Manifest.Planning.Schedule)
+		r.cadence.spec = strings.TrimSpace(repo.Manifest.Planning.Schedule)
 	}
 	return r
 }
@@ -141,7 +139,7 @@ func (r *replanner) look(ctx context.Context) {
 	r.order = slices.Clone(board.Order)
 	sched := r.schedule(repo.Manifest.Planning, now)
 	if r.o.Agent == nil || !r.o.Agent(r.e.Root).Plan {
-		r.queue, r.mark = nil, now
+		r.queue, r.cadence.mark = nil, now
 		return
 	}
 	byID := map[string]*workitem.Item{}
@@ -160,11 +158,10 @@ func (r *replanner) look(ctx context.Context) {
 	if len(ahead) > 0 {
 		r.replan(repo, items, board, now, ahead)
 	}
-	if sched != nil && scheduleDue(*sched, r.mark, now) {
+	if r.cadence.due(sched, now) {
 		for _, id := range workitem.PullSequence(board.Order, items, workitem.Ready) {
-			r.queue = enqueue(r.queue, id, "schedule "+sched.String())
+			r.queue = enqueue(r.queue, id, scheduleTrigger(sched))
 		}
-		r.mark = now
 	}
 	r.drain(ctx)
 }
@@ -173,9 +170,7 @@ func (r *replanner) look(ctx context.Context) {
 // parsed, which is warned of once. A schedule set or changed comes round
 // first at its next time from now.
 func (r *replanner) schedule(plan manifest.Planning, now time.Time) *cron.Schedule {
-	if spec := strings.TrimSpace(plan.Schedule); spec != r.spec {
-		r.spec, r.mark = spec, now
-	}
+	r.cadence.see(plan.Schedule, now)
 	sched, err := plan.PlanSchedule()
 	if err != nil {
 		r.warnOnce("planning schedule not valid", err)
@@ -410,6 +405,39 @@ func moveTriggers(changes []workitem.Change) []string {
 func scheduleDue(sched cron.Schedule, mark, now time.Time) bool {
 	next := sched.Next(mark)
 	return !next.IsZero() && !next.After(now)
+}
+
+// cadence follows a manifest schedule from look to look, for the replanner
+// and the analyzer's schedule (S-0211, S-0223): spec is the schedule as last
+// seen, and mark when it last came round or was set.
+type cadence struct {
+	spec string
+	mark time.Time
+}
+
+// see takes spec as the schedule at now: one set or changed comes round
+// first at its next time from now.
+func (c *cadence) see(spec string, now time.Time) {
+	if spec = strings.TrimSpace(spec); spec != c.spec {
+		c.spec, c.mark = spec, now
+	}
+}
+
+// due reports whether sched, nil when there is none, has come round since
+// the mark by now, and marks now when it has, so that times missed in
+// between come round once.
+func (c *cadence) due(sched *cron.Schedule, now time.Time) bool {
+	if sched == nil || !scheduleDue(*sched, c.mark, now) {
+		return false
+	}
+	c.mark = now
+	return true
+}
+
+// scheduleTrigger is the trigger of a run a schedule started: "schedule"
+// and the schedule as written, as "schedule daily".
+func scheduleTrigger(sched *cron.Schedule) string {
+	return "schedule " + sched.String()
 }
 
 // enqueue adds trigger for item to q: to item's entry when it has one and
