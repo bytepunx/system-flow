@@ -3,12 +3,18 @@ id: T-0972
 type: task
 nature: feature
 title: flai serve starts the analyzer when analysis.schedule comes round, while the analyze host action is on
-status: backlog
+status: in-progress
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:36Z
-updated: 2026-10-05T05:47:36Z
-transitions: []
+updated: 2026-10-06T20:28:07Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:28:07Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:28:07Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/serve.go]

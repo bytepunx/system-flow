@@ -3,11 +3,11 @@ id: T-0968
 type: task
 nature: feature
 title: flai serve starts the analyzer behind the analyze host action, records its run, and logs the report it wrote with the run's cost
-status: in-progress
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:21Z
-updated: 2026-10-06T20:15:10Z
+updated: 2026-10-06T20:27:49Z
 transitions:
   - to: ready
     at: 2026-10-06T20:15:10Z
@@ -15,10 +15,27 @@ transitions:
   - to: in-progress
     at: 2026-10-06T20:15:10Z
     by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:27:49Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:27:49Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
 after: [T-0949, T-0957]
+usage:
+  source: log
+  seconds: 758
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 159
+      output: 815
+      cache_read: 10644843
+      cache_write: 226274
+      cost: 4.7359
 ---
 # T-0968 flai serve starts the analyzer behind the analyze host action, records its run, and logs the report it wrote with the run's cost
 

@@ -26,15 +26,15 @@ tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/analysis_test.go]
 usage:
   source: log
-  seconds: 308
+  seconds: 381
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 129
-      cache_read: 519455
-      cache_write: 68030
-      cost: 0.2557
+      input: 38
+      output: 233
+      cache_read: 1047127
+      cache_write: 109965
+      cost: 0.5041
 ---
 # T-0949 system-flow.yaml takes analysis.agent and analysis.schedule, and flai check reports a bad one
 

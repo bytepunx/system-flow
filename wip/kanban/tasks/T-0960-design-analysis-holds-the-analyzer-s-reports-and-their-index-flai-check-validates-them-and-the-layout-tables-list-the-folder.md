@@ -3,11 +3,11 @@ id: T-0960
 type: task
 nature: feature
 title: design/analysis holds the analyzer's reports and their index, flai check validates them, and the layout tables list the folder
-status: in-progress
+status: done
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:46:40Z
-updated: 2026-10-06T20:15:10Z
+updated: 2026-10-06T20:27:49Z
 transitions:
   - to: ready
     at: 2026-10-06T20:15:09Z
@@ -15,10 +15,27 @@ transitions:
   - to: in-progress
     at: 2026-10-06T20:15:10Z
     by: agent-S-0223
+  - to: review
+    at: 2026-10-06T20:27:49Z
+    by: agent-S-0223
+  - to: done
+    at: 2026-10-06T20:27:49Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/internal/analysis/analysis.go, flai/internal/analysis/analysis_test.go, flai/internal/check/check.go, flai/internal/check/analysis_test.go, design/analysis/README.md, template/root/design/analysis/README.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/README.md, template/root/design/README.md.tmpl, design/system/repository-layout.md, docs/users/conventions.md, docs/users/index.md]
 after: [T-0949]
+usage:
+  source: log
+  seconds: 758
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 394
+      cache_read: 2731641
+      cache_write: 97259
+      cost: 1.2325
 ---
 # T-0960 design/analysis holds the analyzer's reports and their index, flai check validates them, and the layout tables list the folder
 

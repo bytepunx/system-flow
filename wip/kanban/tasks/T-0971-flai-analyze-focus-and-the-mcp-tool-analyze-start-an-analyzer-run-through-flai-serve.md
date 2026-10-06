@@ -3,12 +3,18 @@ id: T-0971
 type: task
 nature: feature
 title: "flai analyze [--focus] and the MCP tool analyze start an analyzer run through flai serve"
-status: backlog
+status: in-progress
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:31Z
-updated: 2026-10-05T05:47:31Z
-transitions: []
+updated: 2026-10-06T20:28:07Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:28:06Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:28:07Z
+    by: agent-S-0223
 stream: S-0223
 tags: [flai]
 touches: [flai/cmd/analyze.go, flai/cmd/analyze_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/analyze.go, flai/internal/mcpserver/analyze_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go]

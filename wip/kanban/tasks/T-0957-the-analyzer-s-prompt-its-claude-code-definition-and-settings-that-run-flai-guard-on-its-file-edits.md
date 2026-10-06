@@ -20,15 +20,15 @@ tags: [flai]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/adapters.go, ".claude/agents/analyzer.md", ".claude/settings.json", template/root/.claude/agents/analyzer.md, template/root/.claude/settings.json]
 usage:
   source: log
-  seconds: 307
+  seconds: 1149
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 267
-      cache_read: 1873509
-      cache_write: 106720
-      cost: 0.8619
+      input: 85
+      output: 435
+      cache_read: 3196578
+      cache_write: 164474
+      cost: 1.4643
 ---
 # T-0957 The analyzer's prompt, its claude-code definition, and settings that run flai guard on its file edits
 

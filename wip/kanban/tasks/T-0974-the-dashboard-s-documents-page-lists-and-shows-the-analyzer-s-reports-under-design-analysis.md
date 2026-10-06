@@ -3,12 +3,18 @@ id: T-0974
 type: task
 nature: feature
 title: The dashboard's documents page lists and shows the analyzer's reports under design/analysis
-status: backlog
+status: in-progress
 parent: S-0223
 owner: alex
 created: 2026-10-05T05:47:53Z
-updated: 2026-10-05T05:47:53Z
-transitions: []
+updated: 2026-10-06T20:28:08Z
+transitions:
+  - to: ready
+    at: 2026-10-06T20:28:08Z
+    by: agent-S-0223
+  - to: in-progress
+    at: 2026-10-06T20:28:08Z
+    by: agent-S-0223
 stream: S-0223
 tags: [dashboard]
 touches: ["flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flai/internal/hostapi/docs_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
