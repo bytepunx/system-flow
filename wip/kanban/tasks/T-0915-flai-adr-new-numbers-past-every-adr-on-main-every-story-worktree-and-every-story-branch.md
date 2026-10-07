@@ -3,12 +3,18 @@ id: T-0915
 type: task
 nature: remediation
 title: flai adr new numbers past every ADR on main, every story worktree, and every story branch
-status: backlog
+status: in-progress
 parent: S-0245
 owner: alex
 created: 2026-10-05T05:44:13Z
-updated: 2026-10-05T05:44:13Z
-transitions: []
+updated: 2026-10-07T02:03:10Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:03:10Z
+    by: agent-S-0245
+  - to: in-progress
+    at: 2026-10-07T02:03:10Z
+    by: agent-S-0245
 stream: S-0245
 tags: [flai, adr]
 touches: [flai/internal/adr, flai/cmd/adr.go, flai/cmd/adr_test.go, docs/users/flai-reference.md]

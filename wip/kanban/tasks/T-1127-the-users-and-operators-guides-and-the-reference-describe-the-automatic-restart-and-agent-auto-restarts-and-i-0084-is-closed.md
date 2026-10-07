@@ -3,16 +3,36 @@ id: T-1127
 type: task
 nature: remediation
 title: The users' and operators' guides and the reference describe the automatic restart and agent.auto_restarts, and I-0084 is closed
-status: backlog
+status: done
 parent: S-0294
 owner: alex
 created: 2026-10-06T23:08:07Z
-updated: 2026-10-06T23:09:16Z
-transitions: []
+updated: 2026-10-07T02:01:21Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:59:54Z
+    by: agent-S-0294
+  - to: in-progress
+    at: 2026-10-07T01:59:54Z
+    by: agent-S-0294
+  - to: done
+    at: 2026-10-07T02:01:21Z
+    by: agent-S-0294
 stream: S-0294
 tags: [docs, serve]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/summary.md]
 after: [T-1126]
+usage:
+  source: log
+  seconds: 87
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 200
+      cache_read: 1872972
+      cache_write: 68046
+      cost: 0.865
 ---
 # T-1127 The users' and operators' guides and the reference describe the automatic restart and agent.auto_restarts, and I-0084 is closed
 

@@ -3,12 +3,18 @@ id: T-1098
 type: task
 nature: improvement
 title: A taskdone package closes a task in the ADR's order and stops at the first step that fails, with its findings
-status: backlog
+status: in-progress
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:09Z
-updated: 2026-10-06T22:53:36Z
-transitions: []
+updated: 2026-10-07T02:00:20Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:00:19Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T02:00:20Z
+    by: agent-S-0269
 stream: S-0269
 tags: [cli, git]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go]

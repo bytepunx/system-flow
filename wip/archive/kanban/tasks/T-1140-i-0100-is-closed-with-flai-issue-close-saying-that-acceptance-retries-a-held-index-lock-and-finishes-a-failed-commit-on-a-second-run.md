@@ -3,16 +3,36 @@ id: T-1140
 type: task
 nature: remediation
 title: I-0100 is closed with flai issue close, saying that acceptance retries a held index lock and finishes a failed commit on a second run
-status: backlog
+status: done
 parent: S-0307
 owner: alex
 created: 2026-10-07T01:12:57Z
-updated: 2026-10-07T01:12:57Z
-transitions: []
+updated: 2026-10-07T01:57:38Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:56:04Z
+    by: agent-S-0307
+  - to: in-progress
+    at: 2026-10-07T01:56:04Z
+    by: agent-S-0307
+  - to: done
+    at: 2026-10-07T01:57:38Z
+    by: agent-S-0307
 stream: S-0307
 tags: [flai]
 touches: [design/issues/I-0100-the-acceptance-s-commit-step-fails-when-another-process-holds-git-s-index-lock-and-the-acceptance-cannot-then-be-finished-by-flai.md, design/issues/summary.md]
 after: [T-1138]
+usage:
+  source: log
+  seconds: 94
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 3865
+      cache_read: 446411
+      cache_write: 20071
+      cost: 0.2936
 ---
 # T-1140 I-0100 is closed with flai issue close, saying that acceptance retries a held index lock and finishes a failed commit on a second run
 

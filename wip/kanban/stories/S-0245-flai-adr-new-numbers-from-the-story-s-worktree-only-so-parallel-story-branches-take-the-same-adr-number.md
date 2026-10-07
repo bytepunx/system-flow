@@ -3,14 +3,17 @@ id: S-0245
 type: story
 nature: improvement
 title: flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T01:43:45Z
+updated: 2026-10-07T02:02:40Z
 transitions:
   - to: ready
     at: 2026-10-07T01:11:26Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T02:02:40Z
+    by: agent-S-0245
 tags: []
 topics: [cli]
 touches: [flai/internal/adr, flai/cmd/adr.go, flai/cmd/adr_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flai-cli.md, design/system/documentation-standard.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]

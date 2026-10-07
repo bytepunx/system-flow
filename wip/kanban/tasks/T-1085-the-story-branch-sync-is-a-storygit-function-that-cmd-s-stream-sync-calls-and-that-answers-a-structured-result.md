@@ -3,11 +3,11 @@ id: T-1085
 type: task
 nature: improvement
 title: The story-branch sync is a storygit function that cmd's stream sync calls and that answers a structured result
-status: in-progress
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:52:50Z
-updated: 2026-10-07T01:43:27Z
+updated: 2026-10-07T02:00:18Z
 transitions:
   - to: ready
     at: 2026-10-07T01:43:26Z
@@ -15,9 +15,29 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:43:27Z
     by: agent-S-0269
+  - to: done
+    at: 2026-10-07T02:00:18Z
+    by: agent-S-0269
 stream: S-0269
 tags: [cli, git]
-touches: [flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go]
+touches: [flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/branch.go]
+usage:
+  source: log
+  seconds: 1011
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 123
+      output: 489
+      cache_read: 6932760
+      cache_write: 173739
+      cost: 3.1667
+    - model: claude-sonnet-5-5
+      input: 6
+      output: 18
+      cache_read: 24770
+      cache_write: 1015
+      cost: 0.0169
 ---
 # T-1085 The story-branch sync is a storygit function that cmd's stream sync calls and that answers a structured result
 

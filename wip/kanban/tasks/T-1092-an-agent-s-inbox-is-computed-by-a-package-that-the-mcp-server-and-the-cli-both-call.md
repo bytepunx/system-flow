@@ -3,11 +3,11 @@ id: T-1092
 type: task
 nature: improvement
 title: An agent's inbox is computed by a package that the MCP server and the CLI both call
-status: in-progress
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:52:57Z
-updated: 2026-10-07T01:43:27Z
+updated: 2026-10-07T02:00:19Z
 transitions:
   - to: ready
     at: 2026-10-07T01:43:27Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:43:27Z
     by: agent-S-0269
+  - to: done
+    at: 2026-10-07T02:00:19Z
+    by: agent-S-0269
 stream: S-0269
 tags: [mcp]
 touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go]
+usage:
+  source: log
+  seconds: 1011
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 363
+      cache_read: 3644634
+      cache_write: 111783
+      cost: 1.674
 ---
 # T-1092 An agent's inbox is computed by a package that the MCP server and the CLI both call
 

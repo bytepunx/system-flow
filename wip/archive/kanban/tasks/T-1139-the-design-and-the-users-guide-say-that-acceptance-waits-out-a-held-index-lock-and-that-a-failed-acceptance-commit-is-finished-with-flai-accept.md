@@ -3,16 +3,36 @@ id: T-1139
 type: task
 nature: remediation
 title: The design and the users' guide say that acceptance waits out a held index lock and that a failed acceptance commit is finished with flai accept
-status: backlog
+status: done
 parent: S-0307
 owner: alex
 created: 2026-10-07T01:12:53Z
-updated: 2026-10-07T01:12:53Z
-transitions: []
+updated: 2026-10-07T01:57:38Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:56:03Z
+    by: agent-S-0307
+  - to: in-progress
+    at: 2026-10-07T01:56:03Z
+    by: agent-S-0307
+  - to: done
+    at: 2026-10-07T01:57:38Z
+    by: agent-S-0307
 stream: S-0307
 tags: [flai, docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-1138]
+usage:
+  source: log
+  seconds: 95
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 8952
+      cache_read: 1034080
+      cache_write: 46492
+      cost: 0.6801
 ---
 # T-1139 The design and the users' guide say that acceptance waits out a held index lock and that a failed acceptance commit is finished with flai accept
 

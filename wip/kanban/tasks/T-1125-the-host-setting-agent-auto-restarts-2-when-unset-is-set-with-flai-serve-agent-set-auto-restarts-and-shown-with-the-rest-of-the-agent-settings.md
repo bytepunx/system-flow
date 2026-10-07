@@ -3,11 +3,11 @@ id: T-1125
 type: task
 nature: remediation
 title: The host setting agent.auto_restarts, 2 when unset, is set with flai serve agent set --auto-restarts and shown with the rest of the agent settings
-status: in-progress
+status: done
 parent: S-0294
 owner: alex
 created: 2026-10-06T23:07:46Z
-updated: 2026-10-07T01:43:40Z
+updated: 2026-10-07T01:49:51Z
 transitions:
   - to: ready
     at: 2026-10-07T01:43:22Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:43:23Z
     by: agent-S-0294
+  - to: done
+    at: 2026-10-07T01:49:51Z
+    by: agent-S-0294
 stream: S-0294
 tags: [cli, serve]
 touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 388
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 359
+      cache_read: 3132129
+      cache_write: 105950
+      cost: 1.443
 ---
 # T-1125 The host setting agent.auto_restarts, 2 when unset, is set with flai serve agent set --auto-restarts and shown with the rest of the agent settings
 

@@ -3,11 +3,11 @@ id: T-1124
 type: task
 nature: remediation
 title: An ADR refining ADR-0043, flai-cli.md, and workflow.md say flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then opens a thread
-status: in-progress
+status: done
 parent: S-0294
 owner: alex
 created: 2026-10-06T23:07:37Z
-updated: 2026-10-07T01:43:40Z
+updated: 2026-10-07T01:49:50Z
 transitions:
   - to: ready
     at: 2026-10-07T01:43:22Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:43:22Z
     by: agent-S-0294
+  - to: done
+    at: 2026-10-07T01:49:50Z
+    by: agent-S-0294
 stream: S-0294
 tags: [docs, serve]
 touches: [design/adrs, design/system/flai-cli.md, design/system/workflow.md, design/adrs/README.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
+usage:
+  source: log
+  seconds: 388
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 226
+      cache_read: 1620030
+      cache_write: 59499
+      cost: 0.7485
 ---
 # T-1124 An ADR refining ADR-0043, flai-cli.md, and workflow.md say flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then opens a thread
 

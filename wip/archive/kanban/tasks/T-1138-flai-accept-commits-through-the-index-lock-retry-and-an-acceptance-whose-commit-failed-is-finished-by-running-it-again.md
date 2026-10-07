@@ -3,16 +3,36 @@ id: T-1138
 type: task
 nature: remediation
 title: flai accept commits through the index-lock retry, and an acceptance whose commit failed is finished by running it again
-status: backlog
+status: done
 parent: S-0307
 owner: alex
 created: 2026-10-07T01:12:45Z
-updated: 2026-10-07T01:12:45Z
-transitions: []
+updated: 2026-10-07T01:56:03Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:44:49Z
+    by: agent-S-0307
+  - to: in-progress
+    at: 2026-10-07T01:44:50Z
+    by: agent-S-0307
+  - to: done
+    at: 2026-10-07T01:56:03Z
+    by: agent-S-0307
 stream: S-0307
 tags: [flai]
 touches: [flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/accept_lock_test.go]
 after: [T-1137]
+usage:
+  source: log
+  seconds: 673
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 37002
+      cache_read: 4274149
+      cache_write: 192165
+      cost: 2.8112
 ---
 # T-1138 flai accept commits through the index-lock retry, and an acceptance whose commit failed is finished by running it again
 

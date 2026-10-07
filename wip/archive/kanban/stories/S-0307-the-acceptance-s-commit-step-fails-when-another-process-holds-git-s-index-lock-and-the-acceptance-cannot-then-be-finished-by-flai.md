@@ -3,10 +3,10 @@ id: S-0307
 type: story
 nature: remediation
 title: The acceptance's commit step fails when another process holds git's index lock, and the acceptance cannot then be finished by flai
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T01:07:13Z
-updated: 2026-10-07T01:42:04Z
+updated: 2026-10-07T02:03:45Z
 transitions:
   - to: ready
     at: 2026-10-07T01:10:44Z
@@ -14,14 +14,36 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:42:04Z
     by: system-flow
+  - to: review
+    at: 2026-10-07T02:02:09Z
+    by: agent-S-0307
+  - to: done
+    at: 2026-10-07T02:03:45Z
+    by: alex
 tags: [flai]
 topics: [cli, git]
-touches: [flai/internal/storygit/indexlock.go, flai/internal/storygit/indexlock_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/accept_lock_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0100-the-acceptance-s-commit-step-fails-when-another-process-holds-git-s-index-lock-and-the-acceptance-cannot-then-be-finished-by-flai.md, design/issues/summary.md]
+touches: [flai/internal/storygit/indexlock.go, flai/internal/storygit/indexlock_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/accept_lock_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0100-the-acceptance-s-commit-step-fails-when-another-process-holds-git-s-index-lock-and-the-acceptance-cannot-then-be-finished-by-flai.md, design/issues/summary.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1229
+  models:
+    - model: claude-opus-5-5
+      input: 194
+      output: 80766
+      cache_read: 9329430
+      cache_write: 419450
+      cost: 6.1362
+    - model: claude-sonnet-5-5
+      input: 16
+      output: 4420
+      cache_read: 229877
+      cache_write: 51924
+      cost: 0.22
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -49,8 +71,8 @@ This story remediates [I-0100](../../../design/issues/I-0100-the-acceptance-s-co
 Directions to weigh: retry the commit a few times when git reports the index lock held, since the other writer is brief; or make an acceptance that is done and archived but whose commit is missing resumable, as one that is done but not archived already is ("completed from step 0 without a second transition"); and record the commit's failure in the journal.
 
 ## Acceptance criteria
-- [ ] The cause I-0100 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0100 is closed with `flai issue close I-0100 --reason` saying what fixed it
+- [x] The cause I-0100 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0100 is closed with `flai issue close I-0100 --reason` saying what fixed it
 
 ## Tasks
 - T-1137 A storygit helper runs a git command again while another process holds the index lock, and gives up with git's whole error

@@ -3,11 +3,11 @@ id: T-1137
 type: task
 nature: remediation
 title: A storygit helper runs a git command again while another process holds the index lock, and gives up with git's whole error
-status: in-progress
+status: done
 parent: S-0307
 owner: alex
 created: 2026-10-07T01:12:33Z
-updated: 2026-10-07T01:42:24Z
+updated: 2026-10-07T01:44:49Z
 transitions:
   - to: ready
     at: 2026-10-07T01:42:24Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:42:24Z
     by: agent-S-0307
+  - to: done
+    at: 2026-10-07T01:44:49Z
+    by: agent-S-0307
 stream: S-0307
 tags: [flai]
 touches: [flai/internal/storygit/indexlock.go, flai/internal/storygit/indexlock_test.go]
+usage:
+  source: log
+  seconds: 145
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 11936
+      cache_read: 1378747
+      cache_write: 61988
+      cost: 0.9068
 ---
 # T-1137 A storygit helper runs a git command again while another process holds the index lock, and gives up with git's whole error
 

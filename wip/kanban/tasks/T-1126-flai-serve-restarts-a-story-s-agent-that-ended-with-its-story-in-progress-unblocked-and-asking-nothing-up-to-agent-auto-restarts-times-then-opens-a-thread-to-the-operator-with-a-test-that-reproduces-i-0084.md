@@ -3,16 +3,36 @@ id: T-1126
 type: task
 nature: remediation
 title: flai serve restarts a story's agent that ended with its story in progress, unblocked, and asking nothing, up to agent.auto_restarts times, then opens a thread to the operator, with a test that reproduces I-0084
-status: backlog
+status: done
 parent: S-0294
 owner: alex
 created: 2026-10-06T23:07:58Z
-updated: 2026-10-06T23:09:15Z
-transitions: []
+updated: 2026-10-07T01:59:54Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:49:51Z
+    by: agent-S-0294
+  - to: in-progress
+    at: 2026-10-07T01:49:51Z
+    by: agent-S-0294
+  - to: done
+    at: 2026-10-07T01:59:54Z
+    by: agent-S-0294
 stream: S-0294
 tags: [cli, serve]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/cmd/serve_actions.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/cmd/serve_actions.go, flai/internal/harness/harness.go]
 after: [T-1124, T-1125]
+usage:
+  source: log
+  seconds: 603
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 552
+      cache_read: 7255207
+      cache_write: 157482
+      cost: 3.3032
 ---
 # T-1126 flai serve restarts a story's agent that ended with its story in progress, unblocked, and asking nothing, up to agent.auto_restarts times, then opens a thread to the operator, with a test that reproduces I-0084
 

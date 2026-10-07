@@ -6,7 +6,7 @@ title: Claude Code ends a headless agent ten minutes after its turn ends, even w
 status: in-progress
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-07T01:42:03Z
+updated: 2026-10-07T02:01:09Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:56Z
@@ -16,16 +16,23 @@ transitions:
     by: agent-S-0294
 tags: [cli, serve]
 topics: [automation]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/adrs, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/summary.md]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/adrs, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/summary.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/adrs/README.md, flai/internal/harness/harness.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1169
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 266
+      output: 1598
+      cache_read: 16504450
+      cache_write: 555468
+      cost: 7.6023
   strategic:
     - kind: planner
       seconds: 614
@@ -75,8 +82,8 @@ Two separate things went wrong, and each has its own fix.
 S-0285 made the first remediation ([ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md)). It measured the ten minutes again on 2.1.290: a turn ended at 10:34:48Z with a background sub-agent out, and the process exited at 10:44:49Z with the sub-agent cut off. It also measured the remedy: a launch with `run_in_background` false returned an 11-minute sub-agent's result as the tool's result, and three launched in one message ran together. The start prompt and `delegation.md` now name that way and say never to end the turn on a background sub-agent. The second remediation is still open.
 
 ## Acceptance criteria
-- [ ] The cause I-0084 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0084 is closed with `flai issue close I-0084 --reason` saying what fixed it
+- [x] The cause I-0084 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0084 is closed with `flai issue close I-0084 --reason` saying what fixed it
 
 ## Tasks
 - T-1124 An ADR refining ADR-0043, flai-cli.md, and workflow.md say flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then opens a thread
