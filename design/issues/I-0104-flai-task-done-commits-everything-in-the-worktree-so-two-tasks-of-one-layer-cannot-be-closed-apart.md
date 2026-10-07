@@ -3,11 +3,11 @@ id: I-0104
 title: flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
 class: efficiency
 status: open
-count: 4
-cost: 4m
+count: 5
+cost: 3m
 first_reported: 2026-10-07T07:17:53Z
-last_reported: 2026-10-07T20:17:54Z
-updated: 2026-10-07T20:17:54Z
+last_reported: 2026-10-07T23:45:13Z
+updated: 2026-10-07T23:45:13Z
 ---
 
 # I-0104 flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
@@ -32,6 +32,10 @@ S-0298, layer 1: T-1038 (design docs) and T-1039 (selfupgrade) ran together in o
 ### 2026-10-07T20:17:54Z
 Story: S-0328.
 S-0328's layer 2 ran T-1177, T-1178, and T-1179 together in one worktree. Closing any of them with flai task done would have swept the other two's files into its commit, so each task's paths were committed by hand with git add and git commit, and flai task done was then called with nothing left to commit. The by-hand commits did not widen the touches, so the story's touches were widened by hand for two files.
+
+### 2026-10-07T23:45:13Z
+Story: S-0314.
+T-1290's flai task done committed T-1291's design edit to design/system/flaiover-dashboard.md with it, so T-1291 closed with no commit of its own
 
 ## Remediation
 
