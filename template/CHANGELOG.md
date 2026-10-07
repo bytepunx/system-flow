@@ -2,6 +2,7 @@
 
 ## 1.0.75 - 2026-10-07
 
+- S-0333 Closing a task messages every open story whose claim covers a path the task changed, before either story is accepted (patch).
 - S-0333 Closing a task messages every open story whose claim covers a path the task changed, before either story is accepted (patch, ADR-0120): `work-management.md` says that a message telling you a task of another open story changed paths your story claims comes from `flai task done` as it closed that task, naming the task, the commit and its subject, and the paths in `about`. You read the change with the `git show` it names, check whether it breaks your story's work, and reply on the conversation either way, since it awaits your story until you do: when the change breaks your work, or your work depends on the shape it changed, you say how and note it in the narrative; otherwise you say it does not. You adjust to it early where you can, and you do not sync to get it: `flai stream sync` brings it only once that story is accepted, and the `overlapped` change follows then. It needs a flai that has it; an older flai sends no message when it closes a task.
 
 ## 1.0.74 - 2026-10-07
