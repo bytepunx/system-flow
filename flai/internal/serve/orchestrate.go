@@ -33,6 +33,12 @@ import (
 // (Dir.ActivityLogs); and once it has ended, its activity since its last
 // activity_log is logged in wip/agents/orchestrator.md. It is no story's
 // agent: the in-progress limit does not count it, and it holds no story back.
+//
+// The operator may stop it and hold it stopped, and start it again, from its
+// dashboard page or in a shell (S-0228, OrchestratorStop and
+// OrchestratorStart). The hold is kept on its run in serve/agents.json:
+// while it is held no look starts it, and turning the action off lifts it,
+// so that turned on again the orchestrator starts.
 
 // orchestrateRetry is how long after a failed run the orchestrator is
 // started again.
@@ -41,6 +47,10 @@ const orchestrateRetry = time.Minute
 // orchestrateOff is the activity of a run stopped because the orchestrate
 // host action was turned off.
 const orchestrateOff = "stopped: orchestrate turned off"
+
+// orchestrateHeld is the activity of a run the operator stopped and held
+// stopped (S-0228).
+const orchestrateHeld = "stopped: stopped from the dashboard"
 
 // orchestrator runs the orchestrator for one project while the orchestrate
 // host action is on (S-0218).
@@ -54,6 +64,11 @@ type orchestrator struct {
 	// minute does not record it again; "" when the last start was not
 	// refused.
 	said string
+	// seen is the run as the last look left it, its session and whether it
+	// was held, so that a run started or held by a process of its own (flai
+	// serve orchestrate start or stop) is told to the dashboard at the next
+	// look (S-0228); "" before the first look.
+	seen string
 }
 
 // newOrchestrator is the orchestrator for project e, starting its runs with
@@ -63,8 +78,9 @@ func newOrchestrator(o Options, e Entry, starter *launcher) *orchestrator {
 }
 
 // look starts the orchestrator while the action is on and no run is going,
-// unless the last run failed less than orchestrateRetry ago, and stops the
-// run going while the action is off.
+// unless the operator holds it stopped (S-0228) or the last run failed less
+// than orchestrateRetry ago, and stops the run going while the action is
+// off, which also lifts the hold.
 func (r *orchestrator) look(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -73,14 +89,18 @@ func (r *orchestrator) look(ctx context.Context) {
 		cfg = r.o.Agent(r.e.Root)
 	}
 	run := r.o.Dir.AgentStates()[r.e.Root].Orchestrator
+	r.notice(run)
 	switch {
 	case !cfg.Orchestrate:
 		r.said = ""
 		if run.live() {
 			r.stop(run)
 		}
+		r.unhold()
 		return
 	case run.live():
+		return
+	case run != nil && run.Held:
 		return
 	case run != nil && run.Outcome == OutcomeFailed && !r.due(run):
 		return
@@ -92,6 +112,55 @@ func (r *orchestrator) look(ctx context.Context) {
 	r.starter.mu.Lock()
 	defer r.starter.mu.Unlock()
 	r.said = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said)
+	r.seen = seenAs(r.o.Dir.AgentStates()[r.e.Root].Orchestrator) // told as it was recorded
+}
+
+// notice tells the dashboard of run when the last look left another, or the
+// same one held otherwise: a process of its own, which tells no dashboard,
+// started or held it since. The first look tells nothing.
+func (r *orchestrator) notice(run *AgentRun) {
+	seen := seenAs(run)
+	if seen == r.seen {
+		return
+	}
+	if r.seen != "" && run != nil && r.starter.changed != nil {
+		r.starter.changed(run)
+	}
+	r.seen = seen
+}
+
+// seenAs is what notice compares of the orchestrator's run.
+func seenAs(run *AgentRun) string {
+	if run == nil {
+		return "none"
+	}
+	return fmt.Sprintf("%s held=%t", run.Session, run.Held)
+}
+
+// unhold lifts the operator's hold on the orchestrator, if there is one,
+// because the action was turned off (S-0228): turned on again, it starts the
+// orchestrator. The dashboard is told, as of a run that ended.
+func (r *orchestrator) unhold() {
+	if run := r.o.Dir.AgentStates()[r.e.Root].Orchestrator; run == nil || !run.Held {
+		return
+	}
+	var lifted *AgentRun
+	r.o.Dir.updateAgent(r.e.Root, func(s *AgentState) {
+		if cur := s.Orchestrator; cur != nil && cur.Held {
+			c := *cur
+			c.Held = false
+			s.put(&c)
+			lifted = &c
+		}
+	})
+	if lifted == nil {
+		return
+	}
+	r.seen = seenAs(lifted)
+	r.starter.log("orchestrator no longer held stopped, since orchestrate was turned off", "pid", lifted.PID)
+	if r.starter.changed != nil {
+		r.starter.changed(lifted)
+	}
 }
 
 // due says whether orchestrateRetry has passed since run ended; a run whose
@@ -210,8 +279,9 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 // nobody saw included, and stopped when it was stopped. It journals the end,
 // save a stop's, which the stop journals, and logs the run's activity since
 // the last entry in the orchestrator's activity document, with its final
-// reply, or orchestrateOff when it was stopped, as the summary. An activity
-// that cannot be logged is warned of, and the run stays recorded as it ended.
+// reply as the summary, or, when it was stopped, orchestrateHeld when the
+// operator held it stopped and orchestrateOff otherwise. An activity that
+// cannot be logged is warned of, and the run stays recorded as it ended.
 func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -228,6 +298,9 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	summary := ""
 	if ended.Outcome == OutcomeStopped {
 		summary = orchestrateOff
+		if ended.Held {
+			summary = orchestrateHeld
+		}
 	} else if l.record != nil {
 		e := hostapi.Entry{At: ended.Ended, Action: hostapi.ActionOrchestrate, Method: "serve.orchestrate", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve",
 			Outcome: "done", Detail: fmt.Sprintf("the orchestrator %s (pid %d) ended, %s", run.Agent, run.PID, ended.Outcome)}

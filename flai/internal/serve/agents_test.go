@@ -1168,3 +1168,27 @@ func TestAnAgentThatEndedAskingIsStartedAgainOnAConfirmationNotARecommendation(t
 	lab.release(id)
 	waitFor(t, "it ends at last", func() bool { return !lab.run(id).live() })
 }
+
+func TestTheOrchestratorsAndTheAnalyzersEarlierRunsAreKeptNewestFirst(t *testing.T) {
+	var s AgentState
+	for i := 1; i <= pastRuns+2; i++ {
+		started := fmt.Sprintf("2026-10-07T00:%02d:00Z", i)
+		s.put(&AgentRun{Agent: "orchestrator", Started: started, PID: i})
+		s.put(&AgentRun{Agent: "analyzer", Focus: "risk", Started: started, PID: i})
+	}
+	// The newest run recorded again, as when it ends, is no earlier run.
+	ended := *s.Orchestrator
+	ended.Ended = "2026-10-07T01:00:00Z"
+	s.put(&ended)
+	for name, past := range map[string][]*AgentRun{"orchestrator": s.PastOrchestrators, "analyzer": s.PastAnalyzers} {
+		if len(past) != pastRuns {
+			t.Fatalf("%s: kept %d earlier runs, want %d", name, len(past), pastRuns)
+		}
+		if past[0].PID != pastRuns+1 || past[pastRuns-1].PID != 2 {
+			t.Errorf("%s: earlier runs from pid %d to %d, want %d newest first to 2", name, past[0].PID, past[pastRuns-1].PID, pastRuns+1)
+		}
+	}
+	if s.Orchestrator.PID != pastRuns+2 || s.Orchestrator.Ended == "" {
+		t.Errorf("newest orchestrator run = %+v, want pid %d ended", s.Orchestrator, pastRuns+2)
+	}
+}

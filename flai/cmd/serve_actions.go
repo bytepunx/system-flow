@@ -51,8 +51,9 @@ func (a *app) host() hostapi.Host {
 			if plans == nil {
 				plans = map[string]*serve.AgentRun{}
 			}
-			// the newest orchestrator run, null before the first (S-0218), and
-			// the newest analyzer run, its focus and report among it (S-0223)
+			// the newest orchestrator run, null before the first (S-0218), with
+			// held while the operator holds it stopped (S-0228), and the newest
+			// analyzer run, its focus and report among it (S-0223)
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
 				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer}
 		},
@@ -62,8 +63,8 @@ func (a *app) host() hostapi.Host {
 		PlanStream: func(root, item string, after int64) (any, error) {
 			return serve.PlanStream(a.serveDir().AgentStates()[root], item, after)
 		},
-		OrchestratorStream: func(root string, after int64) (any, error) {
-			return serve.OrchestratorStream(a.serveDir().AgentStates()[root], after)
+		RoleStream: func(root, role string, after int64) (any, error) {
+			return serve.RoleStream(a.serveDir().AgentStates()[root], role, after)
 		},
 		Settings: a.hostSettings,
 		Requests: a.serveDir().Requests,
@@ -1007,6 +1008,95 @@ activity page, asks for it only while it is.`,
 			return a.agentStop(args[0])
 		},
 	}
+}
+
+// flai serve orchestrate: the orchestrator stopped and held stopped, and
+// started again, on the operator's word (S-0228).
+func newServeOrchestrateCmd(a *app) *cobra.Command {
+	c := &cobra.Command{
+		Use:   "orchestrate",
+		Short: "Stop the project's orchestrator and hold it stopped, or start it again",
+		Long: `While the orchestrate host action is on, flai serve runs the project's
+orchestrator, and starts it again whenever its run ends (S-0218). stop ends
+the run and holds the orchestrator stopped, so that flai serve does not start
+it again while the action stays on; start lifts the hold and starts it, as
+turning the action on does. Turning the action off and on lifts the hold too.
+The dashboard's orchestrator page runs these; both are refused while the
+action is off.`,
+		Example: `  flai serve orchestrate stop
+  flai serve orchestrate start`,
+		Args: cobra.NoArgs,
+	}
+	c.AddCommand(
+		&cobra.Command{
+			Use:   "stop",
+			Short: "End the orchestrator's run and hold it stopped while orchestrate stays on",
+			Long: `Ends the orchestrator's run as flai serve agent stop ends a story's agent:
+its process group is sent SIGTERM, and SIGKILL if it has not ended ten
+seconds later, while it is still the orchestrator flai started. The run is
+recorded as stopped by the operator, its activity is logged in
+wip/agents/orchestrator.md as stopped from the dashboard, and the
+orchestrator is held stopped: flai serve does not start it again until flai
+serve orchestrate start, or until orchestrate is turned off and on. A run
+that failed and waits to be started again is held as it is.
+
+It refuses, and says why, while the orchestrate action is off for the
+project, when flai serve has started no orchestrator for it, and when the
+orchestrator is already held stopped.`,
+			Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error { return a.orchestrateNow(false) },
+		},
+		&cobra.Command{
+			Use:   "start",
+			Short: "Lift the hold on the orchestrator and start it",
+			Long: `Lifts the hold flai serve orchestrate stop put on the orchestrator and starts
+it, as flai serve does when orchestrate is turned on: in the project's main
+checkout, with its orchestration agent and the harnesses and the command set
+with flai serve agent. flai serve settles the run once it ends and starts it
+again, as it does any orchestrator run. A start that fails lifts the hold as
+well, and flai serve tries again a minute later.
+
+It refuses, and says why, while the orchestrate action is off for the
+project, when the orchestrator is not held stopped, and while the run it was
+held on is still being stopped.`,
+			Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error { return a.orchestrateNow(true) },
+		},
+	)
+	return c
+}
+
+// orchestrateNow stops and holds, or starts, the orchestrator of the project
+// in the working directory, and prints the run as recorded.
+func (a *app) orchestrateNow(start bool) error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	o := serve.Options{Dir: a.serveDir(), Logger: a.logger(), Now: a.now, Agent: a.agentConfig, Host: a.host()}
+	e := serve.Entry{Key: repo.Manifest.Key, Name: repo.Manifest.Name, Root: mainRootOf(repo)}
+	var run *serve.AgentRun
+	if start {
+		run, err = serve.OrchestratorStart(context.Background(), o, e)
+	} else {
+		run, err = serve.OrchestratorStop(o, e)
+	}
+	var no *serve.Refused
+	if errors.As(err, &no) {
+		return fmt.Errorf("rule: %s", no.Why)
+	}
+	if err != nil {
+		return err
+	}
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"held": run.Held, "orchestrator": run})
+	}
+	if start {
+		fmt.Fprintf(a.out, "started %s (%s) as %s (pid %d); log %s\n", run.Command, run.Harness, run.Agent, run.PID, run.Log)
+		return nil
+	}
+	fmt.Fprintf(a.out, "stopped the orchestrator %s (pid %d), and held it stopped; flai serve orchestrate start starts it again\n", run.Agent, run.PID)
+	return nil
 }
 
 // agentStop stops story's agent and prints the run as it ended.

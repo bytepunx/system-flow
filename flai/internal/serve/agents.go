@@ -161,6 +161,10 @@ type AgentRun struct {
 	// Stopped is when the operator stopped it (S-0170): however its process
 	// ends from then, it ended stopped.
 	Stopped string `json:"stopped,omitempty"`
+	// Held is set on the orchestrator's run alone, while the operator holds
+	// the orchestrator stopped (S-0228): flai serve does not start it again
+	// until they start it, or turn the orchestrate action off and on.
+	Held bool `json:"held,omitempty"`
 }
 
 // same says whether r and o are one run: the same start of the same
@@ -216,6 +220,29 @@ type AgentState struct {
 	// Analyzer is the project's newest analyzer run (S-0223), no story's
 	// run either.
 	Analyzer *AgentRun `json:"analyzer,omitempty"`
+	// PastOrchestrators and PastAnalyzers are the runs Orchestrator and
+	// Analyzer named before, newest first, at most pastRuns of each
+	// (S-0228): what the dashboard's pages list as past runs.
+	PastOrchestrators []*AgentRun `json:"past_orchestrators,omitempty"`
+	PastAnalyzers     []*AgentRun `json:"past_analyzers,omitempty"`
+}
+
+// pastRuns is how many of the orchestrator's and the analyzer's earlier runs
+// are kept.
+const pastRuns = 20
+
+// keep is past with was, the run a new one replaces, put first and the
+// oldest let go beyond pastRuns; past as it is when was is nil or is that
+// new run.
+func keep(past []*AgentRun, was, r *AgentRun) []*AgentRun {
+	if was == nil || was.same(r) {
+		return past
+	}
+	out := append([]*AgentRun{was}, past...)
+	if len(out) > pastRuns {
+		out = out[:pastRuns]
+	}
+	return out
 }
 
 // of is the newest run recorded for what r is for: its item's planner run,
@@ -235,13 +262,15 @@ func (s *AgentState) of(r *AgentRun) *AgentRun {
 
 // put records a run as its story's newest, and keeps Running and Last true,
 // a planner run as its item's newest, or the orchestrator's or the
-// analyzer's as the newest.
+// analyzer's as the newest, the one it replaces kept among their past runs.
 func (s *AgentState) put(r *AgentRun) {
 	if r.orchestrates() {
+		s.PastOrchestrators = keep(s.PastOrchestrators, s.Orchestrator, r)
 		s.Orchestrator = r
 		return
 	}
 	if r.analyzes() {
+		s.PastAnalyzers = keep(s.PastAnalyzers, s.Analyzer, r)
 		s.Analyzer = r
 		return
 	}
@@ -336,13 +365,20 @@ func (l *launcher) told(run *AgentRun) {
 
 // ended records a run as ended, as the operator's stop when they stopped it
 // (S-0170): Stop marks the run before it signals the process, so the end
-// the process makes is theirs, not a failure.
+// the process makes is theirs, not a failure. A hold on the orchestrator
+// stays on the run that ended (S-0228).
 func (l *launcher) ended(run *AgentRun) {
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) {
-		if cur := s.of(run); cur.same(run) && cur.Stopped != "" {
+		cur := s.of(run)
+		if !cur.same(run) {
+			s.put(run)
+			return
+		}
+		if cur.Stopped != "" {
 			run.Stopped = cur.Stopped
 			run.stopped()
 		}
+		run.Held = cur.Held
 		s.put(run)
 	})
 	if l.changed != nil {

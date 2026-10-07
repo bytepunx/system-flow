@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 )
 
@@ -60,13 +61,16 @@ type StreamEntry struct {
 	Error bool `json:"error,omitempty"`
 }
 
-// StreamRead is one read of a story's newest agent's stream, or of an
-// item's newest planner's.
+// StreamRead is one read of a story's newest agent's stream, of an item's
+// newest planner's, or of the project's newest orchestrator's or analyzer's.
 type StreamRead struct {
-	// Story is the story whose agent this is; empty on a planner's stream.
+	// Story is the story whose agent this is; empty on any other stream.
 	Story string `json:"story"`
-	// Item is the epic or story a planner plans; empty on a story's agent's.
-	Item  string `json:"item,omitempty"`
+	// Item is the epic or story a planner plans; empty on any other stream.
+	Item string `json:"item,omitempty"`
+	// Role is the strategic role read by RoleStream, orchestrate or analyze;
+	// empty on a story's agent's stream and a planner's.
+	Role  string `json:"role,omitempty"`
 	Agent string `json:"agent"`
 	// Started names the run: a new run writes a new log, so an offset from
 	// another run means nothing.
@@ -118,14 +122,31 @@ func PlanStream(st AgentState, item string, after int64) (*StreamRead, error) {
 	return out, nil
 }
 
-// OrchestratorStream reads the stream of the newest orchestrator flai serve
-// started for the project (S-0218), as Stream reads a story's agent's; an
-// error that is hostapi.ErrNoAgent when it started none.
-func OrchestratorStream(st AgentState, after int64) (*StreamRead, error) {
-	if st.Orchestrator == nil {
-		return nil, fmt.Errorf("flai serve has started no orchestrator for this project: %w", hostapi.ErrNoAgent)
+// RoleStream reads the stream of the newest run of a strategic role flai
+// serve started for the project, as Stream reads a story's agent's: the
+// orchestrator's for conventions.RoleOrchestrate (S-0218), the analyzer's for
+// conventions.RoleAnalyze (S-0228). It is an error that is hostapi.ErrNoAgent
+// when it started none, and another for any other role.
+func RoleStream(st AgentState, role string, after int64) (*StreamRead, error) {
+	var run *AgentRun
+	var what string
+	switch role {
+	case conventions.RoleOrchestrate:
+		run, what = st.Orchestrator, "orchestrator"
+	case conventions.RoleAnalyze:
+		run, what = st.Analyzer, "analyzer"
+	default:
+		return nil, fmt.Errorf("there is no stream for the role %q: name %s or %s", role, conventions.RoleOrchestrate, conventions.RoleAnalyze)
 	}
-	return streamRun(st.Orchestrator, "the orchestrator", after)
+	if run == nil {
+		return nil, noRun(what)
+	}
+	out, err := streamRun(run, "the "+what, after)
+	if err != nil {
+		return nil, err
+	}
+	out.Role = role
+	return out, nil
 }
 
 // noPlanner is an item flai serve has started no planner for: it says so,
@@ -137,6 +158,17 @@ func (n noPlanner) Error() string { return "flai serve has started no planner fo
 
 // Is makes errors.Is find hostapi.ErrNoAgent in it.
 func (noPlanner) Is(target error) bool { return target == hostapi.ErrNoAgent }
+
+// noRun is a strategic role, the orchestrator or the analyzer, flai serve
+// has started no run of for the project: it says so, and is
+// hostapi.ErrNoAgent to whoever asks, as noPlanner is.
+type noRun string
+
+// Error names the role's agent.
+func (n noRun) Error() string { return "flai serve has started no " + string(n) + " for this project" }
+
+// Is makes errors.Is find hostapi.ErrNoAgent in it.
+func (noRun) Is(target error) bool { return target == hostapi.ErrNoAgent }
 
 // streamRun reads run's log as Stream says; id names what the run is for in
 // its errors.

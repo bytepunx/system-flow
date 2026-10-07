@@ -244,22 +244,41 @@ func TestPlanStreamReadsAPlannerRun(t *testing.T) {
 	}
 }
 
-// S-0218: the orchestrator's stream is read from the project's newest
-// orchestrator run, and a project with none has no stream.
-func TestOrchestratorStreamReadsTheRun(t *testing.T) {
+// S-0218, S-0228: a strategic role's stream is read from the project's
+// newest run of it, the orchestrator's or the analyzer's, and names the role;
+// a project with none has no stream, and no other role has one.
+func TestRoleStreamReadsTheNewestRunOfTheRole(t *testing.T) {
 	text := strings.Join(sessionLines, "\n") + "\n"
 	st, log := streamState(t, text, false)
-	if _, err := OrchestratorStream(st, -1); !errors.Is(err, hostapi.ErrNoAgent) {
-		t.Errorf("no orchestrator run: err = %v, want hostapi.ErrNoAgent", err)
+	for role, what := range map[string]string{"orchestrate": "orchestrator", "analyze": "analyzer"} {
+		if _, err := RoleStream(st, role, -1); !errors.Is(err, hostapi.ErrNoAgent) || err.Error() != "flai serve has started no "+what+" for this project" {
+			t.Errorf("no %s run: err = %v, want hostapi.ErrNoAgent naming the %s", what, err, what)
+		}
+	}
+	other := filepath.Join(t.TempDir(), "other.log")
+	if err := os.WriteFile(other, []byte("not this one\n"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	st.Orchestrator = &AgentRun{Agent: "orchestrator", Started: "2026-09-29T06:00:00Z", Log: log, PID: 44}
-	got, err := OrchestratorStream(st, -1)
+	st.Analyzer = &AgentRun{Agent: "analyzer", Focus: "risk", Started: "2026-09-29T07:00:00Z", Ended: "2026-09-29T07:05:00Z", Outcome: OutcomeWorked, Log: other, PID: 45}
+	got, err := RoleStream(st, "orchestrate", -1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	sameEntries(t, got.Entries, sessionEntries)
-	if got.Item != "" || got.Story != "" || got.Agent != "orchestrator" || !got.Running || got.Next != int64(len(text)) {
-		t.Errorf("run = %+v", got)
+	if got.Role != "orchestrate" || got.Item != "" || got.Story != "" || got.Agent != "orchestrator" || !got.Running || got.Next != int64(len(text)) {
+		t.Errorf("orchestrator run = %+v", got)
+	}
+	got, err = RoleStream(st, "analyze", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameEntries(t, got.Entries, []StreamEntry{{Kind: StreamOutput, Text: "not this one"}})
+	if got.Role != "analyze" || got.Agent != "analyzer" || got.Running || got.Outcome != OutcomeWorked || got.Ended != "2026-09-29T07:05:00Z" {
+		t.Errorf("analyzer run = %+v", got)
+	}
+	if _, err := RoleStream(st, "plan", -1); err == nil || errors.Is(err, hostapi.ErrNoAgent) || !strings.Contains(err.Error(), `there is no stream for the role "plan"`) {
+		t.Errorf("another role: err = %v, want a refusal that is not hostapi.ErrNoAgent", err)
 	}
 }
 

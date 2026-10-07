@@ -1026,3 +1026,119 @@ func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
 		}
 	}
 }
+
+// orchestratorState writes the project's orchestrator run, and the
+// analyzer's when there is one, as flai serve records them.
+func orchestratorState(t *testing.T, cfg, root string, orchestrator, analyzer *serve.AgentRun) {
+	t.Helper()
+	dir := serve.DirFor(cfg)
+	_ = os.MkdirAll(string(dir), 0o700)
+	data, _ := json.Marshal(map[string]serve.AgentState{root: {Orchestrator: orchestrator, Analyzer: analyzer}})
+	if err := os.WriteFile(filepath.Join(string(dir), "agents.json"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0228: the stop holds the orchestrator stopped, here a run that failed
+// and waits to be started again, and the start lifts the hold and starts
+// it, each refused while the orchestrate action is off; the host's
+// orchestrate.stop and orchestrate.start run them, and agent.status says
+// the orchestrator is held.
+func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := mainRootOf(repo)
+	for _, verb := range []string{"stop", "start"} {
+		if _, errOut, code := runIn(t, root, "serve", "orchestrate", verb); code == 0 || !strings.Contains(errOut, "rule: the orchestrate host action is off for this project, so flai serve runs no orchestrator to "+verb) {
+			t.Errorf("%s while off: %d %s", verb, code, errOut)
+		}
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "orchestrate"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "start"); code == 0 || !strings.Contains(errOut, "rule: the orchestrator is not held stopped") {
+		t.Errorf("start with no hold: %d %s", code, errOut)
+	}
+	failed := &serve.AgentRun{Agent: "orchestrator", Harness: "command", Started: "2026-09-15T20:59:00Z", Ended: "2026-09-15T20:59:00Z", Session: "s1",
+		Error: "no harness", Outcome: serve.OutcomeFailed, Why: "could not be started: no harness"}
+	orchestratorState(t, cfg, main, failed, nil)
+	out, errOut, code := runIn(t, root, "serve", "orchestrate", "stop", "--json")
+	var said struct {
+		Held         bool           `json:"held"`
+		Orchestrator serve.AgentRun `json:"orchestrator"`
+	}
+	if err := json.Unmarshal([]byte(out), &said); code != 0 || err != nil || !said.Held || !said.Orchestrator.Held || said.Orchestrator.Session != "s1" || said.Orchestrator.Outcome != serve.OutcomeFailed {
+		t.Fatalf("stop: %d %s %s", code, out, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "stop"); code == 0 || !strings.Contains(errOut, "rule: the orchestrator is already held stopped") {
+		t.Errorf("stop twice: %d %s", code, errOut)
+	}
+	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}
+	p := channel.Project{Key: "t", Root: main}
+	res, e := hostapi.MethodsFor("test", nil, a.host())["agent.status"](context.Background(), p, json.RawMessage(`{}`))
+	if b, _ := json.Marshal(res); e != nil || !strings.Contains(string(b), `"orchestrator":{`) || !strings.Contains(string(b), `"session":"s1","outcome":"failed","why":"could not be started: no harness","held":true}`) {
+		t.Errorf("agent.status: %+v %s", e, b)
+	}
+
+	// through the host: a start that fails, as with no harness and no
+	// command, lifts the hold as well, and a stop holds the failed run
+	inProcess(t)
+	m := hostapi.MethodsFor("test", nil, a.host())
+	if _, e := m["orchestrate.start"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000001"}`)); e == nil || !strings.Contains(e.Message, "the orchestrator's agent names no harness") {
+		t.Fatalf("orchestrate.start: %+v", e)
+	}
+	run := a.serveDir().AgentStates()[main].Orchestrator
+	if run == nil || run.Held || run.Session == "s1" || run.Outcome != serve.OutcomeFailed {
+		t.Fatalf("after the start: %+v, want a new failed run, not held", run)
+	}
+	res, e = m["orchestrate.stop"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000002"}`))
+	w, _ := res.(hostapi.Written)
+	if err := json.Unmarshal(w.Data, &said); e != nil || err != nil || !said.Held || !said.Orchestrator.Held || said.Orchestrator.Session != run.Session {
+		t.Fatalf("orchestrate.stop: %s %+v", w.Data, e)
+	}
+	if r := a.serveDir().AgentStates()[main].Orchestrator; !r.Held || r.Session != run.Session {
+		t.Errorf("after the stop: %+v, want the failed run held", r)
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	for _, want := range []string{`"method": "orchestrate.start"`, `"method": "orchestrate.stop"`,
+		"stopped the orchestrator orchestrator on the operator's word, and held it stopped while orchestrate stays on: it was not running"} {
+		if !strings.Contains(js, want) {
+			t.Errorf("journal lacks %q: %s", want, js)
+		}
+	}
+}
+
+// S-0228: the host answers agent.stream with role from the analyzer's newest
+// run, as flai serve recorded it, and is not found with no run of the role.
+func TestTheHostAnswersARolesStream(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := filepath.Join(t.TempDir(), "t-analyzer.log")
+	if err := os.WriteFile(log, []byte(`{"type":"assistant","message":{"content":[{"type":"text","text":"Reading the metrics."}]}}`+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	orchestratorState(t, cfg, mainRootOf(repo), nil, &serve.AgentRun{Agent: "analyzer", Focus: "risk", Started: "2026-09-15T20:00:00Z", Ended: "2026-09-15T20:05:00Z", Outcome: serve.OutcomeWorked, Log: log})
+	a := &app{}
+	m := hostapi.MethodsFor("test", nil, a.host())["agent.stream"]
+	p := channel.Project{Key: "t", Root: mainRootOf(repo)}
+	res, e := m(context.Background(), p, json.RawMessage(`{"role":"analyze"}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if r := res.(*serve.StreamRead); r.Role != "analyze" || r.Agent != "analyzer" || r.Running || len(r.Entries) != 1 || r.Entries[0].Text != "Reading the metrics." {
+		t.Errorf("agent.stream: %+v", r)
+	}
+	if _, e := m(context.Background(), p, json.RawMessage(`{"role":"orchestrate"}`)); e == nil || e.Code != hostapi.NotFound || !strings.Contains(e.Message, "flai serve has started no orchestrator for this project") {
+		t.Errorf("no orchestrator run: %+v", e)
+	}
+}

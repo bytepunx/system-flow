@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -72,6 +73,9 @@ var good = map[string]struct {
 	"agent.stop":    {`{"id":"S-0001",` + rid + `}`, "serve agent stop S-0001 --json", ""},
 	"plan.run":      {`{"id":"E-0001",` + rid + `}`, "plan E-0001 --json", ""},
 	"analyze.run":   {`{"focus":"risk",` + rid + `}`, "analyze --focus=risk --json", ""},
+	// S-0228: the orchestrator held stopped, and started again
+	"orchestrate.stop":  {`{` + rid + `}`, "serve orchestrate stop --json", ""},
+	"orchestrate.start": {`{` + rid + `}`, "serve orchestrate start --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
@@ -175,16 +179,18 @@ var refused = map[string][]string{
 	"host.check":        {`"--force"`},
 	"host.process": {`{"process":"--config=/tmp/x","action":"stop",` + rid + `}`, `{"process":"serve","action":"--help",` + rid + `}`,
 		`{"process":"dashboard","action":"stop",` + rid + `}`, `{"process":"serve","action":"restart"}`},
-	"host.upgrade":  {`"--force"`, `{}`},
-	"checks.tail":   {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
-	"checks.run":    {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
-	"checks.cancel": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
-	"agent.restart": {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
-	"agent.start":   {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
-	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
-	"agent.stop":    {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
-	"plan.run":      {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001 --json",` + rid + `}`, `{"id":"E-0001"}`},
-	"analyze.run":   {`{"focus":"--help",` + rid + `}`, `{"focus":"all",` + rid + `}`, `{"focus":["risk"],` + rid + `}`, `{"focus":"risk"}`},
+	"host.upgrade":      {`"--force"`, `{}`},
+	"checks.tail":       {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
+	"checks.run":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"checks.cancel":     {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.restart":     {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.start":       {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.commit":      {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"agent.stop":        {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
+	"plan.run":          {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001 --json",` + rid + `}`, `{"id":"E-0001"}`},
+	"analyze.run":       {`{"focus":"--help",` + rid + `}`, `{"focus":"all",` + rid + `}`, `{"focus":["risk"],` + rid + `}`, `{"focus":"risk"}`},
+	"orchestrate.stop":  {`"--force"`, `["--force"]`, `{}`},
+	"orchestrate.start": {`"--force"`, `["--force"]`, `{}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
 	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
@@ -639,6 +645,8 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 		host := args[0] == "serve" || args[0] == "agent" || (len(args) > 1 && args[1] == "token" && (args[0] == "dashboard" || args[0] == "mcp"))
 		// S-0116, S-0115: starting a story's agent is the agent action's, and changes no setting; so is stopping it (S-0170)
 		now := (name == "agent.restart" || name == "agent.start" || name == "agent.commit" || name == "agent.stop") && sp.action == ActionAgent && strings.Join(args[:3], " ") == "serve "+strings.Replace(name, ".", " ", 1)
+		// S-0228: stopping and starting the orchestrator is the orchestrate action's, and changes no setting
+		now = now || ((name == "orchestrate.stop" || name == "orchestrate.start") && sp.action == ActionOrchestrate && strings.Join(args[:3], " ") == "serve "+strings.Replace(name, ".", " ", 1))
 		if host && !now && sp.action != ActionSettings {
 			t.Errorf("%s runs flai %s without the settings action", name, strings.Join(args[:2], " "))
 		}
@@ -1084,7 +1092,8 @@ func TestAnalyzeRunNeedsTheAnalyzeAction(t *testing.T) {
 
 // S-0218: orchestrate is a host action the dashboard sees, as plan is, off
 // until the operator turns it on, and turned on and off from the settings
-// page as the others are; no method of its own asks for it.
+// page as the others are; of its own, only the stop and the start ask for
+// it (S-0228).
 func TestOrchestrateIsAHostActionTheDashboardSees(t *testing.T) {
 	p := withDocs(t)
 	means := Actions[ActionOrchestrate]
@@ -1100,8 +1109,13 @@ func TestOrchestrateIsAHostActionTheDashboardSees(t *testing.T) {
 		t.Errorf("project.info names orchestrate, off by default: %v %v", on, ok)
 	}
 	for name, sp := range specs() {
-		if sp.action == ActionOrchestrate {
-			t.Errorf("%s asks for orchestrate; flai serve sees it at every look", name)
+		if sp.action == ActionOrchestrate && name != "orchestrate.stop" && name != "orchestrate.start" {
+			t.Errorf("%s asks for orchestrate; flai serve sees it at every look, and only the orchestrator's stop and start ask for it", name)
+		}
+	}
+	for _, name := range []string{"orchestrate.stop", "orchestrate.start"} {
+		if sp := specs()[name]; sp.action != ActionOrchestrate {
+			t.Errorf("%s is gated by %q, not the orchestrate action", name, sp.action)
 		}
 	}
 	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
@@ -1219,37 +1233,120 @@ func TestAgentStreamOfAPlanAsksTheHost(t *testing.T) {
 	}
 }
 
-// S-0218: agent.stream with orchestrator reads the project's orchestrator's
-// stream through the host's OrchestratorStream, and takes it alone.
-func TestAgentStreamOfTheOrchestratorAsksTheHost(t *testing.T) {
+// S-0218, S-0228: agent.stream with role reads the project's newest
+// orchestrator's or analyzer's stream through the host's RoleStream, and
+// with orchestrator true, as before role, the orchestrator's; it takes
+// exactly one of story, plan, and role, refuses any other role, and is not
+// found when the host started no run of the role.
+func TestAgentStreamOfARoleAsksTheHost(t *testing.T) {
 	p := withDocs(t)
-	var asked []int64
+	type asked struct {
+		role  string
+		after int64
+	}
+	var got []asked
 	host := Host{
 		AgentStream: func(root, story string, after int64) (any, error) { return nil, errors.New("asked a story's agent") },
 		PlanStream:  func(root, item string, after int64) (any, error) { return nil, errors.New("asked a planner") },
-		OrchestratorStream: func(root string, after int64) (any, error) {
+		RoleStream: func(root, role string, after int64) (any, error) {
 			if root != p.Root {
 				t.Errorf("root %q, want %q", root, p.Root)
 			}
-			asked = append(asked, after)
-			return map[string]any{"agent": "orchestrator"}, nil
+			got = append(got, asked{role, after})
+			if role == "analyze" && after == 9 {
+				return nil, fmt.Errorf("flai serve has started no analyzer for this project: %w", ErrNoAgent)
+			}
+			return map[string]any{"role": role}, nil
 		},
 	}
 	m := MethodsFor("test", nil, host)["agent.stream"]
-	res, e := m(context.Background(), p, json.RawMessage(`{"orchestrator":true,"after":5}`))
-	if e != nil {
-		t.Fatal(e)
-	}
-	if b, _ := json.Marshal(res); string(b) != `{"agent":"orchestrator"}` || len(asked) != 1 || asked[0] != 5 {
-		t.Errorf("answer %s, asked %v", b, asked)
-	}
-	for _, raw := range []string{`{"orchestrator":true,"story":"S-0001"}`, `{"orchestrator":true,"plan":"E-0001"}`, `{"orchestrator":false}`} {
-		if _, e := m(context.Background(), p, json.RawMessage(raw)); e == nil || e.Code != channel.CodeInvalidParams {
-			t.Errorf("%s: %+v, want invalid params", raw, e)
+	for raw, want := range map[string]string{
+		`{"role":"orchestrate","after":5}`: `{"role":"orchestrate"}`,
+		`{"role":"analyze"}`:               `{"role":"analyze"}`,
+		`{"orchestrator":true,"after":7}`:  `{"role":"orchestrate"}`,
+	} {
+		res, e := m(context.Background(), p, json.RawMessage(raw))
+		if e != nil {
+			t.Fatalf("%s: %+v", raw, e)
+		}
+		if b, _ := json.Marshal(res); string(b) != want {
+			t.Errorf("%s answered %s, want %s", raw, b, want)
 		}
 	}
-	if _, e := MethodsFor("test", nil, Host{AgentStream: host.AgentStream})["agent.stream"](context.Background(), p, json.RawMessage(`{"orchestrator":true}`)); e == nil || e.Code != NotFound {
-		t.Errorf("on a host that reads no orchestrator's stream: %+v", e)
+	slices.SortFunc(got, func(a, b asked) int { return int(a.after - b.after) })
+	if want := []asked{{"analyze", -1}, {"orchestrate", 5}, {"orchestrate", 7}}; !slices.Equal(got, want) {
+		t.Errorf("asked %+v, want %+v", got, want)
+	}
+	for raw, code := range map[string]int{
+		`{"role":"orchestrate","story":"S-0001"}`:    channel.CodeInvalidParams,
+		`{"role":"analyze","plan":"E-0001"}`:         channel.CodeInvalidParams,
+		`{"role":"orchestrate","orchestrator":true}`: channel.CodeInvalidParams,
+		`{"orchestrator":true,"story":"S-0001"}`:     channel.CodeInvalidParams,
+		`{"orchestrator":false}`:                     channel.CodeInvalidParams,
+		`{"role":"plan"}`:                            channel.CodeInvalidParams,
+		`{"role":"--help"}`:                          channel.CodeInvalidParams,
+		`{"role":"analyze","after":-1}`:              channel.CodeInvalidParams,
+		`{"role":"analyze","after":9}`:               NotFound,
+	} {
+		if _, e := m(context.Background(), p, json.RawMessage(raw)); e == nil || e.Code != code {
+			t.Errorf("%s: %+v, want code %d", raw, e, code)
+		}
+	}
+	if len(got) != 4 {
+		t.Errorf("a refused read reached the host: %+v", got)
+	}
+	if _, e := MethodsFor("test", nil, Host{AgentStream: host.AgentStream})["agent.stream"](context.Background(), p, json.RawMessage(`{"role":"analyze"}`)); e == nil || e.Code != NotFound {
+		t.Errorf("on a host that reads no role's stream: %+v", e)
+	}
+}
+
+// S-0228: orchestrate.stop and orchestrate.start run flai serve orchestrate
+// stop and start only while the operator has enabled the orchestrate action
+// for the project, say what enables it when not, and journal each, the stop
+// and the start as what they did.
+func TestOrchestrateStopAndStartNeedTheOrchestrateAction(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := false
+	host := Host{Enabled: func(action, root string) bool { return on && action == ActionOrchestrate && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{}
+	m := writeMethods(rec.run, time.Now, host)
+	for i, name := range []string{"orchestrate.stop", "orchestrate.start"} {
+		_, e := m[name](context.Background(), p, json.RawMessage(fmt.Sprintf(`{"request_id":"req-0000000%d"}`, i)))
+		if e == nil || e.Code != Disabled || !strings.Contains(e.Message, `the host action "orchestrate" is not enabled`) || !strings.Contains(e.Message, "flai serve enable orchestrate") {
+			t.Fatalf("%s off: %+v", name, e)
+		}
+	}
+	if len(rec.runs) != 0 {
+		t.Fatalf("a refused stop or start ran %+v", rec.runs)
+	}
+	on = true
+	rec.ran = Ran{Stdout: []byte(`{"held":true,"orchestrator":{"agent":"orchestrator","command":"claude","pid":42,"held":true,"outcome":"stopped"}}`)}
+	if _, e := m["orchestrate.stop"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000003"}`)); e != nil {
+		t.Fatalf("stop on: %+v", e)
+	}
+	rec.ran = Ran{Stdout: []byte(`{"held":false,"orchestrator":{"agent":"orchestrator","command":"claude","pid":43}}`)}
+	if _, e := m["orchestrate.start"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000004"}`)); e != nil {
+		t.Fatalf("start on: %+v", e)
+	}
+	if len(rec.runs) != 2 || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "serve orchestrate stop --json" || strings.Join(rec.runs[1].Args, " ") != "serve orchestrate start --json" {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+	if len(journal) != 4 || journal[0].Outcome != "disabled" || journal[0].Action != ActionOrchestrate || journal[0].Method != "orchestrate.stop" || journal[1].Method != "orchestrate.start" {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if j := journal[2]; j.Outcome != "done" || j.Action != ActionOrchestrate || j.Detail != "stopped the orchestrator orchestrator (pid 42) and held it stopped" {
+		t.Errorf("stopped: %+v", j)
+	}
+	if j := journal[3]; j.Outcome != "done" || j.Action != ActionOrchestrate || j.Detail != "lifted the hold and started claude as orchestrator (pid 43)" {
+		t.Errorf("started: %+v", j)
+	}
+	rec.ran = Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "err": "rule: the orchestrator is not held stopped: flai serve runs it for as long as orchestrate is on"}}}
+	if _, e := m["orchestrate.start"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000005"}`)); e == nil || e.Code != Rule || !strings.HasPrefix(e.Message, "the orchestrator is not held stopped") {
+		t.Errorf("a refused start: %+v", e)
+	}
+	if j := journal[len(journal)-1]; j.Outcome != "failed" || !strings.HasPrefix(j.Detail, "the orchestrator is not held stopped") {
+		t.Errorf("refused start journalled as %+v", j)
 	}
 }
 

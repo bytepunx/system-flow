@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
@@ -90,8 +91,9 @@ var (
 )
 
 // ErrNoAgent is what Host.AgentStream returns for a story flai serve has
-// started no agent for, and Host.PlanStream, wrapped, for an item it has
-// started no planner for.
+// started no agent for, Host.PlanStream, wrapped, for an item it has started
+// no planner for, and Host.RoleStream, wrapped, for a strategic role it has
+// started no run of.
 var ErrNoAgent = errors.New("flai serve has started no agent for this story")
 
 func bad(format string, a ...any) *channel.Error {
@@ -224,12 +226,14 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// said and did, read from its log from the byte offset after, or its
 		// tail when after is absent (S-0142); with plan in place of story, the
 		// newest planner flai serve started for that epic or story (S-0259);
-		// with orchestrator true, the project's newest orchestrator (S-0218).
-		// Read-only, like agent.status.
+		// with role, orchestrate or analyze, the project's newest run of that
+		// strategic role (S-0228), and with orchestrator true, as before it,
+		// the newest orchestrator's (S-0218). Read-only, like agent.status.
 		"agent.stream": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Story        string `json:"story"`
 				Plan         string `json:"plan"`
+				Role         string `json:"role"`
 				Orchestrator bool   `json:"orchestrator"`
 				After        *int64 `json:"after"`
 			}
@@ -237,21 +241,24 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				return nil, e
 			}
 			given := 0
-			for _, g := range []bool{in.Story != "", in.Plan != "", in.Orchestrator} {
+			for _, g := range []bool{in.Story != "", in.Plan != "", in.Role != "", in.Orchestrator} {
 				if g {
 					given++
 				}
 			}
 			if given != 1 {
-				return nil, bad("give one of story, for a story's agent, plan, for the planner of an epic or a story, and orchestrator, for the project's orchestrator")
+				return nil, bad("give one of story, for a story's agent, plan, for the planner of an epic or a story, and role, %s or %s, for the project's orchestrator or analyzer", conventions.RoleOrchestrate, conventions.RoleAnalyze)
+			}
+			if in.Orchestrator {
+				in.Role = conventions.RoleOrchestrate
 			}
 			id, read := in.Story, host.AgentStream
 			switch {
-			case in.Orchestrator:
-				read = nil
-				if host.OrchestratorStream != nil {
-					read = func(root, _ string, after int64) (any, error) { return host.OrchestratorStream(root, after) }
+			case in.Role != "":
+				if in.Role != conventions.RoleOrchestrate && in.Role != conventions.RoleAnalyze {
+					return nil, bad("role must be %s, for the orchestrator, or %s, for the analyzer, not %q", conventions.RoleOrchestrate, conventions.RoleAnalyze, in.Role)
 				}
+				id, read = in.Role, host.RoleStream
 			case in.Plan != "":
 				if !planID.MatchString(in.Plan) {
 					return nil, bad("%q is not an epic's or a story's ID", in.Plan)
