@@ -2823,6 +2823,7 @@ Create stories (flai show prints one, flai move transitions it).
 Subcommands:
 
 - [new](#flai-story-new): Create a story from the item template
+- [start](#flai-story-start): Start a ready story in one call: move it to in-progress, open its stream, prime, and read the inbox
 
 #### flai story new
 
@@ -2867,6 +2868,47 @@ Flags:
 | `--topics` strings | topics the story is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+#### flai story start
+
+Start a ready story in one call: move it to in-progress, open its stream, prime, and read the inbox.
+
+```text
+flai story start <story> [flags]
+```
+
+Start a ready story in one call (S-0274), in place of the four calls an agent makes at the start of a story: flai move S-nnnn in-progress, then flai stream open S-nnnn, flai prime --story S-nnnn, and the MCP tool inbox. The steps run in this order:
+
+```text
+1. Move: the story to in-progress under flai move's rules, its epic
+   following it to in-progress with its first started story.
+2. Stream: the story's narrative is opened, or taken up when it was begun
+   before, and in a git repository the branch story/S-nnnn is checked out in
+   its worktree under .flai-cache/worktrees/S-nnnn, as flai stream open does.
+3. Prime: the story's context pack, fitted to --budget, as flai prime --story
+   prints it.
+4. Inbox: the agent's inbox, as the MCP tool inbox answers it.
+```
+
+A story that is not ready, or that the board holds (its claim overlaps a story in progress, or it names in after: a story that is not done), is refused and nothing changes. The agent is FLAI\_AGENT and the session FLAI\_SESSION; FLAI\_AGENT records the move and names whose inbox is read.
+
+The output is the move, the narrative, the branch and its worktree, the pack, and then the inbox: the threads awaiting you, the stories ready to pull, and what others changed. --json prints one object with the keys story, followed, worktree, branch, from, pack, and inbox, as the MCP tool story\_start answers it.
+
+Exit codes: 0 when the story started, 4 when it was refused and nothing changed, 3 when it moved to in-progress and a later step failed (what ran is printed, and the error names the command that finishes the step), and 1 when the start could not run.
+
+Examples:
+
+```bash
+flai story start S-0274
+flai story start S-0274 --budget 120KB
+flai story start S-0274 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--budget` string | the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB) |
 
 ### flai stream
 

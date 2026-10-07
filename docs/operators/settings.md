@@ -260,7 +260,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--body-stdin` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--bottom` | [flai order](../users/flai-reference.md#flai-order) |
 | `--bucket` | [flai stats](../users/flai-reference.md#flai-stats) |
-| `--budget` | [flai prime](../users/flai-reference.md#flai-prime) |
+| `--budget` | [flai prime](../users/flai-reference.md#flai-prime), [flai story start](../users/flai-reference.md#flai-story-start) |
 | `--build` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai move](../users/flai-reference.md#flai-move), [flai order](../users/flai-reference.md#flai-order), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread confirm](../users/flai-reference.md#flai-thread-confirm), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--candidates` | [flai plan](../users/flai-reference.md#flai-plan), [flai promote](../users/flai-reference.md#flai-promote) |
