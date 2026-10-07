@@ -3,15 +3,35 @@ id: T-1190
 type: task
 nature: feature
 title: The MCP tools message_send, message_reply, and message_get work a conversation from the calling agent's story
-status: backlog
+status: done
 parent: S-0331
 owner: alex
 created: 2026-10-07T20:14:33Z
-updated: 2026-10-07T20:14:33Z
-transitions: []
+updated: 2026-10-07T21:12:39Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:01:57Z
+    by: agent-S-0331
+  - to: in-progress
+    at: 2026-10-07T21:01:57Z
+    by: agent-S-0331
+  - to: done
+    at: 2026-10-07T21:12:38Z
+    by: agent-S-0331
 stream: S-0331
 tags: [flai]
-touches: [flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go]
+touches: [flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/cmd/touches.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/server_test.go]
+usage:
+  source: log
+  seconds: 641
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 19699
+      cache_read: 3358264
+      cache_write: 120027
+      cost: 1.7917
 ---
 # T-1190 The MCP tools message_send, message_reply, and message_get work a conversation from the calling agent's story
 

@@ -3,16 +3,36 @@ id: T-1193
 type: task
 nature: feature
 title: The convention, the template, and the design say when a story's agent messages another and how it answers one
-status: backlog
+status: done
 parent: S-0331
 owner: alex
 created: 2026-10-07T20:14:49Z
-updated: 2026-10-07T20:14:49Z
-transitions: []
+updated: 2026-10-07T21:29:02Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:24:49Z
+    by: agent-S-0331
+  - to: in-progress
+    at: 2026-10-07T21:24:49Z
+    by: agent-S-0331
+  - to: done
+    at: 2026-10-07T21:29:02Z
+    by: agent-S-0331
 stream: S-0331
 tags: [flai, template]
-touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/delegation.md, design/system/workflow.md, template/root/design/conventions/delegation.md]
 after: [T-1191, T-1192]
+usage:
+  source: log
+  seconds: 253
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 22923
+      cache_read: 3907952
+      cache_write: 139673
+      cost: 2.085
 ---
 # T-1193 The convention, the template, and the design say when a story's agent messages another and how it answers one
 

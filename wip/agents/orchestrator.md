@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 70.2882
-accrued_seconds: 70670
-tasks_completed: 74
-last_run: 2026-10-07T21:00:06Z
+accrued_cost: 70.6485
+accrued_seconds: 70698
+tasks_completed: 76
+last_run: 2026-10-07T21:00:34Z
 ---
 
 # Orchestrator activity
@@ -529,6 +529,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0330
 - Seconds: 890
 - Cost: 1.1520 USD, estimated
+
+### 2026-10-07T21:00:28Z
+
+- Summary: Published under judgement after accepting S-0330: 1 pending, 124.03 USD/week; flai 1.36.0→1.37.0 (flai/v1.37.0), template 1.0.71→1.0.72 (v1.0.72, 715c9f3); bundled S-0330; pushed
+- Items: S-0330
+- Seconds: 22
+- Cost: 0.1428 USD, estimated
+
+### 2026-10-07T21:00:34Z
+
+- Summary: Promoted S-0331 to ready, the sole flai promote --candidates candidate once S-0330 was accepted (rank 1, forecast 44m), and applied the throughput order: S-0331 alone
+- Items: S-0331
+- Seconds: 6
+- Cost: 0.2175 USD, estimated
 
 ## Refusals
 

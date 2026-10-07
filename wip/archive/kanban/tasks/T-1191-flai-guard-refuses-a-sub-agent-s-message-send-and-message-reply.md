@@ -3,15 +3,35 @@ id: T-1191
 type: task
 nature: feature
 title: flai guard refuses a sub-agent's message_send and message_reply
-status: backlog
+status: done
 parent: S-0331
 owner: alex
 created: 2026-10-07T20:14:37Z
-updated: 2026-10-07T20:14:37Z
-transitions: []
+updated: 2026-10-07T21:12:42Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:01:58Z
+    by: agent-S-0331
+  - to: in-progress
+    at: 2026-10-07T21:01:58Z
+    by: agent-S-0331
+  - to: done
+    at: 2026-10-07T21:12:42Z
+    by: agent-S-0331
 stream: S-0331
 tags: [flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+usage:
+  source: log
+  seconds: 644
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 11800
+      cache_read: 2011737
+      cache_write: 71901
+      cost: 1.0733
 ---
 # T-1191 flai guard refuses a sub-agent's message_send and message_reply
 

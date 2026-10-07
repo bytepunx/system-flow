@@ -3,16 +3,36 @@ id: T-1192
 type: task
 nature: feature
 title: inbox lists the conversations of the agent's story under messages, and wait_for_events wakes on a message to it
-status: backlog
+status: done
 parent: S-0331
 owner: alex
 created: 2026-10-07T20:14:45Z
-updated: 2026-10-07T20:14:45Z
-transitions: []
+updated: 2026-10-07T21:24:44Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:12:48Z
+    by: agent-S-0331
+  - to: in-progress
+    at: 2026-10-07T21:12:48Z
+    by: agent-S-0331
+  - to: done
+    at: 2026-10-07T21:24:44Z
+    by: agent-S-0331
 stream: S-0331
 tags: [flai]
-touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/storystart/start.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
 after: [T-1190]
+usage:
+  source: log
+  seconds: 716
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 30309
+      cache_read: 5167052
+      cache_write: 184675
+      cost: 2.7568
 ---
 # T-1192 inbox lists the conversations of the agent's story under messages, and wait_for_events wakes on a message to it
 
