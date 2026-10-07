@@ -4,7 +4,9 @@
 // its output. The tiers that select the paths run in list order, cheapest
 // first, and the run stops at the first that fails; its output is parsed
 // into a few findings, never handed back whole. flai test, the MCP tool
-// test, and the host method test.run share it.
+// test, and the host method test.run share it. Verify runs a story's
+// close-out checks before the tiers its branch selects, as one report
+// (S-0270).
 package verify
 
 import (
@@ -112,6 +114,9 @@ type RunOptions struct {
 	Proc Proc
 	// Now is the clock that times each tier; nil is time.Now.
 	Now func() time.Time
+	// Env are KEY=value entries added to the environment each tier's
+	// command inherits, as Verify adds CLOSE_OUT_STORY.
+	Env []string
 }
 
 // Options are what Test needs to answer for a checkout.

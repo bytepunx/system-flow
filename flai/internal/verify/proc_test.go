@@ -38,6 +38,16 @@ func TestOSRunsTiersAsProcessesAndStopsAtTheFailingOne(t *testing.T) {
 	}
 }
 
+func TestOSAddsTheEnvironmentToTheOneTheTierInherits(t *testing.T) {
+	t.Setenv("FLAI_VERIFY_INHERITED", "kept")
+	res, err := Run(context.Background(), t.TempDir(), []Selected{
+		sel("env", "", "sh", "-c", `test "$CLOSE_OUT_STORY" = S-0001 && test "$FLAI_VERIFY_INHERITED" = kept`),
+	}, RunOptions{Env: []string{"CLOSE_OUT_STORY=S-0001"}})
+	if err != nil || !res.Passed {
+		t.Errorf("the tier did not see the story and the inherited environment: %+v, %v", res, err)
+	}
+}
+
 func TestCancellingTheContextKillsTheTiersProcessGroup(t *testing.T) {
 	dir := t.TempDir()
 	pidFile := filepath.Join(dir, "pid")

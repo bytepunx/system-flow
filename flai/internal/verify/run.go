@@ -13,11 +13,12 @@ import (
 
 // Proc runs a tier's command; OS is the real one.
 type Proc interface {
-	// Run runs argv in dir, writing what it prints to stdout and stderr,
+	// Run runs argv in dir, with env, KEY=value entries, added to the
+	// environment it inherits, writing what it prints to stdout and stderr,
 	// and answers its exit status. An error says it could not start or its
 	// output could not be read. When ctx ends it stops the command and
 	// everything the command started, and answers.
-	Run(ctx context.Context, dir string, argv []string, stdout, stderr io.Writer) (int, error)
+	Run(ctx context.Context, dir string, argv, env []string, stdout, stderr io.Writer) (int, error)
 }
 
 // Run runs the selected tiers in order, each in its Dir below root, and
@@ -94,7 +95,7 @@ func runTier(ctx context.Context, root string, s Selected, opts RunOptions) outp
 	if len(s.Argv) == 0 {
 		err = fmt.Errorf("tier %s has no command; give it one in the manifest", s.Tier.Name)
 	} else {
-		exit, err = opts.Proc.Run(ctx, dir, s.Argv, io.MultiWriter(&stdout, &combined), io.MultiWriter(&stderr, &combined))
+		exit, err = opts.Proc.Run(ctx, dir, s.Argv, opts.Env, io.MultiWriter(&stdout, &combined), io.MultiWriter(&stderr, &combined))
 	}
 	if err == nil && ctx.Err() != nil {
 		err = fmt.Errorf("stopped: %w", ctx.Err())

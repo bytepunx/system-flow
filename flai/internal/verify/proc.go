@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"os/exec"
 	"time"
 )
@@ -20,11 +21,15 @@ const waitDelay = 5 * time.Second
 // stopping one reaches everything it started (as serve's runOneCheck does).
 type OS struct{}
 
-// Run runs argv in dir as a process; when ctx ends it asks the process group
-// to stop and, if it has not within a grace period, kills it.
-func (OS) Run(ctx context.Context, dir string, argv []string, stdout, stderr io.Writer) (int, error) {
+// Run runs argv in dir as a process, with env added to the environment flai
+// has; when ctx ends it asks the process group to stop and, if it has not
+// within a grace period, kills it.
+func (OS) Run(ctx context.Context, dir string, argv, env []string, stdout, stderr io.Writer) (int, error) {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = dir
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	cmd.WaitDelay = waitDelay
 	ownGroup(cmd)

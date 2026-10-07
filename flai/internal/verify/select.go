@@ -37,16 +37,44 @@ func Select(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
 		if t.AllOnly {
 			continue
 		}
-		matched := matching(t.Paths, paths)
-		if len(matched) == 0 {
-			continue
-		}
-		dir := cleanDir(t.Dir)
-		if argv, ok := fill(t.Command, files(dir, matched), packages(fsys, dir, matched)); ok {
-			out = append(out, Selected{Tier: t, Argv: argv})
+		if s, ok := selectByPaths(fsys, t, paths); ok {
+			out = append(out, s)
 		}
 	}
 	return out
+}
+
+// SelectStory chooses the tiers, in list order, that a story's close-out
+// runs for the paths its branch changed: those Select chooses without all,
+// and the AllOnly tiers that the paths select or that have no Paths, which
+// run as they do with all. Verify runs them.
+func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
+	var out []Selected
+	for _, t := range tiers {
+		if !t.AllOnly {
+			if s, ok := selectByPaths(fsys, t, paths); ok {
+				out = append(out, s)
+			}
+			continue
+		}
+		if len(t.Paths) == 0 || len(matching(t.Paths, paths)) > 0 {
+			out = append(out, Selected{Tier: t, Argv: allArgv(t)})
+		}
+	}
+	return out
+}
+
+// selectByPaths is the tier with its placeholders filled for the paths it
+// selects, and whether it is selected: some path matches it and every
+// placeholder in its command comes to something.
+func selectByPaths(fsys fs.FS, t Tier, paths []string) (Selected, bool) {
+	matched := matching(t.Paths, paths)
+	if len(matched) == 0 {
+		return Selected{}, false
+	}
+	dir := cleanDir(t.Dir)
+	argv, ok := fill(t.Command, files(dir, matched), packages(fsys, dir, matched))
+	return Selected{Tier: t, Argv: argv}, ok
 }
 
 // allArgv is the argv a tier runs when every tier runs.

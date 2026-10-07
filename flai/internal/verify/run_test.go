@@ -26,11 +26,13 @@ type fakeProc struct {
 	now   time.Time
 	ran   []string
 	dirs  []string
+	envs  [][]string
 }
 
-func (f *fakeProc) Run(_ context.Context, dir string, argv []string, stdout, stderr io.Writer) (int, error) {
+func (f *fakeProc) Run(_ context.Context, dir string, argv, env []string, stdout, stderr io.Writer) (int, error) {
 	f.ran = append(f.ran, strings.Join(argv, " "))
 	f.dirs = append(f.dirs, dir)
+	f.envs = append(f.envs, env)
 	s := f.steps[argv[0]]
 	_, _ = io.WriteString(stdout, s.stdout)
 	_, _ = io.WriteString(stderr, s.stderr)
@@ -172,7 +174,22 @@ func TestRunReportsTheContextEndingDuringATier(t *testing.T) {
 // cancelled MCP call does, and answers as a killed process would.
 type cancellingProc struct{ cancel context.CancelFunc }
 
-func (p *cancellingProc) Run(context.Context, string, []string, io.Writer, io.Writer) (int, error) {
+func (p *cancellingProc) Run(context.Context, string, []string, []string, io.Writer, io.Writer) (int, error) {
 	p.cancel()
 	return -1, nil
+}
+
+func TestRunGivesEveryTierTheEnvironmentItIsAsked(t *testing.T) {
+	proc := &fakeProc{steps: map[string]step{}}
+	env := []string{"CLOSE_OUT_STORY=S-0001"}
+	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a"), sel("b", "", "b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}, Env: env}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(proc.envs, [][]string{env, env}) {
+		t.Errorf("environments %q", proc.envs)
+	}
+	proc = &fakeProc{steps: map[string]step{}}
+	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a")}, RunOptions{Proc: proc, FS: fstest.MapFS{}}); err != nil || proc.envs[0] != nil {
+		t.Errorf("with no environment asked a tier got %q, %v", proc.envs, err)
+	}
 }

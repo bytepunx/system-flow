@@ -2,6 +2,7 @@ package verify
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -145,5 +146,44 @@ func TestSelectWithTheTierAtTheRoot(t *testing.T) {
 	want := []string{"go", "test", ".", "./cmd/x", "cmd/x/x.txt", "go.mod"}
 	if len(got) != 1 || !reflect.DeepEqual(got[0].Argv, want) {
 		t.Errorf("got %+v, want argv %q", got, want)
+	}
+}
+
+func TestSelectStoryAddsTheAllOnlyTiersThePathsSelectOrThatHaveNone(t *testing.T) {
+	tiers := []Tier{
+		{Name: "go-test", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "test", "{packages}"}},
+		{Name: "integration", AllOnly: true, Dir: "flai", Paths: []string{"flai/**"}, Command: []string{"go", "test", "{packages}"}},
+		{Name: "template", AllOnly: true, Paths: []string{"template/**", "!template/**/*.md"}, Command: []string{"template-test.sh"}},
+		{Name: "flaiover", AllOnly: true, Paths: []string{"flaiover/**"}, Command: []string{"npm", "test", "{files}"}, AllCommand: []string{"npm", "run", "check"}},
+		{Name: "smoke", AllOnly: true, Command: []string{"smoke.sh"}},
+	}
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
+	for _, tc := range []struct {
+		name  string
+		paths []string
+		want  []string // name and argv, joined
+	}{
+		{name: "a Go file selects its tests, the full run, and smoke", paths: []string{"flai/main.go"},
+			want: []string{"go-test go test .", "integration go test ./...", "smoke smoke.sh"}},
+		{name: "a file of a sub-project selects its whole run with its own command", paths: []string{"flaiover/src/a.ts", "template/x.sh"},
+			want: []string{"template template-test.sh", "flaiover npm run check", "smoke smoke.sh"}},
+		{name: "an excluded path selects nothing", paths: []string{"template/README.md"},
+			want: []string{"smoke smoke.sh"}},
+		{name: "no paths still run the tiers with none", want: []string{"smoke smoke.sh"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []string
+			for _, s := range SelectStory(fsys, tiers, tc.paths) {
+				got = append(got, s.Tier.Name+" "+strings.Join(s.Argv, " "))
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("selected %q, want %q", got, tc.want)
+			}
+			for _, s := range Select(fsys, tiers, tc.paths, false) {
+				if s.Tier.AllOnly {
+					t.Errorf("Select chose %s, which only all runs", s.Tier.Name)
+				}
+			}
+		})
 	}
 }
