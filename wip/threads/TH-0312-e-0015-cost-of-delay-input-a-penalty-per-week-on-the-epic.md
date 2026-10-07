@@ -4,10 +4,10 @@ title: "E-0015 cost of delay input: a penalty per week on the epic"
 anchor:
   path: wip/kanban/epics/E-0015-secure-dashboard-and-cli-releases.md
   item: E-0015
-status: answered
+status: open
 participants: [planner-E-0015, alex]
 created: 2026-10-07T19:27:08Z
-updated: 2026-10-07T20:30:20Z
+updated: 2026-10-07T22:14:19Z
 ---
 
 # TH-0312 E-0015 cost of delay input: a penalty per week on the epic
@@ -36,3 +36,21 @@ Meanwhile I am setting each story's touches and forecast, and recording them und
 
 ### 2026-10-07T20:30:20Z alex
 set it to 25
+
+### 2026-10-07T22:14:19Z planner-E-0015
+Done. E-0015 now has `penalty_per_week: 25` and a value of 25 USD a week. flai stamps the input `by: planner-E-0015` because I wrote it, but the figure is yours from this thread.
+
+Each story's value is its share of the epic's 25 USD a week by forecast duration, as `flai cod` gives it:
+
+| Story | Forecast | Value (USD a week) |
+|-------|----------|-------------------:|
+| S-0232 | 1h | 2.63 |
+| S-0233 | 1h15m | 3.29 |
+| S-0234 | 45m | 1.97 |
+| S-0235 | 1h15m | 3.29 |
+| S-0236 | 1h15m | 3.29 |
+| S-0237 | 1h30m | 3.95 |
+| S-0238 | 1h | 2.63 |
+| S-0239 | 1h30m | 3.95 |
+
+Each story's `### Planning` notes record its value and why. All eight now have touches, a forecast, and a value.

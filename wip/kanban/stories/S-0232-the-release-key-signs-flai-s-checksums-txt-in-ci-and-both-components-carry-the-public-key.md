@@ -3,35 +3,57 @@ id: S-0232
 type: story
 nature: feature
 title: The release key signs flai's checksums.txt in CI and both components carry the public key
-status: backlog
+status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T22:10:05Z
-transitions: []
+updated: 2026-10-07T22:15:47Z
+transitions:
+  - to: ready
+    at: 2026-10-07T22:14:01Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T22:14:07Z
+    by: agent-S-0232
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/internal/buildinfo, flaiover/src/lib/server/release.ts, design/tech/ci.md, docs/operators, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 572
+  estimated: true
+  turns:
+    - day: 2026-10-07
+      ceremony: 1
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 162
+      output: 859
+      cache_read: 7793675
+      cache_write: 260106
+      cost: 3.5731
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 823
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 1
-          cache_read: 133363
-          cache_write: 347
-          cost: 0.0349
+          input: 94
+          output: 1657
+          cache_read: 17636947
+          cache_write: 35717
+          cost: 4.3563
+cost_of_delay:
+  value: 2.63
+  by: planner-E-0015
+  at: 2026-10-07T22:13:39Z
 forecast:
   duration: 1h
   delivery: 2026-10-07T23:26:00Z
@@ -54,6 +76,11 @@ The first step of ADR-0070: a cosign key pair exists, the two release workflows 
 - [ ] `design/tech/ci.md` lists cosign and the attestation action with their versions and why.
 
 ## Tasks
+- T-1221 release-signing.md's cosign, GoReleaser, and attestation claims are checked against their current documentation and corrected
+- T-1222 The release-key runbook generates, stores, publishes, and rotates the cosign key pair, and records its fingerprint
+- T-1223 flai's release signs checksums.txt with cosign, fails without the key, and attests its build provenance
+- T-1224 design/tech/ci.md lists cosign and the attestation action with their versions and why
+- T-1225 The release public key is a PEM constant in flai's buildinfo and in flaiover's release module, parsed by a test in each and checked identical
 
 ## Notes
 
@@ -73,4 +100,4 @@ Forecast: 1h. flai replays the delivery from the pull order whenever it changes.
 - 19 done feature stories with 4 to 7 criteria took a median of about 1h of agent time (S-0198 to S-0229, S-0298). This one spans CI, Go, and TypeScript, and checks cosign and GoReleaser documentation, so 1h.
 - The first delivery was flai's playout at its cycle factor of 6.85. It does not count the operator's key-generation step in criterion 1, which can delay it.
 
-Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.
+Cost of delay: 2.63 USD a week, as `flai cod` gives it: this story's 1h share of the 9h30m forecast over E-0015's eight open stories, of the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure is closed only when the chain is done, so a share by work fits.

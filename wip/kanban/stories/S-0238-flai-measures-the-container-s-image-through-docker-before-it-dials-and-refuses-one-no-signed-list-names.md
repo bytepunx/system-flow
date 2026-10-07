@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T22:10:05Z
+updated: 2026-10-07T22:14:12Z
 transitions: []
 tags: [cli]
 topics: [release, security]
@@ -18,6 +18,10 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 2.63
+  by: planner-E-0015
+  at: 2026-10-07T22:13:46Z
 forecast:
   duration: 1h
   delivery: 2026-10-08T07:23:00Z
@@ -58,4 +62,4 @@ Forecast: 1h. flai replays the delivery from the pull order whenever it changes.
 - Done feature stories of this size took a median of about 1h of agent time. This one is a Docker check before dialling, three statuses, and a fake runner, so 1h.
 - The first delivery was played out after S-0236 at flai's cycle factor of 6.85.
 
-Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.
+Cost of delay: 2.63 USD a week, as `flai cod` gives it: this story's 1h share of the 9h30m forecast over E-0015's eight open stories, of the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure is closed only when the chain is done, so a share by work fits.

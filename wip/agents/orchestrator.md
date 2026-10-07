@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 75.9667
-accrued_seconds: 74871
-tasks_completed: 81
-last_run: 2026-10-07T22:10:10Z
+accrued_cost: 80.9060
+accrued_seconds: 75720
+tasks_completed: 87
+last_run: 2026-10-07T22:24:19Z
 ---
 
 # Orchestrator activity
@@ -578,6 +578,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0335
 - Seconds: 1608
 - Cost: 2.3281 USD, estimated
+
+### 2026-10-07T22:10:28Z
+
+- Summary: Published under judgement after accepting S-0335: 1 pending, 93.02 USD/week; flai 1.38.0→1.38.1 (flai/v1.38.1), flaiover 0.41.2→0.41.3 (flaiover/v0.41.3), template 1.0.73→1.0.74 (v1.0.74, eacbc06); bundled S-0335; pushed
+- Items: S-0335
+- Seconds: 18
+- Cost: 0.2493 USD, estimated
+
+### 2026-10-07T22:10:34Z
+
+- Summary: Re-applied the throughput order after S-0333 left ready for in-progress: S-0332 alone (55m), held on overlap with S-0333 in design/system/workflow.md. No promote candidates
+- Items: S-0332
+- Seconds: 6
+- Cost: 0.0883 USD, estimated
+
+### 2026-10-07T22:14:07Z
+
+- Summary: Promoted S-0232 to ready, the sole flai promote --candidates candidate once planner-E-0015 set E-0015's values (rank 1, forecast 1h), and applied the throughput order: S-0332 (55m), then S-0232 (1h)
+- Items: S-0232
+- Seconds: 213
+- Cost: 2.7095 USD, estimated
+
+### 2026-10-07T22:14:13Z
+
+- Summary: Re-applied the throughput order after S-0232 left ready for in-progress: S-0332 alone (55m)
+- Items: S-0332
+- Seconds: 6
+- Cost: 0.2803 USD, estimated
+
+### 2026-10-07T22:24:14Z
+
+- Summary: Recommended an answer on TH-0324, citing design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md § Decision
+- Items: S-0232
+- Seconds: 601
+- Cost: 1.4181 USD, estimated
+
+### 2026-10-07T22:24:19Z
+
+- Summary: Recommended on TH-0324 (agent-S-0232; answer_threads autonomous) that the operator take the agent's options. First, the attestation step skipped while the repository is private, since ADR-0070 says flai depends on no attestation. Second, the key in a tag-limited release environment, since ADR-0070 keeps it to the release workflows. Posted as a recommendation, not an answer: criterion 3 changes scope and the public key is the operator's
+- Items: S-0232
+- Seconds: 5
+- Cost: 0.1938 USD, estimated
 
 ## Refusals
 

@@ -4,10 +4,10 @@ title: S-0329 is ready to accept once TH-0315 is resolved
 anchor:
   path: wip/kanban/stories/S-0329-display-all-time-stamps-across-the-site-in-local-time.md
   item: S-0329
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T20:45:13Z
-updated: 2026-10-07T20:45:13Z
+updated: 2026-10-07T22:25:33Z
 ---
 
 # TH-0323 S-0329 is ready to accept once TH-0315 is resolved
@@ -42,3 +42,6 @@ I cannot resolve a thread I did not open.
 - A command hint names the `--forecast-delivery <UTC time>` input format.
 
 If any of these should go local too, the planner offered a follow-up story on TH-0315.
+
+### 2026-10-07T22:25:33Z alex
+Resolved: S-0329 was accepted

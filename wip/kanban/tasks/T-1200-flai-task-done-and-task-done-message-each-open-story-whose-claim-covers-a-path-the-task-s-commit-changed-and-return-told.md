@@ -3,15 +3,21 @@ id: T-1200
 type: task
 nature: feature
 title: flai task done and task_done message each open story whose claim covers a path the task's commit changed, and return told
-status: backlog
+status: in-progress
 parent: S-0333
 owner: alex
 created: 2026-10-07T20:15:38Z
-updated: 2026-10-07T20:15:38Z
-transitions: []
+updated: 2026-10-07T22:13:27Z
+transitions:
+  - to: ready
+    at: 2026-10-07T22:13:26Z
+    by: agent-S-0333
+  - to: in-progress
+    at: 2026-10-07T22:13:27Z
+    by: agent-S-0333
 stream: S-0333
 tags: [flai]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go]
 after: [T-1199]
 ---
 # T-1200 flai task done and task_done message each open story whose claim covers a path the task's commit changed, and return told

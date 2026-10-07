@@ -6,7 +6,7 @@ title: Secure Dashboard and CLI Releases
 status: in-progress
 owner: alex
 created: 2026-10-01T11:06:14Z
-updated: 2026-10-05T00:30:17Z
+updated: 2026-10-07T22:13:38Z
 transitions:
   - to: ready
     at: 2026-10-01T11:15:15Z
@@ -18,7 +18,13 @@ tags: [dashboard, cli]
 topics: [releases]
 usage:
   source: sum
-  seconds: 2546
+  seconds: 3118
+  estimated: true
+  turns:
+    - day: 2026-10-07
+      ceremony: 1
+      hand_edits: 1
+      work: 21
   models:
     - model: claude-fable-5-1
       input: 2082
@@ -33,11 +39,11 @@ usage:
       cache_write: 78430
       cost: 0.3016
     - model: claude-opus-5-5
-      input: 104
-      output: 24433
-      cache_read: 3039680
-      cache_write: 142182
-      cost: 2.07
+      input: 266
+      output: 25292
+      cache_read: 10833355
+      cache_write: 402288
+      cost: 5.6431
     - model: claude-sonnet-5-5
       input: 48
       output: 14014
@@ -46,15 +52,23 @@ usage:
       cost: 0.5753
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 823
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 1
-          cache_read: 133363
-          cache_write: 347
-          cost: 0.0349
+          input: 94
+          output: 1657
+          cache_read: 17636947
+          cache_write: 35717
+          cost: 4.3563
+cost_of_delay:
+  inputs:
+    penalty_per_week: 25
+    by: planner-E-0015
+    at: 2026-10-07T22:13:25Z
+  value: 25
+  by: planner-E-0015
+  at: 2026-10-07T22:13:38Z
 ---
 # E-0015 Secure Dashboard and CLI Releases
 
