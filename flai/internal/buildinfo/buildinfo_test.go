@@ -22,3 +22,15 @@ func TestBelow(t *testing.T) {
 		}
 	}
 }
+
+func TestBare(t *testing.T) {
+	for v, want := range map[string]bool{
+		"1.2.3": true, "0.39.0": true, "10.0.12": true,
+		"v1.2.3": false, "1.2": false, "1.2.3.4": false, "1.2.3-rc.1": false,
+		"01.2.3": false, "1.2.3\n": false, "latest": false, "": false,
+	} {
+		if got := Bare(v); got != want {
+			t.Errorf("Bare(%q) = %v, want %v", v, got, want)
+		}
+	}
+}

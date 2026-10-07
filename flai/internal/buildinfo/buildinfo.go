@@ -2,6 +2,7 @@
 package buildinfo
 
 import (
+	"fmt"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -72,6 +73,13 @@ func Semver(v string) ([3]int, bool) {
 		out[i] = n
 	}
 	return out, true
+}
+
+// Bare reports whether v is a release written as a bare X.Y.Z: no leading
+// v, no suffix, and no leading zeros (ADR-0117).
+func Bare(v string) bool {
+	n, ok := Semver(v)
+	return ok && fmt.Sprintf("%d.%d.%d", n[0], n[1], n[2]) == v
 }
 
 // Below reports whether version is a release older than other. A version

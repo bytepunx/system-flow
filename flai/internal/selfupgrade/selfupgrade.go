@@ -228,8 +228,7 @@ func plainVersion(tag, prefix string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	n, ok := buildinfo.Semver(rest)
-	if !ok || fmt.Sprintf("%d.%d.%d", n[0], n[1], n[2]) != rest {
+	if !buildinfo.Bare(rest) {
 		return "", false
 	}
 	return rest, true

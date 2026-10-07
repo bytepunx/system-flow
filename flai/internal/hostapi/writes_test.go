@@ -27,43 +27,45 @@ var good = map[string]struct {
 	args   string
 	stdin  string
 }{
-	"item.move":         {`{"id":"S-0001","to":"cancelled","reason":"  not\n needed ",` + rid + `}`, "move S-0001 cancelled --by=olive --reason=not needed --json", ""},
-	"story.start":       {`{"story":"S-0001","budget":" 120KB ",` + rid + `}`, "story start S-0001 --budget=120KB --json", ""},
-	"item.order":        {`{"id":"S-0002","before":"S-0001",` + rid + `}`, "order S-0002 --before=S-0001 --json", ""},
-	"item.block":        {`{"id":"T-0001","reason":"tide",` + rid + `}`, "block T-0001 --reason=tide --json", ""},
-	"board.limit":       {`{"column":"in-progress","limit":3,` + rid + `}`, "board limit --json -- in-progress 3", ""},
-	"item.unblock":      {`{"id":"T-0001",` + rid + `}`, "unblock T-0001 --json", ""},
-	"item.new":          {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
-	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
-	"item.finalize":     {`{"id":"S-0001",` + rid + `}`, "edit S-0001 --no-draft --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
-	"item.criteria":     {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1,3],` + rid + `}`, "criteria tick S-0001 1,3 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
-	"task.done":         {`{"id":"T-0001","message":"feat: [S-0001] T-0001 the parser","log":"  parsed\n tables ",` + rid + `}`, "task done T-0001 --message=feat: [S-0001] T-0001 the parser --log=parsed tables --json", ""},
-	"issue.list":        {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
-	"issue.story":       {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
-	"item.edit":         {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
-	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
-	"stream.log":        {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
-	"stream.answer":     {`{"id":"S-0001","question":"--not a flag?","answer":"--also not",` + rid + `}`, "stream answer S-0001 --by=olive --json -- --not a flag? --also not", ""},
-	"stream.state":      {`{"id":"S-0001","current":"  --not a flag\n- T-1 done \n","next":"1. --json\n2. -",` + rid + `}`, "stream state S-0001 --current=--not a flag\n- T-1 done --next=1. --json\n2. - --json", ""},
-	"thread.new":        {`{"on":"S-0001","heading":"Goal","title":"How deep?","text":"Eight metres?",` + rid + `}`, "thread new --on=S-0001 --by=olive --heading=Goal --json -- How deep? Eight metres?", ""},
-	"thread.reply":      {`{"id":"TH-0001","text":"Nine.","recommend":true,"source":" design/adrs/0090-x.md#Decision ",` + rid + `}`, "thread reply TH-0001 --by=olive --recommend --source=design/adrs/0090-x.md#Decision --json -- Nine.", ""},
-	"thread.confirm":    {`{"id":"TH-0001",` + rid + `}`, "thread confirm TH-0001 --by=olive --json", ""},
-	"thread.resolve":    {`{"id":"TH-0001","reason":"answered",` + rid + `}`, "thread resolve TH-0001 --by=olive --reason=answered --json", ""},
-	"doc.show":          {`{"path":"design/system/overview.md"}`, "doc show --json -- design/system/overview.md", ""},
-	"doc.save":          {`{"path":"design/system/overview.md","content":"# new\n","hash":"abcdef0123456789","message":"tidy",` + rid + `}`, "doc save --hash=abcdef0123456789 --trailer=" + Trailer + " --message=tidy --json -- design/system/overview.md", "# new\n"},
-	"adr.new":           {`{"title":"Decide it","status":"accepted","refines":["ADR-0016"],"supersedes":["7"],"body":"## Context\nx\n",` + rid + `}`, "adr new --status=accepted --supersedes=7 --refines=16 --body-stdin --autocommit --trailer=" + Trailer + " --json -- Decide it", "## Context\nx\n"},
-	"adr.template":      {`{}`, "adr new --print-body --json", ""},
-	"adr.accept":        {`{"id":"ADR-0028",` + rid + `}`, "adr accept 28 --autocommit --trailer=" + Trailer + " --json", ""},
-	"publish.run":       {`{` + rid + `}`, "release --pending --json", ""},
-	"dashboard.status":  {`{}`, "dashboard status --json", ""},
-	"dashboard.check":   {`{}`, "dashboard check --json", ""},
-	"dashboard.restart": {`{` + rid + `}`, "dashboard restart --json", ""},
-	"dashboard.upgrade": {`{` + rid + `}`, "dashboard upgrade --json", ""},
-	"dashboard.stop":    {`{` + rid + `}`, "dashboard stop --json", ""},
-	"checks.status":     {`{"id":"S-0001"}`, "checks status S-0001 --json", ""},
+	"item.move":          {`{"id":"S-0001","to":"cancelled","reason":"  not\n needed ",` + rid + `}`, "move S-0001 cancelled --by=olive --reason=not needed --json", ""},
+	"story.start":        {`{"story":"S-0001","budget":" 120KB ",` + rid + `}`, "story start S-0001 --budget=120KB --json", ""},
+	"item.order":         {`{"id":"S-0002","before":"S-0001",` + rid + `}`, "order S-0002 --before=S-0001 --json", ""},
+	"item.block":         {`{"id":"T-0001","reason":"tide",` + rid + `}`, "block T-0001 --reason=tide --json", ""},
+	"board.limit":        {`{"column":"in-progress","limit":3,` + rid + `}`, "board limit --json -- in-progress 3", ""},
+	"item.unblock":       {`{"id":"T-0001",` + rid + `}`, "unblock T-0001 --json", ""},
+	"item.new":           {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
+	"item.template":      {`{"type":"epic"}`, "epic new --print-body --json", ""},
+	"item.finalize":      {`{"id":"S-0001",` + rid + `}`, "edit S-0001 --no-draft --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
+	"item.criteria":      {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1,3],` + rid + `}`, "criteria tick S-0001 1,3 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
+	"task.done":          {`{"id":"T-0001","message":"feat: [S-0001] T-0001 the parser","log":"  parsed\n tables ",` + rid + `}`, "task done T-0001 --message=feat: [S-0001] T-0001 the parser --log=parsed tables --json", ""},
+	"issue.list":         {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
+	"issue.story":        {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
+	"item.edit":          {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
+	"accept.run":         {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
+	"stream.log":         {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
+	"stream.answer":      {`{"id":"S-0001","question":"--not a flag?","answer":"--also not",` + rid + `}`, "stream answer S-0001 --by=olive --json -- --not a flag? --also not", ""},
+	"stream.state":       {`{"id":"S-0001","current":"  --not a flag\n- T-1 done \n","next":"1. --json\n2. -",` + rid + `}`, "stream state S-0001 --current=--not a flag\n- T-1 done --next=1. --json\n2. - --json", ""},
+	"thread.new":         {`{"on":"S-0001","heading":"Goal","title":"How deep?","text":"Eight metres?",` + rid + `}`, "thread new --on=S-0001 --by=olive --heading=Goal --json -- How deep? Eight metres?", ""},
+	"thread.reply":       {`{"id":"TH-0001","text":"Nine.","recommend":true,"source":" design/adrs/0090-x.md#Decision ",` + rid + `}`, "thread reply TH-0001 --by=olive --recommend --source=design/adrs/0090-x.md#Decision --json -- Nine.", ""},
+	"thread.confirm":     {`{"id":"TH-0001",` + rid + `}`, "thread confirm TH-0001 --by=olive --json", ""},
+	"thread.resolve":     {`{"id":"TH-0001","reason":"answered",` + rid + `}`, "thread resolve TH-0001 --by=olive --reason=answered --json", ""},
+	"doc.show":           {`{"path":"design/system/overview.md"}`, "doc show --json -- design/system/overview.md", ""},
+	"doc.save":           {`{"path":"design/system/overview.md","content":"# new\n","hash":"abcdef0123456789","message":"tidy",` + rid + `}`, "doc save --hash=abcdef0123456789 --trailer=" + Trailer + " --message=tidy --json -- design/system/overview.md", "# new\n"},
+	"adr.new":            {`{"title":"Decide it","status":"accepted","refines":["ADR-0016"],"supersedes":["7"],"body":"## Context\nx\n",` + rid + `}`, "adr new --status=accepted --supersedes=7 --refines=16 --body-stdin --autocommit --trailer=" + Trailer + " --json -- Decide it", "## Context\nx\n"},
+	"adr.template":       {`{}`, "adr new --print-body --json", ""},
+	"adr.accept":         {`{"id":"ADR-0028",` + rid + `}`, "adr accept 28 --autocommit --trailer=" + Trailer + " --json", ""},
+	"publish.run":        {`{` + rid + `}`, "release --pending --json", ""},
+	"dashboard.status":   {`{}`, "dashboard status --json", ""},
+	"dashboard.check":    {`{}`, "dashboard check --json", ""},
+	"dashboard.versions": {`{}`, "dashboard versions --json", ""},
+	"dashboard.restart":  {`{` + rid + `}`, "dashboard restart --json", ""},
+	"dashboard.upgrade":  {`{` + rid + `}`, "dashboard upgrade --json", ""},
+	"dashboard.stop":     {`{` + rid + `}`, "dashboard stop --json", ""},
+	"checks.status":      {`{"id":"S-0001"}`, "checks status S-0001 --json", ""},
 	// S-0106: flai host, through flai serve
 	"host.status":   {`{}`, "host status --json", ""},
 	"host.check":    {`{}`, "host check --json", ""},
+	"host.versions": {`{}`, "host versions --json", ""},
 	"host.process":  {`{"process":"serve","action":"restart",` + rid + `}`, "host restart serve --json", ""},
 	"host.upgrade":  {`{` + rid + `}`, "host upgrade --json", ""},
 	"checks.tail":   {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
@@ -187,34 +189,36 @@ var refused = map[string][]string{
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","clear_forecast":true,"forecast":{"duration":"6h"},` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","cost_of_delay":{"value":5},` + rid + `}`,
 	},
-	"item.new":          {`{"type":"task","title":"t","body":"b",` + rid + `}`, `{"type":"story","title":"t","body":"b","parent":"S-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","parent":"E-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["a,b"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["two words"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","nature":"urgent",` + rid + `}`, `{"type":"epic","title":"","body":"b",` + rid + `}`, `{"type":"epic","title":"t","body":"  ",` + rid + `}`, `{"type":"epic","title":"t","body":"b","draft":true,` + rid + `}`},
-	"item.template":     {`{"type":"task"}`},
-	"issue.list":        {`{"story":"--all"}`, `{"story":"T-0001"}`, `{"story":"S-1 --all"}`, `[]`},
-	"issue.story":       {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","epic":"S-0001",` + rid + `}`, `{"id":"I-0001","epic":"--json",` + rid + `}`, `{"id":"I-0001"}`},
-	"accept.run":        {`{"id":"S-1 --no-push",` + rid + `}`, `{"id":"S-0001","by":"alex",` + rid + `}`, `{"id":"S-0001","verified":"abc1234",` + rid + `}`, `{"id":"S-0001","evidence":"Verdict: pass",` + rid + `}`},
-	"stream.log":        {`{"id":"S-0001","entry":"  ",` + rid + `}`},
-	"stream.answer":     {`{"id":"../../etc","question":"q","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"  ","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"q","answer":"  ",` + rid + `}`},
-	"thread.new":        {`{"on":"../secret.md","title":"t","text":"x",` + rid + `}`, `{"on":"--by=eve","title":"t","text":"x",` + rid + `}`, `{"on":"S-0001","title":"","text":"x",` + rid + `}`, `{"on":"src/main.go","title":"t","text":"x",` + rid + `}`},
-	"thread.reply":      {`{"id":"--by=eve","text":"x",` + rid + `}`, `{"id":"TH-0001","text":"",` + rid + `}`, `{"id":"TH-0001","text":"x","recommend":"--yes",` + rid + `}`},
-	"thread.confirm":    {`{"id":"--by=eve",` + rid + `}`, `{"id":"TH-1; ls",` + rid + `}`, `{"id":"TH-0001"}`},
-	"thread.resolve":    {`{"id":"TH-1; ls",` + rid + `}`},
-	"doc.show":          {`{"path":"../../etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.md"}`, `{"path":"src/notes.md"}`},
-	"doc.save":          {`{"path":"design/x.md","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.sh","content":"c","hash":"abcdef0123",` + rid + `}`},
-	"adr.new":           {`{"title":"t","body":"b","status":"final",` + rid + `}`, `{"title":"t","body":"b","refines":["--autocommit"],` + rid + `}`, `{"title":"t","body":"b","supersedes":["0"],` + rid + `}`},
-	"adr.template":      {`[]`},
-	"adr.accept":        {`{"id":"--trailer=x",` + rid + `}`},
-	"publish.run":       {`"--force"`, `{}`},
-	"dashboard.status":  {`"--force"`},
-	"dashboard.check":   {`"--force"`},
-	"dashboard.restart": {`"--force"`, `{}`},
-	"dashboard.upgrade": {`"--force"`, `{}`},
-	"dashboard.stop":    {`"--force"`, `{}`},
-	"checks.status":     {`{"id":"--help"}`, `{"id":"../S-0001"}`},
-	"host.status":       {`"--force"`},
-	"host.check":        {`"--force"`},
+	"item.new":           {`{"type":"task","title":"t","body":"b",` + rid + `}`, `{"type":"story","title":"t","body":"b","parent":"S-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","parent":"E-0001",` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["a,b"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","tags":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["two words"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","topics":["--owner=eve"],` + rid + `}`, `{"type":"epic","title":"t","body":"b","nature":"urgent",` + rid + `}`, `{"type":"epic","title":"","body":"b",` + rid + `}`, `{"type":"epic","title":"t","body":"  ",` + rid + `}`, `{"type":"epic","title":"t","body":"b","draft":true,` + rid + `}`},
+	"item.template":      {`{"type":"task"}`},
+	"issue.list":         {`{"story":"--all"}`, `{"story":"T-0001"}`, `{"story":"S-1 --all"}`, `[]`},
+	"issue.story":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","epic":"S-0001",` + rid + `}`, `{"id":"I-0001","epic":"--json",` + rid + `}`, `{"id":"I-0001"}`},
+	"accept.run":         {`{"id":"S-1 --no-push",` + rid + `}`, `{"id":"S-0001","by":"alex",` + rid + `}`, `{"id":"S-0001","verified":"abc1234",` + rid + `}`, `{"id":"S-0001","evidence":"Verdict: pass",` + rid + `}`},
+	"stream.log":         {`{"id":"S-0001","entry":"  ",` + rid + `}`},
+	"stream.answer":      {`{"id":"../../etc","question":"q","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"  ","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"q","answer":"  ",` + rid + `}`},
+	"thread.new":         {`{"on":"../secret.md","title":"t","text":"x",` + rid + `}`, `{"on":"--by=eve","title":"t","text":"x",` + rid + `}`, `{"on":"S-0001","title":"","text":"x",` + rid + `}`, `{"on":"src/main.go","title":"t","text":"x",` + rid + `}`},
+	"thread.reply":       {`{"id":"--by=eve","text":"x",` + rid + `}`, `{"id":"TH-0001","text":"",` + rid + `}`, `{"id":"TH-0001","text":"x","recommend":"--yes",` + rid + `}`},
+	"thread.confirm":     {`{"id":"--by=eve",` + rid + `}`, `{"id":"TH-1; ls",` + rid + `}`, `{"id":"TH-0001"}`},
+	"thread.resolve":     {`{"id":"TH-1; ls",` + rid + `}`},
+	"doc.show":           {`{"path":"../../etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.md"}`, `{"path":"src/notes.md"}`},
+	"doc.save":           {`{"path":"design/x.md","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.sh","content":"c","hash":"abcdef0123",` + rid + `}`},
+	"adr.new":            {`{"title":"t","body":"b","status":"final",` + rid + `}`, `{"title":"t","body":"b","refines":["--autocommit"],` + rid + `}`, `{"title":"t","body":"b","supersedes":["0"],` + rid + `}`},
+	"adr.template":       {`[]`},
+	"adr.accept":         {`{"id":"--trailer=x",` + rid + `}`},
+	"publish.run":        {`"--force"`, `{}`},
+	"dashboard.status":   {`"--force"`},
+	"dashboard.check":    {`"--force"`},
+	"dashboard.versions": {`"--force"`, `["--json"]`},
+	"dashboard.restart":  {`"--force"`, `{}`},
+	"dashboard.upgrade":  {`"--force"`, `{}`, `{"tag":"v0.4.0",` + rid + `}`, `{"tag":"0.4.0 --image=evil",` + rid + `}`},
+	"dashboard.stop":     {`"--force"`, `{}`},
+	"checks.status":      {`{"id":"--help"}`, `{"id":"../S-0001"}`},
+	"host.status":        {`"--force"`},
+	"host.check":         {`"--force"`},
+	"host.versions":      {`"--force"`, `["--json"]`},
 	"host.process": {`{"process":"--config=/tmp/x","action":"stop",` + rid + `}`, `{"process":"serve","action":"--help",` + rid + `}`,
 		`{"process":"dashboard","action":"stop",` + rid + `}`, `{"process":"serve","action":"restart"}`},
-	"host.upgrade":      {`"--force"`, `{}`},
+	"host.upgrade":      {`"--force"`, `{}`, `{"version":"v1.2.0",` + rid + `}`, `{"version":"--help",` + rid + `}`},
 	"checks.tail":       {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
 	"checks.run":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"checks.cancel":     {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
@@ -1679,8 +1683,16 @@ func TestVerifyStatusAnswersTheLastReportOrNull(t *testing.T) {
 // context instead.
 func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 	p := withDocs(t)
+	calls := map[string]string{}
 	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run", "test.run", "verify.run", "host.process", "host.upgrade"} {
-		t.Run(name, func(t *testing.T) {
+		calls[name] = good[name].params
+	}
+	// S-0298: an upgrade to a chosen release is as detached as one to the newest.
+	calls["host.upgrade to a chosen version"] = `{"version":"1.2.0",` + rid + `}`
+	calls["dashboard.upgrade to a chosen tag"] = `{"tag":"0.4.0",` + rid + `}`
+	for call, params := range calls {
+		name, _, _ := strings.Cut(call, " ")
+		t.Run(call, func(t *testing.T) {
 			parentCtx, cancelParent := context.WithCancel(context.Background())
 			t.Cleanup(cancelParent)
 			var sawCtx context.Context
@@ -1692,8 +1704,8 @@ func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 				}
 				return Ran{Stdout: []byte(`{"container":"flaiover"}`)}, nil
 			}
-			if _, e := writeMethods(run, time.Now, hostFor(name))[name](parentCtx, p, json.RawMessage(good[name].params)); e != nil {
-				t.Fatalf("%s: %+v", name, e)
+			if _, e := writeMethods(run, time.Now, hostFor(name))[name](parentCtx, p, json.RawMessage(params)); e != nil {
+				t.Fatalf("%s: %+v", call, e)
 			}
 			// The real assertion already happened inside run, live, the moment
 			// the connection died: ctx.Err() was nil there, or the test failed
@@ -1705,9 +1717,124 @@ func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 				t.Fatal("run was never called")
 			}
 			if sawCtx == parentCtx {
-				t.Errorf("%s: ran with the request's own context, not a detached one", name)
+				t.Errorf("%s: ran with the request's own context, not a detached one", call)
 			}
 		})
+	}
+}
+
+// S-0298: the published flai and dashboard releases are reads, answered as
+// flai lists them, with no host action, request ID, or journal entry.
+func TestTheVersionsReadsAnswerTheReleaseLists(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	host := Host{Record: func(e Entry) { journal = append(journal, e) }}
+	for name, list := range map[string]string{
+		"host.versions": `[{"version":"1.2.0","tag":"flai/v1.2.0","published":"2026-10-01T09:00:00Z","installed":true,"latest":true},` +
+			`{"version":"1.1.0","tag":"flai/v1.1.0","installed":false,"latest":false,"below_minimum":[{"project":"Here","minimum":"1.2.0"}]}]`,
+		"dashboard.versions": `[{"version":"0.4.0","tag":"flaiover/v0.4.0","running":false,"configured":false,"latest":true},` +
+			`{"version":"0.3.0","tag":"flaiover/v0.3.0","running":true,"configured":false,"latest":false}]`,
+	} {
+		rec := &recorder{ran: Ran{Stdout: []byte(list)}}
+		res, e := writeMethods(rec.run, time.Now, host)[name](context.Background(), p, json.RawMessage(`{}`))
+		if e != nil {
+			t.Fatalf("%s: %+v", name, e)
+		}
+		if w := res.(Written); string(w.Data) != list {
+			t.Errorf("%s answered %s, want %s", name, w.Data, list)
+		}
+	}
+	if len(journal) != 0 {
+		t.Errorf("a read is journalled: %+v", journal)
+	}
+}
+
+// S-0298, ADR-0117 §3: an upgrade may name a release, a bare X.Y.Z, which
+// reaches flai as its flag, the dashboard's always with --published so that
+// flai refuses one that is not published; without one it is the command it
+// always was.
+func TestAnUpgradeRunsTheReleaseAskedFor(t *testing.T) {
+	p := withDocs(t)
+	for _, c := range []struct{ name, params, args string }{
+		{"host.upgrade", `{"version":"1.2.0",` + rid + `}`, "host upgrade --version=1.2.0 --json"},
+		{"host.upgrade", `{"version":"10.0.12",` + rid + `}`, "host upgrade --version=10.0.12 --json"},
+		{"host.upgrade", `{"version":"",` + rid + `}`, "host upgrade --json"},
+		{"dashboard.upgrade", `{"tag":"0.4.0",` + rid + `}`, "dashboard upgrade --published --tag=0.4.0 --json"},
+		{"dashboard.upgrade", `{"tag":"",` + rid + `}`, "dashboard upgrade --json"},
+	} {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
+		if _, e := writeMethods(rec.run, time.Now, hostFor(c.name))[c.name](context.Background(), p, json.RawMessage(c.params)); e != nil {
+			t.Errorf("%s %s: %+v", c.name, c.params, e)
+			continue
+		}
+		if len(rec.runs) != 1 || strings.Join(rec.runs[0].Args, " ") != c.args {
+			t.Errorf("%s %s ran %v, want %q", c.name, c.params, rec.runs, c.args)
+		}
+	}
+}
+
+// S-0298, ADR-0117 §3: a release that is not a bare X.Y.Z is invalid params,
+// refused before anything runs, though the host action is on; nothing the
+// dashboard sends names an image.
+func TestAnUpgradeRefusesWhatIsNotABareRelease(t *testing.T) {
+	p := withDocs(t)
+	for name, field := range map[string]string{"host.upgrade": "version", "dashboard.upgrade": "tag"} {
+		for _, v := range []string{`"v1.2.0"`, `"1.2"`, `"1.2.0.1"`, `"1.2.0-rc.1"`, `"1.2.0+build"`, `"01.2.0"`, `"1.02.0"`, `" 1.2.0"`, `"latest"`,
+			`"--image=evil"`, `"1.2.0 --image=evil"`, `"ghcr.io/evil/flaiover:1.2.0"`, `1.2`, `["1.2.0"]`} {
+			params := `{"` + field + `":` + v + `,` + rid + `}`
+			rec := &recorder{}
+			_, e := writeMethods(rec.run, time.Now, hostFor(name))[name](context.Background(), p, json.RawMessage(params))
+			if e == nil || e.Code != channel.CodeInvalidParams || len(rec.runs) != 0 {
+				t.Errorf("%s %s: error %+v, ran %d command(s)", name, params, e, len(rec.runs))
+			}
+		}
+		params := `{"` + field + `":"1.2.0-rc.1",` + rid + `}`
+		if _, e := writeMethods((&recorder{}).run, time.Now, hostFor(name))[name](context.Background(), p, json.RawMessage(params)); e == nil || !strings.Contains(e.Message, field) || !strings.Contains(e.Message, "X.Y.Z") {
+			t.Errorf("%s: the refusal does not say what to give: %+v", name, e)
+		}
+	}
+}
+
+// S-0298: the journal names the release an upgrade asked for, or that it
+// asked for the newest flai or the configured dashboard.
+func TestTheJournalNamesTheReleaseAnUpgradeAskedFor(t *testing.T) {
+	p := withDocs(t)
+	for _, c := range []struct{ name, params, answer, detail string }{
+		{"host.upgrade", `{"version":"1.1.0",` + rid + `}`, `{"restarting":true,"upgrade":{"previous":"1.2.0","installed":"1.1.0","tag":"flai/v1.1.0"}}`,
+			"installed flai 1.1.0, as asked, over 1.2.0; the host restarts on it"},
+		{"host.upgrade", `{` + rid + `}`, `{"restarting":true,"upgrade":{"previous":"1.1.0","installed":"1.2.0","tag":"flai/v1.2.0"}}`,
+			"installed the newest flai, 1.2.0, over 1.1.0; the host restarts on it"},
+		{"host.upgrade", `{` + rid + `}`, `{"restarting":false,"upgrade":{"current":"1.2.0","latest":"1.2.0","up_to_date":true}}`,
+			"flai 1.2.0 is the latest"},
+		{"dashboard.upgrade", `{"tag":"0.3.0",` + rid + `}`, `{"container":"flaiover","outcome":"upgraded","from":"ghcr.io/bytepunx/flaiover:latest","to":"ghcr.io/bytepunx/flaiover:0.3.0"}`,
+			"upgraded flaiover from ghcr.io/bytepunx/flaiover:latest to ghcr.io/bytepunx/flaiover:0.3.0, release 0.3.0, as asked"},
+		{"dashboard.upgrade", `{"tag":"0.3.0",` + rid + `}`, `{"container":"flaiover","outcome":"up-to-date","to":"ghcr.io/bytepunx/flaiover:0.3.0"}`,
+			"flaiover already running ghcr.io/bytepunx/flaiover:0.3.0, release 0.3.0, as asked"},
+		{"dashboard.upgrade", `{` + rid + `}`, `{"container":"flaiover","outcome":"started","to":"ghcr.io/bytepunx/flaiover:latest"}`,
+			"started flaiover (ghcr.io/bytepunx/flaiover:latest), the configured release"},
+	} {
+		var journal []Entry
+		h := hostFor(c.name)
+		h.Record = func(e Entry) { journal = append(journal, e) }
+		rec := &recorder{ran: Ran{Stdout: []byte(c.answer)}}
+		if _, e := writeMethods(rec.run, time.Now, h)[c.name](context.Background(), p, json.RawMessage(c.params)); e != nil {
+			t.Fatalf("%s %s: %+v", c.name, c.params, e)
+		}
+		if len(journal) != 1 || journal[0].Outcome != "done" || journal[0].Detail != c.detail {
+			t.Errorf("%s %s journalled %+v, want %q", c.name, c.params, journal, c.detail)
+		}
+	}
+	// A refusal is journalled as flai gave it, which names the release.
+	refusal := "resolve flai 1.3.0: o/r has no published release tagged flai/v1.3.0; published are 1.2.0, 1.1.0: choose one of them, or give no version for the newest"
+	var journal []Entry
+	h := hostFor("host.upgrade")
+	h.Record = func(e Entry) { journal = append(journal, e) }
+	rec := &recorder{ran: Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "err": refusal}}}}
+	if _, e := writeMethods(rec.run, time.Now, h)["host.upgrade"](context.Background(), p, json.RawMessage(`{"version":"1.3.0",`+rid+`}`)); e == nil {
+		t.Fatal("an unpublished release was not refused")
+	}
+	if len(journal) != 1 || journal[0].Outcome != "failed" || journal[0].Detail != refusal {
+		t.Errorf("the refusal journalled %+v", journal)
 	}
 }
 

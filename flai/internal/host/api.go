@@ -131,16 +131,10 @@ func upgradeRequest(body io.Reader) (UpgradeRequest, error) {
 	if err := json.NewDecoder(body).Decode(&in); err != nil && !errors.Is(err, io.EOF) {
 		return in, errors.New(`the body is empty for the newest flai, or a JSON object {"version": "X.Y.Z"} naming a published release`)
 	}
-	if in.Version != "" && !bareVersion(in.Version) {
+	if in.Version != "" && !buildinfo.Bare(in.Version) {
 		return in, fmt.Errorf("%q is not a release version: give X.Y.Z, such as 1.2.3, or no version for the newest flai", in.Version)
 	}
 	return in, nil
-}
-
-// bareVersion says whether v is X.Y.Z, with no v, suffix, or leading zeros.
-func bareVersion(v string) bool {
-	n, ok := buildinfo.Semver(v)
-	return ok && fmt.Sprintf("%d.%d.%d", n[0], n[1], n[2]) == v
 }
 
 func refuseOrigin(next http.Handler) http.Handler {

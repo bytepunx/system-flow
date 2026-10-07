@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
@@ -471,10 +472,14 @@ type spec struct {
 	reads bool
 	// describe says in a line what a successful call did, for the journal.
 	// Nil means the publish shape (describe, below); a host action with
-	// a different answer shape (dashboard.restart, dashboard.upgrade,
-	// dashboard.stop) sets its own. A failed call is always "failed",
-	// err.Message, whichever this is.
+	// a different answer shape (dashboard.restart, dashboard.stop) sets its
+	// own, or asked (dashboard.upgrade, host.upgrade). A failed call is
+	// always "failed", err.Message, whichever this is.
 	describe func(res any, err *channel.Error) (outcome, detail string)
+	// asked, when set, is describe made from what was asked, for an answer
+	// that does not say it: an upgrade names the release asked for, or the
+	// newest (ADR-0117). Called only once build has accepted the params.
+	asked func(raw json.RawMessage) func(res any, err *channel.Error) (outcome, detail string)
 	// say, when set, is the journal's line for a call that succeeded, made
 	// from what was asked (S-0105: which setting became what).
 	say func(raw json.RawMessage) string
@@ -528,6 +533,31 @@ var (
 	sinceValue = regexp.MustCompile(`^\d+[dwh]$`)
 	docHash    = regexp.MustCompile(`^[A-Fa-f0-9]{8,128}$`)
 )
+
+// upgradeRelease reads the release an upgrade's params name in field,
+// host.upgrade's version or dashboard.upgrade's tag: "" for none, or a bare
+// X.Y.Z, with no v, suffix, or leading zeros (ADR-0117 §3), refused before
+// any command runs.
+func upgradeRelease(raw json.RawMessage, field string) (string, *channel.Error) {
+	in, e := decode[struct {
+		Version string `json:"version"`
+		Tag     string `json:"tag"`
+	}](raw)
+	if e != nil {
+		return "", e
+	}
+	v := in.Version
+	if field == "tag" {
+		v = in.Tag
+	}
+	if v == "" {
+		return "", nil
+	}
+	if !buildinfo.Bare(v) {
+		return "", bad("%s %q is not a release: give a bare X.Y.Z, such as 1.2.3, or leave %s out", field, v, field)
+	}
+	return v, nil
+}
 
 func needID(id string) *channel.Error {
 	if !anyItemID.MatchString(id) {
@@ -1656,22 +1686,42 @@ func itemSpecs() map[string]spec {
 			return []string{"dashboard", "check"}, "", nil
 		}),
 
+		// dashboard.versions: a read of the published dashboard releases,
+		// newest first, marking the one running (S-0298).
+		"dashboard.versions": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"dashboard", "versions"}, "", nil
+		}),
+
 		// dashboard.restart and dashboard.upgrade: the host action (S-0081),
 		// running the same commands the operator's own shell does. Both
 		// stream progress: they take real Docker time, unlike a move or an
-		// edit. Neither takes an image or tag from the dashboard; flai
-		// upgrades only to what this host's own configuration names.
+		// edit. The dashboard never names an image. dashboard.upgrade may
+		// name a tag, a bare X.Y.Z, which flai deploys only when it is a
+		// published dashboard release (ADR-0117 §3, --published); without
+		// one it upgrades to what this host's own configuration names. A
+		// chosen release keeps running through restarts until an upgrade
+		// without a tag or a start after a stop (ADR-0118).
 		"dashboard.restart": {action: ActionDashboard, progress: true, describe: describeDashboardRestart, detachTimeout: 90 * time.Second, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			if _, e := decode[struct{}](raw); e != nil {
 				return nil, "", e
 			}
 			return []string{"dashboard", "restart"}, "", nil
 		}},
-		"dashboard.upgrade": {action: ActionDashboard, progress: true, describe: describeDashboardUpgrade, detachTimeout: 6 * time.Minute, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			if _, e := decode[struct{}](raw); e != nil {
+		"dashboard.upgrade": {action: ActionDashboard, progress: true, detachTimeout: 6 * time.Minute, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			tag, e := upgradeRelease(raw, "tag")
+			if e != nil {
 				return nil, "", e
 			}
-			return []string{"dashboard", "upgrade"}, "", nil
+			if tag == "" {
+				return []string{"dashboard", "upgrade"}, "", nil
+			}
+			return []string{"dashboard", "upgrade", "--published", "--tag=" + tag}, "", nil
+		}, asked: func(raw json.RawMessage) func(any, *channel.Error) (string, string) {
+			tag, _ := upgradeRelease(raw, "tag")
+			return describeDashboardUpgrade(tag)
 		}},
 
 		// dashboard.stop: the host action, the same command the operator's
@@ -1698,11 +1748,23 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"host", "check"}, "", nil
 		}),
+		// host.versions: a read of the published flai releases, newest first,
+		// marking the one installed and any below a project's flai.minimum
+		// (S-0298).
+		"host.versions": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			if _, e := decode[struct{}](raw); e != nil {
+				return nil, "", e
+			}
+			return []string{"host", "versions"}, "", nil
+		}),
 
 		// host.process and host.upgrade: the host action (S-0106). Both are
 		// detached: restarting flai serve, or the host restarting on a new
-		// flai, ends the connection the request came on.
-		"host.process": {action: ActionHost, describe: describeHost, detachTimeout: 60 * time.Second, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// flai, ends the connection the request came on. host.upgrade may
+		// name a version, a bare X.Y.Z, which the host installs only when it
+		// is a published flai release (ADR-0117 §3); without one it installs
+		// the newest.
+		"host.process": {action: ActionHost, describe: describeHost(""), detachTimeout: 60 * time.Second, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				Process string `json:"process"`
 				Action  string `json:"action"`
@@ -1722,11 +1784,18 @@ func itemSpecs() map[string]spec {
 			_ = json.Unmarshal(raw, &in)
 			return in.Action + " " + in.Process
 		}},
-		"host.upgrade": {action: ActionHost, describe: describeHost, detachTimeout: 6 * time.Minute, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			if _, e := decode[struct{}](raw); e != nil {
+		"host.upgrade": {action: ActionHost, detachTimeout: 6 * time.Minute, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			version, e := upgradeRelease(raw, "version")
+			if e != nil {
 				return nil, "", e
 			}
-			return []string{"host", "upgrade"}, "", nil
+			if version == "" {
+				return []string{"host", "upgrade"}, "", nil
+			}
+			return []string{"host", "upgrade", "--version=" + version}, "", nil
+		}, asked: func(raw json.RawMessage) func(any, *channel.Error) (string, string) {
+			version, _ := upgradeRelease(raw, "version")
+			return describeHost(version)
 		}},
 
 		// checks.status: a read of what flai checks status already reports:
@@ -2261,29 +2330,34 @@ func describeTestRun(res any, err *channel.Error) (outcome, detail string) {
 	return "done", "failed"
 }
 
-// describeHost reads flai host upgrade's --json shape for the journal; a
-// process action says what was asked (its say).
-func describeHost(res any, err *channel.Error) (outcome, detail string) {
-	if err != nil {
-		return "failed", err.Message
+// describeHost reads flai host upgrade's --json shape for the journal,
+// naming the release asked for, version, or the newest when it is ""
+// (ADR-0117); a process action says what was asked (its say).
+func describeHost(version string) func(res any, err *channel.Error) (outcome, detail string) {
+	return func(res any, err *channel.Error) (outcome, detail string) {
+		if err != nil {
+			return "failed", err.Message
+		}
+		w, _ := res.(Written)
+		var said struct {
+			Restarting bool `json:"restarting"`
+			Upgrade    struct {
+				Installed string `json:"installed"`
+				Previous  string `json:"previous"`
+				Current   string `json:"current"`
+			} `json:"upgrade"`
+		}
+		_ = json.Unmarshal(w.Data, &said)
+		switch {
+		case said.Restarting && version != "":
+			return "done", fmt.Sprintf("installed flai %s, as asked, over %s; the host restarts on it", said.Upgrade.Installed, said.Upgrade.Previous)
+		case said.Restarting:
+			return "done", fmt.Sprintf("installed the newest flai, %s, over %s; the host restarts on it", said.Upgrade.Installed, said.Upgrade.Previous)
+		case said.Upgrade.Current != "":
+			return "done", "flai " + said.Upgrade.Current + " is the latest"
+		}
+		return "done", ""
 	}
-	w, _ := res.(Written)
-	var said struct {
-		Restarting bool `json:"restarting"`
-		Upgrade    struct {
-			Installed string `json:"installed"`
-			Previous  string `json:"previous"`
-			Current   string `json:"current"`
-		} `json:"upgrade"`
-	}
-	_ = json.Unmarshal(w.Data, &said)
-	switch {
-	case said.Restarting:
-		return "done", fmt.Sprintf("installed flai %s over %s; the host restarts on it", said.Upgrade.Installed, said.Upgrade.Previous)
-	case said.Upgrade.Current != "":
-		return "done", "flai " + said.Upgrade.Current + " is the latest"
-	}
-	return "done", ""
 }
 
 // describeDashboardRestart, describeDashboardUpgrade, and describeDashboardStop
@@ -2309,27 +2383,35 @@ func describeDashboardRestart(res any, err *channel.Error) (outcome, detail stri
 	return "done", fmt.Sprintf("%s %s (%s)", verb, said.Container, said.Ref)
 }
 
-func describeDashboardUpgrade(res any, err *channel.Error) (outcome, detail string) {
-	if err != nil {
-		return "failed", err.Message
+// describeDashboardUpgrade names the release asked for, tag, or the
+// configured one when it is "" (ADR-0117, ADR-0118).
+func describeDashboardUpgrade(tag string) func(res any, err *channel.Error) (outcome, detail string) {
+	asked := "the configured release"
+	if tag != "" {
+		asked = "release " + tag + ", as asked"
 	}
-	w, _ := res.(Written)
-	var said struct {
-		Container string `json:"container"`
-		Outcome   string `json:"outcome"`
-		From      string `json:"from"`
-		To        string `json:"to"`
-	}
-	_ = json.Unmarshal(w.Data, &said)
-	switch said.Outcome {
-	case "up-to-date":
-		return "done", fmt.Sprintf("%s already running %s", said.Container, said.To)
-	case "started":
-		return "done", fmt.Sprintf("started %s (%s)", said.Container, said.To)
-	case "upgraded":
-		return "done", fmt.Sprintf("upgraded %s from %s to %s", said.Container, said.From, said.To)
-	default:
-		return "done", said.Container
+	return func(res any, err *channel.Error) (outcome, detail string) {
+		if err != nil {
+			return "failed", err.Message
+		}
+		w, _ := res.(Written)
+		var said struct {
+			Container string `json:"container"`
+			Outcome   string `json:"outcome"`
+			From      string `json:"from"`
+			To        string `json:"to"`
+		}
+		_ = json.Unmarshal(w.Data, &said)
+		switch said.Outcome {
+		case "up-to-date":
+			return "done", fmt.Sprintf("%s already running %s, %s", said.Container, said.To, asked)
+		case "started":
+			return "done", fmt.Sprintf("started %s (%s), %s", said.Container, said.To, asked)
+		case "upgraded":
+			return "done", fmt.Sprintf("upgraded %s from %s to %s, %s", said.Container, said.From, said.To, asked)
+		default:
+			return "done", said.Container
+		}
 	}
 }
 
@@ -2487,6 +2569,9 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				d := describe
 				if sp.describe != nil {
 					d = sp.describe
+				}
+				if sp.asked != nil {
+					d = sp.asked(raw)
 				}
 				entry.Outcome, entry.Detail = d(res, rerr)
 				if sp.say != nil && rerr == nil {
