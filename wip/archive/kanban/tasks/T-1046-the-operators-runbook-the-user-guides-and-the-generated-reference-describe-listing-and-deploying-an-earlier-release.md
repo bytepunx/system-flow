@@ -3,12 +3,21 @@ id: T-1046
 type: task
 nature: improvement
 title: The operators' runbook, the user guides, and the generated reference describe listing and deploying an earlier release
-status: backlog
+status: done
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:45:47Z
-updated: 2026-10-06T21:56:42Z
-transitions: []
+updated: 2026-10-07T15:11:29Z
+transitions:
+  - to: ready
+    at: 2026-10-07T15:06:52Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T15:06:52Z
+    by: agent-S-0298
+  - to: done
+    at: 2026-10-07T15:11:29Z
+    by: agent-S-0298
 stream: S-0298
 tags: [cli, dashboard]
 touches: [docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators/index.md, docs/operators/runbooks/update.md]

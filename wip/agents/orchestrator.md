@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 50.4222
-accrued_seconds: 49390
-tasks_completed: 62
-last_run: 2026-10-07T15:03:59Z
+accrued_cost: 54.5717
+accrued_seconds: 63441
+tasks_completed: 63
+last_run: 2026-10-07T18:58:10Z
 ---
 
 # Orchestrator activity
@@ -446,6 +446,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 334
 - Cost: 1.5894 USD, estimated
 
+### 2026-10-07T18:58:10Z
+
+- Summary: The host's flai is now 1.35.1, so the upgrade is done. That closed my MCP connection, which is what `activity_log`, `wait_for_events`, and the other flai tools run on. Without them I can't log decisions or wait for events, so I'm ending this session. A new orchestrator session picks up with the new flai once the orchestrate host action is back on. If flai serve does not restart it by itself, turn the action off and on.
+- Items: none
+- Seconds: 14051
+- Cost: 4.1495 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -461,4 +468,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-07T08:20:45Z
 
 - Call: `flai order --by throughput --apply --json 2>`
+- Needs: none
+
+### 2026-10-07T15:04:12Z
+
+- Call: `flai board --json >/dev/null 2>/tmp/fb.err`
+- Needs: none
+
+### 2026-10-07T15:04:14Z
+
+- Call: `flai board 2>`
 - Needs: none

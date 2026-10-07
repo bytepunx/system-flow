@@ -3,10 +3,10 @@ id: S-0298
 type: story
 nature: improvement
 title: The Host Updates Tab Allows an Operator to Rollback to A Previous Version
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T20:53:15Z
-updated: 2026-10-07T14:51:41Z
+updated: 2026-10-07T18:59:43Z
 transitions:
   - to: ready
     at: 2026-10-07T14:14:49Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T14:26:08Z
     by: agent-S-0298
+  - to: review
+    at: 2026-10-07T15:26:31Z
+    by: agent-S-0298
+  - to: done
+    at: 2026-10-07T18:59:43Z
+    by: alex
 tags: [dashboard, cli]
 topics: [release, security]
-touches: [flaiover/src, flai/cmd, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, flai/cmd/host.go, flai/cmd/host_integration_test.go, flai/internal/host/api.go, flai/internal/host/client.go, flai/internal/host/host.go, flai/internal/host/host_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/folder.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/host/+server.ts, flaiover/src/routes/api/host/host.test.ts, flaiover/src/routes/api/dashboard/+server.ts, flaiover/src/routes/api/dashboard/dashboard.test.ts, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_versions_test.go]
+touches: [flaiover/src, flai/cmd, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, flai/cmd/host.go, flai/cmd/host_integration_test.go, flai/internal/host/api.go, flai/internal/host/client.go, flai/internal/host/host.go, flai/internal/host/host_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/folder.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/host/+server.ts, flaiover/src/routes/api/host/host.test.ts, flaiover/src/routes/api/dashboard/+server.ts, flaiover/src/routes/api/dashboard/dashboard.test.ts, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_versions_test.go, flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/buildinfo_test.go, flai/cmd/host_versions_test.go, design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -68,9 +74,9 @@ Presently, the host Updates page allows the operator to deploy new versions. The
 Introduce flai commands for the cli, http, mcp protocols so that the operator can discover available older versions and deploy one for both the flai CLI and the dashboard.
 
 ## Acceptance criteria
-- [ ] New commands are available to allow the operator to view prior versions
-- [ ] New commands are available to allow the operator to select a specific version of the CLI and dashboard to deploy
-- [ ] Deploying a specific version works like updating to the latest
+- [x] New commands are available to allow the operator to view prior versions
+- [x] New commands are available to allow the operator to select a specific version of the CLI and dashboard to deploy
+- [x] Deploying a specific version works like updating to the latest
 
 ## Tasks
 - T-1038 Record in an ADR and the design that a host action may install a named published release, and name the versions commands

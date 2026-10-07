@@ -4,10 +4,10 @@ title: S-0293 and S-0298 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0298-the-host-updates-tab-allows-an-operator-to-rollback-to-a-previous-version.md
   item: S-0298
-status: open
+status: resolved
 participants: [flai]
 created: 2026-10-07T15:00:24Z
-updated: 2026-10-07T15:00:24Z
+updated: 2026-10-07T15:07:18Z
 ---
 
 # TH-0294 S-0293 and S-0298 conflict when merged
@@ -23,3 +23,6 @@ A trial merge of story/S-0293 with story/S-0298 at flai stream sync conflicts in
 - `design/system/flai-cli.md`
 
 Whichever of S-0293 and S-0298 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T15:07:18Z flai
+Resolved: S-0293 is done, no longer open, at the sync of S-0298

@@ -7,7 +7,7 @@ status: backlog
 parent: S-0280
 owner: alex
 created: 2026-10-07T15:03:46Z
-updated: 2026-10-07T15:03:46Z
+updated: 2026-10-07T15:04:31Z
 transitions: []
 stream: S-0280
 tags: [flai]
@@ -26,7 +26,7 @@ The reason names:
 - the fix: a close-out records no `item.archive` and leaves out one that does not name the story;
 - the ADR T-1164 wrote, and the tests T-1165 added.
 
-It shares no path with T-1166 and can run beside it.
+It shares no path with T-1167 and can run beside it.
 
 ## Done when
 
