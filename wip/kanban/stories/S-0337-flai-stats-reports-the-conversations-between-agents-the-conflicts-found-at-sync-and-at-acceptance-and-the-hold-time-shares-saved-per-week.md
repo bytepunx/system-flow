@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:31Z
-updated: 2026-10-07T20:24:19Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [flai, flaiover]
 topics: [cli, dashboard, git]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T20:22:19Z
 forecast:
   duration: 54m
-  delivery: 2026-10-08T12:08:00Z
-  basis: "flai forecast: median 114 s per unit of size over 29 done large-band feature stories on claude-opus-5-5, times size 28; 46th in the pull order, after S-0332, S-0333, and S-0334."
-  by: planner-E-0018
-  at: 2026-10-07T20:21:34Z
+  delivery: 2026-10-08T11:02:00Z
+  basis: "Its own forecast of 54m; 44th in the pull order with an in-progress limit of 3, behind S-0329, S-0330, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0280, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0310, S-0312, S-0313, S-0314, S-0315, S-0316, S-0317, S-0318, S-0319, S-0320, S-0321, S-0322, S-0323, S-0324, S-0325, S-0326, S-0327, S-0331, S-0332, S-0333, S-0334, S-0335 and S-0336."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 finalized:
   by: orchestrator
   at: 2026-10-07T20:24:19Z
