@@ -6,7 +6,7 @@ title: flai adr new numbers from the story's worktree only, so parallel story br
 status: ready
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T01:11:26Z
+updated: 2026-10-07T01:43:45Z
 transitions:
   - to: ready
     at: 2026-10-07T01:11:26Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:03Z
 forecast:
   duration: 25m
-  delivery: 2026-10-07T08:35:00Z
-  basis: "Its own forecast of 25m; 21st in the pull order with an in-progress limit of 3, behind S-0286, S-0269, S-0270, S-0271, S-0274, S-0275, S-0294, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239 and S-0241."
+  delivery: 2026-10-07T03:40:00Z
+  basis: "Its own forecast of 25m; 5th in the pull order with an in-progress limit of 3, behind S-0269, S-0294, S-0307, S-0270, S-0271, S-0274 and S-0275."
   by: flai
-  at: 2026-10-07T01:07:09Z
+  at: 2026-10-07T01:43:45Z
 ---
 # S-0245 flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
 

@@ -6,7 +6,7 @@ title: "flai check finds `threads.archived` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-10-05T04:40:46Z
-updated: 2026-10-07T01:22:11Z
+updated: 2026-10-07T01:43:45Z
 transitions:
   - to: ready
     at: 2026-10-07T01:12:26Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-07T01:21:57Z
 forecast:
   duration: 45m
-  delivery: 2026-10-07T04:30:00Z
-  basis: "flai forecast's 24m (78 s per unit over 32 done improvement stories, size 18), raised to 45m for five tasks with two command changes, an ADR, and a regenerated reference; similar close-out remediations S-0249, S-0266, and S-0276 took 12m to 43m"
-  by: planner-S-0277
-  at: 2026-10-07T01:21:15Z
+  delivery: 2026-10-07T04:09:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0269, S-0294, S-0307, S-0270, S-0271, S-0274, S-0275 and S-0245."
+  by: flai
+  at: 2026-10-07T01:43:45Z
 finalized:
   by: alex
   at: 2026-10-07T01:12:18Z
