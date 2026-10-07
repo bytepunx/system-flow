@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -118,7 +119,8 @@ func (r *Result) drop(f Finding) {
 }
 
 // storyPaths is the cleaned paths of the files that belong to st: its item
-// file and its tasks', its narrative, and the threads anchored on any of them.
+// file and its tasks', its narrative, the threads anchored on any of them,
+// and the conversations it is one of the two stories of (ADR-0120).
 func storyPaths(repo *workitem.Repo, st *workitem.Item) (map[string]bool, error) {
 	items, err := repo.List(true)
 	if err != nil {
@@ -139,6 +141,17 @@ func storyPaths(repo *workitem.Repo, st *workitem.Item) (map[string]bool, error)
 	for _, th := range list {
 		if th.Anchor.Item != "" && ids[workitem.CanonicalID(th.Anchor.Item)] {
 			in[filepath.Clean(th.Path)] = true
+		}
+	}
+	// A conversation that does not read is reported by the messages rule on
+	// its own file; none is the story's then.
+	convs, err := messages.List(repo)
+	if err != nil {
+		return in, nil //nolint:nilerr // the messages rule reports it; no conversation is inside
+	}
+	for _, c := range convs {
+		if c.Names(st.ID) {
+			in[filepath.Clean(c.Path)] = true
 		}
 	}
 	return in, nil

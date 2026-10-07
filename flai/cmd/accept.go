@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -45,10 +48,13 @@ design/conventions/work-management.md and git.md:
   2. flai archive for the item and its children and narrative, and for an
      epic that followed its story to done, the epic and its cancelled stories;
      every thread still open or answered on what is archived is resolved,
-     as "<id> was accepted", by whoever accepts (I-0073)
-  3. git commit the work item, the archive, and the threads; while another
-     git process holds the index lock, git add and git commit are run again,
-     for about nine seconds in all, and the lock is never removed
+     as "<id> was accepted", by whoever accepts (I-0073), and every
+     conversation still open of a story archived is closed, as "<id> was
+     accepted", or "<id> was archived" for an epic's cancelled story (ADR-0120)
+  3. git commit the work item, the archive, the threads, and the
+     conversations; while another git process holds the index lock, git add
+     and git commit are run again, for about nine seconds in all, and the
+     lock is never removed
   4. tell every story in progress or in review whose touches cover a path
      the merge changed which paths those are, for its agent's MCP inbox
 
@@ -62,10 +68,11 @@ done but was never archived (an older flai, a hand edit) is completed from
 step 0 without a second transition. An item that is done and archived while
 its archived file is not committed is one whose commit failed: the error
 kept git's output and named this command. It is completed by resolving the
-threads left open on what it archived, as step 2 does, and from step 3,
-committing what the main checkout holds under the usual subject, and step 4
-tells the open stories the paths the story's commits changed. A done,
-archived item whose file is committed is refused as already done.
+threads and closing the conversations left open on what it archived, as
+step 2 does, and from step 3, committing what the main checkout holds under
+the usual subject, and step 4 tells the open stories the paths the story's
+commits changed. A done, archived item whose file is committed is refused as
+already done.
 The orchestrator completes neither: that is the operator's. --dry-run
 changes nothing.
 
@@ -122,8 +129,20 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 	o.stdin = c.InOrStdin
 }
 
+// accepted is what flai accept did, or under DryRun would do: the preview's
+// acceptance and the conversations it closes (ADR-0120).
+type accepted struct {
+	*preview.Acceptance
+	// ClosedMessages are the conversations still open of the stories the
+	// acceptance archives, which it closes, or under DryRun would.
+	ClosedMessages []string `json:"closed_messages,omitempty"`
+	// closing names each of ClosedMessages with the story it was open with,
+	// for the text output.
+	closing []string
+}
+
 // acceptItem runs the acceptance flow for a story or an epic.
-func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*preview.Acceptance, error) {
+func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*accepted, error) {
 	opts, err := a.acceptance(repo, it, o)
 	if err != nil {
 		return nil, err
@@ -139,6 +158,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 		return nil, fmt.Errorf("rule: %s %s; the orchestrator accepts only a story in review, so the operator completes this acceptance with flai accept %s", it.ID, left, it.ID)
 	}
+	acc := &accepted{Acceptance: res}
+	messagesToClose(repo, it, acc)
 	res.DryRun = o.dryRun
 	if !o.dryRun {
 		res.By = orDefault(o.by, a.author())
@@ -150,10 +171,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, fmt.Errorf("%s cannot be accepted yet: %s", it.ID, strings.Join(res.Blockers, "; "))
 	}
 	if o.dryRun {
-		return res, nil
+		return acc, nil
 	}
+	acc.ClosedMessages, acc.closing = nil, nil
 	if res.CommitOnly {
-		return a.finishCommit(repo, it, res, o)
+		return a.finishCommit(repo, it, acc, o)
 	}
 	useGit, hasBranch := a.inGitWorkTree(repo.MainRoot), res.Branch != ""
 
@@ -239,11 +261,14 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if err := a.resolveAccepted(repo, it, res, archived, o.by); err != nil {
 		return nil, err
 	}
+	if err := a.closeAccepted(repo, it, acc, archived, o.by); err != nil {
+		return nil, err
+	}
 	if err := a.refreshIndex(repo); err != nil {
 		return nil, err
 	}
 	if !useGit {
-		return res, nil
+		return acc, nil
 	}
 	// 3. commit: the item, the archive, and nothing else. No release is
 	// computed, no tag created, no push made (S-0087) — that is a publish, a
@@ -254,20 +279,25 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	// 4. tell the stories still open what changed under their claim (S-0132)
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
-	return res, nil
+	return acc, nil
 }
 
 // finishCommit completes the acceptance of it, done and archived, whose
 // commit failed (I-0100): steps 3 and 4 only, with no merge, no transition,
 // and no archive, since those happened.
-func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, o acceptOptions) (*preview.Acceptance, error) {
-	// the threads the run that archived left open: an older flai's, or one
-	// whose resolving failed
+func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted, o acceptOptions) (*accepted, error) {
+	res := acc.Acceptance
+	// the threads and conversations the run that archived left open: an
+	// older flai's, or one whose resolving or closing failed
 	all, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
-	if err := a.resolveAccepted(repo, it, res, preview.ThreadItems(all, it, res.Epic), o.by); err != nil {
+	archived := preview.ThreadItems(all, it, res.Epic)
+	if err := a.resolveAccepted(repo, it, res, archived, o.by); err != nil {
+		return nil, err
+	}
+	if err := a.closeAccepted(repo, it, acc, archived, o.by); err != nil {
 		return nil, err
 	}
 	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
@@ -286,7 +316,7 @@ func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, res *preview.
 		changed = committed[it.ID]
 	}
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
-	return res, nil
+	return acc, nil
 }
 
 // resolveAccepted is step 2a: it resolves the threads still open or answered
@@ -303,6 +333,112 @@ func (a *app) resolveAccepted(repo *workitem.Repo, it *workitem.Item, res *previ
 		a.acceptStep(it, "threads", "resolved "+strings.Join(resolved, ", ")+", open or answered on what it archived")
 	}
 	return nil
+}
+
+// closeAccepted is step 2b: it closes the conversations still open of the
+// stories the acceptance of it archived (ADR-0120), as by: the accepted
+// story's as "<id> was accepted", and those of the cancelled stories of an
+// epic archived with it as "<id> was archived", which is what happened to
+// them. The files go into the acceptance commit.
+func (a *app) closeAccepted(repo *workitem.Repo, it *workitem.Item, acc *accepted, archived []string, by string) error {
+	by = orDefault(by, a.author())
+	open, err := openConversations(repo, archived)
+	var closed, rest []string
+	if err == nil {
+		closed, err = messages.CloseOn(repo, []string{it.ID}, by, "accepted", a.now())
+	}
+	if err == nil {
+		rest, err = messages.CloseOn(repo, archived, by, "archived", a.now())
+	}
+	if err != nil {
+		return fmt.Errorf("close the conversations of what the acceptance of %s archived: %w\n%s, but not committed; once the conversation above is fixed, run flai accept %s to close the conversations left and commit", it.ID, err, acceptedState(it.ID, acc.Acceptance), it.ID)
+	}
+	closed = append(closed, rest...)
+	sort.Strings(closed)
+	acc.ClosedMessages, acc.closing = closed, closingLines(among(open, closed), archived)
+	if len(closed) > 0 {
+		a.acceptStep(it, "messages", "closed "+strings.Join(closed, ", ")+", open on what it archived")
+	}
+	return nil
+}
+
+// messagesToClose sets on acc the conversations still open of the stories
+// accepting it archives, which the acceptance closes (ADR-0120). One that
+// cannot be read is a blocker, as a thread is: the acceptance would stop on
+// it after archiving.
+func messagesToClose(repo *workitem.Repo, it *workitem.Item, acc *accepted) {
+	all, err := repo.List(true)
+	if err != nil {
+		acc.Blockers = append(acc.Blockers, fmt.Sprintf("cannot list the items to find the conversations accepting %s closes: %v", it.ID, err))
+		return
+	}
+	ids := preview.ThreadItems(all, it, acc.Epic)
+	open, err := openConversations(repo, ids)
+	if err != nil {
+		acc.Blockers = append(acc.Blockers, fmt.Sprintf("cannot read the conversations of what accepting %s archives, which it closes: %v; fix the conversation file it names", it.ID, err))
+		return
+	}
+	for _, c := range open {
+		acc.ClosedMessages = append(acc.ClosedMessages, c.ID)
+	}
+	acc.closing = closingLines(open, ids)
+}
+
+// openConversations are the conversations still stored open that name one of
+// ids, in ID order: those messages.CloseOn closes on the same IDs.
+func openConversations(repo *workitem.Repo, ids []string) ([]*messages.Conversation, error) {
+	leaving := canonicalSet(ids)
+	all, err := messages.List(repo)
+	if err != nil {
+		return nil, err
+	}
+	var out []*messages.Conversation
+	for _, c := range all {
+		if c.Status != messages.StatusClosed && (leaving[workitem.CanonicalID(c.From)] || leaving[workitem.CanonicalID(c.To)]) {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+// closingLines names each conversation of convs as the text output does: its
+// ID and the story of its two that is not among ids, the one it was open
+// with, or both stories when both are.
+func closingLines(convs []*messages.Conversation, ids []string) []string {
+	leaving := canonicalSet(ids)
+	var lines []string
+	for _, c := range convs {
+		from, to := leaving[workitem.CanonicalID(c.From)], leaving[workitem.CanonicalID(c.To)]
+		switch {
+		case from && to:
+			lines = append(lines, c.ID+", open between "+c.From+" and "+c.To)
+		case to:
+			lines = append(lines, c.ID+", open with "+c.From)
+		default:
+			lines = append(lines, c.ID+", open with "+c.To)
+		}
+	}
+	return lines
+}
+
+// among are the conversations of convs whose IDs ids lists.
+func among(convs []*messages.Conversation, ids []string) []*messages.Conversation {
+	var out []*messages.Conversation
+	for _, c := range convs {
+		if slices.Contains(ids, c.ID) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// canonicalSet is ids in canonical form, as a set.
+func canonicalSet(ids []string) map[string]bool {
+	set := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		set[workitem.CanonicalID(id)] = true
+	}
+	return set
 }
 
 // commitAcceptance is step 3: it commits everything in the main checkout
@@ -492,10 +628,11 @@ func (a *app) acceptStep(it *workitem.Item, step, detail string) {
 	a.logger().Info("acceptance step", "component", "accept", "item", it.ID, "step", step, "detail", detail)
 }
 
-func (a *app) printAccept(res *preview.Acceptance) error {
+func (a *app) printAccept(acc *accepted) error {
 	if a.jsonOut {
-		return a.printJSON(res)
+		return a.printJSON(acc)
 	}
+	res := acc.Acceptance
 	if res.DryRun {
 		for _, b := range res.Blockers {
 			fmt.Fprintf(a.out, "blocked: %s\n", b)
@@ -525,6 +662,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 		if len(res.ResolvedThreads) > 0 {
 			fmt.Fprintf(a.out, "would resolve %s, open or answered on what it archives\n", strings.Join(res.ResolvedThreads, ", "))
 		}
+		for _, line := range acc.closing {
+			fmt.Fprintf(a.out, "would close %s\n", line)
+		}
 		fmt.Fprintln(a.out, "dry run: nothing changed")
 		return nil
 	}
@@ -553,6 +693,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 	}
 	if len(res.ResolvedThreads) > 0 {
 		fmt.Fprintf(a.out, "resolved %s, open or answered on what it archived\n", strings.Join(res.ResolvedThreads, ", "))
+	}
+	for _, line := range acc.closing {
+		fmt.Fprintf(a.out, "closed %s\n", line)
 	}
 	for _, n := range res.Overlaps {
 		fmt.Fprintf(a.out, "told %s it overlaps: %s\n", n.ID, strings.Join(n.Paths, ", "))

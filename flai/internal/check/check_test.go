@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -612,6 +613,90 @@ func TestThreadRules(t *testing.T) {
 	if strings.Contains(got["threads.anchor"], "TH-0001") || strings.Contains(got["threads.front-matter"], "TH-0001") || strings.Contains(got["threads.anchor"], "TH-0006") || strings.Contains(got["threads.archived"], "TH-0006") {
 		t.Errorf("the good and archived threads must pass: %v", got)
 	}
+}
+
+// ADR-0120: each conversation under wip/messages has valid front matter, a
+// unique ID, a file name starting with it, two stories that exist, and dated
+// entries; one left open on an archived story is a warning, and README.md is
+// not a conversation. The wip walk lints its markdown.
+func TestMessageRules(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive/kanban/stories", "wip/messages"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustItem(t, repo, workitem.Story, "Live", "")
+	_ = os.WriteFile(filepath.Join(root, "wip/archive/kanban/stories/S-0002-old.md"), []byte("---\nid: S-0002\ntype: story\nnature: feature\ntitle: Old\nstatus: done\nowner: a\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\ntransitions:\n  - to: done\n    at: 2026-09-01T12:00:00Z\n    by: a\ntags: []\n---\n\n# S-0002 Old\n"), 0o644)
+	mustItem(t, repo, workitem.Story, "Other", "")
+	conv := func(id, from, to, status, extra, entries string) string {
+		return fmt.Sprintf("---\nid: %s\ntitle: T\nfrom: %s\nto: %s\nstatus: %s\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\n%s---\n\n# %s T\n\n## Entries\n%s", id, from, to, status, extra, id, entries)
+	}
+	entry := "\n### 2026-09-01T12:00:00Z alex S-0001\nhi\n"
+	w := func(name, body string) {
+		_ = os.WriteFile(filepath.Join(root, "wip/messages", name), []byte(body), 0o644)
+	}
+	w("README.md", "# Messages\n\nConversations between stories.\n")
+	w("MS-0001-ok.md", conv("MS-0001", "S-0001", "S-0003", "open", "", entry))
+	w("MS-0001-same.md", conv("MS-0001", "S-0003", "S-0001", "open", "", entry))
+	w("MS-0002-left-open.md", conv("MS-0002", "S-0001", "S-0002", "open", "", entry))
+	w("MS-0003-closed.md", conv("MS-0003", "S-0002", "S-0001", "closed", "", entry))
+	w("MS-0004-gone.md", conv("MS-0004", "S-0001", "S-0009", "open", "", entry))
+	w("MS-0005-bad.md", conv("MS-0005", "S-0001", "S-0003", "pending", "", entry))
+	w("MS-0006-broken.md", "---\nid: [MS-0006\n---\n\n# MS-0006\n")
+	w("misnamed.md", conv("MS-0007", "S-0001", "S-0003", "open", "", entry))
+	w("MS-0008-empty.md", conv("MS-0008", "S-0001", "S-0003", "open", "", ""))
+	w("MS-0009-extra.md", conv("MS-0009", "S-0001", "S-0003", "open", "priority: high\n", entry))
+	w("MS-0010-twice.md", conv("MS-0010", "S-0001", "S-0003", "open", "", entry+"\nhi again\n"+entry))
+	_ = os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\n"), 0o644)
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range res.Findings {
+		lint := strings.HasPrefix(f.Rule, "markdown.") && strings.Contains(filepath.ToSlash(f.Path), "wip/messages/")
+		if !lint && !strings.HasPrefix(f.Rule, "messages.") {
+			continue
+		}
+		msg, _, _ := strings.Cut(f.Message, ";")
+		msg, _, _ = strings.Cut(msg, "\n")
+		got = append(got, fmt.Sprintf("%s:%d %s %s %s", filepath.Base(f.Path), f.Line, f.Level, f.Rule, msg))
+	}
+	want := []string{
+		"MS-0001-same.md:2 error messages.duplicate-id MS-0001 is also defined in " + filepath.FromSlash("wip/messages/MS-0001-ok.md"),
+		"MS-0002-left-open.md:6 warning messages.closed MS-0002 is open but S-0002 is archived, so it reads as closed",
+		"MS-0004-gone.md:5 error messages.story to names story S-0009, which does not exist",
+		`MS-0005-bad.md:2 error messages.front-matter status "pending" must be one of open, closed`,
+		"MS-0006-broken.md:2 error messages.front-matter " + parseError(t, root, "MS-0006-broken.md"),
+		"MS-0008-empty.md:1 warning messages.entries MS-0008 has no dated entries",
+		`MS-0009-extra.md:10 error messages.unknown-field field "priority" is not one this flai knows: a newer flai wrote it, or it is misspelled`,
+		`MS-0010-twice.md:21 warning markdown.MD024 MD024/no-duplicate-heading Multiple headings with the same content [Context: "2026-09-01T12:00:00Z alex S-0001"]`,
+		"misnamed.md:1 error messages.filename file name should start with MS-0007-",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("message findings:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// parseError is the message flai check gives for a conversation that does
+// not parse, which is the YAML decoder's, cut where the test cuts it.
+func parseError(t *testing.T, root, name string) string {
+	t.Helper()
+	path := filepath.Join(root, "wip/messages", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = messages.Parse(string(data))
+	if err == nil {
+		t.Fatalf("%s parses", name)
+	}
+	msg, _, _ := strings.Cut(err.Error(), "\n")
+	return msg
 }
 
 // ADR-0047: design and tech files declare topics, and every topic on a

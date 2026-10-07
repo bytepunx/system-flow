@@ -130,6 +130,15 @@ func TestScopedCheckFailsOnlyOnTheStorysOwnFindings(t *testing.T) {
 				t.Fatal(err)
 			}
 		}},
+		{name: "a conversation of the story", rule: "messages.entries", path: "MS-0001-who-takes-flai-cmd.md", fails: true, setup: func(t *testing.T, root string) {
+			addStory(t, root, "S-006", "E-001", "")
+			writeConversation(t, root, "S-004", "S-006")
+		}},
+		{name: "a conversation between two other stories", rule: "messages.entries", path: "MS-0001-who-takes-flai-cmd.md", setup: func(t *testing.T, root string) {
+			addStory(t, root, "S-006", "E-001", "")
+			addStory(t, root, "S-007", "E-001", "")
+			writeConversation(t, root, "S-006", "S-007")
+		}},
 		{name: "a path in the story's diff", rule: "doc.title", path: overview, changed: []string{overview}, fails: true, setup: func(t *testing.T, root string) {
 			edit(t, root, overview, "title: Overview\n", "")
 		}},
@@ -238,5 +247,19 @@ func TestScopeToStoryNamesAStory(t *testing.T) {
 		if err := ScopeToStory(&Result{}, repo, id, nil); err == nil || !strings.Contains(err.Error(), "scope the check to") {
 			t.Errorf("%s: want an error naming the scope, got %v", id, err)
 		}
+	}
+}
+
+// writeConversation writes a conversation between two stories with no dated
+// entries, which the messages rule warns on (ADR-0120).
+func writeConversation(t *testing.T, root, from, to string) {
+	t.Helper()
+	doc := "---\nid: MS-0001\ntitle: Who takes flai/cmd\nfrom: " + from + "\nto: " + to + "\nstatus: open\nparticipants: [agent-" + from + "]\ncreated: 2026-10-07T10:00:00Z\nupdated: 2026-10-07T10:00:00Z\n---\n\n# MS-0001 Who takes flai/cmd\n\n## Entries\n"
+	p := filepath.Join(root, "wip/messages/MS-0001-who-takes-flai-cmd.md")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

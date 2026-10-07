@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -112,6 +113,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.experiments()
 	c.analysis()
 	c.threads()
+	c.messages()
 	c.markdown()
 	c.conflictMarkers()
 	sortFindings(c.res.Findings)
@@ -1110,6 +1112,69 @@ func (c *checker) threads() {
 		}
 		if len(th.Entries()) == 0 {
 			c.add(Warning, "threads.entries", th.Path, 1, "%s has no dated entries", th.ID)
+		}
+	}
+}
+
+// messages validates wip/messages (ADR-0120): each conversation's front
+// matter, unique IDs, file names, that both its stories exist, its dated
+// entries, and an open conversation of an archived story. Its markdown is
+// the wip walk's (markdown). Every markdown file but README.md is read on its
+// own, so that one that does not parse is reported and the rest still are.
+func (c *checker) messages() {
+	dir := messages.Dir(c.repo)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return // optional until the first message
+	}
+	seen := map[string]string{}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".md") || name == "README.md" {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			c.add(Error, "messages.front-matter", path, 1, "%v", err)
+			continue
+		}
+		conv, err := messages.Parse(string(data))
+		if err == nil {
+			err = conv.Validate()
+		}
+		if err != nil {
+			c.add(Error, "messages.front-matter", path, keyLine(path, "id"), "%v", err)
+			continue
+		}
+		if prev, dup := seen[conv.ID]; dup {
+			c.add(Error, "messages.duplicate-id", path, keyLine(path, "id"), "%s is also defined in %s", conv.ID, prev)
+		}
+		seen[conv.ID] = path
+		if rel, err := filepath.Rel(c.repo.Root, path); err == nil {
+			seen[conv.ID] = rel
+		}
+		c.unknownFields("messages.unknown-field", path, conv.Unknown)
+		if !strings.HasPrefix(name, conv.ID+"-") {
+			c.add(Error, "messages.filename", path, 1, "file name should start with %s-", conv.ID)
+		}
+		archived := ""
+		for _, side := range []struct{ field, story string }{{"from", conv.From}, {"to", conv.To}} {
+			it := c.byID[workitem.CanonicalID(side.story)]
+			switch {
+			case it == nil:
+				c.add(Error, "messages.story", path, keyLine(path, side.field), "%s names story %s, which does not exist", side.field, side.story)
+			case it.Archived && archived == "":
+				archived = it.ID
+			}
+		}
+		// flai accept and flai archive close it; one an older flai left open
+		// is closed by hand, as they would have closed it
+		if archived != "" && conv.Status == messages.StatusOpen {
+			c.add(Warning, "messages.closed", path, keyLine(path, "status"), "%s is open but %s is archived, so it reads as closed; close it as flai archive would: set its status to closed and add a dated entry \"Closed: %s was archived\" under ## Entries", conv.ID, archived, archived)
+		}
+		if len(conv.Entries()) == 0 {
+			c.add(Warning, "messages.entries", path, 1, "%s has no dated entries", conv.ID)
 		}
 	}
 }
