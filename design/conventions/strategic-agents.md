@@ -54,6 +54,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: `cod`, `wsjf`, `throughput`, or `fifo`).
 - Each of these only while its permission is on:
   - ask the planner to plan
+  - settle a story planner's threads, and give its story cost of delay inputs
   - finalize a draft
   - promote a story to `ready`
   - order the ready column
@@ -61,14 +62,21 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
   - accept a story
   - publish a release.
 - With `plan_backlog_epics`, run `flai plan --candidates` and start the planner (`plan`) for each epic it lists, one at a time.
+- With `plan_backlog_stories`, after the epics, start the planner (`plan`) for each story `flai plan --candidates` lists (its `type` is `story`), one at a time.
 - With `finalize_drafts`, run `flai promote --drafts`. Finalize a complete draft whose criteria, touches, forecast, and value you judge consistent: `item_edit` with only its id and `draft: false`. For any other draft, open one thread on the story saying what is missing or inconsistent, once, and leave it.
 - With `promote_to_ready`, run `flai promote --candidates` and move the candidates to `ready` in its order while the ready limit has room. Never a draft, never a held story.
 - With `order_ready`, run `flai order --by <policy> --apply` after each change to the ready column, yours or another's. It keeps a story the operator placed by hand within the last day. Never place a story by hand yourself.
 - With `answer_threads`, read its value in `system-flow.yaml` each time before you act on threads: the operator may change it while you run, as they may your other permissions, your policy, and the release policy (`orchestration.release`), so read those again before each decision too. Take from `inbox` the threads awaiting the operator, leaving out those you opened and those with a `pending_recommendation`.
   - With `off`, leave them alone.
   - With `recommend`, reply to each with `thread_reply`, `recommendation: true`, and a `source`: the ADR, design section, or convention your answer rests on, read with `doc_get` first.
-  - With `autonomous`, answer with a `source` when one settles the question. Post a recommendation instead, escalating to the operator, when none does, or when the question asks for the operator's judgement: a decision not yet recorded, a change of scope, or money (a cost of delay input, an estimate, spend).
-  - Never resolve a thread you did not open, never answer one you opened, and never confirm a recommendation: the operator does.
+  - With `autonomous`, answer with a `source` when one settles the question. Post a recommendation instead, escalating to the operator, when none does, or when the question asks for the operator's judgement: a decision not yet recorded, a change of scope, or money (a cost of delay input, an estimate, spend), save the cost of delay inputs a story's planner asks for under `plan_backlog_stories`.
+  - Never resolve a thread you did not open, but a story planner's under `plan_backlog_stories`. Never answer one you opened, and never confirm a recommendation: the operator does.
+- With `plan_backlog_stories`, settle the threads a story's planner opened (its opener is `planner-S-nnnn`), whatever `answer_threads` says. Log each with `activity_log`.
+  - Approve a plan whose tasks, touches, and figures fit the story: reply, and resolve the thread.
+  - Answer its questions, with a `source` when one settles them.
+  - For a cost of delay input it asks for, take the figure it recommends unless the thread or the story gives a reason for one of the alternatives it lists. Set it with `item_edit` `cost_of_delay` on the story: the inputs only, never a value. The planner works the value out on its next run. Then reply naming what you set, and resolve the thread.
+  - Post a recommendation instead, and leave the thread open, when a question asks for a change of scope or a decision not yet recorded.
+  - Never confirm a recommendation.
 - With `accept_reviews`, take each story in review in turn. Never move a story to `done` with `item_move`.
   1. Verify it at the head of its branch, `story/<S-nnnn>`: read its last result with `flai verify <S-nnnn> --last --json`, and when it did not pass or its commit is not the branch's head, run `flai verify <S-nnnn> --json`, or the MCP tool `verify`. A run that did not pass is a blocker. Then hand its worktree, `.flai-cache/worktrees/<S-nnnn>` in the project, and that result to the verifier. It reads the result with `flai verify <S-nnnn> --last` rather than running the suite, checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified.
   2. Run `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run` with that commit, and read the blockers.
@@ -107,7 +115,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Put your recommended answer first.
 - Then hold `wait_for_events` until the thread is answered, and meanwhile do what needs no answer.
 - Never ask in the conversation.
-- Never guess past a missing input the operator owns. The cost of delay inputs are the operator's.
+- Never guess past a missing input the operator owns. The cost of delay inputs are the operator's, or, with `plan_backlog_stories`, the orchestrator's to give a backlog story that has none.
 
 ## When in doubt
 

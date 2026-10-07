@@ -1233,7 +1233,7 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 			"Reply on threads only as answer_threads says, and read it in system-flow.yaml in the main checkout each time before you act on threads: the operator may change it while you run",
 			"Take from inbox the threads awaiting the operator, those whose status is open and whose last entry is by a story's agent, leaving out the threads you opened and those whose pending_recommendation is not null",
 			"thread_reply logs the reply and its source in your decision log",
-			"Never resolve a thread you did not open, never answer a thread you opened, and never confirm a recommendation: the operator does",
+			"Never resolve a thread you did not open, but a story's planner's while plan_backlog_stories is on, never answer a thread you opened, and never confirm a recommendation: the operator does",
 		},
 		"off": {"While answer_threads is off, leave them alone"},
 		"recommend": {
@@ -1261,6 +1261,52 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 	for who, o := range others {
 		if strings.Contains(o, "answer_threads") || strings.Contains(o, "pending_recommendation") {
 			t.Errorf("%s's prompt names answer_threads or pending_recommendation:\n%s", who, o)
+		}
+	}
+}
+
+// S-0328, ADR-0119: while plan_backlog_stories is on, the orchestrator starts
+// the planner, after the epics, for each story flai plan --candidates lists,
+// one at a time, and settles the threads a story's planner opens whatever
+// answer_threads says: it approves a plan that fits, answers questions, and
+// chooses a cost of delay input, the planner's recommended figure unless a
+// reason favours an alternative, setting the inputs alone with item_edit;
+// it replies, resolves, and logs each, and never confirms a recommendation.
+// A cost of delay input is the operator's judgement under answer_threads
+// save on a story planner's thread under this permission. No other agent is
+// told any of it.
+func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
+	p := Prompt(orchestrateReq(nil))
+	for _, w := range []string{
+		// the permission
+		"ask it to plan a backlog story, with plan, and settle the threads a story's planner opens, giving its story cost of delay inputs with item_edit, only while plan_backlog_stories is on",
+		"the epics to plan from flai plan --candidates, and after them the stories",
+		// planning
+		"While plan_backlog_stories is on, after the epics, start the planner with the flai MCP tool plan for each story flai plan --candidates lists, those whose type is story, one at a time, and for no other",
+		// a story planner's threads
+		"While plan_backlog_stories is on, settle the threads a story's planner opened, those whose opener is planner-S-nnnn, whatever answer_threads says",
+		"Approve a plan whose tasks, touches, and figures fit the story: reply so with thread_reply, and resolve the thread with the flai MCP tool thread_resolve",
+		"Answer its questions with thread_reply, with a source when one settles them",
+		"For a cost of delay input it asks for, take the figure it recommends unless the thread or the story gives a reason for one of the alternatives it lists",
+		"Set it with the flai MCP tool item_edit, cost_of_delay on the story, giving the inputs only, revenue_per_week, penalty_per_week, or time_lost_per_cycle, never a value and nothing else: the planner works the value out on its next run",
+		"Then reply naming what you set, and resolve the thread",
+		"Log each approval, answer, and cost of delay you set with activity_log",
+		"Never confirm a recommendation: the operator does",
+		"While plan_backlog_stories is off, a story's planner's threads are the operator's, as answer_threads says",
+		// the exceptions to answer_threads
+		"or money, such as a cost of delay input, an estimate, or spend, save the cost of delay inputs a story's planner asks for while plan_backlog_stories is on",
+		"Never resolve a thread you did not open, but a story's planner's while plan_backlog_stories is on",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	for who, o := range others {
+		for _, w := range []string{"plan_backlog_stories", "planner-S-nnnn", "thread_resolve"} {
+			if strings.Contains(o, w) {
+				t.Errorf("%s's prompt says %q", who, w)
+			}
 		}
 	}
 }
@@ -1502,6 +1548,18 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 		copies = append(copies, string(data))
 		for _, want := range []string{
 			"With `plan_backlog_epics`, run `flai plan --candidates`",
+			// plan_backlog_stories (S-0328, ADR-0119)
+			"ask it to plan a story with `plan` (`plan_backlog_stories`)",
+			"With `plan_backlog_stories`, after the epics, start the planner with `plan` for each story `flai plan --candidates` lists (its `type` is `story`), one at a time.",
+			"With `plan_backlog_stories`, settle the threads a story's planner opened (its opener is `planner-S-nnnn`), whatever `answer_threads` says.",
+			"Approve a plan whose tasks, touches, and figures fit the story: reply so with `thread_reply`, and resolve the thread with `thread_resolve`.",
+			"For a cost of delay input it asks for, take the figure it recommends unless the thread or the story gives a reason for one of the alternatives it lists.",
+			"Set it with `item_edit` `cost_of_delay` on the story, giving the inputs only, never a value: the planner works the value out on its next run.",
+			"Then reply naming what you set, and resolve the thread.",
+			"Log each with `activity_log`.",
+			"save the cost of delay inputs a story's planner asks for under `plan_backlog_stories`",
+			"Never resolve a thread you did not open, but a story planner's under `plan_backlog_stories`",
+			"mcp__flai__thread_reply, mcp__flai__thread_resolve",
 			"With `finalize_drafts`, run `flai promote --drafts`",
 			"with `item_edit` giving only its id and `draft: false`",
 			"With `promote_to_ready`, run `flai promote --candidates`",
