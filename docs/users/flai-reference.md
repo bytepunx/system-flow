@@ -149,14 +149,16 @@ The operator's acceptance step as one command, per design/conventions/work-manag
    a story's epic follows it, to done when it was the epic's last open story
 2. flai archive for the item and its children and narrative, and for an
    epic that followed its story to done, the epic and its cancelled stories
-3. git commit the work item and archive
+3. git commit the work item and archive; while another git process holds
+   the index lock, git add and git commit are run again, for about nine
+   seconds in all, and the lock is never removed
 4. tell every story in progress or in review whose touches cover a path
    the merge changed which paths those are, for its agent's MCP inbox
 ```
 
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087): that is a deliberate step of its own, run when the operator chooses to publish what has accumulated on main, not tied to any one item. See flai release --pending.
 
-flai move &lt;story&gt; done from review runs exactly this. An item that is already done but was never archived (an older flai, a hand edit) is completed from step 0 without a second transition. --dry-run changes nothing.
+flai move &lt;story&gt; done from review runs exactly this. An item that is already done but was never archived (an older flai, a hand edit) is completed from step 0 without a second transition. An item that is done and archived while its archived file is not committed is one whose commit failed: the error kept git's output and named this command. It is completed from step 3, committing what the main checkout holds under the usual subject, and step 4 tells the open stories the paths the story's commits changed. A done, archived item whose file is committed is refused as already done. The orchestrator completes neither: that is the operator's. --dry-run changes nothing.
 
 A story whose branch changes a path Claude Code protects (a .claude folder, .mcp.json, and the others of ADR-0106) is accepted by its operator only: the story's owner or the project's owner, or anyone but the orchestrator when neither is named. Anyone else is refused, before anything is merged, with the files named; --dry-run lists them.
 
