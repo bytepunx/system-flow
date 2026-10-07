@@ -158,7 +158,9 @@ Acceptance computes no release, creates no tag, and pushes nothing (S-0087): tha
 
 flai move &lt;story&gt; done from review runs exactly this. An item that is already done but was never archived (an older flai, a hand edit) is completed from step 0 without a second transition. --dry-run changes nothing.
 
---by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless orchestration.permissions.accept\_reviews is on; under FLAI\_ROLE=orchestrate no other acceptance is allowed. It is refused, before anything is merged, unless --verified names the story branch's head, every acceptance criterion is ticked, every file the branch changes is under the story's touches, no thread on the story or its tasks is open, and --evidence, a Verdict: line and one item "- &lt;n&gt;: &lt;files&gt;" per criterion, names a changed file for each of them. The evidence is written, with the commit, under ### Accepted by the orchestrator in the story's Notes. With --dry-run the evidence is optional.
+A story whose branch changes a path Claude Code protects (a .claude folder, .mcp.json, and the others of ADR-0106) is accepted by its operator only: the story's owner or the project's owner, or anyone but the orchestrator when neither is named. Anyone else is refused, before anything is merged, with the files named; --dry-run lists them.
+
+--by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless orchestration.permissions.accept\_reviews is on; under FLAI\_ROLE=orchestrate no other acceptance is allowed. It is refused, before anything is merged, unless --verified names the story branch's head, every acceptance criterion is ticked, every file the branch changes is under the story's touches and on no path Claude Code protects, no thread on the story or its tasks is open, and --evidence, a Verdict: line and one item "- &lt;n&gt;: &lt;files&gt;" per criterion, names a changed file for each of them. The evidence is written, with the commit, under ### Accepted by the orchestrator in the story's Notes. With --dry-run the evidence is optional.
 
 Examples:
 

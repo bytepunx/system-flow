@@ -600,7 +600,7 @@ func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 	restarted.Restart = "ended (exit 1)"
 	for _, p := range []string{Prompt(r), Prompt(restarted)} {
 		for _, w := range []string{
-			"A write to a file in a .claude/ folder is never a sub-agent's: flai guard refuses it unless the operator has turned on auto-approve",
+			"A write to a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is never a sub-agent's: flai guard refuses it unless the operator has turned on auto-approve",
 			"say so in the prompt of every sub-agent whose task changes such a file, and ask it to return the file's whole new content in its final message",
 			"Make those writes yourself once the layer's sub-agents are back, never while a layer runs: permission_prompt opens a thread on S-0104 and holds the call until the operator answers",
 			"write each whole file into the worktree's ignored .flai-cache/ folder instead, on a path with no .claude folder along it, open one thread on S-0104 with the exact cp commands that put each in place, and end rather than wait",
