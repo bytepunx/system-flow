@@ -7,7 +7,7 @@ count: 1
 cost: 3m
 first_reported: 2026-10-06T10:32:27Z
 last_reported: 2026-10-06T10:32:27Z
-updated: 2026-10-06T10:32:27Z
+updated: 2026-10-07T18:59:45Z
 ---
 
 # I-0089 design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
@@ -27,3 +27,5 @@ S-0220's agent met a conflict in design/issues/summary.md at two syncs, 06:07Z a
 Directions to weigh: `flai stream sync` and `flai accept` regenerate `summary.md` themselves when it is the only conflict, since it is derived from the issue files; or the file is not committed and is generated where it is read.
 
 S-0278 built the first direction ([ADR-0098](../adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)) for I-0074, which has the same cause. The operator chooses at its acceptance whether that closes this issue too.
+
+Story S-0315 remediates this issue, created from it at 2026-10-07T18:59:45Z.
