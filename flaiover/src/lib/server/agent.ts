@@ -77,6 +77,7 @@ export const REQUIRED_METHODS = [
 	'item.finalize',
 	'item.criteria',
 	'task.done',
+	'story.start',
 	'accept.preview',
 	'accept.run',
 	'stream.diff',

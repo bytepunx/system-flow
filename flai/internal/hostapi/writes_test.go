@@ -28,6 +28,7 @@ var good = map[string]struct {
 	stdin  string
 }{
 	"item.move":         {`{"id":"S-0001","to":"cancelled","reason":"  not\n needed ",` + rid + `}`, "move S-0001 cancelled --by=olive --reason=not needed --json", ""},
+	"story.start":       {`{"story":"S-0001","budget":" 120KB ",` + rid + `}`, "story start S-0001 --budget=120KB --json", ""},
 	"item.order":        {`{"id":"S-0002","before":"S-0001",` + rid + `}`, "order S-0002 --before=S-0001 --json", ""},
 	"item.block":        {`{"id":"T-0001","reason":"tide",` + rid + `}`, "block T-0001 --reason=tide --json", ""},
 	"board.limit":       {`{"column":"in-progress","limit":3,` + rid + `}`, "board limit --json -- in-progress 3", ""},
@@ -138,6 +139,12 @@ var refused = map[string][]string{
 		`{"id":"S-0001","message":"m",` + rid + `}`, `{"id":"E-0001","message":"m",` + rid + `}`, `{"id":"--help","message":"m",` + rid + `}`,
 		`{"id":"T-0001 --log=x","message":"m",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"T-0001","message":" \n ",` + rid + `}`,
 		`{"id":"T-0001","message":["m"],` + rid + `}`, `{"id":"T-0001","message":"m"}`,
+	},
+	// S-0274: a story started in one call, by its ID, with a budget that is a size
+	"story.start": {
+		`{"story":"T-0001",` + rid + `}`, `{"story":"E-0001",` + rid + `}`, `{"story":"--help",` + rid + `}`, `{"story":"S-0001 --json",` + rid + `}`,
+		`{"id":"S-0001",` + rid + `}`, `{"story":"S-0001","budget":"--json",` + rid + `}`, `{"story":"S-0001","budget":"lots",` + rid + `}`,
+		`{"story":"S-0001","budget":"0KB",` + rid + `}`, `{"story":"S-0001","budget":120,` + rid + `}`, `{"story":"S-0001"}`,
 	},
 	// S-0271: a story's narrative state, some text to write, never standard input
 	"stream.state": {
@@ -2153,6 +2160,77 @@ func TestTaskDoneAnswersFlaiTaskDonesResult(t *testing.T) {
 	}
 	if _, e, _ := done(Ran{Exit: 1, Events: fatal("T-0021 not found")}, params); e == nil || e.Code != NotFound {
 		t.Errorf("a task that is not there: %+v", e)
+	}
+}
+
+// S-0274: story.start runs flai story start --json, with --budget when one is
+// given, and answers its result. A story not ready or held (exit 4) is
+// refused with flai's reason and the refused object as data; a step that
+// failed after the move (exit 3) is flai's error with the result as data; and
+// what is not a story, or a budget that is not a size, never reaches flai.
+func TestStoryStartAnswersFlaiStoryStartsResult(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	start := func(ran Ran, params string) (any, *channel.Error, string) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, Host{})["story.start"](context.Background(), p, json.RawMessage(params))
+		if len(rec.runs) == 0 {
+			return res, e, ""
+		}
+		if rec.runs[0].Dir != p.Root || rec.runs[0].Stdin != "" {
+			t.Errorf("story.start ran in %s with standard input %q", rec.runs[0].Dir, rec.runs[0].Stdin)
+		}
+		return res, e, strings.Join(rec.runs[0].Args, " ")
+	}
+	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
+
+	started := `{"story":{"id":"S-0007","status":"in-progress"},"followed":null,"worktree":"/p/.flai-cache/worktrees/S-0007","branch":"story/S-0007","from":"main","pack":{"story":"S-0007"},"inbox":{"agent":"flaiover"}}`
+	res, e, args := start(Ran{Stdout: []byte(started)}, `{"story":"S-0007",`+rid+`}`)
+	if e != nil || args != "story start S-0007 --json" {
+		t.Errorf("without a budget: %+v %q", e, args)
+	}
+	if w, ok := res.(Written); !ok || string(w.Data) != started {
+		t.Errorf("the answer: %#v", res)
+	}
+	for _, budget := range []string{"", "  "} {
+		if _, e, args := start(Ran{Stdout: []byte(started)}, `{"story":"S-0007","budget":"`+budget+`",`+rid+`}`); e != nil || args != "story start S-0007 --json" {
+			t.Errorf("a blank budget %q: %+v %q", budget, e, args)
+		}
+	}
+	if _, e, args := start(Ran{Stdout: []byte(started)}, `{"story":"S-0007","budget":"80 kb",`+rid+`}`); e != nil || args != "story start S-0007 --budget=80 kb --json" {
+		t.Errorf("with a budget: %+v %q", e, args)
+	}
+
+	if _, e, args := start(Ran{}, `{"story":"T-0021",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || e.Message != "T-0021 is not a story" || args != "" {
+		t.Errorf("a task: %+v %q", e, args)
+	}
+	if _, e, args := start(Ran{}, `{"story":"S-0007","budget":"lots",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, `budget "lots" is not a size`) || args != "" {
+		t.Errorf("a budget that is not a size: %+v %q", e, args)
+	}
+
+	// exit 4: not ready, or held, and nothing changed
+	reason := "S-0007 is in progress already; if wait_for_work offered it, another agent pulled it first"
+	_, e, _ = start(Ran{Exit: 4, Stdout: []byte(`{"refused":{"story":"S-0007","status":"in-progress","hold":null,"reason":"` + reason + `"}}`), Events: fatal("refused: " + reason)}, `{"story":"S-0007",`+rid+`}`)
+	if e == nil || e.Code != Refused || e.Message != reason {
+		t.Fatalf("a refusal: %+v", e)
+	}
+	if d, ok := e.Data.(map[string]any); !ok || d["story"] != "S-0007" || d["status"] != "in-progress" || d["reason"] != reason {
+		t.Errorf("a refusal's data: %#v", e.Data)
+	}
+
+	// exit 3: moved, then a later step failed
+	moved := `{"story":{"id":"S-0007","status":"in-progress"},"followed":null,"worktree":"","branch":"","from":"","pack":null,"inbox":null}`
+	step := "S-0007 is in progress, but its stream step failed: git worktree add: exit status 128; finish it with flai stream open S-0007"
+	_, e, _ = start(Ran{Exit: 3, Stdout: []byte(moved), Events: fatal(step)}, `{"story":"S-0007",`+rid+`}`)
+	if e == nil || e.Code != channel.CodeInternal || e.Message != step {
+		t.Fatalf("a failed step: %+v", e)
+	}
+	if d, ok := e.Data.(map[string]any); !ok || d["story"].(map[string]any)["status"] != "in-progress" {
+		t.Errorf("a failed step's data: %#v", e.Data)
+	}
+
+	// exit 1: the start could not run
+	if _, e, _ := start(Ran{Exit: 1, Events: fatal("S-0007 not found")}, `{"story":"S-0007",`+rid+`}`); e == nil || e.Code != NotFound {
+		t.Errorf("a story that is not there: %+v", e)
 	}
 }
 

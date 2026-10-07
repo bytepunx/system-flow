@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
@@ -682,6 +683,37 @@ func itemSpecs() map[string]spec {
 
 	return map[string]spec{
 		"item.move": {build: moveArgs},
+
+		// story.start: a ready story started in one call, as flai story start
+		// starts it (S-0274): moved to in-progress, its stream opened, its
+		// pack built, and the inbox read, as the agent the channel runs flai
+		// as, FLAI_AGENT. The answer is flai story start --json's result. A
+		// story not ready or held (exit 4) is refused with flai's reason and
+		// the refused object as data, and nothing changed. A step that failed
+		// after the move (exit 3) is flai's error, naming the step and the
+		// command that finishes it, with the result as data, so the dashboard
+		// sees the story moved and what the steps before it did.
+		"story.start": {exits: map[int]int{3: channel.CodeInternal, 4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Story  string `json:"story"`
+				Budget string `json:"budget"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needStory(in.Story); e != nil {
+				return nil, "", e
+			}
+			args := []string{"story", "start", in.Story}
+			if budget := strings.TrimSpace(in.Budget); budget != "" {
+				if _, err := ctxpack.ParseSize(budget); err != nil {
+					return nil, "", bad("%s", err)
+				}
+				args = append(args, "--budget="+budget)
+			}
+			return args, "", nil
+		}},
+
 		"item.order": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID     string `json:"id"`
