@@ -6,7 +6,7 @@ title: flai task done commits everything in the worktree, so two tasks of one la
 status: backlog
 owner: alex
 created: 2026-10-07T14:26:01Z
-updated: 2026-10-07T23:35:29Z
+updated: 2026-10-07T23:45:02Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-07T23:35:29Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T06:21:00Z
-  basis: "flai forecast gave 24m (78 s per unit over 47 done large-band improvement stories, size 18); raised to 45m from S-0333 (38m) and S-0269 (69m), which changed the same taskdone, cmd, and mcpserver files, plus a new ADR here; 19th in the pull order with an in-progress limit of 3, so delivery is flai's 06:00 moved by the extra 21m."
-  by: planner-S-0312
-  at: 2026-10-07T23:35:29Z
+  delivery: 2026-10-08T06:33:00Z
+  basis: "Its own forecast of 45m; 19th in the pull order with an in-progress limit of 3, behind S-0232, S-0310, S-0314, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306 and S-0309."
+  by: flai
+  at: 2026-10-07T23:45:02Z
 ---
 # S-0312 flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
 
