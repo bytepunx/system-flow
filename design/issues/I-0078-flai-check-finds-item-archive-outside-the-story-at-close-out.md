@@ -2,11 +2,11 @@
 id: I-0078
 title: "flai check finds `item.archive` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 38
 first_reported: 2026-10-05T05:52:49Z
 last_reported: 2026-10-07T07:26:28Z
-updated: 2026-10-07T07:26:28Z
+updated: 2026-10-07T23:29:48Z
 ---
 
 # I-0078 flai check finds `item.archive` outside the story at close-out
@@ -209,3 +209,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0280 remediates this issue, created from it at 2026-10-05T07:09:05Z.
+Closed 2026-10-07T23:29:48Z: Fixed by S-0280 (ADR-0122): a check scoped to a story leaves out every item.archive outside it, so a close-out records none. Every instance named S-0250, cancelled from backlog and left unarchived, which no story branch can archive; the main checkout's flai check still warns on such an item.
