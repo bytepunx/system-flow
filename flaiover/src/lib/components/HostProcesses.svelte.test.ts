@@ -261,6 +261,112 @@ describe('HostProcesses', () => {
 		expect(api).toHaveBeenCalledTimes(2);
 	});
 
+	const releases = () =>
+		answer([
+			{
+				version: '1.10.0',
+				tag: 'flai/v1.10.0',
+				published: '2026-10-01T09:00:00Z',
+				installed: false,
+				latest: true
+			},
+			{ version: '1.9.0', tag: 'flai/v1.9.0', installed: true, latest: false },
+			{
+				version: '1.8.0',
+				tag: 'flai/v1.8.0',
+				installed: false,
+				latest: false,
+				below_minimum: [{ project: 'harbour', minimum: '1.9.0' }]
+			}
+		]);
+	const rows = () =>
+		[...document.querySelectorAll('ul[aria-label="Published flai releases"] li')].map((li) =>
+			li.textContent!.replace(/\s+/g, ' ').trim()
+		);
+	const deploy = (version: string) =>
+		document.querySelector<HTMLButtonElement>(`button[aria-label="Deploy ${version}"]`);
+
+	async function listed(first = host(), props = {}) {
+		await open(first, props);
+		api.mockResolvedValueOnce(releases());
+		q('host-processes-versions-list')!.click();
+		await settle();
+	}
+
+	it('lists the published releases newest first, marking the installed, newest, and below a minimum', async () => {
+		await listed();
+		expect(lastPost()).toEqual({ action: 'versions' });
+		expect(rows()).toEqual([
+			'1.10.0 2026-10-01 newest Deploy',
+			'1.9.0 installed',
+			"1.8.0 below harbour's minimum 1.9.0 Deploy"
+		]);
+		expect(deploy('1.9.0')).toBeNull();
+	});
+
+	it('lists the releases while the host action is off, offering no deploy', async () => {
+		await listed(host({ host_enabled: false }));
+		expect(rows()).toHaveLength(3);
+		expect(deploy('1.10.0')).toBeNull();
+		expect(deploy('1.8.0')).toBeNull();
+	});
+
+	it('deploys a chosen release once confirmed, waits for the host, and reports the version', async () => {
+		await listed(host(), fast);
+		deploy('1.10.0')!.click();
+		flushSync();
+		expect(api).toHaveBeenCalledTimes(2);
+		expect(text('host-processes-confirm-deploy')).toContain('Install flai 1.10.0 on the host?');
+		expect(text('host-processes-confirm-deploy')).not.toContain('flai.minimum');
+
+		api.mockImplementationOnce(() => Promise.reject(new TypeError('network error')));
+		q('host-processes-confirm-deploy-yes')!.click();
+		await settleThrough(2);
+		expect(lastPost()).toEqual({ action: 'upgrade', version: '1.10.0' });
+		api.mockResolvedValue(host({ version: '1.10.0' }));
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe(
+				'Deployed flai 1.10.0 over 1.9.0; serve and MCP restarted.'
+			)
+		);
+		expect(q('host-processes-confirm-deploy')).toBeNull();
+	});
+
+	it('warns before going back below a project’s flai.minimum, and deploys it when confirmed', async () => {
+		await listed(host(), fast);
+		deploy('1.8.0')!.click();
+		flushSync();
+		const said = text('host-processes-confirm-deploy')!;
+		expect(said).toContain("below harbour's flai.minimum, 1.9.0");
+		expect(said).toContain('flai serve leaves harbour unserved');
+
+		api.mockResolvedValueOnce(
+			answer({ upgrade: { previous: '1.9.0', installed: '1.8.0' }, restarting: true })
+		);
+		api.mockResolvedValue(host({ version: '1.8.0' }));
+		q('host-processes-confirm-deploy-yes')!.click();
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe(
+				'Deployed flai 1.8.0 over 1.9.0; serve and MCP restarted.'
+			)
+		);
+		expect(JSON.parse(api.mock.calls[2][1].body)).toEqual({ action: 'upgrade', version: '1.8.0' });
+	});
+
+	it('shows flai’s refusal of a release it does not list as published', async () => {
+		await listed();
+		deploy('1.10.0')!.click();
+		flushSync();
+		api.mockResolvedValueOnce(
+			answer({ error: 'flai 1.10.0 is not published; published: 1.9.0, 1.8.0' }, false)
+		);
+		q('host-processes-confirm-deploy-yes')!.click();
+		await settle();
+		expect(text('host-processes-failed')).toBe(
+			'flai 1.10.0 is not published; published: 1.9.0, 1.8.0'
+		);
+	});
+
 	it('hides the controls but keeps the check while the host action is off', async () => {
 		await open(host({ host_enabled: false }));
 		expect(q('host-processes-serve-restart')).toBeNull();

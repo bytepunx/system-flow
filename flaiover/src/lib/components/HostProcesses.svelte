@@ -6,7 +6,9 @@
 	// upgrade (which has the host start its children again from the new binary), end the very
 	// connection that asked: like the Dashboard area beside it, those treat a network error or a
 	// timeout as the work going ahead and poll /api/host until it answers again. Serve stopped
-	// cannot be started from here; the Stop confirmation says what brings it back.
+	// cannot be started from here; the Stop confirmation says what brings it back. Versions (S-0298)
+	// lists the published releases, a read, and installs a chosen one as Upgrade does, with its
+	// version; one below a served project's flai.minimum is warned about, not refused (ADR-0117).
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 
@@ -31,6 +33,15 @@
 	type Process = 'serve' | 'mcp';
 	type Action = 'start' | 'stop' | 'restart';
 	type Check = { current?: string; latest?: string; up_to_date?: boolean };
+	/** One published flai release as host.versions lists it, newest first. */
+	type Release = {
+		version: string;
+		tag: string;
+		published?: string;
+		installed: boolean;
+		latest: boolean;
+		below_minimum?: { project: string; minimum: string }[];
+	};
 
 	let {
 		disconnectTimeoutMs = 4000,
@@ -50,6 +61,8 @@
 	let message = $state<string | null>(null);
 	let failed = $state<string | null>(null);
 	let checkResult = $state<Check | null>(null);
+	let releases = $state<Release[] | null>(null);
+	let chosen = $state<Release | null>(null);
 
 	const children = $derived(view?.running ? view.children : []);
 	const rows = $derived([
@@ -122,6 +135,14 @@
 		return (body as { error?: string })?.error ?? 'the action failed';
 	}
 
+	// Starts an action: what the last one left on the page is cleared.
+	function begin(what: string) {
+		busy = what;
+		message = failed = null;
+		checkResult = null;
+		releases = chosen = null;
+	}
+
 	async function act(process: Process, action: Action) {
 		if (busy) return;
 		if (process === 'serve' && action === 'stop' && !confirmStopServe) {
@@ -129,9 +150,7 @@
 			return;
 		}
 		confirmStopServe = false;
-		busy = `${process}:${action}`;
-		message = failed = null;
-		checkResult = null;
+		begin(`${process}:${action}`);
 		const endsConnection = process === 'serve' && action !== 'start';
 		const servePid = children.find((k) => k.name === 'serve')?.pid;
 		try {
@@ -160,29 +179,31 @@
 		}
 	}
 
-	async function check() {
+	// The two reads: check for a newer flai, and versions, the published releases.
+	async function read(action: 'check' | 'versions') {
 		if (busy) return;
-		busy = 'check';
-		message = failed = null;
-		checkResult = null;
+		begin(action);
 		try {
-			const outcome = await post({ action: 'check' }, false);
+			const outcome = await post({ action }, false);
 			if (outcome === 'gone') failed = 'The host did not answer.';
 			else if (!outcome.ok) failed = refusal(outcome.body);
-			else checkResult = outcome.body as Check;
+			else if (action === 'check') checkResult = outcome.body as Check;
+			else releases = Array.isArray(outcome.body) ? (outcome.body as Release[]) : [];
 		} finally {
 			busy = null;
 		}
 	}
 
-	async function upgrade() {
+	// version, a published release chosen from Versions, is installed in place of the newest.
+	async function upgrade(version?: string) {
 		if (busy) return;
-		busy = 'upgrade';
-		message = failed = null;
-		checkResult = null;
+		begin('upgrade');
 		const before = view?.running ? view.version : undefined;
 		try {
-			const outcome = await post({ action: 'upgrade' }, true);
+			const outcome = await post(
+				version === undefined ? { action: 'upgrade' } : { action: 'upgrade', version },
+				true
+			);
 			if (outcome !== 'gone' && !outcome.ok) {
 				failed = refusal(outcome.body);
 				return;
@@ -194,9 +215,12 @@
 				return;
 			}
 			await waitForReconnect(
-				(v) => `Upgraded flai ${before ?? ''} to ${v.version}; serve and MCP restarted.`,
+				(v) =>
+					version === undefined
+						? `Upgraded flai ${before ?? ''} to ${v.version}; serve and MCP restarted.`
+						: `Deployed flai ${v.version} over ${before ?? ''}; serve and MCP restarted.`,
 				(v) => v.version !== before,
-				`The host did not come back on a newer flai in time; on the host, flai host status says more.`
+				`The host did not come back on ${version === undefined ? 'a newer flai' : `flai ${version}`} in time; on the host, flai host status says more.`
 			);
 		} finally {
 			busy = null;
@@ -350,21 +374,82 @@
 		{#if failed}
 			<p class="mt-2 text-warn" role="status" data-testid="host-processes-failed">{failed}</p>
 		{/if}
+		{#if releases}
+			{#if releases.length}
+				<ul class="mt-2" aria-label="Published flai releases" data-testid="host-processes-versions">
+					{#each releases as r (r.version)}
+						{@const marks = [r.installed && 'installed', r.latest && 'newest'].filter(Boolean)}
+						<li class="flex items-center gap-2 py-0.5" data-testid="host-processes-version">
+							<span class="font-mono">{r.version}</span>
+							{#if r.published}<span class="text-muted">{r.published.slice(0, 10)}</span>{/if}
+							{#if marks.length}<span class="text-muted">{marks.join(', ')}</span>{/if}
+							{#each r.below_minimum ?? [] as m (m.project)}
+								<span class="text-warn">below {m.project}'s minimum {m.minimum}</span>
+							{/each}
+							{#if view.host_enabled && !r.installed}
+								<button
+									type="button"
+									class="ml-auto rounded border border-line px-2 py-0.5 disabled:opacity-60"
+									onclick={() => (chosen = r)}
+									disabled={!!busy}
+									aria-label={`Deploy ${r.version}`}>Deploy</button
+								>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="mt-2 text-muted" data-testid="host-processes-versions-none">
+					No published releases were found.
+				</p>
+			{/if}
+		{/if}
+		{#if chosen}
+			<p class="mt-2 text-warn" role="alert" data-testid="host-processes-confirm-deploy">
+				Install flai {chosen.version} on the host? The host restarts serve and the MCP servers on it,
+				as Upgrade does.
+				{#each chosen.below_minimum ?? [] as m (m.project)}
+					It is below {m.project}'s
+					<code class="rounded bg-ground px-1 text-ink">flai.minimum</code>,
+					{m.minimum}: flai serve leaves {m.project} unserved, and flai's commands refuse it, until flai
+					is at least {m.minimum} again.
+				{/each}
+				<button
+					type="button"
+					class="ml-1 rounded border border-warn px-2 py-0.5"
+					onclick={() => chosen && upgrade(chosen.version)}
+					data-testid="host-processes-confirm-deploy-yes">Deploy {chosen.version}</button
+				>
+				<button
+					type="button"
+					class="ml-1 rounded border border-line px-2 py-0.5 text-ink"
+					onclick={() => (chosen = null)}>Cancel</button
+				>
+			</p>
+		{/if}
 
 		<p class="mt-3 flex flex-wrap gap-2">
 			<button
 				type="button"
 				class="rounded border border-line px-2 py-1 disabled:opacity-60"
-				onclick={check}
+				onclick={() => read('check')}
 				disabled={!!busy}
 				data-testid="host-processes-check"
 				>{busy === 'check' ? 'Checking…' : 'Check for upgrade'}</button
+			>
+			<button
+				type="button"
+				class="rounded border border-line px-2 py-1 disabled:opacity-60"
+				onclick={() => read('versions')}
+				disabled={!!busy}
+				data-testid="host-processes-versions-list"
+				>{busy === 'versions' ? 'Listing…' : 'Versions'}</button
 			>
 			{#if view.host_enabled}
 				<button
 					type="button"
 					class="rounded border border-line px-2 py-1 disabled:opacity-60"
-					onclick={upgrade}
+					onclick={() => upgrade()}
 					disabled={!!busy}
 					data-testid="host-processes-upgrade"
 					>{busy === 'upgrade' ? 'Upgrading…' : 'Upgrade'}</button
@@ -373,8 +458,8 @@
 		</p>
 		{#if !view.host_enabled}
 			<p class="mt-2 text-muted" data-testid="host-processes-off">
-				Start, stop, restart, and upgrade from here are off; the operator turns them on in a shell
-				on the host with
+				Start, stop, restart, upgrade, and deploying a release from here are off; the operator turns
+				them on in a shell on the host with
 				<code class="rounded bg-ground px-1 text-ink">flai serve enable host</code>.
 			</p>
 		{/if}

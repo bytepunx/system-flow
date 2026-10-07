@@ -6,7 +6,8 @@
 	// container answering the request that asked for them: the fetch is expected to end in a
 	// network error, not a clean response, so those two treat one as "proceeding" and poll this
 	// page's own status until the container is reachable again, rather than trusting the fetch to
-	// resolve cleanly.
+	// resolve cleanly. Versions (S-0298) lists the published releases, a read, and deploys a chosen
+	// one as Upgrade does, with its tag: once, on this container, not pinned (ADR-0117, ADR-0118).
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 
@@ -17,6 +18,14 @@
 		url?: string;
 		serves?: string[];
 		dashboard_enabled: boolean;
+	};
+	/** One published dashboard release as dashboard.versions lists it, newest first. */
+	type Release = {
+		version: string;
+		tag: string;
+		running: boolean;
+		configured: boolean;
+		latest: boolean;
 	};
 
 	// The wait before a stalled restart/upgrade POST is treated as "the container answering it is
@@ -34,11 +43,17 @@
 
 	let status = $state<Status | null>(null);
 	let loadFailed = $state(false);
-	let busy = $state<'check' | 'restart' | 'upgrade' | 'stop' | null>(null);
+	let busy = $state<'check' | 'versions' | 'restart' | 'upgrade' | 'stop' | null>(null);
 	let reconnecting = $state(false);
 	let message = $state<string | null>(null);
 	let checkResult = $state<{ running?: boolean; upgrade_available?: boolean } | null>(null);
+	let releases = $state<Release[] | null>(null);
+	let chosen = $state<Release | null>(null);
 	let failed = $state<string | null>(null);
+
+	// ADR-0118: how long a release chosen here lasts, said with the result of deploying one.
+	const LASTS =
+		'It keeps running through restarts until the next Upgrade, which goes to the configured tag, or a start after a stop.';
 
 	async function load(): Promise<boolean> {
 		try {
@@ -66,11 +81,12 @@
 	// never touched, and a stop that was genuinely the last project threw an unhandled rejection
 	// instead of reporting anything.
 	async function fireAndExpectMaybeNoAnswer(
-		action: 'restart' | 'upgrade' | 'stop'
+		action: 'restart' | 'upgrade' | 'stop',
+		tag?: string
 	): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; body?: unknown } | 'gone'> {
 		const attempt = api('/api/dashboard', {
 			method: 'POST',
-			body: JSON.stringify({ action })
+			body: JSON.stringify(tag === undefined ? { action } : { action, tag })
 		})
 			.then(async (r) => ({ ok: r.ok, body: await r.json().catch(() => ({})) }))
 			.catch(() => 'gone' as const);
@@ -78,16 +94,16 @@
 		return Promise.race([attempt, timeout]);
 	}
 
-	async function waitForReconnect(previousImage: string | undefined) {
+	async function waitForReconnect(previousImage: string | undefined, after = '') {
 		reconnecting = true;
 		const deadline = Date.now() + reconnectGiveUpMs;
 		while (Date.now() < deadline) {
 			await sleep(reconnectPollMs);
 			if (await load()) {
 				message =
-					status?.image && status.image !== previousImage
+					(status?.image && status.image !== previousImage
 						? `Reconnected — now running ${status.image}.`
-						: 'Reconnected.';
+						: 'Reconnected.') + after;
 				reconnecting = false;
 				return;
 			}
@@ -96,14 +112,16 @@
 		failed = 'Did not reconnect within a minute; on the host, flai dashboard status says more.';
 	}
 
-	async function act(action: 'check' | 'restart' | 'upgrade' | 'stop') {
+	// tag, given only with upgrade, deploys that published release in place of the configured one.
+	async function act(action: 'check' | 'versions' | 'restart' | 'upgrade' | 'stop', tag?: string) {
 		if (busy) return;
 		busy = action;
 		message = failed = null;
 		checkResult = null;
+		releases = chosen = null;
 		const previousImage = status?.image;
 		try {
-			if (action === 'check') {
+			if (action === 'check' || action === 'versions') {
 				const r = await api('/api/dashboard', {
 					method: 'POST',
 					body: JSON.stringify({ action })
@@ -113,7 +131,8 @@
 					failed = body.error ?? r.statusText;
 					return;
 				}
-				checkResult = body;
+				if (action === 'check') checkResult = body;
+				else releases = Array.isArray(body) ? body : [];
 				return;
 			}
 			if (action === 'stop') {
@@ -138,9 +157,10 @@
 				if (body.state !== 'stopped') await load();
 				return;
 			}
-			const outcome = await fireAndExpectMaybeNoAnswer(action);
+			const outcome = await fireAndExpectMaybeNoAnswer(action, tag);
+			const after = tag === undefined ? '' : ` ${LASTS}`;
 			if (outcome === 'gone') {
-				await waitForReconnect(previousImage);
+				await waitForReconnect(previousImage, after);
 				return;
 			}
 			if (!outcome.ok) {
@@ -150,14 +170,18 @@
 			// A clean response beat the container's own teardown. Restart always cycles the
 			// container, so it always reconnects; upgrade only touched anything if it actually
 			// swapped — "up-to-date" or "started" never stopped what was already answering.
-			if (action === 'restart' || (outcome.body as { outcome?: string }).outcome === 'upgraded') {
-				await waitForReconnect(previousImage);
+			const done = outcome.body as { outcome?: string; to?: string };
+			if (action === 'restart' || done.outcome === 'upgraded') {
+				await waitForReconnect(previousImage, after);
 				return;
 			}
+			const container = status?.container ?? 'flaiover';
 			message =
-				(outcome.body as { outcome?: string }).outcome === 'up-to-date'
-					? `${status?.container ?? 'flaiover'} is already running the latest.`
-					: 'Started.';
+				done.outcome === 'up-to-date'
+					? tag === undefined
+						? `${container} is already running the latest.`
+						: `${container} is already running ${done.to ?? tag}.`
+					: `Started.${after}`;
 		} finally {
 			busy = null;
 		}
@@ -208,9 +232,62 @@
 			{#if failed}
 				<p class="mt-2 text-warn" role="status" data-testid="host-panel-failed">{failed}</p>
 			{/if}
+			{#if releases}
+				{#if releases.length}
+					<ul
+						class="mt-2"
+						aria-label="Published dashboard releases"
+						data-testid="host-panel-versions"
+					>
+						{#each releases as r (r.version)}
+							{@const marks = [
+								r.running && 'running',
+								r.latest && 'newest',
+								r.configured && 'configured'
+							].filter(Boolean)}
+							<li class="flex items-center gap-2 py-0.5" data-testid="host-panel-version">
+								<span class="font-mono">{r.version}</span>
+								{#if marks.length}<span class="text-muted">{marks.join(', ')}</span>{/if}
+								{#if status.dashboard_enabled && !r.running}
+									<button
+										type="button"
+										class="ml-auto rounded border border-line px-2 py-0.5 disabled:opacity-60"
+										onclick={() => (chosen = r)}
+										disabled={!!busy}
+										aria-label={`Deploy ${r.version}`}>Deploy</button
+									>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="mt-2 text-muted" data-testid="host-panel-versions-none">
+						No published releases were found.
+					</p>
+				{/if}
+			{/if}
+			{#if chosen}
+				<p class="mt-2 text-warn" role="alert" data-testid="host-panel-confirm-deploy">
+					Deploy {status.container}
+					{chosen.version}? It applies to this container, not the configuration. {LASTS} This page has
+					no control to pin a release; on the host,
+					<code class="rounded bg-ground px-1 text-ink">flai config set dashboard.tag</code> does.
+					<button
+						type="button"
+						class="ml-1 rounded border border-warn px-2 py-0.5"
+						onclick={() => chosen && act('upgrade', chosen.version)}
+						data-testid="host-panel-confirm-deploy-yes">Deploy {chosen.version}</button
+					>
+					<button
+						type="button"
+						class="ml-1 rounded border border-line px-2 py-0.5 text-ink"
+						onclick={() => (chosen = null)}>Cancel</button
+					>
+				</p>
+			{/if}
 
-			{#if status.dashboard_enabled}
-				<p class="mt-3 flex flex-wrap gap-2">
+			<p class="mt-3 flex flex-wrap gap-2">
+				{#if status.dashboard_enabled}
 					<button
 						type="button"
 						class="rounded border border-line px-2 py-1 disabled:opacity-60"
@@ -219,6 +296,16 @@
 						data-testid="host-panel-check"
 						>{busy === 'check' ? 'Checking…' : 'Check for updates'}</button
 					>
+				{/if}
+				<button
+					type="button"
+					class="rounded border border-line px-2 py-1 disabled:opacity-60"
+					onclick={() => act('versions')}
+					disabled={!!busy}
+					data-testid="host-panel-versions-list"
+					>{busy === 'versions' ? 'Listing…' : 'Versions'}</button
+				>
+				{#if status.dashboard_enabled}
 					<button
 						type="button"
 						class="rounded border border-line px-2 py-1 disabled:opacity-60"
@@ -241,11 +328,12 @@
 						disabled={!!busy}
 						data-testid="host-panel-stop">{busy === 'stop' ? 'Stopping…' : 'Stop'}</button
 					>
-				</p>
-			{:else}
+				{/if}
+			</p>
+			{#if !status.dashboard_enabled}
 				<p class="mt-3 text-muted">
-					Restart, upgrade, and stop from here are off; the operator turns them on in a shell on the
-					host with
+					Restart, upgrade, deploying a release, and stop from here are off; the operator turns them
+					on in a shell on the host with
 					<code class="rounded bg-ground px-1 text-ink">flai serve enable dashboard</code>.
 				</p>
 			{/if}

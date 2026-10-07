@@ -38,7 +38,7 @@ describe('HostPanel', () => {
 		document.body.innerHTML = '';
 	});
 
-	it('shows what is running and hides the buttons when the action is off', async () => {
+	it('shows what is running and hides the buttons but Versions when the action is off', async () => {
 		api.mockResolvedValueOnce(status({ dashboard_enabled: false }));
 		c = mount(HostPanel, { target: document.body });
 		flushSync();
@@ -47,7 +47,8 @@ describe('HostPanel', () => {
 		expect(text).toContain('flaiover');
 		expect(text).toContain('ghcr.io/bytepunx/flaiover:0.22.6');
 		expect(text).toContain('harbour');
-		expect(document.querySelectorAll('button')).toHaveLength(0);
+		const buttons = [...document.querySelectorAll('button')];
+		expect(buttons.map((b) => b.textContent)).toEqual(['Versions']);
 		expect(document.body.textContent).toContain('flai serve enable dashboard');
 	});
 
@@ -195,6 +196,107 @@ describe('HostPanel', () => {
 		);
 		expect(document.querySelector('[data-testid="host-panel-reconnecting"]')).toBeNull();
 		expect(document.querySelector('[data-testid="host-panel-failed"]')).toBeNull();
+	});
+
+	const release = (version: string, over: Record<string, unknown> = {}) => ({
+		version,
+		tag: `flaiover/v${version}`,
+		running: false,
+		configured: false,
+		latest: false,
+		...over
+	});
+	const releases = () =>
+		answer([
+			release('0.22.7', { latest: true }),
+			release('0.22.6', { running: true, configured: true }),
+			release('0.22.5')
+		]);
+	const confirmYes = () =>
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-confirm-deploy-yes"]')!;
+	const list = () => document.querySelector('ul[aria-label="Published dashboard releases"]');
+	const rows = () =>
+		[...list()!.querySelectorAll('li')].map((li) => li.textContent!.replace(/\s+/g, ' ').trim());
+	const deploy = (version: string) =>
+		document.querySelector<HTMLButtonElement>(`button[aria-label="Deploy ${version}"]`);
+	const confirm = () => document.querySelector('[data-testid="host-panel-confirm-deploy"]');
+
+	async function listed(over: Record<string, unknown> = {}, props = {}) {
+		api.mockResolvedValueOnce(status(over));
+		c = mount(HostPanel, { target: document.body, props });
+		flushSync();
+		await settle();
+		api.mockResolvedValueOnce(releases());
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-versions-list"]')!.click();
+		await settle();
+	}
+
+	it('lists the published releases newest first, marking the running, newest, and configured', async () => {
+		await listed();
+		expect(api).toHaveBeenLastCalledWith(
+			'/api/dashboard',
+			expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'versions' }) })
+		);
+		expect(rows()).toEqual(['0.22.7 newest Deploy', '0.22.6 running, configured', '0.22.5 Deploy']);
+		expect(deploy('0.22.6')).toBeNull();
+	});
+
+	it('lists the releases while the action is off, offering no deploy', async () => {
+		await listed({ dashboard_enabled: false });
+		expect(rows()).toHaveLength(3);
+		expect(deploy('0.22.5')).toBeNull();
+		expect(deploy('0.22.7')).toBeNull();
+	});
+
+	it('deploys a chosen release once confirmed, saying it lasts until the next Upgrade, and reconnects', async () => {
+		await listed({}, fast);
+		deploy('0.22.5')!.click();
+		flushSync();
+		expect(api).toHaveBeenCalledTimes(2);
+		const said = confirm()!.textContent!.replace(/\s+/g, ' ');
+		expect(said).toContain('applies to this container, not the configuration');
+		expect(said).toContain(
+			'keeps running through restarts until the next Upgrade, which goes to the configured tag, or a start after a stop'
+		);
+		expect(said).toContain('flai config set dashboard.tag');
+
+		// the POST never resolves: the container answering it was swapped mid-request
+		api.mockImplementationOnce(() => new Promise(() => {}));
+		confirmYes().click();
+		await settleThrough(20);
+		expect(JSON.parse(api.mock.calls[2][1].body)).toEqual({ action: 'upgrade', tag: '0.22.5' });
+		expect(document.querySelector('[data-testid="host-panel-reconnecting"]')).not.toBeNull();
+
+		api.mockResolvedValue(status({ image: 'ghcr.io/bytepunx/flaiover:0.22.5' }));
+		await settleThrough(20);
+		const message = document.querySelector('[data-testid="host-panel-message"]')!.textContent!;
+		expect(message).toContain('Reconnected — now running ghcr.io/bytepunx/flaiover:0.22.5.');
+		expect(message).toContain('keeps running through restarts until the next Upgrade');
+		expect(confirm()).toBeNull();
+	});
+
+	it('shows flai’s refusal of a release it does not list as published', async () => {
+		await listed();
+		deploy('0.22.5')!.click();
+		flushSync();
+		api.mockResolvedValueOnce(
+			answer({ error: 'flaiover 0.22.5 is not published; published: 0.22.7, 0.22.6' }, false)
+		);
+		confirmYes().click();
+		await settle();
+		expect(document.querySelector('[data-testid="host-panel-failed"]')!.textContent).toBe(
+			'flaiover 0.22.5 is not published; published: 0.22.7, 0.22.6'
+		);
+	});
+
+	it('cancels a chosen release without asking anything', async () => {
+		await listed();
+		deploy('0.22.7')!.click();
+		flushSync();
+		[...confirm()!.querySelectorAll('button')].find((b) => b.textContent === 'Cancel')!.click();
+		flushSync();
+		expect(confirm()).toBeNull();
+		expect(api).toHaveBeenCalledTimes(2);
 	});
 
 	// Found live: an upgrade that changed nothing (already current) still made the page say
