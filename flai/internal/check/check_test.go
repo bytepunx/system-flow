@@ -205,14 +205,9 @@ func TestTouchesOverlap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
-	for _, f := range res.Findings {
-		if f.Rule == "wip.overlap" && strings.Contains(f.Message, "S-0001 touches flaiover/src/lib") {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("expected wip.overlap: %+v", res.Findings)
+	want := "S-0001 touches flaiover/src/lib, which S-0002 (in progress) also touches as flaiover/src/lib/server/auth.ts"
+	if got := overlapFindings(res); len(got) != 1 || got[0].Message != want || !slices.Equal(got[0].Stories, []string{"S-0001", "S-0002"}) || !strings.HasSuffix(got[0].Path, filepath.Base(s1.Path)) {
+		t.Errorf("wip.overlap = %+v, want one on S-0001: %s", got, want)
 	}
 	s2.Touches = []string{"docs"}
 	_ = repo.Save(s2)
@@ -264,8 +259,10 @@ func TestTouchesOverlapInsideASharedPath(t *testing.T) {
 		}
 		return got
 	}
-	if got := overlaps(); len(got) != 3 {
-		t.Fatalf("with no shared paths, want 3 overlaps, got %q", got)
+	// ADR-0115: one finding for the pair, naming every overlapping entry
+	whole := "S-0001 touches docs/users/flai.md, design/adrs/0096-x.md and flai/cmd/x.go, which S-0002 (in progress) also touches as docs/users, design and flai/cmd"
+	if got := overlaps(); len(got) != 1 || got[0] != whole {
+		t.Fatalf("with no shared paths, overlaps = %q\nwant only %s", got, whole)
 	}
 
 	shared := base + "claims:\n  shared:\n    - docs/users/flai.md\n    - design/adrs\n    - ../outside\n"
@@ -290,6 +287,110 @@ func TestTouchesOverlapInsideASharedPath(t *testing.T) {
 	if len(claims) != 1 || claims[0].Level != Error || claims[0].Path != "system-flow.yaml" || claims[0].Line != 12 || !strings.Contains(claims[0].Message, `"../outside" has a .. segment`) {
 		t.Errorf("manifest.claims findings = %+v, want one error on line 12 naming ../outside", claims)
 	}
+}
+
+// I-0076, ADR-0115 (the S-0223 instance): a story whose folder touch its task
+// narrows to one file inside it claims that file, so another story in
+// progress on a different file in the folder is no wip.overlap, as it is no
+// hold.
+func TestOverlapComparesClaimsNotTouches(t *testing.T) {
+	repo := overlapProject(t)
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	a := mustItem(t, repo, workitem.Story, "A", e.ID)
+	b := mustItem(t, repo, workitem.Story, "B", e.ID)
+	task := mustItem(t, repo, workitem.Task, "Serve a", a.ID)
+	a.Touches = []string{"flai/internal/serve"}
+	b.Touches = []string{"flai/internal/serve/b.go"}
+	task.Touches = []string{"flai/internal/serve/a.go"}
+	for _, it := range []*workitem.Item{a, b, task} {
+		it.Status = workitem.InProgress
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := overlapFindings(res); len(got) != 0 {
+		t.Errorf("a claim narrowed to flai/internal/serve/a.go overlaps flai/internal/serve/b.go: %+v", got)
+	}
+
+	// without the task's narrowing, the folder is claimed whole
+	task.Touches = nil
+	if err := repo.Save(task); err != nil {
+		t.Fatal(err)
+	}
+	res, err = Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "S-0001 touches flai/internal/serve, which S-0002 (in progress) also touches as flai/internal/serve/b.go"
+	if got := overlapFindings(res); len(got) != 1 || got[0].Message != want {
+		t.Errorf("wip.overlap = %+v, want %s", got, want)
+	}
+}
+
+// I-0076, ADR-0115 (the S-0262 and T-0877 instance): two stories in progress
+// on one path, with a task in progress of one on it too, are one wip.overlap
+// naming both stories: the task is part of its story's claim, not compared on
+// its own.
+func TestOverlapIsOneFindingPerPairOfStories(t *testing.T) {
+	repo := overlapProject(t)
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	a := mustItem(t, repo, workitem.Story, "A", e.ID)
+	b := mustItem(t, repo, workitem.Story, "B", e.ID)
+	task := mustItem(t, repo, workitem.Task, "B's task", b.ID)
+	for _, it := range []*workitem.Item{a, b, task} {
+		it.Status = workitem.InProgress
+		it.Touches = []string{"design/system/workflow.md"}
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "S-0001 touches design/system/workflow.md, which S-0002 (in progress) also touches as design/system/workflow.md"
+	got := overlapFindings(res)
+	if len(got) != 1 || got[0].Message != want || !slices.Equal(got[0].Stories, []string{"S-0001", "S-0002"}) || !strings.HasSuffix(got[0].Path, filepath.Base(a.Path)) {
+		t.Fatalf("wip.overlap = %+v, want one on S-0001: %s", got, want)
+	}
+	// the inbox's reading is the same finding
+	items, err := repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inbox := Overlaps(repo, items); len(inbox) != 1 || inbox[0].Message != want || !slices.Equal(inbox[0].Stories, got[0].Stories) {
+		t.Errorf("Overlaps = %+v, want the check's %+v", inbox, got)
+	}
+}
+
+// overlapProject is an empty project to put stories in progress in.
+func overlapProject(t *testing.T) *workitem.Repo {
+	t.Helper()
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return repo
+}
+
+// overlapFindings is the wip.overlap findings of res.
+func overlapFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "wip.overlap" {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // S-0130, ADR-0046: an after: entry that names no story, the story itself,

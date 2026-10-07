@@ -47,6 +47,9 @@ type Finding struct {
 	// Outside marks a finding outside the story a run is scoped to
 	// (ScopeToStory): a note the run passes over, whatever its level.
 	Outside bool `json:"outside,omitempty"`
+	// Stories are the two stories a wip.overlap names, lower ID first, so a
+	// run scoped to a story keeps it only when it names that story (ADR-0115).
+	Stories []string `json:"stories,omitempty"`
 	// advisory marks a warning --strict passes over (advise).
 	advisory bool
 }
@@ -494,35 +497,58 @@ func storyBranchExists(mainRoot, id string) bool {
 	return err == nil && strings.Contains(string(data), " refs/heads/story/"+id+"\n")
 }
 
-// overlap warns when two in-progress items declare touches that cover the
-// same path (ADR-0019); it is advisory, humans and agents coordinate. An
+// overlap warns when the claims of two stories in progress cover the same
+// path (ADR-0019); it is advisory, humans and agents coordinate. Each story
+// is compared by its claim, as the pull hold reads it (ADR-0096 §3): its
+// touches with each folder narrowed to its tasks' touches inside it, and its
+// open tasks' touches outside them; a task is never compared on its own. An
 // overlap that lies wholly inside a shared path is not reported (ADR-0096).
+// A pair of stories is one warning, on the item file of the one with the
+// lower ID, naming each overlapping entry of both claims, with both IDs in
+// Stories (ADR-0115).
 func (c *checker) overlap() {
-	holds := workitem.NewHolds(nil, c.repo.Manifest.Projects).WithShared(c.repo.SharedClaims())
-	type owner struct {
-		it   *workitem.Item
-		path string
+	holds := workitem.NewHolds(c.items, c.repo.Manifest.Projects).WithShared(c.repo.SharedClaims())
+	type open struct {
+		it    *workitem.Item
+		claim []string
 	}
-	var owners []owner
+	var stories []open
 	for _, it := range c.items {
-		if it.Archived || it.Type == workitem.Epic || it.Status != workitem.InProgress {
-			continue
-		}
-		for _, p := range it.Touches {
-			owners = append(owners, owner{it, p})
+		if !it.Archived && it.Type == workitem.Story && it.Status == workitem.InProgress {
+			stories = append(stories, open{it, holds.Claim(it)})
 		}
 	}
-	for i := 0; i < len(owners); i++ {
-		for j := i + 1; j < len(owners); j++ {
-			a, b := owners[i], owners[j]
-			if a.it.ID == b.it.ID || a.it.Parent == b.it.ID || b.it.Parent == a.it.ID {
+	sort.SliceStable(stories, func(i, j int) bool { return stories[i].it.ID < stories[j].it.ID })
+	for i, a := range stories {
+		for _, b := range stories[i+1:] {
+			mine, theirs := overlapping(holds, a.claim, b.claim), overlapping(holds, b.claim, a.claim)
+			if len(mine) == 0 {
 				continue
 			}
-			if holds.Overlaps(a.path, b.path) {
-				c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, a.path, b.it.ID, b.path)
-			}
+			c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, andList(mine), b.it.ID, andList(theirs))
+			c.res.Findings[len(c.res.Findings)-1].Stories = []string{a.it.ID, b.it.ID}
 		}
 	}
+}
+
+// overlapping is the entries of claim that overlap an entry of other where it
+// counts, as holds.Overlaps says, in claim's order.
+func overlapping(holds *workitem.Holds, claim, other []string) []string {
+	var out []string
+	for _, p := range claim {
+		if slices.ContainsFunc(other, func(o string) bool { return holds.Overlaps(p, o) }) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// andList joins xs with ", " and " and " before the last.
+func andList(xs []string) string {
+	if len(xs) < 2 {
+		return strings.Join(xs, "")
+	}
+	return strings.Join(xs[:len(xs)-1], ", ") + " and " + xs[len(xs)-1]
 }
 
 // componentTag warns on an open story that a release could not plan: its
