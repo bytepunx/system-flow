@@ -315,6 +315,23 @@ Parallelism, Hold Time, and Touches Drift show what claims cost. A story in read
 
 The table views list Parallelism by day, with in progress, held, and the limit; Hold Time by week, with each reason's time and the total; and Touches Drift by story, with both counts, then by week, with the stories done, how many had exact touches, and the share.
 
+### Cost of delay
+
+The planning group also has three charts of cost of delay: what a week of waiting for a story costs, the value you set on it ([Drafts, cost of delay, and forecasts](flai.md#drafts-cost-of-delay-and-forecasts)). CoD Outstanding and CoD Incurred cover the item type you choose, stories or epics; CoD by Order always projects the ready stories, and offers only the window.
+
+| Chart | Shows |
+|-------|-------|
+| CoD Outstanding | For each day of the window, the cost of delay per week of the stories in each column at the end of the day, stacked: backlog, ready, in progress, and review, in the colours of Cumulative Flow |
+| CoD Incurred | What waiting cost in each week of the window, as bars, with the mean per week so far as a dashed line |
+| CoD by Order | What the stories in ready now will cost by the time each is pulled, under three orders: the board's pull order, by cost of delay, and by WSJF. One step line per order, rising at each story's projected pull. The time axis runs from now to the last pull, not over the window |
+
+- **Stories without a value.** Under each chart, how many stories in each column have no cost of delay now. They add nothing to the sums, so a column full of them looks cheaper than it is.
+- **The saving.** Under CoD by Order, each order's total, and what ordering the ready column by cost of delay or by WSJF, whichever is cheaper, would save against the pull order. Each story costs its value for every week from now until it is projected to be pulled, with no more stories in progress at once than the in-progress limit allows. When the pull order is already the cheapest, it says so. To take the saving, reorder the column with `flai order --by cod` or `--by wsjf` ([Ordering by a policy](flai.md#ordering-by-a-policy)), or drag the cards on the board.
+- **Stories left out.** CoD by Order prices only the ready stories with both a cost of delay and a forecast duration, so the three totals cover the same stories. It names the others.
+- **No in-progress limit.** Without one, every story is pulled at once, and every order costs nothing.
+
+The table view lists each day, each week, or each projected pull, with the numbers the chart draws. These charts need a flai on the host as new as the dashboard; with an older one the page says so.
+
 ### Agent waiting
 
 Agent Waiting, under Flow, shows the time agents spent waiting on someone else, mostly on you: for an answer on a thread, and for a story in review to be accepted or sent back. The exact definitions are in [metrics.md](../../design/system/metrics.md#waiting).
