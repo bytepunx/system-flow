@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T23:45:02Z
+updated: 2026-10-07T23:47:55Z
 transitions: []
 tags: [cli]
 topics: [release, security]
@@ -55,10 +55,10 @@ cost_of_delay:
   at: 2026-10-07T22:13:40Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-08T01:14:00Z
-  basis: "Its own forecast of 1h15m; 1st in the pull order with an in-progress limit of 3, behind S-0232, S-0310 and S-0314."
+  delivery: 2026-10-08T01:16:00Z
+  basis: "Its own forecast of 1h15m; 1st in the pull order with an in-progress limit of 3, behind S-0232 and S-0310."
   by: flai
-  at: 2026-10-07T23:45:02Z
+  at: 2026-10-07T23:47:55Z
 ---
 # S-0233 flai self-upgrade, flai host upgrade, and install.sh verify the release's signature before installing it
 
