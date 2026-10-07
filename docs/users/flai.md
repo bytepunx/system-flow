@@ -1211,10 +1211,14 @@ It runs behind a host action that is off until you turn it on:
 ```bash
 flai serve enable orchestrate    # for this project; --all-projects for every project
 flai serve disable orchestrate   # stop it
+flai serve orchestrate stop      # stop it and hold it stopped while orchestrate stays on
+flai serve orchestrate start     # lift the hold and start it
 flai serve journal               # each start, end, failure, and stop
 ```
 
-The Settings page of the dashboard turns it on and off too, while `settings` is on. Within a minute of turning it on, `flai serve` starts one orchestrator for the project, in its main checkout, as `orchestrator`. It does not end by itself: after each decision it waits for the next change. When a run ends all the same, `flai serve` starts another, a minute later if the run failed. Within a minute of turning it off, `flai serve` stops it. A start flai cannot make, because the orchestrator's agent names no harness and no command is set, or the project has no `.claude/agents/orchestrator.md` (`flai upgrade` adds it), is in the journal once.
+The Settings page of the dashboard turns it on and off too, while `settings` is on. Within a minute of turning it on, `flai serve` starts one orchestrator for the project, in its main checkout, as `orchestrator`. It does not end by itself: after each decision it waits for the next change. When a run ends all the same, `flai serve` starts another, a minute later if the run failed. Within a minute of turning it off, `flai serve` stops it.
+
+To pause it without turning the action off, run `flai serve orchestrate stop` in the project, or press **Stop** on the dashboard's [Orchestrator page](flaiover.md#orchestrator). The run ends, and `flai serve` does not start another until you run `flai serve orchestrate start` or press **Start**, which starts it at once. Turning the action off and on lifts the hold too. Both refuse, saying why, while `orchestrate` is off; `stop` refuses when the orchestrator was never started or is already held, and `start` when it is not held. A start flai cannot make, because the orchestrator's agent names no harness and no command is set, or the project has no `.claude/agents/orchestrator.md` (`flai upgrade` adds it), is in the journal once.
 
 Its agent is `orchestration.agent` in `system-flow.yaml`, laid over the project's `agent` as `planning.agent` is for the planner. With `claude-code` it runs as the project's `.claude/agents/orchestrator.md`. A command you set with `flai serve agent set` gets `FLAI_ROLE=orchestrate` and no story. The run does not count against the in-progress limit. Its output is in `serve/agents/<key>-orchestrator-<time>.log` beside flai serve's state.
 
@@ -1249,9 +1253,9 @@ Where to see what it did:
 
 | What | Where |
 |------|-------|
-| Each decision: what it did, on which items, why, and the policy figure behind it, such as a story's cost of delay value, its value over its duration, its forecast, or a candidate's rank | `wip/agents/orchestrator.md`, under `## Log`, one entry per decision, with its seconds and cost. A run that ends logs the time since the last decision as one more entry; a run you stopped says `stopped: orchestrate turned off` |
+| Each decision: what it did, on which items, why, and the policy figure behind it, such as a story's cost of delay value, its value over its duration, its forecast, or a candidate's rank | `wip/agents/orchestrator.md`, under `## Log`, one entry per decision, with its seconds and cost. A run that ends logs the time since the last decision as one more entry; a run stopped by turning the action off says `stopped: orchestrate turned off`, and one you stopped with `flai serve orchestrate stop` or **Stop** says `stopped: stopped from the dashboard` |
 | Each call the guard refused it: when, the call, and the permission it needs, or `none` | `wip/agents/orchestrator.md`, under `## Refusals` |
-| Its runs, starts, failures, and stops | `flai serve journal`, and the dashboard's Activity page, which shows the run and what it is saying |
+| Its runs, starts, failures, and stops | `flai serve journal`, and the dashboard's Activity page, which shows the run and what it is saying, and its [Orchestrator page](flaiover.md#orchestrator), which also lists its last decisions and its past runs with their cost |
 
 [The orchestrator](../../design/system/strategic-agents.md#the-orchestrator) has the whole of it.
 
@@ -1277,7 +1281,7 @@ flai analyze --focus risk --json   # or for one, and print the run as data
 flai serve journal                 # every analyzer started, or that could not be
 ```
 
-The MCP tool `analyze` from your own agent does the same, and so does the host API's `analyze.run` for a dashboard; the dashboard has no button for it yet. `flai analyze` needs `flai serve` running to record how the run ended and log what it did; without one it says so, and the analyzer still runs. One analyzer runs per project at a time: flai refuses another while one runs, naming it. It also refuses while the `analyze` action is off, for a focus that is none of the three, and when the analyzer's agent names no harness and no command is set.
+The MCP tool `analyze` from your own agent does the same, and so does **Run** on the dashboard's [Analyzer page](flaiover.md#analyzer), through the host API's `analyze.run`. `flai analyze` needs `flai serve` running to record how the run ended and log what it did; without one it says so, and the analyzer still runs. One analyzer runs per project at a time: flai refuses another while one runs, naming it. It also refuses while the `analyze` action is off, for a focus that is none of the three, and when the analyzer's agent names no harness and no command is set.
 
 To have it run on its own, set a schedule. While `analyze` is on, `flai serve` starts the analyzer with no focus each time the schedule comes round, at most a minute late:
 

@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -292,16 +292,20 @@ The orchestrator keeps a project's work moving, and nothing else (S-0218, [ADR-0
 
 ### Starting and stopping it
 
-The host action `orchestrate`, off by default, turns it on for a project: `flai serve enable orchestrate`, or the dashboard's Settings page while `settings` is on. No command or method starts it. `flai serve` reads the action at every look of the project's launcher: when its work items or threads change, when an agent ends, and every minute (`internal/serve/orchestrate.go`).
+The host action `orchestrate`, off by default, turns it on for a project: `flai serve enable orchestrate`, or the dashboard's Settings page while `settings` is on. No command or method starts it but the operator's Start after their Stop (below). `flai serve` reads the action at every look of the project's launcher: when its work items or threads change, when an agent ends, and every minute (`internal/serve/orchestrate.go`).
 
 | At a look | What `flai serve` does |
 |-----------|------------------------|
 | The action is on and no run is going | Starts the orchestrator |
+| The action is on and the operator holds it stopped | Nothing until they start it |
 | The action is on and the last run failed less than a minute ago | Nothing until the minute has passed, so that a run that fails at once does not spin |
 | The action is on and a run is going | Nothing |
 | The action is off and a run is going | Stops it as `flai serve agent stop` stops a story's agent: marks it stopped, ends its process group, and kills the group once the grace has passed. The stop is journalled, and the run's activity is logged with the summary `stopped: orchestrate turned off` |
+| The action is off and the operator holds it stopped | Lifts the hold, so that turned on again the orchestrator starts |
 
-A run that ends while the action is on is started again at the next look. The orchestrator does not end by itself, so a run ends when it fails, when it is stopped, or when its harness ends it.
+A run that ends while the action is on is started again at the next look, unless the operator holds it stopped. The orchestrator does not end by itself, so a run ends when it fails, when it is stopped, or when its harness ends it.
+
+The operator stops it and holds it stopped with **Stop** on the Orchestrator page, the write `orchestrate.stop`, or `flai serve orchestrate stop` (S-0228). The run is stopped as the action turned off stops it, and its activity is logged with the summary `stopped: stopped from the dashboard`. The hold is `held` on its run in `serve/agents.json`, kept on the run that ended. **Start**, `orchestrate.start`, or `flai serve orchestrate start` lifts the hold and starts the orchestrator at once, in the main checkout, as a look would; a start that fails lifts the hold too, and the next look tries again after the minute. Both are refused while the action is off. A stop is refused when `flai serve` has started no orchestrator for the project and when it is already held; a start, when it is not held and while the run it was held on is still being stopped. A run that failed and waits to be started again is held as it is. Each is journalled under `orchestrate`.
 
 A start is refused when the orchestrator's agent names no harness and no command is set on the host, and when the harness refuses it, as `claude-code` does in a project with no `.claude/agents/orchestrator.md`, naming `flai upgrade`. A refusal is recorded as a failed run and journalled once: the same refusal at the next looks is not recorded again until a start gets past it or the action is turned off.
 
@@ -448,11 +452,11 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 
 | Outcome | When |
 |---------|------|
-| `stopped` | the `orchestrate` action was turned off and flai serve stopped it |
+| `stopped` | the `orchestrate` action was turned off and flai serve stopped it, or the operator stopped it |
 | `failed` | it exited with a code other than 0, or could not be started |
 | `worked` | otherwise, an exit nobody saw included |
 
-It then logs the run's activity since the last entry in `wip/agents/orchestrator.md` with `serve.LogRunEnd`: the run's final reply as the summary, or `stopped: orchestrate turned off`, and the seconds and cost measured from the log. Each decision the orchestrator logs with `activity_log` during the run covers its own span, so the end logs only what came after the last one.
+It then logs the run's activity since the last entry in `wip/agents/orchestrator.md` with `serve.LogRunEnd`: the run's final reply as the summary, or `stopped: orchestrate turned off`, or `stopped: stopped from the dashboard` when the operator stopped it, and the seconds and cost measured from the log. Each decision the orchestrator logs with `activity_log` during the run covers its own span, so the end logs only what came after the last one.
 
 ### What it costs on the items (S-0226)
 
@@ -460,11 +464,11 @@ Each orchestrator activity is charged to the work items its entry names, when it
 
 An activity that names no work item charges no item: its cost is the orchestrator's project strategic total. That total, for every kind, is what the kind's activity document accrued that no item or issue carries: its `accrued_cost` and `accrued_seconds` less that kind's `strategic` figures on the items with no parent, which carry every charge made below them, and on the issues no story was made from. It is worked out by `flai stats`, which reports it per kind beside what the items and the issues carry ([metrics.md](metrics.md#strategic-agents-s-0206)), not written anywhere, so that the three always add up to the document. It also holds the planner's activities with no planned item, those logged before S-0225, and the analyzer's that named no issue ([What the analyzer's run costs](#what-the-analyzers-run-costs-s-0227)).
 
-Every start, end, failure, and stop is a journal entry with action `orchestrate` and method `serve.orchestrate`. `agent.status` carries the run as `orchestrator`, null before the first; `agent.stream` with `orchestrator: true` reads its log as it reads a story's agent's (`OrchestratorStream`). When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: orchestrate`.
+Every start, end, failure, and stop is a journal entry with action `orchestrate` and method `serve.orchestrate`. `agent.status` carries the run as `orchestrator`, null before the first, with `held` while the operator holds it, and up to 20 earlier runs as `past_orchestrators`; `agent.stream` with `role: orchestrate`, or `orchestrator: true` as before S-0228, reads its log as it reads a story's agent's (`RoleStream`). When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: orchestrate`; a hold or a start made in a process of its own is told at the next look.
 
 ### On the dashboard
 
-The Activity page lists the orchestrator's run and its stream. The Settings page lists the `orchestrate` action with the others, to turn on and off while `settings` is on. The Orchestrator page (`/workflow/orchestrator`, S-0229) holds its settings panel: the permissions, each with what it lets the orchestrator do and its risk, `orchestration.policy`, and the `orchestration.release` keys, written through `flai manifest set` while `settings` is on. `orchestration.agent` is not on it and stays a hand edit. The page's status, decisions, refusals, and runs are S-0228's. See [flaiover-dashboard.md](flaiover-dashboard.md).
+The Activity page lists the orchestrator's run and its stream. The Settings page lists the `orchestrate` action with the others, to turn on and off while `settings` is on. The Orchestrator page (`/workflow/orchestrator`) shows the action's state, on, off, or held; the run under way and its stream; its last decisions with their reasons above its whole activity log; and its runs with their cost and outcome; with **Stop** and **Start** (S-0228). Below them is its settings panel (S-0229): the permissions, each with what it lets the orchestrator do and its risk, `orchestration.policy`, and the `orchestration.release` keys, written through `flai manifest set` while `settings` is on. `orchestration.agent` is not on it and stays a hand edit. See [flaiover-dashboard.md](flaiover-dashboard.md).
 
 ## The analyzer
 
@@ -598,4 +602,4 @@ When the issue step makes a story from an issue, the story carries the issue's s
 
 ### The analyzer on the dashboard
 
-The documents page lists the reports under `design/analysis/` beside the folder's README and shows each as it shows any design document ([flaiover-dashboard.md](flaiover-dashboard.md)). The Settings page lists the `analyze` action with the others, to turn on and off while `settings` is on. The Analyzer page (`/workflow/analyzer`, S-0229) holds its settings panel, `analysis.agent` and `analysis.schedule`, written through `flai manifest set` while `settings` is on. No page has an Analyze button yet: `analyze.run` is there for the analyzer's page, whose runs and activity are S-0228's.
+The documents page lists the reports under `design/analysis/` beside the folder's README and shows each as it shows any design document ([flaiover-dashboard.md](flaiover-dashboard.md)). The Settings page lists the `analyze` action with the others, to turn on and off while `settings` is on. The Analyzer page (`/workflow/analyzer`) shows the action's state; the run under way with its focus and its stream, which `agent.stream` reads with `role: analyze`; its activity log, each entry linking the report it wrote; and its runs, the newest and up to 20 before it (`past_analyzers`), with their focus, report, cost, and outcome. **Run** with a focus, or with none for all three, is `analyze.run` (S-0228). Below them is its settings panel (S-0229), `analysis.agent` and `analysis.schedule`, written through `flai manifest set` while `settings` is on.

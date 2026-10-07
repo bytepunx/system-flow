@@ -2117,6 +2117,7 @@ Subcommands:
 - [enable](#flai-serve-enable): Let flai serve perform a host action for this project when its dashboard asks
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
 - [journal](#flai-serve-journal): Every host action a dashboard asked for: when, what, which project, for whom, and what became of it
+- [orchestrate](#flai-serve-orchestrate): Stop the project's orchestrator and hold it stopped, or start it again
 - [project](#flai-serve-project): The projects flai serve serves on the dashboard: add, remove, and list them, and why one is not showing
 - [start](#flai-serve-start): Start flai serve under flai host, starting the host if it is not running
 - [status](#flai-serve-status): Whether flai serve runs, which projects it serves, and which dashboards have it connected
@@ -2529,6 +2530,48 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `-n`, `--last` int | only the last n entries |
+
+#### flai serve orchestrate
+
+Stop the project's orchestrator and hold it stopped, or start it again.
+
+While the orchestrate host action is on, flai serve runs the project's orchestrator, and starts it again whenever its run ends (S-0218). stop ends the run and holds the orchestrator stopped, so that flai serve does not start it again while the action stays on; start lifts the hold and starts it, as turning the action on does. Turning the action off and on lifts the hold too. The dashboard's orchestrator page runs these; both are refused while the action is off.
+
+Examples:
+
+```bash
+flai serve orchestrate stop
+flai serve orchestrate start
+```
+
+Subcommands:
+
+- [start](#flai-serve-orchestrate-start): Lift the hold on the orchestrator and start it
+- [stop](#flai-serve-orchestrate-stop): End the orchestrator's run and hold it stopped while orchestrate stays on
+
+##### flai serve orchestrate start
+
+Lift the hold on the orchestrator and start it.
+
+```text
+flai serve orchestrate start
+```
+
+Lifts the hold flai serve orchestrate stop put on the orchestrator and starts it, as flai serve does when orchestrate is turned on: in the project's main checkout, with its orchestration agent and the harnesses and the command set with flai serve agent. flai serve settles the run once it ends and starts it again, as it does any orchestrator run. A start that fails lifts the hold as well, and flai serve tries again a minute later.
+
+It refuses, and says why, while the orchestrate action is off for the project, when the orchestrator is not held stopped, and while the run it was held on is still being stopped.
+
+##### flai serve orchestrate stop
+
+End the orchestrator's run and hold it stopped while orchestrate stays on.
+
+```text
+flai serve orchestrate stop
+```
+
+Ends the orchestrator's run as flai serve agent stop ends a story's agent: its process group is sent SIGTERM, and SIGKILL if it has not ended ten seconds later, while it is still the orchestrator flai started. The run is recorded as stopped by the operator, its activity is logged in wip/agents/orchestrator.md as stopped from the dashboard, and the orchestrator is held stopped: flai serve does not start it again until flai serve orchestrate start, or until orchestrate is turned off and on. A run that failed and waits to be started again is held as it is.
+
+It refuses, and says why, while the orchestrate action is off for the project, when flai serve has started no orchestrator for it, and when the orchestrator is already held stopped.
 
 #### flai serve project
 

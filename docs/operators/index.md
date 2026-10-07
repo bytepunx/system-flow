@@ -236,7 +236,11 @@ With `orchestrate` on, `flai serve` runs one orchestrator for the project, on yo
 flai serve enable orchestrate    # for the project in the working directory; --all-projects for every project
 flai serve journal               # every start, end, failure, and stop
 flai serve disable orchestrate   # stops the run
+flai serve orchestrate stop      # stops the run and holds it stopped while the action stays on
+flai serve orchestrate start     # lifts the hold and starts it
 ```
+
+With the action on, anyone with the dashboard's token can also Stop and Start the orchestrator on its Orchestrator page (S-0228). A stop holds it stopped: `flai serve` does not start it again until it is started, or the action is turned off and on ([Running the orchestrator](../users/flai.md#running-the-orchestrator)).
 
 **Understand what enabling it means.** The orchestrator is one agent session that does not end, with the orchestrator's agent (`orchestration.agent` in `system-flow.yaml` over `agent`), so it spends while it waits and decides. It does not count against the in-progress limit. What it may do is what `orchestration.permissions` in `system-flow.yaml` turns on, each off by default, set with `flai manifest set` or, while `settings` is on, on the dashboard's Orchestrator page ([the settings host action](#the-settings-host-action-changing-the-hosts-settings-from-the-dashboard-s-0105)): with none on, it reads, logs, and asks you on threads. `flai guard` refuses it every call outside them, names the permission the call needs, and logs the refusal; that holds only while `.claude/settings.json` runs the guard, on `Edit|MultiEdit|Write|NotebookEdit` too for an orchestrator's session, as the template's does, and `flai` on `PATH` has the orchestrator's rules. A project whose `.claude/agents/` has no `orchestrator.md` cannot start it on `claude-code`: `flai upgrade` adds it. The permissions and what each allows are in [Running the orchestrator](../users/flai.md#running-the-orchestrator).
 

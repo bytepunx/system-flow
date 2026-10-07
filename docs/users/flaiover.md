@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 ---
 
@@ -152,7 +152,7 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 **Stop** is beside an agent that runs, or that ended waiting for an answer, once the operator has turned on the `agent` host action. It asks first, and says what stopping does: the agent's process and everything it started end at once, and cannot be resumed; an agent waiting for an answer is not started again when the answer comes; the story's worktree keeps what the agent changed, committed or not; and the story stays where it is, with no agent, until you press **Retry** on its page or move it back to ready. Only **Stop the agent** in that dialog stops it. The agent then reads as stopped by the operator, with a red dot. If flai refuses, for an agent that has already ended, the dialog says why.
 
-**The orchestrator.** When the operator has turned on the `orchestrate` host action (`flai serve enable orchestrate`), `flai serve` runs the project's orchestrator, and its newest run has a card above the stories: what it is doing (working, or stopped by the operator, ended, or failed, and why), its agent, harness, and model, its session, and when it started and ended, with its stream window, open while it runs. A run that could not be started says why and has no window. The page reads it again when the orchestrator starts or ends. Its decisions and its Stop are not here.
+**The orchestrator.** When the operator has turned on the `orchestrate` host action (`flai serve enable orchestrate`), `flai serve` runs the project's orchestrator, and its newest run has a card above the stories: what it is doing (working, or stopped by the operator, ended, or failed, and why), its agent, harness, and model, its session, and when it started and ended, with its stream window, open while it runs. A run that could not be started says why and has no window. The page reads it again when the orchestrator starts or ends. Its decisions, its runs, and **Stop** and **Start** are on the [Orchestrator](#orchestrator) page.
 
 ## Planner
 
@@ -180,7 +180,16 @@ The page follows the planner as it works: it reads itself again when the planner
 
 ## Orchestrator
 
-Orchestrator holds the settings of the agent that keeps the project's work moving: what it may do without you, how it orders the ready column, and when a release is due. Find it in the Workflow group, after Planner. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)); its run and stream are on the [Activity](#activity) page. Its status, decisions, and runs will be shown here too.
+Orchestrator shows the agent that keeps the project's work moving: whether it runs, what it is doing, what it has decided, and what that cost, and below that its settings. Find it in the Workflow group, after Planner. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
+
+- **The orchestrate host action** says whether `flai serve` runs the orchestrator: on; off, with the command that turns it on, `flai serve enable orchestrate`; or held, because you stopped it.
+- **Stop** ends the orchestrator's run and holds it stopped. While the action is on, `flai serve` starts the orchestrator again whenever a run ends; while it is held, it does not. **Start** lifts the hold and starts it at once. Stop shows while the orchestrator is not held, and Start while it is. Both need the `orchestrate` host action on, and are disabled, saying so, while it is off. The page says what flai did, or why it refused, such as an orchestrator already held. The run you stopped logs its activity as `stopped: stopped from the dashboard`. Turning the action off and on again lifts the hold too. On the host, `flai serve orchestrate stop` and `flai serve orchestrate start` do the same.
+- **Running now** shows the run under way, with its agent, when it started, and its stream window, as the Planner page does.
+- **Last decisions** are the five newest entries of its activity: what it did and why, with the policy figure behind it.
+- **Activity** is `wip/agents/orchestrator.md`: its totals, then every decision, newest first, as the Planner page shows the planner's.
+- **Runs** lists the orchestrator's runs, newest first, the newest and up to 20 before it: when each started and ended, how it went, what it cost, and why it failed.
+
+The page reads itself again when the orchestrator's document changes, and when a run starts or ends or is held or let go.
 
 Its settings are the `orchestration` keys of `system-flow.yaml` but `agent`, edited as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says. **Permissions** are what it may do without you. Each is off until you turn it on, and a change holds from the orchestrator's next step: it is not restarted, and it reads its permissions again before each decision. Beside each the page says what it allows and what can go wrong:
 
@@ -210,7 +219,15 @@ The orchestrator's own agent is set by hand in `system-flow.yaml`, under `orches
 
 ## Analyzer
 
-Analyzer holds the settings of the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)). Find it last in the Workflow group. Its runs, its activity, and a button to start it will be shown here too; its reports are on the [Docs](#docs) page.
+Analyzer shows the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, what it is doing, what it has found, and what that cost, and below that its settings. Find it last in the Workflow group. Its reports are on the [Docs](#docs) page.
+
+- **The analyze host action** says whether `flai serve` may start the analyzer here. While it is off, the page gives the command that turns it on: `flai serve enable analyze`.
+- **Run** starts the analyzer now, looking for the **Focus** you choose: `bottlenecks`, `intent`, `risk`, or all three, the default. The page says what flai answered: the run it started, or why it refused. One analyzer runs at a time, so Run is disabled while one runs, and while the host action is off. The page says which.
+- **Running now** shows the run under way: its focus, its agent, when it started, why it started, and its stream window.
+- **Activity** is `wip/agents/analyzer.md`: its totals, then each run's entry, newest first, with a link to the report it wrote, or `no report`.
+- **Runs** lists its runs, newest first, the newest and up to 20 before it. Each shows its focus, its report, when it started and ended, how it went, what it cost, and why it failed.
+
+The page reads itself again when the analyzer's document changes, and when a run starts or ends.
 
 Its settings are the `analysis` keys of `system-flow.yaml`, edited as the next section says:
 
