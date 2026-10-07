@@ -3,15 +3,35 @@ id: T-0919
 type: task
 nature: feature
 title: metrics.md defines each wait of the window, with its story, thread, and who was awaited, and an ADR records it
-status: backlog
+status: done
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:44:51Z
-updated: 2026-10-05T05:44:51Z
-transitions: []
+updated: 2026-10-07T08:55:28Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:54:31Z
+    by: agent-S-0215
+  - to: in-progress
+    at: 2026-10-07T08:54:33Z
+    by: agent-S-0215
+  - to: done
+    at: 2026-10-07T08:55:28Z
+    by: agent-S-0215
 stream: S-0215
 tags: [flai]
 touches: [design/system/metrics.md, design/adrs]
+usage:
+  source: log
+  seconds: 55
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 92
+      cache_read: 811947
+      cache_write: 16935
+      cost: 0.3731
 ---
 # T-0919 metrics.md defines each wait of the window, with its story, thread, and who was awaited, and an ADR records it
 

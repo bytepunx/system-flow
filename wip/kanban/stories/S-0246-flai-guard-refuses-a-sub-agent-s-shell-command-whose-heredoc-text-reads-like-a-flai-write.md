@@ -3,14 +3,17 @@ id: S-0246
 type: story
 nature: improvement
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T08:48:14Z
+updated: 2026-10-07T08:59:19Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:43Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T08:59:19Z
+    by: agent-S-0246
 tags: []
 topics: [cli]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md]
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 5
+      seconds: 12
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 51
-          cache_read: 284781
-          cache_write: 7353
-          cost: 0.0762
+          input: 9
+          output: 87
+          cache_read: 744219
+          cache_write: 19343
+          cost: 0.1992
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

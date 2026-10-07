@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 303
-      cache_read: 2278105
-      cache_write: 107313
-      cost: 1.0715
+      input: 48
+      output: 20449
+      cache_read: 2364967
+      cache_write: 88680
+      cost: 1.4006
 ---
 # T-0929 flai stats reports held stories per day, held hours by reason per week, and the weekly share of exact touches
 

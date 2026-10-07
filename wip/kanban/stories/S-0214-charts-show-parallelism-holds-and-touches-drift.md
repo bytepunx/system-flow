@@ -3,11 +3,11 @@ id: S-0214
 type: story
 nature: feature
 title: Charts show parallelism, holds, and touches drift
-status: in-progress
+status: review
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:33:29Z
+updated: 2026-10-07T08:53:52Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -21,6 +21,9 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:18:13Z
     by: agent-S-0214
+  - to: review
+    at: 2026-10-07T08:53:52Z
+    by: agent-S-0214
 tags: [dashboard]
 topics: [planning, analysis]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, docs/users/flai.md, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai-reference.md, flai/internal/statsread/statsread.go]
@@ -32,15 +35,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1513
-  estimated: true
+  seconds: 2165
   models:
     - model: claude-opus-5-5
-      input: 414
-      output: 2407
-      cache_read: 18982659
-      cache_write: 789012
-      cost: 8.8813
+      input: 444
+      output: 187469
+      cache_read: 21681565
+      cache_write: 813000
+      cost: 12.8408
+  strategic:
+    - kind: orchestrator
+      seconds: 378
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 30
+          output: 389
+          cache_read: 2873304
+          cache_write: 13089
+          cost: 0.7531
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 75
+          cache_read: 184630
+          cache_write: 48109
+          cost: 0.1561
 cost_of_delay:
   value: 106.42
   by: planner-S-0214
@@ -59,10 +78,10 @@ forecast:
 The planner's touches exist to raise parallelism safely. The operator should see how many stories run at once, how long claims hold work, and how far declared touches are from what was changed.
 
 ## Acceptance criteria
-- [ ] `/charts/parallelism`: stories in progress per day against the in-progress limit, with held stories as a second series
-- [ ] `/charts/hold-time`: per week the hours stories spent held, by reason (overlap, after, empty claim)
-- [ ] `/charts/touches-drift`: per story completed, files changed outside its touches and touches never changed, as stacked bars, with the share of stories whose touches were exact per week
-- [ ] Charts span the window, read `/api/stats`, match `flai stats --json`; listed under Planning; design and user guide describe them; tests cover the data mapping
+- [x] `/charts/parallelism`: stories in progress per day against the in-progress limit, with held stories as a second series
+- [x] `/charts/hold-time`: per week the hours stories spent held, by reason (overlap, after, empty claim)
+- [x] `/charts/touches-drift`: per story completed, files changed outside its touches and touches never changed, as stacked bars, with the share of stories whose touches were exact per week
+- [x] Charts span the window, read `/api/stats`, match `flai stats --json`; listed under Planning; design and user guide describe them; tests cover the data mapping
 
 ## Tasks
 - T-0924 metrics.md defines held stories per day, held hours by reason per week, and the weekly share of exact touches, and an ADR records them

@@ -3,10 +3,10 @@ id: S-0265
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-05T00:03:14Z
-updated: 2026-10-07T08:47:52Z
+updated: 2026-10-07T08:59:42Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:41Z
@@ -14,18 +14,30 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:47:52Z
     by: agent-S-0265
+  - to: review
+    at: 2026-10-07T08:59:11Z
+    by: agent-S-0265
+  - to: done
+    at: 2026-10-07T08:59:42Z
+    by: orchestrator
 tags: []
 topics: [cli]
-touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases, docs/users/flai.md, design/issues/I-0056-flai-s-wip-markdown-lint-does-not-flag-a-bare-email-address-so-a-thread-entry-with-one-reached-main-and-failed-a-story-s-close-out.md, design/issues/summary.md]
+touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases, docs/users/flai.md, design/issues/I-0056-flai-s-wip-markdown-lint-does-not-flag-a-bare-email-address-so-a-thread-entry-with-one-reached-main-and-failed-a-story-s-close-out.md, design/issues/summary.md, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/I-0111-flai-check-finds-narrative-state-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 701
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 38542
+      cache_read: 4720085
+      cache_write: 129601
+      cost: 2.7521
   strategic:
     - kind: planner
       seconds: 128
@@ -78,8 +90,8 @@ finalized:
 This story remediates [I-0056](../../../design/issues/I-0056-flai-s-wip-markdown-lint-does-not-flag-a-bare-email-address-so-a-thread-entry-with-one-reached-main-and-failed-a-story-s-close-out.md), "flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0056 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0056 is closed with `flai issue close I-0056 --reason` saying what fixed it
+- [x] The cause I-0056 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0056 is closed with `flai issue close I-0056 --reason` saying what fixed it
 
 ## Tasks
 - T-0981 flai's MD034 reports a bare email address as markdownlint does
@@ -109,3 +121,13 @@ Figures:
 
 - Forecast 25m, adjusted from flai's 5m (134 s per unit of size times size 2, with no touches counted). The three sibling lint remediations, S-0262 (MD038), S-0240 (MD007), and S-0258 (blockquotes), took 16m, 21m, and 23m of agent time, including regenerating fixtures and the close-out. Delivery 2026-10-06T00:17Z is flai's 2026-10-05T23:57Z, 33rd in the pull order, plus the extra 20m.
 - Cost of delay 25.00 USD a week, as flai works it out: 10m lost per 168h cycle at 150 USD an hour, from flai's inputs, which stand.
+
+### Accepted by the orchestrator
+
+- Verified: 4576a05ce4238ae27ba478055293449b417e7135
+- At: 2026-10-07T08:59:42Z
+
+Verdict: S-0265 meets both acceptance criteria, stays within its touches, and breaches no convention, verified at commit 4576a05ce4238ae27ba478055293449b417e7135.
+
+- 1: flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/email.md, flai/internal/mdlint/testdata/cases/expected.txt, docs/users/flai.md
+- 2: design/issues/I-0056-flai-s-wip-markdown-lint-does-not-flag-a-bare-email-address-so-a-thread-entry-with-one-reached-main-and-failed-a-story-s-close-out.md, design/issues/summary.md

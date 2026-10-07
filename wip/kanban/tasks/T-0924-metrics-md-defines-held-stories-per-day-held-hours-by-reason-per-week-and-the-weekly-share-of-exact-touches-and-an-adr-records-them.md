@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 522
-      cache_read: 2992734
-      cache_write: 101395
-      cost: 1.3899
+      input: 63
+      output: 26524
+      cache_read: 3067617
+      cache_write: 115027
+      cost: 1.8168
 ---
 # T-0924 metrics.md defines held stories per day, held hours by reason per week, and the weekly share of exact touches, and an ADR records them
 

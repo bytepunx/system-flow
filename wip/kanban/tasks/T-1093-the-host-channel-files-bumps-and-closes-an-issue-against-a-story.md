@@ -32,7 +32,7 @@ usage:
       output: 539
       cache_read: 5715188
       cache_write: 164963
-      cost: 2.6412
+      cost: 2.642
 ---
 # T-1093 The host channel files, bumps, and closes an issue against a story
 

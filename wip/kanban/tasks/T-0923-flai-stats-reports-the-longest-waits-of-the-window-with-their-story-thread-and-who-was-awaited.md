@@ -3,12 +3,18 @@ id: T-0923
 type: task
 nature: feature
 title: flai stats reports the longest waits of the window with their story, thread, and who was awaited
-status: backlog
+status: in-progress
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:44:57Z
-updated: 2026-10-05T05:44:57Z
-transitions: []
+updated: 2026-10-07T08:55:43Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:54:32Z
+    by: agent-S-0215
+  - to: in-progress
+    at: 2026-10-07T08:55:43Z
+    by: agent-S-0215
 stream: S-0215
 tags: [flai]
 touches: [flai/internal/metrics]

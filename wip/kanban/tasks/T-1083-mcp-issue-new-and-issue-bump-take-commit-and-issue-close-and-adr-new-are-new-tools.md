@@ -32,7 +32,7 @@ usage:
       output: 470
       cache_read: 5184574
       cache_write: 178488
-      cost: 2.409
+      cost: 2.4096
 ---
 # T-1083 MCP issue_new and issue_bump take commit, and issue_close and adr_new are new tools
 

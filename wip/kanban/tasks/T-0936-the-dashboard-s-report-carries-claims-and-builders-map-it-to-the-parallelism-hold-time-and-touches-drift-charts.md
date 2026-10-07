@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 528
-      cache_read: 5437701
-      cache_write: 174673
-      cost: 2.521
+      input: 114
+      output: 48111
+      cache_read: 5564226
+      cache_write: 208643
+      cost: 3.2954
 ---
 # T-0936 The dashboard's Report carries claims, and builders map it to the parallelism, hold-time, and touches-drift charts
 

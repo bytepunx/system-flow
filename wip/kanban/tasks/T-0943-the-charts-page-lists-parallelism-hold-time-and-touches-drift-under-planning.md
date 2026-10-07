@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 458
-      cache_read: 3628603
-      cache_write: 115800
-      cost: 1.682
+      input: 76
+      output: 32098
+      cache_read: 3712297
+      cache_write: 139201
+      cost: 2.1986
 ---
 # T-0943 The Charts page lists parallelism, hold time, and touches drift under Planning
 

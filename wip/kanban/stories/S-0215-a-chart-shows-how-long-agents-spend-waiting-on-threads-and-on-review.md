@@ -3,11 +3,11 @@ id: S-0215
 type: story
 nature: feature
 title: A chart shows how long agents spend waiting on threads and on review
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:48:14Z
+updated: 2026-10-07T08:54:06Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-10-07T03:29:20Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T08:54:06Z
+    by: agent-S-0215
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts]
 after: [S-0205]
@@ -27,9 +30,16 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 92
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 297
+      cache_read: 1595953
+      cache_write: 111397
+      cost: 0.7686
   strategic:
     - kind: orchestrator
       seconds: 2

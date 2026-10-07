@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 24.9867
-accrued_seconds: 26855
-tasks_completed: 30
-last_run: 2026-10-07T08:48:17Z
+accrued_cost: 26.0930
+accrued_seconds: 27253
+tasks_completed: 34
+last_run: 2026-10-07T08:54:55Z
 ---
 
 # Orchestrator activity
@@ -221,6 +221,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0308
 - Seconds: 240
 - Cost: 0.6842 USD, estimated
+
+### 2026-10-07T08:48:27Z
+
+- Summary: Published under judgement: 1 pending, 12.5 USD/week; flai 1.34.3→1.34.4 (flai/v1.34.4); bundled S-0308; pushed
+- Items: S-0308
+- Seconds: 10
+- Cost: 0.0468 USD, estimated
+
+### 2026-10-07T08:48:31Z
+
+- Summary: Re-applied the throughput order after S-0265 left ready for in-progress: S-0215, S-0216 kept (placed by hand), S-0246 30m. No promote candidates
+- Items: S-0246
+- Seconds: 4
+- Cost: 0.0957 USD, estimated
+
+### 2026-10-07T08:54:49Z
+
+- Summary: Left S-0214 in review, not accepted: the dry-run is blocked by the open TH-0259 (flai's S-0213/S-0214 merge-conflict notice); verify passed every tier at head 0e92e6f5 and the verifier matched all 4 criteria. Asked the operator on TH-0261 to resolve TH-0259, then accept S-0214 before S-0213
+- Items: S-0214
+- Seconds: 378
+- Cost: 0.9092 USD, estimated
+
+### 2026-10-07T08:54:55Z
+
+- Summary: Re-applied the throughput order after S-0215 left ready for in-progress: S-0216 kept (placed by hand), S-0246 30m. No promote candidates
+- Items: S-0216, S-0246
+- Seconds: 6
+- Cost: 0.0546 USD, estimated
 
 ## Refusals
 

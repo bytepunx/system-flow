@@ -3,12 +3,18 @@ id: T-0927
 type: task
 nature: feature
 title: The agent-waiting chart maps the weeks of waiting to stacked thread and review bars with the mean wait per story as a line
-status: backlog
+status: in-progress
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:45:02Z
-updated: 2026-10-05T05:45:08Z
-transitions: []
+updated: 2026-10-07T08:55:43Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:54:32Z
+    by: agent-S-0215
+  - to: in-progress
+    at: 2026-10-07T08:55:43Z
+    by: agent-S-0215
 stream: S-0215
 tags: [dashboard]
 touches: [flaiover/src/lib/viz]

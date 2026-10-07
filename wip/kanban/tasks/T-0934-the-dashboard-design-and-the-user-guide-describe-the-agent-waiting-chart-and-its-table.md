@@ -3,12 +3,15 @@ id: T-0934
 type: task
 nature: feature
 title: The dashboard design and the user guide describe the agent-waiting chart and its table
-status: backlog
+status: ready
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:45:18Z
-updated: 2026-10-05T05:45:22Z
-transitions: []
+updated: 2026-10-07T08:54:33Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:54:33Z
+    by: agent-S-0215
 stream: S-0215
 tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]

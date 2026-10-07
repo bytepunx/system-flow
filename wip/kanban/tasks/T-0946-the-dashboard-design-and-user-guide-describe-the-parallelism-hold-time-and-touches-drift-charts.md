@@ -24,15 +24,15 @@ touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0943]
 usage:
   source: log
-  seconds: 107
+  seconds: 108
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 187
-      cache_read: 1162052
-      cache_write: 91353
-      cost: 0.563
+      input: 25
+      output: 10745
+      cache_read: 1242661
+      cache_write: 46596
+      cost: 0.736
 ---
 # T-0946 The dashboard design and user guide describe the parallelism, hold-time, and touches-drift charts
 

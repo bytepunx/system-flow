@@ -31,7 +31,7 @@ usage:
       output: 292
       cache_read: 2184356
       cache_write: 121602
-      cost: 1.0358
+      cost: 1.0361
 ---
 # T-1072 A shared helper commits the files a command wrote on the story branch and widens the story's touches to them
 

@@ -3,11 +3,11 @@ id: T-1105
 type: task
 nature: improvement
 title: The design and the user guide describe --commit, the new MCP tools, and the host channel operations
-status: in-progress
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:53:23Z
-updated: 2026-10-07T08:45:12Z
+updated: 2026-10-07T08:50:01Z
 transitions:
   - to: ready
     at: 2026-10-07T08:45:11Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:45:12Z
     by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:50:01Z
+    by: agent-S-0275
 stream: S-0275
 tags: [docs]
-touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1077, T-1083, T-1093]
+usage:
+  source: log
+  seconds: 288
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 603
+      cache_read: 5762660
+      cache_write: 138354
+      cost: 2.6514
 ---
 # T-1105 The design and the user guide describe --commit, the new MCP tools, and the host channel operations
 

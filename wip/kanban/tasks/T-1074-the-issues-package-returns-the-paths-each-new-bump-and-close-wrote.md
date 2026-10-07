@@ -31,7 +31,7 @@ usage:
       output: 140
       cache_read: 1355461
       cache_write: 97855
-      cost: 0.6528
+      cost: 0.653
 ---
 # T-1074 The issues package returns the paths each new, bump, and close wrote
 

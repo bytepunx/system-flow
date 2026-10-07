@@ -18,7 +18,7 @@ tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
 usage:
   source: sum
-  seconds: 114763
+  seconds: 115507
   estimated: true
   models:
     - model: claude-haiku-4-5-20251001
@@ -28,11 +28,11 @@ usage:
       cache_write: 1262294
       cost: 4.5448
     - model: claude-opus-5-5
-      input: 17500
-      output: 5746014
-      cache_read: 1038214299
-      cache_write: 26285997
-      cost: 493.8866
+      input: 17568
+      output: 5931373
+      cache_read: 1042509158
+      cache_write: 26421382
+      cost: 498.6147
     - model: claude-sonnet-5
       input: 1758
       output: 433950
@@ -63,21 +63,21 @@ usage:
           cache_write: 385110
           cost: 4.8942
     - kind: orchestrator
-      seconds: 1156
+      seconds: 1537
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 109
-          output: 1472
-          cache_read: 6701371
-          cache_write: 40213
-          cost: 1.934
+          input: 140
+          output: 1865
+          cache_read: 9674526
+          cache_write: 58073
+          cost: 2.7144
         - model: claude-sonnet-5-5
-          input: 10
-          output: 43
-          cache_read: 136303
-          cache_write: 59643
-          cost: 0.1314
+          input: 24
+          output: 118
+          cache_read: 320933
+          cache_write: 107752
+          cost: 0.2875
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10h

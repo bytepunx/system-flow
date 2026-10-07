@@ -32,7 +32,7 @@ usage:
       output: 359
       cache_read: 4214163
       cache_write: 145810
-      cost: 1.9584
+      cost: 1.9589
 ---
 # T-1077 flai issue bump, new, and close and flai adr new take --commit
 

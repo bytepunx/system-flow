@@ -3,11 +3,11 @@ id: T-0981
 type: task
 nature: remediation
 title: flai's MD034 reports a bare email address as markdownlint does
-status: in-progress
+status: done
 parent: S-0265
 owner: alex
 created: 2026-10-05T05:50:04Z
-updated: 2026-10-07T08:48:04Z
+updated: 2026-10-07T08:54:36Z
 transitions:
   - to: ready
     at: 2026-10-07T08:48:04Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:48:04Z
     by: agent-S-0265
+  - to: done
+    at: 2026-10-07T08:54:36Z
+    by: agent-S-0265
 stream: S-0265
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases]
+usage:
+  source: log
+  seconds: 392
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 9820
+      cache_read: 1202658
+      cache_write: 33022
+      cost: 0.7012
 ---
 # T-0981 flai's MD034 reports a bare email address as markdownlint does
 

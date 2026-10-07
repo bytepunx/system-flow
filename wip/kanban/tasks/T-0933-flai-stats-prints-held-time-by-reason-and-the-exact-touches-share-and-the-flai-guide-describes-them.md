@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 271
-      cache_read: 1853653
-      cache_write: 80738
-      cost: 0.8689
+      input: 39
+      output: 16582
+      cache_read: 1917807
+      cache_write: 71913
+      cost: 1.1358
 ---
 # T-0933 flai stats prints held time by reason and the exact-touches share, and the flai guide describes them
 

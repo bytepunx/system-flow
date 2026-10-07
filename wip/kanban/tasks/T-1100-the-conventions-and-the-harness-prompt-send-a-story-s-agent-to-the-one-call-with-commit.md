@@ -24,15 +24,15 @@ touches: [design/conventions/continuous-improvement.md, design/conventions/decis
 after: [T-1077, T-1083]
 usage:
   source: log
-  seconds: 537
+  seconds: 626
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 272
-      cache_read: 1908337
-      cache_write: 68673
-      cost: 0.8881
+      input: 50
+      output: 323
+      cache_read: 2146314
+      cache_write: 76284
+      cost: 0.9987
 ---
 # T-1100 The conventions and the harness prompt send a story's agent to the one call with --commit
 
