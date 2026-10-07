@@ -563,6 +563,65 @@ func TestAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.
 	}
 }
 
+// I-0089: a story's branch records an issue while issues are recorded and
+// closed on main itself, not through another story's acceptance, so both
+// sides rewrite design/issues/summary.md and the story's sync stopped on it.
+// The sync and the acceptance regenerate it from the issue files (ADR-0098).
+func TestSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself(t *testing.T) {
+	root := syncProject(t)
+	onMain := func(at time.Time, msg string, args ...string) {
+		t.Helper()
+		if _, errOut, code := runInAt(t, root, at, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+		gitIn(t, root, "add", "design")
+		gitIn(t, root, "commit", "-q", "-m", msg)
+	}
+	onMain(issueClock, "docs: record main's old issue", "issue", "new", "Main's old issue", "--class", "efficiency")
+	b := openSyncStory(t, root, 1, "design,docs")
+	recordIssueIn(t, b, issueClock.Add(time.Hour), "The story's issue", nil)
+	onMain(issueClock.Add(2*time.Hour), "docs: record main's new issue", "issue", "new", "Main's new issue", "--class", "efficiency")
+	onMain(issueClock.Add(3*time.Hour), "docs: close main's old issue", "issue", "close", "I-0001", "--reason", "fixed on main")
+
+	out, errOut, code := runInAt(t, b, issueClock.Add(4*time.Hour), "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("sync stopped on the generated summary: %d %s %s", code, out, errOut)
+	}
+	if storygit.RebaseInProgress(execx.System{}, b) {
+		t.Fatal("the rebase is left in progress")
+	}
+	if st := gitIn(t, b, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+	open := []string{"[I-0002]", "The story's issue", "[I-0003]", "Main's new issue"}
+	summary := gitIn(t, b, "show", "HEAD:design/issues/summary.md")
+	for _, want := range open {
+		if !strings.Contains(summary, want) {
+			t.Errorf("the story's summary lacks %q:\n%s", want, summary)
+		}
+	}
+	if strings.Contains(summary, "Main's old issue") {
+		t.Errorf("the story's summary lists the issue closed on main:\n%s", summary)
+	}
+	if strings.Contains(summary, strings.Repeat("<", 7)) || strings.Contains(summary, strings.Repeat(">", 7)) {
+		t.Errorf("the story's summary carries conflict markers:\n%s", summary)
+	}
+
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	if _, errOut, code := runInAt(t, root, issueClock.Add(5*time.Hour), "accept", "S-0001"); code != 0 {
+		t.Fatalf("acceptance stopped on the generated summary: %d %s", code, errOut)
+	}
+	summary = gitIn(t, root, "show", "main:design/issues/summary.md")
+	for _, want := range open {
+		if !strings.Contains(summary, want) {
+			t.Errorf("main's summary lacks %q:\n%s", want, summary)
+		}
+	}
+	if strings.Contains(summary, "Main's old issue") || strings.Contains(summary, strings.Repeat("<", 7)) {
+		t.Errorf("main's summary lists the closed issue or carries conflict markers:\n%s", summary)
+	}
+}
+
 // When another path conflicts as well, the summary's rows may depend on it,
 // so the sync stops as before and names every path, the summary included.
 func TestSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
