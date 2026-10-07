@@ -6,7 +6,7 @@ title: TestRoundTripRepositoryItems reads the live main checkout and fails a clo
 status: backlog
 owner: alex
 created: 2026-10-06T09:56:52Z
-updated: 2026-10-06T09:56:52Z
+updated: 2026-10-07T02:19:37Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
     by: flai
     at: 2026-10-06T09:56:52Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:19:37Z
 ---
 # S-0290 TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
 
