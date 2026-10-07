@@ -15,12 +15,14 @@ type CostOfDelay struct {
 	Weeks []CostWeek `json:"weeks"`
 }
 
-// CostDay is the cost of delay outstanding per column at the end of a day and
-// what waiting cost during it.
+// CostDay is the cost of delay outstanding per column at the end of a day, the
+// number of items in each column then without a value, and what waiting cost
+// during the day.
 type CostDay struct {
-	Date        string             `json:"date"`
-	Outstanding map[string]float64 `json:"outstanding"`
-	Incurred    float64            `json:"incurred"`
+	Date         string             `json:"date"`
+	Outstanding  map[string]float64 `json:"outstanding"`
+	WithoutValue map[string]int     `json:"without_value"`
+	Incurred     float64            `json:"incurred"`
 }
 
 // CostWeek is what waiting cost during one ISO week.
@@ -50,24 +52,33 @@ func deriveCostOfDelay(m *ItemMetrics, it *workitem.Item) {
 
 // costOfDelay lays out the cost of delay of the items with a value, by the day
 // from the one that holds the window's start to today, and by the ISO week
-// from the one that holds the window's start to this one.
+// from the one that holds the window's start to this one. Each day also counts
+// the items without a value, of a type that carries one, in each column.
 func costOfDelay(items []*workitem.Item, start, now time.Time) CostOfDelay {
-	var valued []*workitem.Item
+	var valued, unvalued []*workitem.Item
 	for _, it := range items {
-		if costValue(it) != nil {
+		switch {
+		case costValue(it) != nil:
 			valued = append(valued, it)
+		case workitem.Carries(it.Type, "cost_of_delay"):
+			unvalued = append(unvalued, it)
 		}
 	}
 	out := CostOfDelay{Days: []CostDay{}, Weeks: []CostWeek{}}
 	for d := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC); !d.After(now); d = d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
-		p := CostDay{Date: d.Format("2006-01-02"), Outstanding: map[string]float64{}}
+		p := CostDay{Date: d.Format("2006-01-02"), Outstanding: map[string]float64{}, WithoutValue: map[string]int{}}
 		for _, col := range costColumns {
-			p.Outstanding[col] = 0
+			p.Outstanding[col], p.WithoutValue[col] = 0, 0
 		}
 		for _, it := range valued {
 			if st := stateAt(it, end); slices.Contains(costColumns, st) {
 				p.Outstanding[st] += *costValue(it)
+			}
+		}
+		for _, it := range unvalued {
+			if st := stateAt(it, end); slices.Contains(costColumns, st) {
+				p.WithoutValue[st]++
 			}
 		}
 		for col, v := range p.Outstanding {
