@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -185,11 +186,48 @@ func TestRunGivesEveryTierTheEnvironmentItIsAsked(t *testing.T) {
 	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a"), sel("b", "", "b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}, Env: env}); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(proc.envs, [][]string{env, env}) {
-		t.Errorf("environments %q", proc.envs)
+	want := []string{"CLOSE_OUT_STORY=S-0001", "FLAI_ROLE=verify"}
+	if !reflect.DeepEqual(proc.envs, [][]string{want, want}) || !reflect.DeepEqual(env, []string{"CLOSE_OUT_STORY=S-0001"}) {
+		t.Errorf("environments %q, asked %q", proc.envs, env)
 	}
 	proc = &fakeProc{steps: map[string]step{}}
-	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a")}, RunOptions{Proc: proc, FS: fstest.MapFS{}}); err != nil || proc.envs[0] != nil {
+	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a")}, RunOptions{Proc: proc, FS: fstest.MapFS{}}); err != nil ||
+		!reflect.DeepEqual(proc.envs, [][]string{{"FLAI_ROLE=verify"}}) {
 		t.Errorf("with no environment asked a tier got %q, %v", proc.envs, err)
+	}
+}
+
+// role is the FLAI_ROLE a command run with env, added to its own, sees: the
+// last one, as exec takes it.
+func role(env []string) string {
+	got := ""
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, "FLAI_ROLE="); ok {
+			got = v
+		}
+	}
+	return got
+}
+
+func TestEveryTierRunsAsTheVerifyRoleWhateverRoleAskedIt(t *testing.T) {
+	for _, env := range [][]string{nil, {"CLOSE_OUT_STORY=S-0001"}, {"FLAI_ROLE=orchestrate", "CLOSE_OUT_STORY=S-0001"}} {
+		proc := &fakeProc{steps: map[string]step{}}
+		if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a"), sel("b", "", "b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}, Env: env}); err != nil {
+			t.Fatal(err)
+		}
+		for i, got := range proc.envs {
+			if role(got) != "verify" || (len(env) > 0 && !slices.Contains(got, "CLOSE_OUT_STORY=S-0001")) {
+				t.Errorf("asked %q, %s ran with %q", env, proc.ran[i], got)
+			}
+		}
+	}
+
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/a.go": {}}
+	tiers := []Tier{{Name: "vet", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "vet", "{packages}"}}}
+	proc := &fakeProc{}
+	opts := Options{Root: "/repo", Tiers: tiers, All: true}
+	opts.FS, opts.Proc, opts.Env = fsys, proc, []string{"FLAI_ROLE=orchestrate"}
+	if _, err := Test(context.Background(), opts); err != nil || len(proc.envs) != 1 || role(proc.envs[0]) != "verify" {
+		t.Errorf("flai test ran with %q, %v", proc.envs, err)
 	}
 }

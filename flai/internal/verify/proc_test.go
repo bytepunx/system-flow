@@ -48,6 +48,18 @@ func TestOSAddsTheEnvironmentToTheOneTheTierInherits(t *testing.T) {
 	}
 }
 
+func TestATierRunsAsTheVerifyRoleUnderTheOrchestrator(t *testing.T) {
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	for _, env := range [][]string{nil, {"FLAI_ROLE=orchestrate"}} {
+		res, err := Run(context.Background(), t.TempDir(), []Selected{
+			sel("role", "", "sh", "-c", `test "$FLAI_ROLE" = verify`),
+		}, RunOptions{Env: env})
+		if err != nil || !res.Passed {
+			t.Errorf("asked %q, the tier did not run as the verify role: %+v, %v", env, res, err)
+		}
+	}
+}
+
 func TestCancellingTheContextKillsTheTiersProcessGroup(t *testing.T) {
 	dir := t.TempDir()
 	pidFile := filepath.Join(dir, "pid")

@@ -9,7 +9,15 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 )
+
+// roleEnv names the variable flai reads an agent's role from. Every tier
+// runs with it set to the verify role, whatever role started the run, so a
+// test that runs flai's writes in process is not refused as the
+// orchestrator that ran flai verify (S-0311, TH-0260).
+const roleEnv = "FLAI_ROLE"
 
 // Proc runs a tier's command; OS is the real one.
 type Proc interface {
@@ -92,10 +100,13 @@ func runTier(ctx context.Context, root string, s Selected, opts RunOptions) outp
 	start := opts.Now()
 	var exit int
 	var err error
+	// last of a name wins in exec, so the role beats the inherited one and
+	// any opts.Env sets
+	tierEnv := append(append([]string{}, opts.Env...), roleEnv+"="+conventions.RoleVerify)
 	if len(s.Argv) == 0 {
 		err = fmt.Errorf("tier %s has no command; give it one in the manifest", s.Tier.Name)
 	} else {
-		exit, err = opts.Proc.Run(ctx, dir, s.Argv, opts.Env, io.MultiWriter(&stdout, &combined), io.MultiWriter(&stderr, &combined))
+		exit, err = opts.Proc.Run(ctx, dir, s.Argv, tierEnv, io.MultiWriter(&stdout, &combined), io.MultiWriter(&stderr, &combined))
 	}
 	if err == nil && ctx.Err() != nil {
 		err = fmt.Errorf("stopped: %w", ctx.Err())
