@@ -1408,8 +1408,8 @@ describe('the cost of delay charts (S-0213)', () => {
 		expect(text('[data-testid="cod-left-out"]')).toBe(
 			'Ready stories left out, without a value or a forecast duration: S-0003, S-0004.'
 		);
-		// the order states the stories left out in place of the counts without a value
-		expect(document.querySelector('[data-testid="cod-without-value"]')).toBeNull();
+		// the order states the counts without a value too, beside the stories it left out
+		expect(text('[data-testid="cod-without-value"]')).toMatch(/^Items without a value now/);
 		expect(rows('cod-order-table')).toEqual([
 			['pull order', '2026-09-30 21:00 UTC', 'S-0001', '100'],
 			['pull order', '2026-10-01 21:00 UTC', 'S-0002', '450'],

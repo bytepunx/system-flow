@@ -479,7 +479,8 @@
 				? ordered.left_out.join(', ')
 				: 'none'}.
 		</p>
-	{:else if codKind && kind !== 'cod-order' && unvalued}
+	{/if}
+	{#if codKind && unvalued}
 		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
 			{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add nothing
 				to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
