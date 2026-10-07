@@ -151,6 +151,10 @@ export const REQUIRED_METHODS = [
 	// S-0198: the open issues, and a story made from one, offered at acceptance
 	'issue.list',
 	'issue.story',
+	// S-0275: an issue filed, bumped, or closed against a story, committed in the main checkout
+	'issue.new',
+	'issue.bump',
+	'issue.close',
 	// S-0208: the planner for an epic or a story, gated by the plan host action
 	'plan.run',
 	// S-0223: the analyzer for the project, with a focus or none, gated by the analyze host action

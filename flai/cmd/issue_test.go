@@ -655,6 +655,106 @@ func TestIssueCommandsCommitOnTheStoryBranch(t *testing.T) {
 	}
 }
 
+// S-0275: flai issue new, bump, and close --autocommit, as the dashboard's
+// host channel runs them in the main checkout, each commit the issue's file
+// and summary.md on their own with the trailers, in text and in JSON, and
+// --commit with --autocommit is refused with nothing written.
+func TestIssueCommandsAutocommitInTheMainCheckout(t *testing.T) {
+	root := bodyProject(t)
+	t.Setenv("FLAI_STORY", "")
+	const title = "The board is slow to load"
+	const trailer = "Co-Authored-By: flaiover <flaiover@localhost>"
+	file := "design/issues/I-0001-the-board-is-slow-to-load.md"
+	committedHere := func(subject string) {
+		t.Helper()
+		if msg := gitIn(t, root, "log", "-1", "--format=%B"); msg != subject+"\n\n"+trailer {
+			t.Errorf("the commit's message: %q, want %q and the trailer", msg, subject)
+		}
+		if got := gitIn(t, root, "show", "--name-only", "--format=", "HEAD"); got != file+"\ndesign/issues/summary.md" {
+			t.Errorf("the commit should hold the issue and the summary only: %q", got)
+		}
+		if st := gitIn(t, root, "status", "--porcelain"); st != "" {
+			t.Errorf("nothing should be left uncommitted: %q", st)
+		}
+	}
+
+	out, errOut, code := runIn(t, root, "issue", "new", title, "--class", "efficiency", "--story", "S-0005", "--autocommit", "--trailer", trailer)
+	if code != 0 || out != "I-0001 "+title+"\n  "+file+"\n  committed "+gitIn(t, root, "rev-parse", "--short", "HEAD")+"\n" {
+		t.Fatalf("issue new --autocommit: %d %q %s", code, out, errOut)
+	}
+	committedHere("docs: record I-0001 " + title)
+
+	type autocommitted struct {
+		ID          string  `json:"id"`
+		Count       int     `json:"count"`
+		Status      string  `json:"status"`
+		Outcome     *string `json:"outcome"`
+		Committed   bool    `json:"committed"`
+		Commit      string  `json:"commit"`
+		CommitError *string `json:"commit_error"`
+	}
+	for _, c := range []struct {
+		args         []string
+		verb, status string
+		count        int
+	}{
+		{[]string{"issue", "bump", "I-0001", "--story", "S-0005", "--note", "again", "--autocommit", "--trailer", trailer, "--json"}, "bump", "open", 2},
+		{[]string{"issue", "close", "I-0001", "--reason", "fixed by S-0005", "--autocommit", "--trailer", trailer, "--json"}, "close", "closed", 2},
+	} {
+		out, errOut, code := runIn(t, root, c.args...)
+		var res autocommitted
+		if code != 0 || json.Unmarshal([]byte(out), &res) != nil {
+			t.Fatalf("%v: %d %s %s", c.args, code, out, errOut)
+		}
+		if res.ID != "I-0001" || res.Count != c.count || res.Status != c.status || res.Outcome != nil || !res.Committed ||
+			res.Commit != gitIn(t, root, "rev-parse", "--short", "HEAD") || res.CommitError != nil {
+			t.Errorf("%v: %s", c.args, out)
+		}
+		committedHere("docs: " + c.verb + " I-0001 " + title)
+	}
+
+	head := gitIn(t, root, "rev-parse", "HEAD")
+	_, errOut, code = runIn(t, root, "issue", "new", "Both", "--class", "defect", "--story", "S-0005", "--commit", "--autocommit")
+	if code == 0 || !strings.Contains(errOut, "--commit and --autocommit cannot be given together") {
+		t.Errorf("--commit with --autocommit: %d %s", code, errOut)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "" || gitIn(t, root, "rev-parse", "HEAD") != head {
+		t.Errorf("a refused --commit --autocommit writes nothing: %q", st)
+	}
+}
+
+// With dashboard.autocommit: false, --autocommit commits nothing: the issue
+// is written, the text says nothing of a commit, and --json says committed
+// false with no commit.
+func TestIssueAutocommitOffCommitsNothing(t *testing.T) {
+	root := bodyProject(t)
+	t.Setenv("FLAI_STORY", "")
+	manifest := filepath.Join(root, "system-flow.yaml")
+	m, _ := os.ReadFile(manifest)
+	_ = os.WriteFile(manifest, append(m, []byte("dashboard:\n  autocommit: false\n")...), 0o644)
+	gitIn(t, root, "commit", "-q", "-am", "autocommit off")
+	head := gitIn(t, root, "rev-parse", "HEAD")
+
+	out, errOut, code := runIn(t, root, "issue", "new", "Lint is slow", "--class", "efficiency", "--autocommit", "--trailer", "X: y")
+	if code != 0 || out != "I-0001 Lint is slow\n  design/issues/I-0001-lint-is-slow.md\n" {
+		t.Errorf("issue new --autocommit, autocommit off: %d %q %s", code, out, errOut)
+	}
+	out, errOut, code = runIn(t, root, "issue", "bump", "I-0001", "--autocommit", "--json")
+	var res map[string]any
+	if code != 0 || json.Unmarshal([]byte(out), &res) != nil || res["committed"] != false || res["commit"] != nil || res["commit_error"] != nil {
+		t.Errorf("issue bump --autocommit --json, autocommit off: %d %s %s", code, out, errOut)
+	}
+	if gitIn(t, root, "rev-parse", "HEAD") != head {
+		t.Error("dashboard.autocommit: false means no commit")
+	}
+	if data := readIssueFile(t, root, "I-0001-lint-is-slow.md"); !strings.Contains(string(data), "\ncount: 2\n") {
+		t.Errorf("the issue should be written and bumped:\n%s", data)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "?? design/" {
+		t.Errorf("the issue and summary should be left uncommitted: %q", st)
+	}
+}
+
 // S-0275: --commit outside a story's worktree is refused before anything is
 // written, whether no story resolves or the story's branch is not the one
 // checked out.

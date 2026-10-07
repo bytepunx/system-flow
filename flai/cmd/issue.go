@@ -95,7 +95,7 @@ type issueFiled struct {
 // (S-0275).
 func issueCommitFlags(c *cobra.Command, commit *bool, trailers *[]string) {
 	c.Flags().BoolVar(commit, "commit", false, commitFlagHelp)
-	c.Flags().StringArrayVar(trailers, "trailer", nil, "trailer line for the --commit commit (repeatable)")
+	c.Flags().StringArrayVar(trailers, "trailer", nil, "trailer line for the commit, --commit's or --autocommit's (repeatable)")
 }
 
 // issueCommitHelp is what --commit does, for the Long help of issue new,
@@ -108,9 +108,16 @@ touches gained; --json adds commit (null when nothing changed) and
 touches_added. Where the story's branch is not checked out, or no story
 resolves, --commit is refused and nothing is written.`
 
-// printIssueJSON prints an issue as --json gives it, with what --commit did
-// when it was given; outcome is printed when withOutcome.
-func (a *app) printIssueJSON(is *issues.Issue, outcome issues.Outcome, withOutcome bool, done *storyCommitted) error {
+// printIssueJSON prints an issue as --json gives it, with what --commit or
+// --autocommit did when one was given; outcome is printed when withOutcome.
+func (a *app) printIssueJSON(is *issues.Issue, outcome issues.Outcome, withOutcome bool, done *storyCommitted, ac *issueAutocommit) error {
+	if ac != nil {
+		out := issueAutocommitted{Issue: is, issueAutocommit: *ac}
+		if withOutcome {
+			out.Outcome = outcome
+		}
+		return a.printJSON(out)
+	}
 	if done == nil {
 		if withOutcome {
 			return a.printJSON(issueFiled{Issue: is, Outcome: outcome})
@@ -142,18 +149,117 @@ func (a *app) commitIssue(sc *storyCommit, repo *workitem.Repo, is *issues.Issue
 }
 
 // beginIssueCommit is beginStoryCommit for an issue command, nil when
-// --commit was not given.
-func (a *app) beginIssueCommit(repo *workitem.Repo, commit bool, story string, trailers []string) (*storyCommit, error) {
+// --commit was not given; --commit with --autocommit is refused there.
+func (a *app) beginIssueCommit(repo *workitem.Repo, commit, autocommit bool, story string, trailers []string) (*storyCommit, error) {
 	if !commit {
 		return nil, nil
 	}
-	return a.beginStoryCommit(repo, story, false, trailers)
+	return a.beginStoryCommit(repo, story, autocommit, trailers)
+}
+
+// issueAutocommitFlag adds --autocommit to issue new, bump, and close.
+func issueAutocommitFlag(c *cobra.Command, autocommit *bool) {
+	c.Flags().BoolVar(autocommit, "autocommit", false, "commit the issue's file and summary.md on their own in this checkout, unless dashboard.autocommit is false")
+}
+
+// issueAutocommitHelp is what --autocommit does, for the Long help of issue
+// new, bump, and close.
+const issueAutocommitHelp = `--autocommit commits what was written, the issue's file and summary.md, on
+their own in the checkout the command ran in, as "docs: %s I-nnnn <title>",
+with each --trailer, unless the project sets dashboard.autocommit: false.
+Nothing is pushed and no story's touches change. The output then says the
+commit, or why nothing was committed; --json adds committed, commit, and
+commit_error, as flai adr new --autocommit does. --commit with --autocommit is
+refused and nothing is written.`
+
+// issueAutocommit is what --autocommit did: whether the issue's file and
+// summary.md were committed, the commit, or why they were not.
+type issueAutocommit struct {
+	Committed   bool   `json:"committed"`
+	Commit      string `json:"commit,omitempty"`
+	CommitError string `json:"commit_error,omitempty"`
+}
+
+// print writes what --autocommit did after the command's own output, as
+// flai issue story does; nothing when nothing was committed and nothing failed.
+func (ac *issueAutocommit) print(a *app) {
+	switch {
+	case ac.Committed:
+		fmt.Fprintf(a.out, "  committed %s\n", ac.Commit)
+	case ac.CommitError != "":
+		fmt.Fprintf(a.out, "  NOT committed (%s)\n", firstLine(ac.CommitError))
+	}
+}
+
+// issueAutocommitted is an issue as flai issue new, bump, and close
+// --autocommit --json give it: with the outcome when --report was given, and
+// what --autocommit did.
+type issueAutocommitted struct {
+	*issues.Issue
+	Outcome issues.Outcome `json:"outcome,omitempty"`
+	issueAutocommit
+}
+
+// autocommitIssue commits what an issue command wrote, the issue's file and
+// summary.md, on their own in the checkout at repo.Root as
+// "docs: <verb> I-nnnn <title>", when --autocommit was given and the project
+// commits what flai writes; nil when --autocommit was not given. A failed
+// commit is reported, not failed: the issue is written and valid.
+func (a *app) autocommitIssue(autocommit bool, repo *workitem.Repo, is *issues.Issue, verb string, trailers []string) (*issueAutocommit, error) {
+	if !autocommit {
+		return nil, nil
+	}
+	ac := &issueAutocommit{}
+	if !repo.Manifest.Autocommit() {
+		return ac, nil
+	}
+	paths, err := issueWritten(repo, is)
+	if err != nil {
+		return nil, err
+	}
+	if len(paths) == 0 {
+		return ac, nil
+	}
+	if _, err := a.runner.Run(repo.Root, "git", "rev-parse", "--is-inside-work-tree"); err != nil {
+		return ac, nil //nolint:nilerr // a project not in git has nothing to commit to, by design
+	}
+	msg := "docs: " + verb + " " + is.ID + " " + is.Title
+	if len(trailers) > 0 {
+		msg += "\n\n" + strings.Join(trailers, "\n")
+	}
+	spec := append([]string{"--"}, paths...)
+	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, append([]string{"add"}, spec...)...); err != nil {
+		ac.CommitError = fmt.Sprintf("stage %s in %s: %v; commit them by hand", strings.Join(paths, ", "), repo.Root, err)
+		return ac, nil
+	}
+	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, append([]string{"commit", "-q", "-m", msg}, spec...)...); err != nil {
+		ac.CommitError = fmt.Sprintf("commit %s in %s: %v; commit them by hand", strings.Join(paths, ", "), repo.Root, err)
+		return ac, nil
+	}
+	sha, err := a.runner.Run(repo.Root, "git", "rev-parse", "--short", "HEAD")
+	if err != nil {
+		ac.CommitError = fmt.Sprintf("read the commit made in %s: %v; git log -1 shows it", repo.Root, err)
+		return ac, nil
+	}
+	ac.Committed, ac.Commit = true, strings.TrimSpace(sha)
+	return ac, nil
+}
+
+// printCommitted writes what --commit or --autocommit did after the
+// command's own text, when either was given.
+func (a *app) printCommitted(done *storyCommitted, ac *issueAutocommit) {
+	if done != nil {
+		done.print(a)
+	}
+	if ac != nil {
+		ac.print(a)
+	}
 }
 
 func newIssueNewCmd(a *app) *cobra.Command {
 	var class, cost, note, story, report string
 	var impact issues.Impact
-	var commit bool
+	var commit, autocommit bool
 	var trailers []string
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
@@ -178,21 +284,27 @@ says which happened, and --json gives it as outcome: opened, bumped, or
 already recorded. A path that is not a markdown file under design/analysis is
 refused and nothing is written.
 
-` + fmt.Sprintf(issueCommitHelp, "record") + ` A bumped issue's
-commit says bump; one already recorded from the report commits nothing.`,
+` + fmt.Sprintf(issueCommitHelp, "record") + `
+
+` + fmt.Sprintf(issueAutocommitHelp, "record") + `
+
+With either, a bumped issue's commit says bump; one already recorded from the
+report commits nothing.`,
 		Example: `  flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
   flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"
   flai issue new "Review waits a day for the operator" --class efficiency --time-lost-per-cycle 6h \
     --evidence "12 stories waited 18h on average in review" --report design/analysis/2026-10-06-bottlenecks.md --json
   flai issue new "The lint cache is shared between worktrees" --class defect --cost 10m --commit \
-    --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"`,
+    --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"
+  flai issue new "The board is slow to load" --class efficiency --story S-0212 --autocommit \
+    --trailer "Co-Authored-By: flaiover <flaiover@localhost>" --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			sc, err := a.beginIssueCommit(repo, commit, story, trailers)
+			sc, err := a.beginIssueCommit(repo, commit, autocommit, story, trailers)
 			if err != nil {
 				return err
 			}
@@ -212,8 +324,12 @@ commit says bump; one already recorded from the report commits nothing.`,
 			if err != nil {
 				return err
 			}
+			ac, err := a.autocommitIssue(autocommit, repo, is, verb, trailers)
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
-				return a.printIssueJSON(is, outcome, report != "", done)
+				return a.printIssueJSON(is, outcome, report != "", done, ac)
 			}
 			fmt.Fprintf(a.out, "%s %s\n  %s\n", is.ID, is.Title, relPath(repo.Root, is.Path))
 			if report != "" {
@@ -226,9 +342,7 @@ commit says bump; one already recorded from the report commits nothing.`,
 					fmt.Fprintln(a.out, "  opened")
 				}
 			}
-			if done != nil {
-				done.print(a)
-			}
+			a.printCommitted(done, ac)
 			return nil
 		},
 	}
@@ -238,6 +352,7 @@ commit says bump; one already recorded from the report commits nothing.`,
 	c.Flags().StringVar(&story, "story", "", storyHelp)
 	issueImpactFlags(c, &impact, &report)
 	issueCommitFlags(c, &commit, &trailers)
+	issueAutocommitFlag(c, &autocommit)
 	_ = c.MarkFlagRequired("class")
 	return c
 }
@@ -245,7 +360,7 @@ commit says bump; one already recorded from the report commits nothing.`,
 func newIssueBumpCmd(a *app) *cobra.Command {
 	var cost, note, story, report string
 	var impact issues.Impact
-	var commit bool
+	var commit, autocommit bool
 	var trailers []string
 	c := &cobra.Command{
 		Use:   "bump <id>",
@@ -261,17 +376,21 @@ the analysis report under design/analysis that found it, as flai issue new
 another title. A bad amount, duration, or report path is refused and nothing
 is written.
 
-` + fmt.Sprintf(issueCommitHelp, "bump"),
+` + fmt.Sprintf(issueCommitHelp, "bump") + `
+
+` + fmt.Sprintf(issueAutocommitHelp, "bump"),
 		Example: `  flai issue bump I-0007 --cost 10m --note "again in the release dry run"
   flai issue bump I-0007 --report design/analysis/2026-10-06-risk.md --penalty-per-week 300 --evidence "two releases slipped"
-  flai issue bump I-0007 --cost 5m --note "again while closing the story out" --commit --json`,
+  flai issue bump I-0007 --cost 5m --note "again while closing the story out" --commit --json
+  flai issue bump I-0007 --story S-0212 --note "seen again on the board" --autocommit \
+    --trailer "Co-Authored-By: flaiover <flaiover@localhost>"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			sc, err := a.beginIssueCommit(repo, commit, story, trailers)
+			sc, err := a.beginIssueCommit(repo, commit, autocommit, story, trailers)
 			if err != nil {
 				return err
 			}
@@ -289,13 +408,15 @@ is written.
 			if err != nil {
 				return err
 			}
+			ac, err := a.autocommitIssue(autocommit, repo, is, "bump", trailers)
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
-				return a.printIssueJSON(is, "", false, done)
+				return a.printIssueJSON(is, "", false, done, ac)
 			}
 			fmt.Fprintf(a.out, "%s count %d, avg cost %s\n", is.ID, is.Count, orDefault(is.Cost, "-"))
-			if done != nil {
-				done.print(a)
-			}
+			a.printCommitted(done, ac)
 			return nil
 		},
 	}
@@ -304,12 +425,13 @@ is written.
 	c.Flags().StringVar(&story, "story", "", storyHelp)
 	issueImpactFlags(c, &impact, &report)
 	issueCommitFlags(c, &commit, &trailers)
+	issueAutocommitFlag(c, &autocommit)
 	return c
 }
 
 func newIssueCloseCmd(a *app) *cobra.Command {
 	var reason string
-	var commit bool
+	var commit, autocommit bool
 	var trailers []string
 	c := &cobra.Command{
 		Use:   "close <id>",
@@ -318,16 +440,20 @@ func newIssueCloseCmd(a *app) *cobra.Command {
 
 ` + fmt.Sprintf(issueCommitHelp, "close") + ` The story is
 FLAI_STORY, else the one in FLAI_AGENT of the form agent-S-nnnn, else the
-story branch checked out.`,
+story branch checked out.
+
+` + fmt.Sprintf(issueAutocommitHelp, "close"),
 		Example: `  flai issue close I-0007 --reason "fixed by S-0275"
-  flai issue close I-0007 --reason "fixed by S-0275" --commit`,
+  flai issue close I-0007 --reason "fixed by S-0275" --commit
+  flai issue close I-0007 --reason "no longer seen since S-0212" --autocommit \
+    --trailer "Co-Authored-By: flaiover <flaiover@localhost>" --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			sc, err := a.beginIssueCommit(repo, commit, "", trailers)
+			sc, err := a.beginIssueCommit(repo, commit, autocommit, "", trailers)
 			if err != nil {
 				return err
 			}
@@ -345,18 +471,21 @@ story branch checked out.`,
 			if err != nil {
 				return err
 			}
+			ac, err := a.autocommitIssue(autocommit, repo, is, "close", trailers)
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
-				return a.printIssueJSON(is, "", false, done)
+				return a.printIssueJSON(is, "", false, done, ac)
 			}
 			fmt.Fprintf(a.out, "%s closed\n", is.ID)
-			if done != nil {
-				done.print(a)
-			}
+			a.printCommitted(done, ac)
 			return nil
 		},
 	}
 	c.Flags().StringVar(&reason, "reason", "", "what closed it (a story ID, a fix, or why it no longer applies)")
 	issueCommitFlags(c, &commit, &trailers)
+	issueAutocommitFlag(c, &autocommit)
 	_ = c.MarkFlagRequired("reason")
 	return c
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -584,6 +585,29 @@ func listEntry(flag, v string) *channel.Error {
 		return bad("%s values are single words or paths without commas", flag)
 	}
 	return nil
+}
+
+// occurrenceArgs checks what issue.new and issue.bump say of an occurrence,
+// the story it belongs to, its cost, and a note, each optional, and gives
+// the flags for those given.
+func occurrenceArgs(story, cost, note string) ([]string, *channel.Error) {
+	var args []string
+	if story != "" {
+		if e := needStory(story); e != nil {
+			return nil, e
+		}
+		args = append(args, "--story="+story)
+	}
+	if cost = strings.TrimSpace(cost); cost != "" {
+		if d, err := time.ParseDuration(cost); err != nil || d < 0 {
+			return nil, bad("cost %q is not a duration like 20m", cost)
+		}
+		args = append(args, "--cost="+cost)
+	}
+	if note = text(note); note != "" {
+		args = append(args, "--note="+note)
+	}
+	return args, nil
 }
 
 func adrNo(v string) (string, *channel.Error) {
@@ -1206,6 +1230,83 @@ func itemSpecs() map[string]spec {
 				args = append(args, "--epic="+in.Epic)
 			}
 			return args, "", nil
+		}},
+
+		// issue.new, issue.bump, and issue.close: an issue filed, another
+		// occurrence of one recorded, and one closed, from the dashboard
+		// (S-0275), as flai issue new, bump, and close do them, in the main
+		// checkout and committed there on their own with the dashboard's
+		// trailer (--autocommit). Each commits the main checkout and widens
+		// no story's touches: --commit, which commits on a story's branch, is
+		// the story's agent's, in its worktree. story names the story the
+		// occurrence belongs to; close takes none. The answer is the issue
+		// as --json gives it, with committed, commit, and commit_error.
+		"issue.new": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Title string `json:"title"`
+				Class string `json:"class"`
+				Story string `json:"story"`
+				Cost  string `json:"cost"`
+				Note  string `json:"note"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			title := text(in.Title)
+			if title == "" {
+				return nil, "", bad("a title is required: the problem, as a sentence")
+			}
+			if len([]rune(title)) > 200 {
+				return nil, "", bad("the title is longer than 200 characters")
+			}
+			if !slices.Contains(issues.Classes, in.Class) {
+				return nil, "", bad("class must be one of %s", strings.Join(issues.Classes, ", "))
+			}
+			occurred, e := occurrenceArgs(in.Story, in.Cost, in.Note)
+			if e != nil {
+				return nil, "", e
+			}
+			args := append([]string{"issue", "new", "--class=" + in.Class}, occurred...)
+			return append(args, "--autocommit", "--trailer="+Trailer, "--", title), "", nil
+		}},
+
+		"issue.bump": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID    string `json:"id"`
+				Story string `json:"story"`
+				Cost  string `json:"cost"`
+				Note  string `json:"note"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if !issueID.MatchString(in.ID) {
+				return nil, "", bad("%q is not an issue ID", in.ID)
+			}
+			occurred, e := occurrenceArgs(in.Story, in.Cost, in.Note)
+			if e != nil {
+				return nil, "", e
+			}
+			args := append([]string{"issue", "bump", in.ID}, occurred...)
+			return append(args, "--autocommit", "--trailer="+Trailer), "", nil
+		}},
+
+		"issue.close": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID     string `json:"id"`
+				Reason string `json:"reason"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if !issueID.MatchString(in.ID) {
+				return nil, "", bad("%q is not an issue ID", in.ID)
+			}
+			reason := text(in.Reason)
+			if reason == "" {
+				return nil, "", bad("a reason is required: what closed it, a story ID, a fix, or why it no longer applies")
+			}
+			return []string{"issue", "close", in.ID, "--reason=" + reason, "--autocommit", "--trailer=" + Trailer}, "", nil
 		}},
 
 		// accept.run is the operator's acceptance, or with by: orchestrator

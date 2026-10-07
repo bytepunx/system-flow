@@ -100,6 +100,10 @@ var good = map[string]struct {
 	"settings.shared_check": {`{"paths":["docs/users/flai.md"," --help "],"story":"S-0001"}`, "shared check --json -- docs/users/flai.md --help S-0001", ""},
 	// S-0229: the strategic agents' settings, through flai manifest set under the settings action
 	"settings.manifest": {manifestSave, "manifest set --autocommit --trailer=" + Trailer + " --unset=analysis.schedule --json -- " + manifestSaveArgs, ""},
+	// S-0275: an issue filed, bumped, and closed from the dashboard, committed in the main checkout
+	"issue.new":   {`{"title":" --json  is my title ","class":"defect","story":"S-0212","cost":" 20m ","note":"  seen\n again ",` + rid + `}`, "issue new --class=defect --story=S-0212 --cost=20m --note=seen again --autocommit --trailer=" + Trailer + " --json -- --json is my title", ""},
+	"issue.bump":  {`{"id":"I-0007","story":"S-0212","cost":"5m","note":"--again",` + rid + `}`, "issue bump I-0007 --story=S-0212 --cost=5m --note=--again --autocommit --trailer=" + Trailer + " --json", ""},
+	"issue.close": {`{"id":"I-0007","reason":" fixed by\n S-0275 ",` + rid + `}`, "issue close I-0007 --reason=fixed by S-0275 --autocommit --trailer=" + Trailer + " --json", ""},
 }
 
 // manifestSave is a save of the strategic agents' settings: a value of every
@@ -246,6 +250,21 @@ var refused = map[string][]string{
 		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"modelname":"claude-sonnet-5"}},` + rid + `}`},
 	"settings.shared_check": {`{}`, `{"paths":[]}`, `{"paths":[" "]}`, `{"paths":["a\u0000b"]}`, `{"paths":["S-0001"]}`, `{"paths":"docs"}`,
 		`{"story":"T-0001"}`, `{"story":"--help"}`, `{"story":"S-0001 --json"}`},
+	// S-0275: an issue's ID, a story's ID, a class from the list, a duration, and a title or reason
+	"issue.new": {
+		`{"class":"defect",` + rid + `}`, `{"title":"  ","class":"defect",` + rid + `}`, `{"title":"t",` + rid + `}`, `{"title":"t","class":"bug",` + rid + `}`,
+		`{"title":"t","class":"--json",` + rid + `}`, `{"title":"t","class":"defect","story":"T-0001",` + rid + `}`, `{"title":"t","class":"defect","story":"--help",` + rid + `}`,
+		`{"title":"t","class":"defect","story":"S-1 --json",` + rid + `}`, `{"title":"t","class":"defect","cost":"soon",` + rid + `}`, `{"title":"t","class":"defect","cost":"-5m",` + rid + `}`,
+		`{"title":"` + strings.Repeat("x", 201) + `","class":"defect",` + rid + `}`, `{"title":["t"],"class":"defect",` + rid + `}`, `{"title":"t","class":"defect"}`,
+	},
+	"issue.bump": {
+		`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","story":"E-0001",` + rid + `}`,
+		`{"id":"I-0001","story":"--json",` + rid + `}`, `{"id":"I-0001","cost":"x",` + rid + `}`, `{` + rid + `}`, `{"id":"I-0001"}`,
+	},
+	"issue.close": {
+		`{"id":"--help","reason":"r",` + rid + `}`, `{"id":"I-1; ls","reason":"r",` + rid + `}`, `{"id":"S-0001","reason":"r",` + rid + `}`,
+		`{"id":"I-0001",` + rid + `}`, `{"id":"I-0001","reason":" \n ",` + rid + `}`, `{"id":"I-0001","reason":["r"],` + rid + `}`, `{"id":"I-0001","reason":"r"}`,
+	},
 }
 
 type recorder struct {
@@ -378,6 +397,32 @@ func TestIssueMethodsWithTheirOptionsLeftOut(t *testing.T) {
 	_, e := writeMethods(rec.run, time.Now, Host{})["issue.story"](context.Background(), p, json.RawMessage(good["issue.story"].params))
 	if e == nil || e.Code != Refused || e.Data.(map[string]any)["findings"] == nil {
 		t.Errorf("a refusal: %+v", e)
+	}
+}
+
+// S-0275: issue.new and issue.bump with only what they need leave out the
+// occurrence's flags, issue.close takes no story, and an exit 4 from any of
+// them is Refused with flai's data, as issue.story's is.
+func TestIssueWritesWithTheirOptionsLeftOutAndRefused(t *testing.T) {
+	p := withDocs(t)
+	for name, c := range map[string]struct{ params, args string }{
+		"issue.new":   {`{"title":"Lint is slow","class":"efficiency",` + rid + `}`, "issue new --class=efficiency --autocommit --trailer=" + Trailer + " --json -- Lint is slow"},
+		"issue.bump":  {`{"id":"I-12",` + rid + `}`, "issue bump I-12 --autocommit --trailer=" + Trailer + " --json"},
+		"issue.close": {`{"id":"I-12","reason":"gone",` + rid + `}`, "issue close I-12 --reason=gone --autocommit --trailer=" + Trailer + " --json"},
+	} {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"I-0012","committed":true,"commit":"abc1234"}`)}}
+		if _, e := writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(c.params)); e != nil {
+			t.Fatalf("%s: %+v", name, e)
+		}
+		if got := strings.Join(rec.runs[0].Args, " "); got != c.args || rec.runs[0].Dir != p.Root {
+			t.Errorf("%s ran %q in %s, want %q in the main checkout %s", name, got, rec.runs[0].Dir, c.args, p.Root)
+		}
+		refusal := Ran{Exit: 4, Stdout: []byte(`{"refused":{"findings":[{"rule":"issues.front-matter"}]}}`), Events: []map[string]any{{"level": "FATAL", "err": "refused: flai check has 1 finding(s)"}}}
+		rec = &recorder{ran: refusal}
+		_, e := writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(good[name].params))
+		if e == nil || e.Code != Refused || e.Data.(map[string]any)["findings"] == nil {
+			t.Errorf("%s: exit 4 should be Refused with the findings: %+v", name, e)
+		}
 	}
 }
 
