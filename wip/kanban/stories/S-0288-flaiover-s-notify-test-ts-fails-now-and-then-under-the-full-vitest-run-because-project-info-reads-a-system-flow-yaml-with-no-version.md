@@ -6,7 +6,7 @@ title: flaiover's notify.test.ts fails now and then under the full vitest run be
 status: backlog
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-06T09:56:51Z
+updated: 2026-10-07T02:20:05Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-06T09:56:51Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:20:05Z
 ---
 # S-0288 flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
 
