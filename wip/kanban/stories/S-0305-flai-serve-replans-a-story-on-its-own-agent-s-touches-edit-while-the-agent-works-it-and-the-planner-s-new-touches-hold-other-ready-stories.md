@@ -6,7 +6,7 @@ title: flai serve replans a story on its own agent's touches edit while the agen
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:10Z
-updated: 2026-10-07T01:07:10Z
+updated: 2026-10-07T02:17:58Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-07T01:07:10Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:17:58Z
 ---
 # S-0305 flai serve replans a story on its own agent's touches edit while the agent works it, and the planner's new touches hold other ready stories
 
