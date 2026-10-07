@@ -222,10 +222,12 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // operator started past a hold or a full limit is told what it went past
 // (S-0182). Every agent working a story is told how its issues are recorded
 // and that the operator chooses at acceptance which become stories (S-0198).
-// The planner is asked to plan its item instead (planPrompt), the
-// orchestrator to keep the project's work moving (orchestratePrompt), and
-// the analyzer to write a report (analyzePrompt). Only the claude-code
-// adapter sends a prompt.
+// An agent for a ready story begins it with story_start (S-0274); one for a
+// story already in progress, which story_start refuses, primes and takes it
+// up with flai stream open. The planner is asked to plan its item instead
+// (planPrompt), the orchestrator to keep the project's work moving
+// (orchestratePrompt), and the analyzer to write a report (analyzePrompt).
+// Only the claude-code adapter sends a prompt.
 func Prompt(r Request) string {
 	switch r.Role {
 	case conventions.RolePlan:
@@ -248,6 +250,15 @@ If a change cannot be committed without the designer deciding something, ask wit
 %[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
 	why := "because it entered ready."
+	open := startStory(r.Story, "Begin")
+	switch {
+	case r.Begun != nil, r.Restart != "" && r.AutoRestart != "":
+		open = takeUp(r.Story, "Prime")
+	case r.Restart != "":
+		open = fmt.Sprintf("If %[1]s is still ready, ", r.Story) + startStory(r.Story, "begin") + " If it is in progress already, " + takeUp(r.Story, "prime")
+	case r.Started && len(r.Past) > 0:
+		open = startStory(r.Story, "Begin") + fmt.Sprintf(" If story_start refuses %[1]s because the board holds it, start it as the operator asked with flai move %[1]s in-progress, which only warns of the hold, then ", r.Story) + takeUp(r.Story, "prime")
+	}
 	switch {
 	case r.Begun != nil:
 		why = fmt.Sprintf("because the operator started it here, and this host has had no agent for it: it was begun %[1]s. Its branch and worktree may not be on this host, and what was not committed and pushed there is not here. Reconcile before you do anything else: run flai stream open %[2]s, which keeps the narrative and checks out story/%[2]s from this clone, else from the remote, else new from the main branch, and says which; read the narrative's Current state, Next steps, and log, and the story's tasks; compare them with what is committed on the branch; and go on from what is committed rather than starting over, doing again what the narrative says was done and is not there. Log what you found with flai stream log %[2]s.%[3]s", r.Begun.Said(), r.Story, answeredSince(r.Begun))
@@ -262,11 +273,28 @@ If a change cannot be committed without the designer deciding something, ask wit
 	}
 	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s
 
-Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md: prime your session with flai prime --story %[2]s (or the flai MCP tool prime), which prints the conventions that apply and what the story names whole, and briefs the design and ADRs its topics and links select, within a size budget. A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Open the story with flai stream open %[2]s, write its tasks if it has none, and work them in the worktree that prints. When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[2]s, runs flai stream sync %[2]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand. Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state %[2]s --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.
+Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. %[7]s A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Write the story's tasks if it has none, or review the ones the planner drafted, and work them in that worktree. When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[2]s, runs flai stream sync %[2]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand. Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state %[2]s --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.
 
 %[6]s
 
-%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r))
+%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open)
+}
+
+// startStory is how an agent begins a ready story (S-0274): one call to the
+// MCP tool story_start, or flai story start on the host, moves it to
+// in-progress, opens its stream, primes, and answers the inbox, and the
+// agent reads every part of the pack the answer does not hold. lead is its
+// first word, Begin or begin.
+func startStory(story, lead string) string {
+	return fmt.Sprintf("%[2]s with the flai MCP tool story_start with %[1]s (flai story start %[1]s on the host): in one call it moves %[1]s to in-progress, opens its narrative and its branch in a worktree, primes your session, and answers your inbox. Work in the worktree it answers. Its pack holds the conventions that apply and what the story names whole, and briefs the design and ADRs its topics and links select, within a size budget, in parts: read every part. When the answer holds part 1, read part 2 on with the flai MCP tool prime and %[1]s; when it holds only the pack's header, read every part with prime.", story, lead)
+}
+
+// takeUp is how an agent takes up a story already in progress, which
+// story_start refuses: it primes with flai prime --story and opens the
+// stream again with flai stream open, which keeps the narrative. lead is
+// its first word, Prime or prime, as the sentence it begins needs.
+func takeUp(story, lead string) string {
+	return fmt.Sprintf("%[2]s your session with flai prime --story %[1]s (or the flai MCP tool prime), which prints the conventions that apply and what the story names whole, and briefs the design and ADRs its topics and links select, within a size budget, and take %[1]s up with flai stream open %[1]s, which prints the worktree to work in.", story, lead)
 }
 
 // planPrompt is what the planner is asked to do (S-0208): plan its item, an

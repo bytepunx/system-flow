@@ -154,9 +154,75 @@ func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 	if strings.Contains(p, "--cat") {
 		t.Errorf("an agent with a story primes with its pack, not every convention:\n%s", p)
 	}
-	for _, want := range []string{"agent-S-0104", "prime your session with flai prime --story S-0104 (or the flai MCP tool prime)", "A brief is not the document", "doc_get and its heading", "before relying on it or changing what it describes", "doc_search", "flai stream open S-0104", "no other story", "thread_open", "wait_for_events", "flai move S-0104 review", "commit everything outstanding in the worktree", "refused while anything is uncommitted", "flai block S-0104"} {
+	for _, want := range []string{"agent-S-0104", "A brief is not the document", "doc_get and its heading", "before relying on it or changing what it describes", "doc_search", "no other story", "thread_open", "wait_for_events", "flai move S-0104 review", "commit everything outstanding in the worktree", "refused while anything is uncommitted", "flai block S-0104"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt lacks %q", want)
+		}
+	}
+}
+
+// S-0274: an agent for a ready story begins it with one call, story_start or
+// flai story start, and reads every part of the pack its answer lacks; one
+// for a story already in progress, which story_start refuses, still primes
+// and takes it up with flai stream open.
+func TestAReadyStoryBeginsWithStoryStart(t *testing.T) {
+	p := Prompt(req(nil))
+	for _, want := range []string{
+		"Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. Begin with the flai MCP tool story_start with S-0104 (flai story start S-0104 on the host)",
+		"moves S-0104 to in-progress, opens its narrative and its branch in a worktree, primes your session, and answers your inbox",
+		"Work in the worktree it answers.",
+		"read every part",
+		"When the answer holds part 1, read part 2 on with the flai MCP tool prime and S-0104; when it holds only the pack's header, read every part with prime.",
+		"A brief is not the document",
+		"Write the story's tasks if it has none, or review the ones the planner drafted",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("a ready story's prompt lacks %q:\n%s", want, p)
+		}
+	}
+	for _, never := range []string{"flai stream open", "flai prime --story"} {
+		if strings.Contains(p, never) {
+			t.Errorf("a ready story's prompt still names %q:\n%s", never, p)
+		}
+	}
+	r := req(nil)
+	r.Started = true
+	if p := Prompt(r); !strings.Contains(p, "Begin with the flai MCP tool story_start with S-0104") || strings.Contains(p, "flai stream open") {
+		t.Errorf("an operator's start of a ready story begins with story_start:\n%s", p)
+	}
+
+	r.Past = []string{"held (overlap): touches flai/cmd"}
+	p = Prompt(r)
+	for _, want := range []string{"Begin with the flai MCP tool story_start with S-0104", "If story_start refuses S-0104 because the board holds it, start it as the operator asked with flai move S-0104 in-progress, which only warns of the hold, then prime your session with flai prime --story S-0104", "flai stream open S-0104"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("a start past a hold lacks %q:\n%s", want, p)
+		}
+	}
+
+	r = req(nil)
+	r.Begun = &Begun{By: "alex", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104"}
+	p = Prompt(r)
+	for _, want := range []string{"Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. Prime your session with flai prime --story S-0104 (or the flai MCP tool prime)", "take S-0104 up with flai stream open S-0104", "A brief is not the document"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("the reconcile prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "story_start") || strings.Contains(p, "flai story start") {
+		t.Errorf("a story in progress is not started with story_start, which refuses it:\n%s", p)
+	}
+
+	r = req(nil)
+	r.Restart, r.AutoRestart = "ended (exit 1) with S-0104 in in-progress", "1 of 2"
+	if p := Prompt(r); !strings.Contains(p, "Prime your session with flai prime --story S-0104") || !strings.Contains(p, "flai stream open S-0104") || strings.Contains(p, "story_start") {
+		t.Errorf("an automatic restart takes the story up:\n%s", p)
+	}
+
+	r = req(nil)
+	r.Restart = "ended (exit 1) with S-0104 in ready"
+	p = Prompt(r)
+	for _, want := range []string{"If S-0104 is still ready, begin with the flai MCP tool story_start with S-0104", "If it is in progress already, prime your session with flai prime --story S-0104", "take S-0104 up with flai stream open S-0104"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("a restart lacks %q:\n%s", want, p)
 		}
 	}
 }
