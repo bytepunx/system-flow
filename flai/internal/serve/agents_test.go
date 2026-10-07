@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -22,6 +23,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -875,6 +877,241 @@ func TestAnAnsweredAgentWhoseStoryIsInBacklogIsNotStarted(t *testing.T) {
 	lab.l.look(ctx, false)
 	if r := lab.run(id); r.live() || r.Answered != "" {
 		t.Fatalf("started for a story in backlog: %+v", r)
+	}
+}
+
+// inProgress makes a story in progress that no agent here works, for a
+// story's agent to converse with.
+func (lab *agentLab) inProgress(title string) string {
+	lab.t.Helper()
+	id := lab.backlog(title, nil)
+	lab.toReady(id)
+	lab.move(id, workitem.InProgress)
+	return id
+}
+
+// endedAgo makes story's newest run, which has ended, read as one that
+// started and ended d earlier than it did.
+func (lab *agentLab) endedAgo(story string, d time.Duration) {
+	lab.t.Helper()
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+		r := *s.Stories[story]
+		for _, at := range []*string{&r.Started, &r.Ended} {
+			t, err := time.Parse(time.RFC3339, *at)
+			if err != nil {
+				lab.t.Fatal(err)
+			}
+			*at = t.Add(-d).Format(time.RFC3339)
+		}
+		s.put(&r)
+	})
+}
+
+// S-0335: an agent that ends waiting on another story's agent's reply ended
+// asking, and says it waits on that story rather than on the operator, while
+// it runs and once it has ended. Its story sent back to ready waits for the
+// reply, and once the other story's agent replies its agent is started again,
+// as itself, in its session, for the conversation.
+func TestAnAgentThatEndedOnAConversationIsStartedAgainOnTheReply(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	other := lab.inProgress("Other")
+	id := lab.ready("Messages and ends")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: first.Agent, Text: "Which port do you bind?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waits := other + "'s agent to reply on " + c.ID + ": " + c.Title
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{other}) ||
+		!slices.Equal(a.Conversations, []string{c.ID}) || a.Why != "waiting for "+waits {
+		t.Fatalf("running, it waits on the other story's agent: %+v", a)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	r := lab.run(id)
+	if r.Outcome != OutcomeAsked || r.Thread != "" || !slices.Equal(r.Conversations, []string{c.ID}) || !slices.Equal(r.WaitsOn, []string{other}) || r.Why != "waiting for "+waits {
+		t.Fatalf("asked: %+v", r)
+	}
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{other}) ||
+		!slices.Equal(a.Conversations, []string{c.ID}) || a.Why != r.Why {
+		t.Fatalf("ended, it waits on the other story's agent: %+v", a)
+	}
+
+	// sent back to ready, it waits for the reply, and the board says so
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	st, _ := lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "not yet", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || !strings.Contains(lab.state().Waiting, id+"'s agent is waiting for "+other+"'s agent to reply on "+c.ID) {
+		t.Fatalf("before the reply: %+v, waiting %q", r, lab.state().Waiting)
+	}
+
+	if _, err := messages.Reply(lab.repo, c.ID, other, "builder-"+other, "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { return lab.run(id).live() })
+	if again := lab.run(id); again.Agent != first.Agent || again.Session != first.Session || again.Answered != c.ID {
+		t.Errorf("the same agent, in its session, for the reply: %+v, first %+v", again, first)
+	}
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+	if !strings.Contains(string(got), "answered: "+c.ID) {
+		t.Errorf("the command was told what was answered:\n%s", got)
+	}
+	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "again for "+id+" as "+first.Agent+", a message on "+c.ID) {
+		t.Errorf("journal: %+v", j)
+	}
+}
+
+// S-0335: an agent that ended asking the operator and waiting on another
+// story's agent records both. A new message to its story starts it again, in
+// its session, while the question to the operator is still open, and the
+// message it was started for does not start it again when it ends once more.
+func TestAnAgentThatEndedAskingIsStartedAgainOnANewMessageToItsStory(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	other := lab.inProgress("Other")
+	id := lab.ready("Asks both and ends")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: first.Agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: first.Agent, Text: "Do you change flai/cmd?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	both := "waiting for an answer to " + th.ID + ": " + th.Title + "; and for " + other + "'s agent to reply on " + c.ID + ": " + c.Title
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != th.ID || !slices.Equal(a.WaitsOn, []string{other}) || a.Why != both {
+		t.Fatalf("running, the operator's question is its thread, and the other story is named too: %+v", a)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID || !slices.Equal(r.Conversations, []string{c.ID}) || !slices.Equal(r.WaitsOn, []string{other}) || r.Why != both {
+		t.Fatalf("asked on both: %+v", r)
+	}
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != th.ID || !slices.Equal(a.WaitsOn, []string{other}) {
+		t.Fatalf("ended: %+v", a)
+	}
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	lab.l.look(ctx, false)
+	if lab.run(id).live() {
+		t.Fatal("started again before an answer, a reply, or a message")
+	}
+
+	// a minute on, the other story's agent writes to it about something else
+	lab.endedAgo(id, time.Minute)
+	c2, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "I am renaming flai/cmd/prime.go.", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { return lab.run(id).live() })
+	if again := lab.run(id); again.Agent != first.Agent || again.Session != first.Session || again.Answered != c2.ID {
+		t.Errorf("the same agent, in its session, for the message: %+v, first %+v", again, first)
+	}
+	if open, _ := threads.Get(lab.repo, th.ID); !awaitsAnswer(open, first.Agent) {
+		t.Errorf("the question to the operator was answered: %+v", open)
+	}
+
+	// it ends with its question still open, and the message it read starts nothing
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID || !slices.Equal(r.Conversations, []string{c.ID}) {
+		t.Fatalf("asked again: %+v", r)
+	}
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || len(lab.entries()) != 2 {
+		t.Fatalf("started again for the message it was started for: %+v, journal %+v", r, lab.entries())
+	}
+}
+
+// S-0335, I-0095: a reply that comes before the end of a run is judged, after
+// the run started, leaves its agent with a message unanswered: it ended
+// asking on that conversation, which answers it at once, and the next look
+// starts it again in its session. A message that came before the run started
+// is no such reply.
+func TestAReplyBeforeTheEndIsJudgedStartsTheAgentAgain(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	other, id := lab.inProgress("Other"), lab.inProgress("Messages")
+	agent := "builder-" + id
+	started := time.Now().UTC().Add(-time.Minute)
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: agent, Text: "Which port do you bind?", Now: started.Add(10 * time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := messages.Reply(lab.repo, c.ID, other, "builder-"+other, "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	later := AgentRun{Story: id, Agent: agent, Started: time.Now().UTC().Add(time.Minute).Format(time.RFC3339)}
+	if judgeRun(lab.root, &later, new(int)); later.Outcome != OutcomeFailed || len(later.Conversations) != 0 {
+		t.Errorf("a run started after the reply: %+v", later)
+	}
+
+	run := AgentRun{Story: id, Agent: agent, Started: started.Format(time.RFC3339), Ended: time.Now().UTC().Format(time.RFC3339), Session: "earlier"}
+	judgeRun(lab.root, &run, new(int))
+	if run.Outcome != OutcomeAsked || run.Thread != "" || !slices.Equal(run.Conversations, []string{c.ID}) || len(run.WaitsOn) != 0 ||
+		run.Why != "ended with a message from "+other+"'s agent on "+c.ID+" unanswered: "+c.Title {
+		t.Fatalf("judged: %+v", run)
+	}
+	if got := answered(lab.repo, &run); got != c.ID {
+		t.Errorf("answered at once by %q", got)
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&run) })
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || len(a.WaitsOn) != 0 || !slices.Equal(a.Conversations, []string{c.ID}) {
+		t.Errorf("activity: %+v", a)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { r := lab.run(id); return r.Answered == c.ID })
+	if again := lab.run(id); again.Agent != agent || again.Session != "earlier" {
+		t.Errorf("the same agent, in its session: %+v", again)
+	}
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// S-0335: a message written in the second a run ended, after it was judged,
+// is new to it; one its story answered in that second, or one from before,
+// is not.
+func TestAMessageInTheSecondARunEndedIsNew(t *testing.T) {
+	lab := newAgentLab(t)
+	other, id := lab.inProgress("Other"), lab.inProgress("Asks")
+	ended := time.Now().UTC().Truncate(time.Second)
+	run := AgentRun{Story: id, Agent: "builder-" + id, Started: ended.Add(-time.Hour).Format(time.RFC3339), Ended: ended.Format(time.RFC3339), Outcome: OutcomeAsked, Thread: "TH-0001"}
+	before, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "Before.", Now: ended.Add(-time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	answeredThen, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "Answered then.", Now: ended})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := messages.Reply(lab.repo, answeredThen.ID, id, run.Agent, "Noted.", ended); err != nil {
+		t.Fatal(err)
+	}
+	if got := messaged(lab.repo, &run); got != "" {
+		t.Fatalf("%s and %s are not new to it, yet %q is", before.ID, answeredThen.ID, got)
+	}
+	then, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "Then.", Now: ended})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := answered(lab.repo, &run); got != then.ID {
+		t.Errorf("answered by %q, not %s", got, then.ID)
 	}
 }
 

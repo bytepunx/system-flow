@@ -44,7 +44,7 @@ func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, e
 	case run.running():
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run != nil && run.Outcome == OutcomeAsked:
-		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)
+		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
 	}
 	wt := repo.WorktreePath(it.ID)
 	if _, err := os.Stat(wt); err != nil {

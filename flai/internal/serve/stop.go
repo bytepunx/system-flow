@@ -88,7 +88,7 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 	if out == nil {
 		return nil, fmt.Errorf("%s's agent was replaced while it was stopped; it is not recorded as stopped", it.ID)
 	}
-	what := "recorded it as stopped: it was waiting for an answer to " + run.Thread + ", and is not started again when it comes"
+	what := "recorded it as stopped: it was " + run.awaits() + ", and is not started again when that comes"
 	switch {
 	case killed:
 		what = fmt.Sprintf("killed its process group (pid %d), which had not ended %s after it was asked to", run.PID, o.stopGrace())

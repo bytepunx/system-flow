@@ -80,7 +80,7 @@ func TestAnAgentIsStartedToCommitWhatAStoryInReviewLeftUncommitted(t *testing.T)
 	lab.release(id)
 	// The serving flai judges the run by the story's state once it ends: a
 	// story still in review worked.
-	if outcome, why, _ := judge(lab.root, id, run.Agent, new(int)); outcome != OutcomeWorked {
-		t.Errorf("a commit run that leaves the story in review: %s %s", outcome, why)
+	if judgeRun(lab.root, run, new(int)); run.Outcome != OutcomeWorked {
+		t.Errorf("a commit run that leaves the story in review: %s %s", run.Outcome, run.Why)
 	}
 }

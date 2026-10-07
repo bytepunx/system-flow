@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -100,7 +101,7 @@ func (c AgentConfig) host(name string) harness.Host {
 // Outcomes of an agent that has ended.
 const (
 	OutcomeWorked = "worked" // it left its story in review or done
-	OutcomeAsked  = "asked"  // it ended waiting for an answer, and is started again when there is one
+	OutcomeAsked  = "asked"  // it ended waiting for an answer or a reply, and is started again when there is one
 	OutcomeFailed = "failed" // it could not be started, or left its story anywhere else
 	// OutcomeStopped is an agent the operator stopped (S-0170): its story is
 	// left where it was, and gets no agent until a retry or a move to ready.
@@ -133,7 +134,9 @@ type AgentRun struct {
 	Log     string `json:"log,omitempty"`
 	// Session is the harness's session, which a start after an answer resumes.
 	Session string `json:"session,omitempty"`
-	// Answered is the question this run was started again for.
+	// Answered is what this run was started again for: the thread whose
+	// question was answered, or the conversation a reply or a new message to
+	// its story came on (S-0335).
 	Answered string `json:"answered,omitempty"`
 	// Trigger is what started a planner run (ADR-0084): asked, for the
 	// operator's asking, orchestrator, for the orchestrator's (S-0219), and
@@ -149,11 +152,20 @@ type AgentRun struct {
 	// root, once it has ended: the newest file under design/analysis changed
 	// since it started; empty when it wrote none (S-0223).
 	Report string `json:"report,omitempty"`
-	// Outcome is set once it has ended; Why says what went wrong, and Thread
-	// is the question it ended waiting on.
+	// Outcome is set once it has ended; Why says what went wrong, or what it
+	// waits for, and Thread is the question to the operator it ended waiting
+	// on.
 	Outcome string `json:"outcome,omitempty"`
 	Why     string `json:"why,omitempty"`
 	Thread  string `json:"thread,omitempty"`
+	// Conversations are the conversations with other stories' agents a run
+	// that ended asking ended on (S-0335): those awaiting the reply of the
+	// agent of a story WaitsOn names, and those holding a message to its
+	// story that came while it ran and that it left unanswered. WaitsOn are
+	// the stories whose agents' replies it waits on, each once, in the order
+	// of their conversations.
+	Conversations []string `json:"conversations,omitempty"`
+	WaitsOn       []string `json:"waits_on,omitempty"`
 	// StoryAgent is the story's agent as it was when this run was started,
 	// empty when it named none, and nil on runs recorded before S-0116: a
 	// story whose agent has changed since is started again.
@@ -188,7 +200,7 @@ func (r *AgentRun) same(o *AgentRun) bool {
 // stopped makes an ended run read as the operator's stop, when they stopped
 // it.
 func (r *AgentRun) stopped() {
-	r.Outcome, r.Why, r.Thread = OutcomeStopped, "stopped by the operator at "+r.Stopped, ""
+	r.Outcome, r.Why, r.Thread, r.Conversations, r.WaitsOn = OutcomeStopped, "stopped by the operator at "+r.Stopped, "", nil, nil
 }
 
 // agentChanged says whether the story's agent says something else than it
@@ -424,8 +436,11 @@ type readyStory struct {
 	// started to commit what the worktree holds (S-0140).
 	Commit string
 	// Asked is the run that ended asking, once its question is answered: the
-	// agent is started again in its session (S-0182).
-	Asked *AgentRun
+	// agent is started again in its session (S-0182). Answer is what answered
+	// it: the thread, or the conversation a reply or a new message to the
+	// story came on (S-0335).
+	Asked  *AgentRun
+	Answer string
 	// Started is set when the operator has its agent started now (S-0115),
 	// and Past says what that start went past: a hold's reason, a full
 	// in-progress limit, a full review (S-0243), or nothing (S-0182).
@@ -478,35 +493,125 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 // started: it claims its paths from then, not once its agent pulls it.
 const agentStarted = "its agent started"
 
-// judge is how an agent that has ended left its story: worked, asked (a
-// question of its own on the story is open and unanswered), or failed.
-func judge(root, story, agent string, exit *int) (outcome, why, thread string) {
+// judgeRun records on run, a story's agent's run that has ended with exit,
+// how it left its story: worked, asked, or failed, with why, and what an
+// asked run waits on. It ended asking when a question of its own on the
+// story is open and unanswered, when a conversation of its story awaits
+// another story's agent's reply (S-0335), or when a message to its story came
+// on a conversation after the run started and has had no reply: a reply that
+// came before the end was judged, which would otherwise leave the agent
+// waiting on what has come, so that it is started again at once to read it.
+func judgeRun(root string, run *AgentRun, exit *int) {
+	run.Outcome, run.Why, run.Thread, run.Conversations, run.WaitsOn = OutcomeFailed, "", "", nil, nil
 	code := "an exit code nobody saw"
 	if exit != nil {
 		code = fmt.Sprintf("exit %d", *exit)
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
-		return OutcomeFailed, fmt.Sprintf("ended (%s); the project could not be read: %v", code, err), ""
+		run.Why = fmt.Sprintf("ended (%s); the project could not be read: %v", code, err)
+		return
 	}
-	it, err := repo.Get(story)
+	it, err := repo.Get(run.Story)
 	if err != nil {
-		return OutcomeFailed, fmt.Sprintf("ended (%s); %s could not be read: %v", code, story, err), ""
+		run.Why = fmt.Sprintf("ended (%s); %s could not be read: %v", code, run.Story, err)
+		return
 	}
 	switch it.Status {
 	case workitem.Review, workitem.Done:
-		return OutcomeWorked, "", ""
+		run.Outcome = OutcomeWorked
+		return
 	}
-	if th := asking(repo, story, agent); th != nil {
-		return OutcomeAsked, "waiting for an answer to " + th.ID + ": " + th.Title, th.ID
+	th := asking(repo, run.Story, run.Agent)
+	waits, unread := awaitingOther(repo, run.Story), unanswered(repo, run.Story, run.Started)
+	if th != nil || len(waits) > 0 || len(unread) > 0 {
+		run.Outcome, run.Why = OutcomeAsked, waitWhy(th, waits, unread, run.Story)
+		if th != nil {
+			run.Thread = th.ID
+		}
+		run.Conversations, run.WaitsOn = conversationIDs(slices.Concat(waits, unread)), others(waits, run.Story)
+		return
 	}
-	why = fmt.Sprintf("ended (%s) with %s in %s", code, story, it.Status)
+	run.Why = fmt.Sprintf("ended (%s) with %s in %s", code, run.Story, it.Status)
 	for _, b := range it.Blocked {
 		if b.Until == "" {
-			why += ", blocked: " + b.Reason
+			run.Why += ", blocked: " + b.Reason
 		}
 	}
-	return OutcomeFailed, why, ""
+}
+
+// awaitingOther are story's open conversations that await the other story's
+// agent's reply; none when they cannot be read, as no question is asked when
+// threads cannot be.
+func awaitingOther(repo *workitem.Repo, story string) []*messages.Conversation {
+	out, err := messages.AwaitingOther(repo, story)
+	if err != nil {
+		return nil
+	}
+	return out
+}
+
+// unanswered are story's open conversations that await its reply to a
+// message the other story's agent wrote after started, a run's start; none
+// when that is not known.
+func unanswered(repo *workitem.Repo, story, started string) []*messages.Conversation {
+	at, err := time.Parse(time.RFC3339, started)
+	if err != nil {
+		return nil
+	}
+	since, err := messages.ToSince(repo, story, at)
+	if err != nil {
+		return nil
+	}
+	return slices.DeleteFunc(since, func(c *messages.Conversation) bool {
+		closed, _ := c.Closed(repo)
+		return closed || !owesReply(c, story)
+	})
+}
+
+// owesReply says whether c awaits story's reply: the other story wrote last.
+func owesReply(c *messages.Conversation, story string) bool {
+	return workitem.CanonicalID(c.Awaiting()) == workitem.CanonicalID(story)
+}
+
+// waitWhy says what a story's agent waits for: an answer to th, its question
+// to the operator, when there is one; the reply of the other story's agent on
+// each of waits; and, for a run that has ended, a message on each of unread
+// that it left unanswered.
+func waitWhy(th *threads.Thread, waits, unread []*messages.Conversation, story string) string {
+	var on, why []string
+	if th != nil {
+		on = append(on, "an answer to "+th.ID+": "+th.Title)
+	}
+	for _, c := range waits {
+		on = append(on, c.Other(story)+"'s agent to reply on "+c.ID+": "+c.Title)
+	}
+	if len(on) > 0 {
+		why = append(why, "waiting for "+strings.Join(on, "; and for "))
+	}
+	for _, c := range unread {
+		why = append(why, "ended with a message from "+c.Other(story)+"'s agent on "+c.ID+" unanswered: "+c.Title)
+	}
+	return strings.Join(why, "; ")
+}
+
+func conversationIDs(cs []*messages.Conversation) []string {
+	var out []string
+	for _, c := range cs {
+		out = append(out, c.ID)
+	}
+	return out
+}
+
+// others are the stories story converses with in cs, each once, in order.
+func others(cs []*messages.Conversation, story string) []string {
+	var out []string
+	for _, c := range cs {
+		if o := c.Other(story); !slices.ContainsFunc(out, func(s string) bool { return workitem.CanonicalID(s) == workitem.CanonicalID(o) }) {
+			out = append(out, o)
+		}
+	}
+	return out
 }
 
 // look is called when the project's work items may have changed, when an
@@ -550,17 +655,21 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	reserved := 0
 	for _, s := range stories {
 		run := st.Stories[s.ID]
+		answer := ""
+		if asked(run) {
+			answer = answered(repo, run)
+		}
 		switch {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
 			holds.Open(s.item, agentStarted)
-		case asked(run) && !answered(repo, run):
-			sk.add(s.ID+"'s agent is waiting for an answer to "+run.Thread, s)
+		case asked(run) && answer == "":
+			sk.add(s.ID+"'s agent is "+run.awaits(), s)
 		case asked(run):
 			// answered while its story is in ready: started again in its
 			// session, but, unlike resume, only when nothing holds it and
 			// the limit has room (S-0182)
-			s.Asked = run
+			s.Asked, s.Answer = run, answer
 			todo = append(todo, s)
 		case run != nil && run.Queued == "" && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
@@ -586,7 +695,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			// review full stops the pull, not the work: what is started
 			// or in progress goes on (S-0243, I-0007)
 			reviewFull = append(reviewFull, s)
-		case l.start(ctx, cfg, s, s.Asked):
+		case l.start(ctx, cfg, s):
 			reserved++
 			holds.Open(s.item, agentStarted)
 		}
@@ -683,7 +792,7 @@ func (l *launcher) settleOrphans() {
 		}
 		ended := *run
 		ended.Ended = l.now().UTC().Format(time.RFC3339)
-		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, run.Story, run.Agent, nil)
+		judgeRun(l.entry.Root, &ended, nil)
 		l.ended(&ended)
 		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 		l.measure(run.Story)
@@ -702,24 +811,28 @@ func (l *launcher) settleOrphans() {
 	}
 }
 
-// resume starts again each agent that ended waiting for an answer, once the
-// answer is there, in the session it had, when its story is open: in
-// progress or in review. Such a story is counted in the limit already, and
-// it holds others rather than being held (ADR-0046), so neither holds it
-// back. A story in ready is started again by the look, once nothing holds
-// it and the limit has room, like any other; one in backlog waits until it
-// is ready (S-0182).
+// resume starts again each agent that ended waiting for an answer or a
+// reply, once what answers it is there (answered), in the session it had,
+// when its story is open: in progress or in review. Such a story is counted
+// in the limit already, and it holds others rather than being held
+// (ADR-0046), so neither holds it back. A story in ready is started again by
+// the look, once nothing holds it and the limit has room, like any other;
+// one in backlog waits until it is ready (S-0182).
 func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for id, run := range st.Stories {
-		if !asked(run) || !answered(repo, run) {
+		if !asked(run) {
+			continue
+		}
+		answer := answered(repo, run)
+		if answer == "" {
 			continue
 		}
 		it, err := repo.Get(id)
 		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) {
 			continue
 		}
-		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent}, run)
+		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, Asked: run, Answer: answer})
 	}
 }
 
@@ -824,9 +937,31 @@ func (l *launcher) stopRestarting(repo *workitem.Repo, cfg AgentConfig, run *Age
 	l.log("agent not restarted: at the limit", "story", run.Story, "ended", ends, "thread", th.ID)
 }
 
-// asked says whether run ended asking a question on a thread.
+// asked says whether run ended asking: a question on a thread, or on a
+// conversation with another story's agent (S-0335).
 func asked(run *AgentRun) bool {
-	return run != nil && run.Outcome == OutcomeAsked && run.Thread != ""
+	return run != nil && run.Outcome == OutcomeAsked && (run.Thread != "" || len(run.Conversations) > 0)
+}
+
+// awaits is what a run that ended asking waits for, as the reason its story
+// is not started says it: an answer to its question to the operator, the
+// reply of the agent of each story it waits on, or both.
+func (r *AgentRun) awaits() string {
+	var on []string
+	if r.Thread != "" {
+		on = append(on, "an answer to "+r.Thread)
+	}
+	if len(r.Conversations) > 0 {
+		who := "the other story's agent"
+		switch {
+		case len(r.WaitsOn) == 1:
+			who = r.WaitsOn[0] + "'s agent"
+		case len(r.WaitsOn) > 1:
+			who = "the agents of " + strings.Join(r.WaitsOn, ", ")
+		}
+		on = append(on, who+" to reply on "+strings.Join(r.Conversations, ", "))
+	}
+	return "waiting for " + strings.Join(on, " and for ")
 }
 
 // agentEnv is flai serve's environment without the host's address and token
@@ -847,18 +982,18 @@ func agentEnv(env []string) []string {
 var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS"}
 
 // start starts an agent for story, or starts again the one that ended asking
-// in after, and says whether it did.
-func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory, after ...*AgentRun) bool {
+// in story.Asked, for story.Answer, and says whether it did.
+func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory) bool {
 	now := l.now().UTC()
 	name := cfg.Name
 	if name == "" {
 		name = "agent"
 	}
 	run := &AgentRun{Story: story.ID, Agent: name + "-" + story.ID, Started: now.Format(time.RFC3339), Session: newSession(), AutoRestarts: story.AutoRestarts}
-	if len(after) > 0 && after[0] != nil {
-		run.Agent, run.Answered = after[0].Agent, after[0].Thread
-		if after[0].Session != "" {
-			run.Session = after[0].Session
+	if story.Asked != nil {
+		run.Agent, run.Answered = story.Asked.Agent, story.Answer
+		if story.Asked.Session != "" {
+			run.Session = story.Asked.Session
 		}
 	}
 	run.StoryAgent = &manifest.Agent{}
@@ -901,7 +1036,11 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	l.told(run)
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
 	if run.Answered != "" {
-		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s answered (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.Answered, run.PID, run.Log)
+		what := run.Answered + " answered"
+		if strings.HasPrefix(run.Answered, "MS-") {
+			what = "a message on " + run.Answered
+		}
+		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, what, run.PID, run.Log)
 	}
 	if story.Commit != "" {
 		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s to commit what its worktree holds (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
@@ -922,7 +1061,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	l.await(cmd, out, run.PID, func(code int) {
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
-		ended.Outcome, ended.Why, ended.Thread = judge(l.entry.Root, story.ID, run.Agent, &code)
+		judgeRun(l.entry.Root, &ended, &code)
 		l.ended(&ended)
 		l.log("agent ended", "story", story.ID, "pid", run.PID, "exit", code, "outcome", ended.Outcome)
 		l.measure(story.ID)
@@ -1035,7 +1174,7 @@ func oneOrMany(n int, one, many string) string {
 // Activity states of a story's agent (S-0104), as the dashboard shows them.
 const (
 	ActivityWorking = "working" // running
-	ActivityWaiting = "waiting" // running, and waiting for the designer
+	ActivityWaiting = "waiting" // waiting for the designer or another story's agent, running or not
 	ActivityFailed  = "failed"  // ended, or never started, without its story in review
 	ActivityWorked  = "worked"  // ended with its story in review or done
 )
@@ -1045,8 +1184,15 @@ type StoryActivity struct {
 	State string    `json:"state"`
 	Why   string    `json:"why,omitempty"`
 	Run   *AgentRun `json:"run"`
-	// Thread is the question a waiting agent asked, when it waits on one.
+	// Thread is the question to the operator a waiting agent asked, when it
+	// waits on one.
 	Thread string `json:"thread,omitempty"`
+	// WaitsOn are the stories whose agents' replies a waiting agent waits on,
+	// rather than or as well as the operator's answer, and Conversations the
+	// conversations it waits on them in, or, once it has ended, those with a
+	// message to its story it is started again to read (S-0335).
+	WaitsOn       []string `json:"waits_on,omitempty"`
+	Conversations []string `json:"conversations,omitempty"`
 	// Hold is why a story in ready waits for another's claim (S-0128); Why
 	// says the same.
 	Hold *workitem.Hold `json:"hold,omitempty"`
@@ -1094,8 +1240,10 @@ func orSomeone(who string) string {
 // Activity is what each story's newest agent is doing. One that runs is
 // waiting when it asked a question on its story that nobody has answered
 // yet (an open thread whose last entry is its own, or one it opened with a
-// recommendation awaiting the operator's confirmation) or its story is
-// blocked.
+// recommendation awaiting the operator's confirmation), when a conversation
+// of its story awaits another story's agent's reply, which WaitsOn names
+// (S-0335), or when its story is blocked; the operator's question, when
+// there is one, is its Thread either way.
 // One that ended is waiting when it asked, or when the operator queued
 // another for its story in ready (S-0118). A story in ready that a claim
 // holds is waiting with the hold's reason, whether or not it has had an
@@ -1178,8 +1326,13 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 		switch {
 		case run.live():
 			a.State = ActivityWorking
-			if th := asked[id]; th != nil {
-				a.State, a.Thread, a.Why = ActivityWaiting, th.ID, "waiting for an answer to "+th.ID+": "+th.Title
+			th, waits := asked[id], awaitingOther(repo, id)
+			if th != nil || len(waits) > 0 {
+				a.State, a.Why = ActivityWaiting, waitWhy(th, waits, nil, id)
+				if th != nil {
+					a.Thread = th.ID
+				}
+				a.WaitsOn, a.Conversations = others(waits, id), conversationIDs(waits)
 			} else if it, err := repo.Get(id); err == nil {
 				for _, b := range it.Blocked {
 					if b.Until == "" {
@@ -1191,6 +1344,7 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 			a.State = ActivityWorked
 		case run.Outcome == OutcomeAsked:
 			a.State, a.Thread, a.Why = ActivityWaiting, run.Thread, run.Why
+			a.WaitsOn, a.Conversations = run.WaitsOn, run.Conversations
 		case run.Queued != "" && inReady(repo, id):
 			a.State, a.Why = ActivityWaiting, "queued: flai serve starts another agent when there is room"
 		default:
@@ -1207,7 +1361,8 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 // held are the stories in ready with no agent running that a claim holds,
 // counting the claim of each story in ready whose agent runs, as the
 // launcher does. One whose agent ended asking is left out until the question
-// is answered: it waits for the answer, and then for its hold (S-0182).
+// or its conversation is answered: it waits for the answer, and then for its
+// hold (S-0182, S-0335).
 func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 	items, err := repo.List(false)
 	if err != nil {
@@ -1222,7 +1377,7 @@ func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 		switch run := st.Stories[it.ID]; {
 		case run.live():
 			holds.Open(it, agentStarted)
-		case !asked(run) || answered(repo, run):
+		case !asked(run) || answered(repo, run) != "":
 			ready = append(ready, it)
 		}
 	}
@@ -1271,11 +1426,61 @@ func awaitsAnswer(th *threads.Thread, agent string) bool {
 	return th.PendingRecommendation() != nil && th.Opener() == agent
 }
 
-// answered says whether the question a run ended waiting on has an answer:
-// an entry by someone else after the agent's that is not a recommendation
-// awaiting the operator's confirmation, the confirmation of one, or the
-// thread resolved.
-func answered(repo *workitem.Repo, run *AgentRun) bool {
+// answered is what answers a run that ended asking, or "" while nothing does:
+// its thread, once the question has an answer (threadAnswered); a
+// conversation it ended on, once the other story's agent has written last on
+// it or it reads as closed, so that no reply will come (S-0335); or a
+// conversation on which a message to its story came after it ended
+// (messaged), even while its question to the operator is unanswered.
+func answered(repo *workitem.Repo, run *AgentRun) string {
+	if run.Thread != "" && threadAnswered(repo, run) {
+		return run.Thread
+	}
+	for _, id := range run.Conversations {
+		c, err := messages.Get(repo, id)
+		if err != nil {
+			continue
+		}
+		if closed, _ := c.Closed(repo); closed || owesReply(c, run.Story) {
+			return c.ID
+		}
+	}
+	return messaged(repo, run)
+}
+
+// messaged is the first conversation of run's story, which ended asking,
+// that awaits its reply to a message the other story's agent wrote after the
+// run ended, or "". It looks from a second before the end, as times are kept
+// to the second: a message written in the second the run ended, after
+// judgeRun read the conversations, is new to it too, while one its agent
+// answered in that second no longer awaits its reply. It never looks before
+// the run started: the message it was started again for is not new to it.
+func messaged(repo *workitem.Repo, run *AgentRun) string {
+	ended, err := time.Parse(time.RFC3339, run.Ended)
+	if err != nil {
+		return ""
+	}
+	since := ended.Add(-time.Second)
+	if started, err := time.Parse(time.RFC3339, run.Started); err == nil && started.After(since) {
+		since = started
+	}
+	cs, err := messages.ToSince(repo, run.Story, since)
+	if err != nil {
+		return ""
+	}
+	for _, c := range cs {
+		if owesReply(c, run.Story) {
+			return c.ID
+		}
+	}
+	return ""
+}
+
+// threadAnswered says whether the question on the thread a run ended
+// waiting on has an answer: an entry by someone else after the agent's that
+// is not a recommendation awaiting the operator's confirmation, the
+// confirmation of one, or the thread resolved.
+func threadAnswered(repo *workitem.Repo, run *AgentRun) bool {
 	th, err := threads.Get(repo, run.Thread)
 	if err != nil {
 		return false

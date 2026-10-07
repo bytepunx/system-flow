@@ -51,8 +51,10 @@ type Request struct {
 	// Session names the harness's session, so that it can be resumed; a
 	// harness that has no sessions ignores it.
 	Session string
-	// Answered is the thread the agent asked on that has been answered: the
-	// agent ended while it waited, and is started again to go on (S-0104).
+	// Answered is the thread the agent asked on that has been answered, or
+	// the conversation (MS-nnnn) another story's agent wrote on to its story:
+	// the agent ended while it waited, and is started again to go on (S-0104,
+	// S-0335).
 	Answered string
 	// Restart says how the story's last agent ended, when the operator has
 	// had a new one started for it (S-0116); empty when it entered ready.
@@ -243,6 +245,11 @@ func Prompt(r Request) string {
 Do only this. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md, for how commits are made here. In the worktree, read git status and git diff. Commit the changes on story/%[2]s, in commits whose messages name %[2]s and say what changed and why, after the lint and tests the project runs for what they touch; fix what they find only when it is part of the same work. Discard a file only when it is plainly output that does not belong in the repository, and say which in the story's narrative with flai stream log %[2]s. Do not move %[2]s or its tasks, do not change anything the uncommitted work does not already change, and do not start other work. When git status in the worktree is clean, log what you committed with flai stream log %[2]s and end.
 
 If a change cannot be committed without the designer deciding something, ask with the flai MCP tool thread_open on %[2]s, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps with flai stream state, saying what you asked and what is left to commit, and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer. Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true, write the narrative's Current state and Next steps with flai stream state, and end.`, r.Name, r.Story, r.Commit)
+	}
+	if strings.HasPrefix(r.Answered, "MS-") {
+		return fmt.Sprintf(`Another story's agent has written to %[2]s on %[3]s. Read it with the flai MCP tool inbox, which lists %[2]s's conversations under messages, or message_get (flai message show %[3]s on the host), answer what awaits your reply with message_reply, then go on working %[2]s to review as before.
+
+%[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
 	if r.Answered != "" {
 		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.

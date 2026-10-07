@@ -325,6 +325,13 @@ func TestAnAnsweredAgentGoesOnInItsSession(t *testing.T) {
 	if !slices.Contains(cmd.Env, "FLAI_ANSWERED=TH-0001") {
 		t.Errorf("command env: %q", cmd.Env)
 	}
+	// S-0335: one started again on a message is told to read the
+	// conversation, not a thread.
+	r.Answered = "MS-0002"
+	st, _ = (claudeCode{}).Start(r, Host{})
+	if p := st.Argv[2]; after(st.Argv, "--resume") != r.Session || !strings.Contains(p, "written to S-0104 on MS-0002") || !strings.Contains(p, "message_reply") || strings.Contains(p, "thread_get") {
+		t.Errorf("resume prompt on a message: %s", p)
+	}
 }
 
 // S-0140: an agent started to commit a story's worktree is told to do that

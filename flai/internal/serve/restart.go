@@ -110,7 +110,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	case run.running():
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run.Outcome == OutcomeAsked:
-		return nil, refused("%s's agent is waiting for an answer to %s; answering it starts the agent again", it.ID, run.Thread)
+		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
 	case run.Queued != "" && it.Status == workitem.Ready:
 		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
 	}
