@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 120
-      output: 627
-      cache_read: 6554686
-      cache_write: 175890
-      cost: 2.9823
+      input: 113
+      output: 49922
+      cache_read: 6695250
+      cache_write: 161144
+      cost: 3.2689
 ---
 # T-1068 The verify package selects the tiers for given paths, runs them cheapest first, and parses each tool's output into capped findings
 

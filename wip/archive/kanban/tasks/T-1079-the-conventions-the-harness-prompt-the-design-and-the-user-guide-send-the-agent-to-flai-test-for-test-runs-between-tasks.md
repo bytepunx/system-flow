@@ -3,16 +3,36 @@ id: T-1079
 type: task
 nature: improvement
 title: The conventions, the harness prompt, the design, and the user guide send the agent to flai test for test runs between tasks
-status: backlog
+status: done
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:52:38Z
-updated: 2026-10-06T22:52:38Z
-transitions: []
+updated: 2026-10-07T00:34:35Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:28:55Z
+    by: agent-S-0273
+  - to: in-progress
+    at: 2026-10-07T00:28:55Z
+    by: agent-S-0273
+  - to: done
+    at: 2026-10-07T00:34:35Z
+    by: agent-S-0273
 stream: S-0273
 tags: [conventions, docs, harness]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/system/devex.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, scripts/README.md, Makefile]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, template/template.yaml, design/system/devex.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, scripts/README.md, Makefile]
 after: [T-1067, T-1069, T-1070, T-1073]
+usage:
+  source: log
+  seconds: 340
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 45821
+      cache_read: 6145362
+      cache_write: 147909
+      cost: 3.0004
 ---
 # T-1079 The conventions, the harness prompt, the design, and the user guide send the agent to flai test for test runs between tasks
 

@@ -3,16 +3,36 @@ id: T-0931
 type: task
 nature: feature
 title: The Workflow menu's Analyzer page shows its state, current run, activity, and runs, and runs it with a focus
-status: backlog
+status: done
 parent: S-0228
 owner: alex
 created: 2026-10-05T05:45:13Z
-updated: 2026-10-05T05:45:13Z
-transitions: []
+updated: 2026-10-07T00:36:34Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:31:15Z
+    by: agent-S-0228
+  - to: in-progress
+    at: 2026-10-07T00:31:15Z
+    by: agent-S-0228
+  - to: done
+    at: 2026-10-07T00:36:34Z
+    by: agent-S-0228
 stream: S-0228
 tags: [dashboard]
-touches: [flaiover/src/routes/workflow/analyzer, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts]
+touches: [flaiover/src/routes/workflow/analyzer, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts]
 after: [T-0928]
+usage:
+  source: log
+  seconds: 319
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 272
+      cache_read: 2779291
+      cache_write: 109686
+      cost: 1.2801
 ---
 # T-0931 The Workflow menu's Analyzer page shows its state, current run, activity, and runs, and runs it with a focus
 

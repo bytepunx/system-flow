@@ -3,11 +3,11 @@ id: T-0921
 type: task
 nature: feature
 title: The dashboard's API answers the orchestrator's and the analyzer's state, activity, and runs, and runs the analyzer and stops and starts the orchestrator
-status: in-progress
+status: done
 parent: S-0228
 owner: alex
 created: 2026-10-05T05:44:54Z
-updated: 2026-10-07T00:03:29Z
+updated: 2026-10-07T00:23:18Z
 transitions:
   - to: ready
     at: 2026-10-07T00:03:28Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T00:03:29Z
     by: agent-S-0228
+  - to: done
+    at: 2026-10-07T00:23:18Z
+    by: agent-S-0228
 stream: S-0228
 tags: [dashboard]
 touches: [flaiover/src/routes/api/orchestrator, flaiover/src/routes/api/analyzer, flaiover/src/routes/api/agent-stream, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/planner.ts, flaiover/src/lib/planner.test.ts, flaiover/src/lib/server/agent.ts]
+usage:
+  source: log
+  seconds: 1189
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 658
+      cache_read: 4717939
+      cache_write: 139809
+      cost: 2.1526
 ---
 # T-0921 The dashboard's API answers the orchestrator's and the analyzer's state, activity, and runs, and runs the analyzer and stops and starts the orchestrator
 

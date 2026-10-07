@@ -3,16 +3,36 @@ id: T-1073
 type: task
 nature: improvement
 title: The host method test.run runs flai test in a story's worktree behind the checks host action and answers its result
-status: backlog
+status: done
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:52:18Z
-updated: 2026-10-06T22:52:18Z
-transitions: []
+updated: 2026-10-07T00:28:39Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:22:04Z
+    by: agent-S-0273
+  - to: in-progress
+    at: 2026-10-07T00:22:04Z
+    by: agent-S-0273
+  - to: done
+    at: 2026-10-07T00:28:39Z
+    by: agent-S-0273
 stream: S-0273
 tags: [hostapi, testing]
-touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/dashboard-host-channel.md]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/dashboard-host-channel.md, flaiover/src/lib/server/agent.ts]
 after: [T-1069]
+usage:
+  source: log
+  seconds: 395
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 47676
+      cache_read: 6394031
+      cache_write: 153894
+      cost: 3.1218
 ---
 # T-1073 The host method test.run runs flai test in a story's worktree behind the checks host action and answers its result
 

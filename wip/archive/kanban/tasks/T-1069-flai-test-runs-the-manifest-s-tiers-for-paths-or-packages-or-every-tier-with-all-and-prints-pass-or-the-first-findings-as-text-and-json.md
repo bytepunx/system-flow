@@ -3,16 +3,36 @@ id: T-1069
 type: task
 nature: improvement
 title: flai test runs the manifest's tiers for paths or packages, or every tier with --all, and prints pass or the first findings as text and --json
-status: backlog
+status: done
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:51:58Z
-updated: 2026-10-06T23:52:58Z
-transitions: []
+updated: 2026-10-07T00:20:50Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:11:05Z
+    by: agent-S-0273
+  - to: in-progress
+    at: 2026-10-07T00:11:06Z
+    by: agent-S-0273
+  - to: done
+    at: 2026-10-07T00:20:50Z
+    by: agent-S-0273
 stream: S-0273
 tags: [cli, testing]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, system-flow.yaml, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, system-flow.yaml, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh, scripts/lint-md.sh, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1067, T-1068]
+usage:
+  source: log
+  seconds: 584
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 35036
+      cache_read: 4698866
+      cache_write: 113094
+      cost: 2.2942
 ---
 # T-1069 flai test runs the manifest's tiers for paths or packages, or every tier with --all, and prints pass or the first findings as text and --json
 

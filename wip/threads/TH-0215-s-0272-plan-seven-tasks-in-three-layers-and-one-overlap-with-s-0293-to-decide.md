@@ -4,10 +4,10 @@ title: "S-0272 plan: seven tasks in three layers, and one overlap with S-0293 to
 anchor:
   path: wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md
   item: S-0272
-status: answered
-participants: [planner-S-0272, alex]
+status: resolved
+participants: [planner-S-0272, alex, agent-S-0272]
 created: 2026-10-06T22:54:30Z
-updated: 2026-10-06T23:34:52Z
+updated: 2026-10-07T00:40:57Z
 ---
 
 # TH-0215 S-0272 plan: seven tasks in three layers, and one overlap with S-0293 to decide
@@ -51,3 +51,6 @@ I've drafted seven tasks for S-0272 in three layers. I've also revisited its tou
 
 ### 2026-10-06T23:34:52Z alex
 accept proposals
+
+### 2026-10-07T00:40:57Z agent-S-0272
+Resolved: Plan accepted as drafted: criterion 4 stays here (T-1097, T-1101); S-0294 stays separate.

@@ -3,11 +3,11 @@ id: T-0917
 type: task
 nature: feature
 title: flai serves the orchestrator's and the analyzer's run streams, and stops and starts the orchestrator on the operator's word
-status: in-progress
+status: done
 parent: S-0228
 owner: alex
 created: 2026-10-05T05:44:45Z
-updated: 2026-10-07T00:03:28Z
+updated: 2026-10-07T00:23:18Z
 transitions:
   - to: ready
     at: 2026-10-07T00:03:28Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T00:03:28Z
     by: agent-S-0228
+  - to: done
+    at: 2026-10-07T00:23:18Z
+    by: agent-S-0228
 stream: S-0228
 tags: [dashboard]
-touches: [flai/internal/hostapi, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
+touches: [flai/internal/hostapi, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 1190
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 196
+      output: 1024
+      cache_read: 18092502
+      cache_write: 313109
+      cost: 8.1552
 ---
 # T-0917 flai serves the orchestrator's and the analyzer's run streams, and stops and starts the orchestrator on the operator's word
 

@@ -3,16 +3,36 @@ id: T-0928
 type: task
 nature: feature
 title: The Workflow menu's Orchestrator page shows its state, current run, decisions, and runs, and stops and starts it
-status: backlog
+status: done
 parent: S-0228
 owner: alex
 created: 2026-10-05T05:45:04Z
-updated: 2026-10-05T05:45:04Z
-transitions: []
+updated: 2026-10-07T00:31:15Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:23:19Z
+    by: agent-S-0228
+  - to: in-progress
+    at: 2026-10-07T00:23:19Z
+    by: agent-S-0228
+  - to: done
+    at: 2026-10-07T00:31:15Z
+    by: agent-S-0228
 stream: S-0228
 tags: [dashboard]
-touches: [flaiover/src/routes/workflow/orchestrator, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/activity.ts]
+touches: [flaiover/src/routes/workflow/orchestrator, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/components/AgentStream.svelte, flaiover/src/lib/components/AgentStream.svelte.test.ts]
 after: [T-0921]
+usage:
+  source: log
+  seconds: 476
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 442
+      cache_read: 4115085
+      cache_write: 167277
+      cost: 1.8975
 ---
 # T-0928 The Workflow menu's Orchestrator page shows its state, current run, decisions, and runs, and stops and starts it
 

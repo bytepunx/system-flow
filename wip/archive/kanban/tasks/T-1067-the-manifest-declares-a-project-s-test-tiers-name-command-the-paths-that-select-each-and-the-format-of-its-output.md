@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 124
-      output: 704
-      cache_read: 7910367
-      cache_write: 204466
-      cost: 3.5956
+      input: 136
+      output: 60189
+      cache_read: 8072223
+      cache_write: 194285
+      cost: 3.9412
 ---
 # T-1067 The manifest declares a project's test tiers: name, command, the paths that select each, and the format of its output
 

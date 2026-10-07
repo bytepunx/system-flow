@@ -3,11 +3,11 @@ id: S-0273
 type: story
 nature: improvement
 title: flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings
-status: in-progress
+status: done
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-07T00:08:00Z
+updated: 2026-10-07T00:41:52Z
 transitions:
   - to: ready
     at: 2026-10-06T23:32:45Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:51:15Z
     by: agent-S-0273
+  - to: review
+    at: 2026-10-07T00:40:46Z
+    by: agent-S-0273
+  - to: done
+    at: 2026-10-07T00:41:52Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, code, conventions, template]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, system-flow.yaml, template/root/system-flow.yaml.tmpl, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh, scripts/README.md, Makefile, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/system/devex.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/check/check.go, flai/internal/check/tests_test.go, template/template.yaml]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, system-flow.yaml, template/root/system-flow.yaml.tmpl, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh, scripts/README.md, Makefile, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/system/devex.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/check/check.go, flai/internal/check/tests_test.go, template/template.yaml, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, scripts/lint-md.sh, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flaiover/src/lib/server/agent.ts, docs/operators/index.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,15 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1122
-  estimated: true
+  seconds: 3008
   models:
     - model: claude-opus-5-5
-      input: 274
-      output: 1460
-      cache_read: 15623802
-      cache_write: 475305
-      cost: 7.1335
+      input: 736
+      output: 325788
+      cache_read: 43693237
+      cache_write: 1051625
+      cost: 21.3328
+    - model: claude-sonnet-5-5
+      input: 10
+      output: 3786
+      cache_read: 84891
+      cache_write: 33193
+      cost: 0.1378
 cost_of_delay:
   value: 213
   by: planner-E-0017
@@ -55,9 +66,9 @@ finalized:
 Between edits an agent runs `go test`, `vitest`, `golangci-lint`, or `gofmt` by hand (1,449 turns across 108 runs) and reads the log that comes back, tail and all. `flai test [path|package]...` runs the tiers the project defines for the paths given (the Go packages, the flaiover unit tests, the lint and format checks that apply), cheapest first, and answers pass, or the first failures as findings: test name, path, line, and the assertion's message, with the step's duration; `--all` runs every tier. Over MCP it is `test`, on the host channel `test.run`. `flai verify` (its sibling story) runs it for the whole diff before review.
 
 ## Acceptance criteria
-- [ ] `flai test` with paths or packages runs the matching tiers from `scripts/` and answers pass or findings as text and `--json`, never more than the first failures and their messages
-- [ ] The same is `test` over MCP and `test.run` on the host channel
-- [ ] The conventions, the harness prompt, `design/system/devex.md`, `flai-cli.md`, and the user guide send the agent to it for test runs between tasks, and the project's `Makefile` targets keep working for people
+- [x] `flai test` with paths or packages runs the matching tiers from `scripts/` and answers pass or findings as text and `--json`, never more than the first failures and their messages
+- [x] The same is `test` over MCP and `test.run` on the host channel
+- [x] The conventions, the harness prompt, `design/system/devex.md`, `flai-cli.md`, and the user guide send the agent to it for test runs between tasks, and the project's `Makefile` targets keep working for people
 
 ## Tasks
 - T-1067 The manifest declares a project's test tiers: name, command, the paths that select each, and the format of its output

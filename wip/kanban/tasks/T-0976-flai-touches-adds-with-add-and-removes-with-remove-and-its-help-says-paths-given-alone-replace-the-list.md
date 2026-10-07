@@ -3,12 +3,18 @@ id: T-0976
 type: task
 nature: improvement
 title: flai touches adds with --add and removes with --remove, and its help says paths given alone replace the list
-status: backlog
+status: in-progress
 parent: S-0254
 owner: alex
 created: 2026-10-05T05:49:34Z
-updated: 2026-10-05T05:49:34Z
-transitions: []
+updated: 2026-10-07T00:41:25Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:41:25Z
+    by: agent-S-0254
+  - to: in-progress
+    at: 2026-10-07T00:41:25Z
+    by: agent-S-0254
 stream: S-0254
 tags: [cli]
 touches: [flai/cmd/touches.go, flai/cmd/touches_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go]
