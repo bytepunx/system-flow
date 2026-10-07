@@ -28,17 +28,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 27248
-      cache_read: 4192923
-      cache_write: 141740
-      cost: 2.1842
+      input: 75
+      output: 31008
+      cache_read: 4220838
+      cache_write: 128025
+      cost: 2.2162
     - model: claude-sonnet-5-5
-      input: 2
-      output: 16
-      cache_read: 5573
-      cache_write: 6018
-      cost: 0.0133
+      input: 1
+      output: 150
+      cache_read: 11482
+      cache_write: 1735
+      cost: 0.0081
 ---
 # T-1102 flai task done T-nnnn -m closes a task from the story's worktree and answers the result as text and --json
 

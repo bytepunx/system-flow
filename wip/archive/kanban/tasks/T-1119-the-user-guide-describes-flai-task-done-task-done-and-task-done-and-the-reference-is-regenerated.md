@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 375
-      cache_read: 2213858
-      cache_write: 89737
-      cost: 1.1537
+      input: 54
+      output: 15523
+      cache_read: 2275856
+      cache_write: 84983
+      cost: 1.2828
 ---
 # T-1119 The user guide describes flai task done, task_done, and task.done, and the reference is regenerated
 

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:52:46Z
-updated: 2026-10-06T22:53:14Z
+updated: 2026-10-07T03:27:06Z
 transitions: []
 stream: S-0270
 tags: [flai, template]
-touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md]
+touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, system-flow.yaml, template/root/system-flow.yaml.tmpl]
 after: [T-1075]
 ---
 # T-1082 Both close-out scripts run flai verify for their checks and keep only the commit around it

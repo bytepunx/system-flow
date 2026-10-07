@@ -32,6 +32,12 @@ usage:
       cache_read: 2723955
       cache_write: 79672
       cost: 1.414
+    - model: claude-sonnet-5-5
+      input: 35
+      output: 6628
+      cache_read: 505852
+      cache_write: 76456
+      cost: 0.3587
 ---
 # T-1080 An ADR and flai-cli.md set flai task done's steps, stop rule, answer, and its MCP and host-channel names
 

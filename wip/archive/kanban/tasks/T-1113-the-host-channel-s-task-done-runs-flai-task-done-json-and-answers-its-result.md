@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 234
-      cache_read: 1882206
-      cache_write: 118279
-      cost: 1.0019
+      input: 47
+      output: 13480
+      cache_read: 1976391
+      cache_write: 73801
+      cost: 1.114
 ---
 # T-1113 The host channel's task.done runs flai task done --json and answers its result
 

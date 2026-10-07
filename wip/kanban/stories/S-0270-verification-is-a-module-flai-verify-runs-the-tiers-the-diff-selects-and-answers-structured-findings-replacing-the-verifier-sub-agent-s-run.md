@@ -3,11 +3,11 @@ id: S-0270
 type: story
 nature: improvement
 title: "Verification is a module: flai verify runs the tiers the diff selects and answers structured findings, replacing the verifier sub-agent's run"
-status: ready
+status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:29Z
-updated: 2026-10-07T03:13:45Z
+updated: 2026-10-07T03:27:06Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:06Z
@@ -18,9 +18,12 @@ transitions:
   - to: ready
     at: 2026-10-06T23:59:01Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T03:25:12Z
+    by: agent-S-0270
 tags: [cli, mcp, dashboard]
 topics: [automation, mcp, hostapi, code, conventions, template, dashboard]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/serve/checks.go, flai/internal/serve/checks_config.go, scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/server/agent.ts, "flaiover/src/routes/api/items/[id]/verify/+server.ts", "flaiover/src/routes/api/items/[id]/verify/verify.test.ts", design/adrs, design/system/flai-cli.md, design/system/devex.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/serve/checks.go, flai/internal/serve/checks_config.go, scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/server/agent.ts, "flaiover/src/routes/api/items/[id]/verify/+server.ts", "flaiover/src/routes/api/items/[id]/verify/verify.test.ts", design/adrs, design/system/flai-cli.md, design/system/devex.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, system-flow.yaml, template/root/system-flow.yaml.tmpl]
 after: [S-0273]
 agent:
   harness: claude-code

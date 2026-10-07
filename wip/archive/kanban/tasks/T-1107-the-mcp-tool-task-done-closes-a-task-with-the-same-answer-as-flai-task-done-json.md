@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 69
-      output: 22559
-      cache_read: 3561604
-      cache_write: 123275
-      cost: 1.8565
+      input: 65
+      output: 26319
+      cache_read: 3589519
+      cache_write: 109560
+      cost: 1.8885
 ---
 # T-1107 The MCP tool task_done closes a task with the same answer as flai task done --json
 

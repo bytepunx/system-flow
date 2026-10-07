@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 508
-      cache_read: 2230863
-      cache_write: 95210
-      cost: 1.165
+      input: 54
+      output: 15674
+      cache_read: 2298064
+      cache_write: 85813
+      cost: 1.2953
 ---
 # T-1116 The conventions, their template copies, and the harness prompt send the agent to flai task done at every task transition
 
