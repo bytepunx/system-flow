@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -104,7 +105,8 @@ type SyncOptions struct {
 	Runner execx.Runner
 	Repo   *workitem.Repo
 	Story  *workitem.Item
-	// Now dates the conflict threads Sync writes.
+	// Now dates the conflict messages Sync writes and the conversations and
+	// old conflict threads it closes.
 	Now time.Time
 	// Generated is every generated file: a stop on them alone is continued,
 	// and the trial merge leaves them out of a pair's conflicts.
@@ -123,7 +125,12 @@ type BranchCheck struct {
 	Branch    string   `json:"branch"`
 	Clean     bool     `json:"clean"`
 	Conflicts []string `json:"conflicts"`
-	Thread    string   `json:"thread,omitempty"`
+	// Conversation is the pair's conversation that tells of the conflict,
+	// when the two conflict (ADR-0121).
+	Conversation string `json:"conversation,omitempty"`
+	// Thread is the old conflict thread of the pair this sync resolved, when
+	// the two merge cleanly.
+	Thread string `json:"thread,omitempty"`
 }
 
 // SyncResult is what a sync did to a story's branch and what its checks
@@ -167,10 +174,10 @@ func (s SyncResult) RebaseInProgress() bool {
 // for the agent. A refusal or a stop is a result, with how to continue and
 // abort; an error is a sync that could not be tried, or a rebase git failed
 // without stopping. After a clean rebase it trial-merges the branch with
-// every other open story's, keeping one conflict thread per pair, and lists
-// what the branch changed outside the story's claim; a check that fails then
-// is logged, the sync stands, and the result holds what the checks found
-// before it failed.
+// every other open story's, telling each conflicting pair in its
+// conversation (ADR-0121), and lists what the branch changed outside the
+// story's claim; a check that fails then is logged, the sync stands, and the
+// result holds what the checks found before it failed.
 func Sync(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
@@ -183,8 +190,12 @@ func Sync(o SyncOptions) (SyncResult, error) {
 		o.Log.Warn("story branch checks failed after the rebase", "component", "git", "story", o.Story.ID, "err", err)
 		return res, nil
 	}
-	if err := reportConflicts(o, &res); err != nil {
-		o.Log.Warn("conflict threads not written", "component", "threads", "story", o.Story.ID, "err", err)
+	if res.TrialMergeSkipped != "" {
+		return res, nil
+	}
+	tellConflicts(o, &res)
+	if err := resolveConflictThreads(o, &res); err != nil {
+		o.Log.Warn("old conflict threads not resolved", "component", "threads", "story", o.Story.ID, "err", err)
 	}
 	return res, nil
 }
@@ -317,11 +328,13 @@ func relPath(root, p string) string {
 // trial merge with every other open story's branch, which writes nothing to
 // any worktree, to catch the overlaps the declared touches missed while both
 // stories are still open, and the paths the branch changed outside the
-// story's claim, so that it is widened. A conflict is a thread flai writes,
-// one per pair of stories: a thread whose last entry is flai's awaits every
-// agent and the designer, so both stories' agents see it in the MCP inbox
-// and the designer in the dashboard's. The generated files are left out of a
-// pair's conflicts: the rebase writes them again when it stops on them
+// story's claim, so that it is widened. A conflict is a message flai writes
+// from the syncing story to the other in the pair's conversation, which then
+// awaits the other story's agent; the two agents settle it between them, and
+// either escalates to the operator only when they do not agree (ADR-0121).
+// Conflict threads, which earlier syncs wrote, are only resolved now. The
+// generated files are left out of a pair's conflicts: the rebase writes them
+// again when it stops on them
 // alone, so a pair whose only conflict is one merges cleanly as far as the
 // check is concerned (ADR-0098). A pair's conflicts are the paths both
 // stories changed since each left the main branch: the trial merge's base is
@@ -485,15 +498,21 @@ func TrialMerge(r execx.Runner, root, ours, theirs string) ([]string, error) {
 	return paths, nil
 }
 
-// ConflictAuthor writes the conflict threads.
+// ConflictAuthor writes the conflict messages, closes the conversations
+// they are in, and resolves the old conflict threads.
 const ConflictAuthor = "flai"
 
-var conflictTitlePattern = regexp.MustCompile(`^(S-\d+) and (S-\d+) conflict when merged$`)
+var (
+	conflictTitlePattern   = regexp.MustCompile(`^(S-\d+) and (S-\d+) conflict when merged$`)
+	conflictMessagePattern = regexp.MustCompile(`^` + regexp.QuoteMeta(Prefix) + `S-\d+ and ` + regexp.QuoteMeta(Prefix) + `S-\d+ conflict when merged\.`)
+)
 
-// IsConflictTitle reports whether title is a conflict thread's.
+// IsConflictTitle reports whether title is a conflict thread's, as syncs
+// before ADR-0121 opened them.
 func IsConflictTitle(title string) bool { return conflictTitlePattern.MatchString(title) }
 
-// ConflictTitle names the pair's thread, the same whichever story synced.
+// ConflictTitle names the pair's old conflict thread, the same whichever
+// story synced.
 func ConflictTitle(a, b string) string {
 	if b < a {
 		a, b = b, a
@@ -501,9 +520,9 @@ func ConflictTitle(a, b string) string {
 	return a + " and " + b + " conflict when merged"
 }
 
-// ConflictText is the entry for a pair and its conflicting paths, the same
-// whichever story synced, so that a sync that finds nothing new writes
-// nothing.
+// ConflictText is the message that tells a pair of its conflicting paths,
+// the same whichever story synced, so that a sync that finds nothing new
+// writes nothing.
 func ConflictText(a, b string, paths []string) string {
 	if b < a {
 		a, b = b, a
@@ -512,22 +531,160 @@ func ConflictText(a, b string, paths []string) string {
 	for _, p := range paths {
 		fmt.Fprintf(&list, "- `%s`\n", p)
 	}
-	return fmt.Sprintf("A trial merge of %s with %s at flai stream sync conflicts in:\n\n%s\n"+
+	return fmt.Sprintf("%s and %s conflict when merged.\n\n"+
+		"A trial merge of the two at flai stream sync conflicts in:\n\n%s\n"+
 		"Whichever of %s and %s is accepted second will stop on these paths when it rebases. "+
-		"Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. "+
-		"Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.",
+		"Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. "+
+		"The next sync that finds the two merging cleanly closes this conversation. "+
+		"When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.",
 		Branch(a), Branch(b), list.String(), a, b)
 }
 
-// reportConflicts keeps one open thread for each pair of the story and
-// another open story whose branches conflict: it opens one on the story for
-// a new conflict, adds an entry when the paths change, and resolves it once
-// the pair merges cleanly or the other story is no longer open. It sets each
-// conflicting branch's Thread.
-func reportConflicts(o SyncOptions, res *SyncResult) error {
-	if res.TrialMergeSkipped != "" {
-		return nil
+// tellConflicts tells each pair of the story and another open story whose
+// branches conflict in the pair's conversation (ADR-0121): a message from
+// the story to the other about the conflicting paths, unless the newest
+// conflict message there names the same paths. It closes the pair's open
+// conversations whose newest message by flai tells of a conflict once the
+// two merge cleanly or the other story is no longer in progress or in
+// review. It sets each conflicting branch's Conversation. A conversation
+// that cannot be read or written is logged and the others are still told.
+func tellConflicts(o SyncOptions, res *SyncResult) {
+	repo, story := o.Repo, o.Story
+	convs, err := openConversations(repo, story.ID)
+	if err != nil {
+		o.Log.Warn("conflict messages not written", "component", "messages", "story", story.ID, "err", err)
+		return
 	}
+	checked := map[string]bool{}
+	for i, b := range res.Branches {
+		other := workitem.CanonicalID(b.Story)
+		checked[other] = true
+		pair := between(convs, other)
+		if b.Clean {
+			closeConflicts(o, pair, cleanReason(res.Branch, b.Branch, story.ID))
+			continue
+		}
+		id, err := tellConflict(o, b, pair)
+		if err != nil {
+			o.Log.Warn("conflict message not written", "component", "messages", "story", story.ID, "item", b.Story, "err", err)
+			continue
+		}
+		res.Branches[i].Conversation = id
+	}
+	// A pair's conversation whose other story is open no longer, sent back
+	// out of in progress or review: what is left of the conflict is this
+	// story's own rebase to settle. A story accepted, cancelled, or archived
+	// already closes its conversations (ADR-0120).
+	for _, c := range convs {
+		other := workitem.CanonicalID(c.Other(story.ID))
+		if checked[other] {
+			continue
+		}
+		it, err := repo.Get(other)
+		if err != nil || it.Status == workitem.InProgress || it.Status == workitem.Review {
+			continue
+		}
+		closeConflicts(o, []*messages.Conversation{c}, goneReason(other, it.Status, story.ID))
+	}
+}
+
+// tellConflict adds the conflict message for b to the pair's conversation,
+// or starts one, unless the newest conflict message in pair, the pair's open
+// conversations, already says it. It returns the conversation that tells it.
+func tellConflict(o SyncOptions, b BranchCheck, pair []*messages.Conversation) (string, error) {
+	text := ConflictText(o.Story.ID, b.Story, b.Conflicts)
+	for i := len(pair) - 1; i >= 0; i-- {
+		if told, _ := toldConflict(pair[i]); told != "" {
+			if told == text {
+				return pair[i].ID, nil
+			}
+			break
+		}
+	}
+	c, err := messages.Notify(o.Repo, messages.SendOptions{From: o.Story.ID, To: b.Story, Author: ConflictAuthor, Text: text, About: b.Conflicts, Now: o.Now})
+	if err != nil {
+		return "", err
+	}
+	return c.ID, nil
+}
+
+// closeConflicts closes each of convs whose newest message by flai tells of
+// a conflict, with reason; one that cannot be closed is logged.
+func closeConflicts(o SyncOptions, convs []*messages.Conversation, reason string) {
+	for _, c := range convs {
+		if _, newest := toldConflict(c); !newest {
+			continue
+		}
+		if _, err := messages.Close(o.Repo, c.ID, ConflictAuthor, reason, o.Now); err != nil {
+			o.Log.Warn("conflict conversation not closed", "component", "messages", "story", o.Story.ID, "conversation", c.ID, "err", err)
+		}
+	}
+}
+
+// toldConflict is the text of the newest conflict message flai wrote in c,
+// "" when none, and whether it is the newest message flai wrote there.
+func toldConflict(c *messages.Conversation) (text string, newest bool) {
+	es := c.Entries()
+	newest = true
+	for i := len(es) - 1; i >= 0; i-- {
+		e := es[i]
+		if e.Author != ConflictAuthor || e.Story == "" {
+			continue
+		}
+		if conflictMessagePattern.MatchString(e.Text) {
+			return e.Text, newest
+		}
+		newest = false
+	}
+	return "", false
+}
+
+// openConversations is the story's conversations stored open that read as
+// open, in ID order.
+func openConversations(repo *workitem.Repo, story string) ([]*messages.Conversation, error) {
+	all, err := messages.For(repo, story)
+	if err != nil {
+		return nil, err
+	}
+	var out []*messages.Conversation
+	for _, c := range all {
+		if closed, _ := c.Closed(repo); c.Status == messages.StatusOpen && !closed {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+// between is those of convs that name the other story, in their order.
+func between(convs []*messages.Conversation, other string) []*messages.Conversation {
+	var out []*messages.Conversation
+	for _, c := range convs {
+		if c.Names(other) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// cleanReason says that two branches merge cleanly at the story's sync.
+func cleanReason(mine, theirs, story string) string {
+	if theirs < mine {
+		mine, theirs = theirs, mine
+	}
+	return fmt.Sprintf("%s and %s merge cleanly at the sync of %s", mine, theirs, story)
+}
+
+// goneReason says that the other story, in state, is open no longer at the
+// story's sync.
+func goneReason(other, state, story string) string {
+	return fmt.Sprintf("%s is %s, no longer open, at the sync of %s", other, state, story)
+}
+
+// resolveConflictThreads resolves the conflict threads syncs opened before
+// ADR-0121, one per pair, once the pair merges cleanly or the other story is
+// no longer open, setting the clean branch's Thread, and mirrors the
+// narratives of the stories they are on. It opens none and adds to none.
+func resolveConflictThreads(o SyncOptions, res *SyncResult) error {
 	repo, story, now := o.Repo, o.Story, o.Now
 	all, err := threads.List(repo)
 	if err != nil {
@@ -544,32 +701,14 @@ func reportConflicts(o SyncOptions, res *SyncResult) error {
 		title := ConflictTitle(story.ID, b.Story)
 		th := open[title]
 		delete(open, title)
-		text := ConflictText(story.ID, b.Story, b.Conflicts)
-		switch {
-		case !b.Clean && th == nil:
-			if th, err = threads.New(repo, threads.NewOptions{Title: title, On: story.ID, Author: ConflictAuthor, Text: text, Now: now}); err != nil {
-				return err
-			}
-			changed = append(changed, th)
-		case !b.Clean && lastEntryBy(th, ConflictAuthor) != text:
-			if th, err = threads.Reply(repo, th.ID, ConflictAuthor, text, now); err != nil {
-				return err
-			}
-			changed = append(changed, th)
-		case b.Clean && th != nil:
-			lo, hi := res.Branch, b.Branch
-			if hi < lo {
-				lo, hi = hi, lo
-			}
-			if th, err = threads.Resolve(repo, th.ID, ConflictAuthor, fmt.Sprintf("%s and %s merge cleanly at the sync of %s", lo, hi, story.ID), now); err != nil {
-				return err
-			}
-			changed = append(changed, th)
+		if !b.Clean || th == nil {
 			continue
 		}
-		if th != nil {
-			res.Branches[i].Thread = th.ID
+		if th, err = threads.Resolve(repo, th.ID, ConflictAuthor, cleanReason(res.Branch, b.Branch, story.ID), now); err != nil {
+			return err
 		}
+		res.Branches[i].Thread = th.ID
+		changed = append(changed, th)
 	}
 	// A pair's thread whose other story is no longer open: its branch is
 	// merged or dropped, and what is left of the conflict is this story's
@@ -592,7 +731,7 @@ func reportConflicts(o SyncOptions, res *SyncResult) error {
 			}
 			state = it.Status
 		}
-		if th, err = threads.Resolve(repo, th.ID, ConflictAuthor, fmt.Sprintf("%s is %s, no longer open, at the sync of %s", other, state, story.ID), now); err != nil {
+		if th, err = threads.Resolve(repo, th.ID, ConflictAuthor, goneReason(other, state, story.ID), now); err != nil {
 			return err
 		}
 		changed = append(changed, th)
@@ -605,15 +744,4 @@ func reportConflicts(o SyncOptions, res *SyncResult) error {
 		}
 	}
 	return nil
-}
-
-// lastEntryBy is the text of author's last entry on th, "" when none.
-func lastEntryBy(th *threads.Thread, author string) string {
-	e := th.Entries()
-	for i := len(e) - 1; i >= 0; i-- {
-		if e[i].Author == author {
-			return e[i].Text
-		}
-	}
-	return ""
 }

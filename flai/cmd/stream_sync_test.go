@@ -13,11 +13,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
-	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -178,121 +177,81 @@ func agentInbox(t *testing.T, root, agent string) mcpserver.InboxOut {
 	return out
 }
 
-// designerInbox is the dashboard's inbox for the designer.
-func designerInbox(t *testing.T, root string) hostapi.DesignerInbox {
-	t.Helper()
-	m := hostapi.Methods("test", time.Now)["inbox.designer"]
-	res, rerr := m(context.Background(), channel.Project{Key: "t", Root: root}, json.RawMessage(`{}`))
-	if rerr != nil {
-		t.Fatalf("inbox.designer: %+v", rerr)
-	}
-	data, _ := json.Marshal(res)
-	var out hostapi.DesignerInbox
-	if err := json.Unmarshal(data, &out); err != nil {
-		t.Fatal(err)
-	}
-	return out
-}
-
-func TestSyncConflictIsAThreadInEveryInbox(t *testing.T) {
+// ADR-0121: a conflict is a message from the syncing story to the other in
+// the pair's conversation, which the sync names and --json gives as the
+// branch's conversation; no thread is opened.
+func TestSyncConflictIsAMessageBetweenThePair(t *testing.T) {
 	root := syncProject(t)
 	one := openSyncStory(t, root, 1, "docs")
 	two := openSyncStory(t, root, 2, "docs/guide.md")
 	commitIn(t, one, "docs/guide.md", "one's line\n")
 	commitIn(t, two, "docs/guide.md", "two's line\n")
 	at := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
-	sync := func(wt, id string, minutes int) string {
+	sync := func(wt, id string, minutes int, args ...string) string {
 		t.Helper()
-		out, errOut, code := runInAt(t, wt, at.Add(time.Duration(minutes)*time.Minute), "stream", "sync", id)
+		out, errOut, code := runInAt(t, wt, at.Add(time.Duration(minutes)*time.Minute), append(args, "stream", "sync", id)...)
 		if code != 0 {
 			t.Fatalf("sync %s: %d %s %s", id, code, out, errOut)
 		}
 		return out
 	}
-	thread := func() *threads.Thread {
+	conversation := func() *messages.Conversation {
 		t.Helper()
 		repo, _ := workitem.Open(root)
-		th, err := threads.Get(repo, "TH-0001")
+		c, err := messages.Get(repo, "MS-0001")
 		if err != nil {
 			t.Fatal(err)
 		}
-		return th
+		return c
 	}
 
 	out := sync(one, "S-0001", 1)
-	if !strings.Contains(out, "conflicts with story/S-0002 (in progress) in docs/guide.md; see TH-0001") {
-		t.Fatalf("sync names no thread:\n%s", out)
+	if !strings.Contains(out, "story/S-0001 conflicts with story/S-0002 (in progress) in docs/guide.md; see MS-0001\n") {
+		t.Fatalf("sync names no conversation:\n%s", out)
 	}
-	th := thread()
-	if th.Title != "S-0001 and S-0002 conflict when merged" || th.Anchor.Item != "S-0001" || th.Opener() != "flai" || !th.Open() {
-		t.Fatalf("thread: %+v", th)
+	c := conversation()
+	if c.From != "S-0001" || c.To != "S-0002" || strings.Join(c.About, ",") != "docs/guide.md" || c.Status != "open" || c.Awaiting() != "S-0002" {
+		t.Fatalf("conversation: %+v", c)
 	}
-	if e := th.Entries(); len(e) != 1 || !strings.Contains(e[0].Text, "story/S-0001 with story/S-0002") || !strings.Contains(e[0].Text, "- `docs/guide.md`") {
+	if e := c.Entries(); len(e) != 1 || e[0].Author != "flai" || !strings.Contains(e[0].Text, "story/S-0001 and story/S-0002 conflict when merged") || !strings.Contains(e[0].Text, "- `docs/guide.md`") {
 		t.Fatalf("entry: %+v", e)
 	}
-	// both stories' agents and the designer see it
-	for _, agent := range []string{"agent-S-0001", "agent-S-0002"} {
-		in := agentInbox(t, root, agent)
-		found := false
-		for _, s := range in.Threads {
-			found = found || (s.ID == "TH-0001" && s.Awaiting == "you")
+	repo, _ := workitem.Open(root)
+	if all, err := threads.List(repo); err != nil || len(all) != 0 {
+		t.Errorf("a thread was opened: %v %+v", err, all)
+	}
+	// each story's agent finds it in its inbox, S-0002's to answer
+	t.Setenv("FLAI_STORY", "")
+	for agent, awaiting := range map[string]string{"agent-S-0001": "other", "agent-S-0002": "you"} {
+		if in := agentInbox(t, root, agent); len(in.Messages) != 1 || in.Messages[0].ID != "MS-0001" || in.Messages[0].Awaiting != awaiting {
+			t.Errorf("%s's inbox messages: %+v", agent, in.Messages)
 		}
-		if !found {
-			t.Errorf("%s's inbox lacks TH-0001: %+v", agent, in.Threads)
-		}
-	}
-	found := false
-	for _, e := range designerInbox(t, root).Entries {
-		found = found || e.Key == "thread:TH-0001"
-	}
-	if !found {
-		t.Error("the designer's inbox lacks TH-0001")
-	}
-	if n, _ := os.ReadFile(filepath.Join(root, "wip/agents/S-0001.md")); !strings.Contains(string(n), "TH-0001") {
-		t.Error("S-0001's narrative does not mirror TH-0001")
 	}
 
 	// the other story's sync finds the same paths and writes nothing
-	if out := sync(two, "S-0002", 2); !strings.Contains(out, "conflicts with story/S-0001 (in progress) in docs/guide.md; see TH-0001") {
+	if out := sync(two, "S-0002", 2); !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/guide.md; see MS-0001\n") {
 		t.Fatalf("second sync:\n%s", out)
 	}
-	if n := len(thread().Entries()); n != 1 {
+	var res struct {
+		Branches []storygit.BranchCheck `json:"branches"`
+	}
+	if err := json.Unmarshal([]byte(sync(two, "S-0002", 3, "--json")), &res); err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Branches) != 1 || res.Branches[0].Conversation != "MS-0001" || res.Branches[0].Thread != "" {
+		t.Errorf("--json branches: %+v", res.Branches)
+	}
+	if n := len(conversation().Entries()); n != 1 {
 		t.Errorf("same paths wrote %d entries", n)
 	}
 
-	// new conflicting paths add an entry to the same thread
-	commitIn(t, one, "docs/more.md", "one\n")
-	commitIn(t, two, "docs/more.md", "two\n")
-	sync(one, "S-0001", 3)
-	if e := thread().Entries(); len(e) != 2 || !strings.Contains(e[1].Text, "- `docs/guide.md`\n- `docs/more.md`") {
-		t.Fatalf("new paths: %+v", e)
-	}
-
-	// once the two merge cleanly, sync resolves it
+	// once the two merge cleanly, sync closes it
 	commitIn(t, two, "docs/guide.md", "one's line\n")
-	commitIn(t, two, "docs/more.md", "one\n")
-	if out := sync(one, "S-0001", 4); !strings.Contains(out, "merges cleanly with story/S-0002") {
+	if out := sync(one, "S-0001", 4); !strings.Contains(out, "story/S-0001 merges cleanly with story/S-0002 (in progress)\n") {
 		t.Fatalf("clean:\n%s", out)
 	}
-	if th := thread(); th.Open() || !strings.Contains(th.Entries()[2].Text, "merge cleanly at the sync of S-0001") {
-		t.Fatalf("not resolved: %+v %+v", th, th.Entries())
-	}
-
-	// a pair's thread is resolved when the other story is no longer open
-	commitIn(t, two, "docs/guide.md", "two again\n")
-	sync(one, "S-0001", 5)
-	repo, _ := workitem.Open(root)
-	th2, err := threads.Get(repo, "TH-0002")
-	if err != nil || !th2.Open() {
-		t.Fatalf("a new conflict opens a new thread: %v %+v", err, th2)
-	}
-	if _, errOut, code := runInAt(t, root, at.Add(6*time.Minute), "move", "S-0002", "cancelled", "--reason", "dropped"); code != 0 {
-		t.Fatal(errOut)
-	}
-	sync(one, "S-0001", 7)
-	th2, _ = threads.Get(repo, "TH-0002")
-	if th2.Open() || !strings.Contains(th2.Entries()[len(th2.Entries())-1].Text, "S-0002 is cancelled, no longer open") {
-		t.Fatalf("not resolved when S-0002 closed: %+v", th2.Entries())
+	if c := conversation(); c.Status != "closed" || !strings.Contains(c.Entries()[1].Text, "merge cleanly at the sync of S-0001") {
+		t.Fatalf("not closed: %+v %+v", c, c.Entries())
 	}
 }
 
@@ -630,9 +589,9 @@ func TestSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
 }
 
 // trialSync syncs S-0002 from its worktree wt and returns the sync's text
-// output, its --json branches, and the conflict threads open on the project
-// at root.
-func trialSync(t *testing.T, root, wt string) (string, []storygit.BranchCheck, []*threads.Thread) {
+// output, its --json branches, the conflict threads open on the project at
+// root, and its conversations.
+func trialSync(t *testing.T, root, wt string) (string, []storygit.BranchCheck, []*threads.Thread, []*messages.Conversation) {
 	t.Helper()
 	out, errOut, code := runInAt(t, wt, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
 	if code != 0 {
@@ -662,13 +621,16 @@ func trialSync(t *testing.T, root, wt string) (string, []storygit.BranchCheck, [
 			open = append(open, th)
 		}
 	}
-	return out, res.Branches, open
+	convs, err := messages.List(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out, res.Branches, open, convs
 }
 
 // I-0074: two open stories that each record an issue conflict in
-// design/issues/summary.md alone, which the trial merge reported, opening a
-// thread for the pair. The file is generated, so the pair is clean
-// (ADR-0098).
+// design/issues/summary.md alone, which the trial merge reported, telling
+// the pair. The file is generated, so the pair is clean (ADR-0098).
 func TestSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
 	root, b := openIssueStories(t, nil)
 	// git itself reports the pair as conflicting in the summary
@@ -676,36 +638,36 @@ func TestSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
 	}
 
-	out, branches, open := trialSync(t, root, b)
+	out, branches, _, convs := trialSync(t, root, b)
 	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") || strings.Contains(out, "conflicts with") {
 		t.Errorf("sync output:\n%s", out)
 	}
-	if len(branches) != 1 || branches[0].Story != "S-0001" || !branches[0].Clean || branches[0].Conflicts == nil || len(branches[0].Conflicts) != 0 || branches[0].Thread != "" {
+	if len(branches) != 1 || branches[0].Story != "S-0001" || !branches[0].Clean || branches[0].Conflicts == nil || len(branches[0].Conflicts) != 0 || branches[0].Conversation != "" {
 		t.Errorf("branches: %+v", branches)
 	}
-	if len(open) != 0 {
-		t.Errorf("a conflict thread was opened: %+v", open)
+	if len(convs) != 0 {
+		t.Errorf("the pair was told of a conflict: %+v", convs)
 	}
 }
 
 // When the pair conflicts in another file as well, the trial merge reports
-// that file alone, in the sync's output and in the pair's thread.
+// that file alone, in the sync's output and in the pair's conversation.
 func TestSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary(t *testing.T) {
 	root, b := openIssueStories(t, map[string][2]string{"docs/guide.md": {"A's line\n", "B's line\n"}})
 
-	out, branches, open := trialSync(t, root, b)
-	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/guide.md; see TH-0001\n") {
+	out, branches, _, convs := trialSync(t, root, b)
+	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/guide.md; see MS-0001\n") {
 		t.Errorf("sync output:\n%s", out)
 	}
-	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "docs/guide.md" || branches[0].Thread != "TH-0001" {
+	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "docs/guide.md" || branches[0].Conversation != "MS-0001" {
 		t.Errorf("branches: %+v", branches)
 	}
-	if len(open) != 1 {
-		t.Fatalf("conflict threads: %+v", open)
+	if len(convs) != 1 || strings.Join(convs[0].About, ",") != "docs/guide.md" {
+		t.Fatalf("conversations: %+v", convs)
 	}
-	for _, e := range open[0].Entries() {
+	for _, e := range convs[0].Entries() {
 		if !strings.Contains(e.Text, "- `docs/guide.md`\n") || strings.Contains(e.Text, "summary.md") {
-			t.Errorf("thread entry: %s", e.Text)
+			t.Errorf("conflict message: %s", e.Text)
 		}
 	}
 }
@@ -743,45 +705,46 @@ func TestSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
 	}
 
-	out, branches, open := trialSync(t, root, a)
+	out, branches, _, convs := trialSync(t, root, a)
 	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") || strings.Contains(out, "conflicts with") {
 		t.Errorf("sync output:\n%s", out)
 	}
-	if len(branches) != 1 || branches[0].Story != "S-0001" || !branches[0].Clean || branches[0].Conflicts == nil || len(branches[0].Conflicts) != 0 || branches[0].Thread != "" {
+	if len(branches) != 1 || branches[0].Story != "S-0001" || !branches[0].Clean || branches[0].Conflicts == nil || len(branches[0].Conflicts) != 0 || branches[0].Conversation != "" {
 		t.Errorf("branches: %+v", branches)
 	}
-	if len(open) != 0 {
-		t.Errorf("a conflict thread was opened: %+v", open)
+	if len(convs) != 0 {
+		t.Errorf("the pair was told of a conflict: %+v", convs)
 	}
 }
 
 // A path both branches change still conflicts beside one main brought, and
-// is the only one the sync and the pair's thread name.
+// is the only one the sync and the pair's conversation name.
 func TestSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, map[string][2]string{"docs/more.md": {"stale branch's more\n", "fresh branch's more\n"}})
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md,docs/more.md" {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
 	}
 
-	out, branches, open := trialSync(t, root, a)
-	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/more.md; see TH-0001\n") {
+	out, branches, _, convs := trialSync(t, root, a)
+	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/more.md; see MS-0001\n") {
 		t.Errorf("sync output:\n%s", out)
 	}
-	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "docs/more.md" || branches[0].Thread != "TH-0001" {
+	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "docs/more.md" || branches[0].Conversation != "MS-0001" {
 		t.Errorf("branches: %+v", branches)
 	}
-	if len(open) != 1 {
-		t.Fatalf("conflict threads: %+v", open)
+	if len(convs) != 1 {
+		t.Fatalf("conversations: %+v", convs)
 	}
-	for _, e := range open[0].Entries() {
+	for _, e := range convs[0].Entries() {
 		if !strings.Contains(e.Text, "- `docs/more.md`\n") || strings.Contains(e.Text, "guide.md") {
-			t.Errorf("thread entry: %s", e.Text)
+			t.Errorf("conflict message: %s", e.Text)
 		}
 	}
 }
 
 // A pair's thread that named only what main brought, as a sync before the
-// fix wrote it, is resolved at the next sync, which finds the pair clean.
+// fix wrote it, is resolved at the next sync, which finds the pair clean and
+// names the thread; it opens no conversation.
 func TestSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, nil)
 	repo, err := workitem.Open(root)
@@ -794,12 +757,12 @@ func TestSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, _, open := trialSync(t, root, a)
-	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") {
-		t.Errorf("sync output:\n%s", out)
+	out, _, open, convs := trialSync(t, root, a)
+	if want := "story/S-0002 merges cleanly with story/S-0001 (in progress); resolved " + th.ID + "\n"; !strings.Contains(out, want) {
+		t.Errorf("sync output lacks %q:\n%s", want, out)
 	}
-	if len(open) != 0 {
-		t.Errorf("conflict threads left open: %+v", open)
+	if len(open) != 0 || len(convs) != 0 {
+		t.Errorf("conflict threads left open: %+v, conversations: %+v", open, convs)
 	}
 	th, err = threads.Get(repo, th.ID)
 	if err != nil {

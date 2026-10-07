@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -132,7 +133,7 @@ func TestContinueRebase(t *testing.T) {
 	}
 }
 
-// syncClock dates the conflict threads Sync writes.
+// syncClock dates what Sync writes.
 var syncClock = time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
 
 // syncProject is a project in a git repository whose main branch has
@@ -296,17 +297,26 @@ func TestSyncRegeneratesGeneratedFilesItStopsOnAlone(t *testing.T) {
 	}
 }
 
-// Another open story's branch that changes the same path conflicts in the
-// trial merge, which writes nothing to either worktree and opens one thread
-// for the pair; once the two merge cleanly the next sync resolves it.
-func TestSyncTrialMergeConflictOpensAThreadForThePair(t *testing.T) {
-	repo := syncProject(t)
-	story, one := openStory(t, repo, "S-0001", "docs")
-	_, two := openStory(t, repo, "S-0002", "docs")
+// conflictingPair is a project with S-0001 and S-0002 in progress, whose
+// branches change docs/guide.md each its own way. It returns S-0001 and the
+// two worktrees.
+func conflictingPair(t *testing.T) (repo *workitem.Repo, story *workitem.Item, one, two string) {
+	t.Helper()
+	repo = syncProject(t)
+	story, one = openStory(t, repo, "S-0001", "docs")
+	_, two = openStory(t, repo, "S-0002", "docs")
 	commitFiles(t, one, "feat: [S-0001] guide", "docs/guide.md")
 	commitFiles(t, two, "feat: [S-0002] guide", "docs/guide.md")
+	return repo, story, one, two
+}
 
-	res, err := Sync(syncOptions(repo, story))
+// syncAt syncs story minutes after syncClock, so that each sync's entries
+// carry a time of their own, and returns its one trial-merged branch.
+func syncAt(t *testing.T, repo *workitem.Repo, story *workitem.Item, minutes int) BranchCheck {
+	t.Helper()
+	o := syncOptions(repo, story)
+	o.Now = syncClock.Add(time.Duration(minutes) * time.Minute)
+	res, err := Sync(o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,8 +326,37 @@ func TestSyncTrialMergeConflictOpensAThreadForThePair(t *testing.T) {
 	if len(res.Branches) != 1 {
 		t.Fatalf("branches: %+v", res.Branches)
 	}
-	b := res.Branches[0]
-	if b.Story != "S-0002" || b.Branch != "story/S-0002" || b.Status != workitem.InProgress || b.Clean || strings.Join(b.Conflicts, ",") != "docs/guide.md" || b.Thread != "TH-0001" {
+	return res.Branches[0]
+}
+
+// conversation reads the conversation id.
+func conversation(t *testing.T, repo *workitem.Repo, id string) *messages.Conversation {
+	t.Helper()
+	c, err := messages.Get(repo, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+// noThreads fails the test when the project has any thread.
+func noThreads(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	if all, err := threads.List(repo); err != nil || len(all) != 0 {
+		t.Errorf("threads: %v %+v", err, all)
+	}
+}
+
+// ADR-0121: another open story's branch that changes the same path
+// conflicts in the trial merge, which writes nothing to either worktree and
+// tells the other story in the pair's conversation, about the path, which
+// then awaits it. A sync that finds the same paths adds nothing, new paths
+// add a message, and the sync that finds the two merging cleanly closes it.
+func TestSyncTrialMergeConflictIsAMessageBetweenThePair(t *testing.T) {
+	repo, story, one, two := conflictingPair(t)
+
+	b := syncAt(t, repo, story, 1)
+	if b.Story != "S-0002" || b.Branch != "story/S-0002" || b.Status != workitem.InProgress || b.Clean || strings.Join(b.Conflicts, ",") != "docs/guide.md" || b.Conversation != "MS-0001" || b.Thread != "" {
 		t.Errorf("pair: %+v", b)
 	}
 	for _, wt := range []string{one, two} {
@@ -325,21 +364,141 @@ func TestSyncTrialMergeConflictOpensAThreadForThePair(t *testing.T) {
 			t.Errorf("%s is not clean: %v", wt, dirty)
 		}
 	}
-	th, err := threads.Get(repo, "TH-0001")
+	noThreads(t, repo)
+	c := conversation(t, repo, "MS-0001")
+	e := c.Entries()
+	if c.From != "S-0001" || c.To != "S-0002" || strings.Join(c.About, ",") != "docs/guide.md" || c.Status != messages.StatusOpen || c.Awaiting() != "S-0002" {
+		t.Errorf("conversation: %+v", c)
+	}
+	if len(e) != 1 || e[0].Author != ConflictAuthor || e[0].Story != "S-0001" || e[0].Text != ConflictText("S-0002", "S-0001", []string{"docs/guide.md"}) {
+		t.Fatalf("entries: %+v", e)
+	}
+	for _, want := range []string{"story/S-0001 and story/S-0002 conflict when merged.", "- `docs/guide.md`", "`flai message escalate`", "`message_escalate`"} {
+		if !strings.Contains(e[0].Text, want) {
+			t.Errorf("message lacks %q:\n%s", want, e[0].Text)
+		}
+	}
+
+	// the same paths add nothing
+	if b := syncAt(t, repo, story, 2); b.Conversation != "MS-0001" || len(conversation(t, repo, "MS-0001").Entries()) != 1 {
+		t.Errorf("same paths: %+v %+v", b, conversation(t, repo, "MS-0001").Entries())
+	}
+
+	// other paths add a message to the same conversation
+	commitFiles(t, one, "feat: [S-0001] more", "docs/more.md")
+	commitFiles(t, two, "feat: [S-0002] more", "docs/more.md")
+	if b := syncAt(t, repo, story, 3); b.Conversation != "MS-0001" || strings.Join(b.Conflicts, ",") != "docs/guide.md,docs/more.md" {
+		t.Errorf("new paths: %+v", b)
+	}
+	c = conversation(t, repo, "MS-0001")
+	if e := c.Entries(); len(e) != 2 || !strings.Contains(e[1].Text, "- `docs/guide.md`\n- `docs/more.md`") || strings.Join(c.About, ",") != "docs/guide.md,docs/more.md" {
+		t.Fatalf("new paths: %+v %+v", c, e)
+	}
+
+	// S-0002 takes S-0001's lines, so the two merge cleanly
+	write(t, two, "docs/guide.md", "feat: [S-0001] guide\n")
+	write(t, two, "docs/more.md", "feat: [S-0001] more\n")
+	git(t, two, "commit", "-q", "-am", "feat: [S-0002] take S-0001's lines")
+	if b := syncAt(t, repo, story, 4); !b.Clean || b.Conversation != "" || b.Thread != "" {
+		t.Errorf("clean: %+v", b)
+	}
+	c = conversation(t, repo, "MS-0001")
+	if closed, why := c.Closed(repo); !closed || why != "story/S-0001 and story/S-0002 merge cleanly at the sync of S-0001" {
+		t.Errorf("not closed on a clean merge: %v %q", closed, why)
+	}
+	noThreads(t, repo)
+}
+
+// A clean merge leaves open a conversation of the pair that tells of no
+// conflict: one the agents started, or one whose newest message by flai is
+// another notice.
+func TestSyncCleanMergeLeavesAConversationWithoutAConflictOpen(t *testing.T) {
+	repo := syncProject(t)
+	story, _ := openStory(t, repo, "S-0001", "docs")
+	openStory(t, repo, "S-0002", "design")
+	agents, err := messages.Send(repo, messages.SendOptions{From: "S-0002", To: "S-0001", Author: "agent-S-0002", Text: "Which of us changes the guide?", Now: syncClock})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if th.Title != ConflictTitle("S-0002", "S-0001") || !th.Open() || th.Opener() != ConflictAuthor || th.Entries()[0].Text != ConflictText("S-0001", "S-0002", []string{"docs/guide.md"}) {
-		t.Errorf("thread: %+v %+v", th, th.Entries())
+	if b := syncAt(t, repo, story, 1); !b.Clean || b.Conversation != "" {
+		t.Errorf("pair: %+v", b)
+	}
+	if c := conversation(t, repo, agents.ID); c.Status != messages.StatusOpen || len(c.Entries()) != 1 {
+		t.Errorf("the agents' conversation was touched: %+v %+v", c, c.Entries())
 	}
 
-	// S-0002 takes S-0001's line, so the two merge cleanly
+	// a conflict message followed by another of flai's notices
+	text := ConflictText("S-0001", "S-0002", []string{"docs/guide.md"})
+	for i, m := range []string{text, "S-0001 renamed a path S-0002's claim covers."} {
+		if _, err := messages.Notify(repo, messages.SendOptions{From: "S-0001", To: "S-0002", Author: ConflictAuthor, Text: m, Now: syncClock.Add(time.Duration(2+i) * time.Minute)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	syncAt(t, repo, story, 4)
+	if c := conversation(t, repo, agents.ID); c.Status != messages.StatusOpen {
+		t.Errorf("closed though flai's newest message tells of no conflict: %+v", c.Entries())
+	}
+}
+
+// A pair's conversation that tells of a conflict is closed by the next sync
+// once the other story is sent back out of in progress, though it has no
+// branch to trial-merge then.
+func TestSyncClosesAConflictConversationWhenTheOtherStoryIsNoLongerOpen(t *testing.T) {
+	repo, story, _, _ := conflictingPair(t)
+	if b := syncAt(t, repo, story, 1); b.Conversation != "MS-0001" {
+		t.Fatalf("pair: %+v", b)
+	}
+	other, err := repo.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	other.Status = workitem.Ready
+	if err := repo.Save(other); err != nil {
+		t.Fatal(err)
+	}
+
+	o := syncOptions(repo, story)
+	o.Now = syncClock.Add(2 * time.Minute)
+	res, err := Sync(o)
+	if err != nil || len(res.Branches) != 0 {
+		t.Fatalf("sync: %v %+v", err, res)
+	}
+	c := conversation(t, repo, "MS-0001")
+	if closed, why := c.Closed(repo); c.Status != messages.StatusClosed || !closed || why != "S-0002 is ready, no longer open, at the sync of S-0001" {
+		t.Errorf("not closed: %v %q", closed, why)
+	}
+	noThreads(t, repo)
+}
+
+// ADR-0121: a conflict thread an older flai opened gets no entry while the
+// pair conflicts, which is told in a conversation instead, and is resolved
+// once the two merge cleanly, naming it on the branch; no thread is opened.
+func TestSyncResolvesAnOldConflictThreadAndOpensNone(t *testing.T) {
+	repo, story, _, two := conflictingPair(t)
+	th, err := threads.New(repo, threads.NewOptions{Title: ConflictTitle("S-0001", "S-0002"), On: "S-0001", Author: ConflictAuthor, Text: "An old conflict thread.", Now: syncClock})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if b := syncAt(t, repo, story, 1); b.Conversation != "MS-0001" || b.Thread != "" {
+		t.Errorf("conflict: %+v", b)
+	}
+	if th, err = threads.Get(repo, th.ID); err != nil || !th.Open() || len(th.Entries()) != 1 {
+		t.Fatalf("the old thread changed: %v %+v", err, th.Entries())
+	}
+
 	write(t, two, "docs/guide.md", "feat: [S-0001] guide\n")
 	git(t, two, "commit", "-q", "-am", "feat: [S-0002] take S-0001's guide")
-	if res, err = Sync(syncOptions(repo, story)); err != nil || len(res.Branches) != 1 || !res.Branches[0].Clean || res.Branches[0].Thread != "" {
-		t.Fatalf("clean: %v %+v", err, res.Branches)
+	if b := syncAt(t, repo, story, 2); !b.Clean || b.Thread != th.ID || b.Conversation != "" {
+		t.Errorf("clean: %+v", b)
 	}
-	if th, err = threads.Get(repo, "TH-0001"); err != nil || th.Open() {
-		t.Errorf("the pair's thread is still open: %v", err)
+	if th, err = threads.Get(repo, th.ID); err != nil || th.Open() {
+		t.Errorf("the old thread is still open: %v", err)
+	}
+	if all, err := threads.List(repo); err != nil || len(all) != 1 {
+		t.Errorf("threads: %v %+v", err, all)
+	}
+	if c := conversation(t, repo, "MS-0001"); c.Status != messages.StatusClosed {
+		t.Errorf("the conversation is still open: %+v", c.Entries())
 	}
 }

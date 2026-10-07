@@ -23,7 +23,9 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 }
 
 // printSyncChecks says, one line each, how story's branch merges with the
-// other open branches, and what it changed outside the story's claim.
+// other open branches, with the conversation that tells a conflicting pair
+// and the old conflict thread a clean pair resolved, and what it changed
+// outside the story's claim.
 func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult) {
 	mine := storyBranch(story.ID)
 	if res.TrialMergeSkipped != "" {
@@ -35,10 +37,18 @@ func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult)
 			state = "in review"
 		}
 		if b.Clean {
-			fmt.Fprintf(w, "%s merges cleanly with %s (%s)\n", mine, b.Branch, state)
+			resolved := ""
+			if b.Thread != "" {
+				resolved = "; resolved " + b.Thread
+			}
+			fmt.Fprintf(w, "%s merges cleanly with %s (%s)%s\n", mine, b.Branch, state, resolved)
 			continue
 		}
-		fmt.Fprintf(w, "%s conflicts with %s (%s) in %s; see %s\n", mine, b.Branch, state, strings.Join(b.Conflicts, ", "), b.Thread)
+		see := ""
+		if b.Conversation != "" {
+			see = "; see " + b.Conversation
+		}
+		fmt.Fprintf(w, "%s conflicts with %s (%s) in %s%s\n", mine, b.Branch, state, strings.Join(b.Conflicts, ", "), see)
 	}
 	if len(res.Outside) > 0 {
 		fmt.Fprintf(w, "%s changed %s outside %s's touches: %s\n", mine, plural(len(res.Outside), "path"), story.ID, strings.Join(res.Outside, ", "))

@@ -155,10 +155,16 @@ with and the conflicting paths. A pair's conflicts are the paths both branches
 changed since they left the main branch, not what the main branch brought
 since: a path where main has since changed what a branch behind it did is
 that story's own rebase to settle (I-0064). Generated files are left out, so a pair
-whose only conflict is summary.md counts as clean. Each conflicting pair of stories
-has one thread, written by flai on the story that synced, which both stories'
-agents and the designer see in their inboxes; a sync that finds the pair
-merging cleanly again resolves it. It also lists the paths the branch changed since
+whose only conflict is summary.md counts as clean. A conflict is told to both
+stories in their conversation, not a thread (ADR-0121): flai messages the other
+story from the one that synced, about the conflicting paths, and sync names
+the pair's conversation. A later sync with the same paths adds nothing, and one
+that finds the pair merging cleanly again, or the other story no longer open,
+closes the conversation. The two agents agree who changes what; either asks the
+operator with flai message escalate only when they do not agree. A conflict
+thread an older flai opened is still resolved the same way, and no sync opens
+one. With --json each branch names its conversation, and thread names an old
+conflict thread it resolved. It also lists the paths the branch changed since
 the main branch that the story's touches, and its open tasks', do not cover,
 so that they are widened with flai touches.`,
 		Args: cobra.ExactArgs(1),
