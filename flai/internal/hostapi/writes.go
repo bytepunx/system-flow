@@ -546,9 +546,12 @@ func upgradeRelease(raw json.RawMessage, field string) (string, *channel.Error) 
 	if e != nil {
 		return "", e
 	}
-	v := in.Version
+	v, other, otherField := in.Version, in.Tag, "tag"
 	if field == "tag" {
-		v = in.Tag
+		v, other, otherField = in.Tag, in.Version, "version"
+	}
+	if other != "" {
+		return "", bad("%s is not a parameter of this upgrade: give the release as %s", otherField, field)
 	}
 	if v == "" {
 		return "", nil

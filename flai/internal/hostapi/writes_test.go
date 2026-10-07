@@ -1793,6 +1793,15 @@ func TestAnUpgradeRefusesWhatIsNotABareRelease(t *testing.T) {
 			t.Errorf("%s: the refusal does not say what to give: %+v", name, e)
 		}
 	}
+	// the other upgrade's field is refused, not ignored into the newest or
+	// the configured release
+	for name, params := range map[string]string{"host.upgrade": `{"tag":"1.2.0",` + rid + `}`, "dashboard.upgrade": `{"version":"1.2.0",` + rid + `}`} {
+		rec := &recorder{}
+		_, e := writeMethods(rec.run, time.Now, hostFor(name))[name](context.Background(), p, json.RawMessage(params))
+		if e == nil || e.Code != channel.CodeInvalidParams || len(rec.runs) != 0 {
+			t.Errorf("%s %s: error %+v, ran %d command(s)", name, params, e, len(rec.runs))
+		}
+	}
 }
 
 // S-0298: the journal names the release an upgrade asked for, or that it

@@ -126,9 +126,13 @@ func (h *host) api() http.Handler {
 
 // upgradeRequest reads POST /upgrade's body: none, or a JSON object whose
 // version, when given, is a bare X.Y.Z, refused before anything runs.
+// maxUpgradeBody is the most of a POST /upgrade body read: {"version":
+// "X.Y.Z"} needs a few dozen bytes.
+const maxUpgradeBody = 4 << 10
+
 func upgradeRequest(body io.Reader) (UpgradeRequest, error) {
 	var in UpgradeRequest
-	if err := json.NewDecoder(body).Decode(&in); err != nil && !errors.Is(err, io.EOF) {
+	if err := json.NewDecoder(io.LimitReader(body, maxUpgradeBody)).Decode(&in); err != nil && !errors.Is(err, io.EOF) {
 		return in, errors.New(`the body is empty for the newest flai, or a JSON object {"version": "X.Y.Z"} naming a published release`)
 	}
 	if in.Version != "" && !buildinfo.Bare(in.Version) {
