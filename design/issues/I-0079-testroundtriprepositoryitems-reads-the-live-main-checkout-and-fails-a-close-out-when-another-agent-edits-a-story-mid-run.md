@@ -3,7 +3,7 @@ id: I-0079
 title: TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
 class: defect
 status: open
-count: 4
+count: 5
 cost: 5m
 first_reported: 2026-10-05T05:55:58Z
 last_reported: 2026-10-07T09:09:01Z
@@ -28,6 +28,10 @@ S-0299's close-out: TestRoundTripRepositoryItems read the main checkout's wip/ w
 ### 2026-10-07T03:19:14Z
 Story: S-0269.
 S-0269's second close-out stopped at the full Go tests: TestRoundTripRepositoryItems read S-0246, S-0265, and S-0279 in the main checkout while flai's forecast replan rewrote them (forecast and timestamps differ); internal/workitem passed alone.
+
+### 2026-10-07T08:25:53Z
+Story: S-0213.
+S-0213's close-out stopped at integration in flai/internal/workitem while S-0214's agent was writing a task file in the main checkout; the package passed alone on a rerun a minute later.
 
 ### 2026-10-07T09:09:01Z
 Story: S-0246.

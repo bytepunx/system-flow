@@ -3,9 +3,9 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: closed
-count: 14
+count: 15
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-07T03:10:53Z
+last_reported: 2026-10-07T08:25:30Z
 updated: 2026-10-07T09:42:24Z
 ---
 
@@ -110,6 +110,21 @@ flai check found outside the story:
 Story: S-0277.
 flai check found outside the story:
 `wip/kanban/stories/S-0269-one-command-closes-a-task-flai-task-done-commits-syncs-moves-logs-widens-touches-checks-and-answers-the-inbox.md`: S-0269 touches design/system/workflow.md, which S-0277 (in progress) also touches as design/system/workflow.md
+
+### 2026-10-07T08:25:30Z
+Story: S-0213.
+flai check found outside the story:
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches design/system/flaiover-dashboard.md, which S-0214 (in progress) also touches as design/system/flaiover-dashboard.md
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches design/system/metrics.md, which S-0214 (in progress) also touches as design/system/metrics.md
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches design/system/metrics.md, which T-0924 (in progress) also touches as design/system/metrics.md
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches docs/users/flaiover.md, which S-0214 (in progress) also touches as docs/users/flaiover.md
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flai/cmd/check_stats_test.go, which S-0214 (in progress) also touches as flai/cmd/check_stats_test.go
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flai/cmd/stats.go, which S-0214 (in progress) also touches as flai/cmd/stats.go
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flai/internal/metrics, which S-0214 (in progress) also touches as flai/internal/metrics
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flaiover/src/lib/charts, which S-0214 (in progress) also touches as flaiover/src/lib/charts
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flaiover/src/lib/sitemenu.ts, which S-0214 (in progress) also touches as flaiover/src/lib/sitemenu.ts
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flaiover/src/lib/viz, which S-0214 (in progress) also touches as flaiover/src/lib/viz
+`wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md`: S-0213 touches flaiover/src/routes/charts, which S-0214 (in progress) also touches as flaiover/src/routes/charts
 
 ## Remediation
 
