@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 12
+count: 13
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-07T01:04:51Z
-updated: 2026-10-07T01:04:51Z
+last_reported: 2026-10-07T02:00:55Z
+updated: 2026-10-07T02:00:55Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -100,6 +100,11 @@ flai check found outside the story:
 `wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md`: S-0272 touches flai/internal/harness/harness.go, which S-0286 (in progress) also touches as flai/internal/harness
 `wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md`: S-0272 touches flai/internal/harness/harness_test.go, which S-0286 (in progress) also touches as flai/internal/harness
 `wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md`: S-0272 touches flai/internal/serve/restart_test.go, which S-0286 (in progress) also touches as flai/internal/serve
+
+### 2026-10-07T02:00:55Z
+Story: S-0307.
+flai check found outside the story:
+`wip/kanban/stories/S-0269-one-command-closes-a-task-flai-task-done-commits-syncs-moves-logs-widens-touches-checks-and-answers-the-inbox.md`: S-0269 touches flai/internal/harness/harness.go, which S-0294 (in progress) also touches as flai/internal/harness/harness.go
 
 ## Remediation
 
