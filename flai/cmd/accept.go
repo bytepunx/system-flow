@@ -55,13 +55,20 @@ flai move <story> done from review runs exactly this. An item that is already
 done but was never archived (an older flai, a hand edit) is completed from
 step 0 without a second transition. --dry-run changes nothing.
 
+A story whose branch changes a path Claude Code protects (a .claude folder,
+.mcp.json, and the others of ADR-0106) is accepted by its operator only: the
+story's owner or the project's owner, or anyone but the orchestrator when
+neither is named. Anyone else is refused, before anything is merged, with the
+files named; --dry-run lists them.
+
 --by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless
 orchestration.permissions.accept_reviews is on; under FLAI_ROLE=orchestrate no
 other acceptance is allowed. It is refused, before anything is merged, unless
 --verified names the story branch's head, every acceptance criterion is
-ticked, every file the branch changes is under the story's touches, no thread
-on the story or its tasks is open, and --evidence, a Verdict: line and one
-item "- <n>: <files>" per criterion, names a changed file for each of them.
+ticked, every file the branch changes is under the story's touches and on no
+path Claude Code protects, no thread on the story or its tasks is open, and
+--evidence, a Verdict: line and one item "- <n>: <files>" per criterion,
+names a changed file for each of them.
 The evidence is written, with the commit, under ### Accepted by the
 orchestrator in the story's Notes. With --dry-run the evidence is optional.`,
 		Example: `  flai accept S-031 --by alex
@@ -382,6 +389,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 				effect = "--yes includes them in the acceptance commit"
 			}
 			fmt.Fprintf(a.out, "uncommitted outside wip: %s; %s\n", strings.Join(res.Uncommitted, ", "), effect)
+		}
+		if res.OperatorOnly != "" {
+			fmt.Fprintf(a.out, "%s: %s\n", res.OperatorOnly, strings.Join(res.Protected, ", "))
 		}
 		if res.Branch != "" {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)

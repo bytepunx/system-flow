@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -54,14 +56,20 @@ type Acceptance struct {
 	Verified string `json:"verified,omitempty"`
 	// Evidence is the orchestrator's evidence, when given.
 	Evidence *Evidence `json:"evidence,omitempty"`
+	// Protected are the files the story's branch changes on a path Claude
+	// Code protects, and OperatorOnly says, when there are any, that only the
+	// operator accepts the story and who that is (ADR-0106).
+	Protected    []string `json:"protected,omitempty"`
+	OperatorOnly string   `json:"operator_only,omitempty"`
 }
 
 // Accept is what accepting a story or an epic would do, worked out before
 // the first change so that an item is never left half accepted: an item
 // that cannot be accepted at all is an error, and everything that would
-// stop the acceptance midway is a blocker. by is who the probe's
-// transitions are made by; log takes a warning about a worktree git cannot
-// open.
+// stop the acceptance midway is a blocker. by is who accepts: the probe's
+// transitions are made by them, and a story whose branch changes a path
+// Claude Code protects is refused unless they are its operator (ADR-0106);
+// log takes a warning about a worktree git cannot open.
 func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger) (*Acceptance, error) {
 	return AcceptWith(r, repo, it, by, now, log, AcceptOptions{})
 }
@@ -148,10 +156,21 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		} else if b != "" {
 			res.Blockers = append(res.Blockers, b)
 		}
+		// a change to a path Claude Code protects takes effect for every
+		// agent once merged, so only the operator accepts it (ADR-0106)
+		if diff, err := storygit.StoryDiff(r, repo, it.ID); err != nil {
+			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read what %s changes to check it for paths Claude Code protects: %v", res.Branch, err))
+		} else if res.Protected = protected.Changed(changedPaths(diff)); len(res.Protected) > 0 {
+			who := operatorsOf(repo, it)
+			res.OperatorOnly = fmt.Sprintf("only the operator (%s) accepts %s: its branch changes paths Claude Code protects", who, it.ID)
+			if !opts.Orchestrator && !isOperator(repo, it, by) {
+				res.Blockers = append(res.Blockers, fmt.Sprintf("only the operator (%s) accepts %s, not %s: its branch changes paths Claude Code protects, %s; the operator reads them in the diff and accepts it (ADR-0106)", who, it.ID, by, strings.Join(res.Protected, ", ")))
+			}
+		}
 	}
 	if opts.Orchestrator {
 		res.Evidence = opts.Evidence
-		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts)
+		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected)
 		for _, b := range res.OrchestratorBlockers {
 			res.Blockers = append(res.Blockers, b.Message)
 		}
@@ -180,6 +199,48 @@ func ConflictMarkers(r execx.Runner, repo *workitem.Repo, id string) (string, er
 		where = fmt.Sprintf("on %s (open its worktree with flai stream open %s)", branch, id)
 	}
 	return fmt.Sprintf("%s carries merge conflict markers at %s; resolve each conflict %s keeping what both sides meant, remove the markers, commit, and accept again", branch, workitem.Shorten(found, 20), where), nil
+}
+
+// operators are who accept a story whose branch changes a path Claude Code
+// protects (ADR-0106): its owner and the project's owner, those named, each
+// once, as ADR-0097 names who answers a permission thread. None means anyone
+// but the orchestrator.
+func operators(repo *workitem.Repo, it *workitem.Item) []string {
+	var who []string
+	for _, name := range []string{it.Owner, repo.Manifest.Owner} {
+		if name != "" && !slices.Contains(who, name) {
+			who = append(who, name)
+		}
+	}
+	return who
+}
+
+// isOperator says whether by is the operator of it: never the orchestrator.
+func isOperator(repo *workitem.Repo, it *workitem.Item, by string) bool {
+	who := operators(repo, it)
+	return !workitem.IsOrchestrator(by) && (len(who) == 0 || slices.Contains(who, by))
+}
+
+// operatorsOf names the operator of it for a sentence: the names, or who
+// may accept when it and the project name no owner.
+func operatorsOf(repo *workitem.Repo, it *workitem.Item) string {
+	if who := operators(repo, it); len(who) > 0 {
+		return strings.Join(who, " or ")
+	}
+	return fmt.Sprintf("anyone but the orchestrator, as neither %s nor the project names an owner", it.ID)
+}
+
+// changedPaths are the paths a branch's diff changes, a renamed file's old
+// path beside its new one.
+func changedPaths(diff *storygit.Diff) []string {
+	var changed []string
+	for _, f := range diff.Files {
+		changed = append(changed, f.Path)
+		if f.OldPath != "" {
+			changed = append(changed, f.OldPath)
+		}
+	}
+	return changed
 }
 
 // epicAccepted works out what the story's epic would do were the story,

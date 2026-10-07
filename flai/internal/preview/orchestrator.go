@@ -20,9 +20,10 @@ import (
 // verifier passed at the story branch's head, every acceptance criterion is
 // ticked, every file the branch changes is under the story's touches, no
 // thread on the story or its tasks is open, and the orchestrator's evidence,
-// when given, names for each criterion a file the branch changes. Each
-// failing condition is a blocker of the preview, beside those of any
-// acceptance.
+// when given, names for each criterion a file the branch changes; and the
+// branch changes no path Claude Code protects, which the operator alone
+// accepts (ADR-0106). Each failing condition is a blocker of the preview,
+// beside those of any acceptance.
 
 // Codes of the blockers an acceptance by the orchestrator adds.
 const (
@@ -32,6 +33,7 @@ const (
 	BlockOutsideTouches       = "outside_touches"       // the branch changes a file under none of the touches
 	BlockThreadOpen           = "thread_open"           // a thread on the story or a task is not resolved
 	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion
+	BlockProtectedPaths       = "protected_paths"       // the branch changes a path Claude Code protects, which the operator accepts (ADR-0106)
 )
 
 // Blocker is one failing condition of an acceptance by the orchestrator: a
@@ -143,9 +145,10 @@ func cleanPath(p string) string {
 }
 
 // orchestratorBlockers is what stops the orchestrator accepting it under
-// ADR-0093, beside what stops any acceptance; verified is the commit given,
-// resolved to its full name, or "" when it names none.
-func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item, opts AcceptOptions) (blockers []Blocker, verified string) {
+// ADR-0093, beside what stops any acceptance, with prot the protected files
+// its branch changes; verified is the commit given, resolved to its full
+// name, or "" when it names none.
+func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item, opts AcceptOptions, prot []string) (blockers []Blocker, verified string) {
 	add := func(code, format string, args ...any) {
 		blockers = append(blockers, Blocker{Code: code, Message: fmt.Sprintf(format, args...)})
 	}
@@ -196,12 +199,7 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	if err != nil {
 		add(BlockOutsideTouches, "cannot read what %s changes to check it against its touches: %v", branch, err)
 	} else {
-		for _, f := range diff.Files {
-			changed = append(changed, f.Path)
-			if f.OldPath != "" {
-				changed = append(changed, f.OldPath)
-			}
-		}
+		changed = changedPaths(diff)
 		claim := workitem.NewHolds(nil, repo.Manifest.Projects).Claim(it)
 		records := []string{repo.Manifest.Layout["wip"], path.Join(repo.Manifest.Layout["design"], issues.Folder)}
 		if experiment.Needs(it) {
@@ -243,6 +241,11 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	// 5. the evidence, when given, names a changed file for every criterion
 	if opts.Evidence != nil && diff != nil {
 		blockers = append(blockers, unevidenced(criteria, opts.Evidence, changed)...)
+	}
+
+	// 6. the branch changes no path Claude Code protects
+	if len(prot) > 0 {
+		add(BlockProtectedPaths, "%s changes paths Claude Code protects, %s, so only the operator (%s) accepts %s, whatever the orchestrator judges (ADR-0106)", branch, strings.Join(prot, ", "), operatorsOf(repo, it), it.ID)
 	}
 	return blockers, verified
 }
