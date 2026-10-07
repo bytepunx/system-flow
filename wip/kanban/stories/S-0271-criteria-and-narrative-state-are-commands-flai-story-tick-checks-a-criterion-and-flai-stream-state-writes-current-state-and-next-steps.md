@@ -7,10 +7,16 @@ status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-06T23:57:14Z
+updated: 2026-10-06T23:59:04Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:17Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-06T23:58:42Z
+    by: alex
+  - to: ready
+    at: 2026-10-06T23:59:04Z
     by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]

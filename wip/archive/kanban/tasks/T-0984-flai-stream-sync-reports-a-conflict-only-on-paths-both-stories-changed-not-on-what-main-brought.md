@@ -3,15 +3,41 @@ id: T-0984
 type: task
 nature: remediation
 title: flai stream sync reports a conflict only on paths both stories changed, not on what main brought
-status: backlog
+status: done
 parent: S-0251
 owner: alex
 created: 2026-10-05T05:50:45Z
-updated: 2026-10-05T05:50:45Z
-transitions: []
+updated: 2026-10-07T00:04:00Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:00:07Z
+    by: agent-S-0251
+  - to: in-progress
+    at: 2026-10-07T00:00:07Z
+    by: agent-S-0251
+  - to: done
+    at: 2026-10-07T00:04:00Z
+    by: agent-S-0251
 stream: S-0251
 tags: [flai, git]
 touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 233
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 13806
+      cache_read: 1753042
+      cache_write: 80156
+      cost: 1.1773
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 3356
+      cache_read: 277169
+      cache_write: 44481
+      cost: 0.2002
 ---
 # T-0984 flai stream sync reports a conflict only on paths both stories changed, not on what main brought
 

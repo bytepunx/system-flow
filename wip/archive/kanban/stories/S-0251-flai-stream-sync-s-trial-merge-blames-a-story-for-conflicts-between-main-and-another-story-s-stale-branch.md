@@ -3,23 +3,47 @@ id: S-0251
 type: story
 nature: improvement
 title: flai stream sync's trial merge blames a story for conflicts between main and another story's stale branch
-status: backlog
+status: done
 owner: alex
 created: 2026-10-03T18:33:16Z
-updated: 2026-10-06T23:57:14Z
-transitions: []
+updated: 2026-10-07T00:09:45Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:59:23Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-07T00:04:27Z
+    by: agent-S-0251
+  - to: review
+    at: 2026-10-07T00:08:44Z
+    by: agent-S-0251
+  - to: done
+    at: 2026-10-07T00:09:45Z
+    by: alex
 tags: []
 topics: [cli]
-touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0064-flai-stream-sync-s-trial-merge-blames-a-story-for-conflicts-between-main-and-another-story-s-stale-branch.md, design/issues/summary.md]
+touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0064-flai-stream-sync-s-trial-merge-blames-a-story-for-conflicts-between-main-and-another-story-s-stale-branch.md, design/issues/summary.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 566
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 31426
+      cache_read: 3990422
+      cache_write: 182457
+      cost: 2.6799
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 3356
+      cache_read: 277169
+      cache_write: 44481
+      cost: 0.2002
   strategic:
     - kind: planner
       seconds: 1
@@ -53,8 +77,8 @@ forecast:
 This story remediates [I-0064](../../../design/issues/I-0064-flai-stream-sync-s-trial-merge-blames-a-story-for-conflicts-between-main-and-another-story-s-stale-branch.md), "flai stream sync's trial merge blames a story for conflicts between main and another story's stale branch". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0064 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0064 is closed with `flai issue close I-0064 --reason` saying what fixed it
+- [x] The cause I-0064 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0064 is closed with `flai issue close I-0064 --reason` saying what fixed it
 
 ## Tasks
 - T-0984 flai stream sync reports a conflict only on paths both stories changed, not on what main brought

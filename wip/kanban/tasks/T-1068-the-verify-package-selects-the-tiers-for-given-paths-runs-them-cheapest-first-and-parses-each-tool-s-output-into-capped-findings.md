@@ -3,11 +3,11 @@ id: T-1068
 type: task
 nature: improvement
 title: The verify package selects the tiers for given paths, runs them cheapest first, and parses each tool's output into capped findings
-status: in-progress
+status: done
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:51:47Z
-updated: 2026-10-06T23:52:59Z
+updated: 2026-10-07T00:09:43Z
 transitions:
   - to: ready
     at: 2026-10-06T23:52:59Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:52:59Z
     by: agent-S-0273
+  - to: done
+    at: 2026-10-07T00:09:43Z
+    by: agent-S-0273
 stream: S-0273
 tags: [cli, testing]
 touches: [flai/internal/verify]
+usage:
+  source: log
+  seconds: 1004
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 120
+      output: 627
+      cache_read: 6554686
+      cache_write: 175890
+      cost: 2.9823
 ---
 # T-1068 The verify package selects the tiers for given paths, runs them cheapest first, and parses each tool's output into capped findings
 

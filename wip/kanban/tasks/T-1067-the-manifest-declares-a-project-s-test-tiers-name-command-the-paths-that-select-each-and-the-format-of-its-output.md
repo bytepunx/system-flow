@@ -3,11 +3,11 @@ id: T-1067
 type: task
 nature: improvement
 title: "The manifest declares a project's test tiers: name, command, the paths that select each, and the format of its output"
-status: in-progress
+status: done
 parent: S-0273
 owner: alex
 created: 2026-10-06T22:51:37Z
-updated: 2026-10-06T23:52:59Z
+updated: 2026-10-07T00:09:43Z
 transitions:
   - to: ready
     at: 2026-10-06T23:52:58Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:52:59Z
     by: agent-S-0273
+  - to: done
+    at: 2026-10-07T00:09:43Z
+    by: agent-S-0273
 stream: S-0273
 tags: [manifest, cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/system/project-manifest.md, docs/operators/settings.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go, flai/internal/check/tests_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, template/template.yaml, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 1004
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 704
+      cache_read: 7910367
+      cache_write: 204466
+      cost: 3.5956
 ---
 # T-1067 The manifest declares a project's test tiers: name, command, the paths that select each, and the format of its output
 

@@ -3,12 +3,15 @@ id: S-0275
 type: story
 nature: improvement
 title: "Issue and ADR handling from the worktree is one call each: bump, close, and adr new number from the whole repository and commit on the story branch"
-status: backlog
+status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:33Z
-updated: 2026-10-06T23:57:14Z
-transitions: []
+updated: 2026-10-06T23:59:38Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:59:38Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
 touches: [flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go, flai/internal/adr/adr.go, flai/internal/storygit/commit.go, flai/internal/storygit/commit_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/adr.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/continuous-improvement.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md]

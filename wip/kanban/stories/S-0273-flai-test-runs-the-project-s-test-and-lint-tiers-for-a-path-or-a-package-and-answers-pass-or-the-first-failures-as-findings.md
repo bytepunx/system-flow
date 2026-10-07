@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T23:52:58Z
+updated: 2026-10-07T00:08:00Z
 transitions:
   - to: ready
     at: 2026-10-06T23:32:45Z
@@ -17,12 +17,23 @@ transitions:
     by: agent-S-0273
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, code, conventions, template]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, system-flow.yaml, template/root/system-flow.yaml.tmpl, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh, scripts/README.md, Makefile, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/system/devex.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, system-flow.yaml, template/root/system-flow.yaml.tmpl, scripts/flai-test.sh, scripts/test.sh, scripts/flaiover-unit.sh, scripts/with-env.sh, scripts/README.md, Makefile, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, design/conventions/tooling.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/system/devex.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/check/check.go, flai/internal/check/tests_test.go, template/template.yaml]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1122
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 274
+      output: 1460
+      cache_read: 15623802
+      cache_write: 475305
+      cost: 7.1335
 cost_of_delay:
   value: 213
   by: planner-E-0017

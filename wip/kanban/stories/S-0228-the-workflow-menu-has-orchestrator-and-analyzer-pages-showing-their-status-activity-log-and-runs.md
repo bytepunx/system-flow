@@ -3,14 +3,17 @@ id: S-0228
 type: story
 nature: feature
 title: The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-06T23:57:14Z
+updated: 2026-10-06T23:58:30Z
 transitions:
   - to: ready
     at: 2026-10-06T22:46:46Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-06T23:58:30Z
     by: alex
 tags: [dashboard]
 topics: [orchestration, analysis]

@@ -17,6 +17,17 @@ transitions:
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
 touches: [flai, design/conventions, template]
+usage:
+  source: sum
+  seconds: 1122
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 274
+      output: 1460
+      cache_read: 15623802
+      cache_write: 475305
+      cost: 7.1335
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6h

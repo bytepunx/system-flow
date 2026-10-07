@@ -3,12 +3,18 @@ id: T-0917
 type: task
 nature: feature
 title: flai serves the orchestrator's and the analyzer's run streams, and stops and starts the orchestrator on the operator's word
-status: backlog
+status: in-progress
 parent: S-0228
 owner: alex
 created: 2026-10-05T05:44:45Z
-updated: 2026-10-05T05:44:45Z
-transitions: []
+updated: 2026-10-07T00:03:28Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:03:28Z
+    by: agent-S-0228
+  - to: in-progress
+    at: 2026-10-07T00:03:28Z
+    by: agent-S-0228
 stream: S-0228
 tags: [dashboard]
 touches: [flai/internal/hostapi, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]

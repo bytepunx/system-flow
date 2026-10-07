@@ -3,11 +3,14 @@ id: S-0286
 type: story
 nature: improvement
 title: A story that changes a path Claude Code protects is flagged at review and accepted only by the operator, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a worktree but .git
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T06:32:43Z
-updated: 2026-10-06T23:57:14Z
-transitions: []
+updated: 2026-10-06T23:59:48Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:59:48Z
+    by: alex
 tags: [flai, flaiover]
 topics: [cli, dashboard]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/internal/serve, flai/internal/harness, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_protected_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, docs/operators/settings.md]

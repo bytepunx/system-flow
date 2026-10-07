@@ -3,11 +3,14 @@ id: S-0254
 type: story
 nature: improvement
 title: flai touches with paths replaces an item's touches, and its help does not say so
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-03T20:33:24Z
-updated: 2026-10-06T23:57:14Z
-transitions: []
+updated: 2026-10-06T23:59:26Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:59:26Z
+    by: alex
 tags: []
 topics: [cli]
 touches: [flai/cmd/touches.go, flai/cmd/touches_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/flai-cli.md, design/issues/I-0067-flai-touches-with-paths-replaces-an-item-s-touches-and-its-help-does-not-say-so.md, design/issues/summary.md]

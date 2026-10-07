@@ -3,12 +3,15 @@ id: S-0274
 type: story
 nature: improvement
 title: "Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together"
-status: backlog
+status: ready
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-06T23:57:14Z
-transitions: []
+updated: 2026-10-06T23:59:35Z
+transitions:
+  - to: ready
+    at: 2026-10-06T23:59:35Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions, template]
 touches: [flai/cmd/items.go, flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/move.go, flai/cmd/stream.go, flai/cmd/prime.go, flai/cmd/branch.go, flai/internal/storygit/open.go, flai/internal/storygit/open_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/inbox.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]

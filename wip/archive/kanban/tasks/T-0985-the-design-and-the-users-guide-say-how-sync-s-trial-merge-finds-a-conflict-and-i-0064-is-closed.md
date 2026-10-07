@@ -3,16 +3,36 @@ id: T-0985
 type: task
 nature: remediation
 title: The design and the users' guide say how sync's trial merge finds a conflict, and I-0064 is closed
-status: backlog
+status: done
 parent: S-0251
 owner: alex
 created: 2026-10-05T05:50:53Z
-updated: 2026-10-05T05:50:53Z
-transitions: []
+updated: 2026-10-07T00:04:24Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:04:00Z
+    by: agent-S-0251
+  - to: in-progress
+    at: 2026-10-07T00:04:00Z
+    by: agent-S-0251
+  - to: done
+    at: 2026-10-07T00:04:24Z
+    by: agent-S-0251
 stream: S-0251
 tags: [flai, docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0064-flai-stream-sync-s-trial-merge-blames-a-story-for-conflicts-between-main-and-another-story-s-stale-branch.md, design/issues/summary.md]
 after: [T-0984]
+usage:
+  source: log
+  seconds: 24
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 3796
+      cache_read: 481979
+      cache_write: 22038
+      cost: 0.3237
 ---
 # T-0985 The design and the users' guide say how sync's trial merge finds a conflict, and I-0064 is closed
 
