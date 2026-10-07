@@ -12,25 +12,27 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// Claude Code's permission prompt tool (S-0257). Run headless, Claude Code
-// refuses a write under any .claude/ folder as sensitive unless a person or
-// the tool named by --permission-prompt-tool approves it. flai serve names
-// this one: it approves such a write in an in-progress story's worktree when
-// the operator answers allow on a thread, or at once when the host's
-// AutoApprove says so, and refuses everything else.
+// Claude Code's permission prompt tool (S-0257, ADR-0106). Run headless,
+// Claude Code refuses a write to a path it protects, such as a .claude/
+// folder or .mcp.json, unless a person or the tool named by
+// --permission-prompt-tool approves it. flai serve names this one: it
+// approves such a write in an in-progress story's worktree when the operator
+// answers allow on a thread, or at once when the host's AutoApprove says so,
+// and refuses everything else, a path in .git always.
 
 // AutoApprove reports whether the project at root lets permission_prompt
-// allow a write under .claude/ without asking the operator.
+// allow a write to a protected path without asking the operator.
 type AutoApprove func(root string) bool
 
-const permissionPromptDescription = "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a file in a .claude/ folder inside an in-progress story's worktree, which Claude Code refuses as sensitive without a person's approval. Unless the host auto-approves such writes, it opens a thread on the story showing the change and waits until the operator replies: allow lets the write through, anything else refuses it with the operator's words as the reason. Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
+const permissionPromptDescription = "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git. Unless the host auto-approves such writes, it opens a thread on the story showing the change and waits until the operator replies: allow lets the write through, anything else refuses it with the operator's words as the reason. Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
 
 // permissionScope is what every refusal of a request outside the tool's remit says.
-const permissionScope = "permission_prompt approves only an Edit, Write, MultiEdit, or NotebookEdit of a file in a .claude/ folder inside an in-progress story's worktree; anything else the session's permissions do not allow is refused, as before"
+const permissionScope = "permission_prompt approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects, other than .git, inside an in-progress story's worktree; anything else the session's permissions do not allow is refused, as before"
 
 // permissionPoll is how often a held permission_prompt reads its thread for
 // the operator's answer; tests shorten it.
@@ -168,14 +170,16 @@ func (s *server) permissionPrompt(ctx context.Context, in PermissionIn) Permissi
 	if it.Status != workitem.InProgress {
 		return deny("%s is %s, not in progress: %s", it.ID, it.Status, permissionScope)
 	}
-	inTree := parts[1:]
-	if len(inTree) < 2 || !slices.Contains(inTree[:len(inTree)-1], ".claude") {
-		return deny("%s is not in a .claude/ folder of %s's worktree: %s", path, it.ID, permissionScope)
+	shown := strings.Join(parts[1:], "/")
+	if protected.Git(shown) {
+		return deny("%s is in .git, which permission_prompt never approves: git's link to the repository and its history are not an agent's to write; %s", path, permissionScope)
+	}
+	if !protected.Path(shown) {
+		return deny("%s is not a path Claude Code protects in %s's worktree: %s", path, it.ID, permissionScope)
 	}
 	if escapes(s.repo.WorktreePath(it.ID), path) {
 		return deny("%s leaves %s's worktree through a symbolic link: %s", path, it.ID, permissionScope)
 	}
-	shown := strings.Join(inTree, "/")
 	if s.autoApprove != nil && s.autoApprove(projectRoot(s.repo)) {
 		if s.logger != nil {
 			s.logger.Info("permission allowed without asking", "component", "mcp", "agent", s.agent, "tool", in.ToolName, "path", path, "story", it.ID)
@@ -352,7 +356,7 @@ func answeredBy(owner, projectOwner string) string {
 // answer, who may and how, and the change itself.
 func permissionRequest(agent, story, owner, projectOwner string, in PermissionIn, rel string) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s asks to %s `%s` in %s's worktree. Claude Code refuses writes under .claude/ without a person's approval.\n\n", agent, in.ToolName, rel, story)
+	fmt.Fprintf(&b, "%s asks to %s `%s` in %s's worktree. Claude Code protects the path and does not write it without a person's approval.\n\n", agent, in.ToolName, rel, story)
 	if who := answeredBy(owner, projectOwner); who != "" {
 		fmt.Fprintf(&b, "Reply `allow`, as %s, to let it write. Anything else refuses it, and your words go back to the agent as the reason; a reply by anyone else is not an answer.\n\n", who)
 	} else {

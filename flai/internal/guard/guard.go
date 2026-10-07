@@ -87,6 +87,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -824,8 +825,8 @@ func (g Guard) Decide(e Event) Refusal {
 	if who == "" {
 		who = "unnamed"
 	}
-	if file, ok := ClaudeWrite(e); ok && !g.AutoApprove {
-		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a file in a .claude/ folder is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086). Put the file's whole new content in your final message; the story's agent writes it.", who, e.ToolName, file)}
+	if file, ok := ProtectedWrite(e); ok && !g.AutoApprove {
+		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086, ADR-0106). Put the file's whole new content in your final message; the story's agent writes it.", who, e.ToolName, file)}
 	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
 		if slices.Contains(MCPReads, tool) {
@@ -844,11 +845,12 @@ func (g Guard) Decide(e Event) Refusal {
 	return Refusal{}
 }
 
-// ClaudeWrite says whether e writes a file in a .claude/ folder, one whose
-// path has a folder named .claude along it, and which file (S-0299): Claude
-// Code asks a person before any such write, so that a sub-agent's would wait
-// on a thread for the operator.
-func ClaudeWrite(e Event) (string, bool) {
+// ProtectedWrite says whether e writes a path Claude Code protects other than
+// one in .git, such as a file in a .claude/ folder or .mcp.json, and which
+// file (S-0299, ADR-0106): Claude Code asks a person before any such write,
+// so that a sub-agent's would wait on a thread for the operator.
+// permission_prompt refuses a path in .git at once, so that one never waits.
+func ProtectedWrite(e Event) (string, bool) {
 	if !slices.Contains(fileWrites, e.ToolName) {
 		return "", false
 	}
@@ -856,8 +858,8 @@ func ClaudeWrite(e Event) (string, bool) {
 	if file == "" {
 		return "", false
 	}
-	dir := filepath.ToSlash(filepath.Dir(filepath.Clean(file)))
-	return file, slices.Contains(strings.Split(dir, "/"), ".claude")
+	clean := filepath.Clean(file)
+	return file, protected.Path(clean) && !protected.Git(clean)
 }
 
 // waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why

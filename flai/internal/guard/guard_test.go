@@ -69,6 +69,10 @@ func TestASubAgentWritesNoFileUnderClaudeWhileAutoApproveIsOff(t *testing.T) {
 		sub("Edit", wt+"/.claude/settings.json"),
 		sub("MultiEdit", ".claude/hooks/x.sh"),
 		sub("NotebookEdit", wt+"/.claude/n.ipynb"),
+		// every other path Claude Code protects, too (ADR-0106)
+		sub("Write", wt+"/.mcp.json"),
+		sub("Edit", wt+"/template/root/.mcp.json"),
+		sub("Write", wt+"/.vscode/settings.json"),
 	}
 	for _, e := range claude {
 		file := cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
@@ -88,7 +92,8 @@ func TestASubAgentWritesNoFileUnderClaudeWhileAutoApproveIsOff(t *testing.T) {
 			t.Errorf("the story's agent's own write refused: %s", why)
 		}
 	}
-	for _, file := range []string{wt + "/flai/cmd/guard.go", wt + "/foo.claude/x.md", wt + "/docs/.claude.md", wt + "/.claude"} {
+	// permission_prompt refuses a path in .git at once, so it holds nothing
+	for _, file := range []string{wt + "/flai/cmd/guard.go", wt + "/foo.claude/x.md", wt + "/docs/.claude.md", wt + "/.claude", wt + "/my.mcp.json", wt + "/.git/config"} {
 		if why := g.Check(sub("Write", file)); why != "" {
 			t.Errorf("%s refused: %s", file, why)
 		}

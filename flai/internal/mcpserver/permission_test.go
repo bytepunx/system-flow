@@ -180,8 +180,13 @@ func TestPermissionPromptRefusesAtOnceWhatItDoesNotApprove(t *testing.T) {
 		{"outside any worktree", "Write", map[string]any{"file_path": filepath.Join(f.repo.Root, ".claude/settings.json")}, "is not inside a story's worktree"},
 		{"an escape with ..", "Write", map[string]any{"file_path": f.repo.WorktreePath(f.story.ID) + "/../../../.claude/settings.json"}, "is not inside a story's worktree"},
 		{"an escape through a symbolic link", "Write", map[string]any{"file_path": filepath.Join(linked, ".claude/settings.json")}, "through a symbolic link"},
-		{"not a .claude folder", "Write", map[string]any{"file_path": f.worktreeFile("flai/claude/settings.json")}, "is not in a .claude/ folder"},
-		{"a file named .claude", "Write", map[string]any{"file_path": f.worktreeFile(".claude")}, "is not in a .claude/ folder"},
+		{"not a protected path", "Write", map[string]any{"file_path": f.worktreeFile("flai/claude/settings.json")}, "is not a path Claude Code protects in " + f.story.ID + "'s worktree"},
+		{"a file named .claude", "Write", map[string]any{"file_path": f.worktreeFile(".claude")}, "is not a path Claude Code protects"},
+		{"a name like a protected file", "Write", map[string]any{"file_path": f.worktreeFile("my.mcp.json")}, "is not a path Claude Code protects"},
+		{"the worktree's .git", "Write", map[string]any{"file_path": f.worktreeFile(".git")}, "is in .git, which permission_prompt never approves"},
+		{"a hook in a nested .git", "Edit", map[string]any{"file_path": f.worktreeFile("sub/.git/hooks/pre-commit")}, "is in .git, which permission_prompt never approves"},
+		{"a protected path in the main checkout", "Write", map[string]any{"file_path": filepath.Join(f.repo.Root, ".mcp.json")}, "is not inside a story's worktree"},
+		{"a protected path outside the project", "Write", map[string]any{"file_path": filepath.Join(t.TempDir(), ".vscode/settings.json")}, "is not inside a story's worktree"},
 		{"no such story", "Write", map[string]any{"file_path": filepath.Join(f.repo.WorktreePath("S-0099"), ".claude/settings.json")}, "is not a story's worktree"},
 		{"a story not in progress", "Write", map[string]any{"file_path": filepath.Join(f.repo.WorktreePath(other.ID), ".claude/settings.json")}, other.ID + " is ready, not in progress"},
 		{"a notebook without notebook_path", "NotebookEdit", map[string]any{"file_path": settings}, "names no absolute path"},
@@ -216,6 +221,66 @@ func TestPermissionPromptAutoApprovesWithoutAThread(t *testing.T) {
 		}
 	}
 	noThreads(t, f.repo)
+}
+
+// ADR-0106: every path Claude Code protects in the story's worktree is
+// approved, not only .claude/, while .git, the main checkout, and every path
+// outside the worktree stay refused, auto-approve or not.
+func TestPermissionPromptAutoApprovesEveryProtectedPathButGit(t *testing.T) {
+	f := setupWith(t, func(o *Options) { o.AutoApprove = func(string) bool { return true } })
+	for _, rel := range []string{".mcp.json", ".vscode/settings.json", "template/root/.mcp.json", "template/root/.claude/agents/x.md", ".husky/pre-commit"} {
+		input := map[string]any{"file_path": f.worktreeFile(rel), "content": "{}"}
+		if out := f.askPermission(t, context.Background(), "Write", input); out.Behavior != "allow" || !reflect.DeepEqual(out.UpdatedInput, input) {
+			t.Errorf("%s: auto-approve allows a protected path with the input unchanged: %+v", rel, out)
+		}
+	}
+	for _, c := range []struct{ path, why string }{
+		{f.worktreeFile(".git"), "is in .git, which permission_prompt never approves"},
+		{f.worktreeFile(".git/config"), "is in .git, which permission_prompt never approves"},
+		{f.worktreeFile("sub/.git/hooks/pre-commit"), "is in .git, which permission_prompt never approves"},
+		{f.worktreeFile("flai/main.go"), "is not a path Claude Code protects"},
+		{filepath.Join(f.repo.Root, ".mcp.json"), "is not inside a story's worktree"},
+		{filepath.Join(t.TempDir(), ".mcp.json"), "is not inside a story's worktree"},
+	} {
+		out := f.askPermission(t, context.Background(), "Write", map[string]any{"file_path": c.path, "content": "x"})
+		if out.Behavior != "deny" || !strings.Contains(out.Message, c.why) || out.UpdatedInput != nil {
+			t.Errorf("%s: %+v, want a refusal saying %q under auto-approve", c.path, out, c.why)
+		}
+	}
+	noThreads(t, f.repo)
+}
+
+// Without auto-approve, a protected path outside .claude/ is asked on a
+// thread like one in it.
+func TestPermissionPromptAsksForEveryProtectedPath(t *testing.T) {
+	fastPermissionPoll(t)
+	for _, rel := range []string{".mcp.json", ".vscode/settings.json", "template/root/.mcp.json"} {
+		t.Run(rel, func(t *testing.T) {
+			f := setup(t)
+			input := map[string]any{"file_path": f.worktreeFile(rel), "content": "{}"}
+			got := make(chan PermissionOut, 1)
+			go func() { got <- f.askPermission(t, context.Background(), "Write", input) }()
+			th := waitForThread(t, f.repo)
+			if th.Anchor.Item != f.story.ID || th.Title != "Allow Write "+rel+"?" {
+				t.Errorf("the thread is on the story and asks to allow the write: %+v", th)
+			}
+			if want := "claude asks to Write `" + rel + "` in " + f.story.ID + "'s worktree. Claude Code protects the path"; !strings.Contains(th.Entries()[0].Text, want) {
+				t.Errorf("the request does not say %q:\n%s", want, th.Entries()[0].Text)
+			}
+			*f.clock = t0.Add(3 * time.Minute)
+			if _, err := threads.Reply(f.repo, th.ID, "alex", "allow", t0.Add(2*time.Minute)); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case out := <-got:
+				if out.Behavior != "allow" || !reflect.DeepEqual(out.UpdatedInput, input) {
+					t.Errorf("the operator's allow lets the write through: %+v", out)
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("no decision after the operator answered")
+			}
+		})
+	}
 }
 
 // waitForThread is the first thread, once permission_prompt has opened it.
