@@ -18,6 +18,7 @@
 	import DiffView from '$lib/components/DiffView.svelte';
 	import Threads from '$lib/components/Threads.svelte';
 	import { render, enhance } from '$lib/markdown';
+	import { localTime } from '$lib/localtime';
 	import { themeState } from '$lib/theme.svelte';
 	import { tick } from 'svelte';
 
@@ -775,9 +776,10 @@
 			{#if checksRun?.started}
 				<p data-testid="checks-summary">
 					{#if checksRun.running}
-						Running {checksRun.current}, started {checksRun.started}.
+						Running {checksRun.current}, started {localTime(checksRun.started)}.
 					{:else}
-						{checksRun.outcome}, started {checksRun.started}, ended {checksRun.ended}.
+						{checksRun.outcome}, started {localTime(checksRun.started)}, ended
+						{localTime(checksRun.ended ?? '')}.
 					{/if}
 				</p>
 				{#if checksRun.steps?.length}
@@ -848,8 +850,8 @@
 					<span class={verify.passed ? 'font-medium text-good' : 'font-medium text-danger'}
 						>{verify.outcome}</span
 					>. Verified <code class="rounded bg-ground px-1 text-ink">{verify.commit}</code> against
-					<code class="rounded bg-ground px-1 text-ink">{verify.base}</code> at {verify.ranAt}, in
-					{verify.duration}.
+					<code class="rounded bg-ground px-1 text-ink">{verify.base}</code> at
+					{localTime(verify.ranAt)}, in {verify.duration}.
 				</p>
 				<ul class="mt-2 space-y-1">
 					{#each verify.rows as row, i (i)}

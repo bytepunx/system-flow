@@ -11,6 +11,7 @@
 	// version; one below a served project's flai.minimum is warned about, not refused (ADR-0117).
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
+	import { localDate } from '$lib/localtime';
 
 	type Child = {
 		name: string;
@@ -381,7 +382,7 @@
 						{@const marks = [r.installed && 'installed', r.latest && 'newest'].filter(Boolean)}
 						<li class="flex items-center gap-2 py-0.5" data-testid="host-processes-version">
 							<span class="font-mono">{r.version}</span>
-							{#if r.published}<span class="text-muted">{r.published.slice(0, 10)}</span>{/if}
+							{#if r.published}<span class="text-muted">{localDate(r.published)}</span>{/if}
 							{#if marks.length}<span class="text-muted">{marks.join(', ')}</span>{/if}
 							{#each r.below_minimum ?? [] as m (m.project)}
 								<span class="text-warn">below {m.project}'s minimum {m.minimum}</span>

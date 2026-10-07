@@ -227,7 +227,10 @@ describe("the activity page shows the orchestrator's run (S-0218)", () => {
 		for (const h of heard) h('orchestrator');
 		await settle();
 		expect(line()).toBe('orchestrator stopped by the operator (claude-code, claude-opus-5-5)');
-		expect(section()!.textContent).toContain('2026-10-05T11:00:00Z');
+		// when it started and ended, in the local zone (S-0329): the tests run in New York
+		expect(section()!.textContent).toContain('2026-10-05 06:00 EDT');
+		expect(section()!.textContent).toContain('2026-10-05 07:00 EDT');
+		expect(section()!.textContent).not.toContain('2026-10-05T1');
 
 		run = {
 			story: '',

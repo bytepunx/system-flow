@@ -97,6 +97,29 @@ describe('ActivityView agent streams (S-0142)', () => {
 		]);
 	});
 
+	it('shows when the narrative was written and its last log entry in the local zone (S-0329)', async () => {
+		// just after midnight in UTC, the evening before in New York, where the tests run
+		c = mount(ActivityView, {
+			target: document.body,
+			props: {
+				streams: [
+					{
+						...stream('S-0001'),
+						updated: '2026-01-15T00:20:00Z',
+						last_log: { at: '2026-01-15T00:10:00Z', text: 'T-0001 done.' }
+					}
+				]
+			}
+		});
+		await settle();
+		const text = card('S-0001')!.textContent!.replace(/\s+/g, ' ');
+		expect(text).toContain('2026-01-14 19:10 EST T-0001 done.');
+		expect(text).not.toContain('2026-01-15');
+		expect(card('S-0001')!.querySelector('dd[title]')!.getAttribute('title')).toBe(
+			'2026-01-14 19:20 EST'
+		);
+	});
+
 	it('shows the narratives alone when flai knows of no agent', async () => {
 		c = mount(ActivityView, { target: document.body, props: { streams: [stream('S-0001')] } });
 		await settle();
@@ -168,6 +191,9 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 		flushSync();
 		const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
 		expect(dialog.textContent).toContain("Stop S-0001's agent?");
+		// when it started, in the local zone (S-0329): the tests run in New York
+		expect(dialog.textContent).toContain('agent-S-0001, started 2026-09-29 01:00 EDT');
+		expect(dialog.textContent).not.toContain('2026-09-29T05:00:00Z');
 		const warning = dialog.querySelector('[data-warning]')!.textContent!.replace(/\s+/g, ' ');
 		expect(warning).toContain('every process it started, is ended now (pid 4242)');
 		expect(warning).toContain('stays as it left it, committed or not');

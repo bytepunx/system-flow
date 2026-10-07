@@ -18,6 +18,7 @@
 	import { follow } from '$lib/events';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
+	import { localDate, localTime } from '$lib/localtime';
 	import {
 		expectedCostLine,
 		modelLine,
@@ -113,7 +114,7 @@
 		const evidence =
 			t.by === 'orchestrator' &&
 			item.body.split('\n').some((l) => l.trim() === '### Accepted by the orchestrator');
-		return { by: t.by, on: t.at.slice(0, 10), evidence };
+		return { by: t.by, on: localDate(t.at), evidence };
 	});
 	const expected = $derived(expectedCostLine(expectedCost));
 	// What strategic agents such as the planner spent on the item, apart from its agents (ADR-0083).
@@ -504,10 +505,10 @@
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>
 				<ol class="space-y-1 text-xs">
-					<li><span class="font-mono text-muted">{item.created}</span> created</li>
+					<li><span class="font-mono text-muted">{localTime(item.created)}</span> created</li>
 					{#each item.transitions as t (t.at + t.to)}
 						<li>
-							<span class="font-mono text-muted">{t.at}</span>
+							<span class="font-mono text-muted">{localTime(t.at)}</span>
 							{t.to} <span class="text-muted">by {t.by}</span>
 						</li>
 					{/each}
@@ -517,7 +518,8 @@
 					<ul class="space-y-1 text-xs">
 						{#each item.blocked as b (b.from)}
 							<li>
-								<span class="font-mono text-muted">{b.from}</span> → {b.until ?? 'open'}: {b.reason}
+								<span class="font-mono text-muted">{localTime(b.from)}</span> →
+								{b.until ? localTime(b.until) : 'open'}: {b.reason}
 							</li>
 						{/each}
 					</ul>

@@ -266,7 +266,8 @@ describe('HostProcesses', () => {
 			{
 				version: '1.10.0',
 				tag: 'flai/v1.10.0',
-				published: '2026-10-01T09:00:00Z',
+				// just after midnight in UTC, the day before in New York, where the tests run (S-0329)
+				published: '2026-10-01T02:00:00Z',
 				installed: false,
 				latest: true
 			},
@@ -297,7 +298,7 @@ describe('HostProcesses', () => {
 		await listed();
 		expect(lastPost()).toEqual({ action: 'versions' });
 		expect(rows()).toEqual([
-			'1.10.0 2026-10-01 newest Deploy',
+			'1.10.0 2026-09-30 newest Deploy',
 			'1.9.0 installed',
 			"1.8.0 below harbour's minimum 1.9.0 Deploy"
 		]);

@@ -4,6 +4,7 @@
 	// view; a question answered since says so rather than vanishing without a word.
 	import { inboxState } from '$lib/inbox.svelte';
 	import { tick } from 'svelte';
+	import { localTime } from '$lib/localtime';
 	import QuestionAnswer from './QuestionAnswer.svelte';
 
 	let {
@@ -56,7 +57,7 @@
 					aria-current={q.key === select ? 'true' : undefined}
 				>
 					<span>{q.title}</span>
-					{#if q.at}<span class="block text-xs text-muted">{q.at}</span>{/if}
+					{#if q.at}<span class="block text-xs text-muted">{localTime(q.at)}</span>{/if}
 					{#if writable}<QuestionAnswer entry={q} />{/if}
 				</li>
 			{/each}

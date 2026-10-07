@@ -9,6 +9,7 @@
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { slug } from '$lib/markdown';
+	import { localTime } from '$lib/localtime';
 	import QuestionAnswer from './QuestionAnswer.svelte';
 
 	let { inbox, writable = false }: { inbox: Inbox; writable?: boolean } = $props();
@@ -62,7 +63,7 @@
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the server builds these dashboard paths -->
 						<a class="underline" href={e.href}>{e.title}</a>
 						{#if e.detail}<span class="block text-xs text-muted">{e.detail}</span>{/if}
-						{#if e.at}<span class="block text-xs text-muted">{e.at}</span>{/if}
+						{#if e.at}<span class="block text-xs text-muted">{localTime(e.at)}</span>{/if}
 						{#if e.recommendation}
 							{@const rec = e.recommendation}
 							<div class="mt-2 border-l-2 border-info pl-2 text-xs" data-recommendation={e.key}>

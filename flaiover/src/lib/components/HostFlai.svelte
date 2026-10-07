@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { hostFlai } from '$lib/hostflai.svelte';
 	import { projectState } from '$lib/project.svelte';
+	import { localTime } from '$lib/localtime';
 
 	const status = $derived(hostFlai.status);
 	// The flai answers, and is older than the newest flai release in the project's history (S-0181).
@@ -30,7 +31,7 @@
 			href={resolve('/host')}
 			class="rounded border border-line px-2 py-1 text-xs text-muted no-underline hover:text-accent"
 			data-host-flai="connected"
-			title={`flai ${status.flai ?? ''} on the host, connected since ${status.since ?? ''}`}
+			title={`flai ${status.flai ?? ''} on the host, connected since ${localTime(status.since ?? '')}`}
 			>host flai: connected</a
 		>
 	{:else if status.connected}

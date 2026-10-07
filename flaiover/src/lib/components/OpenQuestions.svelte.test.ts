@@ -64,6 +64,19 @@ describe('a story’s open questions (S-0173)', () => {
 		expect(document.querySelector('[data-testid="open-questions"]')).toBeNull();
 	});
 
+	it('shows when a question was asked in the local zone (S-0329)', () => {
+		// just after midnight in UTC, the evening before in New York, where the tests run
+		inboxState.data = {
+			...BOX,
+			entries: [{ ...question('S-0001', 'd', 'When?'), at: '2026-01-15T03:30:00Z' }]
+		};
+		c = mount(OpenQuestions, { target: document.body, props: { story: 'S-0001' } });
+		flushSync();
+		const text = document.querySelector('[data-question]')!.textContent!;
+		expect(text).toContain('2026-01-14 22:30 EST');
+		expect(text).not.toContain('2026-01-15');
+	});
+
 	it('marks the question a link names and brings it into view', async () => {
 		const seen: string[] = [];
 		Element.prototype.scrollIntoView = function (this: Element) {

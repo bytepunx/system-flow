@@ -93,7 +93,10 @@ describe('the item page (S-0154)', () => {
 		changed('wip/kanban/stories/S-0154-story-pages-receive-live-updates.md');
 		await settle();
 		expect(document.querySelector('[data-testid="item-line"]')!.textContent).toContain('review');
-		expect(history()).toContain('2026-09-29T08:00:00Z review by agent-S-0154');
+		// every time in the local zone (S-0329): the tests run in New York
+		expect(history()).toContain('2026-09-29 01:55 EDT created');
+		expect(history()).toContain('2026-09-29 04:00 EDT review by agent-S-0154');
+		expect(history()).not.toContain('Z ');
 		expect(document.body.textContent).toContain('T-0553');
 		expect(document.body.textContent).toContain('Review this story');
 		// the body did not change: it is not drawn again, and writable is not asked again
@@ -733,6 +736,27 @@ describe('the item page (S-0154)', () => {
 		expect(shown()).toBeNull();
 	});
 
+	it('shows when the item was blocked and unblocked in the local zone (S-0329)', async () => {
+		serve({
+			...story,
+			blocked: [
+				{ from: '2026-09-29T08:10:00Z', until: '2026-09-29T09:20:00Z', reason: 'waiting on X' },
+				{ from: '2026-09-30T03:00:00Z', reason: 'waiting on Y' }
+			]
+		} as typeof story);
+		c = mount(ItemPage, { target: document.body });
+		await settle();
+		const headings = [...document.querySelectorAll('aside h3')];
+		const heading = headings.find((h) => h.textContent === 'Blocked')!;
+		const blocked = [...heading.nextElementSibling!.querySelectorAll('li')].map((li) =>
+			li.textContent!.replace(/\s+/g, ' ').trim()
+		);
+		expect(blocked).toEqual([
+			'2026-09-29 04:10 EDT → 2026-09-29 05:20 EDT: waiting on X',
+			'2026-09-29 23:00 EDT → open: waiting on Y'
+		]);
+	});
+
 	// ADR-0093: a done story says who accepted it and on which day, from its last transition to
 	// done; the orchestrator's acceptance links to the evidence it wrote in the story's Notes.
 	describe('who accepted a done story (ADR-0093)', () => {
@@ -742,7 +766,8 @@ describe('the item page (S-0154)', () => {
 			transitions: [
 				...story.transitions,
 				{ to: 'review', at: '2026-10-05T22:00:00Z', by: 'agent-S-0154' },
-				{ to: 'done', at: '2026-10-06T09:30:00Z', by }
+				// just after midnight in UTC, which is the day before in New York (S-0329)
+				{ to: 'done', at: '2026-10-06T02:30:00Z', by }
 			],
 			body: story.body + notes
 		});
@@ -761,7 +786,7 @@ describe('the item page (S-0154)', () => {
 			c = mount(ItemPage, { target: document.body });
 			await settle();
 			expect(line()).toBe(
-				'Accepted by orchestrator on 2026-10-06, with its evidence in the Notes.'
+				'Accepted by orchestrator on 2026-10-05, with its evidence in the Notes.'
 			);
 			expect(link()!.getAttribute('href')).toBe('#accepted-by-the-orchestrator');
 			// the link lands on the heading the body renders
@@ -774,7 +799,7 @@ describe('the item page (S-0154)', () => {
 			serve(done('alex'));
 			c = mount(ItemPage, { target: document.body });
 			await settle();
-			expect(line()).toBe('Accepted by alex on 2026-10-06.');
+			expect(line()).toBe('Accepted by alex on 2026-10-05.');
 			expect(link()).toBeNull();
 			unmount(c);
 			document.body.innerHTML = '';

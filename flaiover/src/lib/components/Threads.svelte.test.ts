@@ -93,6 +93,10 @@ describe('Threads', () => {
 		expect(operator.className).toContain('items-end');
 		expect(operator.querySelector('.prose')!.className).toContain('bg-primary-soft');
 		expect(operator.textContent).toContain('alex');
+		// each entry's time in the local zone (S-0329): the tests run in New York
+		expect(agent.querySelector('.font-mono')!.textContent).toBe('2026-09-26 03:00 EDT');
+		expect(operator.querySelector('.font-mono')!.textContent).toBe('2026-09-26 03:05 EDT');
+		expect(document.body.textContent).not.toContain('2026-09-26T07');
 	});
 
 	const numbered = (n: number) => ({

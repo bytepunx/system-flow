@@ -22,11 +22,19 @@ describe('HostFlai', () => {
 
 	it('says connected when a flai answers everything the dashboard needs', () => {
 		const c = mount(HostFlai, { target: document.body });
-		hostFlai.status = { configured: true, connected: true, flai: '1.9.0', since: '2026-09-22' };
+		hostFlai.status = {
+			configured: true,
+			connected: true,
+			flai: '1.9.0',
+			since: '2026-09-22T03:15:42.123Z'
+		};
 		flushSync();
 		expect(badge()?.getAttribute('data-host-flai')).toBe('connected');
 		expect(badge()?.textContent).toContain('connected');
-		expect(badge()?.getAttribute('title')).toContain('1.9.0');
+		// since when, in the local zone (S-0329): the tests run in New York
+		expect(badge()?.getAttribute('title')).toBe(
+			'flai 1.9.0 on the host, connected since 2026-09-21 23:15 EDT'
+		);
 		unmount(c);
 	});
 

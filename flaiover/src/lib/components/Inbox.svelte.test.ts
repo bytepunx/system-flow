@@ -69,6 +69,9 @@ describe('inbox and activity views', () => {
 		expect(links).toEqual(['/review/S-0041', '/items/S-0042', '/items/T-0003']);
 		expect(document.body.textContent).toContain('blocked: waiting on keys');
 		expect(document.body.textContent).toContain('flai is not available');
+		// when the thread changed, in the local zone (S-0329): the tests run in New York
+		expect(document.body.textContent).toContain('2026-09-19 00:00 EDT');
+		expect(document.body.textContent).not.toContain('2026-09-19T04:00:00Z');
 	});
 
 	const QUESTION_BOX: Inbox = {

@@ -2,6 +2,7 @@
 	// Stopping a story's agent ends what it is doing and cannot be taken back (S-0170): say what it
 	// does before it happens. Closing the dialog changes nothing.
 	import type { StoryActivity } from '$lib/activity';
+	import { localTime } from '$lib/localtime';
 
 	let {
 		story,
@@ -51,7 +52,7 @@
 		aria-labelledby="agent-stop-title"
 	>
 		<h2 id="agent-stop-title" class="text-base font-semibold">Stop {story}'s agent?</h2>
-		<p class="mt-1 text-muted">{activity.run.agent}, started {activity.run.started}</p>
+		<p class="mt-1 text-muted">{activity.run.agent}, started {localTime(activity.run.started)}</p>
 		<div class="mt-3 rounded border border-warn bg-warn-soft p-2" role="note" data-warning>
 			{#if asked}
 				<p>

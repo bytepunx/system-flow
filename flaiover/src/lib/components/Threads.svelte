@@ -8,6 +8,7 @@
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import { follow } from '$lib/events';
+	import { localTime } from '$lib/localtime';
 	import type { StoryActivity } from '$lib/activity';
 
 	type Source = { path: string; heading?: string };
@@ -295,7 +296,7 @@
 						data-from={e.operator ? 'operator' : 'agent'}
 					>
 						<div class="text-xs text-muted">
-							<span class="font-mono">{e.at}</span>
+							<span class="font-mono">{localTime(e.at)}</span>
 							{e.author}
 							{#if e.recommendation}<span
 									class="ml-1 rounded border border-info px-1.5 py-0.5 text-[10px] text-info uppercase"

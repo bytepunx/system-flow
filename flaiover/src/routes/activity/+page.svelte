@@ -6,6 +6,7 @@
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { debounced, follow, listen } from '$lib/events';
+	import { localTime } from '$lib/localtime';
 	import ActivityView from '$lib/components/ActivityView.svelte';
 	import AgentStream from '$lib/components/AgentStream.svelte';
 	import { anyRunning, orchestratorLine, orchestratorRunning, type HostAgent } from '$lib/activity';
@@ -100,10 +101,10 @@
 						>{/if}
 				</dd>
 				<dt class="text-muted">started</dt>
-				<dd>{orchestrator.started}</dd>
+				<dd>{localTime(orchestrator.started)}</dd>
 				{#if orchestrator.ended}
 					<dt class="text-muted">ended</dt>
-					<dd>{orchestrator.ended}</dd>
+					<dd>{localTime(orchestrator.ended)}</dd>
 				{/if}
 			</dl>
 			<!-- a run that could not be started has no log to read -->

@@ -519,6 +519,12 @@ describe('Review', () => {
 			const text = document.querySelector('[data-testid="checks-section"]')!.textContent!;
 			expect(text).toContain('passed');
 			expect(text).toContain('flai: ok');
+			// the run's times in the local zone (S-0329): the tests run in New York, where midnight
+			// in UTC is the evening before
+			const summary = document.querySelector('[data-testid="checks-summary"]')!.textContent!;
+			expect(summary.replace(/\s+/g, ' ')).toContain(
+				'passed, started 2026-09-21 20:00 EDT, ended 2026-09-21 20:05 EDT.'
+			);
 		});
 
 		// A live checksRun state, held here rather than in a fixed backend() array: watchChecks
@@ -605,6 +611,9 @@ describe('Review', () => {
 			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
 			await settle();
 			expect(document.querySelector('[data-testid="checks-run"]')).toBeNull();
+			expect(document.querySelector('[data-testid="checks-summary"]')!.textContent).toContain(
+				'Running flai, started 2026-09-21 20:00 EDT.'
+			);
 			document.querySelector<HTMLButtonElement>('[data-testid="checks-cancel"]')!.click();
 			await settle();
 			expect(calls('/checks')[0][1]).toMatchObject({
@@ -660,7 +669,9 @@ describe('Review', () => {
 			expect(summary).toContain('Passed every step');
 			expect(summary).toContain('0123456789ab');
 			expect(summary).not.toContain('0123456789abcdef');
-			expect(summary).toContain('2026-10-06T22:00:00Z');
+			// when it ran, in the local zone (S-0329): the tests run in New York
+			expect(summary).toContain('2026-10-06 18:00 EDT');
+			expect(summary).not.toContain('2026-10-06T22:00:00Z');
 			expect(steps()).toEqual([
 				'passed rebase 3ms',
 				'passed check 1.5s',

@@ -7,6 +7,7 @@
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { age } from '$lib/age';
+	import { localTime } from '$lib/localtime';
 	import { activityLine, stoppable, type StoryActivity } from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 	import AgentStopConfirm from './AgentStopConfirm.svelte';
@@ -102,7 +103,7 @@
 						>{/if}
 				</dd>
 				<dt class="text-muted">last wrote</dt>
-				<dd title={s.updated}>{age(s.age_seconds)} ago</dd>
+				<dd title={localTime(s.updated)}>{age(s.age_seconds)} ago</dd>
 				<dt class="text-muted">task</dt>
 				<dd>
 					{#if s.task}<a class="underline" href={resolve('/items/[id]', { id: s.task.id })}
@@ -112,7 +113,7 @@
 				</dd>
 				<dt class="text-muted">last log</dt>
 				<dd class="whitespace-pre-wrap">
-					{#if s.last_log}<span class="text-muted">{s.last_log.at}</span>
+					{#if s.last_log}<span class="text-muted">{localTime(s.last_log.at)}</span>
 						{s.last_log.text}{:else}<span class="text-muted">nothing logged</span>{/if}
 				</dd>
 			</dl>
