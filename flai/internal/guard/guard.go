@@ -174,8 +174,9 @@ var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_
 // story, which a story's sub-agent may call besides MCPReads: message_get
 // reads a conversation of the story's (S-0331, ADR-0120). The planner, the
 // orchestrator, and the analyzer have no story, so the tools refuse them, and
-// their allowlists leave them out. message_send and message_reply, which
-// write a conversation, are the story's agent's alone.
+// their allowlists leave them out. message_send, message_reply, and
+// message_escalate, which write a conversation, and the last a thread too
+// (ADR-0121), are the story's agent's alone.
 var MCPStoryReads = []string{"message_get"}
 
 // cliReads are the flai commands a sub-agent may run, each with the

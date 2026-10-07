@@ -14,9 +14,10 @@ import (
 
 // overlapInstructions tells a story's agent, in the server's instructions,
 // what to do when a story in progress comes to claim the paths its story
-// does: message that story's agent, not open a thread, and ask the operator
-// only when the two do not agree (S-0331).
-const overlapInstructions = "When its cause is a story in progress, not an accepted one, a write grew the two stories' claims to overlap on those paths: before you change them, message that story's agent with message_send, naming the paths in about, and narrow your touches if you can (I-0059). inbox lists your story's open conversations under messages, which awaiting_you does not count, and wait_for_events wakes on a message to your story, an event of kind message naming the conversation and the sender's story. Answer a message to your story with message_reply before you go on, and read a conversation with message_get. Messages go between the agents of two open stories, apart from the operator's threads (ADR-0120): open a thread for the operator with thread_open only when the two of you do not agree."
+// does: agree with that story's agent in their conversation, not on a thread,
+// and escalate to the operator only when the two do not agree (S-0331,
+// ADR-0121).
+const overlapInstructions = "When its cause is a story in progress, not an accepted one, a write grew the two stories' claims to overlap on those paths, and the story whose claim grew has messaged the other in the two stories' conversation, about them (ADR-0121): before you change them, agree there with message_reply which of you changes them first, and narrow your touches if you can (I-0059). A conflict flai stream sync finds between two open branches arrives the same way, as a message from flai in that conversation. inbox lists your story's open conversations under messages, which awaiting_you does not count, and wait_for_events wakes on a message to your story, an event of kind message naming the conversation and the sender's story. Answer a message to your story with message_reply before you go on, and read a conversation with message_get. Messages go between the agents of two open stories, apart from the operator's threads (ADR-0120): ask the operator with message_escalate only when the two of you do not agree, which opens a thread on your story (ADR-0121)."
 
 // messageEventDescription says, in wait_for_events's description, how a
 // message to the agent's story arrives (S-0331).
@@ -36,6 +37,8 @@ const messagesReturns = " Returns the conversation as flai message show --json p
 const messageSendDescription = "Start a conversation from this session's story to the story to with its first message, as flai message send does (S-0331): text is the message, whose first line is the conversation's title, and about the repository paths it is about, each a file or folder relative to the root that must exist, here or in this story's worktree. Message the other story's agent this way before you change paths both stories claim, naming them in about." + messagesWhat + messagesFrom + " A send to or from a story not in progress or in review, or archived, is refused with its state, as is a send to this story itself, and nothing is written." + messagesReturns
 
 const messageReplyDescription = "Add a message to the conversation id from this session's story, one of its two, as flai message reply does (S-0331); the conversation then awaits the other story. Answer a message to your story before you go on with the paths it is about." + messagesWhat + messagesFrom + " A reply is refused from a story that is not one of the two, from a story no longer in progress or in review, and on a conversation that reads as closed (its status is closed, or either story is done, cancelled, or archived), which takes none: send a new message to start another; nothing is written." + messagesReturns
+
+const messageEscalateDescription = "Ask the operator to settle what this session's story and the other story of the conversation id do not agree, as flai message escalate does (ADR-0121): reason says what the two could not agree. It opens a thread on this session's story, which awaits the operator, whose title names both stories and the conversation's title and whose first entry names both stories, gives the conversation's path, and quotes the reason; and it adds a message from this story to the conversation naming the thread, so that the conversation awaits the other story and stays open. Escalate only when the two of you have tried and do not agree; settle what you can with message_reply." + messagesWhat + messagesFrom + " An escalation is refused from a story that is not one of the two, from a story no longer in progress or in review, on a conversation that reads as closed, and with an empty reason; nothing is written. Returns thread, as thread_get answers it, and conversation, as flai message show --json prints it."
 
 const messageGetDescription = "Read the conversation id (any zero padding, such as ms-4), as flai message show --json prints it (S-0331): its front matter, whether it reads as closed and why, the story it awaits while open, and every entry. Any session may read one; it needs no story of its own." + messagesWhat + messagesReturns
 
@@ -58,6 +61,23 @@ type MessageReplyIn struct {
 }
 
 func (in MessageReplyIn) project() string { return in.Project }
+
+// MessageEscalateIn asks the operator, from the calling session's story, to
+// settle what a conversation's two stories do not agree.
+type MessageEscalateIn struct {
+	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string `json:"id" jsonschema:"the conversation, such as MS-0004 (any zero padding)"`
+	Reason  string `json:"reason" jsonschema:"what the two stories could not agree, quoted on the thread"`
+}
+
+func (in MessageEscalateIn) project() string { return in.Project }
+
+// EscalateOut is the thread an escalation opened and the conversation it
+// recorded it in.
+type EscalateOut struct {
+	Thread       ThreadDetail    `json:"thread" jsonschema:"the thread opened on this session's story for the operator, as thread_get answers it"`
+	Conversation ConversationOut `json:"conversation" jsonschema:"the conversation, with the message naming the thread, as flai message show --json prints it"`
+}
 
 // MessageGetIn names a conversation.
 type MessageGetIn struct {
@@ -140,6 +160,27 @@ func (s *server) messageReply(_ context.Context, _ *mcp.CallToolRequest, in Mess
 	}
 	out, err := conversationOut(s.repo, c)
 	return nil, out, err
+}
+
+func (s *server) messageEscalate(_ context.Context, _ *mcp.CallToolRequest, in MessageEscalateIn) (*mcp.CallToolResult, EscalateOut, error) {
+	story, err := s.messageStory("message_escalate")
+	if err != nil {
+		return nil, EscalateOut{}, err
+	}
+	c, th, err := messages.Escalate(s.repo, in.ID, story, s.agent, in.Reason, s.now())
+	if th != nil {
+		if merr := s.mirror(th); merr != nil && err == nil {
+			err = merr
+		}
+	}
+	if err != nil {
+		return nil, EscalateOut{}, err
+	}
+	conv, err := conversationOut(s.repo, c)
+	if err != nil {
+		return nil, EscalateOut{}, err
+	}
+	return nil, EscalateOut{Thread: s.detail(th), Conversation: conv}, nil
 }
 
 func (s *server) messageGet(_ context.Context, _ *mcp.CallToolRequest, in MessageGetIn) (*mcp.CallToolResult, ConversationOut, error) {

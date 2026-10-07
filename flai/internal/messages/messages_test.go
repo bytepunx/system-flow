@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -637,6 +638,151 @@ func TestValidate(t *testing.T) {
 		tc.edit(c)
 		if err := c.Validate(); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("got %v, want %q", err, tc.want)
+		}
+	}
+}
+
+// threadFiles lists what wip/threads holds.
+func threadFiles(t *testing.T, r *workitem.Repo) []string {
+	t.Helper()
+	matches, err := filepath.Glob(filepath.Join(threads.Dir(r), "*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return matches
+}
+
+// lintFile fails the test when the file has a lint finding.
+func lintFile(t *testing.T, r *workitem.Repo, path string) {
+	t.Helper()
+	cfg, err := mdlint.Load(r.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f := cfg.Lint(readFile(t, path)); len(f) > 0 {
+		t.Fatalf("lint findings %+v in:\n%s", f, readFile(t, path))
+	}
+}
+
+// ADR-0121: either story of a conversation escalates it. The thread opens on
+// the escalating story, by its agent, titled for both stories, and its first
+// entry names both, gives the conversation's path, and quotes the reason; the
+// conversation gets an entry from the escalating story naming the thread, so
+// that it awaits the other, and stays open.
+func TestEscalateFromEitherStory(t *testing.T) {
+	for _, tc := range []struct {
+		name, mine, other string
+	}{
+		{"from the sender", "S-0001", "S-0003"},
+		{"from the addressee", "S-0003", "S-0001"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := project(t)
+			c, err := Send(r, SendOptions{From: "S-0001", To: "S-0003", Author: "agent-S-0001", Text: "May I take plan.md?", About: []string{"design/system/plan.md"}, Now: t0})
+			if err != nil {
+				t.Fatal(err)
+			}
+			at := t0.Add(time.Hour)
+			reason := "We both need plan.md this week.\n\nNeither can wait for the other."
+			got, th, err := Escalate(r, "ms-1", strings.ToLower(tc.mine), "agent-"+tc.mine, "  "+reason+"\n", at)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if th.ID != "TH-0001" || th.Title != tc.mine+" and "+tc.other+" do not agree: May I take plan.md?" || th.Anchor.Item != tc.mine || th.Status != "open" || th.Opener() != "agent-"+tc.mine {
+				t.Errorf("thread: %+v", th)
+			}
+			es := th.Entries()
+			if len(es) != 1 {
+				t.Fatalf("one entry: %+v", es)
+			}
+			for _, want := range []string{
+				tc.mine + " and " + tc.other + " do not agree in their conversation MS-0001",
+				"`" + relTo(r, c.Path) + "`",
+				"about `design/system/plan.md`",
+				"What they could not agree:\n\n> We both need plan.md this week.\n>\n> Neither can wait for the other.\n",
+				"flai message show MS-0001",
+			} {
+				if !strings.Contains(es[0].Text, want) {
+					t.Errorf("the thread's entry does not say %q:\n%s", want, es[0].Text)
+				}
+			}
+			if !strings.HasPrefix(relTo(r, c.Path), "wip/messages/MS-0001-") {
+				t.Errorf("the conversation's path is from the root: %s", relTo(r, c.Path))
+			}
+			lintFile(t, r, th.Path)
+
+			if got.Status != StatusOpen || got.Awaiting() != tc.other || got.Updated != "2026-10-07T10:00:00Z" || !contains(got.Participants, "agent-"+tc.mine) {
+				t.Errorf("the conversation stays open and awaits %s: awaiting %s, %+v", tc.other, got.Awaiting(), got)
+			}
+			if closed, why := got.Closed(r); closed {
+				t.Errorf("an escalated conversation reads as closed: %s", why)
+			}
+			back, err := Read(c.Path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ces := back.Entries()
+			last := ces[len(ces)-1]
+			if len(ces) != 2 || last.Story != tc.mine || last.Author != "agent-"+tc.mine || last.At != "2026-10-07T10:00:00Z" {
+				t.Fatalf("the conversation's new entry: %+v", ces)
+			}
+			for _, want := range []string{"Asked the operator on TH-0001, `" + relTo(r, th.Path) + "`", "> We both need plan.md this week.", "This conversation stays open."} {
+				if !strings.Contains(last.Text, want) {
+					t.Errorf("the conversation's entry does not say %q:\n%s", want, last.Text)
+				}
+			}
+			lintClean(t, r, back)
+			if err := back.Validate(); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+// ADR-0121: an escalation from a third story, by no author, with an empty
+// reason, on a conversation that reads as closed or does not exist, from a
+// story no longer in progress or in review, or with a reason the lint rejects
+// is refused, and nothing is written.
+func TestEscalateRefusals(t *testing.T) {
+	r := project(t)
+	open := send(t, r, "S-0001", "S-0003", "May I take plan.md?", t0)
+	closed := send(t, r, "S-0002", "S-0001", "Who writes the row?", t0)
+	if _, err := Close(r, closed.ID, "operator", "settled", t0); err != nil {
+		t.Fatal(err)
+	}
+	accepted := send(t, r, "S-0002", "S-0003", "And the docs?", t0)
+	before := map[string]string{}
+	for _, c := range []*Conversation{open, closed, accepted} {
+		before[c.Path] = readFile(t, c.Path)
+	}
+	at := t0.Add(time.Hour)
+	for _, tc := range []struct {
+		name, id, story, author, reason, want string
+		setup                                 func()
+	}{
+		{"third story", open.ID, "S-0002", "a", "No.", "S-0002 is not in MS-0001, which is between S-0001 and S-0003", nil},
+		{"empty reason", open.ID, "S-0001", "a", " \n ", "an escalation needs a reason", nil},
+		{"no author", open.ID, "S-0001", " ", "No.", "an author is required", nil},
+		{"closed", closed.ID, "S-0001", "a", "No.", "MS-0002 is closed (settled) and cannot be escalated", nil},
+		{"unknown", "MS-9", "S-0001", "a", "No.", "MS-0009 not found", nil},
+		{"lint", open.ID, "S-0001", "a", "one\ttwo", "MD010", nil},
+		{"story gone", accepted.ID, "S-0002", "a", "No.", "MS-0003 is closed (S-0002 was accepted)", func() { setStatus(t, r, "S-0002", workitem.Done) }},
+		{"story not open", open.ID, "S-0001", "a", "No.", "S-0001 is ready; a message goes only between stories in progress or in review", func() { setStatus(t, r, "S-0001", workitem.Ready) }},
+	} {
+		if tc.setup != nil {
+			tc.setup()
+		}
+		if _, th, err := Escalate(r, tc.id, tc.story, tc.author, tc.reason, at); err == nil || th != nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: got %v %v, want an error containing %q", tc.name, th, err, tc.want)
+		}
+	}
+	if files := threadFiles(t, r); len(files) != 0 {
+		t.Errorf("a refused escalation opens no thread: %v", files)
+	}
+	for path, was := range before {
+		if readFile(t, path) != was {
+			t.Errorf("a refused escalation leaves %s as it was:\n%s", path, readFile(t, path))
 		}
 	}
 }

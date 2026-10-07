@@ -1849,16 +1849,45 @@ Conversations between the agents of two open stories, apart from the operator's 
 
 Conversations between the agents of two stories in progress or in review (ADR-0120). A message goes from one story to another, and the messages between the two make a conversation, one file in wip/messages, MS-nnnn-&lt;slug&gt;.md, in the main checkout.
 
-A conversation awaits the story that did not write its last message. It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
+A conversation awaits the story that did not write its last message. When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
 
 Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.
 
 Subcommands:
 
+- [escalate](#flai-message-escalate): Ask the operator on a thread to settle what a conversation's two stories do not agree
 - [list](#flai-message-list): List conversations; those still open by default
 - [reply](#flai-message-reply): Add a message to a conversation from one of its two stories
 - [send](#flai-message-send): Start a conversation from one open story to another with its first message
 - [show](#flai-message-show): Print a conversation with every message
+
+#### flai message escalate
+
+Ask the operator on a thread to settle what a conversation's two stories do not agree.
+
+```text
+flai message escalate <MS-nnnn> "<reason>" [flags]
+```
+
+Asks the operator to settle what the two stories of the conversation &lt;MS-nnnn&gt; could not agree (ADR-0121), and prints the thread it opens and the conversation.
+
+The thread is opened on the escalating story, by its agent. Its title names both stories and the conversation's title, and its first entry names both stories, gives the conversation's path, and quotes &lt;reason&gt;: what the two could not agree. The conversation gets a message from the escalating story naming the thread, so that it awaits the other story, and it stays open. The operator answers on the thread.
+
+The escalating story is --from, else FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here. An escalation is refused from a story that is not one of the two, from a story no longer in progress or in review, on a conversation that reads as closed, and with an empty reason; nothing is written. The author is --by, else FLAI\_AGENT, else the config author.
+
+Examples:
+
+```bash
+flai message escalate MS-0004 "We both need flai/cmd/root.go this week, and neither can wait for the other." --from S-0331
+flai message escalate ms-4 "Who writes the docs row" --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--by` string | author (default: FLAI\_AGENT, then config author) |
+| `--from` string | the story that escalates, one of the conversation's two (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
 
 #### flai message list
 
@@ -3258,7 +3287,7 @@ Conflicts stop the rebase inside the worktree. Each conflicting path is listed o
 
 A stop whose only conflicting path is a generated file, which today is design/issues/summary.md alone, does not wait for you (ADR-0098). Sync writes the file again from the issue files in the worktree at that stop, git adds it, and continues the rebase, until the rebase finishes or stops on another path. A stop where other paths conflict too is left for you, and lists them all, summary.md included; once the others are resolved, flai issue summary run in the worktree writes it. flai accept syncs the same way. A rebase already in progress is never continued for you.
 
-After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. A pair's conflicts are the paths both branches changed since they left the main branch, not what the main branch brought since: a path where main has since changed what a branch behind it did is that story's own rebase to settle (I-0064). Generated files are left out, so a pair whose only conflict is summary.md counts as clean. Each conflicting pair of stories has one thread, written by flai on the story that synced, which both stories' agents and the designer see in their inboxes; a sync that finds the pair merging cleanly again resolves it. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
+After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. A pair's conflicts are the paths both branches changed since they left the main branch, not what the main branch brought since: a path where main has since changed what a branch behind it did is that story's own rebase to settle (I-0064). Generated files are left out, so a pair whose only conflict is summary.md counts as clean. A conflict is told to both stories in their conversation, not a thread (ADR-0121): flai messages the other story from the one that synced, about the conflicting paths, and sync names the pair's conversation. A later sync with the same paths adds nothing, and one that finds the pair merging cleanly again, or the other story no longer open, closes the conversation. The two agents agree who changes what; either asks the operator with flai message escalate only when they do not agree. A conflict thread an older flai opened is still resolved the same way, and no sync opens one. With --json each branch names its conversation, and thread names an old conflict thread it resolved. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
 
 ### flai task
 

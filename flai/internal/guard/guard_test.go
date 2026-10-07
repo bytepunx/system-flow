@@ -161,9 +161,9 @@ func TestASubAgentRunsChecksButNotWrites(t *testing.T) {
 	}
 }
 
-// S-0331: a sub-agent reads its story's conversations with other stories and
-// writes to none, as it reads threads and writes to none; the story's agent
-// does both. The planner, the orchestrator, and the analyzer have no story,
+// S-0331, ADR-0121: a sub-agent reads its story's conversations with other
+// stories and writes to none, nor escalates one to the operator, as it reads
+// threads and writes to none; the story's agent does both. The planner, the orchestrator, and the analyzer have no story,
 // so the guard keeps the MCP tools out of their allowlists; the commands that
 // list and show conversations are reads, as flai thread list and show are.
 func TestASubAgentReadsMessagesButSendsNone(t *testing.T) {
@@ -174,13 +174,15 @@ func TestASubAgentReadsMessagesButSendsNone(t *testing.T) {
 		"flai message send S-0330 'I am changing flai/cmd/root.go' --from S-0331",
 		"scripts/flai.sh message reply MS-0004 'Yes, it is yours'",
 		"bin/flai --config c.json message reply MS-0004 'Yes'",
+		"flai message escalate MS-0004 'We both need root.go this week' --from S-0331",
+		"scripts/flai.sh message escalate ms-4 'Who writes the row' --json",
 	}
 	reads := []string{
 		"flai message list --story S-0331 --json",
 		"scripts/flai.sh message show MS-0004",
 		"bin/flai message list --all",
 	}
-	for _, tool := range []string{"message_send", "message_reply"} {
+	for _, tool := range []string{"message_send", "message_reply", "message_escalate"} {
 		why := g.Check(sub(tool))
 		if !strings.Contains(why, "a sub-agent (general-purpose) cannot call "+tool) || !strings.Contains(why, "conversations with other stories") || !strings.Contains(why, "final message") {
 			t.Errorf("a sub-agent's %s: %q", tool, why)
@@ -200,7 +202,7 @@ func TestASubAgentReadsMessagesButSendsNone(t *testing.T) {
 			t.Errorf("a sub-agent's %q refused: %s", c, why)
 		}
 	}
-	own := []Event{itemOf("message_send", "", ""), itemOf("message_reply", "", ""), itemOf("message_get", "", "")}
+	own := []Event{itemOf("message_send", "", ""), itemOf("message_reply", "", ""), itemOf("message_escalate", "", ""), itemOf("message_get", "", "")}
 	for _, c := range append(append([]string{}, sends...), reads...) {
 		own = append(own, bash("", c))
 	}
@@ -213,7 +215,7 @@ func TestASubAgentReadsMessagesButSendsNone(t *testing.T) {
 	}
 	roles := map[string]Guard{"planner": planGuard, "orchestrator": orchestrator(allOn), "analyzer": analyzerIn(t.TempDir())}
 	for who, gr := range roles {
-		for _, tool := range []string{"message_send", "message_reply", "message_get"} {
+		for _, tool := range []string{"message_send", "message_reply", "message_escalate", "message_get"} {
 			if why := gr.Check(itemOf(tool, "", "")); !strings.Contains(why, "cannot call "+tool) {
 				t.Errorf("the %s's %s: %q", who, tool, why)
 			}

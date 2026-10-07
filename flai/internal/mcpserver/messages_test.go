@@ -220,13 +220,13 @@ func TestTheMessageToolsAndInstructions(t *testing.T) {
 			}
 		}
 	}
-	if len(seen) != 3 {
-		t.Errorf("message_send, message_reply, and message_get should be listed: %v", seen)
+	if len(seen) != 4 {
+		t.Errorf("message_send, message_reply, message_escalate, and message_get should be listed: %v", seen)
 	}
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	for name, in := range map[string]string{"project": f.cs.InitializeResult().Instructions, "folder": folderSetup(t, root).cs.InitializeResult().Instructions} {
-		for _, want := range []string{"message that story's agent with message_send, naming the paths in about", "Answer a message to your story with message_reply before you go on", "message_get", "open a thread for the operator with thread_open only when the two of you do not agree", "inbox lists your story's open conversations under messages, which awaiting_you does not count", "wait_for_events wakes on a message to your story, an event of kind message"} {
+		for _, want := range []string{"the story whose claim grew has messaged the other in the two stories' conversation", "agree there with message_reply which of you changes them first", "as a message from flai in that conversation", "Answer a message to your story with message_reply before you go on", "message_get", "ask the operator with message_escalate only when the two of you do not agree", "inbox lists your story's open conversations under messages, which awaiting_you does not count", "wait_for_events wakes on a message to your story, an event of kind message"} {
 			if !strings.Contains(in, want) {
 				t.Errorf("the %s instructions do not say %q: %s", name, want, in)
 			}
@@ -366,5 +366,84 @@ func TestAMessageWakesAWaitingAgent(t *testing.T) {
 	quiet, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 1})
 	if got := messageEvents(quiet); quiet["timed_out"] != true || len(got) != 0 {
 		t.Errorf("neither the message told nor the story's own reply is told again: %v", quiet)
+	}
+}
+
+// S-0332, ADR-0121: message_escalate, from either story of a conversation,
+// opens a thread on the session's story naming both stories, giving the
+// conversation's path, and quoting the reason, and records it in the
+// conversation, which then awaits the other story; a third story, an empty
+// reason, and a closed conversation are refused, and nothing is written.
+func TestMessageEscalateAsksTheOperator(t *testing.T) {
+	f, other := messagesFixture(t)
+	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "May I take plan.md?", About: []string{"design/system/plan.md"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("FLAI_STORY", other.ID)
+	out, failed := f.call(t, "message_escalate", map[string]any{"id": "ms-1", "reason": "We both need plan.md this week."})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	data, _ := json.Marshal(out)
+	var got EscalateOut
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	th, conv := got.Thread, got.Conversation
+	if th.ID != "TH-0001" || th.Title != other.ID+" and "+f.story.ID+" do not agree: May I take plan.md?" || len(th.EntryList) != 1 || th.EntryList[0].Author != "claude" {
+		t.Errorf("message_escalate should open a thread titled for both stories: %+v", th)
+	}
+	if len(th.EntryList) == 1 {
+		for _, want := range []string{other.ID + " and " + f.story.ID + " do not agree in their conversation MS-0001, `" + conv.Path + "`", "> We both need plan.md this week."} {
+			if !strings.Contains(th.EntryList[0].Text, want) {
+				t.Errorf("the thread's entry does not say %q:\n%s", want, th.EntryList[0].Text)
+			}
+		}
+	}
+	if conv.ID != c.ID || conv.Status != messages.StatusOpen || conv.Awaiting != f.story.ID || len(conv.Entries) != 2 || conv.Entries[1].Story != other.ID || !strings.Contains(conv.Entries[1].Text, "Asked the operator on TH-0001") {
+		t.Errorf("the conversation should record the thread and await %s: %+v", f.story.ID, conv)
+	}
+
+	t.Setenv("FLAI_STORY", f.story.ID)
+	if out, failed = f.call(t, "message_escalate", map[string]any{"id": c.ID, "reason": "And the docs."}); failed != "" {
+		t.Fatal(failed)
+	}
+	data, _ = json.Marshal(out)
+	got = EscalateOut{}
+	_ = json.Unmarshal(data, &got)
+	if got.Thread.ID != "TH-0002" || !strings.HasPrefix(got.Thread.Title, f.story.ID+" and "+other.ID+" do not agree") || got.Conversation.Awaiting != other.ID {
+		t.Errorf("the sender's story escalates too, and the conversation then awaits %s: %+v", other.ID, got)
+	}
+
+	epic, err := f.repo.Get(f.story.Parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	third := storyOfEpic(t, f.repo, epic, "Third", nil, workitem.Ready, workitem.InProgress)
+	if _, err := messages.Close(f.repo, c.ID, "operator", "settled", t0); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(c.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ story, reason, want string }{
+		{third.ID, "No.", third.ID + " is not in MS-0001"},
+		{f.story.ID, " ", "an escalation needs a reason"},
+		{f.story.ID, "No.", "MS-0001 is closed (settled) and cannot be escalated"},
+		{"", "No.", "message_escalate writes as this session's own story, and it has none"},
+	} {
+		t.Setenv("FLAI_STORY", tc.story)
+		if _, failed := f.call(t, "message_escalate", map[string]any{"id": c.ID, "reason": tc.reason}); !strings.Contains(failed, tc.want) {
+			t.Errorf("an escalation from %q with %q should be refused with %q: %q", tc.story, tc.reason, tc.want, failed)
+		}
+	}
+	if after, _ := os.ReadFile(c.Path); string(after) != string(before) {
+		t.Errorf("a refused escalation should write nothing:\n%s", after)
+	}
+	if matches, _ := filepath.Glob(filepath.Join(f.repo.WipDir(), "threads", "*.md")); len(matches) != 2 {
+		t.Errorf("a refused escalation should open no thread: %v", matches)
 	}
 }

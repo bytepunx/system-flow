@@ -18,6 +18,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -561,6 +562,113 @@ func Reply(r *workitem.Repo, id, story, author, text string, now time.Time) (*Co
 	return c, save(r, c, was)
 }
 
+// Escalate asks the operator to settle what the two stories of a conversation
+// could not agree (ADR-0121). It opens a thread on story, one of the two,
+// which must still be in progress or in review, by author: the thread names
+// both stories, gives the conversation's path, and quotes the reason. The
+// conversation then gets an entry from story naming the thread, so that it
+// awaits the other story, and it stays open. An empty reason, a story that is
+// not one of the two, and a conversation that reads as closed are refused,
+// and nothing is written.
+func Escalate(r *workitem.Repo, id, story, author, reason string, now time.Time) (*Conversation, *threads.Thread, error) {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return nil, nil, fmt.Errorf("an escalation needs a reason: say what the two stories could not agree")
+	}
+	if author = cleanAuthor(author); author == "" {
+		return nil, nil, fmt.Errorf("an author is required (--by, FLAI_AGENT, or config author)")
+	}
+	c, err := Get(r, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !c.Names(story) {
+		return nil, nil, fmt.Errorf("%s is not in %s, which is between %s and %s: only one of its two stories escalates it; ask the operator about your own story with flai thread new", workitem.CanonicalID(story), c.ID, c.From, c.To)
+	}
+	if closed, why := c.Closed(r); closed {
+		return nil, nil, fmt.Errorf("%s is closed (%s) and cannot be escalated: send a new message with flai message send, or ask the operator with flai thread new", c.ID, why)
+	}
+	it, err := sendable(r, story, "escalating story")
+	if err != nil {
+		return nil, nil, err
+	}
+	mine := storyOf(c, it.ID)
+	other := c.Other(mine)
+	convPath := relTo(r, c.Path)
+	stamp := now.UTC().Format(workitem.TimeFormat)
+	was := c.Marshal()
+
+	// Check the conversation's entry before the thread is written, with the
+	// ID the thread will most likely take, so that a reason the lint rejects
+	// leaves nothing behind.
+	next := threads.NextID(r)
+	trial := *c
+	trial.Participants = append([]string(nil), c.Participants...)
+	trial.add(stamp, author, mine, escalatedText(next, relTo(r, filepath.Join(threads.Dir(r), next+".md")), reason))
+	if err := r.LintGuard(c.Path, was, trial.Marshal()); err != nil {
+		return nil, nil, err
+	}
+
+	th, err := threads.New(r, threads.NewOptions{
+		Title:  fmt.Sprintf("%s and %s do not agree: %s", mine, other, c.Title),
+		On:     it.ID,
+		Author: author,
+		Text:   escalationText(c, mine, other, convPath, reason),
+		Now:    now,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	c.add(stamp, author, mine, escalatedText(th.ID, relTo(r, th.Path), reason))
+	if err := save(r, c, was); err != nil {
+		return nil, th, fmt.Errorf("%s is open on %s, but %s does not record it: %w; tell %s with flai message reply %s naming %s", th.ID, it.ID, c.ID, err, other, c.ID, th.ID)
+	}
+	return c, th, nil
+}
+
+// escalationText is the first entry of the thread an escalation opens: the
+// two stories, the conversation by its path, and the reason, quoted.
+func escalationText(c *Conversation, mine, other, path, reason string) string {
+	about := ""
+	if len(c.About) > 0 {
+		quoted := make([]string, len(c.About))
+		for i, p := range c.About {
+			quoted[i] = "`" + p + "`"
+		}
+		about = ", about " + strings.Join(quoted, ", ")
+	}
+	return fmt.Sprintf("%s and %s do not agree in their conversation %s, `%s`%s. %s asks the operator to settle it. What they could not agree:\n\n%s\n\nRead the conversation with flai message show %s. Answer here; %s's agent tells %s in the conversation.",
+		mine, other, c.ID, path, about, mine, quote(reason), c.ID, mine, other)
+}
+
+// escalatedText is the entry an escalation adds to the conversation: the
+// thread the operator was asked on, and the reason, quoted.
+func escalatedText(thread, path, reason string) string {
+	return fmt.Sprintf("Asked the operator on %s, `%s`, since we do not agree. What we could not agree:\n\n%s\n\nThe operator answers on the thread. This conversation stays open.", thread, path, quote(reason))
+}
+
+// quote is text as a markdown block quote, a blank line kept as ">".
+func quote(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, l := range lines {
+		if l = strings.TrimRight(l, " \t"); l == "" {
+			lines[i] = ">"
+		} else {
+			lines[i] = "> " + l
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// relTo is path relative to the main checkout, with forward slashes, or as
+// given when it is not under it.
+func relTo(r *workitem.Repo, path string) string {
+	if rel, err := filepath.Rel(r.MainRoot, path); err == nil {
+		return filepath.ToSlash(rel)
+	}
+	return path
+}
+
 // add appends an entry by author for story at stamp, names author among the
 // participants, and marks the conversation updated then.
 func (c *Conversation) add(stamp, author, story, text string) {
@@ -643,10 +751,7 @@ func CloseOn(r *workitem.Repo, stories []string, author, verb string, now time.T
 // reads it: the front matter, whether it reads as closed and why, the story
 // it awaits while open, the path relative to the repository, and the entries.
 func View(r *workitem.Repo, c *Conversation) map[string]any {
-	path := c.Path
-	if rel, err := filepath.Rel(r.MainRoot, c.Path); err == nil {
-		path = filepath.ToSlash(rel)
-	}
+	path := relTo(r, c.Path)
 	closed, why := c.Closed(r)
 	awaiting := ""
 	if !closed {

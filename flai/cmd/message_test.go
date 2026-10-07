@@ -223,3 +223,94 @@ func TestMessageReplyListAndShow(t *testing.T) {
 		t.Errorf("show of an unknown ID: exit %d, %q", code, errOut)
 	}
 }
+
+// S-0332, ADR-0121: flai message escalate opens a thread on the escalating
+// story, mirrored into its narrative, records it in the conversation, which
+// then awaits the other story, and prints both, or both with --json; it is
+// refused from a third story, with an empty reason, and on a closed
+// conversation.
+func TestMessageEscalate(t *testing.T) {
+	root, repo := messageProject(t)
+	narrative := filepath.Join(root, "wip", "agents", "S-0003.md")
+	if err := os.WriteFile(narrative, []byte("# S-0003\n\n## Open questions\n\nNone.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"message", "send", "S-0003", "Will you leave plan.md to me", "--from", "S-0001", "--about", "design/system/plan.md", "--by", "agent-S-0001"},
+		{"message", "send", "S-0001", "Who writes the docs row", "--from", "S-0002", "--by", "agent-S-0002"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %d %s", args, code, errOut)
+		}
+	}
+	t1 := time.Date(2026, 9, 15, 22, 0, 0, 0, time.UTC)
+
+	out, errOut, code := runInAt(t, root, t1, "message", "escalate", "ms-1", "We both need plan.md this week", "--from", "S-0003", "--by", "agent-S-0003")
+	if code != 0 {
+		t.Fatalf("escalate: %d %s", code, errOut)
+	}
+	if !strings.HasPrefix(out, "TH-0001 S-0003 and S-0001 do not agree: Will you leave plan.md to me\n  wip/threads/TH-0001-") || !strings.HasSuffix(out, ".md\nMS-0001 awaits S-0001 (2 entries)\n") {
+		t.Errorf("escalate:\n%s", out)
+	}
+	if data, _ := os.ReadFile(narrative); !strings.Contains(string(data), "- TH-0001 (open, agent-S-0003, 2026-09-15): S-0003 and S-0001 do not agree") {
+		t.Errorf("the thread is mirrored into the escalating story's narrative:\n%s", data)
+	}
+	out, _, _ = runIn(t, root, "message", "show", "MS-0001", "--json")
+	if v := decodeMessage(t, out); v.Status != "open" || v.Awaiting != "S-0001" || len(v.Entries) != 2 || v.Entries[1].Story != "S-0003" || !strings.Contains(v.Entries[1].Text, "Asked the operator on TH-0001") {
+		t.Errorf("the conversation records the escalation and stays open: %+v", v)
+	}
+
+	t.Setenv("FLAI_STORY", "S-0001")
+	out, errOut, code = runInAt(t, root, t1, "message", "escalate", "MS-0002", "Neither of us will write it", "--by", "agent-S-0001", "--json")
+	if code != 0 {
+		t.Fatalf("escalate --json: %d %s", code, errOut)
+	}
+	var got struct {
+		Thread struct {
+			ID     string `json:"id"`
+			Title  string `json:"title"`
+			Status string `json:"status"`
+			Story  string `json:"story"`
+			Anchor struct {
+				Item string `json:"item"`
+			} `json:"anchor"`
+			Entries []struct {
+				Author string `json:"author"`
+				Text   string `json:"text"`
+			} `json:"entries"`
+		} `json:"thread"`
+		Conversation messageView `json:"conversation"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("--json: %v\n%s", err, out)
+	}
+	th, conv := got.Thread, got.Conversation
+	if th.ID != "TH-0002" || th.Title != "S-0001 and S-0002 do not agree: Who writes the docs row" || th.Status != "open" || th.Anchor.Item != "S-0001" || th.Story != "S-0001" || len(th.Entries) != 1 || th.Entries[0].Author != "agent-S-0001" {
+		t.Errorf("escalate --json thread: %+v", th)
+	}
+	if len(th.Entries) == 1 && (!strings.Contains(th.Entries[0].Text, "S-0001 and S-0002 do not agree in their conversation MS-0002, `"+conv.Path+"`") || !strings.Contains(th.Entries[0].Text, "> Neither of us will write it")) {
+		t.Errorf("the thread names both stories, links the conversation, and quotes the reason:\n%s", th.Entries[0].Text)
+	}
+	if conv.ID != "MS-0002" || conv.Awaiting != "S-0002" || conv.Closed || len(conv.Entries) != 2 || !strings.Contains(conv.Entries[1].Text, "Asked the operator on TH-0002") {
+		t.Errorf("escalate --json conversation: %+v", conv)
+	}
+
+	setStoryStatus(t, repo, "S-0002", workitem.Done)
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"third story", []string{"MS-0001", "No", "--from", "S-0002"}, "S-0002 is not in MS-0001"},
+		{"empty reason", []string{"MS-0001", " ", "--from", "S-0001"}, "an escalation needs a reason"},
+		{"closed", []string{"MS-0002", "No", "--from", "S-0001"}, "MS-0002 is closed (S-0002 was accepted) and cannot be escalated"},
+	} {
+		args := append([]string{"message", "escalate", "--by", "tester"}, tc.args...)
+		if _, errOut, code := runIn(t, root, args...); code == 0 || !strings.Contains(errOut, tc.want) {
+			t.Errorf("%s: exit %d, %q, want it refused with %q", tc.name, code, errOut, tc.want)
+		}
+	}
+	if matches, _ := filepath.Glob(filepath.Join(root, "wip", "threads", "*.md")); len(matches) != 2 {
+		t.Errorf("a refused escalation opens no thread: %v", matches)
+	}
+}

@@ -19,11 +19,11 @@ func newMessageCmd(a *app) *cobra.Command {
 		Short: "Conversations between the agents of two open stories, apart from the operator's threads (wip/messages)",
 		Long: `Conversations between the agents of two stories in progress or in review (ADR-0120). A message goes from one story to another, and the messages between the two make a conversation, one file in wip/messages, MS-nnnn-<slug>.md, in the main checkout.
 
-A conversation awaits the story that did not write its last message. It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
+A conversation awaits the story that did not write its last message. When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
 
 Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.`,
 	}
-	c.AddCommand(newMessageSendCmd(a), newMessageReplyCmd(a), newMessageListCmd(a), newMessageShowCmd(a))
+	c.AddCommand(newMessageSendCmd(a), newMessageReplyCmd(a), newMessageEscalateCmd(a), newMessageListCmd(a), newMessageShowCmd(a))
 	return c
 }
 
@@ -112,6 +112,49 @@ The replying story is --from, else FLAI_STORY, else the story in FLAI_AGENT of t
 		},
 	}
 	c.Flags().StringVar(&from, "from", "", fromHelp)
+	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
+	return c
+}
+
+func newMessageEscalateCmd(a *app) *cobra.Command {
+	var from, by string
+	c := &cobra.Command{
+		Use:   "escalate <MS-nnnn> \"<reason>\"",
+		Short: "Ask the operator on a thread to settle what a conversation's two stories do not agree",
+		Long: `Asks the operator to settle what the two stories of the conversation <MS-nnnn> could not agree (ADR-0121), and prints the thread it opens and the conversation.
+
+The thread is opened on the escalating story, by its agent. Its title names both stories and the conversation's title, and its first entry names both stories, gives the conversation's path, and quotes <reason>: what the two could not agree. The conversation gets a message from the escalating story naming the thread, so that it awaits the other story, and it stays open. The operator answers on the thread.
+
+The escalating story is --from, else FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn, else the story branch checked out here. An escalation is refused from a story that is not one of the two, from a story no longer in progress or in review, on a conversation that reads as closed, and with an empty reason; nothing is written. The author is --by, else FLAI_AGENT, else the config author.`,
+		Example: `  flai message escalate MS-0004 "We both need flai/cmd/root.go this week, and neither can wait for the other." --from S-0331
+  flai message escalate ms-4 "Who writes the docs row" --json`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			story, err := a.messageStory(repo, from)
+			if err != nil {
+				return err
+			}
+			c, th, err := messages.Escalate(repo, args[0], story, a.threadAuthor(by), args[1], a.now())
+			if th != nil {
+				if merr := a.afterThread(repo, th); merr != nil && err == nil {
+					err = merr
+				}
+			}
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(map[string]any{"thread": threadJSON(repo, th), "conversation": messages.View(repo, c)})
+			}
+			fmt.Fprintf(a.out, "%s %s\n  %s\n%s awaits %s (%d entries)\n", th.ID, th.Title, relPath(repo.MainRoot, th.Path), c.ID, c.Awaiting(), len(c.Entries()))
+			return nil
+		},
+	}
+	c.Flags().StringVar(&from, "from", "", "the story that escalates, one of the conversation's two (default: FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn, else the story branch checked out here)")
 	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
 	return c
 }
