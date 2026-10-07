@@ -2,12 +2,12 @@
 id: I-0056
 title: flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-02T16:11:21Z
 last_reported: 2026-10-02T16:11:21Z
-updated: 2026-10-05T00:03:14Z
+updated: 2026-10-07T08:54:50Z
 ---
 
 # I-0056 flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
@@ -23,3 +23,4 @@ flai's wip markdown lint does not flag a bare email address, so a thread entry w
 ## Remediation
 
 Story S-0265 remediates this issue, created from it at 2026-10-05T00:03:14Z.
+Closed 2026-10-07T08:54:50Z: flai's MD034 now reports GFM's extended email autolink, a bare address, as markdownlint-cli2 0.20.0 does, skipping it in link text, after an unclosed [, and where a text directive takes the name after a colon; tested by the email.md fixture against markdownlint and TestBareEmailOfI0056 (S-0265, T-0981).
