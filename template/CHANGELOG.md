@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.74 - 2026-10-07
+
+- S-0335 A story's agent that waits only on another story's agent's reply ends, and flai serve starts it again when the reply or a new message to its story comes (patch, ADR-0120): `work-management.md` says that when nothing is left but the other story's agent's reply, you write the narrative's `## Current state` and `## Next steps` with `flai stream state`, naming the conversation and what each reply leads to, and end the session, as for the designer's answer; `flai serve` starts you again, in the same session, when that agent replies or a new message to your story comes, and your first `inbox` lists it under `messages`. When `wait_for_events` answers `end: true`, its `why` names the open question or the conversation awaiting another story's agent's reply. An agent run by hand, not by `flai serve`, is not started again and holds `wait_for_events` until the reply comes. It needs a flai that has it; an older flai keeps such an agent waiting.
+
 ## 1.0.73 - 2026-10-07
 
 - S-0331 A story's agent sends and answers messages through MCP, inbox lists those to its story, and wait_for_events wakes on one (patch).
