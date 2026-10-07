@@ -5,6 +5,7 @@ import WebSocket from 'ws';
 import {
 	AgentError,
 	AgentRegistry,
+	ANALYZER,
 	CLOSE_HELD,
 	ORCHESTRATOR,
 	proof,
@@ -329,6 +330,14 @@ describe('AgentRegistry and AgentHub', () => {
 				params: { project: 'harbour', role: 'orchestrate' }
 			})
 		);
+		// S-0228: the project's analyzer, with the role analyze
+		flai.ws.send(
+			JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'agent',
+				params: { project: 'harbour', role: 'analyze' }
+			})
+		);
 		// not a story, not a role the dashboard knows, and not a notification: none is announced
 		flai.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'agent', params: { story: 7 } }));
 		flai.ws.send(
@@ -338,7 +347,7 @@ describe('AgentRegistry and AgentHub', () => {
 			JSON.stringify({ jsonrpc: '2.0', id: 98, method: 'agent', params: { story: 'S-1' } })
 		);
 		await new Promise((r) => setTimeout(r, 50));
-		expect(stories).toEqual(['S-0154', 'E-0016', ORCHESTRATOR]);
+		expect(stories).toEqual(['S-0154', 'E-0016', ORCHESTRATOR, ANALYZER]);
 	});
 
 	it('says what a flai older than the dashboard does not offer', async () => {
