@@ -46,7 +46,10 @@ strategic agent's totals, under strategic, split into what the items carry,
 what the issues carry that no story does, and the project total (ADR-0095);
 strategic_issues lists each issue that carries strategic usage. An issue's
 usage counts until a story made from it carries it, then counts as the
-story's (S-0227).
+story's (S-0227). turns counts the story agents' turns in each class
+(ceremony, test_runs, empty_wakes, hand_edits, work) over the window, per
+day of it, and per story, from the stories' usage.turns, which flai serve
+measures from its agents' logs (S-0293).
 Touches drift and the exact touches need git; without it flai stats warns and
 leaves them out.`,
 		Example: `  flai stats
@@ -119,8 +122,51 @@ func printSummary(a *app, rep *metrics.Report) {
 	printForecasts(a, rep.Forecasts)
 	printCostOfDelay(a, rep)
 	printWaiting(a, rep.Waiting)
+	printTurns(a, rep.Turns)
 	printClaims(a, rep)
 }
+
+// printTurns prints, when the stories' agents took any turn in the window,
+// their turns in each class over it, with each class's share, then per day
+// that has any and per story (S-0293).
+func printTurns(a *app, t metrics.Turns) {
+	if t.Total.Turns == 0 {
+		return
+	}
+	noun := "stories"
+	if len(t.Stories) == 1 {
+		noun = "story"
+	}
+	fmt.Fprintf(a.out, "\nstory agents' turns, over %d %s in the window:\n", len(t.Stories), noun)
+	shares := make([]string, 0, len(t.Classes))
+	for _, c := range t.Classes {
+		n := t.Total.Count(c)
+		shares = append(shares, fmt.Sprintf("%s %d (%.0f%%)", turnClass(c), n, float64(n)*100/float64(t.Total.Turns)))
+	}
+	fmt.Fprintf(a.out, "  total %d · %s\n", t.Total.Turns, strings.Join(shares, " · "))
+	fmt.Fprintln(a.out, "  by day:")
+	for _, d := range t.Days {
+		if d.Turns > 0 {
+			fmt.Fprintf(a.out, "    %s  %s\n", d.Day, turnCounts(t.Classes, d.TurnCounts))
+		}
+	}
+	fmt.Fprintln(a.out, "  by story:")
+	for _, s := range t.Stories {
+		fmt.Fprintf(a.out, "    %-6s  %s  %s\n", s.ID, turnCounts(t.Classes, s.TurnCounts), s.Title)
+	}
+}
+
+// turnCounts is a count of turns and its count in each class.
+func turnCounts(classes []string, c metrics.TurnCounts) string {
+	parts := []string{fmt.Sprint(c.Turns)}
+	for _, class := range classes {
+		parts = append(parts, fmt.Sprintf("%s %d", turnClass(class), c.Count(class)))
+	}
+	return strings.Join(parts, " · ")
+}
+
+// turnClass is a class of turn as text names it: test_runs as test runs.
+func turnClass(class string) string { return strings.ReplaceAll(class, "_", " ") }
 
 // printForecasts prints how far forecasts and estimates were from what
 // happened, for each kind of error some item has (S-0205).

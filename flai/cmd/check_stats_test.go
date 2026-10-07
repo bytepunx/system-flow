@@ -242,6 +242,47 @@ func TestStatsPrintsTheItemsWithoutAValueAndThePullOrdersCost(t *testing.T) {
 	}
 }
 
+// S-0293: the story agents' turns print with each class's share of the
+// window's, then the days that have any, then each story; nothing prints
+// when there are none.
+func TestStatsPrintsTheStoryAgentsTurns(t *testing.T) {
+	var out bytes.Buffer
+	a := &app{out: &out}
+	counts := func(ceremony, tests, wakes, edits, work int) metrics.TurnCounts {
+		return metrics.TurnCounts{Turns: ceremony + tests + wakes + edits + work, Ceremony: ceremony, TestRuns: tests, EmptyWakes: wakes, HandEdits: edits, Work: work}
+	}
+	turns := metrics.Turns{
+		Classes: usage.TurnClasses,
+		Total:   counts(4, 2, 1, 1, 12),
+		Days: []metrics.TurnsDay{
+			{Day: "2026-10-04", TurnCounts: counts(3, 2, 0, 1, 4)},
+			{Day: "2026-10-05", TurnCounts: counts(0, 0, 0, 0, 0)},
+			{Day: "2026-10-06", TurnCounts: counts(1, 0, 1, 0, 8)},
+		},
+		Stories: []metrics.StoryTurns{
+			{ID: "S-0270", Title: "First", Status: workitem.Done, TurnCounts: counts(3, 2, 0, 1, 4)},
+			{ID: "S-0293", Title: "Second", Status: workitem.InProgress, TurnCounts: counts(1, 0, 1, 0, 8)},
+		},
+	}
+	printTurns(a, turns)
+	want := "\nstory agents' turns, over 2 stories in the window:\n" +
+		"  total 20 · ceremony 4 (20%) · test runs 2 (10%) · empty wakes 1 (5%) · hand edits 1 (5%) · work 12 (60%)\n" +
+		"  by day:\n" +
+		"    2026-10-04  10 · ceremony 3 · test runs 2 · empty wakes 0 · hand edits 1 · work 4\n" +
+		"    2026-10-06  10 · ceremony 1 · test runs 0 · empty wakes 1 · hand edits 0 · work 8\n" +
+		"  by story:\n" +
+		"    S-0270  10 · ceremony 3 · test runs 2 · empty wakes 0 · hand edits 1 · work 4  First\n" +
+		"    S-0293  10 · ceremony 1 · test runs 0 · empty wakes 1 · hand edits 0 · work 8  Second\n"
+	if out.String() != want {
+		t.Errorf("printed:\n%s\nwant:\n%s", out.String(), want)
+	}
+	out.Reset()
+	printTurns(a, metrics.Turns{Classes: usage.TurnClasses, Days: []metrics.TurnsDay{{Day: "2026-10-04"}}})
+	if out.Len() != 0 {
+		t.Errorf("no turns printed %q", out.String())
+	}
+}
+
 // ADR-0079: flai stats prints each strategic agent's totals from its
 // activity document, --json carries them and the window's log entries under
 // strategic, and an unreadable document stops stats as an unreadable item
@@ -438,6 +479,13 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	done.Estimate = "50h"
 	// its agents woke to nothing four times (S-0272)
 	done.Usage = &usage.Usage{Source: usage.SourceLog, Seconds: 3600, EmptyWakes: 4, Models: []usage.Model{{Model: "claude-opus-5-5", Input: 10, Cost: 1}}}
+	// and its agent took ten turns on two days of the window, and some
+	// before it (S-0293)
+	done.Usage.Turns = []usage.TurnDay{
+		{Day: "2026-08-01", Work: 50},
+		{Day: "2026-09-29", Ceremony: 2, Work: 6},
+		{Day: "2026-10-01", TestRuns: 1, HandEdits: 1},
+	}
 	waiting := story("Waiting", 50, "2026-09-30T09:00:00Z", workitem.Ready, "2026-09-30T12:00:00Z")
 	for _, it := range []*workitem.Item{done, waiting} {
 		if err := repo.Save(it); err != nil {
@@ -465,10 +513,25 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &rep); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days"} {
+	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days", "turns"} {
 		if len(rep[key]) == 0 || string(rep[key]) == "null" {
 			t.Errorf("--json lacks %s", key)
 		}
+	}
+	// the window's 31 days, from the 3rd of September to the 3rd of
+	// October, and the story's turns on them (S-0293)
+	var turns metrics.Turns
+	if err := json.Unmarshal(rep["turns"], &turns); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(turns.Days); n != 31 || turns.Days[0].Day != "2026-09-03" || turns.Days[n-1].Day != "2026-10-03" {
+		t.Errorf("turns.days = %d from %+v", n, turns.Days)
+	}
+	if want := (metrics.TurnCounts{Turns: 10, Ceremony: 2, TestRuns: 1, HandEdits: 1, Work: 6}); turns.Total != want {
+		t.Errorf("turns.total = %+v, want %+v", turns.Total, want)
+	}
+	if len(turns.Stories) != 1 || turns.Stories[0].ID != done.ID || turns.Stories[0].Status != workitem.Done || turns.Stories[0].Turns != 10 {
+		t.Errorf("turns.stories = %+v, want %s with 10", turns.Stories, done.ID)
 	}
 	var wakes struct {
 		Waiting struct {
@@ -551,6 +614,14 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 		"\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 50.00 · in-progress 0.00 · review 0.00\n  incurred in the window 39.57\n" +
 			"  ready until pulled  none placed; 1 left out, without a value or a forecast duration\n",
 		"\nwaiting, over 1 completed:\n  on threads   total 2h · mean 2h\n  in review    total 4h · mean 4h\n  empty wakes  total 4 · mean 4.0 per item with usage\n",
+		// the turns follow the waiting and come before the claims (S-0293)
+		"per item with usage\n\nstory agents' turns, over 1 story in the window:\n" +
+			"  total 10 · ceremony 2 (20%) · test runs 1 (10%) · empty wakes 0 (0%) · hand edits 1 (10%) · work 6 (60%)\n" +
+			"  by day:\n" +
+			"    2026-09-29  8 · ceremony 2 · test runs 0 · empty wakes 0 · hand edits 0 · work 6\n" +
+			"    2026-10-01  2 · ceremony 0 · test runs 1 · empty wakes 0 · hand edits 1 · work 0\n" +
+			"  by story:\n" +
+			"    S-0001  10 · ceremony 2 · test runs 1 · empty wakes 0 · hand edits 1 · work 6  Done\n\nclaims:\n",
 		"\nclaims:\n  held in ready  total 0m · mean 0m, over 1 completed\n  held by reason  overlap 0m · after 0m · no-touches 18h, every story over the window's weeks\n  in progress now 0 of a limit of 2\n",
 		"\nstrategic agents in the window:\n  $0.25 · 1m, beside 1 completed (usage $1.00 per item)\n",
 	} {

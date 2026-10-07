@@ -187,6 +187,9 @@ type Report struct {
 	// Claims is the items in progress against the limit and the stories'
 	// touches drift (S-0205).
 	Claims Claims `json:"claims"`
+	// Turns is the story agents' turns per class over the window, per day,
+	// and per story (S-0293).
+	Turns Turns `json:"turns"`
 }
 
 // Compute derives every metric from the items.
@@ -281,6 +284,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)
 	rep.Claims = claims(items, all, start, opt, replay)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
+	rep.Turns = turns(all, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
