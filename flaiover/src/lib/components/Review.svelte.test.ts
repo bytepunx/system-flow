@@ -301,6 +301,39 @@ describe('Review', () => {
 		expect(JSON.parse(calls('/accept')[0][1].body)).toEqual({ include_uncommitted: true });
 	});
 
+	// ADR-0106: a branch that changes paths Claude Code protects is accepted by the operator only;
+	// the page names the files and says so, and keeps the operator's Accept on.
+	it('names the protected files and that only the operator accepts, and keeps Accept on', async () => {
+		const sentence =
+			'only the operator (alex) accepts S-0041: its branch changes paths Claude Code protects';
+		backend({
+			preview: {
+				branch: 'story/S-0041',
+				plan: null,
+				protected: ['.claude/settings.json', '.mcp.json'],
+				operator_only: sentence
+			}
+		});
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		const box = document.querySelector('[data-testid="accept-protected"]')!;
+		expect(box.textContent).toContain(sentence);
+		expect([...box.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+			'.claude/settings.json',
+			'.mcp.json'
+		]);
+		expect(button('Accept').disabled).toBe(false);
+	});
+
+	it('says nothing of protected paths when the branch changes none', async () => {
+		backend({});
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		expect(document.querySelector('[data-testid="accept-protected"]')).toBeNull();
+		expect(document.body.textContent).not.toContain('only the operator');
+		expect(button('Accept').disabled).toBe(false);
+	});
+
 	it('offers a research story for acceptance, with no release and what lands unreleased (ADR-0025)', async () => {
 		backend({
 			preview: {

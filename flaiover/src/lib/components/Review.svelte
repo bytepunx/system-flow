@@ -37,6 +37,10 @@
 		uncommitted?: string[];
 		/** Uncommitted paths in the story's worktree: they block acceptance (S-0140). */
 		worktree_uncommitted?: string[];
+		/** Files the branch changes on a path Claude Code protects: only the operator accepts it (ADR-0106). */
+		protected?: string[];
+		/** The sentence saying so, present exactly when protected is. */
+		operator_only?: string;
 		plan?: {
 			level: string;
 			commits: string[];
@@ -612,6 +616,17 @@
 							branch={preview.branch}
 							disabled={running || !writable}
 						/>
+					</div>
+				{/if}
+				{#if preview.protected?.length}
+					<div
+						class="mb-2 rounded border border-warn bg-warn-soft p-2 text-warn"
+						data-testid="accept-protected"
+					>
+						<p class="font-medium">{preview.operator_only}</p>
+						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+							{#each preview.protected as p (p)}<li>{p}</li>{/each}
+						</ul>
 					</div>
 				{/if}
 				{#if preview.uncommitted?.length}
