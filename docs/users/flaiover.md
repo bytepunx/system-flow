@@ -249,7 +249,7 @@ The same settings are changed in a shell with `flai manifest set` ([Changing the
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in three groups: flow, usage, and planning. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in four groups: flow, usage, planning, and strategic. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. The strategic charts offer only the item type. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
 
 | Chart | Shows |
 |-------|-------|
@@ -274,6 +274,8 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Parallelism | Each day of the window: how many items were in progress at its end, and how many stories in ready were held then, beside a dashed line at the board's in-progress limit. Stories held while in progress sits below the limit are work the claims kept from starting, not the limit |
 | Hold Time | The hours stories in ready were held in each week of the window, stacked by reason: overlap, a claim that overlaps a story in progress; after, a story it waits for is not done; empty claim, its touches or the in-progress story's are empty. Each hold counts under one reason, so a bar's height is the time held |
 | Touches Drift | One bar per story done in the window: the files it changed outside its touches, which the planner or its agent should have declared, stacked on the touches it never changed, which they should have dropped. Hover a bar for the paths. A line on the right-hand axis shows each week's share of stories whose touches were exact |
+| Strategic Cost | A bar for each day of the window: what the planner, the orchestrator, and the analyzer spent that day, stacked. A line for what the agents spent per item completed that day, and a dashed line for what the strategic agents spent per item over the window, with its share of the agents' cost per item |
+| Strategic Use | A bar for each day of the window: the hours the planner, the orchestrator, and the analyzer worked that day, stacked. Two lines for the items completed that day: their mean cycle time and their mean waiting time, in hours |
 
 The usage charts read what agents spent on each item: its tokens and cost, which flai records from the logs of the agents `flai serve` starts (see [Tokens and cost](flai.md#tokens-and-cost)). Each model keeps its colour and its mark on every chart. Until items carry usage, they say so and how to fill in stories worked before. An item's page shows its usage, per model, beside its other fields.
 
@@ -322,6 +324,17 @@ Agent Waiting, under Flow, shows the time agents spent waiting on someone else, 
 - **The dashed line** is the mean wait per item done that week, threads and review together. A week with nothing done has no point, and the line breaks there.
 - **Filters.** Choose the item type. There is no epic filter, since flai adds up the waits over every epic.
 - **The table** under the chart lists the ten longest waits with a part in the window, longest first: the story, whether it waited on a thread or in review, the thread, when the wait started and when it ended, or `open`, the hours of it inside the window, and who it waited for, the one who answered the thread or moved the story out of review. It lists stories in any state but cancelled, so a story waiting now is in the table before any bar holds it. When nothing waited in the window, it says so.
+
+### Strategic
+
+The strategic charts set what the planner, the orchestrator, and the analyzer cost against the delivery they serve, so you can tell whether they pay for themselves. Each is one bar per UTC day of the window, the three agents stacked, each in its own colour. They count the item type you choose. The figures are those of `strategic_days` in `flai stats --json`, defined in [Strategic use per day](../../design/system/metrics.md#strategic-use-per-day).
+
+- **Strategic Cost, in dollars.** The bars are what each strategic agent spent that day; hover one to see whether its cost is estimated in part. The solid line is what the agents spent on average per item completed that day, without the strategic agents; a day with nothing completed has no point.
+- **The ratio.** The dashed line is what the strategic agents spent over the window, divided by the items completed in it. Its label gives that as a share of what the agents spent per item over the window, the `usage $… per item` that `flai stats` prints under "strategic agents in the window", beside their total and the items completed. At 10%, the strategic agents add a tenth to each item's cost. With nothing completed, or nothing spent by the agents, there is no ratio.
+- **Strategic Use, in hours.** The bars are the hours each strategic agent worked that day. The two lines cover the items completed that day: their mean cycle time, and their mean waiting time, the time each waited on its threads while in progress plus its time in review ([Waiting](../../design/system/metrics.md#waiting)). A day with nothing completed has no point.
+- **Reading Strategic Use.** The return on the strategic agents' time is the waiting and cycle-time lines falling while their bars rise.
+
+Under each chart a note says how to read it, and on Strategic Cost it states the ratio. The table view lists each day.
 
 ## Docs
 
