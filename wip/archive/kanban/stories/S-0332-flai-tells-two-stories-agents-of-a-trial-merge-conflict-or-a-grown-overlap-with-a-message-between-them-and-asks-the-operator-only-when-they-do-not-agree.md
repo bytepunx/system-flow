@@ -3,11 +3,11 @@ id: S-0332
 type: story
 nature: improvement
 title: flai tells two stories' agents of a trial-merge conflict or a grown overlap with a message between them, and asks the operator only when they do not agree
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:10:41Z
-updated: 2026-10-07T22:47:38Z
+updated: 2026-10-07T23:20:33Z
 transitions:
   - to: ready
     at: 2026-10-07T21:43:11Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T22:47:38Z
     by: agent-S-0332
+  - to: review
+    at: 2026-10-07T23:19:35Z
+    by: agent-S-0332
+  - to: done
+    at: 2026-10-07T23:20:33Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, git, conventions, template]
-touches: [design/adrs, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/adrs, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/touches.go, flai/internal/inbox/inbox.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, design/system/agent-coordination.md, design/system/continuous-improvement.md]
 after: [S-0331]
 agent:
   harness: claude-code
@@ -25,20 +31,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1933
+  turns:
+    - day: 2026-10-07
+      ceremony: 2
+      hand_edits: 2
+      work: 59
+  models:
+    - model: claude-opus-5-5
+      input: 374
+      output: 148336
+      cache_read: 22700507
+      cache_write: 719713
+      cost: 11.8244
   strategic:
     - kind: orchestrator
-      seconds: 325
+      seconds: 331
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 63
-          output: 1013
-          cache_read: 6159168
-          cache_write: 49704
-          cost: 1.5299
+          input: 67
+          output: 1045
+          cache_read: 6504106
+          cache_write: 60868
+          cost: 1.6176
 cost_of_delay:
   value: 142.12
   by: planner-E-0018
@@ -61,11 +78,11 @@ Route flai's own coordination notices to the agents that must act on them. Today
 
 ## Acceptance criteria
 
-- [ ] A trial merge at `flai stream sync` that conflicts with another open story's branch opens, or adds an entry to, one conversation between the two stories, `about` the conflicting paths, instead of a thread; the conversation closes when a later sync finds the two merging cleanly or the other story is no longer open.
-- [ ] A claim that grows to overlap another in-progress story's (S-0244) opens, or adds to, the same pair's conversation, `about` the paths gained, beside the `overlapped` change both stories still get.
-- [ ] `flai message escalate <conversation> "<reason>"`, and the MCP tool `message_escalate`, open a thread on the operator that names both stories, links the conversation, and says what they could not agree; the conversation records it.
-- [ ] Conflict threads already open are left as they are; no new conflict thread is opened by a sync.
-- [ ] An ADR refining ADR-0046 records the change, and `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies describe it.
+- [x] A trial merge at `flai stream sync` that conflicts with another open story's branch opens, or adds an entry to, one conversation between the two stories, `about` the conflicting paths, instead of a thread; the conversation closes when a later sync finds the two merging cleanly or the other story is no longer open.
+- [x] A claim that grows to overlap another in-progress story's (S-0244) opens, or adds to, the same pair's conversation, `about` the paths gained, beside the `overlapped` change both stories still get.
+- [x] `flai message escalate <conversation> "<reason>"`, and the MCP tool `message_escalate`, open a thread on the operator that names both stories, links the conversation, and says what they could not agree; the conversation records it.
+- [x] Conflict threads already open are left as they are; no new conflict thread is opened by a sync.
+- [x] An ADR refining ADR-0046 records the change, and `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies describe it.
 
 ## Tasks
 
@@ -105,3 +122,16 @@ Forecast 55m, delivery 2026-10-08T09:29Z.
 - Raised by 17m to the feature rate, 114 s per unit: besides rerouting two notices it adds a command and an MCP tool, which is feature work. Delivery is shifted by the same 17m.
 
 Cost of delay 142.12 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 55m of 6h27m. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 2afebf1715724360aba2750585cf3d6b67cdcca8
+- At: 2026-10-07T23:20:33Z
+
+Verdict: meets all criteria (verifier at 2afebf1715724360aba2750585cf3d6b67cdcca8; flai verify passed every step at that commit). Criterion 4: no sync opens or adds to a conflict thread; already-open ones keep the resolution main already gave them on a clean merge or a departed story.
+
+- 1: flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go
+- 2: flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/touches.go, flai/internal/inbox/inbox.go
+- 3: flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go
+- 4: flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go
+- 5: design/adrs/0121-flai-tells-two-stories-of-a-trial-merge-conflict-or-a-grown-overlap-with-a.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md

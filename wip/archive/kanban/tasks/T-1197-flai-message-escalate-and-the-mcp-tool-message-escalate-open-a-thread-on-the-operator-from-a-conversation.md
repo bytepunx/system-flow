@@ -3,16 +3,36 @@ id: T-1197
 type: task
 nature: feature
 title: flai message escalate and the MCP tool message_escalate open a thread on the operator from a conversation
-status: backlog
+status: done
 parent: S-0332
 owner: alex
 created: 2026-10-07T20:15:12Z
-updated: 2026-10-07T20:15:20Z
-transitions: []
+updated: 2026-10-07T23:08:44Z
+transitions:
+  - to: ready
+    at: 2026-10-07T22:50:27Z
+    by: agent-S-0332
+  - to: in-progress
+    at: 2026-10-07T22:50:28Z
+    by: agent-S-0332
+  - to: done
+    at: 2026-10-07T23:08:43Z
+    by: agent-S-0332
 stream: S-0332
 tags: [flai]
-touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go]
 after: [T-1194]
+usage:
+  source: log
+  seconds: 1095
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 37043
+      cache_read: 5668915
+      cache_write: 179731
+      cost: 2.9529
 ---
 # T-1197 flai message escalate and the MCP tool message_escalate open a thread on the operator from a conversation
 

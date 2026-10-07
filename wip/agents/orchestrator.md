@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 85.6024
-accrued_seconds: 77162
-tasks_completed: 102
-last_run: 2026-10-07T22:48:32Z
+accrued_cost: 92.7971
+accrued_seconds: 78873
+tasks_completed: 123
+last_run: 2026-10-07T23:17:03Z
 ---
 
 # Orchestrator activity
@@ -725,6 +725,153 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0333
 - Seconds: 236
 - Cost: 0.5719 USD, estimated
+
+### 2026-10-07T22:48:58Z
+
+- Summary: Published under judgement after accepting S-0333: 1 pending, 113.7 USD/week; flai 1.38.1→1.39.0 (flai/v1.39.0), template 1.0.74→1.0.75 (v1.0.75, f55b3be); bundled S-0333; pushed
+- Items: S-0333
+- Seconds: 26
+- Cost: 0.0424 USD, estimated
+
+### 2026-10-07T22:49:04Z
+
+- Summary: After S-0333's acceptance, S-0332 left ready for in-progress, so ready is empty and there is nothing to order. No promote candidates: S-0280 and S-0297 held on overlap with S-0332, and S-0233–S-0239 held by after on S-0232
+- Items: S-0332
+- Seconds: 6
+- Cost: 0.0877 USD, estimated
+
+### 2026-10-07T22:50:27Z
+
+- Summary: Answered TH-0327, citing wip/kanban/stories/S-0235-a-signed-release-stamp-is-built-into-flai-and-into-the-flaiover-image.md
+- Items: S-0235
+- Seconds: 83
+- Cost: 0.5107 USD, estimated
+
+### 2026-10-07T22:50:29Z
+
+- Summary: Approved planner-S-0235's plan on TH-0327 and resolved it: T-1234–T-1238 in three layers cover all five criteria; forecast 1h and value 2.70 USD/week stand
+- Items: S-0235
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-07T22:50:35Z
+
+- Summary: Started the planner for S-0236 under plan_backlog_stories: first story flai plan --candidates lists now that S-0235's planner has ended (no tasks)
+- Items: S-0236
+- Seconds: 6
+- Cost: 0.1492 USD, estimated
+
+### 2026-10-07T22:55:51Z
+
+- Summary: Answered TH-0328, citing wip/kanban/stories/S-0236-flai-dashboard-resolves-the-image-from-the-signed-digest-list-and-runs-it-by-digest.md
+- Items: S-0236
+- Seconds: 316
+- Cost: 0.8638 USD, estimated
+
+### 2026-10-07T22:55:54Z
+
+- Summary: Approved planner-S-0236's plan on TH-0328 and resolved it: T-1239–T-1246 in five layers cover all six criteria; forecast 1h30m and value 3.95 USD/week stand
+- Items: S-0236
+- Seconds: 3
+- Cost: 0.0543 USD, estimated
+
+### 2026-10-07T22:55:59Z
+
+- Summary: Started the planner for S-0237 under plan_backlog_stories: first story flai plan --candidates lists now that S-0236's planner has ended (no tasks)
+- Items: S-0237
+- Seconds: 5
+- Cost: 0.0545 USD, estimated
+
+### 2026-10-07T23:02:15Z
+
+- Summary: Answered TH-0329, citing design/adrs/0032-accepting-a-story-merges-it-publishing-is-a-deliberate-batched-step-over.md
+- Items: S-0237
+- Seconds: 376
+- Cost: 0.7168 USD, estimated
+
+### 2026-10-07T23:02:18Z
+
+- Summary: Approved planner-S-0237's plan on TH-0329 and resolved it: T-1247–T-1252 in three layers cover all five criteria; forecast 1h30m and value 3.95 USD/week stand. Release decision under judgement: S-0237 will not be published before S-0239 is accepted, because a release flai and dashboard would refuse this repository's unsigned builds until dashboard.allow_unsigned ships (source: ADR-0032)
+- Items: S-0237, S-0239
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-07T23:02:23Z
+
+- Summary: Started the planner for S-0238 under plan_backlog_stories: first story flai plan --candidates lists now that S-0237's planner has ended (no tasks)
+- Items: S-0238
+- Seconds: 5
+- Cost: 0.1171 USD, estimated
+
+### 2026-10-07T23:07:07Z
+
+- Summary: Answered TH-0330, citing wip/kanban/stories/S-0234-the-flaiover-image-s-digest-list-is-signed-in-ci-and-published-on-a-flaiover-github-release.md
+- Items: S-0238
+- Seconds: 284
+- Cost: 0.9527 USD, estimated
+
+### 2026-10-07T23:07:12Z
+
+- Summary: Approved planner-S-0238's plan on TH-0330 and resolved it: T-1253–T-1258 in four layers cover all five criteria; forecast 1h15m and value 3.21 USD/week stand. Noted that S-0234's T-1231, not T-1258, settles the RepoDigests question
+- Items: S-0238
+- Seconds: 5
+- Cost: 0.0627 USD, estimated
+
+### 2026-10-07T23:07:17Z
+
+- Summary: Started the planner for S-0239 under plan_backlog_stories: first story flai plan --candidates lists now that S-0238's planner has ended (no tasks)
+- Items: S-0239
+- Seconds: 5
+- Cost: 0.0629 USD, estimated
+
+### 2026-10-07T23:11:10Z
+
+- Summary: Answered TH-0331, citing wip/kanban/stories/S-0239-dashboard-allow-unsigned-lets-a-development-build-connect-shown-on-every-page-and-in-every-status.md
+- Items: S-0239
+- Seconds: 233
+- Cost: 1.6768 USD, estimated
+
+### 2026-10-07T23:11:13Z
+
+- Summary: Approved planner-S-0239's plan on TH-0331 and resolved it: T-1259–T-1266 in four layers cover all five criteria; forecast 1h30m and value 3.85 USD/week stand. S-0237 stays held from publishing until S-0239 is accepted
+- Items: S-0239
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-07T23:11:18Z
+
+- Summary: Started the planner for S-0241 under plan_backlog_stories: first story flai plan --candidates lists now that S-0239's planner has ended (no touches, forecast, value, or tasks)
+- Items: S-0241
+- Seconds: 5
+- Cost: 0.1383 USD, estimated
+
+### 2026-10-07T23:14:14Z
+
+- Summary: Answered TH-0332, citing wip/kanban/stories/S-0241-measure-planned-stories-again-with-forked-task-sub-agents-once-a-headless-session-offers-forks.md
+- Items: S-0241
+- Seconds: 176
+- Cost: 1.1202 USD, estimated
+
+### 2026-10-07T23:14:19Z
+
+- Summary: Settled planner-S-0241's TH-0332 under plan_backlog_stories: set penalty_per_week 25 on S-0241, the planner's recommended input (not 0: that forks are not yet offered decides when, not what delay costs), approved its three-task plan with its 2h forecast, and resolved the thread. The planner works out the value on its next run. S-0241 is not to be promoted while no headless session offers forks, as its Notes say
+- Items: S-0241
+- Seconds: 5
+- Cost: 0.1447 USD, estimated
+
+### 2026-10-07T23:17:01Z
+
+- Summary: Did not promote S-0241, the sole flai promote --candidates candidate (rank 1, 2h): its Notes say it cannot be worked until a headless session offers forks. Asked the operator on TH-0333 to block it (recommended), promote it anyway, or make it a draft again
+- Items: S-0241
+- Seconds: 162
+- Cost: 0.4399 USD, estimated
+
+### 2026-10-07T23:17:03Z
+
+- Summary: Started the planner for S-0287 under plan_backlog_stories: first story flai plan --candidates lists (draft lacking touches, forecast, value, and tasks)
+- Items: S-0287
+- Seconds: 2
+- Cost: 0.0000 USD
 
 ## Refusals
 
