@@ -48,10 +48,10 @@ Acceptance is the gate because it is the first moment the write can take effect:
 
 ### 2. The check against each new Claude Code
 
-- When flai serve starts a claude-code agent, it reads the version of the `claude` it runs. When flai has no record of that version, it checks it before starting the agent, once.
+- When flai serve starts, and when it starts a claude-code agent, it reads the version of the `claude` it runs. When flai has no record of that version, it checks it once, beside the agent: the check never delays or stops an agent's start.
 - The check makes one real write through `permission_prompt`, with the adapter's own permission arguments and the cheapest model: in a scratch project in a temporary folder, with one story in progress, its worktree, and auto-approve on for it, a headless `claude -p` is asked to Write a file in the worktree's `.claude/` folder. It passes when the file holds what was asked, and fails otherwise.
 - flai records the version, when it was checked, and the outcome, with Claude Code's error on a failure, in its host state beside its configuration. A version with a record is not checked again, whatever its outcome.
-- On a failure flai opens a thread to the operator on the manifest, `system-flow.yaml`, of each project it serves with claude-code agents, quoting Claude Code's error and naming the version. It still starts the agents: a story that never writes a protected path does not need the prompt.
+- On a failure flai opens a thread to the operator on the manifest, `system-flow.yaml`, of each project it serves with claude-code agents, quoting Claude Code's error, naming the version, and saying that protected-path writes will not go through until it is fixed. The agents still run: a story that never writes a protected path does not need the prompt.
 - One check costs about 0.02 USD on Haiku.
 
 ### 3. The prompt covers every protected path but `.git`
