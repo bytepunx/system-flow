@@ -2,12 +2,12 @@
 id: I-0058
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
 class: efficiency
-status: open
+status: closed
 count: 6
 cost: 3m
 first_reported: 2026-10-02T17:23:40Z
 last_reported: 2026-10-06T22:01:45Z
-updated: 2026-10-06T22:01:45Z
+updated: 2026-10-07T09:03:38Z
 ---
 
 # I-0058 flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
@@ -41,3 +41,4 @@ Story: S-0227.
 T-0942's task sub-agent edited design/system/strategic-agents.md through a shell script; the guard refused it because the script's text held the words of a flai issue command. It redid the edits with the Edit tool.
 
 ## Remediation
+Closed 2026-10-07T09:03:38Z: S-0246: flai guard reads a heredoc's body as input, not as commands, unless a shell on the line that opens it reads it (bash <<EOF, cat <<EOF | sh), so a sub-agent's heredoc whose text names a flai write is no longer refused
