@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 ---
 
@@ -554,7 +554,7 @@ A story's agent works through its tasks one at a time, and keeps the branch clos
 
 1. When a task is done, it commits the task's changes, with their docs and work item updates, on `story/S-0037`.
 2. It runs `flai stream sync`, and resolves each conflict sync lists.
-3. It runs the tests for what the task changed, and commits any fix they need.
+3. It runs the tests for what the task changed with `flai test` on the paths it changed ([Run the tests for what changed](#run-the-tests-for-what-changed)), and commits any fix they need.
 
 Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out with `scripts/close-out.sh`, which refuses a branch that does not yet contain the main branch and says to sync.
 
@@ -1011,6 +1011,35 @@ Whether or not the project has a markdownlint configuration, `flai check` report
 
 A front-matter field flai does not know, on a work item, a thread, or an issue, is an error: `item.unknown-field`, `threads.unknown-field`, or `issues.unknown-field`, on the field's line. A newer flai wrote it, or it is misspelled. Everything else reads past it: the board, `flai serve`, and the MCP tools list the item, log a warning naming the file and the field, and keep the field when they write the file. When the flai on your host is older than the project, upgrade it ([Keeping the host's flai current](../operators/index.md#keeping-the-hosts-flai-current)).
 
+## Run the tests for what changed
+
+`flai test` runs the project's test and lint tiers for the files and folders you give it, and answers pass or the first findings (S-0273). It runs in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder.
+
+```bash
+flai test flai/internal/verify          # the tiers that path selects
+flai test docs/users/flai.md --json     # the result as JSON
+flai test                               # what this checkout changed against the main branch, committed or not
+flai test --all --max 10                # every tier, all_only ones too, for the whole checkout
+```
+
+The tiers are the manifest's `tests` ([Project manifest](../../design/system/project-manifest.md), [settings](../operators/settings.md)). A tier runs when one of its `paths` selects a path you gave, in the manifest's order, cheapest first, and the run stops at the first tier that fails; the tiers after it are `not-reached`. A tier marked `all_only`, such as integration or smoke tests, runs only under `--all`. A manifest without `tests` has one tier, `scripts/test.sh`, for every path.
+
+The answer is never a tier's whole log. Each tier is a line with its state and duration. The tier that failed lists its first findings, each as `path:line name: message`: a failing Go test, a lint finding, a file gofmt would change, a failing vitest test. `--max` caps them across the run, 5 by default, and a last line counts those left out:
+
+```text
+passed gofmt (310ms)
+passed vet (2.1s)
+failed go-test (14.8s)
+flai/internal/verify/run_test.go:42 TestRunStopsAtTheFirstFailure: want 1 tier, got 2
+not-reached markdown
+```
+
+With `--json` the answer is `{"passed": ..., "paths": [...], "tiers": [...]}`, each tier with its `name`, `command`, `state` (`passed`, `failed`, or `not-reached`), `exit_code`, `duration_ms`, and `findings`, each a `name`, `path`, `line`, and `message`, with `omitted` counting those left out.
+
+The exit status is 0 on pass and 1 when a tier failed. It is 2 when `flai test` could not answer: an argument outside the checkout, a manifest whose `tests` are not valid (`flai check` names what is wrong), a main branch it cannot find with no paths given, or a run stopped before it finished.
+
+A story's agent runs it between tasks, on the paths the task changed, instead of running `go test`, vitest, golangci-lint, or gofmt itself and reading their logs, and instead of handing that run to a sub-agent ([Sub-agents](#sub-agents)). The whole suite, the whole lint, and `flai check` stay the verifier's, through the close-out. Sub-agents may run `flai test`: `flai guard` lets them. Over MCP, the tool `test` takes `story` (the tiers run in its worktree; without it, in the main checkout), `paths`, `all`, and `max`, and answers what `flai test --json` prints; a failing tier is an answer, not an error. A dashboard runs it through the host method `test.run` while you have the `checks` host action on ([The checks host action](../operators/index.md#the-checks-host-action-s-0082)).
+
 ## Flow metrics
 
 ```bash
@@ -1311,7 +1340,7 @@ flai measures each activity from the log `flai serve` keeps of the agent's run. 
 
 ## Sub-agents
 
-An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, test, lint, and `flai check` runs and long logs to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). While it works it runs only the tests for what it changed. The whole suite, the lint, and `flai check` are the verifier's: one run before review, and one more after the agent fixes what that one found. The agent makes the fixes itself, never a sub-agent. Since S-0176 it is also told to plan its story's tasks as it writes them, giving each its `touches` and the tasks it waits for (`--after`), and to hand each task to a task sub-agent, running a layer of tasks that wait for nothing undone and share no path at once only when the tasks are long; it reviews, commits, and moves each task itself, and a task sub-agent edits only what its task touches. The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
+An agent `flai serve` starts with `claude-code` is told to keep its own context for decisions and edits and to hand noisy work to sub-agents: search across many files to the explorer, runs of the whole suite, the whole lint, and `flai check`, and long logs, to the verifier, and, before it moves its story to review, a check of its diff against the story's criteria and the conventions to a fresh verifier ([ADR-0059](../../design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)). While it works it runs only the tests for what it changed, itself, with `flai test` or the MCP tool `test` on the paths it changed (S-0273), not `go test`, vitest, golangci-lint, or gofmt by hand, and not through a sub-agent. The whole suite, the lint, and `flai check` are the verifier's: one run before review, and one more after the agent fixes what that one found. The agent makes the fixes itself, never a sub-agent. Since S-0176 it is also told to plan its story's tasks as it writes them, giving each its `touches` and the tasks it waits for (`--after`), and to hand each task to a task sub-agent, running a layer of tasks that wait for nothing undone and share no path at once only when the tasks are long; it reviews, commits, and moves each task itself, and a task sub-agent edits only what its task touches. The convention `design/conventions/delegation.md` says the same to any agent. The template defines both sub-agents for Claude Code:
 
 | File | What it is |
 |------|------------|

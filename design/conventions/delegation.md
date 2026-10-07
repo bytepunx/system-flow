@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-06
+updated: 2026-10-07
 audience: agent
 order: 130
 status: active
@@ -21,15 +21,16 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Keep your own context for decisions and edits.
 - Hand sub-agents work that you only need the conclusion from:
   - search across many files
-  - test and lint runs
+  - runs of the whole suite and the whole lint
   - long logs
   - diff checks
 - Use the explorer to find and read code, designs, and logs
-- Use the verifier to run tests, lint, `flai check`, and checking diffs.
+- Use the verifier to run the whole suite, the whole lint, and `flai check`, and to check diffs.
 - Never hand the explorer or the verifier an edit, and never hand any sub-agent a commit, a transition, or a question for the designer.
 - While working:
-  - run only the tests for what you changed
-  - leave the whole suite tests, linting, and `flai check` to the verifier
+  - run only the tests for what you changed, yourself, with `flai test` on the paths you changed, or the MCP tool `test` with those paths: it runs the test and lint tiers the manifest's `tests` declare that those paths select, cheapest first, and answers pass or the first findings
+  - do not run `go test`, vitest, golangci-lint, or gofmt by hand and read their logs, and do not hand that run to a sub-agent
+  - leave the whole suite, the whole lint, and `flai check` to the verifier
   - make independent edits and commands in one turn, as several tool calls in one message: consecutive edits to one file, reads of files you already know, commands that do not wait on each other
   - move a task you have just written to ready and in-progress in one command, `flai move T-nnnn ready && flai move T-nnnn in-progress`, since `flai move` refuses a task straight from `backlog` to `in-progress`
 - Before moving a story to `review`:
@@ -57,7 +58,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Name the task's ID in each task sub-agent's description, the Agent tool's `description`, so that flai measures the task by its sub-agent's calls rather than by the time it was in progress. An explorer or verifier started for one task names that task too; one started for the story as a whole names none.
 - A layer's tasks share the story's worktree when their `touches` have no path in common. Give each task its own worktree from the story's branch (`git worktree add -b task/T-nnnn <path> <story branch>`), and merge it back yourself, when one builds or tests what another changes, so that a half-done edit cannot fail a sibling's tests.
 - A task's `touches` are a guess made before its code is read. Before you commit a task's work, compare the files it changed with its `touches`. When it changed a path another task of the layer touches, review both together, and redo the later one where their edits met.
-- Review each one's work as your own before you accept it: read its diff against the task's `## Done when`, run the tests for what it changed, and fix or finish what falls short yourself. Then commit it and move the task. Tick each acceptance criterion the sub-agent named once your review has verified it (`work-management.md`).
+- Review each one's work as your own before you accept it: read its diff against the task's `## Done when`, run `flai test` on the paths it changed, and fix or finish what falls short yourself. Then commit it and move the task. Tick each acceptance criterion the sub-agent named once your review has verified it (`work-management.md`).
 - Only you commit, sync the stream, move items, keep the narrative, and talk to the designer. Record in the narrative what each task sub-agent did, and the interference it reported.
 
 ## As an explorer or a verifier
@@ -75,7 +76,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 
 - You work one task for the story's agent, in the worktree your prompt names. A fork already holds the conventions; otherwise prime with `prime` and the story, and read the conventions your prompt names.
 - Edit only the paths your task touches. When the task needs a change outside them, stop and say so in your final message rather than make it.
-- Run only the tests for what you changed; leave the whole suite, the lint, and `flai check` to the story's agent.
+- Run only the tests for what you changed, with `flai test` on the paths you changed or the MCP tool `test`, rather than running the test and lint tools by hand; leave the whole suite, the whole lint, and `flai check` to the story's agent.
 - When a build or test fails in a path your task does not touch, another task's edit may be half done: do not fix it. Wait a minute and run it again, and say in your final message what failed, when, and for how long.
 - Do not commit, stage, or otherwise write to git. Do not move, create, or edit work items, write to threads, read the inbox, wait for events or work, or sync the stream; the guard refuses them, and you do not work around it.
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.

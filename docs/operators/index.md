@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 ---
 
@@ -183,11 +183,13 @@ flai serve journal                # every run and cancel, refused ones included
 flai serve checks clear flaiover  # one name, or every name with no argument
 ```
 
-In this repository `scripts/flai-test.sh` is what a story's close-out runs for a change to `flai/`: gofmt, vet, and golangci-lint, flaiover's vitest when `flaiover/node_modules` is present, the full Go tests once with the race detector (`make integration`), and the smoke tier. It leaves out `make test`, whose short Go tests the full run holds; `make test` stays the quick run between tasks.
+In this repository `scripts/flai-test.sh` is what a story's close-out runs for a change to `flai/`: gofmt, vet, and golangci-lint, flaiover's vitest when `flaiover/node_modules` is present, the full Go tests once with the race detector (`make integration`), and the smoke tier. It leaves out `make test`, whose short Go tests the full run holds. Between tasks an agent runs `flai test` on the paths it changed instead, which runs the tiers `system-flow.yaml`'s `tests` declare for those paths ([Run the tests for what changed](../users/flai.md#run-the-tests-for-what-changed)).
 
 Naming nothing here leaves the manifest's own `checks:` in effect instead — the project's own default, committed and visible to everyone. Naming any command here, on this host, uses this list instead, for this host only: your own real choice of where to name them, never a merge of both.
 
 **Understand what enabling it means.** Whoever holds the dashboard token can run every named check, in order, in a story's worktree, on your machine, as you, and cancel a run early. Each command is an argument list, run as it stands, never through a shell; `{story}` and `{root}` are replaced in an argument, nothing else is interpreted. The first command to fail stops the rest; a run is bounded by the timeout above, and cancelling it (terminate, then, after a short grace period, kill) reaches the whole process tree the command started, not only its direct child. One run per story at a time: a second while one is active is refused, not queued. The outcome and duration stay with the story (`flai checks status <id>`) until you accept it.
+
+The same action lets the dashboard run `flai test` (`test.run`, S-0273): the project's own test and lint tiers, the manifest's `tests`, for paths it names or for every tier, in a story's worktree or the main checkout, on your machine, as you. Each tier's command is the one in that checkout's `system-flow.yaml`, not one named on this host: in a story's worktree, the one on the story's branch, which its agent can change. A run has no time limit of its own; it is detached for at most two hours, as a checks run is.
 
 It can reach its port, the network, and the two secrets. It cannot read or write any file of the project or of the host: no work tree, no `.git`, no `.flai-cache` beyond those two files, no flai configuration. So it cannot leave a git hook or setting that would run on your machine, change a tracked file or a branch, or plant an ignored file your tools execute, which were the routes open or guarded while the repository was mounted (I-0022, ADR-0027, superseded).
 

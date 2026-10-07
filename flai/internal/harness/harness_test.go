@@ -371,13 +371,46 @@ func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
 	p := Prompt(req(&manifest.Agent{Harness: ClaudeCode}))
 	for _, w := range []string{
 		"run only the tests for what you changed",
-		"leave the whole suite, the lint, and flai check to the verifier rather than running them yourself as well",
+		"Leave the whole suite, the whole lint, and flai check to the verifier rather than running them yourself as well",
 		"have one fresh verifier run the whole suite, the lint, and flai check in the worktree, through the project's close-out script where it has one",
 		"Fix what it finds yourself, never through a sub-agent, commit, and have one more fresh verifier run the same and confirm the fixes",
 		"A verifier's passing run is the story's run before review: do not repeat it",
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
+	}
+}
+
+// S-0273: the story's agent runs the tests for what it changed itself, with
+// flai test or the MCP tool test on the paths it changed, not the test and
+// lint tools by hand and not through a sub-agent; the whole suite and lint
+// stay the verifier's.
+func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		for _, w := range []string{
+			"run only the tests for what you changed, yourself, with flai test and the paths you changed, or the flai MCP tool test with them",
+			"it runs the test and lint tiers the manifest's tests declare that those paths select, cheapest first, and answers pass or the first findings",
+			"Do not run go test, vitest, golangci-lint, or gofmt by hand and read their logs, and do not hand that run to a sub-agent",
+			"runs of the whole suite, the whole lint, and flai check, and long logs, to the verifier",
+			"Leave the whole suite, the whole lint, and flai check to the verifier rather than running them yourself as well",
+		} {
+			if !strings.Contains(p, w) {
+				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+		if strings.Contains(p, "test, lint, and flai check runs and long logs to the verifier") {
+			t.Errorf("the prompt still hands every test run to the verifier:\n%s", p)
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, "flai test") {
+			t.Errorf("told about flai test again:\n%s", p)
 		}
 	}
 }
@@ -467,7 +500,7 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"tasks with no after between them and no path in common form layers that can run together",
 			"record the layers and why each task waits in the narrative's Decisions",
 			"Work the plan layer by layer, handing each task to a task sub-agent",
-			"A task sub-agent edits only what its task touches, runs only its own tests, and never commits, syncs, or writes through flai",
+			"A task sub-agent edits only what its task touches, runs only its own tests with flai test, and never commits, syncs, or writes through flai",
 			"Name the task's ID in each task sub-agent's description, so that flai measures the task by its calls",
 			// S-0285: a sub-agent is launched in the foreground, the
 			// session is not left to end under a running one, and
@@ -542,7 +575,7 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 		cycle := []string{
 			"When a task is done, commit its changes, with its docs and work-item updates, on story/S-0104",
 			"then run flai stream sync S-0104, and resolve each conflict it lists in the worktree, git add it, and git rebase --continue",
-			"then run the tests for what the task changed and commit any fix they need",
+			"then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them) and commit any fix they need",
 			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then have one fresh verifier",
 			"through the project's close-out script where it has one (it refuses a branch that does not contain the main branch)",
 		}
