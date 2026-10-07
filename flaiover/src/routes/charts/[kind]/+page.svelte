@@ -2,20 +2,25 @@
 	import { api } from '$lib/api';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { follow } from '$lib/events';
 	import Chart from '$lib/components/Chart.svelte';
 	import SpendTable from '$lib/components/SpendTable.svelte';
+	import ForecastTable from '$lib/components/ForecastTable.svelte';
 	import {
 		bucketsFor,
 		build,
 		completedIn,
 		controls,
+		errorFacets,
 		FLOW_KINDS,
+		forecastRows,
 		hasSpend,
 		human,
 		KINDS,
 		normalise,
+		PLANNING_KINDS,
+		plural,
 		SPEND_KINDS,
 		spendRows,
 		titleOf,
@@ -23,9 +28,14 @@
 		WINDOWS,
 		withUsage,
 		withCost,
+		spreadFor,
 		strategicCost,
 		type BucketSize,
+		type ErrorField,
+		type ErrorFilter,
+		type ErrorSpread,
 		type Kind,
+		type PlanningKind,
 		type Report
 	} from '$lib/viz/charts';
 	import { count, dollars } from '$lib/usage';
@@ -40,6 +50,9 @@
 	let epic = $state('');
 	// what spend over time is laid out in (S-0163)
 	let bucket = $state<BucketSize>('day');
+	// the nature and the model the planning charts are narrowed to, all when empty (S-0212)
+	let nature = $state('');
+	let model = $state('');
 	let report = $state<Report | null>(null);
 	let error = $state<string | null>(null);
 	const dark = $derived(themeState.dark);
@@ -51,11 +64,55 @@
 			: 'cycle-time'
 	);
 	const t = $derived(theme(dark));
-	const option = $derived(report ? build(kind, report, t, epic || undefined) : null);
+	const shown = $derived(controls(kind));
+	/** The groups of charts the header lists, in order. */
+	const groups = [
+		{ name: 'flow', kinds: FLOW_KINDS },
+		{ name: 'usage', kinds: USAGE_KINDS },
+		{ name: 'planning', kinds: PLANNING_KINDS }
+	];
+	const filter = $derived<ErrorFilter>({
+		nature: (shown.nature && nature) || undefined,
+		model: (shown.model && model) || undefined
+	});
+	const option = $derived(report ? build(kind, report, t, epic || undefined, filter) : null);
 	const s = $derived(report?.summary);
 	const usageKind = $derived((USAGE_KINDS as readonly string[]).includes(kind));
 	const spendKind = $derived(SPEND_KINDS.includes(kind));
-	const shown = $derived(controls(kind));
+	const planningKind = $derived((PLANNING_KINDS as readonly string[]).includes(kind));
+	// the planning charts read stories, whichever type was chosen on another chart (S-0212)
+	const asType = $derived(planningKind ? 'story' : type);
+	const facets = $derived(
+		report && planningKind
+			? errorFacets(report, kind as PlanningKind)
+			: { natures: [], models: [] }
+	);
+	const forecasts = $derived(report && planningKind ? forecastRows(report, filter) : []);
+	/** Whether any story done in the window has a forecast of its duration or its delivery. */
+	const forecastSet = $derived(
+		report !== null &&
+			forecastRows(report).some(
+				(r) => r.forecast_seconds !== undefined || r.delivery_error_seconds !== undefined
+			)
+	);
+	/** flai's spread of an error under the filter; under nature and model, from the rows shown. */
+	const spread = (which: 'forecast' | 'delivery', field: ErrorField): ErrorSpread | undefined =>
+		report ? spreadFor(report, which, filter, forecasts.flatMap((r) => r[field] ?? [])) : undefined;
+	const p = (v: number | undefined) => (v === undefined ? '-' : human(v));
+	/** The stories with a forecast and the p50 and p85 of their absolute errors, in a line. */
+	const planningSummary = $derived.by(() => {
+		if (!report?.forecasts) return '';
+		const f = spread('forecast', 'forecast_error_seconds');
+		const d = spread('delivery', 'delivery_error_seconds');
+		const of = [filter.nature, filter.model].filter(Boolean).join(', ');
+		const scope = of ? `(${of})` : 'in the window';
+		const n = f?.count ?? 0;
+		return [
+			`${n} ${n === 1 ? report.type : plural(report.type)} with a forecast ${scope}`,
+			`forecast error p50 ${p(f?.p50_seconds)} p85 ${p(f?.p85_seconds)}`,
+			`delivery error p50 ${p(d?.p50_seconds)} p85 ${p(d?.p85_seconds)}`
+		].join(' · ');
+	});
 	const buckets = $derived(bucketsFor(since));
 	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket));
 	const spend = $derived(report?.usage?.spend?.[report.type]);
@@ -92,11 +149,17 @@
 
 	// the latest question asked: an answer to an earlier one, arriving after it, is not drawn
 	let asked = 0;
+	// the type last asked for: a chart that reads another type asks flai again when it opens
+	let askedType = 'story';
+	$effect(() => {
+		if (asType !== askedType) untrack(() => void load());
+	});
 	async function load() {
 		const mine = ++asked;
+		askedType = asType;
 		// an hour is laid out over 31 days or less: a longer window goes by the day
 		if (!buckets.includes(bucket)) bucket = 'day';
-		const r = await api(`/api/stats?since=${since}&type=${type}&bucket=${bucket}`);
+		const r = await api(`/api/stats?since=${since}&type=${asType}&bucket=${bucket}`);
 		const body = await r.json();
 		if (mine !== asked) return;
 		if (!r.ok) {
@@ -127,13 +190,13 @@
 
 <svelte:head><title>{title} · flaiover</title></svelte:head>
 
-{#each [{ name: 'flow', kinds: FLOW_KINDS }, { name: 'usage', kinds: USAGE_KINDS }] as group (group.name)}
+{#each groups as group (group.name)}
 	<nav
-		class="flex flex-wrap items-center gap-2 {group.name === 'usage' ? 'mb-3' : 'mb-1'}"
+		class="flex flex-wrap items-center gap-2 {group.name === 'planning' ? 'mb-3' : 'mb-1'}"
 		aria-label="{group.name} charts"
 		data-testid="charts-{group.name}"
 	>
-		<span class="w-12 text-xs text-muted">{group.name}</span>
+		<span class="w-14 text-xs text-muted">{group.name}</span>
 		{#each group.kinds as k (k)}
 			<a
 				href={resolve('/charts/[kind]', { kind: k })}
@@ -187,7 +250,31 @@
 			></label
 		>
 	{/if}
-	{#if usageKind && report?.usage && report.usage.items > 0}
+	{#if shown.nature}
+		<label
+			>nature <select
+				class="rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={nature}
+				data-testid="nature"
+				><option value="">all</option>{#each facets.natures as n (n)}<option value={n}>{n}</option
+					>{/each}</select
+			></label
+		>
+	{/if}
+	{#if shown.model}
+		<label
+			>model <select
+				class="rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={model}
+				data-testid="model"
+				><option value="">all</option>{#each facets.models as m (m)}<option value={m}>{m}</option
+					>{/each}</select
+			></label
+		>
+	{/if}
+	{#if planningKind && planningSummary}
+		<span class="text-xs text-muted" data-testid="planning-summary">{planningSummary}</span>
+	{:else if usageKind && report?.usage && report.usage.items > 0}
 		<span class="text-xs text-muted" data-testid="usage-summary">{usageSummary}</span>
 	{:else if s}
 		<span class="text-xs text-muted"
@@ -212,6 +299,18 @@
 		<p class="mb-2 text-sm text-muted" data-testid="usage-none">
 			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
 			starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
+		</p>
+	{:else if planningKind && report && !report.forecasts}
+		<p class="mb-2 text-sm text-muted" data-testid="forecasts-older">
+			The flai on the host sends no forecast errors, which this chart is drawn from: it is older
+			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if planningKind && !forecastSet}
+		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
+			No story done in the window has a forecast. The planner sets one when it plans a story, or set
+			one with <code
+				>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
+			>.
 		</p>
 	{/if}
 	{#if spendKind && report && hasSpend(report)}
@@ -238,7 +337,9 @@
 	<details class="mt-4 text-xs">
 		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
-			{#if spendKind && report}
+			{#if planningKind}
+				<ForecastTable rows={forecasts} />
+			{:else if spendKind && report}
 				<SpendTable rows={spendRows(report, kind)} bucket={report.usage?.bucket ?? bucket} />
 			{:else if usageKind && report}
 				<table class="min-w-full" data-testid="usage-table">

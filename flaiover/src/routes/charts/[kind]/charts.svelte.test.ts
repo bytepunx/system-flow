@@ -5,8 +5,23 @@ import { flushSync, mount, unmount } from 'svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
-const at = vi.hoisted(() => ({ params: { kind: 'tokens-spent' } }));
-vi.mock('$app/state', () => ({ page: at }));
+const at = vi.hoisted(() => ({ params: { kind: 'tokens-spent' }, moved: () => {} }));
+// SvelteKit keeps the page when it goes to another chart: its params are read as they change
+vi.mock('$app/state', async () => {
+	const { createSubscriber } = await import('svelte/reactivity');
+	const follows = createSubscriber((update) => {
+		at.moved = update;
+		return () => {};
+	});
+	return {
+		page: {
+			get params() {
+				follows();
+				return at.params;
+			}
+		}
+	};
+});
 vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) =>
 		route.replace(/\[(\.\.\.)?(\w+)\]/, (_, __, k) => params[k] ?? '')
@@ -473,5 +488,230 @@ describe('the window (S-0166)', () => {
 		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
 		expect(ids().sort()).toEqual(['S-0001', 'S-0002']);
 		expect(document.querySelectorAll('label select')[2].querySelectorAll('option').length).toBe(1);
+	});
+});
+
+describe('the planning charts (S-0212)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const story = (id: string, completed: string, rest: Record<string, unknown>) => ({
+		id,
+		type: 'story',
+		nature: 'feature',
+		title: `Story ${id}`,
+		status: 'done',
+		created: '2026-09-01T00:00:00Z',
+		started: '2026-09-01T00:00:00Z',
+		completed,
+		blocked_seconds: 0,
+		time_in_state_seconds: {},
+		...rest
+	});
+	const spread = (count: number, seconds: number) => ({
+		count,
+		p50_seconds: seconds,
+		p85_seconds: seconds
+	});
+	// flai's own figures: the p50 and p85 of the absolute errors, in all, per nature, and per model
+	const forecasts = {
+		forecast: {
+			count: 2,
+			p50_seconds: 7200,
+			p85_seconds: 10800,
+			by_nature: { feature: spread(1, 7200), remediation: spread(1, 10800) },
+			by_model: { 'claude-opus-5-5': spread(1, 7200), '(none)': spread(1, 10800) }
+		},
+		delivery: {
+			...spread(1, 86400),
+			by_nature: { feature: spread(1, 86400) },
+			by_model: { 'claude-opus-5-5': spread(1, 86400) }
+		},
+		estimate: {
+			count: 2,
+			p50_seconds: 1800,
+			p85_seconds: 3600,
+			by_nature: { feature: { count: 2, p50_seconds: 1800, p85_seconds: 3600 } },
+			by_model: { 'claude-opus-5-5': spread(1, 1800), '(none)': spread(1, 3600) }
+		}
+	};
+	const items = [
+		story('S-0001', '2026-09-10T12:00:00Z', { estimate_error_seconds: -3600 }),
+		story('S-0002', '2026-09-20T12:00:00Z', {
+			nature: 'remediation',
+			forecast_seconds: 14400,
+			cycle_time_seconds: 3600,
+			forecast_error_seconds: -10800
+		}),
+		story('S-0003', '2026-09-28T12:00:00Z', {
+			model: 'claude-opus-5-5',
+			forecast_seconds: 21600,
+			cycle_time_seconds: 28800,
+			forecast_error_seconds: 7200,
+			delivery_error_seconds: -86400,
+			estimate_error_seconds: 1800
+		})
+	];
+	let answered: Record<string, unknown> = {};
+	beforeEach(() => {
+		answered = { items, forecasts };
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const q = new URL(url, 'http://localhost').searchParams;
+			return answer({
+				...reportIn(q.get('bucket') ?? 'day'),
+				type: q.get('type'),
+				...answered
+			});
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+		chartWindow.set('30d');
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	/** Goes to another chart on the same page, as a link in the header does. */
+	const go = async (kind: string) => {
+		at.params.kind = kind;
+		at.moved();
+		await settle();
+	};
+	const asked = () =>
+		api.mock.calls.map(([u]) => u as string).filter((u) => u.startsWith('/api/stats'));
+	const controls = () =>
+		[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0]);
+	const options = (testid: string) =>
+		[...document.querySelectorAll(`[data-testid="${testid}"] option`)].map((o) => o.textContent);
+	type Drawn = { series: { name: string; data: { id: string }[] }[] };
+	const drawn = () => setOption.mock.calls.at(-1)![0] as Drawn;
+	const points = () => drawn().series.map((s) => [s.name, s.data.map((d) => d.id)]);
+	const rows = () =>
+		[...document.querySelectorAll('[data-testid="forecast-table"] tbody tr')].map((tr) =>
+			tr.querySelector('a')!.textContent!.trim()
+		);
+
+	it('lists the planning charts as a third group, each opening its chart', async () => {
+		await open('forecast-accuracy');
+		const links = [...document.querySelectorAll('[data-testid="charts-planning"] a')];
+		expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+			['Forecast Accuracy', '/charts/forecast-accuracy'],
+			['Delivery Accuracy', '/charts/delivery-accuracy'],
+			['Forecast Error / Model', '/charts/forecast-by-model']
+		]);
+		expect(text('h1')).toBe('Forecast Accuracy');
+		expect(points()).toEqual([
+			['forecast error', ['S-0002', 'S-0003']],
+			['estimate error', ['S-0001', 'S-0003']]
+		]);
+		await go('delivery-accuracy');
+		expect(text('h1')).toBe('Delivery Accuracy');
+		expect(drawn().series[0]).toMatchObject({ name: 'delivery error', data: [{ id: 'S-0003' }] });
+		await go('forecast-by-model');
+		expect(text('h1')).toBe('Forecast Error / Model');
+		expect(drawn().series.map((s) => s.name)).toEqual(['(none)', 'claude-opus-5-5']);
+		// the report was read once: every planning chart reads the same stories
+		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
+	});
+
+	it('narrows a chart by nature and by model, with flai figures for one and the rows for both', async () => {
+		await open('forecast-accuracy');
+		expect(controls()).toEqual(['window', 'nature', 'model']);
+		expect(options('nature')).toEqual(['all', 'feature', 'remediation']);
+		expect(options('model')).toEqual(['all', '(none)', 'claude-opus-5-5']);
+		expect(text('[data-testid="planning-summary"]')).toBe(
+			'2 stories with a forecast in the window · forecast error p50 2h p85 3h · delivery error p50 1d p85 1d'
+		);
+		expect(rows()).toEqual(['S-0003', 'S-0002', 'S-0001']);
+		await choose('nature', 'remediation');
+		expect(points()).toEqual([['forecast error', ['S-0002']]]);
+		expect(rows()).toEqual(['S-0002']);
+		expect(text('[data-testid="planning-summary"]')).toBe(
+			'1 story with a forecast (remediation) · forecast error p50 3h p85 3h · delivery error p50 - p85 -'
+		);
+		await choose('nature', 'feature');
+		await choose('model', '(none)');
+		expect(rows()).toEqual(['S-0001']);
+		expect(text('[data-testid="planning-summary"]')).toBe(
+			'0 stories with a forecast (feature, (none)) · forecast error p50 - p85 - · delivery error p50 - p85 -'
+		);
+		await choose('model', 'claude-opus-5-5');
+		expect(rows()).toEqual(['S-0003']);
+		expect(text('[data-testid="planning-summary"]')).toBe(
+			'1 story with a forecast (feature, claude-opus-5-5) · forecast error p50 2h p85 2h · delivery error p50 1d p85 1d'
+		);
+		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
+	});
+
+	it('shows the error per model by the bucket, narrowed by nature only', async () => {
+		await open('forecast-by-model');
+		expect(controls()).toEqual(['window', 'per', 'nature']);
+		expect(document.querySelector('[data-testid="model"]')).toBeNull();
+		expect(options('nature')).toEqual(['all', 'feature', 'remediation']);
+		await choose('bucket', 'week');
+		expect(asked().at(-1)).toBe('/api/stats?since=30d&type=story&bucket=week');
+		await choose('nature', 'feature');
+		expect(drawn().series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
+	});
+
+	it('asks flai for stories, whichever type was chosen on another chart', async () => {
+		await open('cycle-time');
+		const type = [...document.querySelectorAll('label')]
+			.find((l) => l.textContent!.trim().startsWith('type'))!
+			.querySelector('select')!;
+		type.value = 'task';
+		type.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(asked()).toEqual([
+			'/api/stats?since=30d&type=story&bucket=day',
+			'/api/stats?since=30d&type=task&bucket=day'
+		]);
+		await go('forecast-accuracy');
+		expect(asked().at(-1)).toBe('/api/stats?since=30d&type=story&bucket=day');
+		expect(text('[data-testid="planning-summary"]')).toContain('2 stories with a forecast');
+		await go('delivery-accuracy');
+		await go('cycle-time');
+		expect(asked().slice(2)).toEqual([
+			'/api/stats?since=30d&type=story&bucket=day',
+			'/api/stats?since=30d&type=task&bucket=day'
+		]);
+	});
+
+	it('says how a forecast is set when no story in the window has one', async () => {
+		answered = {
+			items: [items[0]],
+			forecasts: {
+				forecast: { count: 0, by_nature: {}, by_model: {} },
+				delivery: { count: 0, by_nature: {}, by_model: {} },
+				estimate: { ...spread(1, 3600), by_nature: {}, by_model: {} }
+			}
+		};
+		await open('forecast-accuracy');
+		expect(text('[data-testid="forecast-none"]')).toContain(
+			'flai edit <story> --forecast-duration 6h --forecast-delivery <UTC time>'
+		);
+		expect(text('[data-testid="forecast-none"]')).toContain('The planner sets one');
+		expect(text('[data-testid="planning-summary"]')).toBe(
+			'0 stories with a forecast in the window · forecast error p50 - p85 - · delivery error p50 - p85 -'
+		);
+		expect(rows()).toEqual(['S-0001']);
+	});
+
+	it('says the flai on the host is older when it sends no forecast errors', async () => {
+		answered = { items: [], forecasts: undefined };
+		await open('delivery-accuracy');
+		expect(text('[data-testid="forecasts-older"]')).toContain('flai self-upgrade');
+		expect(document.querySelector('[data-testid="forecast-none"]')).toBeNull();
+		expect(document.querySelector('[data-testid="planning-summary"]')).toBeNull();
 	});
 });
