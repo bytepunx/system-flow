@@ -3,11 +3,11 @@ id: I-0058
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
 class: efficiency
 status: open
-count: 7
+count: 6
 cost: 3m
 first_reported: 2026-10-02T17:23:40Z
-last_reported: 2026-10-07T08:45:08Z
-updated: 2026-10-07T08:45:08Z
+last_reported: 2026-10-06T22:01:45Z
+updated: 2026-10-06T22:01:45Z
 ---
 
 # I-0058 flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
@@ -39,9 +39,5 @@ T-0903's task sub-agent wrote a Go test through a bash heredoc whose comment nam
 ### 2026-10-06T22:01:45Z
 Story: S-0227.
 T-0942's task sub-agent edited design/system/strategic-agents.md through a shell script; the guard refused it because the script's text held the words of a flai issue command. It redid the edits with the Edit tool.
-
-### 2026-10-07T08:45:08Z
-Story: S-0275.
-Two task sub-agents of S-0275 (T-1077, T-1083) were refused a heredoc edit whose text described flai issue commands, and redid it with the Edit tool.
 
 ## Remediation
