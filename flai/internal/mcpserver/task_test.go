@@ -102,10 +102,12 @@ func field(out map[string]any, path string) any {
 	return v
 }
 
-// ADR-0107: task_done commits, syncs, moves the task to done, logs, widens
-// the touches, checks, and answers the inbox in one call.
+// ADR-0107: task_done commits, tells the other open stories whose claim
+// covers the commit (S-0333), syncs, moves the task to done, logs, widens the
+// touches, checks, and answers the inbox in one call.
 func TestTaskDoneClosesATaskInOneCall(t *testing.T) {
 	repo, wt := closeProject(t)
+	writeIn(t, repo.Root, "wip/kanban/stories/S-006-six.md", "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\ntouches: [README.md]\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
 
 	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-3", "message": "docs: [S-004] T-003 the readme\n\nWhy."})
@@ -120,6 +122,9 @@ func TestTaskDoneClosesATaskInOneCall(t *testing.T) {
 	}
 	if field(out, "log.entry") != "docs: [S-004] T-003 the readme" || field(out, "check.passed") != true || field(out, "inbox.agent") != "agent-S-004" {
 		t.Errorf("log %v, check %v, inbox %v", out["log"], out["check"], field(out, "inbox.agent"))
+	}
+	if told, _ := out["told"].([]any); len(told) != 1 || field(told[0].(map[string]any), "story") != "S-006" || field(told[0].(map[string]any), "conversation") != "MS-0001" {
+		t.Errorf("told: %v", out["told"])
 	}
 	if st := t003(t, repo); st != workitem.Done {
 		t.Errorf("T-003 is %s", st)

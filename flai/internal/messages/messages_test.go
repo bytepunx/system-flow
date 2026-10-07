@@ -451,6 +451,109 @@ func TestAwaitingOtherAndToSince(t *testing.T) {
 	}
 }
 
+// S-0333: Notify starts a conversation as Send does when none is open between
+// the two stories, taking about paths that do not exist, as a commit that
+// deleted them names them.
+func TestNotifyStartsAConversation(t *testing.T) {
+	r := project(t)
+	send(t, r, "S-0001", "S-0002", "Another pair", t0)
+	c, err := Notify(r, SendOptions{From: "S-0001", To: "S-0003", Author: "agent-S-0001", Text: "T-0001 of S-0001 changed paths S-0003's claim covers.", About: []string{"./flai/gone.go", "design/system/plan.md", "flai/gone.go"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ID != "MS-0002" || c.From != "S-0001" || c.To != "S-0003" || strings.Join(c.About, ",") != "flai/gone.go,design/system/plan.md" {
+		t.Fatalf("conversation: %+v", c)
+	}
+	if !strings.Contains(readFile(t, c.Path), "\nBetween S-0001 and S-0003, about `flai/gone.go`, `design/system/plan.md`.\n\n## Entries\n\n### 2026-10-07T09:00:00Z agent-S-0001 S-0001\nT-0001 of S-0001 changed paths S-0003's claim covers.\n") {
+		t.Errorf("file:\n%s", readFile(t, c.Path))
+	}
+	if err := c.Validate(); err != nil {
+		t.Error(err)
+	}
+	lintClean(t, r, c)
+}
+
+// S-0333: Notify writes on the conversation open between the two stories,
+// whichever started it, adding the about paths it does not name yet; a
+// conversation stored closed is not written on again, and one is started in
+// its place.
+func TestNotifyReusesTheOpenConversation(t *testing.T) {
+	r := project(t)
+	first, err := Send(r, SendOptions{From: "S-0003", To: "S-0001", Author: "agent-S-0003", Text: "Who owns plan.md?", About: []string{"design/system/plan.md"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := t0.Add(time.Minute)
+	c, err := Notify(r, SendOptions{From: "s-1", To: "S-3", Author: "agent-S-0001", Text: "I changed it.", About: []string{"design/system/plan.md", "flai/gone.go"}, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ID != first.ID || strings.Join(c.About, ",") != "design/system/plan.md,flai/gone.go" || c.Updated != "2026-10-07T09:01:00Z" || !contains(c.Participants, "agent-S-0001") {
+		t.Fatalf("the other direction reuses %s: %+v", first.ID, c)
+	}
+	es := c.Entries()
+	if len(es) != 2 || es[1] != (Entry{At: "2026-10-07T09:01:00Z", Author: "agent-S-0001", Story: "S-0001", Text: "I changed it."}) || c.Awaiting() != "S-0003" {
+		t.Errorf("entries %+v, awaiting %s", es, c.Awaiting())
+	}
+	if body := readFile(t, c.Path); !strings.Contains(body, "\nBetween S-0003 and S-0001, about `design/system/plan.md`, `flai/gone.go`.\n") {
+		t.Errorf("the sentence under the heading names the paths added:\n%s", body)
+	}
+	lintClean(t, r, c)
+	if err := c.Validate(); err != nil {
+		t.Error(err)
+	}
+
+	again, err := Notify(r, SendOptions{From: "S-0003", To: "S-0001", Author: "agent-S-0003", Text: "Thanks.", About: []string{"flai/gone.go"}, Now: at.Add(time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.ID != first.ID || len(again.About) != 2 || len(again.Entries()) != 3 {
+		t.Errorf("the same direction reuses it, adding no path twice: %+v", again)
+	}
+
+	if _, err := Close(r, first.ID, "alex", "settled", at.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	closed := readFile(t, first.Path)
+	next, err := Notify(r, SendOptions{From: "S-0001", To: "S-0003", Author: "agent-S-0001", Text: "Changed again.", About: []string{"flai/gone.go"}, Now: at.Add(3 * time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.ID != "MS-0002" || next.From != "S-0001" || strings.Join(next.About, ",") != "flai/gone.go" {
+		t.Errorf("a closed conversation is not reused: %+v", next)
+	}
+	if readFile(t, first.Path) != closed {
+		t.Error("the closed conversation was written to")
+	}
+}
+
+// S-0333: Notify refuses what Send refuses but a path that does not exist,
+// writing nothing.
+func TestNotifyRefusals(t *testing.T) {
+	r := project(t)
+	for _, tc := range []struct {
+		name string
+		opt  SendOptions
+		want string
+	}{
+		{"empty text", SendOptions{From: "S-0001", To: "S-0002", Author: "a", Text: " "}, "needs text"},
+		{"same story", SendOptions{From: "S-0001", To: "S-1", Author: "a", Text: "Hi"}, "S-0001 cannot message itself"},
+		{"backlog", SendOptions{From: "S-0001", To: "S-0004", Author: "a", Text: "Hi"}, "S-0004 is in the backlog"},
+		{"about outside", SendOptions{From: "S-0001", To: "S-0002", Author: "a", Text: "Hi", About: []string{"../x"}}, "not a path inside the repository"},
+		{"lint", SendOptions{From: "S-0001", To: "S-0002", Author: "a", Text: "Hi\n\n**Bold as a heading**"}, "MD036"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.opt.Now = t0
+			if _, err := Notify(r, tc.opt); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("got %v, want an error containing %q", err, tc.want)
+			}
+		})
+	}
+	if list, err := List(r); err != nil || len(list) != 0 {
+		t.Errorf("a refused notice writes nothing: %v %v", ids(list), err)
+	}
+}
+
 // View is what --json prints: the front matter, the path from the root, who
 // is awaited, and the entries.
 func TestView(t *testing.T) {

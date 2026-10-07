@@ -1,6 +1,7 @@
 // Package taskdone closes a task in one call (ADR-0107): it commits the
-// story's worktree, syncs the story's branch, moves the task to done, logs
-// the narrative, widens the touches, checks the story, and reads the agent's
+// story's worktree, tells the other open stories whose claim covers what the
+// commit changed, syncs the story's branch, moves the task to done, logs the
+// narrative, widens the touches, checks the story, and reads the agent's
 // inbox, in that order, stopping at the first step that fails. flai task
 // done, the MCP tool task_done, and the host channel's task.done answer its
 // Result.
@@ -21,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -28,6 +30,7 @@ import (
 // The steps, in the order Run takes them, as Result.Stopped names them.
 const (
 	StepCommit  = "commit"
+	StepTell    = "tell"
 	StepSync    = "sync"
 	StepMove    = "move"
 	StepLog     = "log"
@@ -63,6 +66,7 @@ type Result struct {
 	Task    string               `json:"task"`
 	Story   string               `json:"story"`
 	Commit  *Commit              `json:"commit"`
+	Told    []Told               `json:"told"`
 	Sync    *storygit.SyncResult `json:"sync"`
 	Move    *Move                `json:"move"`
 	Log     *Log                 `json:"log"`
@@ -81,6 +85,16 @@ type Commit struct {
 	Hash    string   `json:"hash"`
 	Subject string   `json:"subject"`
 	Paths   []string `json:"paths"` // what it changed, as git names them
+}
+
+// Told is a story in progress or in review, other than the task's, whose
+// claim covers paths the commit changed, and the conversation the notice of
+// them went to it in (S-0333).
+type Told struct {
+	Story        string   `json:"story" jsonschema:"the other open story"`
+	Title        string   `json:"title" jsonschema:"its title"`
+	Paths        []string `json:"paths" jsonschema:"the changed paths its claim covers"`
+	Conversation string   `json:"conversation" jsonschema:"the conversation, MS-nnnn, the notice is in"`
 }
 
 // Move is the task's move to done.
@@ -147,6 +161,7 @@ func Run(ctx context.Context, o Options) (Result, error) {
 		do   func() error
 	}{
 		{StepCommit, r.commit},
+		{StepTell, r.tell},
 		{StepSync, r.sync},
 		{StepMove, r.move},
 		{StepLog, r.log},
@@ -260,6 +275,52 @@ func (r *run) commit() error {
 	}
 	r.res.Commit = &Commit{Hash: strings.TrimSpace(hash), Subject: subject(r.o.Message), Paths: paths}
 	return nil
+}
+
+// tell messages each other story in progress or in review whose claim covers
+// a path the commit changed, the shared paths included, on the conversation
+// open between the two stories or a new one (S-0333). It runs before the
+// sync, so that a sync stopped on conflicts, after which a second call has
+// nothing to commit, does not lose the notice. It never stops the run: a
+// notice that cannot be sent is logged and left out of Result.Told.
+func (r *run) tell() error {
+	r.res.Told = []Told{}
+	c := r.res.Commit
+	if c == nil {
+		return nil
+	}
+	items, err := r.o.Repo.List(false)
+	if err != nil {
+		r.logger.Warn("change notices not sent", "component", "taskdone", "task", r.task.ID, "err", err)
+		return nil
+	}
+	for _, cov := range itemedit.Covering(items, r.o.Repo.Manifest.Projects, r.story.ID, c.Paths) {
+		conv, err := messages.Notify(r.o.Repo, messages.SendOptions{
+			From: r.story.ID, To: cov.ID, Author: r.o.Agent, Text: r.notice(cov), About: cov.Paths, Now: r.o.Now(),
+		})
+		if err != nil {
+			r.logger.Warn("change notice not sent", "component", "taskdone", "task", r.task.ID, "item", cov.ID, "err", err)
+			continue
+		}
+		r.res.Told = append(r.res.Told, Told{Story: cov.ID, Title: cov.Title, Paths: cov.Paths, Conversation: conv.ID})
+	}
+	return nil
+}
+
+// notice is the message that tells cov's agent of the commit: the task, its
+// story, the commit and its subject, the paths cov's claim covers, and what
+// to do about them.
+func (r *run) notice(cov itemedit.Covered) string {
+	c := r.res.Commit
+	paths := make([]string, len(cov.Paths))
+	for i, p := range cov.Paths {
+		paths[i] = code(p)
+	}
+	hash := abbrev(c.Hash)
+	return fmt.Sprintf("%s of %s changed paths %s's claim covers.\n\n%s, %s, committed %s on %s, %s, changing %s. It reaches the main branch when %s is accepted; %s shows it until then. Reply here if it breaks your work, or adjust to it early.",
+		r.task.ID, r.story.ID, cov.ID,
+		r.task.ID, r.task.Title, hash, storygit.Branch(r.story.ID), code(c.Subject), strings.Join(paths, ", "),
+		r.story.ID, code("git show "+hash))
 }
 
 // sync is the story's flai stream sync; a refusal or a stop on conflicts
@@ -412,6 +473,27 @@ func mainRoot(repo *workitem.Repo) string {
 func subject(message string) string {
 	first, _, _ := strings.Cut(strings.TrimSpace(message), "\n")
 	return strings.TrimSpace(first)
+}
+
+// abbrev is a commit's hash cut to the seven characters git shows.
+func abbrev(hash string) string {
+	if len(hash) > 7 {
+		return hash[:7]
+	}
+	return hash
+}
+
+// code is s as a markdown code span, fenced with more backticks than any run
+// of them in s, so that a subject or a path reads as git wrote it.
+func code(s string) string {
+	fence := "`"
+	for strings.Contains(s, fence) {
+		fence += "`"
+	}
+	if strings.HasPrefix(s, "`") || strings.HasSuffix(s, "`") {
+		s = " " + s + " "
+	}
+	return fence + s + fence
 }
 
 // lines is git's output, one path a line, without empty lines.

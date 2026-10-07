@@ -405,44 +405,90 @@ type SendOptions struct {
 // in the repository. The file is refused, and nothing written, when the
 // project's lint rejects it.
 func Send(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
-	text := strings.TrimSpace(opt.Text)
-	if text == "" {
-		return nil, fmt.Errorf("a message needs text")
+	m, err := prepare(r, opt)
+	if err != nil {
+		return nil, err
 	}
-	author := cleanAuthor(opt.Author)
-	if author == "" {
-		return nil, fmt.Errorf("an author is required (--by, FLAI_AGENT, or config author)")
+	if m.about, err = resolveAbout(r, opt.About); err != nil {
+		return nil, err
+	}
+	return begin(r, m)
+}
+
+// Notify sends a message from opt.From to opt.To on the conversation still
+// open between the two stories, whichever of them started it, adding to its
+// about the paths it does not name yet; with none open, it starts one as Send
+// does. Unlike Send, it takes the about paths as given, cleaned, without
+// asking that each exist: flai sends it for what git reports, and a path a
+// commit deleted, or one only a story's worktree holds, is still one the
+// message is about. The file is refused, and nothing written, when the
+// project's lint rejects it.
+func Notify(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
+	m, err := prepare(r, opt)
+	if err != nil {
+		return nil, err
+	}
+	if m.about, err = cleanAbout(opt.About); err != nil {
+		return nil, err
+	}
+	c, err := openBetween(r, m.from.ID, m.to.ID)
+	if err != nil {
+		return nil, err
+	}
+	if c == nil {
+		return begin(r, m)
+	}
+	was := c.Marshal()
+	before := betweenLine(c.From, c.To, c.About)
+	for _, p := range m.about {
+		if !contains(c.About, p) {
+			c.About = append(c.About, p)
+		}
+	}
+	c.Body = strings.Replace(c.Body, "\n"+before+"\n", "\n"+betweenLine(c.From, c.To, c.About)+"\n", 1)
+	c.add(m.now, m.author, storyOf(c, m.from.ID), m.text)
+	return c, save(r, c, was)
+}
+
+// message is a first message, or a notice, checked and ready to write.
+type message struct {
+	text, author string
+	from, to     *workitem.Item
+	about        []string
+	now          string
+}
+
+// prepare checks what Send and Notify share: the text, the author, and two
+// different stories, each in progress or in review.
+func prepare(r *workitem.Repo, opt SendOptions) (message, error) {
+	m := message{text: strings.TrimSpace(opt.Text), author: cleanAuthor(opt.Author), now: opt.Now.UTC().Format(workitem.TimeFormat)}
+	if m.text == "" {
+		return m, fmt.Errorf("a message needs text")
+	}
+	if m.author == "" {
+		return m, fmt.Errorf("an author is required (--by, FLAI_AGENT, or config author)")
 	}
 	if s := workitem.CanonicalID(strings.TrimSpace(opt.From)); s != "" && s == workitem.CanonicalID(strings.TrimSpace(opt.To)) {
-		return nil, fmt.Errorf("%s cannot message itself: name another story in progress or in review", s)
+		return m, fmt.Errorf("%s cannot message itself: name another story in progress or in review", s)
 	}
-	from, err := sendable(r, opt.From, "sender")
-	if err != nil {
-		return nil, err
+	var err error
+	if m.from, err = sendable(r, opt.From, "sender"); err != nil {
+		return m, err
 	}
-	to, err := sendable(r, opt.To, "addressee")
-	if err != nil {
-		return nil, err
+	if m.to, err = sendable(r, opt.To, "addressee"); err != nil {
+		return m, err
 	}
-	about, err := resolveAbout(r, opt.About)
-	if err != nil {
-		return nil, err
-	}
-	now := opt.Now.UTC().Format(workitem.TimeFormat)
+	return m, nil
+}
+
+// begin writes a new conversation holding the message as its first entry.
+func begin(r *workitem.Repo, m message) (*Conversation, error) {
 	c := &Conversation{
-		ID: NextID(r), Title: titleOf(text, from.ID), From: from.ID, To: to.ID, About: about,
-		Status: StatusOpen, Participants: []string{author}, Created: now, Updated: now,
+		ID: NextID(r), Title: titleOf(m.text, m.from.ID), From: m.from.ID, To: m.to.ID, About: m.about,
+		Status: StatusOpen, Participants: []string{m.author}, Created: m.now, Updated: m.now,
 	}
 	c.Path = filepath.Join(Dir(r), c.ID+"-"+orSlug(c.Title)+".md")
-	between := fmt.Sprintf("Between %s and %s", c.From, c.To)
-	if len(about) > 0 {
-		quoted := make([]string, len(about))
-		for i, p := range about {
-			quoted[i] = "`" + p + "`"
-		}
-		between += ", about " + strings.Join(quoted, ", ")
-	}
-	c.Body = fmt.Sprintf("\n# %s %s\n\n%s.\n\n## Entries\n\n### %s %s %s\n%s\n", c.ID, c.Title, between, now, author, c.From, text)
+	c.Body = fmt.Sprintf("\n# %s %s\n\n%s\n\n## Entries\n\n### %s %s %s\n%s\n", c.ID, c.Title, betweenLine(c.From, c.To, c.About), m.now, m.author, c.From, m.text)
 	if err := r.LintGuard(c.Path, "", c.Marshal()); err != nil {
 		return nil, err
 	}
@@ -450,6 +496,39 @@ func Send(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+// betweenLine is the sentence under a conversation's heading naming its two
+// stories and the paths it is about.
+func betweenLine(from, to string, about []string) string {
+	line := fmt.Sprintf("Between %s and %s", from, to)
+	if len(about) > 0 {
+		quoted := make([]string, len(about))
+		for i, p := range about {
+			quoted[i] = "`" + p + "`"
+		}
+		line += ", about " + strings.Join(quoted, ", ")
+	}
+	return line + "."
+}
+
+// openBetween is the newest conversation between the two stories, in either
+// direction, that is stored open and reads as open, or nil when there is none.
+func openBetween(r *workitem.Repo, a, b string) (*Conversation, error) {
+	all, err := For(r, a)
+	if err != nil {
+		return nil, err
+	}
+	for i := len(all) - 1; i >= 0; i-- {
+		c := all[i]
+		if !c.Names(b) || c.Status != StatusOpen {
+			continue
+		}
+		if closed, _ := c.Closed(r); !closed {
+			return c, nil
+		}
+	}
+	return nil, nil
 }
 
 // Reply appends a message from story, one of the conversation's two, which
@@ -478,13 +557,18 @@ func Reply(r *workitem.Repo, id, story, author, text string, now time.Time) (*Co
 		return nil, err
 	}
 	was := c.Marshal()
-	stamp := now.UTC().Format(workitem.TimeFormat)
-	c.Body = appendEntry(c.Body, stamp+" "+author+" "+storyOf(c, it.ID), text)
+	c.add(now.UTC().Format(workitem.TimeFormat), author, storyOf(c, it.ID), text)
+	return c, save(r, c, was)
+}
+
+// add appends an entry by author for story at stamp, names author among the
+// participants, and marks the conversation updated then.
+func (c *Conversation) add(stamp, author, story, text string) {
+	c.Body = appendEntry(c.Body, stamp+" "+author+" "+story, text)
 	if !contains(c.Participants, author) {
 		c.Participants = append(c.Participants, author)
 	}
 	c.Updated = stamp
-	return c, save(r, c, was)
 }
 
 // Close closes a conversation that is still stored open, with an entry by
@@ -636,16 +720,28 @@ func storyOf(c *Conversation, story string) string {
 // working checkout or the main one, and returns them cleaned, with forward
 // slashes, without repeats.
 func resolveAbout(r *workitem.Repo, paths []string) ([]string, error) {
+	out, err := cleanAbout(paths)
+	if err != nil {
+		return nil, err
+	}
+	for _, rel := range out {
+		if _, err := os.Stat(filepath.Join(r.Root, filepath.FromSlash(rel))); err != nil {
+			if _, err2 := os.Stat(filepath.Join(r.MainRoot, filepath.FromSlash(rel))); err2 != nil {
+				return nil, fmt.Errorf("--about %s does not exist in the repository: name a file or folder relative to its root", rel)
+			}
+		}
+	}
+	return out, nil
+}
+
+// cleanAbout returns the paths cleaned, with forward slashes, without
+// repeats, whether they exist or not.
+func cleanAbout(paths []string) ([]string, error) {
 	var out []string
 	for _, p := range paths {
 		rel, err := cleanPath(p)
 		if err != nil {
 			return nil, fmt.Errorf("--about: %w", err)
-		}
-		if _, err := os.Stat(filepath.Join(r.Root, filepath.FromSlash(rel))); err != nil {
-			if _, err2 := os.Stat(filepath.Join(r.MainRoot, filepath.FromSlash(rel))); err2 != nil {
-				return nil, fmt.Errorf("--about %s does not exist in the repository: name a file or folder relative to its root", rel)
-			}
 		}
 		if !contains(out, rel) {
 			out = append(out, rel)

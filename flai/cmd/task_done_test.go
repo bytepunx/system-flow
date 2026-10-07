@@ -61,6 +61,10 @@ func writeIn(t *testing.T, dir, rel, content string) {
 	}
 }
 
+// otherStory is S-006, in progress with an empty claim, so that every path a
+// commit of S-004 changes is told to it.
+const otherStory = "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n"
+
 // taskDone runs flai task done in the worktree at the fixture's clock.
 func taskDone(t *testing.T, wt string, args ...string) (string, string, int) {
 	t.Helper()
@@ -80,12 +84,14 @@ func taskStatus(t *testing.T, root string) string {
 	return it.Status
 }
 
-// ADR-0107: flai task done commits, syncs, moves the task to done, logs,
-// widens the touches, checks, and reads the inbox, a line for each; called
-// again with --json it commits nothing, does not move the task again, and
+// ADR-0107: flai task done commits, tells the other open stories whose claim
+// covers the commit (S-0333), syncs, moves the task to done, logs, widens the
+// touches, checks, and reads the inbox, a line for each; called again with
+// --json it commits nothing, tells nobody, does not move the task again, and
 // prints the result.
 func TestTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
 	root, wt := taskDoneProject(t)
+	writeIn(t, root, "wip/kanban/stories/S-006-six.md", otherStory)
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
 
 	out, errOut, code := taskDone(t, wt, "T-003", "-m", "feat: [S-004] T-003 the readme\n\nWhy, at length.")
@@ -94,8 +100,7 @@ func TestTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
 	}
 	head := gitIn(t, wt, "rev-parse", "HEAD")
 	for _, want := range []string{
-		"commit: " + short(head) + " feat: [S-004] T-003 the readme\n",
-		"sync: story/S-004 is rebased onto main\n",
+		"commit: " + short(head) + " feat: [S-004] T-003 the readme\ntold: S-006 (MS-0001) of README.md\nsync: story/S-004 is rebased onto main\n",
 		"move: T-003 → done\n",
 		": feat: [S-004] T-003 the readme\n",
 		"touches: added to T-003: README.md\n",
@@ -126,7 +131,7 @@ func TestTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("%v: %s", err, out)
 	}
-	if res.Task != "T-003" || res.Story != "S-004" || res.Stopped != "" || res.Commit != nil {
+	if res.Task != "T-003" || res.Story != "S-004" || res.Stopped != "" || res.Commit != nil || res.Told == nil || len(res.Told) != 0 {
 		t.Errorf("json: %+v", res)
 	}
 	if res.Sync == nil || !res.Sync.Synced || res.Move == nil || !res.Move.Skipped || res.Log == nil || res.Log.Entry != "checked it again" {

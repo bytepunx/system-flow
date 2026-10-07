@@ -3,6 +3,7 @@ package taskdone
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -79,6 +80,17 @@ func git(t *testing.T, dir string, args ...string) string {
 		t.Fatal(out, err)
 	}
 	return out
+}
+
+// story writes a story to the main checkout, in progress or in review, whose
+// touches are its claim.
+func story(t *testing.T, repo *workitem.Repo, id, status string, touches ...string) {
+	t.Helper()
+	moves := "  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\n"
+	if status == workitem.Review {
+		moves += "  - to: review\n    at: 2026-08-31T11:00:00Z\n    by: agent\n"
+	}
+	write(t, repo.Root, "wip/kanban/stories/"+id+"-other.md", "---\nid: "+id+"\ntype: story\nnature: feature\ntitle: Other "+id+"\nstatus: "+status+"\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T11:00:00Z\ntransitions:\n"+moves+"tags: []\ntouches: ["+strings.Join(touches, ", ")+"]\n---\n\n# "+id+" Other "+id+"\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
 }
 
 // options close T-003 with message as agent-S-004 at the clock's time.
@@ -163,7 +175,14 @@ func TestRunClosesATaskInOneCall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"stopped":""`, `"followed":[]`, `"warnings":[]`, `"overlaps":[]`, `"notes":[`} {
+	// no other story is open: nobody is told, and no conversation is written
+	if res.Told == nil || len(res.Told) != 0 {
+		t.Errorf("told: %+v", res.Told)
+	}
+	if _, err := os.Stat(messages.Dir(repo)); !os.IsNotExist(err) {
+		t.Errorf("a conversation was written: %v", err)
+	}
+	for _, want := range []string{`"stopped":""`, `"told":[]`, `"followed":[]`, `"warnings":[]`, `"overlaps":[]`, `"notes":[`} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("json lacks %s: %s", want, data)
 		}
@@ -186,12 +205,14 @@ func TestRunClosesATaskInOneCall(t *testing.T) {
 
 // A sync that stops on a conflict with the main branch stops the run before
 // the move, with the paths and how to continue; the task stays in progress
-// and nothing is logged. Called again with the rebase unfinished, the commit
-// step refuses.
+// and nothing is logged, but the other open stories have been told of the
+// commit, which a second call would not make again. Called again with the
+// rebase unfinished, the commit step refuses.
 func TestRunStopsAtARefusedSyncBeforeTheMove(t *testing.T) {
 	repo, wt := project(t)
 	write(t, repo.Root, "README.md", "# good\n\nChanged on main.\n")
 	git(t, repo.Root, "commit", "-q", "-am", "docs: main's readme")
+	story(t, repo, "S-006", workitem.InProgress)
 	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
 	before := narrative(t, repo)
 
@@ -210,6 +231,9 @@ func TestRunStopsAtARefusedSyncBeforeTheMove(t *testing.T) {
 	}
 	if res.Move != nil || res.Log != nil || res.Touches != nil || res.Check != nil || res.Inbox != nil {
 		t.Errorf("steps after the sync ran: %+v", res)
+	}
+	if len(res.Told) != 1 || res.Told[0].Story != "S-006" || res.Told[0].Conversation != "MS-0001" {
+		t.Errorf("told before the sync: %+v", res.Told)
 	}
 	if st := get(t, repo, "T-003").Status; st != workitem.InProgress {
 		t.Errorf("T-003 is %s", st)
@@ -231,7 +255,7 @@ func TestRunStopsAtARefusedSyncBeforeTheMove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Stopped != StepCommit || res.ExitCode() != 1 || res.Commit != nil || res.Sync != nil || !strings.Contains(res.Error, "git rebase --continue") {
+	if res.Stopped != StepCommit || res.ExitCode() != 1 || res.Commit != nil || res.Told != nil || res.Sync != nil || !strings.Contains(res.Error, "git rebase --continue") {
 		t.Errorf("with the rebase unfinished: stopped %q: %s", res.Stopped, res.Error)
 	}
 	if st := get(t, repo, "T-003").Status; st != workitem.InProgress {
@@ -333,4 +357,108 @@ func TestRunAnswersTheStorysMessages(t *testing.T) {
 	if m := res.Inbox.Messages[0]; m.With != "S-006" || m.Awaiting != "you" || m.Last.Text != "Who changes the readme?" {
 		t.Errorf("message %+v", m)
 	}
+}
+
+// S-0333: the commit is told to each other story in progress or in review
+// whose claim covers a path it changed, a shared path included, on one
+// conversation per pair, which a later commit's notice reuses, its about
+// growing; a story whose claim is empty is told of every path, and one whose
+// claim covers none of them is not told.
+func TestRunTellsEachOpenStoryWhoseClaimCoversTheCommit(t *testing.T) {
+	repo, wt := project(t)
+	write(t, repo.Root, "system-flow.yaml", "version: 1\nname: good\nkey: g\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nclaims:\n  shared: [README.md]\n")
+	// the repository's lint, so that a notice it rejects is not told
+	write(t, repo.Root, ".markdownlint.yaml", "default: true\nMD013: false\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD032: false\nMD033: false\nMD041: false\nMD060: false\n")
+	story(t, repo, "S-006", workitem.InProgress, "README.md", "docs")
+	story(t, repo, "S-007", workitem.Review)
+	story(t, repo, "S-008", workitem.InProgress, "design")
+	repo, err := workitem.Open(repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if shared := repo.Manifest.Claims.Shared; len(shared) != 1 || shared[0] != "README.md" {
+		t.Fatalf("README.md is not a shared path: %v", shared)
+	}
+	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	write(t, wt, "src/main.go", "package main\n")
+
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 the readme\n\nWhy."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	want := []Told{
+		{Story: "S-006", Title: "Other S-006", Paths: []string{"README.md"}, Conversation: "MS-0001"},
+		{Story: "S-007", Title: "Other S-007", Paths: []string{"README.md", "src/main.go"}, Conversation: "MS-0002"},
+	}
+	if !toldAs(res.Told, want) {
+		t.Fatalf("told %+v, want %+v", res.Told, want)
+	}
+	c, err := messages.Get(repo, "MS-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := res.Commit.Hash[:7]
+	text := "T-003 of S-004 changed paths S-006's claim covers.\n\nT-003, T3, committed " + hash + " on story/S-004, `feat: [S-004] T-003 the readme`, changing `README.md`. It reaches the main branch when S-004 is accepted; `git show " + hash + "` shows it until then. Reply here if it breaks your work, or adjust to it early."
+	if es := c.Entries(); c.From != "S-004" || c.To != "S-006" || strings.Join(c.About, ",") != "README.md" || len(es) != 1 || es[0].Author != "agent-S-004" || es[0].Text != text {
+		t.Errorf("MS-0001: %+v\n%s", c, c.Body)
+	}
+	if err := c.Validate(); err != nil {
+		t.Error(err)
+	}
+
+	write(t, wt, "docs/README.md", "# Docs\n\nChanged later.\n")
+	res, err = Run(context.Background(), options(repo, "docs: [S-004] T-003 the docs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = []Told{
+		{Story: "S-006", Title: "Other S-006", Paths: []string{"docs/README.md"}, Conversation: "MS-0001"},
+		{Story: "S-007", Title: "Other S-007", Paths: []string{"docs/README.md"}, Conversation: "MS-0002"},
+	}
+	if res.Stopped != "" || !toldAs(res.Told, want) {
+		t.Fatalf("again: stopped %q %s, told %+v", res.Stopped, res.Error, res.Told)
+	}
+	if c, err = messages.Get(repo, "MS-0001"); err != nil {
+		t.Fatal(err)
+	}
+	// the same agent at the same second joins the entry before it
+	if strings.Join(c.About, ",") != "README.md,docs/README.md" || strings.Count(c.Body, "T-003 of S-004 changed paths S-006's claim covers.") != 2 || !strings.Contains(c.Body, "`docs: [S-004] T-003 the docs`, changing `docs/README.md`.") {
+		t.Errorf("the pair's conversation is reused: %+v\n%s", c, c.Body)
+	}
+	if all, _ := messages.List(repo); len(all) != 2 {
+		t.Errorf("one conversation per pair: %d", len(all))
+	}
+}
+
+// S-0333: a notice that cannot be written is logged, is not in told, and does
+// not stop the close.
+func TestRunGoesOnWhenANoticeCannotBeWritten(t *testing.T) {
+	repo, wt := project(t)
+	story(t, repo, "S-006", workitem.InProgress)
+	write(t, repo.Root, "wip/messages", "a file where the folder goes\n")
+	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	var logs strings.Builder
+	o := options(repo, "feat: [S-004] T-003 the readme")
+	o.Logger = slog.New(slog.NewTextHandler(&logs, nil))
+
+	res, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Told == nil || len(res.Told) != 0 || get(t, repo, "T-003").Status != workitem.Done {
+		t.Fatalf("stopped at %q: %s, told %+v", res.Stopped, res.Error, res.Told)
+	}
+	if !strings.Contains(logs.String(), "change notice not sent") || !strings.Contains(logs.String(), "item=S-006") {
+		t.Errorf("logs:\n%s", logs.String())
+	}
+}
+
+// toldAs reports whether told is want, in order.
+func toldAs(told, want []Told) bool {
+	return slices.EqualFunc(told, want, func(a, b Told) bool {
+		return a.Story == b.Story && a.Title == b.Title && a.Conversation == b.Conversation && slices.Equal(a.Paths, b.Paths)
+	})
 }

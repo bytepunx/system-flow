@@ -21,27 +21,32 @@ func newTaskDoneCmd(a *app) *cobra.Command {
 	var message, logEntry string
 	c := &cobra.Command{
 		Use:   "done <task> -m \"<message>\"",
-		Short: "Close a task in one call: commit, sync, move to done, log, widen touches, check, and read the inbox",
+		Short: "Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen touches, check, and read the inbox",
 		Long: `Close a task in one call (ADR-0107). flai finds the task's story and works
 in the story's worktree. The steps run in this order, and the first that
 fails stops the run; the steps after it are not done.
 
 1. Commit: git add -A and git commit -m in the story's worktree. Nothing to
    commit is not a failure.
-2. Sync: flai stream sync for the story. It rebases the branch onto the main
+2. Tell: a message to each other story in progress or in review whose claim
+   covers a path the commit changed, the shared paths included, about those
+   paths, naming the task, the commit, and its subject; on the conversation
+   open between the two stories, or a new one. A message that cannot be sent
+   is logged and stops nothing.
+3. Sync: flai stream sync for the story. It rebases the branch onto the main
    branch, trial-merges it with the other open story branches, and lists
    what it changed outside the story's touches. A refusal or a stop on
    conflicts stops the run.
-3. Move: the task to done, under flai move's rules, with any story or epic
+4. Move: the task to done, under flai move's rules, with any story or epic
    that follows it. A task already done is not moved again, so the call can
    be repeated after a stop.
-4. Log: an entry in the story's narrative: --log when given, else the
+5. Log: an entry in the story's narrative: --log when given, else the
    message's subject line.
-5. Touches: the paths the commit changed that the task's touches, or the
+6. Touches: the paths the commit changed that the task's touches, or the
    story's, do not cover are added to each, as flai touches records them.
-6. Check: flai check --strict scoped to the story. A finding in the story
+7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
-7. Inbox: the agent's inbox, as the MCP tool inbox answers it.
+8. Inbox: the agent's inbox, as the MCP tool inbox answers it.
 
 The agent is FLAI_AGENT and the session FLAI_SESSION.
 
@@ -121,6 +126,9 @@ func (a *app) printTaskDone(res taskdone.Result) {
 		fmt.Fprintf(w, "commit: %s %s\n", short(c.Hash), c.Subject)
 	} else if res.Stopped != taskdone.StepCommit {
 		fmt.Fprintln(w, "commit: nothing to commit")
+	}
+	for _, t := range res.Told {
+		fmt.Fprintf(w, "told: %s (%s) of %s\n", t.Story, t.Conversation, strings.Join(t.Paths, ", "))
 	}
 	if s := res.Sync; s != nil {
 		switch {
