@@ -1,0 +1,225 @@
+package cmd
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
+)
+
+// messageLint is the repository's markdown lint configuration, so that a
+// conversation the lint refuses fails the test.
+const messageLint = "default: true\nMD013: false\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD032: false\nMD033: false\nMD041: false\nMD060: false\n"
+
+// messageView is the part of a conversation's --json the tests read.
+type messageView struct {
+	ID       string   `json:"id"`
+	Title    string   `json:"title"`
+	From     string   `json:"from"`
+	To       string   `json:"to"`
+	About    []string `json:"about"`
+	Status   string   `json:"status"`
+	Closed   bool     `json:"closed"`
+	Reason   string   `json:"closed_reason"`
+	Awaiting string   `json:"awaiting"`
+	Path     string   `json:"path"`
+	Entries  []struct {
+		At     string `json:"at"`
+		Author string `json:"author"`
+		Story  string `json:"story"`
+		Text   string `json:"text"`
+	} `json:"entries"`
+}
+
+// messageProject builds a project with the lint configuration, a file to
+// talk about, and S-0001 and S-0002 in progress, S-0003 in review, S-0004
+// ready, and S-0005 done. The environment names no story and no agent.
+func messageProject(t *testing.T) (string, *workitem.Repo) {
+	t.Helper()
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "")
+	t.Setenv("FLAI_STORY", "")
+	root := tempProject(t)
+	if err := os.MkdirAll(filepath.Join(root, "design", "system"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for path, content := range map[string]string{".markdownlint.yaml": messageLint, "design/system/plan.md": "# Plan\n"} {
+		if err := os.WriteFile(filepath.Join(root, path), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, state := range []string{workitem.InProgress, workitem.InProgress, workitem.Review, workitem.Ready, workitem.Done} {
+		s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Story " + state, Owner: "t", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		setStoryStatus(t, repo, s.ID, state)
+	}
+	return root, repo
+}
+
+// setStoryStatus writes a story's status without the rules a move applies.
+func setStoryStatus(t *testing.T, repo *workitem.Repo, id, state string) {
+	t.Helper()
+	s, err := repo.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Status = state
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func decodeMessage(t *testing.T, out string) messageView {
+	t.Helper()
+	var v messageView
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatalf("--json: %v\n%s", err, out)
+	}
+	return v
+}
+
+// S-0330, ADR-0120: flai message send starts a conversation from the --from
+// story, else FLAI_STORY, else the story in an agent-S-nnnn FLAI_AGENT, and
+// prints it, or its view with --json.
+func TestMessageSendStartsAConversation(t *testing.T) {
+	root, _ := messageProject(t)
+
+	out, errOut, code := runIn(t, root, "message", "send", "S-0003", "Will you leave root.go to me\n\nUntil I push.", "--from", "S-0001", "--about", "design/system/plan.md", "--by", "agent-S-0001")
+	if code != 0 {
+		t.Fatalf("send: %d %s", code, errOut)
+	}
+	if !strings.HasPrefix(out, "MS-0001 Will you leave root.go to me\n  S-0001 → S-0003, about design/system/plan.md\n  wip/messages/MS-0001-") || !strings.HasSuffix(out, ".md\n") {
+		t.Errorf("send:\n%s", out)
+	}
+
+	t.Setenv("FLAI_STORY", "S-0002")
+	out, errOut, code = runIn(t, root, "message", "send", "S-0003", "Who writes the docs row", "--by", "agent-S-0002", "--json")
+	if code != 0 {
+		t.Fatalf("send under FLAI_STORY: %d %s", code, errOut)
+	}
+	v := decodeMessage(t, out)
+	if v.ID != "MS-0002" || v.From != "S-0002" || v.To != "S-0003" || v.Status != "open" || v.Closed || v.Awaiting != "S-0003" ||
+		len(v.About) != 0 || len(v.Entries) != 1 || v.Entries[0].Author != "agent-S-0002" || v.Entries[0].Story != "S-0002" ||
+		v.Entries[0].At != "2026-09-15T21:00:00Z" || v.Entries[0].Text != "Who writes the docs row" || !strings.HasPrefix(v.Path, "wip/messages/MS-0002-") {
+		t.Errorf("send --json: %+v", v)
+	}
+
+	t.Setenv("FLAI_STORY", "")
+	t.Setenv("FLAI_AGENT", "agent-S-0003")
+	out, errOut, code = runIn(t, root, "message", "send", "S-0001", "And the reference", "--json")
+	if code != 0 {
+		t.Fatalf("send under FLAI_AGENT: %d %s", code, errOut)
+	}
+	if v := decodeMessage(t, out); v.From != "S-0003" || v.To != "S-0001" || v.Entries[0].Author != "agent-S-0003" {
+		t.Errorf("send under FLAI_AGENT: %+v", v)
+	}
+}
+
+// A send to or from a story not in progress or in review, or with no sender
+// story, is refused with the reason, and nothing is written.
+func TestMessageSendRefusals(t *testing.T) {
+	root, _ := messageProject(t)
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"to a ready story", []string{"S-0004", "Hello", "--from", "S-0001"}, "S-0004 is ready; a message goes only between stories in progress or in review"},
+		{"from a done story", []string{"S-0001", "Hello", "--from", "S-0005"}, "S-0005 is done; a message goes only between stories in progress or in review"},
+		{"to itself", []string{"S-0001", "Hello", "--from", "S-0001"}, "S-0001 cannot message itself"},
+		{"from no story", []string{"S-0001", "Hello"}, "no story to send from: give --from S-nnnn"},
+	} {
+		args := append([]string{"message", "send", "--by", "tester"}, tc.args...)
+		if _, errOut, code := runIn(t, root, args...); code == 0 || !strings.Contains(errOut, tc.want) {
+			t.Errorf("%s: exit %d, %q, want it refused with %q", tc.name, code, errOut, tc.want)
+		}
+	}
+	if matches, _ := filepath.Glob(filepath.Join(root, "wip", "messages", "*")); len(matches) > 0 {
+		t.Errorf("a refused send wrote %v", matches)
+	}
+}
+
+// flai message reply makes the conversation await the other story; list
+// shows the open ones, a story's with --story, and the closed ones with
+// --all; show prints every entry; each has --json.
+func TestMessageReplyListAndShow(t *testing.T) {
+	root, repo := messageProject(t)
+	t1 := time.Date(2026, 9, 15, 22, 0, 0, 0, time.UTC)
+	for _, args := range [][]string{
+		{"message", "send", "S-0003", "Will you leave root.go to me", "--from", "S-0001", "--about", "design/system/plan.md", "--by", "agent-S-0001"},
+		{"message", "send", "S-0001", "Who writes the docs row", "--from", "S-0002", "--by", "agent-S-0002"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %d %s", args, code, errOut)
+		}
+	}
+
+	out, errOut, code := runInAt(t, root, t1, "message", "reply", "ms-1", "Yes, until you push", "--from", "S-0003", "--by", "agent-S-0003")
+	if code != 0 || out != "MS-0001 awaits S-0001 (2 entries)\n" {
+		t.Fatalf("reply: %d %q %s", code, out, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "message", "reply", "MS-0001", "Me too", "--from", "S-0002", "--by", "agent-S-0002"); code == 0 || !strings.Contains(errOut, "S-0002 is not in MS-0001") {
+		t.Errorf("a reply from a third story: exit %d, %q", code, errOut)
+	}
+	out, errOut, code = runInAt(t, root, t1, "message", "reply", "MS-0002", "I do", "--from", "S-0001", "--by", "agent-S-0001", "--json")
+	if v := decodeMessage(t, out); code != 0 || v.Awaiting != "S-0002" || len(v.Entries) != 2 {
+		t.Fatalf("reply --json: %d %+v %s", code, v, errOut)
+	}
+
+	out, _, _ = runIn(t, root, "message", "list")
+	want := "MS-0001  S-0001 → S-0003  awaiting S-0001  2026-09-15T22:00:00Z  Will you leave root.go to me\n" +
+		"MS-0002  S-0002 → S-0001  awaiting S-0002  2026-09-15T22:00:00Z  Who writes the docs row\n"
+	if out != want {
+		t.Errorf("list:\n%s\nwant:\n%s", out, want)
+	}
+	if out, _, _ = runIn(t, root, "message", "list", "--story", "s-3"); !strings.HasPrefix(out, "MS-0001 ") || strings.Contains(out, "MS-0002") {
+		t.Errorf("list --story s-3:\n%s", out)
+	}
+
+	setStoryStatus(t, repo, "S-0002", workitem.Done)
+	if out, _, _ = runIn(t, root, "message", "list"); !strings.HasPrefix(out, "MS-0001 ") || strings.Contains(out, "MS-0002") {
+		t.Errorf("list leaves the closed out:\n%s", out)
+	}
+	if out, _, _ = runIn(t, root, "message", "list", "--all"); !strings.Contains(out, "MS-0002  S-0002 → S-0001  closed: S-0002 was accepted  2026-09-15T22:00:00Z  Who writes the docs row\n") {
+		t.Errorf("list --all:\n%s", out)
+	}
+	if out, _, _ = runIn(t, root, "message", "list", "--story", "S-0002"); out != "no open conversations for S-0002\n" {
+		t.Errorf("list --story S-0002: %q", out)
+	}
+	if out, _, _ = runIn(t, root, "message", "list", "--story", "S-0004", "--json"); out != "[]\n" {
+		t.Errorf("an empty list --json: %q", out)
+	}
+	out, _, _ = runIn(t, root, "message", "list", "--all", "--json")
+	var rows []messageView
+	if err := json.Unmarshal([]byte(out), &rows); err != nil || len(rows) != 2 || rows[0].Awaiting != "S-0001" || !rows[1].Closed || rows[1].Reason != "S-0002 was accepted" || rows[1].Awaiting != "" {
+		t.Errorf("list --all --json: %v %+v", err, rows)
+	}
+
+	out, _, _ = runIn(t, root, "message", "show", "MS-0001")
+	want = "MS-0001 Will you leave root.go to me\n  between S-0001 and S-0003 · open · awaiting S-0001\n  about design/system/plan.md\n" +
+		"\n2026-09-15T21:00:00Z agent-S-0001 S-0001\nWill you leave root.go to me\n" +
+		"\n2026-09-15T22:00:00Z agent-S-0003 S-0003\nYes, until you push\n"
+	if out != want {
+		t.Errorf("show:\n%s\nwant:\n%s", out, want)
+	}
+	if out, _, _ = runIn(t, root, "message", "show", "MS-0002"); !strings.Contains(out, "  between S-0002 and S-0001 · closed: S-0002 was accepted\n") {
+		t.Errorf("show of a closed conversation:\n%s", out)
+	}
+	out, _, _ = runIn(t, root, "message", "show", "ms-1", "--json")
+	if v := decodeMessage(t, out); v.ID != "MS-0001" || len(v.Entries) != 2 || v.Entries[1].Story != "S-0003" || v.About[0] != "design/system/plan.md" {
+		t.Errorf("show --json: %+v", v)
+	}
+	if _, errOut, code := runIn(t, root, "message", "show", "MS-0009"); code == 0 || !strings.Contains(errOut, "conversation MS-0009 not found") {
+		t.Errorf("show of an unknown ID: exit %d, %q", code, errOut)
+	}
+}
