@@ -7,7 +7,7 @@ count: 2
 cost: 5m
 first_reported: 2026-10-07T07:17:53Z
 last_reported: 2026-10-07T09:05:53Z
-updated: 2026-10-07T09:05:53Z
+updated: 2026-10-07T14:26:01Z
 ---
 
 # I-0104 flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
@@ -26,3 +26,5 @@ Story: S-0215.
 S-0215: closing T-0927 committed T-0923's flai/internal/metrics files under the chart's message; I amended the message and committed T-0932 and T-0934 by hand before closing each with nothing to commit.
 
 ## Remediation
+
+Story S-0312 remediates this issue, created from it at 2026-10-07T14:26:01Z.
