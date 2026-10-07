@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -42,7 +43,9 @@ design/conventions/work-management.md and git.md:
      a story's epic follows it, to done when it was the epic's last open story
   2. flai archive for the item and its children and narrative, and for an
      epic that followed its story to done, the epic and its cancelled stories
-  3. git commit the work item and archive
+  3. git commit the work item and archive; while another git process holds
+     the index lock, git add and git commit are run again, for about nine
+     seconds in all, and the lock is never removed
   4. tell every story in progress or in review whose touches cover a path
      the merge changed which paths those are, for its agent's MCP inbox
 
@@ -53,7 +56,14 @@ release --pending.
 
 flai move <story> done from review runs exactly this. An item that is already
 done but was never archived (an older flai, a hand edit) is completed from
-step 0 without a second transition. --dry-run changes nothing.
+step 0 without a second transition. An item that is done and archived while
+its archived file is not committed is one whose commit failed: the error
+kept git's output and named this command. It is completed from step 3,
+committing what the main checkout holds under the usual subject, and step 4
+tells the open stories the paths the story's commits changed. A done,
+archived item whose file is committed is refused as already done.
+The orchestrator completes neither: that is the operator's. --dry-run
+changes nothing.
 
 A story whose branch changes a path Claude Code protects (a .claude folder,
 .mcp.json, and the others of ADR-0106) is accepted by its operator only: the
@@ -119,7 +129,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return nil, err
 	}
 	if opts.Orchestrator && res.Resumed {
-		return nil, fmt.Errorf("rule: %s is done but was never archived; the orchestrator accepts only a story in review, so the operator completes this acceptance with flai accept %s", it.ID, it.ID)
+		left := "is done but was never archived"
+		if res.CommitOnly {
+			left = "is done and archived but its acceptance was never committed"
+		}
+		return nil, fmt.Errorf("rule: %s %s; the orchestrator accepts only a story in review, so the operator completes this acceptance with flai accept %s", it.ID, left, it.ID)
 	}
 	res.DryRun = o.dryRun
 	if !o.dryRun {
@@ -133,6 +147,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	if o.dryRun {
 		return res, nil
+	}
+	if res.CommitOnly {
+		return a.finishCommit(repo, it, res, o)
 	}
 	useGit, hasBranch := a.inGitWorkTree(repo.MainRoot), res.Branch != ""
 
@@ -221,22 +238,81 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// computed, no tag created, no push made (S-0087) — that is a publish, a
 	// deliberate step of its own over everything accumulated on main, not
 	// tied to any one item's acceptance. See flai release --pending.
-	if _, err := a.runner.Run(repo.Root, "git", "add", "-A"); err != nil {
+	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
 		return nil, err
 	}
-	msg := fmt.Sprintf("chore: [%s] accept and archive", it.ID)
-	if res.Epic != nil && res.Epic.To == workitem.Done {
-		msg += ", with " + res.Epic.ID
+	// 4. tell the stories still open what changed under their claim (S-0132)
+	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
+	return res, nil
+}
+
+// finishCommit completes the acceptance of it, done and archived, whose
+// commit failed (I-0100): steps 3 and 4 only, with no merge, no transition,
+// and no archive, since those happened.
+func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, o acceptOptions) (*preview.Acceptance, error) {
+	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
+		return nil, err
 	}
-	for _, t := range o.trailers {
+	// The merge is behind this run, so what it changed cannot be read from
+	// the head before it as step 0 reads it. The paths are taken from the
+	// story's commits instead, outside the wip folder: what its branch
+	// brought into the main branch.
+	var changed []string
+	if it.Type == workitem.Story {
+		committed, err := storygit.Committed(a.runner, repo)
+		if err != nil {
+			a.logger().Warn("overlap notices not sent", "component", "accept", "item", it.ID, "err", err)
+		}
+		changed = committed[it.ID]
+	}
+	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
+	return res, nil
+}
+
+// commitAcceptance is step 3: it commits everything in the main checkout
+// under the acceptance's subject. git add and git commit are run again while
+// another git process holds the index lock (I-0100). A commit that fails even
+// so says what the acceptance has done and how to finish it.
+func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, trailers []string) error {
+	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, "add", "-A"); err != nil {
+		return notCommitted(it.ID, res, "not yet staged", err)
+	}
+	msg := acceptSubject(it.ID, res.Epic)
+	for _, t := range trailers {
 		msg += "\n\n" + t
 	}
-	if _, err := a.runner.Run(repo.Root, "git", "commit", "-q", "-m", msg); err != nil {
-		return nil, err
+	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, "commit", "-q", "-m", msg); err != nil {
+		return notCommitted(it.ID, res, "staged", err)
 	}
 	a.acceptStep(it, "committed", firstLine(msg))
-	// 4. tell the stories still open what changed under their claim (S-0132)
-	res.Overlaps = a.tellOverlaps(repo, it, orDefault(o.by, a.author()), changed)
+	return nil
+}
+
+// acceptSubject is the subject of the acceptance commit of id, naming the
+// epic that followed it to done.
+func acceptSubject(id string, epic *workitem.Followed) string {
+	subject := fmt.Sprintf("chore: [%s] accept and archive", id)
+	if epic != nil && epic.To == workitem.Done {
+		subject += ", with " + epic.ID
+	}
+	return subject
+}
+
+// notCommitted is the error of an acceptance of id whose commit failed with
+// err, git's whole output in it: what is done, where its changes are, and
+// that flai accept finishes it.
+func notCommitted(id string, res *preview.Acceptance, changes string, err error) error {
+	state := id + " is done and archived"
+	if res.Merged {
+		state = res.Branch + " is merged and " + state
+	}
+	return fmt.Errorf("commit the acceptance of %s: %w\n%s, and its changes are %s in the main checkout but not committed; once git's error above is resolved, run flai accept %s to commit them", id, err, state, changes, id)
+}
+
+// tellAccepted is step 4: it tells the stories still open which of changed
+// their claims cover (S-0132).
+func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, by string, changed []string) {
+	res.Overlaps = a.tellOverlaps(repo, it, by, changed)
 	if len(res.Overlaps) > 0 {
 		ids := make([]string, len(res.Overlaps))
 		for i, n := range res.Overlaps {
@@ -244,7 +320,6 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 		a.acceptStep(it, "told", "told "+strings.Join(ids, ", ")+" which changed paths their claims cover")
 	}
-	return res, nil
 }
 
 // acceptance is what o adds to the acceptance preview of it, after refusing
@@ -396,7 +471,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 		if res.Branch != "" {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)
 		}
-		if e := res.Epic; e != nil {
+		if res.CommitOnly {
+			fmt.Fprintf(a.out, "would commit the acceptance of %s, done and archived but not committed: %s\n", res.ID, acceptSubject(res.ID, res.Epic))
+		} else if e := res.Epic; e != nil {
 			fmt.Fprintf(a.out, "would also move %s %s from %s to %s, following %s", e.ID, e.Title, e.From, e.To, e.Story)
 			if e.To == workitem.Done {
 				fmt.Fprint(a.out, ", and archive it")
@@ -410,7 +487,11 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 	if res.Resumed {
 		verb = "completed the acceptance of"
 	}
-	fmt.Fprintf(a.out, "%s %s: done, %d items archived, committed", verb, res.ID, res.Archived)
+	if res.CommitOnly {
+		fmt.Fprintf(a.out, "%s %s: done and archived already, committed", verb, res.ID)
+	} else {
+		fmt.Fprintf(a.out, "%s %s: done, %d items archived, committed", verb, res.ID, res.Archived)
+	}
 	if res.Merged {
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}

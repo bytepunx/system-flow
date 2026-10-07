@@ -29,11 +29,14 @@ type Acceptance struct {
 	Status   string   `json:"status"`
 	By       string   `json:"by,omitempty"` // who accepted it, as its done transition records; set by the real run
 	DryRun   bool     `json:"dry_run,omitempty"`
-	Resumed  bool     `json:"resumed,omitempty"` // the item was already done but never archived
+	Resumed  bool     `json:"resumed,omitempty"` // the item was already done: never archived, or archived but never committed (CommitOnly)
 	Branch   string   `json:"branch,omitempty"`
 	Merged   bool     `json:"merged"`
 	Archived int      `json:"archived"`
 	Blockers []string `json:"blockers,omitempty"` // what would stop acceptance before it changes anything
+	// CommitOnly says the item is done and archived but its acceptance
+	// commit is missing: only the commit and the notices are left (I-0100).
+	CommitOnly bool `json:"commit_only,omitempty"`
 	// Uncommitted paths outside wip. The real run refuses them unless --yes
 	// includes them in the acceptance commit; a dry run reports them so the
 	// choice can be made before confirming (S-0051).
@@ -89,6 +92,12 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	case it.Status == workitem.Done && !it.Archived:
 		// Done without acceptance: finish the job rather than refuse it.
 		res.Resumed = true
+	case it.Status == workitem.Done && useGit && uncommitted(r, repo.MainRoot, it.Path):
+		// Done and archived, its archived file not committed: its acceptance
+		// commit failed (I-0100), so the commit is finished. The item's own
+		// file decides, not the wip folder, where flai leaves other changes
+		// uncommitted that an old item's subject must not take in.
+		res.Resumed, res.CommitOnly = true, true
 	case it.Closed():
 		return nil, fmt.Errorf("%s is already %s", it.ID, it.Status)
 	case it.Type == workitem.Story && it.Status != workitem.Review:
@@ -101,6 +110,12 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		}
 	} else if _, err := os.Stat(filepath.Join(repo.MainRoot, ".git")); err == nil {
 		res.Blockers = append(res.Blockers, "this is a git repository but git cannot be run here; accept from a shell with flai accept "+it.ID)
+	}
+	if res.CommitOnly {
+		// The merge, the transition, and the archive are behind it, so
+		// nothing they check applies; the commit names the epic it archived.
+		res.Epic = archivedEpic(r, repo, it)
+		return res, nil
 	}
 	// The workflow's own rules for done (open tasks, unticked criteria) are
 	// checked on a copy before the branch is merged: a story that cannot be
@@ -176,6 +191,41 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		}
 	}
 	return res, nil
+}
+
+// uncommitted reports whether path has changes the checkout at root has not
+// committed, staged or not; false when git cannot say.
+func uncommitted(r execx.Runner, root, path string) bool {
+	st, err := r.Run(root, "git", "status", "--porcelain", "--", path)
+	return err == nil && strings.TrimSpace(st) != ""
+}
+
+// archivedEpic is the walk the epic of story took with it to done, when the
+// epic's archived file is not committed either: the acceptance whose commit
+// is missing archived it with the story. Nil otherwise.
+func archivedEpic(r execx.Runner, repo *workitem.Repo, story *workitem.Item) *workitem.Followed {
+	if story.Type != workitem.Story || story.Parent == "" {
+		return nil
+	}
+	epic, err := repo.Get(story.Parent)
+	if err != nil || epic.Type != workitem.Epic || epic.Status != workitem.Done || !epic.Archived || !uncommitted(r, repo.MainRoot, epic.Path) {
+		return nil
+	}
+	return &workitem.Followed{ID: epic.ID, Type: epic.Type, Title: epic.Title, From: walkedFrom(epic.Transitions), To: workitem.Done, Story: story.ID}
+}
+
+// walkedFrom is the state an item was in before its last walk: the
+// transitions made at the time of the last one are one walk, as a follow
+// makes them; backlog when there is nothing before them.
+func walkedFrom(ts []workitem.Transition) string {
+	i := len(ts) - 1
+	for i >= 0 && ts[i].At == ts[len(ts)-1].At {
+		i--
+	}
+	if i < 0 {
+		return workitem.Backlog
+	}
+	return ts[i].To
 }
 
 // ConflictMarkers is why story id's branch cannot be accepted for the merge
