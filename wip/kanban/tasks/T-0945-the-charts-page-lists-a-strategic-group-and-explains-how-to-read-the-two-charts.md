@@ -3,16 +3,36 @@ id: T-0945
 type: task
 nature: feature
 title: The charts page lists a Strategic group and explains how to read the two charts
-status: backlog
+status: done
 parent: S-0216
 owner: alex
 created: 2026-10-05T05:45:44Z
-updated: 2026-10-05T05:45:44Z
-transitions: []
+updated: 2026-10-07T09:56:46Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:43:43Z
+    by: agent-S-0216
+  - to: in-progress
+    at: 2026-10-07T09:43:43Z
+    by: agent-S-0216
+  - to: done
+    at: 2026-10-07T09:56:46Z
+    by: agent-S-0216
 stream: S-0216
 tags: [dashboard]
-touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
+touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0939, T-0941]
+usage:
+  source: log
+  seconds: 783
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 27052
+      cache_read: 3172540
+      cache_write: 207242
+      cost: 2.3521
 ---
 # T-0945 The charts page lists a Strategic group and explains how to read the two charts
 

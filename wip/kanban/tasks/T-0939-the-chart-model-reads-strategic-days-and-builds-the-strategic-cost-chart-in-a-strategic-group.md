@@ -3,11 +3,11 @@ id: T-0939
 type: task
 nature: feature
 title: The chart model reads strategic_days and builds the Strategic Cost chart in a Strategic group
-status: in-progress
+status: done
 parent: S-0216
 owner: alex
 created: 2026-10-05T05:45:27Z
-updated: 2026-10-07T09:18:44Z
+updated: 2026-10-07T09:31:53Z
 transitions:
   - to: ready
     at: 2026-10-07T09:18:43Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T09:18:44Z
     by: agent-S-0216
+  - to: done
+    at: 2026-10-07T09:31:53Z
+    by: agent-S-0216
 stream: S-0216
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts]
+usage:
+  source: log
+  seconds: 789
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 32738
+      cache_read: 3839280
+      cache_write: 250795
+      cost: 2.8464
 ---
 # T-0939 The chart model reads strategic_days and builds the Strategic Cost chart in a Strategic group
 

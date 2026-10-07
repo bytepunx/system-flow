@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 97
-      cache_read: 555940
-      cache_write: 11755
-      cost: 0.2556
+      input: 10
+      output: 2613
+      cache_read: 556041
+      cache_write: 11658
+      cost: 0.2568
 ---
 # T-0920 flai guard reads a heredoc's text as input, not as commands, unless a shell runs it
 

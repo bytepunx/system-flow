@@ -3,10 +3,10 @@ id: E-0016
 type: epic
 nature: feature
 title: Introduce Orchestration, Planning, and Analysis agents
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-02T10:51:49Z
-updated: 2026-10-04T04:53:11Z
+updated: 2026-10-07T09:58:22Z
 transitions:
   - to: ready
     at: 2026-10-03T06:23:24Z
@@ -14,11 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-03T06:23:28Z
     by: alex
+  - to: review
+    at: 2026-10-07T09:58:22Z
+    by: agent-S-0216
 tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
 usage:
   source: sum
-  seconds: 116884
+  seconds: 119300
   estimated: true
   models:
     - model: claude-haiku-4-5-20251001
@@ -28,11 +31,11 @@ usage:
       cache_write: 1262294
       cost: 4.5448
     - model: claude-opus-5-5
-      input: 17832
-      output: 6034269
-      cache_read: 1054709005
-      cache_write: 26792892
-      cost: 505.5872
+      input: 18132
+      output: 6158043
+      cache_read: 1069224470
+      cache_write: 27741094
+      cost: 516.3488
     - model: claude-sonnet-5
       input: 1758
       output: 433950
@@ -63,21 +66,21 @@ usage:
           cache_write: 385110
           cost: 4.8942
     - kind: orchestrator
-      seconds: 2681
+      seconds: 3040
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 224
-          output: 3208
-          cache_read: 19350166
-          cache_write: 76111
-          cost: 5.2437
+          input: 250
+          output: 3574
+          cache_read: 23389213
+          cache_write: 84631
+          cost: 6.2997
         - model: claude-sonnet-5-5
-          input: 32
-          output: 166
-          cache_read: 391277
-          cache_write: 144205
-          cost: 0.3591
+          input: 46
+          output: 263
+          cache_read: 566217
+          cache_write: 185063
+          cost: 0.5039
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10h
@@ -147,3 +150,4 @@ Three new agents get introduced to system-flow:
 - S-0259 The Workflow menu has a Planner page showing its status, activity log, and runs
 
 ## Notes
+- 2026-10-07T09:58:22Z: moved to review: follows S-0216, which moved to review

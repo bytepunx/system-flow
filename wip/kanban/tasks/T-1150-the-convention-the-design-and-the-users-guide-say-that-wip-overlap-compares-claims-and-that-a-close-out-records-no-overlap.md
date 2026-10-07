@@ -3,16 +3,36 @@ id: T-1150
 type: task
 nature: improvement
 title: The convention, the design, and the users' guide say that wip.overlap compares claims and that a close-out records no overlap
-status: backlog
+status: done
 parent: S-0279
 owner: alex
 created: 2026-10-07T01:21:13Z
-updated: 2026-10-07T01:21:13Z
-transitions: []
+updated: 2026-10-07T09:47:37Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:42:37Z
+    by: agent-S-0279
+  - to: in-progress
+    at: 2026-10-07T09:42:38Z
+    by: agent-S-0279
+  - to: done
+    at: 2026-10-07T09:47:37Z
+    by: agent-S-0279
 stream: S-0279
 tags: [flai, template]
-touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/work-hierarchy.md]
 after: [T-1145]
+usage:
+  source: log
+  seconds: 299
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 23831
+      cache_read: 3794112
+      cache_write: 144329
+      cost: 2.1675
 ---
 # T-1150 The convention, the design, and the users' guide say that wip.overlap compares claims and that a close-out records no overlap
 

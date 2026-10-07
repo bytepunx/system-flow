@@ -3,16 +3,36 @@ id: T-0947
 type: task
 nature: feature
 title: The dashboard design and the user guide describe the Strategic Cost and Strategic Use charts
-status: backlog
+status: done
 parent: S-0216
 owner: alex
 created: 2026-10-05T05:45:49Z
-updated: 2026-10-05T05:45:49Z
-transitions: []
+updated: 2026-10-07T09:43:31Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:32:19Z
+    by: agent-S-0216
+  - to: in-progress
+    at: 2026-10-07T09:32:20Z
+    by: agent-S-0216
+  - to: done
+    at: 2026-10-07T09:43:31Z
+    by: agent-S-0216
 stream: S-0216
 tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0939]
+usage:
+  source: log
+  seconds: 671
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 13619
+      cache_read: 1597119
+      cache_write: 104330
+      cost: 1.1841
 ---
 # T-0947 The dashboard design and the user guide describe the Strategic Cost and Strategic Use charts
 

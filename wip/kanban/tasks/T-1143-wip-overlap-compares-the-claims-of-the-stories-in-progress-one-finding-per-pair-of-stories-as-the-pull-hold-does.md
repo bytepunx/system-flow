@@ -3,16 +3,36 @@ id: T-1143
 type: task
 nature: improvement
 title: wip.overlap compares the claims of the stories in progress, one finding per pair of stories, as the pull hold does
-status: backlog
+status: done
 parent: S-0279
 owner: alex
 created: 2026-10-07T01:20:15Z
-updated: 2026-10-07T01:20:40Z
-transitions: []
+updated: 2026-10-07T09:35:10Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:32:12Z
+    by: agent-S-0279
+  - to: in-progress
+    at: 2026-10-07T09:32:12Z
+    by: agent-S-0279
+  - to: done
+    at: 2026-10-07T09:35:10Z
+    by: agent-S-0279
 stream: S-0279
 tags: [flai]
 touches: [flai/internal/check/check.go, flai/internal/check/check_test.go]
 after: [T-1141]
+usage:
+  source: log
+  seconds: 178
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 10793
+      cache_read: 1718425
+      cache_write: 65369
+      cost: 0.9817
 ---
 # T-1143 wip.overlap compares the claims of the stories in progress, one finding per pair of stories, as the pull hold does
 

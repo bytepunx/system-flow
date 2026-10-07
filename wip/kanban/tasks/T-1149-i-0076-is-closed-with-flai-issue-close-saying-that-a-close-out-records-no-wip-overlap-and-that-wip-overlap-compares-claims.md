@@ -3,16 +3,36 @@ id: T-1149
 type: task
 nature: improvement
 title: I-0076 is closed with flai issue close, saying that a close-out records no wip.overlap and that wip.overlap compares claims
-status: backlog
+status: done
 parent: S-0279
 owner: alex
 created: 2026-10-07T01:21:01Z
-updated: 2026-10-07T01:21:18Z
-transitions: []
+updated: 2026-10-07T09:42:31Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:42:24Z
+    by: agent-S-0279
+  - to: in-progress
+    at: 2026-10-07T09:42:24Z
+    by: agent-S-0279
+  - to: done
+    at: 2026-10-07T09:42:31Z
+    by: agent-S-0279
 stream: S-0279
 tags: [flai]
 touches: [design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-1145]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2492
+      cache_read: 396810
+      cache_write: 15095
+      cost: 0.2267
 ---
 # T-1149 I-0076 is closed with flai issue close, saying that a close-out records no wip.overlap and that wip.overlap compares claims
 

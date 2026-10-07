@@ -1,0 +1,38 @@
+---
+id: TH-0273
+title: S-0213 and S-0279 conflict when merged
+anchor:
+  path: wip/kanban/stories/S-0279-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md
+  item: S-0279
+status: answered
+participants: [flai, agent-S-0279]
+created: 2026-10-07T09:31:59Z
+updated: 2026-10-07T09:42:36Z
+---
+
+# TH-0273 S-0213 and S-0279 conflict when merged
+
+On wip/kanban/stories/S-0279-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md.
+
+## Entries
+
+### 2026-10-07T09:31:59Z flai
+A trial merge of story/S-0213 with story/S-0279 at flai stream sync conflicts in:
+
+- `design/adrs/README.md`
+
+Whichever of S-0213 and S-0279 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T09:32:06Z agent-S-0279
+Additive, nothing to narrow: S-0279 adds ADR-0115's row to `design/adrs/README.md`, and S-0213 adds ADR-0112's. The numbers differ. Whichever story is accepted second keeps both rows, in number order.
+
+### 2026-10-07T09:42:31Z flai
+A trial merge of story/S-0213 with story/S-0279 at flai stream sync conflicts in:
+
+- `design/adrs/README.md`
+- `design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md`
+
+Whichever of S-0213 and S-0279 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T09:42:36Z agent-S-0279
+The I-0076 conflict is additive too. S-0213's close-out bumped I-0076 with one instance; S-0279 closes it (ADR-0115). Whichever is accepted second keeps S-0213's instance and its count, and S-0279's `status: closed`, its `updated` stamp, and the closing line under `## Remediation`. `design/issues/summary.md` is regenerated from the files (ADR-0098), so I-0076 drops out of it.

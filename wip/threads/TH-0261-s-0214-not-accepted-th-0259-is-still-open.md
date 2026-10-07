@@ -4,10 +4,10 @@ title: "S-0214 not accepted: TH-0259 is still open"
 anchor:
   path: wip/kanban/stories/S-0214-charts-show-parallelism-holds-and-touches-drift.md
   item: S-0214
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T08:54:45Z
-updated: 2026-10-07T08:54:45Z
+updated: 2026-10-07T14:14:24Z
 ---
 
 # TH-0261 S-0214 not accepted: TH-0259 is still open
@@ -35,3 +35,6 @@ Everything else is clear at 0e92e6f5, the branch head:
   - 4: `flai/internal/statsread/statsread.go`, `flai/cmd/stats.go`, `flai/cmd/check_stats_test.go`, `design/system/flaiover-dashboard.md`, `design/system/metrics.md`, `design/adrs/0113-…md`, `docs/users/flaiover.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, and the tests
 
 Why S-0214 goes first: S-0213 is held on TH-0260. My verify fails its go-test on my own `FLAI_ROLE`. After S-0214 merges, S-0213's agent must sync onto it, and S-0213 then needs a verify that does not inherit my role, from your shell.
+
+### 2026-10-07T14:14:24Z alex
+Resolved: S-0214 was accepted

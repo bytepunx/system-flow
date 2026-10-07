@@ -3,10 +3,10 @@ id: S-0246
 type: story
 nature: improvement
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T09:19:26Z
+updated: 2026-10-07T09:29:50Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:43Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:59:19Z
     by: agent-S-0246
+  - to: review
+    at: 2026-10-07T09:29:50Z
+    by: agent-S-0246
 tags: []
 topics: [cli]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, flai/cmd/guard.go]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, flai/cmd/guard.go, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/I-0111-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,26 +27,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 266
-  estimated: true
+  seconds: 1845
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 308
-      cache_read: 1684458
-      cache_write: 100160
-      cost: 0.8036
+      input: 124
+      output: 33196
+      cache_read: 7064548
+      cache_write: 148114
+      cost: 3.2622
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 449
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 87
-          cache_read: 744219
-          cache_write: 19343
-          cost: 0.1992
+          input: 47
+          output: 754
+          cache_read: 5627499
+          cache_write: 28635
+          cost: 1.4757
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 85
+          cache_read: 128185
+          cache_write: 39378
+          cost: 0.1124
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -66,8 +74,8 @@ forecast:
 This story remediates [I-0058](../../../design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md), "flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0058 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0058 is closed with `flai issue close I-0058 --reason` saying what fixed it
+- [x] The cause I-0058 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0058 is closed with `flai issue close I-0058 --reason` saying what fixed it
 
 ## Tasks
 - T-0920 flai guard reads a heredoc's text as input, not as commands, unless a shell runs it

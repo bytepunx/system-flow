@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 30.7536
-accrued_seconds: 28921
-tasks_completed: 40
-last_run: 2026-10-07T09:22:47Z
+accrued_cost: 38.0592
+accrued_seconds: 31091
+tasks_completed: 49
+last_run: 2026-10-07T09:58:57Z
 ---
 
 # Orchestrator activity
@@ -291,6 +291,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0275
 - Seconds: 216
 - Cost: 0.5736 USD, estimated
+
+### 2026-10-07T09:23:01Z
+
+- Summary: Published under judgement: 1 pending, 41 USD/week; flai 1.34.5→1.34.6 (flai/v1.34.6), flaiover 0.37.0→0.37.1 (flaiover/v0.37.1), template 1.0.68→1.0.69 (v1.0.69, 03ec71b); bundled S-0275; pushed
+- Items: S-0275
+- Seconds: 14
+- Cost: 0.0655 USD, estimated
+
+### 2026-10-07T09:23:08Z
+
+- Summary: Promoted S-0279 to ready (rank 1, forecast 45m, sole flai promote --candidates candidate once S-0275 was accepted) and applied the throughput order; ready had room (0 of 10)
+- Items: S-0279
+- Seconds: 7
+- Cost: 0.1977 USD, estimated
+
+### 2026-10-07T09:30:25Z
+
+- Summary: Left S-0246 in review, not accepted: the dry-run is blocked by TH-0267 (answered by its agent, not resolved); verify passed at head f21ad7c4 and the verifier matched both criteria. Asked the operator on a thread to resolve TH-0267
+- Items: S-0246
+- Seconds: 437
+- Cost: 1.3889 USD, estimated
+
+### 2026-10-07T09:32:04Z
+
+- Summary: Recommended an answer on TH-0269, citing design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md § Decision
+- Items: S-0279
+- Seconds: 99
+- Cost: 0.5558 USD, estimated
+
+### 2026-10-07T09:32:07Z
+
+- Summary: Recommended (not answered) on TH-0269 that the operator accept ADR-0115 for S-0279, after clarifying whether wip.overlap keeps stories in review as ADR-0096 §1 says; escalated because it is a decision not yet recorded (source ADR-0096 § Decision)
+- Items: S-0279
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-07T09:44:27Z
+
+- Summary: Recommended an answer on TH-0278, citing design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md § Decision
+- Items: S-0293
+- Seconds: 740
+- Cost: 2.5641 USD, estimated
+
+### 2026-10-07T09:44:30Z
+
+- Summary: Recommended (not answered) on TH-0278 for S-0293: keep the turn classes per ADR-0105, and have the operator reword criterion 3 before it is ticked, since 3 of 4 classes miss the 10% band; escalated as a change of scope (source ADR-0089 § Decision)
+- Items: S-0293
+- Seconds: 3
+- Cost: 0.0769 USD, estimated
+
+### 2026-10-07T09:52:58Z
+
+- Summary: Left S-0279 in review, not accepted: the dry-run is blocked by TH-0269 (ADR-0115 decision) and TH-0273/0274/0275 (conflict notices); verify passed at head 955a1288 and the verifier matched both criteria, but found ADR-0115 cites ADR-0096 §1 for the opposite of what it says. Asked the operator on a thread
+- Items: S-0279
+- Seconds: 508
+- Cost: 1.2559 USD, estimated
+
+### 2026-10-07T09:58:57Z
+
+- Summary: Left S-0216 in review, not accepted: the dry-run is blocked by TH-0270/0271/0272 (conflict notices with S-0213/0214/0215); verify passed at head 85593646 and the verifier matched all 3 criteria. Recommended on a thread the order S-0214, S-0215, S-0216, S-0213
+- Items: S-0216
+- Seconds: 359
+- Cost: 1.2008 USD, estimated
 
 ## Refusals
 

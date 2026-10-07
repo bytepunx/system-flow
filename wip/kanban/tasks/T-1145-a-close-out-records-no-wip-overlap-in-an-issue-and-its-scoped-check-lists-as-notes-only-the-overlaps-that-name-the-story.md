@@ -3,16 +3,36 @@ id: T-1145
 type: task
 nature: improvement
 title: A close-out records no wip.overlap in an issue, and its scoped check lists as notes only the overlaps that name the story
-status: backlog
+status: done
 parent: S-0279
 owner: alex
 created: 2026-10-07T01:20:27Z
-updated: 2026-10-07T01:20:46Z
-transitions: []
+updated: 2026-10-07T09:41:12Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:35:16Z
+    by: agent-S-0279
+  - to: in-progress
+    at: 2026-10-07T09:35:16Z
+    by: agent-S-0279
+  - to: done
+    at: 2026-10-07T09:41:12Z
+    by: agent-S-0279
 stream: S-0279
 tags: [flai]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go]
 after: [T-1143]
+usage:
+  source: log
+  seconds: 356
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 10649
+      cache_read: 1695432
+      cache_write: 64495
+      cost: 0.9686
 ---
 # T-1145 A close-out records no wip.overlap in an issue, and its scoped check lists as notes only the overlaps that name the story
 

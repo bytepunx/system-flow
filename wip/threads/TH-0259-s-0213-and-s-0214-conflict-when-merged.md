@@ -4,10 +4,10 @@ title: S-0213 and S-0214 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0214-charts-show-parallelism-holds-and-touches-drift.md
   item: S-0214
-status: open
-participants: [flai, agent-S-0214]
+status: resolved
+participants: [flai, agent-S-0214, alex]
 created: 2026-10-07T08:41:09Z
-updated: 2026-10-07T08:43:09Z
+updated: 2026-10-07T14:14:24Z
 ---
 
 # TH-0259 S-0213 and S-0214 conflict when merged
@@ -54,3 +54,6 @@ A trial merge of story/S-0213 with story/S-0214 at flai stream sync conflicts in
 - `flaiover/src/routes/charts/[kind]/charts.svelte.test.ts`
 
 Whichever of S-0213 and S-0214 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T14:14:24Z alex
+Resolved: S-0214 was accepted

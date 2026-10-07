@@ -3,11 +3,11 @@ id: S-0216
 type: story
 nature: feature
 title: Strategic Cost and Strategic Use charts show what the planner, orchestrator, and analyzer add against delivery
-status: in-progress
+status: review
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T09:18:27Z
+updated: 2026-10-07T09:58:22Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:57Z
@@ -21,6 +21,9 @@ transitions:
   - to: in-progress
     at: 2026-10-07T09:18:27Z
     by: agent-S-0216
+  - to: review
+    at: 2026-10-07T09:58:22Z
+    by: agent-S-0216
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts]
 after: [S-0205, S-0225, S-0226, S-0227]
@@ -30,20 +33,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2416
+  models:
+    - model: claude-opus-5-5
+      input: 300
+      output: 123774
+      cache_read: 14515465
+      cache_write: 948202
+      cost: 10.7616
   strategic:
     - kind: orchestrator
-      seconds: 10
+      seconds: 369
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 28
-          cache_read: 386507
-          cache_write: 5926
-          cost: 0.1024
+          input: 30
+          output: 394
+          cache_read: 4425554
+          cache_write: 14446
+          cost: 1.1584
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 97
+          cache_read: 174940
+          cache_write: 40858
+          cost: 0.1448
 cost_of_delay:
   value: 46.84
   by: planner-S-0216
@@ -62,9 +77,9 @@ forecast:
 The operator should be able to tell whether the strategic agents pay for themselves. Two charts contrast what they cost and the time they take with the average cost and delivery time per story over the same period.
 
 ## Acceptance criteria
-- [ ] `/charts/strategic-cost`: per bucket, the cost of the planner, orchestrator, and analyzer (stacked, from their activity logs) as bars, with the mean cost per story completed in the bucket as a line on the same axis, and the ratio stated
-- [ ] `/charts/strategic-use`: per bucket, the agent seconds of the three as bars, with the mean cycle time and the mean agent waiting time per story completed as lines, so a fall in waiting or cycle time can be read against the agents' time
-- [ ] Both span the window, read `/api/stats`, match `flai stats --json`; listed under a Strategic group; a note explains how to read them; design and user guide describe them; tests cover the mapping
+- [x] `/charts/strategic-cost`: per bucket, the cost of the planner, orchestrator, and analyzer (stacked, from their activity logs) as bars, with the mean cost per story completed in the bucket as a line on the same axis, and the ratio stated
+- [x] `/charts/strategic-use`: per bucket, the agent seconds of the three as bars, with the mean cycle time and the mean agent waiting time per story completed as lines, so a fall in waiting or cycle time can be read against the agents' time
+- [x] Both span the window, read `/api/stats`, match `flai stats --json`; listed under a Strategic group; a note explains how to read them; design and user guide describe them; tests cover the mapping
 
 ## Tasks
 - T-0939 The chart model reads strategic_days and builds the Strategic Cost chart in a Strategic group

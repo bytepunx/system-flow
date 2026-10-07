@@ -3,11 +3,11 @@ id: S-0214
 type: story
 nature: feature
 title: Charts show parallelism, holds, and touches drift
-status: review
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:53:52Z
+updated: 2026-10-07T14:14:24Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-10-07T08:53:52Z
     by: agent-S-0214
+  - to: done
+    at: 2026-10-07T14:14:24Z
+    by: alex
 tags: [dashboard]
 topics: [planning, analysis]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, docs/users/flai.md, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai-reference.md, flai/internal/statsread/statsread.go]

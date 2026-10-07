@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 43
-      cache_read: 410850
-      cache_write: 16562
-      cost: 0.1925
+      input: 7
+      output: 1967
+      cache_read: 418636
+      cache_write: 8777
+      cost: 0.1933
 ---
 # T-0926 flai guard's design and docs say how it reads a heredoc, and I-0058 is closed
 

@@ -3,23 +3,38 @@ id: S-0279
 type: story
 nature: improvement
 title: "flai check finds `wip.overlap` outside the story at close-out"
-status: backlog
+status: review
 owner: alex
 created: 2026-10-05T04:40:48Z
-updated: 2026-10-07T08:59:42Z
-transitions: []
+updated: 2026-10-07T09:52:14Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:23:05Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T09:30:05Z
+    by: agent-S-0279
+  - to: review
+    at: 2026-10-07T09:52:14Z
+    by: agent-S-0279
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/adrs, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/work-hierarchy.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1351
+  models:
+    - model: claude-opus-5-5
+      input: 266
+      output: 76628
+      cache_read: 12199903
+      cache_write: 464088
+      cost: 6.9697
   strategic:
     - kind: planner
       seconds: 574
@@ -38,15 +53,21 @@ usage:
           cache_write: 284594
           cost: 5.2617
     - kind: orchestrator
-      seconds: 624
+      seconds: 1238
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 43
-          output: 592
-          cache_read: 2569508
-          cache_write: 59693
-          cost: 0.6861
+          input: 95
+          output: 1380
+          cache_read: 9965219
+          cache_write: 81833
+          cost: 2.6215
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 48
+          cache_read: 72235
+          cache_write: 38139
+          cost: 0.074
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 45m
@@ -72,8 +93,8 @@ finalized:
 This story remediates [I-0076](../../../design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md), "flai check finds `wip.overlap` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0076 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0076 is closed with `flai issue close I-0076 --reason` saying what fixed it
+- [x] The cause I-0076 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0076 is closed with `flai issue close I-0076 --reason` saying what fixed it
 
 ## Tasks
 - T-1141 An ADR refining ADR-0085 and ADR-0096 records the remedy for I-0076, proposed from its instances

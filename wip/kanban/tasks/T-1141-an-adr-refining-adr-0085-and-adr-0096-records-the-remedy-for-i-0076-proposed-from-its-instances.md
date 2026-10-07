@@ -3,15 +3,35 @@ id: T-1141
 type: task
 nature: improvement
 title: An ADR refining ADR-0085 and ADR-0096 records the remedy for I-0076, proposed from its instances
-status: backlog
+status: done
 parent: S-0279
 owner: alex
 created: 2026-10-07T01:20:06Z
-updated: 2026-10-07T01:20:06Z
-transitions: []
+updated: 2026-10-07T09:32:00Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:30:54Z
+    by: agent-S-0279
+  - to: in-progress
+    at: 2026-10-07T09:30:55Z
+    by: agent-S-0279
+  - to: done
+    at: 2026-10-07T09:32:00Z
+    by: agent-S-0279
 stream: S-0279
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 65
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 5965
+      cache_read: 949694
+      cache_write: 36127
+      cost: 0.5425
 ---
 # T-1141 An ADR refining ADR-0085 and ADR-0096 records the remedy for I-0076, proposed from its instances
 
