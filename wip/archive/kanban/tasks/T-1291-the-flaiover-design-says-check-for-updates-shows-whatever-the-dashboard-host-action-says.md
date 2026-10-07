@@ -23,15 +23,15 @@ tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md]
 usage:
   source: log
-  seconds: 61
+  seconds: 70
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 68
-      cache_read: 312730
-      cache_write: 3051
-      cost: 0.1393
+      input: 10
+      output: 1762
+      cache_read: 513469
+      cache_write: 20091
+      cost: 0.2987
 ---
 # T-1291 The flaiover design says Check for updates shows whatever the dashboard host action says
 

@@ -3,10 +3,10 @@ id: S-0314
 type: story
 nature: remediation
 title: The flaiover guide says Check for updates always works, but the Dashboard area hides it while the dashboard host action is off
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:44Z
-updated: 2026-10-07T23:43:18Z
+updated: 2026-10-07T23:47:54Z
 transitions:
   - to: ready
     at: 2026-10-07T23:42:28Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-07T23:43:18Z
     by: agent-S-0314
+  - to: review
+    at: 2026-10-07T23:47:16Z
+    by: agent-S-0314
+  - to: done
+    at: 2026-10-07T23:47:54Z
+    by: orchestrator
 tags: [dashboard]
-touches: [flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md, design/issues/summary.md]
+touches: [flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md, design/issues/summary.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,18 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 91
-  estimated: true
+  seconds: 246
   turns:
     - day: 2026-10-07
-      work: 19
+      ceremony: 2
+      hand_edits: 1
+      work: 29
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 391
-      cache_read: 1447197
-      cache_write: 93551
-      cost: 0.6795
+      input: 66
+      output: 11199
+      cache_read: 3262863
+      cache_write: 127672
+      cost: 1.8982
   strategic:
     - kind: orchestrator
       seconds: 129
@@ -71,8 +78,8 @@ finalized:
 This story remediates [I-0115](../../../design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md), "The flaiover guide says Check for updates always works, but the Dashboard area hides it while the dashboard host action is off". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0115 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0115 is closed with `flai issue close I-0115 --reason` saying what fixed it
+- [x] The cause I-0115 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0115 is closed with `flai issue close I-0115 --reason` saying what fixed it
 
 ## Tasks
 - T-1290 The Dashboard area shows Check for updates while the dashboard host action is off
@@ -102,3 +109,13 @@ Left out: `HostProcesses.svelte` and its test (co-change 2 of 4), whose Check fo
 Forecast 12m, delivery 2026-10-08T06:25:00Z: `flai forecast` as it stands, rerun after the touches were set (it gave 5m on 0 touches). Kept: the change is one gate, one test, one design sentence, and a mechanical close, which the 16 medium-band remediations it rests on fit.
 
 Cost of delay value 12.50 USD a week: `flai cod` from the inputs flai set from I-0115 (5m lost per 168h cycle at 150 USD an hour). Kept: one occurrence, and the defect misleads but blocks nothing.
+
+### Accepted by the orchestrator
+
+- Verified: 8a90ac5f53e8d101e8f74944efe48951407a3828
+- At: 2026-10-07T23:47:54Z
+
+Verdict: accept; both criteria met (verifier at 8a90ac5f53e8d101e8f74944efe48951407a3828; flai verify passed every step at that commit). The I-0104 bump on the branch is the close-out's own record.
+
+- 1: flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, design/system/flaiover-dashboard.md
+- 2: design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md, design/issues/summary.md

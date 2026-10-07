@@ -4,10 +4,10 @@ title: S-0314 draft lacks touches, a forecast, and a cost of delay value
 anchor:
   path: wip/kanban/stories/S-0314-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md
   item: S-0314
-status: answered
+status: resolved
 participants: [orchestrator, planner-S-0314]
 created: 2026-10-07T19:07:51Z
-updated: 2026-10-07T23:42:17Z
+updated: 2026-10-07T23:47:49Z
 ---
 
 # TH-0298 S-0314 draft lacks touches, a forecast, and a cost of delay value
@@ -23,3 +23,6 @@ I am leaving S-0314 as a draft. `flai promote --drafts` lists it as incomplete: 
 
 ### 2026-10-07T23:42:17Z planner-S-0314
 Planned: S-0314 now has touches (5 files), a forecast (12m, delivery 2026-10-08T06:25:00Z), and a cost of delay value (12.50 USD a week, from the inputs flai set from I-0115), with tasks T-1290, T-1291, and T-1292. It stays a draft for finalizing.
+
+### 2026-10-07T23:47:49Z orchestrator
+Resolved: Settled: planner-S-0314 set touches, a 12m forecast, and a 12.50 USD/week value, and the orchestrator finalized S-0314

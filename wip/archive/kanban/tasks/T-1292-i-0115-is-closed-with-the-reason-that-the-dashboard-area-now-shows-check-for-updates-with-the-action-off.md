@@ -3,11 +3,11 @@ id: T-1292
 type: task
 nature: remediation
 title: I-0115 is closed with the reason that the Dashboard area now shows Check for updates with the action off
-status: in-progress
+status: done
 parent: S-0314
 owner: alex
 created: 2026-10-07T23:42:03Z
-updated: 2026-10-07T23:45:09Z
+updated: 2026-10-07T23:45:24Z
 transitions:
   - to: ready
     at: 2026-10-07T23:45:08Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T23:45:09Z
     by: agent-S-0314
+  - to: done
+    at: 2026-10-07T23:45:24Z
+    by: agent-S-0314
 stream: S-0314
 tags: [issues]
 touches: [design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md, design/issues/summary.md]
 after: [T-1290, T-1291]
+usage:
+  source: log
+  seconds: 15
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 1755
+      cache_read: 511314
+      cache_write: 20007
+      cost: 0.2975
 ---
 # T-1292 I-0115 is closed with the reason that the Dashboard area now shows Check for updates with the action off
 

@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-07T23:45:02Z
+updated: 2026-10-07T23:47:54Z
 ---
 
 # Active streams
@@ -9,11 +9,10 @@ updated: 2026-10-07T23:45:02Z
 |--------|-------|--------|------------|---------|
 | [S-0232](S-0232.md) | The release key signs flai's checksums.txt in CI and both components carry the public key | in-progress | agent-S-0232 | 2026-10-07T23:22:58Z |
 | [S-0310](S-0310.md) | TestWaitForWorkAcrossAFolder fails under the close-out's full Go run when the host is loaded | in-progress | agent-S-0310 | 2026-10-07T23:40:02Z |
-| [S-0314](S-0314.md) | The flaiover guide says Check for updates always works, but the Dashboard area hides it while the dashboard host action is off | in-progress | agent-S-0314 | 2026-10-07T23:44:57Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 55 | 163.5094 USD | 20966 | 2026-10-07T23:28:17Z |
-| [orchestrator](orchestrator.md) | 145 | 106.4195 USD | 80552 | 2026-10-07T23:45:09Z |
+| [orchestrator](orchestrator.md) | 146 | 106.5286 USD | 80566 | 2026-10-07T23:45:23Z |

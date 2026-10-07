@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 84
-      cache_read: 413367
-      cache_write: 3479
-      cost: 0.1838
+      output: 1377
+      cache_read: 401146
+      cache_write: 15696
+      cost: 0.2334
 ---
 # T-1290 The Dashboard area shows Check for updates while the dashboard host action is off
 
