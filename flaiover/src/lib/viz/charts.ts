@@ -61,6 +61,10 @@ export type ItemMetrics = {
 	/** The item's agent model, `(none)` without one (ADR-0111); absent from an older flai. */
 	model?: string;
 	age_seconds?: number;
+	/** What its agent waited on its threads while in progress, absent with none (S-0205). */
+	wait_threads_seconds?: number;
+	/** Its time in review, absent if it was never there (S-0205). */
+	wait_review_seconds?: number;
 	usage?: ItemUsage;
 	/** What its agent waited on threads while in progress, and in review (S-0205); absent when none. */
 	wait_threads_seconds?: number;
@@ -368,7 +372,7 @@ export type ClaimsKind = (typeof CLAIMS_KINDS)[number];
 export const PLANNING_KINDS = [...FORECAST_KINDS, ...CLAIMS_KINDS] as const;
 export type PlanningKind = (typeof PLANNING_KINDS)[number];
 /** The charts of what the strategic agents add against delivery, by the day (S-0216). */
-export const STRATEGIC_KINDS = ['strategic-cost'] as const;
+export const STRATEGIC_KINDS = ['strategic-cost', 'strategic-use'] as const;
 export const KINDS = [
 	...FLOW_KINDS,
 	...USAGE_KINDS,
@@ -398,7 +402,8 @@ export const TITLES: Record<Kind, string> = {
 	parallelism: 'Parallelism',
 	'hold-time': 'Hold Time',
 	'touches-drift': 'Touches Drift',
-	'strategic-cost': 'Strategic Cost'
+	'strategic-cost': 'Strategic Cost',
+	'strategic-use': 'Strategic Use'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
 export const SPEND_KINDS: readonly Kind[] = [
@@ -1922,6 +1927,23 @@ export const STRATEGIC_AGENTS = ['planner', 'orchestrator', 'analyzer'] as const
 const AGENT_SLOT: Record<string, number> = { planner: 6, orchestrator: 5, analyzer: 4 };
 /** A strategic day's moment on a time axis: the start of its UTC day. */
 const dayOf = (d: StrategicDay) => `${d.date}T00:00:00Z`;
+/**
+ * One bar series per strategic agent with an entry in the window, in their fixed order and colours,
+ * stacked, with a bar on every day, 0 on a day it has none, estimated as its entries were.
+ */
+function agentBars(t: Theme, days: StrategicDay[], value: (u: StrategicUse) => number) {
+	return STRATEGIC_AGENTS.filter((k) => days.some((d) => d.agents[k])).map((k) => ({
+		name: k,
+		type: 'bar',
+		stack: 'strategic',
+		barMaxWidth: 24,
+		itemStyle: { color: colorFor(t, AGENT_SLOT, k, 0), borderColor: t.surface, borderWidth: 1 },
+		data: days.map((d): Point => {
+			const u = d.agents[k];
+			return { value: [dayOf(d), u ? value(u) : 0], items: 0, estimated: u?.estimated };
+		})
+	}));
+}
 /** What the strategic agents spent over the window against what the agents spent per item. */
 export type StrategicRatio = {
 	/** The sum of `strategic_days[].cost`. */
@@ -1966,18 +1988,7 @@ export function strategicRatio(report: Report): StrategicRatio | undefined {
  */
 export function strategicCostByDay(r: Report, t: Theme): Opt {
 	const days = r.strategic_days ?? [];
-	const present = STRATEGIC_AGENTS.filter((k) => days.some((d) => d.agents[k]));
-	const bars = present.map((k) => ({
-		name: k,
-		type: 'bar',
-		stack: 'strategic',
-		barMaxWidth: 24,
-		itemStyle: { color: colorFor(t, AGENT_SLOT, k, 0), borderColor: t.surface, borderWidth: 1 },
-		data: days.map((d): Point => {
-			const u = d.agents[k];
-			return { value: [dayOf(d), u?.cost ?? 0], items: 0, estimated: u?.estimated };
-		})
-	}));
+	const bars = agentBars(t, days, (u) => u.cost);
 	const mean = line(
 		t,
 		`mean per ${r.type}`,
@@ -2007,6 +2018,82 @@ export function strategicCostByDay(r: Report, t: Theme): Opt {
 			'US dollars',
 			dollars,
 			hover('day', dollars, '')
+		),
+		series
+	});
+}
+/** A strategic day of a table, with what the agents of the items done that day waited. */
+export type StrategicRow = StrategicDay & {
+	/**
+	 * The mean over those items of `wait_threads_seconds` plus `wait_review_seconds`, a missing wait
+	 * counted as 0; absent when none was done that day.
+	 */
+	wait_seconds?: number;
+};
+/**
+ * The strategic days with their mean waiting (S-0216), over the items `completed` counts: done, not
+ * cancelled, by the UTC day of their completion, so the window's first day whole, as flai counts
+ * them, where `completedIn` starts at the window's start.
+ */
+export function strategicRows(report: Report): StrategicRow[] {
+	const r = normalise(report);
+	const waits = new Map<string, number[]>();
+	for (const i of r.items) {
+		if (i.status !== 'done' || !i.completed) continue;
+		const day = new Date(i.completed).toISOString().slice(0, 10);
+		const wait = (i.wait_threads_seconds ?? 0) + (i.wait_review_seconds ?? 0);
+		waits.set(day, [...(waits.get(day) ?? []), wait]);
+	}
+	return r.strategic_days!.map((d) => {
+		const w = waits.get(d.date);
+		return w ? { ...d, wait_seconds: w.reduce((n, s) => n + s, 0) / w.length } : d;
+	});
+}
+/** Hours on an axis and in a tooltip, to a tenth. */
+const inHours = (h: number) => `${Math.round(h * 10) / 10}h`;
+/**
+ * Strategic Use (S-0216): one bar per day of the window, the hours the planner, the orchestrator,
+ * and the analyzer worked that day stacked, a kind's estimated in part when any of its entries was.
+ * On the same axis, in hours, the mean cycle time and the mean waiting of the items done that day,
+ * with no point on a day without one.
+ */
+export function strategicUseByDay(r: Report, t: Theme): Opt {
+	const rows = strategicRows(r);
+	const bars = agentBars(t, rows, (u) => u.seconds / 3600);
+	const mean = (
+		name: string,
+		color: string,
+		symbol: string,
+		of: (d: StrategicRow) => number | undefined
+	) =>
+		line(
+			t,
+			`${name} per ${r.type}`,
+			color,
+			symbol,
+			rows.flatMap((d): Point[] => {
+				const s = of(d);
+				return s === undefined ? [] : [{ value: [dayOf(d), s / 3600], items: 0 }];
+			})
+		);
+	const series =
+		rows.length > 0
+			? [
+					...bars,
+					mean('mean cycle time', t.text, 'circle', (d) => d.cycle_time_seconds),
+					mean('mean waiting', t.textSecondary, 'diamond', (d) => d.wait_seconds)
+				]
+			: [];
+	return base(t, {
+		...bucketAxes(
+			t,
+			r,
+			'day',
+			rows.map((d) => Date.parse(dayOf(d))),
+			series.length > 1,
+			'hours',
+			inHours,
+			hover('day', inHours, '')
 		),
 		series
 	});
@@ -2066,5 +2153,7 @@ export function build(
 			return touchesDrift(r, t);
 		case 'strategic-cost':
 			return strategicCostByDay(r, t);
+		case 'strategic-use':
+			return strategicUseByDay(r, t);
 	}
 }

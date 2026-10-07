@@ -51,6 +51,7 @@ import {
 	models,
 	spendRows,
 	strategicRatio,
+	strategicRows,
 	STRATEGIC_KINDS,
 	withUsage,
 	type Bucket,
@@ -2177,6 +2178,62 @@ const strategic: Report = {
 	}
 };
 
+/** A story of this repository as flai stats --json reported it, with what it waited. */
+const doneOn = (
+	id: string,
+	completed: string,
+	cycle: number,
+	threads: number | undefined,
+	review: number | undefined,
+	status = 'done'
+): ItemMetrics => ({
+	id,
+	type: 'story',
+	nature: 'feature',
+	title: id,
+	status,
+	created: '2026-09-20T00:00:00Z',
+	completed,
+	cycle_time_seconds: status === 'done' ? cycle : undefined,
+	blocked_seconds: 0,
+	time_in_state_seconds: {},
+	wait_threads_seconds: threads,
+	wait_review_seconds: review
+});
+// The stories flai stats --json reported done on 26 to 28 September, 2026-10-07, with S-0139, the
+// one cancelled; those done after 28 September left out, so their days have none done.
+const waited: Report = {
+	...strategic,
+	items: [
+		doneOn('S-0117', '2026-09-26T04:18:59Z', 2976, undefined, 2718),
+		doneOn('S-0118', '2026-09-26T03:15:35Z', 945, 195, 33),
+		doneOn('S-0119', '2026-09-26T03:23:38Z', 440, undefined, 25),
+		doneOn('S-0120', '2026-09-26T05:39:27Z', 901, undefined, 11),
+		doneOn('S-0121', '2026-09-26T06:02:02Z', 2242, 1093, 203),
+		doneOn('S-0122', '2026-09-26T07:04:22Z', 3886, 1434, 274),
+		doneOn('S-0123', '2026-09-26T07:27:34Z', 1351, undefined, 233),
+		doneOn('S-0124', '2026-09-26T08:02:04Z', 2637, 1967, 118),
+		doneOn('S-0125', '2026-09-26T17:48:17Z', 35087, 34515, 70),
+		doneOn('S-0126', '2026-09-26T07:40:57Z', 613, undefined, 398),
+		doneOn('S-0127', '2026-09-26T07:46:34Z', 356, undefined, 70),
+		doneOn('S-0128', '2026-09-26T17:47:43Z', 35019, undefined, 34197),
+		doneOn('S-0129', '2026-09-26T18:12:29Z', 1314, undefined, 517),
+		doneOn('S-0130', '2026-09-26T20:14:28Z', 8458, 1457, 6968),
+		doneOn('S-0131', '2026-09-26T21:02:26Z', 10683, 665, 10013),
+		doneOn('S-0132', '2026-09-26T21:09:40Z', 10430, 602, 9791),
+		doneOn('S-0133', '2026-09-26T17:53:35Z', 279, undefined, 37),
+		doneOn('S-0139', '2026-09-26T20:27:09Z', 0, 0, undefined, 'cancelled'),
+		doneOn('S-0140', '2026-09-27T03:56:25Z', 24374, 24271, 27),
+		doneOn('S-0134', '2026-09-28T22:39:28Z', 153757, 129, 2014),
+		doneOn('S-0135', '2026-09-28T22:56:03Z', 948, undefined, 79)
+	],
+	strategic_days: strategicDays.map((d) =>
+		d.date <= '2026-09-28'
+			? d
+			: { ...d, completed: 0, cost_per_item: undefined, cycle_time_seconds: undefined }
+	)
+};
+
 describe('strategic charts', () => {
 	type Series = {
 		name: string;
@@ -2252,15 +2309,17 @@ describe('strategic charts', () => {
 		).toBe(
 			'2026-10-06<br/>planner: $56.69 (estimated in part)<br/>orchestrator: $0.00<br/>mean per story: $11.64'
 		);
-		expect(STRATEGIC_KINDS).toEqual(['strategic-cost']);
+		expect(STRATEGIC_KINDS).toEqual(['strategic-cost', 'strategic-use']);
 		expect(titleOf('strategic-cost')).toBe('Strategic Cost');
-		expect(controls('strategic-cost')).toEqual({
-			type: true,
-			epic: false,
-			bucket: false,
-			nature: false,
-			model: false
-		});
+		expect(titleOf('strategic-use')).toBe('Strategic Use');
+		for (const k of STRATEGIC_KINDS)
+			expect(controls(k)).toEqual({
+				type: true,
+				epic: false,
+				bucket: false,
+				nature: false,
+				model: false
+			});
 	});
 	it('strategic cost states what the strategic agents spent per story against the agents', () => {
 		// $136.8546 over 162 stories done, against the agents' $1296.4735 over 128: what flai stats
@@ -2329,5 +2388,91 @@ describe('strategic charts', () => {
 		expect(
 			normalise({ ...strategic, strategic_days: null } as unknown as Report).strategic_days
 		).toEqual([]);
+		const use = build('strategic-use', older, light) as Strategic;
+		expect(use.series).toEqual([]);
+		expect(strategicRows(older)).toEqual([]);
+	});
+	it('strategic use stacks the strategic agents hours per day, with mean cycle time and waiting', () => {
+		const o = build('strategic-use', waited, light) as Strategic;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['planner', 'bar'],
+			['orchestrator', 'bar'],
+			['mean cycle time per story', 'line'],
+			['mean waiting per story', 'line']
+		]);
+		expect(new Set(o.series.slice(0, 2).map((s) => s.stack))).toEqual(new Set(['strategic']));
+		// one bar per day of the window, in hours, 0 on a day a kind worked none, estimated as spent
+		expect(o.series[0].data.map((d) => d.value[0])).toEqual(
+			strategicDays.map((d) => `${d.date}T00:00:00Z`)
+		);
+		const h = (s: number) => s / 3600;
+		expect(o.series[0].data.map((d) => d.value[1])).toEqual(
+			[...Array(8).fill(0), 3516, 5576, 7156, 578].map(h)
+		);
+		expect(o.series[1].data.map((d) => d.value[1])).toEqual([...Array(11).fill(0), 28705].map(h));
+		expect(o.series[1].data[11].estimated).toBe(true);
+		// the same colours as strategic cost
+		const c = build('strategic-cost', waited, light) as Strategic;
+		expect(o.series.slice(0, 2).map((s) => s.itemStyle.color)).toEqual(
+			c.series.slice(0, 2).map((s) => s.itemStyle.color)
+		);
+		// the lines have a point only on the days a story was done, in hours
+		const at = ['2026-09-26T00:00:00Z', '2026-09-27T00:00:00Z', '2026-09-28T00:00:00Z'];
+		expect(o.series[2].data.map((d) => d.value[0])).toEqual(at);
+		expect(o.series[3].data.map((d) => d.value[0])).toEqual(at);
+		expect(o.series[2].data.map((d) => d.value[1])).toEqual(
+			[6918.64705882353, 24374, 77352.5].map(h)
+		);
+		// one axis, in hours, over the window by the day
+		expect(o.yAxis.name).toBe('hours');
+		expect(o.yAxis.axisLabel.formatter(6.75)).toBe('6.8h');
+		expect(o.xAxis).toMatchObject({
+			type: 'time',
+			minInterval: 24 * hour,
+			min: Date.parse('2026-09-26T00:00:00Z') - 12 * hour,
+			max: Date.parse('2026-10-07T00:00:00Z') + 12 * hour
+		});
+		expect(o.legend.show).toBe(true);
+		expect(
+			o.tooltip.formatter([
+				{ seriesName: 'planner', data: o.series[0].data[11] },
+				{ seriesName: 'orchestrator', data: o.series[1].data[11] }
+			])
+		).toBe(
+			'2026-10-07<br/>planner: 0.2h (estimated in part)<br/>orchestrator: 8h (estimated in part)'
+		);
+		expect(
+			o.tooltip.formatter([
+				{ seriesName: 'mean cycle time per story', data: o.series[2].data[0] },
+				{ seriesName: 'mean waiting per story', data: o.series[3].data[0] }
+			])
+		).toBe('2026-09-26<br/>mean cycle time per story: 1.9h<br/>mean waiting per story: 1.8h');
+	});
+	it('strategic use waits the mean of the threads and review waits of the stories done that day', () => {
+		const rows = strategicRows(waited);
+		expect(rows.map((d) => d.date)).toEqual(strategicDays.map((d) => d.date));
+		// 26 September: 17 stories done, the cancelled S-0139 left out, those done before the window's
+		// start at 09:21 counted, as flai counts them; a missing wait counts 0
+		expect(rows[0]).toMatchObject({ completed: 17, wait_seconds: 107604 / 17 });
+		// 27 September: S-0140 alone, 24271 on threads and 27 in review
+		expect(rows[1].wait_seconds).toBe(24298);
+		// 28 September: S-0134 129 + 2014, S-0135 no thread and 79 in review
+		expect(rows[2].wait_seconds).toBe(1111);
+		// no story done, no wait
+		expect(rows.slice(3).every((d) => d.wait_seconds === undefined)).toBe(true);
+		// the items that wait are those the day's completed counts, and whose cycle time it means
+		const done = waited.items.filter((i) => i.status === 'done');
+		for (const d of rows.slice(0, 3)) {
+			const of = done.filter((i) => i.completed!.startsWith(d.date));
+			expect(of.length).toBe(d.completed);
+			expect(of.reduce((n, i) => n + i.cycle_time_seconds!, 0) / of.length).toBeCloseTo(
+				d.cycle_time_seconds!,
+				9
+			);
+		}
+		const o = build('strategic-use', waited, light) as Strategic;
+		expect(o.series[3].data.map((d) => d.value[1])).toEqual(
+			[107604 / 17, 24298, 1111].map((s) => s / 3600)
+		);
 	});
 });
