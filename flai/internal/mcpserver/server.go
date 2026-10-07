@@ -23,10 +23,10 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
-	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/search"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -199,22 +199,7 @@ func New(opt Options) *mcp.Server {
 // ---- threads ----
 
 // ThreadSummary is a thread without its entries.
-type ThreadSummary struct {
-	ID        string         `json:"id"`
-	Title     string         `json:"title"`
-	Status    string         `json:"status"`
-	Anchor    threads.Anchor `json:"anchor"`
-	Story     string         `json:"story,omitempty" jsonschema:"the story this thread belongs to, when anchored to a story or task"`
-	Updated   string         `json:"updated"`
-	Entries   int            `json:"entries"`
-	LastBy    string         `json:"last_by"`
-	LastEntry string         `json:"last_entry" jsonschema:"text of the most recent entry"`
-	Awaiting  string         `json:"awaiting" jsonschema:"'you' when the last entry is not yours, else 'other'; 'other' too on a thread you opened while a recommendation on it awaits the operator's confirmation, which is no answer until they confirm it"`
-	// PendingRecommendation is the recommendation awaiting the operator's
-	// confirmation (ADR-0090), nil when there is none.
-	PendingRecommendation *threads.Entry `json:"pending_recommendation" jsonschema:"the recommendation awaiting the operator's confirmation, null when there is none: the thread still awaits the operator until they confirm it or answer otherwise"`
-	Project               string         `json:"project,omitempty" jsonschema:"the project the thread is in, when the server serves more than one"`
-}
+type ThreadSummary = inbox.ThreadSummary
 
 // ThreadDetail is a thread with its entries.
 type ThreadDetail struct {
@@ -223,23 +208,9 @@ type ThreadDetail struct {
 	EntryList    []threads.Entry `json:"entry_list"`
 }
 
-// summary is th as this agent sees it. It awaits the agent when the last
-// entry is someone else's, but for the agent that opened it while a
-// recommendation on it awaits the operator's confirmation: that is no answer
-// to its question until the operator confirms it (ADR-0090). Anyone else,
-// the operator and the recommendation's author included, sees it by its last
-// entry.
+// summary is th as this agent sees it, as inbox.Summarize says.
 func (s *server) summary(th *threads.Thread) ThreadSummary {
-	entries := th.Entries()
-	out := ThreadSummary{ID: th.ID, Title: th.Title, Status: th.Status, Anchor: th.Anchor, Story: threads.StoryOf(s.repo, th), Updated: th.Updated, Entries: len(entries), Awaiting: "other", PendingRecommendation: th.PendingRecommendation()}
-	if n := len(entries); n > 0 {
-		out.LastBy, out.LastEntry = entries[n-1].Author, entries[n-1].Text
-		asked := out.PendingRecommendation != nil && th.Opener() == s.agent
-		if out.LastBy != s.agent && !asked {
-			out.Awaiting = "you"
-		}
-	}
-	return out
+	return inbox.Summarize(s.repo, s.agent, th)
 }
 
 func (s *server) detail(th *threads.Thread) ThreadDetail {
@@ -254,62 +225,10 @@ type InboxIn struct {
 }
 
 // InboxOut is the agent's inbox.
-type InboxOut struct {
-	Agent       string   `json:"agent"`
-	Unpublished []string `json:"unpublished,omitempty" jsonschema:"the accepted items no release has covered yet, by ID: what publishing would send to the remote. Information for the operator, or for an agent the operator asks to publish; not a step to take on your own"`
-	// FlaiOutdated is set while this flai is older than the newest flai
-	// release in the project's history (S-0181).
-	FlaiOutdated *release.Outdated    `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
-	AwaitingYou  int                  `json:"awaiting_you"`
-	Threads      []ThreadSummary      `json:"threads"`
-	Ready        []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
-	CanPull      bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
-	PullHold     string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
-	Changes      []Event              `json:"changes" jsonschema:"what others changed since this agent last looked, newest kept, at most 50; reported once. A first look under a new name covers the last 24 hours of stories and epics only"`
-	Omitted      int                  `json:"changes_omitted" jsonschema:"how many older changes were left out of changes because of the cap; they are not reported later"`
-}
+type InboxOut = inbox.Inbox
 
 func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
-	done := perf.Track(ctx, "threads.read")
-	all, err := threads.List(s.repo)
-	done()
-	if err != nil {
-		return nil, InboxOut{}, err
-	}
-	out := InboxOut{Agent: s.agent, Threads: []ThreadSummary{}}
-	story := workitem.CanonicalID(in.Story)
-	for _, th := range all {
-		if !th.Open() {
-			continue
-		}
-		sum := s.summary(th)
-		if in.Story != "" && sum.Story != story {
-			continue
-		}
-		if sum.Awaiting == "you" {
-			out.AwaitingYou++
-		} else if !in.All {
-			continue
-		}
-		out.Threads = append(out.Threads, sum)
-	}
-	// one list for the board and the changes (S-0156)
-	items, err := s.listItems(ctx)
-	if err != nil {
-		return nil, InboxOut{}, err
-	}
-	view, err := s.boardViewOf(ctx, items, false)
-	if err != nil {
-		return nil, InboxOut{}, err
-	}
-	out.Ready, out.CanPull, out.PullHold, out.Unpublished = view.ReadyInPullOrder(), view.CanPull(), view.PullHold(), view.Unpublished
-	out.FlaiOutdated = release.FlaiOutdated(s.runner, s.repo.Root, s.version)
-	if out.Ready == nil {
-		out.Ready = []workitem.BoardCard{}
-	}
-	done = perf.Track(ctx, "changes.read")
-	out.Changes, out.Omitted, err = s.catchUpWith(items)
-	done()
+	out, err := inbox.Read(ctx, inbox.Options{Repo: s.repo, Agent: s.agent, Story: in.Story, All: in.All, Now: s.now, Runner: s.runner, Version: s.version})
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
@@ -334,19 +253,7 @@ func (s *server) listItems(ctx context.Context) ([]*workitem.Item, error) {
 
 // boardViewOf is the board of items listed with listItems.
 func (s *server) boardViewOf(ctx context.Context, items []*workitem.Item, all bool) (workitem.BoardView, error) {
-	done := perf.Track(ctx, "board.load")
-	board, err := s.repo.LoadBoard()
-	done()
-	if err != nil {
-		return workitem.BoardView{}, err
-	}
-	var ids map[string]bool // without a runner, nothing is known to be unpublished
-	if s.runner != nil {
-		done = perf.Track(ctx, "release.pending")
-		ids = release.PendingIDs(execx.Timed(ctx, s.runner), s.repo.Root, s.repo.Manifest, s.repo)
-		done()
-	}
-	return workitem.NewBoardView(items, board, s.now(), all, ids, s.repo.Holds(items)), nil
+	return inbox.Board(ctx, s.repo, s.runner, s.now, items, all)
 }
 
 // BoardIn selects what the board shows.
