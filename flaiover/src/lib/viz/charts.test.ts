@@ -50,12 +50,15 @@ import {
 	tokensSpent,
 	models,
 	spendRows,
+	strategicRatio,
+	STRATEGIC_KINDS,
 	withUsage,
 	type Bucket,
 	type Claims,
 	type ErrorFilter,
 	type ItemMetrics,
 	type Report,
+	type StrategicDay,
 	type WaitWeek
 } from './charts';
 import { CATEGORICAL, modelSlot, modelSymbol, theme, TYPE_SLOT } from './palette';
@@ -324,6 +327,27 @@ const report: Report = {
 			}
 		]
 	},
+	// the days S-001 and S-002 were completed; flai sends every day of the window
+	strategic_days: [
+		{
+			date: '2026-08-03',
+			agents: { planner: { cost: 0.4, seconds: 600, estimated: true } },
+			cost: 0.4,
+			seconds: 600,
+			completed: 1,
+			cost_per_item: 1.5,
+			cycle_time_seconds: 93600
+		},
+		{
+			date: '2026-08-12',
+			agents: {},
+			cost: 0,
+			seconds: 0,
+			completed: 1,
+			cost_per_item: 0.25,
+			cycle_time_seconds: 86400
+		}
+	],
 	usage: {
 		items: 2,
 		tokens: 3500000,
@@ -2021,5 +2045,289 @@ describe('claims charts', () => {
 			expect(errorFacets(forecasting, kind), kind).toEqual({ natures: [], models: [] });
 		}
 		expect(FORECAST_KINDS.every(isForecastKind)).toBe(true);
+	});
+});
+
+// flai stats --json --since 11d on this repository, 2026-10-07, trimmed: the strategic days, and of
+// usage its totals. The planner spent from 4 October, the orchestrator on 7 October; on 26 to 28
+// September the stories done carried no agents' usage, so those days have no cost per item.
+const strategicDays: StrategicDay[] = [
+	{
+		date: '2026-09-26',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 17,
+		cycle_time_seconds: 6918.64705882353
+	},
+	{
+		date: '2026-09-27',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 1,
+		cycle_time_seconds: 24374
+	},
+	{
+		date: '2026-09-28',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 2,
+		cycle_time_seconds: 77352.5
+	},
+	{
+		date: '2026-09-29',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 30,
+		cost_per_item: 5.7092,
+		cycle_time_seconds: 3339.233333333333
+	},
+	{
+		date: '2026-09-30',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 5,
+		cost_per_item: 5.2406,
+		cycle_time_seconds: 1104.2
+	},
+	{
+		date: '2026-10-01',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 15,
+		cost_per_item: 10.1552,
+		cycle_time_seconds: 9572.533333333333
+	},
+	{
+		date: '2026-10-02',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 11,
+		cost_per_item: 7.7906,
+		cycle_time_seconds: 13681.181818181818
+	},
+	{
+		date: '2026-10-03',
+		agents: {},
+		cost: 0,
+		seconds: 0,
+		completed: 13,
+		cost_per_item: 13.7473,
+		cycle_time_seconds: 12154.384615384615
+	},
+	{
+		date: '2026-10-04',
+		agents: { planner: { cost: 8.7265, seconds: 3516, estimated: true } },
+		cost: 8.7265,
+		seconds: 3516,
+		completed: 10,
+		cost_per_item: 16.2799,
+		cycle_time_seconds: 11044
+	},
+	{
+		date: '2026-10-05',
+		agents: { planner: { cost: 34.5781, seconds: 5576, estimated: true } },
+		cost: 34.5781,
+		seconds: 5576,
+		completed: 15,
+		cost_per_item: 7.302,
+		cycle_time_seconds: 2108.133333333333
+	},
+	{
+		date: '2026-10-06',
+		agents: { planner: { cost: 56.688, seconds: 7156, estimated: true } },
+		cost: 56.688,
+		seconds: 7156,
+		completed: 25,
+		cost_per_item: 11.6428,
+		cycle_time_seconds: 6123.8
+	},
+	{
+		date: '2026-10-07',
+		agents: {
+			planner: { cost: 6.682, seconds: 578, estimated: true },
+			orchestrator: { cost: 30.18, seconds: 28705, estimated: true }
+		},
+		cost: 36.862,
+		seconds: 29283,
+		completed: 18,
+		cost_per_item: 11.9793,
+		cycle_time_seconds: 5366.333333333333
+	}
+];
+const strategic: Report = {
+	...report,
+	generated_at: '2026-10-07T09:21:02Z',
+	window_days: 11,
+	window_start: '2026-09-26T09:21:02Z',
+	strategic_days: strategicDays,
+	usage: {
+		items: 128,
+		tokens: 2789278953,
+		cost: 1296.4735,
+		seconds: 266955,
+		estimated: true,
+		models: []
+	}
+};
+
+describe('strategic charts', () => {
+	type Series = {
+		name: string;
+		type: string;
+		stack?: string;
+		itemStyle: { color: string };
+		lineStyle?: { type: string };
+		data: { value: [string, number]; items: number; estimated?: boolean }[];
+		markLine?: { data: { name: string; yAxis: number }[] };
+	};
+	type Strategic = {
+		series: Series[];
+		legend: { show: boolean };
+		useUTC: boolean;
+		xAxis: { type: string; min?: number; max?: number; minInterval: number };
+		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
+		tooltip: { formatter: (p: unknown) => string };
+	};
+	const hour = 3600e3;
+
+	it('strategic cost stacks what each strategic agent spent per day, with the cost per story', () => {
+		const o = build('strategic-cost', strategic, light) as Strategic;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['planner', 'bar'],
+			['orchestrator', 'bar'],
+			['mean per story', 'line']
+		]);
+		expect(new Set(o.series.slice(0, 2).map((s) => s.stack))).toEqual(new Set(['strategic']));
+		// one bar per day of the window, 0 on a day a kind spent nothing
+		const days = o.series[0].data.map((d) => d.value[0]);
+		expect(days).toEqual(strategicDays.map((d) => `${d.date}T00:00:00Z`));
+		expect(o.series[0].data.map((d) => d.value[1])).toEqual([
+			0, 0, 0, 0, 0, 0, 0, 0, 8.7265, 34.5781, 56.688, 6.682
+		]);
+		expect(o.series[1].data.map((d) => d.value[1])).toEqual([...Array(11).fill(0), 30.18]);
+		// every strategic entry is apportioned, so estimated, and the bars say so
+		expect(o.series[0].data.map((d) => d.estimated)).toEqual([
+			...Array(8).fill(undefined),
+			true,
+			true,
+			true,
+			true
+		]);
+		// the agents' cost per story done that day: no point on 26 to 28 September
+		expect(o.series[2].data.map((d) => d.value)).toEqual([
+			['2026-09-29T00:00:00Z', 5.7092],
+			['2026-09-30T00:00:00Z', 5.2406],
+			['2026-10-01T00:00:00Z', 10.1552],
+			['2026-10-02T00:00:00Z', 7.7906],
+			['2026-10-03T00:00:00Z', 13.7473],
+			['2026-10-04T00:00:00Z', 16.2799],
+			['2026-10-05T00:00:00Z', 7.302],
+			['2026-10-06T00:00:00Z', 11.6428],
+			['2026-10-07T00:00:00Z', 11.9793]
+		]);
+		// one axis, in dollars, over the window by the day, half a day either side
+		expect(o.yAxis.name).toBe('US dollars');
+		expect(o.yAxis.axisLabel.formatter(0.5)).toBe('$0.500');
+		expect(o.useUTC).toBe(true);
+		expect(o.xAxis).toMatchObject({
+			type: 'time',
+			minInterval: 24 * hour,
+			min: Date.parse('2026-09-26T00:00:00Z') - 12 * hour,
+			max: Date.parse('2026-10-07T00:00:00Z') + 12 * hour
+		});
+		expect(o.legend.show).toBe(true);
+		expect(
+			o.tooltip.formatter([
+				{ seriesName: 'planner', data: o.series[0].data[10] },
+				{ seriesName: 'orchestrator', data: o.series[1].data[10] },
+				{ seriesName: 'mean per story', data: o.series[2].data[7] }
+			])
+		).toBe(
+			'2026-10-06<br/>planner: $56.69 (estimated in part)<br/>orchestrator: $0.00<br/>mean per story: $11.64'
+		);
+		expect(STRATEGIC_KINDS).toEqual(['strategic-cost']);
+		expect(titleOf('strategic-cost')).toBe('Strategic Cost');
+		expect(controls('strategic-cost')).toEqual({
+			type: true,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
+	});
+	it('strategic cost states what the strategic agents spent per story against the agents', () => {
+		// $136.8546 over 162 stories done, against the agents' $1296.4735 over 128: what flai stats
+		// prints as "$136.85 · 12h38m, beside 162 completed (usage $10.13 per item)"
+		const ratio = strategicRatio(strategic)!;
+		expect(ratio).toMatchObject({ cost: 136.8546, completed: 162 });
+		expect(ratio.cost_per_item).toBeCloseTo(0.84478, 5);
+		expect(ratio.agent_cost_per_item).toBeCloseTo(10.1287, 4);
+		expect(ratio.share).toBeCloseTo(0.0834, 4);
+		const o = build('strategic-cost', strategic, light) as Strategic;
+		expect(o.series[2].markLine?.data).toEqual([
+			{ yAxis: ratio.cost_per_item, name: 'strategic per story 8%' }
+		]);
+		// the type of the report names it
+		const tasks = build('strategic-cost', { ...strategic, type: 'task' }, light) as Strategic;
+		expect(tasks.series[2].name).toBe('mean per task');
+		expect(tasks.series[2].markLine?.data[0].name).toBe('strategic per task 8%');
+		// nothing completed, or nothing the agents spent: no ratio, and no line for it
+		const idle: Report = {
+			...strategic,
+			strategic_days: strategicDays.map((d) => ({ ...d, completed: 0, cost_per_item: undefined }))
+		};
+		expect(strategicRatio(idle)).toBeUndefined();
+		const none = build('strategic-cost', idle, light) as Strategic;
+		expect(none.series[2].data).toEqual([]);
+		expect(none.series[2].markLine).toBeUndefined();
+		const unspent: Report = { ...strategic, usage: { ...strategic.usage!, items: 0, cost: 0 } };
+		expect(strategicRatio(unspent)).toBeUndefined();
+	});
+	it('strategic cost gives each strategic agent its fixed colour, in a fixed order', () => {
+		const analyzed: Report = {
+			...strategic,
+			strategic_days: strategicDays.map((d) =>
+				d.date === '2026-10-02'
+					? { ...d, agents: { analyzer: { cost: 1.25, seconds: 600 } }, cost: 1.25, seconds: 600 }
+					: d
+			)
+		};
+		const o = build('strategic-cost', analyzed, light) as Strategic;
+		expect(o.series.map((s) => s.name)).toEqual([
+			'planner',
+			'orchestrator',
+			'analyzer',
+			'mean per story'
+		]);
+		expect(o.series.slice(0, 3).map((s) => s.itemStyle.color)).toEqual([
+			CATEGORICAL.light[6],
+			CATEGORICAL.light[5],
+			CATEGORICAL.light[4]
+		]);
+		const night = build('strategic-cost', analyzed, dark) as Strategic;
+		expect(night.series[2].itemStyle.color).toBe(CATEGORICAL.dark[4]);
+		// an entry not estimated is not marked
+		expect(o.tooltip.formatter([{ seriesName: 'analyzer', data: o.series[2].data[6] }])).toBe(
+			'2026-10-02<br/>analyzer: $1.25'
+		);
+		// the strategic ratio counts it
+		expect(strategicRatio(analyzed)!.cost).toBe(138.1046);
+	});
+	it('draws an empty strategic cost from a flai older than S-0205', () => {
+		const older = { ...strategic, strategic_days: undefined };
+		const o = build('strategic-cost', older, light) as Strategic;
+		expect(o.series).toEqual([]);
+		expect(o.legend.show).toBe(false);
+		expect(strategicRatio(older)).toBeUndefined();
+		expect(
+			normalise({ ...strategic, strategic_days: null } as unknown as Report).strategic_days
+		).toEqual([]);
 	});
 });

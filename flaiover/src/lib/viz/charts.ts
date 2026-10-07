@@ -255,6 +255,23 @@ export type Waiting = {
 	/** Absent from a flai older than S-0215. */
 	longest?: LongestWait[];
 };
+/** What one kind of strategic agent spent on a day, estimated when any of its entries was. */
+export type StrategicUse = { cost: number; seconds: number; estimated?: boolean };
+/**
+ * What the strategic agents spent on one day of the window, per kind with an entry that ended that
+ * day and summed, beside the items of the report's type completed that day: the agents' mean cost
+ * of those on which agents spent, strategic usage left out, and their mean cycle time, each absent
+ * when none has one (S-0205).
+ */
+export type StrategicDay = {
+	date: string;
+	agents: Record<string, StrategicUse>;
+	cost: number;
+	seconds: number;
+	completed: number;
+	cost_per_item?: number;
+	cycle_time_seconds?: number;
+};
 /**
  * Older flai builds emit null for empty lists; give every list the charts
  * iterate a value so a selection with no items draws an empty chart instead
@@ -275,6 +292,7 @@ export function normalise(r: Report): Report {
 		throughput: r.throughput ?? [],
 		cfd: r.cfd ?? [],
 		burnup: r.burnup ?? {},
+		strategic_days: r.strategic_days ?? [],
 		usage: {
 			items: 0,
 			tokens: 0,
@@ -311,6 +329,8 @@ export type Report = {
 	claims?: Claims;
 	/** Absent from a flai older than S-0205. */
 	waiting?: Waiting;
+	/** One per day of the window; absent from a flai older than S-0205. */
+	strategic_days?: StrategicDay[];
 };
 
 /** The charts of how work flows. */
@@ -347,7 +367,14 @@ export type ClaimsKind = (typeof CLAIMS_KINDS)[number];
 /** The charts the Planning group lists: forecasts, then claims. */
 export const PLANNING_KINDS = [...FORECAST_KINDS, ...CLAIMS_KINDS] as const;
 export type PlanningKind = (typeof PLANNING_KINDS)[number];
-export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS, ...PLANNING_KINDS] as const;
+/** The charts of what the strategic agents add against delivery, by the day (S-0216). */
+export const STRATEGIC_KINDS = ['strategic-cost'] as const;
+export const KINDS = [
+	...FLOW_KINDS,
+	...USAGE_KINDS,
+	...PLANNING_KINDS,
+	...STRATEGIC_KINDS
+] as const;
 export type Kind = (typeof KINDS)[number];
 export const TITLES: Record<Kind, string> = {
 	'cycle-time': 'Cycle Time',
@@ -370,7 +397,8 @@ export const TITLES: Record<Kind, string> = {
 	'forecast-by-model': 'Forecast Error / Model',
 	parallelism: 'Parallelism',
 	'hold-time': 'Hold Time',
-	'touches-drift': 'Touches Drift'
+	'touches-drift': 'Touches Drift',
+	'strategic-cost': 'Strategic Cost'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
 export const SPEND_KINDS: readonly Kind[] = [
@@ -403,9 +431,12 @@ export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
  * them; a chart per item shows every type, so none is chosen. The forecast charts read the
  * stories, narrowed by nature and model; the chart per model shows every model, by the bucket.
  * The claims charts read the stories, which alone are held, by the day, the week, and the story,
- * as flai lays them out.
+ * as flai lays them out. flai lays the strategic charts out by the day over the report's type, so
+ * only the type is chosen.
  */
 export function controls(kind: Kind) {
+	if ((STRATEGIC_KINDS as readonly Kind[]).includes(kind))
+		return { type: true, epic: false, bucket: false, nature: false, model: false };
 	if (isClaimsKind(kind))
 		return { type: false, epic: false, bucket: false, nature: false, model: false };
 	if (isForecastKind(kind))
@@ -1882,6 +1913,105 @@ export function touchesDrift(r: Report, t: Theme): Opt {
 	});
 }
 
+/** The strategic agents, in the order the strategic charts stack them. */
+export const STRATEGIC_AGENTS = ['planner', 'orchestrator', 'analyzer'] as const;
+/**
+ * A strategic agent's fixed slot: the three that stay apart from each other in both modes for every
+ * pair, as the item types' do.
+ */
+const AGENT_SLOT: Record<string, number> = { planner: 6, orchestrator: 5, analyzer: 4 };
+/** A strategic day's moment on a time axis: the start of its UTC day. */
+const dayOf = (d: StrategicDay) => `${d.date}T00:00:00Z`;
+/** What the strategic agents spent over the window against what the agents spent per item. */
+export type StrategicRatio = {
+	/** The sum of `strategic_days[].cost`. */
+	cost: number;
+	/** The sum of `strategic_days[].completed`. */
+	completed: number;
+	/** `cost` over `completed`. */
+	cost_per_item: number;
+	/** The agents' mean cost per item over the window: `usage.cost` over `usage.items`. */
+	agent_cost_per_item: number;
+	/** `cost_per_item` over `agent_cost_per_item`. */
+	share: number;
+};
+/**
+ * The ratio Strategic Cost states (S-0216): what the strategic agents spent over the window per
+ * item of the report's type completed in it, as a share of the agents' mean cost per item, the
+ * figure `flai stats` prints beside it; none when nothing was completed or agents spent nothing.
+ */
+export function strategicRatio(report: Report): StrategicRatio | undefined {
+	const r = normalise(report);
+	const days = r.strategic_days ?? [];
+	const cost = Math.round(days.reduce((n, d) => n + d.cost, 0) * 1e4) / 1e4;
+	const completed = days.reduce((n, d) => n + d.completed, 0);
+	const u = r.usage!;
+	if (completed === 0 || u.items === 0 || u.cost === 0) return undefined;
+	const perItem = cost / completed;
+	const agent = u.cost / u.items;
+	return {
+		cost,
+		completed,
+		cost_per_item: perItem,
+		agent_cost_per_item: agent,
+		share: perItem / agent
+	};
+}
+/**
+ * Strategic Cost (S-0216): one bar per day of the window, what the planner, the orchestrator, and
+ * the analyzer spent that day stacked, a kind's estimated in part when any of its entries was. On
+ * the same axis, the agents' mean cost per item completed that day, with no point on a day without
+ * one, and a dashed line at what the strategic agents spent per item completed over the window,
+ * labelled with its share of the agents' mean cost per item.
+ */
+export function strategicCostByDay(r: Report, t: Theme): Opt {
+	const days = r.strategic_days ?? [];
+	const present = STRATEGIC_AGENTS.filter((k) => days.some((d) => d.agents[k]));
+	const bars = present.map((k) => ({
+		name: k,
+		type: 'bar',
+		stack: 'strategic',
+		barMaxWidth: 24,
+		itemStyle: { color: colorFor(t, AGENT_SLOT, k, 0), borderColor: t.surface, borderWidth: 1 },
+		data: days.map((d): Point => {
+			const u = d.agents[k];
+			return { value: [dayOf(d), u?.cost ?? 0], items: 0, estimated: u?.estimated };
+		})
+	}));
+	const mean = line(
+		t,
+		`mean per ${r.type}`,
+		t.text,
+		'circle',
+		days.flatMap((d): Point[] =>
+			d.cost_per_item === undefined ? [] : [{ value: [dayOf(d), d.cost_per_item], items: 0 }]
+		)
+	);
+	const ratio = strategicRatio(r);
+	const stated = ratio && {
+		...refLine(
+			t,
+			[{ yAxis: ratio.cost_per_item, name: `strategic per ${r.type} ${percent(ratio.share)}` }],
+			'{b}'
+		),
+		label: { color: t.textSecondary, formatter: '{b}', position: 'insideEndTop' }
+	};
+	const series = days.length > 0 ? [...bars, { ...mean, markLine: stated }] : [];
+	return base(t, {
+		...bucketAxes(
+			t,
+			r,
+			'day',
+			days.map((d) => Date.parse(dayOf(d))),
+			series.length > 1,
+			'US dollars',
+			dollars,
+			hover('day', dollars, '')
+		),
+		series
+	});
+}
+
 /** A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic. */
 export function build(
 	kind: Kind,
@@ -1934,5 +2064,7 @@ export function build(
 			return holdTime(r, t);
 		case 'touches-drift':
 			return touchesDrift(r, t);
+		case 'strategic-cost':
+			return strategicCostByDay(r, t);
 	}
 }
