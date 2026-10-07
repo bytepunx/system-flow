@@ -3261,7 +3261,7 @@ flai test [path|package]... [flags]
 
 Run the project's test and lint tiers, the tests list in system-flow.yaml, for the files and folders given, in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder. With no argument the files are those the checkout changed against the main branch, committed or not. --all runs every tier, all\_only ones too, for the whole checkout.
 
-The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A manifest without tests runs scripts/test.sh as its one tier.
+The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A manifest without tests runs scripts/test.sh as its one tier. Each tier runs with FLAI\_ROLE=verify whatever role ran flai test, so a test that runs flai's writes is not refused as the orchestrator (S-0311).
 
 The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings.
 
@@ -3524,7 +3524,9 @@ narrative  the narrative's Current state and Next steps are written
 check      flai check --strict, scoped to the story, passes
 <tier>     each test and lint tier of the worktree's system-flow.yaml that
            what the branch changed against the main branch selects, run
-           with CLOSE_OUT_STORY set to the story
+           with CLOSE_OUT_STORY set to the story and FLAI_ROLE=verify,
+           whatever role ran flai verify, so a test that runs flai's
+           writes is not refused as the orchestrator (S-0311)
 ```
 
 flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)". With --json the answer is the report, with the story, the commit and base it was verified at, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, and the notes.

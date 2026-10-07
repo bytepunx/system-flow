@@ -41,7 +41,9 @@ after it are not reached:
   check      flai check --strict, scoped to the story, passes
   <tier>     each test and lint tier of the worktree's system-flow.yaml that
              what the branch changed against the main branch selects, run
-             with CLOSE_OUT_STORY set to the story
+             with CLOSE_OUT_STORY set to the story and FLAI_ROLE=verify,
+             whatever role ran flai verify, so a test that runs flai's
+             writes is not refused as the orchestrator (S-0311)
 
 flai verify commits nothing. The answer is a line for each step, its state
 and duration, the failing step's first findings under it, at most --max
