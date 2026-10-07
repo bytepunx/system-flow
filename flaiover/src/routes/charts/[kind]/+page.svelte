@@ -83,9 +83,7 @@
 	// the planning charts read stories, whichever type was chosen on another chart (S-0212)
 	const asType = $derived(planningKind ? 'story' : type);
 	const facets = $derived(
-		report && planningKind
-			? errorFacets(report, kind as PlanningKind)
-			: { natures: [], models: [] }
+		report && planningKind ? errorFacets(report, kind as PlanningKind) : { natures: [], models: [] }
 	);
 	const forecasts = $derived(report && planningKind ? forecastRows(report, filter) : []);
 	/** Whether any story done in the window has a forecast of its duration or its delivery. */
@@ -97,7 +95,14 @@
 	);
 	/** flai's spread of an error under the filter; under nature and model, from the rows shown. */
 	const spread = (which: 'forecast' | 'delivery', field: ErrorField): ErrorSpread | undefined =>
-		report ? spreadFor(report, which, filter, forecasts.flatMap((r) => r[field] ?? [])) : undefined;
+		report
+			? spreadFor(
+					report,
+					which,
+					filter,
+					forecasts.flatMap((r) => r[field] ?? [])
+				)
+			: undefined;
 	const p = (v: number | undefined) => (v === undefined ? '-' : human(v));
 	/** The stories with a forecast and the p50 and p85 of their absolute errors, in a line. */
 	const planningSummary = $derived.by(() => {

@@ -20,17 +20,16 @@
 	><tbody
 		>{#each rows as row (row.id)}<tr
 				><td class="pr-4"
-					><a class="font-mono underline" href={resolve('/items/[id]', { id: row.id })}>{row.id}</a
-					>
+					><a class="font-mono underline" href={resolve('/items/[id]', { id: row.id })}>{row.id}</a>
 					{row.title}</td
 				><td class="pr-4 font-mono whitespace-nowrap">{row.completed.slice(0, 10)}</td><td
 					class="py-0.5 pr-4"><KindChips nature={row.nature} /></td
-				><td class="pr-4">{row.model}</td><td class="pr-4"
-					>{say(row.forecast_seconds, human)}</td
-				><td class="pr-4">{say(row.cycle_time_seconds, human)}</td
-				><td class="pr-4">{say(row.forecast_error_seconds, humanSigned)}</td><td class="pr-4"
-					>{say(row.delivery_error_seconds, humanSigned)}</td
-				><td>{say(row.estimate_error_seconds, humanSigned)}</td></tr
+				><td class="pr-4">{row.model}</td><td class="pr-4">{say(row.forecast_seconds, human)}</td
+				><td class="pr-4">{say(row.cycle_time_seconds, human)}</td><td class="pr-4"
+					>{say(row.forecast_error_seconds, humanSigned)}</td
+				><td class="pr-4">{say(row.delivery_error_seconds, humanSigned)}</td><td
+					>{say(row.estimate_error_seconds, humanSigned)}</td
+				></tr
 			>{/each}</tbody
 	>
 </table>

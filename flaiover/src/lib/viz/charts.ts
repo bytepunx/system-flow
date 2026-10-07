@@ -73,9 +73,7 @@ export type ErrorStats = ErrorSpread & {
 export type Forecasts = { forecast: ErrorStats; delivery: ErrorStats; estimate: ErrorStats };
 /** The per-item error fields the planning charts read. */
 export type ErrorField =
-	| 'forecast_error_seconds'
-	| 'delivery_error_seconds'
-	| 'estimate_error_seconds';
+	'forecast_error_seconds' | 'delivery_error_seconds' | 'estimate_error_seconds';
 /** What a model spent on an item, or on the items in a window (S-0143). */
 export type ModelSpend = {
 	model: string;
@@ -1183,7 +1181,12 @@ export function forecastAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 	const items = doneIn(r).filter((i) => passes(i, f));
 	const forecast = errorPoints(items, 'forecast_error_seconds');
 	const estimate = errorPoints(items, 'estimate_error_seconds');
-	const s = spreadFor(r, 'forecast', f, forecast.map((p) => p.value[1]));
+	const s = spreadFor(
+		r,
+		'forecast',
+		f,
+		forecast.map((p) => p.value[1])
+	);
 	const lines = band(s);
 	const scatter = (name: string, color: string, symbol: string, data: ErrorPoint[]) => ({
 		name,
@@ -1281,7 +1284,12 @@ export function deliveryAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 		...p,
 		value: [p.value[0], p.value[1] / DAY_S]
 	}));
-	const s = spreadFor(r, 'delivery', f, errors.map((p) => p.value[1]));
+	const s = spreadFor(
+		r,
+		'delivery',
+		f,
+		errors.map((p) => p.value[1])
+	);
 	const lines = band(s, DAY_S);
 	const w = windowOf(r);
 	const weeks = w
