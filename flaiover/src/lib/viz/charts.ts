@@ -8,12 +8,15 @@ import {
 	modelSlot,
 	modelSymbol,
 	NATURE_SLOT,
+	ORDER_SLOT,
+	ORDER_SYMBOL,
 	STATE_SLOT,
 	STRATEGIC_SLOT,
 	TYPE_SLOT,
 	TYPE_SYMBOL,
 	type Theme
 } from './palette';
+import { amount } from '$lib/planning';
 import { count, dollars } from '$lib/usage';
 
 export type Distribution = {
@@ -331,6 +334,43 @@ export type Report = {
 	waiting?: Waiting;
 	/** One per day of the window; absent from a flai older than S-0205. */
 	strategic_days?: StrategicDay[];
+	cost_of_delay?: CostOfDelayReport;
+};
+
+/** The columns cost of delay is laid out in, in board order (S-0205). */
+export const COD_COLUMNS = ['backlog', 'ready', 'in-progress', 'review'] as const;
+export type CodColumn = (typeof COD_COLUMNS)[number];
+/** The cost of delay of a day: outstanding per column at its end, and what waiting cost in it. */
+export type CodDay = {
+	date: string;
+	outstanding: Record<CodColumn, number>;
+	/** The items per column at the day's end without a value; absent from a flai older than S-0213. */
+	without_value?: Record<CodColumn, number>;
+	incurred: number;
+};
+/** What waiting cost in an ISO week, which starts on `start`. */
+export type CodWeek = { week: string; start: string; incurred: number };
+/** The orders the ready column's cost of delay is projected under (S-0213). */
+export const ORDERS = ['current', 'cod', 'wsjf'] as const;
+export type OrderBy = (typeof ORDERS)[number];
+/** A projected pull and the cost of the stories pulled up to it; the first point has no story. */
+export type OrderPoint = { at: string; id?: string; incurred: number };
+export type OrderSeries = { by: OrderBy; total: number; points: OrderPoint[] };
+/** The ready column's cost of delay projected from `at` until each story is pulled (S-0213). */
+export type CostOrder = {
+	at: string;
+	horizon: string;
+	series: OrderSeries[];
+	saving: number;
+	cheaper: Exclude<OrderBy, 'current'>;
+	left_out: string[];
+};
+/** What waiting for the items cost, and what the pull order will cost (S-0205, S-0213). */
+export type CostOfDelayReport = {
+	days: CodDay[];
+	weeks: CodWeek[];
+	/** Absent from a flai older than S-0213. */
+	order?: CostOrder;
 };
 
 /** The charts of how work flows. */
@@ -369,11 +409,14 @@ export const PLANNING_KINDS = [...FORECAST_KINDS, ...CLAIMS_KINDS] as const;
 export type PlanningKind = (typeof PLANNING_KINDS)[number];
 /** The charts of what the strategic agents add against delivery, by the day (S-0216). */
 export const STRATEGIC_KINDS = ['strategic-cost', 'strategic-use'] as const;
+/** The charts of what waiting costs and what the pull order will cost (S-0213). */
+export const COD_KINDS = ['cod-outstanding', 'cod-incurred', 'cod-order'] as const;
 export const KINDS = [
 	...FLOW_KINDS,
 	...USAGE_KINDS,
 	...PLANNING_KINDS,
-	...STRATEGIC_KINDS
+	...STRATEGIC_KINDS,
+	...COD_KINDS
 ] as const;
 export type Kind = (typeof KINDS)[number];
 export const TITLES: Record<Kind, string> = {
@@ -399,7 +442,10 @@ export const TITLES: Record<Kind, string> = {
 	'hold-time': 'Hold Time',
 	'touches-drift': 'Touches Drift',
 	'strategic-cost': 'Strategic Cost',
-	'strategic-use': 'Strategic Use'
+	'strategic-use': 'Strategic Use',
+	'cod-outstanding': 'CoD Outstanding',
+	'cod-incurred': 'CoD Incurred',
+	'cod-order': 'CoD by Order'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
 export const SPEND_KINDS: readonly Kind[] = [
@@ -433,7 +479,7 @@ export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
  * stories, narrowed by nature and model; the chart per model shows every model, by the bucket.
  * The claims charts read the stories, which alone are held, by the day, the week, and the story,
  * as flai lays them out. flai lays the strategic charts out by the day over the report's type, so
- * only the type is chosen.
+ * only the type is chosen. Cost of delay takes the window alone.
  */
 export function controls(kind: Kind) {
 	if ((STRATEGIC_KINDS as readonly Kind[]).includes(kind))
@@ -449,9 +495,10 @@ export function controls(kind: Kind) {
 			model: kind !== 'forecast-by-model'
 		};
 	const spend = SPEND_KINDS.includes(kind);
+	const cod = (COD_KINDS as readonly Kind[]).includes(kind);
 	return {
-		type: !PER_ITEM_KINDS.includes(kind),
-		epic: !spend && !['cfd', 'throughput', 'agent-waiting'].includes(kind),
+		type: !cod && !PER_ITEM_KINDS.includes(kind),
+		epic: !cod && !spend && !['cfd', 'throughput', 'agent-waiting'].includes(kind),
 		bucket: spend,
 		nature: false,
 		model: false
@@ -649,19 +696,31 @@ export function burnUp(r: Report, t: Theme, epic = 'all'): Opt {
 	});
 }
 
-/** Cumulative flow: stacked areas per state with a surface-coloured seam between bands. */
-export function cfd(r: Report, t: Theme): Opt {
-	const series = STATES.map((st) => ({
-		name: st,
+/** A state's band of a stacked area by the day, in the state's colour, with a surface-coloured seam. */
+function stateBand(t: Theme, state: string, stack: string, data: [string, number][]) {
+	return {
+		name: state,
 		type: 'line',
-		stack: 'flow',
+		stack,
 		showSymbol: false,
 		lineStyle: { width: 2, color: t.surface },
-		areaStyle: { color: colorFor(t, STATE_SLOT, st, 0), opacity: 1 },
-		itemStyle: { color: colorFor(t, STATE_SLOT, st, 0) },
+		areaStyle: { color: colorFor(t, STATE_SLOT, state, 0), opacity: 1 },
+		itemStyle: { color: colorFor(t, STATE_SLOT, state, 0) },
 		emphasis: { focus: 'series' },
-		data: r.cfd.map((d) => [d.date, d.counts[st] ?? 0])
-	}));
+		data
+	};
+}
+
+/** Cumulative flow: stacked areas per state with a surface-coloured seam between bands. */
+export function cfd(r: Report, t: Theme): Opt {
+	const series = STATES.map((st) =>
+		stateBand(
+			t,
+			st,
+			'flow',
+			r.cfd.map((d) => [d.date, d.counts[st] ?? 0])
+		)
+	);
 	return base(t, {
 		legend: legend(t, true),
 		tooltip: tooltip(t, { trigger: 'axis', axisPointer: { type: 'line' } }),
@@ -2095,6 +2154,206 @@ export function strategicUseByDay(r: Report, t: Theme): Opt {
 	});
 }
 
+/** Whether the report carries cost of delay at all: a flai older than S-0205 sends none. */
+export const hasCostOfDelay = (r: Report) => r.cost_of_delay !== undefined;
+/** Whether it carries the pull order's projection: a flai older than S-0213 sends none. */
+export const hasOrder = (r: Report) => r.cost_of_delay?.order !== undefined;
+const codDays = (r: Report) => r.cost_of_delay?.days ?? [];
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * The items without a cost of delay value now, per column: the last day's count. None from a flai
+ * older than S-0213, or from a report without days.
+ */
+export function withoutValueNow(r: Report): Record<CodColumn, number> | undefined {
+	const days = codDays(r);
+	return days[days.length - 1]?.without_value;
+}
+
+/** What CoD Outstanding plots, as rows: each day of the window, newest first. */
+export const codDayRows = (r: Report): CodDay[] => [...codDays(r)].reverse();
+
+/** A week of CoD Incurred: what waiting cost in it, and the mean per week from the window's first. */
+export type CodWeekRow = CodWeek & { mean: number };
+/** Each week of the window with its running mean, oldest first, to two decimals as flai rounds. */
+function weeksWithMeans(r: Report): CodWeekRow[] {
+	let sum = 0;
+	return (r.cost_of_delay?.weeks ?? []).map((w, i) => {
+		sum += w.incurred;
+		return { ...w, mean: round2(sum / (i + 1)) };
+	});
+}
+/** What CoD Incurred plots, as rows: each week of the window with its running mean, newest first. */
+export const codWeekRows = (r: Report): CodWeekRow[] => weeksWithMeans(r).reverse();
+
+/** A projected pull under an order, and the cost of the stories pulled up to and including it. */
+export type OrderRow = { by: OrderBy; at: string; id: string; incurred: number };
+/** What CoD by Order plots, as rows: per order, current, cod, wsjf, each pull in order of pull. */
+export function codOrderRows(r: Report): OrderRow[] {
+	return (r.cost_of_delay?.order?.series ?? []).flatMap((s) =>
+		s.points.flatMap((p) => (p.id ? [{ by: s.by, at: p.at, id: p.id, incurred: p.incurred }] : []))
+	);
+}
+
+/** What CoD by Order states beside the chart (ADR-0112). */
+export type OrderSummary = {
+	totals: Record<OrderBy, number>;
+	saving: number;
+	cheaper: Exclude<OrderBy, 'current'>;
+	left_out: string[];
+};
+/**
+ * The total of each order, what the cheaper of cod and wsjf saves over the pull order (negative
+ * when the pull order is cheaper), and the ready stories left out; none from a flai older than
+ * S-0213.
+ */
+export function orderSummary(r: Report): OrderSummary | undefined {
+	const o = r.cost_of_delay?.order;
+	if (!o) return undefined;
+	const totals = Object.fromEntries(
+		ORDERS.map((by) => [by, o.series.find((s) => s.by === by)?.total ?? 0])
+	) as Record<OrderBy, number>;
+	return { totals, saving: o.saving, cheaper: o.cheaper, left_out: o.left_out };
+}
+
+/**
+ * CoD Outstanding (S-0213): per day of the window, the value per week of the items in each column
+ * at the day's end, stacked in board order and coloured as the cumulative flow colours the states.
+ */
+export function codOutstanding(r: Report, t: Theme): Opt {
+	const days = codDays(r);
+	const series =
+		days.length === 0
+			? []
+			: COD_COLUMNS.map((col) =>
+					stateBand(
+						t,
+						col,
+						'outstanding',
+						days.map((d) => [d.date, d.outstanding[col] ?? 0])
+					)
+				);
+	return base(t, {
+		legend: legend(t, series.length > 1),
+		tooltip: tooltip(t, { trigger: 'axis', axisPointer: { type: 'line' } }),
+		xAxis: axisX(t, { type: 'time', ...span(r, true) }),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'value per week',
+			nameTextStyle: { color: t.textSecondary, align: 'left' },
+			axisLabel: { color: t.textSecondary, formatter: amount }
+		}),
+		series
+	});
+}
+
+/**
+ * CoD Incurred (S-0213): a bar per ISO week of the window, what waiting cost in it, with the
+ * running mean per week as a dashed line, on a time axis of weeks as spend over time has it.
+ */
+export function codIncurred(r: Report, t: Theme): Opt {
+	const weeks = weeksWithMeans(r);
+	const at = (w: CodWeek) => `${w.start}T00:00:00Z`;
+	const series =
+		weeks.length === 0
+			? []
+			: [
+					{
+						name: 'incurred',
+						type: 'bar',
+						barMaxWidth: 24,
+						itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 1 },
+						data: weeks.map((w): Point => ({ value: [at(w), w.incurred], items: 0 }))
+					},
+					{
+						...line(
+							t,
+							'mean per week',
+							t.textSecondary,
+							'none',
+							weeks.map((w): Point => ({ value: [at(w), w.mean], items: 0 })),
+							true
+						),
+						showSymbol: false
+					}
+				];
+	return base(t, {
+		useUTC: true,
+		legend: legend(t, series.length > 1),
+		tooltip: tooltip(t, {
+			trigger: 'axis',
+			axisPointer: { type: 'line', lineStyle: { color: t.textSecondary, width: 1 } },
+			formatter: hover('week', amount, '')
+		}),
+		xAxis: axisX(t, {
+			type: 'time',
+			minInterval: BUCKET_MS.week,
+			...buckets(
+				r,
+				'week',
+				weeks.map((w) => Date.parse(at(w)))
+			)
+		}),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'incurred',
+			nameTextStyle: { color: t.textSecondary, align: 'left' },
+			axisLabel: { color: t.textSecondary, formatter: amount }
+		}),
+		series
+	});
+}
+
+/** What each order is called in a legend and a tooltip. */
+export const ORDER_LABEL: Record<OrderBy, string> = {
+	current: 'pull order',
+	cod: 'by cost of delay',
+	wsjf: 'by WSJF'
+};
+type Pull = Point & { id?: string };
+/**
+ * CoD by Order (S-0213): per order, the cumulative projected cost of the ready stories against
+ * each projected pull, as a step line, since a story's cost is counted when it is pulled. Its time
+ * axis runs from the projection's start to its last pull, not over the window (ADR-0112).
+ */
+export function codOrder(r: Report, t: Theme): Opt {
+	const order = r.cost_of_delay?.order;
+	const series = (order?.series ?? []).map((s) => ({
+		...line(
+			t,
+			ORDER_LABEL[s.by],
+			colorFor(t, ORDER_SLOT, s.by, 0),
+			ORDER_SYMBOL[s.by],
+			s.points.map((p): Pull => ({ value: [p.at, p.incurred], items: 0, id: p.id }))
+		),
+		step: 'end'
+	}));
+	return base(t, {
+		useUTC: true,
+		legend: marks(t, series.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: { marker?: string; seriesName: string; data: Pull }) => {
+				const when = bucketLabel(p.data.value[0], 'hour');
+				const what = p.data.id ? `${p.data.id} pulled ${when}` : `now, ${when}`;
+				return `${p.marker ?? ''}${p.seriesName}<br/>${what}<br/>cumulative ${amount(p.data.value[1])}`;
+			}
+		}),
+		xAxis: axisX(
+			t,
+			order
+				? { type: 'time', min: Date.parse(order.at), max: Date.parse(order.horizon) }
+				: { type: 'time' }
+		),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'projected cost',
+			nameTextStyle: { color: t.textSecondary, align: 'left' },
+			axisLabel: { color: t.textSecondary, formatter: amount }
+		}),
+		series
+	});
+}
+
 /** A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic. */
 export function build(
 	kind: Kind,
@@ -2151,5 +2410,11 @@ export function build(
 			return strategicCostByDay(r, t);
 		case 'strategic-use':
 			return strategicUseByDay(r, t);
+		case 'cod-outstanding':
+			return codOutstanding(r, t);
+		case 'cod-incurred':
+			return codIncurred(r, t);
+		case 'cod-order':
+			return codOrder(r, t);
 	}
 }

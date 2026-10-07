@@ -66,6 +66,16 @@ export const TYPE_SYMBOL: Record<string, string> = {
 	task: 'triangle'
 };
 
+// The orders the ready column's cost of delay is projected under (S-0213): the same three slots
+// that stay apart for every pair in both modes, and a mark each, so that the three lines are told
+// apart by more than colour.
+export const ORDER_SLOT: Record<string, number> = { current: 6, cod: 5, wsjf: 4 };
+export const ORDER_SYMBOL: Record<string, string> = {
+	current: 'diamond',
+	cod: 'circle',
+	wsjf: 'triangle'
+};
+
 export type Theme = {
 	dark: boolean;
 	surface: string;

@@ -54,15 +54,37 @@ import {
 	strategicRows,
 	STRATEGIC_KINDS,
 	withUsage,
+	COD_COLUMNS,
+	COD_KINDS,
+	codDayRows,
+	codIncurred,
+	codOrder,
+	codOrderRows,
+	codOutstanding,
+	codWeekRows,
+	hasCostOfDelay,
+	hasOrder,
+	orderSummary,
+	withoutValueNow,
 	type Bucket,
 	type Claims,
+	type CodDay,
+	type CostOfDelayReport,
 	type ErrorFilter,
 	type ItemMetrics,
 	type Report,
 	type StrategicDay,
 	type WaitWeek
 } from './charts';
-import { CATEGORICAL, modelSlot, modelSymbol, theme, TYPE_SLOT } from './palette';
+import {
+	CATEGORICAL,
+	modelSlot,
+	modelSymbol,
+	ORDER_SLOT,
+	STATE_SLOT,
+	theme,
+	TYPE_SLOT
+} from './palette';
 
 // Spend over time as flai lays it out (S-0163): stories on 3 August (two models) and on
 // 5 August, the day between them empty, and tasks on 3 August.
@@ -375,14 +397,98 @@ const report: Report = {
 	}
 };
 
+// Cost of delay as flai stats --json prints it (S-0205, S-0213), over a window from Sunday
+// 23 August 12:00 to 1 September 12:00: a day from the one that holds the start, and the ISO
+// weeks from the one that holds it, Monday 17 August.
+const codDay = (
+	date: string,
+	[backlog, ready, inProgress, review]: number[],
+	[b, r, i, v]: number[],
+	incurred: number
+): CodDay => ({
+	date,
+	outstanding: { backlog, ready, 'in-progress': inProgress, review },
+	without_value: { backlog: b, ready: r, 'in-progress': i, review: v },
+	incurred
+});
+const cod: CostOfDelayReport = {
+	days: [
+		...['23', '24', '25', '26', '27', '28'].map((d) =>
+			codDay(`2026-08-${d}`, [100, 50, 0, 0], [2, 1, 0, 0], 21.43)
+		),
+		codDay('2026-08-29', [100, 50, 25, 0], [2, 1, 0, 0], 21.43),
+		codDay('2026-08-30', [80, 70, 25, 0], [2, 1, 0, 0], 21.43),
+		codDay('2026-08-31', [80, 45, 25, 25], [3, 0, 1, 0], 17.86),
+		codDay('2026-09-01', [80, 45, 0, 50], [3, 0, 0, 1], 8.93)
+	],
+	weeks: [
+		{ week: '2026-W34', start: '2026-08-17', incurred: 150 },
+		{ week: '2026-W35', start: '2026-08-24', incurred: 140.5 },
+		{ week: '2026-W36', start: '2026-08-31', incurred: 30.25 }
+	],
+	// S-010 is worth 100 a week, S-011 50, S-012 10; S-013 has no forecast and is left out
+	order: {
+		at: '2026-09-01T12:00:00Z',
+		horizon: '2026-09-08T12:00:00Z',
+		series: [
+			{
+				by: 'current',
+				total: 107.14,
+				points: [
+					{ at: '2026-09-01T12:00:00Z', incurred: 0 },
+					{ at: '2026-09-01T12:00:00Z', id: 'S-012', incurred: 0 },
+					{ at: '2026-09-05T12:00:00Z', id: 'S-010', incurred: 57.14 },
+					{ at: '2026-09-08T12:00:00Z', id: 'S-011', incurred: 107.14 }
+				]
+			},
+			{
+				by: 'cod',
+				total: 18.58,
+				points: [
+					{ at: '2026-09-01T12:00:00Z', incurred: 0 },
+					{ at: '2026-09-01T12:00:00Z', id: 'S-010', incurred: 0 },
+					{ at: '2026-09-03T12:00:00Z', id: 'S-011', incurred: 14.29 },
+					{ at: '2026-09-04T12:00:00Z', id: 'S-012', incurred: 18.58 }
+				]
+			},
+			{
+				by: 'wsjf',
+				total: 17.15,
+				points: [
+					{ at: '2026-09-01T12:00:00Z', incurred: 0 },
+					{ at: '2026-09-01T12:00:00Z', id: 'S-011', incurred: 0 },
+					{ at: '2026-09-02T12:00:00Z', id: 'S-010', incurred: 14.29 },
+					{ at: '2026-09-03T12:00:00Z', id: 'S-012', incurred: 17.15 }
+				]
+			}
+		],
+		saving: 89.99,
+		cheaper: 'wsjf',
+		left_out: ['S-013']
+	}
+};
+const codReport: Report = {
+	...report,
+	window_days: 9,
+	window_start: '2026-08-23T12:00:00Z',
+	cost_of_delay: cod
+};
+
 const light = theme(false);
 const dark = theme(true);
 
 describe('chart builders', () => {
 	it('every kind builds with one y-axis and a tooltip', () => {
 		for (const k of KINDS) {
-			// the fixture carries no forecasts or claims: the planning charts draw from their own
-			const fixture = isClaimsKind(k) ? claiming : isForecastKind(k) ? forecasting : report;
+			// the fixture carries no forecasts, claims, or cost of delay: those charts draw from their own
+			const cod = (COD_KINDS as readonly string[]).includes(k);
+			const fixture = isClaimsKind(k)
+				? claiming
+				: isForecastKind(k)
+					? forecasting
+					: cod
+						? codReport
+						: report;
 			const o = build(k, fixture, light) as {
 				yAxis: unknown;
 				tooltip: unknown;
@@ -1033,6 +1139,246 @@ describe('chart builders', () => {
 			'cost-per-model'
 		] as const)
 			expect(spendRows(planned, kind), kind).toEqual(spendRows(report, kind));
+	});
+	type Cod = {
+		useUTC?: boolean;
+		legend: { show: boolean };
+		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
+		yAxis: { name: string };
+		tooltip: { formatter: (p: unknown) => string };
+		series: {
+			name: string;
+			type: string;
+			stack?: string;
+			step?: string;
+			symbol?: string;
+			lineStyle: { type?: string; color: string };
+			itemStyle: { color: string };
+			areaStyle?: { color: string };
+			data: unknown[];
+		}[];
+	};
+	it('CoD Outstanding stacks the value per week of each column per day, in board order', () => {
+		const o = codOutstanding(codReport, light) as Cod;
+		expect(o.series.map((s) => s.name)).toEqual(['backlog', 'ready', 'in-progress', 'review']);
+		expect(new Set(o.series.map((s) => s.stack))).toEqual(new Set(['outstanding']));
+		// a band per column in the colour the cumulative flow gives its state, with the surface as seam
+		for (const s of o.series) {
+			expect(s.areaStyle?.color).toBe(CATEGORICAL.light[STATE_SLOT[s.name]]);
+			expect(s.lineStyle.color).toBe(light.surface);
+		}
+		expect(o.series[0].data).toHaveLength(10);
+		expect(o.series.map((s) => s.data.slice(-3))).toEqual([
+			[
+				['2026-08-30', 80],
+				['2026-08-31', 80],
+				['2026-09-01', 80]
+			],
+			[
+				['2026-08-30', 70],
+				['2026-08-31', 45],
+				['2026-09-01', 45]
+			],
+			[
+				['2026-08-30', 25],
+				['2026-08-31', 25],
+				['2026-09-01', 0]
+			],
+			[
+				['2026-08-30', 0],
+				['2026-08-31', 25],
+				['2026-09-01', 50]
+			]
+		]);
+		// by the day over the window: from the day that holds its start to its now (ADR-0054)
+		expect([o.xAxis.type, o.xAxis.min, o.xAxis.max]).toEqual([
+			'time',
+			Date.parse('2026-08-23T00:00:00Z'),
+			Date.parse('2026-09-01T12:00:00Z')
+		]);
+		expect(o.yAxis.name).toBe('value per week');
+		expect(o.legend.show).toBe(true);
+		expect((build('cod-outstanding', codReport, light) as Cod).series).toEqual(o.series);
+		// the items without a value now: the last day's, per column
+		expect(withoutValueNow(codReport)).toEqual({
+			backlog: 3,
+			ready: 0,
+			'in-progress': 0,
+			review: 1
+		});
+		expect(Object.keys(withoutValueNow(codReport)!)).toEqual([...COD_COLUMNS]);
+		const rows = codDayRows(codReport);
+		expect(rows.map((d) => d.date).slice(0, 2)).toEqual(['2026-09-01', '2026-08-31']);
+		expect(rows[0]).toEqual(cod.days[cod.days.length - 1]);
+	});
+	it('CoD Incurred is a bar per week with the running mean per week from the first, dashed', () => {
+		const o = codIncurred(codReport, light) as Cod;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['incurred', 'bar'],
+			['mean per week', 'line']
+		]);
+		type P = { value: [string, number] };
+		const points = (i: number) => (o.series[i].data as P[]).map((d) => d.value);
+		expect(points(0)).toEqual([
+			['2026-08-17T00:00:00Z', 150],
+			['2026-08-24T00:00:00Z', 140.5],
+			['2026-08-31T00:00:00Z', 30.25]
+		]);
+		// the sum from the window's first week to this one over the number of those weeks:
+		// 150, 290.5 / 2, 320.75 / 3, to two decimals
+		expect(points(1).map((v) => v[1])).toEqual([150, 145.25, 106.92]);
+		expect(o.series[1].lineStyle.type).toBe('dashed');
+		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[0]);
+		// weeks in UTC over the window: from the week that holds the start to the one that holds now,
+		// half a week either side
+		const halfWeek = 3.5 * 86400e3;
+		expect(o.useUTC).toBe(true);
+		expect([o.xAxis.min, o.xAxis.max, o.xAxis.minInterval]).toEqual([
+			Date.parse('2026-08-17T00:00:00Z') - halfWeek,
+			Date.parse('2026-08-31T00:00:00Z') + halfWeek,
+			7 * 86400e3
+		]);
+		expect(o.legend.show).toBe(true);
+		expect(
+			o.tooltip.formatter([
+				{ seriesName: 'incurred', data: o.series[0].data[1] },
+				{ seriesName: 'mean per week', data: o.series[1].data[1] }
+			])
+		).toBe('week of 2026-08-24<br/>incurred: 140.5<br/>mean per week: 145.25');
+		expect(codWeekRows(codReport)).toEqual([
+			{ week: '2026-W36', start: '2026-08-31', incurred: 30.25, mean: 106.92 },
+			{ week: '2026-W35', start: '2026-08-24', incurred: 140.5, mean: 145.25 },
+			{ week: '2026-W34', start: '2026-08-17', incurred: 150, mean: 150 }
+		]);
+	});
+	it('CoD by Order draws a step line per order from now to the last pull, and states the saving', () => {
+		const o = codOrder(codReport, light) as Cod;
+		expect(o.series.map((s) => s.name)).toEqual(['pull order', 'by cost of delay', 'by WSJF']);
+		expect(o.series.map((s) => s.step)).toEqual(['end', 'end', 'end']);
+		type P = { value: [string, number]; id?: string };
+		const points = (i: number) => (o.series[i].data as P[]).map((d) => [d.id, ...d.value]);
+		expect(points(0)).toEqual([
+			[undefined, '2026-09-01T12:00:00Z', 0],
+			['S-012', '2026-09-01T12:00:00Z', 0],
+			['S-010', '2026-09-05T12:00:00Z', 57.14],
+			['S-011', '2026-09-08T12:00:00Z', 107.14]
+		]);
+		expect(points(1).map((p) => p[2])).toEqual([0, 0, 14.29, 18.58]);
+		expect(points(2).map((p) => p[0])).toEqual([undefined, 'S-011', 'S-010', 'S-012']);
+		// a colour and a mark per order, apart for every pair
+		expect(o.series.map((s) => s.itemStyle.color)).toEqual([
+			CATEGORICAL.light[ORDER_SLOT.current],
+			CATEGORICAL.light[ORDER_SLOT.cod],
+			CATEGORICAL.light[ORDER_SLOT.wsjf]
+		]);
+		expect(new Set(o.series.map((s) => s.symbol)).size).toBe(3);
+		// a projection: from its start to its horizon, not over the window (ADR-0112)
+		expect([o.useUTC, o.xAxis.type, o.xAxis.min, o.xAxis.max]).toEqual([
+			true,
+			'time',
+			Date.parse('2026-09-01T12:00:00Z'),
+			Date.parse('2026-09-08T12:00:00Z')
+		]);
+		expect(o.yAxis.name).toBe('projected cost');
+		expect(o.legend.show).toBe(true);
+		expect(o.tooltip.formatter({ seriesName: 'pull order', data: o.series[0].data[2] })).toBe(
+			'pull order<br/>S-010 pulled 2026-09-05 12:00 UTC<br/>cumulative 57.14'
+		);
+		expect(o.tooltip.formatter({ seriesName: 'by WSJF', data: o.series[2].data[0] })).toBe(
+			'by WSJF<br/>now, 2026-09-01 12:00 UTC<br/>cumulative 0'
+		);
+		expect(orderSummary(codReport)).toEqual({
+			totals: { current: 107.14, cod: 18.58, wsjf: 17.15 },
+			saving: 89.99,
+			cheaper: 'wsjf',
+			left_out: ['S-013']
+		});
+		// the table: each projected pull of each order, in order of pull
+		const rows = codOrderRows(codReport);
+		expect(rows).toHaveLength(9);
+		expect(rows.slice(0, 4)).toEqual([
+			{ by: 'current', at: '2026-09-01T12:00:00Z', id: 'S-012', incurred: 0 },
+			{ by: 'current', at: '2026-09-05T12:00:00Z', id: 'S-010', incurred: 57.14 },
+			{ by: 'current', at: '2026-09-08T12:00:00Z', id: 'S-011', incurred: 107.14 },
+			{ by: 'cod', at: '2026-09-01T12:00:00Z', id: 'S-010', incurred: 0 }
+		]);
+		expect(rows.map((r) => r.by)).toEqual([
+			...Array(3).fill('current'),
+			...Array(3).fill('cod'),
+			...Array(3).fill('wsjf')
+		]);
+	});
+	it('the cost of delay charts take the window alone, and are named as the others are', () => {
+		for (const kind of COD_KINDS)
+			expect(controls(kind), kind).toEqual({ type: false, epic: false, bucket: false });
+		expect(COD_KINDS.map((k) => titleOf(k))).toEqual([
+			'CoD Outstanding',
+			'CoD Incurred',
+			'CoD by Order'
+		]);
+		expect(KINDS.slice(-3)).toEqual([...COD_KINDS]);
+	});
+	it('the cost of delay charts are empty, not broken, from a flai that sends less', () => {
+		// older than S-0205: no cost of delay at all
+		expect(hasCostOfDelay(report)).toBe(false);
+		expect(hasOrder(report)).toBe(false);
+		for (const kind of COD_KINDS) {
+			const o = build(kind, report, light) as Cod;
+			expect(o.series, kind).toEqual([]);
+			expect(o.legend.show, kind).toBe(false);
+		}
+		expect(withoutValueNow(report)).toBeUndefined();
+		expect(orderSummary(report)).toBeUndefined();
+		expect([codDayRows(report), codWeekRows(report), codOrderRows(report)]).toEqual([[], [], []]);
+		// older than S-0213: no items without a value, and no order
+		const older: Report = {
+			...codReport,
+			cost_of_delay: {
+				days: cod.days.map((d) => ({
+					date: d.date,
+					outstanding: d.outstanding,
+					incurred: d.incurred
+				})),
+				weeks: cod.weeks
+			}
+		};
+		expect(hasCostOfDelay(older)).toBe(true);
+		expect(hasOrder(older)).toBe(false);
+		expect((codOutstanding(older, light) as Cod).series).toEqual(
+			(codOutstanding(codReport, light) as Cod).series
+		);
+		expect((codIncurred(older, light) as Cod).series).toHaveLength(2);
+		expect(withoutValueNow(older)).toBeUndefined();
+		expect((codOrder(older, light) as Cod).series).toEqual([]);
+		expect(orderSummary(older)).toBeUndefined();
+		expect(codOrderRows(older)).toEqual([]);
+		// no story placed: each order is its first point, and nothing is saved
+		const none: Report = {
+			...codReport,
+			cost_of_delay: {
+				...cod,
+				order: {
+					at: '2026-09-01T12:00:00Z',
+					horizon: '2026-09-01T12:00:00Z',
+					series: (['current', 'cod', 'wsjf'] as const).map((by) => ({
+						by,
+						total: 0,
+						points: [{ at: '2026-09-01T12:00:00Z', incurred: 0 }]
+					})),
+					saving: 0,
+					cheaper: 'cod',
+					left_out: ['S-010', 'S-011']
+				}
+			}
+		};
+		expect((codOrder(none, light) as Cod).series.map((s) => s.data.length)).toEqual([1, 1, 1]);
+		expect(codOrderRows(none)).toEqual([]);
+		expect(orderSummary(none)).toEqual({
+			totals: { current: 0, cod: 0, wsjf: 0 },
+			saving: 0,
+			cheaper: 'cod',
+			left_out: ['S-010', 'S-011']
+		});
 	});
 	it('dark theme swaps the palette and surface', () => {
 		expect(dark.series[0]).toBe(CATEGORICAL.dark[0]);
