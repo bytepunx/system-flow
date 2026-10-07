@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -166,36 +167,31 @@ so that they are widened with flai touches.`,
 			if err != nil {
 				return err
 			}
-			base, conflicts, err := a.syncStoryBranch(repo, it.ID)
+			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Generated: a.syncGenerated(repo, it.ID), Log: a.logger()})
+			// conflicts is null here unless the rebase waits, as it always was
 			if err != nil {
-				var stop *syncStopped
-				if !errors.As(err, &stop) {
-					if a.jsonOut {
-						_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": false})
-					}
-					return err
-				}
 				if a.jsonOut {
-					_ = a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "worktree": stop.Worktree, "ok": false,
-						"uncommitted": nonNil(stop.Uncommitted), "conflicts": nonNil(stop.Conflicts), "rebase_in_progress": stop.RebaseInProgress,
-						"continue": stop.Continue, "abort": stop.Abort})
+					_ = a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": false})
+				}
+				return err
+			}
+			if !res.Synced {
+				stop := syncStoppedFrom(res)
+				if a.jsonOut {
+					_ = a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "worktree": res.Worktree, "ok": false,
+						"uncommitted": res.Uncommitted, "conflicts": res.Conflicts, "rebase_in_progress": res.RebaseInProgress(),
+						"continue": res.Continue, "abort": res.Abort})
 				} else {
 					fmt.Fprint(a.out, stop.Report())
 				}
 				return stop
 			}
-			checks, cerr := a.checkSync(repo, it, base)
-			if cerr != nil {
-				a.logger().Warn("story branch checks failed after the rebase", "component", "git", "story", it.ID, "err", cerr)
-			} else if err := a.reportConflicts(repo, it, &checks); err != nil {
-				a.logger().Warn("conflict threads not written", "component", "threads", "story", it.ID, "err", err)
-			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"story": it.ID, "branch": storyBranch(it.ID), "base": base, "conflicts": conflicts, "ok": true,
-					"branches": checks.Branches, "trial_merge_skipped": checks.Skipped, "outside_touches": checks.Outside})
+				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
+					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "outside_touches": res.Outside})
 			}
-			fmt.Fprintf(a.out, "%s is rebased onto %s\n", storyBranch(it.ID), base)
-			printSyncChecks(a.out, it, checks)
+			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)
+			printSyncChecks(a.out, it, res)
 			return nil
 		},
 	}

@@ -201,63 +201,20 @@ func nonNil(l []string) []string {
 	return l
 }
 
-// rebaseStopped describes the rebase waiting in a story's worktree.
-func rebaseStopped(id, base, wt string, conflicts []string, found bool) *syncStopped {
-	cont := fmt.Sprintf("in %s, resolve each conflicting path, git add it, and run git rebase --continue; then run flai stream sync %s again", wt, id)
-	if len(conflicts) == 0 {
-		cont = fmt.Sprintf("in %s, git add the resolved paths and run git rebase --continue; then run flai stream sync %s again", wt, id)
-	}
-	return &syncStopped{
-		Story: id, Base: base, Worktree: wt, RebaseInProgress: true, Found: found, Conflicts: conflicts,
-		Continue: cont,
-		Abort:    fmt.Sprintf("in %s, run git rebase --abort, which puts %s back as it was before the sync", wt, storyBranch(id)),
-	}
-}
-
 // syncStoryBranch rebases the story branch onto the main branch inside its
-// worktree, without stashing (ADR-0069). It refuses, touching nothing, a
-// worktree with uncommitted changes or with a rebase already in progress. A
-// stop whose conflicts are all generated files it resolves and continues
-// (ADR-0098); on any other conflict the rebase is left in progress for the
-// agent to resolve. Each of these returns a *syncStopped, and the
-// conflicting paths when there are any.
+// worktree with storygit.Rebase, the rebase of flai stream sync without its
+// checks (ADR-0069, ADR-0098). A refusal or a rebase left for the agent is
+// a *syncStopped, with the conflicting paths when there are any.
 func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conflicts []string, err error) {
-	path := repo.WorktreePath(id)
-	if _, err := os.Stat(path); err != nil {
-		return "", nil, fmt.Errorf("%s has no worktree at %s; open one with flai stream open %s", id, relPath(repo.MainRoot, path), id)
-	}
-	base, err = a.mainBranch(repo.MainRoot)
+	// the rebase reads only the story's ID
+	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Generated: a.syncGenerated(repo, id), Log: a.logger()})
 	if err != nil {
-		return "", nil, err
+		return res.Base, nil, err
 	}
-	wt := relPath(repo.MainRoot, path)
-	if storygit.RebaseInProgress(a.runner, path) {
-		conflicts = storygit.Conflicts(a.runner, path)
-		return base, conflicts, rebaseStopped(id, base, wt, conflicts, true)
+	if !res.Synced {
+		return res.Base, res.Conflicts, syncStoppedFrom(res)
 	}
-	dirty, err := storygit.Uncommitted(a.runner, path)
-	if err != nil {
-		return base, nil, err
-	}
-	if len(dirty) > 0 {
-		return base, nil, &syncStopped{
-			Story: id, Base: base, Worktree: wt, Uncommitted: dirty,
-			Continue: fmt.Sprintf("commit them on %s (or stash them), then run flai stream sync %s again", storyBranch(id), id),
-		}
-	}
-	if _, err := a.runner.Run(path, "git", "rebase", base); err != nil {
-		if !storygit.RebaseInProgress(a.runner, path) {
-			return base, nil, err
-		}
-		var stopped bool
-		if conflicts, stopped, err = a.continueOverGenerated(repo, id, path); err != nil {
-			return base, nil, err
-		}
-		if stopped {
-			return base, conflicts, rebaseStopped(id, base, wt, conflicts, false)
-		}
-	}
-	return base, nil, nil
+	return res.Base, nil, nil
 }
 
 // generatedFile is a committed file flai writes from others, so a rebase
@@ -277,61 +234,6 @@ func generatedFiles(repo *workitem.Repo) []generatedFile {
 			return err
 		},
 	}}
-}
-
-// generatedPaths is the generated files' paths, relative to the repository
-// root, which no conflict between branches needs an agent for.
-func generatedPaths(repo *workitem.Repo) []string {
-	var paths []string
-	for _, f := range generatedFiles(repo) {
-		paths = append(paths, f.path)
-	}
-	return paths
-}
-
-// continueOverGenerated continues the rebase stopped in the story's worktree
-// at path for as long as every path of each stop is a generated file,
-// writing each again from the worktree as it is at that stop, staging it,
-// and continuing (ADR-0098). It reports whether the rebase is left stopped
-// for the agent, and that stop's conflicts.
-func (a *app) continueOverGenerated(repo *workitem.Repo, id, path string) (conflicts []string, stopped bool, err error) {
-	files, wt := generatedFiles(repo), issues.RepoFor(repo, id)
-	for storygit.RebaseInProgress(a.runner, path) {
-		conflicts = storygit.Conflicts(a.runner, path)
-		regen, ok := onlyGenerated(conflicts, files)
-		if !ok {
-			return conflicts, true, nil
-		}
-		for _, f := range regen {
-			if err := f.regenerate(wt, a.now()); err != nil {
-				a.logger().Warn("generated file not regenerated; the rebase is left for the agent", "component", "git", "story", id, "path", f.path, "err", err)
-				return conflicts, true, nil
-			}
-			a.logger().Info("generated file regenerated to continue the rebase", "component", "git", "story", id, "path", f.path)
-		}
-		if _, err := a.runner.Run(path, "git", append([]string{"add", "--"}, conflicts...)...); err != nil {
-			a.logger().Warn("generated files not staged; the rebase is left for the agent", "component", "git", "story", id, "paths", conflicts, "err", err)
-			return conflicts, true, nil
-		}
-		if err := storygit.ContinueRebase(a.runner, path); err != nil && !storygit.RebaseInProgress(a.runner, path) {
-			return nil, false, err
-		}
-	}
-	return nil, false, nil
-}
-
-// onlyGenerated returns the generated files among conflicts, and whether
-// they are all of them; a stop with no conflicts is not one of these.
-func onlyGenerated(conflicts []string, files []generatedFile) ([]generatedFile, bool) {
-	var regen []generatedFile
-	for _, c := range conflicts {
-		i := slices.IndexFunc(files, func(f generatedFile) bool { return f.path == c })
-		if i < 0 {
-			return nil, false
-		}
-		regen = append(regen, files[i])
-	}
-	return regen, len(regen) > 0
 }
 
 // mergeStoryBranch brings a story's branch into the main branch: the

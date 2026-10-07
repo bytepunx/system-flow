@@ -130,8 +130,8 @@ func TestSyncTrialMergesOtherOpenBranches(t *testing.T) {
 		t.Fatalf("sync --json: %d %s %s", code, out, errOut)
 	}
 	var res struct {
-		OK       bool          `json:"ok"`
-		Branches []branchCheck `json:"branches"`
+		OK       bool                   `json:"ok"`
+		Branches []storygit.BranchCheck `json:"branches"`
 	}
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("%v: %s", err, out)
@@ -631,7 +631,7 @@ func TestSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
 // trialSync syncs S-0002 from its worktree wt and returns the sync's text
 // output, its --json branches, and the conflict threads open on the project
 // at root.
-func trialSync(t *testing.T, root, wt string) (string, []branchCheck, []*threads.Thread) {
+func trialSync(t *testing.T, root, wt string) (string, []storygit.BranchCheck, []*threads.Thread) {
 	t.Helper()
 	out, errOut, code := runInAt(t, wt, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
 	if code != 0 {
@@ -642,7 +642,7 @@ func trialSync(t *testing.T, root, wt string) (string, []branchCheck, []*threads
 		t.Fatalf("sync --json: %d %s %s", code, js, errOut)
 	}
 	var res struct {
-		Branches []branchCheck `json:"branches"`
+		Branches []storygit.BranchCheck `json:"branches"`
 	}
 	if err := json.Unmarshal([]byte(js), &res); err != nil {
 		t.Fatalf("%v: %s", err, js)
@@ -657,7 +657,7 @@ func trialSync(t *testing.T, root, wt string) (string, []branchCheck, []*threads
 	}
 	var open []*threads.Thread
 	for _, th := range all {
-		if th.Open() && conflictTitlePattern.MatchString(th.Title) {
+		if th.Open() && storygit.IsConflictTitle(th.Title) {
 			open = append(open, th)
 		}
 	}
@@ -671,7 +671,7 @@ func trialSync(t *testing.T, root, wt string) (string, []branchCheck, []*threads
 func TestSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
 	root, b := openIssueStories(t, nil)
 	// git itself reports the pair as conflicting in the summary
-	if raw, err := (&app{runner: execx.System{}}).trialMerge(root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "design/issues/summary.md" {
+	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "design/issues/summary.md" {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
 	}
 
@@ -738,7 +738,7 @@ func staleStories(t *testing.T, files map[string][2]string) (root, a string) {
 func TestSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, nil)
 	// git itself reports the pair as conflicting in main's change
-	if raw, err := (&app{runner: execx.System{}}).trialMerge(root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md" {
+	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md" {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
 	}
 
@@ -758,7 +758,7 @@ func TestSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
 // is the only one the sync and the pair's thread name.
 func TestSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, map[string][2]string{"docs/more.md": {"stale branch's more\n", "fresh branch's more\n"}})
-	if raw, err := (&app{runner: execx.System{}}).trialMerge(root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md,docs/more.md" {
+	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md,docs/more.md" {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
 	}
 
@@ -787,8 +787,8 @@ func TestSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	th, err := threads.New(repo, threads.NewOptions{Title: conflictTitle("S-0002", "S-0001"), On: "S-0002", Author: conflictAuthor,
-		Text: conflictText("S-0002", "S-0001", []string{"docs/guide.md"}), Now: issueClock.Add(3 * time.Hour)})
+	th, err := threads.New(repo, threads.NewOptions{Title: storygit.ConflictTitle("S-0002", "S-0001"), On: "S-0002", Author: storygit.ConflictAuthor,
+		Text: storygit.ConflictText("S-0002", "S-0001", []string{"docs/guide.md"}), Now: issueClock.Add(3 * time.Hour)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -816,7 +816,11 @@ func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := generatedPaths(repo); strings.Join(got, ",") != "design/issues/summary.md" {
+	var got []string
+	for _, f := range generatedFiles(repo) {
+		got = append(got, f.path)
+	}
+	if strings.Join(got, ",") != "design/issues/summary.md" {
 		t.Errorf("generated paths: %q", got)
 	}
 }
