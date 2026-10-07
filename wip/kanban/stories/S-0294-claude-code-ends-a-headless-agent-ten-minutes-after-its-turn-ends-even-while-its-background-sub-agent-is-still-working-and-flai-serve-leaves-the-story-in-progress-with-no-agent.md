@@ -6,7 +6,7 @@ title: Claude Code ends a headless agent ten minutes after its turn ends, even w
 status: ready
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-07T00:41:52Z
+updated: 2026-10-07T01:07:09Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:56Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-06T22:53:45Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T03:56:00Z
-  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 3, behind S-0228, S-0254, S-0272, S-0269, S-0270, S-0271, S-0274, S-0275, S-0281 and S-0286."
+  delivery: 2026-10-07T03:25:00Z
+  basis: "Its own forecast of 40m; 6th in the pull order with an in-progress limit of 3, behind S-0286, S-0269, S-0270, S-0271, S-0274 and S-0275."
   by: flai
-  at: 2026-10-07T00:41:52Z
+  at: 2026-10-07T01:07:09Z
 finalized:
   by: alex
   at: 2026-10-06T22:50:34Z

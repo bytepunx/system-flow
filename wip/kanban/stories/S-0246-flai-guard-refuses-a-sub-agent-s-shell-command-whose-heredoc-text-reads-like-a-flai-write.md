@@ -6,7 +6,7 @@ title: flai guard refuses a sub-agent's shell command whose heredoc text reads l
 status: backlog
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T00:51:08Z
+updated: 2026-10-07T01:07:09Z
 transitions: []
 tags: []
 topics: [cli]
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-05T05:46:19Z
 forecast:
   duration: 30m
-  delivery: 2026-10-07T09:19:00Z
-  basis: "Its own forecast of 30m; 23rd in the pull order with an in-progress limit of 3, behind S-0254, S-0272, S-0281, S-0269, S-0270, S-0271, S-0274, S-0275, S-0286, S-0294, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241 and S-0245."
+  delivery: 2026-10-07T09:05:00Z
+  basis: "Its own forecast of 30m; 22nd in the pull order with an in-progress limit of 3, behind S-0286, S-0269, S-0270, S-0271, S-0274, S-0275, S-0294, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241 and S-0245."
   by: flai
-  at: 2026-10-07T00:51:08Z
+  at: 2026-10-07T01:07:09Z
 ---
 # S-0246 flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
 
