@@ -1,11 +1,13 @@
 package itemedit
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -16,7 +18,9 @@ import (
 // write of touches therefore watches the claim of the story it concerns, and
 // tells both stories when what the claim gained reaches another story in
 // progress. The write always stands: the report is advisory, as wip.overlap
-// is (ADR-0019).
+// is (ADR-0019). The story whose claim grew also messages the other in the
+// pair's conversation, so that the two agents settle who changes the paths
+// first (ADR-0121).
 
 // Overlapping is another story in progress whose claim a write reached, and
 // the paths the write added to the written story's claim that its claim
@@ -87,6 +91,11 @@ func WatchClaim(repo *workitem.Repo, id string) *ClaimWatch {
 // stamped with by and now, for inbox and wait_for_events to report. Now is
 // read after the write, not before it: an agent woken by the item's file may
 // look, and move its cursor, in the second between the two.
+//
+// Each overlap is also a message from the watched story to the other, by by,
+// about the paths gained, in the pair's open conversation or a new one
+// (ADR-0121). A message that cannot be written is in the error, beside the
+// stories reached, which stay valid: the write and its overlap notices stand.
 func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 	switch {
 	case w == nil:
@@ -137,11 +146,30 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Story < out[j].Story })
 	at := now.UTC().Format(workitem.TimeFormat)
+	var untold []error
 	for _, o := range out {
 		RecordOverlap(w.repo, Overlap{At: at, By: by, ID: story.ID, Title: story.Title, Grew: story.ID, Reached: o.Story, Paths: o.Paths})
 		RecordOverlap(w.repo, Overlap{At: at, By: by, ID: o.Story, Title: o.Title, Grew: story.ID, Reached: o.Story, Paths: o.Paths})
+		_, err := messages.Notify(w.repo, messages.SendOptions{
+			From: story.ID, To: o.Story, Author: by, Text: overlapNotice(story.ID, o), About: o.Paths, Now: now,
+		})
+		if err != nil {
+			untold = append(untold, fmt.Errorf("message %s that the claim of %s grew to overlap its own: %w; the overlap notices stand, and flai message send tells it by hand", o.Story, story.ID, err))
+		}
 	}
-	return out, nil
+	return out, errors.Join(untold...)
+}
+
+// overlapNotice is the message from grew, the story whose claim grew, that
+// tells o's agent the two claims now overlap: on which paths, the question to
+// settle, and how to ask the operator when the two do not agree.
+func overlapNotice(grew string, o Overlapping) string {
+	paths := make([]string, len(o.Paths))
+	for i, p := range o.Paths {
+		paths[i] = "`" + p + "`"
+	}
+	return fmt.Sprintf("The claims of %s and %s now overlap.\n\nA write grew the claim of %s to cover %s, which the claim of %s covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.",
+		grew, o.Story, grew, strings.Join(paths, ", "), o.Story)
 }
 
 // held says whether the claim before the write held p: p itself or a folder

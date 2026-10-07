@@ -478,7 +478,7 @@ func describeGrown(c workitem.Change, grew, reached string) string {
 	if c.By != "" {
 		who = ", written by " + c.By
 	}
-	return grew + "'s claim grew to overlap " + reached + "'s on " + namePaths(c.To) + who + ". Both stories claim them now: message " + c.Cause + "'s agent with message_send, naming the paths in about, before " + c.ID + " " + c.Title + " changes them"
+	return grew + "'s claim grew to overlap " + reached + "'s on " + namePaths(c.To) + who + ". Both stories claim them now: agree with " + c.Cause + "'s agent in the two stories' conversation (message_reply) who changes them first, before " + c.ID + " " + c.Title + " changes them"
 }
 
 // lastFromOther is c's newest entry written for the story of its two that is
