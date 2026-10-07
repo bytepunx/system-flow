@@ -11,7 +11,7 @@ export type DashboardStatus = {
 	serves?: string[];
 };
 
-const ACTIONS = ['check', 'restart', 'upgrade', 'stop'] as const;
+const ACTIONS = ['check', 'versions', 'restart', 'upgrade', 'stop'] as const;
 type Action = (typeof ACTIONS)[number];
 
 /**
@@ -46,9 +46,11 @@ async function dashboardEnabled(): Promise<boolean> {
 }
 
 /**
- * POST {action}: check reports whether a newer image is available, changing nothing (a read that
- * pulls — S-0081); restart, upgrade, and stop are the dashboard host action, gated the same way
- * Publish is (flai serve enable dashboard).
+ * POST {action, tag}: check reports whether a newer image is available, changing nothing (a read
+ * that pulls — S-0081), and versions lists the published releases (S-0298), a read; restart,
+ * upgrade, and stop are the dashboard host action, gated the same way Publish is (flai serve
+ * enable dashboard). Upgrade swaps to the configured tag, or once to the one tag names, which flai
+ * on the host checks is a published X.Y.Z (ADR-0117).
  * Real Docker time: restart and upgrade get generous timeouts, upgrade longest of all since it
  * pulls an image and waits for a temporary container to answer healthy before it touches anything
  * running. 403 with what enables it while the operator has not; the running container is never
@@ -57,7 +59,7 @@ async function dashboardEnabled(): Promise<boolean> {
  */
 export const POST: RequestHandler = ({ request }) =>
 	respond(async () => {
-		const body = (await request.json().catch(() => ({}))) as { action?: string };
+		const body = (await request.json().catch(() => ({}))) as { action?: string; tag?: unknown };
 		const action = body.action;
 		if (!action || !ACTIONS.includes(action as Action)) {
 			throw new RepoError(400, `action must be one of ${ACTIONS.join(', ')}`);
@@ -66,7 +68,22 @@ export const POST: RequestHandler = ({ request }) =>
 			const { data } = await repo().run('dashboard.check', {}, { timeoutMs: 120000 });
 			return data as Record<string, unknown>;
 		}
+		if (action === 'versions') {
+			const { data } = await repo().run('dashboard.versions', {}, { timeoutMs: 120000 });
+			return data;
+		}
+		const tag = action === 'upgrade' ? body.tag : undefined;
+		if (tag !== undefined && (typeof tag !== 'string' || !tag)) {
+			throw new RepoError(
+				400,
+				'tag must be a release such as 1.2.3, or left out for the configured one'
+			);
+		}
 		const timeoutMs = action === 'upgrade' ? 300000 : 60000;
-		const { data, warnings } = await repo().write(`dashboard.${action}`, {}, { timeoutMs });
+		const { data, warnings } = await repo().write(
+			`dashboard.${action}`,
+			tag === undefined ? {} : { tag },
+			{ timeoutMs }
+		);
 		return { ...(data as Record<string, unknown>), log: warnings };
 	});

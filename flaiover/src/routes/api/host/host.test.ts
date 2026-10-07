@@ -133,6 +133,46 @@ describe('/api/host (S-0107)', () => {
 		expect(asked[0]).toEqual({ method: 'host.check', params: {} });
 	});
 
+	it('lists the published releases as a read, passing flai’s list through (S-0298)', async () => {
+		const releases = [
+			{ version: '1.10.0', tag: 'flai/v1.10.0', installed: false, latest: true },
+			{ version: '1.9.0', tag: 'flai/v1.9.0', installed: true, latest: false, below_minimum: false }
+		];
+		script['host.versions'] = { data: releases };
+		const r = await post({ action: 'versions' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toEqual(releases);
+		expect(asked).toEqual([{ method: 'host.versions', params: {} }]);
+	});
+
+	it('upgrades to the version named, sending it as the method’s version (S-0298)', async () => {
+		script['host.upgrade'] = {
+			data: { upgrade: { previous: '1.10.0', installed: '1.9.0' }, restarting: true }
+		};
+		const r = await post({ action: 'upgrade', version: '1.9.0' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ upgrade: { installed: '1.9.0' } });
+		expect(asked[0].method).toBe('host.upgrade');
+		expect(asked[0].params.version).toBe('1.9.0');
+	});
+
+	it('refuses a version that is not a string, or is empty, without asking flai to upgrade (S-0298)', async () => {
+		for (const version of [190, '', null, ['1.9.0'], { v: '1.9.0' }]) {
+			const r = await post({ action: 'upgrade', version });
+			expect(r.status).toBe(400);
+			expect((await r.json()).error).toContain('version must be');
+		}
+		// only the project's identity, which every answer carries, is asked
+		expect(asked.map((a) => a.method)).not.toContain('host.upgrade');
+	});
+
+	it('answers an upgrade to a version with the host action’s refusal when it is not enabled', async () => {
+		script['host.upgrade'] = { error: new RepoError(403, 'the host action "host" is not enabled') };
+		const r = await post({ action: 'upgrade', version: '1.9.0' });
+		expect(r.status).toBe(403);
+		expect((await r.json()).error).toContain('not enabled');
+	});
+
 	it('starts, stops, and restarts the process named, sending a request_id', async () => {
 		for (const [action, process] of [
 			['start', 'mcp'],
@@ -158,7 +198,7 @@ describe('/api/host (S-0107)', () => {
 		expect(r.status).toBe(200);
 		expect(await r.json()).toMatchObject({ restarting: true, upgrade: { installed: '1.10.0' } });
 		expect(asked[0].method).toBe('host.upgrade');
-		expect(asked[0].params.process).toBeUndefined();
+		expect(Object.keys(asked[0].params)).toEqual(['request_id']);
 	});
 
 	it('does not repeat a write that ends its own connection when the connection is lost', async () => {
@@ -174,11 +214,17 @@ describe('/api/host (S-0107)', () => {
 			for (const body of [
 				{ action: 'restart', process: 'serve' },
 				{ action: 'stop', process: 'all' },
-				{ action: 'upgrade' }
+				{ action: 'upgrade' },
+				{ action: 'upgrade', version: '1.9.0' }
 			]) {
 				expect((await post(body)).status).toBe(502);
 			}
-			expect(sent).toEqual(['host.process serve', 'host.process all', 'host.upgrade']);
+			expect(sent).toEqual([
+				'host.process serve',
+				'host.process all',
+				'host.upgrade',
+				'host.upgrade'
+			]);
 			// the MCP servers going down leaves serve's connection alone: the usual one retry stands
 			sent.length = 0;
 			await post({ action: 'restart', process: 'mcp' });

@@ -120,6 +120,9 @@ export const REQUIRED_METHODS = [
 	'host.check',
 	'host.process',
 	'host.upgrade',
+	// S-0298: the published releases of flai and of the dashboard, reads
+	'host.versions',
+	'dashboard.versions',
 	// S-0105: the host's settings, gated by the settings host action
 	'settings.get',
 	'settings.action',

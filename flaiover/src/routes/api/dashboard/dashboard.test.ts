@@ -16,18 +16,18 @@ const channel = (async (method: string, params: Record<string, unknown> = {}) =>
 describe('/api/dashboard (S-0081)', () => {
 	let GET: Handler;
 	let POST: Handler;
-	let post: (action: unknown) => Promise<Response>;
+	let post: (action: unknown, rest?: Record<string, unknown>) => Promise<Response>;
 
 	beforeAll(async () => {
 		useRepo(new Repo('/nowhere', channel));
 		const mod = await import('./+server');
 		GET = mod.GET as unknown as Handler;
 		POST = mod.POST as unknown as Handler;
-		post = (action) =>
+		post = (action, rest = {}) =>
 			POST({
 				request: new Request('http://x/api/dashboard', {
 					method: 'POST',
-					body: JSON.stringify({ action })
+					body: JSON.stringify({ action, ...rest })
 				})
 			} as never);
 	});
@@ -92,6 +92,55 @@ describe('/api/dashboard (S-0081)', () => {
 		expect(r.status).toBe(200);
 		expect(await r.json()).toMatchObject({ outcome: 'upgraded', to: '0.22.7' });
 		expect(asked[0].method).toBe('dashboard.upgrade');
+		expect(Object.keys(asked[0].params)).toEqual(['request_id']);
+	});
+
+	it('lists the published releases as a read, passing flai’s list through (S-0298)', async () => {
+		const releases = [
+			{ version: '0.23.0', tag: 'flaiover/v0.23.0', running: true, latest: true },
+			{ version: '0.22.7', tag: 'flaiover/v0.22.7', running: false, configured: false }
+		];
+		script['dashboard.versions'] = { data: releases };
+		const r = await post('versions');
+		expect(r.status).toBe(200);
+		expect(await r.json()).toEqual(releases);
+		expect(asked).toEqual([{ method: 'dashboard.versions', params: {} }]);
+	});
+
+	it('upgrades to the tag named, sending it as the method’s tag (S-0298)', async () => {
+		script['dashboard.upgrade'] = {
+			data: { container: 'flaiover', outcome: 'upgraded', from: '0.23.0', to: '0.22.7' }
+		};
+		const r = await post('upgrade', { tag: '0.22.7' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ outcome: 'upgraded', to: '0.22.7' });
+		expect(asked[0].method).toBe('dashboard.upgrade');
+		expect(asked[0].params.tag).toBe('0.22.7');
+	});
+
+	it('refuses a tag that is not a string, or is empty, without asking flai to upgrade (S-0298)', async () => {
+		for (const tag of [227, '', null, ['0.22.7'], { t: '0.22.7' }]) {
+			const r = await post('upgrade', { tag });
+			expect(r.status).toBe(400);
+			expect((await r.json()).error).toContain('tag must be');
+		}
+		// only the project's identity, which every answer carries, is asked
+		expect(asked.map((a) => a.method)).not.toContain('dashboard.upgrade');
+	});
+
+	it('answers an upgrade to a tag with the host action’s refusal when it is not enabled', async () => {
+		script['dashboard.upgrade'] = {
+			error: new RepoError(403, 'the host action "dashboard" is not enabled')
+		};
+		const r = await post('upgrade', { tag: '0.22.7' });
+		expect(r.status).toBe(403);
+		expect((await r.json()).error).toContain('not enabled');
+	});
+
+	it('sends a tag only with an upgrade', async () => {
+		script['dashboard.restart'] = { data: { container: 'flaiover', was_running: true } };
+		await post('restart', { tag: '0.22.7' });
+		expect(Object.keys(asked[0].params)).toEqual(['request_id']);
 	});
 
 	it('answers with the host action’s refusal when it is not enabled', async () => {

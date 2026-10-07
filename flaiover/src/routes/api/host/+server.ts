@@ -38,7 +38,7 @@ export type HostView =
 	| (HostStatus & { running: true; host_enabled: boolean })
 	| { running: false; reason: string; host_enabled: boolean };
 
-const ACTIONS = ['check', 'start', 'stop', 'restart', 'upgrade'] as const;
+const ACTIONS = ['check', 'versions', 'start', 'stop', 'restart', 'upgrade'] as const;
 type Action = (typeof ACTIONS)[number];
 const PROCESSES = ['serve', 'mcp', 'all'] as const;
 
@@ -77,17 +77,21 @@ async function hostEnabled(): Promise<boolean> {
 }
 
 /**
- * POST {action, process}: check asks whether a newer flai is released, changing nothing, a read;
- * start, stop, and restart of serve, the MCP servers, or all (host.process), and upgrade, are the
- * host action, gated the way the dashboard action is (flai serve enable host). Stopping or restarting serve,
- * and an upgrade, end the very connection this request came on: the page expects that and polls
- * GET until it answers again. Upgrade gets the longest timeout, since it downloads a release.
+ * POST {action, process, version}: check asks whether a newer flai is released, changing nothing,
+ * and versions lists the published releases (S-0298), both reads; start, stop, and restart of
+ * serve, the MCP servers, or all (host.process), and upgrade, are the host action, gated the way
+ * the dashboard action is (flai serve enable host). Upgrade installs the newest release, or the
+ * one version names, which flai on the host checks is a published X.Y.Z (ADR-0117). Stopping or
+ * restarting serve, and an upgrade, end the very connection this request came on: the page expects
+ * that and polls GET until it answers again. Upgrade gets the longest timeout, since it downloads
+ * a release.
  */
 export const POST: RequestHandler = ({ request }) =>
 	respond(async () => {
 		const body = (await request.json().catch(() => ({}))) as {
 			action?: string;
 			process?: string;
+			version?: unknown;
 		};
 		const action = body.action;
 		if (!action || !ACTIONS.includes(action as Action)) {
@@ -97,12 +101,23 @@ export const POST: RequestHandler = ({ request }) =>
 			const { data } = await repo().run('host.check', {}, { timeoutMs: 120000 });
 			return data as Record<string, unknown>;
 		}
+		if (action === 'versions') {
+			const { data } = await repo().run('host.versions', {}, { timeoutMs: 120000 });
+			return data;
+		}
 		// A write that ends the connection it came on is not retried when the connection is lost:
 		// the serve that answers the retry has no record of it, and a serve restart ran twice.
 		if (action === 'upgrade') {
+			const version = body.version;
+			if (version !== undefined && (typeof version !== 'string' || !version)) {
+				throw new RepoError(
+					400,
+					'version must be a release such as 1.2.3, or left out for the newest'
+				);
+			}
 			const { data, warnings } = await repo().write(
 				'host.upgrade',
-				{},
+				version === undefined ? {} : { version },
 				{ timeoutMs: 360000, retry: false }
 			);
 			return { ...(data as Record<string, unknown>), log: warnings };
