@@ -62,6 +62,10 @@ type Usage struct {
 	// timed out with nothing to report (S-0272, ADR-0105): measured on a
 	// story from its agents' logs, summed on an epic, none on a task.
 	EmptyWakes int `yaml:"empty_wakes,omitempty" json:"empty_wakes,omitempty"`
+	// Turns counts the turns of the item's own agent by class, per UTC day
+	// in order of day (S-0293): measured on a story from its agent's logs,
+	// summed day by day on an epic, none on a task.
+	Turns []TurnDay `yaml:"turns,omitempty" json:"turns,omitempty"`
 	// Models are what each model spent, in order of name.
 	Models []Model `yaml:"models" json:"models"`
 	// Strategic is what strategic agents spent on the item, one entry per
@@ -116,6 +120,7 @@ func (u *Usage) Clone() *Usage {
 	}
 	c := *u
 	c.Models = slices.Clone(u.Models)
+	c.Turns = slices.Clone(u.Turns)
 	if u.Strategic != nil {
 		c.Strategic = make([]Strategic, len(u.Strategic))
 		for i, s := range u.Strategic {
@@ -129,8 +134,8 @@ func (u *Usage) Clone() *Usage {
 // Split is u in n shares that add up to it, in order: its seconds and each
 // model's tokens in whole numbers, the remainder going to the first shares,
 // and each model's cost over n (ADR-0095). Each share keeps u's source and
-// estimate and leaves its Strategic and its empty wakes out, since a call is
-// not apportioned (ADR-0105); n below one gives none.
+// estimate and leaves its Strategic, its empty wakes, and its turns out,
+// since a call is not apportioned (ADR-0105); n below one gives none.
 func (u *Usage) Split(n int) []*Usage {
 	if u == nil || n < 1 {
 		return nil
@@ -239,14 +244,15 @@ func (u *Usage) AddStrategic(kind string, o *Usage) {
 	u.tidyStrategic()
 }
 
-// Add adds o to u, model by model, and its empty wakes; o's Strategic is
-// left out.
+// Add adds o to u, model by model, its empty wakes, and its turns day by
+// day; o's Strategic is left out.
 func (u *Usage) Add(o *Usage) {
 	if o == nil {
 		return
 	}
 	u.Seconds += o.Seconds
 	u.EmptyWakes += o.EmptyWakes
+	u.Turns = mergeTurns(u.Turns, o.Turns)
 	u.Estimated = u.Estimated || o.Estimated
 	for _, m := range o.Models {
 		u.addModel(m)
@@ -269,9 +275,10 @@ func addModel(ms []Model, m Model) []Model {
 // Tidy sorts the models by name, drops those that spent nothing, and rounds
 // each cost to a hundredth of a cent, so that the same usage is always
 // written the same way; and does the same to each strategic entry, kept in
-// StrategicKinds order.
+// StrategicKinds order. Its turns are sorted by day, a day with none dropped.
 func (u *Usage) Tidy() {
 	u.Models = tidyModels(u.Models)
+	u.Turns = tidyTurns(u.Turns)
 	u.tidyStrategic()
 }
 
@@ -358,7 +365,8 @@ func Same(a, b *Usage) bool {
 	if a.Empty() || b.Empty() {
 		return a.Empty() && b.Empty()
 	}
-	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && a.EmptyWakes == b.EmptyWakes && slices.Equal(a.Models, b.Models)
+	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && a.EmptyWakes == b.EmptyWakes && slices.Equal(a.Models, b.Models) &&
+		slices.Equal(a.Turns, b.Turns)
 }
 
 // Summary says in a line what was spent: tokens, cost, time, and where the

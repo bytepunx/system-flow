@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -455,5 +456,64 @@ func TestEmptyWakesAreTheOwnAgentsWaitsThatTimedOutWithNothing(t *testing.T) {
 	}
 	if got := again.Total(nil); got == nil || got.EmptyWakes != 1 {
 		t.Errorf("one log's total = %+v, want 1 empty wake", got)
+	}
+}
+
+// toolUse is a tool_use block calling the tool name with input, given as
+// JSON.
+func toolUse(id, name, input string) string {
+	return `{"type":"tool_use","id":"` + id + `","name":"` + name + `","input":` + input + `}`
+}
+
+// bashUse is a Bash tool_use block running command.
+func bashUse(id, command string) string {
+	return toolUse(id, "Bash", `{"command":`+quoted(command)+`,"description":"x"}`)
+}
+
+// S-0293: a story's turns are its own agent's messages that call a tool,
+// their calls gathered across a message's repeats and their day the first
+// repeat's, counted per UTC day by class; a sub-agent's and a message that
+// calls no tool are left out, and no task carries any.
+func TestTurnsAreTheOwnAgentsToolMessagesCountedByDayAndClass(t *testing.T) {
+	rec, err := Read(writeLog(t, "a.log",
+		// 2026-10-03: a test run beside ceremony
+		opusCall("m1", "2026-10-03T10:00:00Z", 100, "", "", bashUse("b1", "cd flai && go test ./... 2>&1 | tail -5")+","+bashUse("b2", "git status")),
+		// ceremony, its second call in a repeat on the next day, a test
+		// named in a commit message's heredoc
+		opusCall("m2", "2026-10-03T23:59:59Z", 100, "", "", bashUse("b3", "scripts/flai.sh stream sync")),
+		opusCall("m2", "2026-10-04T00:00:01Z", 100, "", "", bashUse("b4", "git add -A && git commit -F - <<'EOF'\nfeat: go test passes\nEOF")),
+		// a hand edit, an empty wake, and a message that calls no tool
+		opusCall("m3", "2026-10-03T11:00:00Z", 100, "", "", toolUse("e1", "Edit", `{"file_path":"/w/S-0001/wip/agents/S-0001.md","old_string":"a","new_string":"b"}`)),
+		waitCall("m4", "2026-10-03T12:00:00Z", "w1", ""),
+		toolResult("2026-10-03T12:30:00Z", "w1", quoted(timedOut), false),
+		opusCall("m5", "2026-10-03T12:31:00Z", 100, "", "", `{"type":"text","text":"thinking"}`),
+		// 2026-10-04: ceremony and cat, a wake with news, a task marked done
+		opusCall("m6", "2026-10-04T09:00:00Z", 100, "", "", bashUse("b5", "git status && cat wip/kanban/board.md")),
+		waitCall("m7", "2026-10-04T09:01:00Z", "w2", ""),
+		toolResult("2026-10-04T09:02:00Z", "w2", quoted(`{"changed":[],"events":[{"id":"S-0001","kind":"moved"}],"timed_out":false}`), false),
+		opusCall("m8", "2026-10-04T09:03:00Z", 100, "", "", bashUse("b6", "scripts/flai.sh task done T-0001")),
+		// a sub-agent's test run
+		opusCall("m9", "2026-10-04T09:04:00Z", 100, "toolu_A", "T-0001 work", bashUse("b7", "go test ./...")),
+		// the inbox and a move through a variable, then a hand edit by sed
+		opusCall("m10", "2026-10-04T09:05:00Z", 100, "", "", toolUse("i1", "mcp__flai__inbox", `{}`)+","+bashUse("b8", `F=../../scripts/flai.sh; "$F" move T-0001 done`)),
+		opusCall("m11", "2026-10-04T09:06:00Z", 100, "", "", bashUse("b9", "sed -i 's/a/b/' wip/kanban/tasks/T-0001-x.md")),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := rec.Total(nil)
+	want := []TurnDay{
+		{Day: "2026-10-03", Ceremony: 1, TestRuns: 1, EmptyWakes: 1, HandEdits: 1},
+		{Day: "2026-10-04", Ceremony: 1, HandEdits: 1, Work: 3},
+	}
+	if u == nil || !slices.Equal(u.Turns, want) {
+		t.Fatalf("turns = %+v, want %+v", u, want)
+	}
+	if u.EmptyWakes != 1 {
+		t.Errorf("empty wakes = %d, want 1", u.EmptyWakes)
+	}
+	tasks := rec.Tasks(map[string][]Span{"T-0001": {span("2026-10-03T00:00:00Z", "2026-10-05T00:00:00Z")}}, nil)
+	if len(tasks) != 1 || tasks["T-0001"].Turns != nil {
+		t.Errorf("tasks = %+v, want T-0001 with no turns", tasks)
 	}
 }

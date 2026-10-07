@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
@@ -31,9 +32,28 @@ func usageBlock(u *usage.Usage) string {
 	if u.EmptyWakes > 0 {
 		fmt.Fprintf(&b, "  empty_wakes: %d\n", u.EmptyWakes)
 	}
+	turnsBlock(&b, u.Turns)
 	modelsBlock(&b, "  ", u.Models)
 	StrategicBlock(&b, u.Strategic)
 	return b.String()
+}
+
+// turnsBlock writes a usage's turns key and its days, each with the classes
+// it has turns of, in usage.TurnClasses order (S-0293); nothing when there
+// are none.
+func turnsBlock(b *strings.Builder, days []usage.TurnDay) {
+	if len(days) == 0 {
+		return
+	}
+	b.WriteString("  turns:\n")
+	for _, d := range days {
+		fmt.Fprintf(b, "    - day: %s\n", Scalar(d.Day))
+		for _, c := range usage.TurnClasses {
+			if n := d.Count(c); n != 0 {
+				fmt.Fprintf(b, "      %s: %d\n", c, n)
+			}
+		}
+	}
 }
 
 // StrategicBlock writes a usage's strategic key and its entries, nested
@@ -80,8 +100,31 @@ func usageErrors(u *usage.Usage) []string {
 	if u.EmptyWakes < 0 {
 		errs = append(errs, "usage.empty_wakes is negative")
 	}
+	errs = append(errs, turnErrors(u.Turns)...)
 	errs = append(errs, modelErrors("usage", u.Models)...)
 	return append(errs, StrategicErrors(u.Strategic, "an item")...)
+}
+
+// turnErrors are what is wrong with a usage's turns: a day that is not a
+// date or is listed twice, or a negative count (S-0293).
+func turnErrors(days []usage.TurnDay) []string {
+	var errs []string
+	seen := map[string]bool{}
+	for i, d := range days {
+		at := fmt.Sprintf("usage.turns[%d]", i)
+		if _, err := time.Parse(usage.DayFormat, d.Day); err != nil {
+			errs = append(errs, fmt.Sprintf("%s.day %q is not a date like 2026-10-04", at, d.Day))
+		} else if seen[d.Day] {
+			errs = append(errs, fmt.Sprintf("%s.day %s is listed twice", at, d.Day))
+		}
+		seen[d.Day] = true
+		for _, c := range usage.TurnClasses {
+			if d.Count(c) < 0 {
+				errs = append(errs, fmt.Sprintf("%s.%s is negative", at, c))
+			}
+		}
+	}
+	return errs
 }
 
 // StrategicErrors are what is wrong with a usage's strategic entries, on

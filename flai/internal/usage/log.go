@@ -43,6 +43,10 @@ import (
 // tool_result, and counted when that result is not an error and reports
 // timed_out with no events, no changed paths, and no end. A call whose result
 // is not in the logs is not counted.
+//
+// A story's turns (S-0293) are gathered as the logs are read, each message of
+// the session's own agent with the tools it called, and classified and
+// counted by day when the record is totalled: turns.go says how.
 
 // Rates are dollars per token for each model, from what logs reported.
 type Rates map[string]float64
@@ -85,8 +89,12 @@ type Record struct {
 	// waits are the session's own agent's wait_for_events calls whose result
 	// has not been read yet, by the ID of their tool_use.
 	waits map[string]bool
-	// emptyWakes counts those calls whose result was an empty wake.
-	emptyWakes int
+	// emptied are the IDs of those calls whose result was an empty wake.
+	emptied map[string]bool
+	// turns are the session's own agent's messages, in the order they were
+	// first seen, and turnByID their index by message ID.
+	turns    []turn
+	turnByID map[string]int
 }
 
 // waitTool is the name Claude Code gives the flai MCP tool wait_for_events.
@@ -101,7 +109,10 @@ type start struct {
 // Read reads the logs, oldest run first. A log that is missing is skipped:
 // flai serve may not have written it yet.
 func Read(paths ...string) (*Record, error) {
-	rec := &Record{reported: map[string]map[string]Model{}, started: map[string]start{}, waits: map[string]bool{}}
+	rec := &Record{
+		reported: map[string]map[string]Model{}, started: map[string]start{}, waits: map[string]bool{},
+		emptied: map[string]bool{}, turnByID: map[string]int{},
+	}
 	byID := map[string]int{} // message id to its index in calls
 	for _, p := range paths {
 		if err := rec.read(p, byID); err != nil {
@@ -136,6 +147,10 @@ type line struct {
 			Input struct {
 				Description string `json:"description"`
 				Prompt      string `json:"prompt"`
+				// Command is a Bash call's, FilePath the file an Edit,
+				// Write, or MultiEdit call changes.
+				Command  string `json:"command"`
+				FilePath string `json:"file_path"`
 			} `json:"input"`
 			// ToolUseID and IsError are a tool_result's: the tool_use it
 			// answers, and whether the call failed.
@@ -199,6 +214,7 @@ func (rec *Record) read(path string, byID map[string]int) error {
 				case e.Type == "assistant":
 					rec.addStarts(e)
 					rec.addWaits(e)
+					rec.addTurn(e)
 					rec.addCall(e, byID)
 				case e.Type == "user":
 					rec.addWakes(e, raw)
@@ -273,7 +289,28 @@ func (rec *Record) addWakes(e line, raw []byte) {
 		}
 		delete(rec.waits, b.ToolUseID)
 		if !b.IsError && emptyWake(raw, b.ToolUseID) {
-			rec.emptyWakes++
+			rec.emptied[b.ToolUseID] = true
+		}
+	}
+}
+
+// addTurn gathers the tools the session's own agent calls in an event into
+// the turn of its message, which the first event of the message opens; a
+// sub-agent's are left out.
+func (rec *Record) addTurn(e line) {
+	if e.Message == nil || e.Message.ID == "" || e.ParentToolUseID != "" {
+		return
+	}
+	i, ok := rec.turnByID[e.Message.ID]
+	if !ok {
+		at, _ := time.Parse(time.RFC3339Nano, e.Timestamp)
+		i = len(rec.turns)
+		rec.turnByID[e.Message.ID] = i
+		rec.turns = append(rec.turns, turn{at: at})
+	}
+	for _, b := range e.Message.Content {
+		if b.Type == "tool_use" {
+			rec.turns[i].calls = append(rec.turns[i].calls, toolCall{id: b.ID, name: b.Name, command: b.Input.Command, path: b.Input.FilePath})
 		}
 	}
 }
@@ -401,7 +438,7 @@ func (r Rates) Merge(o Rates) Rates {
 }
 
 // Total is everything the record says was spent, with SourceLog, and the
-// empty wakes its logs hold; nil when it says nothing. What no result
+// empty wakes and the turns by day its logs hold; nil when it says nothing. What no result
 // reported is priced at rates, or at the record's own when rates has none
 // for its model.
 func (rec *Record) Total(rates Rates) *Usage {
@@ -421,7 +458,8 @@ func (rec *Record) Total(rates Rates) *Usage {
 	for _, run := range rec.Runs {
 		u.Seconds += int64(run.End.Sub(run.Start).Seconds())
 	}
-	u.EmptyWakes = rec.emptyWakes
+	u.EmptyWakes = len(rec.emptied)
+	u.Turns = turnDays(rec.turns, rec.emptied)
 	if u.Empty() {
 		return nil
 	}

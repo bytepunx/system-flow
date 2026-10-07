@@ -2,7 +2,8 @@
 # the keys of a story's agent block and of each of its roles (S-0189), the
 # keys of an item's cost_of_delay and forecast blocks (S-0199) and of a
 # story's finalized block (S-0201), the keys of an item's usage block, of
-# each of its models, and of each of its strategic entries (S-0225), and
+# each of its models, and of each of its strategic entries (S-0225), the
+# counts of each day of its turns (S-0293), and
 # the types of item that carry each field only some types carry (S-0176).
 # TestFieldsFileIsTheCode keeps it equal to the code: change it with any
 # field added or removed. Publishing a flai release that changed it raises
@@ -16,7 +17,8 @@ item.cost_of_delay: at by inputs value
 item.cost_of_delay.inputs: at by penalty_per_week revenue_per_week time_lost_per_cycle
 item.forecast: at basis by delivery duration
 item.finalized: at by
-item.usage: empty_wakes estimated models seconds source strategic
+item.usage: empty_wakes estimated models seconds source strategic turns
 item.usage.models: cache_read cache_write cost input model output
 item.usage.strategic: estimated kind models seconds
+item.usage.turns: ceremony day empty_wakes hand_edits test_runs work
 item.types: after=story,task agent=story cost_of_delay=epic,story draft=story finalized=story forecast=story topics=epic,story

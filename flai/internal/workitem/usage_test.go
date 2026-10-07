@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -266,6 +267,102 @@ func TestAnEpicSumsItsStoriesEmptyWakes(t *testing.T) {
 	data, _ := os.ReadFile(epic.Path)
 	if !strings.Contains(string(data), "  seconds: 600\n  empty_wakes: 7\n  models:\n") {
 		t.Errorf("epic front matter:\n%s", data)
+	}
+}
+
+// S-0293: a story's turns are written after its empty wakes, each day with
+// the classes it has turns of, read back the same, and refused when a day is
+// not a date or is listed twice or a count is negative; none are written
+// when there are none.
+func TestTurnsAreWrittenAndReadBack(t *testing.T) {
+	parsed, err := ParseItem(turnsDoc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := parsed.Validate(); err != nil {
+		t.Error(err)
+	}
+	want := []usage.TurnDay{{Day: "2026-10-03", Ceremony: 12, TestRuns: 3, Work: 40}, {Day: "2026-10-04", EmptyWakes: 2, HandEdits: 1}}
+	if !slices.Equal(parsed.Usage.Turns, want) {
+		t.Errorf("turns = %+v, want %+v", parsed.Usage.Turns, want)
+	}
+	if got := parsed.Marshal(); got != turnsDoc {
+		t.Errorf("round trip:\n%s", got)
+	}
+	parsed.Usage.Turns = []usage.TurnDay{{Day: "4 October", Work: 1}, {Day: "2026-10-04", Ceremony: -1}, {Day: "2026-10-04", Work: 1}}
+	got := strings.Join(usageErrors(parsed.Usage), "; ")
+	for _, e := range []string{`usage.turns[0].day "4 October" is not a date`, "usage.turns[1].ceremony is negative", "usage.turns[2].day 2026-10-04 is listed twice"} {
+		if !strings.Contains(got, e) {
+			t.Errorf("errors %q lack %q", got, e)
+		}
+	}
+	parsed.Usage.Turns = nil
+	if got := parsed.Marshal(); strings.Contains(got, "turns") {
+		t.Errorf("no turns written as:\n%s", got)
+	}
+}
+
+const turnsDoc = `---
+id: S-0001
+type: story
+nature: feature
+title: S
+status: ready
+parent: E-0001
+owner: alex
+created: 2026-09-15T20:00:00Z
+updated: 2026-09-15T20:00:00Z
+transitions:
+  - to: ready
+    at: 2026-09-15T20:00:00Z
+    by: alex
+tags: []
+usage:
+  source: log
+  seconds: 1083
+  empty_wakes: 2
+  turns:
+    - day: 2026-10-03
+      ceremony: 12
+      test_runs: 3
+      work: 40
+    - day: 2026-10-04
+      empty_wakes: 2
+      hand_edits: 1
+  models:
+    - model: claude-opus-5-5
+      input: 256
+      output: 89342
+      cache_read: 19723140
+      cache_write: 327605
+      cost: 8.1258
+---
+# S-0001 S
+`
+
+// S-0293: an epic's usage carries its stories' turns summed day by day.
+func TestAnEpicSumsItsStoriesTurnsByDay(t *testing.T) {
+	r, s, _ := usageProject(t)
+	old, err := r.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	old.Usage.Turns = []usage.TurnDay{{Day: "2026-10-03", Work: 4}}
+	if err := r.Save(old); err != nil {
+		t.Fatal(err)
+	}
+	s.Usage = spent(500, 9, false)
+	s.Usage.Turns = []usage.TurnDay{{Day: "2026-10-03", Ceremony: 1}, {Day: "2026-10-04", Work: 2}}
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.RollUp(s); err != nil {
+		t.Fatal(err)
+	}
+	epic, _ := r.Get("E-0001")
+	want := []usage.TurnDay{{Day: "2026-10-03", Ceremony: 1, Work: 4}, {Day: "2026-10-04", Work: 2}}
+	if !slices.Equal(epic.Usage.Turns, want) {
+		t.Errorf("epic turns = %+v, want %+v", epic.Usage.Turns, want)
 	}
 }
 

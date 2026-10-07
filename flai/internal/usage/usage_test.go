@@ -154,6 +154,46 @@ func TestEmptyWakesAreComparedSummedAndKept(t *testing.T) {
 	}
 }
 
+// S-0293: a usage's turns are compared, cloned, summed day by day, and never
+// apportioned to a share.
+func TestTurnsAreComparedClonedAndSummedByDay(t *testing.T) {
+	u := agents(60, Model{Model: "a", Input: 1})
+	u.Turns = []TurnDay{{Day: "2026-10-03", Ceremony: 2}, {Day: "2026-10-04", Work: 1}}
+	plain := agents(60, Model{Model: "a", Input: 1})
+	if Same(u, plain) || Same(plain, u) {
+		t.Error("usage that differs only in its turns is the same")
+	}
+	c := u.Clone()
+	if !Same(u, c) {
+		t.Errorf("clone = %+v, want the turns", c)
+	}
+	c.Turns[0].Ceremony = 9
+	if u.Turns[0].Ceremony != 2 || Same(u, c) {
+		t.Errorf("a clone's turns are the original's: %+v", u.Turns)
+	}
+	other := agents(30, Model{Model: "a", Input: 2})
+	other.Turns = []TurnDay{{Day: "2026-10-04", Work: 2, TestRuns: 1}, {Day: "2026-10-02", HandEdits: 1}}
+	sum := Sum(u, other, plain)
+	want := []TurnDay{{Day: "2026-10-02", HandEdits: 1}, {Day: "2026-10-03", Ceremony: 2}, {Day: "2026-10-04", TestRuns: 1, Work: 3}}
+	if !reflect.DeepEqual(sum.Turns, want) {
+		t.Errorf("sum turns = %+v, want %+v", sum.Turns, want)
+	}
+	if u.Turns[1].Work != 1 || other.Turns[0].Work != 2 {
+		t.Errorf("a sum changed what it summed: %+v %+v", u.Turns, other.Turns)
+	}
+	for i, s := range u.Split(2) {
+		if s.Turns != nil {
+			t.Errorf("share %d carries turns %+v, want none", i, s.Turns)
+		}
+	}
+	messy := agents(1)
+	messy.Turns = []TurnDay{{Day: "2026-10-05", Work: 1}, {Day: "2026-10-01"}, {Day: "2026-10-04", Ceremony: 1}}
+	messy.Tidy()
+	if want := []TurnDay{{Day: "2026-10-04", Ceremony: 1}, {Day: "2026-10-05", Work: 1}}; !reflect.DeepEqual(messy.Turns, want) {
+		t.Errorf("tidied turns = %+v, want %+v", messy.Turns, want)
+	}
+}
+
 // ADR-0095: an orchestrator activity's usage is split evenly between the
 // items it named, in whole tokens and seconds that add up to the whole, the
 // remainder to the first items named, and its cost over the count.

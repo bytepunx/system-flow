@@ -46,6 +46,8 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		"item.usage: " + strings.Join(workitem.KnownFields(usage.Usage{}), " "),
 		"item.usage.models: " + strings.Join(workitem.KnownFields(usage.Model{}), " "),
 		"item.usage.strategic: " + strings.Join(workitem.KnownFields(usage.Strategic{}), " "),
+		// and the counts of each day of its turns (S-0293)
+		"item.usage.turns: " + strings.Join(workitem.KnownFields(usage.TurnDay{}), " "),
 		// the types each type-restricted field is valid on (S-0176): an older
 		// flai refuses an item that carries one on a type it does not allow
 		"item.types: " + workitem.FieldTypes(),
