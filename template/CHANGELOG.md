@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.66 - 2026-10-07
+
+- S-0273 flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings (patch).
+
 ## 1.0.65 - 2026-10-06
 
 - S-0273 A new project declares its test tiers in the manifest (patch): `system-flow.yaml` carries `tests`, the project's test tiers, cheapest first, each with a `name`, a `command` (an argument list that may hold `{packages}` or `{files}` as an argument of its own), the `paths` that select it (globs from the root, as `claims.shared`'s, with `!` to take paths out), the `format` of its output (`go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`), and optionally `dir`, `all_only`, and `all_command`. It starts with `scripts/test.sh` as the tier `test` for every path, and `scripts/integration.sh` and `scripts/smoke.sh` as `integration` and `smoke`, which run only under `--all`; all three are `plain`. Change them with `flai manifest set tests='<JSON list>'` or by hand. A project made before this has no `tests` key, and flai gives it one `plain` tier running `scripts/test.sh` when it exists. An older flai ignores the key, so it needs a flai that has it.
