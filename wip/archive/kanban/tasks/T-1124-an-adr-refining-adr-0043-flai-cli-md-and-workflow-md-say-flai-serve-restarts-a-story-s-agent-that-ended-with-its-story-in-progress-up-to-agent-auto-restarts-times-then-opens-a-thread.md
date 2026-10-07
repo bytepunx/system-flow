@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 226
-      cache_read: 1620030
-      cache_write: 59499
-      cost: 0.7485
+      input: 25
+      output: 9029
+      cache_read: 1659479
+      cache_write: 49842
+      cost: 0.8293
 ---
 # T-1124 An ADR refining ADR-0043, flai-cli.md, and workflow.md say flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then opens a thread
 

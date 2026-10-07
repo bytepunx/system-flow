@@ -3,12 +3,18 @@ id: T-1144
 type: task
 nature: improvement
 title: flai accept resolves the threads still open on what it archives, in the acceptance commit, and its dry run lists them
-status: backlog
+status: in-progress
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:20Z
-updated: 2026-10-07T01:20:36Z
-transitions: []
+updated: 2026-10-07T02:10:10Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:10:10Z
+    by: agent-S-0277
+  - to: in-progress
+    at: 2026-10-07T02:10:10Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai, cli]
 touches: [flai/cmd/accept.go, flai/internal/preview/accept.go, flai/cmd/accept_threads_test.go]

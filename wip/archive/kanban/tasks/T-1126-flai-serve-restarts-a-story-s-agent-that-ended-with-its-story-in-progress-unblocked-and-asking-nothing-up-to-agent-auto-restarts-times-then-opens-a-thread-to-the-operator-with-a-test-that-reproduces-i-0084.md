@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 552
-      cache_read: 7255207
-      cache_write: 157482
-      cost: 3.3032
+      input: 112
+      output: 39848
+      cache_read: 7324158
+      cache_write: 219978
+      cost: 3.6601
 ---
 # T-1126 flai serve restarts a story's agent that ended with its story in progress, unblocked, and asking nothing, up to agent.auto_restarts times, then opens a thread to the operator, with a test that reproduces I-0084
 

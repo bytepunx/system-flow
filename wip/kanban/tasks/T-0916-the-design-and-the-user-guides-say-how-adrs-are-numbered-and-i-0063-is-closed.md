@@ -3,12 +3,18 @@ id: T-0916
 type: task
 nature: remediation
 title: The design and the user guides say how ADRs are numbered, and I-0063 is closed
-status: backlog
+status: in-progress
 parent: S-0245
 owner: alex
 created: 2026-10-05T05:44:20Z
-updated: 2026-10-05T05:44:20Z
-transitions: []
+updated: 2026-10-07T02:10:00Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:10:00Z
+    by: agent-S-0245
+  - to: in-progress
+    at: 2026-10-07T02:10:00Z
+    by: agent-S-0245
 stream: S-0245
 tags: [docs, adr]
 touches: [design/system/flai-cli.md, design/system/documentation-standard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 359
-      cache_read: 3132129
-      cache_write: 105950
-      cost: 1.443
+      input: 49
+      output: 17407
+      cache_read: 3199424
+      cache_write: 96093
+      cost: 1.5988
 ---
 # T-1125 The host setting agent.auto_restarts, 2 when unset, is set with flai serve agent set --auto-restarts and shown with the rest of the agent settings
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 200
-      cache_read: 1872972
-      cache_write: 68046
-      cost: 0.865
+      input: 29
+      output: 10434
+      cache_read: 1917836
+      cache_write: 57601
+      cost: 0.9584
 ---
 # T-1127 The users' and operators' guides and the reference describe the automatic restart and agent.auto_restarts, and I-0084 is closed
 

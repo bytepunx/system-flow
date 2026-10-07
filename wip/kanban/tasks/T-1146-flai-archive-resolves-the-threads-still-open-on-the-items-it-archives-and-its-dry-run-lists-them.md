@@ -3,12 +3,18 @@ id: T-1146
 type: task
 nature: improvement
 title: flai archive resolves the threads still open on the items it archives, and its dry run lists them
-status: backlog
+status: in-progress
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:27Z
-updated: 2026-10-07T01:20:40Z
-transitions: []
+updated: 2026-10-07T02:10:11Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:10:10Z
+    by: agent-S-0277
+  - to: in-progress
+    at: 2026-10-07T02:10:11Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai, cli]
 touches: [flai/cmd/archive.go, flai/cmd/archive_test.go]

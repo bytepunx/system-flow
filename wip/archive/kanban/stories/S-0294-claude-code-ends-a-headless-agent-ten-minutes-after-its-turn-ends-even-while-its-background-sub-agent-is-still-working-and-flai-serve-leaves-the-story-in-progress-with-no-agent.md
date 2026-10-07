@@ -3,10 +3,10 @@ id: S-0294
 type: story
 nature: remediation
 title: Claude Code ends a headless agent ten minutes after its turn ends, even while its background sub-agent is still working, and flai serve leaves the story in progress with no agent
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-07T02:01:09Z
+updated: 2026-10-07T02:10:20Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:56Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:42:03Z
     by: agent-S-0294
+  - to: review
+    at: 2026-10-07T02:07:09Z
+    by: agent-S-0294
+  - to: done
+    at: 2026-10-07T02:10:20Z
+    by: alex
 tags: [cli, serve]
 topics: [automation]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/adrs, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/summary.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/adrs/README.md, flai/internal/harness/harness.go]
@@ -24,15 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1169
-  estimated: true
+  seconds: 1526
   models:
     - model: claude-opus-5-5
-      input: 266
-      output: 1598
-      cache_read: 16504450
-      cache_write: 555468
-      cost: 7.6023
+      input: 290
+      output: 103188
+      cache_read: 18965979
+      cache_write: 569636
+      cost: 9.4778
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 4120
+      cache_read: 240183
+      cache_write: 54054
+      cost: 0.2244
   strategic:
     - kind: planner
       seconds: 614

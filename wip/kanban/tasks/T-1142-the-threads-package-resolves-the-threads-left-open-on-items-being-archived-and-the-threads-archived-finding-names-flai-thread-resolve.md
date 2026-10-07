@@ -3,15 +3,35 @@ id: T-1142
 type: task
 nature: improvement
 title: The threads package resolves the threads left open on items being archived, and the threads.archived finding names flai thread resolve
-status: backlog
+status: done
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:10Z
-updated: 2026-10-07T01:20:10Z
-transitions: []
+updated: 2026-10-07T02:10:09Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:07:43Z
+    by: agent-S-0277
+  - to: in-progress
+    at: 2026-10-07T02:07:44Z
+    by: agent-S-0277
+  - to: done
+    at: 2026-10-07T02:10:09Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai]
 touches: [flai/internal/threads/archived.go, flai/internal/threads/archived_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go]
+usage:
+  source: log
+  seconds: 145
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 198
+      cache_read: 1053136
+      cache_write: 65225
+      cost: 0.4994
 ---
 # T-1142 The threads package resolves the threads left open on items being archived, and the threads.archived finding names flai thread resolve
 

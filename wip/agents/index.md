@@ -1,15 +1,15 @@
 ---
 title: Active streams
-updated: 2026-10-07T02:03:46Z
+updated: 2026-10-07T02:10:20Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0245](S-0245.md) | flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number | in-progress | agent-S-0245 | 2026-10-07T02:03:10Z |
+| [S-0245](S-0245.md) | flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number | in-progress | agent-S-0245 | 2026-10-07T02:10:01Z |
 | [S-0269](S-0269.md) | One command closes a task: flai task done commits, syncs, moves, logs, widens touches, checks, and answers the inbox | in-progress | agent-S-0269 | 2026-10-07T02:00:19Z |
-| [S-0294](S-0294.md) | Claude Code ends a headless agent ten minutes after its turn ends, even while its background sub-agent is still working, and flai serve leaves the story in progress with no agent | in-progress | agent-S-0294 | 2026-10-07T02:01:21Z |
+| [S-0277](S-0277.md) | flai check finds `threads.archived` outside the story at close-out | in-progress | agent-S-0277 | 2026-10-07T02:10:11Z |
 
 ## Strategic agents
 
