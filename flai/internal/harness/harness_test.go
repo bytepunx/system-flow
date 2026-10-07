@@ -468,7 +468,8 @@ func TestThePromptNeverTellsTheAgentToPush(t *testing.T) {
 
 // S-0198: an agent working its story, fresh or answered, records issues for
 // it and leaves to the operator, at acceptance, which become stories; one
-// started only to commit is not told.
+// started only to commit is not told. S-0275: it records them, and its ADRs,
+// with --commit in one call.
 func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	answered, commit := r, r
@@ -477,7 +478,10 @@ func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
 	for _, x := range []Request{r, answered} {
 		p := Prompt(x)
 		for _, w := range []string{
-			"flai issue new, or flai issue bump when the issue exists: each instance names " + r.Story,
+			"flai issue new --commit, or flai issue bump --commit when the issue exists, run in the worktree (or the flai MCP tools issue_new and issue_bump with commit): each instance names " + r.Story,
+			// S-0275: the one call commits the issue on the story's branch and widens its touches, and records an ADR the same way
+			"the one call commits the issue on " + r.Story + "'s branch and adds it to " + r.Story + "'s touches, so follow it with no git add, git commit, or flai touches",
+			"Record an ADR the same way, with flai adr new --commit (or the flai MCP tool adr_new with commit)",
 			"Make no story for them yourself: " + r.Story + "'s review page lists them, checked, so the operator chooses at acceptance which become backlog stories",
 			"flai issue story or the flai MCP tool issue_story only when the operator asks, or when flai check warns issues.no-story",
 		} {

@@ -1,6 +1,6 @@
 ---
 title: Continuous improvement
-updated: 2026-10-03
+updated: 2026-10-07
 audience: agent
 order: 100
 status: active
@@ -31,6 +31,10 @@ How to record recurring friction, defects, blockers, and inefficiencies so they 
   - order by issue cost
   - update it with every occurrence
 - Record an occurrence with `flai issue new`, or `flai issue bump` when the issue exists: each instance names the story you work
+- Working a story, record, bump, or close an issue in one call from the story's worktree: `flai issue new|bump|close --commit`, or the MCP tool `issue_new`, `issue_bump`, or `issue_close` with `commit`:
+  - it numbers a new issue from the whole repository, commits exactly what it wrote on `story/S-nnnn` as `docs: [S-nnnn] ...`, with each `--trailer`, and adds it to the story's touches
+  - follow it with no `git add`, `git commit`, or `flai touches`
+  - off the story's branch it refuses and writes nothing; `--autocommit` is for the main checkout, not a story's agent
 - Make no story for an issue yourself; the operator chooses, at acceptance, which issues become stories:
   - a story's review page lists the open issues it recorded or bumped, checked, and every other open issue no open story links, unchecked
   - accepting it makes a `remediation` or `improvement` backlog story for each checked issue

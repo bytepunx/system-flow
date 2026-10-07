@@ -1,6 +1,6 @@
 ---
 title: Decisions
-updated: 2026-10-03
+updated: 2026-10-07
 audience: agent
 order: 40
 status: active
@@ -20,12 +20,13 @@ What counts as a decision, where each kind is recorded, and what never happens t
   - in `design/adrs`
   - changes to structure, technology, contracts between parts, or a tool-enforced rule
   - record with `flai adr new "<the decision, as a sentence>"`:
-    - calculates the next number from the files present
+    - calculates the next number from the whole repository: this checkout, main, every worktree, and every story branch
     - names the file
     - writes the front matter
     - adds the row to the index
     - sets `superseded_by` on any ADR it supersedes (`--supersedes`, `--refines`, `--status accepted`)
     - sets the body on standard input with `--body-stdin`
+    - from your story's worktree, add `--commit` (MCP `adr_new` with `commit`): it commits exactly what it wrote on `story/S-nnnn` as `docs: [S-nnnn] ...`, with each `--trailer`, and adds it to the story's touches; follow it with no `git add`, `git commit`, or `flai touches`
     - do not copy the template by hand or look the number up
     - One decision per file
 - Never edit an accepted ADR except to set `superseded_by`, or its `topics` with `flai adr topics`.

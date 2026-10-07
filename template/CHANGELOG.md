@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.69 - 2026-10-07
+
+- S-0275 The agent records an issue or an ADR in one call from its story's worktree (patch): `continuous-improvement.md` says that, working a story, you record, bump, or close an issue with `flai issue new|bump|close --commit`, or the MCP tool `issue_new`, `issue_bump`, or `issue_close` with `commit`, which numbers a new issue from the whole repository, commits exactly what it wrote on `story/S-nnnn` as `docs: [S-nnnn] ...`, with each `--trailer`, and adds it to the story's touches; you follow it with no `git add`, `git commit`, or `flai touches`. Off the story's branch it refuses and writes nothing, and `--autocommit` stays the main checkout's. `decisions.md` says the same of `flai adr new --commit`, or the MCP tool `adr_new` with `commit`, and that `flai adr new` numbers from the whole repository: this checkout, main, every worktree, and every story branch. `design/adrs/README.md` names `flai adr new --commit`. It needs a flai that has `--commit` and the MCP tools `issue_close` and `adr_new`.
+
 ## 1.0.68 - 2026-10-07
 
 - S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together (patch).
