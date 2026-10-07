@@ -10,7 +10,7 @@ import (
 
 // Inline content: emphasis resolved as CommonMark resolves it (the
 // delimiter run algorithm), with code spans, HTML, autolinks, link
-// destinations, and bare URLs taken out first. What is left of a delimiter
+// destinations, and bare URLs and email addresses taken out first. What is left of a delimiter
 // run once emphasis is resolved is literal text, which is what the
 // space-in-emphasis rule pairs up.
 
@@ -82,7 +82,7 @@ type codeSpan struct {
 type inlineOut struct {
 	emphs     []emph
 	leftovers []leftover
-	urls      [][2]int // line, col of each bare URL
+	urls      [][2]int // line, col of each bare URL or email address
 	codes     []codeSpan
 	groups    int
 }
@@ -234,6 +234,68 @@ func bareURL(t string, i int) int {
 	return trimURL(s[:end])
 }
 
+// bareEmail returns the length of a GFM extended email autolink at i, as
+// micromark takes it for markdownlint, or 0: atext (alphanumerics and
+// +-._) after anything but atext or a slash, then @, then a domain of
+// alphanumerics, - and _ with at least one dot before an alphanumeric,
+// ending in a letter. A dot that ends the domain is left out of it.
+func bareEmail(t string, i int) int {
+	if i > 0 && (isAtext(t[i-1]) || t[i-1] == '/') || directive(t, i) {
+		return 0
+	}
+	j := i
+	for j < len(t) && isAtext(t[j]) {
+		j++
+	}
+	if j == i || j == len(t) || t[j] != '@' {
+		return 0
+	}
+	data, dot := false, false
+	for j++; j < len(t); j++ {
+		c := t[j]
+		switch {
+		case c == '.' && j+1 < len(t) && isAlnum(t[j+1]):
+			dot = true
+			continue
+		case c == '-' || c == '_' || isAlnum(c):
+			data = true
+			continue
+		}
+		break
+	}
+	if !data || !dot || !isAlpha(t[j-1]) {
+		return 0
+	}
+	return j - i
+}
+
+// directive reports whether a colon before i opens a text directive whose
+// name starts at i, which markdownlint's parser (micromark's directive
+// extension) takes before an email autolink can start there: a colon not
+// escaped and not after another unescaped colon, then a name of letters,
+// digits, - and _ that does not end in - or _ and is not followed by a
+// colon.
+func directive(t string, i int) bool {
+	if i == 0 || t[i-1] != ':' || i >= 2 && t[i-2] == '\\' || i >= 2 && t[i-2] == ':' && (i < 3 || t[i-3] != '\\') {
+		return false
+	}
+	j := i
+	for j < len(t) {
+		r, size := utf8.DecodeRuneInString(t[j:])
+		if unicode.IsSpace(r) || isPunct(r) && (j == i || r != '-' && r != '_') {
+			break
+		}
+		j += size
+	}
+	return j > i && t[j-1] != '-' && t[j-1] != '_' && (j == len(t) || t[j] != ':')
+}
+
+func isAlpha(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' }
+
+func isAlnum(c byte) bool { return isAlpha(c) || c >= '0' && c <= '9' }
+
+func isAtext(c byte) bool { return isAlnum(c) || c == '+' || c == '-' || c == '.' || c == '_' }
+
 // trimURL drops the trailing punctuation and unbalanced parentheses GFM
 // leaves out of an autolink.
 func trimURL(u string) int {
@@ -255,13 +317,17 @@ func trimURL(u string) int {
 // read into out.
 func parseInline(seg *segment, out *inlineOut) segInfo {
 	var info segInfo
-	parseRange(seg, 0, len(seg.text), seg.pair, out, &info)
+	parseRange(seg, 0, len(seg.text), seg.pair, false, out, &info)
 	return info
 }
 
-func parseRange(seg *segment, from, to int, pair bool, out *inlineOut, info *segInfo) {
+// parseRange parses seg's text from from to to. Within link text, and after
+// a [ that nothing closes, there are no bare URLs or email addresses, as
+// micromark takes none while a [ before them is open.
+func parseRange(seg *segment, from, to int, pair, link bool, out *inlineOut, info *segInfo) {
 	t := seg.text
 	var ds []*delim
+	unclosed := false // a [ before i that nothing closes
 	for i := from; i < to; {
 		c := t[i]
 		switch {
@@ -302,11 +368,12 @@ func parseRange(seg *segment, from, to int, pair bool, out *inlineOut, info *seg
 			}
 			end := matchBracket(t, open, to)
 			if end < 0 {
+				unclosed = true
 				i = open + 1
 				continue
 			}
 			info.other++
-			parseRange(seg, open+1, end, false, out, info)
+			parseRange(seg, open+1, end, false, true, out, info)
 			j := end + 1
 			if j < to && t[j] == '(' {
 				if k := matchParen(t, j, to); k >= 0 {
@@ -318,6 +385,12 @@ func parseRange(seg *segment, from, to int, pair bool, out *inlineOut, info *seg
 				}
 			}
 			i = j
+		case !link && !unclosed && isAtext(c) && bareEmail(t[:to], i) > 0:
+			n := bareEmail(t[:to], i)
+			l, col := seg.where(i)
+			out.urls = append(out.urls, [2]int{l, col})
+			info.other++
+			i += n
 		case c == '*' || c == '_':
 			n := runLen(t[:to], i, c)
 			prev, next := before(t[:to], i), after(t[:to], i+n)
@@ -335,7 +408,7 @@ func parseRange(seg *segment, from, to int, pair bool, out *inlineOut, info *seg
 			}
 			ds = append(ds, d)
 			i += n
-		case c == 'h' && bareURL(t[:to], i) > 0:
+		case c == 'h' && !link && !unclosed && bareURL(t[:to], i) > 0:
 			n := bareURL(t[:to], i)
 			l, col := seg.where(i)
 			out.urls = append(out.urls, [2]int{l, col})

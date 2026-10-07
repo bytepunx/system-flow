@@ -290,6 +290,26 @@ func TestSpaceInCodeSpanOfI0072(t *testing.T) {
 	}
 }
 
+// I-0056: TH-0067's entries carried a bare email address, which
+// markdownlint-cli2 0.20.0 reports as MD034, and they reached main because
+// mdlint knew only http and https literals. A thread entry that brings one
+// is now refused; one in a code span or an autolink is not.
+func TestBareEmailOfI0056(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".markdownlint.yaml"), []byte("default: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before := "# TH-0067\n\n## Entries\n\n### 2026-10-02T15:35:00Z alex\n\nThe invoice goes to:\n"
+	err := Guard(dir, "wip/threads/TH-0067.md", before, before+"alex@example.com, copied to <alex@example.com>.\n")
+	var le *Error
+	if !errors.As(err, &le) || len(le.Findings) != 1 || !strings.Contains(err.Error(), "line 8: MD034/no-bare-urls") {
+		t.Errorf("guard: %v", err)
+	}
+	if err := Guard(dir, "wip/threads/TH-0067.md", before, before+"`alex@example.com`, copied to <alex@example.com>.\n"); err != nil {
+		t.Errorf("a code span and an autolink are not bare: %v", err)
+	}
+}
+
 // I-0070: TH-0101's entry quoted step 3 of a list as "> 3.", which
 // markdownlint-cli2 0.20.0 reports as MD029, and it reached main because
 // mdlint did not parse blockquotes. A thread entry that brings one is now
