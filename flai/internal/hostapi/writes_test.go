@@ -36,6 +36,7 @@ var good = map[string]struct {
 	"item.template":     {`{"type":"epic"}`, "epic new --print-body --json", ""},
 	"item.finalize":     {`{"id":"S-0001",` + rid + `}`, "edit S-0001 --no-draft --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
 	"item.criteria":     {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1,3],` + rid + `}`, "criteria tick S-0001 1,3 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --json", ""},
+	"task.done":         {`{"id":"T-0001","message":"feat: [S-0001] T-0001 the parser","log":"  parsed\n tables ",` + rid + `}`, "task done T-0001 --message=feat: [S-0001] T-0001 the parser --log=parsed tables --json", ""},
 	"issue.list":        {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
 	"issue.story":       {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
 	"item.edit":         {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
@@ -127,6 +128,12 @@ var refused = map[string][]string{
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":["--json"],` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1.5],` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1]}`,
+	},
+	// S-0269: a task closed in one call, with a message, never a story's ID
+	"task.done": {
+		`{"id":"S-0001","message":"m",` + rid + `}`, `{"id":"E-0001","message":"m",` + rid + `}`, `{"id":"--help","message":"m",` + rid + `}`,
+		`{"id":"T-0001 --log=x","message":"m",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"T-0001","message":" \n ",` + rid + `}`,
+		`{"id":"T-0001","message":["m"],` + rid + `}`, `{"id":"T-0001","message":"m"}`,
 	},
 	// S-0273: flai test in a checkout, its paths kept inside it
 	"test.run": {
@@ -1899,6 +1906,77 @@ func TestItemCriteriaTicksOrUnticksAsTheOwner(t *testing.T) {
 	rule := Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "err": "rule: S-0007 has 3 criteria: there is no 9"}}}
 	if _, e, _ := criteria(rule, `{"id":"S-0007","hash":"`+hash+`","tick":[9],`+rid+`}`); e == nil || e.Code != Rule || e.Message != "S-0007 has 3 criteria: there is no 9" {
 		t.Errorf("a number there is not: %+v", e)
+	}
+}
+
+// S-0269: task.done runs flai task done --json (ADR-0107) and answers its
+// result. A stop at the sync is a conflict and one at the check a refusal,
+// each with the result as data; a stop at another step is an error with the
+// result as data, a rule when a workflow rule refused it; a run that could not
+// start is flai's error; and a story's ID never reaches the command line.
+func TestTaskDoneAnswersFlaiTaskDonesResult(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	done := func(ran Ran, params string) (any, *channel.Error, string) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, Host{})["task.done"](context.Background(), p, json.RawMessage(params))
+		if len(rec.runs) == 0 {
+			return res, e, ""
+		}
+		return res, e, strings.Join(rec.runs[0].Args, " ")
+	}
+	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
+	const params = `{"id":"T-0021","message":"feat: [S-0004] T-0021 the parser\n\nIt reads tables.",` + rid + `}`
+	stoppedAt := func(step, err string) []byte {
+		return []byte(`{"task":"T-0021","story":"S-0004","commit":{"hash":"abc1234","subject":"feat: [S-0004] T-0021 the parser","paths":["flai/x.go"]},` +
+			`"sync":null,"move":null,"log":null,"touches":null,"check":null,"inbox":null,"stopped":"` + step + `","error":"` + err + `"}`)
+	}
+
+	ran := `{"task":"T-0021","story":"S-0004","commit":null,"sync":{"synced":true},"move":{"id":"T-0021","state":"done"},"log":null,"touches":null,"check":{"passed":true},"inbox":{"agent":"agent"},"stopped":""}`
+	res, e, args := done(Ran{Stdout: []byte(ran)}, params)
+	if e != nil || args != "task done T-0021 --message=feat: [S-0004] T-0021 the parser\n\nIt reads tables. --json" {
+		t.Errorf("a close without --log: %+v %q", e, args)
+	}
+	if w, ok := res.(Written); !ok || string(w.Data) != ran {
+		t.Errorf("the answer: %#v", res)
+	}
+	if _, e, args := done(Ran{Stdout: []byte(ran)}, `{"id":"T-0021","message":"--amend","log":" parsed  tables ",`+rid+`}`); e != nil || args != "task done T-0021 --message=--amend --log=parsed tables --json" {
+		t.Errorf("a close with --log: %+v %q", e, args)
+	}
+	if _, e, args := done(Ran{}, `{"id":"T-0021","log":"x",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || !strings.HasPrefix(e.Message, "message is required") || args != "" {
+		t.Errorf("no message: %+v %q", e, args)
+	}
+	if _, e, args := done(Ran{}, `{"id":"S-0004","message":"m",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || !strings.HasPrefix(e.Message, "S-0004 is not a task") || args != "" {
+		t.Errorf("a story: %+v %q", e, args)
+	}
+
+	// exit 3: the sync stopped the run
+	_, e, _ = done(Ran{Exit: 3, Stdout: stoppedAt("sync", "conflicts in flai/x.go"), Events: fatal("T-0021 stopped at the sync step: conflicts in flai/x.go")}, params)
+	if e == nil || e.Code != Conflict || e.Message != "T-0021 stopped at the sync step: conflicts in flai/x.go" {
+		t.Fatalf("a stopped sync: %+v", e)
+	}
+	if d, ok := e.Data.(map[string]any); !ok || d["stopped"] != "sync" || d["commit"].(map[string]any)["hash"] != "abc1234" {
+		t.Errorf("a stopped sync's data: %#v", e.Data)
+	}
+	// exit 4: the check stopped it
+	_, e, _ = done(Ran{Exit: 4, Stdout: stoppedAt("check", "1 finding in S-0004"), Events: fatal("T-0021 stopped at the check step: 1 finding in S-0004")}, params)
+	if e == nil || e.Code != Refused || e.Data.(map[string]any)["stopped"] != "check" {
+		t.Errorf("a failed check: %+v", e)
+	}
+	// exit 1 with the result: another step stopped it
+	_, e, _ = done(Ran{Exit: 1, Stdout: stoppedAt("move", "move T-0021 to done: rule: T-0021 cannot go from backlog to done"), Events: fatal("x")}, params)
+	if e == nil || e.Code != Rule || e.Message != "T-0021 stopped at the move step: move T-0021 to done: rule: T-0021 cannot go from backlog to done" || e.Data.(map[string]any)["stopped"] != "move" {
+		t.Errorf("a refused move: %+v", e)
+	}
+	_, e, _ = done(Ran{Exit: 1, Stdout: stoppedAt("commit", "git commit: exit status 128"), Events: fatal("x")}, params)
+	if e == nil || e.Code != channel.CodeInternal || e.Message != "T-0021 stopped at the commit step: git commit: exit status 128" || e.Data.(map[string]any)["task"] != "T-0021" {
+		t.Errorf("a failed commit: %+v", e)
+	}
+	// exit 1 without the result: the run could not start
+	if _, e, _ := done(Ran{Exit: 1, Events: fatal("S-0004 has no worktree at .flai-cache/worktrees/S-0004; open one with flai stream open S-0004")}, params); e == nil || e.Code != channel.CodeInternal || e.Data != nil || !strings.HasPrefix(e.Message, "S-0004 has no worktree") {
+		t.Errorf("a run that could not start: %+v", e)
+	}
+	if _, e, _ := done(Ran{Exit: 1, Events: fatal("T-0021 not found")}, params); e == nil || e.Code != NotFound {
+		t.Errorf("a task that is not there: %+v", e)
 	}
 }
 

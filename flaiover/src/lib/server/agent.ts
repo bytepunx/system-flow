@@ -76,6 +76,7 @@ export const REQUIRED_METHODS = [
 	'item.edit',
 	'item.finalize',
 	'item.criteria',
+	'task.done',
 	'accept.preview',
 	'accept.run',
 	'stream.diff',

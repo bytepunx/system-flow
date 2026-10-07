@@ -455,8 +455,9 @@ type spec struct {
 	exits map[int]int
 	// answers are exit codes besides 0 whose JSON object on standard output
 	// is the answer, not an error: flai test's 1, a tier that failed
-	// (S-0273). Without one on standard output the exit is the error it
-	// would otherwise be.
+	// (S-0273), and flai task done's 1, which its judge reads (ADR-0107).
+	// Without one on standard output the exit is the error it would
+	// otherwise be.
 	answers []int
 	// judge, when set, reads a successful answer and may refuse it after all:
 	// item.finalize refuses a story flai edit left unchanged, which was not a
@@ -540,6 +541,18 @@ func needStory(id string) *channel.Error {
 	}
 	if !strings.HasPrefix(id, "S-") {
 		return bad("%s is not a story", id)
+	}
+	return nil
+}
+
+// needTask checks id is a task's ID: flai task done closes a task, and a
+// story or an epic moves on by other means (ADR-0107).
+func needTask(id string) *channel.Error {
+	if e := needID(id); e != nil {
+		return e
+	}
+	if !strings.HasPrefix(id, "T-") {
+		return bad("%s is not a task: task.done closes a task (T-nnnn); a story goes to review with item.move after its close-out, and an epic follows its stories", id)
 	}
 	return nil
 }
@@ -1073,6 +1086,38 @@ func itemSpecs() map[string]spec {
 				words[i] = strconv.Itoa(n)
 			}
 			return []string{"criteria", verb, in.ID, strings.Join(words, ","), "--hash=" + in.Hash, "--by=" + owner(p), "--autocommit", "--trailer=" + Trailer}, "", nil
+		}},
+
+		// task.done: a task closed in one call, as flai task done closes it
+		// (ADR-0107): commit, sync, move, log, widen touches, check, and inbox,
+		// stopping at the first step that fails. The answer is flai task done
+		// --json's result. A stop at the sync (exit 3) is a conflict and one at
+		// the check (exit 4) a refusal, each with the result as data, as the
+		// ADR maps them; a stop at another step (exit 1 with the result) is
+		// taskStopped's error, with the result as data too, so the dashboard
+		// sees what the steps before it did. Exit 1 without a result is a run
+		// that could not start, read as any other failure of flai's.
+		"task.done": {exits: map[int]int{3: Conflict, 4: Refused}, answers: []int{1}, judge: taskStopped, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID      string `json:"id"`
+				Message string `json:"message"`
+				Log     string `json:"log"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needTask(in.ID); e != nil {
+				return nil, "", e
+			}
+			// the message is the commit's, body and all, so its lines are kept
+			if strings.TrimSpace(in.Message) == "" {
+				return nil, "", bad("message is required: the commit message for what the task changed")
+			}
+			args := []string{"task", "done", in.ID, "--message=" + in.Message}
+			if entry := text(in.Log); entry != "" {
+				args = append(args, "--log="+entry)
+			}
+			return args, "", nil
 		}},
 
 		"item.template": read(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
@@ -1897,6 +1942,32 @@ func testResult(w Written) *channel.Error {
 		return &channel.Error{Code: channel.CodeInternal, Message: "flai test answered without its result on standard output; run flai test --json in the checkout on the host to see why"}
 	}
 	return nil
+}
+
+// taskStopped reads flai task done's result and refuses one that stopped:
+// the run reached exit 1 at a step besides the sync and the check (ADR-0107),
+// which answers counts as an answer only so that the result reaches the
+// dashboard. It is an error in flai's words with the result as data, a rule
+// when a workflow rule refused the step (a move flai move does not allow),
+// and a failure of flai's otherwise. A result that ran to the end is the
+// answer.
+func taskStopped(w Written) *channel.Error {
+	var res struct {
+		Task    string `json:"task"`
+		Stopped string `json:"stopped"`
+		Error   string `json:"error"`
+	}
+	_ = json.Unmarshal(w.Data, &res) // an answer that is not the result did not stop
+	if res.Stopped == "" {
+		return nil
+	}
+	var data map[string]any
+	_ = json.Unmarshal(w.Data, &data)
+	code := channel.CodeInternal
+	if strings.HasPrefix(res.Error, "rule: ") || strings.Contains(res.Error, ": rule: ") {
+		code = Rule
+	}
+	return &channel.Error{Code: code, Message: fmt.Sprintf("%s stopped at the %s step: %s", res.Task, res.Stopped, res.Error), Data: data}
 }
 
 // isObject reports whether out is a JSON object.
