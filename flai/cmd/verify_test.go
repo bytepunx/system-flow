@@ -335,6 +335,64 @@ func TestVerifyLastPrintsTheStoredReport(t *testing.T) {
 	}
 }
 
+// roleTierEnv, set to 1, has the test binary run as roleTier's command.
+const roleTierEnv = "FLAI_TEST_ROLE_TIER"
+
+// roleTier is a tier script that passes only under the verify role and when
+// a story's move to ready, made in process as TH-0260's go-test tier made
+// it, is not refused: it runs TestRoleTierMovesAStoryToReady in this test
+// binary.
+func roleTier(t *testing.T) string {
+	t.Helper()
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return `test "$FLAI_ROLE" = verify || { echo "FLAI_ROLE is $FLAI_ROLE, not verify"; exit 1; }; ` +
+		roleTierEnv + `=1 exec "` + exe + `" -test.run=^TestRoleTierMovesAStoryToReady$`
+}
+
+// TestRoleTierMovesAStoryToReady is roleTier's command, not a test of its
+// own: in a tier it makes a project and moves its story to ready in process,
+// under the role the tier gave it, and fails when flai refuses the move.
+func TestRoleTierMovesAStoryToReady(t *testing.T) {
+	if os.Getenv(roleTierEnv) != "1" {
+		t.Skip("roleTier's command; it runs only in a tier")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "tester")
+	root := tempProject(t)
+	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Moved", "--epic", "E-0001"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-moved.md")
+	story, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte(strings.Replace(string(story), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "ready"); code != 0 {
+		t.Fatalf("flai move S-0001 ready under FLAI_ROLE=%s: exit %d %s", os.Getenv("FLAI_ROLE"), code, errOut)
+	}
+}
+
+// S-0311: flai verify run as the orchestrator runs its tiers under the
+// verify role, so a tier whose tests make flai's writes is not refused as
+// the orchestrator (TH-0260).
+func TestVerifyRunsItsTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
+	root, _ := verifyFixture(t, roleTier(t))
+	t.Setenv("FLAI_ROLE", "orchestrate")
+
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
+	if code != 0 || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("exit %d\n%s%s", code, out, errOut)
+	}
+}
+
 func TestVerifyRefusesAStoryWithNoWorktree(t *testing.T) {
 	root, worktree := verifyFixture(t, "exit 0")
 	if err := os.RemoveAll(worktree); err != nil {

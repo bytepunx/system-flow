@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -141,6 +142,30 @@ func TestVerifyAnswersTheStepThatFailed(t *testing.T) {
 	if out["passed"] != false || out["stopped_at"] != "narrative" ||
 		states != "rebase=passed sync=passed narrative=failed check=not-reached ok=not-reached bad=not-reached" || !strings.Contains(found, "## Next steps is empty") {
 		t.Errorf("an empty narrative section: %v (steps %s, findings %q)", out, states, found)
+	}
+}
+
+// S-0311: the orchestrator's server answers verify, and runs the tiers under
+// the verify role rather than its own, so a tier whose tests make flai's
+// writes is not refused as the orchestrator (TH-0260).
+func TestVerifyRunsTheTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
+	// the server reads its role when the fixture makes it
+	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	f, change := verifyFixture(t)
+	// on the story's branch the ok tier passes only under the verify role
+	manifest := strings.Replace(testManifest, `[sh, -c, "exit 0"]`, `[sh, -c, 'test "$FLAI_ROLE" = verify || { echo "FLAI_ROLE is $FLAI_ROLE, not verify"; exit 1; }']`, 1)
+	if err := os.WriteFile(filepath.Join(f.repo.WorktreePath(f.story.ID), "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	change("ok/a.txt")
+
+	out, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
+	if failed != "" {
+		t.Fatalf("the orchestrator's verify was refused: %s", failed)
+	}
+	states, found := steps(t, out)
+	if out["passed"] != true || states != "rebase=passed sync=passed narrative=passed check=passed ok=passed" {
+		t.Errorf("the orchestrator's run: %v (steps %s, findings %q)", out, states, found)
 	}
 }
 

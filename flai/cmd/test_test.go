@@ -177,6 +177,40 @@ func TestFlaiTestWithNoArgumentsRunsForWhatTheCheckoutChanged(t *testing.T) {
 	}
 }
 
+// S-0311: flai test run as the orchestrator runs its tiers under the verify
+// role, so a tier whose tests make flai's writes is not refused as the
+// orchestrator (TH-0260).
+func TestFlaiTestRunsItsTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("sh not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	manifest, err := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		"system-flow.yaml": string(manifest) + verifyTier(roleTier(t)),
+		"docs/x.md":        "x\n",
+	}
+	for name, body := range files {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("FLAI_ROLE", "orchestrate")
+
+	res := testResult(t, root, 0, "docs/x.md")
+	if got := strings.Join(tierNames(res), ","); got != "unit" || !res.Passed {
+		t.Errorf("ran %s: %+v", got, res)
+	}
+}
+
 func TestFlaiTestExitsTwoWhenItCannotAnswer(t *testing.T) {
 	root := testFixture(t)
 	cases := map[string][]string{
