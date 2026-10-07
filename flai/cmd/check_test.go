@@ -363,6 +363,47 @@ func TestCheckRecordIssuesNotesButDoesNotRecordTheStorysOwnOverlap(t *testing.T)
 	}
 }
 
+// I-0078, ADR-0122: another story, cancelled from backlog, waits to be
+// archived; a close-out of S-004 neither notes its item.archive nor records
+// it in an issue, while the unscoped check still warns on it.
+func TestCheckRecordIssuesLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", nil)
+	story := "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: cancelled\nparent: E-001\nowner: agent\n" +
+		"created: 2026-08-25T09:00:00Z\nupdated: 2026-08-26T10:00:00Z\ntransitions:\n  - to: cancelled\n    at: 2026-08-26T10:00:00Z\n    by: alex\ntags: []\n" +
+		"---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n"
+	if err := os.WriteFile(filepath.Join(root, "wip/kanban/stories/S-006-six.md"), []byte(story), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	epic := filepath.Join(root, "wip/kanban/epics/E-001-epic.md")
+	data, err := os.ReadFile(epic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(epic, []byte(strings.Replace(string(data), "- S-005 Five\n", "- S-005 Five\n- S-006 Six\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	if !strings.Contains(out, "warning: item.archive: S-006 is cancelled; run flai archive\n") {
+		t.Fatalf("unscoped, the run should report S-006's item.archive:\n%s%s", out, errOut)
+	}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "item.archive") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the item.archive should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("no issue should be opened or bumped, got %v", names)
+	}
+}
+
 // S-0227: a finding that quotes a code span is written without backticks,
 // so the issue it is recorded in passes the markdown lint (MD038).
 func TestFindingTextLeavesNoCodeSpanOpen(t *testing.T) {

@@ -219,6 +219,57 @@ func TestScopedCheckLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
 	}
 }
 
+// I-0078, ADR-0122: scoped to a story, an item.archive on another story,
+// cancelled from backlog and not archived, is left out of the result, and
+// its warning is taken back from the counts, so the run neither notes nor
+// records it. Unscoped, it is reported as before.
+func TestScopedCheckLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
+	root := scopeProject(t)
+	addCancelledStory(t, root, "S-006")
+	whole, scoped := runScoped(t, root, nil)
+	var archive []Finding
+	for _, f := range whole.Findings {
+		if f.Rule == "item.archive" {
+			archive = append(archive, f)
+		}
+	}
+	if len(archive) != 1 || archive[0].Message != "S-006 is cancelled; run flai archive" {
+		t.Fatalf("unscoped, the run should report S-006's item.archive: %+v", whole.Findings)
+	}
+	warnings, outside := 0, 0
+	for _, f := range scoped.Findings {
+		if f.Rule == "item.archive" {
+			t.Errorf("scoped to S-004, the item.archive of another story should be left out: %+v", f)
+		}
+		if f.Level == Warning {
+			warnings++
+		}
+		if f.Outside {
+			outside++
+		}
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	if scoped.Warnings != warnings || scoped.Outside != outside {
+		t.Errorf("counts should match the findings kept: warnings %d outside %d, findings give %d, %d", scoped.Warnings, scoped.Outside, warnings, outside)
+	}
+}
+
+// addCancelledStory writes a story under E-001 that was cancelled from
+// backlog and never archived, as S-0250 was (I-0078), and lists it in the
+// epic.
+func addCancelledStory(t *testing.T, root, id string) {
+	t.Helper()
+	story := "---\nid: " + id + "\ntype: story\nnature: feature\ntitle: Six\nstatus: cancelled\nparent: E-001" +
+		"\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-26T10:00:00Z\ntransitions:\n  - to: cancelled\n    at: 2026-08-26T10:00:00Z\n    by: alex\ntags: []\n" +
+		"---\n\n# " + id + " Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n"
+	if err := os.WriteFile(filepath.Join(root, "wip/kanban/stories", id+"-six.md"), []byte(story), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	edit(t, root, "wip/kanban/epics/E-001-epic.md", "- S-005 Five\n", "- S-005 Five\n- "+id+" Six\n")
+}
+
 // addStory writes an in-progress story under parent, with front matter
 // extra, and its narrative.
 func addStory(t *testing.T, root, id, parent, extra string) {

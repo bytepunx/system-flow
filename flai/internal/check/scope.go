@@ -19,7 +19,9 @@ import (
 // Stories is outside it, a note: clearing it is the pull hold's business and
 // the other story's (ADR-0019, ADR-0046). One that does not name the story is
 // left out of the scoped result, and the counts it added are taken back
-// (ADR-0115).
+// (ADR-0115). So is an item.archive outside the story: the item waits for
+// the operator's flai archive in the main checkout, which no story branch
+// clears, and it never names a story in progress (ADR-0122, I-0078).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -62,7 +64,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	}
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
-		if f.Rule == "wip.overlap" && !namesStory(f, st.ID) {
+		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) || (f.Rule == "item.archive" && !inside(f.Path)) {
 			res.drop(f)
 			continue
 		}

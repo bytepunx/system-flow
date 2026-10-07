@@ -33,7 +33,9 @@ story's item file or one of its tasks', its narrative, a thread anchored on
 the story or one of its tasks, or a path its branch changes against the main
 branch (as flai stream diff reads it), or that is uncommitted in its
 worktree. Every other finding is outside it. A wip.overlap that names the
-story is outside it too, and one between two other stories is left out. A
+story is outside it too, and one between two other stories is left out, as
+is an item.archive outside the story, which only flai archive in the main
+checkout clears. A
 finding outside keeps its level and is printed with "(outside S-nnnn)"; it
 is a note that neither an error nor --strict fails on, and the summary
 counts it, as does outside in --json. Without --story every finding counts,
@@ -155,7 +157,8 @@ func (r recordedIssue) describe() string {
 // opened or bumped. A wip.overlap is never recorded (ADR-0115 §3): the pull
 // hold, the overlapped change, the report on a growing claim, and the trial
 // merge report it where it can be acted on, and an issue would only count
-// how often stories ran side by side (I-0076).
+// how often stories ran side by side (I-0076). An item.archive outside the
+// story never reaches it: the scoped check leaves it out (ADR-0122).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {
