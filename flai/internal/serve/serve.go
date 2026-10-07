@@ -253,6 +253,28 @@ func Run(ctx context.Context, o Options) error {
 	offered := &offers{o: o, running: map[string]*running{}}
 	unavailable := map[string]string{}
 	var mu sync.Mutex
+	// Each Claude Code that flai serve may start an agent with is checked
+	// against permission_prompt once (S-0286, ADR-0106): at the first look
+	// after it starts, and at a later look once the claude it runs has
+	// changed. Every look that may start an agent reads the operator's
+	// say first, so the check begins there, beside the start, never before it.
+	checker := newClaudeChecker(o, func() []Entry {
+		mu.Lock()
+		defer mu.Unlock()
+		out := make([]Entry, 0, len(clients))
+		for _, r := range clients {
+			out = append(out, r.entry)
+		}
+		return out
+	})
+	defer checker.wait()
+	if agent := o.Agent; agent != nil {
+		o.Agent = func(root string) AgentConfig {
+			cfg := agent(root)
+			checker.consider(ctx, root, cfg)
+			return cfg
+		}
+	}
 	defer func() {
 		offered.halt()
 		for _, r := range clients {

@@ -50,7 +50,7 @@ var claudeCodeTakes = map[string]option{
 // as its analyzer definition (S-0223), each with flai guard on its file
 // edits and the same handler, which denies anything outside a story's
 // worktree.
-func (c claudeCode) Start(r Request, host Host) (Start, error) {
+func (claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
 	if r.Agent != nil {
@@ -64,13 +64,7 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
-	def := c.DefaultHost()
-	if host.Program == "" {
-		host.Program = def.Program
-	}
-	if host.Args == nil {
-		host.Args = def.Args
-	}
+	host = ClaudeCodeHost(host)
 	// The agent reaches flai through this flai's own MCP server on stdio,
 	// whatever the project's .mcp.json says, which a headless session would
 	// not have approved, and no other: not the operator's own connectors and
@@ -83,7 +77,7 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if r.Name != "" {
 		args = append(args, "--agent", r.Name)
 	}
-	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "stdio", "command": r.Flai, "args": args}}})
+	mcp, err := mcpConfig(r.Flai, args)
 	if err != nil {
 		return Start{}, err
 	}
@@ -93,8 +87,7 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if r.Role != "" {
 		subject = strings.Join(strings.Fields(r.Role+" "+r.Item+" "+r.Focus), " ")
 	}
-	argv := []string{host.Program, "-p", Prompt(r), "--output-format", "stream-json", "--verbose",
-		"--mcp-config", string(mcp), "--strict-mcp-config", "--name", strings.TrimSpace(r.Project + " " + subject)}
+	argv := append(headless(host.Program, Prompt(r), mcp), "--name", strings.TrimSpace(r.Project+" "+subject))
 	// A session of its own, so that an agent that ended waiting for an
 	// answer goes on with what it knew.
 	switch {
@@ -117,9 +110,59 @@ func (c claudeCode) Start(r Request, host Host) (Start, error) {
 	if r.Role != "" {
 		argv = append(argv, "--agent", claudeCodeStrategic[r.Role])
 	}
-	argv = append(argv, "--permission-prompt-tool", PermissionPromptTool)
-	argv = append(argv, host.Args...)
+	argv = append(argv, permissionArgs(host)...)
 	return Start{Harness: ClaudeCode, Argv: argv, Env: env}, nil
+}
+
+// ClaudeCodeHost is host with claude-code's defaults where the operator set
+// none: the program, and the arguments when they are nil.
+func ClaudeCodeHost(host Host) Host {
+	def := claudeCode{}.DefaultHost()
+	if host.Program == "" {
+		host.Program = def.Program
+	}
+	if host.Args == nil {
+		host.Args = def.Args
+	}
+	return host
+}
+
+// ClaudeCodeCheck is the headless claude -p that checks a Claude Code
+// against permission_prompt (ADR-0106): the prompt on model, with flai's MCP
+// server, flai run with mcpArgs, as its only server, and the permission
+// arguments a story's agent gets from host.
+func ClaudeCodeCheck(host Host, flai string, mcpArgs []string, model, prompt string) ([]string, error) {
+	host = ClaudeCodeHost(host)
+	mcp, err := mcpConfig(flai, mcpArgs)
+	if err != nil {
+		return nil, err
+	}
+	argv := append(headless(host.Program, prompt, mcp), "--model", model)
+	return append(argv, permissionArgs(host)...), nil
+}
+
+// headless is how every claude -p flai runs begins: the prompt, its events
+// as stream-json, and the MCP servers of mcp and no others.
+func headless(program, prompt, mcp string) []string {
+	return []string{program, "-p", prompt, "--output-format", "stream-json", "--verbose", "--mcp-config", mcp, "--strict-mcp-config"}
+}
+
+// mcpConfig is the --mcp-config that starts flai's own MCP server on stdio,
+// the program flai with args, as the server named flai.
+func mcpConfig(flai string, args []string) (string, error) {
+	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "stdio", "command": flai, "args": args}}})
+	if err != nil {
+		return "", fmt.Errorf("the MCP configuration for flai's server: %w", err)
+	}
+	return string(mcp), nil
+}
+
+// permissionArgs are what a claude-code session may do: flai's
+// permission_prompt as its handler (PermissionPromptTool), then the
+// operator's arguments, so that the handler applies with the default host
+// arguments and with the operator's own.
+func permissionArgs(host Host) []string {
+	return append([]string{"--permission-prompt-tool", PermissionPromptTool}, host.Args...)
 }
 
 // claudeCodeRoles are the sub-agent definitions, in the project's
