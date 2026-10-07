@@ -2,6 +2,7 @@
 
 ## 1.0.70 - 2026-10-07
 
+- S-0279 flai check finds `wip.overlap` outside the story at close-out (patch).
 - S-0279 A close-out records no `wip.overlap` and notes only an overlap naming its story (patch, ADR-0115): `work-management.md` says that a check finding outside the story is still printed as a note and recorded in an issue, which the close-out commits, but that a `wip.overlap` naming your story is printed as a note and recorded in no issue, and one between two other stories is left out. `wip.overlap` compares the claims of the stories in progress, as the pull hold does, once per pair of stories, so a story is no longer reported against another story's task or against files inside its folder touch that its tasks do not name. It needs a flai that has it; an older flai still records every `wip.overlap` at close-out.
 
 ## 1.0.69 - 2026-10-07
