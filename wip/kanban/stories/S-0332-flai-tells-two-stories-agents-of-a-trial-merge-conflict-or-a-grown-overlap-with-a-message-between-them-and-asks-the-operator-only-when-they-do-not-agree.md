@@ -7,7 +7,7 @@ status: ready
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:10:41Z
-updated: 2026-10-07T21:43:11Z
+updated: 2026-10-07T22:10:05Z
 transitions:
   - to: ready
     at: 2026-10-07T21:43:11Z
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-07T20:22:00Z
 forecast:
   duration: 55m
-  delivery: 2026-10-08T08:35:00Z
-  basis: "Its own forecast of 55m; 38th in the pull order with an in-progress limit of 3, behind S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0280, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0310, S-0312, S-0313, S-0314, S-0315, S-0316, S-0317, S-0318, S-0319, S-0320, S-0321, S-0322, S-0323, S-0324, S-0325, S-0326 and S-0327."
+  delivery: 2026-10-07T23:09:00Z
+  basis: "Its own forecast of 55m; 1st in the pull order with an in-progress limit of 3, behind S-0333."
   by: flai
-  at: 2026-10-07T21:42:43Z
+  at: 2026-10-07T22:10:05Z
 finalized:
   by: orchestrator
   at: 2026-10-07T20:24:16Z
